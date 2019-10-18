@@ -25,6 +25,11 @@ def compile_local_workflow(testcase, client, profile):
 
     build_directory = os.path.join(client.current_folder, "build")
     cmake_cache = load(os.path.join(build_directory, "CMakeCache.txt"))
+    if True:
+        # TODO: Remove
+        toolcahin = load(os.path.join(build_directory, CMakeToolchain.filename))
+        print(toolcahin)
+        print("!"*200)
     return client.out, cmake_cache, build_directory, None
 
 
@@ -63,13 +68,18 @@ def compile_cmake_workflow(testcase, client, profile):
 
     build_directory = os.path.join(client.current_folder, "build")
     cmake_cache = load(os.path.join(build_directory, "CMakeCache.txt"))
+    if True:
+        # TODO: Remove
+        toolcahin = load(os.path.join(build_directory, CMakeToolchain.filename))
+        print(toolcahin)
+        print("!"*200)
     return client.out, cmake_cache, build_directory, None
 
 
-@parameterized_class([{"function": compile_cache_workflow_without_toolchain, "use_toolchain": False},
-                      {"function": compile_cache_workflow_with_toolchain, "use_toolchain": True},
-                      #{"function": compile_local_workflow, "use_toolchain": True},
-                      #{"function": compile_cmake_workflow, "use_toolchain": True},
+@parameterized_class([{"function": compile_cache_workflow_without_toolchain, "use_toolchain": False, "in_cache": True},
+                      {"function": compile_cache_workflow_with_toolchain, "use_toolchain": True, "in_cache": True},
+                      {"function": compile_local_workflow, "use_toolchain": True, "in_cache": False},
+                      {"function": compile_cmake_workflow, "use_toolchain": True, "in_cache": False},
                       ])
 @attr("toolchain")
 class AdjustAutoTestCase(unittest.TestCase):
@@ -113,6 +123,9 @@ class AdjustAutoTestCase(unittest.TestCase):
             include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
             conan_basic_setup()
         endif()
+
+        message(">> CONAN_EXPORTED: ${CONAN_EXPORTED}")
+        message(">> CONAN_IN_LOCAL_CACHE: ${CONAN_IN_LOCAL_CACHE}")
 
         message(">> CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
         message(">> CMAKE_CXX_FLAGS: ${CMAKE_CXX_FLAGS}")
@@ -201,12 +214,32 @@ class AdjustAutoTestCase(unittest.TestCase):
         from pprint import pprint
         pprint(cmake_cache)
 
+    def test_conan_stuff(self):
+        # self.skipTest("Disabled")
+        configure_out, cmake_cache, cmake_cache_keys, _, _ = self._run_configure()
+
+        in_local_cache = "ON" if self.in_cache else "OFF"
+        exported_str = "1"
+        if self.in_cache:
+            self.assertIn(">> CONAN_EXPORTED: {}".format(exported_str), configure_out)
+            self.assertIn(">> CONAN_IN_LOCAL_CACHE: {}".format(in_local_cache), configure_out)
+
+            type_str = "STRING" if self.use_toolchain else "UNINITIALIZED"
+            self.assertEqual(exported_str, cmake_cache["CONAN_EXPORTED:" + type_str])
+            self.assertEqual(in_local_cache, cmake_cache["CONAN_IN_LOCAL_CACHE:" + type_str])
+        else:
+            self.assertIn(">> CONAN_EXPORTED: {}".format(exported_str), configure_out)
+            self.assertIn(">> CONAN_IN_LOCAL_CACHE: {}".format(in_local_cache), configure_out)
+
+            self.assertNotIn("CONAN_EXPORTED", cmake_cache_keys)
+            self.assertNotIn("CONAN_IN_LOCAL_CACHE", cmake_cache_keys)
+
     @parameterized.expand([("Debug",), ("Release",)])
     def test_build_type(self, build_type):
         #self.skipTest("Disabled")
         configure_out, cmake_cache, cmake_cache_keys, _, _ = self._run_configure({"build_type": build_type})
 
-        self.assertIn("build_type={}".format(build_type), configure_out)
+        #self.assertIn("build_type={}".format(build_type), configure_out)
         self.assertIn(">> CMAKE_BUILD_TYPE: {}".format(build_type), configure_out)
 
         self.assertEqual(build_type, cmake_cache["CMAKE_BUILD_TYPE:STRING"])
@@ -217,7 +250,7 @@ class AdjustAutoTestCase(unittest.TestCase):
         #self.skipTest("Disabled")
         configure_out, cmake_cache, cmake_cache_keys, _, _ = self._run_configure({"compiler.libcxx": libcxx})
 
-        self.assertIn("compiler.libcxx={}".format(libcxx), configure_out)
+        #self.assertIn("compiler.libcxx={}".format(libcxx), configure_out)
         self.assertIn("-- Conan: C++ stdlib: {}".format(libcxx), configure_out)
         self.assertIn(">> CMAKE_CXX_FLAGS: -m64 -stdlib={}".format(libcxx), configure_out)
 
@@ -230,25 +263,39 @@ class AdjustAutoTestCase(unittest.TestCase):
         #self.skipTest("Disabled")
         configure_out, cmake_cache, cmake_cache_keys, _, package_dir = self._run_configure()
 
-        self.assertIn(">> CMAKE_INSTALL_BINDIR: bin", configure_out)
-        self.assertIn(">> CMAKE_INSTALL_DATAROOTDIR: share", configure_out)
-        self.assertIn(">> CMAKE_INSTALL_INCLUDEDIR: include", configure_out)
-        self.assertIn(">> CMAKE_INSTALL_LIBDIR: lib", configure_out)
-        self.assertIn(">> CMAKE_INSTALL_LIBEXECDIR: bin", configure_out)
-        self.assertIn(">> CMAKE_INSTALL_OLDINCLUDEDIR: include", configure_out)
-        self.assertIn(">> CMAKE_INSTALL_SBINDIR: bin", configure_out)
-        self.assertIn(">> CMAKE_INSTALL_PREFIX: {}".format(package_dir), configure_out)
+        value_f = lambda u: u if self.in_cache else ""
+        self.assertIn(">> CMAKE_INSTALL_BINDIR: {}".format(value_f("bin")), configure_out)
+        self.assertIn(">> CMAKE_INSTALL_DATAROOTDIR: {}".format(value_f("share")), configure_out)
+        self.assertIn(">> CMAKE_INSTALL_INCLUDEDIR: {}".format(value_f("include")), configure_out)
+        self.assertIn(">> CMAKE_INSTALL_LIBDIR: {}".format(value_f("lib")), configure_out)
+        self.assertIn(">> CMAKE_INSTALL_LIBEXECDIR: {}".format(value_f("bin")), configure_out)
+        self.assertIn(">> CMAKE_INSTALL_OLDINCLUDEDIR: {}".format(value_f("include")), configure_out)
+        self.assertIn(">> CMAKE_INSTALL_SBINDIR: {}".format(value_f("bin")), configure_out)
+        if self.in_cache:
+            self.assertIn(">> CMAKE_INSTALL_PREFIX: {}".format(package_dir), configure_out)
+        else:
+            pass  # TODO: It takes the default value, override it to something?
 
-        type_str = "STRING" if self.use_toolchain else "UNINITIALIZED"
-        self.assertEqual("bin", cmake_cache["CMAKE_INSTALL_BINDIR:" + type_str])
-        self.assertEqual("share", cmake_cache["CMAKE_INSTALL_DATAROOTDIR:" + type_str])
-        self.assertEqual("include", cmake_cache["CMAKE_INSTALL_INCLUDEDIR:" + type_str])
-        self.assertEqual("lib", cmake_cache["CMAKE_INSTALL_LIBDIR:" + type_str])
-        self.assertEqual("bin", cmake_cache["CMAKE_INSTALL_LIBEXECDIR:" + type_str])
-        self.assertEqual("include", cmake_cache["CMAKE_INSTALL_OLDINCLUDEDIR:" + type_str])
-        self.assertEqual("bin", cmake_cache["CMAKE_INSTALL_SBINDIR:" + type_str])
-        type_str = "STRING" if self.use_toolchain else "PATH"
-        self.assertEqual(package_dir, cmake_cache["CMAKE_INSTALL_PREFIX:" + type_str])
+        if self.in_cache:
+            type_str = "STRING" if self.use_toolchain else "UNINITIALIZED"
+            self.assertEqual("bin", cmake_cache["CMAKE_INSTALL_BINDIR:" + type_str])
+            self.assertEqual("share", cmake_cache["CMAKE_INSTALL_DATAROOTDIR:" + type_str])
+            self.assertEqual("include", cmake_cache["CMAKE_INSTALL_INCLUDEDIR:" + type_str])
+            self.assertEqual("lib", cmake_cache["CMAKE_INSTALL_LIBDIR:" + type_str])
+            self.assertEqual("bin", cmake_cache["CMAKE_INSTALL_LIBEXECDIR:" + type_str])
+            self.assertEqual("include", cmake_cache["CMAKE_INSTALL_OLDINCLUDEDIR:" + type_str])
+            self.assertEqual("bin", cmake_cache["CMAKE_INSTALL_SBINDIR:" + type_str])
+            type_str = "STRING" if self.use_toolchain else "PATH"
+            self.assertEqual(package_dir, cmake_cache["CMAKE_INSTALL_PREFIX:" + type_str])
+        else:
+            self.assertNotIn("CMAKE_INSTALL_BINDIR", cmake_cache_keys)
+            self.assertNotIn("CMAKE_INSTALL_DATAROOTDIR", cmake_cache_keys)
+            self.assertNotIn("CMAKE_INSTALL_INCLUDEDIR", cmake_cache_keys)
+            self.assertNotIn("CMAKE_INSTALL_LIBDIR", cmake_cache_keys)
+            self.assertNotIn("CMAKE_INSTALL_LIBEXECDIR", cmake_cache_keys)
+            self.assertNotIn("CMAKE_INSTALL_OLDINCLUDEDIR", cmake_cache_keys)
+            self.assertNotIn("CMAKE_INSTALL_SBINDIR", cmake_cache_keys)
+            #self.assertNotIn("CMAKE_INSTALL_PREFIX", cmake_cache_keys)  # TODO: It takes the default value '/usr/local', override to?
 
     def test_ccxx_flags(self):
         #self.skipTest("Disabled")
@@ -271,7 +318,7 @@ class AdjustAutoTestCase(unittest.TestCase):
         configure_out, cmake_cache, cmake_cache_keys, _, _ = self._run_configure({"compiler.cppstd": cppstd})
 
         extensions_str = "ON" if "gnu" in cppstd else "OFF"
-        self.assertIn("compiler.cppstd={}".format(cppstd), configure_out)
+        #self.assertIn("compiler.cppstd={}".format(cppstd), configure_out)
         self.assertIn("-- Conan setting CPP STANDARD: 14 WITH EXTENSIONS {}".format(extensions_str), configure_out)
         self.assertIn(">> CMAKE_CXX_STANDARD: 14", configure_out)
         self.assertIn(">> CMAKE_CXX_EXTENSIONS: {}".format(extensions_str), configure_out)
@@ -292,7 +339,7 @@ class AdjustAutoTestCase(unittest.TestCase):
         configure_out, cmake_cache, cmake_cache_keys, _, _ = self._run_configure(options_dict={"app:fPIC": fpic})
 
         fpic_str = "ON" if fpic == "True" else "OFF"
-        self.assertIn("app:fPIC={}".format(fpic), configure_out)
+        #self.assertIn("app:fPIC={}".format(fpic), configure_out)
         self.assertIn("-- Conan: Adjusting fPIC flag ({})".format(fpic_str), configure_out)
         self.assertIn(">> CMAKE_POSITION_INDEPENDENT_CODE: {}".format(fpic_str), configure_out)
 
