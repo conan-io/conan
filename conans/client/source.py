@@ -147,13 +147,14 @@ def config_source(export_folder, export_source_folder, scm_sources_folder,
 
             def get_sources_from_exports():
                 # First of all get the exported scm sources
+                dest_dir = src_folder
+                scm_data = get_scm_data(conanfile)
+                if scm_data:
+                    dest_dir = os.path.normpath(os.path.join(src_folder, scm_data.subfolder or ""))
                 if os.path.exists(scm_sources_folder):
-                    merge_directories(scm_sources_folder, src_folder)
+                    merge_directories(scm_sources_folder, dest_dir)
                 else:
-                    scm_data = get_scm_data(conanfile)
                     if scm_data:
-                        dest_dir = os.path.normpath(
-                            os.path.join(src_folder, scm_data.subfolder or ""))
                         output.info("Getting sources from url: '%s'" % scm_data.url)
                         scm = SCM(scm_data, dest_dir, output)
                         scm.checkout()

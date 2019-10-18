@@ -46,7 +46,8 @@ class CaptureExportSCMDataTest(unittest.TestCase):
             conanfile=conanfile,
             conanfile_dir=self.conanfile_dir,
             destination_folder="",
-            output=output)
+            output=output,
+            ignore_dirty=True)
 
         self.assertEqual(scm_data.url, url)
         self.assertEqual(scm_data.revision, self.rev)
@@ -71,7 +72,8 @@ class CaptureExportSCMDataTest(unittest.TestCase):
             conanfile=conanfile,
             conanfile_dir=self.conanfile_dir,
             destination_folder="",
-            output=output)
+            output=output,
+            ignore_dirty=True)
 
         self.assertEqual(scm_data.url, url)
         if is_pristine:
@@ -97,9 +99,13 @@ class CaptureExportSCMDataTest(unittest.TestCase):
                     conanfile=conanfile,
                     conanfile_dir=self.conanfile_dir,
                     destination_folder="",
-                    output=output)
+                    output=output,
+                    ignore_dirty=True)
 
         self.assertEqual(scm_data.url, url)
         self.assertEqual(scm_data.revision, self.rev)
         self.assertIn("Repo origin deduced by 'auto': {}".format(url), output)
         self.assertNotIn("Revision deduced", output)
+
+
+    # TODO: Add more tests for the ignore_dirty

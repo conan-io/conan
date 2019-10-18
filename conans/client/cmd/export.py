@@ -210,13 +210,16 @@ def _capture_export_scm_data(conanfile, conanfile_dir, destination_folder, outpu
     captured = scm_data.capture_origin or scm_data.capture_revision
 
     if not captured:
+        # We replace even not "auto" values but evaluated functions (e.g from a python_require)
+        _replace_scm_data_in_conanfile(os.path.join(destination_folder, "conanfile.py"), scm_data)
         return scm_data, None
-
-    local_src_path = scm.get_local_path_to_url(scm_data.url)
 
     if not scm.is_pristine() and not ignore_dirty:
         output.warn("There are uncommitted changes, skipping the replacement of 'scm.url' and "
                     "'scm.revision' auto fields. Use --ignore-dirty to force it.")
+        local_src_path = scm.get_local_path_to_url(scm_data.url) \
+            if scm_data.url != "auto" else conanfile_dir
+        return scm_data, local_src_path
     else:
         if scm_data.url == "auto":
             origin = scm.get_qualified_remote_url(remove_credentials=True)
@@ -233,6 +236,7 @@ def _capture_export_scm_data(conanfile, conanfile_dir, destination_folder, outpu
             scm_data.revision = scm.get_revision()
             output.success("Revision deduced by 'auto': %s" % scm_data.revision)
 
+        local_src_path = scm.get_local_path_to_url(scm_data.url)
         _replace_scm_data_in_conanfile(os.path.join(destination_folder, "conanfile.py"), scm_data)
 
     return scm_data, local_src_path

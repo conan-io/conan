@@ -375,6 +375,10 @@ class PkgTest(base.MyConanfileBase):
         pass
 """
         client.save({"conanfile.py": reuse})
+        # Commit changes so it replaces and exports the scm data
+        client.run_command('git add .')
+        client.run_command('git commit -m "Modified conanfile"')
+
         client.run("export . Pkg/0.1@lasote/testing")
         client.run("get Pkg/0.1@lasote/testing")
         self.assertNotIn("scm = base.scm", client.out)
