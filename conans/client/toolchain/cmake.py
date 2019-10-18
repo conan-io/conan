@@ -76,8 +76,8 @@ class CMakeToolchain:
             #conan_check_compiler()
             conan_set_libcxx()
             #conan_set_vs_runtime()
-            #conan_set_find_paths()
-            #conan_set_find_library_paths()
+            conan_set_find_paths()
+            conan_set_find_library_paths()
             
         else()
             message(">>>> TRY COMPILE")

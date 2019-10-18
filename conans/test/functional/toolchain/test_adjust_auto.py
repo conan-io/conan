@@ -23,8 +23,9 @@ def compile_local_workflow(testcase, client, profile):
         client.run("build ..")
         testcase.assertIn("Using Conan toolchain", client.out)
 
-    cmake_cache = load(os.path.join(client.current_folder, "build", "CMakeCache.txt"))
-    return client.out, cmake_cache
+    build_directory = os.path.join(client.current_folder, "build")
+    cmake_cache = load(os.path.join(build_directory, "CMakeCache.txt"))
+    return client.out, cmake_cache, build_directory, None
 
 
 def _compile_cache_workflow(testcase, client, profile, use_toolchain):
@@ -34,16 +35,16 @@ def _compile_cache_workflow(testcase, client, profile, use_toolchain):
     if use_toolchain:
         testcase.assertIn("Using Conan toolchain", client.out)
 
-    # Run the app and check it has been properly compiled
     package_layout = client.cache.package_layout(pref.ref)
-    cmake_cache = load(os.path.join(package_layout.build(pref), "CMakeCache.txt"))
+    build_directory = package_layout.build(pref)
+    cmake_cache = load(os.path.join(build_directory, "CMakeCache.txt"))
 
     if use_toolchain:
         # TODO: Remove
-        toolcahin = load(os.path.join(package_layout.build(pref), CMakeToolchain.filename))
+        toolcahin = load(os.path.join(build_directory, CMakeToolchain.filename))
         print(toolcahin)
         print("!"*200)
-    return client.out, cmake_cache
+    return client.out, cmake_cache, build_directory, package_layout.package(pref)
 
 
 def compile_cache_workflow_with_toolchain(testcase, client, profile):
@@ -60,8 +61,9 @@ def compile_cmake_workflow(testcase, client, profile):
         client.run_command("cmake .. -DCMAKE_TOOLCHAIN_FILE={}".format(CMakeToolchain.filename))
         testcase.assertIn("Using Conan toolchain", client.out)
 
-    cmake_cache = load(os.path.join(client.current_folder, "build", "CMakeCache.txt"))
-    return client.out, cmake_cache
+    build_directory = os.path.join(client.current_folder, "build")
+    cmake_cache = load(os.path.join(build_directory, "CMakeCache.txt"))
+    return client.out, cmake_cache, build_directory, None
 
 
 @parameterized_class([{"function": compile_cache_workflow_without_toolchain, "use_toolchain": False},
@@ -135,6 +137,12 @@ class AdjustAutoTestCase(unittest.TestCase):
         message(">> CMAKE_INSTALL_NAME_DIR: ${CMAKE_INSTALL_NAME_DIR}")
         message(">> CMAKE_SKIP_RPATH: ${CMAKE_SKIP_RPATH}")
         
+        message(">> CMAKE_MODULE_PATH: ${CMAKE_MODULE_PATH}")
+        message(">> CMAKE_PREFIX_PATH: ${CMAKE_PREFIX_PATH}")
+
+        message(">> CMAKE_INCLUDE_PATH: ${CMAKE_INCLUDE_PATH}")
+        message(">> CMAKE_LIBRARY_PATH: ${CMAKE_LIBRARY_PATH}")
+
         add_executable(app src/app.cpp)
     """)
 
@@ -156,10 +164,10 @@ class AdjustAutoTestCase(unittest.TestCase):
                     "src/app.cpp": cls.app_cpp})
         # TODO: Remove the app.cpp and the add_executable, probably it is not need to run cmake configure.
 
-    def _run_configure(self, settings_dict, options_dict):
+    def _run_configure(self, settings_dict=None, options_dict=None):
         # Build the profile according to the settings provided
-        settings_lines = "\n".join("{}={}".format(k, v) for k, v in settings_dict.items())
-        options_lines = "\n".join("{}={}".format(k, v) for k, v in options_dict.items())
+        settings_lines = "\n".join("{}={}".format(k, v) for k, v in settings_dict.items()) if settings_dict else ""
+        options_lines = "\n".join("{}={}".format(k, v) for k, v in options_dict.items()) if options_dict else ""
         profile = textwrap.dedent("""
                     include(default)
                     [settings]
@@ -171,7 +179,7 @@ class AdjustAutoTestCase(unittest.TestCase):
         profile_path = os.path.join(self.t.current_folder, "profile")
 
         # Run the configure corresponding to this test case
-        configure_out, cmake_cache = self.function(client=self.t, profile=profile_path)
+        configure_out, cmake_cache, build_directory, package_directory = self.function(client=self.t, profile=profile_path)
 
         # Prepare the outputs for the test cases
         configure_out = [re.sub(r"\s\s+", " ", line) for line in str(configure_out).splitlines()]  # FIXME: There are some extra spaces between flags
@@ -184,7 +192,7 @@ class AdjustAutoTestCase(unittest.TestCase):
         cmake_cache_keys = [item.split(":")[0] for item in cmake_cache_items.keys()]
 
         self._print_things(configure_out, cmake_cache_items)
-        return configure_out, cmake_cache_items, cmake_cache_keys
+        return configure_out, cmake_cache_items, cmake_cache_keys, build_directory, package_directory
 
     def _print_things(self, configure_out, cmake_cache):
         # TODO: Remove this functions
@@ -195,8 +203,8 @@ class AdjustAutoTestCase(unittest.TestCase):
 
     @parameterized.expand([("Debug",), ("Release",)])
     def test_build_type(self, build_type):
-        self.skipTest("Disabled")
-        configure_out, cmake_cache, cmake_cache_keys = self._run_configure({"build_type": build_type})
+        #self.skipTest("Disabled")
+        configure_out, cmake_cache, cmake_cache_keys, _, _ = self._run_configure({"build_type": build_type})
 
         self.assertIn("build_type={}".format(build_type), configure_out)
         self.assertIn(">> CMAKE_BUILD_TYPE: {}".format(build_type), configure_out)
@@ -206,8 +214,8 @@ class AdjustAutoTestCase(unittest.TestCase):
     @parameterized.expand([("libc++",), ])  # ("libstdc++",), is deprecated
     @unittest.skipIf(platform.system() != "Darwin", "libcxx for Darwin")
     def test_libcxx(self, libcxx):
-        self.skipTest("Disabled")
-        configure_out, cmake_cache, cmake_cache_keys = self._run_configure({"compiler.libcxx": libcxx})
+        #self.skipTest("Disabled")
+        configure_out, cmake_cache, cmake_cache_keys, _, _ = self._run_configure({"compiler.libcxx": libcxx})
 
         self.assertIn("compiler.libcxx={}".format(libcxx), configure_out)
         self.assertIn("-- Conan: C++ stdlib: {}".format(libcxx), configure_out)
@@ -219,8 +227,8 @@ class AdjustAutoTestCase(unittest.TestCase):
             self.assertEqual(libcxx, cmake_cache["CONAN_LIBCXX:STRING"])
 
     def test_install_paths(self):
-        self.skipTest("Disabled")
-        configure_out, cmake_cache, cmake_cache_keys = self._run_configure({})
+        #self.skipTest("Disabled")
+        configure_out, cmake_cache, cmake_cache_keys, _, package_dir = self._run_configure()
 
         self.assertIn(">> CMAKE_INSTALL_BINDIR: bin", configure_out)
         self.assertIn(">> CMAKE_INSTALL_DATAROOTDIR: share", configure_out)
@@ -229,6 +237,7 @@ class AdjustAutoTestCase(unittest.TestCase):
         self.assertIn(">> CMAKE_INSTALL_LIBEXECDIR: bin", configure_out)
         self.assertIn(">> CMAKE_INSTALL_OLDINCLUDEDIR: include", configure_out)
         self.assertIn(">> CMAKE_INSTALL_SBINDIR: bin", configure_out)
+        self.assertIn(">> CMAKE_INSTALL_PREFIX: {}".format(package_dir), configure_out)
 
         type_str = "STRING" if self.use_toolchain else "UNINITIALIZED"
         self.assertEqual("bin", cmake_cache["CMAKE_INSTALL_BINDIR:" + type_str])
@@ -238,13 +247,12 @@ class AdjustAutoTestCase(unittest.TestCase):
         self.assertEqual("bin", cmake_cache["CMAKE_INSTALL_LIBEXECDIR:" + type_str])
         self.assertEqual("include", cmake_cache["CMAKE_INSTALL_OLDINCLUDEDIR:" + type_str])
         self.assertEqual("bin", cmake_cache["CMAKE_INSTALL_SBINDIR:" + type_str])
-
         type_str = "STRING" if self.use_toolchain else "PATH"
-        self.assertTrue(len(cmake_cache["CMAKE_INSTALL_PREFIX:" + type_str].strip()) > 0)
+        self.assertEqual(package_dir, cmake_cache["CMAKE_INSTALL_PREFIX:" + type_str])
 
     def test_ccxx_flags(self):
-        self.skipTest("Disabled")
-        configure_out, cmake_cache, cmake_cache_keys = self._run_configure({})
+        #self.skipTest("Disabled")
+        configure_out, cmake_cache, cmake_cache_keys, _, _ = self._run_configure()
 
         self.assertIn(">> CMAKE_CXX_FLAGS: -m64 -stdlib=libc++", configure_out)
         self.assertIn(">> CMAKE_C_FLAGS: -m64", configure_out)
@@ -259,8 +267,8 @@ class AdjustAutoTestCase(unittest.TestCase):
 
     @parameterized.expand([("gnu14",), ("14", ), ])
     def test_stdcxx_flags(self, cppstd):
-        self.skipTest("Disabled")
-        configure_out, cmake_cache, cmake_cache_keys = self._run_configure({"compiler.cppstd": cppstd})
+        #self.skipTest("Disabled")
+        configure_out, cmake_cache, cmake_cache_keys, _, _ = self._run_configure({"compiler.cppstd": cppstd})
 
         extensions_str = "ON" if "gnu" in cppstd else "OFF"
         self.assertIn("compiler.cppstd={}".format(cppstd), configure_out)
@@ -280,7 +288,8 @@ class AdjustAutoTestCase(unittest.TestCase):
 
     @parameterized.expand([("True",), ("False", ), ])
     def test_fPIC(self, fpic):
-        configure_out, cmake_cache, cmake_cache_keys = self._run_configure({}, {"app:fPIC": fpic})
+        #self.skipTest("Disabled")
+        configure_out, cmake_cache, cmake_cache_keys, _, _ = self._run_configure(options_dict={"app:fPIC": fpic})
 
         fpic_str = "ON" if fpic == "True" else "OFF"
         self.assertIn("app:fPIC={}".format(fpic), configure_out)
@@ -293,7 +302,8 @@ class AdjustAutoTestCase(unittest.TestCase):
 
     @unittest.skipIf(platform.system() != "Darwin", "libcxx for Darwin")
     def test_rpath(self):
-        configure_out, cmake_cache, cmake_cache_keys = self._run_configure({}, {})
+        #self.skipTest("Disabled")
+        configure_out, cmake_cache, cmake_cache_keys, _, _ = self._run_configure()
 
         self.assertIn(">> CMAKE_INSTALL_NAME_DIR: ", configure_out)
         self.assertIn(">> CMAKE_SKIP_RPATH: 1", configure_out)
@@ -302,3 +312,28 @@ class AdjustAutoTestCase(unittest.TestCase):
             self.assertEqual("1", cmake_cache["CMAKE_SKIP_RPATH:BOOL"])
         else:
             self.assertEqual("NO", cmake_cache["CMAKE_SKIP_RPATH:BOOL"])
+
+    def test_find_paths(self):
+        #self.skipTest("Disabled")
+        configure_out, cmake_cache, cmake_cache_keys, build_directory, _ = self._run_configure()
+
+        # TODO: CONAN_CMAKE_MODULE_PATH, we are not populating that variable!
+
+        self.assertIn(">> CMAKE_MODULE_PATH: {}".format(build_directory), configure_out)
+        self.assertIn(">> CMAKE_PREFIX_PATH: ", configure_out)
+
+        type_str = "STRING" if self.use_toolchain else "UNINITIALIZED"
+        self.assertEqual(build_directory, cmake_cache["CMAKE_MODULE_PATH:" + type_str])
+        self.assertNotIn("CMAKE_PREFIX_PATH", cmake_cache_keys)
+
+    def test_find_library_paths(self):
+        #self.skipTest("Disabled")
+        configure_out, cmake_cache, cmake_cache_keys, _, _ = self._run_configure()
+
+        self.assertIn(">> CMAKE_INCLUDE_PATH: ", configure_out)
+        self.assertIn(">> CMAKE_LIBRARY_PATH: ", configure_out)
+
+        self.assertNotIn("CMAKE_INCLUDE_PATH", cmake_cache_keys)
+        self.assertNotIn("CMAKE_LIBRARY_PATH", cmake_cache_keys)
+
+        # TODO: We need a test using dependencies
