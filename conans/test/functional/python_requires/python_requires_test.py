@@ -442,7 +442,7 @@ class PkgTest(base.MyConanfileBase):
             """)
         client.save({"conanfile.py": reuse})
         client.run("create . Pkg/0.1@lasote/testing", assert_error=True)
-        self.assertIn("ERROR: Package recipe exported with name Pkg!=Base", client.out)
+        self.assertIn("ERROR: Package recipe with name Pkg!=Base", client.out)
 
         reuse = textwrap.dedent("""
             from conans import python_requires
