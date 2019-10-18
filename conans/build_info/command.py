@@ -10,13 +10,17 @@ from conans.util.files import save
 from conans.client.output import ConanOutput
 
 
+class ArgumentParserError(Exception):
+    pass
+
+
 class ErrorCatchingArgumentParser(argparse.ArgumentParser):
     def exit(self, status=0, message=None):
         if status:
-            return argparse.ArgumentError(f"Exiting because of an error: {message}")
+            raise ArgumentParserError(f"Exiting because of an error: {message}")
 
-    def error(self, message=""):
-        return argparse.ArgumentError(message)
+    def error(self, message):
+        raise ArgumentParserError(message)
 
 
 def run():
@@ -47,7 +51,7 @@ def run():
         except Exception as exc:
             exc_v1 = exc
             pass
-    except argparse.ArgumentError as exc:
+    except ArgumentParserError as exc:
         exc_v1 = exc
         pass
 
@@ -103,21 +107,22 @@ def run():
             if args.subcommand == "publish":
                 publish(args.build_info_file, args.url, args.user, args.password,
                                    args.apikey)
-        except argparse.ArgumentError as exc:
+        except ArgumentParserError as exc:
             exc_v2 = exc
         except ConanException as exc:
-            raise exc
+            print(exc)
+            exit(1)
 
     if exc_v1 and exc_v2:
-        output.error("Error executing conan_build_info. There are two possible uses:")
-        output.info("Extracting build information from conan traces (in deprecation):")
+        output.error("Error executing conan_build_info. There are two possible uses:\n")
+        output.info("Extracting build information from conan traces (in deprecation):\n")
         output.error(str(exc_v1))
         parser_v1.print_help()
         output.info("Calculating build info from collected information and lockfiles "
-                    "(recommended use):")
+                    "(recommended use):\n")
         output.error(str(exc_v2))
         parser_v2.print_help()
-
+        exit(1)
 
 if __name__ == "__main__":
     run()
