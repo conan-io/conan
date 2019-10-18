@@ -186,13 +186,13 @@ class ConanApp(object):
                                             self.out)
 
         self.proxy = ConanProxy(self.cache, self.out, self.remote_manager)
-        resolver = RangeResolver(self.cache, self.remote_manager)
-        self.python_requires = ConanPythonRequire(self.proxy, resolver)
+        self.range_resolver = RangeResolver(self.cache, self.remote_manager)
+        self.python_requires = ConanPythonRequire(self.proxy, self.range_resolver)
         self.loader = ConanFileLoader(self.runner, self.out, self.python_requires)
 
         self.binaries_analyzer = GraphBinariesAnalyzer(self.cache, self.out, self.remote_manager)
         self.graph_manager = GraphManager(self.out, self.cache, self.remote_manager, self.loader,
-                                          self.proxy, resolver, self.binaries_analyzer)
+                                          self.proxy, self.range_resolver, self.binaries_analyzer)
 
     def load_remotes(self, remote_name=None, update=False, check_updates=False):
         remotes = self.cache.registry.load_remotes()
