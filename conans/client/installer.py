@@ -15,7 +15,7 @@ from conans.client.source import complete_recipe_sources, config_source
 from conans.client.tools.env import pythonpath
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
                            conanfile_exception_formatter)
-from conans.model.build_info import CppInfo, DepsCppInfo
+from conans.model.build_info import CppInfo
 from conans.model.conan_file import get_env_context_manager
 from conans.model.editable_layout import EditableLayout
 from conans.model.env_info import EnvInfo
@@ -444,7 +444,6 @@ class BinaryInstaller(object):
 
     @staticmethod
     def propagate_info(node):
-        node.conanfile.deps_cpp_info = DepsCppInfo()
         # Get deps_cpp_info from upstream nodes
         node_order = [n for n in node.public_closure if n.binary != BINARY_SKIP]
         # List sort is stable, will keep the original order of the closure, but prioritize levels
