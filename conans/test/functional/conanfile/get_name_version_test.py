@@ -89,7 +89,7 @@ class GetVersionNameTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile})
         client.run("export .", assert_error=True)
         self.assertIn("ERROR: conanfile.py: Error in get_name() method, line 5", client.out)
-        self.assertIn("NameError: global name 'error' is not defined", client.out)
+        self.assertIn("name 'error' is not defined", client.out)
         conanfile = textwrap.dedent("""
            from conans import ConanFile
            class Lib(ConanFile):
