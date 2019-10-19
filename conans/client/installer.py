@@ -15,7 +15,7 @@ from conans.client.source import complete_recipe_sources, config_source
 from conans.client.tools.env import pythonpath
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
                            conanfile_exception_formatter)
-from conans.model.build_info import CppInfo
+from conans.model.build_info import CppInfo, DepsCppInfo
 from conans.model.conan_file import get_env_context_manager
 from conans.model.editable_layout import EditableLayout
 from conans.model.env_info import EnvInfo
@@ -318,8 +318,8 @@ class BinaryInstaller(object):
                     raise_package_not_found_error(conan_file, ref, package_id, dependencies,
                                                   out=output, recorder=self._recorder)
 
-                self._propagate_info(node)
                 if node.binary == BINARY_EDITABLE:
+                    self.propagate_info(node)
                     self._handle_node_editable(node, graph_info)
                 else:
                     if node.binary == BINARY_SKIP:  # Privates not necessary
@@ -331,7 +331,7 @@ class BinaryInstaller(object):
                     self._handle_node_cache(node, keep_build, processed_package_refs, remotes)
 
         # Finally, propagate information to root node (ref=None)
-        self._propagate_info(root_node)
+        self.propagate_info(root_node)
 
     @staticmethod
     def _node_concurrently_installed(node, package_folder):
@@ -393,6 +393,7 @@ class BinaryInstaller(object):
                 processed_package_references.add(pref)
                 if node.binary == BINARY_BUILD:
                     assert node.prev is None, "PREV for %s to be built should be None" % str(pref)
+                    self.propagate_info(node)
                     with set_dirty_context_manager(package_folder):
                         pref = self._build_package(node, output, keep_build, remotes)
                     assert node.prev, "Node PREV shouldn't be empty"
@@ -442,7 +443,8 @@ class BinaryInstaller(object):
         return pref
 
     @staticmethod
-    def _propagate_info(node):
+    def propagate_info(node):
+        node.conanfile.deps_cpp_info = DepsCppInfo()
         # Get deps_cpp_info from upstream nodes
         node_order = [n for n in node.public_closure if n.binary != BINARY_SKIP]
         # List sort is stable, will keep the original order of the closure, but prioritize levels
