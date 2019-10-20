@@ -472,7 +472,8 @@ class BinaryInstaller(object):
         conanfile.user_info = UserInfo()
 
         # Get deps_cpp_info from upstream nodes
-        public_deps = [name for name, req in conanfile.requires.items() if not req.private and not req.override]
+        public_deps = [name for name, req in conanfile.requires.items() if not req.private
+                       and not req.override]
         conanfile.cpp_info.public_deps = public_deps
         # Once the node is build, execute package info, so it has access to the
         # package folder and artifacts
