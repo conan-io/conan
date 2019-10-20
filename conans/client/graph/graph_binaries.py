@@ -291,14 +291,14 @@ class GraphBinariesAnalyzer(object):
             if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
                 continue
             if node.package_id == PACKAGE_ID_UNKNOWN:
-                assert node.binary is None
+                assert node.binary is None, "Node.binary should be None"
                 node.binary = BINARY_UNKNOWN
                 continue
             self._evaluate_node(node, build_mode, update, remotes)
             self._handle_private(node)
 
     def reevaluate_node(self, node, remotes, build_mode, update):
-        assert node.binary is None
+        assert node.binary == BINARY_UNKNOWN
         output = node.conanfile.output
         node._package_id = None  # Invalidate it, so it can be re-computed
         default_package_id_mode = self._cache.config.default_package_id_mode
@@ -308,6 +308,7 @@ class GraphBinariesAnalyzer(object):
         if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
             return
         assert node.package_id != PACKAGE_ID_UNKNOWN
+        node.binary = None  # Necessary to invalidate so it is properly evaluated
         self._evaluate_node(node, build_mode, update, remotes)
         output.info("Binary for updated ID from: %s" % node.binary)
         if node.binary == BINARY_BUILD:
