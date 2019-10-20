@@ -3,7 +3,7 @@ import os
 from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_MISSING,
                                        BINARY_SKIP, BINARY_UPDATE,
                                        RECIPE_EDITABLE, BINARY_EDITABLE,
-                                       RECIPE_CONSUMER, RECIPE_VIRTUAL)
+                                       RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_UNKNOWN)
 from conans.errors import NoRemoteAvailable, NotFoundException, conanfile_exception_formatter
 from conans.model.info import ConanInfo, PACKAGE_ID_UNKNOWN
 from conans.model.manifest import FileTreeManifest
@@ -156,10 +156,6 @@ class GraphBinariesAnalyzer(object):
         assert node.package_id != PACKAGE_ID_UNKNOWN, "Node.package_id shouldn't be Unknown"
         assert node.prev is None, "Node.prev should be None"
 
-        if node.package_id == PACKAGE_ID_UNKNOWN:
-            node.binary = BINARY_MISSING
-            return
-
         ref, conanfile = node.ref, node.conanfile
 
         # If it has lock
@@ -296,6 +292,7 @@ class GraphBinariesAnalyzer(object):
                 continue
             if node.package_id == PACKAGE_ID_UNKNOWN:
                 assert node.binary is None
+                node.binary = BINARY_UNKNOWN
                 continue
             self._evaluate_node(node, build_mode, update, remotes)
             self._handle_private(node)
