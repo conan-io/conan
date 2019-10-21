@@ -1,9 +1,12 @@
 import os
-from collections import namedtuple
+from collections import namedtuple, defaultdict
 
 from conans import Options
 from conans.model.conan_file import ConanFile
+from conans.model.env_info import DepsEnvInfo, EnvInfo
+from conans.model.env_info import EnvValues
 from conans.model.options import PackageOptions
+from conans.model.user_info import DepsUserInfo
 from conans.test.utils.tools import TestBufferConanOutput
 
 
@@ -19,9 +22,22 @@ class MockSettings(object):
 MockOptions = MockSettings
 
 
-class MockDepsCppInfo(object):
+class MockCppInfo(object):
+    def __init__(self):
+        self.bin_paths = []
+        self.lib_paths = []
+        self.include_paths = []
+        self.libs = []
+        self.cflags = []
+        self.cppflags = []
+        self.defines = []
+        self.framework_paths = []
+
+
+class MockDepsCppInfo(defaultdict):
 
     def __init__(self):
+        super(MockDepsCppInfo, self).__init__(MockCppInfo)
         self.include_paths = []
         self.lib_paths = []
         self.libs = []
@@ -31,6 +47,11 @@ class MockDepsCppInfo(object):
         self.sharedlinkflags = []
         self.exelinkflags = []
         self.sysroot = ""
+        self.framework_paths = []
+
+    @property
+    def deps(self):
+        return self.keys()
 
 
 class MockConanfile(ConanFile):
@@ -68,7 +89,8 @@ class ConanFileMock(ConanFile):
         if options_values:
             for var, value in options_values.items():
                 self.options._data[var] = value
-        self.deps_cpp_info = namedtuple("deps_cpp_info", "sysroot")("/path/to/sysroot")
+        self.deps_cpp_info = MockDepsCppInfo()  # ("deps_cpp_info", "sysroot")("/path/to/sysroot")
+        self.deps_cpp_info.sysroot = "/path/to/sysroot"
         self.output = TestBufferConanOutput()
         self.in_local_cache = False
         self.install_folder = "myinstallfolder"
@@ -80,6 +102,10 @@ class ConanFileMock(ConanFile):
         self.should_test = True
         self.generators = []
         self.captured_env = {}
+        self.deps_env_info = DepsEnvInfo()
+        self.env_info = EnvInfo()
+        self.deps_user_info = DepsUserInfo()
+        self._conan_env_values = EnvValues()
 
     def run(self, command):
         self.command = command
