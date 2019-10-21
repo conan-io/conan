@@ -9,9 +9,10 @@ import requests
 
 from conans.client.cache.cache import ClientCache
 from conans.client.rest import response_to_str
-from conans.errors import AuthenticationException, RequestErrorException
+from conans.errors import AuthenticationException, RequestErrorException, ConanException
 from conans.model.ref import ConanFileReference
 from conans.paths import get_conan_user_home
+from conans.util.files import save
 
 
 class Artifact(namedtuple('Artifact', ["sha1", "md5", "name", "id"])):
@@ -216,6 +217,26 @@ def create_build_info(output, build_info_file, lockfile, multi_module, skip_env,
     bi.create()
 
 
+def start_build_info(output, build_name, build_number):
+    paths = ClientCache(os.path.join(get_conan_user_home(), ".conan"), output)
+    content = "artifact_property_build.name={}\n" \
+              "artifact_property_build.number={}\n".format(build_name, build_number)
+    try:
+        artifact_properties_file = paths.put_headers_path
+        save(artifact_properties_file, content)
+    except Exception:
+        raise ConanException("Can't write properties file in %s" % artifact_properties_file)
+
+
+def stop_build_info(output):
+    paths = ClientCache(os.path.join(get_conan_user_home(), ".conan"), output)
+    try:
+        artifact_properties_file = paths.put_headers_path
+        save(artifact_properties_file, "")
+    except Exception:
+        raise ConanException("Can't write properties file in %s" % artifact_properties_file)
+
+
 def publish_build_info(build_info_file, url, user, password, apikey):
     with open(build_info_file) as json_data:
         parsed_uri = urlparse(url)
@@ -234,3 +255,8 @@ def publish_build_info(build_info_file, url, user, password, apikey):
             raise AuthenticationException(response_to_str(response))
         elif response.status_code != 204:
             raise RequestErrorException(response_to_str(response))
+
+
+def update_build_info(build_info_1, build_info_2):
+    print(build_info_1, build_info_2)
+    pass

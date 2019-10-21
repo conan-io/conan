@@ -4,7 +4,8 @@ import os
 import sys
 
 from conans.build_info.conan_build_info import get_build_info
-from conans.build_info.conan_build_info_v2 import start, stop, create, update, publish
+from conans.build_info.build_info import start_build_info, stop_build_info, create_build_info, \
+    update_build_info, publish_build_info
 from conans.errors import ConanException
 from conans.util.files import save
 from conans.client.output import ConanOutput
@@ -111,18 +112,18 @@ def run():
         try:
             args = parser_v2.parse_args()
             if args.subcommand == "start":
-                start(args.build_name, args.build_number, output)
+                start_build_info(args.build_name, args.build_number, output)
             if args.subcommand == "stop":
-                stop(output)
+                stop_build_info(output)
             if args.subcommand == "create":
                 check_credential_arguments()
-                create(output, args.build_info_file, args.lockfile, args.multi_module, args.skip_env,
+                create_build_info(output, args.build_info_file, args.lockfile, args.multi_module, args.skip_env,
                        args.user, args.password, args.apikey)
             if args.subcommand == "update":
-                update(args.build_info_1, args.build_info_2, output)
+                update_build_info(args.build_info_1, args.build_info_2, output)
             if args.subcommand == "publish":
                 check_credential_arguments()
-                publish(args.build_info_file, args.url, args.user, args.password, args.apikey)
+                publish_build_info(args.build_info_file, args.url, args.user, args.password, args.apikey)
         except ArgumentParserError as exc:
             exc_v2 = exc
         except ConanException as exc:
