@@ -96,11 +96,10 @@ def decode_text(text, encoding="auto"):
     bom_length = 0
     if encoding == "auto":
         encoding, bom_length = _detect_encoding(text)
-    if encoding:
-        return text[bom_length:].decode(encoding)
-    else:
-        logger.warning("can't decode %s" % str(text))
-        return text.decode("utf-8", "ignore")  # Ignore not compatible characters
+        if encoding is None:
+            logger.warning("can't decode %s" % str(text))
+            return text.decode("utf-8", "ignore")  # Ignore not compatible characters
+    return text[bom_length:].decode(encoding)
 
 
 def touch(fname, times=None):
