@@ -37,6 +37,6 @@ def update(build_info_1, build_info_2, output):
     pass
 
 
-def publish(output, build_info_file, url, user, password, apikey):
+def publish(build_info_file, url, user, password, apikey):
     publish_build_info(build_info_file, url, user, password, apikey)
 
