@@ -58,7 +58,11 @@ class CMakeToolchain:
             
             # We need to reset these values because Conan is appending to them
             set(CMAKE_CXX_FLAGS "")
+            set(CMAKE_CXX_FLAGS_DEBUG "")
+            set(CMAKE_CXX_FLAGS_RELEASE "")
             set(CMAKE_C_FLAGS "")
+            set(CMAKE_C_FLAGS_DEBUG "")
+            set(CMAKE_C_FLAGS_RELEASE "")
 
             # We are going to adjust automagically many things as requested by Conan
             #   these are the things done by 'conan_basic_setup()'
