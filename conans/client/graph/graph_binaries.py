@@ -2,7 +2,8 @@ import os
 
 from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_MISSING,
                                        BINARY_UPDATE, RECIPE_EDITABLE, BINARY_EDITABLE,
-                                       RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP)
+                                       RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP, BINARY_UNKNOWN)
+
 from conans.errors import NoRemoteAvailable, NotFoundException, conanfile_exception_formatter
 from conans.model.info import ConanInfo, PACKAGE_ID_UNKNOWN
 from conans.model.manifest import FileTreeManifest
@@ -155,10 +156,6 @@ class GraphBinariesAnalyzer(object):
         assert node.package_id != PACKAGE_ID_UNKNOWN, "Node.package_id shouldn't be Unknown"
         assert node.prev is None, "Node.prev should be None"
 
-        if node.package_id == PACKAGE_ID_UNKNOWN:
-            node.binary = BINARY_MISSING
-            return
-
         ref, conanfile = node.ref, node.conanfile
 
         # If it has lock
@@ -281,13 +278,14 @@ class GraphBinariesAnalyzer(object):
             if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
                 continue
             if node.package_id == PACKAGE_ID_UNKNOWN:
-                assert node.binary is None
+                assert node.binary is None, "Node.binary should be None"
+                node.binary = BINARY_UNKNOWN
                 continue
             self._evaluate_node(node, build_mode, update, remotes)
         deps_graph.mark_private_skippable(nodes_subset=nodes_subset, root=root)
 
     def reevaluate_node(self, node, remotes, build_mode, update):
-        assert node.binary is None
+        assert node.binary == BINARY_UNKNOWN
         output = node.conanfile.output
         node._package_id = None  # Invalidate it, so it can be re-computed
         default_package_id_mode = self._cache.config.default_package_id_mode
@@ -297,6 +295,7 @@ class GraphBinariesAnalyzer(object):
         if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
             return
         assert node.package_id != PACKAGE_ID_UNKNOWN
+        node.binary = None  # Necessary to invalidate so it is properly evaluated
         self._evaluate_node(node, build_mode, update, remotes)
         output.info("Binary for updated ID from: %s" % node.binary)
         if node.binary == BINARY_BUILD:

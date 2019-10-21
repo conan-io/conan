@@ -4,8 +4,8 @@ from collections import OrderedDict
 
 from conans.client.generators.text import TXTGenerator
 from conans.client.graph.build_mode import BuildMode
-from conans.client.graph.graph import BINARY_BUILD, Node,\
-    RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_EDITABLE
+from conans.client.graph.graph import BINARY_BUILD, Node, \
+    RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_EDITABLE, BINARY_UNKNOWN
 from conans.client.graph.graph_builder import DepsGraphBuilder
 from conans.errors import ConanException, conanfile_exception_formatter
 from conans.model.conan_file import get_env_context_manager
@@ -14,7 +14,6 @@ from conans.model.graph_lock import GraphLock, GraphLockFile
 from conans.model.ref import ConanFileReference
 from conans.paths import BUILD_INFO
 from conans.util.files import load
-from conans.model.info import PACKAGE_ID_UNKNOWN
 
 
 class _RecipeBuildRequires(OrderedDict):
@@ -233,8 +232,8 @@ class GraphManager(object):
             if node.recipe == RECIPE_VIRTUAL:
                 continue
             # Packages with PACKAGE_ID_UNKNOWN might be built in the future, need build requires
-            if (node.binary not in (BINARY_BUILD, BINARY_EDITABLE)
-                    and node.recipe != RECIPE_CONSUMER and node.package_id != PACKAGE_ID_UNKNOWN):
+            if (node.binary not in (BINARY_BUILD, BINARY_EDITABLE, BINARY_UNKNOWN)
+                    and node.recipe != RECIPE_CONSUMER):
                 continue
             package_build_requires = self._get_recipe_build_requires(node.conanfile)
             str_ref = str(node.ref)
