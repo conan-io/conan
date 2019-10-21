@@ -34,8 +34,8 @@ def run():
         parser_v1.add_argument("trace_path", help="Path to the conan trace log file e.g.: "
                                                   "/tmp/conan_trace.log")
         parser_v1.add_argument("--output", default=False,
-                               help="Optional file to output the JSON contents, if not specified the "
-                                    "JSON will be printed to stdout")
+                               help="Optional file to output the JSON contents, if not specified "
+                                    "the JSON will be printed to stdout")
         args = parser_v1.parse_args()
         if args.trace_path not in valid_commands and not os.path.exists(args.trace_path):
             output.error("Error, conan trace log not found! '%s'" % args.trace_path)
@@ -79,6 +79,9 @@ def run():
         parser_create.add_argument("--lockfile", type=str, required=True, help="input lockfile")
         parser_create.add_argument("--multi_module", nargs='?', default=True, help="input lockfile")
         parser_create.add_argument("--skip_env", nargs='?', default=True, help="input lockfile")
+        parser_create.add_argument("--user", type=str, nargs="?", default=None, help="user")
+        parser_create.add_argument("--password", type=str, nargs="?", default=None, help="password")
+        parser_create.add_argument("--apikey", type=str, nargs="?", default=None, help="apikey")
 
         parser_update = subparsers.add_parser("update",
                                               help="Command to update a build info json with "
@@ -92,28 +95,38 @@ def run():
         parser_publish.add_argument("build_info_file", type=str,
                                     help="build info to upload")
         parser_publish.add_argument("--url", type=str, required=True, help="url")
-        parser_publish.add_argument("--user", type=str, required=True, help="user")
+        parser_publish.add_argument("--user", type=str, nargs="?", default=None, help="user")
         parser_publish.add_argument("--password", type=str, nargs="?", default=None, help="password")
         parser_publish.add_argument("--apikey", type=str, nargs="?", default=None, help="apikey")
 
         try:
             args = parser_v2.parse_args()
             if args.subcommand == "start":
-                start(args.build_name, args.build_number)
+                start(args.build_name, args.build_number, output)
             if args.subcommand == "stop":
-                stop()
+                stop(output)
             if args.subcommand == "create":
-                create(args.build_info_file, args.lockfile, args.multi_module, args.skip_env)
+                if args.user and args.apikey:
+                    parser_v2.error("Please select one authentificacion method --user USER "
+                                    "--password PASSWORD or --apikey APIKEY")
+                if args.user and not args.password:
+                    parser_v2.error("Please specify a password")
+                create(output, args.build_info_file, args.lockfile, args.multi_module, args.skip_env,
+                       args.user, args.password, args.apikey)
             if args.subcommand == "update":
-                update(args.build_info_1, args.build_info_2)
+                update(args.build_info_1, args.build_info_2, output)
             if args.subcommand == "publish":
+                if args.user and args.apikey:
+                    parser_v2.error("Please select one authentificacion method --user USER "
+                                    "--password PASSWORD or --apikey APIKEY")
+                if args.user and not args.password:
+                    parser_v2.error("Please specify a password")
                 publish(args.build_info_file, args.url, args.user, args.password,
-                        args.apikey)
+                        args.apikey, output)
         except ArgumentParserError as exc:
             exc_v2 = exc
         except ConanException as exc:
-            print(exc)
-            exit(1)
+            output.error(exc)
 
     if exc_v1 and exc_v2:
         output.error("Error executing conan_build_info. There are two possible uses:\n")
@@ -124,7 +137,6 @@ def run():
                     "(recommended use):\n")
         output.error(str(exc_v2))
         parser_v2.print_help()
-        exit(1)
 
 
 if __name__ == "__main__":

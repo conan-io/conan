@@ -2,16 +2,16 @@ import datetime
 import json
 import os
 import re
-import sys
 from collections import defaultdict, namedtuple
 from urllib.parse import urlparse, urljoin
 
 import requests
 
 from conans.client.cache.cache import ClientCache
+from conans.client.rest import response_to_str
+from conans.errors import AuthenticationException, RequestErrorException
 from conans.model.ref import ConanFileReference
 from conans.paths import get_conan_user_home
-from conans.client.output import ConanOutput
 
 
 class Artifact(namedtuple('Artifact', ["sha1", "md5", "name", "id"])):
@@ -37,7 +37,8 @@ def _parse_profile(contents):
 
 
 class BuildInfoCreator(object):
-    def __init__(self, build_info_file, lockfile, multi_module=True, skip_env=True):
+    def __init__(self, output, build_info_file, lockfile, multi_module=True, skip_env=True,
+                 user=None, password=None, apikey=None):
         self._pref_pattern = re.compile(r"(?P<name>[^\/@#:]+)\/"
                                         r"(?P<version>[^\/@#:]+)"
                                         r"@"
@@ -46,11 +47,14 @@ class BuildInfoCreator(object):
                                         r"#(?P<rrev>[^\/@#:]+)"
                                         r":(?P<pid>[^\/@#:]+)"
                                         r"#(?P<prev>[^\/@#:]+)")
-        self._output = ConanOutput(sys.stdout, sys.stderr, True)
+        self._output = output
         self._build_info_file = build_info_file
         self._lockfile = lockfile
         self._multi_module = multi_module
         self._skip_env = skip_env
+        self._user = user
+        self._password = password
+        self._apikey = apikey
         self._conan_cache = ClientCache(os.path.join(get_conan_user_home(), ".conan"), self._output)
 
     def parse_pref(self, pref):
@@ -88,11 +92,16 @@ class BuildInfoCreator(object):
                 uri=parsed_uri)
             request_url = urljoin(base_url, "{}/conan_sources.tgz".format(request_path))
             response = requests.get(request_url)
-            if response:
+            if response.status_code == 200:
                 data = response.json()
                 ret[data["checksums"]["sha1"]] = {"md5": data["checksums"],
                                                   "name": "conan_sources.tgz",
                                                   "id": None}
+            elif response.status_code == 401:
+                raise AuthenticationException(response_to_str(response))
+            else:
+                raise RequestErrorException(response_to_str(response))
+
         return set([Artifact(k, **v) for k, v in ret.items()])
 
     def _get_recipe_artifacts(self, pref, add_prefix, use_id):
@@ -194,6 +203,6 @@ class BuildInfoCreator(object):
             f.write(json.dumps(ret, indent=4, default=dump_custom_types))
 
 
-def create_build_info(build_info_file, lockfile, multi_module, skip_env):
-    bi = BuildInfoCreator(build_info_file, lockfile, multi_module, skip_env)
+def create_build_info(output, build_info_file, lockfile, multi_module, skip_env, user, password, apikey):
+    bi = BuildInfoCreator(output, build_info_file, lockfile, multi_module, skip_env, user, password, apikey)
     bi.create()
