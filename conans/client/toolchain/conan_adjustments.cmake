@@ -187,6 +187,7 @@ endmacro()
 
 macro(conan_set_vs_runtime)
     if(CONAN_LINK_RUNTIME)
+        conan_message(STATUS "Conan: Adjusting runtime: ${CONAN_LINK_RUNTIME}")
         foreach(flag CMAKE_C_FLAGS_RELEASE CMAKE_CXX_FLAGS_RELEASE
                      CMAKE_C_FLAGS_RELWITHDEBINFO CMAKE_CXX_FLAGS_RELWITHDEBINFO
                      CMAKE_C_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_MINSIZEREL)

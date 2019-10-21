@@ -74,7 +74,7 @@ class CMakeToolchain:
             
             #conan_check_compiler()
             conan_set_libcxx()
-            #conan_set_vs_runtime()
+            conan_set_vs_runtime()
             conan_set_find_paths()
             conan_set_find_library_paths()
             
@@ -116,7 +116,7 @@ class CMakeToolchain:
 
         generator = generator or get_generator(self._conanfile.settings)
         self._context = {
-            "conan_adjustements_cmake": self.conan_adjustements,
+            "conan_adjustements_cmake": self.conan_adjustements.replace("\\", "/"),
             #"build_type": build_type or self._conanfile.settings.get_safe("build_type"),
             #"generator": generator,
             "generator_platform": generator_platform or
