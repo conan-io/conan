@@ -55,14 +55,6 @@ class CMakeToolchain:
         if(NOT _CMAKE_IN_TRY_COMPILE)
             message(">>>> NOT TRY COMPILE")
             include("{{conan_adjustements_cmake}}")
-            
-            # We need to reset these values because Conan is appending to them
-            set(CMAKE_CXX_FLAGS "")
-            set(CMAKE_CXX_FLAGS_DEBUG "")
-            set(CMAKE_CXX_FLAGS_RELEASE "")
-            set(CMAKE_C_FLAGS "")
-            set(CMAKE_C_FLAGS_DEBUG "")
-            set(CMAKE_C_FLAGS_RELEASE "")
 
             # We are going to adjust automagically many things as requested by Conan
             #   these are the things done by 'conan_basic_setup()'
@@ -82,8 +74,8 @@ class CMakeToolchain:
             conan_set_find_paths()
             conan_set_find_library_paths()
             
-            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}" CACHE STRING "" FORCE)
-            set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}" CACHE STRING "" FORCE)
+            set(CMAKE_CXX_FLAGS_INIT "${CONAN_CXX_FLAGS}" CACHE STRING "" FORCE)
+            set(CMAKE_C_FLAGS_INIT "${CONAN_C_FLAGS}" CACHE STRING "" FORCE)
         else()
             # message(">>>> TRY COMPILE")
         endif()
