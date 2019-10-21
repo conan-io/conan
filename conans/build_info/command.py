@@ -117,13 +117,14 @@ def run():
                 stop_build_info(output)
             if args.subcommand == "create":
                 check_credential_arguments()
-                create_build_info(output, args.build_info_file, args.lockfile, args.multi_module, args.skip_env,
-                       args.user, args.password, args.apikey)
+                create_build_info(output, args.build_info_file, args.lockfile, args.multi_module,
+                                  args.skip_env, args.user, args.password, args.apikey)
             if args.subcommand == "update":
-                update_build_info(args.build_info_1, args.build_info_2, output)
+                update_build_info(args.build_info_1, args.build_info_2)
             if args.subcommand == "publish":
                 check_credential_arguments()
-                publish_build_info(args.build_info_file, args.url, args.user, args.password, args.apikey)
+                publish_build_info(args.build_info_file, args.url, args.user, args.password,
+                                   args.apikey)
         except ArgumentParserError as exc:
             exc_v2 = exc
         except ConanException as exc:
