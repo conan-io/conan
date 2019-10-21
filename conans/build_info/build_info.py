@@ -71,19 +71,19 @@ class BuildInfoCreator(object):
     def _get_metadata_artifacts(self, metadata, request_path, use_id=False, name_format="{}",
                                 package_id=None):
         ret = {}
-        have_sources = False
+        need_sources = False
         if package_id:
             data = metadata.packages[package_id].checksums
         else:
             data = metadata.recipe.checksums
-            have_sources = "conan_sources.tgz" in data
+            need_sources = not ("conan_sources.tgz" in data)
 
         for name, value in data.items():
             name_or_id = name_format.format(name)
             ret[value["sha1"]] = {"md5": value["md5"],
                                   "name": name_or_id if not use_id else None,
                                   "id": name_or_id if use_id else None}
-        if not have_sources:
+        if need_sources:
             remote_name = metadata.recipe.remote
             remotes = self._conan_cache.registry.load_remotes()
             remote_url = remotes[remote_name].url
@@ -91,7 +91,13 @@ class BuildInfoCreator(object):
             base_url = "{uri.scheme}://{uri.netloc}/artifactory/api/storage/conan/".format(
                 uri=parsed_uri)
             request_url = urljoin(base_url, "{}/conan_sources.tgz".format(request_path))
-            response = requests.get(request_url)
+            if self._user and self._password:
+                response = requests.get(request_url, auth=(self._user, self._password))
+            elif self._apikey:
+                response = requests.get(request_url, headers={"X-JFrog-Art-Api": self._apikey})
+            else:
+                response = requests.get(request_url)
+
             if response.status_code == 200:
                 data = response.json()
                 ret[data["checksums"]["sha1"]] = {"md5": data["checksums"],
@@ -203,6 +209,28 @@ class BuildInfoCreator(object):
             f.write(json.dumps(ret, indent=4, default=dump_custom_types))
 
 
-def create_build_info(output, build_info_file, lockfile, multi_module, skip_env, user, password, apikey):
-    bi = BuildInfoCreator(output, build_info_file, lockfile, multi_module, skip_env, user, password, apikey)
+def create_build_info(output, build_info_file, lockfile, multi_module, skip_env, user, password,
+                      apikey):
+    bi = BuildInfoCreator(output, build_info_file, lockfile, multi_module, skip_env, user, password,
+                          apikey)
     bi.create()
+
+
+def publish_build_info(build_info_file, url, user, password, apikey):
+    with open(build_info_file) as json_data:
+        parsed_uri = urlparse(url)
+        request_url = "{uri.scheme}://{uri.netloc}/artifactory/api/build".format(uri=parsed_uri)
+        if user and password:
+            response = requests.put(request_url, headers={"Content-Type": "application/json"},
+                                    data=json_data, auth=(user, password))
+        elif apikey:
+            response = requests.put(request_url, headers={"Content-Type": "application/json",
+                                                          "X-JFrog-Art-Api": apikey},
+                                    data=json_data)
+        else:
+            response = requests.put(request_url)
+
+        if response.status_code == 401:
+            raise AuthenticationException(response_to_str(response))
+        elif response.status_code != 204:
+            raise RequestErrorException(response_to_str(response))

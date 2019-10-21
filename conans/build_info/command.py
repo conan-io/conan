@@ -99,6 +99,15 @@ def run():
         parser_publish.add_argument("--password", type=str, nargs="?", default=None, help="password")
         parser_publish.add_argument("--apikey", type=str, nargs="?", default=None, help="apikey")
 
+        def check_credential_arguments():
+            if args.user and args.apikey:
+                parser_v2.error("Please select one authentificacion method --user USER "
+                                "--password PASSWORD or --apikey APIKEY")
+            if args.user and not args.password:
+                parser_v2.error(
+                    "Please specify a password for user '{}' with --password PASSWORD".format(
+                        args.user))
+
         try:
             args = parser_v2.parse_args()
             if args.subcommand == "start":
@@ -106,23 +115,14 @@ def run():
             if args.subcommand == "stop":
                 stop(output)
             if args.subcommand == "create":
-                if args.user and args.apikey:
-                    parser_v2.error("Please select one authentificacion method --user USER "
-                                    "--password PASSWORD or --apikey APIKEY")
-                if args.user and not args.password:
-                    parser_v2.error("Please specify a password")
+                check_credential_arguments()
                 create(output, args.build_info_file, args.lockfile, args.multi_module, args.skip_env,
                        args.user, args.password, args.apikey)
             if args.subcommand == "update":
                 update(args.build_info_1, args.build_info_2, output)
             if args.subcommand == "publish":
-                if args.user and args.apikey:
-                    parser_v2.error("Please select one authentificacion method --user USER "
-                                    "--password PASSWORD or --apikey APIKEY")
-                if args.user and not args.password:
-                    parser_v2.error("Please specify a password")
-                publish(args.build_info_file, args.url, args.user, args.password,
-                        args.apikey, output)
+                check_credential_arguments()
+                publish(args.build_info_file, args.url, args.user, args.password, args.apikey)
         except ArgumentParserError as exc:
             exc_v2 = exc
         except ConanException as exc:
