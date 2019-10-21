@@ -15,6 +15,7 @@ from conans.client.build.cmake_flags import get_generator, get_generator_platfor
 class CMakeToolchain:
     filename = "conan_toolchain.cmake"
     conan_adjustements = os.path.join(os.path.dirname(__file__), "conan_adjustments.cmake")
+    conan_project_include = os.path.join(os.path.dirname(__file__), "conan_project_include.cmake")
 
     _template = textwrap.dedent("""
         # Conan generated toolchain file
@@ -54,7 +55,8 @@ class CMakeToolchain:
         get_property( _CMAKE_IN_TRY_COMPILE GLOBAL PROPERTY IN_TRY_COMPILE )
         if(NOT _CMAKE_IN_TRY_COMPILE)
             message(">>>> NOT TRY COMPILE")
-            include("{{conan_adjustements_cmake}}")
+            set(CMAKE_PROJECT_INCLUDE "{{ conan_project_include_cmake }}")  # Will be executed after the project
+            include("{{ conan_adjustements_cmake }}")
 
             # We are going to adjust automagically many things as requested by Conan
             #   these are the things done by 'conan_basic_setup()'
@@ -70,7 +72,7 @@ class CMakeToolchain:
             
             #conan_check_compiler()
             conan_set_libcxx()
-            conan_set_vs_runtime()
+            #conan_set_vs_runtime()  # This goes to the after-project() command call
             conan_set_find_paths()
             conan_set_find_library_paths()
             
@@ -115,6 +117,7 @@ class CMakeToolchain:
         generator = generator or get_generator(self._conanfile.settings)
         self._context = {
             "conan_adjustements_cmake": self.conan_adjustements.replace("\\", "/"),
+            "conan_project_include_cmake": self.conan_project_include.replace("\\", "/"),
             #"build_type": build_type or self._conanfile.settings.get_safe("build_type"),
             #"generator": generator,
             "generator_platform": generator_platform or

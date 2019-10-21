@@ -187,17 +187,18 @@ endmacro()
 
 macro(conan_set_vs_runtime)
     if(CONAN_LINK_RUNTIME)
+        set(CONAN_LINK_RUNTIME_REPLACEMENT ${CONAN_LINK_RUNTIME})
+        if(CONAN_LINK_RUNTIME_REPLACEMENT MATCHES ".*d$")
+            string(REGEX REPLACE "d$" "" CONAN_LINK_RUNTIME_REPLACEMENT "${CONAN_LINK_RUNTIME_REPLACEMENT}")
+        endif()
+
         conan_message(STATUS "Conan: Adjusting runtime: ${CONAN_LINK_RUNTIME}")
         foreach(flag CMAKE_C_FLAGS_RELEASE CMAKE_CXX_FLAGS_RELEASE
                      CMAKE_C_FLAGS_RELWITHDEBINFO CMAKE_CXX_FLAGS_RELWITHDEBINFO
-                     CMAKE_C_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_MINSIZEREL)
+                     CMAKE_C_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_MINSIZEREL
+                     CMAKE_C_FLAGS_DEBUG CMAKE_CXX_FLAGS_DEBUG)
             if(DEFINED ${flag})
-                string(REPLACE "/MD" ${CONAN_LINK_RUNTIME} ${flag} "${${flag}}")
-            endif()
-        endforeach()
-        foreach(flag CMAKE_C_FLAGS_DEBUG CMAKE_CXX_FLAGS_DEBUG)
-            if(DEFINED ${flag})
-                string(REPLACE "/MDd" ${CONAN_LINK_RUNTIME} ${flag} "${${flag}}")
+                string(REPLACE "/MD" ${CONAN_LINK_RUNTIME_REPLACEMENT} ${flag} "${${flag}}")
             endif()
         endforeach()
     endif()

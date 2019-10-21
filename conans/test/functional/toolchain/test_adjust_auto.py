@@ -119,7 +119,7 @@ class AdjustAutoTestCase(unittest.TestCase):
         project(App C CXX)
         
         if(NOT CMAKE_TOOLCHAIN_FILE)
-            message(">> Using toolchain")
+            message(">> Not using toolchain")
             include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
             conan_basic_setup()
         endif()
