@@ -837,7 +837,18 @@ servers["r2"] = TestServer()
             added_modules = set(sys.modules).difference(old_modules)
             for added in added_modules:
                 sys.modules.pop(added, None)
+        self._handle_cli_result(command, assert_error=assert_error, error=error)
+        return error
 
+    def run_command(self, command, cwd=None, assert_error=False):
+        output = TestBufferConanOutput()
+        self.out = output
+        runner = ConanRunner(output=output)
+        ret = runner(command, cwd=cwd or self.current_folder)
+        self._handle_cli_result(command, assert_error=assert_error, error=ret)
+        return ret
+
+    def _handle_cli_result(self, command, assert_error, error):
         if (assert_error and not error) or (not assert_error and error):
             if assert_error:
                 msg = " Command succeeded (failure expected): "
@@ -847,18 +858,10 @@ servers["r2"] = TestServer()
                 header='{:-^80}'.format(msg),
                 output_header='{:-^80}'.format(" Output: "),
                 output_footer='-'*80,
-                cmd=command_line,
+                cmd=command,
                 output=self.out
             )
             raise Exception(exc_message)
-
-        return error
-
-    def run_command(self, command, cwd=None):
-        output = TestBufferConanOutput()
-        self.out = output
-        runner = ConanRunner(output=output)
-        return runner(command, cwd=cwd or self.current_folder)
 
     def save(self, files, path=None, clean_first=False):
         """ helper metod, will store files in the current folder
