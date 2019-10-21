@@ -557,7 +557,7 @@ class Command(object):
             conan_home = self._conan.config_home()
             self._out.info(conan_home)
             if args.json:
-                self._outputer.json_output(conan_home, args.json, os.getcwd())
+                self._outputer.json_output({"home": conan_home}, args.json, os.getcwd())
             return conan_home
         elif args.subcommand == "install":
             verify_ssl = get_bool_from_text(args.verify_ssl)
