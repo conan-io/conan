@@ -49,6 +49,9 @@ class ClientCommonRouter(object):
             url += "?%s" % urlencode({"q": query})
         return self.base_url + url
 
+    def oauth_authenticate(self):
+        return self.base_url + routes.oauth_authenticate
+
     def common_authenticate(self):
         return self.base_url + routes.common_authenticate
 
@@ -84,7 +87,7 @@ class ClientV1Router(ClientCommonRouter):
 
     def package_snapshot(self, pref):
         """get recipe manifest url"""
-        return self.base_url + self._for_package(pref.copy_clear_rev())
+        return self.base_url + self._for_package(pref.copy_clear_revs())
 
     def recipe_manifest(self, ref):
         """get recipe manifest url"""
@@ -92,7 +95,7 @@ class ClientV1Router(ClientCommonRouter):
 
     def package_manifest(self, pref):
         """get manifest url"""
-        return self.base_url + _format_pref(routes.v1_package_digest, pref.copy_clear_rev())
+        return self.base_url + _format_pref(routes.v1_package_digest, pref.copy_clear_revs())
 
     def recipe_download_urls(self, ref):
         """ urls to download the recipe"""

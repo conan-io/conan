@@ -10,7 +10,7 @@ def users_list(localdb_file, remotes):
     remotes_info = []
     for remote in remotes:
         user_info = {}
-        user, token = localdb.get_login(remote.url)
+        user, token, _ = localdb.get_login(remote.url)
         user_info["name"] = remote.name
         user_info["user_name"] = user
         user_info["authenticated"] = True if token else False
@@ -20,7 +20,7 @@ def users_list(localdb_file, remotes):
 
 def token_present(localdb_file, remote, user):
     localdb = LocalDB.create(localdb_file)
-    current_user, token = localdb.get_login(remote.url)
+    current_user, token, _ = localdb.get_login(remote.url)
     return token is not None and (user is None or user == current_user)
 
 
@@ -33,10 +33,10 @@ def user_set(localdb_file, user, remote_name=None):
 
     if user.lower() == "none":
         user = None
-    return update_localdb(localdb, user, None, remote_name)
+    return update_localdb(localdb, user, token=None, refresh_token=None, remote=remote_name)
 
 
-def update_localdb(localdb, user, token, remote):
+def update_localdb(localdb, user, token, refresh_token, remote):
     previous_user = localdb.get_username(remote.url)
-    localdb.set_login((user, token), remote.url)
+    localdb.store(user, token, refresh_token, remote.url)
     return remote.name, previous_user, user

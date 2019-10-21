@@ -230,3 +230,11 @@ class PackageCacheLayout(object):
             return sorted([path for path in os.listdir(abs_path) if not discarded_file(path)])
         else:
             return load(abs_path)
+
+    def packages_ids(self):
+        packages_folder = self.packages()
+        if os.path.exists(packages_folder):
+            pkg_ids = [d for d in os.listdir(packages_folder)]
+        else:
+            pkg_ids = []
+        return pkg_ids

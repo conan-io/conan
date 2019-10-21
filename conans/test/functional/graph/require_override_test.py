@@ -1,28 +1,7 @@
+import textwrap
 import unittest
 
-from conans.test.utils.tools import TestClient
-
-base_conanfile = """
-from conans import ConanFile
-
-class ChatConan(ConanFile):
-    name = "%s"
-    version = "%s"
-    build_policy = "missing"
-    requires = %s
-"""
-
-base_conanfile_method = """
-from conans import ConanFile
-
-class ChatConan(ConanFile):
-    name = "%s"
-    version = "%s"
-    build_policy = "missing"
-    
-    def requirements(self):
-        %s
-"""
+from conans.test.utils.tools import TestClient, GenConanfile
 
 
 class RequireOverrideTest(unittest.TestCase):
@@ -30,49 +9,56 @@ class RequireOverrideTest(unittest.TestCase):
     def setUp(self):
         self.client = TestClient()
 
-    def _save(self, name, version, req_method, requires=None):
-        reqs = []
-        if not req_method:
-            requires = requires or []
-            text = "("
-            for req in requires:
-                if isinstance(req, str):
-                    reqs.append('"%s"' % str(req))
-                else:
-                    reqs.append(str(req))
-            text += ', '.join(reqs)
-            text += ")"
-            tmp = base_conanfile % (name, version, text)
-        else:
-            requires = requires or []
-            for req in requires:
-                if isinstance(req, str):
-                    reqs.append('self.requires("%s")' % str(req))
-                else:
-                    reqs.append('self.requires("%s", override="%s")' % (req[0], req[1]))
-            text = '\n        '.join(reqs) if reqs else "pass"
-            tmp = base_conanfile_method % (name, version, text)
-        self.client.save({"conanfile.py": tmp}, clean_first=True)
-
-    def _save_and_export(self, name, version, req_method, requires=None, ):
-        self._save(name, version, req_method, requires)
-        self.client.run("export . user/channel")
+    def _save(self, req_method, requires):
+        conanfile = GenConanfile()
+        for req in requires:
+            req2, override = req if isinstance(req, tuple) else (req, False)
+            if not req_method:
+                conanfile.with_require_plain(req2, override=override)
+            else:
+                conanfile.with_requirement_plain(req2, override=override)
+        self.client.save({"conanfile.py": conanfile}, clean_first=True)
 
     def test_override(self):
+        self.client.save({"conanfile.py": GenConanfile()})
+        self.client.run("export . libA/1.0@user/channel")
+        self.client.run("export . libA/1.0@user/channel")
+
         for req_method in (False, True):
-            self._save_and_export("libA", "1.0", req_method)
-            self._save_and_export("libA", "2.0", req_method)
-            self._save_and_export("libB", "1.0", req_method, ["libA/1.0@user/channel"])
-            self._save_and_export("libC", "1.0", req_method, ["libA/2.0@user/channel"])
-            self._save("project", "1.0", req_method, ["libB/1.0@user/channel",
-                                                      "libC/1.0@user/channel"])
-            self.client.run("create . user/channel", assert_error=True)
+            self._save(req_method, ["libA/1.0@user/channel"])
+            self.client.run("export . libB/1.0@user/channel")
+            self._save(req_method, ["libA/2.0@user/channel"])
+            self.client.run("export . libC/1.0@user/channel")
+            self._save(req_method, ["libB/1.0@user/channel", "libC/1.0@user/channel"])
+            self.client.run("info .", assert_error=True)
             self.assertIn("Requirement libA/2.0@user/channel conflicts with "
                           "already defined libA/1.0@user/channel", self.client.out)
 
-            self._save("project", "1.0", req_method, ["libB/1.0@user/channel",
-                                                      "libC/1.0@user/channel",
-                                                      ("libA/1.0@user/channel", "override")])
-            self.client.run("create . user/channel")
-            self.assertIn("libA/2.0@user/channel overridden by project/1.0@user/channel",
-                          self.client.out)
+            self._save(req_method, ["libB/1.0@user/channel", "libC/1.0@user/channel",
+                                    ("libA/1.0@user/channel", "override")])
+            self.client.run("info .")
+            self.assertIn("libA/2.0@user/channel overridden", self.client.out)
+
+    def test_public_deps(self):
+        client = TestClient()
+        pkg2 = textwrap.dedent(""" 
+            from conans import ConanFile
+            class Pkg(ConanFile):
+                requires = ("pkg/0.1@user/stable", "override"),
+                def package_info(self):
+                    self.output.info("PUBLIC PKG2:%s" % self.cpp_info.public_deps)
+            """)
+        client.save({"conanfile.py": pkg2})
+        client.run("create . pkg2/0.1@user/stable")
+        self.assertIn("pkg2/0.1@user/stable: PUBLIC PKG2:[]", client.out)
+        pkg3 = textwrap.dedent(""" 
+            from conans import ConanFile
+            class Pkg(ConanFile):
+                requires = "pkg2/0.1@user/stable", ("pkg/0.1@user/stable", "override")
+                generators = "cmake"
+            """)
+        client.save({"conanfile.py": pkg3})
+        client.run("install .")
+        self.assertIn("pkg2/0.1@user/stable: PUBLIC PKG2:[]", client.out)
+        conanbuildinfo = client.load("conanbuildinfo.cmake")
+        self.assertIn("set(CONAN_DEPENDENCIES pkg2)", conanbuildinfo)

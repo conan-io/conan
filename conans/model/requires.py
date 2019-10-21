@@ -139,13 +139,12 @@ class Requirements(OrderedDict):
                 other_ref = other_req.ref
                 if other_ref and other_ref != req.ref:
                     down_reference_str = str(down_ref) if down_ref else ""
-                    msg = "requirement %s overridden by %s to %s " \
-                          % (req.ref, down_reference_str or "your conanfile", other_ref)
+                    msg = "%s: requirement %s overridden by %s to %s " \
+                          % (own_ref, req.ref, down_reference_str or "your conanfile", other_ref)
 
                     if error_on_override and not other_req.override:
                         raise ConanException(msg)
 
-                    msg = "%s %s" % (own_ref, msg)
                     output.warn(msg)
                     req.ref = other_ref
                     # FIXME: We should compute the intersection of version_ranges

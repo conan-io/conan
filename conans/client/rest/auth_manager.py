@@ -45,12 +45,21 @@ def input_credentials_if_unauthorized(func):
                     self._user_io.out.info('If you don\'t have an account sign up here: '
                                            'https://bintray.com/signup/oss')
                 return retry_with_new_token(self, *args, **kwargs)
+            elif self._rest_client.token and self._rest_client.refresh_token:
+                # If we have a refresh token try to refresh the access token
+                try:
+                    self.authenticate(self.user, None)
+                except AuthenticationException as exc:
+                    logger.info("Cannot refresh the token, cleaning and retrying: {}".format(exc))
+                    self._clear_user_tokens(self.user)
+                # Set custom headers of mac_digest and username
+                self.set_custom_headers(self.user)
+                return wrapper(self, *args, **kwargs)
             else:
                 # Token expired or not valid, so clean the token and repeat the call
                 # (will be anonymous call but exporting who is calling)
                 logger.info("Token expired or not valid, cleaning the saved token and retrying")
-                self._store_login((self.user, None))
-                self._rest_client.token = None
+                self._clear_user_tokens(self.user)
                 # Set custom headers of mac_digest and username
                 self.set_custom_headers(self.user)
                 return wrapper(self, *args, **kwargs)
@@ -62,7 +71,7 @@ def input_credentials_if_unauthorized(func):
         for _ in range(LOGIN_RETRIES):
             user, password = self._user_io.request_login(self._remote.name, self.user)
             try:
-                token, _, _, _ = self.authenticate(user, password)
+                self.authenticate(user, password)
             except AuthenticationException:
                 if self.user is None:
                     self._user_io.out.error('Wrong user or password')
@@ -72,8 +81,6 @@ def input_credentials_if_unauthorized(func):
                     self._user_io.out.info(
                         'You can change username with "conan user <username>"')
             else:
-                logger.debug("Got token")
-                self._rest_client.token = token
                 self.user = user
                 # Set custom headers of mac_digest and username
                 self.set_custom_headers(user)
@@ -100,11 +107,14 @@ class ConanApiAuthManager(object):
         self._remote = remote
         self._rest_client.remote_url = remote.url
         self._rest_client.verify_ssl = remote.verify_ssl
-        self.user, self._rest_client.token = self._localdb.get_login(remote.url)
+        tmp = self._localdb.get_login(remote.url)
+        self.user, self._rest_client.token, self._rest_client.refresh_token = tmp
 
-    def _store_login(self, login):
+    def _clear_user_tokens(self, user):
+        self._rest_client.refresh_token = None
+        self._rest_client.token = None
         try:
-            self._localdb.set_login(login, self._remote.url)
+            self._localdb.store(user, token=None, refresh_token=None, remote_url=self._remote.url)
         except Exception as e:
             self._user_io.out.error(
                 'Your credentials could not be stored in local cache\n')
@@ -221,10 +231,14 @@ class ConanApiAuthManager(object):
                 user = prev_user
 
         try:
-            token = self._rest_client.authenticate(user, password)
+            token, refresh_token = self._rest_client.authenticate(user, password)
         except UnicodeDecodeError:
             raise ConanException("Password contains not allowed symbols")
 
         # Store result in DB
-        remote_name, prev_user, user = update_localdb(self._localdb, user, token, self._remote)
-        return token, remote_name, prev_user, user
+        remote_name, prev_user, user = update_localdb(self._localdb, user, token, refresh_token,
+                                                      self._remote)
+        self._rest_client.token = token
+        self._rest_client.refresh_token = refresh_token
+
+        return token, refresh_token, remote_name, prev_user, user

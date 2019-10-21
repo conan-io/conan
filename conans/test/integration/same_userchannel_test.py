@@ -95,15 +95,15 @@ class HelloReuseConan(ConanFile):
         self.client.run("install .", assert_error=True)
         self.assertIn("ERROR: conanfile.py (Hello/0.1): "
                       "Error in requirements() method, line 10", self.client.out)
-        self.assertIn("ConanException: CONAN_USERNAME environment "
-                      "variable not defined, but self.user is used", self.client.out)
+        self.assertIn("ConanException: user not defined, but self.user is used in"
+                      " conanfile", self.client.out)
 
         os.environ["CONAN_USERNAME"] = "lasote"
         self.client.run("install .", assert_error=True)
         self.assertIn("ERROR: conanfile.py (Hello/0.1): "
                       "Error in requirements() method, line 10", self.client.out)
-        self.assertIn("ConanException: CONAN_CHANNEL environment "
-                      "variable not defined, but self.channel is used", self.client.out)
+        self.assertIn("ConanException: channel not defined, but self.channel is used in"
+                      " conanfile", self.client.out)
 
         os.environ["CONAN_CHANNEL"] = "stable"
         self.client.run("install .")

@@ -281,8 +281,8 @@ def unzip_and_get_files(files, destination_dir, tgz_name, output):
 def uncompress_file(src_path, dest_folder, output):
     t1 = time.time()
     try:
-        with progress_bar.open_binary(src_path, desc="Decompressing %s" % os.path.basename(src_path),
-                                      output=output) as file_handler:
+        with progress_bar.open_binary(src_path, output, "Decompressing %s" % os.path.basename(
+                src_path)) as file_handler:
             tar_extract(file_handler, dest_folder)
     except Exception as e:
         error_msg = "Error while downloading/extracting files to %s\n%s\n" % (dest_folder, str(e))

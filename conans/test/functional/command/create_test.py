@@ -6,7 +6,7 @@ from parameterized.parameterized import parameterized
 
 from conans.client import tools
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
+from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID, GenConanfile
 from conans.util.files import load
 
 
@@ -35,8 +35,32 @@ PkgA/0.1@user/testing"""
         text = load(os.path.join(client.current_folder, "conanbuildinfo.txt"))
         txt = ";".join(text.splitlines())
         self.assertIn("[libs];LibB;LibA", txt)
-        cmake = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
+        cmake = client.load("conanbuildinfo.cmake")
         self.assertIn("set(CONAN_LIBS LibB LibA ${CONAN_LIBS})", cmake)
+
+    def can_override_even_versions_with_build_metadata_test(self):
+        # https://github.com/conan-io/conan/issues/5900
+
+        client = TestClient()
+        client.save({"conanfile.py":
+                    GenConanfile().with_name("libcore").with_version("1.0+abc")})
+        client.run("create .")
+        client.save({"conanfile.py":
+                    GenConanfile().with_name("libcore").with_version("1.0+xyz")})
+        client.run("create .")
+
+        client.save({"conanfile.py":
+                    GenConanfile().with_name("intermediate").
+                    with_version("1.0").with_require_plain("libcore/1.0+abc")})
+        client.run("create .")
+
+        client.save({"conanfile.py":
+                    GenConanfile().with_name("consumer").
+                    with_version("1.0").with_require_plain("intermediate/1.0").
+                    with_require_plain("libcore/1.0+xyz")})
+        client.run("create .")
+        self.assertIn("WARN: intermediate/1.0: requirement libcore/1.0+abc "
+                      "overridden by consumer/1.0 to libcore/1.0+xyz", client.out)
 
     def transitive_same_name_test(self):
         # https://github.com/conan-io/conan/issues/1366

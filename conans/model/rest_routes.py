@@ -125,5 +125,9 @@ class RestRoutes(object):
         return "users/authenticate"
 
     @property
+    def oauth_authenticate(self):
+        return "users/token"
+
+    @property
     def common_check_credentials(self):
         return "users/check_credentials"
