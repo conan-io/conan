@@ -257,6 +257,68 @@ def publish_build_info(build_info_file, url, user, password, apikey):
             raise RequestErrorException(response_to_str(response))
 
 
-def update_build_info(build_info_1, build_info_2):
-    print(build_info_1, build_info_2)
-    pass
+def find_module(build_info, module_id):
+    for it in build_info["modules"]:
+        if it["id"] == module_id:
+            return it
+    new_module = {"id": module_id, "properties": {}, "artifacts": [], "dependencies": []}
+    build_info["modules"].append(new_module)
+    return new_module
+
+
+def merge_properties(lhs, rhs):
+    ret = lhs["properties"]
+    for it, value in rhs["properties"].items():
+        if it in lhs["properties"]:
+            assert value == ret[it], "{} != {}".format(value, ret[it])
+        else:
+            ret[it] = value
+    return ret
+
+
+def merge_artifacts(lhs, rhs, key, cmp_key):
+    ret = {it[cmp_key]: it for it in lhs[key]}
+    for art in rhs[key]:
+        art_cmp_key = art[cmp_key]
+        if art_cmp_key in ret:
+            assert art[cmp_key] == ret[art_cmp_key][cmp_key], \
+                "({}) {} != {} for sha1={}".format(cmp_key, art[cmp_key], ret[art_cmp_key][cmp_key],
+                                                   art_cmp_key)
+        else:
+            ret[art_cmp_key] = art
+
+    return [value for _, value in ret.items()]
+
+
+def merge_buildinfo(lhs, rhs):
+    if not lhs or not rhs:
+        return lhs or rhs
+
+    # Check they are compatible
+    assert lhs["version"] == rhs["version"]
+    assert lhs["name"] == rhs["name"]
+    assert lhs["number"] == rhs["number"]
+
+    # merge_properties(lhs, rht)  # TODO: Environment coming from different machines
+
+    for rhs_module in rhs["modules"]:
+        lhs_module = find_module(lhs, rhs_module["id"])
+        lhs_module["properties"] = merge_properties(lhs_module, rhs_module)
+        lhs_module["artifacts"] = merge_artifacts(lhs_module, rhs_module, key="artifacts",
+                                                  cmp_key="name")
+        lhs_module["dependencies"] = merge_artifacts(lhs_module, rhs_module, key="dependencies",
+                                                     cmp_key="id")
+    return lhs
+
+
+def update_build_info(buildinfo, output_file):
+    build_info = {}
+    for it in buildinfo:
+        with open(it) as json_data:
+            data = json.load(json_data)
+
+        build_info = merge_buildinfo(build_info, data)
+
+    with open(output_file, "w") as f:
+        f.write(json.dumps(build_info, indent=4))
+
