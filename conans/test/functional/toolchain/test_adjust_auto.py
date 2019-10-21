@@ -493,10 +493,9 @@ class AdjustAutoTestCase(unittest.TestCase):
         mp1_prefix = "/MP1 " if self.use_toolchain else ""
         mp1_postfix = "" if self.use_toolchain else " /MP1"
         runtime_debug = runtime + "d" if self.use_toolchain and build_type == "Release" else runtime  # FIXME: no-toolchain uses the same
-        runtime_release = runtime[:1] if self.use_toolchain and build_type == "Debug" else runtime
+        runtime_release = runtime[:2] if self.use_toolchain and build_type == "Debug" else runtime
         extra_blank = "" if self.use_toolchain else " "
-        mdd_flag = "MDd" if self.use_toolchain else "MD"  # FIXME: no-toolchain modifies it
-
+        
         if self.use_toolchain:
             self.assertIn(">> CMAKE_SHARED_LINKER_FLAGS: ", configure_out)
             self.assertIn(">> CMAKE_EXE_LINKER_FLAGS: ", configure_out)
