@@ -469,6 +469,9 @@ class AdjustAutoTestCase(unittest.TestCase):
             self.assertIn(">> CMAKE_C_FLAGS: /MP1", configure_out)
             self.assertIn(">> CMAKE_C_FLAGS_DEBUG: ", configure_out)
             self.assertIn(">> CMAKE_C_FLAGS_RELEASE: ", configure_out)
+
+            self.assertIn(">> CMAKE_SHARED_LINKER_FLAGS: ", configure_out)
+            self.assertIn(">> CMAKE_EXE_LINKER_FLAGS: ", configure_out)
         else:
             self.assertIn(">> CMAKE_CXX_FLAGS: /DWIN32 /D_WINDOWS /W3 /GR /EHsc /MP1", configure_out)
             self.assertIn(">> CMAKE_CXX_FLAGS_DEBUG: /{} /Zi /Ob0 /Od /RTC1 ".format(runtime), configure_out)  # FIXME: Same runtime for debug and release!
@@ -477,6 +480,9 @@ class AdjustAutoTestCase(unittest.TestCase):
             self.assertIn(">> CMAKE_C_FLAGS_DEBUG: /{} /Zi /Ob0 /Od /RTC1 ".format(runtime), configure_out)  # FIXME: Same runtime for debug and release
             self.assertIn(">> CMAKE_C_FLAGS_RELEASE: /{} /O2 /Ob2 /DNDEBUG ".format(runtime), configure_out)
 
+            self.assertIn(">> CMAKE_SHARED_LINKER_FLAGS: /machine:x64 ", configure_out)
+            self.assertIn(">> CMAKE_EXE_LINKER_FLAGS: /machine:x64 ", configure_out)
+
         # FIXME: Cache doesn't match those in CMakeLists
         self.assertEqual("/DWIN32 /D_WINDOWS /W3 /GR /EHsc".format(runtime), cmake_cache["CMAKE_CXX_FLAGS:STRING"])
         self.assertEqual("/MDd /Zi /Ob0 /Od /RTC1".format(runtime), cmake_cache["CMAKE_CXX_FLAGS_DEBUG:STRING"])
@@ -484,6 +490,9 @@ class AdjustAutoTestCase(unittest.TestCase):
         self.assertEqual("/DWIN32 /D_WINDOWS /W3".format(runtime), cmake_cache["CMAKE_C_FLAGS:STRING"])
         self.assertEqual("/MDd /Zi /Ob0 /Od /RTC1".format(runtime), cmake_cache["CMAKE_C_FLAGS_DEBUG:STRING"])
         self.assertEqual("/MD /O2 /Ob2 /DNDEBUG".format(runtime), cmake_cache["CMAKE_C_FLAGS_RELEASE:STRING"])
+
+        self.assertEqual("/machine:x64", cmake_cache["CMAKE_SHARED_LINKER_FLAGS:STRING"])
+        self.assertEqual("/machine:x64", cmake_cache["CMAKE_EXE_LINKER_FLAGS:STRING"])
 
         type_str = "STRING" if self.use_toolchain else "UNINITIALIZED"
         self.assertEqual("/{}".format(runtime), cmake_cache["CONAN_LINK_RUNTIME:" + type_str])
