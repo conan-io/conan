@@ -490,32 +490,32 @@ class AdjustAutoTestCase(unittest.TestCase):
         configure_out, cmake_cache, cmake_cache_keys, _, _ = self._run_configure({"compiler.runtime": runtime,
                                                                                   "build_type": build_type})
 
-        if self.use_toolchain:
-            self.assertIn(">> CMAKE_CXX_FLAGS: /MP1", configure_out)
-            self.assertIn(">> CMAKE_CXX_FLAGS_DEBUG: ", configure_out)
-            self.assertIn(">> CMAKE_CXX_FLAGS_RELEASE: ", configure_out)
-            self.assertIn(">> CMAKE_C_FLAGS: /MP1", configure_out)
-            self.assertIn(">> CMAKE_C_FLAGS_DEBUG: ", configure_out)
-            self.assertIn(">> CMAKE_C_FLAGS_RELEASE: ", configure_out)
+        mp1_prefix = "/MP1 " if self.use_toolchain else ""
+        mp1_postfix = "" if self.use_toolchain else " /MP1"
+        runtime_debug = runtime + "d" if self.use_toolchain and build_type == "Release" else runtime  # FIXME: no-toolchain uses the same
+        runtime_release = runtime[:1] if self.use_toolchain and build_type == "Debug" else runtime
+        extra_blank = "" if self.use_toolchain else " "
+        mdd_flag = "MDd" if self.use_toolchain else "MD"  # FIXME: no-toolchain modifies it
 
+        if self.use_toolchain:
             self.assertIn(">> CMAKE_SHARED_LINKER_FLAGS: ", configure_out)
             self.assertIn(">> CMAKE_EXE_LINKER_FLAGS: ", configure_out)
         else:
-            self.assertIn(">> CMAKE_CXX_FLAGS: /DWIN32 /D_WINDOWS /W3 /GR /EHsc /MP1", configure_out)
-            self.assertIn(">> CMAKE_CXX_FLAGS_DEBUG: /{} /Zi /Ob0 /Od /RTC1 ".format(runtime), configure_out)  # FIXME: Same runtime for debug and release!
-            self.assertIn(">> CMAKE_CXX_FLAGS_RELEASE: /{} /O2 /Ob2 /DNDEBUG ".format(runtime), configure_out)
-            self.assertIn(">> CMAKE_C_FLAGS: /DWIN32 /D_WINDOWS /W3 /MP1", configure_out)
-            self.assertIn(">> CMAKE_C_FLAGS_DEBUG: /{} /Zi /Ob0 /Od /RTC1 ".format(runtime), configure_out)  # FIXME: Same runtime for debug and release
-            self.assertIn(">> CMAKE_C_FLAGS_RELEASE: /{} /O2 /Ob2 /DNDEBUG ".format(runtime), configure_out)
-
             self.assertIn(">> CMAKE_SHARED_LINKER_FLAGS: /machine:x64 ", configure_out)
             self.assertIn(">> CMAKE_EXE_LINKER_FLAGS: /machine:x64 ", configure_out)
 
-        # FIXME: Cache doesn't match those in CMakeLists
+        self.assertIn(">> CMAKE_CXX_FLAGS: {}/DWIN32 /D_WINDOWS /W3 /GR /EHsc{}".format(mp1_prefix, mp1_postfix), configure_out)
+        self.assertIn(">> CMAKE_CXX_FLAGS_DEBUG: /{} /Zi /Ob0 /Od /RTC1".format(runtime_debug) + extra_blank, configure_out)  # FIXME: Same runtime for debug and release!
+        self.assertIn(">> CMAKE_CXX_FLAGS_RELEASE: /{} /O2 /Ob2 /DNDEBUG".format(runtime_release) + extra_blank, configure_out)
+        self.assertIn(">> CMAKE_C_FLAGS: {}/DWIN32 /D_WINDOWS /W3{}".format(mp1_prefix, mp1_postfix), configure_out)
+        self.assertIn(">> CMAKE_C_FLAGS_DEBUG: /{} /Zi /Ob0 /Od /RTC1".format(runtime_debug) + extra_blank, configure_out)  # FIXME: Same runtime for debug and release
+        self.assertIn(">> CMAKE_C_FLAGS_RELEASE: /{} /O2 /Ob2 /DNDEBUG".format(runtime_release) + extra_blank, configure_out)
+
         if self.use_toolchain:
-            self.assertEqual(" /MP1".format(runtime), cmake_cache["CMAKE_CXX_FLAGS:STRING"])
-            self.assertEqual(" /MP1".format(runtime), cmake_cache["CMAKE_C_FLAGS:STRING"])
+            self.assertEqual("/MP1 /DWIN32 /D_WINDOWS /W3 /GR /EHsc", cmake_cache["CMAKE_CXX_FLAGS:STRING"])
+            self.assertEqual("/MP1 /DWIN32 /D_WINDOWS /W3", cmake_cache["CMAKE_C_FLAGS:STRING"])
         else:
+            # FIXME: Cache doesn't match those in CMakeLists
             self.assertEqual("/DWIN32 /D_WINDOWS /W3 /GR /EHsc".format(runtime), cmake_cache["CMAKE_CXX_FLAGS:STRING"])
             self.assertEqual("/DWIN32 /D_WINDOWS /W3".format(runtime), cmake_cache["CMAKE_C_FLAGS:STRING"])
 
