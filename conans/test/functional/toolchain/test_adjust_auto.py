@@ -525,7 +525,19 @@ class AdjustAutoTestCase(unittest.TestCase):
     @parameterized.expand([("x86_64",), ("x86",), ])
     @unittest.skipUnless(platform.system() == "Windows", "Only windows")
     def test_arch_win(self, arch):
-        self.fail("Not implemented")
+        cache_filepath = os.path.join(self.t.current_folder, "build", "CMakeCache.txt")
+        if os.path.exists(cache_filepath):
+            os.unlink(cache_filepath)  # FIXME: Ideally this shouldn't be needed (I need it only here)
+        configure_out, cmake_cache, cmake_cache_keys, _, _ = self._run_configure({"arch": arch})
+
+        extra_blank = "" if self.use_toolchain else " "
+
+        arch_str = "x64" if arch == "x86_64" else "X86"
+        self.assertIn(">> CMAKE_SHARED_LINKER_FLAGS: /machine:{}".format(arch_str) + extra_blank, configure_out)
+        self.assertIn(">> CMAKE_EXE_LINKER_FLAGS: /machine:{}".format(arch_str) + extra_blank, configure_out)
+
+        self.assertEqual("/machine:{}".format(arch_str), cmake_cache["CMAKE_SHARED_LINKER_FLAGS:STRING"])
+        self.assertEqual("/machine:{}".format(arch_str), cmake_cache["CMAKE_EXE_LINKER_FLAGS:STRING"])
 
     @parameterized.expand([("x86_64",), ("x86",), ])
     @unittest.skipUnless(platform.system() == "Linux", "Only windows")
