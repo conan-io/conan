@@ -321,6 +321,17 @@ class AdjustAutoTestCase(unittest.TestCase):
 
         self.assertIn(">> CMAKE_CXX_FLAGS: -m64 -stdlib=libc++", configure_out)
         self.assertIn(">> CMAKE_C_FLAGS: -m64", configure_out)
+        if self.use_toolchain:
+            self.assertIn(">> CMAKE_CXX_FLAGS_DEBUG: ", configure_out)
+            self.assertIn(">> CMAKE_CXX_FLAGS_RELEASE: ", configure_out)
+            self.assertIn(">> CMAKE_C_FLAGS_DEBUG: ", configure_out)
+            self.assertIn(">> CMAKE_C_FLAGS_RELEASE: ", configure_out)
+        else:
+            self.assertIn(">> CMAKE_CXX_FLAGS_DEBUG: -g ", configure_out)
+            self.assertIn(">> CMAKE_CXX_FLAGS_RELEASE: -O3 -DNDEBUG ", configure_out)
+            self.assertIn(">> CMAKE_C_FLAGS_DEBUG: -g ", configure_out)
+            self.assertIn(">> CMAKE_C_FLAGS_RELEASE: -O3 -DNDEBUG ", configure_out)
+
         self.assertIn(">> CMAKE_SHARED_LINKER_FLAGS: -m64", configure_out)
         self.assertIn(">> CMAKE_EXE_LINKER_FLAGS: ", configure_out)
 
@@ -331,6 +342,11 @@ class AdjustAutoTestCase(unittest.TestCase):
             # FIXME: Cache doesn't match those in CMakeLists
             self.assertEqual("", cmake_cache["CMAKE_CXX_FLAGS:STRING"])
             self.assertEqual("", cmake_cache["CMAKE_C_FLAGS:STRING"])
+
+        self.assertEqual("-g", cmake_cache["CMAKE_CXX_FLAGS_DEBUG:STRING"])
+        self.assertEqual("-O3 -DNDEBUG", cmake_cache["CMAKE_CXX_FLAGS_RELEASE:STRING"])
+        self.assertEqual("-g", cmake_cache["CMAKE_C_FLAGS_DEBUG:STRING"])
+        self.assertEqual("-O3 -DNDEBUG", cmake_cache["CMAKE_C_FLAGS_RELEASE:STRING"])
 
         self.assertEqual("", cmake_cache["CMAKE_SHARED_LINKER_FLAGS:STRING"])
         self.assertEqual("", cmake_cache["CMAKE_EXE_LINKER_FLAGS:STRING"])
