@@ -169,6 +169,9 @@ class AdjustAutoTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        # This is intended as a classmethod, this way the client will use the `CMakeCache` between
+        #   builds and it will be testing that the toolchain initializes all the variables
+        #   properly (it doesn't use preexisting data)
         cls.t = TurboTestClient(path_with_spaces=False)
 
         # Prepare the actual consumer package
@@ -208,7 +211,6 @@ class AdjustAutoTestCase(unittest.TestCase):
         return configure_out, cmake_cache_items, cmake_cache_keys, build_directory, package_directory
 
     def _print_things(self, configure_out, cmake_cache):
-        return
         # TODO: Remove this functions
         print("\n".join(configure_out))
         print("*"*200)
@@ -309,9 +311,14 @@ class AdjustAutoTestCase(unittest.TestCase):
         self.assertIn(">> CMAKE_SHARED_LINKER_FLAGS: -m64", configure_out)
         self.assertIn(">> CMAKE_EXE_LINKER_FLAGS: ", configure_out)
 
-        # FIXME: Cache doesn't match those in CMakeLists
-        self.assertEqual("", cmake_cache["CMAKE_CXX_FLAGS:STRING"])
-        self.assertEqual("", cmake_cache["CMAKE_C_FLAGS:STRING"])
+        if self.use_toolchain:
+            self.assertEqual(" -m64 -stdlib=libc++", cmake_cache["CMAKE_CXX_FLAGS:STRING"])
+            self.assertEqual(" -m64", cmake_cache["CMAKE_C_FLAGS:STRING"])
+        else:
+            # FIXME: Cache doesn't match those in CMakeLists
+            self.assertEqual("", cmake_cache["CMAKE_CXX_FLAGS:STRING"])
+            self.assertEqual("", cmake_cache["CMAKE_C_FLAGS:STRING"])
+
         self.assertEqual("", cmake_cache["CMAKE_SHARED_LINKER_FLAGS:STRING"])
         self.assertEqual("", cmake_cache["CMAKE_EXE_LINKER_FLAGS:STRING"])
 

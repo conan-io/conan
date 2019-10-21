@@ -56,6 +56,10 @@ class CMakeToolchain:
             message(">>>> NOT TRY COMPILE")
             include("{{conan_adjustements_cmake}}")
             
+            # We need to reset these values because Conan is appending to them
+            set(CMAKE_CXX_FLAGS "")
+            set(CMAKE_C_FLAGS "")
+
             # We are going to adjust automagically many things as requested by Conan
             #   these are the things done by 'conan_basic_setup()'
             
@@ -74,11 +78,12 @@ class CMakeToolchain:
             conan_set_find_paths()
             conan_set_find_library_paths()
             
+            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}" CACHE STRING "" FORCE)
+            set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}" CACHE STRING "" FORCE)
         else()
-            message(">>>> TRY COMPILE")
+            # message(">>>> TRY COMPILE")
         endif()
 
-                
         {#
         # Host machine        
         set(CMAKE_SYSTEM_NAME {{host.os}})
@@ -102,7 +107,6 @@ class CMakeToolchain:
                  build_type=None,
                  toolset=None,
                  make_program=None,
-                 set_cmake_flags=False,
                  msbuild_verbosity="minimal",
                  # cmake_program=None,  # TODO: cmake program should be considered in the environment
                  generator_platform=None
@@ -126,7 +130,7 @@ class CMakeToolchain:
                                           cmake_system_name=cmake_system_name,
                                           make_program=make_program, parallel=parallel,
                                           generator=generator,
-                                          set_cmake_flags=set_cmake_flags,
+                                          set_cmake_flags=False,
                                           forced_build_type=build_type,
                                           output=self._conanfile.output)
         self.definitions = builder.get_definitions()
