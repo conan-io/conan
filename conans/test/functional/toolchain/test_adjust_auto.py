@@ -129,7 +129,11 @@ class AdjustAutoTestCase(unittest.TestCase):
 
         message(">> CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
         message(">> CMAKE_CXX_FLAGS: ${CMAKE_CXX_FLAGS}")
+        message(">> CMAKE_CXX_FLAGS_DEBUG: ${CMAKE_CXX_FLAGS_DEBUG}")
+        message(">> CMAKE_CXX_FLAGS_RELEASE: ${CMAKE_CXX_FLAGS_RELEASE}")
         message(">> CMAKE_C_FLAGS: ${CMAKE_C_FLAGS}")
+        message(">> CMAKE_C_FLAGS_DEBUG: ${CMAKE_C_FLAGS_DEBUG}")
+        message(">> CMAKE_C_FLAGS_RELEASE: ${CMAKE_C_FLAGS_RELEASE}")
         message(">> CMAKE_SHARED_LINKER_FLAGS: ${CMAKE_SHARED_LINKER_FLAGS}")
         message(">> CMAKE_EXE_LINKER_FLAGS: ${CMAKE_EXE_LINKER_FLAGS}")
 
@@ -268,11 +272,6 @@ class AdjustAutoTestCase(unittest.TestCase):
             self.assertEqual(libcxx, cmake_cache["CONAN_LIBCXX:STRING"])
 
     @parameterized.expand([("libc++",), ])
-    @unittest.skipIf(platform.system() != "Windows", "libcxx for Windows")
-    def test_libcxx_win(self, libcxx):
-        self.fail("Not implemented")
-
-    @parameterized.expand([("libc++",), ])
     @unittest.skipIf(platform.system() != "Linux", "libcxx for Linux")
     def test_libcxx_linux(self, libcxx):
         self.fail("Not implemented")
@@ -338,7 +337,25 @@ class AdjustAutoTestCase(unittest.TestCase):
 
     @unittest.skipIf(platform.system() != "Windows", "Only Windows")
     def test_ccxx_flags_win(self):
-        self.fail("Not implemented")
+        # self.skipTest("Disabled")
+        configure_out, cmake_cache, cmake_cache_keys, _, _ = self._run_configure()
+
+        if self.use_toolchain:
+            self.assertIn(">> CMAKE_CXX_FLAGS: /MP1", configure_out)
+            self.assertIn(">> CMAKE_C_FLAGS: /MP1", configure_out)
+            self.assertIn(">> CMAKE_SHARED_LINKER_FLAGS: ", configure_out)
+            self.assertIn(">> CMAKE_EXE_LINKER_FLAGS: ", configure_out)
+        else:
+            self.assertIn(">> CMAKE_CXX_FLAGS: /DWIN32 /D_WINDOWS /W3 /GR /EHsc /MP1", configure_out)
+            self.assertIn(">> CMAKE_C_FLAGS: /DWIN32 /D_WINDOWS /W3 /MP1", configure_out)
+            self.assertIn(">> CMAKE_SHARED_LINKER_FLAGS: /machine:x64 ", configure_out)
+            self.assertIn(">> CMAKE_EXE_LINKER_FLAGS: /machine:x64 ", configure_out)
+
+        # FIXME: Cache doesn't match those in CMakeLists
+        self.assertEqual("/DWIN32 /D_WINDOWS /W3 /GR /EHsc", cmake_cache["CMAKE_CXX_FLAGS:STRING"])
+        self.assertEqual("/DWIN32 /D_WINDOWS /W3", cmake_cache["CMAKE_C_FLAGS:STRING"])
+        self.assertEqual("/machine:x64", cmake_cache["CMAKE_SHARED_LINKER_FLAGS:STRING"])
+        self.assertEqual("/machine:x64", cmake_cache["CMAKE_EXE_LINKER_FLAGS:STRING"])
 
     @unittest.skipIf(platform.system() != "Linux", "Only Linux")
     def test_ccxx_flags_linux(self):
@@ -439,6 +456,35 @@ class AdjustAutoTestCase(unittest.TestCase):
 
         # TODO: We need a test using dependencies
 
-    @unittest.skipUnless(platform.system() != "Windows", "Only windows")
-    def test_vs_runtime(self):
-        self.fail("Not implemented")
+    @parameterized.expand([("Debug", "MTd",), ("Debug", "MDd"), ("Release", "MT"), ("Release", "MD")])
+    @unittest.skipUnless(platform.system() == "Windows", "Only windows")
+    def test_vs_runtime(self, build_type, runtime):
+        configure_out, cmake_cache, cmake_cache_keys, _, _ = self._run_configure({"compiler.runtime": runtime,
+                                                                                  "build_type": build_type})
+
+        if self.use_toolchain and self.in_cache:  # FIXME: wtf
+            self.assertIn(">> CMAKE_CXX_FLAGS: /MP1", configure_out)
+            self.assertIn(">> CMAKE_CXX_FLAGS_DEBUG: ", configure_out)
+            self.assertIn(">> CMAKE_CXX_FLAGS_RELEASE: ", configure_out)
+            self.assertIn(">> CMAKE_C_FLAGS: /MP1", configure_out)
+            self.assertIn(">> CMAKE_C_FLAGS_DEBUG: ", configure_out)
+            self.assertIn(">> CMAKE_C_FLAGS_RELEASE: ", configure_out)
+        else:
+            self.assertIn(">> CMAKE_CXX_FLAGS: /DWIN32 /D_WINDOWS /W3 /GR /EHsc /MP1", configure_out)
+            self.assertIn(">> CMAKE_CXX_FLAGS_DEBUG: /{} /Zi /Ob0 /Od /RTC1 ".format(runtime), configure_out)  # FIXME: Same runtime for debug and release!
+            self.assertIn(">> CMAKE_CXX_FLAGS_RELEASE: /{} /O2 /Ob2 /DNDEBUG ".format(runtime), configure_out)
+            self.assertIn(">> CMAKE_C_FLAGS: /DWIN32 /D_WINDOWS /W3 /MP1", configure_out)
+            self.assertIn(">> CMAKE_C_FLAGS_DEBUG: /{} /Zi /Ob0 /Od /RTC1 ".format(runtime), configure_out)  # FIXME: Same runtime for debug and release
+            self.assertIn(">> CMAKE_C_FLAGS_RELEASE: /{} /O2 /Ob2 /DNDEBUG ".format(runtime), configure_out)
+
+        # FIXME: Cache doesn't match those in CMakeLists
+        self.assertEqual("/DWIN32 /D_WINDOWS /W3 /GR /EHsc".format(runtime), cmake_cache["CMAKE_CXX_FLAGS:STRING"])
+        self.assertEqual("/MDd /Zi /Ob0 /Od /RTC1".format(runtime), cmake_cache["CMAKE_CXX_FLAGS_DEBUG:STRING"])
+        self.assertEqual("/MD /O2 /Ob2 /DNDEBUG".format(runtime), cmake_cache["CMAKE_CXX_FLAGS_RELEASE:STRING"])
+        self.assertEqual("/DWIN32 /D_WINDOWS /W3".format(runtime), cmake_cache["CMAKE_C_FLAGS:STRING"])
+        self.assertEqual("/MDd /Zi /Ob0 /Od /RTC1".format(runtime), cmake_cache["CMAKE_C_FLAGS_DEBUG:STRING"])
+        self.assertEqual("/MD /O2 /Ob2 /DNDEBUG".format(runtime), cmake_cache["CMAKE_C_FLAGS_RELEASE:STRING"])
+
+        type_str = "STRING" if self.use_toolchain else "UNINITIALIZED"
+        self.assertEqual("/{}".format(runtime), cmake_cache["CONAN_LINK_RUNTIME:" + type_str])
+
