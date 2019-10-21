@@ -299,6 +299,7 @@ class AdjustAutoTestCase(unittest.TestCase):
             self.assertNotIn("CMAKE_INSTALL_SBINDIR", cmake_cache_keys)
             #self.assertNotIn("CMAKE_INSTALL_PREFIX", cmake_cache_keys)  # TODO: It takes the default value '/usr/local', override to?
 
+    @unittest.skipIf(platform.system() != "Darwin", "Only MacOS")
     def test_ccxx_flags(self):
         #self.skipTest("Disabled")
         configure_out, cmake_cache, cmake_cache_keys, _, _ = self._run_configure()
