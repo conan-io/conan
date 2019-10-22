@@ -115,7 +115,7 @@ def run():
         try:
             args = parser_v2.parse_args()
             if args.subcommand == "start":
-                start_build_info(args.build_name, args.build_number, output)
+                start_build_info(output, args.build_name, args.build_number)
             if args.subcommand == "stop":
                 stop_build_info(output)
             if args.subcommand == "create":
