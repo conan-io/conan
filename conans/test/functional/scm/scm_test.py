@@ -610,10 +610,6 @@ class SVNSCMTest(SVNLocalRepoTestCase):
         self.ref = ConanFileReference.loads("lib/0.1@user/channel")
         self.client = TestClient()
 
-    def _commit_contents(self):
-        self.client.run_command("svn add *")
-        self.client.run_command('svn commit -m  "commiting"')
-
     def test_scm_other_type_ignored(self):
         conanfile = '''
 from conans import ConanFile, tools
@@ -784,7 +780,9 @@ class ConanLib(ConanFile):
 """
         self.client.save({"conanfile.py": conanfile,
                           "myfile2.txt": "My file is copied"})
-        self._commit_contents()
+        self.client.run_command("svn add myfile2.txt")
+        self.client.run_command('svn commit -m  "commiting"')
+
         self.client.run("source . --source-folder=./source2")
         # myfile2 is no in the specified commit
         self.assertFalse(os.path.exists(os.path.join(curdir, "source2", "myfile2.txt")))
