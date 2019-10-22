@@ -296,9 +296,9 @@ class UploadTest(unittest.TestCase):
         client.run('upload lib* --parallel -c --all -r default')
         self.assertIn("Uploading lib0/1.0@user/channel to remote 'default'", client.out)
         self.assertIn("Uploading lib1/1.0@user/channel to remote 'default'", client.out)
-        client.run('search lib0/1.0@user/channel')
+        client.run('search lib0/1.0@user/channel -r default')
         self.assertIn("lib0/1.0@user/channel", client.out)
-        client.run('search lib1/1.0@user/channel')
+        client.run('search lib1/1.0@user/channel -r default')
         self.assertIn("lib1/1.0@user/channel", client.out)
 
     def upload_parallel_fail_on_interaction_test(self):
