@@ -1,12 +1,15 @@
 import textwrap
 import unittest
 
+from parameterized import parameterized
+
 from conans.test.utils.tools import TestClient
 
 
 class GetVersionNameTest(unittest.TestCase):
 
-    def set_version_name_test(self):
+    @parameterized.expand([("", ), ("@user/channel", )])
+    def set_version_name_test(self, user_channel):
         client = TestClient()
         conanfile = textwrap.dedent("""
             from conans import ConanFile
@@ -17,13 +20,15 @@ class GetVersionNameTest(unittest.TestCase):
                     self.version = "2.1"
             """)
         client.save({"conanfile.py": conanfile})
-        client.run("export . user/testing")
-        self.assertIn("pkg/2.1@user/testing: A new conanfile.py version was exported", client.out)
-        client.run("install pkg/2.1@user/testing --build=missing")
-        self.assertIn("pkg/2.1@user/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Build",
+        client.run("export . %s" % user_channel)
+        self.assertIn("pkg/2.1%s: A new conanfile.py version was exported" % user_channel,
                       client.out)
-        client.run("install pkg/2.1@user/testing")
-        self.assertIn("pkg/2.1@user/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache",
+        # installing it doesn't break
+        client.run("install pkg/2.1%s --build=missing" % (user_channel or "@"))
+        self.assertIn("pkg/2.1%s:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Build" % user_channel,
+                      client.out)
+        client.run("install pkg/2.1%s --build=missing" % (user_channel or "@"))
+        self.assertIn("pkg/2.1%s:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache" % user_channel,
                       client.out)
 
         # Local flow should also work
