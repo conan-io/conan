@@ -5,6 +5,7 @@ from conans.test.utils.profiles import create_profile
 from conans.test.utils.tools import TestClient
 from conans.util.files import load
 import platform
+import json
 
 
 class ProfileTest(unittest.TestCase):
@@ -65,6 +66,22 @@ class ProfileTest(unittest.TestCase):
         self.assertIn("CC=/path/tomy/gcc_build", client.out)
         self.assertIn("CXX=/path/tomy/g++_build", client.out)
         self.assertIn("package:VAR=value", client.out)
+
+        # Test profile detail json file
+        client.run("profile show profile1 --json profile1.json")
+        json_path = os.path.join(client.current_folder, "profile1.json")
+        self.assertTrue(os.path.exists(json_path))
+        json_content = load(json_path)
+        json_obj = json.loads(json_content)
+        self.assertTrue(json_obj['settings']['os'] == "Windows")
+        self.assertTrue(json_obj['options']['MyOption'] == "32")
+
+        client.run("profile show profile3 --json profile3.json")
+        json_path = os.path.join(client.current_folder, "profile3.json")
+        json_obj = json.loads(load(json_path))
+        self.assertTrue(json_obj['env']['package:VAR'] == "value")
+        self.assertTrue(json_obj['env']['CXX'] == "/path/tomy/g++_build")
+        self.assertFalse(json_obj['env']['CC'] != "/path/tomy/gcc_build")
 
     def profile_update_and_get_test(self):
         client = TestClient()
