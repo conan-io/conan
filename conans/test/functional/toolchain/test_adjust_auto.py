@@ -161,6 +161,9 @@ class AdjustAutoTestCase(unittest.TestCase):
         message(">> CMAKE_LIBRARY_PATH: ${CMAKE_LIBRARY_PATH}")
 
         add_executable(app src/app.cpp)
+        
+        get_directory_property(_COMPILE_DEFINITONS DIRECTORY ${CMAKE_SOURCE_DIR} COMPILE_DEFINITIONS )
+        message(">> COMPILE_DEFINITONS: ${_COMPILE_DEFINITONS}")
     """)
 
     app_cpp = textwrap.dedent("""
@@ -271,10 +274,17 @@ class AdjustAutoTestCase(unittest.TestCase):
         else:
             self.assertEqual(libcxx, cmake_cache["CONAN_LIBCXX:STRING"])
 
-    @parameterized.expand([("libc++",), ])
+    @parameterized.expand([("libstdc++",), ("libstdc++11", ), ])
     @unittest.skipIf(platform.system() != "Linux", "libcxx for Linux")
     def test_libcxx_linux(self, libcxx):
-        self.fail("Not implemented")
+        configure_out, cmake_cache, cmake_cache_keys, _, _ = self._run_configure({"compiler.libcxx": libcxx})
+
+        self.assertIn("-- Conan: C++ stdlib: {}".format(libcxx), configure_out)
+        cxx11_abi_str = "1" if libcxx == "libstdc++11" else "0"
+        self.assertIn(">> COMPILE_DEFINITONS: _GLIBCXX_USE_CXX11_ABI={}".format(cxx11_abi_str), configure_out)
+
+        type_str = "STRING" if self.use_toolchain else "UNINITIALIZED"
+        self.assertEqual(libcxx, cmake_cache["CONAN_LIBCXX:" + type_str])
 
     def test_install_paths(self):
         #self.skipTest("Disabled")
@@ -384,7 +394,39 @@ class AdjustAutoTestCase(unittest.TestCase):
 
     @unittest.skipIf(platform.system() != "Linux", "Only Linux")
     def test_ccxx_flags_linux(self):
-        self.fail("Not implemented")
+        cache_filepath = os.path.join(self.t.current_folder, "build", "CMakeCache.txt")
+        if os.path.exists(cache_filepath):
+            os.unlink(cache_filepath)  # FIXME: Ideally this shouldn't be needed (I need it only here)
+
+        configure_out, cmake_cache, cmake_cache_keys, _, _ = self._run_configure()
+
+        extra_blank = "" if self.use_toolchain else " "  # FIXME: There is an extra blank for no-toolchain
+        self.assertIn(">> CMAKE_CXX_FLAGS: -m64", configure_out)
+        self.assertIn(">> CMAKE_C_FLAGS: -m64", configure_out)
+        self.assertIn(">> CMAKE_CXX_FLAGS_DEBUG: -g" + extra_blank, configure_out)
+        self.assertIn(">> CMAKE_CXX_FLAGS_RELEASE: -O3 -DNDEBUG" + extra_blank, configure_out)
+        self.assertIn(">> CMAKE_C_FLAGS_DEBUG: -g" + extra_blank, configure_out)
+        self.assertIn(">> CMAKE_C_FLAGS_RELEASE: -O3 -DNDEBUG" + extra_blank, configure_out)
+
+        self.assertIn(">> CMAKE_SHARED_LINKER_FLAGS: -m64", configure_out)
+        self.assertIn(">> CMAKE_EXE_LINKER_FLAGS: ", configure_out)
+
+        if self.use_toolchain:
+            self.assertEqual("-m64", cmake_cache["CMAKE_CXX_FLAGS:STRING"])
+            self.assertEqual("-m64", cmake_cache["CMAKE_C_FLAGS:STRING"])
+            self.assertEqual("-m64", cmake_cache["CMAKE_SHARED_LINKER_FLAGS:STRING"])
+        else:
+            # FIXME: No-toolchain doesn't match those in CMakeLists
+            self.assertEqual("", cmake_cache["CMAKE_CXX_FLAGS:STRING"])
+            self.assertEqual("", cmake_cache["CMAKE_C_FLAGS:STRING"])
+            self.assertEqual("", cmake_cache["CMAKE_SHARED_LINKER_FLAGS:STRING"])
+
+        self.assertEqual("-g", cmake_cache["CMAKE_CXX_FLAGS_DEBUG:STRING"])
+        self.assertEqual("-O3 -DNDEBUG", cmake_cache["CMAKE_CXX_FLAGS_RELEASE:STRING"])
+        self.assertEqual("-g", cmake_cache["CMAKE_C_FLAGS_DEBUG:STRING"])
+        self.assertEqual("-O3 -DNDEBUG", cmake_cache["CMAKE_C_FLAGS_RELEASE:STRING"])
+
+        self.assertEqual("", cmake_cache["CMAKE_EXE_LINKER_FLAGS:STRING"])
 
     @parameterized.expand([("gnu14",), ("14", ), ])
     @unittest.skipIf(platform.system() == "Windows", "Not for windows")
@@ -542,4 +584,28 @@ class AdjustAutoTestCase(unittest.TestCase):
     @parameterized.expand([("x86_64",), ("x86",), ])
     @unittest.skipUnless(platform.system() == "Linux", "Only windows")
     def test_arch_linux(self, arch):
-        self.fail("Not implemented")
+        cache_filepath = os.path.join(self.t.current_folder, "build", "CMakeCache.txt")
+        if os.path.exists(cache_filepath):
+            os.unlink(cache_filepath)  # FIXME: Ideally this shouldn't be needed (I need it only here)
+
+        configure_out, cmake_cache, cmake_cache_keys, _, _ = self._run_configure({"arch": arch})
+
+        arch_str = "m32" if arch == "x86" else "m64"
+        self.assertIn(">> CMAKE_CXX_FLAGS: -{}".format(arch_str), configure_out)
+        self.assertIn(">> CMAKE_C_FLAGS: -{}".format(arch_str), configure_out)
+
+        self.assertIn(">> CMAKE_SHARED_LINKER_FLAGS: -{}".format(arch_str), configure_out)
+        self.assertIn(">> CMAKE_EXE_LINKER_FLAGS: ", configure_out)
+
+        if self.use_toolchain:
+            self.assertEqual("-{}".format(arch_str), cmake_cache["CMAKE_CXX_FLAGS:STRING"])
+            self.assertEqual("-{}".format(arch_str), cmake_cache["CMAKE_C_FLAGS:STRING"])
+            self.assertEqual("-{}".format(arch_str), cmake_cache["CMAKE_SHARED_LINKER_FLAGS:STRING"])
+
+        else:
+            # FIXME: Cache doesn't match those in CMakeLists
+            self.assertEqual("", cmake_cache["CMAKE_CXX_FLAGS:STRING"])
+            self.assertEqual("", cmake_cache["CMAKE_C_FLAGS:STRING"])
+            self.assertEqual("", cmake_cache["CMAKE_SHARED_LINKER_FLAGS:STRING"])
+
+        self.assertEqual("", cmake_cache["CMAKE_EXE_LINKER_FLAGS:STRING"])
