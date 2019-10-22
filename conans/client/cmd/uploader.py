@@ -219,6 +219,10 @@ class CmdUpload(object):
 
         t1 = time.time()
         the_files = self._compress_recipe_files(ref)
+
+        with self._cache.package_layout(ref).update_metadata() as metadata:
+            metadata.recipe.checksums = calc_files_checksum(the_files)
+
         local_manifest = FileTreeManifest.loads(load(the_files["conanmanifest.txt"]))
 
         remote_manifest = None
@@ -310,8 +314,6 @@ class CmdUpload(object):
         src_files, src_symlinks = gather_files(export_src_folder)
         the_files = _compress_recipe_files(files, symlinks, src_files, src_symlinks, export_folder,
                                            self._output)
-        with self._cache.package_layout(ref).update_metadata() as metadata:
-            metadata.recipe.checksums = calc_files_checksum(the_files)
 
         return the_files
 
