@@ -28,7 +28,7 @@ def run():
     output = ConanOutput(sys.stdout, sys.stderr, True)
     exc_v1 = None
     exc_v2 = None
-    valid_commands = ["start", "stop", "create", "update", "publish"]
+    valid_subcommands = ["start", "stop", "create", "update", "publish"]
     try:
         parser_v1 = ErrorCatchingArgumentParser(description="Extracts build-info from a specified "
                                                             "conan trace log and return a valid JSON")
@@ -38,68 +38,68 @@ def run():
                                help="Optional file to output the JSON contents, if not specified "
                                     "the JSON will be printed to stdout")
         args = parser_v1.parse_args()
-        if args.trace_path not in valid_commands and not os.path.exists(args.trace_path):
+        if args.trace_path not in valid_subcommands and not os.path.exists(args.trace_path):
             output.error("Error, conan trace log not found! '%s'" % args.trace_path)
         if args.output and not os.path.exists(os.path.dirname(args.output)):
             output.error("Error, output file directory not found! '%s'" % args.trace_path)
-        try:
-            info = get_build_info(args.trace_path)
-            the_json = json.dumps(info.serialize())
-            if args.output:
-                save(args.output, the_json)
-            else:
-                output.write(the_json)
-        except Exception as exc:
-            exc_v1 = exc
-            pass
-    except ArgumentParserError as exc:
+
+        info = get_build_info(args.trace_path)
+        the_json = json.dumps(info.serialize())
+        if args.output:
+            save(args.output, the_json)
+        else:
+            output.write(the_json)
+    except Exception as exc:
         exc_v1 = exc
-        pass
-
     finally:
-        parser_v2 = ErrorCatchingArgumentParser(description="Generates build info build info from "
-                                                            "collected information and lockfiles",
-                                                prog="conan_build_info")
-        subparsers = parser_v2.add_subparsers(dest="subcommand", help="sub-command help")
+        if exc_v1:
+            parser_v2 = ErrorCatchingArgumentParser(
+                description="Generates build info build info from "
+                            "collected information and lockfiles",
+                prog="conan_build_info")
+            subparsers = parser_v2.add_subparsers(dest="subcommand", help="sub-command help")
 
-        parser_start = subparsers.add_parser("start",
-                                             help="Command to incorporate to the "
-                                                  "artifacts.properties the build name and number")
-        parser_start.add_argument("build-name", type=str, help="build name to assign")
-        parser_start.add_argument("build-number", type=int,
-                                  help="build number to assign")
+            parser_start = subparsers.add_parser("start",
+                                                 help="Command to incorporate to the "
+                                                      "artifacts.properties the build name and number")
+            parser_start.add_argument("build-name", type=str, help="build name to assign")
+            parser_start.add_argument("build-number", type=int,
+                                      help="build number to assign")
 
-        subparsers.add_parser("stop", help="Command to remove from the artifacts.properties "
-                                           "the build name and number")
+            subparsers.add_parser("stop", help="Command to remove from the artifacts.properties "
+                                               "the build name and number")
 
-        parser_create = subparsers.add_parser("create",
-                                              help="Command to generate a build info json from a "
-                                                   "lockfile")
-        parser_create.add_argument("build_info_file", type=str,
-                                   help="build info json for output")
-        parser_create.add_argument("--lockfile", type=str, required=True, help="input lockfile")
-        parser_create.add_argument("--multi-module", nargs="?", default=True, help="input lockfile")
-        parser_create.add_argument("--skip-env", nargs="?", default=True, help="input lockfile")
-        parser_create.add_argument("--user", type=str, nargs="?", default=None, help="user")
-        parser_create.add_argument("--password", type=str, nargs="?", default=None, help="password")
-        parser_create.add_argument("--apikey", type=str, nargs="?", default=None, help="apikey")
+            parser_create = subparsers.add_parser("create",
+                                                  help="Command to generate a build info json from a "
+                                                       "lockfile")
+            parser_create.add_argument("build_info_file", type=str,
+                                       help="build info json for output")
+            parser_create.add_argument("--lockfile", type=str, required=True, help="input lockfile")
+            parser_create.add_argument("--multi-module", nargs="?", default=True,
+                                       help="input lockfile")
+            parser_create.add_argument("--skip-env", nargs="?", default=True, help="input lockfile")
+            parser_create.add_argument("--user", type=str, nargs="?", default=None, help="user")
+            parser_create.add_argument("--password", type=str, nargs="?", default=None,
+                                       help="password")
+            parser_create.add_argument("--apikey", type=str, nargs="?", default=None, help="apikey")
 
-        parser_update = subparsers.add_parser("update",
-                                              help="Command to update a build info json with "
-                                                   "another one")
-        parser_update.add_argument("buildinfo", nargs="+", help="BuildInfo files to parse")
-        parser_update.add_argument("--output-file", default="buildinfo.json",
-                                   help="Path to generated build info file")
+            parser_update = subparsers.add_parser("update",
+                                                  help="Command to update a build info json with "
+                                                       "another one")
+            parser_update.add_argument("buildinfo", nargs="+", help="BuildInfo files to parse")
+            parser_update.add_argument("--output-file", default="buildinfo.json",
+                                       help="Path to generated build info file")
 
-        parser_publish = subparsers.add_parser("publish",
-                                               help="Command to publish the build info to "
-                                                    "Artifactory")
-        parser_publish.add_argument("buildinfo", type=str,
-                                    help="build info to upload")
-        parser_publish.add_argument("--url", type=str, required=True, help="url")
-        parser_publish.add_argument("--user", type=str, nargs="?", default=None, help="user")
-        parser_publish.add_argument("--password", type=str, nargs="?", default=None, help="password")
-        parser_publish.add_argument("--apikey", type=str, nargs="?", default=None, help="apikey")
+            parser_publish = subparsers.add_parser("publish",
+                                                   help="Command to publish the build info to "
+                                                        "Artifactory")
+            parser_publish.add_argument("buildinfo", type=str,
+                                        help="build info to upload")
+            parser_publish.add_argument("--url", type=str, required=True, help="url")
+            parser_publish.add_argument("--user", type=str, nargs="?", default=None, help="user")
+            parser_publish.add_argument("--password", type=str, nargs="?", default=None,
+                                        help="password")
+            parser_publish.add_argument("--apikey", type=str, nargs="?", default=None, help="apikey")
 
         def check_credential_arguments():
             if args.user and args.apikey:
@@ -131,15 +131,24 @@ def run():
         except ConanException as exc:
             output.error(exc)
 
-    if exc_v1 and exc_v2:
-        output.error("Error executing conan_build_info. There are two possible uses:\n")
-        output.info("Extracting build information from conan traces (in deprecation):\n")
+    def print_helpv1():
         output.error(str(exc_v1))
         parser_v1.print_help()
-        output.info("Calculating build info from collected information and lockfiles "
-                    "(recommended use):\n")
+
+    def print_helpv2():
         output.error(str(exc_v2))
         parser_v2.print_help()
+
+    v2_subcommands = any([item in vars(args).values() for item in valid_subcommands])
+    if exc_v2 and v2_subcommands:
+        print_helpv2()
+    elif exc_v1 and exc_v2:
+        output.error("Error executing conan_build_info. There are two possible uses:\n")
+        output.info("1. Extracting build information from conan traces (in deprecation):\n")
+        print_helpv1()
+        output.info("2. Calculating build info from collected information and lockfiles "
+                    "(recommended use):\n")
+        print_helpv2()
 
 
 if __name__ == "__main__":
