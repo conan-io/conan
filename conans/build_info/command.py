@@ -49,8 +49,10 @@ def run():
             save(args.output, the_json)
         else:
             output.write(the_json)
-    except Exception as exc:
+    except ArgumentParserError as exc:
         exc_v1 = exc
+    except Exception as exc:
+        output.error(exc)
     finally:
         if exc_v1:
             parser_v2 = ErrorCatchingArgumentParser(
@@ -129,6 +131,8 @@ def run():
         except ArgumentParserError as exc:
             exc_v2 = exc
         except ConanException as exc:
+            output.error(exc)
+        except Exception as exc:
             output.error(exc)
 
     def print_helpv1():
