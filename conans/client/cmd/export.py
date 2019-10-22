@@ -56,7 +56,6 @@ def export_scm(scm_data, origin_folder, scm_sources_folder, output):
     # https://github.com/conan-io/conan/issues/5195
     excluded = SCM(scm_data, origin_folder, output).excluded_files
     excluded.append("conanfile.py")
-    excluded.append(".git")
     output.info("Getting sources from folder: %s" % origin_folder)
     merge_directories(origin_folder, scm_sources_folder, excluded=excluded)
 

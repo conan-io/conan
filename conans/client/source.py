@@ -101,9 +101,7 @@ def config_source_local(src_folder, conanfile, conanfile_path, hook_manager):
 
     def get_sources_from_exports():
         if conanfile_folder != src_folder:
-            scm_data = get_scm_data(conanfile)
-            if scm_data:
-                _run_local_scm(scm_data, src_folder, conanfile_folder, output=conanfile.output)
+            _run_local_scm(conanfile, src_folder, conanfile_folder, output=conanfile.output)
             conanfile.output.info("Executing exports to: %s" % src_folder)
             # FIXME: import loop between source and export
             from conans.client.cmd.export import export_recipe, export_source
@@ -146,22 +144,8 @@ def config_source(export_folder, export_source_folder, scm_sources_folder,
             mkdir(src_folder)
 
             def get_sources_from_exports():
-                # First of all get the exported scm sources
-                dest_dir = src_folder
-                scm_data = get_scm_data(conanfile)
-                if scm_data:
-                    dest_dir = os.path.normpath(os.path.join(src_folder, scm_data.subfolder or ""))
-                if os.path.exists(scm_sources_folder):
-                    merge_directories(scm_sources_folder, dest_dir)
-                else:
-                    if scm_data:
-                        output.info("Getting sources from url: '%s'" % scm_data.url)
-                        scm = SCM(scm_data, dest_dir, output)
-                        scm.checkout()
-                        # This is a bit weird. Why after a SCM should we remove files.
-                        # Maybe check conan 2.0
-                        # TODO: Why removing in the cache? There is no danger.
-                        _clean_source_folder(dest_dir)
+                # First of all get the exported scm sources (if auto) or clone (if fixed)
+                _run_cache_scm(conanfile, src_folder, scm_sources_folder, output)
                 # so self exported files have precedence over python_requires ones
                 merge_directories(export_folder, src_folder)
                 # Now move the export-sources to the right location
@@ -220,25 +204,62 @@ def _clean_source_folder(folder):
         pass
 
 
-def _run_local_scm(scm_data, src_folder, local_sources_path, output):
+def _run_cache_scm(conanfile, src_folder, scm_sources_folder, output):
+    """
+    :param conanfile: recipe
+    :param src_folder: sources folder in the cache, (Destination dir)
+    :param scm_sources_folder: scm sources folder in the cache, where the scm sources were exported
+    :param output: output
+    :return:
+    """
+    scm_data = get_scm_data(conanfile)
+    if not scm_data:
+        return
+
+    if scm_data.subfolder:
+        dest_dir = os.path.normpath(os.path.join(src_folder, scm_data.subfolder))
+    else:
+        dest_dir = src_folder
+    if os.path.exists(scm_sources_folder):
+        output.info("Copying previously cached scm sources")
+        merge_directories(scm_sources_folder, dest_dir)
+    else:
+        output.info("Getting sources from url: '%s'" % scm_data.url)
+        scm = SCM(scm_data, dest_dir, output)
+        scm.checkout()
+        # This is a bit weird. Why after a SCM should we remove files.
+        # Maybe check conan 2.0
+        # TODO: Why removing in the cache? There is no danger.
+        _clean_source_folder(dest_dir)
+
+
+def _run_local_scm(conanfile, src_folder, conanfile_folder, output):
+    """
+    Only called when 'conan source' in user space
+    :param conanfile: recipe
+    :param src_folder: specified src_folder
+    :param conanfile_folder: Folder containing the local conanfile
+    :param output: Output
+    :return:
+    """
+
+    scm_data = get_scm_data(conanfile)
+    if not scm_data:
+        return
     dest_dir = os.path.normpath(os.path.join(src_folder, scm_data.subfolder or ""))
     # In user space, if revision="auto", then copy
     if scm_data.capture_origin or scm_data.capture_revision:  # FIXME: or clause?
-        scm = SCM(scm_data, local_sources_path, output)
+        scm = SCM(scm_data, conanfile_folder, output)
         scm_url = scm_data.url if scm_data.url != "auto" else \
             scm.get_qualified_remote_url(remove_credentials=True)
 
         src_path = scm.get_local_path_to_url(url=scm_url)
         if src_path:
-            local_sources_path = src_path
-    else:
-        local_sources_path = None
+            excluded = SCM(scm_data, src_path, output).excluded_files
+            output.info("Getting sources from folder: %s" % src_path)
+            merge_directories(src_path, dest_dir, excluded=excluded)
+            return
 
-    if local_sources_path:
-        excluded = SCM(scm_data, local_sources_path, output).excluded_files
-        output.info("Getting sources from folder: %s" % local_sources_path)
-        merge_directories(local_sources_path, dest_dir, excluded=excluded)
-    else:
-        output.info("Getting sources from url: '%s'" % scm_data.url)
-        scm = SCM(scm_data, dest_dir, output)
-        scm.checkout()
+    output.info("Getting sources from url: '%s'" % scm_data.url)
+    scm = SCM(scm_data, dest_dir, output)
+    scm.checkout()
