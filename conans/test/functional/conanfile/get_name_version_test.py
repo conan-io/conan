@@ -6,14 +6,14 @@ from conans.test.utils.tools import TestClient
 
 class GetVersionNameTest(unittest.TestCase):
 
-    def get_version_name_test(self):
+    def set_version_name_test(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
             from conans import ConanFile
             class Lib(ConanFile):
-                def get_name(self):
+                def set_name(self):
                     self.name = "pkg"
-                def get_version(self):
+                def set_version(self):
                     self.version = "2.1"
             """)
         client.save({"conanfile.py": conanfile})
@@ -30,14 +30,14 @@ class GetVersionNameTest(unittest.TestCase):
         client.run("install .")
         self.assertIn("conanfile.py (pkg/2.1): Installing package", client.out)
 
-    def get_version_name_file_test(self):
+    def set_version_name_file_test(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
             from conans import ConanFile, load
             class Lib(ConanFile):
-                def get_name(self):
+                def set_name(self):
                     self.name = load("name.txt")
-                def get_version(self):
+                def set_version(self):
                     self.version = load("version.txt")
             """)
         client.save({"conanfile.py": conanfile,
@@ -55,14 +55,14 @@ class GetVersionNameTest(unittest.TestCase):
         client.run("install .")
         self.assertIn("conanfile.py (pkg/2.1): Installing package", client.out)
 
-    def get_version_name_errors_test(self):
+    def set_version_name_errors_test(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
             from conans import ConanFile
             class Lib(ConanFile):
-                def get_name(self):
+                def set_name(self):
                     self.name = "pkg"
-                def get_version(self):
+                def set_version(self):
                     self.version = "2.1"
             """)
         client.save({"conanfile.py": conanfile})
@@ -78,25 +78,25 @@ class GetVersionNameTest(unittest.TestCase):
         client.run("install . other/1.2@", assert_error=True)
         self.assertIn("ERROR: Package recipe with name other!=pkg", client.out)
 
-    def get_version_name_crash_test(self):
+    def set_version_name_crash_test(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
             from conans import ConanFile
             class Lib(ConanFile):
-                def get_name(self):
+                def set_name(self):
                     self.name = error
             """)
         client.save({"conanfile.py": conanfile})
         client.run("export .", assert_error=True)
-        self.assertIn("ERROR: conanfile.py: Error in get_name() method, line 5", client.out)
+        self.assertIn("ERROR: conanfile.py: Error in set_name() method, line 5", client.out)
         self.assertIn("name 'error' is not defined", client.out)
         conanfile = textwrap.dedent("""
            from conans import ConanFile
            class Lib(ConanFile):
-               def get_version(self):
+               def set_version(self):
                    self.version = error
            """)
         client.save({"conanfile.py": conanfile})
         client.run("export .", assert_error=True)
-        self.assertIn("ERROR: conanfile.py: Error in get_version() method, line 5", client.out)
+        self.assertIn("ERROR: conanfile.py: Error in set_version() method, line 5", client.out)
         self.assertIn("name 'error' is not defined", client.out)

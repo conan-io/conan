@@ -457,14 +457,14 @@ class PkgTest(base.MyConanfileBase):
         client.run("create . lasote/testing")
         self.assertIn("Pkg/0.1@lasote/testing: Created package ", client.out)
 
-    def reuse_get_name_get_version_test(self):
+    def reuse_set_name_set_version_test(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
             from conans import ConanFile, load
             class BasePkg(ConanFile):
-                def get_name(self):
+                def set_name(self):
                     self.name = load("name.txt")
-                def get_version(self):
+                def set_version(self):
                     self.version = load("version.txt")
             """)
         client.save({"conanfile.py": conanfile,

@@ -72,16 +72,16 @@ class ConanFileLoader(object):
         """
         conanfile = self.load_basic(conanfile_path, lock_python_requires, user, channel)
 
-        if hasattr(conanfile, "get_name"):
+        if hasattr(conanfile, "set_name"):
             if conanfile.name:
-                raise ConanException("Conanfile defined package 'name', get_name() redundant")
-            with conanfile_exception_formatter("conanfile.py", "get_name"):
-                conanfile.get_name()
-        if hasattr(conanfile, "get_version"):
+                raise ConanException("Conanfile defined package 'name', set_name() redundant")
+            with conanfile_exception_formatter("conanfile.py", "set_name"):
+                conanfile.set_name()
+        if hasattr(conanfile, "set_version"):
             if conanfile.version:
-                raise ConanException("Conanfile defined package 'version', get_version() redundant")
-            with conanfile_exception_formatter("conanfile.py", "get_version"):
-                conanfile.get_version()
+                raise ConanException("Conanfile defined package 'version', set_version() redundant")
+            with conanfile_exception_formatter("conanfile.py", "set_version"):
+                conanfile.set_version()
 
         # Export does a check on existing name & version
         if name:
