@@ -211,16 +211,15 @@ class CmdUpload(object):
                                    reference=ref, remote=recipe_remote)
         msg = "\rUploading %s to remote '%s'" % (str(ref), recipe_remote.name)
         self._output.info(left_justify_message(msg))
-        failed_recipe_upload = False
         try:
             self._upload_recipe(ref, conanfile, retry, retry_wait, policy, recipe_remote, remotes)
             upload_recorder.add_recipe(ref, recipe_remote.name, recipe_remote.url)
         except ConanException as exc:
             self._exceptions_list.append(exc)
-            failed_recipe_upload = True
+            return
 
         # Now the binaries
-        if prefs and not failed_recipe_upload:
+        if prefs:
             total = len(prefs)
             p_remote = recipe_remote
 
@@ -253,7 +252,7 @@ class CmdUpload(object):
                                                [(index, pref) for index, pref
                                                 in enumerate(prefs)],
                                                callback=upload_package_callback)
-        elif not failed_recipe_upload:
+        else:
             # FIXME: I think it makes no sense to specify a remote to "post_upload"
             # FIXME: because the recipe can have one and the package a different one
             self._hook_manager.execute("post_upload", conanfile_path=conanfile_path, reference=ref,
