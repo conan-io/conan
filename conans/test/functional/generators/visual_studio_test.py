@@ -84,11 +84,11 @@ class VisualStudioTest(unittest.TestCase):
         files["MyProject/main.cpp"] = main_cpp
         files["conanfile.py"] = consumer
         props = os.path.join(client.current_folder, "conanbuildinfo.props")
-        old = '<Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />'
+        old = r'<Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />'
         new = old + '<Import Project="{props}" />'.format(props=props)
         files["MyProject/MyProject.vcxproj"] = files["MyProject/MyProject.vcxproj"].replace(old, new)
         client.save(files, clean_first=True)
         client.run("install .")
         client.run("build .")
-        client.run_command("x64\Release\MyProject.exe")
+        client.run_command(r"x64\Release\MyProject.exe")
         self.assertIn("Hello world!!!", client.out)

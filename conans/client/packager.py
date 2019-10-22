@@ -41,11 +41,13 @@ def export_pkg(conanfile, package_id, src_package_folder, package_folder, hook_m
     return prev
 
 
-def create_package(conanfile, package_id, source_folder, build_folder, package_folder,
-                   install_folder, hook_manager, conanfile_path, ref, local=False,
-                   copy_info=False):
-    """ copies built artifacts, libs, headers, data, etc. from build_folder to
-    package folder
+def run_package_method(conanfile, package_id, source_folder, build_folder, package_folder,
+                       install_folder, hook_manager, conanfile_path, ref, local=False,
+                       copy_info=False):
+    """ calls the recipe "package()" method
+    - Assigns folders to conanfile.package_folder, source_folder, install_folder, build_folder
+    - Calls pre-post package hook
+    - Prepares FileCopier helper for self.copy
     """
     mkdir(package_folder)
     output = conanfile.output

@@ -9,6 +9,8 @@ set({name}_LIBRARIES_TARGETS{build_type_suffix} "") # Will be filled later, if C
 set({name}_LIBRARIES{build_type_suffix} "") # Will be filled later
 set({name}_LIBS{build_type_suffix} "") # Same as {name}_LIBRARIES
 
+{deps.find_frameworks}
+
 mark_as_advanced({name}_INCLUDE_DIRS{build_type_suffix}
                  {name}_INCLUDES{build_type_suffix}
                  {name}_DEFINITIONS{build_type_suffix}

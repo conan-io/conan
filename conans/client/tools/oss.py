@@ -4,8 +4,8 @@ import platform
 import subprocess
 import sys
 import tempfile
-from subprocess import PIPE
-
+import math
+from subprocess import CalledProcessError, PIPE
 import six
 
 from conans.client.tools.env import environment_append
@@ -24,14 +24,35 @@ def args_to_string(args):
         return " ".join("'" + arg.replace("'", r"'\''") + "'" for arg in args)
 
 
+class CpuProperties(object):
+
+    def get_cpu_quota(self):
+        return int(load("/sys/fs/cgroup/cpu/cpu.cfs_quota_us"))
+
+    def get_cpu_period(self):
+        return int(load("/sys/fs/cgroup/cpu/cpu.cfs_period_us"))
+
+    def get_cpus(self):
+        try:
+            cfs_quota_us = self.get_cpu_quota()
+            cfs_period_us = self.get_cpu_period()
+            if cfs_quota_us > 0 and cfs_period_us > 0:
+                return int(math.ceil(cfs_quota_us / cfs_period_us))
+        except:
+            pass
+        return multiprocessing.cpu_count()
+
+
 def cpu_count(output=None):
-    output = default_output(output, 'conans.client.tools.oss.cpu_count')
     try:
         env_cpu_count = os.getenv("CONAN_CPU_COUNT", None)
         if env_cpu_count is not None and not env_cpu_count.isdigit():
             raise ConanException("Invalid CONAN_CPU_COUNT value '%s', "
                                  "please specify a positive integer" % env_cpu_count)
-        return int(env_cpu_count) if env_cpu_count else multiprocessing.cpu_count()
+        if env_cpu_count:
+            return int(env_cpu_count)
+        else:
+            return CpuProperties().get_cpus()
     except NotImplementedError:
         output.warn("multiprocessing.cpu_count() not implemented. Defaulting to 1 cpu")
     return 1  # Safe guess
@@ -395,9 +416,13 @@ class OSInfo(object):
             return None
 
 
-def cross_building(settings, self_os=None, self_arch=None):
+def cross_building(settings, self_os=None, self_arch=None, skip_x64_x86=False):
     ret = get_cross_building_settings(settings, self_os, self_arch)
     build_os, build_arch, host_os, host_arch = ret
+
+    if skip_x64_x86 and host_os is not None and (build_os == host_os) and \
+            host_arch is not None and (build_arch == "x86_64") and (host_arch == "x86"):
+        return False
 
     if host_os is not None and (build_os != host_os):
         return True

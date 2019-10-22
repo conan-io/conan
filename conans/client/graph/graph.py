@@ -21,6 +21,7 @@ BINARY_BUILD = "Build"
 BINARY_MISSING = "Missing"
 BINARY_SKIP = "Skip"
 BINARY_EDITABLE = "Editable"
+BINARY_UNKNOWN = "Unknown"
 
 CONTEXT_HOST = "host"
 CONTEXT_BUILD = "build"
@@ -59,8 +60,9 @@ class _NodeOrderedDict(object):
 
 
 class Node(object):
-    def __init__(self, ref, conanfile, context, recipe=None):
+    def __init__(self, ref, conanfile, context, recipe=None, path=None):
         self.ref = ref
+        self.path = path  # path to the consumer conanfile.xx for consumer, None otherwise
         self._package_id = None
         self.prev = None
         self.conanfile = conanfile
@@ -124,11 +126,10 @@ class Node(object):
 
     def partial_copy(self):
         # Used for collapse_graph
-        result = Node(self.ref, self.conanfile, context=self.context)
+        result = Node(self.ref, self.conanfile, self.context, self.recipe, self.path)
         result.dependants = set()
         result.dependencies = []
         result.binary = self.binary
-        result.recipe = self.recipe
         result.remote = self.remote
         result.binary_remote = self.binary_remote
         result.build_require = self.build_require
@@ -247,8 +248,6 @@ class DepsGraph(object):
         self.nodes = set()
         self.root = None
         self.aliased = {}
-        # These are the nodes with pref (not including PREV) that have been evaluated
-        self.evaluated = {}  # {pref: [nodes]}
 
     def add_node(self, node):
         if not self.nodes:
@@ -330,7 +329,7 @@ class DepsGraph(object):
             new_level = []
             for n in level:
                 if n.binary == BINARY_BUILD and n.pref not in total_prefs:
-                    new_level.append((n.id, repr(n.pref)))
+                    new_level.append((n.id, n.pref.copy_clear_prev()))
                     total_prefs.add(n.pref)
             if new_level:
                 result.append(new_level)

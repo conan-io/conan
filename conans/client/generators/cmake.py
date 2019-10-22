@@ -32,6 +32,21 @@ class DepsCppCmake(object):
         self.src_paths = join_paths(cpp_info.src_paths)
 
         self.libs = join_flags(" ", cpp_info.libs)
+
+        framework_paths = join_paths(cpp_info.framework_paths)
+        self.find_frameworks = ""
+        for framework in cpp_info.frameworks:
+            var = "CONAN_FRAMEWORK_" + framework.upper()
+            find_framework = "if(APPLE)\n" \
+                             "find_library({var} {framework} " \
+                             "PATHS {framework_paths})\n" \
+                             "endif(APPLE)\n".format(var=var,
+                                                     framework=framework,
+                                                     framework_paths=framework_paths)
+            var = '${%s}' % var
+            self.libs += " " + var
+            self.find_frameworks += find_framework
+
         self.defines = join_defines(cpp_info.defines, "-D")
         self.compile_definitions = join_defines(cpp_info.defines)
 
@@ -61,7 +76,8 @@ class CMakeGenerator(Generator):
         sections = ["include(CMakeParseArguments)"]
 
         # Per requirement variables
-        for dep_name, dep_cpp_info in self.deps_build_info.dependencies:
+        for _, dep_cpp_info in self.deps_build_info.dependencies:
+            dep_name = dep_cpp_info.name
             deps = DepsCppCmake(dep_cpp_info)
             dep_flags = cmake_dependency_vars(dep_name, deps=deps)
             sections.append(dep_flags)

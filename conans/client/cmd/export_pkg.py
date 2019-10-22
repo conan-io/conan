@@ -20,10 +20,9 @@ def export_pkg(app, recorder, full_ref, source_folder, build_folder, package_fol
 
     # The graph has to be loaded with build_mode=[ref.name], so that node is not tried
     # to be downloaded from remotes
-    deps_graph, _ = graph_manager.load_graph(ref, None, graph_info=graph_info,
-                                             build_mode=[ref.name], check_updates=False,
-                                             update=False, remotes=remotes,
-                                             recorder=recorder, apply_build_requires=False)
+    deps_graph = graph_manager.load_graph(ref, None, graph_info=graph_info, build_mode=[ref.name],
+                                          check_updates=False, update=False, remotes=remotes,
+                                          recorder=recorder, apply_build_requires=False)
     # this is a bit tricky, but works. The root (virtual), has only 1 neighbor,
     # which is the exported pkg
     nodes = deps_graph.root.neighbors()
@@ -52,9 +51,9 @@ def export_pkg(app, recorder, full_ref, source_folder, build_folder, package_fol
                                    hook_manager, conan_file_path, ref)
     else:
         with get_env_context_manager(conanfile):
-            prev = packager.create_package(conanfile, package_id, source_folder, build_folder,
-                                           dest_package_folder, install_folder, hook_manager,
-                                           conan_file_path, ref, local=True)
+            prev = packager.run_package_method(conanfile, package_id, source_folder, build_folder,
+                                               dest_package_folder, install_folder, hook_manager,
+                                               conan_file_path, ref, local=True)
 
     packager.update_package_metadata(prev, layout, package_id, full_ref.revision)
     pref = PackageReference(pref.ref, pref.id, prev)

@@ -59,7 +59,7 @@ class DepsGraphBuilder(object):
             contexts.append(context)
 
         if graph_lock:
-            graph_lock.lock_node(node, build_requires)  # TODO: Add info about context?
+            graph_lock.lock_node(node, build_requires, build_requires=True)  # TODO: Add info about context?
 
         self._resolve_ranges(graph, build_requires, scope, update, remotes)
 
@@ -78,7 +78,6 @@ class DepsGraphBuilder(object):
 
         subgraph = DepsGraph()
         subgraph.aliased = graph.aliased
-        subgraph.evaluated = graph.evaluated
         subgraph.nodes = new_nodes
         for n in subgraph.nodes:
             n.build_require = True
@@ -122,14 +121,16 @@ class DepsGraphBuilder(object):
         param down_ref: ConanFileReference of who is depending on current node for this expansion
         """
         # basic node configuration: calling configure() and requirements()
-        new_reqs, new_options = self._config_node(dep_graph, node, down_reqs, down_ref,
-                                                  down_options)
+        new_options = self._config_node(dep_graph, node, down_ref, down_options)
 
         if graph_lock:
             graph_lock.lock_node(node, node.conanfile.requires.values())
-
-        # if there are version-ranges, resolve them before expanding each of the requirements
-        self._resolve_deps(dep_graph, node, update, remotes)
+            new_reqs = None
+        else:
+            # propagation of requirements only necessary if not locked
+            new_reqs = node.conanfile.requires.update(down_reqs, self._output, node.ref, down_ref)
+            # if there are version-ranges, resolve them before expanding each of the requirements
+            self._resolve_deps(dep_graph, node, update, remotes)
 
         # Expand each one of the current requirements
         for name, require in node.conanfile.requires.items():
@@ -227,7 +228,7 @@ class DepsGraphBuilder(object):
 
             # Recursion is only necessary if the inputs conflict with the current "previous"
             # configuration of upstream versions and options
-            if self._recurse(previous.public_closure, new_reqs, new_options, previous.context):
+            if not graph_lock and self._recurse(previous.public_closure, new_reqs, new_options, previous.context):
                 self._load_deps(dep_graph, previous, new_reqs, node.ref, new_options, check_updates,
                                 update, remotes, processed_profile_host, processed_profile_build,
                                 graph_lock)
@@ -269,13 +270,14 @@ class DepsGraphBuilder(object):
                         return True
         return False
 
-    def _config_node(self, graph, node, down_reqs, down_ref, down_options):
+    @staticmethod
+    def _config_node(graph, node, down_ref, down_options):
         """ update settings and option in the current ConanFile, computing actual
         requirement values, cause they can be overridden by downstream requires
         param settings: dict of settings values => {"os": "windows"}
         """
+        conanfile, ref = node.conanfile, node.ref
         try:
-            conanfile, ref = node.conanfile, node.ref
             # Avoid extra time manipulating the sys.path for python
             with get_env_context_manager(conanfile, without_python=True):
                 if hasattr(conanfile, "config"):
@@ -318,7 +320,6 @@ class DepsGraphBuilder(object):
                 if graph.aliased:
                     for req in conanfile.requires.values():
                         req.ref = graph.aliased.get(req.ref, req.ref)
-                new_down_reqs = conanfile.requires.update(down_reqs, self._output, ref, down_ref)
         except ConanExceptionInUserConanfileMethod:
             raise
         except ConanException as e:
@@ -326,7 +327,7 @@ class DepsGraphBuilder(object):
         except Exception as e:
             raise ConanException(e)
 
-        return new_down_reqs, new_options
+        return new_options
 
     def _create_new_node(self, current_node, dep_graph, requirement, name_req,
                          check_updates, update, remotes, processed_profile, graph_lock,

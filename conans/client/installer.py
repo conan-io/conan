@@ -5,10 +5,10 @@ import time
 from conans.client import tools
 from conans.client.file_copier import report_copied_files
 from conans.client.generators import TXTGenerator, write_generators
-from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_MISSING, \
-    BINARY_SKIP, BINARY_UPDATE, BINARY_EDITABLE
+from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_EDITABLE, \
+    BINARY_MISSING, BINARY_SKIP, BINARY_UPDATE, BINARY_UNKNOWN
 from conans.client.importer import remove_imports, run_imports
-from conans.client.packager import create_package, update_package_metadata
+from conans.client.packager import run_package_method, update_package_metadata
 from conans.client.recorder.action_recorder import INSTALL_ERROR_BUILDING, INSTALL_ERROR_MISSING, \
     INSTALL_ERROR_MISSING_BUILD_FOLDER
 from conans.client.source import complete_recipe_sources, config_source
@@ -20,6 +20,7 @@ from conans.model.conan_file import get_env_context_manager
 from conans.model.editable_layout import EditableLayout
 from conans.model.env_info import EnvInfo
 from conans.model.graph_info import GraphInfo
+from conans.model.info import PACKAGE_ID_UNKNOWN
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference
 from conans.model.user_info import UserInfo
@@ -154,9 +155,9 @@ class _PackageBuilder(object):
             # Could be source or build depends no_copy_source
             source_folder = conanfile.source_folder
             install_folder = build_folder  # While installing, the infos goes to build folder
-            prev = create_package(conanfile, package_id, source_folder, build_folder,
-                                  package_folder, install_folder, self._hook_manager,
-                                  conanfile_path, pref.ref)
+            prev = run_package_method(conanfile, package_id, source_folder, build_folder,
+                                      package_folder, install_folder, self._hook_manager,
+                                      conanfile_path, pref.ref)
 
         update_package_metadata(prev, package_layout, package_id, pref.ref.revision)
 
@@ -289,24 +290,24 @@ class BinaryInstaller(object):
     """ main responsible of retrieving binary packages or building them from source
     locally in case they are not found in remotes
     """
-    def __init__(self, cache, output, remote_manager, recorder, hook_manager):
-        self._cache = cache
-        self._out = output
-        self._remote_manager = remote_manager
+    def __init__(self, app, recorder):
+        self._cache = app.cache
+        self._out = app.out
+        self._remote_manager = app.remote_manager
         self._recorder = recorder
-        self._hook_manager = hook_manager
+        self._binaries_analyzer = app.binaries_analyzer
+        self._hook_manager = app.hook_manager
 
-    def install(self, deps_graph, remotes, keep_build=False, graph_info=None):
+    def install(self, deps_graph, remotes, build_mode, update, keep_build=False, graph_info=None):
         # order by levels and separate the root node (ref=None) from the rest
         nodes_by_level = deps_graph.by_levels()
         root_level = nodes_by_level.pop()
         root_node = root_level[0]
         # Get the nodes in order and if we have to build them
-        self._build(nodes_by_level, keep_build, root_node, graph_info, remotes)
+        self._build(nodes_by_level, keep_build, root_node, graph_info, remotes, build_mode, update)
 
-    def _build(self, nodes_by_level, keep_build, root_node, graph_info, remotes):
+    def _build(self, nodes_by_level, keep_build, root_node, graph_info, remotes, build_mode, update):
         xbuilding = bool(graph_info.profile_build)  # If build profile is provided, then it is xbuild
-
         processed_package_refs = set()
         for level in nodes_by_level:
             for node in level:
@@ -326,12 +327,15 @@ class BinaryInstaller(object):
                         continue
                     assert ref.revision is not None, "Installer should receive RREV always"
                     _handle_system_requirements(conan_file, node.pref, self._cache, output)
+                    if node.binary == BINARY_UNKNOWN:
+                        self._binaries_analyzer.reevaluate_node(node, remotes, build_mode, update)
                     self._handle_node_cache(node, keep_build, processed_package_refs, remotes)
 
         # Finally, propagate information to root node (ref=None)
         self._propagate_info(root_node, xbuilding)
 
-    def _node_concurrently_installed(self, node, package_folder):
+    @staticmethod
+    def _node_concurrently_installed(node, package_folder):
         if node.binary == BINARY_DOWNLOAD and os.path.exists(package_folder):
             return True
         elif node.binary == BINARY_UPDATE:
@@ -378,13 +382,14 @@ class BinaryInstaller(object):
     def _handle_node_cache(self, node, keep_build, processed_package_references, remotes):
         pref = node.pref
         assert pref.id, "Package-ID without value"
-
+        assert pref.id != PACKAGE_ID_UNKNOWN, "Package-ID error: %s" % str(pref)
         conanfile = node.conanfile
         output = conanfile.output
 
-        package_folder = self._cache.package_layout(pref.ref, conanfile.short_paths).package(pref)
+        layout = self._cache.package_layout(pref.ref, conanfile.short_paths)
+        package_folder = layout.package(pref)
 
-        with self._cache.package_layout(pref.ref).package_lock(pref):
+        with layout.package_lock(pref):
             if pref not in processed_package_references:
                 processed_package_references.add(pref)
                 if node.binary == BINARY_BUILD:
@@ -406,7 +411,7 @@ class BinaryInstaller(object):
                                                              node.binary_remote, output,
                                                              self._recorder)
                             output.info("Downloaded package revision %s" % pref.revision)
-                            with self._cache.package_layout(pref.ref).update_metadata() as metadata:
+                            with layout.update_metadata() as metadata:
                                 metadata.packages[pref.id].remote = node.binary_remote.name
                     else:
                         output.success('Download skipped. Probable concurrent download')
@@ -429,7 +434,7 @@ class BinaryInstaller(object):
             assert python_require.ref.revision is not None, \
                 "Installer should receive python_require.ref always"
             complete_recipe_sources(self._remote_manager, self._cache,
-                                    conanfile, python_require.ref, remotes)
+                                    python_require.conanfile, python_require.ref, remotes)
 
         builder = _PackageBuilder(self._cache, output, self._hook_manager, self._remote_manager)
         pref = builder.build_package(node, keep_build, self._recorder, remotes)
@@ -475,7 +480,8 @@ class BinaryInstaller(object):
         conanfile.user_info = UserInfo()
 
         # Get deps_cpp_info from upstream nodes
-        public_deps = [name for name, req in conanfile.requires.items() if not req.private]
+        public_deps = [name for name, req in conanfile.requires.items() if not req.private
+                       and not req.override]
         conanfile.cpp_info.public_deps = public_deps
         # Once the node is build, execute package info, so it has access to the
         # package folder and artifacts
