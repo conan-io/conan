@@ -394,7 +394,39 @@ class AdjustAutoTestCase(unittest.TestCase):
 
     @unittest.skipIf(platform.system() != "Linux", "Only Linux")
     def test_ccxx_flags_linux(self):
-        self.fail("Not implemented")
+        cache_filepath = os.path.join(self.t.current_folder, "build", "CMakeCache.txt")
+        if os.path.exists(cache_filepath):
+            os.unlink(cache_filepath)  # FIXME: Ideally this shouldn't be needed (I need it only here)
+            
+        configure_out, cmake_cache, cmake_cache_keys, _, _ = self._run_configure()
+
+        extra_blank = "" if self.use_toolchain else " "  # FIXME: There is an extra blank for no-toolchain
+        self.assertIn(">> CMAKE_CXX_FLAGS: -m64", configure_out)
+        self.assertIn(">> CMAKE_C_FLAGS: -m64", configure_out)
+        self.assertIn(">> CMAKE_CXX_FLAGS_DEBUG: -g" + extra_blank, configure_out)
+        self.assertIn(">> CMAKE_CXX_FLAGS_RELEASE: -O3 -DNDEBUG" + extra_blank, configure_out)
+        self.assertIn(">> CMAKE_C_FLAGS_DEBUG: -g" + extra_blank, configure_out)
+        self.assertIn(">> CMAKE_C_FLAGS_RELEASE: -O3 -DNDEBUG" + extra_blank, configure_out)
+
+        self.assertIn(">> CMAKE_SHARED_LINKER_FLAGS: -m64", configure_out)
+        self.assertIn(">> CMAKE_EXE_LINKER_FLAGS: ", configure_out)
+
+        if self.use_toolchain:
+            self.assertEqual("-m64", cmake_cache["CMAKE_CXX_FLAGS:STRING"])
+            self.assertEqual("-m64", cmake_cache["CMAKE_C_FLAGS:STRING"])
+            self.assertEqual("-m64", cmake_cache["CMAKE_SHARED_LINKER_FLAGS:STRING"])
+        else:
+            # FIXME: No-toolchain doesn't match those in CMakeLists
+            self.assertEqual("", cmake_cache["CMAKE_CXX_FLAGS:STRING"])
+            self.assertEqual("", cmake_cache["CMAKE_C_FLAGS:STRING"])
+            self.assertEqual("", cmake_cache["CMAKE_SHARED_LINKER_FLAGS:STRING"])
+
+        self.assertEqual("-g", cmake_cache["CMAKE_CXX_FLAGS_DEBUG:STRING"])
+        self.assertEqual("-O3 -DNDEBUG", cmake_cache["CMAKE_CXX_FLAGS_RELEASE:STRING"])
+        self.assertEqual("-g", cmake_cache["CMAKE_C_FLAGS_DEBUG:STRING"])
+        self.assertEqual("-O3 -DNDEBUG", cmake_cache["CMAKE_C_FLAGS_RELEASE:STRING"])
+
+        self.assertEqual("", cmake_cache["CMAKE_EXE_LINKER_FLAGS:STRING"])
 
     @parameterized.expand([("gnu14",), ("14", ), ])
     @unittest.skipIf(platform.system() == "Windows", "Not for windows")
