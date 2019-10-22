@@ -80,7 +80,6 @@ class Progress(object):
     def update(self, chunks, chunk_size=1024):
         for chunk in chunks:
             yield chunk
-            time.sleep(0.01)
             data_size = len(chunk)
             self._processed_size += data_size
             self.pb_update(data_size)
