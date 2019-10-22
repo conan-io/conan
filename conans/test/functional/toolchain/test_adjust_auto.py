@@ -161,6 +161,9 @@ class AdjustAutoTestCase(unittest.TestCase):
         message(">> CMAKE_LIBRARY_PATH: ${CMAKE_LIBRARY_PATH}")
 
         add_executable(app src/app.cpp)
+        
+        get_directory_property(_COMPILE_DEFINITONS DIRECTORY ${CMAKE_SOURCE_DIR} COMPILE_DEFINITIONS )
+        message(">> COMPILE_DEFINITONS: ${_COMPILE_DEFINITONS}")
     """)
 
     app_cpp = textwrap.dedent("""
@@ -271,10 +274,17 @@ class AdjustAutoTestCase(unittest.TestCase):
         else:
             self.assertEqual(libcxx, cmake_cache["CONAN_LIBCXX:STRING"])
 
-    @parameterized.expand([("libc++",), ])
+    @parameterized.expand([("libstdc++",), ("libstdc++11", ), ])
     @unittest.skipIf(platform.system() != "Linux", "libcxx for Linux")
     def test_libcxx_linux(self, libcxx):
-        self.fail("Not implemented")
+        configure_out, cmake_cache, cmake_cache_keys, _, _ = self._run_configure({"compiler.libcxx": libcxx})
+
+        self.assertIn("-- Conan: C++ stdlib: {}".format(libcxx), configure_out)
+        cxx11_abi_str = "1" if libcxx == "libstdc++11" else "0"
+        self.assertIn(">> COMPILE_DEFINITONS: _GLIBCXX_USE_CXX11_ABI={}".format(cxx11_abi_str), configure_out)
+
+        type_str = "STRING" if self.use_toolchain else "UNINITIALIZED"
+        self.assertEqual(libcxx, cmake_cache["CONAN_LIBCXX:" + type_str])
 
     def test_install_paths(self):
         #self.skipTest("Disabled")
