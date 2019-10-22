@@ -229,6 +229,21 @@ class CommandOutputer(object):
         data = self._grab_info_data(deps_graph, grab_paths=show_paths)
         self._handle_json_output(data, json_output, cwd)
 
+    def json_profile(self, profile_text, path):
+        profile_obj = {}
+        profile_obj['settings'] = {key: value for key, value in profile_text.settings.items()}
+        profile_obj['options'] = {key: value for key, value in profile_text.options.as_list()}
+        profile_obj['build_requires'] = [{key: [str(val) for val in values]}
+                                          for key, values in
+                                          profile_text.build_requires.items()]
+        envs = {}
+        for package, env_vars in profile_text.env_values.data.items():
+            for name, value in env_vars.items():
+                key = "%s:%s" % (package, name) if package else name
+                envs[key] = value
+        profile_obj['env'] = envs
+        self.json_output(profile_obj, path, os.getcwd())
+
     def print_search_references(self, search_info, pattern, raw, all_remotes_search):
         printer = Printer(self._output)
         printer.print_search_recipes(search_info, pattern, raw, all_remotes_search)
