@@ -310,7 +310,7 @@ class AdjustAutoTestCase(unittest.TestCase):
         if os.path.exists(cache_filepath):
             os.unlink(cache_filepath)  # FIXME: Ideally this shouldn't be needed (I need it only here)
 
-        with environment_append({"CMAKE_GENERATOR": compiler_name}):
+        with environment_append({"CMAKE_GENERATOR": compiler_name}):  # TODO: FIXME: The toolchain needs an environment
             configure_out, cmake_cache, cmake_cache_keys, _, _ = self._run_configure({"compiler.version": compiler_version})
 
         self.assertIn("-- Building for: {}".format(compiler_name), configure_out)
@@ -331,7 +331,7 @@ class AdjustAutoTestCase(unittest.TestCase):
     @unittest.skipUnless(platform.system() == "Windows", "Only Windows")
     def test_compiler_toolset_win(self, compiler_toolset):
 
-        # TODO: What if the toolset is not installed for the CMAKE_GENERATOR given
+        # TODO: What if the toolset is not installed for the CMAKE_GENERATOR given?
 
         cache_filepath = os.path.join(self.t.current_folder, "build", "CMakeCache.txt")
         if os.path.exists(cache_filepath):
