@@ -552,4 +552,28 @@ class AdjustAutoTestCase(unittest.TestCase):
     @parameterized.expand([("x86_64",), ("x86",), ])
     @unittest.skipUnless(platform.system() == "Linux", "Only windows")
     def test_arch_linux(self, arch):
-        self.fail("Not implemented")
+        cache_filepath = os.path.join(self.t.current_folder, "build", "CMakeCache.txt")
+        if os.path.exists(cache_filepath):
+            os.unlink(cache_filepath)  # FIXME: Ideally this shouldn't be needed (I need it only here)
+
+        configure_out, cmake_cache, cmake_cache_keys, _, _ = self._run_configure({"arch": arch})
+
+        arch_str = "m32" if arch == "x86" else "m64"
+        self.assertIn(">> CMAKE_CXX_FLAGS: -{}".format(arch_str), configure_out)
+        self.assertIn(">> CMAKE_C_FLAGS: -{}".format(arch_str), configure_out)
+
+        self.assertIn(">> CMAKE_SHARED_LINKER_FLAGS: -{}".format(arch_str), configure_out)
+        self.assertIn(">> CMAKE_EXE_LINKER_FLAGS: ", configure_out)
+
+        if self.use_toolchain:
+            self.assertEqual("-{}".format(arch_str), cmake_cache["CMAKE_CXX_FLAGS:STRING"])
+            self.assertEqual("-{}".format(arch_str), cmake_cache["CMAKE_C_FLAGS:STRING"])
+            self.assertEqual("-{}".format(arch_str), cmake_cache["CMAKE_SHARED_LINKER_FLAGS:STRING"])
+
+        else:
+            # FIXME: Cache doesn't match those in CMakeLists
+            self.assertEqual("", cmake_cache["CMAKE_CXX_FLAGS:STRING"])
+            self.assertEqual("", cmake_cache["CMAKE_C_FLAGS:STRING"])
+            self.assertEqual("", cmake_cache["CMAKE_SHARED_LINKER_FLAGS:STRING"])
+
+        self.assertEqual("", cmake_cache["CMAKE_EXE_LINKER_FLAGS:STRING"])
