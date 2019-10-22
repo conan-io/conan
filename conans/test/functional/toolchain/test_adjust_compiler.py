@@ -14,6 +14,7 @@ from conans.client.toolchain.cmake import CMakeToolchain
 from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TurboTestClient
 from conans.util.files import load
+from conans.client.tools import environment_append
 
 
 def compile_local_workflow(testcase, client, profile):
@@ -299,17 +300,38 @@ class AdjustAutoTestCase(unittest.TestCase):
         self.assertEqual("/usr/bin/{}-ar-{}".format(tools_str, compiler_version), cmake_cache["CMAKE_C_COMPILER_AR:FILEPATH"])
         self.assertEqual("/usr/bin/{}-ranlib-{}".format(tools_str, compiler_version), cmake_cache["CMAKE_C_COMPILER_RANLIB:FILEPATH"])
 
-    @parameterized.expand([("7",), ("8",), ])
+    @parameterized.expand([("14", "Visual Studio 14 2015 Win64"), ("16", "Visual Studio 16 2019"), ])
     @unittest.skipUnless(platform.system() == "Windows", "Only Windows")
-    def test_compiler_version_win(self, compiler_version):
-        self.skipTest("This should be implemented in terms of CMAKE_GENERATOR (environment)")
-        self.fail("Not implemented: different versions of Visual Studio")
+    def test_compiler_version_win(self, compiler_version, compiler_name):
+        if not self.use_toolchain:
+            self.skipTest("It doesn't work without toolchain")
+
+        cache_filepath = os.path.join(self.t.current_folder, "build", "CMakeCache.txt")
+        if os.path.exists(cache_filepath):
+            os.unlink(cache_filepath)  # FIXME: Ideally this shouldn't be needed (I need it only here)
+
+        with environment_append({"CMAKE_GENERATOR": compiler_name}):
+            configure_out, cmake_cache, cmake_cache_keys, _, _ = self._run_configure({"compiler.version": compiler_version})
+
+        self.assertIn("-- Building for: {}".format(compiler_name), configure_out)
+        if compiler_version == "14":
+            self.assertIn("-- The C compiler identification is MSVC 19.0.24215.1", configure_out)
+            self.assertIn("-- The CXX compiler identification is MSVC 19.0.24215.1", configure_out)
+            self.assertIn("-- Check for working C compiler: C:/Program Files (x86)/Microsoft Visual Studio 14.0/VC/bin/x86_amd64/cl.exe -- works", configure_out)
+            self.assertIn("-- Check for working CXX compiler: C:/Program Files (x86)/Microsoft Visual Studio 14.0/VC/bin/x86_amd64/cl.exe -- works", configure_out)
+        else:
+            self.assertIn("-- The C compiler identification is MSVC 19.22.27905.0", configure_out)
+            self.assertIn("-- The CXX compiler identification is MSVC 19.22.27905.0", configure_out)
+            self.assertIn("-- Check for working C compiler: C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/MSVC/14.22.27905/bin/Hostx64/x64/cl.exe -- works", configure_out)
+            self.assertIn("-- Check for working CXX compiler: C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/MSVC/14.22.27905/bin/Hostx64/x64/cl.exe -- works", configure_out)
+
+        self.assertEqual(compiler_name, cmake_cache["CMAKE_GENERATOR:INTERNAL"])
 
     @parameterized.expand([("v140",), ("v141",), ("v142",), ])
     @unittest.skipUnless(platform.system() == "Windows", "Only Windows")
     def test_compiler_toolset_win(self, compiler_toolset):
-        #if not self.use_toolchain:
-        #    self.skipTest("It doesn't work without toolchain")
+
+        # TODO: What if the toolset is not installed for the CMAKE_GENERATOR given
 
         cache_filepath = os.path.join(self.t.current_folder, "build", "CMakeCache.txt")
         if os.path.exists(cache_filepath):
@@ -318,6 +340,7 @@ class AdjustAutoTestCase(unittest.TestCase):
         configure_out, cmake_cache, cmake_cache_keys, _, _ = self._run_configure({"compiler.toolset": compiler_toolset})
 
         #self.assertIn("compiler.toolset={}".format(compiler_toolset), configure_out)
+        self.assertIn("-- Building for: Visual Studio 16 2019")
         if compiler_toolset == "v140":
             self.assertIn("-- The C compiler identification is MSVC 19.0.24215.1", configure_out)
             self.assertIn("-- The CXX compiler identification is MSVC 19.0.24215.1", configure_out)
