@@ -750,20 +750,32 @@ class Pkg(ConanFile):
                       client.out)
 
     def checksums_metadata_test(self):
-        server = TestServer(users={"user": "password"}, write_permissions=[("*/*@*/*", "*")])
-        servers = {"default": server}
-        client = TestClient(servers=servers, users={"default": [("user", "password")]})
-
+        client = TestClient(default_server_user=True)
         client.save({"conanfile.py": GenConanfile()})
-
         client.run('create . lib/1.0@user/channel')
-        client.run('upload lib/1.0 -c --all')
+        client.run('upload lib/1.0 -c --all -r default')
         ref = ConanFileReference("lib", "1.0", "user", "channel")
         metadata = client.cache.package_layout(ref).load_metadata()
-        self.assertEqual(len(metadata.packages[NO_SETTINGS_PACKAGE_ID].checksums["conan_package.tgz"]["md5"]), 32)
-        self.assertEqual(len(metadata.packages[NO_SETTINGS_PACKAGE_ID].checksums["conan_package.tgz"]["sha1"]), 40)
-        self.assertEqual(len(metadata.recipe.checksums["conanfile.py"]["md5"]), 32)
-        self.assertEqual(len(metadata.recipe.checksums["conanfile.py"]["sha1"]), 40)
+        package_md5 = metadata.packages[NO_SETTINGS_PACKAGE_ID].checksums["conan_package.tgz"]["md5"]
+        package_sha1 = metadata.packages[NO_SETTINGS_PACKAGE_ID].checksums["conan_package.tgz"][
+            "sha1"]
+        recipe_md5 = metadata.recipe.checksums["conanfile.py"]["md5"]
+        recipe_sha1 = metadata.recipe.checksums["conanfile.py"]["sha1"]
+        self.assertEqual(len(package_md5), 32)
+        self.assertEqual(len(package_sha1), 40)
+        self.assertEqual(len(recipe_md5), 32)
+        self.assertEqual(len(recipe_sha1), 40)
+        client.run('remove * -f')
+        client.run('install lib/1.0@user/channel -r default')
+        metadata = client.cache.package_layout(ref).load_metadata()
+        self.assertEqual(
+            metadata.packages[NO_SETTINGS_PACKAGE_ID].checksums["conan_package.tgz"]["md5"],
+            package_md5)
+        self.assertEqual(
+            metadata.packages[NO_SETTINGS_PACKAGE_ID].checksums["conan_package.tgz"]["sha1"],
+            package_sha1)
+        self.assertEqual(metadata.recipe.checksums["conanfile.py"]["md5"], recipe_md5)
+        self.assertEqual(metadata.recipe.checksums["conanfile.py"]["sha1"], recipe_sha1)
         
     def upload_without_cleaned_user_test(self):
         """ When a user is not authenticated, uploads failed first time
