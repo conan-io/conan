@@ -73,7 +73,7 @@ class CaptureExportSCMDataTest(unittest.TestCase):
             conanfile_dir=self.conanfile_dir,
             destination_folder="",
             output=output,
-            ignore_dirty=True)
+            ignore_dirty=False)
 
         self.assertEqual(scm_data.url, url)
         if is_pristine:
@@ -82,7 +82,9 @@ class CaptureExportSCMDataTest(unittest.TestCase):
             self.assertNotIn("Repo origin deduced", output)
         else:
             self.assertEqual(scm_data.revision, "auto")
-            self.assertIn("Repo status is not pristine: there might be modified files", output)
+            self.assertIn("There are uncommitted changes, skipping the replacement of 'scm.url' "
+                          "and 'scm.revision' auto fields. Use --ignore-dirty to force it.",
+                          output)
 
     def test_url_auto(self, _):
         output = TestBufferConanOutput()
