@@ -18,7 +18,7 @@ class ArgumentParserError(Exception):
 class ErrorCatchingArgumentParser(argparse.ArgumentParser):
     def exit(self, status=0, message=None):
         if status:
-            raise ArgumentParserError(f"Exiting because of an error: {message}")
+            raise ArgumentParserError(message)
 
     def error(self, message):
         raise ArgumentParserError(message)
@@ -103,37 +103,37 @@ def run():
                                         help="password")
             parser_publish.add_argument("--apikey", type=str, nargs="?", default=None, help="apikey")
 
-        def check_credential_arguments():
-            if args.user and args.apikey:
-                parser_v2.error("Please select one authentificacion method --user USER "
-                                "--password PASSWORD or --apikey APIKEY")
-            if args.user and not args.password:
-                parser_v2.error(
-                    "Please specify a password for user '{}' with --password PASSWORD".format(
-                        args.user))
+            def check_credential_arguments():
+                if args.user and args.apikey:
+                    parser_v2.error("Please select one authentificacion method --user USER "
+                                    "--password PASSWORD or --apikey APIKEY")
+                if args.user and not args.password:
+                    parser_v2.error(
+                        "Please specify a password for user '{}' with --password PASSWORD".format(
+                            args.user))
 
-        try:
-            args = parser_v2.parse_args()
-            if args.subcommand == "start":
-                start_build_info(output, args.build_name, args.build_number)
-            if args.subcommand == "stop":
-                stop_build_info(output)
-            if args.subcommand == "create":
-                check_credential_arguments()
-                create_build_info(output, args.build_info_file, args.lockfile, args.multi_module,
-                                  args.skip_env, args.user, args.password, args.apikey)
-            if args.subcommand == "update":
-                update_build_info(args.buildinfo, args.output_file)
-            if args.subcommand == "publish":
-                check_credential_arguments()
-                publish_build_info(args.buildinfo, args.url, args.user, args.password,
-                                   args.apikey)
-        except ArgumentParserError as exc:
-            exc_v2 = exc
-        except ConanException as exc:
-            output.error(exc)
-        except Exception as exc:
-            output.error(exc)
+            try:
+                args = parser_v2.parse_args()
+                if args.subcommand == "start":
+                    start_build_info(output, args.build_name, args.build_number)
+                if args.subcommand == "stop":
+                    stop_build_info(output)
+                if args.subcommand == "create":
+                    check_credential_arguments()
+                    create_build_info(output, args.build_info_file, args.lockfile, args.multi_module,
+                                      args.skip_env, args.user, args.password, args.apikey)
+                if args.subcommand == "update":
+                    update_build_info(args.buildinfo, args.output_file)
+                if args.subcommand == "publish":
+                    check_credential_arguments()
+                    publish_build_info(args.buildinfo, args.url, args.user, args.password,
+                                       args.apikey)
+            except ArgumentParserError as exc:
+                exc_v2 = exc
+            except ConanException as exc:
+                output.error(exc)
+            except Exception as exc:
+                output.error(exc)
 
     def print_helpv1():
         output.error(str(exc_v1))
