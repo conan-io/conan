@@ -62,8 +62,8 @@ def run():
             parser_start = subparsers.add_parser("start",
                                                  help="Command to incorporate to the "
                                                       "artifacts.properties the build name and number")
-            parser_start.add_argument("build-name", type=str, help="build name to assign")
-            parser_start.add_argument("build-number", type=int,
+            parser_start.add_argument("build_name", type=str, help="build name to assign")
+            parser_start.add_argument("build_number", type=int,
                                       help="build number to assign")
 
             subparsers.add_parser("stop", help="Command to remove from the artifacts.properties "
