@@ -397,7 +397,7 @@ class AdjustAutoTestCase(unittest.TestCase):
         cache_filepath = os.path.join(self.t.current_folder, "build", "CMakeCache.txt")
         if os.path.exists(cache_filepath):
             os.unlink(cache_filepath)  # FIXME: Ideally this shouldn't be needed (I need it only here)
-            
+
         configure_out, cmake_cache, cmake_cache_keys, _, _ = self._run_configure()
 
         extra_blank = "" if self.use_toolchain else " "  # FIXME: There is an extra blank for no-toolchain
@@ -609,3 +609,35 @@ class AdjustAutoTestCase(unittest.TestCase):
             self.assertEqual("", cmake_cache["CMAKE_SHARED_LINKER_FLAGS:STRING"])
 
         self.assertEqual("", cmake_cache["CMAKE_EXE_LINKER_FLAGS:STRING"])
+
+    @parameterized.expand([("7",), ("8",), ])
+    @unittest.skipUnless(platform.system() == "Linux", "Only linux")
+    def test_compiler_version_linux(self, compiler_version):
+        if not self.use_toolchain:
+            self.skipTest("It doesn't work without toolchain")
+
+        cache_filepath = os.path.join(self.t.current_folder, "build", "CMakeCache.txt")
+        if os.path.exists(cache_filepath):
+            os.unlink(cache_filepath)  # FIXME: Ideally this shouldn't be needed (I need it only here)
+
+        configure_out, cmake_cache, cmake_cache_keys, _, _ = self._run_configure({"compiler.version": compiler_version})
+
+        def gcc_version_full():
+            import re
+            from conans.client.conf.detect import _execute
+            _, output = _execute("gcc-{} --version".format(compiler_version))
+            m = re.match(".*(?P<version>\d\.\d\.\d)$", output.split("\\n")[0])
+            return m.group("version")
+
+        full_version_str = gcc_version_full()
+        self.assertTrue(full_version_str.startswith(compiler_version))
+        self.assertIn("-- The C compiler identification is GNU {}".format(full_version_str), configure_out)
+        self.assertIn("-- The CXX compiler identification is GNU {}".format(full_version_str), configure_out)
+        self.assertIn("-- Check for working C compiler: /usr/bin/gcc-{} -- works".format(compiler_version), configure_out)
+        self.assertIn("-- Check for working CXX compiler: /usr/bin/g++-{} -- works".format(compiler_version), configure_out)
+
+        self.assertEqual("/usr/bin/gcc-ar-{}".format(compiler_version), cmake_cache["CMAKE_CXX_COMPILER_AR:FILEPATH"])
+        self.assertEqual("/usr/bin/gcc-ranlib-{}".format(compiler_version), cmake_cache["CMAKE_CXX_COMPILER_RANLIB:FILEPATH"])
+        self.assertEqual("/usr/bin/gcc-ar-{}".format(compiler_version), cmake_cache["CMAKE_C_COMPILER_AR:FILEPATH"])
+        self.assertEqual("/usr/bin/gcc-ranlib-{}".format(compiler_version), cmake_cache["CMAKE_C_COMPILER_RANLIB:FILEPATH"])
+

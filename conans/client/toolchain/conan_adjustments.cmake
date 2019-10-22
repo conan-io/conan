@@ -236,3 +236,13 @@ macro(conan_set_find_library_paths)
     set(CMAKE_LIBRARY_PATH ${CONAN_LIB_DIRS} ${CMAKE_LIBRARY_PATH})
 endmacro()
 
+
+macro(conan_set_compiler)
+    if(CONAN_COMPILER STREQUAL "gcc")
+        conan_message(STATUS "Conan: Adjust compiler: ${CONAN_COMPILER} ${CONAN_COMPILER_VERSION}")
+        set(CMAKE_C_COMPILER gcc-${CONAN_COMPILER_VERSION})
+        #set(CMAKE_C_COMPILER_VERSION 7.4.0) # ${CONAN_COMPILER_VERSION})
+        set(CMAKE_CXX_COMPILER g++-${CONAN_COMPILER_VERSION})
+        #set(CMAKE_CXX_COMPILER_VERSION 7.4.0) # ${CONAN_COMPILER_VERSION})
+    endif()
+endmacro()

@@ -51,6 +51,7 @@ class CMakeToolchain:
         set(ENV{{ '{' }}{{ it }}{{ '}' }} "{{ value }}")
         {%- endfor %}
         
+        include("{{ conan_adjustements_cmake }}")
         
         get_property( _CMAKE_IN_TRY_COMPILE GLOBAL PROPERTY IN_TRY_COMPILE )
         if(NOT _CMAKE_IN_TRY_COMPILE)
@@ -83,6 +84,9 @@ class CMakeToolchain:
         else()
             # message(">>>> TRY COMPILE")
         endif()
+        
+        conan_set_compiler()
+
 
         {#
         # Host machine        
