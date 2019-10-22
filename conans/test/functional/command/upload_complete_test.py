@@ -280,12 +280,8 @@ class UploadTest(unittest.TestCase):
     def upload_parallel_success_test(self):
         """Upload 2 packages in parallel with success"""
 
-        # For each file will fail the first time and will success in the second one
-        server = TestServer(users={"user": "password"}, write_permissions=[("*/*@*/*", "*")])
-        servers = {"default": server}
-        client = TestClient(servers=servers, users={"default": [("user", "password")]})
+        client = TestClient(default_server_user=True)
         client.save({"conanfile.py": GenConanfile()})
-        
         client.run('create . lib0/1.0@user/channel')
         self.assertIn("lib0/1.0@user/channel: Package '{}' created".format(NO_SETTINGS_PACKAGE_ID),
                       client.out)
@@ -304,12 +300,8 @@ class UploadTest(unittest.TestCase):
     def upload_parallel_fail_on_interaction_test(self):
         """Upload 2 packages in parallel and fail because non_interactive forced"""
 
-        # For each file will fail the first time and will success in the second one
-        server = TestServer(users={"user": "password"}, write_permissions=[("*/*@*/*", "*")])
-        servers = {"default": server}
-        client = TestClient(servers=servers, users={"default": [("user", "password")]})
+        client = TestClient(default_server_user=True)
         client.save({"conanfile.py": GenConanfile()})
-
         num_references = 2
         for index in range(num_references):
             client.run('create . lib{}/1.0@user/channel'.format(index))
