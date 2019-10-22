@@ -333,17 +333,18 @@ class AdjustAutoTestCase(unittest.TestCase):
         if self.use_toolchain:
             self.assertEqual("-m64 -stdlib=libc++", cmake_cache["CMAKE_CXX_FLAGS:STRING"])
             self.assertEqual("-m64", cmake_cache["CMAKE_C_FLAGS:STRING"])
+            self.assertEqual("-m64", cmake_cache["CMAKE_SHARED_LINKER_FLAGS:STRING"])
         else:
             # FIXME: No-toolchain doesn't match those in CMakeLists
             self.assertEqual("", cmake_cache["CMAKE_CXX_FLAGS:STRING"])
             self.assertEqual("", cmake_cache["CMAKE_C_FLAGS:STRING"])
+            self.assertEqual("", cmake_cache["CMAKE_SHARED_LINKER_FLAGS:STRING"])
 
         self.assertEqual("-g", cmake_cache["CMAKE_CXX_FLAGS_DEBUG:STRING"])
         self.assertEqual("-O3 -DNDEBUG", cmake_cache["CMAKE_CXX_FLAGS_RELEASE:STRING"])
         self.assertEqual("-g", cmake_cache["CMAKE_C_FLAGS_DEBUG:STRING"])
         self.assertEqual("-O3 -DNDEBUG", cmake_cache["CMAKE_C_FLAGS_RELEASE:STRING"])
 
-        self.assertEqual("", cmake_cache["CMAKE_SHARED_LINKER_FLAGS:STRING"])
         self.assertEqual("", cmake_cache["CMAKE_EXE_LINKER_FLAGS:STRING"])
 
     @unittest.skipIf(platform.system() != "Windows", "Only Windows")
