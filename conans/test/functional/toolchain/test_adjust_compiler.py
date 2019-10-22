@@ -302,9 +302,41 @@ class AdjustAutoTestCase(unittest.TestCase):
     @parameterized.expand([("7",), ("8",), ])
     @unittest.skipUnless(platform.system() == "Windows", "Only Windows")
     def test_compiler_version_win(self, compiler_version):
+        self.skipTest("This should be implemented in terms of CMAKE_GENERATOR (environment)")
         self.fail("Not implemented: different versions of Visual Studio")
 
-    @parameterized.expand([("7",), ("8",), ])
+    @parameterized.expand([("v140",), ("v141",), ("v142",), ])
     @unittest.skipUnless(platform.system() == "Windows", "Only Windows")
-    def test_compiler_toolset_win(self, compiler_version):
-        self.fail("Not implemented: different versions of Visual Studio toolset")
+    def test_compiler_toolset_win(self, compiler_toolset):
+        #if not self.use_toolchain:
+        #    self.skipTest("It doesn't work without toolchain")
+
+        cache_filepath = os.path.join(self.t.current_folder, "build", "CMakeCache.txt")
+        if os.path.exists(cache_filepath):
+            os.unlink(cache_filepath)  # FIXME: Ideally this shouldn't be needed (I need it only here)
+
+        configure_out, cmake_cache, cmake_cache_keys, _, _ = self._run_configure({"compiler.toolset": compiler_toolset})
+
+        #self.assertIn("compiler.toolset={}".format(compiler_toolset), configure_out)
+        if compiler_toolset == "v140":
+            self.assertIn("-- The C compiler identification is MSVC 19.0.24215.1", configure_out)
+            self.assertIn("-- The CXX compiler identification is MSVC 19.0.24215.1", configure_out)
+            self.assertIn("-- Check for working C compiler: C:/Program Files (x86)/Microsoft Visual Studio 14.0/VC/bin/amd64/cl.exe -- works", configure_out)
+            self.assertIn("-- Check for working CXX compiler: C:/Program Files (x86)/Microsoft Visual Studio 14.0/VC/bin/amd64/cl.exe -- works", configure_out)
+        elif compiler_toolset == "v141":
+            self.assertIn("-- The C compiler identification is MSVC 19.16.27031.1", configure_out)
+            self.assertIn("-- The CXX compiler identification is MSVC 19.16.27031.1", configure_out)
+            self.assertIn("-- Check for working C compiler: C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/MSVC/14.16.27023/bin/HostX64/x64/cl.exe -- works", configure_out)
+            self.assertIn("-- Check for working CXX compiler: C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/MSVC/14.16.27023/bin/HostX64/x64/cl.exe -- works", configure_out)
+        else:
+            self.assertIn("-- The C compiler identification is MSVC 19.22.27905.0", configure_out)
+            self.assertIn("-- The CXX compiler identification is MSVC 19.22.27905.0", configure_out)
+            self.assertIn("-- Check for working C compiler: C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/MSVC/14.22.27905/bin/Hostx64/x64/cl.exe -- works", configure_out)
+            self.assertIn("-- Check for working CXX compiler: C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/MSVC/14.22.27905/bin/Hostx64/x64/cl.exe -- works", configure_out)
+
+        if compiler_toolset == "v140":
+            self.assertEqual("C:/Program Files (x86)/Microsoft Visual Studio 14.0/VC/bin/amd64/link.exe", cmake_cache["CMAKE_LINKER:FILEPATH"])
+        elif compiler_toolset == "v141":
+            self.assertEqual("C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/MSVC/14.16.27023/bin/HostX64/x64/link.exe", cmake_cache["CMAKE_LINKER:FILEPATH"])
+        else:
+            self.assertEqual("C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/MSVC/14.22.27905/bin/Hostx64/x64/link.exe", cmake_cache["CMAKE_LINKER:FILEPATH"])
