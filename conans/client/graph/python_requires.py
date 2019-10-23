@@ -16,7 +16,7 @@ class PyRequires(object):
     def __init__(self):
         self._pyrequires = {}  # {pkg-name: module}
 
-    def __getattr__(self, item):
+    def __getitem__(self, item):
         try:
             return self._pyrequires[item]
         except KeyError:
@@ -60,7 +60,7 @@ class PyRequireLoader(object):
                 py_requires_extend = [py_requires_extend, ]
             for p in py_requires_extend:
                 pkg_name, base_class_name = p.split(".")
-                base_class = getattr(getattr(py_requires, pkg_name), base_class_name)
+                base_class = getattr(py_requires[pkg_name], base_class_name)
                 conanfile.__bases__ = (base_class,) + conanfile.__bases__
         conanfile.python_requires = py_requires
         conanfile.py_requires_all_refs = all_refs

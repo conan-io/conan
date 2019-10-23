@@ -150,7 +150,7 @@ class PyRequiresExtendTest(unittest.TestCase):
             class Pkg(ConanFile):
                 python_requires = "helper/1.0@user/channel"
                 def build(self):
-                    self.python_requires.base
+                    self.python_requires["base"]
             """)
         client.save({"conanfile.py": conanfile})
         client.run("create . pkg/0.1@user/channel", assert_error=True)
@@ -195,10 +195,10 @@ class PyRequiresExtendTest(unittest.TestCase):
             class MyConanfileBase(ConanFile):
                 python_requires = "pkg1/1.0@user/channel", "pkg2/1.0@user/channel"
                 def build(self):
-                    self.output.info("PKG1 : %s" % self.python_requires.pkg1.myvar)
-                    self.output.info("PKG2 : %s" % self.python_requires.pkg2.myvar)
-                    self.output.info("PKG1F : %s" % self.python_requires.pkg1.myfunct())
-                    self.output.info("PKG2F : %s" % self.python_requires.pkg2.myfunct())
+                    self.output.info("PKG1 : %s" % self.python_requires["pkg1"].myvar)
+                    self.output.info("PKG2 : %s" % self.python_requires["pkg2"].myvar)
+                    self.output.info("PKG1F : %s" % self.python_requires["pkg1"].myfunct())
+                    self.output.info("PKG2F : %s" % self.python_requires["pkg2"].myfunct())
             """)
         client.save({"conanfile.py": conanfile})
         client.run("create . Consumer/0.1@user/testing")
@@ -358,8 +358,8 @@ class PyRequiresExtendTest(unittest.TestCase):
             class MyConanfileBase(ConanFile):
                 python_requires = "base2/1.0@user/channel", "base1/1.0@user/channel"
                 def build(self):
-                    self.python_requires.base1.myhelper.myhelp(self.output)
-                    self.python_requires.base2.myhelper.myhelp(self.output)
+                    self.python_requires["base1"].myhelper.myhelp(self.output)
+                    self.python_requires["base2"].myhelper.myhelp(self.output)
             """)
         # This should work, even if there is a local "myhelper.py" file, which could be
         # accidentaly imported (and it was, it was a bug)
@@ -393,7 +393,7 @@ class PyRequiresExtendTest(unittest.TestCase):
                 python_requires = "base/1.1@user/testing"
                 python_requires_extend = "base.MyConanfileBase"
                 def configure(self):
-                    self.output.info("PYTHON REQUIRE VAR %s" % self.python_requires.base.somevar)
+                    self.output.info("PYTHON REQUIRE VAR %s" % self.python_requires["base"].somevar)
         """)
 
         client2.save({"conanfile.py": reuse})
@@ -429,7 +429,7 @@ class PyRequiresExtendTest(unittest.TestCase):
                 python_requires = "base/[>1.0]@user/testing"
                 python_requires_extend = "base.MyConanfileBase"
                 def configure(self):
-                    self.output.info("PYTHON REQUIRE VAR %s" % self.python_requires.base.somevar)
+                    self.output.info("PYTHON REQUIRE VAR %s" % self.python_requires["base"].somevar)
         """)
 
         client2.save({"conanfile.py": reuse})
@@ -474,11 +474,11 @@ class PyRequiresExtendTest(unittest.TestCase):
             class MyConanfileBase(ConanFile):
                 python_requires = "tool/0.1@user/channel"
                 def source(self):
-                    self.output.info("Pkg1 source: %s" % self.python_requires.tool.var)
+                    self.output.info("Pkg1 source: %s" % self.python_requires["tool"].var)
                 def build(self):
-                    self.output.info("Pkg1 build: %s" % self.python_requires.tool.var)
+                    self.output.info("Pkg1 build: %s" % self.python_requires["tool"].var)
                 def package(self):
-                    self.output.info("Pkg1 package: %s" % self.python_requires.tool.var)
+                    self.output.info("Pkg1 package: %s" % self.python_requires["tool"].var)
             """)
         client.save({"conanfile.py": conanfile})
         client.run("source .")
