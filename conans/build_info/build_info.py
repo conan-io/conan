@@ -3,7 +3,7 @@ import json
 import os
 import re
 from collections import defaultdict, namedtuple
-from urllib.parse import urlparse, urljoin
+from six.moves.urllib.parse import urlparse, urljoin
 
 import requests
 
