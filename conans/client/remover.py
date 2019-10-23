@@ -46,7 +46,7 @@ class DiskRemover(object):
 
     def remove_src(self, package_layout):
         self._remove(package_layout.source(), package_layout.ref, "src folder")
-        self._remove(package_layout.scm_sources(), package_layout.ref, "src folder")
+        self._remove(package_layout.scm_sources(), package_layout.ref, "scm src folder")
 
     def remove_builds(self, package_layout, ids=None):
         if not ids:

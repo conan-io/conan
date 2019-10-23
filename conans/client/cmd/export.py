@@ -3,7 +3,6 @@ import os
 import shutil
 
 import six
-from conans.client.source import merge_directories
 
 from conans.client.cmd.export_linter import conan_linter
 from conans.client.file_copier import FileCopier
@@ -11,12 +10,13 @@ from conans.client.output import ScopedOutput
 from conans.client.remover import DiskRemover
 from conans.errors import ConanException
 from conans.model.manifest import FileTreeManifest
+from conans.model.ref import ConanFileReference
 from conans.model.scm import SCM, get_scm_data
 from conans.paths import CONANFILE, DATA_YML
 from conans.search.search import search_recipes, search_packages
-from conans.util.files import is_dirty, load, rmdir, save, set_dirty, remove, mkdir
+from conans.util.files import is_dirty, load, rmdir, save, set_dirty, remove, mkdir, \
+    merge_directories
 from conans.util.log import logger
-from conans.model.ref import ConanFileReference
 
 
 def export_alias(package_layout, target_ref, output, revisions_enabled):
