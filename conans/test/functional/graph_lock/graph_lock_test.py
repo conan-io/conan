@@ -3,8 +3,6 @@ import os
 import textwrap
 import unittest
 
-from parameterized.parameterized import parameterized
-
 from conans.model.graph_lock import LOCKFILE, LOCKFILE_VERSION
 from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient, TestServer, GenConanfile
@@ -565,10 +563,12 @@ class GraphLockConsumerBuildOrderTest(unittest.TestCase):
         jsonbo = json.loads(client.load("bo.json"))
         level0 = jsonbo[0]
         ca = level0[0]
-        self.assertEqual("CA/1.0@user/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", ca[1])
+        self.assertEqual("CA/1.0@user/channel#f3367e0e7d170aa12abccb175fee5f97"
+                         ":5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", ca[1])
         level1 = jsonbo[1]
         cb = level1[0]
-        self.assertEqual("CB/1.0@user/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", cb[1])
+        self.assertEqual("CB/1.0@user/channel#29352c82c9c6b7d1be85524ef607f77f"
+                         ":5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", cb[1])
 
     def consumer_build_order_test(self):
         # https://github.com/conan-io/conan/issues/5727
