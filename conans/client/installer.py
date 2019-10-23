@@ -447,7 +447,7 @@ class BinaryInstaller(object):
         node_order = [n for n in node.public_closure if n.binary != BINARY_SKIP]
         # List sort is stable, will keep the original order of the closure, but prioritize levels
         conan_file = node.conanfile
-        transitive = node.transitive_closure.values()
+        transitive = [it for it in node.transitive_closure]
         for n in node_order:
             if n not in transitive:
                 conan_file.output.info("Applying build-requirement: %s" % str(n.ref))
@@ -457,10 +457,13 @@ class BinaryInstaller(object):
                 conan_file.deps_cpp_info.update(n.conanfile.cpp_info, n.ref.name)
                 conan_file.deps_env_info.update(n.conanfile.env_info, n.ref.name)
             else:
-                if not n.build_require or n.build_require_host:
-                    conan_file.deps_cpp_info.update(n.conanfile.cpp_info, n.ref.name)
-                else:
-                    conan_file.deps_env_info.update(n.conanfile.env_info, n.ref.name)
+                # TODO: Implement this if/else
+                #if not n.build_require or n.build_require_host:
+                #    conan_file.deps_cpp_info.update(n.conanfile.cpp_info, n.ref.name)
+                #else:
+                #    conan_file.deps_env_info.update(n.conanfile.env_info, n.ref.name)
+                conan_file.deps_cpp_info.update(n.conanfile.cpp_info, n.ref.name)
+                conan_file.deps_env_info.update(n.conanfile.env_info, n.ref.name)
 
         # Update the info but filtering the package values that not apply to the subtree
         # of this current node and its dependencies.

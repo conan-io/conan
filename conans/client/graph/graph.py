@@ -87,7 +87,7 @@ class Node(object):
         self._public_closure = _NodeOrderedDict()  # {ref.name: Node}
         # The dependencies of this node that will be propagated to consumers when they depend
         # on this node. It includes regular (not private and not build requires) dependencies
-        self.transitive_closure = None  # {ref.name: Node}  # TODO: Do we need info about context here?
+        self._transitive_closure = _NodeOrderedDict()  # {ref.name: Node}
         self.inverse_closure = set()  # set of nodes that have this one in their public
         self.ancestors = None  # set{ref.name}
         self._id = None  # Unique ID (uuid at the moment) of a node in the graph
@@ -128,6 +128,10 @@ class Node(object):
     @property
     def public_closure(self):
         return self._public_closure
+
+    @property
+    def transitive_closure(self):
+        return self._transitive_closure
 
     def partial_copy(self):
         # Used for collapse_graph
