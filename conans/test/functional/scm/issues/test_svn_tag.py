@@ -59,4 +59,4 @@ class SVNTaggedComponentTest(SVNLocalRepoTestCase):
 
         # Compile (it will clone the repo)
         t.run("install {ref} --build=lib".format(ref=ref))
-        self.assertIn("lib/version@issue/testing: Getting sources from url:", t.out)
+        self.assertIn("lib/version@issue/testing: SCM: Getting sources from url:", t.out)

@@ -224,7 +224,7 @@ def _run_cache_scm(conanfile, src_folder, scm_sources_folder, output):
         output.info("Copying previously cached scm sources")
         merge_directories(scm_sources_folder, dest_dir)
     else:
-        output.info("Getting sources from url: '%s'" % scm_data.url)
+        output.info("SCM: Getting sources from url: '%s'" % scm_data.url)
         scm = SCM(scm_data, dest_dir, output)
         scm.checkout()
         # This is a bit weird. Why after a SCM should we remove files.
@@ -256,10 +256,10 @@ def _run_local_scm(conanfile, src_folder, conanfile_folder, output):
         src_path = scm.get_local_path_to_url(url=scm_url)
         if src_path:
             excluded = SCM(scm_data, src_path, output).excluded_files
-            output.info("Getting sources from folder: %s" % src_path)
+            output.info("SCM: Getting sources from folder: %s" % src_path)
             merge_directories(src_path, dest_dir, excluded=excluded)
             return
 
-    output.info("Getting sources from url: '%s'" % scm_data.url)
+    output.info("SCM: Getting sources from url: '%s'" % scm_data.url)
     scm = SCM(scm_data, dest_dir, output)
     scm.checkout()

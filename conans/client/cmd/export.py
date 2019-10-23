@@ -56,7 +56,7 @@ def export_scm(scm_data, origin_folder, scm_sources_folder, output):
     # https://github.com/conan-io/conan/issues/5195
     excluded = SCM(scm_data, origin_folder, output).excluded_files
     excluded.append("conanfile.py")
-    output.info("Getting sources from folder: %s" % origin_folder)
+    output.info("SCM: Getting sources from folder: %s" % origin_folder)
     merge_directories(origin_folder, scm_sources_folder, excluded=excluded)
 
 
@@ -216,7 +216,9 @@ def _capture_export_scm_data(conanfile, conanfile_dir, destination_folder, outpu
 
     if not scm.is_pristine() and not ignore_dirty:
         output.warn("There are uncommitted changes, skipping the replacement of 'scm.url' and "
-                    "'scm.revision' auto fields. Use --ignore-dirty to force it.")
+                    "'scm.revision' auto fields. Use --ignore-dirty to force it. The 'conan "
+                    "upload' command will prevent uploading recipes with 'auto' values in these "
+                    "fields.")
         local_src_path = scm.get_local_path_to_url(scm_data.url) \
             if scm_data.url != "auto" else conanfile_dir
         return scm_data, local_src_path

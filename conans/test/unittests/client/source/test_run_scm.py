@@ -71,7 +71,7 @@ class RunSCMTest(unittest.TestCase):
                                scm_sources_folder="/not/existing/path",
                                output=output)
 
-        self.assertIn("Getting sources from url: '{}'".format(url), output)
+        self.assertIn("SCM: Getting sources from url: '{}'".format(url), output)
 
     def test_user_space_with_local_sources(self):
         output = TestBufferConanOutput()
