@@ -6,12 +6,12 @@ import unittest
 import mock
 from parameterized import parameterized
 
-from conans.client.cmd.export import _capture_export_scm_data
+from conans.client.cmd.export import _capture_scm_auto_fields
 from conans.client.tools.scm import Git
 from conans.model.ref import ConanFileReference
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import create_local_git_repo, TestBufferConanOutput
-from conans.util.files import load, save
+from conans.util.files import save
 
 
 @mock.patch("conans.client.cmd.export._replace_scm_data_in_conanfile", return_value=None)
@@ -42,7 +42,7 @@ class CaptureExportSCMDataTest(unittest.TestCase):
         url = self.git.folder if local_origin else "https://remote.url"
         self.git.run("remote add origin \"{}\"".format(url))
 
-        scm_data, _ = _capture_export_scm_data(
+        scm_data, _ = _capture_scm_auto_fields(
             conanfile=conanfile,
             conanfile_dir=self.conanfile_dir,
             destination_folder="",
@@ -68,7 +68,7 @@ class CaptureExportSCMDataTest(unittest.TestCase):
         if not is_pristine:
             save(os.path.join(self.git.folder, "other"), "ccc")
 
-        scm_data, _ = _capture_export_scm_data(
+        scm_data, _ = _capture_scm_auto_fields(
             conanfile=conanfile,
             conanfile_dir=self.conanfile_dir,
             destination_folder="",
@@ -97,7 +97,7 @@ class CaptureExportSCMDataTest(unittest.TestCase):
         url = "https://remote.url"
         self.git.run("remote add origin \"{}\"".format(url))
 
-        scm_data, _ = _capture_export_scm_data(
+        scm_data, _ = _capture_scm_auto_fields(
                     conanfile=conanfile,
                     conanfile_dir=self.conanfile_dir,
                     destination_folder="",
@@ -108,6 +108,3 @@ class CaptureExportSCMDataTest(unittest.TestCase):
         self.assertEqual(scm_data.revision, self.rev)
         self.assertIn("Repo origin deduced by 'auto': {}".format(url), output)
         self.assertNotIn("Revision deduced", output)
-
-
-    # TODO: Add more tests for the ignore_dirty
