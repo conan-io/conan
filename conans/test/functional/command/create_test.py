@@ -313,9 +313,9 @@ class TestConan(ConanFile):
         client.save({"conanfile.py": conanfile})
         client.run("create . Hello/1.2@lasote/stable")
         client.run("create ./ Pkg/1.2@lasote/stable", assert_error=True)
-        self.assertIn("ERROR: Package recipe exported with name Pkg!=Hello", client.out)
+        self.assertIn("ERROR: Package recipe with name Pkg!=Hello", client.out)
         client.run("create . Hello/1.1@lasote/stable", assert_error=True)
-        self.assertIn("ERROR: Package recipe exported with version 1.1!=1.2", client.out)
+        self.assertIn("ERROR: Package recipe with version 1.1!=1.2", client.out)
 
     def create_user_channel_test(self):
         client = TestClient()
