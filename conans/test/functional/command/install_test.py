@@ -70,7 +70,7 @@ class Pkg(ConanFile):
         client.save({"conanfile.py": conanfile})
         # passing the wrong package name raises
         client.run("install . Pkg/0.1@myuser/testing", assert_error=True)
-        self.assertIn("ERROR: Package recipe name Pkg!=Other", client.out)
+        self.assertIn("ERROR: Package recipe with name Pkg!=Other", client.out)
         # Partial reference works
         client.run("install . 0.1@myuser/testing")
         client.run("build .")
@@ -85,7 +85,7 @@ class Pkg(ConanFile):
         client.save({"conanfile.py": conanfile})
         # passing the wrong package name raises
         client.run("install . Other/0.1@myuser/testing", assert_error=True)
-        self.assertIn("ERROR: Package recipe version 0.1!=0.2", client.out)
+        self.assertIn("ERROR: Package recipe with version 0.1!=0.2", client.out)
         # Partial reference works
         client.run("install . myuser/testing")
         client.run("build .")

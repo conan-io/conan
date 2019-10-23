@@ -47,7 +47,7 @@ class VersionRangesTest(GraphTest):
             self.retriever.save_recipe(say_ref, say_content)
 
     def build_graph(self, content, update=False):
-        self.loader.cached_conanfiles = {}
+        self.loader._cached_conanfile_classes = {}
         processed_profile = test_processed_profile()
         root_conan = self.retriever.root(str(content), processed_profile)
         deps_graph = self.builder.load_graph(root_conan, update, update, self.remotes,

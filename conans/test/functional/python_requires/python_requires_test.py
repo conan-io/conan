@@ -423,6 +423,67 @@ class PkgTest(base.MyConanfileBase):
         self.assertTrue(os.path.exists(os.path.join(client.cache.package_layout(ref).export(),
                                                     "other.txt")))
 
+    def reuse_name_version_test(self):
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class BasePkg(ConanFile):
+                name = "Base"
+                version = "1.1"
+            """)
+        client.save({"conanfile.py": conanfile})
+        client.run("export . lasote/testing")
+
+        reuse = textwrap.dedent("""
+            from conans import python_requires
+            base = python_requires("Base/1.1@lasote/testing")
+            class PkgTest(base.BasePkg):
+                pass
+            """)
+        client.save({"conanfile.py": reuse})
+        client.run("create . Pkg/0.1@lasote/testing", assert_error=True)
+        self.assertIn("ERROR: Package recipe with name Pkg!=Base", client.out)
+
+        reuse = textwrap.dedent("""
+            from conans import python_requires
+            base = python_requires("Base/1.1@lasote/testing")
+            class PkgTest(base.BasePkg):
+                name = "Pkg"
+                version = "0.1"
+            """)
+        client.save({"conanfile.py": reuse})
+        client.run("create . Pkg/0.1@lasote/testing")
+        self.assertIn("Pkg/0.1@lasote/testing: Created package ", client.out)
+        client.run("create . lasote/testing")
+        self.assertIn("Pkg/0.1@lasote/testing: Created package ", client.out)
+
+    def reuse_set_name_set_version_test(self):
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile, load
+            class BasePkg(ConanFile):
+                def set_name(self):
+                    self.name = load("name.txt")
+                def set_version(self):
+                    self.version = load("version.txt")
+            """)
+        client.save({"conanfile.py": conanfile,
+                     "name.txt": "Base",
+                     "version.txt": "1.1"})
+        client.run("export . user/testing")
+
+        reuse = textwrap.dedent("""
+            from conans import python_requires
+            base = python_requires("Base/1.1@user/testing")
+            class PkgTest(base.BasePkg):
+                pass
+            """)
+        client.save({"conanfile.py": reuse,
+                     "name.txt": "Pkg",
+                     "version.txt": "2.3"})
+        client.run("create . user/testing")
+        self.assertIn("Pkg/2.3@user/testing: Created package", client.out)
+
     def reuse_exports_conflict_test(self):
         conanfile = """from conans import ConanFile
 class Base(ConanFile):
