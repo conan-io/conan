@@ -1,6 +1,6 @@
 from conans.client.generators.cmake_common import cmake_dependencies, cmake_dependency_vars, \
     cmake_global_vars, cmake_macros, cmake_package_info, cmake_settings_info, cmake_user_info_vars, \
-    generate_targets_section
+    generate_targets_section, include_build_modules
 from conans.model import Generator
 from conans.paths import BUILD_INFO_CMAKE
 
@@ -109,6 +109,10 @@ class CMakeGenerator(Generator):
 
         # MACROS
         sections.append(cmake_macros)
+
+        # BUILD MODULES
+        if deps.build_modules_paths:
+            sections.append(include_build_modules(deps.build_modules_paths))
 
         # USER DECLARED VARS
         sections.append("\n### Definition of user declared vars (user_info) ###\n")

@@ -1,4 +1,5 @@
 from conans.client.generators.cmake import DepsCppCmake
+from conans.client.generators.cmake_common import include_build_modules
 from conans.client.generators.cmake_find_package_common import target_template
 from conans.model import Generator
 
@@ -24,15 +25,6 @@ assign_target_properties = """
     set_property(TARGET {name}::{name} PROPERTY INTERFACE_COMPILE_DEFINITIONS ${{{name}_COMPILE_DEFINITIONS}})
     set_property(TARGET {name}::{name} PROPERTY INTERFACE_COMPILE_OPTIONS "${{{name}_COMPILE_OPTIONS_LIST}}")
 """
-
-
-def _build_modules_section(build_modules):
-    result = []
-    template = 'include({path})'
-    for module in build_modules:
-        if ".cmake" in module:
-            result.append(template.format(path=module))
-    return "\n".join(line for line in result)
 
 
 class CMakeFindPackageGenerator(Generator):
@@ -82,7 +74,7 @@ set(CMAKE_PREFIX_PATH {build_paths} ${{CMAKE_PREFIX_PATH}} ${{CMAKE_CURRENT_LIST
                                    build_paths=deps.build_paths)
         contents.append(tmp)
         if cpp_info.build_modules_paths:
-            contents.append(_build_modules_section(deps.build_modules_paths))
+            contents.append(include_build_modules(deps.build_modules_paths))
         return "\n".join(contents)
 
 

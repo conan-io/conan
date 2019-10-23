@@ -395,25 +395,27 @@ endmacro()""", macro)
         self.assertIn("add_library(MyPkG::MyPkG INTERFACE IMPORTED)", content["FindMyPkG.cmake"])
         self.assertIn("add_library(MyPkG2::MyPkG2 INTERFACE IMPORTED)", content["FindMyPkG2.cmake"])
 
-    def cpp_info_build_modules_cmake_find_package_test(self):
-        """
-        Test cpp_info.names values are applied instead of the reference name
-        """
-        conanfile = ConanFile(TestBufferConanOutput(), None)
-        conanfile.initialize(Settings({}), EnvValues())
+
+class CMakeBuildModulesTest(unittest.TestCase):
+
+    def setUp(self):
+        self.conanfile = ConanFile(TestBufferConanOutput(), None)
+        self.conanfile.initialize(Settings({}), EnvValues())
         ref = ConanFileReference.loads("my_pkg/0.1@lasote/stables")
         cpp_info = CppInfo("dummy_root_folder1")
         cpp_info.filter_empty = False  # For testing purposes only
         cpp_info.name = ref.name
         cpp_info.build_modules = ["my-module.cmake"]
-        conanfile.deps_cpp_info.update(cpp_info, ref)
+        self.conanfile.deps_cpp_info.update(cpp_info, ref.name)
         ref = ConanFileReference.loads("my_pkg2/0.1@lasote/stables")
         cpp_info = CppInfo("dummy_root_folder2")
         cpp_info.filter_empty = False  # For testing purposes only
         cpp_info.name = ref.name
         cpp_info.build_modules = ["other-mod.cmake"]
-        conanfile.deps_cpp_info.update(cpp_info, ref.name)
-        generator = CMakeFindPackageGenerator(conanfile)
+        self.conanfile.deps_cpp_info.update(cpp_info, ref.name)
+
+    def cmake_find_package_test(self):
+        generator = CMakeFindPackageGenerator(self.conanfile)
         content = generator.content
         self.assertIn("Findmy_pkg.cmake", content.keys())
         self.assertIn("Findmy_pkg2.cmake", content.keys())
@@ -427,3 +429,23 @@ endmacro()""", macro)
                       '${CMAKE_CURRENT_LIST_DIR})', content["Findmy_pkg2.cmake"])
         self.assertIn('include("dummy_root_folder1/my-module.cmake")', content["Findmy_pkg.cmake"])
         self.assertIn('include("dummy_root_folder2/other-mod.cmake")', content["Findmy_pkg2.cmake"])
+
+    def cmake_test(self):
+        generator = CMakeGenerator(self.conanfile)
+        content = generator.content
+        self.assertIn('include("dummy_root_folder1/my-module.cmake")', content)
+        self.assertIn('include("dummy_root_folder2/other-mod.cmake")', content)
+
+    # def cmake_multi_test(self):
+    #     generator = CMakeMultiGenerator(self.conanfile)
+    #     content = generator.content
+    #     self.assertIn('include("dummy_root_folder1/my-module.cmake")', content)
+    #     self.assertIn('include("dummy_root_folder2/other-mod.cmake")', content)
+    #     print(content)
+    #
+    # def cmake_find_package_multi_test(self):
+    #     generator = CMakeMultiGenerator(self.conanfile)
+    #     content = generator.content
+    #     self.assertIn('include("dummy_root_folder1/my-module.cmake")', content)
+    #     self.assertIn('include("dummy_root_folder2/other-mod.cmake")', content)
+    #     print(content)

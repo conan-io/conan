@@ -172,6 +172,15 @@ def generate_targets_section(dependencies):
     return section
 
 
+def include_build_modules(build_modules):
+    result = []
+    template = 'include({path})'
+    for module in build_modules:
+        if ".cmake" in module:
+            result.append(template.format(path=module))
+    return "\n".join(line for line in result)
+
+
 _cmake_common_macros = """
 function(conan_message MESSAGE_OUTPUT)
     if(NOT CONAN_CMAKE_SILENT_OUTPUT)
