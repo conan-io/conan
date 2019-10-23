@@ -28,7 +28,8 @@ class DepsGraphBuilder(object):
         # compute the conanfile entry point for this dependency graph
         root_node.public_closure.add(root_node)
         root_node.public_deps.add(root_node)
-        root_node.transitive_closure.add(root_node)
+        root_node.transitive_closure.add(root_node)  # TODO: Do we need itself here?
+        root_node.environment_closure.add(root_node)  # TODO: Do we need itself here?
         root_node.ancestors = set()
         dep_graph.add_node(root_node)
 
@@ -167,7 +168,8 @@ class DepsGraphBuilder(object):
 
             # The closure of a new node starts with just itself
             new_node.public_closure.add(new_node)
-            new_node.transitive_closure.add(new_node)
+            new_node.transitive_closure.add(new_node)  # TODO: Do we need itself here?
+            new_node.environment_closure.add(new_node)  # TODO: Do we need itself here?
             # The new created node is connected to the parent one
             node.connect_closure(new_node)
 
@@ -178,6 +180,8 @@ class DepsGraphBuilder(object):
                 # new_node.public_closure.
                 new_node.public_deps.assign(node.public_closure)
                 new_node.public_deps.add(new_node)
+                if require.build_require and require.build_require_host:
+                    node.environment_closure.add(new_node)
             else:
                 node.transitive_closure.add(new_node)
                 # Normal requires propagate and can conflict with the parent "node.public_deps" too

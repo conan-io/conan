@@ -88,6 +88,11 @@ class Node(object):
         # The dependencies of this node that will be propagated to consumers when they depend
         # on this node. It includes regular (not private and not build requires) dependencies
         self._transitive_closure = _NodeOrderedDict()  # {ref.name: Node}
+
+        # The dependencies of this node that provide environment information (but are not in the
+        #   :ref:_transitive_closure of this node (these are build_requires in the host context)
+        self._environment_closure = _NodeOrderedDict()  # TODO: Shall we add all of them here?
+
         self.inverse_closure = set()  # set of nodes that have this one in their public
         self.ancestors = None  # set{ref.name}
         self._id = None  # Unique ID (uuid at the moment) of a node in the graph
@@ -132,6 +137,10 @@ class Node(object):
     @property
     def transitive_closure(self):
         return self._transitive_closure
+
+    @property
+    def environment_closure(self):
+        return self._environment_closure
 
     def partial_copy(self):
         # Used for collapse_graph
