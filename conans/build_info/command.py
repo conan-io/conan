@@ -38,7 +38,9 @@ def run():
                                help="Optional file to output the JSON contents, if not specified "
                                     "the JSON will be printed to stdout")
         args = parser_v1.parse_args()
-        if args.trace_path not in valid_subcommands and not os.path.exists(args.trace_path):
+        if args.trace_path in valid_subcommands:
+            raise ArgumentParserError()
+        elif not os.path.exists(args.trace_path):
             output.error("Error, conan trace log not found! '%s'" % args.trace_path)
         if args.output and not os.path.exists(os.path.dirname(args.output)):
             output.error("Error, output file directory not found! '%s'" % args.trace_path)
