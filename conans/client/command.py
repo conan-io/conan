@@ -1524,7 +1524,9 @@ class Command(object):
         subparsers.required = True
 
         # create the parser for the "profile" command
-        subparsers.add_parser('list', help='List current profiles')
+        parser_list = subparsers.add_parser('list', help='List current profiles')
+        parser_list.add_argument("-j", "--json", default=None, action=OnceArgument,
+                                 help='json file path where the profile list will be written to')
         parser_show = subparsers.add_parser('show', help='Show the values defined for a profile')
         parser_show.add_argument('profile', help="name of the profile in the '.conan/profiles' "
                                                  "folder or path to a profile file")
@@ -1560,6 +1562,8 @@ class Command(object):
         if args.subcommand == "list":
             profiles = self._conan.profile_list()
             self._outputer.profile_list(profiles)
+            if args.json:
+                self._outputer.json_output(profiles, args.json, os.getcwd())
         elif args.subcommand == "show":
             profile_text = self._conan.read_profile(profile)
             self._outputer.print_profile(profile, profile_text)
