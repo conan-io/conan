@@ -94,10 +94,11 @@ class BuildRequiresInProfileExample(GraphManagerTest):
         options = OptionsValues()
         graph_info = GraphInfo(profile_build=profile_build, profile=profile_host,
                                options=options, root_ref=ref)
-
-        deps_graph, _ = self.manager.load_graph(path, create_reference=None, graph_info=graph_info,
-                                                build_mode=[], check_updates=False, update=False,
-                                                remotes=Remotes(), recorder=ActionRecorder())
+        recorder = ActionRecorder()
+        app = self._get_app()
+        deps_graph = app.graph_manager.load_graph(path, create_reference=None, graph_info=graph_info,
+                                                  build_mode=[], check_updates=False, update=False,
+                                                  remotes=Remotes(), recorder=recorder)
         return deps_graph
 
     @parameterized.expand([(True,), (False,)])

@@ -6,7 +6,9 @@ import textwrap
 from parameterized.parameterized import parameterized
 
 from conans.client.cache.remote_registry import Remotes
+from conans.client.graph.build_mode import BuildMode
 from conans.client.graph.graph import CONTEXT_BUILD, CONTEXT_HOST
+from conans.client.installer import BinaryInstaller
 from conans.client.recorder.action_recorder import ActionRecorder
 from conans.model.graph_info import GraphInfo
 from conans.model.options import OptionsValues
@@ -121,11 +123,16 @@ class ClassicProtocExampleBase(GraphManagerTest):
         options = OptionsValues()
         graph_info = GraphInfo(profile=profile_host, profile_build=profile_build,
                                options=options, root_ref=ref)
+        recorder = ActionRecorder()
+        app = self._get_app()
+        deps_graph = app.graph_manager.load_graph(path, create_reference=None, graph_info=graph_info,
+                                                  build_mode=[], check_updates=False, update=False,
+                                                  remotes=Remotes(), recorder=recorder)
 
-        deps_graph, _ = self.manager.load_graph(path, create_reference=None, graph_info=graph_info,
-                                                build_mode=[], check_updates=False, update=False,
-                                                remotes=Remotes(), recorder=ActionRecorder())
-        self.binary_installer.install(deps_graph, None, False, graph_info)
+        build_mode = []  # Means build all
+        binary_installer = BinaryInstaller(app, recorder)
+        build_mode = BuildMode(build_mode, app.out)
+        binary_installer.install(deps_graph, None, build_mode, update=False, keep_build=False, graph_info=graph_info)
         return deps_graph
 
 

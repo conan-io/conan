@@ -4,7 +4,9 @@ import os
 import textwrap
 
 from conans.client.cache.remote_registry import Remotes
-from conans.client.graph.graph import CONTEXT_HOST, CONTEXT_BUILD
+from conans.client.graph.build_mode import BuildMode
+from conans.client.graph.graph import CONTEXT_BUILD, CONTEXT_HOST
+from conans.client.installer import BinaryInstaller
 from conans.client.recorder.action_recorder import ActionRecorder
 from conans.model.graph_info import GraphInfo
 from conans.model.options import OptionsValues
@@ -119,11 +121,16 @@ class NoWayBackToHost(GraphManagerTest):
         options = OptionsValues()
         graph_info = GraphInfo(profile_build=profile_build, profile=profile_host,
                                options=options, root_ref=ref)
-
-        deps_graph, _ = self.manager.load_graph(path, create_reference=None, graph_info=graph_info,
-                                                build_mode=[], check_updates=False, update=False,
-                                                remotes=Remotes(), recorder=ActionRecorder())
-        self.binary_installer.install(deps_graph, None, False, graph_info)
+        recorder = ActionRecorder()
+        app = self._get_app()
+        deps_graph = app.graph_manager.load_graph(path, create_reference=None, graph_info=graph_info,
+                                                  build_mode=[], check_updates=False, update=False,
+                                                  remotes=Remotes(), recorder=recorder)
+        build_mode = []  # Means build all
+        binary_installer = BinaryInstaller(app, recorder)
+        build_mode = BuildMode(build_mode, app.out)
+        binary_installer.install(deps_graph, None, build_mode, update=False, keep_build=False, graph_info=graph_info)
+        #self.binary_installer.install(deps_graph, None, False, graph_info)
         return deps_graph
 
     def test_crossbuilding(self):
