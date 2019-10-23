@@ -216,10 +216,10 @@ class GraphManager(object):
 
         return conanfile.build_requires
 
-    def _recurse_build_requires(self, graph, subgraph, builder, check_updates,
+    def _recurse_build_requires(self, graph, builder, check_updates,
                                 update, build_mode, remotes, profile_build_requires, recorder,
                                 processed_profile_host, processed_profile_build, graph_lock,
-                                apply_build_requires=True):
+                                apply_build_requires=True, nodes_subset=None, root=None):
         """
         :param graph: This is the full dependency graph with all nodes from all recursions
         :param subgraph: A partial graph of the nodes that need to be evaluated and expanded
@@ -228,11 +228,11 @@ class GraphManager(object):
         """
 
         xbuilding = bool(processed_profile_build)  # If build profile is provided, then it is xbuild
-        self._binary_analyzer.evaluate_graph(subgraph, build_mode, update, remotes)
+        self._binary_analyzer.evaluate_graph(graph, build_mode, update, remotes, nodes_subset, root)
         if not apply_build_requires:
             return
 
-        for node in subgraph.ordered_iterate():
+        for node in graph.ordered_iterate(nodes_subset):
             # Virtual conanfiles doesn't have output, but conanfile.py and conanfile.txt do
             # FIXME: To be improved and build a explicit model for this
             if node.recipe == RECIPE_VIRTUAL:
@@ -262,30 +262,28 @@ class GraphManager(object):
 
             if package_build_requires:
                 br_list = [(it, ctxt) for (_, ctxt), it in package_build_requires.items()]
-                subgraph = builder.extend_build_requires(graph, node,
+                nodessub = builder.extend_build_requires(graph, node,
                                                          br_list,
                                                          check_updates, update, remotes,
                                                          processed_profile_host,
                                                          processed_profile_build, graph_lock)
 
-                self._recurse_build_requires(graph, subgraph, builder,
+                self._recurse_build_requires(graph, builder,
                                              check_updates, update, build_mode,
                                              remotes, profile_build_requires, recorder,
                                              processed_profile_host, processed_profile_build,
-                                             graph_lock)
-                graph.nodes.update(subgraph.nodes)
+                                             graph_lock, nodes_subset=nodessub, root=node)
 
             if new_profile_build_requires:
-                subgraph = builder.extend_build_requires(graph, node, new_profile_build_requires,
+                nodessub = builder.extend_build_requires(graph, node, new_profile_build_requires,
                                                          check_updates, update, remotes,
                                                          processed_profile_host,
                                                          processed_profile_build, graph_lock)
-                self._recurse_build_requires(graph, subgraph, builder,
+                self._recurse_build_requires(graph, builder,
                                              check_updates, update, build_mode,
                                              remotes, {}, recorder,
                                              processed_profile_host, processed_profile_build,
-                                             graph_lock)
-                graph.nodes.update(subgraph.nodes)
+                                             graph_lock, nodes_subset=nodessub, root=node)
 
     def _load_graph(self, root_node, check_updates, update, build_mode, remotes,
                     recorder, processed_profile_host, processed_profile_build,
@@ -298,7 +296,7 @@ class GraphManager(object):
         graph = builder.load_graph(root_node, check_updates, update, remotes, processed_profile_host,
                                    processed_profile_build, graph_lock)
 
-        self._recurse_build_requires(graph, graph, builder, check_updates, update, build_mode,
+        self._recurse_build_requires(graph, builder, check_updates, update, build_mode,
                                      remotes, profile_host_build_requires, recorder,
                                      processed_profile_host, processed_profile_build, graph_lock,
                                      apply_build_requires=apply_build_requires)

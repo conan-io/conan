@@ -8,6 +8,7 @@ from conans.model.conan_file import get_env_context_manager
 from conans.model.ref import ConanFileReference
 from conans.model.requires import Requirements, Requirement
 from conans.util.log import logger
+from collections import OrderedDict
 
 
 class DepsGraphBuilder(object):
@@ -25,8 +26,10 @@ class DepsGraphBuilder(object):
         check_updates = check_updates or update
         dep_graph = DepsGraph()
         # compute the conanfile entry point for this dependency graph
+        name = root_node.name
         root_node.public_closure.add(root_node)
         root_node.public_deps.add(root_node)
+        root_node.transitive_closure = OrderedDict([(name, root_node)])
         root_node.ancestors = set()
         dep_graph.add_node(root_node)
 
@@ -75,14 +78,7 @@ class DepsGraphBuilder(object):
         new_nodes = set(n for n in graph.nodes if n.package_id is None)
         # This is to make sure that build_requires have precedence over the normal requires
         node.public_closure.sort(key_fn=lambda x: x not in new_nodes)
-
-        subgraph = DepsGraph()
-        subgraph.aliased = graph.aliased
-        subgraph.nodes = new_nodes
-        for n in subgraph.nodes:
-            n.build_require = True
-
-        return subgraph
+        return new_nodes
 
     def _resolve_ranges(self, graph, requires, consumer, update, remotes):
         for require in requires:
@@ -172,6 +168,7 @@ class DepsGraphBuilder(object):
 
             # The closure of a new node starts with just itself
             new_node.public_closure.add(new_node)
+            new_node.transitive_closure = OrderedDict([(name, new_node)])
             # The new created node is connected to the parent one
             node.connect_closure(new_node)
 
@@ -183,6 +180,7 @@ class DepsGraphBuilder(object):
                 new_node.public_deps.assign(node.public_closure)
                 new_node.public_deps.add(new_node)
             else:
+                node.transitive_closure[name] = new_node
                 # Normal requires propagate and can conflict with the parent "node.public_deps" too
                 new_node.public_deps.assign(node.public_deps)
                 new_node.public_deps.add(new_node)
@@ -195,6 +193,8 @@ class DepsGraphBuilder(object):
             self._load_deps(dep_graph, new_node, new_reqs, node.ref, new_options, check_updates,
                             update, remotes, processed_profile_host, processed_profile_build,
                             graph_lock)
+            if not require.private and not require.build_require:
+                node.transitive_closure.update(new_node.transitive_closure)
 
         else:  # a public node already exist with this name
             # This is closing a diamond, the node already exists and is reachable
@@ -210,21 +210,18 @@ class DepsGraphBuilder(object):
             for n in previous.public_closure:
                 n.ancestors.update(union)
 
-            # Even if it was in private scope, if it is reached via a public require
-            # the previous node and its upstream becomes public
-            if previous.private and not require.private:
-                previous.make_public()
-
             node.connect_closure(previous)
             dep_graph.add_edge(node, previous, require)
-            # All the upstream dependencies (public_closure) of the previously existing node
-            # now will be also connected to the node and to all its dependants
-            for n in previous.public_closure:
-                if n.build_require or n.private:
-                    continue
-                node.connect_closure(n)
-                for dep_node in node.inverse_closure:
-                    dep_node.connect_closure(n)
+
+            if not require.private and not require.build_require:
+                node.transitive_closure.update(previous.transitive_closure)
+
+                # All the upstream dependencies (public_closure) of the previously existing node
+                # now will be also connected to the node and to all its dependants
+                for name, n in previous.transitive_closure.items():
+                    node.connect_closure(n)
+                    for dep_node in node.inverse_closure:
+                        dep_node.connect_closure(n)
 
             # Recursion is only necessary if the inputs conflict with the current "previous"
             # configuration of upstream versions and options
@@ -379,9 +376,10 @@ class DepsGraphBuilder(object):
         # build-requires and private affect transitively. If "node" is already
         # a build_require or a private one, its requirements will inherit that property
         # Or if the require specify that property, then it will get it too
-        new_node.build_require = current_node.build_require or requirement.build_require
-        new_node.private = current_node.private or requirement.private
-        new_node.build_require_host = requirement.build_require_host
+
+        #new_node.build_require = current_node.build_require or requirement.build_require
+        #new_node.private = current_node.private or requirement.private
+        #new_node.build_require_host = requirement.build_require_host
 
         dep_graph.add_node(new_node)
         dep_graph.add_edge(current_node, new_node, requirement)

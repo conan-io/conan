@@ -822,7 +822,6 @@ class TransitiveGraphTest(GraphManagerTest):
             liba2 = libc.dependencies[1].dst
 
         self.assertIs(liba, liba2)
-        self.assertFalse(liba.private)
 
         self._check_node(app, "app/0.1@", deps=[libc], build_deps=[], dependents=[],
                          closure=[libc, libb, liba], )
@@ -867,9 +866,6 @@ class TransitiveGraphTest(GraphManagerTest):
             liba2 = libc.dependencies[1].dst
         liba1 = libb.dependencies[0].dst
 
-        self.assertTrue(liba1.private)
-        self.assertTrue(liba2.private)
-
         self._check_node(app, "app/0.1@", deps=[libc], build_deps=[], dependents=[],
                          closure=[libc, libb])
         closure = [liba2, libb] if private_first else [libb, liba2]
@@ -900,10 +896,6 @@ class TransitiveGraphTest(GraphManagerTest):
         libc = app.dependencies[0].dst
         libb = libc.dependencies[0].dst
         liba = libb.dependencies[0].dst
-
-        self.assertTrue(liba.private)
-        self.assertTrue(libb.private)
-        self.assertFalse(libc.private)
 
         self._check_node(app, "app/0.1@", deps=[libc], build_deps=[], dependents=[],
                          closure=[libc])
