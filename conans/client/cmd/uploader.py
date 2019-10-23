@@ -132,7 +132,7 @@ class CmdUpload(object):
             if upload:
                 try:
                     conanfile_path = self._cache.package_layout(ref).conanfile()
-                    conanfile = self._loader.load_class(conanfile_path)
+                    conanfile = self._loader.load_basic(conanfile_path)
                 except NotFoundException:
                     raise NotFoundException(("There is no local conanfile exported as %s" %
                                              str(ref)))

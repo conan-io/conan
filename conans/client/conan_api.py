@@ -186,14 +186,14 @@ class ConanApp(object):
                                             self.out)
 
         self.proxy = ConanProxy(self.cache, self.out, self.remote_manager)
-        resolver = RangeResolver(self.cache, self.remote_manager)
-        self.python_requires = ConanPythonRequire(self.proxy, resolver)
-        self.pyreq_loader = PyRequireLoader(self.proxy, resolver)
+        self.range_resolver = RangeResolver(self.cache, self.remote_manager)
+        self.python_requires = ConanPythonRequire(self.proxy, self.range_resolver)
+        self.pyreq_loader = PyRequireLoader(self.proxy, self.range_resolver)
         self.loader = ConanFileLoader(self.runner, self.out, self.python_requires, self.pyreq_loader)
 
         self.binaries_analyzer = GraphBinariesAnalyzer(self.cache, self.out, self.remote_manager)
         self.graph_manager = GraphManager(self.out, self.cache, self.remote_manager, self.loader,
-                                          self.proxy, resolver, self.binaries_analyzer)
+                                          self.proxy, self.range_resolver, self.binaries_analyzer)
 
     def load_remotes(self, remote_name=None, update=False, check_updates=False):
         remotes = self.cache.registry.load_remotes()
@@ -263,17 +263,14 @@ class ConanAPIV1(object):
             ref = ConanFileReference.loads(path)
         except ConanException:
             conanfile_path = _get_conanfile_path(path, get_cwd(), py=True)
-            ref = os.path.basename(conanfile_path)
-            conanfile_class = self.app.loader.load_class(conanfile_path)
+            conanfile = self.app.loader.load_basic(conanfile_path)
         else:
             update = True if remote_name else False
             result = self.app.proxy.get_recipe(ref, update, update, remotes, ActionRecorder())
             conanfile_path, _, _, ref = result
-            conanfile_class = self.app.loader.load_class(conanfile_path)
-            conanfile_class.name = ref.name
-            conanfile_class.version = ref.version
-
-        conanfile = conanfile_class(self.app.out, None, repr(ref))
+            conanfile = self.app.loader.load_basic(conanfile_path)
+            conanfile.name = ref.name
+            conanfile.version = ref.version
 
         result = OrderedDict()
         if not attributes:
@@ -1056,8 +1053,7 @@ class ConanAPIV1(object):
         # Do not allow to override an existing package
         alias_conanfile_path = self.app.cache.package_layout(ref).conanfile()
         if os.path.exists(alias_conanfile_path):
-            conanfile_class = self.app.loader.load_class(alias_conanfile_path)
-            conanfile = conanfile_class(self.app.out, None, repr(ref))
+            conanfile = self.app.loader.load_basic(alias_conanfile_path)
             if not getattr(conanfile, 'alias', None):
                 raise ConanException("Reference '{}' is already a package, remove it before "
                                      "creating and alias with the same name".format(ref))
@@ -1164,7 +1160,7 @@ class ConanAPIV1(object):
 
         # Check the conanfile is there, and name/version matches
         ref = ConanFileReference.loads(reference, validate=True)
-        target_conanfile = self.app.graph_manager._loader.load_class(target_path)
+        target_conanfile = self.app.loader.load_basic(target_path)
         if (target_conanfile.name and target_conanfile.name != ref.name) or \
                 (target_conanfile.version and target_conanfile.version != ref.version):
             raise ConanException("Name and version from reference ({}) and target "

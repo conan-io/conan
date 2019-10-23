@@ -6,7 +6,7 @@ from conans.client import tools
 from conans.client.file_copier import report_copied_files
 from conans.client.generators import TXTGenerator, write_generators
 from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_EDITABLE, \
-    BINARY_MISSING, BINARY_SKIP, BINARY_UPDATE
+    BINARY_MISSING, BINARY_SKIP, BINARY_UPDATE, BINARY_UNKNOWN
 from conans.client.importer import remove_imports, run_imports
 from conans.client.packager import run_package_method, update_package_metadata
 from conans.client.recorder.action_recorder import INSTALL_ERROR_BUILDING, INSTALL_ERROR_MISSING, \
@@ -326,7 +326,7 @@ class BinaryInstaller(object):
                         continue
                     assert ref.revision is not None, "Installer should receive RREV always"
                     _handle_system_requirements(conan_file, node.pref, self._cache, output)
-                    if node.package_id == PACKAGE_ID_UNKNOWN:
+                    if node.binary == BINARY_UNKNOWN:
                         self._binaries_analyzer.reevaluate_node(node, remotes, build_mode, update)
                     self._handle_node_cache(node, keep_build, processed_package_refs, remotes)
 
@@ -477,7 +477,8 @@ class BinaryInstaller(object):
         conanfile.user_info = UserInfo()
 
         # Get deps_cpp_info from upstream nodes
-        public_deps = [name for name, req in conanfile.requires.items() if not req.private]
+        public_deps = [name for name, req in conanfile.requires.items() if not req.private
+                       and not req.override]
         conanfile.cpp_info.public_deps = public_deps
         # Once the node is build, execute package info, so it has access to the
         # package folder and artifacts
