@@ -48,7 +48,6 @@ class BuildInfoCreator(object):
                                         r"#(?P<rrev>[^\/@#:]+)"
                                         r":(?P<pid>[^\/@#:]+)"
                                         r"#(?P<prev>[^\/@#:]+)")
-        self._output = output
         self._build_info_file = build_info_file
         self._lockfile = lockfile
         self._multi_module = multi_module
@@ -56,7 +55,7 @@ class BuildInfoCreator(object):
         self._user = user
         self._password = password
         self._apikey = apikey
-        self._conan_cache = ClientCache(os.path.join(get_conan_user_home(), ".conan"), self._output)
+        self._conan_cache = ClientCache(os.path.join(get_conan_user_home(), ".conan"), output)
 
     def parse_pref(self, pref):
         return self._pref_pattern.match(pref).groupdict()
