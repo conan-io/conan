@@ -12,7 +12,6 @@ from conans.errors import ConanException
 from conans.paths import PACKAGE_TGZ_NAME
 from conans.test import CONAN_TEST_FOLDER
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files, cpp_hello_source_files
-from conans.test.utils.go_test_files import go_hello_conan_files, go_hello_source_files
 from conans.util.files import mkdir_tmp
 
 
@@ -84,8 +83,6 @@ def hello_source_files(number=0, deps=None, lang='cpp'):
     """
     if lang == 'cpp':
         return cpp_hello_source_files(number, deps)
-    elif lang == 'go':
-        return go_hello_source_files(number, deps)
 
 
 def hello_conan_files(ref, number=0, deps=None, language=0, lang='cpp'):
@@ -100,8 +97,6 @@ def hello_conan_files(ref, number=0, deps=None, language=0, lang='cpp'):
          The output of such a conans exe could be like: Hello 3, Hello 4, Hello7"""
     if lang == 'cpp':
         return cpp_hello_conan_files(ref, number, deps, language)
-    elif lang == 'go':
-        return go_hello_conan_files(ref, number, deps)
 
 
 def tgz_with_contents(files):

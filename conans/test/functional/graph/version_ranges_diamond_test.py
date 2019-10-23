@@ -8,7 +8,6 @@ from parameterized import parameterized
 from conans.paths import CONANFILE
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, \
     inc_package_manifest_timestamp, inc_recipe_manifest_timestamp
-from conans.util.files import load
 
 
 class VersionRangesUpdatingTest(unittest.TestCase):
@@ -179,7 +178,7 @@ class HelloReuseConan(ConanFile):
                           self.client.out)
             self.assertIn("conanfile.py (Hello1/0.1): Generated conaninfo.txt",
                           self.client.out)
-            content = load(os.path.join(self.client.current_folder, "conaninfo.txt"))
+            content = self.client.load("conaninfo.txt")
             self.assertIn("Hello0/%s@lasote/stable" % solution, content)
 
 
@@ -223,7 +222,7 @@ class HelloReuseConan(ConanFile):
         self.assertIn("conanfile.py (Hello1/0.1): Generated conaninfo.txt",
                       self.client.out)
 
-        content = load(os.path.join(self.client.current_folder, "conaninfo.txt"))
+        content = self.client.load("conaninfo.txt")
         self.assertIn("Hello0/0.2@lasote/stable", content)
 
     @parameterized.expand([(False, ), (True,)])
@@ -252,7 +251,7 @@ class HelloReuseConan(ConanFile):
             self.assertIn("conanfile.py (Hello3/0.1): Generated conaninfo.txt",
                           self.client.out)
 
-            content = load(os.path.join(self.client.current_folder, "conaninfo.txt"))
+            content = self.client.load("conaninfo.txt")
             self.assertIn("Hello0/0.2@lasote/stable", content)
             self.assertIn("Hello1/0.1@lasote/stable", content)
             self.assertIn("Hello2/0.1@lasote/stable", content)
@@ -279,7 +278,7 @@ class HelloReuseConan(ConanFile):
             self.assertIn("conanfile.py (Hello3/0.1): Generated conaninfo.txt",
                           self.client.out)
 
-            content = load(os.path.join(self.client.current_folder, "conaninfo.txt"))
+            content = self.client.load("conaninfo.txt")
             self.assertIn("Hello0/0.2.1@lasote/stable", content)
             self.assertIn("Hello1/0.1@lasote/stable", content)
             self.assertIn("Hello2/0.1@lasote/stable", content)

@@ -1,9 +1,8 @@
-from collections import defaultdict
-
-from conans import CHECKSUM_DEPLOY, REVISIONS, ONLY_V2
+from conans import CHECKSUM_DEPLOY, REVISIONS, ONLY_V2, OAUTH_TOKEN, COMPLEX_SEARCH_CAPABILITY
 from conans.client.rest.rest_client_v1 import RestV1Methods
 from conans.client.rest.rest_client_v2 import RestV2Methods
 from conans.errors import OnlyV2Available
+from conans.search.search import filter_packages
 from conans.util.log import logger
 
 
@@ -16,6 +15,7 @@ class RestApiClient(object):
 
         # Set to instance
         self.token = None
+        self.refresh_token = None
         self.remote_url = None
         self.custom_headers = {}  # Can set custom headers to each request
         self._output = output
@@ -26,20 +26,24 @@ class RestApiClient(object):
         self._put_headers = put_headers
         self._revisions_enabled = revisions_enabled
 
-        self._cached_capabilities = defaultdict(list)
+        self._cached_capabilities = {}
 
-    def _get_api(self):
-        if self.remote_url not in self._cached_capabilities:
+    def _capable(self, capability):
+        capabilities = self._cached_capabilities.get(self.remote_url)
+        if capabilities is None:
             tmp = RestV1Methods(self.remote_url, self.token, self.custom_headers, self._output,
                                 self.requester, self.verify_ssl, self._put_headers)
-            _, _, cap = tmp.server_info()
-            self._cached_capabilities[self.remote_url] = cap
-            logger.debug("REST: Cached capabilities for the remote: %s" % cap)
-            if not self._revisions_enabled and ONLY_V2 in cap:
+            capabilities = tmp.server_capabilities()
+            self._cached_capabilities[self.remote_url] = capabilities
+            logger.debug("REST: Cached capabilities for the remote: %s" % capabilities)
+            if not self._revisions_enabled and ONLY_V2 in capabilities:
                 raise OnlyV2Available(self.remote_url)
+        return capability in capabilities
 
-        if self._revisions_enabled and REVISIONS in self._cached_capabilities[self.remote_url]:
-            checksum_deploy = CHECKSUM_DEPLOY in self._cached_capabilities[self.remote_url]
+    def _get_api(self):
+        revisions = self._capable(REVISIONS)
+        if self._revisions_enabled and revisions:
+            checksum_deploy = self._capable(CHECKSUM_DEPLOY)
             return RestV2Methods(self.remote_url, self.token, self.custom_headers, self._output,
                                  self.requester, self.verify_ssl, self._put_headers,
                                  checksum_deploy)
@@ -85,11 +89,20 @@ class RestApiClient(object):
         return self._get_api().upload_package(pref, files_to_upload, deleted, retry, retry_wait)
 
     def authenticate(self, user, password):
-        apiv1 = RestV1Methods(self.remote_url, self.token, self.custom_headers, self._output,
-                              self.requester, self.verify_ssl, self._put_headers)
-        # Use v1 for the auth because the "ping" could be also protected so we don't know if
-        # we can use v2
-        return apiv1.authenticate(user, password)
+        api_v1 = RestV1Methods(self.remote_url, self.token, self.custom_headers, self._output,
+                               self.requester, self.verify_ssl, self._put_headers)
+
+        if self.refresh_token and self.token:
+            token, refresh_token = api_v1.refresh_token(self.token, self.refresh_token)
+        else:
+            if self._capable(OAUTH_TOKEN):
+                # Artifactory >= 6.13.X
+                token, refresh_token = api_v1.authenticate_oauth(user, password)
+            else:
+                token = api_v1.authenticate(user, password)
+                refresh_token = None
+
+        return token, refresh_token
 
     def check_credentials(self):
         return self._get_api().check_credentials()
@@ -98,7 +111,10 @@ class RestApiClient(object):
         return self._get_api().search(pattern, ignorecase)
 
     def search_packages(self, reference, query):
-        return self._get_api().search_packages(reference, query)
+        # Do not send the query to the server, as it will fail
+        # https://github.com/conan-io/conan/issues/4951
+        package_infos = self._get_api().search_packages(reference, query=None)
+        return filter_packages(query, package_infos)
 
     def remove_conanfile(self, ref):
         return self._get_api().remove_conanfile(ref)
@@ -106,8 +122,8 @@ class RestApiClient(object):
     def remove_packages(self, ref, package_ids=None):
         return self._get_api().remove_packages(ref, package_ids)
 
-    def server_info(self):
-        return self._get_api().server_info()
+    def server_capabilities(self):
+        return self._get_api().server_capabilities()
 
     def get_recipe_revisions(self, ref):
         return self._get_api().get_recipe_revisions(ref)

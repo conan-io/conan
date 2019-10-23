@@ -7,7 +7,6 @@ from requests.exceptions import ConnectionError
 
 from conans import DEFAULT_REVISION_V1
 from conans.client.cache.remote_registry import Remote
-from conans.client.source import merge_directories
 from conans.errors import ConanConnectionError, ConanException, NotFoundException, \
     NoRestV2Available, PackageNotFoundException
 from conans.paths import EXPORT_SOURCES_DIR_OLD, \
@@ -15,7 +14,8 @@ from conans.paths import EXPORT_SOURCES_DIR_OLD, \
 from conans.search.search import filter_packages
 from conans.util import progress_bar
 from conans.util.env_reader import get_env
-from conans.util.files import make_read_only, mkdir, rmdir, tar_extract, touch_folder
+from conans.util.files import make_read_only, mkdir, rmdir, tar_extract, touch_folder, \
+    merge_directories
 from conans.util.log import logger
 # FIXME: Eventually, when all output is done, tracer functions should be moved to the recorder class
 from conans.util.tracer import (log_package_download,
@@ -281,8 +281,8 @@ def unzip_and_get_files(files, destination_dir, tgz_name, output):
 def uncompress_file(src_path, dest_folder, output):
     t1 = time.time()
     try:
-        with progress_bar.open_binary(src_path, desc="Decompressing %s" % os.path.basename(src_path),
-                                      output=output) as file_handler:
+        with progress_bar.open_binary(src_path, output, "Decompressing %s" % os.path.basename(
+                src_path)) as file_handler:
             tar_extract(file_handler, dest_folder)
     except Exception as e:
         error_msg = "Error while downloading/extracting files to %s\n%s\n" % (dest_folder, str(e))
