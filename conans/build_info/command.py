@@ -39,20 +39,20 @@ def run():
                                     "the JSON will be printed to stdout")
         args = parser_v1.parse_args()
         if args.trace_path not in valid_subcommands and not os.path.exists(args.trace_path):
-            output.error("Error, conan trace log not found! '%s'" % args.trace_path)
+            print("Error, conan trace log not found! '%s'" % args.trace_path)
         if args.output and not os.path.exists(os.path.dirname(args.output)):
-            output.error("Error, output file directory not found! '%s'" % args.trace_path)
+            print("Error, output file directory not found! '%s'" % args.trace_path)
 
         info = get_build_info(args.trace_path)
         the_json = json.dumps(info.serialize())
         if args.output:
             save(args.output, the_json)
         else:
-            output.write(the_json)
+            print(the_json)
     except ArgumentParserError as exc:
         exc_v1 = exc
     except Exception as exc:
-        output.error(exc)
+        print(str(exc))
     finally:
         if exc_v1:
             parser_v2 = ErrorCatchingArgumentParser(
