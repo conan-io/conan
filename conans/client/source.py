@@ -4,6 +4,7 @@ import shutil
 import six
 
 from conans.client import tools
+from conans.client.cmd.export import export_recipe, export_source
 from conans.errors import ConanException, ConanExceptionInUserConanfileMethod, \
     conanfile_exception_formatter
 from conans.model.conan_file import get_env_context_manager
@@ -48,8 +49,6 @@ def config_source_local(src_folder, conanfile, conanfile_path, hook_manager):
         if conanfile_folder != src_folder:
             _run_local_scm(conanfile, src_folder, conanfile_folder, output=conanfile.output)
             conanfile.output.info("Executing exports to: %s" % src_folder)
-            # FIXME: import loop between source and export
-            from conans.client.cmd.export import export_recipe, export_source
             export_recipe(conanfile, conanfile_folder, src_folder)
             export_source(conanfile, conanfile_folder, src_folder)
 
