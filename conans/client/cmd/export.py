@@ -78,14 +78,12 @@ def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
         node_id = graph_lock.get_node(ref)
         python_requires = graph_lock.python_requires(node_id)
         # TODO: check that the locked python_requires are different from the loaded ones
-        # FIXME: private access, will be improved when api collaborators are improved
-        loader._python_requires._range_resolver.output  # invalidate previous version range output
+        app.range_resolver.output  # invalidate previous version range output
         conanfile = loader.load_export(conanfile_path, conanfile.name, conanfile.version,
-                                       conanfile.user, conanfile.channel, python_requires)
+                                       ref.user, ref.channel, python_requires)
 
     check_casing_conflict(cache=cache, ref=ref)
     package_layout = cache.package_layout(ref, short_paths=conanfile.short_paths)
-
     if not export:
         metadata = package_layout.load_metadata()
         recipe_revision = metadata.recipe.revision
@@ -104,11 +102,12 @@ def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
 
     # Get previous digest
     try:
-        previous_manifest = FileTreeManifest.load(package_layout.export())
+        previous_manifest = package_layout.recipe_manifest()
     except IOError:
         previous_manifest = None
     finally:
-        _recreate_folders(package_layout.export(), package_layout.export_sources())
+        _recreate_folders(package_layout.export())
+        _recreate_folders(package_layout.export_sources())
 
     # Copy sources to target folders
     with package_layout.conanfile_write_lock(output=output):
@@ -336,21 +335,13 @@ def _update_revision_in_metadata(package_layout, revisions_enabled, output, path
     return revision
 
 
-def _recreate_folders(destination_folder, destination_src_folder):
+def _recreate_folders(destination_folder):
     try:
         if os.path.exists(destination_folder):
-            # Maybe here we want to invalidate cache
             rmdir(destination_folder)
         os.makedirs(destination_folder)
     except Exception as e:
         raise ConanException("Unable to create folder %s\n%s" % (destination_folder, str(e)))
-
-    try:
-        if os.path.exists(destination_src_folder):
-            rmdir(destination_src_folder)
-        os.makedirs(destination_src_folder)
-    except Exception as e:
-        raise ConanException("Unable to create folder %s\n%s" % (destination_src_folder, str(e)))
 
 
 def _classify_patterns(patterns):

@@ -162,11 +162,9 @@ local __conanbuildinfo__ = [ GLOB $(__file__:D) : conanbuildinfo-*.jam : downcas
 
 
 # mypkg
-# mypkg
 project-define mypkg ;
 
 
-# mypkg2
 # mypkg2
 project-define mypkg2 ;
 

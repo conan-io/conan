@@ -7,7 +7,6 @@ from requests.exceptions import ConnectionError
 
 from conans import DEFAULT_REVISION_V1
 from conans.client.cache.remote_registry import Remote
-from conans.client.source import merge_directories
 from conans.errors import ConanConnectionError, ConanException, NotFoundException, \
     NoRestV2Available, PackageNotFoundException
 from conans.paths import EXPORT_SOURCES_DIR_OLD, \
@@ -15,7 +14,8 @@ from conans.paths import EXPORT_SOURCES_DIR_OLD, \
 from conans.search.search import filter_packages
 from conans.util import progress_bar
 from conans.util.env_reader import get_env
-from conans.util.files import make_read_only, mkdir, rmdir, tar_extract, touch_folder
+from conans.util.files import make_read_only, mkdir, rmdir, tar_extract, touch_folder, \
+    merge_directories
 from conans.util.log import logger
 # FIXME: Eventually, when all output is done, tracer functions should be moved to the recorder class
 from conans.util.tracer import (log_package_download,
