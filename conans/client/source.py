@@ -99,7 +99,8 @@ def config_source(export_folder, export_source_folder, scm_sources_folder,
                         cache, get_sources_from_exports=get_sources_from_exports)
 
 
-def _run_source(conanfile, conanfile_path, src_folder, hook_manager, reference, cache, get_sources_from_exports):
+def _run_source(conanfile, conanfile_path, src_folder, hook_manager, reference, cache,
+                get_sources_from_exports):
     """Execute the source core functionality, both for local cache and user space, in order:
         - Calling pre_source hook
         - Getting sources from SCM
