@@ -97,9 +97,9 @@ class PyRequireLoader(object):
         recipe = self._proxy.get_recipe(ref, self._check_updates, self._update,
                                         remotes=self._remotes, recorder=ActionRecorder())
         path, _, _, new_ref = recipe
-        conanfile = loader.load_basic(conanfile_path=path,
-                                      lock_python_requires=lock_python_requires)
-        module = conanfile.__module__
+        conanfile, module = loader.load_basic_module(conanfile_path=path,
+                                                     lock_python_requires=lock_python_requires)
+
         if getattr(conanfile, "alias", None):
             conanfile, module, new_ref = self._load_conanfile(loader, lock_python_requires,
                                                               conanfile.alias)

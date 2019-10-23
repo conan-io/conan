@@ -498,21 +498,12 @@ class PyRequiresExtendTest(unittest.TestCase):
             import os
             
             class Source(object):
-                @staticmethod
-                def get_name():
-                    try:
-                        return load("name.txt")
-                    except Exception as e:
-                        print("Cannot load name.txt", e)
-                        pass
-                @staticmethod
-                def get_version():
-                    try:
-                        return load("version.txt")
-                    except Exception as e:
-                        print("Cannot load version.txt", e)
-                        pass
-            
+                def set_name(self):
+                    self.name = load("name.txt")
+ 
+                def set_version(self):
+                    self.version = load("version.txt")
+
             class MyConanfileBase(ConanFile):
                 pass
             """)
