@@ -72,11 +72,6 @@ class Node(object):
         self.recipe = recipe
         self.remote = None
         self.binary_remote = None
-
-        #self.build_require = False
-        #self.build_require_host = False
-        #self.private = False
-
         self.revision_pinned = False  # The revision has been specified by the user
         self.context = context
 
