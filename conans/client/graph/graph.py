@@ -91,7 +91,7 @@ class Node(object):
 
         # The dependencies of this node that provide environment information (but are not in the
         #   :ref:_transitive_closure of this node (these are build_requires in the host context)
-        self._environment_closure = _NodeOrderedDict()  # TODO: Shall we add all of them here?
+        self._br_host_closure = _NodeOrderedDict()
 
         self.inverse_closure = set()  # set of nodes that have this one in their public
         self.ancestors = None  # set{ref.name}
@@ -139,8 +139,8 @@ class Node(object):
         return self._transitive_closure
 
     @property
-    def environment_closure(self):
-        return self._environment_closure
+    def br_host_closure(self):
+        return self._br_host_closure
 
     def partial_copy(self):
         # Used for collapse_graph
@@ -150,10 +150,6 @@ class Node(object):
         result.binary = self.binary
         result.remote = self.remote
         result.binary_remote = self.binary_remote
-
-        #result.build_require = self.build_require
-        #result.build_require_host = self.build_require_host
-
         return result
 
     def add_edge(self, edge):
