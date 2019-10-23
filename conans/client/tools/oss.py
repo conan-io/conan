@@ -4,15 +4,15 @@ import platform
 import subprocess
 import sys
 import tempfile
+from subprocess import PIPE
+
 import math
-from subprocess import CalledProcessError, PIPE
 import six
 
 from conans.client.tools.env import environment_append
 from conans.client.tools.files import load, which
 from conans.errors import ConanException, CalledProcessErrorWithStderr
 from conans.model.version import Version
-from conans.util.fallbacks import default_output
 
 
 def args_to_string(args):
@@ -184,15 +184,12 @@ class OSInfo(object):
 
     @property
     def with_yum(self):
-        return self.is_linux and self.linux_distro in \
-                                 ( "pidora", "scientific",
-                                    "centos", "redhat", "rhel",
-                                  "xenserver", "amazon", "oracle")
+        return self.is_linux and self.linux_distro in ("pidora", "fedora", "scientific", "centos", "redhat",
+                                                       "rhel", "xenserver", "amazon", "oracle")
 
     @property
     def with_dnf(self):
-        return self.is_linux and self.linux_distro in ("fedora") \
-            and which('dnf') is not None
+        return self.is_linux and self.linux_distro == "fedora" and which('dnf')
 
     @property
     def with_pacman(self):
