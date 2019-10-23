@@ -3,11 +3,9 @@ import os
 import textwrap
 import unittest
 
-from parameterized.parameterized import parameterized
-
-from conans.model.graph_lock import LOCKFILE, LOCKFILE_VERSION
+from conans.model.graph_lock import LOCKFILE
 from conans.model.ref import ConanFileReference
-from conans.test.utils.tools import TestClient, TestServer, GenConanfile
+from conans.test.utils.tools import TestClient, GenConanfile
 from conans.util.files import load
 
 
@@ -60,9 +58,9 @@ class GraphLockPyRequiresTest(unittest.TestCase):
                 name = "Pkg"
                 python_requires = "Tool/[>=0.1]@user/channel"
                 def configure(self):
-                    self.output.info("CONFIGURE VAR=%s" % self.python_requires.Tool.var)
+                    self.output.info("CONFIGURE VAR=%s" % self.python_requires["Tool"].var)
                 def build(self):
-                    self.output.info("BUILD VAR=%s" % self.python_requires.Tool.var)
+                    self.output.info("BUILD VAR=%s" % self.python_requires["Tool"].var)
             """)
         client.save({"conanfile.py": consumer})
         client.run("install .")
@@ -120,10 +118,10 @@ class GraphLockPyRequiresTest(unittest.TestCase):
         self.assertIn("Pkg/0.1@user/channel: BUILD VAR=42", client.out)
         self.assertIn("Tool/0.1@user/channel", client.out)
         self.assertNotIn("Tool/0.2@user/channel", client.out)
-        self._check_lock("Pkg/0.1@user/channel#4e5797887a0f2937e6f0643e8ac6714e")
+        self._check_lock("Pkg/0.1@user/channel#fc44cf469d43275e9e29dc76f83d1849")
 
     def export_pkg_test(self):
         client = self.client
         client.run("export-pkg . Pkg/0.1@user/channel --install-folder=.  --lockfile")
         self.assertIn("Pkg/0.1@user/channel: CONFIGURE VAR=42", client.out)
-        self._check_lock("Pkg/0.1@user/channel#4e5797887a0f2937e6f0643e8ac6714e")
+        self._check_lock("Pkg/0.1@user/channel#fc44cf469d43275e9e29dc76f83d1849")
