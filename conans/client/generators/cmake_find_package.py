@@ -75,8 +75,18 @@ endif()
                                    find_libraries_block=find_libraries_block,
                                    find_package_header_block=find_package_header_block,
                                    assign_target_properties_block=target_props)
+
+        lines = []
+        lines.append("set(CMAKE_MODULE_PATH {deps.build_paths} ${{CMAKE_MODULE_PATH}} "
+                     "${{CMAKE_CURRENT_LIST_DIR}})".format(deps=deps))
+        lines.append("set(CMAKE_PREFIX_PATH {deps.build_paths} ${{CMAKE_PREFIX_PATH}} "
+                     "${{CMAKE_CURRENT_LIST_DIR}})".format(deps=deps))
+        tmp = tmp + "\n".join(lines)
+        tmp = tmp + "\n"
+
         if cpp_info.build_modules_paths:
             tmp = tmp + _build_modules_section(deps.build_modules_paths)
+            tmp = tmp + "\n"
         return tmp
 
 
