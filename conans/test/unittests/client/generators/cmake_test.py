@@ -243,6 +243,7 @@ class CMakeGeneratorTest(unittest.TestCase):
     conan_set_libcxx()
     conan_set_vs_runtime()
     conan_set_find_paths()
+    conan_include_build_modules()
     conan_set_find_library_paths()
 endmacro()""", macro)
 
@@ -399,8 +400,9 @@ endmacro()""", macro)
 class CMakeBuildModulesTest(unittest.TestCase):
 
     def setUp(self):
+        settings_mock = _MockSettings(build_type="Release")
         self.conanfile = ConanFile(TestBufferConanOutput(), None)
-        self.conanfile.initialize(Settings({}), EnvValues())
+        self.conanfile.initialize(settings_mock, EnvValues())
         ref = ConanFileReference.loads("my_pkg/0.1@lasote/stables")
         cpp_info = CppInfo("dummy_root_folder1")
         cpp_info.filter_empty = False  # For testing purposes only
@@ -436,16 +438,18 @@ class CMakeBuildModulesTest(unittest.TestCase):
         self.assertIn('include("dummy_root_folder1/my-module.cmake")', content)
         self.assertIn('include("dummy_root_folder2/other-mod.cmake")', content)
 
-    # def cmake_multi_test(self):
-    #     generator = CMakeMultiGenerator(self.conanfile)
-    #     content = generator.content
-    #     self.assertIn('include("dummy_root_folder1/my-module.cmake")', content)
-    #     self.assertIn('include("dummy_root_folder2/other-mod.cmake")', content)
-    #     print(content)
-    #
-    # def cmake_find_package_multi_test(self):
-    #     generator = CMakeMultiGenerator(self.conanfile)
-    #     content = generator.content
-    #     self.assertIn('include("dummy_root_folder1/my-module.cmake")', content)
-    #     self.assertIn('include("dummy_root_folder2/other-mod.cmake")', content)
-    #     print(content)
+    def cmake_multi_test(self):
+        generator = CMakeMultiGenerator(self.conanfile)
+        content = generator.content
+        self.assertIn('include("dummy_root_folder1/my-module.cmake")',
+                      content["conanbuildinfo_release.cmake"])
+        self.assertIn('include("dummy_root_folder2/other-mod.cmake")',
+                      content["conanbuildinfo_release.cmake"])
+
+    def cmake_find_package_multi_test(self):
+        generator = CMakeMultiGenerator(self.conanfile)
+        content = generator.content
+        self.assertIn('include("dummy_root_folder1/my-module.cmake")',
+                      content["conanbuildinfo_release.cmake"])
+        self.assertIn('include("dummy_root_folder2/other-mod.cmake")',
+                      content["conanbuildinfo_release.cmake"])

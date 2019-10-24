@@ -2,7 +2,8 @@ from conans.client.generators.cmake import DepsCppCmake
 from conans.client.generators.cmake_common import (cmake_dependencies, cmake_dependency_vars,
                                                    cmake_global_vars, cmake_macros_multi,
                                                    cmake_package_info, cmake_user_info_vars,
-                                                   generate_targets_section)
+                                                   generate_targets_section,
+                                                   conan_include_build_modules)
 from conans.model import Generator
 from conans.model.build_info import CppInfo
 
@@ -65,6 +66,9 @@ class CMakeMultiGenerator(Generator):
         deps = DepsCppCmake(dep_cpp_info)
         all_flags = cmake_global_vars(deps=deps, build_type=build_type)
         sections.append(all_flags)
+
+        # BUILD MODULES
+        sections.append(conan_include_build_modules(deps.build_modules_paths))
 
         return "\n".join(sections)
 

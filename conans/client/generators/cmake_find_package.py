@@ -73,8 +73,8 @@ set(CMAKE_PREFIX_PATH {build_paths} ${{CMAKE_PREFIX_PATH}} ${{CMAKE_CURRENT_LIST
                                    assign_target_properties_block=target_props,
                                    build_paths=deps.build_paths)
         contents.append(tmp)
-        if cpp_info.build_modules_paths:
-            contents.append(include_build_modules(deps.build_modules_paths))
+        if deps.build_modules_paths:
+            contents.extend(include_build_modules(deps.build_modules_paths))
         return "\n".join(contents)
 
 

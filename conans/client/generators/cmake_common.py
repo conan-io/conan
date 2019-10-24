@@ -178,7 +178,17 @@ def include_build_modules(build_modules):
     for module in build_modules:
         if ".cmake" in module:
             result.append(template.format(path=module))
-    return "\n".join(line for line in result)
+    return result
+
+
+def conan_include_build_modules(build_modules):
+    template = """
+function(conan_include_build_modules)
+{build_modules}
+endfunction()
+"""
+    lines = "\n".join(["    " + line for line in include_build_modules(build_modules)])
+    return template.format(build_modules=lines)
 
 
 _cmake_common_macros = """
@@ -617,6 +627,7 @@ macro(conan_basic_setup)
     conan_set_libcxx()
     conan_set_vs_runtime()
     conan_set_find_paths()
+    conan_include_build_modules()
     %%INVOKE_MACROS%%
 endmacro()
 """
