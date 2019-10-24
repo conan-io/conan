@@ -325,7 +325,7 @@ class Command(object):
                                  'Use "None" to skip the test stage')
         parser.add_argument("--ignore-dirty", default=False, action='store_true',
                             help='When using the "scm" feature with "auto" values, capture the'
-                                 ' commit and url even if there are uncommitted changes')
+                                 ' revision and url even if there are uncommitted changes')
 
         _add_manifests_arguments(parser)
         _add_common_install_arguments(parser, build_help=_help_build_policies)
@@ -910,7 +910,7 @@ class Command(object):
                             "Lockfile will be updated with the exported package")
         parser.add_argument("--ignore-dirty", default=False, action='store_true',
                             help='When using the "scm" feature with "auto" values, capture the'
-                                 ' commit and url even if there are uncommitted changes')
+                                 ' revision and url even if there are uncommitted changes')
 
         args = parser.parse_args(*args)
 
@@ -966,7 +966,7 @@ class Command(object):
                             "Lockfile will be updated with the exported package")
         parser.add_argument("--ignore-dirty", default=False, action='store_true',
                             help='When using the "scm" feature with "auto" values, capture the'
-                                 ' commit and url even if there are uncommitted changes')
+                                 ' revision and url even if there are uncommitted changes')
 
         args = parser.parse_args(*args)
         self._warn_python_version()
