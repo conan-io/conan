@@ -3,14 +3,12 @@ import os
 import sys
 import textwrap
 import unittest
-from operator import itemgetter
 
-from mock import patch, PropertyMock
+from mock import patch, Mock
 
 from conans.client.cache.cache import ClientCache
 from conans.model.graph_lock import LOCKFILE
 from conans.build_info.command import run
-from conans.paths import get_conan_user_home
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, TestBufferConanOutput
 
@@ -39,32 +37,23 @@ class MyBuildInfoCreation(unittest.TestCase):
             content = f.read()
             self.assertEqual('', content)
 
-    class FakePut(object):
-        def __init__(self, url, data=None, **kwargs):
-
-            self.url = url
-            self.json_data = data
-            self.headers = {"head": "ers"}
-            self.text = "This is test text"
-            self.request = self
-            if "api/build" in url:
-                self.status_code = 204
-            if kwargs.get("auth", None) and (kwargs["auth"][0] != "user" or kwargs["auth"][1] != "password"):
-                self.status_code = 401
-            elif kwargs["headers"].get("X-JFrog-Art-Api", None) and kwargs["headers"]["X-JFrog-Art-Api"] != "apikey":
-                self.status_code = 401
-            buildinfo = json.load(data)
-            if not buildinfo["name"] == "MyBuildInfo" or not buildinfo["number"] == "42":
-                self.status_code = 400
-            self.ok = True
-            self.content = b""
-            return None
-
-        def json(self):
-            return self.json_data
+    def mock_response(url, data=None, **kwargs):
+        mock_resp = Mock()
+        mock_resp.status_code = 204
+        if "api/build" in url:
+            mock_resp.status_code = 204
+        if kwargs.get("auth", None) and (kwargs["auth"][0] != "user" or kwargs["auth"][1] != "password"):
+            mock_resp.status_code = 401
+        elif kwargs["headers"].get("X-JFrog-Art-Api", None) and kwargs["headers"]["X-JFrog-Art-Api"] != "apikey":
+            mock_resp.status_code = 401
+        buildinfo = json.load(data)
+        if not buildinfo["name"] == "MyBuildInfo" or not buildinfo["number"] == "42":
+            mock_resp.status_code = 400
+        mock_resp.content = None
+        return mock_resp
 
     @patch('conans.build_info.build_info.ClientCache')
-    @patch('conans.build_info.build_info.requests.put', new=FakePut)
+    @patch('conans.build_info.build_info.requests.put', new=mock_response)
     def test_build_info_create_update_publish(self, mock_cache):
         conanfile = textwrap.dedent("""
             from conans import ConanFile, load
