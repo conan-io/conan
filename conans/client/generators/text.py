@@ -31,6 +31,9 @@ class DepsCppTXT(object):
                                    for p in cpp_info.bin_paths)
         self.rootpath = "%s" % cpp_info.rootpath.replace("\\", "/")
         self.sysroot = "%s" % cpp_info.sysroot.replace("\\", "/") if cpp_info.sysroot else ""
+        self.frameworks = "\n".join(cpp_info.frameworks)
+        self.framework_paths = "\n".join(p.replace("\\", "/")
+                                         for p in cpp_info.framework_paths)
 
 
 class TXTGenerator(Generator):
@@ -146,7 +149,9 @@ class TXTGenerator(Generator):
                     '[cflags{dep}{config}]\n{deps.cflags}\n\n'
                     '[sharedlinkflags{dep}{config}]\n{deps.sharedlinkflags}\n\n'
                     '[exelinkflags{dep}{config}]\n{deps.exelinkflags}\n\n'
-                    '[sysroot{dep}{config}]\n{deps.sysroot}\n\n')
+                    '[sysroot{dep}{config}]\n{deps.sysroot}\n\n'
+                    '[frameworks{dep}{config}]\n{deps.frameworks}\n\n'
+                    '[framework_paths{dep}{config}]\n{deps.framework_paths}\n\n')
 
         sections = []
         deps = DepsCppTXT(self.deps_build_info)

@@ -4,15 +4,15 @@ import platform
 import subprocess
 import sys
 import tempfile
+from subprocess import PIPE
+
 import math
-from subprocess import CalledProcessError, PIPE
 import six
 
 from conans.client.tools.env import environment_append
 from conans.client.tools.files import load, which
 from conans.errors import ConanException, CalledProcessErrorWithStderr
 from conans.model.version import Version
-from conans.util.fallbacks import default_output
 
 
 def args_to_string(args):
@@ -184,15 +184,12 @@ class OSInfo(object):
 
     @property
     def with_yum(self):
-        return self.is_linux and self.linux_distro in \
-                                 ( "pidora", "scientific",
-                                    "centos", "redhat", "rhel",
-                                  "xenserver", "amazon", "oracle")
+        return self.is_linux and self.linux_distro in ("pidora", "fedora", "scientific", "centos", "redhat",
+                                                       "rhel", "xenserver", "amazon", "oracle")
 
     @property
     def with_dnf(self):
-        return self.is_linux and self.linux_distro in ("fedora") \
-            and which('dnf') is not None
+        return self.is_linux and self.linux_distro == "fedora" and which('dnf')
 
     @property
     def with_pacman(self):
@@ -422,9 +419,13 @@ class OSInfo(object):
             return None
 
 
-def cross_building(settings, self_os=None, self_arch=None):
+def cross_building(settings, self_os=None, self_arch=None, skip_x64_x86=False):
     ret = get_cross_building_settings(settings, self_os, self_arch)
     build_os, build_arch, host_os, host_arch = ret
+
+    if skip_x64_x86 and host_os is not None and (build_os == host_os) and \
+            host_arch is not None and (build_arch == "x86_64") and (host_arch == "x86"):
+        return False
 
     if host_os is not None and (build_os != host_os):
         return True

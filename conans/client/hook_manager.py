@@ -57,8 +57,7 @@ class HookManager(object):
                 output = ScopedOutput("[HOOK - %s] %s()" % (name, method_name), self.output)
                 method(output=output, **kwargs)
             except Exception as e:
-                raise ConanException("[HOOK - %s] %s(): %s\n%s" % (name, method_name, str(e),
-                                                                   traceback.format_exc()))
+                raise ConanException("[HOOK - %s] %s(): %s" % (name, method_name, str(e)))
 
     def load_hooks(self):
         for name in self._hook_names:
