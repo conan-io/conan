@@ -367,7 +367,7 @@ class BinaryInstaller(object):
                 write_generators(node.conanfile, build_folder, output)
                 save(os.path.join(build_folder, CONANINFO), node.conanfile.info.dumps())
                 output.info("Generated %s" % CONANINFO)
-                graph_info_node = GraphInfo(graph_info.profile, root_ref=node.ref)
+                graph_info_node = GraphInfo(graph_info.profile_host, root_ref=node.ref)
                 graph_info_node.options = node.conanfile.options.values
                 graph_info_node.graph_lock = graph_info.graph_lock
                 graph_info_node.save(build_folder)

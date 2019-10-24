@@ -60,27 +60,26 @@ class GraphManager(object):
             graph_lock_file = GraphLockFile.load(info_folder, self._cache.config.revisions_enabled)
             graph_lock = graph_lock_file.graph_lock
             self._output.info("Using lockfile: '{}/conan.lock'".format(info_folder))
-            profile = graph_lock_file.profile
+            profile_host = graph_lock_file.profile_host
             self._output.info("Using cached profile from lockfile")
         except IOError:  # Only if file is missing
             graph_lock = None
             # This is very dirty, should be removed for Conan 2.0 (source() method only)
-            profile = self._cache.default_profile
-            profile.process_settings(self._cache)
+            profile_host = self._cache.default_profile
+            profile_host.process_settings(self._cache)
             name, version, user, channel = None, None, None, None
         else:
             name, version, user, channel, _ = graph_info.root
-            profile.process_settings(self._cache, preprocess=False)
+            profile_host.process_settings(self._cache, preprocess=False)
             # This is the hack of recovering the options from the graph_info
-            profile.options.update(graph_info.options)
-        processed_profile = profile
+            profile_host.options.update(graph_info.options)
         if conanfile_path.endswith(".py"):
             lock_python_requires = None
             if graph_lock and not test:  # Only lock python requires if it is not test_package
                 node_id = graph_lock.get_node(graph_info.root)
                 lock_python_requires = graph_lock.python_requires(node_id)
             conanfile = self._loader.load_consumer(conanfile_path,
-                                                   processed_profile=processed_profile, test=test,
+                                                   profile_host=profile_host, test=test,
                                                    name=name, version=version,
                                                    user=user, channel=channel,
                                                    lock_python_requires=lock_python_requires)
@@ -93,7 +92,7 @@ class GraphManager(object):
                 conanfile.settings.validate()  # All has to be ok!
                 conanfile.options.validate()
         else:
-            conanfile = self._loader.load_conanfile_txt(conanfile_path, processed_profile)
+            conanfile = self._loader.load_conanfile_txt(conanfile_path, profile_host)
 
         load_deps_info(info_folder, conanfile, required=deps_info_required)
 
@@ -115,13 +114,12 @@ class GraphManager(object):
             conanfile._conan_channel = ref.channel
 
         # Computing the full dependency graph
-        profile = graph_info.profile
-        processed_profile = profile
-        processed_profile.dev_reference = create_reference
+        profile_host = graph_info.profile_host
+        profile_host.dev_reference = create_reference
         ref = None
         graph_lock = graph_info.graph_lock
         if isinstance(reference, list):  # Install workspace with multiple root nodes
-            conanfile = self._loader.load_virtual(reference, processed_profile,
+            conanfile = self._loader.load_virtual(reference, profile_host,
                                                   scope_options=False)
             root_node = Node(ref, conanfile, recipe=RECIPE_VIRTUAL)
         elif isinstance(reference, ConanFileReference):
@@ -129,7 +127,7 @@ class GraphManager(object):
                 raise ConanException("Revisions not enabled in the client, specify a "
                                      "reference without revision")
             # create without test_package and install <ref>
-            conanfile = self._loader.load_virtual([reference], processed_profile)
+            conanfile = self._loader.load_virtual([reference], profile_host)
             root_node = Node(ref, conanfile, recipe=RECIPE_VIRTUAL)
             if graph_lock:  # Find the Node ID in the lock of current root
                 graph_lock.find_consumer_node(root_node, reference)
@@ -151,7 +149,7 @@ class GraphManager(object):
                     node_id = graph_lock.get_node(graph_info.root)
                     lock_python_requires = graph_lock.python_requires(node_id)
 
-                conanfile = self._loader.load_consumer(path, processed_profile, test=test,
+                conanfile = self._loader.load_consumer(path, profile_host, test=test,
                                                        name=graph_info.root.name,
                                                        version=graph_info.root.version,
                                                        user=graph_info.root.user,
@@ -164,7 +162,7 @@ class GraphManager(object):
                                          conanfile._conan_user, conanfile._conan_channel,
                                          validate=False)
             else:
-                conanfile = self._loader.load_conanfile_txt(path, processed_profile,
+                conanfile = self._loader.load_conanfile_txt(path, profile_host,
                                                             ref=graph_info.root)
 
             root_node = Node(ref, conanfile, recipe=RECIPE_CONSUMER, path=path)
@@ -175,9 +173,9 @@ class GraphManager(object):
         build_mode = BuildMode(build_mode, self._output)
         deps_graph = self._load_graph(root_node, check_updates, update,
                                       build_mode=build_mode, remotes=remotes,
-                                      profile_build_requires=profile.build_requires,
+                                      profile_host_build_requires=profile_host.build_requires,
                                       recorder=recorder,
-                                      processed_profile=processed_profile,
+                                      profile_host=profile_host,
                                       apply_build_requires=apply_build_requires,
                                       graph_lock=graph_lock)
 
@@ -213,7 +211,7 @@ class GraphManager(object):
 
     def _recurse_build_requires(self, graph, builder, check_updates,
                                 update, build_mode, remotes, profile_build_requires, recorder,
-                                processed_profile, graph_lock, apply_build_requires=True,
+                                profile_host, graph_lock, apply_build_requires=True,
                                 nodes_subset=None, root=None):
         """
         :param graph: This is the full dependency graph with all nodes from all recursions
@@ -256,37 +254,37 @@ class GraphManager(object):
                 nodessub = builder.extend_build_requires(graph, node,
                                                          package_build_requires.values(),
                                                          check_updates, update, remotes,
-                                                         processed_profile, graph_lock)
+                                                         profile_host, graph_lock)
 
                 self._recurse_build_requires(graph, builder,
                                              check_updates, update, build_mode,
                                              remotes, profile_build_requires, recorder,
-                                             processed_profile, graph_lock, nodes_subset=nodessub,
+                                             profile_host, graph_lock, nodes_subset=nodessub,
                                              root=node)
 
             if new_profile_build_requires:
                 nodessub = builder.extend_build_requires(graph, node, new_profile_build_requires,
                                                          check_updates, update, remotes,
-                                                         processed_profile, graph_lock)
+                                                         profile_host, graph_lock)
 
                 self._recurse_build_requires(graph, builder,
                                              check_updates, update, build_mode,
                                              remotes, {}, recorder,
-                                             processed_profile, graph_lock, nodes_subset=nodessub,
+                                             profile_host, graph_lock, nodes_subset=nodessub,
                                              root=node)
 
     def _load_graph(self, root_node, check_updates, update, build_mode, remotes,
-                    profile_build_requires, recorder, processed_profile, apply_build_requires,
+                    profile_host_build_requires, recorder, profile_host, apply_build_requires,
                     graph_lock):
 
         assert isinstance(build_mode, BuildMode)
         builder = DepsGraphBuilder(self._proxy, self._output, self._loader, self._resolver,
                                    recorder)
-        graph = builder.load_graph(root_node, check_updates, update, remotes, processed_profile,
+        graph = builder.load_graph(root_node, check_updates, update, remotes, profile_host,
                                    graph_lock)
 
         self._recurse_build_requires(graph, builder, check_updates, update, build_mode,
-                                     remotes, profile_build_requires, recorder, processed_profile,
+                                     remotes, profile_host_build_requires, recorder, profile_host,
                                      graph_lock, apply_build_requires=apply_build_requires)
 
         # Sort of closures, for linking order

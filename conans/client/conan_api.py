@@ -456,7 +456,7 @@ class ConanAPIV1(object):
                                     self.app.cache, self.app.out)
 
         self.app.out.info("Configuration:")
-        self.app.out.writeln(graph_info.profile.dumps())
+        self.app.out.writeln(graph_info.profile_host.dumps())
 
         self.app.cache.editable_packages.override(workspace.get_editable_dict())
 
@@ -1251,8 +1251,8 @@ def get_graph_info(profile_names, settings, options, env, cwd, install_folder, c
             graph_info.root = root_ref
         lockfile = lockfile if os.path.isfile(lockfile) else os.path.join(lockfile, LOCKFILE)
         graph_lock_file = GraphLockFile.load(lockfile, cache.config.revisions_enabled)
-        graph_info.profile = graph_lock_file.profile
-        graph_info.profile.process_settings(cache, preprocess=False)
+        graph_info.profile_host = graph_lock_file.profile_host
+        graph_info.profile_host.process_settings(cache, preprocess=False)
         graph_info.graph_lock = graph_lock_file.graph_lock
         output.info("Using lockfile: '{}'".format(lockfile))
         return graph_info
@@ -1266,8 +1266,8 @@ def get_graph_info(profile_names, settings, options, env, cwd, install_folder, c
         graph_info = None
     else:
         graph_lock_file = GraphLockFile.load(install_folder, cache.config.revisions_enabled)
-        graph_info.profile = graph_lock_file.profile
-        graph_info.profile.process_settings(cache, preprocess=False)
+        graph_info.profile_host = graph_lock_file.profile_host
+        graph_info.profile_host.process_settings(cache, preprocess=False)
 
     if profile_names or settings or options or env or not graph_info:
         if graph_info:
@@ -1281,7 +1281,7 @@ def get_graph_info(profile_names, settings, options, env, cwd, install_folder, c
         profile = profile_from_args(profile_names, settings, options, env, cwd, cache)
         profile.process_settings(cache)
         root_ref = ConanFileReference(name, version, user, channel, validate=False)
-        graph_info = GraphInfo(profile=profile, root_ref=root_ref)
+        graph_info = GraphInfo(profile_host=profile, root_ref=root_ref)
         # Preprocess settings and convert to real settings
     return graph_info
 
