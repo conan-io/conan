@@ -10,12 +10,13 @@ from conans.client.output import ScopedOutput
 from conans.client.remover import DiskRemover
 from conans.errors import ConanException
 from conans.model.manifest import FileTreeManifest
+from conans.model.ref import ConanFileReference
 from conans.model.scm import SCM, get_scm_data
 from conans.paths import CONANFILE, DATA_YML
 from conans.search.search import search_recipes, search_packages
-from conans.util.files import is_dirty, load, rmdir, save, set_dirty, remove
+from conans.util.files import is_dirty, load, rmdir, save, set_dirty, remove, mkdir, \
+    merge_directories
 from conans.util.log import logger
-from conans.model.ref import ConanFileReference
 
 
 def export_alias(package_layout, target_ref, output, revisions_enabled):
@@ -49,7 +50,7 @@ def check_casing_conflict(cache, ref):
 
 
 def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
-               export=True, graph_lock=None):
+               export=True, graph_lock=None, ignore_dirty=False):
 
     """ Export the recipe
     param conanfile_path: the original source directory of the user containing a
@@ -111,14 +112,24 @@ def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
 
     # Copy sources to target folders
     with package_layout.conanfile_write_lock(output=output):
+
         origin_folder = os.path.dirname(conanfile_path)
         export_recipe(conanfile, origin_folder, package_layout.export())
         export_source(conanfile, origin_folder, package_layout.export_sources())
         shutil.copy2(conanfile_path, package_layout.conanfile())
 
-        _capture_export_scm_data(conanfile, os.path.dirname(conanfile_path),
-                                 package_layout.export(), output,
-                                 scm_src_file=package_layout.scm_folder())
+        # Calculate the "auto" values and replace in conanfile.py
+        scm_data, local_src_folder = _capture_scm_auto_fields(conanfile,
+                                                              os.path.dirname(conanfile_path),
+                                                              package_layout.export(), output,
+                                                              ignore_dirty)
+        # Clear previous scm_folder
+        scm_sources_folder = package_layout.scm_sources()
+        rmdir(scm_sources_folder)
+        if local_src_folder and not keep_source:
+            # Copy the local scm folder to scm_sources in the cache
+            mkdir(scm_sources_folder)
+            _export_scm(scm_data, local_src_folder, scm_sources_folder, output)
 
         # Execute post-export hook before computing the digest
         hook_manager.execute("post_export", conanfile=conanfile, reference=package_layout.ref,
@@ -179,18 +190,31 @@ def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
     return ref
 
 
-def _capture_export_scm_data(conanfile, conanfile_dir, destination_folder, output, scm_src_file):
-
-    if os.path.exists(scm_src_file):
-        os.unlink(scm_src_file)
-
+def _capture_scm_auto_fields(conanfile, conanfile_dir, destination_folder, output, ignore_dirty):
+    """Deduce the values for the scm auto fields or functions assigned to 'url' or 'revision'
+       and replace the conanfile.py contents.
+       Returns a tuple with (scm_data, path_to_scm_local_directory)"""
     scm_data = get_scm_data(conanfile)
     if not scm_data:
-        return
+        return None, None
 
     # Resolve SCMData in the user workspace (someone may want to access CVS or import some py)
     scm = SCM(scm_data, conanfile_dir, output)
     captured = scm_data.capture_origin or scm_data.capture_revision
+
+    if not captured:
+        # We replace not only "auto" values, also evaluated functions (e.g from a python_require)
+        _replace_scm_data_in_conanfile(os.path.join(destination_folder, "conanfile.py"), scm_data)
+        return scm_data, None
+
+    if not scm.is_pristine() and not ignore_dirty:
+        output.warn("There are uncommitted changes, skipping the replacement of 'scm.url' and "
+                    "'scm.revision' auto fields. Use --ignore-dirty to force it. The 'conan "
+                    "upload' command will prevent uploading recipes with 'auto' values in these "
+                    "fields.")
+        local_src_path = scm.get_local_path_to_url(scm_data.url) \
+            if scm_data.url != "auto" else conanfile_dir
+        return scm_data, local_src_path
 
     if scm_data.url == "auto":
         origin = scm.get_qualified_remote_url(remove_credentials=True)
@@ -202,20 +226,15 @@ def _capture_export_scm_data(conanfile, conanfile_dir, destination_folder, outpu
         scm_data.url = origin
 
     if scm_data.revision == "auto":
-        if not scm.is_pristine():
-            output.warn("Repo status is not pristine: there might be modified files")
+        # If it is pristine by default we don't replace the "auto" unless forcing
+        # This prevents the recipe to get uploaded pointing to an invalid commit
         scm_data.revision = scm.get_revision()
         output.success("Revision deduced by 'auto': %s" % scm_data.revision)
 
+    local_src_path = scm.get_local_path_to_url(scm_data.url)
     _replace_scm_data_in_conanfile(os.path.join(destination_folder, "conanfile.py"), scm_data)
 
-    if captured:
-        # Generate the scm_folder.txt file pointing to the src_path
-        src_path = scm.get_local_path_to_url(scm_data.url)
-        if src_path:
-            save(scm_src_file, os.path.normpath(src_path).replace("\\", "/"))
-
-    return scm_data
+    return scm_data, local_src_path
 
 
 def _replace_scm_data_in_conanfile(conanfile_path, scm_data):
@@ -353,6 +372,16 @@ def _classify_patterns(patterns):
         else:
             included.append(p)
     return included, excluded
+
+
+def _export_scm(scm_data, origin_folder, scm_sources_folder, output):
+    """ Copy the local folder to the scm_sources folder in the cache, this enables to work
+        with local sources without committing and pushing changes to the scm remote.
+        https://github.com/conan-io/conan/issues/5195"""
+    excluded = SCM(scm_data, origin_folder, output).excluded_files
+    excluded.append("conanfile.py")
+    output.info("SCM: Getting sources from folder: %s" % origin_folder)
+    merge_directories(origin_folder, scm_sources_folder, excluded=excluded)
 
 
 def export_source(conanfile, origin_folder, destination_source_folder):
