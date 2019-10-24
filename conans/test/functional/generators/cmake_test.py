@@ -141,7 +141,7 @@ CONAN_BASIC_SETUP()
         client.run("create conanfile_mylib.py mylib/1.0@us/ch")
         client.run("install conanfile_consumer.py")
 
-        content = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
+        content = client.load("conanbuildinfo.cmake")
         self.assertIn("set(CONAN_LIBS lib1 sys1 ${CONAN_LIBS})", content)
         self.assertIn("set(CONAN_LIBS_MYLIB lib1)", content)
         self.assertIn("set(CONAN_SYSTEM_LIBS sys1 ${CONAN_SYSTEM_LIBS})", content)

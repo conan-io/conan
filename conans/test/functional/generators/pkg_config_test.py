@@ -153,7 +153,6 @@ class PkgConfigConan(ConanFile):
         client.run("create .")
         client.run("install MyLib/0.1@ -g pkg_config")
 
-        pc_path = os.path.join(client.current_folder, "MyLib.pc")
-        pc_content = load(pc_path)
+        pc_content = client.load("MyLib.pc")
         self.assertIn("Libs: -L${libdir} -lmylib1  -lmylib2  -lsystem_lib1  -lsystem_lib2 ",
                       pc_content)

@@ -119,7 +119,7 @@ class VisualStudioTest(unittest.TestCase):
         client.run("create conanfile_mylib.py mylib/1.0@us/ch")
         client.run("install conanfile_consumer.py")
 
-        content = load(os.path.join(client.current_folder, "conanbuildinfo.props"))
+        content = client.load("conanbuildinfo.props")
         self.assertIn("<ConanLibraries>lib1.lib;</ConanLibraries>", content)
         self.assertIn("<ConanSystemDeps>sys1.lib;</ConanSystemDeps>", content)
         self.assertIn("<AdditionalLibraryDirectories>$(ConanLibraryDirectories)"

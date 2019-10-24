@@ -298,7 +298,7 @@ class CMakeMultiSystemLibsTest(unittest.TestCase):
         client.save({"conanfile_mylib.py": mylib, "conanfile_consumer.py": consumer})
         client.run("create conanfile_mylib.py mylib/1.0@us/ch")
         client.run("install conanfile_consumer.py")
-        content = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
+        content = client.load("conanbuildinfo.cmake")
         self.assertIn("set(CONAN_LIBS lib1 ${CONAN_LIBS})", content)
         self.assertIn("set(CONAN_LIBS_DEBUG sys1d ${CONAN_LIBS_DEBUG})", content)
         self.assertIn("set(CONAN_LIBS_RELEASE sys1 ${CONAN_LIBS_RELEASE})", content)

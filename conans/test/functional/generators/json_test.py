@@ -86,8 +86,7 @@ class HelloConan(ConanFile):
         client.run("create . Hello/0.1@lasote/testing")
         client.run("install Hello/0.1@lasote/testing -g json")
 
-        my_json = load(os.path.join(client.current_folder, "conanbuildinfo.json"))
-        my_json = json.loads(my_json)
+        my_json = json.loads(client.load("conanbuildinfo.json"))
 
         # Nodes with cpp_info
         deps_info = my_json["dependencies"][0]
