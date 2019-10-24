@@ -194,7 +194,7 @@ class VirtualEnvIntegrationTestCase(unittest.TestCase):
 
     def test_basic_variable(self):
         generator = VirtualEnvGenerator(ConanFileMock())
-        generator.env = {"USER_VAR": r"some value with space and \ (backslash)",
+        generator.env = {"USER_VAR": r"some value with space and \\ (backslash)",
                          "ANOTHER": "data"}
 
         _, environment = self._run_virtualenv(generator)
