@@ -6,36 +6,40 @@ import unittest
 
 from mock import patch, PropertyMock
 
+from conans.client.cache.cache import ClientCache
 from conans.model.graph_lock import LOCKFILE
 from conans.build_info.command import run
-from conans.test.utils.tools import TestClient
+from conans.paths import get_conan_user_home
+from conans.test.utils.test_files import temp_folder
+from conans.test.utils.tools import TestClient, TestBufferConanOutput
 
 
 class MyBuildInfoCreation(unittest.TestCase):
-    @patch('conans.client.cache.cache.ClientCache.put_headers_path', new_callable=PropertyMock)
-    def test_build_info_start(self, mock_put_headers_path):
-        client = TestClient()
-        props_file = client.cache.put_headers_path
+    @patch('conans.build_info.build_info.ClientCache')
+    def test_build_info_start(self, mock_cache):
+        conan_user_home = temp_folder(True)
+        mock_cache.return_value = ClientCache(os.path.join(conan_user_home, ".conan"),
+                                              TestBufferConanOutput())
         sys.argv = ['conan_build_info', 'start', 'MyBuildName', '42']
-        mock_put_headers_path.return_value = props_file
         run()
-        with open(props_file) as f:
+        with open(mock_cache.return_value.put_headers_path) as f:
             content = f.read()
             self.assertIn('MyBuildName', content)
             self.assertIn('42', content)
 
-    @patch('conans.client.cache.cache.ClientCache.put_headers_path', new_callable=PropertyMock)
-    def test_build_info_stop(self, mock_put_headers_path):
-        client = TestClient()
-        props_file = client.cache.put_headers_path
+    @patch('conans.build_info.build_info.ClientCache')
+    def test_build_info_stop(self, mock_cache):
+        conan_user_home = temp_folder(True)
+        mock_cache.return_value = ClientCache(os.path.join(conan_user_home, ".conan"),
+                                              TestBufferConanOutput())
         sys.argv = ['conan_build_info', 'stop']
-        mock_put_headers_path.return_value = client.cache.put_headers_path
         run()
-        with open(props_file) as f:
+        with open(mock_cache.return_value.put_headers_path) as f:
             content = f.read()
             self.assertEqual('', content)
 
-    def test_build_info_create(self):
+    @patch('conans.build_info.build_info.ClientCache')
+    def test_build_info_create(self, mock_cache):
         conanfile = textwrap.dedent("""
             from conans import ConanFile, load
             import os
@@ -56,6 +60,7 @@ class MyBuildInfoCreation(unittest.TestCase):
                             self.output.info("DEP FILE %s: %s" % (d, load(p)))
                 """)
         client = TestClient(default_server_user=True)
+        mock_cache.return_value = client.cache
         client.save({"conanfile.py": conanfile.format(requires=""),
                      "myfile.txt": "HelloA"})
         client.run("create . PkgA/0.1@user/channel")
@@ -76,29 +81,19 @@ class MyBuildInfoCreation(unittest.TestCase):
             requires='requires = "PkgA/0.1@user/channel"'),
             "myfile.txt": "HelloB"})
         client.run("create . PkgB/0.2@user/testing --lockfile")
-        registry = client.cache.registry
-        headers_path = client.cache.put_headers_path
+
         client.run("upload * --all --confirm")
+        sys.argv = ['conan_build_info', 'start', 'MyBuildName', '42']
+        run()
+        sys.argv = ['conan_build_info', 'create',
+                    os.path.join(client.current_folder, 'buildinfo.json'), '--lockfile',
+                    os.path.join(client.current_folder, LOCKFILE)]
+        run()
 
-        @patch('conans.client.cache.cache.ClientCache.put_headers_path', new_callable=PropertyMock)
-        @patch('conans.client.cache.cache.ClientCache.registry', new_callable=PropertyMock)
-        @patch('conans.client.cache.cache.ClientCache.package_layout',
-               new=client.cache.package_layout)
-        @patch('conans.client.cache.cache.ClientCache.read_put_headers',
-               new=client.cache.read_put_headers)
-        def create(registry_mock, mock_put_headers_path):
-            registry_mock.return_value = registry
-            mock_put_headers_path.return_value = headers_path
-            sys.argv = ['conan_build_info', 'start', 'MyBuildName', '42']
-            run()
-            sys.argv = ['conan_build_info', 'create',
-                        os.path.join(client.current_folder, 'buildinfo.json'), '--lockfile',
-                        os.path.join(client.current_folder, LOCKFILE)]
-            run()
-
-        create()
         with open(os.path.join(client.current_folder, 'buildinfo.json')) as f:
             buildinfo = json.load(f)
+            self.assertEqual(buildinfo["name"], "MyBuildName")
+            self.assertEqual(buildinfo["number"], "42")
             self.assertEqual(buildinfo["modules"][0]["id"], "PkgB/0.2@user/testing")
             self.assertEqual(buildinfo["modules"][1]["id"],
                              "PkgB/0.2@user/testing:5bf1ba84b5ec8663764a406f08a7f9ae5d3d5fb5")
@@ -211,7 +206,8 @@ class MyBuildInfoCreation(unittest.TestCase):
         def update(registry_mock, mock_put_headers_path):
             registry_mock.return_value = registry
             mock_put_headers_path.return_value = headers_path
-            sys.argv = ['conan_build_info', 'update', 'buildinfo_a.json', 'buildinfo_b.json', '--output-file', 'mergedbuildinfo.json']
+            sys.argv = ['conan_build_info', 'update', 'buildinfo_a.json', 'buildinfo_b.json',
+                        '--output-file', 'mergedbuildinfo.json']
             run()
 
         with open(os.path.join(client.current_folder, 'mergedbuildinfo.json')) as f:
