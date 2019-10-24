@@ -20,7 +20,7 @@ assign_target_properties = """
     if({name}_INCLUDE_DIRS)
       set_target_properties({name}::{name} PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${{{name}_INCLUDE_DIRS}}")
     endif()
-    set_property(TARGET {name}::{name} PROPERTY INTERFACE_LINK_LIBRARIES ${{{name}_LIBRARIES_TARGETS}} "${{{name}_LINKER_FLAGS_LIST}}")
+    set_property(TARGET {name}::{name} PROPERTY INTERFACE_LINK_LIBRARIES ${{{name}_LIBRARIES_TARGETS}} ${{{name}_SYSTEM_LIBS}} "${{{name}_LINKER_FLAGS_LIST}}")
     set_property(TARGET {name}::{name} PROPERTY INTERFACE_COMPILE_DEFINITIONS ${{{name}_COMPILE_DEFINITIONS}})
     set_property(TARGET {name}::{name} PROPERTY INTERFACE_COMPILE_OPTIONS "${{{name}_COMPILE_OPTIONS_LIST}}")
 """
