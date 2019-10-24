@@ -398,7 +398,6 @@ class BinaryInstaller(object):
                         pref = self._build_package(node, output, keep_build, remotes)
                     assert node.prev, "Node PREV shouldn't be empty"
                     assert node.pref.revision, "Node PREF revision shouldn't be empty"
-                    assert node.prev is not None, "PREV for %s to be built is None" % str(pref)
                     assert pref.revision is not None, "PREV for %s to be built is None" % str(pref)
                 elif node.binary in (BINARY_UPDATE, BINARY_DOWNLOAD):
                     assert node.prev, "PREV for %s is None" % str(pref)
@@ -448,8 +447,10 @@ class BinaryInstaller(object):
         node_order = [n for n in node.public_closure if n.binary != BINARY_SKIP]
         # List sort is stable, will keep the original order of the closure, but prioritize levels
         conan_file = node.conanfile
+
+        transitive = [it for it in node.transitive_closure]
         for n in node_order:
-            if n.build_require:
+            if n not in transitive:
                 conan_file.output.info("Applying build-requirement: %s" % str(n.ref))
 
             conan_file.deps_user_info[n.ref.name] = n.conanfile.user_info
@@ -457,7 +458,7 @@ class BinaryInstaller(object):
                 conan_file.deps_cpp_info.update(n.conanfile.cpp_info, n.ref.name)
                 conan_file.deps_env_info.update(n.conanfile.env_info, n.ref.name)
             else:
-                if not n.build_require or n.build_require_host:
+                if n in transitive:
                     conan_file.deps_cpp_info.update(n.conanfile.cpp_info, n.ref.name)
                 else:
                     conan_file.deps_env_info.update(n.conanfile.env_info, n.ref.name)

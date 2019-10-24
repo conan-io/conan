@@ -19,12 +19,13 @@ def print_graph(deps_graph, out):
     requires = OrderedDict()
     build_requires = OrderedDict()
     python_requires = set()
+    build_time_nodes = deps_graph.build_time_nodes()
     for node in sorted(deps_graph.nodes):
         python_requires.update(_get_python_requires(node.conanfile))
         if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
             continue
         pref = PackageReference(node.ref, node.package_id)
-        if node.build_require:  # TODO: May use build_require_host information
+        if node in build_time_nodes:  # TODO: May use build_require_host information
             build_requires.setdefault(pref, []).append(node)
         else:
             requires.setdefault(pref, []).append(node)
