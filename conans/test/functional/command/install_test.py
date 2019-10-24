@@ -70,7 +70,7 @@ class Pkg(ConanFile):
         client.save({"conanfile.py": conanfile})
         # passing the wrong package name raises
         client.run("install . Pkg/0.1@myuser/testing", assert_error=True)
-        self.assertIn("ERROR: Package recipe name Pkg!=Other", client.out)
+        self.assertIn("ERROR: Package recipe with name Pkg!=Other", client.out)
         # Partial reference works
         client.run("install . 0.1@myuser/testing")
         client.run("build .")
@@ -85,7 +85,7 @@ class Pkg(ConanFile):
         client.save({"conanfile.py": conanfile})
         # passing the wrong package name raises
         client.run("install . Other/0.1@myuser/testing", assert_error=True)
-        self.assertIn("ERROR: Package recipe version 0.1!=0.2", client.out)
+        self.assertIn("ERROR: Package recipe with version 0.1!=0.2", client.out)
         # Partial reference works
         client.run("install . myuser/testing")
         client.run("build .")
@@ -661,3 +661,13 @@ class TestConan(ConanFile):
         client.run("remote disable default")
         client.run("install Pkg/0.1@lasote/testing", assert_error=False)
         self.assertNotIn("Trying with 'default'...", client.out)
+
+    def install_version_range_reference_test(self):
+        # https://github.com/conan-io/conan/issues/5905
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . pkg/0.1@user/channel")
+        client.run("install pkg/[*]@user/channel")
+        self.assertIn("pkg/0.1@user/channel from local cache - Cache", client.out)
+        client.run("install pkg/[0.*]@user/channel")
+        self.assertIn("pkg/0.1@user/channel from local cache - Cache", client.out)

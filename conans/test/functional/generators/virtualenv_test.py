@@ -158,13 +158,6 @@ class VirtualEnvIntegrationTestCase(unittest.TestCase):
             #        generated at the 'generator.content' and not when the 'activate' is called.
             save_files(self.test_folder, generator.content)
 
-            rr = generator.content
-            print(rr["activate.sh"])
-            print("*"*20)
-            print(rr["deactivate.sh"])
-            print("*"*20)
-            print(rr["environment.env"])
-
             # Generate the list of commands to execute
             shell_commands = [
                 self.commands.dump_env.format(filename=self.env_before),
@@ -195,7 +188,7 @@ class VirtualEnvIntegrationTestCase(unittest.TestCase):
         if platform.system() == "Darwin":
             env_after.pop(six.u("PS1"), None)  # TODO: FIXME: Needed for the test to pass
             env_after.pop("PS1", None)  # TODO: FIXME: Needed for the test to pass
-        self.assertDictEqual(env_before, env_after)  # Environment restored incorrectly
+        self.assertDictEqual(env_before, env_after)  # Environment restored correctly
 
         return stdout, _load_env_file(os.path.join(self.test_folder, self.env_activated))
 

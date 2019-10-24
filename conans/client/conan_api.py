@@ -2,8 +2,7 @@ import os
 import sys
 from collections import OrderedDict
 
-from conans.client.manager import deps_install
-from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
+from six import StringIO
 
 import conans
 from conans import __version__ as client_version
@@ -22,6 +21,7 @@ from conans.client.cmd.uploader import CmdUpload
 from conans.client.cmd.user import user_set, users_clean, users_list, token_present
 from conans.client.conf import ConanClientConfigParser
 from conans.client.graph.graph import RECIPE_EDITABLE
+from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
 from conans.client.graph.graph_manager import GraphManager
 from conans.client.graph.printer import print_graph
 from conans.client.graph.proxy import ConanProxy
@@ -31,6 +31,7 @@ from conans.client.hook_manager import HookManager
 from conans.client.importer import run_imports, undo_imports
 from conans.client.installer import BinaryInstaller
 from conans.client.loader import ConanFileLoader
+from conans.client.manager import deps_install
 from conans.client.migrations import ClientMigrator
 from conans.client.output import ConanOutput, colorama_initialize
 from conans.client.profile_loader import profile_from_args, read_profile
@@ -56,6 +57,7 @@ from conans.model.ref import ConanFileReference, PackageReference, check_valid_r
 from conans.model.version import Version
 from conans.model.workspace import Workspace
 from conans.paths import BUILD_INFO, CONANINFO, get_conan_user_home
+from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
 from conans.search.search import search_recipes
 from conans.tools import set_global_instances
 from conans.unicode import get_cwd
@@ -63,20 +65,24 @@ from conans.util.files import exception_message_safe, mkdir, save_files
 from conans.util.log import configure_logger
 from conans.util.tracer import log_command, log_exception
 
-
 default_manifest_folder = '.conan_manifests'
 
 
 def api_method(f):
-    def wrapper(*args, **kwargs):
-        api = args[0]
-        api.create_app()
+    def wrapper(api, *args, **kwargs):
+        quiet = kwargs.pop("quiet", False)
+        old_curdir = get_cwd()
+        old_output = api.user_io.out
+        quiet_output = ConanOutput(StringIO(), api.color) if quiet else None
         try:
-            curdir = get_cwd()
+            api.create_app(quiet_output=quiet_output)
             log_command(f.__name__, kwargs)
             with tools.environment_append(api.app.cache.config.env_vars):
-                return f(*args, **kwargs)
+                return f(api, *args, **kwargs)
         except Exception as exc:
+            if quiet_output:
+                old_output.write(quiet_output._stream.getvalue())
+                old_output.flush()
             msg = exception_message_safe(exc)
             try:
                 log_exception(exc, msg)
@@ -84,7 +90,7 @@ def api_method(f):
                 pass
             raise
         finally:
-            os.chdir(curdir)
+            os.chdir(old_curdir)
     return wrapper
 
 
@@ -137,15 +143,18 @@ def _get_conanfile_path(path, cwd, py):
 
 
 class ConanApp(object):
-    def __init__(self, cache_folder, user_io, http_requester=None, runner=None):
+    def __init__(self, cache_folder, user_io, http_requester=None, runner=None, quiet_output=None):
         # User IO, interaction and logging
         self.user_io = user_io
         self.out = self.user_io.out
+        if quiet_output:
+            self.user_io.out = quiet_output
+            self.out = quiet_output
+
         self.cache_folder = cache_folder
         self.cache = ClientCache(self.cache_folder, self.out)
         self.config = self.cache.config
-        interactive = not self.config.non_interactive
-        if not interactive:
+        if self.config.non_interactive or quiet_output:
             self.user_io.disable_input()
 
         # Adjust CONAN_LOGGING_LEVEL with the env readed
@@ -177,13 +186,13 @@ class ConanApp(object):
                                             self.out)
 
         self.proxy = ConanProxy(self.cache, self.out, self.remote_manager)
-        resolver = RangeResolver(self.cache, self.remote_manager)
-        self.python_requires = ConanPythonRequire(self.proxy, resolver)
+        self.range_resolver = RangeResolver(self.cache, self.remote_manager)
+        self.python_requires = ConanPythonRequire(self.proxy, self.range_resolver)
         self.loader = ConanFileLoader(self.runner, self.out, self.python_requires)
 
-        self.graph_manager = GraphManager(self.out, self.cache,
-                                          self.remote_manager, self.loader, self.proxy,
-                                          resolver)
+        self.binaries_analyzer = GraphBinariesAnalyzer(self.cache, self.out, self.remote_manager)
+        self.graph_manager = GraphManager(self.out, self.cache, self.remote_manager, self.loader,
+                                          self.proxy, self.range_resolver, self.binaries_analyzer)
 
     def load_remotes(self, remote_name=None, update=False, check_updates=False):
         remotes = self.cache.registry.load_remotes()
@@ -201,22 +210,22 @@ class ConanAPIV1(object):
 
     def __init__(self, cache_folder=None, output=None, user_io=None, http_requester=None,
                  runner=None):
-        color = colorama_initialize()
-        self.out = output or ConanOutput(sys.stdout, sys.stderr, color)
+        self.color = colorama_initialize()
+        self.out = output or ConanOutput(sys.stdout, sys.stderr, self.color)
         self.user_io = user_io or UserIO(out=self.out)
         self.cache_folder = cache_folder or os.path.join(get_conan_user_home(), ".conan")
-        cache = ClientCache(self.cache_folder, self.out)
         self.http_requester = http_requester
         self.runner = runner
         self.app = None  # Api calls will create a new one every call
         # Migration system
-        migrator = ClientMigrator(cache, Version(client_version), self.out)
+        migrator = ClientMigrator(self.cache_folder, Version(client_version), self.out)
         migrator.migrate()
-        # Remove in Conan 2.0
-        sys.path.append(os.path.join(cache.cache_folder, "python"))
+        # FIXME Remove in Conan 2.0
+        sys.path.append(os.path.join(self.cache_folder, "python"))
 
-    def create_app(self):
-        self.app = ConanApp(self.cache_folder, self.user_io, self.http_requester, self.runner)
+    def create_app(self, quiet_output=None):
+        self.app = ConanApp(self.cache_folder, self.user_io, self.http_requester,
+                            self.runner, quiet_output=quiet_output)
 
     @api_method
     def new(self, name, header=False, pure_c=False, test=False, exports_sources=False, bare=False,
@@ -252,17 +261,14 @@ class ConanAPIV1(object):
             ref = ConanFileReference.loads(path)
         except ConanException:
             conanfile_path = _get_conanfile_path(path, get_cwd(), py=True)
-            ref = os.path.basename(conanfile_path)
-            conanfile_class = self.app.loader.load_class(conanfile_path)
+            conanfile = self.app.loader.load_basic(conanfile_path)
         else:
             update = True if remote_name else False
             result = self.app.proxy.get_recipe(ref, update, update, remotes, ActionRecorder())
             conanfile_path, _, _, ref = result
-            conanfile_class = self.app.loader.load_class(conanfile_path)
-            conanfile_class.name = ref.name
-            conanfile_class.version = ref.version
-
-        conanfile = conanfile_class(self.app.out, None, repr(ref))
+            conanfile = self.app.loader.load_basic(conanfile_path)
+            conanfile.name = ref.name
+            conanfile.version = ref.version
 
         result = OrderedDict()
         if not attributes:
@@ -454,7 +460,7 @@ class ConanAPIV1(object):
         self.app.cache.editable_packages.override(workspace.get_editable_dict())
 
         recorder = ActionRecorder()
-        deps_graph, _ = self.app.graph_manager.load_graph(workspace.root, None, graph_info, build,
+        deps_graph = self.app.graph_manager.load_graph(workspace.root, None, graph_info, build,
                                                        False, update, remotes, recorder)
 
         print_graph(deps_graph, self.app.out)
@@ -469,7 +475,8 @@ class ConanAPIV1(object):
                     node.conanfile.generators = tmp
 
         installer = BinaryInstaller(self.app, recorder=recorder)
-        installer.install(deps_graph, remotes, keep_build=False, graph_info=graph_info)
+        installer.install(deps_graph, remotes, build, update, keep_build=False,
+                          graph_info=graph_info)
 
         install_folder = install_folder or cwd
         workspace.generate(install_folder, deps_graph, self.app.out)
@@ -611,8 +618,8 @@ class ConanAPIV1(object):
                                                 settings, options, env)
         recorder = ActionRecorder()
         remotes = self.app.load_remotes(remote_name=remote_name, check_updates=check_updates)
-        deps_graph, _ = self.app.graph_manager.load_graph(reference, None, graph_info, ["missing"],
-                                                          check_updates, False, remotes, recorder)
+        deps_graph = self.app.graph_manager.load_graph(reference, None, graph_info, ["missing"],
+                                                       check_updates, False, remotes, recorder)
         return deps_graph.build_order(build_order)
 
     @api_method
@@ -623,11 +630,10 @@ class ConanAPIV1(object):
                                                 settings, options, env)
         recorder = ActionRecorder()
         remotes = self.app.load_remotes(remote_name=remote_name, check_updates=check_updates)
-        deps_graph, conanfile = self.app.graph_manager.load_graph(reference, None, graph_info,
-                                                                  build_modes, check_updates,
-                                                                  False, remotes, recorder)
+        deps_graph = self.app.graph_manager.load_graph(reference, None, graph_info, build_modes,
+                                                       check_updates, False, remotes, recorder)
         nodes_to_build = deps_graph.nodes_to_build()
-        return nodes_to_build, conanfile
+        return nodes_to_build, deps_graph.root.conanfile
 
     @api_method
     def info(self, reference_or_path, remote_name=None, settings=None, options=None, env=None,
@@ -637,14 +643,14 @@ class ConanAPIV1(object):
         recorder = ActionRecorder()
         # FIXME: Using update as check_update?
         remotes = self.app.load_remotes(remote_name=remote_name, check_updates=update)
-        deps_graph, conanfile = self.app.graph_manager.load_graph(reference, None, graph_info, build,
-                                                                  update, False, remotes, recorder)
+        deps_graph = self.app.graph_manager.load_graph(reference, None, graph_info, build,
+                                                       update, False, remotes, recorder)
 
         if install_folder:
             output_folder = _make_abs_path(install_folder)
             graph_info.save(output_folder)
             self.app.out.info("Generated graphinfo")
-        return deps_graph, conanfile
+        return deps_graph, deps_graph.root.conanfile
 
     @api_method
     def build(self, conanfile_path, source_folder=None, package_folder=None, build_folder=None,
@@ -683,9 +689,9 @@ class ConanAPIV1(object):
         conanfile = self.app.graph_manager.load_consumer_conanfile(conanfile_path, install_folder,
                                                                    deps_info_required=True)
         with get_env_context_manager(conanfile):
-            packager.create_package(conanfile, None, source_folder, build_folder, package_folder,
-                                    install_folder, self.app.hook_manager, conanfile_path, None,
-                                    local=True, copy_info=True)
+            packager.run_package_method(conanfile, None, source_folder, build_folder, package_folder,
+                                        install_folder, self.app.hook_manager, conanfile_path, None,
+                                        local=True, copy_info=True)
 
     @api_method
     def source(self, path, source_folder=None, info_folder=None, cwd=None):
@@ -752,7 +758,7 @@ class ConanAPIV1(object):
     def remove(self, pattern, query=None, packages=None, builds=None, src=False, force=False,
                remote_name=None, outdated=False):
         remotes = self.app.cache.registry.load_remotes()
-        remover = ConanRemover(self.app.cache, self.app.remote_manager, self.user_io, remotes)
+        remover = ConanRemover(self.app.cache, self.app.remote_manager, self.app.user_io, remotes)
         remover.remove(pattern, remote_name, src, builds, packages, force=force,
                        packages_query=query, outdated=outdated)
 
@@ -766,7 +772,7 @@ class ConanAPIV1(object):
         # FIXME: conan copy does not support short-paths in Windows
         ref = ConanFileReference.loads(reference)
         cmd_copy(ref, user_channel, packages, self.app.cache,
-                 self.user_io, self.app.remote_manager, self.app.loader, remotes, force=force)
+                 self.app.user_io, self.app.remote_manager, self.app.loader, remotes, force=force)
 
     @api_method
     def authenticate(self, name, password, remote_name, skip_auth=False):
@@ -782,7 +788,7 @@ class ConanAPIV1(object):
         if skip_auth and token_present(self.app.cache.localdb, remote, name):
             return remote.name, name, name
         if not password:
-            name, password = self.user_io.request_login(remote_name=remote_name, username=name)
+            name, password = self.app.user_io.request_login(remote_name=remote_name, username=name)
 
         _, _, remote_name, prev_user, user = self.app.remote_manager.authenticate(remote, name,
                                                                                   password)
@@ -866,7 +872,7 @@ class ConanAPIV1(object):
         """ Uploads a package recipe and the generated binary packages to a specified remote
         """
         upload_recorder = UploadRecorder()
-        uploader = CmdUpload(self.app.cache, self.user_io, self.app.remote_manager,
+        uploader = CmdUpload(self.app.cache, self.app.user_io, self.app.remote_manager,
                              self.app.loader, self.app.hook_manager)
         remotes = self.app.load_remotes(remote_name=remote_name)
         try:
@@ -1045,8 +1051,7 @@ class ConanAPIV1(object):
         # Do not allow to override an existing package
         alias_conanfile_path = self.app.cache.package_layout(ref).conanfile()
         if os.path.exists(alias_conanfile_path):
-            conanfile_class = self.app.loader.load_class(alias_conanfile_path)
-            conanfile = conanfile_class(self.app.out, None, repr(ref))
+            conanfile = self.app.loader.load_basic(alias_conanfile_path)
             if not getattr(conanfile, 'alias', None):
                 raise ConanException("Reference '{}' is already a package, remove it before "
                                      "creating and alias with the same name".format(ref))
@@ -1153,7 +1158,7 @@ class ConanAPIV1(object):
 
         # Check the conanfile is there, and name/version matches
         ref = ConanFileReference.loads(reference, validate=True)
-        target_conanfile = self.app.graph_manager._loader.load_class(target_path)
+        target_conanfile = self.app.loader.load_basic(target_path)
         if (target_conanfile.name and target_conanfile.name != ref.name) or \
                 (target_conanfile.version and target_conanfile.version != ref.version):
             raise ConanException("Name and version from reference ({}) and target "
@@ -1202,8 +1207,8 @@ class ConanAPIV1(object):
                                     lockfile=lockfile)
         # The reference of the root node could be a local path or a ref
         reference = graph_info.graph_lock.root_node_ref()
-        deps_graph, _ = self.app.graph_manager.load_graph(reference, None, graph_info, build,
-                                                          False, False, remotes, recorder)
+        deps_graph = self.app.graph_manager.load_graph(reference, None, graph_info, build,
+                                                       False, False, remotes, recorder)
 
         print_graph(deps_graph, self.app.out)
         graph_info.save_lock(lockfile)
@@ -1221,8 +1226,8 @@ class ConanAPIV1(object):
         recorder = ActionRecorder()
         # FIXME: Using update as check_update?
         remotes = self.app.load_remotes(remote_name=remote_name, check_updates=update)
-        deps_graph, _ = self.app.graph_manager.load_graph(reference, None, graph_info, build, update,
-                                                          False, remotes, recorder)
+        deps_graph = self.app.graph_manager.load_graph(reference, None, graph_info, build, update,
+                                                       False, remotes, recorder)
 
         print_graph(deps_graph, self.app.out)
         lockfile = _make_abs_path(lockfile)

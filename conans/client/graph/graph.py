@@ -21,6 +21,7 @@ BINARY_BUILD = "Build"
 BINARY_MISSING = "Missing"
 BINARY_SKIP = "Skip"
 BINARY_EDITABLE = "Editable"
+BINARY_UNKNOWN = "Unknown"
 
 
 class Node(object):
@@ -201,8 +202,6 @@ class DepsGraph(object):
         self.nodes = set()
         self.root = None
         self.aliased = {}
-        # These are the nodes with pref (not including PREV) that have been evaluated
-        self.evaluated = {}  # {pref: [nodes]}
 
     def add_node(self, node):
         if not self.nodes:
@@ -284,7 +283,7 @@ class DepsGraph(object):
             new_level = []
             for n in level:
                 if n.binary == BINARY_BUILD and n.pref not in total_prefs:
-                    new_level.append((n.id, n.pref.copy_clear_rev()))
+                    new_level.append((n.id, n.pref.copy_clear_prev()))
                     total_prefs.add(n.pref)
             if new_level:
                 result.append(new_level)
