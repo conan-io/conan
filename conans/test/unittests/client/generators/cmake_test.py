@@ -34,8 +34,9 @@ class _MockSettings(object):
     def constraint(self, _):
         return self
 
-    def get_safe(self, _):
-        return None
+    def get_safe(self, name):
+        if name == "build_type":
+            return self.build_type
 
     def items(self):
         return {}
@@ -450,6 +451,6 @@ class CMakeBuildModulesTest(unittest.TestCase):
         generator = CMakeFindPackageMultiGenerator(self.conanfile)
         content = generator.content
         self.assertIn('include("dummy_root_folder1/my-module.cmake")',
-                      content["conanbuildinfo_release.cmake"])
+                      content["my_pkgTarget-release.cmake"])
         self.assertIn('include("dummy_root_folder2/other-mod.cmake")',
-                      content["conanbuildinfo_release.cmake"])
+                      content["my_pkg2Target-release.cmake"])
