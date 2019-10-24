@@ -141,8 +141,8 @@ class RequirementInfo(object):
         self.version = self.full_version
         self.user = self.full_user
         self.channel = self.full_channel
+        self.package_id = self.full_package_id
         self.recipe_revision = self.full_recipe_revision
-        self.package_id = None
         self.package_revision = None
 
     def package_revision_mode(self):
@@ -477,75 +477,9 @@ class ConanInfo(object):
         if self.full_settings.compiler.cppstd:
             self.settings.compiler.cppstd = self.full_settings.compiler.cppstd
 
-    def intel_compatibility(self):
-        if self.full_settings.compiler != "intel":
-            return
-        if self.full_settings.compiler.base_compatible is None or \
-                self.full_settings.compiler.base_compatible == "None":
-            if self.full_settings.compiler.runtime == "static":
-                self._base_compatible()
-            else:
-                self.base_incompatible()
-        elif self.full_settings.compiler.base_compatible:
-            self._base_compatible()
-        else:  # False
-            self._base_incompatible()
-
-    def _base_compatible(self):
-        """
-        Make Intel compiler compatible with the base compiler by assigning base compiler settings
-        to the package ID instead of the full Intel ones.
-        """
-        if self.full_settings.compiler != "intel":
-            return
-        # Unfortunately assigning values is shallow
-        self.settings.compiler = (
-            self.full_settings.compiler.base
-        )  # So now self.settings.compiler is basically just a string
-
-        # Deep copy everything
-        for field, value in self.full_settings.compiler.base.as_list():
-            tokens = field.split(".")
-            attr = self.settings.compiler
-            for token in tokens[:-1]:
-                attr = getattr(attr, token)
-            setattr(attr, tokens[-1], value)
-
-    def _base_incompatible(self):
-        """
-        Make intel compiler incompatible with the base compiler by assigning the full settings of
-        the compiler to the package ID
-        """
-        if self.full_settings.compiler != "intel":
-            return
-        # Method to opt out of binary compatibility
-        self.settings.compiler = (
-            self.full_settings.compiler
-        )
-
-        # Deep copy everything
-        for field, value in self.full_settings.compiler.as_list():
-            tokens = field.split(".")
-            attr = self.settings.compiler
-            for token in tokens[:-1]:
-                attr = getattr(attr, token)
-            setattr(attr, tokens[-1], value)
-
-        # Set base_compatible=False in order to make packages incompatible
-        self.settings.compiler.base_compatible = False
-
-    def base_compatible(self):
-        if self.full_settings.compiler != "intel":
-            return
-        if self.full_settings.compiler.base_compatible == "False":
-            return
-        else:
-            self._base_compatible()
-
-    def base_incompatible(self):
-        if self.full_settings.compiler != "intel":
-            return
-        if self.full_settings.compiler.base_compatible == "True":
-            return
-        else:
-            self._base_incompatible()
+    def shared_library_package_id(self):
+        if self.full_options.shared:
+            for dep_name in self.requires.pkg_names:
+                dep_options = self.full_options[dep_name]
+                if "shared" not in dep_options or not self.full_options[dep_name].shared:
+                    self.requires[dep_name].package_revision_mode()

@@ -115,7 +115,7 @@ class ConanLib(ConanFile):
             self.client.run_command('git config user.name "Your Name"')
             self.client.run_command("git add .")
             self.client.run_command('git commit -m  "commiting"')
-        self.client.run_command('git clone "%s" .' % repo.replace('\\', '/'))
+        self.client.run_command('git clone "%s" .' % repo)
         self.client.run("export . user/channel")
         self.assertIn("WARN: Repo origin looks like a local path", self.client.out)
         os.remove(self.client.cache.package_layout(self.ref).scm_folder())
@@ -520,9 +520,11 @@ class ConanLib(ConanFile):
                 "subfolder": "mysubfolder"}
         conanfile = namedtuple("ConanfileMock", "scm")(data)
         scm_data = SCMData(conanfile)
-        the_json = str(scm_data)
-        data2 = json.loads(the_json)
-        self.assertEqual(data, data2)
+
+        expected_output = '{"password": "mypassword", "revision": "myrevision",' \
+                          ' "subfolder": "mysubfolder", "type": "git", "url": "myurl",' \
+                          ' "username": "myusername"}'
+        self.assertEqual(str(scm_data), expected_output)
 
     def test_git_delegated_function(self):
         conanfile = """
@@ -602,10 +604,6 @@ class SVNSCMTest(SVNLocalRepoTestCase):
     def setUp(self):
         self.ref = ConanFileReference.loads("lib/0.1@user/channel")
         self.client = TestClient()
-
-    def _commit_contents(self):
-        self.client.run_command("svn add *")
-        self.client.run_command('svn commit -m  "commiting"')
 
     def test_scm_other_type_ignored(self):
         conanfile = '''
@@ -779,7 +777,9 @@ class ConanLib(ConanFile):
 """
         self.client.save({"conanfile.py": conanfile,
                           "myfile2.txt": "My file is copied"})
-        self._commit_contents()
+        self.client.run_command("svn add myfile2.txt")
+        self.client.run_command('svn commit -m  "commiting"')
+
         self.client.run("source . --source-folder=./source2")
         # myfile2 is no in the specified commit
         self.assertFalse(os.path.exists(os.path.join(curdir, "source2", "myfile2.txt")))
@@ -898,16 +898,6 @@ class ConanLib(ConanFile):
         self.client.run("create . user/channel")
         self.assertIn("SOURCE METHOD CALLED", self.client.out)
         self.assertIn("BUILD METHOD CALLED", self.client.out)
-
-    def test_scm_serialization(self):
-        data = {"url": "myurl", "revision": "23", "username": "myusername",
-                "password": "mypassword", "type": "svn", "verify_ssl": False,
-                "subfolder": "mysubfolder"}
-        conanfile = namedtuple("ConanfileMock", "scm")(data)
-        scm_data = SCMData(conanfile)
-        the_json = str(scm_data)
-        data2 = json.loads(the_json)
-        self.assertEqual(data, data2)
 
 
 @attr('svn')

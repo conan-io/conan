@@ -102,7 +102,7 @@ class PackageCacheLayout(object):
     @short_path
     def package(self, pref):
         assert isinstance(pref, PackageReference)
-        assert pref.ref == self._ref
+        assert pref.ref == self._ref, "{!r} != {!r}".format(pref.ref, self._ref)
         return os.path.join(self._base_folder, PACKAGES_FOLDER, pref.id)
 
     def scm_folder(self):
@@ -230,3 +230,11 @@ class PackageCacheLayout(object):
             return sorted([path for path in os.listdir(abs_path) if not discarded_file(path)])
         else:
             return load(abs_path)
+
+    def packages_ids(self):
+        packages_folder = self.packages()
+        if os.path.exists(packages_folder):
+            pkg_ids = [d for d in os.listdir(packages_folder)]
+        else:
+            pkg_ids = []
+        return pkg_ids

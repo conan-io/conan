@@ -1,9 +1,9 @@
 import os
 import unittest
 
+from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE
-from conans.test.utils.conanfile import TestConanFile
-from conans.test.utils.tools import TestClient
+from conans.test.utils.tools import TestClient, GenConanfile
 from conans.util.files import load
 
 
@@ -14,9 +14,14 @@ class HalfDiamondTest(unittest.TestCase):
 
     def _export(self, name, deps=None, export=True):
 
-        conanfile = TestConanFile(name, "0.1", requires=deps,
-                                  options={"potato": [True, False]},
-                                  default_options="potato=True")
+        conanfile = GenConanfile().with_name(name).with_version("0.1")\
+                                  .with_option("potato", [True, False])\
+                                  .with_default_option("potato", True)
+        if deps:
+            for dep in deps:
+                ref = ConanFileReference.loads(dep)
+                conanfile = conanfile.with_require(ref)
+
         conanfile = str(conanfile) + """
     def config_options(self):
         del self.options.potato

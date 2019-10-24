@@ -1,10 +1,13 @@
 import os
 import unittest
+from collections import namedtuple
 
 from mock import Mock
 
 from conans.client.cache.cache import ClientCache
 from conans.client.cache.remote_registry import Remotes
+from conans.client.graph.build_mode import BuildMode
+from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
 from conans.client.graph.graph_manager import GraphManager
 from conans.client.graph.proxy import ConanProxy
 from conans.client.graph.python_requires import ConanPythonRequire
@@ -18,9 +21,8 @@ from conans.model.options import OptionsValues
 from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
 from conans.test.unittests.model.transitive_reqs_test import MockRemoteManager
-from conans.test.utils.conanfile import TestConanFile
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestBufferConanOutput
+from conans.test.utils.tools import TestBufferConanOutput, GenConanfile
 from conans.util.files import save
 
 
@@ -31,21 +33,29 @@ class GraphManagerTest(unittest.TestCase):
         cache_folder = temp_folder()
         cache = ClientCache(cache_folder, self.output)
         self.cache = cache
+
+    def _get_app(self):
         self.remote_manager = MockRemoteManager()
-        self.resolver = RangeResolver(cache, self.remote_manager)
+        cache = self.cache
+        self.resolver = RangeResolver(self.cache, self.remote_manager)
         proxy = ConanProxy(cache, self.output, self.remote_manager)
         self.loader = ConanFileLoader(None, self.output, ConanPythonRequire(None, None))
+        binaries = GraphBinariesAnalyzer(cache, self.output, self.remote_manager)
         self.manager = GraphManager(self.output, cache, self.remote_manager, self.loader, proxy,
-                                    self.resolver)
+                                    self.resolver, binaries)
         hook_manager = Mock()
-        recorder = Mock()
-        self.binary_installer = BinaryInstaller(cache, self.output, self.remote_manager, recorder,
-                                                hook_manager)
+        app_type = namedtuple("ConanApp", "cache out remote_manager hook_manager graph_manager"
+                              " binaries_analyzer")
+        app = app_type(self.cache, self.output, self.remote_manager, hook_manager, self.manager,
+                       binaries)
+        return app
 
-    def _cache_recipe(self, reference, test_conanfile, revision=None):
-        if isinstance(test_conanfile, TestConanFile):
-            test_conanfile.info = True
-        ref = ConanFileReference.loads(reference)
+    def _cache_recipe(self, ref, test_conanfile, revision=None):
+        if isinstance(test_conanfile, GenConanfile):
+            name, version = test_conanfile._name, test_conanfile._version
+            test_conanfile = test_conanfile.with_package_info(
+                cpp_info={"libs": ["mylib{}{}lib".format(name, version)]},
+                env_info={"MYENV": ["myenv{}{}env".format(name, version)]})
         save(self.cache.package_layout(ref).conanfile(), str(test_conanfile))
         with self.cache.package_layout(ref).update_metadata() as metadata:
             metadata.recipe.revision = revision or "123"
@@ -57,7 +67,6 @@ class GraphManagerTest(unittest.TestCase):
         path = temp_folder()
         path = os.path.join(path, "conanfile.py")
         save(path, str(content))
-        self.loader.cached_conanfiles = {}
 
         profile = Profile()
         if profile_build_requires:
@@ -70,11 +79,13 @@ class GraphManagerTest(unittest.TestCase):
         ref = ref or ConanFileReference(None, None, None, None, validate=False)
         options = OptionsValues()
         graph_info = GraphInfo(profile, options, root_ref=ref)
-        deps_graph, _ = self.manager.load_graph(path, create_ref, graph_info,
-                                                build_mode, check_updates, update,
-                                                remotes, recorder)
+        app = self._get_app()
+        deps_graph = app.graph_manager.load_graph(path, create_ref, graph_info, build_mode,
+                                                  check_updates, update, remotes, recorder)
         if install:
-            self.binary_installer.install(deps_graph, None, False, graph_info)
+            binary_installer = BinaryInstaller(app, recorder)
+            build_mode = BuildMode(build_mode, app.out)
+            binary_installer.install(deps_graph, None, build_mode, update, False, graph_info)
         return deps_graph
 
     def _check_node(self, node, ref, deps, build_deps, dependents, closure):

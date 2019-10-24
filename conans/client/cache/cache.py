@@ -72,10 +72,12 @@ class ClientCache(object):
         self.editable_packages = EditablePackages(self.cache_folder)
         # paths
         self._store_folder = self.config.storage_path or self.cache_folder
+        # Just call it to make it raise in case of short_paths misconfiguration
+        self.config.short_paths_home
 
     def all_refs(self):
         subdirs = list_folder_subdirs(basedir=self._store_folder, level=4)
-        return [ConanFileReference(*folder.split("/")) for folder in subdirs]
+        return [ConanFileReference.load_dir_repr(folder) for folder in subdirs]
 
     @property
     def store(self):
@@ -92,7 +94,7 @@ class ClientCache(object):
     def config_install_file(self):
         return os.path.join(self.cache_folder, "config_install.json")
 
-    def package_layout(self, ref, short_paths=None, *args, **kwargs):
+    def package_layout(self, ref, short_paths=None):
         assert isinstance(ref, ConanFileReference), "It is a {}".format(type(ref))
         edited_ref = self.editable_packages.get(ref.copy_clear_rev())
         if edited_ref:

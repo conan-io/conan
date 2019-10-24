@@ -787,8 +787,8 @@ build_type: [ Release]
         settings.compiler.version = "12"
         settings.arch = "x86"
         settings.os = "Windows"
-        cmake = CMake(conanfile)
         if platform.system() == "Windows":
+            cmake = CMake(conanfile)
             self.assertNotIn("-DCMAKE_SYSROOT=", cmake.flags)
 
         # Now activate cross build and check sysroot and system processor
@@ -1010,6 +1010,13 @@ build_type: [ Release]
                       conanfile.command)
 
         cmake.generator = "Ninja Makefiles"
+        cmake.test()
+        self.assertEqual('cmake --build '
+                         '%s' % CMakeTest.scape('. --target test -- -j%i' %
+                                                cpu_count(output=conanfile.output)),
+                         conanfile.command)
+
+        cmake.generator = "Ninja"
         cmake.test()
         self.assertEqual('cmake --build '
                          '%s' % CMakeTest.scape('. --target test -- -j%i' %
