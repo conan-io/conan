@@ -374,14 +374,6 @@ class DepsGraphBuilder(object):
         if locked_id:
             new_node.id = locked_id
 
-        # build-requires and private affect transitively. If "node" is already
-        # a build_require or a private one, its requirements will inherit that property
-        # Or if the require specify that property, then it will get it too
-
-        #new_node.build_require = current_node.build_require or requirement.build_require
-        #new_node.private = current_node.private or requirement.private
-        #new_node.build_require_host = requirement.build_require_host
-
         dep_graph.add_node(new_node)
         dep_graph.add_edge(current_node, new_node, requirement)
         return new_node

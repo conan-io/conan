@@ -40,7 +40,7 @@ class BasePackage(ConanFile):
 """
         save(conanfile_path, conanfile)
         save(os.path.join(tmp_dir, "base_recipe.py"), base_recipe)
-        conan_file = loader.load_class(conanfile_path)
+        conan_file = loader.load_basic(conanfile_path)
         self.assertEqual(conan_file.short_paths, True)
 
         result = loader.load_consumer(conanfile_path,

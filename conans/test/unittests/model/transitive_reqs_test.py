@@ -90,7 +90,7 @@ class GraphTest(unittest.TestCase):
         self.binaries_analyzer = GraphBinariesAnalyzer(cache, self.output, self.remote_manager)
 
     def build_graph(self, content, options="", settings=""):
-        self.loader.cached_conanfiles = {}
+        self.loader._cached_conanfile_classes = {}
         full_settings = Settings.loads(default_settings_yml)
         full_settings.values = Values.loads(settings)
         profile = Profile()

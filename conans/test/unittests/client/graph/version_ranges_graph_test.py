@@ -47,7 +47,7 @@ class VersionRangesTest(GraphTest):
             self.retriever.save_recipe(say_ref, say_content)
 
     def build_graph(self, content, update=False):
-        self.loader.cached_conanfiles = {}
+        self.loader._cached_conanfile_classes = {}
         processed_profile = test_processed_profile()
         root_conan = self.retriever.root(str(content), processed_profile)
         deps_graph = self.builder.load_graph(root_conan, update, update, self.remotes,
@@ -153,20 +153,20 @@ class HelloConan(ConanFile):
         # Most important check: counter of calls to remote
         self.assertEqual(self.remote_manager.count, {'Say': 1})
 
-    @parameterized.expand([("", "0.3", None, None),
-                           ('"Say/1.1@myuser/testing"', "1.1", False, False),
-                           ('"Say/0.2@myuser/testing"', "0.2", False, True),
-                           ('("Say/1.1@myuser/testing", "override")', "1.1", True, False),
-                           ('("Say/0.2@myuser/testing", "override")', "0.2", True, True),
+    @parameterized.expand([("", "0.3", None, None, False),
+                           ('"Say/1.1@myuser/testing"', "1.1", False, True, False),
+                           ('"Say/0.2@myuser/testing"', "0.2", False, True, False),
+                           ('("Say/1.1@myuser/testing", "override")', "1.1", True, True, False),
+                           ('("Say/0.2@myuser/testing", "override")', "0.2", True, True, False),
                            # ranges
-                           ('"Say/[<=1.2]@myuser/testing"', "1.2.1", False, False),
-                           ('"Say/[>=0.2,<=1.0]@myuser/testing"', "0.3", False, True),
-                           ('"Say/[>=0.2 <=1.0]@myuser/testing"', "0.3", False, True),
-                           ('("Say/[<=1.2]@myuser/testing", "override")', "1.2.1", True, False),
-                           ('("Say/[>=0.2,<=1.0]@myuser/testing", "override")', "0.3", True, True),
-                           ('("Say/[>=0.2 <=1.0]@myuser/testing", "override")', "0.3", True, True),
+                           ('"Say/[<=1.2]@myuser/testing"', "1.2.1", False, False, True),
+                           ('"Say/[>=0.2,<=1.0]@myuser/testing"', "0.3", False, True, True),
+                           ('"Say/[>=0.2 <=1.0]@myuser/testing"', "0.3", False, True, True),
+                           ('("Say/[<=1.2]@myuser/testing", "override")', "1.2.1", True, False, True),
+                           ('("Say/[>=0.2,<=1.0]@myuser/testing", "override")', "0.3", True, True, True),
+                           ('("Say/[>=0.2 <=1.0]@myuser/testing", "override")', "0.3", True, True, True),
                            ])
-    def transitive_test(self, version_range, solution, override, valid):
+    def transitive_test(self, version_range, solution, override, valid, is_vrange):
         hello_text = GenConanfile().with_name("Hello").with_version("1.2")\
                                    .with_require_plain("Say/[>0.1, <1]@myuser/testing")
         hello_ref = ConanFileReference.loads("Hello/1.2@myuser/testing")
@@ -197,11 +197,9 @@ class ChatConan(ConanFile):
         if override is False:
             edges = {Edge(hello, say), Edge(chat, say), Edge(chat, hello)}
 
-        if valid is True:
+        if is_vrange is True:  # If it is not a version range, it is not 'is_resolved'
             self.assertIn(" valid", self.output)
             self.assertNotIn("not valid", self.output)
-        elif valid is False:
-            self.assertIn("not valid", self.output)
         self.assertEqual(3, len(deps_graph.nodes))
 
         self.assertEqual(_get_edges(deps_graph), edges)
