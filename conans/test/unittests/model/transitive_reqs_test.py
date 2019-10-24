@@ -99,7 +99,7 @@ class GraphTest(unittest.TestCase):
         profile = test_profile(profile=profile)
         root_conan = self.retriever.root(str(content), profile)
         deps_graph = self.builder.load_graph(root_conan, False, False, self.remotes,
-                                             profile)
+                                             profile_host=profile)
 
         build_mode = BuildMode([], self.output)
         self.binaries_analyzer.evaluate_graph(deps_graph, build_mode=build_mode,
@@ -1474,7 +1474,7 @@ class ConsumerConan(ConanFile):
     def build_graph(self, content):
         profile = test_profile()
         root_conan = self.retriever.root(content, profile)
-        deps_graph = self.builder.load_graph(root_conan, False, False, None, profile)
+        deps_graph = self.builder.load_graph(root_conan, False, False, None, profile_host=profile)
         return deps_graph
 
     def test_avoid_duplicate_expansion(self):
