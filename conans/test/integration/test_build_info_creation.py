@@ -116,6 +116,6 @@ class MyBuildInfoCreation(unittest.TestCase):
             buildinfo = json.load(f)
             self.assertEqual(buildinfo["name"], "MyBuildName")
             self.assertEqual(buildinfo["number"], "42")
-            ids_list = list(map(itemgetter("id"), buildinfo["modules"]))
+            ids_list = [item["id"] for item in buildinfo["modules"]]
             self.assertTrue("PkgC/0.2@user/channel" in ids_list)
             self.assertTrue("PkgB/0.2@user/channel" in ids_list)
