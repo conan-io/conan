@@ -323,9 +323,9 @@ class Command(object):
         parser.add_argument("-tf", "--test-folder", action=OnceArgument,
                             help='Alternative test folder name. By default it is "test_package". '
                                  'Use "None" to skip the test stage')
-        parser.add_argument("-id", "--ignore-dirty", default=False, action='store_true',
+        parser.add_argument("--ignore-dirty", default=False, action='store_true',
                             help='When using the "scm" feature with "auto" values, capture the'
-                                 'commit and url even if there are uncommitted changes')
+                                 ' commit and url even if there are uncommitted changes')
 
         _add_manifests_arguments(parser)
         _add_common_install_arguments(parser, build_help=_help_build_policies)
@@ -908,9 +908,9 @@ class Command(object):
         parser.add_argument("-l", "--lockfile", action=OnceArgument, nargs='?', const=".",
                             help="Path to a lockfile or folder containing 'conan.lock' file. "
                             "Lockfile will be updated with the exported package")
-        parser.add_argument("-id", "--ignore-dirty", default=False, action='store_true',
+        parser.add_argument("--ignore-dirty", default=False, action='store_true',
                             help='When using the "scm" feature with "auto" values, capture the'
-                                 'commit and url even if there are uncommitted changes')
+                                 ' commit and url even if there are uncommitted changes')
 
         args = parser.parse_args(*args)
 
@@ -964,9 +964,9 @@ class Command(object):
         parser.add_argument("-l", "--lockfile", action=OnceArgument, nargs='?', const=".",
                             help="Path to a lockfile or folder containing 'conan.lock' file. "
                             "Lockfile will be updated with the exported package")
-        parser.add_argument("-id", "--ignore-dirty", default=False, action='store_true',
+        parser.add_argument("--ignore-dirty", default=False, action='store_true',
                             help='When using the "scm" feature with "auto" values, capture the'
-                                 'commit and url even if there are uncommitted changes')
+                                 ' commit and url even if there are uncommitted changes')
 
         args = parser.parse_args(*args)
         self._warn_python_version()

@@ -129,7 +129,7 @@ def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
         if local_src_folder and not keep_source:
             # Copy the local scm folder to scm_sources in the cache
             mkdir(scm_sources_folder)
-            export_scm(scm_data, local_src_folder, scm_sources_folder, output)
+            _export_scm(scm_data, local_src_folder, scm_sources_folder, output)
 
         # Execute post-export hook before computing the digest
         hook_manager.execute("post_export", conanfile=conanfile, reference=package_layout.ref,
@@ -215,24 +215,24 @@ def _capture_scm_auto_fields(conanfile, conanfile_dir, destination_folder, outpu
         local_src_path = scm.get_local_path_to_url(scm_data.url) \
             if scm_data.url != "auto" else conanfile_dir
         return scm_data, local_src_path
-    else:
-        if scm_data.url == "auto":
-            origin = scm.get_qualified_remote_url(remove_credentials=True)
-            if not origin:
-                raise ConanException("Repo origin cannot be deduced")
-            if scm.is_local_repository():
-                output.warn("Repo origin looks like a local path: %s" % origin)
-            output.success("Repo origin deduced by 'auto': %s" % origin)
-            scm_data.url = origin
 
-        if scm_data.revision == "auto":
-            # If it is pristine by default we don't replace the "auto" unless forcing
-            # This prevents the recipe to get uploaded pointing to an invalid commit
-            scm_data.revision = scm.get_revision()
-            output.success("Revision deduced by 'auto': %s" % scm_data.revision)
+    if scm_data.url == "auto":
+        origin = scm.get_qualified_remote_url(remove_credentials=True)
+        if not origin:
+            raise ConanException("Repo origin cannot be deduced")
+        if scm.is_local_repository():
+            output.warn("Repo origin looks like a local path: %s" % origin)
+        output.success("Repo origin deduced by 'auto': %s" % origin)
+        scm_data.url = origin
 
-        local_src_path = scm.get_local_path_to_url(scm_data.url)
-        _replace_scm_data_in_conanfile(os.path.join(destination_folder, "conanfile.py"), scm_data)
+    if scm_data.revision == "auto":
+        # If it is pristine by default we don't replace the "auto" unless forcing
+        # This prevents the recipe to get uploaded pointing to an invalid commit
+        scm_data.revision = scm.get_revision()
+        output.success("Revision deduced by 'auto': %s" % scm_data.revision)
+
+    local_src_path = scm.get_local_path_to_url(scm_data.url)
+    _replace_scm_data_in_conanfile(os.path.join(destination_folder, "conanfile.py"), scm_data)
 
     return scm_data, local_src_path
 
@@ -374,7 +374,7 @@ def _classify_patterns(patterns):
     return included, excluded
 
 
-def export_scm(scm_data, origin_folder, scm_sources_folder, output):
+def _export_scm(scm_data, origin_folder, scm_sources_folder, output):
     """ Copy the local folder to the scm_sources folder in the cache, this enables to work
         with local sources without committing and pushing changes to the scm remote.
         https://github.com/conan-io/conan/issues/5195"""

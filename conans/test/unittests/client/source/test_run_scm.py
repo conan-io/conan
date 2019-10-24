@@ -7,7 +7,7 @@ import mock
 
 from conans.client.source import _run_cache_scm, _run_local_scm
 from conans.client.tools.scm import Git
-from conans.model.scm import SCM, get_scm_data
+from conans.model.scm import SCM
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import create_local_git_repo, TestBufferConanOutput
 
@@ -40,8 +40,8 @@ class RunSCMTest(unittest.TestCase):
                             side_effect=clean_source_folder):
 
                 _run_cache_scm(conanfile,
-                               src_folder=self.src_folder,
                                scm_sources_folder=local_sources_path,
+                               src_folder=self.src_folder,
                                output=output)
 
         self.assertIn("Copying previously cached scm sources", output)
@@ -67,8 +67,8 @@ class RunSCMTest(unittest.TestCase):
                         side_effect=clean_source_folder):
             with mock.patch.object(SCM, "checkout", new=scm_checkout):
                 _run_cache_scm(conanfile,
-                               src_folder=self.src_folder,
                                scm_sources_folder="/not/existing/path",
+                               src_folder=self.src_folder,
                                output=output)
 
         self.assertIn("SCM: Getting sources from url: '{}'".format(url), output)
@@ -96,8 +96,8 @@ class RunSCMTest(unittest.TestCase):
 
         with mock.patch("conans.client.source.merge_directories", side_effect=merge_directories):
             _run_local_scm(conanfile,
-                           src_folder=self.src_folder,
                            conanfile_folder=local_sources_path,
+                           src_folder=self.src_folder,
                            output=output)
 
         self.assertIn("getting sources from folder: {}".format(local_sources_path).lower(),

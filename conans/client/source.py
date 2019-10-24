@@ -47,7 +47,7 @@ def config_source_local(src_folder, conanfile, conanfile_path, hook_manager):
 
     def get_sources_from_exports():
         if conanfile_folder != src_folder:
-            _run_local_scm(conanfile, src_folder, conanfile_folder, output=conanfile.output)
+            _run_local_scm(conanfile, conanfile_folder, src_folder, output=conanfile.output)
             conanfile.output.info("Executing exports to: %s" % src_folder)
             export_recipe(conanfile, conanfile_folder, src_folder)
             export_source(conanfile, conanfile_folder, src_folder)
@@ -89,7 +89,7 @@ def config_source(export_folder, export_source_folder, scm_sources_folder,
 
             def get_sources_from_exports():
                 # First of all get the exported scm sources (if auto) or clone (if fixed)
-                _run_cache_scm(conanfile, src_folder, scm_sources_folder, output)
+                _run_cache_scm(conanfile, scm_sources_folder, src_folder, output)
                 # so self exported files have precedence over python_requires ones
                 merge_directories(export_folder, src_folder)
                 # Now move the export-sources to the right location
@@ -149,7 +149,7 @@ def _clean_source_folder(folder):
         pass
 
 
-def _run_cache_scm(conanfile, src_folder, scm_sources_folder, output):
+def _run_cache_scm(conanfile, scm_sources_folder, src_folder, output):
     """
     :param conanfile: recipe
     :param src_folder: sources folder in the cache, (Destination dir)
@@ -178,7 +178,7 @@ def _run_cache_scm(conanfile, src_folder, scm_sources_folder, output):
         _clean_source_folder(dest_dir)
 
 
-def _run_local_scm(conanfile, src_folder, conanfile_folder, output):
+def _run_local_scm(conanfile, conanfile_folder, src_folder, output):
     """
     Only called when 'conan source' in user space
     :param conanfile: recipe
@@ -199,7 +199,7 @@ def _run_local_scm(conanfile, src_folder, conanfile_folder, output):
             scm.get_qualified_remote_url(remove_credentials=True)
 
         src_path = scm.get_local_path_to_url(url=scm_url)
-        if src_path:
+        if src_path and src_path != dest_dir:
             excluded = SCM(scm_data, src_path, output).excluded_files
             output.info("SCM: Getting sources from folder: %s" % src_path)
             merge_directories(src_path, dest_dir, excluded=excluded)
