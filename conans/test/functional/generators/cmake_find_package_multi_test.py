@@ -77,7 +77,6 @@ class CMakeFindPathMultiGeneratorTest(unittest.TestCase):
                         self.assertIn("bye World {}!".format(bt), c.out)
                         os.remove(os.path.join(c.current_folder, "example"))
 
-    @unittest.skipUnless(platform.system() != "Windows", "Skip Visual Studio config for build type")
     def cmake_find_package_system_libs_test(self):
         conanfile = textwrap.dedent("""
             from conans import ConanFile, tools
@@ -87,6 +86,7 @@ class CMakeFindPathMultiGeneratorTest(unittest.TestCase):
                 version = "0.1"
                 settings = "build_type"
                 def package_info(self):
+                    self.cpp_info.libs = ["lib1"]
                     if self.settings.build_type == "Debug":
                         self.cpp_info.system_libs.append("sys1d")
                     else:
@@ -103,26 +103,41 @@ class CMakeFindPathMultiGeneratorTest(unittest.TestCase):
             [generators]
             cmake_find_package_multi
             """)
-        cmakelists = textwrap.dedent("""
+        cmakelists_release = textwrap.dedent("""
             cmake_minimum_required(VERSION 3.1)
             project(consumer CXX)
             set(CMAKE_PREFIX_PATH ${CMAKE_BINARY_DIR})
             set(CMAKE_MODULE_PATH ${CMAKE_BINARY_DIR})
             find_package(Test)
-            message("System libs: ${Test_SYSTEM_LIBS}")
-            message("Libraries to Link: ${Test_LIBS}")
+            message("System libs: ${Test_SYSTEM_LIBS_RELEASE}")
+            message("Libraries to Link: ${Test_LIBS_RELEASE}")
             get_target_property(tmp Test::Test INTERFACE_LINK_LIBRARIES)
             message("Target libs: ${tmp}")
             """)
-        client.save({"conanfile.txt": conanfile, "CMakeLists.txt": cmakelists})
+        cmakelists_debug = textwrap.dedent("""
+            cmake_minimum_required(VERSION 3.1)
+            project(consumer CXX)
+            set(CMAKE_PREFIX_PATH ${CMAKE_BINARY_DIR})
+            set(CMAKE_MODULE_PATH ${CMAKE_BINARY_DIR})
+            find_package(Test)
+            message("System libs: ${Test_SYSTEM_LIBS_DEBUG}")
+            message("Libraries to Link: ${Test_LIBS_DEBUG}")
+            get_target_property(tmp Test::Test INTERFACE_LINK_LIBRARIES)
+            message("Target libs: ${tmp}")
+            """)
         for build_type in ["Release", "Debug"]:
+            cmakelists = cmakelists_release if build_type == "Release" else cmakelists_debug
+            client.save({"conanfile.txt": conanfile, "CMakeLists.txt": cmakelists}, clean_first=True)
             client.run("install conanfile.txt --build missing -s build_type=%s" % build_type)
-            client.run_command('cmake .. -DCMAKE_BUILD_TYPE={}'.format(build_type))
-            client.run_command('cmake --build .')
+            client.run_command('cmake . -DCMAKE_BUILD_TYPE={0}'.format(build_type))
 
             library_name = "sys1d" if build_type == "Debug" else "sys1"
-            self.assertIn("System deps: %s" % library_name, client.out)
-            self.assertIn("Libraries to Link: %s" % library_name, client.out)
-            self.assertIn("-- Library %s not found in package, might be system one" % library_name,
-                          client.out)
-            self.assertIn("Target libs: %s" % library_name, client.out)
+            self.assertIn("System libs: %s" % library_name, client.out)
+            self.assertIn("Libraries to Link: lib1", client.out)
+            self.assertNotIn("-- Library %s not found in package, might be system one" %
+                             library_name, client.out)
+            if build_type == "Release":
+                target_libs = "$<$<CONFIG:Release>:lib1;sys1;>;$<$<CONFIG:RelWithDebInfo>:;>;$<$<CONFIG:MinSizeRel>:;>;$<$<CONFIG:Debug>:;>"
+            else:
+                target_libs = "$<$<CONFIG:Release>:;>;$<$<CONFIG:RelWithDebInfo>:;>;$<$<CONFIG:MinSizeRel>:;>;$<$<CONFIG:Debug>:lib1;sys1d;>"
+            self.assertIn("Target libs: %s" % target_libs, client.out)
