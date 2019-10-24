@@ -51,8 +51,8 @@ class GraphManager(object):
         self._loader = loader
         self._binary_analyzer = binary_analyzer
 
-    def load_consumer_conanfile(self, conanfile_path, info_folder, deps_info_required=False,
-                                test=False):
+    def load_consumer_conanfile(self, conanfile_path, info_folder,
+                                deps_info_required=False, test=False):
         """loads a conanfile for local flow: source, imports, package, build
         """
         try:
@@ -76,7 +76,7 @@ class GraphManager(object):
         processed_profile = profile
         if conanfile_path.endswith(".py"):
             lock_python_requires = None
-            if graph_lock and not test:
+            if graph_lock and not test:  # Only lock python requires if it is not test_package
                 node_id = graph_lock.get_node(graph_info.root)
                 lock_python_requires = graph_lock.python_requires(node_id)
             conanfile = self._loader.load_consumer(conanfile_path,
@@ -151,7 +151,7 @@ class GraphManager(object):
             if graph_lock:
                 node_id = graph_lock.get_node(create_reference)
                 locked_ref = graph_lock._nodes[node_id].pref.ref
-                conanfile.requires[reference.name].lock(locked_ref, node_id)
+                conanfile.requires[create_reference.name].lock(locked_ref, node_id)
             return root_node
 
         # It is a path to conanfile.py or conanfile.txt
@@ -186,7 +186,7 @@ class GraphManager(object):
             root_node = Node(None, conanfile, recipe=RECIPE_CONSUMER, path=path)
 
         if graph_lock:  # Find the Node ID in the lock of current root
-            node_id = self.get_node(root_node.ref)
+            node_id = graph_lock.get_node(root_node.ref)
             root_node.id = node_id
 
         return root_node
