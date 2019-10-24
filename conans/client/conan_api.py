@@ -313,7 +313,7 @@ class ConanAPIV1(object):
                keep_source=False, keep_build=False, verify=None,
                manifests=None, manifests_interactive=None,
                remote_name=None, update=False, cwd=None, test_build_folder=None,
-               lockfile=None):
+               lockfile=None, ignore_dirty=False):
         """
         API method to create a conan package
 
@@ -338,7 +338,8 @@ class ConanAPIV1(object):
             # Make sure keep_source is set for keep_build
             keep_source = keep_source or keep_build
             new_ref = cmd_export(self.app, conanfile_path, name, version, user, channel, keep_source,
-                                 not not_export, graph_lock=graph_info.graph_lock)
+                                 not not_export, graph_lock=graph_info.graph_lock,
+                                 ignore_dirty=ignore_dirty)
 
             # The new_ref contains the revision
             # To not break existing things, that they used this ref without revision
@@ -371,7 +372,7 @@ class ConanAPIV1(object):
     def export_pkg(self, conanfile_path, name, channel, source_folder=None, build_folder=None,
                    package_folder=None, install_folder=None, profile_names=None, settings=None,
                    options=None, env=None, force=False, user=None, version=None, cwd=None,
-                   lockfile=None):
+                   lockfile=None, ignore_dirty=False):
 
         remotes = self.app.load_remotes()
         settings = settings or []
@@ -405,7 +406,7 @@ class ConanAPIV1(object):
                                         self.app.cache, self.app.out, lockfile=lockfile)
 
             new_ref = cmd_export(self.app, conanfile_path, name, version, user, channel, True,
-                                 graph_lock=graph_info.graph_lock)
+                                 graph_lock=graph_info.graph_lock, ignore_dirty=ignore_dirty)
             ref = new_ref.copy_clear_rev()
             # new_ref has revision
             recorder.recipe_exported(new_ref)
@@ -738,7 +739,7 @@ class ConanAPIV1(object):
 
     @api_method
     def export(self, path, name, version, user, channel, keep_source=False, cwd=None,
-               lockfile=None):
+               lockfile=None, ignore_dirty=False):
         conanfile_path = _get_conanfile_path(path, cwd, py=True)
         graph_lock = None
         if lockfile:
@@ -749,7 +750,7 @@ class ConanAPIV1(object):
 
         self.app.load_remotes()
         cmd_export(self.app, conanfile_path, name, version, user, channel, keep_source,
-                   graph_lock=graph_lock)
+                   graph_lock=graph_lock, ignore_dirty=ignore_dirty)
 
         if lockfile:
             graph_lock_file.save(lockfile)

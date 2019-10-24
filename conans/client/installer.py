@@ -83,11 +83,12 @@ class _PackageBuilder(object):
                          build_folder, remotes):
         export_folder = package_layout.export()
         export_source_folder = package_layout.export_sources()
+        scm_sources_folder = package_layout.scm_sources()
 
         complete_recipe_sources(self._remote_manager, self._cache, conanfile, pref.ref, remotes)
         _remove_folder_raising(build_folder)
 
-        config_source(export_folder, export_source_folder, source_folder,
+        config_source(export_folder, export_source_folder, scm_sources_folder, source_folder,
                       conanfile, self._output, conanfile_path, pref.ref,
                       self._hook_manager, self._cache)
 
@@ -397,7 +398,6 @@ class BinaryInstaller(object):
                         pref = self._build_package(node, output, keep_build, remotes)
                     assert node.prev, "Node PREV shouldn't be empty"
                     assert node.pref.revision, "Node PREF revision shouldn't be empty"
-                    assert node.prev is not None, "PREV for %s to be built is None" % str(pref)
                     assert pref.revision is not None, "PREV for %s to be built is None" % str(pref)
                 elif node.binary in (BINARY_UPDATE, BINARY_DOWNLOAD):
                     assert node.prev, "PREV for %s is None" % str(pref)
@@ -447,8 +447,9 @@ class BinaryInstaller(object):
         node_order = [n for n in node.public_closure if n.binary != BINARY_SKIP]
         # List sort is stable, will keep the original order of the closure, but prioritize levels
         conan_file = node.conanfile
+        transitive = node.transitive_closure.values()
         for n in node_order:
-            if n.build_require:
+            if n not in transitive:
                 conan_file.output.info("Applying build-requirement: %s" % str(n.ref))
             conan_file.deps_cpp_info.update(n.conanfile.cpp_info, n.ref.name)
             conan_file.deps_env_info.update(n.conanfile.env_info, n.ref.name)
