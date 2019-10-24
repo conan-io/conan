@@ -39,8 +39,33 @@ class MyBuildInfoCreation(unittest.TestCase):
             content = f.read()
             self.assertEqual('', content)
 
+    class FakePut(object):
+        def __init__(self, url, data=None, **kwargs):
+
+            self.url = url
+            self.json_data = data
+            self.headers = {"head": "ers"}
+            self.text = "This is test text"
+            self.request = self
+            if "api/build" in url:
+                self.status_code = 204
+            if kwargs.get("auth", None) and (kwargs["auth"][0] != "user" or kwargs["auth"][1] != "password"):
+                self.status_code = 401
+            elif kwargs["headers"].get("X-JFrog-Art-Api", None) and kwargs["headers"]["X-JFrog-Art-Api"] != "apikey":
+                self.status_code = 401
+            buildinfo = json.load(data)
+            if not buildinfo["name"] == "MyBuildInfo" or not buildinfo["number"] == "42":
+                self.status_code = 400
+            self.ok = True
+            self.content = b""
+            return None
+
+        def json(self):
+            return self.json_data
+
     @patch('conans.build_info.build_info.ClientCache')
-    def test_build_info_create(self, mock_cache):
+    @patch('conans.build_info.build_info.requests.put', new=FakePut)
+    def test_build_info_create_update_publish(self, mock_cache):
         conanfile = textwrap.dedent("""
             from conans import ConanFile, load
             import os
@@ -119,3 +144,12 @@ class MyBuildInfoCreation(unittest.TestCase):
             ids_list = [item["id"] for item in buildinfo["modules"]]
             self.assertTrue("PkgC/0.2@user/channel" in ids_list)
             self.assertTrue("PkgB/0.2@user/channel" in ids_list)
+
+        sys.argv = ['conan_build_info', 'publish',
+                    os.path.join(client.current_folder, 'mergedbuildinfo.json'), '--url',
+                    'http://fakeurl:8081/artifactory', '--user', 'user', '--password', 'password']
+        run()
+        sys.argv = ['conan_build_info', 'publish',
+                    os.path.join(client.current_folder, 'mergedbuildinfo.json'), '--url',
+                    'http://fakeurl:8081/artifactory', '--apikey', 'apikey']
+        run()
