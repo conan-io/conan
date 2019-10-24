@@ -247,10 +247,11 @@ def _manage_text_not_found(search, file_path, strict, function_name, output):
         return False
 
 
-def replace_in_file(file_path, search, replace, strict=True, output=None, encoding_in="auto",
-                    encoding_out="utf-8"):
+def replace_in_file(file_path, search, replace, strict=True, output=None, encoding=None):
     output = default_output(output, 'conans.client.tools.files.replace_in_file')
 
+    encoding_in = encoding or "auto"
+    encoding_out = encoding or "utf-8"
     content = load(file_path, encoding=encoding_in)
     if -1 == content.find(search):
         _manage_text_not_found(search, file_path, strict, "replace_in_file", output=output)
@@ -260,16 +261,18 @@ def replace_in_file(file_path, search, replace, strict=True, output=None, encodi
 
 
 def replace_path_in_file(file_path, search, replace, strict=True, windows_paths=None, output=None,
-                         encoding_in="auto", encoding_out="utf-8"):
+                         encoding=None):
     output = default_output(output, 'conans.client.tools.files.replace_path_in_file')
 
     if windows_paths is False or (windows_paths is None and platform.system() != "Windows"):
         return replace_in_file(file_path, search, replace, strict=strict, output=output,
-                               encoding_in=encoding_in, encoding_out=encoding_out)
+                               encoding=encoding)
 
     def normalized_text(text):
         return text.replace("\\", "/").lower()
 
+    encoding_in = encoding or "auto"
+    encoding_out = encoding or "utf-8"
     content = load(file_path, encoding=encoding_in)
     normalized_content = normalized_text(content)
     normalized_search = normalized_text(search)
