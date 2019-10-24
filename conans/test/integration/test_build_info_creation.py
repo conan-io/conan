@@ -6,7 +6,6 @@ import unittest
 
 from mock import patch, PropertyMock
 
-from conans import load
 from conans.model.graph_lock import LOCKFILE
 from conans.build_info.command import run
 from conans.test.utils.tools import TestClient
