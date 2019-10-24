@@ -1,4 +1,5 @@
 from conans.client.generators.cmake import DepsCppCmake
+from conans.client.generators.cmake_common import include_build_modules
 from conans.client.generators.cmake_find_package import find_dependency_lines
 from conans.client.generators.cmake_find_package_common import target_template
 from conans.model import Generator
@@ -76,7 +77,10 @@ set_property(TARGET {name}::{name}
             ret["{}Config.cmake".format(depname)] = self._find_for_dep(depname, cpp_info)
 
             find_lib = target_template.format(name=depname, deps=deps,
-                                              build_type_suffix=build_type_suffix)
+                                              build_type_suffix=build_type_suffix,
+                                              build_paths=deps.build_paths)
+            if deps.build_modules_paths:
+                find_lib = find_lib + "\n".join(include_build_modules(deps.build_modules_paths))
             ret["{}Targets.cmake".format(depname)] = self.targets_file.format(name=depname)
             ret["{}Target-{}.cmake".format(depname, build_type.lower())] = find_lib
         return ret
@@ -92,9 +96,12 @@ set_property(TARGET {name}::{name}
 
         targets_props = self.target_properties.format(name=name)
 
+        deps_cpp_cmake = DepsCppCmake(cpp_info)
+        build_paths = deps_cpp_cmake.build_paths
+
         tmp = self.config_xxx_template.format(name=name,
                                               version=cpp_info.version,
                                               find_dependencies_block="\n".join(lines),
-                                              target_props_block=targets_props)
-
+                                              target_props_block=targets_props,
+                                              build_paths=build_paths)
         return tmp

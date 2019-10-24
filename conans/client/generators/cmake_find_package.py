@@ -39,9 +39,6 @@ if(NOT ${{CMAKE_VERSION}} VERSION_LESS "3.0")
         {find_dependencies_block}
     endif()
 endif()
-
-set(CMAKE_MODULE_PATH {build_paths} ${{CMAKE_MODULE_PATH}} ${{CMAKE_CURRENT_LIST_DIR}})
-set(CMAKE_PREFIX_PATH {build_paths} ${{CMAKE_PREFIX_PATH}} ${{CMAKE_CURRENT_LIST_DIR}})
 """
 
     @property
@@ -62,7 +59,8 @@ set(CMAKE_PREFIX_PATH {build_paths} ${{CMAKE_PREFIX_PATH}} ${{CMAKE_CURRENT_LIST
             # Here we are generating FindXXX, so find_modules=True
             lines = find_dependency_lines(name, cpp_info, find_modules=True)
         find_package_header_block = find_package_header.format(name=name, version=cpp_info.version)
-        find_libraries_block = target_template.format(name=name, deps=deps, build_type_suffix="")
+        find_libraries_block = target_template.format(name=name, deps=deps, build_type_suffix="",
+                                                      build_paths=deps.build_paths)
         target_props = assign_target_properties.format(name=name, deps=deps)
         contents = []
         tmp = self.template.format(name=name, deps=deps,
@@ -70,8 +68,7 @@ set(CMAKE_PREFIX_PATH {build_paths} ${{CMAKE_PREFIX_PATH}} ${{CMAKE_CURRENT_LIST
                                    find_dependencies_block="\n".join(lines),
                                    find_libraries_block=find_libraries_block,
                                    find_package_header_block=find_package_header_block,
-                                   assign_target_properties_block=target_props,
-                                   build_paths=deps.build_paths)
+                                   assign_target_properties_block=target_props)
         contents.append(tmp)
         if deps.build_modules_paths:
             contents.extend(include_build_modules(deps.build_modules_paths))

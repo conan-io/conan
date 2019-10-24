@@ -4,7 +4,7 @@ import unittest
 
 from conans.client.build.cmake_flags import CMakeDefinitionsBuilder
 from conans.client.conf import default_settings_yml
-from conans.client.generators import CMakeFindPackageGenerator
+from conans.client.generators import CMakeFindPackageGenerator, CMakeFindPackageMultiGenerator
 from conans.client.generators.cmake import CMakeGenerator
 from conans.client.generators.cmake_multi import CMakeMultiGenerator
 from conans.errors import ConanException
@@ -447,7 +447,7 @@ class CMakeBuildModulesTest(unittest.TestCase):
                       content["conanbuildinfo_release.cmake"])
 
     def cmake_find_package_multi_test(self):
-        generator = CMakeMultiGenerator(self.conanfile)
+        generator = CMakeFindPackageMultiGenerator(self.conanfile)
         content = generator.content
         self.assertIn('include("dummy_root_folder1/my-module.cmake")',
                       content["conanbuildinfo_release.cmake"])
