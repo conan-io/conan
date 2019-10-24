@@ -178,8 +178,6 @@ class DepsGraphBuilder(object):
                 # new_node.public_closure.
                 new_node.public_deps.assign(node.public_closure)
                 new_node.public_deps.add(new_node)
-                if require.build_require and require.build_require_host:
-                    node.transitive_closure.add(new_node)
             else:
                 node.transitive_closure.add(new_node)
                 # Normal requires propagate and can conflict with the parent "node.public_deps" too

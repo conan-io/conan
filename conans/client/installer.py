@@ -449,6 +449,7 @@ class BinaryInstaller(object):
         conan_file = node.conanfile
 
         transitive = [it for it in node.transitive_closure]
+        br_host = [it.dst for it in node.dependencies if it.require.build_require_host]
         for n in node_order:
             if n not in transitive:
                 conan_file.output.info("Applying build-requirement: %s" % str(n.ref))
@@ -458,7 +459,7 @@ class BinaryInstaller(object):
                 conan_file.deps_cpp_info.update(n.conanfile.cpp_info, n.ref.name)
                 conan_file.deps_env_info.update(n.conanfile.env_info, n.ref.name)
             else:
-                if n in transitive:
+                if n in transitive or n in br_host:
                     conan_file.deps_cpp_info.update(n.conanfile.cpp_info, n.ref.name)
                 else:
                     conan_file.deps_env_info.update(n.conanfile.env_info, n.ref.name)
