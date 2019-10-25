@@ -44,7 +44,6 @@ def create(app, ref, graph_info, remotes, update, build_modes,
     else:
         deps_install(app=app,
                      ref_or_path=ref,
-                     create_reference=ref,
                      install_folder=None,  # Not output anything
                      manifest_folder=manifest_folder,
                      manifest_verify=manifest_verify,
