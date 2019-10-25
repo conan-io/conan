@@ -4,10 +4,9 @@ from collections import OrderedDict
 
 from conans.client.generators.text import TXTGenerator
 from conans.client.graph.build_mode import BuildMode
-from conans.client.graph.graph import BINARY_BUILD, Node, \
-    RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_EDITABLE, CONTEXT_HOST, CONTEXT_BUILD
-from conans.client.graph.graph_binaries import GraphBinariesAnalyzer, \
-    RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_EDITABLE, BINARY_UNKNOWN
+from conans.client.graph.graph import BINARY_BUILD, Node, CONTEXT_HOST, CONTEXT_BUILD
+from conans.client.graph.graph_binaries import RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_EDITABLE, \
+    BINARY_UNKNOWN
 from conans.client.graph.graph_builder import DepsGraphBuilder
 from conans.errors import ConanException, conanfile_exception_formatter
 from conans.model.conan_file import get_env_context_manager

@@ -1,8 +1,7 @@
 import json
 import os
 
-from conans.client.graph.graph import RECIPE_VIRTUAL, RECIPE_CONSUMER, \
-    BINARY_BUILD
+from conans.client.graph.graph import RECIPE_VIRTUAL, RECIPE_CONSUMER, BINARY_BUILD
 from conans.client.profile_loader import _load_profile
 from conans.errors import ConanException
 from conans.model.info import PACKAGE_ID_UNKNOWN

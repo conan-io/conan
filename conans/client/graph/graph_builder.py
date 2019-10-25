@@ -8,7 +8,6 @@ from conans.model.conan_file import get_env_context_manager
 from conans.model.ref import ConanFileReference
 from conans.model.requires import Requirements, Requirement
 from conans.util.log import logger
-from collections import OrderedDict
 
 
 class DepsGraphBuilder(object):

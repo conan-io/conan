@@ -30,10 +30,6 @@ class Requirement(object):
         self._locked_id = locked_id  # And knows the ID of the locked node that is pointing to
 
     @property
-    def context(self):
-        raise RuntimeError("Never ask the context of a require")
-
-    @property
     def locked_id(self):
         return self._locked_id
 

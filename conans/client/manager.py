@@ -47,7 +47,6 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
                                           False, update, remotes, recorder)
     root_node = deps_graph.root
     conanfile = root_node.conanfile
-
     if root_node.recipe == RECIPE_VIRTUAL:
         out.highlight("Installing package: %s" % str(ref_or_path))
     else:
