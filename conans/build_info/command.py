@@ -55,90 +55,90 @@ def run():
         exc_v1 = exc
     except Exception as exc:
         output.error(exc)
-    finally:
-        if exc_v1:
-            parser_v2 = ErrorCatchingArgumentParser(
-                description="Generates build info build info from lockfiles information",
-                prog="conan_build_info")
 
-            subparsers = parser_v2.add_subparsers(dest="subcommand", help="sub-command help")
+    if exc_v1:
+        parser_v2 = ErrorCatchingArgumentParser(
+            description="Generates build info build info from lockfiles information",
+            prog="conan_build_info")
 
-            parser_start = subparsers.add_parser("start",
-                                                 help="Command to incorporate to the "
-                                                      "artifacts.properties the build name and number")
-            parser_start.add_argument("build_name", type=str, help="build name to assign")
-            parser_start.add_argument("build_number", type=int,
-                                      help="build number to assign")
+        subparsers = parser_v2.add_subparsers(dest="subcommand", help="sub-command help")
 
-            parser_stop = subparsers.add_parser("stop",
-                                                help="Command to remove from the artifacts.properties "
-                                                     "the build name and number")
+        parser_start = subparsers.add_parser("start",
+                                             help="Command to incorporate to the "
+                                                  "artifacts.properties the build name and number")
+        parser_start.add_argument("build_name", type=str, help="build name to assign")
+        parser_start.add_argument("build_number", type=int,
+                                  help="build number to assign")
 
-            parser_create = subparsers.add_parser("create",
-                                                  help="Command to generate a build info json from a "
-                                                       "lockfile")
-            parser_create.add_argument("build_info_file", type=str,
-                                       help="build info json for output")
-            parser_create.add_argument("--lockfile", type=str, required=True, help="input lockfile")
-            parser_create.add_argument("--multi-module", nargs="?", default=True,
-                                       help="If enabled, the module_id will be identified by the "
-                                            "recipe reference plus the package ID")
-            parser_create.add_argument("--skip-env", nargs="?", default=True,
-                                       help="capture or not the environment")
-            parser_create.add_argument("--user", type=str, nargs="?", default=None, help="user")
-            parser_create.add_argument("--password", type=str, nargs="?", default=None,
-                                       help="password")
-            parser_create.add_argument("--apikey", type=str, nargs="?", default=None, help="apikey")
+        parser_stop = subparsers.add_parser("stop",
+                                            help="Command to remove from the artifacts.properties "
+                                                 "the build name and number")
 
-            parser_update = subparsers.add_parser("update",
-                                                  help="Command to update a build info json with "
-                                                       "another one")
-            parser_update.add_argument("buildinfo", nargs="+", help="BuildInfo files to parse")
-            parser_update.add_argument("--output-file", default="buildinfo.json",
-                                       help="Path to generated build info file")
+        parser_create = subparsers.add_parser("create",
+                                              help="Command to generate a build info json from a "
+                                                   "lockfile")
+        parser_create.add_argument("build_info_file", type=str,
+                                   help="build info json for output")
+        parser_create.add_argument("--lockfile", type=str, required=True, help="input lockfile")
+        parser_create.add_argument("--multi-module", nargs="?", default=True,
+                                   help="If enabled, the module_id will be identified by the "
+                                        "recipe reference plus the package ID")
+        parser_create.add_argument("--skip-env", nargs="?", default=True,
+                                   help="capture or not the environment")
+        parser_create.add_argument("--user", type=str, nargs="?", default=None, help="user")
+        parser_create.add_argument("--password", type=str, nargs="?", default=None,
+                                   help="password")
+        parser_create.add_argument("--apikey", type=str, nargs="?", default=None, help="apikey")
 
-            parser_publish = subparsers.add_parser("publish",
-                                                   help="Command to publish the build info to "
-                                                        "Artifactory")
-            parser_publish.add_argument("buildinfo", type=str,
-                                        help="build info to upload")
-            parser_publish.add_argument("--url", type=str, required=True, help="url")
-            parser_publish.add_argument("--user", type=str, nargs="?", default=None, help="user")
-            parser_publish.add_argument("--password", type=str, nargs="?", default=None,
-                                        help="password")
-            parser_publish.add_argument("--apikey", type=str, nargs="?", default=None, help="apikey")
+        parser_update = subparsers.add_parser("update",
+                                              help="Command to update a build info json with "
+                                                   "another one")
+        parser_update.add_argument("buildinfo", nargs="+", help="BuildInfo files to parse")
+        parser_update.add_argument("--output-file", default="buildinfo.json",
+                                   help="Path to generated build info file")
 
-            def check_credential_arguments():
-                if args.user and args.apikey:
-                    parser_v2.error("Please select one authentificacion method --user USER "
-                                    "--password PASSWORD or --apikey APIKEY")
-                if args.user and not args.password:
-                    parser_v2.error(
-                        "Please specify a password for user '{}' with --password PASSWORD".format(
-                            args.user))
+        parser_publish = subparsers.add_parser("publish",
+                                               help="Command to publish the build info to "
+                                                    "Artifactory")
+        parser_publish.add_argument("buildinfo", type=str,
+                                    help="build info to upload")
+        parser_publish.add_argument("--url", type=str, required=True, help="url")
+        parser_publish.add_argument("--user", type=str, nargs="?", default=None, help="user")
+        parser_publish.add_argument("--password", type=str, nargs="?", default=None,
+                                    help="password")
+        parser_publish.add_argument("--apikey", type=str, nargs="?", default=None, help="apikey")
 
-            try:
-                args = parser_v2.parse_args()
-                if args.subcommand == "start":
-                    start_build_info(output, args.build_name, args.build_number)
-                if args.subcommand == "stop":
-                    stop_build_info(output)
-                if args.subcommand == "create":
-                    check_credential_arguments()
-                    create_build_info(output, args.build_info_file, args.lockfile, args.multi_module,
-                                      args.skip_env, args.user, args.password, args.apikey)
-                if args.subcommand == "update":
-                    update_build_info(args.buildinfo, args.output_file)
-                if args.subcommand == "publish":
-                    check_credential_arguments()
-                    publish_build_info(args.buildinfo, args.url, args.user, args.password,
-                                       args.apikey)
-            except ArgumentParserError as exc:
-                exc_v2 = exc
-            except ConanException as exc:
-                output.error(exc)
-            except Exception as exc:
-                output.error(exc)
+        def check_credential_arguments():
+            if args.user and args.apikey:
+                parser_v2.error("Please select one authentificacion method --user USER "
+                                "--password PASSWORD or --apikey APIKEY")
+            if args.user and not args.password:
+                parser_v2.error(
+                    "Please specify a password for user '{}' with --password PASSWORD".format(
+                        args.user))
+
+        try:
+            args = parser_v2.parse_args()
+            if args.subcommand == "start":
+                start_build_info(output, args.build_name, args.build_number)
+            if args.subcommand == "stop":
+                stop_build_info(output)
+            if args.subcommand == "create":
+                check_credential_arguments()
+                create_build_info(output, args.build_info_file, args.lockfile, args.multi_module,
+                                  args.skip_env, args.user, args.password, args.apikey)
+            if args.subcommand == "update":
+                update_build_info(args.buildinfo, args.output_file)
+            if args.subcommand == "publish":
+                check_credential_arguments()
+                publish_build_info(args.buildinfo, args.url, args.user, args.password,
+                                   args.apikey)
+        except ArgumentParserError as exc:
+            exc_v2 = exc
+        except ConanException as exc:
+            output.error(exc)
+        except Exception as exc:
+            output.error(exc)
 
     def print_helpv1():
         output.error(str(exc_v1))
