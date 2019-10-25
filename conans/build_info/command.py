@@ -81,8 +81,10 @@ def run():
                                        help="build info json for output")
             parser_create.add_argument("--lockfile", type=str, required=True, help="input lockfile")
             parser_create.add_argument("--multi-module", nargs="?", default=True,
-                                       help="input lockfile")
-            parser_create.add_argument("--skip-env", nargs="?", default=True, help="input lockfile")
+                                       help="If enabled, the module_id will be identified by the "
+                                            "recipe reference plus the package ID")
+            parser_create.add_argument("--skip-env", nargs="?", default=True,
+                                       help="capture or not the environment")
             parser_create.add_argument("--user", type=str, nargs="?", default=None, help="user")
             parser_create.add_argument("--password", type=str, nargs="?", default=None,
                                        help="password")
