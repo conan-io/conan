@@ -138,14 +138,20 @@ class Requirements(OrderedDict):
                 # update dependency
                 other_ref = other_req.ref
                 if other_ref and other_ref != req.ref:
+                    down_reference_str = str(down_ref) if down_ref else ""
                     msg = "%s: requirement %s overridden by %s to %s " \
-                          % (own_ref, req.ref, down_ref or "your conanfile", other_ref)
+                          % (own_ref, req.ref, down_reference_str or "your conanfile", other_ref)
 
                     if error_on_override and not other_req.override:
                         raise ConanException(msg)
 
                     output.warn(msg)
                     req.ref = other_ref
+                    # FIXME: We should compute the intersection of version_ranges
+                    assert not req.locked_id, "We cannot override a locked requirement"
+                    if req.version_range and not other_req.version_range:
+                        req.range_ref = other_req.range_ref  # Override
+
             new_reqs[name] = req
         return new_reqs
 
