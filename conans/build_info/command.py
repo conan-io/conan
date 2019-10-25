@@ -67,8 +67,7 @@ def run():
                                              help="Command to incorporate to the "
                                                   "artifacts.properties the build name and number")
         parser_start.add_argument("build_name", type=str, help="build name to assign")
-        parser_start.add_argument("build_number", type=int,
-                                  help="build number to assign")
+        parser_start.add_argument("build_number", type=int, help="build number to assign")
 
         parser_stop = subparsers.add_parser("stop",
                                             help="Command to remove from the artifacts.properties "
@@ -81,31 +80,27 @@ def run():
                                    help="build info json for output")
         parser_create.add_argument("--lockfile", type=str, required=True, help="input lockfile")
         parser_create.add_argument("--multi-module", nargs="?", default=True,
-                                   help="If enabled, the module_id will be identified by the "
+                                   help="if enabled, the module_id will be identified by the "
                                         "recipe reference plus the package ID")
         parser_create.add_argument("--skip-env", nargs="?", default=True,
                                    help="capture or not the environment")
         parser_create.add_argument("--user", type=str, nargs="?", default=None, help="user")
-        parser_create.add_argument("--password", type=str, nargs="?", default=None,
-                                   help="password")
+        parser_create.add_argument("--password", type=str, nargs="?", default=None, help="password")
         parser_create.add_argument("--apikey", type=str, nargs="?", default=None, help="apikey")
 
         parser_update = subparsers.add_parser("update",
-                                              help="Command to update a build info json with "
-                                                   "another one")
-        parser_update.add_argument("buildinfo", nargs="+", help="BuildInfo files to parse")
+                                              help="Command to update a build info json with another one")
+        parser_update.add_argument("buildinfo", nargs="+", help="buildinfo files to merge")
         parser_update.add_argument("--output-file", default="buildinfo.json",
-                                   help="Path to generated build info file")
+                                   help="path to generated build info file")
 
         parser_publish = subparsers.add_parser("publish",
-                                               help="Command to publish the build info to "
-                                                    "Artifactory")
+                                               help="Command to publish the build info to Artifactory")
         parser_publish.add_argument("buildinfo", type=str,
                                     help="build info to upload")
         parser_publish.add_argument("--url", type=str, required=True, help="url")
         parser_publish.add_argument("--user", type=str, nargs="?", default=None, help="user")
-        parser_publish.add_argument("--password", type=str, nargs="?", default=None,
-                                    help="password")
+        parser_publish.add_argument("--password", type=str, nargs="?", default=None, help="password")
         parser_publish.add_argument("--apikey", type=str, nargs="?", default=None, help="apikey")
 
         def check_credential_arguments():
