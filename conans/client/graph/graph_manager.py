@@ -52,7 +52,7 @@ class GraphManager(object):
         self._binary_analyzer = binary_analyzer
 
     def load_consumer_conanfile(self, conanfile_path, info_folder,
-                                deps_info_required=False, test=None):
+                                deps_info_required=False, test=False):
         """loads a conanfile for local flow: source, imports, package, build
         """
         try:
@@ -79,10 +79,13 @@ class GraphManager(object):
                 node_id = graph_lock.get_node(graph_info.root)
                 lock_python_requires = graph_lock.python_requires(node_id)
             conanfile = self._loader.load_consumer(conanfile_path,
-                                                   profile_host=profile_host, test=test,
+                                                   profile_host=profile_host,
                                                    name=name, version=version,
                                                    user=user, channel=channel,
                                                    lock_python_requires=lock_python_requires)
+            if test:
+                conanfile.display_name = "%s (test package)" % str(test)
+                conanfile.output.scope = conanfile.display_name
             with get_env_context_manager(conanfile, without_python=True):
                 with conanfile_exception_formatter(str(conanfile), "config_options"):
                     conanfile.config_options()
@@ -100,77 +103,130 @@ class GraphManager(object):
 
     def load_graph(self, reference, create_reference, graph_info, build_mode, check_updates, update,
                    remotes, recorder, apply_build_requires=True):
+        """ main entry point to compute a full dependency graph
+        """
+        root_node = self._load_root_node(reference, create_reference, graph_info)
+        return self._resolve_graph(root_node, graph_info, build_mode, check_updates, update, remotes,
+                                   recorder, apply_build_requires=apply_build_requires)
 
-        def _inject_require(conanfile, ref):
-            """ test_package functionality requires injecting the tested package as requirement
-            before running the install
-            """
-            require = conanfile.requires.get(ref.name)
-            if require:
-                require.ref = require.range_ref = ref
-            else:
-                conanfile.requires.add_ref(ref)
-            conanfile._conan_user = ref.user
-            conanfile._conan_channel = ref.channel
-
-        # Computing the full dependency graph
-        profile_host = graph_info.profile_host
-        profile_host.dev_reference = create_reference
-        ref = None
+    def _load_root_node(self, reference, create_reference, graph_info):
+        """ creates the first, root node of the graph, loading or creating a conanfile
+        and initializing it (settings, options) as necessary. Also locking with lockfile
+        information
+        """
+        profile = graph_info.profile_host
         graph_lock = graph_info.graph_lock
+        profile.dev_reference = create_reference  # Make sure the created one has develop=True
+
         if isinstance(reference, list):  # Install workspace with multiple root nodes
-            conanfile = self._loader.load_virtual(reference, profile_host,
-                                                  scope_options=False)
-            root_node = Node(ref, conanfile, recipe=RECIPE_VIRTUAL)
-        elif isinstance(reference, ConanFileReference):
-            if not self._cache.config.revisions_enabled and reference.revision is not None:
-                raise ConanException("Revisions not enabled in the client, specify a "
-                                     "reference without revision")
-            # create without test_package and install <ref>
-            conanfile = self._loader.load_virtual([reference], profile_host)
-            root_node = Node(ref, conanfile, recipe=RECIPE_VIRTUAL)
-            if graph_lock:  # Find the Node ID in the lock of current root
-                graph_lock.find_consumer_node(root_node, reference)
-        else:
-            path = reference
-            if path.endswith(".py"):
-                test = str(create_reference) if create_reference else None
-                lock_python_requires = None
-                # do not try apply lock_python_requires for test_package/conanfile.py consumer
-                if graph_lock and not create_reference:
-                    if graph_info.root.name is None:
-                        # If the graph_info information is not there, better get what we can from
-                        # the conanfile
-                        conanfile = self._loader.load_basic(path)
-                        graph_info.root = ConanFileReference(graph_info.root.name or conanfile.name,
-                                                             graph_info.root.version or conanfile.version,
-                                                             graph_info.root.user,
-                                                             graph_info.root.channel, validate=False)
-                    node_id = graph_lock.get_node(graph_info.root)
-                    lock_python_requires = graph_lock.python_requires(node_id)
+            conanfile = self._loader.load_virtual(reference, profile, scope_options=False)
+            # Locking in workspaces not implemented yet
+            return Node(ref=None, conanfile=conanfile, recipe=RECIPE_VIRTUAL)
 
-                conanfile = self._loader.load_consumer(path, profile_host, test=test,
-                                                       name=graph_info.root.name,
-                                                       version=graph_info.root.version,
-                                                       user=graph_info.root.user,
-                                                       channel=graph_info.root.channel,
-                                                       lock_python_requires=lock_python_requires)
-                if create_reference:  # create with test_package
-                    _inject_require(conanfile, create_reference)
+        # create (without test_package), install|info|graph|export-pkg <ref>
+        if isinstance(reference, ConanFileReference):
+            return self._load_root_direct_reference(reference, graph_lock, profile)
 
-                ref = ConanFileReference(conanfile.name, conanfile.version,
-                                         conanfile._conan_user, conanfile._conan_channel,
-                                         validate=False)
-            else:
-                conanfile = self._loader.load_conanfile_txt(path, profile_host,
-                                                            ref=graph_info.root)
+        path = reference  # The reference must be pointing to a user space conanfile
+        if create_reference:  # Test_package -> tested reference
+            return self._load_root_test_package(path, create_reference, graph_lock, profile)
 
+        # It is a path to conanfile.py or conanfile.txt
+        root_node, ref = self._load_root_consumer(path, graph_lock, profile, graph_info.root)
+        graph_info.root = ref  # To store it for later calls
+        return root_node
+
+    def _load_root_consumer(self, path, graph_lock, profile, ref):
+        """ load a CONSUMER node from a user space conanfile.py or conanfile.txt
+        install|info|create|graph <path>
+        :path full path to a conanfile
+        :graph_lock: might be None, information of lockfiles
+        :profile: data to inject to the consumer node: settings, options
+        :ref: previous reference of a previous command. Can be used for finding itself in
+              the lockfile, or to initialize
+        """
+        if path.endswith(".py"):
+            lock_python_requires = None
+            if graph_lock:
+                if ref.name is None:
+                    # If the graph_info information is not there, better get what we can from
+                    # the conanfile
+                    conanfile = self._loader.load_basic(path)
+                    ref = ConanFileReference(ref.name or conanfile.name,
+                                             ref.version or conanfile.version,
+                                             ref.user, ref.channel, validate=False)
+                node_id = graph_lock.get_node(ref)
+                lock_python_requires = graph_lock.python_requires(node_id)
+
+            conanfile = self._loader.load_consumer(path, profile,
+                                                   name=ref.name,
+                                                   version=ref.version,
+                                                   user=ref.user,
+                                                   channel=ref.channel,
+                                                   lock_python_requires=lock_python_requires)
+
+            ref = ConanFileReference(conanfile.name, conanfile.version,
+                                     ref.user, ref.channel, validate=False)
             root_node = Node(ref, conanfile, recipe=RECIPE_CONSUMER, path=path)
+        else:
+            conanfile = self._loader.load_conanfile_txt(path, profile, ref=ref)
+            root_node = Node(None, conanfile, recipe=RECIPE_CONSUMER, path=path)
 
-            if graph_lock:  # Find the Node ID in the lock of current root
-                graph_lock.find_consumer_node(root_node, create_reference)
+        if graph_lock:  # Find the Node ID in the lock of current root
+            node_id = graph_lock.get_node(root_node.ref)
+            root_node.id = node_id
 
+        return root_node, ref
+
+    def _load_root_direct_reference(self, reference, graph_lock, profile):
+        """ When a full reference is provided:
+        install|info|graph <ref> or export-pkg .
+        :return a VIRTUAL root_node with a conanfile that requires the reference
+        """
+        if not self._cache.config.revisions_enabled and reference.revision is not None:
+            raise ConanException("Revisions not enabled in the client, specify a "
+                                 "reference without revision")
+
+        conanfile = self._loader.load_virtual([reference], profile)
+        root_node = Node(ref=None, conanfile=conanfile, recipe=RECIPE_VIRTUAL)
+        if graph_lock:  # Find the Node ID in the lock of current root
+            node_id = graph_lock.get_node(reference)
+            locked_ref = graph_lock.pref(node_id).ref
+            conanfile.requires[reference.name].lock(locked_ref, node_id)
+        return root_node
+
+    def _load_root_test_package(self, path, create_reference, graph_lock, profile):
+        """ when a test_package/conanfile.py is provided, together with the reference that is
+        being created and need to be tested
+        :return a CONSUMER root_node with a conanfile.py with an injected requires to the
+        created reference
+        """
+        test = str(create_reference)
+        # do not try apply lock_python_requires for test_package/conanfile.py consumer
+        conanfile = self._loader.load_consumer(path, profile, user=create_reference.user,
+                                               channel=create_reference.channel)
+        conanfile.display_name = "%s (test package)" % str(test)
+        conanfile.output.scope = conanfile.display_name
+        # Injecting the tested reference
+        require = conanfile.requires.get(create_reference.name)
+        if require:
+            require.ref = require.range_ref = create_reference
+        else:
+            conanfile.requires.add_ref(create_reference)
+        ref = ConanFileReference(conanfile.name, conanfile.version,
+                                 create_reference.user, create_reference.channel, validate=False)
+        root_node = Node(ref, conanfile, recipe=RECIPE_CONSUMER, path=path)
+        if graph_lock:
+            node_id = graph_lock.get_node(create_reference)
+            locked_ref = graph_lock.pref(node_id).ref
+            conanfile.requires[create_reference.name].lock(locked_ref, node_id)
+        return root_node
+
+    def _resolve_graph(self, root_node, graph_info, build_mode, check_updates,
+                       update, remotes, recorder, apply_build_requires=True):
         build_mode = BuildMode(build_mode, self._output)
+        profile_host = graph_info.profile_host
+        graph_lock = graph_info.graph_lock
         deps_graph = self._load_graph(root_node, check_updates, update,
                                       build_mode=build_mode, remotes=remotes,
                                       profile_host_build_requires=profile_host.build_requires,
@@ -182,8 +238,8 @@ class GraphManager(object):
         # THIS IS NECESSARY to store dependencies options in profile, for consumer
         # FIXME: This is a hack. Might dissapear if graph for local commands is always recomputed
         graph_info.options = root_node.conanfile.options.values
-        if ref:
-            graph_info.root = ref
+        if root_node.ref:
+            graph_info.root = root_node.ref
         if graph_info.graph_lock is None:
             graph_info.graph_lock = GraphLock(deps_graph)
         else:
@@ -215,9 +271,6 @@ class GraphManager(object):
                                 nodes_subset=None, root=None):
         """
         :param graph: This is the full dependency graph with all nodes from all recursions
-        :param subgraph: A partial graph of the nodes that need to be evaluated and expanded
-            at this recursion. Only the nodes belonging to this subgraph will get their package_id
-            computed, and they will resolve build_requires if they need to be built from sources
         """
 
         self._binary_analyzer.evaluate_graph(graph, build_mode, update, remotes, nodes_subset, root)
