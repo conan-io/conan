@@ -2,6 +2,8 @@ import os
 import re
 import unittest
 
+import six
+
 from conans.client.build.cmake_flags import CMakeDefinitionsBuilder
 from conans.client.conf import default_settings_yml
 from conans.client.generators import CMakeFindPackageGenerator, CMakeFindPackageMultiGenerator
@@ -410,9 +412,9 @@ class CMakeCppInfoNameTest(unittest.TestCase):
     def cmake_find_package_multi_test(self):
         generator = CMakeFindPackageMultiGenerator(self.conanfile)
         content = generator.content
-        self.assertListEqual(['MyPkG2Targets.cmake', 'MyPkGConfig.cmake', 'MyPkG2Config.cmake',
-                              'MyPkGTargets.cmake', 'MyPkGTarget-debug.cmake',
-                              'MyPkG2Target-debug.cmake'], content.keys())
+        six.assertCountEqual(self, ['MyPkG2Targets.cmake', 'MyPkGConfig.cmake', 'MyPkG2Config.cmake',
+                                    'MyPkGTargets.cmake', 'MyPkGTarget-debug.cmake',
+                                    'MyPkG2Target-debug.cmake'], content.keys())
         self.assertNotIn("my_pkg", content["MyPkGConfig.cmake"])
         self.assertNotIn("MY_PKG", content["MyPkGConfig.cmake"])
         self.assertNotIn("my_pkg", content["MyPkG2Config.cmake"])
