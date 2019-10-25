@@ -58,8 +58,7 @@ def run():
     finally:
         if exc_v1:
             parser_v2 = ErrorCatchingArgumentParser(
-                description="Generates build info build info from "
-                            "collected information and lockfiles",
+                description="Generates build info build info from lockfiles information",
                 prog="conan_build_info")
 
             subparsers = parser_v2.add_subparsers(dest="subcommand", help="sub-command help")
