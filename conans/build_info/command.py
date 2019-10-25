@@ -152,10 +152,9 @@ def run():
         print_helpv2()
     elif exc_v1 and exc_v2:
         output.error("Error executing conan_build_info. There are two possible uses:\n")
-        output.info("1. Extracting build information from conan traces (in deprecation):\n")
+        output.info("1. Extracting build information from conan traces:\n")
         print_helpv1()
-        output.info("2. Calculating build info from collected information and lockfiles "
-                    "(recommended use):\n")
+        output.info("2. Calculating build info from collected information and lockfiles:\n")
         print_helpv2()
 
 
