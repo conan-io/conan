@@ -11,6 +11,7 @@ from conans.client.conf import default_settings_yml
 from conans.client.tools import args_to_string
 from conans.errors import ConanException
 from conans.model.settings import Settings
+from conans.model.env_info import EnvValues
 from conans.test.utils.conanfile import ConanFileMock, MockDepsCppInfo
 from conans.test.utils.test_files import temp_folder
 
@@ -198,3 +199,14 @@ class MesonTest(unittest.TestCase):
         meson.build()
         self.assertIn(flag, conan_file.captured_env["CFLAGS"])
         self.assertIn(flag, conan_file.captured_env["CXXFLAGS"])
+
+    def profile_env_applied_test(self):
+        conan_file = ConanFileMock()
+        env_values = EnvValues()
+        env_values.add("PATH", ["SOME/PATH"])
+        conan_file.initialize(Settings(), env_values)
+        conan_file.package_folder = None
+        meson = Meson(conan_file)
+        meson.configure()
+        meson.build()
+        self.assertTrue(conan_file.captured_env["PATH"].startswith("SOME/PATH"))
