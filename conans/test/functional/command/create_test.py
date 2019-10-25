@@ -685,7 +685,7 @@ class TestConanLib(ConanFile):
             settings = "compiler"
 
             def package_id(self):
-                if self.settings.compiler in ["Visual Studio"] or ():
+                if self.settings.compiler in ["Visual Studio"]:
                     compatible_pkg = CompatiblePackage(self)
                     compatible_pkg.settings.compiler = "intel"
                     # You have to use here a specific version or create more than one version of
