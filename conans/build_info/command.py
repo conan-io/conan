@@ -61,19 +61,19 @@ def run():
                 description="Generates build info build info from "
                             "collected information and lockfiles",
                 prog="conan_build_info")
-            subparsers = parser_v2.add_subparsers(dest="subcommand", help="sub-command help",
-                                                  description="subparses description")
+
+            subparsers = parser_v2.add_subparsers(dest="subcommand", help="sub-command help")
 
             parser_start = subparsers.add_parser("start",
                                                  help="Command to incorporate to the "
-                                                      "artifacts.properties the build name and number"
-                                                      ,description="subparser description")
+                                                      "artifacts.properties the build name and number")
             parser_start.add_argument("build_name", type=str, help="build name to assign")
             parser_start.add_argument("build_number", type=int,
                                       help="build number to assign")
 
-            subparsers.add_parser("stop", help="Command to remove from the artifacts.properties "
-                                               "the build name and number")
+            parser_stop = subparsers.add_parser("stop",
+                                                help="Command to remove from the artifacts.properties "
+                                                     "the build name and number")
 
             parser_create = subparsers.add_parser("create",
                                                   help="Command to generate a build info json from a "
