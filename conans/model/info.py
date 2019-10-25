@@ -278,122 +278,115 @@ class PythonRequireInfo(object):
 
     def __init__(self, ref):
         self._ref = ref
+        # This is the default full version but no revision
+        self._name = ref.name
+        self._version = ref.version
+        self._user = ref.user
+        self._channel = ref.channel
+        self._revision = None
 
     @property
     def sha(self):
-        vals = [str(n) for n in (self.name, self.version, self.user, self.channel, self.revision)]
-        if self.recipe_revision:
-            vals.append(self.recipe_revision)
+        vals = [n for n in (self._name, self._version, self._user, self._channel, self._revision)
+                if n]
         return "/".join(vals)
 
-    def unrelated_mode(self):
-        self.name = self.version = self.user = self.channel = None
-        self.recipe_revision = None
-
     def semver_mode(self):
-        self.name = self.full_name
-        self.version = self.full_version.stable()
-        self.user = self.channel = None
-        self.recipe_revision = self.package_revision = None
+        self._name = self._ref.name
+        self._version = self._ref.version.stable()
+        self._user = self._channel = None
+        self._revision = None
 
     def full_version_mode(self):
-        self.name = self.full_name
-        self.version = self.full_version
-        self.user = self.channel = None
-        self.recipe_revision = self.package_revision = None
+        self._name = self._ref.name
+        self._version = self._ref.version
+        self._user = self._channel = None
+        self._revision = None
 
     def patch_mode(self):
-        self.name = self.full_name
-        self.version = self.full_version.patch()
-        self.user = self.channel = None
-        self.recipe_revision = self.package_revision = None
-
-    def base_mode(self):
-        self.name = self.full_name
-        self.version = self.full_version.base
-        self.user = self.channel = None
-        self.recipe_revision = self.package_revision = None
+        self._name = self._ref.name
+        self._version = self._ref.version.patch()
+        self._user = self._channel = None
+        self._revision = None
 
     def minor_mode(self):
-        self.name = self.full_name
-        self.version = self.full_version.minor()
-        self.user = self.channel = None
-        self.recipe_revision = self.package_revision = None
+        self._name = self._ref.name
+        self._version = self._ref.version.minor()
+        self._user = self._channel = None
+        self._revision = None
 
     def major_mode(self):
-        self.name = self.full_name
-        self.version = self.full_version.major()
-        self.user = self.channel = None
-        self.recipe_revision = self.package_revision = None
+        self._name = self._ref.name
+        self._version = self._ref.version.major()
+        self._user = self._channel = None
+        self._revision = None
 
     def full_recipe_mode(self):
-        self.name = self.full_name
-        self.version = self.full_version
-        self.user = self.full_user
-        self.channel = self.full_channel
-        None
-        self.recipe_revision = self.package_revision = None
+        self._name = self._ref.name
+        self._version = self._ref.version
+        self._user = self._ref.user
+        self._channel = self._ref.channel
+        self._revision = None
 
     def recipe_revision_mode(self):
-        self.name = self.full_name
-        self.version = self.full_version
-        self.user = self.full_user
-        self.channel = self.full_channel
-        self.full_package_id
-        self.recipe_revision = self.full_recipe_revision
-        self.package_revision = None
+        self._name = self._ref.name
+        self._version = self._ref.version
+        self._user = self._ref.user
+        self._channel = self._ref.channel
+        self._revision = self._ref.revision
 
 
 class PythonRequiresInfo(object):
 
     def __init__(self, refs):
-        self._data = {ref: PythonRequireInfo(ref) for ref in refs}
+        if refs:
+            self._refs = [PythonRequireInfo(r) for r in sorted(refs)]
+        else:
+            self._refs = None
+
+    def __bool__(self):
+        return bool(self._refs)
+
+    def __nonzero__(self):
+        return self.__bool__()
+
+    def clear(self):
+        self._refs = None
 
     @property
     def sha(self):
-        result = []
-        # Remove requirements without a name, i.e. indirect transitive requirements
-        data = {k: v for k, v in self._data.items() if v.name}
-        for key in sorted(data):
-            s = data[key].sha
-            if s is None:
-                return None
-            result.append(s)
+        result = [r.sha for r in self._refs]
         return sha1('\n'.join(result).encode())
 
     def unrelated_mode(self):
-        self.clear()
+        self._refs = None
 
     def semver_mode(self):
-        for r in self._data.values():
+        for r in self._refs:
             r.semver_mode()
 
     def patch_mode(self):
-        for r in self._data.values():
+        for r in self._refs:
             r.patch_mode()
 
     def minor_mode(self):
-        for r in self._data.values():
+        for r in self._refs:
             r.minor_mode()
 
     def major_mode(self):
-        for r in self._data.values():
+        for r in self._refs:
             r.major_mode()
 
-    def base_mode(self):
-        for r in self._data.values():
-            r.base_mode()
-
     def full_version_mode(self):
-        for r in self._data.values():
+        for r in self._refs:
             r.full_version_mode()
 
     def full_recipe_mode(self):
-        for r in self._data.values():
+        for r in self._refs:
             r.full_recipe_mode()
 
     def recipe_revision_mode(self):
-        for r in self._data.values():
+        for r in self._refs:
             r.recipe_revision_mode()
 
 
@@ -439,7 +432,7 @@ class ConanInfo(object):
         result.vs_toolset_compatible()
         result.discard_build_settings()
         result.default_std_matching()
-        result.python_requires =
+        result.python_requires = PythonRequiresInfo(python_requires)
         return result
 
     @staticmethod
@@ -517,8 +510,7 @@ class ConanInfo(object):
         """ The package_id of a conans is the sha1 of its specific requirements,
         options and settings
         """
-        result = []
-        result.append(self.settings.sha)
+        result = [self.settings.sha]
         # Only are valid requires for OPtions those Non-Dev who are still in requires
         self.options.filter_used(self.requires.pkg_names)
         result.append(self.options.sha)
@@ -526,7 +518,8 @@ class ConanInfo(object):
         if requires_sha is None:
             return PACKAGE_ID_UNKNOWN
         result.append(requires_sha)
-
+        if self.python_requires:
+            result.append(self.python_requires.sha)
         package_id = sha1('\n'.join(result).encode())
         return package_id
 
@@ -544,6 +537,7 @@ class ConanInfo(object):
         self.settings.clear()
         self.options.clear()
         self.requires.clear()
+        self.python_requires.clear()
 
     def vs_toolset_compatible(self):
         """Default behaviour, same package for toolset v140 with compiler=Visual Studio 15 than

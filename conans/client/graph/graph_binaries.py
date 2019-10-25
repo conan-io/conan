@@ -256,11 +256,15 @@ class GraphBinariesAnalyzer(object):
 
         # Make sure not duplicated
         indirect_reqs.difference_update(direct_reqs)
+        python_requires = getattr(conanfile, "py_requires_all_refs", None)
+        if python_requires is not None:
+            python_requires = python_requires.values()
         conanfile.info = ConanInfo.create(conanfile.settings.values,
                                           conanfile.options.values,
                                           direct_reqs,
                                           indirect_reqs,
-                                          default_package_id_mode=default_package_id_mode)
+                                          default_package_id_mode=default_package_id_mode,
+                                          python_requires=python_requires)
 
         # Once we are done, call package_id() to narrow and change possible values
         with conanfile_exception_formatter(str(conanfile), "package_id"):

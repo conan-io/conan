@@ -39,7 +39,6 @@ class PyRequiresExtendTest(unittest.TestCase):
                 python_requires = "base/1.1@user/testing"
                 python_requires_extend = "base.MyConanfileBase"
             """)
-
         client.save({"conanfile.py": reuse}, clean_first=True)
         client.run("create . Pkg/0.1@user/testing")
         self.assertIn("Pkg/0.1@user/testing: My cool source!", client.out)
@@ -53,8 +52,8 @@ class PyRequiresExtendTest(unittest.TestCase):
         self.assertIn("Pkg/0.1@user/testing: My cool package_info!", client.out)
         client.run("remove * -f")
         client.run("download Pkg/0.1@user/testing")
-        self.assertIn("Pkg/0.1@user/testing: Package installed %s" % NO_SETTINGS_PACKAGE_ID,
-                      client.out)
+        self.assertIn("Pkg/0.1@user/testing: Package installed "
+                      "cd120fc0f12d892f67c821bf3cdc9d5879efa6cd", client.out)
 
     def with_alias_test(self):
         client = TestClient()
@@ -252,8 +251,8 @@ class PyRequiresExtendTest(unittest.TestCase):
         self.assertIn("Pkg/0.1@user/testing: My cool package_info!", client.out)
         client.run("remove * -f")
         client.run("download Pkg/0.1@user/testing")
-        self.assertIn("Pkg/0.1@user/testing: Package installed %s" % NO_SETTINGS_PACKAGE_ID,
-                      client.out)
+        self.assertIn("Pkg/0.1@user/testing: Package installed "
+                      "cd120fc0f12d892f67c821bf3cdc9d5879efa6cd", client.out)
 
     def reuse_scm_test(self):
         client = TestClient()
@@ -636,7 +635,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         self.assertIn("    python_requires1/1.0@user/test", client.out)
         self.assertIn("    python_requires2/1.0@user/test", client.out)
         #   - packages
-        self.assertIn("    project/1.0@user/test:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Build",
+        self.assertIn("    project/1.0@user/test:c77b07dec65c32e2fed8cdf88920062a91112724 - Build",
                       client.out)
 
         #   - no mention to alias
