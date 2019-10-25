@@ -208,6 +208,7 @@ class CmdUpload(object):
                                    remote=recipe_remote)
 
     def _upload_recipe(self, ref, conanfile, retry, retry_wait, policy, remote, remotes):
+
         current_remote_name = self._cache.package_layout(ref).load_metadata().recipe.remote
 
         if remote.name != current_remote_name:
@@ -223,6 +224,15 @@ class CmdUpload(object):
 
         remote_manifest = None
         if policy != UPLOAD_POLICY_FORCE:
+            # Check SCM data for auto fields
+            if hasattr(conanfile, "scm") and (
+                    conanfile.scm.get("url") == "auto" or conanfile.scm.get("revision") == "auto"):
+                raise ConanException("The recipe has 'scm.url' or 'scm.revision' with 'auto' "
+                                     "values. Use '--force' to ignore this error or export again "
+                                     "the recipe ('conan export' or 'conan create') in a "
+                                     "repository with no-uncommitted changes or by "
+                                     "using the '--ignore-dirty' option")
+
             remote_manifest = self._check_recipe_date(ref, remote, local_manifest)
         if policy == UPLOAD_POLICY_SKIP:
             return ref
