@@ -587,7 +587,8 @@ class Command(object):
         parser.add_argument("--paths", action='store_true', default=False,
                             help='Show package paths in local cache')
         parser.add_argument("-bo", "--build-order",
-                            help='given a modified reference, return an ordered list to build (CI)',
+                            help="given a modified reference, return an ordered list to build (CI)."
+                                 " [DEPRECATED: use 'conan graph build-order ...' instead]",
                             nargs=1, action=Extender)
         parser.add_argument("-g", "--graph", action=OnceArgument,
                             help='Creates file with project dependencies graph. It will generate '
@@ -615,6 +616,10 @@ class Command(object):
 
         _add_common_install_arguments(parser, build_help=build_help)
         args = parser.parse_args(*args)
+
+        if args.build_order:
+            self._out.warn("Usage of `--build-order` argument is deprecated and can return"
+                           " wrong results. Use `conan graph build-order ...` instead.")
 
         if args.install_folder and (args.profile or args.settings or args.options or args.env):
             raise ArgumentError(None,
