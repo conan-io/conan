@@ -8,14 +8,13 @@ from collections import OrderedDict
 
 from mock import patch
 
-from conans import COMPLEX_SEARCH_CAPABILITY, DEFAULT_REVISION_V1
+from conans import DEFAULT_REVISION_V1
 from conans.model.manifest import FileTreeManifest
 from conans.model.package_metadata import PackageMetadata
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANINFO, EXPORT_FOLDER, PACKAGES_FOLDER
 from conans.server.revision_list import RevisionList
-from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID, TurboTestClient, \
-    GenConanfile
+from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID, GenConanfile
 from conans.util.dates import iso8601_to_str, from_timestamp_to_iso8601
 from conans.util.env_reader import get_env
 from conans.util.files import list_folder_subdirs, load
@@ -133,7 +132,7 @@ class SearchTest(unittest.TestCase):
     def setUp(self):
         self.servers = OrderedDict()
         self.servers["local"] = TestServer(server_capabilities=[])
-        self.servers["search_able"] = TestServer(server_capabilities=[COMPLEX_SEARCH_CAPABILITY])
+        self.servers["search_able"] = TestServer(server_capabilities=[])
 
         self.client = TestClient(servers=self.servers)
 
