@@ -52,7 +52,7 @@ cpu_count = 1             # environment CONAN_CPU_COUNT
 default_package_id_mode = full_package_mode # environment CONAN_DEFAULT_PACKAGE_ID_MODE
 
 [proxies]
-# Empty section will try to use system proxies.
+# Empty (or missing) section will try to use system proxies.
 # As documented in https://requests.kennethreitz.org/en/latest/user/advanced/#proxies
 http = http://user:pass@10.10.1.10:3128/
 https = None
