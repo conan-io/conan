@@ -53,7 +53,7 @@ class MyBuildInfoCreation(unittest.TestCase):
         return mock_resp
 
     @patch("conans.build_info.build_info.ClientCache")
-    @patch("conans.build_info.build_info.requests.put', new=mock_response)
+    @patch("conans.build_info.build_info.requests.put", new=mock_response)
     def test_build_info_create_update_publish(self, mock_cache):
         conanfile = textwrap.dedent("""
             from conans import ConanFile, load
