@@ -18,8 +18,8 @@ LOCKFILE_VERSION = "0.1"
 
 class GraphLockFile(object):
 
-    def __init__(self, profile, graph_lock):
-        self.profile = profile
+    def __init__(self, profile_host, graph_lock):
+        self.profile_host = profile_host
         self.graph_lock = graph_lock
 
     @staticmethod
@@ -44,12 +44,12 @@ class GraphLockFile(object):
         if version:
             version = Version(version)
             # Do something with it, migrate, raise...
-        profile = graph_json["profile"]
+        profile_host = graph_json.get("profile_host") or graph_json["profile"]
         # FIXME: Reading private very ugly
-        profile, _ = _load_profile(profile, None, None)
+        profile_host, _ = _load_profile(profile_host, None, None)
         graph_lock = GraphLock.from_dict(graph_json["graph_lock"])
         graph_lock.revisions_enabled = revisions_enabled
-        graph_lock_file = GraphLockFile(profile, graph_lock)
+        graph_lock_file = GraphLockFile(profile_host, graph_lock)
         return graph_lock_file
 
     def save(self, path):
@@ -59,7 +59,7 @@ class GraphLockFile(object):
         save(path, serialized_graph_str)
 
     def dumps(self):
-        result = {"profile": self.profile.dumps(),
+        result = {"profile_host": self.profile_host.dumps(),
                   "graph_lock": self.graph_lock.as_dict(),
                   "version": LOCKFILE_VERSION}
         return json.dumps(result, indent=True)

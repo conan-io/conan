@@ -20,5 +20,14 @@ class DecodeTextTest(unittest.TestCase):
                            (b'\x2b\x2f\x76\x2B\x41',),
                            (b'\x2b\x2f\x76\x2F\x41',),
                            (b'\x2b\x2f\x76\x38\x2d\x41',)])
-    def test_encodings(self, text):
+    def test_audo_encodings(self, text):
         self.assertEqual('A', decode_text(text))
+
+    @parameterized.expand([(b'\x41', "utf_8_sig"),
+                           (b'\x00\x41', "utf_16_be"),
+                           (b'\x41\x00', "utf_16_le"),
+                           (b'\x00\x00\x00\x41', "utf_32_be"),
+                           (b'\x41\x00\x00\x00', "utf_32_le"),
+                           (b'\x41', "utf_7")])
+    def test_explicit_encodings(self, text, encoding):
+        self.assertEqual('A', decode_text(text, encoding))

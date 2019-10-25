@@ -17,7 +17,7 @@ def install_build_and_test(app, conanfile_abs_path, reference, graph_info,
     and builds the test_package/conanfile.py running the test() method.
     """
     base_folder = os.path.dirname(conanfile_abs_path)
-    test_build_folder, delete_after_build = _build_folder(test_build_folder, graph_info.profile,
+    test_build_folder, delete_after_build = _build_folder(test_build_folder, graph_info.profile_host,
                                                           base_folder)
     rmdir(test_build_folder)
     if build_modes is None:

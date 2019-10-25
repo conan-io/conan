@@ -14,11 +14,11 @@ GRAPH_INFO_FILE = "graph_info.json"
 
 class GraphInfo(object):
 
-    def __init__(self, profile=None, options=None, root_ref=None):
+    def __init__(self, profile_host=None, options=None, root_ref=None):
         # This field is a temporary hack, to store dependencies options for the local flow
         self.options = options
         self.root = root_ref
-        self.profile = profile
+        self.profile_host = profile_host
         self.graph_lock = None
 
     @staticmethod
@@ -55,11 +55,11 @@ class GraphInfo(object):
         save(p, serialized_graph_str)
 
         # A bit hacky, but to avoid repetition by now
-        graph_lock_file = GraphLockFile(self.profile, self.graph_lock)
+        graph_lock_file = GraphLockFile(self.profile_host, self.graph_lock)
         graph_lock_file.save(os.path.join(folder, LOCKFILE))
 
     def save_lock(self, lockfile):
-        graph_lock_file = GraphLockFile(self.profile, self.graph_lock)
+        graph_lock_file = GraphLockFile(self.profile_host, self.graph_lock)
         graph_lock_file.save(lockfile)
 
     def _dumps(self):
