@@ -110,7 +110,7 @@ class RestApiClient(object):
     def search_packages(self, reference, query):
         # Do not send the query to the server, as it will fail
         # https://github.com/conan-io/conan/issues/4951
-        package_infos = self._get_api().search_packages(reference, query)
+        package_infos = self._get_api().search_packages(reference, query=None)
         return filter_packages(query, package_infos)
 
     def remove_conanfile(self, ref):
