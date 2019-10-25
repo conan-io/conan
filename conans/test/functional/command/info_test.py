@@ -432,8 +432,7 @@ class MyTest(ConanFile):
                       self.client.out)
 
         self.client.run("info Hello1/0.1@lasote/stable -bo=Hello0/0.1@lasote/stable")
-        self.assertEqual("[Hello0/0.1@lasote/stable], [Hello1/0.1@lasote/stable]\n",
-                         self.client.out)
+        self.assertIn("[Hello0/0.1@lasote/stable], [Hello1/0.1@lasote/stable]\n", self.client.out)
 
         self.client.run("info Hello1/0.1@lasote/stable -bo=Hello0/0.1@lasote/stable "
                         "--json=file.json")
@@ -516,9 +515,11 @@ class AConan(ConanFile):
         self.assertIn("[LibF/0.1@lasote/stable], [LibC/0.1@lasote/stable]",
                       self.client.out)
         self.client.run("info . -bo=Dev1/0.1@lasote/stable")
-        self.assertEqual("\n", self.client.out)
+        self.assertEqual("WARN: Usage of `--build-order` argument is deprecated and can return wrong"
+                         " results. Use `conan graph build-order ...` instead.\n\n", self.client.out)
         self.client.run("info . -bo=LibG/0.1@lasote/stable")
-        self.assertEqual("\n", self.client.out)
+        self.assertEqual("WARN: Usage of `--build-order` argument is deprecated and can return wrong"
+                         " results. Use `conan graph build-order ...` instead.\n\n", self.client.out)
 
         self.client.run("info . --build-order=ALL")
         self.assertIn("[LibA/0.1@lasote/stable, LibE/0.1@lasote/stable, LibF/0.1@lasote/stable], "
