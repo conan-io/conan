@@ -220,8 +220,8 @@ def start_build_info(output, build_name, build_number):
     paths = ClientCache(os.path.join(get_conan_user_home(), ".conan"), output)
     content = "artifact_property_build.name={}\n" \
               "artifact_property_build.number={}\n".format(build_name, build_number)
+    artifact_properties_file = paths.put_headers_path
     try:
-        artifact_properties_file = paths.put_headers_path
         save(artifact_properties_file, content)
     except Exception:
         raise ConanException("Can't write properties file in %s" % artifact_properties_file)
@@ -229,8 +229,8 @@ def start_build_info(output, build_name, build_number):
 
 def stop_build_info(output):
     paths = ClientCache(os.path.join(get_conan_user_home(), ".conan"), output)
+    artifact_properties_file = paths.put_headers_path
     try:
-        artifact_properties_file = paths.put_headers_path
         save(artifact_properties_file, "")
     except Exception:
         raise ConanException("Can't write properties file in %s" % artifact_properties_file)
