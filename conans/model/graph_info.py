@@ -13,11 +13,11 @@ GRAPH_INFO_FILE = "graph_info.json"
 
 class GraphInfo(object):
 
-    def __init__(self, profile=None, profile_build=None, options=None, root_ref=None):
+    def __init__(self, profile_host=None, profile_build=None, options=None, root_ref=None):
         # This field is a temporary hack, to store dependencies options for the local flow
         self.options = options
         self.root = root_ref
-        self.profile_host = profile
+        self.profile_host = profile_host
         self.profile_build = profile_build
         self.graph_lock = None
 

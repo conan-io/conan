@@ -8,7 +8,7 @@ from conans.client.graph.python_requires import ConanPythonRequire
 from conans.client.loader import ConanFileLoader
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, TestBufferConanOutput,\
-    test_processed_profile
+    test_profile
 from conans.util.files import save, load
 
 base_conanfile = '''
@@ -268,7 +268,7 @@ Just the wind that smells fresh before the storm."""), foo_content)
 
     def _build_and_check(self, tmp_dir, file_path, text_file, msg):
         loader = ConanFileLoader(None, TestBufferConanOutput(), ConanPythonRequire(None, None))
-        ret = loader.load_consumer(file_path, test_processed_profile())
+        ret = loader.load_consumer(file_path, test_profile())
         curdir = os.path.abspath(os.curdir)
         os.chdir(tmp_dir)
         try:

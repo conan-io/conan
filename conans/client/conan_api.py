@@ -1281,7 +1281,7 @@ def get_graph_info(profile_names, settings, options, env, cwd, install_folder, c
         profile = profile_from_args(profile_names, settings, options, env, cwd, cache)
         profile.process_settings(cache)
         root_ref = ConanFileReference(name, version, user, channel, validate=False)
-        graph_info = GraphInfo(profile=profile, root_ref=root_ref)
+        graph_info = GraphInfo(profile_host=profile, root_ref=root_ref)
         # Preprocess settings and convert to real settings
     return graph_info
 
