@@ -183,16 +183,6 @@ def include_build_modules(build_modules):
     return result
 
 
-def conan_include_build_modules(build_modules):
-    template = """
-function(conan_include_build_modules)
-{build_modules}
-endfunction()
-"""
-    lines = "\n".join(["    " + line for line in include_build_modules(build_modules)])
-    return template.format(build_modules=lines)
-
-
 _cmake_common_macros = """
 function(conan_message MESSAGE_OUTPUT)
     if(NOT CONAN_CMAKE_SILENT_OUTPUT)
@@ -567,6 +557,12 @@ macro(conan_target_link_libraries target)
             target_link_libraries(${target} debug ${_LIB})
         endforeach()
     endif()
+endmacro()
+
+macro(conan_include_build_modules)
+    foreach(_BUILD_MODULE_PATH ${CONAN_BUILD_MODULES_PATHS})
+        include(${_BUILD_MODULE_PATH})
+    endforeach()
 endmacro()
 """
 

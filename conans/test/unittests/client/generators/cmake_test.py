@@ -426,6 +426,8 @@ class CMakeBuildModulesTest(unittest.TestCase):
                       content)
         self.assertIn('set(CONAN_BUILD_MODULES_PATHS_MY_PKG2 "dummy_root_folder2/other-mod.cmake")',
                       content)
+        self.assertIn("macro(conan_include_build_modules)", content)
+        self.assertIn("conan_include_build_modules()", content)
 
     def cmake_multi_test(self):
         generator = CMakeMultiGenerator(self.conanfile)
@@ -436,6 +438,11 @@ class CMakeBuildModulesTest(unittest.TestCase):
                       content["conanbuildinfo_release.cmake"])
         self.assertIn('set(CONAN_BUILD_MODULES_PATHS_MY_PKG2_RELEASE "dummy_root_folder2/other-mod.cmake")',
                       content["conanbuildinfo_release.cmake"])
+        print(content["conanbuildinfo_multi.cmake"])
+        print("KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK")
+        print(content["conanbuildinfo_release.cmake"])
+        self.assertIn("macro(conan_include_build_modules)", content["conanbuildinfo_release.cmake"])
+        self.assertIn("conan_include_build_modules()", content["conanbuildinfo_release.cmake"])
 
     def cmake_find_package_test(self):
         generator = CMakeFindPackageGenerator(self.conanfile)
