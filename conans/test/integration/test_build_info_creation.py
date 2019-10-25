@@ -14,28 +14,28 @@ from conans.test.utils.tools import TestClient, TestBufferConanOutput
 
 
 class MyBuildInfoCreation(unittest.TestCase):
-    @patch('conans.build_info.build_info.ClientCache')
+    @patch("conans.build_info.build_info.ClientCache")
     def test_build_info_start(self, mock_cache):
         conan_user_home = temp_folder(True)
         mock_cache.return_value = ClientCache(os.path.join(conan_user_home, ".conan"),
                                               TestBufferConanOutput())
-        sys.argv = ['conan_build_info', 'start', 'MyBuildName', '42']
+        sys.argv = ["conan_build_info", "start", "MyBuildName", "42"]
         run()
         with open(mock_cache.return_value.put_headers_path) as f:
             content = f.read()
-            self.assertIn('MyBuildName', content)
-            self.assertIn('42', content)
+            self.assertIn("MyBuildName", content)
+            self.assertIn("42", content)
 
-    @patch('conans.build_info.build_info.ClientCache')
+    @patch("conans.build_info.build_info.ClientCache")
     def test_build_info_stop(self, mock_cache):
         conan_user_home = temp_folder(True)
         mock_cache.return_value = ClientCache(os.path.join(conan_user_home, ".conan"),
                                               TestBufferConanOutput())
-        sys.argv = ['conan_build_info', 'stop']
+        sys.argv = ["conan_build_info", "stop"]
         run()
         with open(mock_cache.return_value.put_headers_path) as f:
             content = f.read()
-            self.assertEqual('', content)
+            self.assertEqual("", content)
 
     def mock_response(url, data=None, **kwargs):
         mock_resp = Mock()
@@ -52,8 +52,8 @@ class MyBuildInfoCreation(unittest.TestCase):
         mock_resp.content = None
         return mock_resp
 
-    @patch('conans.build_info.build_info.ClientCache')
-    @patch('conans.build_info.build_info.requests.put', new=mock_response)
+    @patch("conans.build_info.build_info.ClientCache")
+    @patch("conans.build_info.build_info.requests.put', new=mock_response)
     def test_build_info_create_update_publish(self, mock_cache):
         conanfile = textwrap.dedent("""
             from conans import ConanFile, load
@@ -91,14 +91,14 @@ class MyBuildInfoCreation(unittest.TestCase):
         client.run("create . PkgB/0.2@user/channel --lockfile")
 
         client.run("upload * --all --confirm")
-        sys.argv = ['conan_build_info', 'start', 'MyBuildName', '42']
+        sys.argv = ["conan_build_info", "start", "MyBuildName", "42"]
         run()
-        sys.argv = ['conan_build_info', 'create',
-                    os.path.join(client.current_folder, 'buildinfo.json'), '--lockfile',
+        sys.argv = ["conan_build_info", "create",
+                    os.path.join(client.current_folder, "buildinfo.json"), "--lockfile",
                     os.path.join(client.current_folder, LOCKFILE)]
         run()
 
-        with open(os.path.join(client.current_folder, 'buildinfo.json')) as f:
+        with open(os.path.join(client.current_folder, "buildinfo.json")) as f:
             buildinfo = json.load(f)
             self.assertEqual(buildinfo["name"], "MyBuildName")
             self.assertEqual(buildinfo["number"], "42")
@@ -114,19 +114,19 @@ class MyBuildInfoCreation(unittest.TestCase):
             "myfile.txt": "HelloC"})
         client.run("create . PkgC/0.2@user/channel --lockfile")
         client.run("upload * --all --confirm")
-        sys.argv = ['conan_build_info', 'create',
-                    os.path.join(client.current_folder, 'buildinfo_b.json'), '--lockfile',
+        sys.argv = ["conan_build_info", "create",
+                    os.path.join(client.current_folder, "buildinfo_b.json"), "--lockfile",
                     os.path.join(client.current_folder, LOCKFILE),
-                    '--user', 'user', '--password', 'password']
+                    "--user", "user", "--password", "password"]
         run()
 
-        sys.argv = ['conan_build_info', 'update',
-                    os.path.join(client.current_folder, 'buildinfo.json'),
-                    os.path.join(client.current_folder, 'buildinfo_b.json'),
-                    '--output-file', os.path.join(client.current_folder, 'mergedbuildinfo.json')]
+        sys.argv = ["conan_build_info", "update",
+                    os.path.join(client.current_folder, "buildinfo.json"),
+                    os.path.join(client.current_folder, "buildinfo_b.json"),
+                    "--output-file", os.path.join(client.current_folder, "mergedbuildinfo.json")]
         run()
 
-        with open(os.path.join(client.current_folder, 'mergedbuildinfo.json')) as f:
+        with open(os.path.join(client.current_folder, "mergedbuildinfo.json")) as f:
             buildinfo = json.load(f)
             self.assertEqual(buildinfo["name"], "MyBuildName")
             self.assertEqual(buildinfo["number"], "42")
@@ -134,11 +134,11 @@ class MyBuildInfoCreation(unittest.TestCase):
             self.assertTrue("PkgC/0.2@user/channel" in ids_list)
             self.assertTrue("PkgB/0.2@user/channel" in ids_list)
 
-        sys.argv = ['conan_build_info', 'publish',
-                    os.path.join(client.current_folder, 'mergedbuildinfo.json'), '--url',
-                    'http://fakeurl:8081/artifactory', '--user', 'user', '--password', 'password']
+        sys.argv = ["conan_build_info", "publish",
+                    os.path.join(client.current_folder, "mergedbuildinfo.json"), "--url",
+                    "http://fakeurl:8081/artifactory", "--user", "user", "--password", "password"]
         run()
-        sys.argv = ['conan_build_info', 'publish',
-                    os.path.join(client.current_folder, 'mergedbuildinfo.json'), '--url',
-                    'http://fakeurl:8081/artifactory', '--apikey', 'apikey']
+        sys.argv = ["conan_build_info", "publish",
+                    os.path.join(client.current_folder, "mergedbuildinfo.json"), "--url",
+                    "http://fakeurl:8081/artifactory", "--apikey", "apikey"]
         run()
