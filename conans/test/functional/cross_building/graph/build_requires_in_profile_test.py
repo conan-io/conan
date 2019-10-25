@@ -92,7 +92,7 @@ class BuildRequiresInProfileExample(GraphManagerTest):
 
         ref = ConanFileReference(None, None, None, None, validate=False)
         options = OptionsValues()
-        graph_info = GraphInfo(profile_build=profile_build, profile=profile_host,
+        graph_info = GraphInfo(profile_build=profile_build, profile_host=profile_host,
                                options=options, root_ref=ref)
         recorder = ActionRecorder()
         app = self._get_app()

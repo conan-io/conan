@@ -121,7 +121,7 @@ class ClassicProtocExampleBase(GraphManagerTest):
 
         ref = ConanFileReference(None, None, None, None, validate=False)
         options = OptionsValues()
-        graph_info = GraphInfo(profile=profile_host, profile_build=profile_build,
+        graph_info = GraphInfo(profile_host=profile_host, profile_build=profile_build,
                                options=options, root_ref=ref)
         recorder = ActionRecorder()
         app = self._get_app()
@@ -132,7 +132,8 @@ class ClassicProtocExampleBase(GraphManagerTest):
         build_mode = []  # Means build all
         binary_installer = BinaryInstaller(app, recorder)
         build_mode = BuildMode(build_mode, app.out)
-        binary_installer.install(deps_graph, None, build_mode, update=False, keep_build=False, graph_info=graph_info)
+        binary_installer.install(deps_graph, None, build_mode, update=False,
+                                 keep_build=False, graph_info=graph_info)
         return deps_graph
 
 
