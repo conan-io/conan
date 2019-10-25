@@ -75,13 +75,10 @@ set_property(TARGET {name}::{name}
             depname = cpp_info.name
             deps = DepsCppCmake(cpp_info)
             ret["{}Config.cmake".format(depname)] = self._find_for_dep(depname, cpp_info)
+            ret["{}Targets.cmake".format(depname)] = self.targets_file.format(name=depname)
 
             find_lib = target_template.format(name=depname, deps=deps,
-                                              build_type_suffix=build_type_suffix,
-                                              build_paths=deps.build_paths)
-            if deps.build_modules_paths:
-                find_lib = find_lib + "\n".join(include_build_modules(deps.build_modules_paths))
-            ret["{}Targets.cmake".format(depname)] = self.targets_file.format(name=depname)
+                                              build_type_suffix=build_type_suffix)
             ret["{}Target-{}.cmake".format(depname, build_type.lower())] = find_lib
         return ret
 

@@ -417,6 +417,26 @@ class CMakeBuildModulesTest(unittest.TestCase):
         cpp_info.build_modules = ["other-mod.cmake"]
         self.conanfile.deps_cpp_info.update(cpp_info, ref.name)
 
+    def cmake_test(self):
+        generator = CMakeGenerator(self.conanfile)
+        content = generator.content
+        self.assertIn('set(CONAN_BUILD_MODULES_PATHS "dummy_root_folder1/my-module.cmake"\n\t\t\t"dummy_root_folder2/other-mod.cmake" ${CONAN_BUILD_MODULES_PATHS})',
+                      content)
+        self.assertIn('set(CONAN_BUILD_MODULES_PATHS_MY_PKG "dummy_root_folder1/my-module.cmake")',
+                      content)
+        self.assertIn('set(CONAN_BUILD_MODULES_PATHS_MY_PKG2 "dummy_root_folder2/other-mod.cmake")',
+                      content)
+
+    def cmake_multi_test(self):
+        generator = CMakeMultiGenerator(self.conanfile)
+        content = generator.content
+        self.assertIn('set(CONAN_BUILD_MODULES_PATHS_RELEASE "dummy_root_folder1/my-module.cmake"\n\t\t\t"dummy_root_folder2/other-mod.cmake" ${CONAN_BUILD_MODULES_PATHS_RELEASE})',
+                      content["conanbuildinfo_release.cmake"])
+        self.assertIn('set(CONAN_BUILD_MODULES_PATHS_MY_PKG_RELEASE "dummy_root_folder1/my-module.cmake")',
+                      content["conanbuildinfo_release.cmake"])
+        self.assertIn('set(CONAN_BUILD_MODULES_PATHS_MY_PKG2_RELEASE "dummy_root_folder2/other-mod.cmake")',
+                      content["conanbuildinfo_release.cmake"])
+
     def cmake_find_package_test(self):
         generator = CMakeFindPackageGenerator(self.conanfile)
         content = generator.content
@@ -430,27 +450,15 @@ class CMakeBuildModulesTest(unittest.TestCase):
                       '${CMAKE_CURRENT_LIST_DIR})', content["Findmy_pkg2.cmake"])
         self.assertIn('set(CMAKE_PREFIX_PATH "dummy_root_folder2/" ${CMAKE_PREFIX_PATH} '
                       '${CMAKE_CURRENT_LIST_DIR})', content["Findmy_pkg2.cmake"])
-        self.assertIn('include("dummy_root_folder1/my-module.cmake")', content["Findmy_pkg.cmake"])
-        self.assertIn('include("dummy_root_folder2/other-mod.cmake")', content["Findmy_pkg2.cmake"])
-
-    def cmake_test(self):
-        generator = CMakeGenerator(self.conanfile)
-        content = generator.content
-        self.assertIn('include("dummy_root_folder1/my-module.cmake")', content)
-        self.assertIn('include("dummy_root_folder2/other-mod.cmake")', content)
-
-    def cmake_multi_test(self):
-        generator = CMakeMultiGenerator(self.conanfile)
-        content = generator.content
-        self.assertIn('include("dummy_root_folder1/my-module.cmake")',
-                      content["conanbuildinfo_release.cmake"])
-        self.assertIn('include("dummy_root_folder2/other-mod.cmake")',
-                      content["conanbuildinfo_release.cmake"])
+        self.assertIn('set(my_pkg_BUILD_MODULES_PATHS "dummy_root_folder1/my-module.cmake")',
+                      content["Findmy_pkg.cmake"])
+        self.assertIn('set(my_pkg2_BUILD_MODULES_PATHS "dummy_root_folder2/other-mod.cmake")',
+                      content["Findmy_pkg2.cmake"])
 
     def cmake_find_package_multi_test(self):
         generator = CMakeFindPackageMultiGenerator(self.conanfile)
         content = generator.content
-        self.assertIn('include("dummy_root_folder1/my-module.cmake")',
+        self.assertIn('set(my_pkg_BUILD_MODULES_PATHS_RELEASE "dummy_root_folder1/my-module.cmake")',
                       content["my_pkgTarget-release.cmake"])
-        self.assertIn('include("dummy_root_folder2/other-mod.cmake")',
+        self.assertIn('set(my_pkg2_BUILD_MODULES_PATHS_RELEASE "dummy_root_folder2/other-mod.cmake")',
                       content["my_pkg2Target-release.cmake"])

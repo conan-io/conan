@@ -142,5 +142,4 @@ class CMakeFindPathMultiGeneratorTest(unittest.TestCase):
             """)
         client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists})
         client.run("create .")
-        print(client.out)
         self.assertIn("Printing using a external module!", client.out)

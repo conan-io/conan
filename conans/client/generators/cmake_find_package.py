@@ -59,8 +59,7 @@ endif()
             # Here we are generating FindXXX, so find_modules=True
             lines = find_dependency_lines(name, cpp_info, find_modules=True)
         find_package_header_block = find_package_header.format(name=name, version=cpp_info.version)
-        find_libraries_block = target_template.format(name=name, deps=deps, build_type_suffix="",
-                                                      build_paths=deps.build_paths)
+        find_libraries_block = target_template.format(name=name, deps=deps, build_type_suffix="")
         target_props = assign_target_properties.format(name=name, deps=deps)
         contents = []
         tmp = self.template.format(name=name, deps=deps,
@@ -70,8 +69,6 @@ endif()
                                    find_package_header_block=find_package_header_block,
                                    assign_target_properties_block=target_props)
         contents.append(tmp)
-        if deps.build_modules_paths:
-            contents.extend(include_build_modules(deps.build_modules_paths))
         return "\n".join(contents)
 
 

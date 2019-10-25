@@ -8,6 +8,7 @@ set(CONAN_SRC_DIRS_{dep}{build_type} {deps.src_paths})
 set(CONAN_BUILD_DIRS_{dep}{build_type} {deps.build_paths})
 set(CONAN_LIBS_{dep}{build_type} {deps.libs})
 set(CONAN_DEFINES_{dep}{build_type} {deps.defines})
+set(CONAN_BUILD_MODULES_PATHS_{dep}{build_type} {deps.build_modules_paths})
 # COMPILE_DEFINITIONS are equal to CONAN_DEFINES without -D, for targets
 set(CONAN_COMPILE_DEFINITIONS_{dep}{build_type} {deps.compile_definitions})
 
@@ -85,6 +86,7 @@ set(CONAN_BIN_DIRS{build_type} {deps.bin_paths} ${{CONAN_BIN_DIRS{build_type}}})
 set(CONAN_RES_DIRS{build_type} {deps.res_paths} ${{CONAN_RES_DIRS{build_type}}})
 set(CONAN_LIBS{build_type} {deps.libs} ${{CONAN_LIBS{build_type}}})
 set(CONAN_DEFINES{build_type} {deps.defines} ${{CONAN_DEFINES{build_type}}})
+set(CONAN_BUILD_MODULES_PATHS{build_type} {deps.build_modules_paths} ${{CONAN_BUILD_MODULES_PATHS{build_type}}})
 set(CONAN_CMAKE_MODULE_PATH{build_type} {deps.build_paths} ${{CONAN_CMAKE_MODULE_PATH{build_type}}})
 
 set(CONAN_CXX_FLAGS{build_type} "{deps.cxxflags} ${{CONAN_CXX_FLAGS{build_type}}}")
