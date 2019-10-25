@@ -159,7 +159,7 @@ path = ./data
 [proxies]
 # Empty section will try to use system proxies.
 # If don't want proxy at all, remove section [proxies]
-# As documented in https://requests.kennethreitz.org/en/latest/user/advanced/#proxies - but see below
+# As documented in http://requests.kennethreitz.org/en/latest/user/advanced/#proxies - but see below
 # for proxies to specific hosts
 # http = http://user:pass@10.10.1.10:3128/
 # http = http://10.10.1.10:3128
