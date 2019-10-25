@@ -315,7 +315,6 @@ class ConanInfo(object):
         result.vs_toolset_compatible()
         result.discard_build_settings()
         result.default_std_matching()
-        result.intel_compatibility()
 
         return result
 
