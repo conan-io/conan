@@ -344,6 +344,10 @@ class PythonRequiresInfo(object):
         else:
             self._refs = None
 
+    def copy(self):
+        # For build_id() implementation
+        return PythonRequiresInfo(self._refs)
+
     def __bool__(self):
         return bool(self._refs)
 
@@ -412,6 +416,7 @@ class ConanInfo(object):
         result.settings = self.settings.copy()
         result.options = self.options.copy()
         result.requires = self.requires.copy()
+        result.python_requires = self.python_requires.copy()
         return result
 
     @staticmethod
