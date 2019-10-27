@@ -7,9 +7,9 @@ from conans.util.files import mkdir
 from conans.util.log import logger
 
 
-def build(app, conanfile_path, source_folder, build_folder, package_folder, install_folder,
-          test=False, should_configure=True, should_build=True, should_install=True,
-          should_test=True):
+def cmd_build(app, conanfile_path, source_folder, build_folder, package_folder, install_folder,
+              test=False, should_configure=True, should_build=True, should_install=True,
+              should_test=True):
     """ Call to build() method saved on the conanfile.py
     param conanfile_path: path to a conanfile.py
     """

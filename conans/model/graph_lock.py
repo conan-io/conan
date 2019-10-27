@@ -145,6 +145,7 @@ class GraphLock(object):
     def root_node_ref(self):
         """ obtain the node in the graph that is not depended by anyone else,
         i.e. the root or downstream consumer
+        Used by graph build-order command
         """
         total = []
         for node in self._nodes.values():
@@ -291,6 +292,9 @@ class GraphLock(object):
             return self._nodes[node_id].python_requires
         return [r.copy_clear_rev() for r in self._nodes[node_id].python_requires or []]
 
+    def pref(self, node_id):
+        return self._nodes[node_id].pref
+
     def get_node(self, ref):
         """ given a REF, return the Node of the package in the lockfile that correspond to that
         REF, or raise if it cannot find it.
@@ -335,21 +339,3 @@ class GraphLock(object):
         if lock_node.pref.ref != ref:
             lock_node.pref = PackageReference(ref, lock_node.pref.id)
             lock_node.modified = True
-
-    def find_consumer_node(self, node, reference):
-        """ similar to get_node(), but taking into account that the consumer node can be a virtual
-        one for some cases of commands, like "conan install <ref>"
-        It will lock the found node, or raise if not found
-        """
-        if reference:
-            assert node.recipe in [RECIPE_CONSUMER, RECIPE_VIRTUAL]
-            node_id = self.get_node(reference)
-            pref = self._nodes[node_id].pref
-            for require in node.conanfile.requires.values():
-                if require.ref.name == pref.ref.name:
-                    require.lock(pref.ref, node_id)
-                    break
-        else:
-            assert node.recipe == RECIPE_CONSUMER
-            node_id = self.get_node(node.ref)
-            node.id = node_id

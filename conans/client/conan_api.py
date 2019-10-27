@@ -8,7 +8,7 @@ import conans
 from conans import __version__ as client_version
 from conans.client import packager, tools
 from conans.client.cache.cache import ClientCache
-from conans.client.cmd.build import build
+from conans.client.cmd.build import cmd_build
 from conans.client.cmd.create import create
 from conans.client.cmd.download import download
 from conans.client.cmd.export import cmd_export, export_alias
@@ -668,10 +668,10 @@ class ConanAPIV1(object):
         default_pkg_folder = os.path.join(build_folder, "package")
         package_folder = _make_abs_path(package_folder, cwd, default=default_pkg_folder)
 
-        build(self.app, conanfile_path,
-              source_folder, build_folder, package_folder, install_folder,
-              should_configure=should_configure, should_build=should_build,
-              should_install=should_install, should_test=should_test)
+        cmd_build(self.app, conanfile_path,
+                  source_folder, build_folder, package_folder, install_folder,
+                  should_configure=should_configure, should_build=should_build,
+                  should_install=should_install, should_test=should_test)
 
     @api_method
     def package(self, path, build_folder, package_folder, source_folder=None, install_folder=None,

@@ -146,20 +146,17 @@ class ConanFileLoader(object):
         conanfile.initialize(tmp_settings, profile.env_values)
 
     def load_consumer(self, conanfile_path, profile_host, name=None, version=None, user=None,
-                      channel=None, test=None, lock_python_requires=None):
+                      channel=None, lock_python_requires=None):
         """ loads a conanfile.py in user space. Might have name/version or not
         """
         conanfile = self.load_named(conanfile_path, name, version, user, channel,
                                     lock_python_requires)
-        if test:
-            conanfile.display_name = "%s (test package)" % str(test)
+
+        ref = ConanFileReference(conanfile.name, conanfile.version, user, channel, validate=False)
+        if str(ref):
+            conanfile.display_name = "%s (%s)" % (os.path.basename(conanfile_path), str(ref))
         else:
-            ref = ConanFileReference(conanfile.name, conanfile.version, user, channel,
-                                     validate=False)
-            if str(ref):
-                conanfile.display_name = "%s (%s)" % (os.path.basename(conanfile_path), str(ref))
-            else:
-                conanfile.display_name = os.path.basename(conanfile_path)
+            conanfile.display_name = os.path.basename(conanfile_path)
         conanfile.output.scope = conanfile.display_name
         conanfile.in_local_cache = False
         try:
