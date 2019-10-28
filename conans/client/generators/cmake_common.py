@@ -552,7 +552,6 @@ endmacro()
 
 macro(conan_include_build_modules)
     if(CMAKE_BUILD_TYPE)
-        MESSAGE("BUILD TYPE: ${CMAKE_BUILD_TYPE}")
         if(${CMAKE_BUILD_TYPE} MATCHES "Debug")
             set(CONAN_BUILD_MODULES_PATHS ${CONAN_BUILD_MODULES_PATHS_DEBUG} ${CONAN_BUILD_MODULES_PATHS})
         elseif(${CMAKE_BUILD_TYPE} MATCHES "Release")
