@@ -237,7 +237,7 @@ class GraphBinariesAnalyzer(object):
         conanfile.options.freeze()
 
     @staticmethod
-    def _compute_package_id(node, default_package_id_mode):
+    def _compute_package_id(node, default_package_id_mode, default_python_requires_id_mode):
         """
         Compute the binary package ID of this node
         :param node: the node to compute the package-ID
@@ -264,7 +264,9 @@ class GraphBinariesAnalyzer(object):
                                           direct_reqs,
                                           indirect_reqs,
                                           default_package_id_mode=default_package_id_mode,
-                                          python_requires=python_requires)
+                                          python_requires=python_requires,
+                                          default_python_requires_id_mode=
+                                          default_python_requires_id_mode)
 
         # Once we are done, call package_id() to narrow and change possible values
         with conanfile_exception_formatter(str(conanfile), "package_id"):
@@ -275,10 +277,11 @@ class GraphBinariesAnalyzer(object):
 
     def evaluate_graph(self, deps_graph, build_mode, update, remotes, nodes_subset=None, root=None):
         default_package_id_mode = self._cache.config.default_package_id_mode
+        default_python_requires_id_mode = self._cache.config.default_python_requires_id_mode
         for node in deps_graph.ordered_iterate(nodes_subset=nodes_subset):
             self._propagate_options(node)
 
-            self._compute_package_id(node, default_package_id_mode)
+            self._compute_package_id(node, default_package_id_mode, default_python_requires_id_mode)
             if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
                 continue
             if node.package_id == PACKAGE_ID_UNKNOWN:
@@ -293,8 +296,9 @@ class GraphBinariesAnalyzer(object):
         output = node.conanfile.output
         node._package_id = None  # Invalidate it, so it can be re-computed
         default_package_id_mode = self._cache.config.default_package_id_mode
+        default_python_requires_id_mode = self._cache.config.default_python_requires_id_mode
         output.info("Unknown binary for %s, computing updated ID" % str(node.ref))
-        self._compute_package_id(node, default_package_id_mode)
+        self._compute_package_id(node, default_package_id_mode, default_python_requires_id_mode)
         output.info("Updated ID: %s" % node.package_id)
         if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
             return

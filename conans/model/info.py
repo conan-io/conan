@@ -276,14 +276,18 @@ class RequirementsInfo(object):
 
 class PythonRequireInfo(object):
 
-    def __init__(self, ref):
+    def __init__(self, ref, default_package_id_mode):
         self._ref = ref
-        # This is the default full version but no revision
-        self._name = ref.name
-        self._version = ref.version
-        self._user = ref.user
-        self._channel = ref.channel
+        self._name = None
+        self._version = None
+        self._user = None
+        self._channel = None
         self._revision = None
+
+        try:
+            getattr(self, default_package_id_mode)()
+        except AttributeError:
+            raise ConanException("'%s' is not a known package_id_mode" % default_package_id_mode)
 
     @property
     def sha(self):
@@ -338,9 +342,10 @@ class PythonRequireInfo(object):
 
 class PythonRequiresInfo(object):
 
-    def __init__(self, refs):
+    def __init__(self, refs, default_package_id_mode):
         if refs:
-            self._refs = [PythonRequireInfo(r) for r in sorted(refs)]
+            self._refs = [PythonRequireInfo(r, default_package_id_mode=default_package_id_mode)
+                          for r in sorted(refs)]
         else:
             self._refs = None
 
@@ -421,7 +426,7 @@ class ConanInfo(object):
 
     @staticmethod
     def create(settings, options, prefs_direct, prefs_indirect, default_package_id_mode,
-               python_requires):
+               python_requires, default_python_requires_id_mode):
         result = ConanInfo()
         result.full_settings = settings
         result.settings = settings.copy()
@@ -437,7 +442,7 @@ class ConanInfo(object):
         result.vs_toolset_compatible()
         result.discard_build_settings()
         result.default_std_matching()
-        result.python_requires = PythonRequiresInfo(python_requires)
+        result.python_requires = PythonRequiresInfo(python_requires, default_python_requires_id_mode)
         return result
 
     @staticmethod
@@ -542,7 +547,6 @@ class ConanInfo(object):
         self.settings.clear()
         self.options.clear()
         self.requires.clear()
-        self.python_requires.clear()
 
     def vs_toolset_compatible(self):
         """Default behaviour, same package for toolset v140 with compiler=Visual Studio 15 than

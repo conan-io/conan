@@ -53,7 +53,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         client.run("remove * -f")
         client.run("download Pkg/0.1@user/testing")
         self.assertIn("Pkg/0.1@user/testing: Package installed "
-                      "cd120fc0f12d892f67c821bf3cdc9d5879efa6cd", client.out)
+                      "69265e58ddc68274e0c5510905003ff78c9db5de", client.out)
 
     def with_alias_test(self):
         client = TestClient()
@@ -252,7 +252,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         client.run("remove * -f")
         client.run("download Pkg/0.1@user/testing")
         self.assertIn("Pkg/0.1@user/testing: Package installed "
-                      "cd120fc0f12d892f67c821bf3cdc9d5879efa6cd", client.out)
+                      "69265e58ddc68274e0c5510905003ff78c9db5de", client.out)
 
     def reuse_scm_test(self):
         client = TestClient()
@@ -635,7 +635,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         self.assertIn("    python_requires1/1.0@user/test", client.out)
         self.assertIn("    python_requires2/1.0@user/test", client.out)
         #   - packages
-        self.assertIn("    project/1.0@user/test:c77b07dec65c32e2fed8cdf88920062a91112724 - Build",
+        self.assertIn("    project/1.0@user/test:88cd9e14eae0af6c823ed619608b6883037e5cbc - Build",
                       client.out)
 
         #   - no mention to alias

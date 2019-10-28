@@ -401,6 +401,16 @@ class ConanClientConfigParser(ConfigParser, object):
         return default_package_id_mode
 
     @property
+    def default_python_requires_id_mode(self):
+        try:
+            default_package_id_mode = get_env("CONAN_DEFAULT_PYTHON_REQUIRES_ID_MODE")
+            if default_package_id_mode is None:
+                default_package_id_mode = self.get_item("general.default_python_requires_id_mode")
+        except ConanException:
+            return "minor_mode"
+        return default_package_id_mode
+
+    @property
     def short_paths_home(self):
         short_paths_home = get_env("CONAN_USER_HOME_SHORT")
         if short_paths_home:

@@ -84,7 +84,7 @@ class GraphLockPyRequiresTest(unittest.TestCase):
         self.assertNotIn("Tool/0.2@user/channel", lock_file)
         lock_file_json = json.loads(lock_file)
         self.assertEqual(1, len(lock_file_json["graph_lock"]["nodes"]))
-        self.assertIn("%s:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9" % ref_b,
+        self.assertIn("%s:1e1576940da80e70cd2d2ce2dddeb0571f91c6e3" % ref_b,
                       lock_file)
         self.assertIn('"Tool/0.1@user/channel#ac4036130c39cab7715b1402e8c211d3"', lock_file)
 
