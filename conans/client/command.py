@@ -514,15 +514,15 @@ class Command(object):
         subparsers.required = True
 
         get_subparser = subparsers.add_parser('get', help='Get the value of configuration item')
-        subparsers.add_parser('home', help='Retrieve the Conan home directory')
+        home_subparser = subparsers.add_parser('home', help='Retrieve the Conan home directory')
         install_subparser = subparsers.add_parser('install', help='Install a full configuration '
                                                                   'from a local or remote zip file')
         rm_subparser = subparsers.add_parser('rm', help='Remove an existing config element')
         set_subparser = subparsers.add_parser('set', help='Set a value for a configuration item')
 
-        rm_subparser.add_argument("item", help="Item to remove")
         get_subparser.add_argument("item", nargs="?", help="Item to print")
-        set_subparser.add_argument("item", help="'item=value' to set")
+        home_subparser.add_argument("-j", "--json", default=None, action=OnceArgument,
+                                    help='json file path where the config home will be written to')
         install_subparser.add_argument("item", nargs="?",
                                        help="git repository, local folder or zip file (local or "
                                        "http) where the configuration is stored")
@@ -538,6 +538,8 @@ class Command(object):
                                        'specified origin')
         install_subparser.add_argument("-tf", "--target-folder",
                                        help='Install to that path in the conan cache')
+        rm_subparser.add_argument("item", help="Item to remove")
+        set_subparser.add_argument("item", help="'item=value' to set")
 
         args = parser.parse_args(*args)
 
@@ -557,6 +559,8 @@ class Command(object):
         elif args.subcommand == "home":
             conan_home = self._conan.config_home()
             self._out.info(conan_home)
+            if args.json:
+                self._outputer.json_output({"home": conan_home}, args.json, os.getcwd())
             return conan_home
         elif args.subcommand == "install":
             verify_ssl = get_bool_from_text(args.verify_ssl)

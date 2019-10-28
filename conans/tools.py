@@ -138,6 +138,11 @@ class AptTool(tools_system_pm.AptTool):
         super(AptTool, self).__init__(output=_global_output, *args, **kwargs)
 
 
+class DnfTool(tools_system_pm.DnfTool):
+    def __init__(self, *args, **kwargs):
+        super(DnfTool, self).__init__(output=_global_output, *args, **kwargs)
+
+
 class YumTool(tools_system_pm.YumTool):
     def __init__(self, *args, **kwargs):
         super(YumTool, self).__init__(output=_global_output, *args, **kwargs)
