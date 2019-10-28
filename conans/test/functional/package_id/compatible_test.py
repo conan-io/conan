@@ -37,6 +37,39 @@ class CompatibleIDsTest(unittest.TestCase):
         self.assertIn("pkg/0.1@user/stable:22c594d7fed4994c59a1eacb24ff6ff48bc5c51c", client.out)
         self.assertIn("pkg/0.1@user/stable: Already installed!", client.out)
 
+    def compatible_setting_no_user_channel_test(self):
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile, CompatiblePackage
+
+            class Pkg(ConanFile):
+                settings = "os", "compiler"
+                def package_id(self):
+                    if self.settings.compiler == "gcc" and self.settings.compiler.version == "4.9":
+                        for version in ("4.8", "4.7", "4.6"):
+                            compatible_pkg = CompatiblePackage(self)
+                            compatible_pkg.settings.compiler.version = version
+            """)
+        profile = textwrap.dedent("""
+            [settings]
+            os = Linux
+            compiler=gcc
+            compiler.version=4.9
+            compiler.libcxx=libstdc++
+            """)
+        client.save({"conanfile.py": conanfile,
+                     "myprofile": profile})
+
+        # No user/channel
+        client.run("create . pkg/0.1@ -pr=myprofile -s compiler.version=4.8")
+        self.assertIn("pkg/0.1: Package '22c594d7fed4994c59a1eacb24ff6ff48bc5c51c' created",
+                      client.out)
+
+        client.save({"conanfile.py": GenConanfile().with_require_plain("pkg/0.1")})
+        client.run("install . -pr=myprofile")
+        self.assertIn("pkg/0.1:22c594d7fed4994c59a1eacb24ff6ff48bc5c51c", client.out)
+        self.assertIn("pkg/0.1: Already installed!", client.out)
+
     def compatible_option_test(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
@@ -112,4 +145,3 @@ class CompatibleIDsTest(unittest.TestCase):
                       client.out)
         self.assertIn('compatible_pkg.options.shared = "bad"', client.out)
         self.assertIn("ConanException: 'bad' is not a valid 'options.shared' value.", client.out)
-
