@@ -91,7 +91,7 @@ class CompatibleIDsTest(unittest.TestCase):
         client.save({"conanfile.py": GenConanfile().with_require_plain("pkg/0.1@user/stable")})
         client.run("install . -o pkg:optimized=2")
         # Information messages
-        self.assertIn("pkg/0.1@user/stable: ERROR: Compatible package ID "
+        self.assertIn("pkg/0.1@user/stable: Compatible package ID "
                       "d97fb97a840e4ac3b5e7bb8f79c87f1d333a85bc equal to the default package ID",
                       client.out)
         self.assertIn("pkg/0.1@user/stable: Main binary package "

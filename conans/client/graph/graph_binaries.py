@@ -169,8 +169,8 @@ class GraphBinariesAnalyzer(object):
                 for compatible_package in node.conanfile.compatible_packages:
                     package_id = compatible_package.package_id()
                     if package_id == node.package_id:
-                        node.conanfile.output.error("Compatible package ID %s equal to the default "
-                                                    "package ID" % package_id)
+                        node.conanfile.output.info("Compatible package ID %s equal to the default "
+                                                   "package ID" % package_id)
                         continue
                     pref = PackageReference(node.ref, package_id)
                     node.binary = None  # Invalidate it
