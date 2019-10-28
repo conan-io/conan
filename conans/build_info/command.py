@@ -28,6 +28,7 @@ def run():
     output = ConanOutput(sys.stdout, sys.stderr, True)
     exc_v1 = None
     exc_v2 = None
+    v2_subcommands = False
     valid_subcommands = ["start", "stop", "create", "update", "publish"]
     try:
         parser_v1 = ErrorCatchingArgumentParser(description="Extracts build-info from a specified "
@@ -128,12 +129,15 @@ def run():
                 check_credential_arguments()
                 publish_build_info(args.buildinfo, args.url, args.user, args.password,
                                    args.apikey)
+            v2_subcommands = any([item in vars(args).values() for item in valid_subcommands])
+
         except ArgumentParserError as exc:
             exc_v2 = exc
         except ConanException as exc:
             output.error(exc)
         except Exception as exc:
             output.error(exc)
+
 
     def print_helpv1():
         output.error(str(exc_v1))
@@ -143,7 +147,6 @@ def run():
         output.error(str(exc_v2))
         parser_v2.print_help()
 
-    v2_subcommands = any([item in vars(args).values() for item in valid_subcommands])
     if exc_v2 and v2_subcommands:
         print_helpv2()
     elif exc_v1 and exc_v2:
