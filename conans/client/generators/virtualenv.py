@@ -11,7 +11,6 @@ sh_activate_tpl = Template(textwrap.dedent("""
     #!/usr/bin/env bash
     DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
     #DIR="$( cd "$( dirname "$_" )" >/dev/null 2>&1 && pwd )"
-    echo "---- $DIR"
 
     {%- for it in modified_vars %}
     export OLD_{{it}}="${{it}}"

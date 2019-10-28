@@ -2,7 +2,6 @@ import os
 import platform
 import unittest
 
-from conans.client.generators.virtualenv import environment_filename
 from conans.test.utils.tools import TestClient, GenConanfile
 from conans.util.files import load
 
@@ -37,7 +36,7 @@ virtualenv
         client.run("create . ")
         client.save({"conanfile.txt": base}, clean_first=True)
         client.run("install . -g virtualenv_python")
-        contents = load(os.path.join(client.current_folder, environment_filename))
+        contents = load(os.path.join(client.current_folder, "environment_python.env"))
         self.assertNotIn("OTHER", contents)
         self.assertIn("PATH=", contents)
         self.assertIn("LD_LIBRARY_PATH=", contents)
@@ -73,7 +72,7 @@ class BaseConan(ConanFile):
             client.run("create . ")
             client.save({"conanfile.txt": base}, clean_first=True)
             client.run("install . -g virtualenv_python")
-            contents = load(os.path.join(client.current_folder, environment_filename))
+            contents = load(os.path.join(client.current_folder, "environment_python.env"))
             self.assertNotIn("OTHER", contents)
             if platform.system() != "Windows":
                 self.assertIn('PYTHONPATH="/path/to/something":"/otherpath"'
