@@ -10,10 +10,11 @@ environment_filename = "environment.env"
 
 sh_activate_tpl = Template(textwrap.dedent("""
     #!/usr/bin/env bash
-    DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+    # DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+    DIR="$( cd "$( dirname "$0" )" >/dev/null 2>&1 && pwd )"
 
     {%- for it in modified_vars %}
-    export OLD_{{it}}=${{it}}
+    export OLD_{{it}}="${{it}}"
     {%- endfor %}
 
     while read line; do
