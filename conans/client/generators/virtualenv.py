@@ -6,12 +6,12 @@ from jinja2 import Template
 from conans.client.tools.oss import OSInfo
 from conans.model import Generator
 
-environment_filename = "environment.env"
 
 sh_activate_tpl = Template(textwrap.dedent("""
     #!/usr/bin/env bash
-    # DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-    DIR="$( cd "$( dirname "$0" )" >/dev/null 2>&1 && pwd )"
+    DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+    #DIR="$( cd "$( dirname "$_" )" >/dev/null 2>&1 && pwd )"
+    echo "---- $DIR"
 
     {%- for it in modified_vars %}
     export OLD_{{it}}="${{it}}"
@@ -45,6 +45,7 @@ sh_deactivate_tpl = Template(textwrap.dedent("""
 class VirtualEnvGenerator(Generator):
 
     append_with_spaces = ["CPPFLAGS", "CFLAGS", "CXXFLAGS", "LIBS", "LDFLAGS", "CL", "_LINK_"]
+    environment_filename = "environment.env"
 
     def __init__(self, conanfile):
         super(VirtualEnvGenerator, self).__init__(conanfile)
@@ -121,7 +122,7 @@ class VirtualEnvGenerator(Generator):
         modified_vars = [it[0] for it in ret if it[2] != '""']
         new_vars = [it[0] for it in ret if it[2] == '""']
 
-        activate_content = sh_activate_tpl.render(environment_file=environment_filename,
+        activate_content = sh_activate_tpl.render(environment_file=self.environment_filename,
                                                   modified_vars=modified_vars, new_vars=new_vars)
         activate_lines = activate_content.splitlines()
         deactivate_content = sh_deactivate_tpl.render(modified_vars=modified_vars, new_vars=new_vars)
@@ -176,6 +177,6 @@ class VirtualEnvGenerator(Generator):
         activate, deactivate, envfile = self._sh_lines()
         result["activate.sh"] = os.linesep.join(activate)
         result["deactivate.sh"] = os.linesep.join(deactivate)
-        result[environment_filename] = os.linesep.join(envfile)
+        result[self.environment_filename] = os.linesep.join(envfile)
 
         return result

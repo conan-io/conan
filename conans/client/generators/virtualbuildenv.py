@@ -5,6 +5,7 @@ from conans.client.tools.win import vcvars_dict
 
 
 class VirtualBuildEnvGenerator(VirtualEnvGenerator):
+    environment_filename = "environment_build.env"
 
     def __init__(self, conanfile):
         super(VirtualBuildEnvGenerator, self).__init__(conanfile)
@@ -26,9 +27,10 @@ class VirtualBuildEnvGenerator(VirtualEnvGenerator):
     def content(self):
         tmp = super(VirtualBuildEnvGenerator, self).content
         ret = {}
-        # The generic virtualenv generator contents, but with the name "xxx_build.xxx"
         for name, value in tmp.items():
-            filename, ext = name.split(".")
-            ret["%s_build.%s" % (filename, ext)] = value
-
+            if name != self.environment_filename:
+                tmp = name.split(".")
+                ret["%s_build.%s" % (tmp[0], tmp[1])] = value
+            else:
+                ret[name] = value
         return ret
