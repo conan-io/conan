@@ -1,5 +1,4 @@
 from conans.client.generators.cmake import DepsCppCmake
-from conans.client.generators.cmake_common import include_build_modules
 from conans.client.generators.cmake_find_package_common import target_template
 from conans.model import Generator
 

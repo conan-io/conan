@@ -1,6 +1,6 @@
 from conans.client.generators.cmake_common import cmake_dependencies, cmake_dependency_vars, \
     cmake_global_vars, cmake_macros, cmake_package_info, cmake_settings_info, cmake_user_info_vars, \
-    generate_targets_section, include_build_modules
+    generate_targets_section
 from conans.model import Generator
 from conans.paths import BUILD_INFO_CMAKE
 

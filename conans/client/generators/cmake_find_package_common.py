@@ -52,8 +52,8 @@ foreach(_LIBRARY_NAME ${{{name}_LIBRARY_LIST{build_type_suffix}}})
 endforeach()
 set({name}_LIBS{build_type_suffix} ${{{name}_LIBRARIES{build_type_suffix}}})
 
-set(CMAKE_MODULE_PATH {deps.build_paths} ${{CMAKE_MODULE_PATH}} ${{CMAKE_CURRENT_LIST_DIR}})
-set(CMAKE_PREFIX_PATH {deps.build_paths} ${{CMAKE_PREFIX_PATH}} ${{CMAKE_CURRENT_LIST_DIR}})
+set(CMAKE_MODULE_PATH {deps.build_paths} ${{CMAKE_MODULE_PATH}})
+set(CMAKE_PREFIX_PATH {deps.build_paths} ${{CMAKE_PREFIX_PATH}})
 
 foreach(_BUILD_MODULE_PATH ${{{name}_BUILD_MODULES_PATHS{build_type_suffix}}})
     include(${{_BUILD_MODULE_PATH}})
