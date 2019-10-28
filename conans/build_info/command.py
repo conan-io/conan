@@ -12,7 +12,7 @@ from conans.client.output import ConanOutput
 
 
 def run():
-    if sys.argv[1] == "--v2":
+    if len(sys.argv) > 2 and sys.argv[1] == "--v2":
         sys.argv.pop(1)
         runv2()
     else:
