@@ -145,7 +145,7 @@ class BuildInfoCreator(object):
 
         with open(self._lockfile) as json_data:
             data = json.load(json_data)
-        profile = dict(_parse_profile(data["profile"]))
+        profile = dict(_parse_profile(data["profile_host"]))
 
         # Gather modules, their artifacts and recursively all required artifacts
         for _, node in data["graph_lock"]["nodes"].items():

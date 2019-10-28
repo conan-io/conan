@@ -52,9 +52,10 @@ class MyBuildInfoCreation(unittest.TestCase):
         mock_resp.content = None
         return mock_resp
 
+    @patch("conans.build_info.build_info.get_conan_user_home")
     @patch("conans.build_info.build_info.ClientCache")
     @patch("conans.build_info.build_info.requests.put", new=mock_response)
-    def test_build_info_create_update_publish(self, mock_cache):
+    def test_build_info_create_update_publish(self, mock_cache, user_home_mock):
         conanfile = textwrap.dedent("""
             from conans import ConanFile, load
             import os
@@ -67,8 +68,11 @@ class MyBuildInfoCreation(unittest.TestCase):
                 def package(self):
                     self.copy("*myfile.txt")
                 """)
-        client = TestClient(default_server_user=True)
+        base_folder = temp_folder(True)
+        cache_folder = os.path.join(base_folder, ".conan")
+        client = TestClient(default_server_user=True, cache_folder=cache_folder)
         mock_cache.return_value = client.cache
+        user_home_mock.return_value = base_folder
         client.save({"conanfile.py": conanfile.format(requires=""),
                      "myfile.txt": "HelloA"})
         client.run("create . PkgA/0.1@user/channel")
