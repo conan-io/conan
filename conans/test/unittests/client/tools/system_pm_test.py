@@ -1,8 +1,14 @@
+import os
+import stat
+
 import mock
 import platform
 import six
 import unittest
 
+from conans.client.tools import environment_append
+
+from conans.test.utils.test_files import temp_folder
 from six import StringIO
 
 from conans import tools
@@ -15,6 +21,7 @@ from conans.errors import ConanException
 from conans.test.unittests.util.tools_test import RunnerMock
 from conans.test.utils.tools import TestBufferConanOutput
 from conans.test.utils.conanfile import MockSettings, MockConanfile
+from conans.util.files import save
 
 
 class SystemPackageToolTest(unittest.TestCase):
@@ -63,7 +70,7 @@ class SystemPackageToolTest(unittest.TestCase):
         os_info.is_macos = False
         os_info.is_linux = True
         os_info.is_windows = False
-        os_info.linux_distro = "fedora"  # Will instantiate YumTool
+        os_info.linux_distro = "fedora"  # Will instantiate DnfTool
 
         with six.assertRaisesRegex(self, ConanException, "add_repository not implemented"):
             new_out = StringIO()
@@ -150,6 +157,18 @@ class SystemPackageToolTest(unittest.TestCase):
             spt.update()
             self.assertEqual(runner.command_called, "sudo -A apt-get update")
 
+            # Fake a dnf exe and check if for fedora it used it
+            tmp = temp_folder()
+            dnf_path = os.path.join(tmp, "dnf{}".format(".exe" if platform.system() == "Windows" else ".sh"))
+            save(dnf_path, "fake_executable")
+            os.chmod(dnf_path, stat.S_IEXEC)
+            with environment_append({"PATH": tmp}):
+                os_info.linux_distro = "fedora"
+                spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
+                spt.update()
+                self.assertEqual(runner.command_called, "sudo -A dnf check-update -y")
+
+            # Without DNF in the path,
             os_info.linux_distro = "fedora"
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             spt.update()
@@ -452,6 +471,8 @@ class SystemPackageToolTest(unittest.TestCase):
                 update_command = "sudo -A apt-get update"
             elif os_info.with_yum:
                 update_command = "sudo -A yum check-update -y"
+            elif os_info.with_dnf:
+                update_command = "sudo -A dnf check-update -y"
             elif os_info.with_zypper:
                 update_command = "sudo -A zypper --non-interactive ref"
             elif os_info.with_pacman:
