@@ -156,6 +156,7 @@ class VirtualEnvIntegrationTestCase(unittest.TestCase):
         with environment_append({"PATH": [self.ori_path, ]}):
             # FIXME: I need this context because restore values for the 'deactivate' script are
             #        generated at the 'generator.content' and not when the 'activate' is called.
+            generator.output_path = self.test_folder
             save_files(self.test_folder, generator.content)
 
             # Generate the list of commands to execute

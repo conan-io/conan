@@ -9,8 +9,8 @@ from conans.model import Generator
 
 sh_activate_tpl = Template(textwrap.dedent("""
     #!/usr/bin/env bash
-    DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-    #DIR="$( cd "$( dirname "$_" )" >/dev/null 2>&1 && pwd )"
+    # DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+    # DIR="$( cd "$( dirname "$_" )" >/dev/null 2>&1 && pwd )"
 
     {%- for it in modified_vars %}
     export OLD_{{it}}="${{it}}"
@@ -19,7 +19,7 @@ sh_activate_tpl = Template(textwrap.dedent("""
     while read line; do
         LINE="$(eval echo $line)";
         export "$LINE";
-    done < "$DIR/{{ environment_file }}"
+    done < "{{ environment_file }}"
 
     export CONAN_OLD_PS1=$PS1
     export PS1="(conanenv) $PS1"
@@ -121,7 +121,8 @@ class VirtualEnvGenerator(Generator):
         modified_vars = [it[0] for it in ret if it[2] != '""']
         new_vars = [it[0] for it in ret if it[2] == '""']
 
-        activate_content = sh_activate_tpl.render(environment_file=self.environment_filename,
+        environment_filepath = os.path.join(self.output_path, self.environment_filename)
+        activate_content = sh_activate_tpl.render(environment_file=environment_filepath,
                                                   modified_vars=modified_vars, new_vars=new_vars)
         activate_lines = activate_content.splitlines()
         deactivate_content = sh_deactivate_tpl.render(modified_vars=modified_vars, new_vars=new_vars)
