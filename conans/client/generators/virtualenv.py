@@ -24,7 +24,7 @@ sh_activate_tpl = Template(textwrap.dedent("""
     export CONAN_OLD_PS1=$PS1
     export PS1="(conanenv) $PS1"
 
-"""))  # .format(environment_filename)
+"""))
 
 sh_deactivate_tpl = Template(textwrap.dedent("""
     #!/usr/bin/env bash
