@@ -4,6 +4,7 @@ import platform
 import unittest
 
 from conans.client.generators.virtualbuildenv import VirtualBuildEnvGenerator
+from conans.client.generators.virtualenv import environment_filename
 from conans.test.utils.conanfile import ConanFileMock, MockSettings
 
 
@@ -12,6 +13,7 @@ class VirtualBuildEnvGeneratorGCCTest(unittest.TestCase):
     activate_sh = "activate_build.sh"
     activate_bat = "activate_build.bat"
     activate_ps1 = "activate_build.ps1"
+    environment_filename = "environment_build.env"
 
     @classmethod
     def setUpClass(cls):
@@ -23,7 +25,7 @@ class VirtualBuildEnvGeneratorGCCTest(unittest.TestCase):
         cls.result = cls.generator.content
 
     def test_output(self):
-        keys = ["deactivate_build.sh", "activate_build.sh"]
+        keys = ["deactivate_build.sh", "activate_build.sh", self.environment_filename]
         if platform.system() == "Windows":
             keys += ["activate_build.bat", "deactivate_build.bat",
                      "activate_build.ps1", "deactivate_build.ps1"]
@@ -38,14 +40,12 @@ class VirtualBuildEnvGeneratorGCCTest(unittest.TestCase):
         self.assertEqual(self.generator.env["LIBS"], [])
 
     def test_scripts(self):
-        self.assertIn('CPPFLAGS="-DNDEBUG ${CPPFLAGS+ $CPPFLAGS}"', self.result[self.activate_sh])
-        self.assertIn('CXXFLAGS="-O3 -s --sysroot=/path/to/sysroot ${CXXFLAGS+ $CXXFLAGS}"',
-                      self.result[self.activate_sh])
-        self.assertIn('CFLAGS="-O3 -s --sysroot=/path/to/sysroot ${CFLAGS+ $CFLAGS}"',
-                      self.result[self.activate_sh])
-        self.assertIn('LDFLAGS="--sysroot=/path/to/sysroot ${LDFLAGS+ $LDFLAGS}"',
-                      self.result[self.activate_sh])
-        self.assertIn('LIBS="${LIBS+ $LIBS}"', self.result[self.activate_sh])
+        content = self.result[self.environment_filename]
+        self.assertIn('CPPFLAGS="-DNDEBUG ${CPPFLAGS+ $CPPFLAGS}"', content)
+        self.assertIn('CXXFLAGS="-O3 -s --sysroot=/path/to/sysroot ${CXXFLAGS+ $CXXFLAGS}"', content)
+        self.assertIn('CFLAGS="-O3 -s --sysroot=/path/to/sysroot ${CFLAGS+ $CFLAGS}"', content)
+        self.assertIn('LDFLAGS="--sysroot=/path/to/sysroot ${LDFLAGS+ $LDFLAGS}"', content)
+        self.assertIn('LIBS="${LIBS+ $LIBS}"', content)
 
         if platform.system() == "Windows":
             self.assertIn('SET CPPFLAGS=-DNDEBUG %CPPFLAGS%',

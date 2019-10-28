@@ -4,7 +4,7 @@ import platform
 import unittest
 
 from conans import ConanFile, Settings
-from conans.client.generators.virtualenv import VirtualEnvGenerator
+from conans.client.generators.virtualenv import VirtualEnvGenerator, environment_filename
 from conans.model.env_info import EnvValues
 from conans.test.utils.tools import TestBufferConanOutput
 
@@ -32,18 +32,19 @@ class VirtualEnvGeneratorTest(unittest.TestCase):
         cls.result = cls.generator.content
 
     def test_output(self):
-        keys = ["deactivate.sh", "activate.sh"]
+        keys = ["deactivate.sh", "activate.sh", environment_filename]
         if platform.system() == "Windows":
-            keys += ["activate.bat", "deactivate.bat", "activate.ps1", "deactivate.ps1"]
+            keys += ["activate.bat", "deactivate.bat", "activate.ps1",
+                     "deactivate.ps1"]
 
         self.assertListEqual(sorted(keys), sorted(self.result.keys()))
 
     def test_variable(self):
-        self.assertIn("USER_FLAG=\"user_value\"", self.result[self.activate_sh])
+        self.assertIn("USER_FLAG=\"user_value\"", self.result[environment_filename])
 
     def test_list_variable(self):
-        self.assertIn("PATH=\"another_path\"${PATH+:$PATH}", self.result[self.activate_sh])
-        self.assertIn("PATH2=\"p1\":\"p2\"${PATH2+:$PATH2}", self.result[self.activate_sh])
+        self.assertIn("PATH=\"another_path\"${PATH+:$PATH}", self.result[environment_filename])
+        self.assertIn("PATH2=\"p1\":\"p2\"${PATH2+:$PATH2}", self.result[environment_filename])
 
         if platform.system() == "Windows":
             self.assertIn("PATH=another_path;%PATH%", self.result[self.activate_bat])
@@ -54,7 +55,7 @@ class VirtualEnvGeneratorTest(unittest.TestCase):
 
     def test_list_with_spaces(self):
         self.assertIn("CL", VirtualEnvGenerator.append_with_spaces)
-        self.assertIn("CL=\"cl1 cl2 ${CL+ $CL}\"", self.result[self.activate_sh])
+        self.assertIn("CL=\"cl1 cl2 ${CL+ $CL}\"", self.result[environment_filename])
 
         if platform.system() == "Windows":
             self.assertIn("CL=cl1 cl2 %CL%", self.result[self.activate_bat])
