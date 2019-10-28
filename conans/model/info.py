@@ -343,6 +343,7 @@ class PythonRequireInfo(object):
 class PythonRequiresInfo(object):
 
     def __init__(self, refs, default_package_id_mode):
+        self._default_package_id_mode = default_package_id_mode
         if refs:
             self._refs = [PythonRequireInfo(r, default_package_id_mode=default_package_id_mode)
                           for r in sorted(refs)]
@@ -351,7 +352,7 @@ class PythonRequiresInfo(object):
 
     def copy(self):
         # For build_id() implementation
-        return PythonRequiresInfo(self._refs)
+        return PythonRequiresInfo(self._refs, self._default_package_id_mode)
 
     def __bool__(self):
         return bool(self._refs)
