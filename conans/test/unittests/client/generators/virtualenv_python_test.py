@@ -1,7 +1,6 @@
 import unittest
 
 from conans import ConanFile, Settings
-from conans.client.generators.virtualenv import environment_filename
 from conans.client.generators.virtualenv_python import VirtualEnvPythonGenerator
 from conans.model.env_info import DepsEnvInfo
 from conans.model.env_info import EnvValues
@@ -23,5 +22,5 @@ class VirtualEnvPythonGeneratorTest(unittest.TestCase):
         content = gen.content
 
         self.assertIn('PYTHONPATH="1":"2":"three":"DepAPath":"DepBPath"${PYTHONPATH+:$PYTHONPATH}',
-                      content[environment_filename])
+                      content[gen.environment_filename])
 
