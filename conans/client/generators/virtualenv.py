@@ -107,6 +107,7 @@ class VirtualEnvGenerator(Generator):
                 # single value
                 value = "\"%s\"" % value if quote_elements else value
             activate_value = "\"%s\"" % value if quote_full_value else value
+            activate_value = activate_value.replace("\\", "\\\\")
 
             # deactivate values
             value = os.environ.get(name, "")

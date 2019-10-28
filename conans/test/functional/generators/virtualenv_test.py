@@ -194,7 +194,7 @@ class VirtualEnvIntegrationTestCase(unittest.TestCase):
 
     def test_basic_variable(self):
         generator = VirtualEnvGenerator(ConanFileMock())
-        generator.env = {"USER_VAR": r"some value with space and \\ (backslash)",
+        generator.env = {"USER_VAR": r"some value with space and \ (backslash)",
                          "ANOTHER": "data"}
 
         _, environment = self._run_virtualenv(generator)
@@ -232,13 +232,14 @@ class VirtualEnvIntegrationTestCase(unittest.TestCase):
         existing_path = os.environ.get("PATH")
 
         generator = VirtualEnvGenerator(ConanFileMock())
-        generator.env = {"PATH": [os.path.join(self.test_folder, "bin")],
+        generator.env = {"PATH": [os.path.join(self.test_folder, "bin"), r'other\path'],
                          "WHATEVER": ["list", "other"]}
 
         _, environment = self._run_virtualenv(generator)
 
         self.assertEqual(environment["PATH"], os.pathsep.join([
             os.path.join(self.test_folder, "bin"),
+            r'other\path',
             self.ori_path,
             existing_path
         ]))

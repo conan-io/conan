@@ -1,10 +1,10 @@
+import os
 import platform
 import unittest
-import os
 
-from conans.util.files import load
-
+from conans.client.generators.virtualenv import environment_filename
 from conans.test.utils.tools import TestClient, GenConanfile
+from conans.util.files import load
 
 
 class VirtualEnvPythonGeneratorTest(unittest.TestCase):
@@ -37,8 +37,7 @@ virtualenv
         client.run("create . ")
         client.save({"conanfile.txt": base}, clean_first=True)
         client.run("install . -g virtualenv_python")
-        name = "activate_run_python.sh" if platform.system() != "Windows" else "activate_run_python.bat"
-        contents = load(os.path.join(client.current_folder, name))
+        contents = load(os.path.join(client.current_folder, environment_filename))
         self.assertNotIn("OTHER", contents)
         self.assertIn("PATH=", contents)
         self.assertIn("LD_LIBRARY_PATH=", contents)
@@ -74,8 +73,7 @@ class BaseConan(ConanFile):
             client.run("create . ")
             client.save({"conanfile.txt": base}, clean_first=True)
             client.run("install . -g virtualenv_python")
-            name = "activate_run_python.sh" if platform.system() != "Windows" else "activate_run_python.bat"
-            contents = load(os.path.join(client.current_folder, name))
+            contents = load(os.path.join(client.current_folder, environment_filename))
             self.assertNotIn("OTHER", contents)
             if platform.system() != "Windows":
                 self.assertIn('PYTHONPATH="/path/to/something":"/otherpath"'
