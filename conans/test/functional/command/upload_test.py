@@ -761,10 +761,10 @@ class Pkg(ConanFile):
             "sha1"]
         recipe_md5 = metadata.recipe.checksums["conanfile.py"]["md5"]
         recipe_sha1 = metadata.recipe.checksums["conanfile.py"]["sha1"]
-        self.assertEqual(len(package_md5), 32)
-        self.assertEqual(len(package_sha1), 40)
-        self.assertEqual(len(recipe_md5), 32)
-        self.assertEqual(len(recipe_sha1), 40)
+        self.assertEqual(package_md5, "25f53ac9685e07815b990e7c6f21bfd0")
+        self.assertEqual(package_sha1, "be152c82859285658a06816aaaec529a159c33d3")
+        self.assertEqual(recipe_md5, "8eda41e0997f3eacc436fb6c621d7396")
+        self.assertEqual(recipe_sha1, "b97d6b26be5bd02252a44c265755f873cf5ec70b")
         client.run('remove * -f')
         client.run('install lib/1.0@user/channel -r default')
         metadata = client.cache.package_layout(ref).load_metadata()
