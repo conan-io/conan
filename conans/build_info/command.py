@@ -20,6 +20,7 @@ def run():
 
 
 def runv1():
+    output = ConanOutput(sys.stdout, sys.stderr, True)
     parser = argparse.ArgumentParser(description='Extracts build-info from a specified '
                                                  'conan trace log and return a valid JSON')
     parser.add_argument('trace_path', help='Path to the conan trace log file e.g.: '
@@ -32,10 +33,10 @@ def runv1():
         args = parser.parse_args()
 
         if not os.path.exists(args.trace_path):
-            print("Error, conan trace log not found! '%s'" % args.trace_path)
+            output.error("Conan trace log not found! '%s'" % args.trace_path)
             exit(1)
         if args.output and not os.path.exists(os.path.dirname(args.output)):
-            print("Error, output file directory not found! '%s'" % args.trace_path)
+            output.error("Output file directory not found! '%s'" % args.trace_path)
             exit(1)
 
         info = get_build_info(args.trace_path)
@@ -43,13 +44,14 @@ def runv1():
         if args.output:
             save(args.output, the_json)
         else:
-            print(the_json)
+            output.write(the_json)
     except Exception as exc:
-        print(exc)
+        output.error(exc)
         exit(1)
     except SystemExit:
-        print("Use 'conan_build_info --v2' to see the usage of the new recommended way to generate "
-              "build info using lockfiles")
+        output.writeln("")
+        output.warn("Use 'conan_build_info --v2' to see the usage of the new recommended way to "
+                    "generate build info using lockfiles")
 
 
 def runv2():
