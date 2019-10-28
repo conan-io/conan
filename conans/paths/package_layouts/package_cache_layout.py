@@ -15,7 +15,7 @@ from conans.model.package_metadata import PackageMetadata
 from conans.model.ref import ConanFileReference
 from conans.model.ref import PackageReference
 from conans.paths import CONANFILE, SYSTEM_REQS, EXPORT_FOLDER, EXPORT_SRC_FOLDER, SRC_FOLDER, \
-    BUILD_FOLDER, PACKAGES_FOLDER, SYSTEM_REQS_FOLDER, SCM_FOLDER, PACKAGE_METADATA
+    BUILD_FOLDER, PACKAGES_FOLDER, SYSTEM_REQS_FOLDER, PACKAGE_METADATA, SCM_SRC_FOLDER
 from conans.util.files import load, save, rmdir
 from conans.util.locks import Lock, NoLock, ReadLock, SimpleLock, WriteLock
 from conans.util.log import logger
@@ -67,6 +67,10 @@ class PackageCacheLayout(object):
     def source(self):
         return os.path.join(self._base_folder, SRC_FOLDER)
 
+    @short_path
+    def scm_sources(self):
+        return os.path.join(self._base_folder, SCM_SRC_FOLDER)
+
     def builds(self):
         return os.path.join(self._base_folder, BUILD_FOLDER)
 
@@ -104,9 +108,6 @@ class PackageCacheLayout(object):
         assert isinstance(pref, PackageReference)
         assert pref.ref == self._ref, "{!r} != {!r}".format(pref.ref, self._ref)
         return os.path.join(self._base_folder, PACKAGES_FOLDER, pref.id)
-
-    def scm_folder(self):
-        return os.path.join(self._base_folder, SCM_FOLDER)
 
     def package_metadata(self):
         return os.path.join(self._base_folder, PACKAGE_METADATA)

@@ -323,6 +323,9 @@ class Command(object):
         parser.add_argument("-tf", "--test-folder", action=OnceArgument,
                             help='Alternative test folder name. By default it is "test_package". '
                                  'Use "None" to skip the test stage')
+        parser.add_argument("--ignore-dirty", default=False, action='store_true',
+                            help='When using the "scm" feature with "auto" values, capture the'
+                                 ' revision and url even if there are uncommitted changes')
 
         _add_manifests_arguments(parser)
         _add_common_install_arguments(parser, build_help=_help_build_policies)
@@ -353,7 +356,7 @@ class Command(object):
                                       args.manifests, args.manifests_interactive,
                                       args.remote, args.update,
                                       test_build_folder=args.test_build_folder,
-                                      lockfile=args.lockfile)
+                                      lockfile=args.lockfile, ignore_dirty=args.ignore_dirty)
         except ConanException as exc:
             info = exc.info
             raise
@@ -584,7 +587,8 @@ class Command(object):
         parser.add_argument("--paths", action='store_true', default=False,
                             help='Show package paths in local cache')
         parser.add_argument("-bo", "--build-order",
-                            help='given a modified reference, return an ordered list to build (CI)',
+                            help="given a modified reference, return an ordered list to build (CI)."
+                                 " [DEPRECATED: use 'conan graph build-order ...' instead]",
                             nargs=1, action=Extender)
         parser.add_argument("-g", "--graph", action=OnceArgument,
                             help='Creates file with project dependencies graph. It will generate '
@@ -612,6 +616,10 @@ class Command(object):
 
         _add_common_install_arguments(parser, build_help=build_help)
         args = parser.parse_args(*args)
+
+        if args.build_order:
+            self._out.warn("Usage of `--build-order` argument is deprecated and can return"
+                           " wrong results. Use `conan graph build-order ...` instead.")
 
         if args.install_folder and (args.profile or args.settings or args.options or args.env):
             raise ArgumentError(None,
@@ -905,6 +913,9 @@ class Command(object):
         parser.add_argument("-l", "--lockfile", action=OnceArgument, nargs='?', const=".",
                             help="Path to a lockfile or folder containing 'conan.lock' file. "
                             "Lockfile will be updated with the exported package")
+        parser.add_argument("--ignore-dirty", default=False, action='store_true',
+                            help='When using the "scm" feature with "auto" values, capture the'
+                                 ' revision and url even if there are uncommitted changes')
 
         args = parser.parse_args(*args)
 
@@ -929,7 +940,8 @@ class Command(object):
                                           force=args.force,
                                           user=user,
                                           channel=channel,
-                                          lockfile=args.lockfile)
+                                          lockfile=args.lockfile,
+                                          ignore_dirty=args.ignore_dirty)
         except ConanException as exc:
             info = exc.info
             raise
@@ -957,6 +969,9 @@ class Command(object):
         parser.add_argument("-l", "--lockfile", action=OnceArgument, nargs='?', const=".",
                             help="Path to a lockfile or folder containing 'conan.lock' file. "
                             "Lockfile will be updated with the exported package")
+        parser.add_argument("--ignore-dirty", default=False, action='store_true',
+                            help='When using the "scm" feature with "auto" values, capture the'
+                                 ' revision and url even if there are uncommitted changes')
 
         args = parser.parse_args(*args)
         self._warn_python_version()
@@ -970,7 +985,8 @@ class Command(object):
 
         return self._conan.export(path=args.path,
                                   name=name, version=version, user=user, channel=channel,
-                                  keep_source=args.keep_source, lockfile=args.lockfile)
+                                  keep_source=args.keep_source, lockfile=args.lockfile,
+                                  ignore_dirty=args.ignore_dirty)
 
     def remove(self, *args):
         """
