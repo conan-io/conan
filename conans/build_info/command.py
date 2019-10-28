@@ -51,10 +51,11 @@ def runv1():
 
 def runv2():
     output = ConanOutput(sys.stdout, sys.stderr, True)
-    parser_v2 = argparse.ArgumentParser(
+    parser = argparse.ArgumentParser(
         description="Generates build info build info from lockfiles information",
         prog="conan_build_info")
-    subparsers = parser_v2.add_subparsers(dest="subcommand", help="sub-command help")
+    subparsers = parser.add_subparsers(dest="subcommand", help="sub-command help")
+
     parser_start = subparsers.add_parser("start",
                                          help="Command to incorporate to the "
                                               "artifacts.properties the build name and number")
@@ -97,15 +98,15 @@ def runv2():
 
     def check_credential_arguments():
         if args.user and args.apikey:
-            parser_v2.error("Please select one authentificacion method --user USER "
-                            "--password PASSWORD or --apikey APIKEY")
+            parser.error("Please select one authentificacion method --user USER "
+                         "--password PASSWORD or --apikey APIKEY")
         if args.user and not args.password:
-            parser_v2.error(
+            parser.error(
                 "Please specify a password for user '{}' with --password PASSWORD".format(
                     args.user))
 
     try:
-        args = parser_v2.parse_args()
+        args = parser.parse_args()
         if args.subcommand == "start":
             start_build_info(output, args.build_name, args.build_number)
         if args.subcommand == "stop":
