@@ -2,9 +2,11 @@ import os
 import re
 import unittest
 
+import six
+
 from conans.client.build.cmake_flags import CMakeDefinitionsBuilder
 from conans.client.conf import default_settings_yml
-from conans.client.generators import CMakeFindPackageGenerator
+from conans.client.generators import CMakeFindPackageGenerator, CMakeFindPackageMultiGenerator
 from conans.client.generators.cmake import CMakeGenerator
 from conans.client.generators.cmake_multi import CMakeMultiGenerator
 from conans.errors import ConanException
@@ -34,7 +36,9 @@ class _MockSettings(object):
     def constraint(self, _):
         return self
 
-    def get_safe(self, _):
+    def get_safe(self, name):
+        if name == "build_type":
+            return self.build_type
         return None
 
     def items(self):
@@ -345,21 +349,29 @@ endmacro()""", macro)
         self.assertIn('set(CONAN_LIBS  ${CONAN_FRAMEWORK_OPENGL} '
                       '${CONAN_FRAMEWORK_OPENCL} ${CONAN_LIBS})', content)
 
-    def cpp_info_name_cmake_vars_test(self):
-        """
-        Test cpp_info.names values are applied instead of the reference name
-        """
-        conanfile = ConanFile(TestBufferConanOutput(), None)
-        conanfile.initialize(Settings({}), EnvValues())
+
+class CMakeCppInfoNameTest(unittest.TestCase):
+    """
+    Test cpp_info.name values are applied in generators instead of the reference name
+    """
+
+    def setUp(self):
+        self.conanfile = ConanFile(TestBufferConanOutput(), None)
+        settings = _MockSettings()
+        settings.build_type = "Debug"
+        self.conanfile.initialize(settings, EnvValues())
         ref = ConanFileReference.loads("my_pkg/0.1@lasote/stables")
         cpp_info = CppInfo("dummy_root_folder1")
         cpp_info.name = "MyPkG"
-        conanfile.deps_cpp_info.update(cpp_info, ref.name)
+        self.conanfile.deps_cpp_info.update(cpp_info, ref.name)
         ref = ConanFileReference.loads("my_pkg2/0.1@lasote/stables")
         cpp_info = CppInfo("dummy_root_folder2")
         cpp_info.name = "MyPkG2"
-        conanfile.deps_cpp_info.update(cpp_info, ref.name)
-        generator = CMakeGenerator(conanfile)
+        cpp_info.public_deps = ["my_pkg"]
+        self.conanfile.deps_cpp_info.update(cpp_info, ref.name)
+
+    def cmake_test(self):
+        generator = CMakeGenerator(self.conanfile)
         content = generator.content
         self.assertIn("set(CONAN_DEPENDENCIES my_pkg my_pkg2)", content)
         content = content.replace("set(CONAN_DEPENDENCIES my_pkg my_pkg2)", "")
@@ -370,21 +382,22 @@ endmacro()""", macro)
         self.assertNotIn('CONAN_PKG::my_pkg', content)
         self.assertNotIn('CONAN_PKG::my_pkg2', content)
 
-    def cpp_info_name_cmake_find_package_test(self):
-        """
-        Test cpp_info.names values are applied instead of the reference name
-        """
-        conanfile = ConanFile(TestBufferConanOutput(), None)
-        conanfile.initialize(Settings({}), EnvValues())
-        ref = ConanFileReference.loads("my_pkg/0.1@lasote/stables")
-        cpp_info = CppInfo("dummy_root_folder1")
-        cpp_info.name = "MyPkG"
-        conanfile.deps_cpp_info.update(cpp_info, ref.name)
-        ref = ConanFileReference.loads("my_pkg2/0.1@lasote/stables")
-        cpp_info = CppInfo("dummy_root_folder2")
-        cpp_info.name = "MyPkG2"
-        conanfile.deps_cpp_info.update(cpp_info, ref.name)
-        generator = CMakeFindPackageGenerator(conanfile)
+    def cmake_multi_test(self):
+        generator = CMakeMultiGenerator(self.conanfile)
+        content = generator.content
+        self.assertIn("set(CONAN_DEPENDENCIES_DEBUG my_pkg my_pkg2)",
+                      content["conanbuildinfo_debug.cmake"])
+        self.assertNotIn("my_pkg", content["conanbuildinfo_multi.cmake"])
+        self.assertNotIn("MY_PKG", content["conanbuildinfo_multi.cmake"])
+        self.assertIn('add_library(CONAN_PKG::MyPkG INTERFACE IMPORTED)',
+                      content["conanbuildinfo_multi.cmake"])
+        self.assertIn('add_library(CONAN_PKG::MyPkG2 INTERFACE IMPORTED)',
+                      content["conanbuildinfo_multi.cmake"])
+        self.assertNotIn('CONAN_PKG::my_pkg', content["conanbuildinfo_multi.cmake"])
+        self.assertNotIn('CONAN_PKG::my_pkg2', content["conanbuildinfo_multi.cmake"])
+
+    def cmake_find_package_test(self):
+        generator = CMakeFindPackageGenerator(self.conanfile)
         content = generator.content
         self.assertIn("FindMyPkG.cmake", content.keys())
         self.assertIn("FindMyPkG2.cmake", content.keys())
@@ -394,4 +407,20 @@ endmacro()""", macro)
         self.assertNotIn("MY_PKG", content["FindMyPkG2.cmake"])
         self.assertIn("add_library(MyPkG::MyPkG INTERFACE IMPORTED)", content["FindMyPkG.cmake"])
         self.assertIn("add_library(MyPkG2::MyPkG2 INTERFACE IMPORTED)", content["FindMyPkG2.cmake"])
+        self.assertIn("find_dependency(MyPkG REQUIRED)", content["FindMyPkG2.cmake"])
 
+    def cmake_find_package_multi_test(self):
+        generator = CMakeFindPackageMultiGenerator(self.conanfile)
+        content = generator.content
+        six.assertCountEqual(self, ['MyPkG2Targets.cmake', 'MyPkGConfig.cmake', 'MyPkG2Config.cmake',
+                                    'MyPkGTargets.cmake', 'MyPkGTarget-debug.cmake',
+                                    'MyPkG2Target-debug.cmake'], content.keys())
+        self.assertNotIn("my_pkg", content["MyPkGConfig.cmake"])
+        self.assertNotIn("MY_PKG", content["MyPkGConfig.cmake"])
+        self.assertNotIn("my_pkg", content["MyPkG2Config.cmake"])
+        self.assertNotIn("MY_PKG", content["MyPkG2Config.cmake"])
+        self.assertIn("add_library(MyPkG::MyPkG INTERFACE IMPORTED)",
+                      content["MyPkGTargets.cmake"])
+        self.assertIn("add_library(MyPkG2::MyPkG2 INTERFACE IMPORTED)",
+                      content["MyPkG2Targets.cmake"])
+        self.assertIn("find_dependency(MyPkG REQUIRED NO_MODULE)", content["MyPkG2Config.cmake"])
