@@ -187,7 +187,11 @@ VAR2=23
         info = CppInfo(folder)
         info.filter_empty = False  # Only for unit testing
         info.build_modules.append("my_module.cmake")
+        info.debug.build_modules = ["mod-release.cmake"]
+        info.debug.filter_empty = False  # Only for unit testing
         deps_cpp_info = DepsCppInfo()
         deps_cpp_info.update(info, "myname")
         self.assertListEqual([os.path.join(folder, "my_module.cmake")],
                              deps_cpp_info["myname"].build_modules_paths)
+        self.assertListEqual([os.path.join(folder, "mod-release.cmake")],
+                             deps_cpp_info["myname"].debug.build_modules_paths)

@@ -2,6 +2,8 @@ import os
 import re
 import unittest
 
+from mock import patch
+
 from conans.client.build.cmake_flags import CMakeDefinitionsBuilder
 from conans.client.conf import default_settings_yml
 from conans.client.generators import CMakeFindPackageGenerator, CMakeFindPackageMultiGenerator
@@ -415,7 +417,8 @@ class CMakeBuildModulesTest(unittest.TestCase):
         cpp_info.filter_empty = False  # For testing purposes only
         cpp_info.name = ref.name
         cpp_info.build_modules = ["other-mod.cmake"]
-        # cpp_info.release.build_modules = ["release-mod.cmake"]
+        cpp_info.release.build_modules = ["release-mod.cmake"]
+        cpp_info.release.filter_empty = False  # For testing purposes only
         self.conanfile.deps_cpp_info.update(cpp_info, ref.name)
 
     def cmake_test(self):
@@ -432,23 +435,33 @@ class CMakeBuildModulesTest(unittest.TestCase):
         self.assertIn("conan_include_build_modules()", content)
 
     def cmake_multi_test(self):
-        generator = CMakeMultiGenerator(self.conanfile)
-        content = generator.content
-        print(content["conanbuildinfo_release.cmake"])
-        print("KKKKKKKKKKKKKKKKKKKKKK")
-        print(content["conanbuildinfo_multi.cmake"])
-        self.assertIn('set(CONAN_BUILD_MODULES_PATHS_RELEASE "dummy_root_folder1/my-module.cmake"'
-                      '\n\t\t\t"dummy_root_folder2/other-mod.cmake" '
-                      '${CONAN_BUILD_MODULES_PATHS_RELEASE})',
-                      content["conanbuildinfo_release.cmake"])
-        self.assertIn('set(CONAN_BUILD_MODULES_PATHS_MY_PKG_RELEASE '
-                      '"dummy_root_folder1/my-module.cmake")',
-                      content["conanbuildinfo_release.cmake"])
-        self.assertIn('set(CONAN_BUILD_MODULES_PATHS_MY_PKG2_RELEASE '
-                      '"dummy_root_folder2/other-mod.cmake")',
-                      content["conanbuildinfo_release.cmake"])
-        self.assertIn("macro(conan_include_build_modules)", content["conanbuildinfo_multi.cmake"])
-        self.assertIn("conan_include_build_modules()", content["conanbuildinfo_multi.cmake"])
+        # Mock extend() function to set filter_empty = False
+        from conans.client.generators.cmake_multi import extend
+        extend_original = extend
+
+        def extend_config(cpp_info, config):
+            result = extend_original(cpp_info, config)
+            result.filter_empty = False  # Do not filter paths in generated configs
+            return result
+
+        with patch('conans.client.generators.cmake_multi.extend', extend_config):
+            generator = CMakeMultiGenerator(self.conanfile)
+            content = generator.content
+            print(content["conanbuildinfo_release.cmake"])
+            print("KKKKKKKKKKKKKKKKKKKKKK")
+            print(content["conanbuildinfo_multi.cmake"])
+            self.assertIn('set(CONAN_BUILD_MODULES_PATHS_RELEASE "dummy_root_folder1/my-module.cmake"'
+                          '\n\t\t\t"dummy_root_folder2/other-mod.cmake" '
+                          '${CONAN_BUILD_MODULES_PATHS_RELEASE})',
+                          content["conanbuildinfo_release.cmake"])
+            self.assertIn('set(CONAN_BUILD_MODULES_PATHS_MY_PKG_RELEASE '
+                          '"dummy_root_folder1/my-module.cmake")',
+                          content["conanbuildinfo_release.cmake"])
+            self.assertIn('set(CONAN_BUILD_MODULES_PATHS_MY_PKG2_RELEASE '
+                          '"dummy_root_folder2/other-mod.cmake")',
+                          content["conanbuildinfo_release.cmake"])
+            self.assertIn("macro(conan_include_build_modules)", content["conanbuildinfo_multi.cmake"])
+            self.assertIn("conan_include_build_modules()", content["conanbuildinfo_multi.cmake"])
 
     def cmake_find_package_test(self):
         generator = CMakeFindPackageGenerator(self.conanfile)
