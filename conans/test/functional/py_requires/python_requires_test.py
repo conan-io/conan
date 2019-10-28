@@ -7,8 +7,7 @@ from parameterized import parameterized
 
 from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE
-from conans.test.utils.tools import (TestClient, NO_SETTINGS_PACKAGE_ID, create_local_git_repo,
-                                     GenConanfile)
+from conans.test.utils.tools import TestClient, create_local_git_repo, GenConanfile
 
 
 class PyRequiresExtendTest(unittest.TestCase):
@@ -641,3 +640,47 @@ class PyRequiresExtendTest(unittest.TestCase):
         #   - no mention to alias
         self.assertNotIn("alias", client.out)
         self.assertNotIn("alias2", client.out)
+
+    def reuse_export_sources_test(self):
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class MyConanfileBase(ConanFile):
+                exports_sources = "*"
+            """)
+        client.save({"conanfile.py": conanfile,
+                     "file.h": "myheader",
+                     "folder/other.h": "otherheader"})
+        client.run("export . tool/0.1@user/channel")
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile, load
+            class MyConanfileBase(ConanFile):
+                python_requires = "tool/0.1@user/channel"
+                def source(self):
+                    sources = self.python_requires["tool"].exports_sources
+                    file_h = os.path.join(sources, "file.h")
+                    other_h = os.path.join(sources, "folder/other.h")
+                    self.output.info("Source: tool header: %s" % load(file_h))
+                    self.output.info("Source: tool other: %s" % load(other_h))
+                def build(self):
+                    sources = self.python_requires["tool"].exports_sources
+                    file_h = os.path.join(sources, "file.h")
+                    other_h = os.path.join(sources, "folder/other.h")
+                    self.output.info("Build: tool header: %s" % load(file_h))
+                    self.output.info("Build: tool other: %s" % load(other_h))           
+                def package(self):
+                    sources = self.python_requires["tool"].exports_sources
+                    file_h = os.path.join(sources, "file.h")
+                    other_h = os.path.join(sources, "folder/other.h")
+                    self.output.info("Package: tool header: %s" % load(file_h))
+                    self.output.info("Package: tool other: %s" % load(other_h))
+            """)
+        client.save({"conanfile.py": conanfile,
+                     "name.txt": "MyPkg",
+                     "version.txt": "MyVersion"})
+        client.run("export .")
+        self.assertIn("MyPkg/MyVersion: A new conanfile.py version was exported", client.out)
+        client.run("create .")
+        self.assertIn("MyPkg/MyVersion: Pkg1 source: MyPkg:MyVersion", client.out)
+        self.assertIn("MyPkg/MyVersion: Pkg1 build: MyPkg:MyVersion", client.out)
+        self.assertIn("MyPkg/MyVersion: Pkg1 package: MyPkg:MyVersion", client.out)
