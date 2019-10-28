@@ -19,7 +19,7 @@ class MyBuildInfoCreation(unittest.TestCase):
         conan_user_home = temp_folder(True)
         mock_cache.return_value = ClientCache(os.path.join(conan_user_home, ".conan"),
                                               TestBufferConanOutput())
-        sys.argv = ["conan_build_info", "start", "MyBuildName", "42"]
+        sys.argv = ["conan_build_info", "--v2", "start", "MyBuildName", "42"]
         run()
         with open(mock_cache.return_value.put_headers_path) as f:
             content = f.read()
@@ -31,7 +31,7 @@ class MyBuildInfoCreation(unittest.TestCase):
         conan_user_home = temp_folder(True)
         mock_cache.return_value = ClientCache(os.path.join(conan_user_home, ".conan"),
                                               TestBufferConanOutput())
-        sys.argv = ["conan_build_info", "stop"]
+        sys.argv = ["conan_build_info", "--v2", "stop"]
         run()
         with open(mock_cache.return_value.put_headers_path) as f:
             content = f.read()
@@ -95,9 +95,9 @@ class MyBuildInfoCreation(unittest.TestCase):
         client.run("create . PkgB/0.2@user/channel --lockfile")
 
         client.run("upload * --all --confirm")
-        sys.argv = ["conan_build_info", "start", "MyBuildName", "42"]
+        sys.argv = ["conan_build_info", "--v2", "start", "MyBuildName", "42"]
         run()
-        sys.argv = ["conan_build_info", "create",
+        sys.argv = ["conan_build_info", "--v2", "create",
                     os.path.join(client.current_folder, "buildinfo.json"), "--lockfile",
                     os.path.join(client.current_folder, LOCKFILE)]
         run()
@@ -118,13 +118,13 @@ class MyBuildInfoCreation(unittest.TestCase):
             "myfile.txt": "HelloC"})
         client.run("create . PkgC/0.2@user/channel --lockfile")
         client.run("upload * --all --confirm")
-        sys.argv = ["conan_build_info", "create",
+        sys.argv = ["conan_build_info", "--v2", "create",
                     os.path.join(client.current_folder, "buildinfo_b.json"), "--lockfile",
                     os.path.join(client.current_folder, LOCKFILE),
                     "--user", "user", "--password", "password"]
         run()
 
-        sys.argv = ["conan_build_info", "update",
+        sys.argv = ["conan_build_info", "--v2", "update",
                     os.path.join(client.current_folder, "buildinfo.json"),
                     os.path.join(client.current_folder, "buildinfo_b.json"),
                     "--output-file", os.path.join(client.current_folder, "mergedbuildinfo.json")]
@@ -138,11 +138,11 @@ class MyBuildInfoCreation(unittest.TestCase):
             self.assertTrue("PkgC/0.2@user/channel" in ids_list)
             self.assertTrue("PkgB/0.2@user/channel" in ids_list)
 
-        sys.argv = ["conan_build_info", "publish",
+        sys.argv = ["conan_build_info", "--v2", "publish",
                     os.path.join(client.current_folder, "mergedbuildinfo.json"), "--url",
                     "http://fakeurl:8081/artifactory", "--user", "user", "--password", "password"]
         run()
-        sys.argv = ["conan_build_info", "publish",
+        sys.argv = ["conan_build_info", "--v2", "publish",
                     os.path.join(client.current_folder, "mergedbuildinfo.json"), "--url",
                     "http://fakeurl:8081/artifactory", "--apikey", "apikey"]
         run()
