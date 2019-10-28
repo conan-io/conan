@@ -121,7 +121,8 @@ class VirtualEnvGenerator(Generator):
         modified_vars = [it[0] for it in ret if it[2] != '""']
         new_vars = [it[0] for it in ret if it[2] == '""']
 
-        environment_filepath = os.path.join(self.output_path, self.environment_filename)
+        environment_filepath = os.path.abspath(os.path.join(self.output_path,
+                                                            self.environment_filename))
         activate_content = sh_activate_tpl.render(environment_file=environment_filepath,
                                                   modified_vars=modified_vars, new_vars=new_vars)
         activate_lines = activate_content.splitlines()
