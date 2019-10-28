@@ -285,6 +285,7 @@ class CMakeMultiSystemLibsTest(unittest.TestCase):
                     self.cpp_info.debug.system_libs = ["sys1d"]
                     self.cpp_info.release.system_libs = ["sys1"]
                     self.cpp_info.libs = ["lib1"]
+                    self.cpp_info.debug.libs = ["lib1debug"]
                 """)
         consumer = textwrap.dedent("""
             import os
@@ -300,11 +301,11 @@ class CMakeMultiSystemLibsTest(unittest.TestCase):
         client.run("install conanfile_consumer.py")
         content = client.load("conanbuildinfo.cmake")
         self.assertIn("set(CONAN_LIBS lib1 ${CONAN_LIBS})", content)
-        self.assertIn("set(CONAN_LIBS_DEBUG sys1d ${CONAN_LIBS_DEBUG})", content)
+        self.assertIn("set(CONAN_LIBS_DEBUG lib1debug sys1d ${CONAN_LIBS_DEBUG})", content)
         self.assertIn("set(CONAN_LIBS_RELEASE sys1 ${CONAN_LIBS_RELEASE})", content)
         self.assertIn("set(CONAN_LIBS_MYLIB lib1)", content)
         self.assertIn("set(CONAN_LIBS_MYLIB_RELEASE )", content)
-        self.assertIn("set(CONAN_LIBS_MYLIB_DEBUG )", content)
+        self.assertIn("set(CONAN_LIBS_MYLIB_DEBUG lib1debug)", content)
 
         self.assertIn("set(CONAN_SYSTEM_LIBS  ${CONAN_SYSTEM_LIBS})", content)
         self.assertIn("set(CONAN_SYSTEM_LIBS_DEBUG sys1d ${CONAN_SYSTEM_LIBS_DEBUG})", content)
