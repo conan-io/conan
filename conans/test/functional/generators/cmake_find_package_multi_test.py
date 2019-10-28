@@ -116,12 +116,16 @@ class Conan(ConanFile):
     def build(self):
         cmake = CMake(self)
         cmake.configure()
-        cmake.build()
         """
         client.save({"conanfile.py": conanfile, "CMakeLists.txt": cmakelists})
-        client.run("install . -g cmake_find_package")
+        client.run("install .")
         client.run("build .")
-        self.assertIn('Found MYHELLO2: 1.0 (found version "1.0")', client.out)
-        self.assertIn('Found MYHELLO: 1.0 (found version "1.0")', client.out)
-        self.assertIn("Target libs: CONAN_LIB::MYHELLO2_hello;;;CONAN_LIB::MYHELLO_hello",
+        self.assertIn("Target libs: $<$<CONFIG:Release>:CONAN_LIB::MYHELLO2_hello_RELEASE;>;"
+                      "$<$<CONFIG:RelWithDebInfo>:;>;"
+                      "$<$<CONFIG:MinSizeRel>:;>;"
+                      "$<$<CONFIG:Debug>:;>;$"
+                      "<$<CONFIG:Release>:CONAN_LIB::MYHELLO_hello_RELEASE;>;"
+                      "$<$<CONFIG:RelWithDebInfo>:;>;"
+                      "$<$<CONFIG:MinSizeRel>:;>;"
+                      "$<$<CONFIG:Debug>:;>",
                       client.out)
