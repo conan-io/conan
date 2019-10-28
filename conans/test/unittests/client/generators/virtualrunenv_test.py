@@ -21,6 +21,7 @@ class VirtualRunEnvGeneratorTest(unittest.TestCase):
         conanfile.deps_cpp_info["hello"].lib_paths = ["lib1", "lib2"]
 
         cls.generator = VirtualRunEnvGenerator(conanfile)
+        cls.generator.output_path = "not-used"
         cls.result = cls.generator.content
 
     def test_output(self):

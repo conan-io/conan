@@ -21,6 +21,7 @@ class VirtualBuildEnvGeneratorGCCTest(unittest.TestCase):
                                            "build_type": "Release"})
 
         cls.generator = VirtualBuildEnvGenerator(conanfile)
+        cls.generator.output_path = "not-used"
         cls.result = cls.generator.content
 
     def test_output(self):

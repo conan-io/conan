@@ -29,6 +29,7 @@ class VirtualEnvGeneratorTest(unittest.TestCase):
         conanfile.initialize(Settings({}), env)
 
         cls.generator = VirtualEnvGenerator(conanfile)
+        cls.generator.output_path = "not-used"
         cls.result = cls.generator.content
 
     def test_output(self):
