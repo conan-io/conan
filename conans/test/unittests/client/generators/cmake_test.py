@@ -437,8 +437,7 @@ class CMakeBuildModulesTest(unittest.TestCase):
 
     def cmake_multi_test(self):
         # Mock extend() function to set filter_empty = False
-        from conans.client.generators.cmake_multi import extend
-        extend_original = extend
+        from conans.client.generators.cmake_multi import extend as extend_original
 
         def extend_config(cpp_info, config):
             result = extend_original(cpp_info, config)
