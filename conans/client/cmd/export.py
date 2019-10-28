@@ -43,7 +43,10 @@ def check_casing_conflict(cache, ref):
     # Check for casing conflict
     # Maybe a platform check could be added, but depends on disk partition
     refs = search_recipes(cache, ref, ignorecase=True)
-    if refs and ref not in [r.copy_clear_rev() for r in refs]:
+    refs2 = [ConanFileReference(r.name, r.version, r.user if ref.user else None,
+                                r.channel if ref.channel else None, validate=False) for r in refs]
+
+    if refs and ref not in refs2:
         raise ConanException("Cannot export package with same name but different case\n"
                              "You exported '%s' but already existing '%s'"
                              % (str(ref), " ".join(str(s) for s in refs)))
