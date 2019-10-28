@@ -54,14 +54,22 @@ class _CppInfo(object):
         abs_paths = [os.path.join(self.rootpath, p)
                      if not os.path.isabs(p) else p for p in paths]
         if self.filter_empty:
-            return [p for p in abs_paths if os.path.exists(p)]
+            return [p for p in abs_paths if os.path.isdir(p)]
+        else:
+            return abs_paths
+
+    def _filter_file_paths(self, paths):
+        abs_paths = [os.path.join(self.rootpath, p)
+                     if not os.path.isabs(p) else p for p in paths]
+        if self.filter_empty:
+            return [p for p in abs_paths if os.path.isfile(p)]
         else:
             return abs_paths
 
     @property
     def build_modules_paths(self):
         if self._build_modules_paths is None:
-            self._build_modules_paths = self._filter_paths(self.build_modules)
+            self._build_modules_paths = self._filter_file_paths(self.build_modules)
         return self._build_modules_paths
 
     @property
