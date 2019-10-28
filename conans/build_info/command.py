@@ -11,20 +11,15 @@ from conans.util.files import save
 from conans.client.output import ConanOutput
 
 
-class ArgumentParserError(Exception):
-    pass
-
-
-class ErrorCatchingArgumentParser(argparse.ArgumentParser):
-    def exit(self, status=0, message=None):
-        if status:
-            raise ArgumentParserError(message)
-
-    def error(self, message):
-        raise ArgumentParserError(message)
-
-
 def run():
+    if sys.argv[1] == "--v2":
+        sys.argv.pop(1)
+        runv2()
+    else:
+        runv1()
+
+
+def runv1():
     parser = argparse.ArgumentParser(description='Extracts build-info from a specified '
                                                  'conan trace log and return a valid JSON')
     parser.add_argument('trace_path', help='Path to the conan trace log file e.g.: '
@@ -125,9 +120,6 @@ def runv2():
             check_credential_arguments()
             publish_build_info(args.buildinfo, args.url, args.user, args.password,
                                args.apikey)
-    except ArgumentParserError as exc:
-        output.error(str(exc))
-        parser_v2.print_help()
     except ConanException as exc:
         output.error(exc)
     except Exception as exc:
@@ -135,9 +127,4 @@ def runv2():
 
 
 if __name__ == "__main__":
-    print("NEW CONAN_BUILD_INFO")
-    if sys.argv[1] == "--version2":
-        sys.argv.pop(1)
-        runv2()
-    else:
-        run()
+    run()
