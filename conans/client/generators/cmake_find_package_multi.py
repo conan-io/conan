@@ -93,11 +93,9 @@ set_property(TARGET {name}::{name}
         targets_props = self.target_properties.format(name=name)
 
         deps_cpp_cmake = DepsCppCmake(cpp_info)
-        build_paths = deps_cpp_cmake.build_paths
 
         tmp = self.config_xxx_template.format(name=name,
                                               version=cpp_info.version,
                                               find_dependencies_block="\n".join(lines),
-                                              target_props_block=targets_props,
-                                              build_paths=build_paths)
+                                              target_props_block=targets_props)
         return tmp
