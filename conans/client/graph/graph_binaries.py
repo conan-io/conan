@@ -1,9 +1,9 @@
 import os
 
 from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_MISSING,
-                                       BINARY_SKIP, BINARY_UPDATE,
-                                       RECIPE_EDITABLE, BINARY_EDITABLE,
-                                       RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_UNKNOWN)
+                                       BINARY_UPDATE, RECIPE_EDITABLE, BINARY_EDITABLE,
+                                       RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP, BINARY_UNKNOWN)
+
 from conans.errors import NoRemoteAvailable, NotFoundException, conanfile_exception_formatter
 from conans.model.info import ConanInfo, PACKAGE_ID_UNKNOWN
 from conans.model.manifest import FileTreeManifest
@@ -269,24 +269,11 @@ class GraphBinariesAnalyzer(object):
         info = conanfile.info
         node.package_id = info.package_id()
 
-    def _handle_private(self, node):
-        if node.binary in (BINARY_CACHE, BINARY_DOWNLOAD, BINARY_UPDATE, BINARY_SKIP):
-            private_neighbours = node.private_neighbors()
-            for neigh in private_neighbours:
-                if not neigh.private:
-                    continue
-                # Current closure contains own node to be skipped
-                for n in neigh.public_closure.values():
-                    if n.private:
-                        # store the binary origin before being overwritten by SKIP
-                        n.binary_non_skip = n.binary
-                        n.binary = BINARY_SKIP
-                        self._handle_private(n)
-
-    def evaluate_graph(self, deps_graph, build_mode, update, remotes):
+    def evaluate_graph(self, deps_graph, build_mode, update, remotes, nodes_subset=None, root=None):
         default_package_id_mode = self._cache.config.default_package_id_mode
-        for node in deps_graph.ordered_iterate():
+        for node in deps_graph.ordered_iterate(nodes_subset=nodes_subset):
             self._propagate_options(node)
+
             self._compute_package_id(node, default_package_id_mode)
             if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
                 continue
@@ -295,7 +282,7 @@ class GraphBinariesAnalyzer(object):
                 node.binary = BINARY_UNKNOWN
                 continue
             self._evaluate_node(node, build_mode, update, remotes)
-            self._handle_private(node)
+        deps_graph.mark_private_skippable(nodes_subset=nodes_subset, root=root)
 
     def reevaluate_node(self, node, remotes, build_mode, update):
         assert node.binary == BINARY_UNKNOWN
