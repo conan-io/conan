@@ -28,16 +28,16 @@ def runv1():
                         help='Optional file to output the JSON contents, if not specified the JSON'
                              ' will be printed to stdout')
 
-    args = parser.parse_args()
-
-    if not os.path.exists(args.trace_path):
-        print("Error, conan trace log not found! '%s'" % args.trace_path)
-        exit(1)
-    if args.output and not os.path.exists(os.path.dirname(args.output)):
-        print("Error, output file directory not found! '%s'" % args.trace_path)
-        exit(1)
-
     try:
+        args = parser.parse_args()
+
+        if not os.path.exists(args.trace_path):
+            print("Error, conan trace log not found! '%s'" % args.trace_path)
+            exit(1)
+        if args.output and not os.path.exists(os.path.dirname(args.output)):
+            print("Error, output file directory not found! '%s'" % args.trace_path)
+            exit(1)
+
         info = get_build_info(args.trace_path)
         the_json = json.dumps(info.serialize())
         if args.output:
@@ -47,6 +47,9 @@ def runv1():
     except Exception as exc:
         print(exc)
         exit(1)
+    except SystemExit:
+        print("Use 'conan_build_info --v2' to see the usage of the new recommended way to generate "
+              "build info using lockfiles")
 
 
 def runv2():
