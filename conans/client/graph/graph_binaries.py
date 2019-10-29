@@ -167,7 +167,7 @@ class GraphBinariesAnalyzer(object):
             pref = PackageReference(node.ref, node.package_id)
             self._process_node(node, pref, build_mode, update, remotes)
             if node.binary == BINARY_MISSING and node.conanfile.compatible_packages:
-                compatible_build_mode = BuildMode([], self._out)
+                compatible_build_mode = BuildMode(None, self._out)
                 for compatible_package in node.conanfile.compatible_packages:
                     package_id = compatible_package.package_id()
                     if package_id == node.package_id:
