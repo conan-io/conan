@@ -7,12 +7,13 @@ from conans.model import Generator
 class VirtualEnvGenerator(Generator):
 
     append_with_spaces = ["CPPFLAGS", "CFLAGS", "CXXFLAGS", "LIBS", "LDFLAGS", "CL", "_LINK_"]
+    suffix = ""
+    venv_name = "conanenv"
 
     def __init__(self, conanfile):
         super(VirtualEnvGenerator, self).__init__(conanfile)
         self.conanfile = conanfile
         self.env = conanfile.env
-        self.venv_name = "conanenv"
 
     @property
     def filename(self):
@@ -130,15 +131,15 @@ class VirtualEnvGenerator(Generator):
         result = {}
         if os_info.is_windows and not os_info.is_posix:
             activate, deactivate = self._cmd_lines()
-            result["activate.bat"] = os.linesep.join(activate)
-            result["deactivate.bat"] = os.linesep.join(deactivate)
+            result["activate{}.bat".format(self.suffix)] = os.linesep.join(activate)
+            result["deactivate{}.bat".format(self.suffix)] = os.linesep.join(deactivate)
 
             activate, deactivate = self._ps1_lines()
-            result["activate.ps1"] = os.linesep.join(activate)
-            result["deactivate.ps1"] = os.linesep.join(deactivate)
+            result["activate{}.ps1".format(self.suffix)] = os.linesep.join(activate)
+            result["deactivate{}.ps1".format(self.suffix)] = os.linesep.join(deactivate)
 
         activate, deactivate = self._sh_lines()
-        result["activate.sh"] = os.linesep.join(activate)
-        result["deactivate.sh"] = os.linesep.join(deactivate)
+        result["activate{}.sh".format(self.suffix)] = os.linesep.join(activate)
+        result["deactivate{}.sh".format(self.suffix)] = os.linesep.join(deactivate)
 
         return result
