@@ -61,7 +61,7 @@ compiler:
         version: ["4.1", "4.4", "4.5", "4.6", "4.7", "4.8", "4.9",
                   "5", "5.1", "5.2", "5.3", "5.4", "5.5",
                   "6", "6.1", "6.2", "6.3", "6.4",
-                  "7", "7.1", "7.2", "7.3",
+                  "7", "7.1", "7.2", "7.3", "7.4",
                   "8", "8.1", "8.2", "8.3",
                   "9", "9.1", "9.2"]
         libcxx: [libstdc++, libstdc++11]
@@ -79,7 +79,7 @@ compiler:
     clang:
         version: ["3.3", "3.4", "3.5", "3.6", "3.7", "3.8", "3.9", "4.0",
                   "5.0", "6.0", "7.0", "7.1",
-                  "8", "9"]
+                  "8", "9", "10"]
         libcxx: [libstdc++, libstdc++11, libc++, c++_shared, c++_static]
         cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
     apple-clang:
@@ -157,9 +157,8 @@ default_package_id_mode = semver_direct_mode # environment CONAN_DEFAULT_PACKAGE
 path = ./data
 
 [proxies]
-# Empty section will try to use system proxies.
-# If don't want proxy at all, remove section [proxies]
-# As documented in http://docs.python-requests.org/en/latest/user/advanced/#proxies - but see below
+# Empty (or missing) section will try to use system proxies.
+# As documented in https://requests.kennethreitz.org/en/latest/user/advanced/#proxies - but see below
 # for proxies to specific hosts
 # http = http://user:pass@10.10.1.10:3128/
 # http = http://10.10.1.10:3128

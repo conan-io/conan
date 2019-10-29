@@ -69,7 +69,7 @@ class CaseSensitiveTest(unittest.TestCase):
         client.run("install Hello0/0.1@lasote/stable --build=missing")
         error = client.run("export-pkg . hello0/0.1@lasote/stable", assert_error=True)
         self.assertTrue(error)
-        self.assertIn("ERROR: Package recipe exported with name hello0!=Hello0", client.out)
+        self.assertIn("ERROR: Package recipe with name hello0!=Hello0", client.out)
 
     def copy_test(self):
         client = TestClient()
