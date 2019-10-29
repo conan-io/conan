@@ -5,7 +5,6 @@ class CompatiblePackage(object):
         self._settings = None
         self._options = None
         self._requires = None
-        conanfile.compatible_packages.append(self)
 
     @property
     def settings(self):

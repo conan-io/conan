@@ -18,6 +18,7 @@ class CompatibleIDsTest(unittest.TestCase):
                         for version in ("4.8", "4.7", "4.6"):
                             compatible_pkg = CompatiblePackage(self)
                             compatible_pkg.settings.compiler.version = version
+                            self.compatible_packages.append(compatible_pkg)
             """)
         profile = textwrap.dedent("""
             [settings]
@@ -49,6 +50,7 @@ class CompatibleIDsTest(unittest.TestCase):
                         for version in ("4.8", "4.7", "4.6"):
                             compatible_pkg = CompatiblePackage(self)
                             compatible_pkg.settings.compiler.version = version
+                            self.compatible_packages.append(compatible_pkg)
             """)
         profile = textwrap.dedent("""
             [settings]
@@ -82,6 +84,7 @@ class CompatibleIDsTest(unittest.TestCase):
                     for optimized in range(int(self.options.optimized), 0, -1):
                         compatible_pkg = CompatiblePackage(self)
                         compatible_pkg.options.optimized = optimized
+                        self.compatible_packages.append(compatible_pkg)
             """)
         client.save({"conanfile.py": conanfile})
         client.run("create . pkg/0.1@user/stable")
@@ -116,6 +119,7 @@ class CompatibleIDsTest(unittest.TestCase):
                 def package_id(self):
                     compatible_pkg = CompatiblePackage(self)
                     compatible_pkg.settings.compiler.version = "bad"
+                    self.compatible_packages.append(self)
             """)
         client.save({"conanfile.py": conanfile})
         client.run("create . pkg/0.1@user/stable",  assert_error=True)
@@ -137,6 +141,7 @@ class CompatibleIDsTest(unittest.TestCase):
                 def package_id(self):
                     compatible_pkg = CompatiblePackage(self)
                     compatible_pkg.options.shared = "bad"
+                    self.compatible_packages.append(self)
             """)
         client.save({"conanfile.py": conanfile})
         client.run("create . pkg/0.1@user/stable",  assert_error=True)
