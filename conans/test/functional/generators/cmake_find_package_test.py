@@ -1,9 +1,11 @@
+import os
 import platform
 import six
 import unittest
 
 from nose.plugins.attrib import attr
 
+from conans.client.tools import replace_in_file
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import TestClient
 
@@ -250,3 +252,49 @@ message("Target libs: ${tmp}")
         six.assertRegex(self, str(client.out), "Libraries to Link: .*Foundation\\.framework")
         six.assertRegex(self, str(client.out), "Target libs: .*Foundation\\.framework")
         self.assertIn("Version: 0.1", client.out)
+
+    def cpp_info_name_test(self):
+        client = TestClient()
+        client.run("new hello/1.0 -s")
+        replace_in_file(os.path.join(client.current_folder, "conanfile.py"),
+                        'self.cpp_info.libs = ["hello"]',
+                        'self.cpp_info.libs = ["hello"]\n        self.cpp_info.name = "MYHELLO"',
+                        output=client.out)
+        client.run("create .")
+        client.run("new hello2/1.0 -s")
+        replace_in_file(os.path.join(client.current_folder, "conanfile.py"),
+                        'self.cpp_info.libs = ["hello"]',
+                        'self.cpp_info.libs = ["hello"]\n        self.cpp_info.name = "MYHELLO2"',
+                        output=client.out)
+        replace_in_file(os.path.join(client.current_folder, "conanfile.py"),
+                        'exports_sources = "src/*"',
+                        'exports_sources = "src/*"\n    requires = "hello/1.0"',
+                        output=client.out)
+        client.run("create .")
+        cmakelists = """
+project(consumer)
+cmake_minimum_required(VERSION 3.1)
+find_package(MYHELLO2)
+
+get_target_property(tmp MYHELLO2::MYHELLO2 INTERFACE_LINK_LIBRARIES)
+message("Target libs: ${tmp}")
+"""
+        conanfile = """
+from conans import ConanFile, CMake
+
+
+class Conan(ConanFile):
+    requires = "hello2/1.0"
+    generators = "cmake_find_package"
+
+    def build(self):
+        cmake = CMake(self)
+        cmake.configure()
+        """
+        client.save({"conanfile.py": conanfile, "CMakeLists.txt": cmakelists})
+        client.run("install .")
+        client.run("build .")
+        self.assertIn('Found MYHELLO2: 1.0 (found version "1.0")', client.out)
+        self.assertIn('Found MYHELLO: 1.0 (found version "1.0")', client.out)
+        self.assertIn("Target libs: CONAN_LIB::MYHELLO2_hello;;;CONAN_LIB::MYHELLO_hello",
+                      client.out)

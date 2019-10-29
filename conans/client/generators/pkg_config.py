@@ -34,12 +34,12 @@ class PkgConfigGenerator(Generator):
     @property
     def content(self):
         ret = {}
-        for _, cpp_info in self.deps_build_info.dependencies:
-            ret["%s.pc" % cpp_info.name] = self.single_pc_file_contents(cpp_info)
+        for depname, cpp_info in self.deps_build_info.dependencies:
+            name = cpp_info.name.lower() if cpp_info.name != depname else depname
+            ret["%s.pc" % name] = self.single_pc_file_contents(name, cpp_info)
         return ret
 
-    def single_pc_file_contents(self, cpp_info):
-        name = cpp_info.name
+    def single_pc_file_contents(self, name, cpp_info):
         prefix_path = cpp_info.rootpath.replace("\\", "/")
         lines = ['prefix=%s' % prefix_path]
 
