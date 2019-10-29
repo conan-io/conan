@@ -119,7 +119,7 @@ class VirtualEnvGenerator(Generator):
             yield name, activate_value, deactivate_value
 
     def _sh_lines(self):
-        ret = self._format_values("sh", self.env.items())
+        ret = list(self._format_values("sh", self.env.items()))
         modified_vars = [it[0] for it in ret if it[2] != '""']
         new_vars = [it[0] for it in ret if it[2] == '""']
 
