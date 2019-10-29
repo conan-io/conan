@@ -33,8 +33,6 @@ class DepsCppCmake(object):
         self.libs_system_frameworks = join_flags(" ", cpp_info.libs + cpp_info.system_libs)
         self.libs = join_flags(" ", cpp_info.libs)
         self.system_libs = join_flags(" ", cpp_info.system_libs)
-        self.libs = join_flags(" ", cpp_info.libs)
-        self.system_libs = join_flags(" ", cpp_info.system_libs)
 
         framework_paths = join_paths(cpp_info.framework_paths)
         self.find_frameworks = ""
