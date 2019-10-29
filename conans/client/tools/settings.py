@@ -9,5 +9,5 @@ def cppstd_minimum_required(conanfile, cppstd_version):
                                         "({}).".format(cppstd, cppstd_version))
     elif not cppstd_flag(conanfile.settings.compiler, conanfile.settings.compiler.version,
                          cppstd_version):
-       raise ConanInvalidConfiguration("Current compiler does not not support the required "
-                                       "c++ standard ({}).".format(cppstd_version))
+        raise ConanInvalidConfiguration("Current compiler does not not support the required "
+                                        "c++ standard ({}).".format(cppstd_version))
