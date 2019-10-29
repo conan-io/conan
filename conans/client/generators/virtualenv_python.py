@@ -3,7 +3,7 @@ from conans.client.generators.virtualrunenv import VirtualRunEnvGenerator
 
 class VirtualEnvPythonGenerator(VirtualRunEnvGenerator):
 
-    suffix = "_python"
+    suffix = "_run_python"
     venv_name = "conanenvpython"
 
     def __init__(self, conanfile):
