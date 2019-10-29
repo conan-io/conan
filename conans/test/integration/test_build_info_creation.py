@@ -115,9 +115,7 @@ class MyBuildInfoCreation(unittest.TestCase):
                     os.path.join(client.current_folder, LOCKFILE)]
         run()
 
-        if len(user_channel) > 2:
-            user_channel = "@" + user_channel
-
+        user_channel = "@" + user_channel if len(user_channel) > 2 else user_channel
         with open(os.path.join(client.current_folder, "buildinfo1.json")) as f:
             buildinfo = json.load(f)
             self.assertEqual(buildinfo["name"], "MyBuildName")

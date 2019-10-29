@@ -340,4 +340,3 @@ def update_build_info(buildinfo, output_file):
 
     with open(output_file, "w") as f:
         f.write(json.dumps(build_info, indent=4))
-
