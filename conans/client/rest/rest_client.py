@@ -1,6 +1,4 @@
-from collections import defaultdict
-
-from conans import CHECKSUM_DEPLOY, REVISIONS, ONLY_V2, OAUTH_TOKEN, COMPLEX_SEARCH_CAPABILITY
+from conans import CHECKSUM_DEPLOY, REVISIONS, ONLY_V2, OAUTH_TOKEN
 from conans.client.rest.rest_client_v1 import RestV1Methods
 from conans.client.rest.rest_client_v2 import RestV2Methods
 from conans.errors import OnlyV2Available
@@ -110,11 +108,10 @@ class RestApiClient(object):
         return self._get_api().search(pattern, ignorecase)
 
     def search_packages(self, reference, query):
-        package_infos = self._get_api().search_packages(reference, query)
-        if query and COMPLEX_SEARCH_CAPABILITY not in self._cached_capabilities.get(self.remote_url,
-                                                                                    []):
-            return filter_packages(query, package_infos)
-        return package_infos
+        # Do not send the query to the server, as it will fail
+        # https://github.com/conan-io/conan/issues/4951
+        package_infos = self._get_api().search_packages(reference, query=None)
+        return filter_packages(query, package_infos)
 
     def remove_conanfile(self, ref):
         return self._get_api().remove_conanfile(ref)
