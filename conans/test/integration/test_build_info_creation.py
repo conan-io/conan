@@ -104,7 +104,6 @@ class MyBuildInfoCreation(unittest.TestCase):
                     os.path.join(client.current_folder, "temp.lock"))
 
         client.run("create PkgB PkgB/0.1@user/channel --lockfile --build missing")
-
         client.run("upload * --all --confirm")
 
         sys.argv = ["conan_build_info", "--v2", "start", "MyBuildName", "42"]
@@ -118,8 +117,12 @@ class MyBuildInfoCreation(unittest.TestCase):
                     os.path.join(client.current_folder, "conan.lock"))
 
         client.run("create PkgC PkgC/0.1@user/channel --lockfile --build missing")
-
         client.run("upload * --all --confirm")
+
+        sys.argv = ["conan_build_info", "--v2", "create",
+                    os.path.join(client.current_folder, "buildinfo2.json"), "--lockfile",
+                    os.path.join(client.current_folder, LOCKFILE)]
+        run()
 
         with open(os.path.join(client.current_folder, "buildinfo1.json")) as f:
             buildinfo = json.load(f)
@@ -139,8 +142,8 @@ class MyBuildInfoCreation(unittest.TestCase):
             self.assertEqual(buildinfo["modules"][1]["id"],
                              "PkgB/0.1@user/channel:09f152eb7b3e0a6e15a2a3f464245864ae8f8644")
             self.assertEqual(buildinfo["modules"][1]["artifacts"][0]["name"], "conan_package.tgz")
-            self.assertEqual(buildinfo["modules"][1]["artifacts"][1]["name"], "conan_package.tgz")
-            self.assertEqual(buildinfo["modules"][1]["artifacts"][2]["name"], "conan_package.tgz")
+            self.assertEqual(buildinfo["modules"][1]["artifacts"][1]["name"], "conaninfo.txt")
+            self.assertEqual(buildinfo["modules"][1]["artifacts"][2]["name"], "conanmanifest.txt")
             self.assertEqual(buildinfo["modules"][1]["dependencies"][0]["id"],
                              "PkgA/0.2@user/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 :: conan_package.tgz")
             self.assertEqual(buildinfo["modules"][1]["dependencies"][1]["id"],
@@ -149,13 +152,6 @@ class MyBuildInfoCreation(unittest.TestCase):
                              "PkgA/0.2@user/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 :: conanmanifest.txt")
 
             self.assertEqual(buildinfo["modules"][2]["id"], "PkgA/0.2@user/channel")
-
-        sys.argv = ["conan_build_info", "--v2", "start", "MyBuildName", "42"]
-        run()
-        sys.argv = ["conan_build_info", "--v2", "create",
-                    os.path.join(client.current_folder, "buildinfo2.json"), "--lockfile",
-                    os.path.join(client.current_folder, LOCKFILE)]
-        run()
 
         sys.argv = ["conan_build_info", "--v2", "update",
                     os.path.join(client.current_folder, "buildinfo1.json"),
@@ -168,8 +164,10 @@ class MyBuildInfoCreation(unittest.TestCase):
             self.assertEqual(buildinfo["name"], "MyBuildName")
             self.assertEqual(buildinfo["number"], "42")
             ids_list = [item["id"] for item in buildinfo["modules"]]
-            self.assertTrue("PkgC/0.2@user/channel" in ids_list)
-            self.assertTrue("PkgB/0.2@user/channel" in ids_list)
+            self.assertTrue("PkgC/0.1@user/channel" in ids_list)
+            self.assertTrue("PkgB/0.1@user/channel" in ids_list)
+            self.assertTrue("PkgC/0.1@user/channel:09f152eb7b3e0a6e15a2a3f464245864ae8f8644" in ids_list)
+            self.assertTrue("PkgB/0.1@user/channel:09f152eb7b3e0a6e15a2a3f464245864ae8f8644" in ids_list)
 
         sys.argv = ["conan_build_info", "--v2", "publish",
                     os.path.join(client.current_folder, "mergedbuildinfo.json"), "--url",
@@ -178,4 +176,7 @@ class MyBuildInfoCreation(unittest.TestCase):
         sys.argv = ["conan_build_info", "--v2", "publish",
                     os.path.join(client.current_folder, "mergedbuildinfo.json"), "--url",
                     "http://fakeurl:8081/artifactory", "--apikey", "apikey"]
+        run()
+
+        sys.argv = ["conan_build_info", "--v2", "stop"]
         run()
