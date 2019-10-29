@@ -9,7 +9,7 @@ from conans.util.files import rmdir
 
 def _prepare_sources(cache, ref, remote_manager, loader, remotes):
     conan_file_path = cache.package_layout(ref).conanfile()
-    conanfile = loader.load_class(conan_file_path)
+    conanfile = loader.load_basic(conan_file_path)
     complete_recipe_sources(remote_manager, cache, conanfile, ref, remotes)
     return conanfile.short_paths
 
