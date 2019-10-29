@@ -143,7 +143,8 @@ CONAN_BASIC_SETUP()
 
         content = client.load("conanbuildinfo.cmake")
         self.assertIn("set(CONAN_LIBS lib1 sys1 ${CONAN_LIBS})", content)
-        self.assertIn("set(CONAN_LIBS_MYLIB lib1)", content)
+        self.assertIn("set(CONAN_LIBS_MYLIB lib1 sys1)", content)
+        self.assertIn("set(CONAN_PKG_LIBS_MYLIB lib1)", content)
         self.assertIn("set(CONAN_SYSTEM_LIBS sys1 ${CONAN_SYSTEM_LIBS})", content)
         self.assertIn("set(CONAN_SYSTEM_LIBS_MYLIB sys1)", content)
 

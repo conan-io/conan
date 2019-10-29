@@ -303,14 +303,16 @@ class CMakeMultiSystemLibsTest(unittest.TestCase):
         client.run("install conanfile_consumer.py -s build_type=Release")
         content = client.load("conanbuildinfo_release.cmake")
         self.assertIn("set(CONAN_LIBS_RELEASE lib1 lib1release sys1 ${CONAN_LIBS_RELEASE})", content)
-        self.assertIn("set(CONAN_LIBS_MYLIB_RELEASE lib1 lib1release)", content)
+        self.assertIn("set(CONAN_LIBS_MYLIB_RELEASE lib1 lib1release sys1)", content)
+        self.assertIn("set(CONAN_PKG_LIBS_MYLIB_RELEASE lib1 lib1release)", content)
         self.assertIn("set(CONAN_SYSTEM_LIBS_RELEASE sys1 ${CONAN_SYSTEM_LIBS_RELEASE})", content)
         self.assertIn("set(CONAN_SYSTEM_LIBS_MYLIB_RELEASE sys1)", content)
 
         client.run("install conanfile_consumer.py -s build_type=Debug")
         content = client.load("conanbuildinfo_debug.cmake")
         self.assertIn("set(CONAN_LIBS_DEBUG lib1 lib1debug sys1d ${CONAN_LIBS_DEBUG})", content)
-        self.assertIn("set(CONAN_LIBS_MYLIB_DEBUG lib1 lib1debug)", content)
+        self.assertIn("set(CONAN_LIBS_MYLIB_DEBUG lib1 lib1debug sys1d)", content)
+        self.assertIn("set(CONAN_PKG_LIBS_MYLIB_DEBUG lib1 lib1debug)", content)
         self.assertIn("set(CONAN_SYSTEM_LIBS_DEBUG sys1d ${CONAN_SYSTEM_LIBS_DEBUG})", content)
         self.assertIn("set(CONAN_SYSTEM_LIBS_MYLIB_DEBUG sys1d)", content)
 

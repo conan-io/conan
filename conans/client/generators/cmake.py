@@ -30,8 +30,9 @@ class DepsCppCmake(object):
         self.bin_paths = join_paths(cpp_info.bin_paths)
         self.build_paths = join_paths(cpp_info.build_paths)
         self.src_paths = join_paths(cpp_info.src_paths)
-        # libs_system_frameworks == Package libs, system deps and frameworks
         self.libs_system_frameworks = join_flags(" ", cpp_info.libs + cpp_info.system_libs)
+        self.libs = join_flags(" ", cpp_info.libs)
+        self.system_libs = join_flags(" ", cpp_info.system_libs)
         self.libs = join_flags(" ", cpp_info.libs)
         self.system_libs = join_flags(" ", cpp_info.system_libs)
 
