@@ -9,7 +9,6 @@ from conans.test.utils.tools import TestClient
 
 
 class VirtualBuildEnvTest(unittest.TestCase):
-    maxDiff = None
 
     @unittest.skipUnless(platform.system() == "Windows", "needs Windows")
     def test_delimiter_error(self):
