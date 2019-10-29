@@ -13,7 +13,7 @@ pylint>=2.0,!=2.3.0; python_version >= '3'
 future>=0.16.0, <0.19.0
 pygments>=2.0, <3.0
 astroid>=1.6.5, <2.0; python_version < '3'
-astroid>=1.6.5; python_version >= '3'
+astroid>=2.0; python_version >= '3'
 deprecation>=2.0, <2.1
 tqdm>=4.28.1, <5
 Jinja2>=2.3, <3
