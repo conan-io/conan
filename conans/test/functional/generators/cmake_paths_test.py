@@ -70,15 +70,13 @@ find_package(Hello0 REQUIRED)
         build_dir = os.path.join(client.current_folder, "build")
         os.mkdir(build_dir)
         with client.chdir(build_dir):
-            ret = client.run_command("cmake ..")
+            client.run_command("cmake ..", assert_error=True)
         shutil.rmtree(build_dir)
-        self.assertNotEqual(ret, 0)
 
         # With the toolchain everything is ok
         os.mkdir(build_dir)
         with client.chdir(build_dir):
-            ret = client.run_command("cmake .. -DCMAKE_TOOLCHAIN_FILE=../conan_paths.cmake")
-        self.assertEqual(ret, 0)
+            client.run_command("cmake .. -DCMAKE_TOOLCHAIN_FILE=../conan_paths.cmake")
         self.assertIn("HELLO FROM THE Hello0 FIND PACKAGE!", client.out)
         ref = ConanFileReference.loads("Hello0/0.1@user/channel")
         pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
@@ -100,8 +98,7 @@ find_package(Hello0 REQUIRED)
         client.save(files, clean_first=True)
         os.mkdir(build_dir)
         client.run("install Hello0/0.1@user/channel -g cmake_paths")
-        ret = client.run_command("cmake .. ", cwd=build_dir)
-        self.assertEqual(ret, 0)
+        client.run_command("cmake .. ", cwd=build_dir)
         self.assertIn("HELLO FROM THE Hello0 FIND PACKAGE!", client.out)
 
     def find_package_priority_test(self):

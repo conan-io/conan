@@ -250,8 +250,9 @@ class Command(object):
             raise ConanException("Argument '--raw' is incompatible with '--json'")
 
         attributes = [args.raw, ] if args.raw else args.attribute
+        quiet = bool(args.raw)
 
-        result = self._conan.inspect(args.path_or_reference, attributes, args.remote)
+        result = self._conan.inspect(args.path_or_reference, attributes, args.remote, quiet=quiet)
         Printer(self._out).print_inspect(result, raw=args.raw)
         if args.json:
             json_output = json.dumps(result)
@@ -322,6 +323,9 @@ class Command(object):
         parser.add_argument("-tf", "--test-folder", action=OnceArgument,
                             help='Alternative test folder name. By default it is "test_package". '
                                  'Use "None" to skip the test stage')
+        parser.add_argument("--ignore-dirty", default=False, action='store_true',
+                            help='When using the "scm" feature with "auto" values, capture the'
+                                 ' revision and url even if there are uncommitted changes')
 
         _add_manifests_arguments(parser)
         _add_common_install_arguments(parser, build_help=_help_build_policies)
@@ -352,7 +356,7 @@ class Command(object):
                                       args.manifests, args.manifests_interactive,
                                       args.remote, args.update,
                                       test_build_folder=args.test_build_folder,
-                                      lockfile=args.lockfile)
+                                      lockfile=args.lockfile, ignore_dirty=args.ignore_dirty)
         except ConanException as exc:
             info = exc.info
             raise
@@ -510,15 +514,15 @@ class Command(object):
         subparsers.required = True
 
         get_subparser = subparsers.add_parser('get', help='Get the value of configuration item')
-        subparsers.add_parser('home', help='Retrieve the Conan home directory')
+        home_subparser = subparsers.add_parser('home', help='Retrieve the Conan home directory')
         install_subparser = subparsers.add_parser('install', help='Install a full configuration '
                                                                   'from a local or remote zip file')
         rm_subparser = subparsers.add_parser('rm', help='Remove an existing config element')
         set_subparser = subparsers.add_parser('set', help='Set a value for a configuration item')
 
-        rm_subparser.add_argument("item", help="Item to remove")
         get_subparser.add_argument("item", nargs="?", help="Item to print")
-        set_subparser.add_argument("item", help="'item=value' to set")
+        home_subparser.add_argument("-j", "--json", default=None, action=OnceArgument,
+                                    help='json file path where the config home will be written to')
         install_subparser.add_argument("item", nargs="?",
                                        help="git repository, local folder or zip file (local or "
                                        "http) where the configuration is stored")
@@ -534,6 +538,8 @@ class Command(object):
                                        'specified origin')
         install_subparser.add_argument("-tf", "--target-folder",
                                        help='Install to that path in the conan cache')
+        rm_subparser.add_argument("item", help="Item to remove")
+        set_subparser.add_argument("item", help="'item=value' to set")
 
         args = parser.parse_args(*args)
 
@@ -553,6 +559,8 @@ class Command(object):
         elif args.subcommand == "home":
             conan_home = self._conan.config_home()
             self._out.info(conan_home)
+            if args.json:
+                self._outputer.json_output({"home": conan_home}, args.json, os.getcwd())
             return conan_home
         elif args.subcommand == "install":
             verify_ssl = get_bool_from_text(args.verify_ssl)
@@ -583,7 +591,8 @@ class Command(object):
         parser.add_argument("--paths", action='store_true', default=False,
                             help='Show package paths in local cache')
         parser.add_argument("-bo", "--build-order",
-                            help='given a modified reference, return an ordered list to build (CI)',
+                            help="given a modified reference, return an ordered list to build (CI)."
+                                 " [DEPRECATED: use 'conan graph build-order ...' instead]",
                             nargs=1, action=Extender)
         parser.add_argument("-g", "--graph", action=OnceArgument,
                             help='Creates file with project dependencies graph. It will generate '
@@ -611,6 +620,10 @@ class Command(object):
 
         _add_common_install_arguments(parser, build_help=build_help)
         args = parser.parse_args(*args)
+
+        if args.build_order:
+            self._out.warn("Usage of `--build-order` argument is deprecated and can return"
+                           " wrong results. Use `conan graph build-order ...` instead.")
 
         if args.install_folder and (args.profile or args.settings or args.options or args.env):
             raise ArgumentError(None,
@@ -904,6 +917,9 @@ class Command(object):
         parser.add_argument("-l", "--lockfile", action=OnceArgument, nargs='?', const=".",
                             help="Path to a lockfile or folder containing 'conan.lock' file. "
                             "Lockfile will be updated with the exported package")
+        parser.add_argument("--ignore-dirty", default=False, action='store_true',
+                            help='When using the "scm" feature with "auto" values, capture the'
+                                 ' revision and url even if there are uncommitted changes')
 
         args = parser.parse_args(*args)
 
@@ -928,7 +944,8 @@ class Command(object):
                                           force=args.force,
                                           user=user,
                                           channel=channel,
-                                          lockfile=args.lockfile)
+                                          lockfile=args.lockfile,
+                                          ignore_dirty=args.ignore_dirty)
         except ConanException as exc:
             info = exc.info
             raise
@@ -956,6 +973,9 @@ class Command(object):
         parser.add_argument("-l", "--lockfile", action=OnceArgument, nargs='?', const=".",
                             help="Path to a lockfile or folder containing 'conan.lock' file. "
                             "Lockfile will be updated with the exported package")
+        parser.add_argument("--ignore-dirty", default=False, action='store_true',
+                            help='When using the "scm" feature with "auto" values, capture the'
+                                 ' revision and url even if there are uncommitted changes')
 
         args = parser.parse_args(*args)
         self._warn_python_version()
@@ -969,7 +989,8 @@ class Command(object):
 
         return self._conan.export(path=args.path,
                                   name=name, version=version, user=user, channel=channel,
-                                  keep_source=args.keep_source, lockfile=args.lockfile)
+                                  keep_source=args.keep_source, lockfile=args.lockfile,
+                                  ignore_dirty=args.ignore_dirty)
 
     def remove(self, *args):
         """
@@ -994,7 +1015,7 @@ class Command(object):
                             help="Remove only outdated from recipe packages. "
                                  "This flag can only be used with a reference")
         parser.add_argument('-p', '--packages', nargs="*", action=Extender,
-                            help="Select package to remove specifying the package ID")
+                            help="Remove all packages of the specified reference if no specific package ID is provided")
         parser.add_argument('-q', '--query', default=None, action=OnceArgument, help=_QUERY_HELP)
         parser.add_argument('-r', '--remote', action=OnceArgument,
                             help='Will remove from the specified remote')
@@ -1204,7 +1225,7 @@ class Command(object):
             raise ConanException("'--table' argument cannot be used together with '--json'")
 
         # Searching foo/bar is considered a pattern (FIXME: 2.0) so use strict mode to disambiguate
-        is_reference = check_valid_ref(args.pattern_or_reference, strict_mode=True)
+        is_reference = check_valid_ref(args.pattern_or_reference)
 
         if is_reference:
             ref = ConanFileReference.loads(args.pattern_or_reference)
@@ -1523,7 +1544,9 @@ class Command(object):
         subparsers.required = True
 
         # create the parser for the "profile" command
-        subparsers.add_parser('list', help='List current profiles')
+        parser_list = subparsers.add_parser('list', help='List current profiles')
+        parser_list.add_argument("-j", "--json", default=None, action=OnceArgument,
+                                 help='json file path where the profile list will be written to')
         parser_show = subparsers.add_parser('show', help='Show the values defined for a profile')
         parser_show.add_argument('profile', help="name of the profile in the '.conan/profiles' "
                                                  "folder or path to a profile file")
@@ -1559,6 +1582,8 @@ class Command(object):
         if args.subcommand == "list":
             profiles = self._conan.profile_list()
             self._outputer.profile_list(profiles)
+            if args.json:
+                self._outputer.json_output(profiles, args.json, os.getcwd())
         elif args.subcommand == "show":
             profile_text = self._conan.read_profile(profile)
             self._outputer.print_profile(profile, profile_text)

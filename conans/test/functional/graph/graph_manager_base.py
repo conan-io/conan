@@ -6,6 +6,7 @@ from mock import Mock
 
 from conans.client.cache.cache import ClientCache
 from conans.client.cache.remote_registry import Remotes
+from conans.client.graph.build_mode import BuildMode
 from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
 from conans.client.graph.graph_manager import GraphManager
 from conans.client.graph.proxy import ConanProxy
@@ -43,9 +44,10 @@ class GraphManagerTest(unittest.TestCase):
         self.manager = GraphManager(self.output, cache, self.remote_manager, self.loader, proxy,
                                     self.resolver, binaries)
         hook_manager = Mock()
-        recorder = Mock()
-        app_type = namedtuple("ConanApp", "cache out remote_manager hook_manager graph_manager")
-        app = app_type(self.cache, self.output, self.remote_manager, hook_manager, self.manager)
+        app_type = namedtuple("ConanApp", "cache out remote_manager hook_manager graph_manager"
+                              " binaries_analyzer")
+        app = app_type(self.cache, self.output, self.remote_manager, hook_manager, self.manager,
+                       binaries)
         return app
 
     def _cache_recipe(self, ref, test_conanfile, revision=None):
@@ -78,12 +80,12 @@ class GraphManagerTest(unittest.TestCase):
         options = OptionsValues()
         graph_info = GraphInfo(profile, options, root_ref=ref)
         app = self._get_app()
-        deps_graph, _ = app.graph_manager.load_graph(path, create_ref, graph_info,
-                                                     build_mode, check_updates, update,
-                                                     remotes, recorder)
+        deps_graph = app.graph_manager.load_graph(path, create_ref, graph_info, build_mode,
+                                                  check_updates, update, remotes, recorder)
         if install:
             binary_installer = BinaryInstaller(app, recorder)
-            binary_installer.install(deps_graph, None, False, graph_info)
+            build_mode = BuildMode(build_mode, app.out)
+            binary_installer.install(deps_graph, None, build_mode, update, False, graph_info)
         return deps_graph
 
     def _check_node(self, node, ref, deps, build_deps, dependents, closure):
