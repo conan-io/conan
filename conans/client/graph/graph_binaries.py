@@ -1,5 +1,6 @@
 import os
 
+from conans.client.graph.build_mode import BuildMode
 from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_MISSING,
                                        BINARY_UPDATE, RECIPE_EDITABLE, BINARY_EDITABLE,
                                        RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP, BINARY_UNKNOWN)
@@ -166,6 +167,7 @@ class GraphBinariesAnalyzer(object):
             pref = PackageReference(node.ref, node.package_id)
             self._process_node(node, pref, build_mode, update, remotes)
             if node.binary == BINARY_MISSING and node.conanfile.compatible_packages:
+                compatible_build_mode = BuildMode([], self._out)
                 for compatible_package in node.conanfile.compatible_packages:
                     package_id = compatible_package.package_id()
                     if package_id == node.package_id:
@@ -174,12 +176,16 @@ class GraphBinariesAnalyzer(object):
                         continue
                     pref = PackageReference(node.ref, package_id)
                     node.binary = None  # Invalidate it
-                    self._process_node(node, pref, build_mode, update, remotes)
+                    # NO Build mode
+                    self._process_node(node, pref, compatible_build_mode, update, remotes)
                     if node.binary and node.binary != BINARY_MISSING:
                         node.conanfile.output.info("Main binary package '%s' missing. Using "
                                                    "compatible package '%s'"
                                                    % (node.package_id, package_id))
                         node._package_id = package_id
+                        # So they are available in package_info() method
+                        node.conanfile.settings = compatible_package.settings
+                        node.conanfile.options = compatible_package.options
                         break
                     else:
                         node.binary = BINARY_MISSING
