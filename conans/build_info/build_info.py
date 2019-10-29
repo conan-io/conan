@@ -171,11 +171,12 @@ class BuildInfoCreator(object):
                     modules[package_key]["properties"].update(_parse_options(node.get("options")))
 
                 # Recurse requires
-                for _, node_id in node["requires"].items():
-                    modules[recipe_key]["dependencies"].update(
-                        _gather_deps(node_id, data, self._get_recipe_artifacts))
-                    modules[package_key]["dependencies"].update(
-                        _gather_deps(node_id, data, self._get_package_artifacts))
+                if node.get("requires"):
+                    for _, node_id in node["requires"].items():
+                        modules[recipe_key]["dependencies"].update(
+                            _gather_deps(node_id, data, self._get_recipe_artifacts))
+                        modules[package_key]["dependencies"].update(
+                            _gather_deps(node_id, data, self._get_package_artifacts))
 
                 # TODO: Is the recipe a 'dependency' of the package
 
