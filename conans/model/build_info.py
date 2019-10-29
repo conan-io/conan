@@ -19,6 +19,7 @@ class _CppInfo(object):
     """
     def __init__(self):
         self.name = None
+        self.system_libs = []  # Ordered list of system libraries
         self.includedirs = []  # Ordered list of include paths
         self.srcdirs = []  # Ordered list of source paths
         self.libdirs = []  # Directories to find libraries
@@ -171,6 +172,7 @@ class _BaseDepsCppInfo(_CppInfo):
         def merge_lists(seq1, seq2):
             return [s for s in seq1 if s not in seq2] + seq2
 
+        self.system_libs = merge_lists(self.system_libs, dep_cpp_info.system_libs)
         self.includedirs = merge_lists(self.includedirs, dep_cpp_info.include_paths)
         self.srcdirs = merge_lists(self.srcdirs, dep_cpp_info.src_paths)
         self.libdirs = merge_lists(self.libdirs, dep_cpp_info.lib_paths)
