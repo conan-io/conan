@@ -26,6 +26,7 @@ def extend(cpp_info, config):
         result.cxxflags = cpp_info.cxxflags + config_info.cxxflags
         result.sharedlinkflags = cpp_info.sharedlinkflags + config_info.sharedlinkflags
         result.exelinkflags = cpp_info.exelinkflags + config_info.exelinkflags
+        result.system_libs = add_lists(cpp_info.system_libs, config_info.system_libs)
         return result
     return cpp_info
 
