@@ -45,7 +45,6 @@ sh_deactivate_tpl = Template(textwrap.dedent("""
 class VirtualEnvGenerator(Generator):
 
     append_with_spaces = ["CPPFLAGS", "CFLAGS", "CXXFLAGS", "LIBS", "LDFLAGS", "CL", "_LINK_"]
-    environment_filename = "environment.env"
     suffix = ""
     venv_name = "conanenv"
 
@@ -123,8 +122,8 @@ class VirtualEnvGenerator(Generator):
         modified_vars = [it[0] for it in ret if it[2] != '""']
         new_vars = [it[0] for it in ret if it[2] == '""']
 
-        environment_filepath = os.path.abspath(os.path.join(self.output_path,
-                                                            self.environment_filename))
+        environment_filepath = os.path.abspath(
+            os.path.join(self.output_path, "environment{}.sh.env".format(self.suffix)))
         activate_content = sh_activate_tpl.render(environment_file=environment_filepath,
                                                   modified_vars=modified_vars, new_vars=new_vars)
         activate_lines = activate_content.splitlines()
@@ -180,6 +179,6 @@ class VirtualEnvGenerator(Generator):
         activate, deactivate, envfile = self._sh_lines()
         result["activate{}.sh".format(self.suffix)] = os.linesep.join(activate)
         result["deactivate{}.sh".format(self.suffix)] = os.linesep.join(deactivate)
-        result[self.environment_filename] = os.linesep.join(envfile)
+        result["environment{}.sh.env".format(self.suffix)] = os.linesep.join(envfile)
 
         return result

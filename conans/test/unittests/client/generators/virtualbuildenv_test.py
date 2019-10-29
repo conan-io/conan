@@ -12,7 +12,6 @@ class VirtualBuildEnvGeneratorGCCTest(unittest.TestCase):
     activate_sh = "activate_build.sh"
     activate_bat = "activate_build.bat"
     activate_ps1 = "activate_build.ps1"
-    environment_filename = "environment_build.env"
 
     @classmethod
     def setUpClass(cls):
@@ -25,7 +24,7 @@ class VirtualBuildEnvGeneratorGCCTest(unittest.TestCase):
         cls.result = cls.generator.content
 
     def test_output(self):
-        keys = ["deactivate_build.sh", "activate_build.sh", self.environment_filename]
+        keys = ["deactivate_build.sh", "activate_build.sh", "environment_build.sh.env"]
         if platform.system() == "Windows":
             keys += ["activate_build.bat", "deactivate_build.bat",
                      "activate_build.ps1", "deactivate_build.ps1"]
@@ -40,7 +39,7 @@ class VirtualBuildEnvGeneratorGCCTest(unittest.TestCase):
         self.assertEqual(self.generator.env["LIBS"], [])
 
     def test_scripts(self):
-        content = self.result[self.environment_filename]
+        content = self.result["environment_build.sh.env"]
         self.assertIn('CPPFLAGS="-DNDEBUG ${CPPFLAGS+ $CPPFLAGS}"', content)
         self.assertIn('CXXFLAGS="-O3 -s --sysroot=/path/to/sysroot ${CXXFLAGS+ $CXXFLAGS}"', content)
         self.assertIn('CFLAGS="-O3 -s --sysroot=/path/to/sysroot ${CFLAGS+ $CFLAGS}"', content)

@@ -23,5 +23,5 @@ class VirtualEnvPythonGeneratorTest(unittest.TestCase):
         content = gen.content
 
         self.assertIn('PYTHONPATH="1":"2":"three":"DepAPath":"DepBPath"${PYTHONPATH+:$PYTHONPATH}',
-                      content[gen.environment_filename])
+                      content["environment_run_python.sh.env"])
 

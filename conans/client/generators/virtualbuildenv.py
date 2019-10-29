@@ -5,7 +5,6 @@ from conans.client.tools.win import vcvars_dict
 
 
 class VirtualBuildEnvGenerator(VirtualEnvGenerator):
-    environment_filename = "environment_build.env"
 
     suffix = "_build"
     venv_name = "conanbuildenv"

@@ -2,7 +2,6 @@ from conans.client.generators.virtualrunenv import VirtualRunEnvGenerator
 
 
 class VirtualEnvPythonGenerator(VirtualRunEnvGenerator):
-    environment_filename = "environment_python.env"
 
     suffix = "_run_python"
     venv_name = "conanenvpython"

@@ -3,7 +3,6 @@ from conans.client.run_environment import RunEnvironment
 
 
 class VirtualRunEnvGenerator(VirtualEnvGenerator):
-    environment_filename = "environment_run.env"
 
     suffix = "_run"
     venv_name = "conanrunenv"
