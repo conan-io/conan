@@ -1,7 +1,6 @@
 import datetime
 import json
 import os
-import re
 from collections import defaultdict, namedtuple
 from six.moves.urllib.parse import urlparse, urljoin
 
@@ -40,14 +39,6 @@ def _parse_profile(contents):
 class BuildInfoCreator(object):
     def __init__(self, output, build_info_file, lockfile, multi_module=True, skip_env=True,
                  user=None, password=None, apikey=None):
-        self._pref_pattern = re.compile(r"(?P<name>[^\/@#:]+)\/"
-                                        r"(?P<version>[^\/@#:]+)"
-                                        r"@"
-                                        r"(?P<user>[^\/@#:]+)\/"
-                                        r"(?P<channel>[^\/@#:]+)"
-                                        r"#(?P<rrev>[^\/@#:]+)"
-                                        r":(?P<pid>[^\/@#:]+)"
-                                        r"#(?P<prev>[^\/@#:]+)")
         self._build_info_file = build_info_file
         self._lockfile = lockfile
         self._multi_module = multi_module
@@ -58,11 +49,26 @@ class BuildInfoCreator(object):
         self._conan_cache = ClientCache(os.path.join(get_conan_user_home(), ".conan"), output)
 
     def parse_pref(self, pref):
-        return self._pref_pattern.match(pref).groupdict()
+        ref = ConanFileReference.loads(pref, validate=False)
+        rrev = ref.revision.split("#")[0].split(":")[0]
+        pid = ref.revision.split("#")[0].split(":")[1]
+        prev = ref.revision.split("#")[1]
+        return {
+            "name": ref.name,
+            "version": ref.version,
+            "user": ref.user,
+            "channel": ref.channel,
+            "rrev": rrev,
+            "pid": pid,
+            "prev": prev
+        }
 
     def _get_reference(self, pref):
         r = self.parse_pref(pref)
-        return "{name}/{version}@{user}/{channel}".format(**r)
+        if r.get("user") and r.get("channel"):
+            return "{name}/{version}@{user}/{channel}".format(**r)
+        else:
+            return "{name}/{version}".format(**r)
 
     def _get_package_reference(self, pref):
         r = self.parse_pref(pref)
@@ -112,22 +118,35 @@ class BuildInfoCreator(object):
 
     def _get_recipe_artifacts(self, pref, add_prefix, use_id):
         r = self.parse_pref(pref)
-        ref = "{name}/{version}@{user}/{channel}#{rrev}".format(**r)
+        if r.get("user") and r.get("channel"):
+            ref = "{name}/{version}@{user}/{channel}#{rrev}".format(**r)
+        else:
+            ref = "{name}/{version}#{rrev}".format(**r)
         reference = ConanFileReference.loads(ref)
         package_layout = self._conan_cache.package_layout(reference)
         metadata = package_layout.load_metadata()
         name_format = "{} :: {{}}".format(self._get_reference(pref)) if add_prefix else "{}"
-        url = "{user}/{name}/{version}/{channel}/{rrev}/export".format(**r)
+        if r.get("user") and r.get("channel"):
+            url = "{user}/{name}/{version}/{channel}/{rrev}/export".format(**r)
+        else:
+            url = "_/{name}/{version}/_/{rrev}/export".format(**r)
+
         return self._get_metadata_artifacts(metadata, url, name_format=name_format, use_id=use_id)
 
     def _get_package_artifacts(self, pref, add_prefix, use_id):
         r = self.parse_pref(pref)
-        ref = "{name}/{version}@{user}/{channel}#{rrev}".format(**r)
+        if r.get("user") and r.get("channel"):
+            ref = "{name}/{version}@{user}/{channel}#{rrev}".format(**r)
+        else:
+            ref = "{name}/{version}#{rrev}".format(**r)
         reference = ConanFileReference.loads(ref)
         package_layout = self._conan_cache.package_layout(reference)
         metadata = package_layout.load_metadata()
         name_format = "{} :: {{}}".format(self._get_package_reference(pref)) if add_prefix else "{}"
-        url = "{user}/{name}/{version}/{channel}/{rrev}/package/{pid}/{prev}".format(**r)
+        if r.get("user") and r.get("channel"):
+            url = "{user}/{name}/{version}/{channel}/{rrev}/package/{pid}/{prev}".format(**r)
+        else:
+            url = "_/{name}/{version}/_/{rrev}/package/{pid}/{prev}".format(**r)
         arts = self._get_metadata_artifacts(metadata, url, name_format=name_format, use_id=use_id,
                                             package_id=r["pid"])
         return arts
