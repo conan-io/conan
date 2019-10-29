@@ -574,7 +574,3 @@ class BuildInfoTest(unittest.TestCase):
         for index in range(2):
             self.assertEqual(mergedinfo["modules"][index]["id"],
                              res_json["modules"][index]["id"])
-            self.assertEqual(mergedinfo["modules"][index]["artifacts"][0],
-                          res_json["modules"][index]["artifacts"][0])
-            self.assertEqual(mergedinfo["modules"][index]["dependencies"][0],
-                          res_json["modules"][index]["dependencies"][0])

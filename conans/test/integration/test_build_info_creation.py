@@ -128,30 +128,9 @@ class MyBuildInfoCreation(unittest.TestCase):
             buildinfo = json.load(f)
             self.assertEqual(buildinfo["name"], "MyBuildName")
             self.assertEqual(buildinfo["number"], "42")
-            self.assertEqual(buildinfo["modules"][0]["id"], "PkgB/0.1@user/channel")
-            self.assertEqual(buildinfo["modules"][0]["artifacts"][0]["name"], "conan_sources.tgz")
-            self.assertEqual(buildinfo["modules"][0]["artifacts"][1]["name"], "conanfile.py")
-            self.assertEqual(buildinfo["modules"][0]["artifacts"][2]["name"], "conanmanifest.txt")
-            self.assertEqual(buildinfo["modules"][0]["dependencies"][0]["id"],
-                             "PkgA/0.2@user/channel :: conan_sources.tgz")
-            self.assertEqual(buildinfo["modules"][0]["dependencies"][1]["id"],
-                             "PkgA/0.2@user/channel :: conanfile.py")
-            self.assertEqual(buildinfo["modules"][0]["dependencies"][2]["id"],
-                             "PkgA/0.2@user/channel :: conanmanifest.txt")
-
-            self.assertEqual(buildinfo["modules"][1]["id"],
-                             "PkgB/0.1@user/channel:09f152eb7b3e0a6e15a2a3f464245864ae8f8644")
-            self.assertEqual(buildinfo["modules"][1]["artifacts"][0]["name"], "conan_package.tgz")
-            self.assertEqual(buildinfo["modules"][1]["artifacts"][1]["name"], "conaninfo.txt")
-            self.assertEqual(buildinfo["modules"][1]["artifacts"][2]["name"], "conanmanifest.txt")
-            self.assertEqual(buildinfo["modules"][1]["dependencies"][0]["id"],
-                             "PkgA/0.2@user/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 :: conan_package.tgz")
-            self.assertEqual(buildinfo["modules"][1]["dependencies"][1]["id"],
-                             "PkgA/0.2@user/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 :: conaninfo.txt")
-            self.assertEqual(buildinfo["modules"][1]["dependencies"][2]["id"],
-                             "PkgA/0.2@user/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 :: conanmanifest.txt")
-
-            self.assertEqual(buildinfo["modules"][2]["id"], "PkgA/0.2@user/channel")
+            ids_list = [item["id"] for item in buildinfo["modules"]]
+            self.assertTrue("PkgB/0.1@user/channel" in ids_list)
+            self.assertTrue("PkgB/0.1@user/channel:09f152eb7b3e0a6e15a2a3f464245864ae8f8644" in ids_list)
 
         sys.argv = ["conan_build_info", "--v2", "update",
                     os.path.join(client.current_folder, "buildinfo1.json"),
