@@ -113,19 +113,19 @@ set(CONAN_CMD_C_FLAGS ${CONAN_C_FLAGS})
 
 
 _target_template = """
-    conan_package_library_targets("${{CONAN_LIBS_{uname}}}" "${{CONAN_LIB_DIRS_{uname}}}"
+    conan_package_library_targets("${{CONAN_PKG_LIBS_{uname}}}" "${{CONAN_LIB_DIRS_{uname}}}"
                                   CONAN_PACKAGE_TARGETS_{uname} "${{CONAN_SYSTEM_LIBS_{uname}}} {deps}"
                                   "" {pkg_name})
-    conan_package_library_targets("${{CONAN_LIBS_{uname}_DEBUG}}" "${{CONAN_LIB_DIRS_{uname}_DEBUG}}"
+    conan_package_library_targets("${{CONAN_PKG_LIBS_{uname}_DEBUG}}" "${{CONAN_LIB_DIRS_{uname}_DEBUG}}"
                                   CONAN_PACKAGE_TARGETS_{uname}_DEBUG "${{CONAN_SYSTEM_LIBS_{uname}_DEBUG}} {deps}"
                                   "debug" {pkg_name})
-    conan_package_library_targets("${{CONAN_LIBS_{uname}_RELEASE}}" "${{CONAN_LIB_DIRS_{uname}_RELEASE}}"
+    conan_package_library_targets("${{CONAN_PKG_LIBS_{uname}_RELEASE}}" "${{CONAN_LIB_DIRS_{uname}_RELEASE}}"
                                   CONAN_PACKAGE_TARGETS_{uname}_RELEASE "${{CONAN_SYSTEM_LIBS_{uname}_RELEASE}} {deps}"
                                   "release" {pkg_name})
-    conan_package_library_targets("${{CONAN_LIBS_{uname}_RELWITHDEBINFO}}" "${{CONAN_LIB_DIRS_{uname}_RELWITHDEBINFO}}"
+    conan_package_library_targets("${{CONAN_PKG_LIBS_{uname}_RELWITHDEBINFO}}" "${{CONAN_LIB_DIRS_{uname}_RELWITHDEBINFO}}"
                                   CONAN_PACKAGE_TARGETS_{uname}_RELWITHDEBINFO "${{CONAN_SYSTEM_LIBS_{uname}_RELWITHDEBINFO}} {deps}"
                                   "relwithdebinfo" {pkg_name})
-    conan_package_library_targets("${{CONAN_LIBS_{uname}_MINSIZEREL}}" "${{CONAN_LIB_DIRS_{uname}_MINSIZEREL}}"
+    conan_package_library_targets("${{CONAN_PKG_LIBS_{uname}_MINSIZEREL}}" "${{CONAN_LIB_DIRS_{uname}_MINSIZEREL}}"
                                   CONAN_PACKAGE_TARGETS_{uname}_MINSIZEREL "${{CONAN_SYSTEM_LIBS_{uname}_MINSIZEREL}} {deps}"
                                   "minsizerel" {pkg_name})
 
