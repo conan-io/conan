@@ -340,7 +340,8 @@ endmacro()""", macro)
                       '"path/to/Frameworks1"\n\t\t\t"path/to/Frameworks2")', content)
         self.assertIn('find_library(CONAN_FRAMEWORK_OPENCL OpenCL PATHS '
                       '"path/to/Frameworks1"\n\t\t\t"path/to/Frameworks2")', content)
-        self.assertIn('set(CONAN_LIBS_MYPKG )', content)  #FIXME: Add a CONAN_FRAMEWORKS_MYPKG
+        self.assertIn('set(CONAN_LIBS_MYPKG  ${CONAN_FRAMEWORK_OPENGL} ${CONAN_FRAMEWORK_OPENCL})',
+                      content)  #FIXME: Add a CONAN_FRAMEWORKS_MYPKG
         self.assertIn('set(CONAN_LIBS  ${CONAN_FRAMEWORK_OPENGL} '
                       '${CONAN_FRAMEWORK_OPENCL} ${CONAN_LIBS})', content)
 
