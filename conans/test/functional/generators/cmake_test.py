@@ -147,7 +147,7 @@ CONAN_BASIC_SETUP()
         self.assertIn("set(CONAN_LIBS_MYLIB ${CONAN_LIBS_MYLIB} ${CONAN_SYSTEM_LIBS_MYLIB} ${CONAN_FRAMEWORKS_FOUND_MYLIB})",
                       content)
         self.assertIn("set(CONAN_PKG_LIBS_MYLIB lib1)", content)
-        self.assertIn("set(CONAN_SYSTEM_LIBS sys1 ${CONAN_SYSTEM_LIBS})", content)
+        self.assertIn("set(CONAN_SYSTEM_LIBS sys1)", content)
         self.assertIn("set(CONAN_SYSTEM_LIBS_MYLIB sys1)", content)
 
         # Check target has libraries and system deps available

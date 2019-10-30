@@ -310,7 +310,7 @@ class CMakeMultiSystemLibsTest(unittest.TestCase):
                       "${CONAN_SYSTEM_LIBS_MYLIB_RELEASE} ${CONAN_FRAMEWORKS_FOUND_MYLIB_RELEASE})",
                       content)
         self.assertIn("set(CONAN_PKG_LIBS_MYLIB_RELEASE lib1 lib1release)", content)
-        self.assertIn("set(CONAN_SYSTEM_LIBS_RELEASE sys1 ${CONAN_SYSTEM_LIBS_RELEASE})", content)
+        self.assertIn("set(CONAN_SYSTEM_LIBS_RELEASE sys1)", content)
         self.assertIn("set(CONAN_SYSTEM_LIBS_MYLIB_RELEASE sys1)", content)
 
         client.run("install conanfile_consumer.py -s build_type=Debug")
@@ -322,7 +322,7 @@ class CMakeMultiSystemLibsTest(unittest.TestCase):
                       content)
         self.assertIn("set(CONAN_PKG_LIBS_DEBUG lib1 lib1debug ${CONAN_PKG_LIBS_DEBUG})", content)
         self.assertIn("set(CONAN_PKG_LIBS_MYLIB_DEBUG lib1 lib1debug)", content)
-        self.assertIn("set(CONAN_SYSTEM_LIBS_DEBUG sys1d ${CONAN_SYSTEM_LIBS_DEBUG})", content)
+        self.assertIn("set(CONAN_SYSTEM_LIBS_DEBUG sys1d)", content)
         self.assertIn("set(CONAN_SYSTEM_LIBS_MYLIB_DEBUG sys1d)", content)
 
 
