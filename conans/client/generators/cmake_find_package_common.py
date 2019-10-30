@@ -23,7 +23,7 @@ mark_as_advanced({name}_INCLUDE_DIRS{build_type_suffix}
                  {name}_LIBRARIES_TARGETS{build_type_suffix})
 
 # Find the real .lib/.a and add them to {name}_LIBS and {name}_LIBRARY_LIST
-set({name}_LIBRARY_LIST{build_type_suffix} {deps.libs})
+set({name}_LIBRARY_LIST{build_type_suffix} {deps.libs_system_frameworks})
 set({name}_LIB_DIRS{build_type_suffix} {deps.lib_paths})
 foreach(_LIBRARY_NAME ${{{name}_LIBRARY_LIST{build_type_suffix}}})
     unset(CONAN_FOUND_LIBRARY CACHE)
