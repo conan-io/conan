@@ -7,6 +7,7 @@ set(CONAN_RES_DIRS_{dep}{build_type} {deps.res_paths})
 set(CONAN_SRC_DIRS_{dep}{build_type} {deps.src_paths})
 set(CONAN_BUILD_DIRS_{dep}{build_type} {deps.build_paths})
 set(CONAN_FRAMEWORK_DIRS_{dep}{build_type} {deps.framework_paths})
+set(CONAN_LIBS_{dep}{build_type} {deps.libs} ${{CONAN_LIBS_{dep}{build_type}}})
 set(CONAN_PKG_LIBS_{dep}{build_type} {deps.libs})
 set(CONAN_SYSTEM_LIBS_{dep}{build_type} {deps.system_libs})
 set(CONAN_FRAMEWORKS_{dep}{build_type} {deps.frameworks})
@@ -29,7 +30,7 @@ set(CONAN_EXE_LINKER_FLAGS_{dep}{build_type}_LIST "{deps.exelinkflags_list}")
 # Apple Frameworks
 conan_find_apple_frameworks(CONAN_FRAMEWORKS_{dep}{build_type} CONAN_FRAMEWORKS_FOUND_{dep}{build_type})
 # Append to aggregated values variable
-set(CONAN_LIBS_{dep}{build_type} ${{CONAN_PKG_LIBS_{dep}{build_type}}} ${{CONAN_SYSTEM_LIBS_{dep}{build_type}}} ${{CONAN_FRAMEWORKS_FOUND_{dep}{build_type}}})
+set(CONAN_LIBS_{dep}{build_type} ${{CONAN_LIBS_{dep}{build_type}}} ${{CONAN_SYSTEM_LIBS_{dep}{build_type}}} ${{CONAN_FRAMEWORKS_FOUND_{dep}{build_type}}})
 """
 
 
@@ -93,6 +94,7 @@ set(CONAN_LIB_DIRS{build_type} {deps.lib_paths} ${{CONAN_LIB_DIRS{build_type}}})
 set(CONAN_BIN_DIRS{build_type} {deps.bin_paths} ${{CONAN_BIN_DIRS{build_type}}})
 set(CONAN_RES_DIRS{build_type} {deps.res_paths} ${{CONAN_RES_DIRS{build_type}}})
 set(CONAN_FRAMEWORK_DIRS{build_type} {deps.framework_paths} ${{CONAN_FRAMEWORK_DIRS{build_type}}})
+set(CONAN_LIBS{build_type} {deps.libs} ${{CONAN_LIBS{build_type}}})
 set(CONAN_PKG_LIBS{build_type} {deps.libs} ${{CONAN_PKG_LIBS{build_type}}})
 set(CONAN_SYSTEM_LIBS{build_type} {deps.system_libs} ${{CONAN_SYSTEM_LIBS{build_type}}})
 set(CONAN_FRAMEWORKS{build_type} {deps.frameworks} ${{CONAN_FRAMEWORKS{build_type}}})
@@ -108,7 +110,7 @@ set(CONAN_C_FLAGS{build_type} "{deps.cflags} ${{CONAN_C_FLAGS{build_type}}}")
 # Apple Frameworks
 conan_find_apple_frameworks(CONAN_FRAMEWORKS{build_type} CONAN_FRAMEWORKS_FOUND{build_type})
 # Append to aggregated values variable
-set(CONAN_LIBS{build_type} ${{CONAN_PKG_LIBS{build_type}}} ${{CONAN_SYSTEM_LIBS{build_type}}} ${{CONAN_FRAMEWORKS_FOUND{build_type}}})
+set(CONAN_LIBS{build_type} ${{CONAN_LIBS{build_type}}} ${{CONAN_SYSTEM_LIBS{build_type}}} ${{CONAN_FRAMEWORKS_FOUND{build_type}}})
 """
 
 

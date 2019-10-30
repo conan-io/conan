@@ -294,6 +294,8 @@ cmake_minimum_required(VERSION 3.1)
 find_package(Test)
 message("Libraries to Link: ${Test_LIBS}")
 message("Version: ${Test_VERSION}")
+message("Frameworks: ${Test_FRAMEWORKS}")
+message("Frameworks found: ${Test_FRAMEWORKS_FOUND}")
 
 get_target_property(tmp Test::Test INTERFACE_LINK_LIBRARIES)
 message("Target libs: ${tmp}")
