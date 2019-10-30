@@ -134,13 +134,14 @@ class CMakeFindPathMultiGeneratorTest(unittest.TestCase):
 
             library_name = "sys1d" if build_type == "Debug" else "sys1"
             self.assertIn("System libs: %s" % library_name, client.out)
-            self.assertIn("Libraries to Link: lib1", client.out)
-            self.assertNotIn("-- Library %s not found in package, might be system one" %
-                             library_name, client.out)
+            self.assertIn("Libraries to Link: lib1;sys1", client.out)
+            self.assertIn("-- Library %s not found in package, might be system one" % library_name,
+                          client.out)
             if build_type == "Release":
-                target_libs = "$<$<CONFIG:Release>:lib1;sys1;>;$<$<CONFIG:RelWithDebInfo>:;>;$<$<CONFIG:MinSizeRel>:;>;$<$<CONFIG:Debug>:;>"
+                #FIXME: System libs are repeated as the targets is set with CONAN_LIBS and  CONAN_SYSTEM_LIBS
+                target_libs = "$<$<CONFIG:Release>:lib1;sys1;sys1;>;$<$<CONFIG:RelWithDebInfo>:;>;$<$<CONFIG:MinSizeRel>:;>;$<$<CONFIG:Debug>:;>"
             else:
-                target_libs = "$<$<CONFIG:Release>:;>;$<$<CONFIG:RelWithDebInfo>:;>;$<$<CONFIG:MinSizeRel>:;>;$<$<CONFIG:Debug>:lib1;sys1d;>"
+                target_libs = "$<$<CONFIG:Release>:;>;$<$<CONFIG:RelWithDebInfo>:;>;$<$<CONFIG:MinSizeRel>:;>;$<$<CONFIG:Debug>:lib1;sys1d;sys1d;>"
             self.assertIn("Target libs: %s" % target_libs, client.out)
 
     def cpp_info_name_test(self):
