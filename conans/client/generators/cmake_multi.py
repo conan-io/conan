@@ -2,7 +2,7 @@ from conans.client.generators.cmake import DepsCppCmake
 from conans.client.generators.cmake_common import (cmake_dependencies, cmake_dependency_vars,
                                                    cmake_global_vars, cmake_macros_multi,
                                                    cmake_package_info, cmake_user_info_vars,
-                                                   generate_targets_section)
+                                                   generate_targets_section, apple_frameworks_macro)
 from conans.model import Generator
 from conans.model.build_info import CppInfo
 
@@ -73,6 +73,7 @@ class CMakeMultiGenerator(Generator):
     @property
     def _content_multi(self):
         sections = ["include(CMakeParseArguments)"]
+        sections.append(apple_frameworks_macro)
 
         # USER DECLARED VARS
         sections.append("\n### Definition of user declared vars (user_info) ###\n")

@@ -1,4 +1,4 @@
-_cmake_single_dep_vars = """{deps.find_frameworks}
+_cmake_single_dep_vars = """
 set(CONAN_{dep}_ROOT{build_type} {deps.rootpath})
 set(CONAN_INCLUDE_DIRS_{dep}{build_type} {deps.include_paths})
 set(CONAN_LIB_DIRS_{dep}{build_type} {deps.lib_paths})
@@ -6,9 +6,10 @@ set(CONAN_BIN_DIRS_{dep}{build_type} {deps.bin_paths})
 set(CONAN_RES_DIRS_{dep}{build_type} {deps.res_paths})
 set(CONAN_SRC_DIRS_{dep}{build_type} {deps.src_paths})
 set(CONAN_BUILD_DIRS_{dep}{build_type} {deps.build_paths})
-set(CONAN_LIBS_{dep}{build_type} {deps.libs_system_frameworks})
+set(CONAN_FRAMEWORK_DIRS_{dep}{build_type} {deps.framework_paths})
 set(CONAN_PKG_LIBS_{dep}{build_type} {deps.libs})
 set(CONAN_SYSTEM_LIBS_{dep}{build_type} {deps.system_libs})
+set(CONAN_FRAMEWORKS_{dep}{build_type} {deps.frameworks})
 set(CONAN_DEFINES_{dep}{build_type} {deps.defines})
 set(CONAN_BUILD_MODULES_PATHS_{dep}{build_type} {deps.build_modules_paths})
 # COMPILE_DEFINITIONS are equal to CONAN_DEFINES without -D, for targets
@@ -24,6 +25,11 @@ set(CONAN_C_FLAGS_{dep}{build_type}_LIST "{deps.cflags_list}")
 set(CONAN_CXX_FLAGS_{dep}{build_type}_LIST "{deps.cxxflags_list}")
 set(CONAN_SHARED_LINKER_FLAGS_{dep}{build_type}_LIST "{deps.sharedlinkflags_list}")
 set(CONAN_EXE_LINKER_FLAGS_{dep}{build_type}_LIST "{deps.exelinkflags_list}")
+
+# Apple Frameworks
+conan_find_apple_frameworks(CONAN_FRAMEWORKS_{dep}{build_type} CONAN_FRAMEWORKS_FOUND_{dep}{build_type})
+# Append to aggregated values variable
+set(CONAN_LIBS_{dep}{build_type} ${{CONAN_PKG_LIBS_{dep}{build_type}}} ${{CONAN_SYSTEM_LIBS_{dep}{build_type}}} ${{CONAN_FRAMEWORKS_FOUND_{dep}{build_type}}})
 """
 
 
@@ -86,8 +92,10 @@ set(CONAN_INCLUDE_DIRS{build_type} {deps.include_paths} ${{CONAN_INCLUDE_DIRS{bu
 set(CONAN_LIB_DIRS{build_type} {deps.lib_paths} ${{CONAN_LIB_DIRS{build_type}}})
 set(CONAN_BIN_DIRS{build_type} {deps.bin_paths} ${{CONAN_BIN_DIRS{build_type}}})
 set(CONAN_RES_DIRS{build_type} {deps.res_paths} ${{CONAN_RES_DIRS{build_type}}})
-set(CONAN_LIBS{build_type} {deps.libs_system_frameworks} ${{CONAN_LIBS{build_type}}})
+set(CONAN_FRAMEWORK_DIRS{build_type} {deps.framework_paths} ${{CONAN_RES_DIRS{build_type}}})
+set(CONAN_PKG_LIBS{build_type} {deps.libs} ${{CONAN_LIBS{build_type}}})
 set(CONAN_SYSTEM_LIBS{build_type} {deps.system_libs} ${{CONAN_SYSTEM_LIBS{build_type}}})
+set(CONAN_FRAMEWORKS{build_type} {deps.frameworks} ${{CONAN_FRAMEWORKS{build_type}}})
 set(CONAN_DEFINES{build_type} {deps.defines} ${{CONAN_DEFINES{build_type}}})
 set(CONAN_BUILD_MODULES_PATHS{build_type} {deps.build_modules_paths} ${{CONAN_BUILD_MODULES_PATHS{build_type}}})
 set(CONAN_CMAKE_MODULE_PATH{build_type} {deps.build_paths} ${{CONAN_CMAKE_MODULE_PATH{build_type}}})
@@ -96,6 +104,11 @@ set(CONAN_CXX_FLAGS{build_type} "{deps.cxxflags} ${{CONAN_CXX_FLAGS{build_type}}
 set(CONAN_SHARED_LINKER_FLAGS{build_type} "{deps.sharedlinkflags} ${{CONAN_SHARED_LINKER_FLAGS{build_type}}}")
 set(CONAN_EXE_LINKER_FLAGS{build_type} "{deps.exelinkflags} ${{CONAN_EXE_LINKER_FLAGS{build_type}}}")
 set(CONAN_C_FLAGS{build_type} "{deps.cflags} ${{CONAN_C_FLAGS{build_type}}}")
+
+# Apple Frameworks
+conan_find_apple_frameworks(CONAN_FRAMEWORKS{build_type} CONAN_FRAMEWORKS_FOUND{build_type})
+# Append to aggregated values variable
+set(CONAN_LIBS{build_type} ${{CONAN_PKG_LIBS{build_type}}} ${{CONAN_SYSTEM_LIBS{build_type}}} ${{CONAN_FRAMEWORKS_FOUND{build_type}}})
 """
 
 
@@ -574,6 +587,36 @@ macro(conan_include_build_modules)
     foreach(_BUILD_MODULE_PATH ${CONAN_BUILD_MODULES_PATHS})
         include(${_BUILD_MODULE_PATH})
     endforeach()
+endmacro()
+"""
+
+apple_frameworks_macro = """
+macro(conan_find_apple_frameworks frameworks)
+    if(APPLE)
+        if(CMAKE_BUILD_TYPE)
+            if(${CMAKE_BUILD_TYPE} MATCHES "Debug")
+                set(CONAN_FRAMEWORKS ${CONAN_FRAMEWORKS_DEBUG} ${CONAN_FRAMEWORKS})
+                set(CONAN_FRAMEWORK_DIRS ${CONAN_FRAMEWORK_DIRS_DEBUG} ${CONAN_FRAMEWORK_DIRS})
+            elseif(${CMAKE_BUILD_TYPE} MATCHES "Release")
+                set(CONAN_FRAMEWORKS ${CONAN_FRAMEWORKS_RELEASE} ${CONAN_BUILD_MODULES_PATHS})
+                set(CONAN_FRAMEWORK_DIRS ${CONAN_FRAMEWORK_DIRS_RELEASE} ${CONAN_FRAMEWORK_DIRS})
+            elseif(${CMAKE_BUILD_TYPE} MATCHES "RelWithDebInfo")
+                set(CONAN_FRAMEWORKS ${CONAN_FRAMEWORKS_RELWITHDEBINFO} ${CONAN_BUILD_MODULES_PATHS})
+                set(CONAN_FRAMEWORK_DIRS ${CONAN_FRAMEWORK_DIRS_RELWITHDEBINFO} ${CONAN_FRAMEWORK_DIRS})
+            elseif(${CMAKE_BUILD_TYPE} MATCHES "MinSizeRel")
+                set(CONAN_FRAMEWORKS ${CONAN_FRAMEWORKS_MINSIZEREL} ${CONAN_BUILD_MODULES_PATHS})
+                set(CONAN_FRAMEWORK_DIRS ${CONAN_FRAMEWORK_DIRS_MINSIZEREL} ${CONAN_FRAMEWORK_DIRS})
+            endif()
+        endif()
+        
+        foreach(_FRAMEWORK ${CONAN_FRAMEWORKS})
+            # https://cmake.org/pipermail/cmake-developers/2017-August/030199.html
+            find_library(CONAN_FRAMEWORK_FOUND NAME ${_FRAMEWORK} PATHS ${CONAN_FRAMEWORK_DIRS})
+            if(CONAN_FRAMEWORK_FOUND)
+                list(APPEND CONAN_FRAMEWORKS_FOUND ${CONAN_FRAMEWORK_FOUND})
+            endif()
+        endforeach()
+    endif()
 endmacro()
 """
 
