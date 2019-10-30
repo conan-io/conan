@@ -84,7 +84,6 @@ class CMakeGenerator(Generator):
         sections.append(cmake_settings_info(self.conanfile.settings))
         all_flags = cmake_dependencies(dependencies=self.deps_build_info.deps)
         sections.append(all_flags)
-
         deps = DepsCppCmake(self.deps_build_info)
         all_flags = cmake_global_vars(deps=deps)
         sections.append(all_flags)
