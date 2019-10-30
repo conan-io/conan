@@ -174,6 +174,18 @@ VAR2=23
         self.assertEqual(info.bin_paths, [abs_bin,
                                           os.path.join(folder, "local_bindir")])
 
+    def cpp_info_system_libs_test(self):
+        info1 = CppInfo("folder1")
+        info1.system_libs = ["sysdep1"]
+        info2 = CppInfo("folder2")
+        info2.system_libs = ["sysdep2", "sysdep3"]
+        deps_cpp_info = DepsCppInfo()
+        deps_cpp_info.update(info1, "dep1")
+        deps_cpp_info.update(info2, "dep2")
+        self.assertEqual(["sysdep1", "sysdep2", "sysdep3"], deps_cpp_info.system_libs)
+        self.assertEqual(["sysdep1"], deps_cpp_info["dep1"].system_libs)
+        self.assertEqual(["sysdep2", "sysdep3"], deps_cpp_info["dep2"].system_libs)
+
     def cpp_info_name_test(self):
         folder = temp_folder()
         info = CppInfo(folder)
