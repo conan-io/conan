@@ -254,7 +254,7 @@ target_link_libraries(say_hello helloHello2)
         self.assertIn("Package libs: lib1", client.out)
         self.assertIn("Package version: 0.1", client.out)
         self.assertIn("System deps: sys1", client.out)
-        self.assertNotIn("-- Library sys1 not found in package, might be system one", client.out)
+        self.assertIn("Library sys1 not found in package, might be system one", client.out)
         self.assertIn("Target linked libs: lib1;sys1;;", client.out)
 
     @unittest.skipUnless(platform.system() == "Darwin", "Requires Apple Frameworks")
