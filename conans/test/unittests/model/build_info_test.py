@@ -193,3 +193,15 @@ VAR2=23
         deps_cpp_info = DepsCppInfo()
         deps_cpp_info.update(info, "myname")
         self.assertIn("MyName", deps_cpp_info["myname"].name)
+
+    def cpp_info_build_modules_test(self):
+        folder = temp_folder()
+        info = CppInfo(folder)
+        info.build_modules.append("my_module.cmake")
+        info.debug.build_modules = ["mod-release.cmake"]
+        deps_cpp_info = DepsCppInfo()
+        deps_cpp_info.update(info, "myname")
+        self.assertListEqual([os.path.join(folder, "my_module.cmake")],
+                             deps_cpp_info["myname"].build_modules_paths)
+        self.assertListEqual([os.path.join(folder, "mod-release.cmake")],
+                             deps_cpp_info["myname"].debug.build_modules_paths)
