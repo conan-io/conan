@@ -117,7 +117,8 @@ class CMakeFindPathMultiGeneratorTest(unittest.TestCase):
         pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID, None)
         package_path = client.cache.package_layout(ref).package(pref)
         modules_path = os.path.join(package_path, "share", "cmake")
-        self.assertListEqual(os.listdir(modules_path), ["FindFindModule.cmake", "my-module.cmake"])
+        self.assertListEqual(sorted(os.listdir(modules_path)),
+                             sorted(["FindFindModule.cmake", "my-module.cmake"]))
         consumer = textwrap.dedent("""
             from conans import ConanFile, CMake
 
