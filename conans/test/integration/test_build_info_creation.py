@@ -170,4 +170,4 @@ class MyBuildInfoCreation(unittest.TestCase):
         user_home_mock.return_value = base_folder
         user_channels = ["", "user/channel"]
         for user_channel in user_channels:
-            self._test_buildinfo(client, user_channel=user_channel)
+            self._test_buildinfo(client, user_channel)
