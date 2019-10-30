@@ -23,7 +23,6 @@ class BuildInfoTest(unittest.TestCase):
         "modules": [
             {
                 "id": "PkgB/0.1@user/channel",
-                "properties": {},
                 "artifacts": [
                     {
                         "sha1": "aba8527a2c4fc142cf5262298824d3680ecb057f",
@@ -61,16 +60,6 @@ class BuildInfoTest(unittest.TestCase):
             },
             {
                 "id": "PkgB/0.1@user/channel:09f152eb7b3e0a6e15a2a3f464245864ae8f8644",
-                "properties": {
-                    "settings.arch": "x86_64",
-                    "settings.arch_build": "x86_64",
-                    "settings.build_type": "Release",
-                    "settings.compiler": "apple-clang",
-                    "settings.compiler.libcxx": "libc++",
-                    "settings.compiler.version": "11.0",
-                    "settings.os": "Macos",
-                    "settings.os_build": "Macos"
-                },
                 "artifacts": [
                     {
                         "sha1": "45f961804e3bcc5267a2f6d130b4dcc16e2379ee",
@@ -108,7 +97,6 @@ class BuildInfoTest(unittest.TestCase):
             },
             {
                 "id": "PkgA/0.2@user/channel",
-                "properties": {},
                 "artifacts": [
                     {
                         "sha1": "def7797033b5b46ca063aaaf21dc7a9c1b93a35a",
@@ -130,16 +118,6 @@ class BuildInfoTest(unittest.TestCase):
             },
             {
                 "id": "PkgA/0.2@user/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9",
-                "properties": {
-                    "settings.arch": "x86_64",
-                    "settings.arch_build": "x86_64",
-                    "settings.build_type": "Release",
-                    "settings.compiler": "apple-clang",
-                    "settings.compiler.libcxx": "libc++",
-                    "settings.compiler.version": "11.0",
-                    "settings.os": "Macos",
-                    "settings.os_build": "Macos"
-                },
                 "artifacts": [
                     {
                         "sha1": "a96d326d2449a103a4f9e6d81018ffd411b3f4a1",
@@ -176,7 +154,6 @@ class BuildInfoTest(unittest.TestCase):
         "modules": [
             {
                 "id": "PkgC/0.1@user/channel",
-                "properties": {},
                 "artifacts": [
                     {
                         "sha1": "410b7df1fd1483a5a7b4c47e67822fc1e3dd533b",
@@ -214,16 +191,6 @@ class BuildInfoTest(unittest.TestCase):
             },
             {
                 "id": "PkgC/0.1@user/channel:09f152eb7b3e0a6e15a2a3f464245864ae8f8644",
-                "properties": {
-                    "settings.arch": "x86_64",
-                    "settings.arch_build": "x86_64",
-                    "settings.build_type": "Release",
-                    "settings.compiler": "apple-clang",
-                    "settings.compiler.libcxx": "libc++",
-                    "settings.compiler.version": "11.0",
-                    "settings.os": "Macos",
-                    "settings.os_build": "Macos"
-                },
                 "artifacts": [
                     {
                         "sha1": "0b6a6755369820f66d6a858d3b44775fb1b38f54",
@@ -261,7 +228,6 @@ class BuildInfoTest(unittest.TestCase):
             },
             {
                 "id": "PkgA/0.2@user/channel",
-                "properties": {},
                 "artifacts": [
                     {
                         "sha1": "def7797033b5b46ca063aaaf21dc7a9c1b93a35a",
@@ -283,16 +249,6 @@ class BuildInfoTest(unittest.TestCase):
             },
             {
                 "id": "PkgA/0.2@user/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9",
-                "properties": {
-                    "settings.arch": "x86_64",
-                    "settings.arch_build": "x86_64",
-                    "settings.build_type": "Release",
-                    "settings.compiler": "apple-clang",
-                    "settings.compiler.libcxx": "libc++",
-                    "settings.compiler.version": "11.0",
-                    "settings.os": "Macos",
-                    "settings.os_build": "Macos"
-                },
                 "artifacts": [
                     {
                         "sha1": "a96d326d2449a103a4f9e6d81018ffd411b3f4a1",
@@ -329,7 +285,6 @@ class BuildInfoTest(unittest.TestCase):
         "modules": [
             {
                 "id": "PkgB/0.1@user/channel",
-                "properties": {},
                 "artifacts": [
                     {
                         "sha1": "aba8527a2c4fc142cf5262298824d3680ecb057f",
@@ -367,16 +322,6 @@ class BuildInfoTest(unittest.TestCase):
             },
             {
                 "id": "PkgB/0.1@user/channel:09f152eb7b3e0a6e15a2a3f464245864ae8f8644",
-                "properties": {
-                    "settings.arch": "x86_64",
-                    "settings.arch_build": "x86_64",
-                    "settings.build_type": "Release",
-                    "settings.compiler": "apple-clang",
-                    "settings.compiler.libcxx": "libc++",
-                    "settings.compiler.version": "11.0",
-                    "settings.os": "Macos",
-                    "settings.os_build": "Macos"
-                },
                 "artifacts": [
                     {
                         "sha1": "45f961804e3bcc5267a2f6d130b4dcc16e2379ee",
@@ -414,7 +359,6 @@ class BuildInfoTest(unittest.TestCase):
             },
             {
                 "id": "PkgA/0.2@user/channel",
-                "properties": {},
                 "artifacts": [
                     {
                         "sha1": "def7797033b5b46ca063aaaf21dc7a9c1b93a35a",
@@ -436,16 +380,6 @@ class BuildInfoTest(unittest.TestCase):
             },
             {
                 "id": "PkgA/0.2@user/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9",
-                "properties": {
-                    "settings.arch": "x86_64",
-                    "settings.arch_build": "x86_64",
-                    "settings.build_type": "Release",
-                    "settings.compiler": "apple-clang",
-                    "settings.compiler.libcxx": "libc++",
-                    "settings.compiler.version": "11.0",
-                    "settings.os": "Macos",
-                    "settings.os_build": "Macos"
-                },
                 "artifacts": [
                     {
                         "sha1": "a96d326d2449a103a4f9e6d81018ffd411b3f4a1",
@@ -467,7 +401,6 @@ class BuildInfoTest(unittest.TestCase):
             },
             {
                 "id": "PkgC/0.1@user/channel",
-                "properties": {},
                 "artifacts": [
                     {
                         "sha1": "410b7df1fd1483a5a7b4c47e67822fc1e3dd533b",
@@ -505,16 +438,6 @@ class BuildInfoTest(unittest.TestCase):
             },
             {
                 "id": "PkgC/0.1@user/channel:09f152eb7b3e0a6e15a2a3f464245864ae8f8644",
-                "properties": {
-                    "settings.arch": "x86_64",
-                    "settings.arch_build": "x86_64",
-                    "settings.build_type": "Release",
-                    "settings.compiler": "apple-clang",
-                    "settings.compiler.libcxx": "libc++",
-                    "settings.compiler.version": "11.0",
-                    "settings.os": "Macos",
-                    "settings.os_build": "Macos"
-                },
                 "artifacts": [
                     {
                         "sha1": "0b6a6755369820f66d6a858d3b44775fb1b38f54",

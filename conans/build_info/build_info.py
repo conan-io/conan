@@ -152,8 +152,7 @@ class BuildInfoCreator(object):
         return arts
 
     def process_lockfile(self):
-        modules = defaultdict(lambda: {"id": None, "properties": {},
-                                       "artifacts": set(), "dependencies": set()})
+        modules = defaultdict(lambda: {"id": None, "artifacts": set(), "dependencies": set()})
 
         def _gather_deps(node_uid, contents, func):
             node_content = contents["graph_lock"]["nodes"].get(node_uid)
@@ -164,7 +163,6 @@ class BuildInfoCreator(object):
 
         with open(self._lockfile) as json_data:
             data = json.load(json_data)
-        profile = dict(_parse_profile(data["profile_host"]))
 
         # Gather modules, their artifacts and recursively all required artifacts
         for _, node in data["graph_lock"]["nodes"].items():
@@ -185,9 +183,6 @@ class BuildInfoCreator(object):
                 modules[package_key]["artifacts"].update(
                     self._get_package_artifacts(pref, add_prefix=not self._multi_module,
                                                 use_id=False))
-                if self._multi_module:  # Only for multi_module, see TODO above
-                    modules[package_key]["properties"].update(profile)
-                    modules[package_key]["properties"].update(_parse_options(node.get("options")))
 
                 # Recurse requires
                 if node.get("requires"):
@@ -280,19 +275,9 @@ def find_module(build_info, module_id):
     for it in build_info["modules"]:
         if it["id"] == module_id:
             return it
-    new_module = {"id": module_id, "properties": {}, "artifacts": [], "dependencies": []}
+    new_module = {"id": module_id, "artifacts": [], "dependencies": []}
     build_info["modules"].append(new_module)
     return new_module
-
-
-def merge_properties(lhs, rhs):
-    ret = lhs["properties"]
-    for it, value in rhs["properties"].items():
-        if it in lhs["properties"]:
-            assert value == ret[it], "{} != {}".format(value, ret[it])
-        else:
-            ret[it] = value
-    return ret
 
 
 def merge_artifacts(lhs, rhs, key, cmp_key):
@@ -318,11 +303,8 @@ def merge_buildinfo(lhs, rhs):
     assert lhs["name"] == rhs["name"]
     assert lhs["number"] == rhs["number"]
 
-    # merge_properties(lhs, rht)  # TODO: Environment coming from different machines
-
     for rhs_module in rhs["modules"]:
         lhs_module = find_module(lhs, rhs_module["id"])
-        lhs_module["properties"] = merge_properties(lhs_module, rhs_module)
         lhs_module["artifacts"] = merge_artifacts(lhs_module, rhs_module, key="artifacts",
                                                   cmp_key="name")
         lhs_module["dependencies"] = merge_artifacts(lhs_module, rhs_module, key="dependencies",
