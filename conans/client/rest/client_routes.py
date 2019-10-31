@@ -262,7 +262,7 @@ class ClientV2Router(ClientCommonRouter):
     def _format_ref_path(url, ref, path, matrix_params):
         ret = url.format(name=ref.name, version=ref.version, username=ref.user or "_",
                          channel=ref.channel or "_", revision=ref.revision, path=path,
-                         matrix_params=matrix_params)
+                         matrix_params=matrix_params or "")
         return ret
 
     @staticmethod
@@ -270,4 +270,4 @@ class ClientV2Router(ClientCommonRouter):
         ref = pref.ref
         return url.format(name=ref.name, version=ref.version, username=ref.user or "_",
                           channel=ref.channel or "_", revision=ref.revision, package_id=pref.id,
-                          p_revision=pref.revision, path=path, matrix_params=matrix_params)
+                          p_revision=pref.revision, path=path, matrix_params=matrix_params or "")
