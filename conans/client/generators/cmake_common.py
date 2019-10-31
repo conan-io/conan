@@ -29,7 +29,7 @@ set(CONAN_SHARED_LINKER_FLAGS_{dep}{build_type}_LIST "{deps.sharedlinkflags_list
 set(CONAN_EXE_LINKER_FLAGS_{dep}{build_type}_LIST "{deps.exelinkflags_list}")
 
 # Apple Frameworks
-conan_find_apple_frameworks(${{CONAN_FRAMEWORKS_FOUND_{dep}{build_type}}} ${{CONAN_FRAMEWORKS_{dep}{build_type}}})
+conan_find_apple_frameworks(CONAN_FRAMEWORKS_FOUND_{dep}{build_type} "${{CONAN_FRAMEWORKS_{dep}{build_type}}}")
 # Append to aggregated values variable
 set(CONAN_LIBS_{dep}{build_type} ${{CONAN_PKG_LIBS_{dep}{build_type}}} ${{CONAN_SYSTEM_LIBS_{dep}{build_type}}} ${{CONAN_FRAMEWORKS_FOUND_{dep}{build_type}}})
 # Aggregate package libs and frameworks for conan_package_library_targets()
@@ -112,7 +112,7 @@ set(CONAN_EXE_LINKER_FLAGS{build_type} "{deps.exelinkflags} ${{CONAN_EXE_LINKER_
 set(CONAN_C_FLAGS{build_type} "{deps.cflags} ${{CONAN_C_FLAGS{build_type}}}")
 
 # Apple Frameworks
-conan_find_apple_frameworks(${{CONAN_FRAMEWORKS_FOUND{build_type}}} ${{CONAN_FRAMEWORKS{build_type}}})
+conan_find_apple_frameworks(CONAN_FRAMEWORKS_FOUND{build_type} "${{CONAN_FRAMEWORKS{build_type}}}")
 # Append to aggregated values variable
 set(CONAN_LIBS{build_type} ${{CONAN_PKG_LIBS{build_type}}} ${{CONAN_SYSTEM_LIBS{build_type}}} ${{CONAN_FRAMEWORKS_FOUND{build_type}}})
 """
@@ -619,7 +619,7 @@ macro(conan_find_apple_frameworks FRAMEWORKS_FOUND FRAMEWORKS)
             # https://cmake.org/pipermail/cmake-developers/2017-August/030199.html
             find_library(CONAN_FRAMEWORK_FOUND NAME ${_FRAMEWORK} PATHS ${CONAN_FRAMEWORK_DIRS})
             if(CONAN_FRAMEWORK_FOUND)
-                list(APPEND FRAMEWORKS_FOUND ${CONAN_FRAMEWORK_FOUND})
+                list(APPEND ${FRAMEWORKS_FOUND} ${CONAN_FRAMEWORK_FOUND})
             else()
                 message(FATAL_ERROR "Framework library ${_FRAMEWORK} not found in paths: ${CONAN_FRAMEWORK_DIRS}")
             endif()
