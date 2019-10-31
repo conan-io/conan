@@ -595,7 +595,7 @@ endmacro()
 """
 
 apple_frameworks_macro = """
-macro(conan_find_apple_frameworks frameworks)
+macro(conan_find_apple_frameworks FRAMEWORKS FRAMEWORKS_FOUND)
     if(APPLE)
         if(CMAKE_BUILD_TYPE)
             if(${CMAKE_BUILD_TYPE} MATCHES "Debug")
@@ -613,11 +613,11 @@ macro(conan_find_apple_frameworks frameworks)
             endif()
         endif()
         
-        foreach(_FRAMEWORK ${CONAN_FRAMEWORKS})
+        foreach(_FRAMEWORK ${FRAMEWORKS})
             # https://cmake.org/pipermail/cmake-developers/2017-August/030199.html
             find_library(CONAN_FRAMEWORK_FOUND NAME ${_FRAMEWORK} PATHS ${CONAN_FRAMEWORK_DIRS})
             if(CONAN_FRAMEWORK_FOUND)
-                list(APPEND CONAN_FRAMEWORKS_FOUND ${CONAN_FRAMEWORK_FOUND})
+                list(APPEND FRAMEWORKS_FOUND ${CONAN_FRAMEWORK_FOUND})
             else()
                 message(FATAL_ERROR "Framework library ${_FRAMEWORK} not found in paths: ${CONAN_FRAMEWORK_DIRS}")
             endif()
