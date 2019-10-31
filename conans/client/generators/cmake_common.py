@@ -11,6 +11,7 @@ set(CONAN_LIBS_{dep}{build_type} {deps.libs})
 set(CONAN_PKG_LIBS_{dep}{build_type} {deps.libs})
 set(CONAN_SYSTEM_LIBS_{dep}{build_type} {deps.system_libs})
 set(CONAN_FRAMEWORKS_{dep}{build_type} {deps.frameworks})
+set(CONAN_FRAMEWORKS_FOUND_{dep}{build_type} "")  # Will be filled later
 set(CONAN_DEFINES_{dep}{build_type} {deps.defines})
 set(CONAN_BUILD_MODULES_PATHS_{dep}{build_type} {deps.build_modules_paths})
 # COMPILE_DEFINITIONS are equal to CONAN_DEFINES without -D, for targets
@@ -28,7 +29,7 @@ set(CONAN_SHARED_LINKER_FLAGS_{dep}{build_type}_LIST "{deps.sharedlinkflags_list
 set(CONAN_EXE_LINKER_FLAGS_{dep}{build_type}_LIST "{deps.exelinkflags_list}")
 
 # Apple Frameworks
-conan_find_apple_frameworks(CONAN_FRAMEWORKS_{dep}{build_type} CONAN_FRAMEWORKS_FOUND_{dep}{build_type})
+conan_find_apple_frameworks(${{CONAN_FRAMEWORKS_FOUND_{dep}{build_type}}} ${{CONAN_FRAMEWORKS_{dep}{build_type}}})
 # Append to aggregated values variable
 set(CONAN_LIBS_{dep}{build_type} ${{CONAN_PKG_LIBS_{dep}{build_type}}} ${{CONAN_SYSTEM_LIBS_{dep}{build_type}}} ${{CONAN_FRAMEWORKS_FOUND_{dep}{build_type}}})
 # Aggregate package libs and frameworks for conan_package_library_targets()
@@ -100,6 +101,7 @@ set(CONAN_LIBS{build_type} {deps.libs} ${{CONAN_LIBS{build_type}}})
 set(CONAN_PKG_LIBS{build_type} {deps.libs} ${{CONAN_PKG_LIBS{build_type}}})
 set(CONAN_SYSTEM_LIBS{build_type} {deps.system_libs})
 set(CONAN_FRAMEWORKS{build_type} {deps.frameworks} ${{CONAN_FRAMEWORKS{build_type}}})
+set(CONAN_FRAMEWORKS_FOUND{build_type} "")  # Will be filled later
 set(CONAN_DEFINES{build_type} {deps.defines} ${{CONAN_DEFINES{build_type}}})
 set(CONAN_BUILD_MODULES_PATHS{build_type} {deps.build_modules_paths} ${{CONAN_BUILD_MODULES_PATHS{build_type}}})
 set(CONAN_CMAKE_MODULE_PATH{build_type} {deps.build_paths} ${{CONAN_CMAKE_MODULE_PATH{build_type}}})
@@ -110,7 +112,7 @@ set(CONAN_EXE_LINKER_FLAGS{build_type} "{deps.exelinkflags} ${{CONAN_EXE_LINKER_
 set(CONAN_C_FLAGS{build_type} "{deps.cflags} ${{CONAN_C_FLAGS{build_type}}}")
 
 # Apple Frameworks
-conan_find_apple_frameworks(CONAN_FRAMEWORKS{build_type} CONAN_FRAMEWORKS_FOUND{build_type})
+conan_find_apple_frameworks(${{CONAN_FRAMEWORKS_FOUND{build_type}}} ${{CONAN_FRAMEWORKS{build_type}}})
 # Append to aggregated values variable
 set(CONAN_LIBS{build_type} ${{CONAN_PKG_LIBS{build_type}}} ${{CONAN_SYSTEM_LIBS{build_type}}} ${{CONAN_FRAMEWORKS_FOUND{build_type}}})
 """
@@ -595,7 +597,7 @@ endmacro()
 """
 
 apple_frameworks_macro = """
-macro(conan_find_apple_frameworks FRAMEWORKS FRAMEWORKS_FOUND)
+macro(conan_find_apple_frameworks FRAMEWORKS_FOUND FRAMEWORKS)
     if(APPLE)
         if(CMAKE_BUILD_TYPE)
             if(${CMAKE_BUILD_TYPE} MATCHES "Debug")
