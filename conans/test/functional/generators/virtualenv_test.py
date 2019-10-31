@@ -181,7 +181,7 @@ class VirtualEnvIntegrationTestCase(unittest.TestCase):
             stdout, stderr = decode_text(stdout), decode_text(stderr)
 
         # Consistency checks
-        self.assertFalse(stderr, "Running shell resulted in error, output:\n%s" % stdout)
+        self.assertFalse(stderr, "Running shell resulted in error, output:\n%s" % stderr)
 
         env_before = _load_env_file(os.path.join(self.test_folder, self.env_before))
         env_after = _load_env_file(os.path.join(self.test_folder, self.env_after))
@@ -242,10 +242,9 @@ class VirtualEnvIntegrationTestCase(unittest.TestCase):
             self.ori_path,
             existing_path
         ]))
-        # FIXME: extra separator in Windows
-        extra_separator = os.pathsep if platform.system() == "Windows" else ""
+
         self.assertEqual(environment["WHATEVER"],
-                         "{}{}{}{}".format("list", os.pathsep, "other", extra_separator))
+                         "{}{}{}".format("list", os.pathsep, "other"))
 
     def test_find_program(self):
         # If we add the path, we should found the env/executable instead of ori/executable
