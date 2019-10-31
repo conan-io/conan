@@ -27,7 +27,7 @@ class RestV2Methods(RestCommonMethods):
 
     @property
     def router(self):
-        return ClientV2Router(self.remote_url.rstrip("/"), self._put_headers)
+        return ClientV2Router(self.remote_url.rstrip("/"), self._artifacts_properties)
 
     def _get_file_list_json(self, url):
         data = self.get_json(url)

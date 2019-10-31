@@ -2,7 +2,7 @@ from six.moves.urllib.parse import urlencode
 
 from conans.model.ref import ConanFileReference
 from conans.model.rest_routes import RestRoutes
-from conans.paths import CONAN_MANIFEST, CONANINFO
+from conans.paths import CONAN_MANIFEST, CONANINFO, ARTIFACTS_PROPERTIES_PUT_PREFIX
 
 
 def _format_ref(url, ref):
@@ -18,6 +18,14 @@ def _format_pref(url, pref):
                      channel=ref.channel or "_", revision=ref.revision, package_id=pref.id,
                      p_revision=pref.revision, matrix_params="")
     return url
+
+
+def _remove_put_prefix(artifacts_properties):
+    len_prefix = len(ARTIFACTS_PROPERTIES_PUT_PREFIX)
+    for key, value in artifacts_properties.items():
+        if key.startswith(ARTIFACTS_PROPERTIES_PUT_PREFIX):
+            key = key[len_prefix:]
+        yield key, value
 
 
 routes = RestRoutes()
@@ -130,18 +138,20 @@ class ClientV1Router(ClientCommonRouter):
 class ClientV2Router(ClientCommonRouter):
     """Builds urls for v2"""
 
-    def __init__(self, base_url, put_headers):
+    def __init__(self, base_url, artifacts_properties):
         self.base_url = "{}/v2/".format(base_url)
-        self._put_headers = put_headers
+        matrix_params = dict(_remove_put_prefix(artifacts_properties))
+        self._matrix_params_str = ";" + ";".join(["{}={}".format(key, value)
+                                                  for key, value in matrix_params.items()])
 
     def recipe_file(self, ref, path, add_matrix_params=False):
         """Recipe file url"""
-        matrix_params = self._put_headers if add_matrix_params else None
+        matrix_params = self._matrix_params_str if add_matrix_params else ""
         return self.base_url + self._for_recipe_file(ref, path, matrix_params=matrix_params)
 
     def package_file(self, pref, path, add_matrix_params=False):
         """Package file url"""
-        matrix_params = self._put_headers if add_matrix_params else None
+        matrix_params = self._matrix_params_str if add_matrix_params else ""
         return self.base_url + self._for_package_file(pref, path, matrix_params=matrix_params)
 
     def remove_recipe(self, ref):
@@ -250,20 +260,14 @@ class ClientV2Router(ClientCommonRouter):
 
     @staticmethod
     def _format_ref_path(url, ref, path, matrix_params):
-        matrix_params_str = ""
-        if matrix_params:
-            matrix_params_str = ";" + ";".join(["{}={}".format(k, v) for k, v in matrix_params.items()])
         ret = url.format(name=ref.name, version=ref.version, username=ref.user or "_",
                          channel=ref.channel or "_", revision=ref.revision, path=path,
-                         matrix_params=matrix_params_str)
+                         matrix_params=matrix_params)
         return ret
 
     @staticmethod
     def _format_pref_path(url, pref, path, matrix_params):
-        matrix_params_str = ""
-        if matrix_params:
-            matrix_params_str = ";" + ";".join(["{}={}".format(k, v) for k, v in matrix_params.items()])
         ref = pref.ref
         return url.format(name=ref.name, version=ref.version, username=ref.user or "_",
                           channel=ref.channel or "_", revision=ref.revision, package_id=pref.id,
-                          p_revision=pref.revision, path=path, matrix_params=matrix_params_str)
+                          p_revision=pref.revision, path=path, matrix_params=matrix_params)
