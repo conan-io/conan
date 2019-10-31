@@ -309,9 +309,14 @@ message("Target libs: ${tmp}")
         self.assertIn("Frameworks found: /System/Library/Frameworks/Foundation.framework",
                       client.out)
         self.assertIn("Target libs: /System/Library/Frameworks/Foundation.framework;;", client.out)
-        self.assertNotRegexpMatches(client.out, "-- Library .*Foundation\\.framework not "
-                                                "found in package, might be system one")
-        self.assertNotRegexpMatches(self, client.out, "Libraries to Link: .*Foundation\\.framework")
+        if six.PY2:
+            self.assertNotRegexpMatches(client.out, "-- Library .*Foundation\\.framework not "
+                                                    "found in package, might be system one")
+            self.assertNotRegexpMatches(client.out, "Libraries to Link: .*Foundation\\.framework")
+        else:
+            self.assertNotRegex("-- Library .*Foundation\\.framework not found in package, might be "
+                                "system one", client.out,)
+            self.assertNotRegex("Libraries to Link: .*Foundation\\.framework", client.out)
 
     def build_modules_test(self):
         conanfile = textwrap.dedent("""
