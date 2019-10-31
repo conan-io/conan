@@ -315,7 +315,7 @@ message("Target libs: ${tmp}")
             self.assertNotRegexpMatches(str(client.out),
                                         r"Libraries to Link: .*Foundation\.framework")
         else:
-            self.assertNotRegex(str(client.out), r"Libraries to Link: .*Foundation\.framework")
+            self.assertNotRegex(str(client.out), r"Libraries to link: .*Foundation\.framework")
 
     def build_modules_test(self):
         conanfile = textwrap.dedent("""
