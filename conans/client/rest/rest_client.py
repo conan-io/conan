@@ -11,7 +11,7 @@ class RestApiClient(object):
         Rest Api Client for handle remote.
     """
 
-    def __init__(self, output, requester, revisions_enabled, put_headers=None):
+    def __init__(self, output, requester, revisions_enabled, artifacts_properties=None):
 
         # Set to instance
         self.token = None
@@ -23,7 +23,7 @@ class RestApiClient(object):
 
         # Remote manager will set it to True or False dynamically depending on the remote
         self.verify_ssl = True
-        self._put_headers = put_headers
+        self._artifacts_properties = artifacts_properties
         self._revisions_enabled = revisions_enabled
 
         self._cached_capabilities = {}
@@ -32,7 +32,7 @@ class RestApiClient(object):
         capabilities = self._cached_capabilities.get(self.remote_url)
         if capabilities is None:
             tmp = RestV1Methods(self.remote_url, self.token, self.custom_headers, self._output,
-                                self.requester, self.verify_ssl, self._put_headers)
+                                self.requester, self.verify_ssl, self._artifacts_properties)
             capabilities = tmp.server_capabilities()
             self._cached_capabilities[self.remote_url] = capabilities
             logger.debug("REST: Cached capabilities for the remote: %s" % capabilities)
@@ -45,11 +45,11 @@ class RestApiClient(object):
         if self._revisions_enabled and revisions:
             checksum_deploy = self._capable(CHECKSUM_DEPLOY)
             return RestV2Methods(self.remote_url, self.token, self.custom_headers, self._output,
-                                 self.requester, self.verify_ssl, self._put_headers,
+                                 self.requester, self.verify_ssl, self._artifacts_properties,
                                  checksum_deploy)
         else:
             return RestV1Methods(self.remote_url, self.token, self.custom_headers, self._output,
-                                 self.requester, self.verify_ssl, self._put_headers)
+                                 self.requester, self.verify_ssl, self._artifacts_properties)
 
     def get_recipe_manifest(self, ref):
         return self._get_api().get_recipe_manifest(ref)
@@ -90,7 +90,7 @@ class RestApiClient(object):
 
     def authenticate(self, user, password):
         api_v1 = RestV1Methods(self.remote_url, self.token, self.custom_headers, self._output,
-                               self.requester, self.verify_ssl, self._put_headers)
+                               self.requester, self.verify_ssl, self._artifacts_properties)
 
         if self.refresh_token and self.token:
             token, refresh_token = api_v1.refresh_token(self.token, self.refresh_token)

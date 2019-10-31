@@ -403,6 +403,8 @@ class Command(object):
                                "`conan download [...] {}:{}`".format(reference, packages_list[0]))
         else:
             reference = repr(pref.ref)
+            if pref.ref.user is None:
+                reference += "@"
             packages_list = [pref.id]
             if args.package:
                 raise ConanException("Use a full package reference (preferred) or the `--package`"

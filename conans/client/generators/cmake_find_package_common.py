@@ -9,6 +9,7 @@ set({name}_LIBRARIES_TARGETS{build_type_suffix} "") # Will be filled later, if C
 set({name}_LIBRARIES{build_type_suffix} "") # Will be filled later
 set({name}_LIBS{build_type_suffix} "") # Same as {name}_LIBRARIES
 set({name}_SYSTEM_LIBS{build_type_suffix} {deps.system_libs})
+set({name}_BUILD_MODULES_PATHS{build_type_suffix} {deps.build_modules_paths})
 
 {deps.find_frameworks}
 
@@ -51,4 +52,11 @@ foreach(_LIBRARY_NAME ${{{name}_LIBRARY_LIST{build_type_suffix}}})
     endif()
 endforeach()
 set({name}_LIBS{build_type_suffix} ${{{name}_LIBRARIES{build_type_suffix}}})
+
+set(CMAKE_MODULE_PATH {deps.build_paths} ${{CMAKE_MODULE_PATH}})
+set(CMAKE_PREFIX_PATH {deps.build_paths} ${{CMAKE_PREFIX_PATH}})
+
+foreach(_BUILD_MODULE_PATH ${{{name}_BUILD_MODULES_PATHS{build_type_suffix}}})
+    include(${{_BUILD_MODULE_PATH}})
+endforeach()
 """

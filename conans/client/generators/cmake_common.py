@@ -10,6 +10,7 @@ set(CONAN_LIBS_{dep}{build_type} {deps.libs_system_frameworks})
 set(CONAN_PKG_LIBS_{dep}{build_type} {deps.libs})
 set(CONAN_SYSTEM_LIBS_{dep}{build_type} {deps.system_libs})
 set(CONAN_DEFINES_{dep}{build_type} {deps.defines})
+set(CONAN_BUILD_MODULES_PATHS_{dep}{build_type} {deps.build_modules_paths})
 # COMPILE_DEFINITIONS are equal to CONAN_DEFINES without -D, for targets
 set(CONAN_COMPILE_DEFINITIONS_{dep}{build_type} {deps.compile_definitions})
 
@@ -88,6 +89,7 @@ set(CONAN_RES_DIRS{build_type} {deps.res_paths} ${{CONAN_RES_DIRS{build_type}}})
 set(CONAN_LIBS{build_type} {deps.libs_system_frameworks} ${{CONAN_LIBS{build_type}}})
 set(CONAN_SYSTEM_LIBS{build_type} {deps.system_libs} ${{CONAN_SYSTEM_LIBS{build_type}}})
 set(CONAN_DEFINES{build_type} {deps.defines} ${{CONAN_DEFINES{build_type}}})
+set(CONAN_BUILD_MODULES_PATHS{build_type} {deps.build_modules_paths} ${{CONAN_BUILD_MODULES_PATHS{build_type}}})
 set(CONAN_CMAKE_MODULE_PATH{build_type} {deps.build_paths} ${{CONAN_CMAKE_MODULE_PATH{build_type}}})
 
 set(CONAN_CXX_FLAGS{build_type} "{deps.cxxflags} ${{CONAN_CXX_FLAGS{build_type}}}")
@@ -555,6 +557,24 @@ macro(conan_target_link_libraries target)
         endforeach()
     endif()
 endmacro()
+
+macro(conan_include_build_modules)
+    if(CMAKE_BUILD_TYPE)
+        if(${CMAKE_BUILD_TYPE} MATCHES "Debug")
+            set(CONAN_BUILD_MODULES_PATHS ${CONAN_BUILD_MODULES_PATHS_DEBUG} ${CONAN_BUILD_MODULES_PATHS})
+        elseif(${CMAKE_BUILD_TYPE} MATCHES "Release")
+            set(CONAN_BUILD_MODULES_PATHS ${CONAN_BUILD_MODULES_PATHS_RELEASE} ${CONAN_BUILD_MODULES_PATHS})
+        elseif(${CMAKE_BUILD_TYPE} MATCHES "RelWithDebInfo")
+            set(CONAN_BUILD_MODULES_PATHS ${CONAN_BUILD_MODULES_PATHS_RELWITHDEBINFO} ${CONAN_BUILD_MODULES_PATHS})
+        elseif(${CMAKE_BUILD_TYPE} MATCHES "MinSizeRel")
+            set(CONAN_BUILD_MODULES_PATHS ${CONAN_BUILD_MODULES_PATHS_MINSIZEREL} ${CONAN_BUILD_MODULES_PATHS})
+        endif()
+    endif()
+
+    foreach(_BUILD_MODULE_PATH ${CONAN_BUILD_MODULES_PATHS})
+        include(${_BUILD_MODULE_PATH})
+    endforeach()
+endmacro()
 """
 
 
@@ -616,6 +636,7 @@ macro(conan_basic_setup)
     conan_set_libcxx()
     conan_set_vs_runtime()
     conan_set_find_paths()
+    conan_include_build_modules()
     %%INVOKE_MACROS%%
 endmacro()
 """
