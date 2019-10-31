@@ -304,7 +304,6 @@ message("Target libs: ${tmp}")
         self.assertIn('Found Test: 0.1 (found version "0.1")', client.out)
         self.assertIn("Version: 0.1", client.out)
         self.assertIn("Frameworks: Foundation", client.out)
-        print(client.out)
         six.assertRegex(self, str(client.out),
                         r"Frameworks found: [^\s]*/System/Library/Frameworks/Foundation.framework")
         six.assertRegex(self, str(client.out),
