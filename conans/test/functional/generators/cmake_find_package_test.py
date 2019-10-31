@@ -1,11 +1,9 @@
 import os
 import platform
 import textwrap
-
-import six
-import textwrap
 import unittest
 
+import six
 from nose.plugins.attrib import attr
 
 from conans.client.tools import replace_in_file
@@ -306,18 +304,18 @@ message("Target libs: ${tmp}")
         self.assertIn('Found Test: 0.1 (found version "0.1")', client.out)
         self.assertIn("Version: 0.1", client.out)
         self.assertIn("Frameworks: Foundation", client.out)
-        self.assertIn("Frameworks found: /System/Library/Frameworks/Foundation.framework",
-                      client.out)
-        self.assertIn("Target libs: /System/Library/Frameworks/Foundation.framework;;", client.out)
+        six.assertRegex(self, str(client.out),
+                        r"Frameworks found: [^\s]*/System/Library/Frameworks/Foundation.framework")
+        six.assertRegex(self, str(client.out),
+                        r"Target libs: [^\s]*/System/Library/Frameworks/Foundation.framework;;")
+
+        self.assertNotIn("Foundation.framework not found in package, might be system one",
+                         client.out)
         if six.PY2:
-            self.assertNotRegexpMatches(str(client.out), "-- Library .*Foundation\\.framework not "
-                                                         "found in package, might be system one")
-            self.assertNotRegexpMatches(str(client.out), "Libraries to Link: "
-                                                         ".*Foundation\\.framework")
+            self.assertNotRegexpMatches(str(client.out),
+                                        r"Libraries to Link: .*Foundation\.framework")
         else:
-            self.assertNotRegex("-- Library .*Foundation\\.framework not found in package, might be "
-                                "system one", str(client.out))
-            self.assertNotRegex("Libraries to Link: .*Foundation\\.framework", str(client.out))
+            self.assertNotRegex(str(client.out), r"Libraries to Link: .*Foundation\.framework")
 
     def build_modules_test(self):
         conanfile = textwrap.dedent("""
