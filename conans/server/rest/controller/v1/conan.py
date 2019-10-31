@@ -21,7 +21,7 @@ class ConanController(object):
         r = BottleRoutes()
 
         @app.route(r.v1_recipe_digest, method=["GET"])
-        def get_recipe_manifest_url(name, version, username, channel, auth_user, matrix_params):
+        def get_recipe_manifest_url(name, version, username, channel, auth_user):
             """
             Get a dict with all files and the download url
             """
@@ -48,7 +48,7 @@ class ConanController(object):
             return urls_norm
 
         @app.route(r.recipe, method=["GET"])
-        def get_recipe_snapshot(name, version, username, channel, auth_user, matrix_params):
+        def get_recipe_snapshot(name, version, username, channel, auth_user):
             """
             Get a dictionary with all files and their each md5s
             """
@@ -60,7 +60,7 @@ class ConanController(object):
             return snapshot_norm
 
         @app.route(r.package, method=["GET"])
-        def get_package_snapshot(name, version, username, channel, package_id, auth_user, matrix_params):
+        def get_package_snapshot(name, version, username, channel, package_id, auth_user):
             """
             Get a dictionary with all files and their each md5s
             """
@@ -73,7 +73,7 @@ class ConanController(object):
             return snapshot_norm
 
         @app.route(r.v1_recipe_download_urls, method=["GET"])
-        def get_conanfile_download_urls(name, version, username, channel, auth_user, matrix_params):
+        def get_conanfile_download_urls(name, version, username, channel, auth_user):
             """
             Get a dict with all files and the download url
             """
@@ -87,8 +87,7 @@ class ConanController(object):
             return urls_norm
 
         @app.route(r.v1_package_download_urls, method=["GET"])
-        def get_package_download_urls(name, version, username, channel, package_id,
-                                      auth_user, matrix_params):
+        def get_package_download_urls(name, version, username, channel, package_id, auth_user):
             """
             Get a dict with all packages files and the download url for each one
             """
@@ -104,7 +103,7 @@ class ConanController(object):
             return urls_norm
 
         @app.route(r.v1_recipe_upload_urls, method=["POST"])
-        def get_conanfile_upload_urls(name, version, username, channel, auth_user, matrix_params):
+        def get_conanfile_upload_urls(name, version, username, channel, auth_user):
             """
             Get a dict with all files and the upload url
             """
@@ -118,7 +117,7 @@ class ConanController(object):
             return urls_norm
 
         @app.route(r.v1_package_upload_urls, method=["POST"])
-        def get_package_upload_urls(name, version, username, channel, package_id, auth_user, matrix_params):
+        def get_package_upload_urls(name, version, username, channel, package_id, auth_user):
             """
             Get a dict with all files and the upload url
             """
