@@ -219,8 +219,8 @@ class ClientV2Router(ClientCommonRouter):
         """url for getting a file from a package, with revisions"""
         assert pref.ref.revision is not None, "_for_package_file needs RREV"
         assert pref.revision is not None, "_for_package_file needs PREV"
-        return ClientV2Router._format_pref_path(cls.routes.package_revision_file, pref, path,
-                                                matrix_params=matrix_params)
+        return cls._format_pref_path(cls.routes.package_revision_file, pref, path,
+                                     matrix_params=matrix_params)
 
     @classmethod
     def _for_package_files(cls, pref):
@@ -233,8 +233,8 @@ class ClientV2Router(ClientCommonRouter):
     def _for_recipe_file(cls, ref, path, matrix_params):
         """url for a recipe file, with or without revisions"""
         assert ref.revision is not None, "for_recipe_file needs RREV"
-        return ClientV2Router._format_ref_path(cls.routes.recipe_revision_file, ref, path,
-                                               matrix_params=matrix_params)
+        return cls._format_ref_path(cls.routes.recipe_revision_file, ref, path,
+                                    matrix_params=matrix_params)
 
     @classmethod
     def _for_recipe_files(cls, ref):
