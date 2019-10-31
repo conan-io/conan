@@ -74,7 +74,7 @@ class ClientV1Router(ClientCommonRouter):
     routes = RestRoutes(matrix_params=False)
 
     def __init__(self, base_url):
-        self.base_url = "{}/v1/".format(base_url)
+        base_url = "{}/v1/".format(base_url)
         super(ClientV1Router, self).__init__(base_url=base_url)
 
     def search_packages(self, ref, query=None):
@@ -143,7 +143,7 @@ class ClientV2Router(ClientCommonRouter):
     routes = RestRoutes(matrix_params=True)
 
     def __init__(self, base_url, artifacts_properties):
-        self.base_url = "{}/v2/".format(base_url)
+        base_url = "{}/v2/".format(base_url)
         super(ClientV2Router, self).__init__(base_url=base_url)
 
         if artifacts_properties:
