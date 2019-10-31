@@ -3,7 +3,7 @@ class RestRoutes(object):
 
     @property
     def recipe(self):
-        return 'conans/{name}/{version}/{username}/{channel}'
+        return 'conans{matrix_params}/{name}/{version}/{username}/{channel}'
 
     @property
     def recipe_latest(self):
