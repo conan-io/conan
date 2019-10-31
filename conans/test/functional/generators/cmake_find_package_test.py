@@ -313,7 +313,7 @@ message("Target libs: ${tmp}")
                          client.out)
         if six.PY2:
             self.assertNotRegexpMatches(str(client.out),
-                                        r"Libraries to Link: .*Foundation\.framework")
+                                        r"Libraries to link: .*Foundation\.framework")
         else:
             self.assertNotRegex(str(client.out), r"Libraries to link: .*Foundation\.framework")
 
