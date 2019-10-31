@@ -30,7 +30,7 @@ set(CONAN_EXE_LINKER_FLAGS_{dep}{build_type}_LIST "{deps.exelinkflags_list}")
 # Apple Frameworks
 conan_find_apple_frameworks(CONAN_FRAMEWORKS_{dep}{build_type} CONAN_FRAMEWORKS_FOUND_{dep}{build_type})
 # Append to aggregated values variable
-set(CONAN_LIBS_{dep}{build_type} ${{CONAN_LIBS_{dep}{build_type}}} ${{CONAN_SYSTEM_LIBS_{dep}{build_type}}} ${{CONAN_FRAMEWORKS_FOUND_{dep}{build_type}}})
+set(CONAN_LIBS_{dep}{build_type} ${{CONAN_PKG_LIBS_{dep}{build_type}}} ${{CONAN_SYSTEM_LIBS_{dep}{build_type}}} ${{CONAN_FRAMEWORKS_FOUND_{dep}{build_type}}})
 """
 
 
@@ -110,7 +110,7 @@ set(CONAN_C_FLAGS{build_type} "{deps.cflags} ${{CONAN_C_FLAGS{build_type}}}")
 # Apple Frameworks
 conan_find_apple_frameworks(CONAN_FRAMEWORKS{build_type} CONAN_FRAMEWORKS_FOUND{build_type})
 # Append to aggregated values variable
-set(CONAN_LIBS{build_type} ${{CONAN_LIBS{build_type}}} ${{CONAN_SYSTEM_LIBS{build_type}}} ${{CONAN_FRAMEWORKS_FOUND{build_type}}})
+set(CONAN_LIBS{build_type} ${{CONAN_PKG_LIBS{build_type}}} ${{CONAN_SYSTEM_LIBS{build_type}}} ${{CONAN_FRAMEWORKS_FOUND{build_type}}})
 """
 
 
