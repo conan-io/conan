@@ -234,8 +234,8 @@ def create_build_info(output, build_info_file, lockfile, multi_module, skip_env,
 
 def start_build_info(output, build_name, build_number):
     paths = ClientCache(os.path.join(get_conan_user_home(), ".conan"), output)
-    content = ARTIFACTS_PROPERTIES_PUT_PREFIX + "build.name={}\n" + \
-              ARTIFACTS_PROPERTIES_PUT_PREFIX + "build.number={}\n".format(build_name, build_number)
+    content = ARTIFACTS_PROPERTIES_PUT_PREFIX + "build.name={}\n".format(build_name) + \
+              ARTIFACTS_PROPERTIES_PUT_PREFIX + "build.number={}\n".format(build_number)
     artifact_properties_file = paths.artifacts_properties_path
     try:
         save(artifact_properties_file, content)
