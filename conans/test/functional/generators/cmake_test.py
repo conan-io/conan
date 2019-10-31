@@ -142,7 +142,7 @@ CONAN_BASIC_SETUP()
         client.run("install conanfile_consumer.py")
 
         content = client.load("conanbuildinfo.cmake")
-        self.assertIn("set(CONAN_LIBS ${CONAN_LIBS} ${CONAN_SYSTEM_LIBS} ${CONAN_FRAMEWORKS_FOUND})",
+        self.assertIn("set(CONAN_LIBS ${CONAN_PKG_LIBS} ${CONAN_SYSTEM_LIBS} ${CONAN_FRAMEWORKS_FOUND})",
                       content)
         self.assertIn("set(CONAN_LIBS_MYLIB ${CONAN_PKG_LIBS_MYLIB} ${CONAN_SYSTEM_LIBS_MYLIB} ${CONAN_FRAMEWORKS_FOUND_MYLIB})",
                       content)
