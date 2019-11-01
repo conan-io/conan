@@ -76,7 +76,13 @@ set_property(TARGET {name}::{name}
             ret["{}Config.cmake".format(depname)] = self._find_for_dep(depname, cpp_info)
             ret["{}Targets.cmake".format(depname)] = self.targets_file.format(name=depname)
 
+            # get {{name}}_INCLUDE_DIR from a first include path if it exists
+            if cpp_info.include_paths:
+                include_dir = cpp_info.include_paths[0]
+            else:
+                include_dir = '""'
             find_lib = target_template.format(name=depname, deps=deps,
+                                              include_dir=include_dir,
                                               build_type_suffix=build_type_suffix)
             ret["{}Target-{}.cmake".format(depname, build_type.lower())] = find_lib
         return ret

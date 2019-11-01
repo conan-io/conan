@@ -58,8 +58,13 @@ endif()
             # Here we are generating FindXXX, so find_modules=True
             public_deps_names = [self.deps_build_info[dep].name for dep in cpp_info.public_deps]
             lines = find_dependency_lines(name, public_deps_names, find_modules=True)
+        # get {{name}}_INCLUDE_DIR as a first include path if exists
+        if cpp_info.include_paths:
+            include_dir = cpp_info.include_paths[0]
+        else:
+            include_dir = '""'
         find_package_header_block = find_package_header.format(name=name, version=cpp_info.version)
-        find_libraries_block = target_template.format(name=name, deps=deps, build_type_suffix="")
+        find_libraries_block = target_template.format(name=name, deps=deps, build_type_suffix="", include_dir=include_dir)
         target_props = assign_target_properties.format(name=name, deps=deps)
         tmp = self.template.format(name=name, deps=deps,
                                    version=cpp_info.version,
