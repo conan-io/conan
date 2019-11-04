@@ -95,7 +95,7 @@ def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
             graph_lock.update_exported_ref(node_id, ref)
         return ref
 
-    _check_for_warnings(conanfile, output)
+    _check_settings_for_warnings(conanfile, output)
 
     hook_manager.execute("pre_export", conanfile=conanfile, conanfile_path=conanfile_path,
                          reference=package_layout.ref)
@@ -194,7 +194,9 @@ def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
     return ref
 
 
-def _check_for_warnings(conanfile, output):
+def _check_settings_for_warnings(conanfile, output):
+    if not conanfile.settings:
+        return
     try:
         if not 'os_build' in conanfile.settings:
             return
