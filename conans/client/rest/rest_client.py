@@ -82,8 +82,7 @@ class RestApiClient(object):
         return self._get_api().get_package_path(pref, path)
 
     def upload_recipe(self, ref, files_to_upload, deleted, retry, retry_wait):
-        return self._get_api().upload_recipe(ref, files_to_upload, deleted, retry,
-                                             retry_wait)
+        return self._get_api().upload_recipe(ref, files_to_upload, deleted, retry, retry_wait)
 
     def upload_package(self, pref, files_to_upload, deleted, retry, retry_wait):
         return self._get_api().upload_package(pref, files_to_upload, deleted, retry, retry_wait)

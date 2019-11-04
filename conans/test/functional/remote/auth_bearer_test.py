@@ -1,9 +1,11 @@
 import unittest
 
 from bottle import request
+from parameterized.parameterized import parameterized
 
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.env_reader import get_env
+from conans.util.files import save
 
 conanfile = """
 from conans import ConanFile
@@ -15,8 +17,8 @@ class OpenSSLConan(ConanFile):
 
 
 class AuthorizationHeaderSpy(object):
-    ''' Generic plugin to handle Authorization header. Must be extended and implement
-    some abstract methods in subclasses'''
+    """ Generic plugin to handle Authorization header. Must be extended and implement
+    some abstract methods in subclasses"""
 
     name = 'authorizationheaderspy'
     api = 2
@@ -37,9 +39,9 @@ class ReturnHandlerPlugin(object):
     api = 2
 
     def apply(self, callback, _):
-        '''Apply plugin'''
+        """Apply plugin"""
         def wrapper(*args, **kwargs):
-            '''Capture possible exceptions to manage the return'''
+            """Capture possible exceptions to manage the return"""
             result = callback(*args, **kwargs)
             if isinstance(result, dict):
                 for k, v in result.items():
@@ -50,11 +52,14 @@ class ReturnHandlerPlugin(object):
 
 class AuthorizeBearerTest(unittest.TestCase):
 
-    def basic_test(self):
+    @parameterized.expand([(False, ), (True, )])
+    def basic_test(self, artifacts_properties):
         auth = AuthorizationHeaderSpy()
         server = TestServer(plugins=[auth])
         servers = {"default": server}
         client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
+        if artifacts_properties:
+            save(client.cache.artifacts_properties_path, "key=value")
         client.save({"conanfile.py": conanfile})
         client.run("export . lasote/stable")
         errors = client.run("upload Hello/0.1@lasote/stable")
@@ -66,15 +71,21 @@ class AuthorizeBearerTest(unittest.TestCase):
                               ('check_credentials', None),
                               ('authenticate', 'Basic'),
                               ('get_recipe_snapshot', 'Bearer'),
-                              ('get_conanfile_upload_urls', 'Bearer'),
-                              ('put_without', None)]
+                              ('get_conanfile_upload_urls', 'Bearer'), ]
+            if artifacts_properties:
+                expected_calls.append(('put_with', None))
+            else:
+                expected_calls.append(('put_without', None))
         else:
             expected_calls = [('ping', None),
                               ('get_recipe_file', None),
                               ('check_credentials', None),
                               ('authenticate', 'Basic'),
-                              ('get_recipe_file_list', 'Bearer'),
-                              ('upload_recipe_file_without', 'Bearer')]
+                              ('get_recipe_file_list', 'Bearer'), ]
+            if artifacts_properties:
+                expected_calls.append(('upload_recipe_file_with', None))
+            else:
+                expected_calls.append(('upload_recipe_file_without', None))
 
         self.assertEqual(len(expected_calls), len(auth.auths))
         for i, (method, auth_type) in enumerate(expected_calls):
@@ -83,13 +94,16 @@ class AuthorizeBearerTest(unittest.TestCase):
             if auth_type:
                 self.assertIn(auth_type, real_call[1])
 
+    @parameterized.expand([(False,), (True,)])
     @unittest.skipIf(get_env("TESTING_REVISIONS_ENABLED", False), "ApiV1 test")
-    def no_signature_test(self):
+    def no_signature_test(self, artifacts_properties):
         auth = AuthorizationHeaderSpy()
         retur = ReturnHandlerPlugin()
         server = TestServer(plugins=[auth, retur])
         servers = {"default": server}
         client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
+        if artifacts_properties:
+            save(client.cache.artifacts_properties_path, "key=value")
         client.save({"conanfile.py": conanfile})
         client.run("export . lasote/stable")
         # Upload will fail, as conan_server is expecting a signed URL
@@ -101,8 +115,11 @@ class AuthorizeBearerTest(unittest.TestCase):
                           ('check_credentials', None),
                           ('authenticate', 'Basic'),
                           ('get_recipe_snapshot', 'Bearer'),
-                          ('get_conanfile_upload_urls', 'Bearer'),
-                          ('put_without', 'Bearer')]
+                          ('get_conanfile_upload_urls', 'Bearer'), ]
+        if artifacts_properties:
+            expected_calls.append(('put_with', 'Bearer'))
+        else:
+            expected_calls.append(('put_without', 'Bearer'))
 
         self.assertEqual(len(expected_calls), len(auth.auths))
         for i, (method, auth_type) in enumerate(expected_calls):
