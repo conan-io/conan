@@ -356,8 +356,7 @@ message("Target libs: ${tmp}")
         pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID, None)
         package_path = client.cache.package_layout(ref).package(pref)
         modules_path = os.path.join(package_path, "share", "cmake")
-        self.assertListEqual(sorted(os.listdir(modules_path)),
-                             sorted(["FindFindModule.cmake", "my-module.cmake"]))
+        self.assertEqual(set(os.listdir(modules_path)), {"FindFindModule.cmake", "my-module.cmake"})
         consumer = textwrap.dedent("""
             from conans import ConanFile, CMake
 
