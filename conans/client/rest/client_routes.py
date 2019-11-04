@@ -1,4 +1,4 @@
-from six.moves.urllib.parse import urlencode
+from six.moves.urllib.parse import quote, urlencode
 
 from conans.model.ref import ConanFileReference
 from conans.model.rest_routes import RestRoutes
@@ -37,7 +37,7 @@ class ClientCommonRouter(object):
 
         if artifacts_properties:
             matrix_params = dict(_remove_put_prefix(artifacts_properties))
-            self._matrix_params_str = ";" + ";".join(["{}={}".format(key, value)
+            self._matrix_params_str = ";" + ";".join(["{}={}".format(key, quote(value, safe=''))
                                                       for key, value in matrix_params.items()])
         else:
             self._matrix_params_str = ""

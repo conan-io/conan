@@ -67,13 +67,14 @@ class ConanControllerV2(object):
             return file_generator
 
         @app.route(r_wo.recipe_revision_file, method=["PUT"])
-        def upload_recipe_file_without(name, version, username, channel, the_path, auth_user, revision):
+        def upload_recipe_file_without(name, version, username, channel, the_path, auth_user,
+                                       revision):
             _upload_recipe_file(name, version, username, channel, the_path, auth_user, revision,
                                 matrix_params="")
 
         @app.route(r_with.recipe_revision_file, method=["PUT"])
         def upload_recipe_file_with(name, version, username, channel, the_path, auth_user, revision,
-                               matrix_params):
+                                    matrix_params):
             _upload_recipe_file(name, version, username, channel, the_path, auth_user, revision,
                                 matrix_params)
 
@@ -84,4 +85,3 @@ class ConanControllerV2(object):
                 raise NotFoundException("Not a checksum storage")
             ref = ConanFileReference(name, version, username, channel, revision)
             conan_service.upload_recipe_file(request.body, request.headers, ref, the_path, auth_user)
-
