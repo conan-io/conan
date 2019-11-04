@@ -1,6 +1,6 @@
 from conans.client.generators.cmake_common import cmake_dependencies, cmake_dependency_vars, \
     cmake_global_vars, cmake_macros, cmake_package_info, cmake_settings_info, cmake_user_info_vars, \
-    generate_targets_section
+    generate_targets_section, apple_frameworks_macro
 from conans.model import Generator
 from conans.paths import BUILD_INFO_CMAKE
 
@@ -30,24 +30,10 @@ class DepsCppCmake(object):
         self.bin_paths = join_paths(cpp_info.bin_paths)
         self.build_paths = join_paths(cpp_info.build_paths)
         self.src_paths = join_paths(cpp_info.src_paths)
-        self.libs_system_frameworks = join_flags(" ", cpp_info.libs + cpp_info.system_libs)
+        self.framework_paths = join_paths(cpp_info.framework_paths)
         self.libs = join_flags(" ", cpp_info.libs)
         self.system_libs = join_flags(" ", cpp_info.system_libs)
-
-        framework_paths = join_paths(cpp_info.framework_paths)
-        self.find_frameworks = ""
-        for framework in cpp_info.frameworks:
-            var = "CONAN_FRAMEWORK_" + framework.upper()
-            find_framework = "if(APPLE)\n" \
-                             "find_library({var} {framework} " \
-                             "PATHS {framework_paths})\n" \
-                             "endif(APPLE)\n".format(var=var,
-                                                     framework=framework,
-                                                     framework_paths=framework_paths)
-            var = '${%s}' % var
-            self.libs_system_frameworks += " " + var
-            self.find_frameworks += find_framework
-
+        self.frameworks = join_flags(" ", cpp_info.frameworks)
         self.defines = join_defines(cpp_info.defines, "-D")
         self.compile_definitions = join_defines(cpp_info.defines)
 
@@ -77,6 +63,7 @@ class CMakeGenerator(Generator):
     @property
     def content(self):
         sections = ["include(CMakeParseArguments)"]
+        sections.append(apple_frameworks_macro)
 
         # Per requirement variables
         for _, dep_cpp_info in self.deps_build_info.dependencies:
