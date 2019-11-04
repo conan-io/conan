@@ -33,7 +33,7 @@ class ConanControllerV2(object):
             return file_generator
 
         @app.route(r_wo.package_revision_file, method=["PUT"])
-        def upload_package_file_wo(name, version, username, channel, package_id,
+        def upload_package_file_without(name, version, username, channel, package_id,
                                    the_path, auth_user, revision, p_revision):
             _upload_package_file(name, version, username, channel, package_id,
                                  the_path, auth_user, revision, p_revision, matrix_params="")
@@ -67,12 +67,12 @@ class ConanControllerV2(object):
             return file_generator
 
         @app.route(r_wo.recipe_revision_file, method=["PUT"])
-        def upload_recipe_file_wo(name, version, username, channel, the_path, auth_user, revision):
+        def upload_recipe_file_without(name, version, username, channel, the_path, auth_user, revision):
             _upload_recipe_file(name, version, username, channel, the_path, auth_user, revision,
                                 matrix_params="")
 
         @app.route(r_with.recipe_revision_file, method=["PUT"])
-        def upload_recipe_file(name, version, username, channel, the_path, auth_user, revision,
+        def upload_recipe_file_with(name, version, username, channel, the_path, auth_user, revision,
                                matrix_params):
             _upload_recipe_file(name, version, username, channel, the_path, auth_user, revision,
                                 matrix_params)

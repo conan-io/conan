@@ -67,14 +67,14 @@ class AuthorizeBearerTest(unittest.TestCase):
                               ('authenticate', 'Basic'),
                               ('get_recipe_snapshot', 'Bearer'),
                               ('get_conanfile_upload_urls', 'Bearer'),
-                              ('put', None)]
+                              ('put_without', None)]
         else:
             expected_calls = [('ping', None),
                               ('get_recipe_file', None),
                               ('check_credentials', None),
                               ('authenticate', 'Basic'),
                               ('get_recipe_file_list', 'Bearer'),
-                              ('upload_recipe_file', 'Bearer')]
+                              ('upload_recipe_file_without', 'Bearer')]
 
         self.assertEqual(len(expected_calls), len(auth.auths))
         for i, (method, auth_type) in enumerate(expected_calls):
@@ -102,7 +102,7 @@ class AuthorizeBearerTest(unittest.TestCase):
                           ('authenticate', 'Basic'),
                           ('get_recipe_snapshot', 'Bearer'),
                           ('get_conanfile_upload_urls', 'Bearer'),
-                          ('put', 'Bearer')]
+                          ('put_without', 'Bearer')]
 
         self.assertEqual(len(expected_calls), len(auth.auths))
         for i, (method, auth_type) in enumerate(expected_calls):
