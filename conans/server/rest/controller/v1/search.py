@@ -12,7 +12,7 @@ class SearchController(object):
     @staticmethod
     def attach_to(app):
 
-        r = BottleRoutes()
+        r = BottleRoutes(matrix_params=False)
 
         @app.route(r.common_search, method=["GET"])
         def search(auth_user):

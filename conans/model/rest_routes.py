@@ -12,8 +12,10 @@ class RestRoutes(RestRoutesCommon):
     def __init__(self, matrix_params=False):
         if matrix_params:
             self.base = 'conans{matrix_params}'
+            self.files_base = 'files{matrix_params}'
         else:
             self.base = 'conans'
+            self.files_base = 'files'
 
     @property
     def recipe(self):
@@ -83,7 +85,7 @@ class RestRoutes(RestRoutesCommon):
     # ONLY V1
     @property
     def v1_updown_file(self):
-        return "files/{path}"
+        return "%s/{path}" % self.files_base
 
     @property
     def v1_recipe_digest(self):

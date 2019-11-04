@@ -15,11 +15,12 @@ class FileUploadDownloadController(object):
     """
     @staticmethod
     def attach_to(app):
-        r = BottleRoutes()
+        r_wo = BottleRoutes(matrix_params=False)
+        r_with = BottleRoutes(matrix_params=True)
         storage_path = app.server_store.store
         service = FileUploadDownloadService(app.updown_auth_manager, storage_path)
 
-        @app.route(r.v1_updown_file, method=["GET"])
+        @app.route(r_wo.v1_updown_file, method=["GET"])
         def get(the_path):
             token = request.query.get("signature", None)
             file_path = service.get_file_path(the_path, token)
@@ -28,8 +29,16 @@ class FileUploadDownloadController(object):
                                root=os.path.dirname(file_path),
                                mimetype=get_mime_type(file_path))
 
-        @app.route(r.v1_updown_file, method=["PUT"])
-        def put(the_path):
+        @app.route(r_wo.v1_updown_file, method=["PUT"])
+        def put_without(the_path):
+            _put(the_path, matrix_params="")
+
+        @app.route(r_with.v1_updown_file, method=["PUT"])
+        def put_with(the_path, matrix_params):
+            _put(the_path, matrix_params)
+
+        def _put(the_path, matrix_params):
+            del matrix_params  # Expected ";key=value;key2=value2" or empty
             token = request.query.get("signature", None)
             file_saver = ConanFileUpload(request.body, None,
                                          filename=os.path.basename(the_path),
@@ -44,20 +53,20 @@ class ConanFileUpload(FileUpload):
     FIXME: Review bottle.FileUpload and analyze possible security or general issues    """
     @cached_property
     def filename(self):
-        ''' Name of the file on the client file system, but normalized to ensure
+        """ Name of the file on the client file system, but normalized to ensure
             file system compatibility. An empty filename is returned as 'empty'.
 
             Only ASCII letters, digits, dashes, underscores and dots are
             allowed in the final filename. Accents are removed, if possible.
             Whitespace is replaced by a single dash. Leading or tailing dots
             or dashes are removed. The filename is limited to 255 characters.
-        '''
+        """
         fname = self.raw_filename
         if six.PY2:
             if not isinstance(fname, unicode):
                 fname = fname.decode('utf8', 'ignore')
         fname = normalize('NFKD', fname).encode('ASCII', 'ignore').decode('ASCII')
         fname = os.path.basename(fname.replace('\\', os.path.sep))
-#         fname = re.sub(r'[^a-zA-Z0-9-_.\s]', '', fname).strip()
-#         fname = re.sub(r'[-\s]+', '-', fname).strip('.-')
+        # fname = re.sub(r'[^a-zA-Z0-9-_.\s]', '', fname).strip()
+        # fname = re.sub(r'[-\s]+', '-', fname).strip('.-')
         return fname[:255] or 'empty'

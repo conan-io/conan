@@ -3,8 +3,8 @@ from conans.model.rest_routes import RestRoutes
 
 class BottleRoutes(RestRoutes):
 
-    def __init__(self):
-        super(BottleRoutes, self).__init__(matrix_params=False)
+    def __init__(self, matrix_params):
+        super(BottleRoutes, self).__init__(matrix_params=matrix_params)
 
     def __getattribute__(self, item):
         tmp = super(BottleRoutes, self).__getattribute__(item)

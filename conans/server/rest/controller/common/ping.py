@@ -7,7 +7,7 @@ class PingController(object):
 
     @staticmethod
     def attach_to(app):
-        r = BottleRoutes()
+        r = BottleRoutes(matrix_params=False)
 
         @app.route(r.ping, method=["GET"])
         def ping():

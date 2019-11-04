@@ -18,7 +18,7 @@ class ConanController(object):
     @staticmethod
     def attach_to(app):
 
-        r = BottleRoutes()
+        r = BottleRoutes(matrix_params=False)
 
         @app.route(r.v1_recipe_digest, method=["GET"])
         def get_recipe_manifest_url(name, version, username, channel, auth_user):

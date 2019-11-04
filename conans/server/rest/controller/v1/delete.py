@@ -17,7 +17,7 @@ class DeleteController(object):
     @staticmethod
     def attach_to(app):
 
-        r = BottleRoutes()
+        r = BottleRoutes(matrix_params=False)
 
         @app.route(r.recipe, method="DELETE")
         def remove_recipe(name, version, username, channel, auth_user):

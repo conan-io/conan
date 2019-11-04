@@ -5,18 +5,18 @@ from conans.model.rest_routes import RestRoutes
 from conans.paths import CONAN_MANIFEST, CONANINFO, ARTIFACTS_PROPERTIES_PUT_PREFIX
 
 
-def _format_ref(url, ref):
+def _format_ref(url, ref, matrix_params=""):
     url = url.format(name=ref.name, version=ref.version, username=ref.user or "_",
                      channel=ref.channel or "_", revision=ref.revision,
-                     matrix_params="")
+                     matrix_params=matrix_params)
     return url
 
 
-def _format_pref(url, pref):
+def _format_pref(url, pref, matrix_params=""):
     ref = pref.ref
     url = url.format(name=ref.name, version=ref.version, username=ref.user or "_",
                      channel=ref.channel or "_", revision=ref.revision, package_id=pref.id,
-                     p_revision=pref.revision, matrix_params="")
+                     p_revision=pref.revision, matrix_params=matrix_params)
     return url
 
 
@@ -32,8 +32,15 @@ class ClientCommonRouter(object):
     """Search urls shared between v1 and v2"""
     routes = None
 
-    def __init__(self, base_url):
+    def __init__(self, base_url, artifacts_properties):
         self.base_url = base_url
+
+        if artifacts_properties:
+            matrix_params = dict(_remove_put_prefix(artifacts_properties))
+            self._matrix_params_str = ";" + ";".join(["{}={}".format(key, value)
+                                                      for key, value in matrix_params.items()])
+        else:
+            self._matrix_params_str = ""
 
     def ping(self):
         return self.base_url + self.routes.ping
@@ -71,11 +78,11 @@ class ClientCommonRouter(object):
 
 class ClientV1Router(ClientCommonRouter):
     """Builds urls for v1"""
-    routes = RestRoutes(matrix_params=False)
+    routes = RestRoutes(matrix_params=True)
 
-    def __init__(self, base_url):
+    def __init__(self, base_url, artifact_properties):
         base_url = "{}/v1/".format(base_url)
-        super(ClientV1Router, self).__init__(base_url=base_url)
+        super(ClientV1Router, self).__init__(base_url, artifact_properties)
 
     def search_packages(self, ref, query=None):
         ref = ref.copy_clear_rev()
@@ -119,14 +126,18 @@ class ClientV1Router(ClientCommonRouter):
         pref = pref.copy_with_revs(None, None)
         return self.base_url + _format_pref(self.routes.v1_package_download_urls, pref)
 
-    def recipe_upload_urls(self, ref):
+    def recipe_upload_urls(self, ref, add_matrix_params=False):
         """ urls to upload the recipe"""
-        return self.base_url + _format_ref(self.routes.v1_recipe_upload_urls, ref.copy_clear_rev())
+        matrix_params = self._matrix_params_str if add_matrix_params else ""
+        return self.base_url + _format_ref(self.routes.v1_recipe_upload_urls, ref.copy_clear_rev(),
+                                           matrix_params=matrix_params)
 
-    def package_upload_urls(self, pref):
+    def package_upload_urls(self, pref, add_matrix_params=False):
         """ urls to upload the package"""
         pref = pref.copy_with_revs(None, None)
-        return self.base_url + _format_pref(self.routes.v1_package_upload_urls, pref)
+        matrix_params = self._matrix_params_str if add_matrix_params else ""
+        return self.base_url + _format_pref(self.routes.v1_package_upload_urls, pref,
+                                            matrix_params=matrix_params)
 
     @classmethod
     def _for_recipe(cls, ref):
@@ -144,14 +155,7 @@ class ClientV2Router(ClientCommonRouter):
 
     def __init__(self, base_url, artifacts_properties):
         base_url = "{}/v2/".format(base_url)
-        super(ClientV2Router, self).__init__(base_url=base_url)
-
-        if artifacts_properties:
-            matrix_params = dict(_remove_put_prefix(artifacts_properties))
-            self._matrix_params_str = ";" + ";".join(["{}={}".format(key, value)
-                                                      for key, value in matrix_params.items()])
-        else:
-            self._matrix_params_str = ""
+        super(ClientV2Router, self).__init__(base_url, artifacts_properties)
 
     def recipe_file(self, ref, path, add_matrix_params=False):
         """Recipe file url"""
