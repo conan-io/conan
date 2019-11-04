@@ -27,7 +27,6 @@ class HelloConan(ConanFile):
     def package(self):
         self.copy("*.h", "include")
 """
-
         client = TestClient()
         client.save({"conanfile.py": mixed_conanfile})
         client.run("export . Hello/0.1")
