@@ -30,14 +30,8 @@ class FileUploadDownloadController(object):
                                mimetype=get_mime_type(file_path))
 
         @app.route(r_wo.v1_updown_file, method=["PUT"])
-        def put_without(the_path):
-            _put(the_path, matrix_params="")
-
         @app.route(r_with.v1_updown_file, method=["PUT"])
-        def put_with(the_path, matrix_params):
-            _put(the_path, matrix_params)
-
-        def _put(the_path, matrix_params):
+        def put(the_path, matrix_params=""):
             del matrix_params  # Expected ";key=value;key2=value2" or empty
             token = request.query.get("signature", None)
             file_saver = ConanFileUpload(request.body, None,

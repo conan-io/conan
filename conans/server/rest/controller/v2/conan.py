@@ -33,19 +33,9 @@ class ConanControllerV2(object):
             return file_generator
 
         @app.route(r_wo.package_revision_file, method=["PUT"])
-        def upload_package_file_without(name, version, username, channel, package_id,
-                                   the_path, auth_user, revision, p_revision):
-            _upload_package_file(name, version, username, channel, package_id,
-                                 the_path, auth_user, revision, p_revision, matrix_params="")
-
         @app.route(r_with.package_revision_file, method=["PUT"])
-        def upload_package_file_with(name, version, username, channel, package_id,
-                                     the_path, auth_user, revision, p_revision, matrix_params):
-            _upload_package_file(name, version, username, channel, package_id,
-                                 the_path, auth_user, revision, p_revision, matrix_params)
-
-        def _upload_package_file(name, version, username, channel, package_id,
-                                 the_path, auth_user, revision, p_revision, matrix_params):
+        def upload_package_file(name, version, username, channel, package_id,
+                                the_path, auth_user, revision, p_revision, matrix_params=""):
             del matrix_params  # Looks like ";key=value;key2=value2" or empty
             if "X-Checksum-Deploy" in request.headers:
                 raise NotFoundException("Non checksum storage")
@@ -67,19 +57,9 @@ class ConanControllerV2(object):
             return file_generator
 
         @app.route(r_wo.recipe_revision_file, method=["PUT"])
-        def upload_recipe_file_without(name, version, username, channel, the_path, auth_user,
-                                       revision):
-            _upload_recipe_file(name, version, username, channel, the_path, auth_user, revision,
-                                matrix_params="")
-
         @app.route(r_with.recipe_revision_file, method=["PUT"])
-        def upload_recipe_file_with(name, version, username, channel, the_path, auth_user, revision,
-                                    matrix_params):
-            _upload_recipe_file(name, version, username, channel, the_path, auth_user, revision,
-                                matrix_params)
-
-        def _upload_recipe_file(name, version, username, channel, the_path, auth_user, revision,
-                                matrix_params):
+        def upload_recipe_file(name, version, username, channel, the_path, auth_user, revision,
+                               matrix_params=""):
             del matrix_params  # Looks like ";key=value;key2=value2"
             if "X-Checksum-Deploy" in request.headers:
                 raise NotFoundException("Not a checksum storage")

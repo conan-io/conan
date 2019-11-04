@@ -71,21 +71,15 @@ class AuthorizeBearerTest(unittest.TestCase):
                               ('check_credentials', None),
                               ('authenticate', 'Basic'),
                               ('get_recipe_snapshot', 'Bearer'),
-                              ('get_conanfile_upload_urls', 'Bearer'), ]
-            if artifacts_properties:
-                expected_calls.append(('put_with', None))
-            else:
-                expected_calls.append(('put_without', None))
+                              ('get_conanfile_upload_urls', 'Bearer'),
+                              ('put', None)]
         else:
             expected_calls = [('ping', None),
                               ('get_recipe_file', None),
                               ('check_credentials', None),
                               ('authenticate', 'Basic'),
-                              ('get_recipe_file_list', 'Bearer'), ]
-            if artifacts_properties:
-                expected_calls.append(('upload_recipe_file_with', None))
-            else:
-                expected_calls.append(('upload_recipe_file_without', None))
+                              ('get_recipe_file_list', 'Bearer'),
+                              ('upload_recipe_file', 'Bearer')]
 
         self.assertEqual(len(expected_calls), len(auth.auths))
         for i, (method, auth_type) in enumerate(expected_calls):
@@ -115,11 +109,8 @@ class AuthorizeBearerTest(unittest.TestCase):
                           ('check_credentials', None),
                           ('authenticate', 'Basic'),
                           ('get_recipe_snapshot', 'Bearer'),
-                          ('get_conanfile_upload_urls', 'Bearer'), ]
-        if artifacts_properties:
-            expected_calls.append(('put_with', 'Bearer'))
-        else:
-            expected_calls.append(('put_without', 'Bearer'))
+                          ('get_conanfile_upload_urls', 'Bearer'),
+                          ('put', 'Bearer')]
 
         self.assertEqual(len(expected_calls), len(auth.auths))
         for i, (method, auth_type) in enumerate(expected_calls):
