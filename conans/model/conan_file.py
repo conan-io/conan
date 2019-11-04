@@ -2,7 +2,7 @@ import os
 from contextlib import contextmanager
 
 from conans.client import tools
-from conans.client.output import Color, ScopedOutput
+from conans.client.output import ScopedOutput
 from conans.client.tools.env import environment_append, no_op, pythonpath
 from conans.client.tools.oss import OSInfo
 from conans.errors import ConanException, ConanInvalidConfiguration
@@ -134,19 +134,6 @@ class ConanFile(object):
         self.options = create_options(self)
         self.requires = create_requirements(self)
         self.settings = create_settings(self, settings)
-
-        try:
-            if self.settings.os_build and self.settings.os:
-                self.output.writeln("*"*60, front=Color.BRIGHT_RED)
-                self.output.writeln("  This package defines both 'os' and 'os_build' ",
-                                    front=Color.BRIGHT_RED)
-                self.output.writeln("  Please use 'os' for libraries and 'os_build'",
-                                    front=Color.BRIGHT_RED)
-                self.output.writeln("  only for build-requires used for cross-building",
-                                    front=Color.BRIGHT_RED)
-                self.output.writeln("*"*60, front=Color.BRIGHT_RED)
-        except ConanException:
-            pass
 
         if 'cppstd' in self.settings.fields:
             self.output.warn("Setting 'cppstd' is deprecated in favor of 'compiler.cppstd',"
