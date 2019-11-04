@@ -28,19 +28,22 @@ class RestApiClient(object):
 
         self._cached_capabilities = {}
 
-    def _get_api(self):
-        if self.remote_url not in self._cached_capabilities:
+    def _capable(self, capability):
+        capabilities = self._cached_capabilities.get(self.remote_url)
+        if capabilities is None:
             tmp = RestV1Methods(self.remote_url, self.token, self.custom_headers, self._output,
                                 self.requester, self.verify_ssl, self._put_headers)
-            cap = tmp.server_capabilities()
-            self._cached_capabilities[self.remote_url] = cap
-            logger.debug("REST: Cached capabilities for the remote: %s" % cap)
-            if not self._revisions_enabled and ONLY_V2 in cap:
+            capabilities = tmp.server_capabilities()
+            self._cached_capabilities[self.remote_url] = capabilities
+            logger.debug("REST: Cached capabilities for the remote: %s" % capabilities)
+            if not self._revisions_enabled and ONLY_V2 in capabilities:
                 raise OnlyV2Available(self.remote_url)
+        return capability in capabilities
 
-        if self._revisions_enabled and REVISIONS in self._cached_capabilities.get(self.remote_url,
-                                                                                  []):
-            checksum_deploy = CHECKSUM_DEPLOY in self._cached_capabilities.get(self.remote_url, [])
+    def _get_api(self):
+        revisions = self._capable(REVISIONS)
+        if self._revisions_enabled and revisions:
+            checksum_deploy = self._capable(CHECKSUM_DEPLOY)
             return RestV2Methods(self.remote_url, self.token, self.custom_headers, self._output,
                                  self.requester, self.verify_ssl, self._put_headers,
                                  checksum_deploy)
@@ -92,7 +95,7 @@ class RestApiClient(object):
         if self.refresh_token and self.token:
             token, refresh_token = api_v1.refresh_token(self.token, self.refresh_token)
         else:
-            if OAUTH_TOKEN in self._cached_capabilities.get(self.remote_url, []):
+            if self._capable(OAUTH_TOKEN):
                 # Artifactory >= 6.13.X
                 token, refresh_token = api_v1.authenticate_oauth(user, password)
             else:

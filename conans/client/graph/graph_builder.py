@@ -20,13 +20,14 @@ class DepsGraphBuilder(object):
         self._resolver = resolver
         self._recorder = recorder
 
-    def load_graph(self, root_node, check_updates, update, remotes, processed_profile,
+    def load_graph(self, root_node, check_updates, update, remotes, profile_host,
                    graph_lock=None):
         check_updates = check_updates or update
         dep_graph = DepsGraph()
         # compute the conanfile entry point for this dependency graph
         name = root_node.name
         root_node.public_closure = OrderedDict([(name, root_node)])
+        root_node.transitive_closure = OrderedDict([(name, root_node)])
         root_node.public_deps = {name: root_node}
         root_node.ancestors = set()
         dep_graph.add_node(root_node)
@@ -35,12 +36,12 @@ class DepsGraphBuilder(object):
         t1 = time.time()
         self._load_deps(dep_graph, root_node, Requirements(), None, None,
                         check_updates, update, remotes,
-                        processed_profile, graph_lock)
+                        profile_host, graph_lock)
         logger.debug("GRAPH: Time to load deps %s" % (time.time() - t1))
         return dep_graph
 
     def extend_build_requires(self, graph, node, build_requires_refs, check_updates, update,
-                              remotes, processed_profile, graph_lock):
+                              remotes, profile_host, graph_lock):
 
         # The options that will be defined in the node will be the real options values that have
         # been already propagated downstream from the dependency graph. This will override any
@@ -62,22 +63,14 @@ class DepsGraphBuilder(object):
             name = require.ref.name
             require.build_require = True
             self._handle_require(name, node, require, graph, check_updates, update,
-                                 remotes, processed_profile, new_reqs, new_options, graph_lock)
+                                 remotes, profile_host, new_reqs, new_options, graph_lock)
 
         new_nodes = set(n for n in graph.nodes if n.package_id is None)
         # This is to make sure that build_requires have precedence over the normal requires
         ordered_closure = list(node.public_closure.items())
         ordered_closure.sort(key=lambda x: x[1] not in new_nodes)
         node.public_closure = OrderedDict(ordered_closure)
-
-        subgraph = DepsGraph()
-        subgraph.aliased = graph.aliased
-        subgraph.evaluated = graph.evaluated
-        subgraph.nodes = new_nodes
-        for n in subgraph.nodes:
-            n.build_require = True
-
-        return subgraph
+        return new_nodes
 
     def _resolve_ranges(self, graph, requires, consumer, update, remotes):
         for require in requires:
@@ -106,7 +99,7 @@ class DepsGraphBuilder(object):
                                     list(conanfile.requires.values())))
 
     def _load_deps(self, dep_graph, node, down_reqs, down_ref, down_options,
-                   check_updates, update, remotes, processed_profile, graph_lock):
+                   check_updates, update, remotes, profile_host, graph_lock):
         """ expands the dependencies of the node, recursively
 
         param node: Node object to be expanded in this step
@@ -131,10 +124,10 @@ class DepsGraphBuilder(object):
             if require.override:
                 continue
             self._handle_require(name, node, require, dep_graph, check_updates, update,
-                                 remotes, processed_profile, new_reqs, new_options, graph_lock)
+                                 remotes, profile_host, new_reqs, new_options, graph_lock)
 
     def _handle_require(self, name, node, require, dep_graph, check_updates, update,
-                        remotes, processed_profile, new_reqs, new_options, graph_lock):
+                        remotes, profile_host, new_reqs, new_options, graph_lock):
         # Handle a requirement of a node. There are 2 possibilities
         #    node -(require)-> new_node (creates a new node in the graph)
         #    node -(require)-> previous (creates a diamond with a previously existing node)
@@ -152,10 +145,11 @@ class DepsGraphBuilder(object):
         if not previous or ((require.build_require or require.private) and not previous_closure):
             # new node, must be added and expanded (node -> new_node)
             new_node = self._create_new_node(node, dep_graph, require, name, check_updates, update,
-                                             remotes, processed_profile, graph_lock)
+                                             remotes, profile_host, graph_lock)
 
             # The closure of a new node starts with just itself
-            new_node.public_closure = OrderedDict([(new_node.ref.name, new_node)])
+            new_node.public_closure = OrderedDict([(name, new_node)])
+            new_node.transitive_closure = OrderedDict([(name, new_node)])
             # The new created node is connected to the parent one
             node.connect_closure(new_node)
 
@@ -167,6 +161,7 @@ class DepsGraphBuilder(object):
                 new_node.public_deps = node.public_closure.copy()
                 new_node.public_deps[name] = new_node
             else:
+                node.transitive_closure[name] = new_node
                 # Normal requires propagate and can conflict with the parent "node.public_deps" too
                 new_node.public_deps = node.public_deps.copy()
                 new_node.public_deps[name] = new_node
@@ -177,7 +172,9 @@ class DepsGraphBuilder(object):
 
             # RECURSION, keep expanding (depth-first) the new node
             self._load_deps(dep_graph, new_node, new_reqs, node.ref, new_options, check_updates,
-                            update, remotes, processed_profile, graph_lock)
+                            update, remotes, profile_host, graph_lock)
+            if not require.private and not require.build_require:
+                node.transitive_closure.update(new_node.transitive_closure)
 
         else:  # a public node already exist with this name
             # This is closing a diamond, the node already exists and is reachable
@@ -193,27 +190,23 @@ class DepsGraphBuilder(object):
             for n in previous.public_closure.values():
                 n.ancestors.update(union)
 
-            # Even if it was in private scope, if it is reached via a public require
-            # the previous node and its upstream becomes public
-            if previous.private and not require.private:
-                previous.make_public()
-
             node.connect_closure(previous)
             dep_graph.add_edge(node, previous, require)
-            # All the upstream dependencies (public_closure) of the previously existing node
-            # now will be also connected to the node and to all its dependants
-            for name, n in previous.public_closure.items():
-                if n.build_require or n.private:
-                    continue
-                node.connect_closure(n)
-                for dep_node in node.inverse_closure:
-                    dep_node.connect_closure(n)
+            if not require.private and not require.build_require:
+                node.transitive_closure.update(previous.transitive_closure)
+
+                # All the upstream dependencies (public_closure) of the previously existing node
+                # now will be also connected to the node and to all its dependants
+                for name, n in previous.transitive_closure.items():
+                    node.connect_closure(n)
+                    for dep_node in node.inverse_closure:
+                        dep_node.connect_closure(n)
 
             # Recursion is only necessary if the inputs conflict with the current "previous"
             # configuration of upstream versions and options
             if not graph_lock and self._recurse(previous.public_closure, new_reqs, new_options):
                 self._load_deps(dep_graph, previous, new_reqs, node.ref, new_options, check_updates,
-                                update, remotes, processed_profile, graph_lock)
+                                update, remotes, profile_host, graph_lock)
 
     @staticmethod
     def _conflicting_references(previous_ref, new_ref, consumer_ref=None):
@@ -312,7 +305,7 @@ class DepsGraphBuilder(object):
         return new_options
 
     def _create_new_node(self, current_node, dep_graph, requirement, name_req,
-                         check_updates, update, remotes, processed_profile, graph_lock,
+                         check_updates, update, remotes, profile, graph_lock,
                          alias_ref=None):
         """ creates and adds a new node to the dependency graph
         """
@@ -330,7 +323,7 @@ class DepsGraphBuilder(object):
 
         locked_id = requirement.locked_id
         lock_python_requires = graph_lock.python_requires(locked_id) if locked_id else None
-        dep_conanfile = self._loader.load_conanfile(conanfile_path, processed_profile,
+        dep_conanfile = self._loader.load_conanfile(conanfile_path, profile,
                                                     ref=requirement.ref,
                                                     lock_python_requires=lock_python_requires)
         if recipe_status == RECIPE_EDITABLE:
@@ -343,7 +336,7 @@ class DepsGraphBuilder(object):
             dep_graph.aliased[alias_ref] = requirement.ref
             return self._create_new_node(current_node, dep_graph, requirement,
                                          name_req, check_updates, update,
-                                         remotes, processed_profile, graph_lock,
+                                         remotes, profile, graph_lock,
                                          alias_ref=alias_ref)
 
         logger.debug("GRAPH: new_node: %s" % str(new_ref))
@@ -357,12 +350,6 @@ class DepsGraphBuilder(object):
 
         if locked_id:
             new_node.id = locked_id
-
-        # build-requires and private affect transitively. If "node" is already
-        # a build_require or a private one, its requirements will inherit that property
-        # Or if the require specify that property, then it will get it too
-        new_node.build_require = current_node.build_require or requirement.build_require
-        new_node.private = current_node.private or requirement.private
 
         dep_graph.add_node(new_node)
         dep_graph.add_edge(current_node, new_node, requirement)

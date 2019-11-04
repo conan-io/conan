@@ -13,10 +13,10 @@ class Retriever(object):
         self.loader = loader
         self.folder = temp_folder()
 
-    def root(self, content, processed_profile):
+    def root(self, content, profile):
         conan_path = os.path.join(self.folder, "data", "root.py")
         save(conan_path, content)
-        conanfile = self.loader.load_consumer(conan_path, processed_profile)
+        conanfile = self.loader.load_consumer(conan_path, profile)
         node = Node(None, conanfile, "rootpath")
         node.recipe = RECIPE_CONSUMER
         return node

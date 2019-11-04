@@ -286,30 +286,30 @@ helloTest/1.4.10@myuser/stable""".format(remote)
     def recipe_search_test(self):
         self.client.run("search Hello*")
         self.assertEqual("Existing package recipes:\n\n"
-                          "Hello/1.4.10@myuser/testing\n"
-                          "Hello/1.4.11@myuser/testing\n"
-                          "Hello/1.4.12@myuser/testing\n"
-                          "Hello/1.5.10@myuser/testing\n"
-                          "helloTest/1.4.10@myuser/stable\n", self.client.out)
+                         "Hello/1.4.10@myuser/testing\n"
+                         "Hello/1.4.11@myuser/testing\n"
+                         "Hello/1.4.12@myuser/testing\n"
+                         "Hello/1.5.10@myuser/testing\n"
+                         "helloTest/1.4.10@myuser/stable\n", self.client.out)
 
         self.client.run("search Hello* --case-sensitive")
         self.assertEqual("Existing package recipes:\n\n"
-                          "Hello/1.4.10@myuser/testing\n"
-                          "Hello/1.4.11@myuser/testing\n"
-                          "Hello/1.4.12@myuser/testing\n"
-                          "Hello/1.5.10@myuser/testing\n", self.client.out)
+                         "Hello/1.4.10@myuser/testing\n"
+                         "Hello/1.4.11@myuser/testing\n"
+                         "Hello/1.4.12@myuser/testing\n"
+                         "Hello/1.5.10@myuser/testing\n", self.client.out)
 
         self.client.run("search *myuser* --case-sensitive")
         self.assertEqual("Existing package recipes:\n\n"
-                          "Bye/0.14@myuser/testing\n"
-                          "Hello/1.4.10@myuser/testing\n"
-                          "Hello/1.4.11@myuser/testing\n"
-                          "Hello/1.4.12@myuser/testing\n"
-                          "Hello/1.5.10@myuser/testing\n"
-                          "MissFile/1.0.2@myuser/stable\n"
-                          "NodeInfo/1.0.2@myuser/stable\n"
-                          "Tool/1.0.0@myuser/testing\n"
-                          "helloTest/1.4.10@myuser/stable\n", self.client.out)
+                         "Bye/0.14@myuser/testing\n"
+                         "Hello/1.4.10@myuser/testing\n"
+                         "Hello/1.4.11@myuser/testing\n"
+                         "Hello/1.4.12@myuser/testing\n"
+                         "Hello/1.5.10@myuser/testing\n"
+                         "MissFile/1.0.2@myuser/stable\n"
+                         "NodeInfo/1.0.2@myuser/stable\n"
+                         "Tool/1.0.0@myuser/testing\n"
+                         "helloTest/1.4.10@myuser/stable\n", self.client.out)
 
         self.client.run("search Hello/*@myuser/testing")
         self.assertIn("Hello/1.4.10@myuser/testing\n"
@@ -485,7 +485,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
 
         for pack_name in ["winx86", "winx64", "linx86", "linx64"]:
             self.assertEqual(pack_name in self.client.out,
-                              pack_name in packages_found, "%s fail" % pack_name)
+                             pack_name in packages_found, "%s fail" % pack_name)
 
     def package_search_complex_queries_test(self):
 

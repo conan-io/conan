@@ -35,25 +35,25 @@ endforeach()
 
     target_properties = """
 # Assign target properties
-set_property(TARGET {name}::{name} 
+set_property(TARGET {name}::{name}
              PROPERTY INTERFACE_LINK_LIBRARIES 
-                 $<$<CONFIG:Release>:${{{name}_LIBRARIES_TARGETS_RELEASE}} ${{{name}_LINKER_FLAGS_RELEASE_LIST}}>
-                 $<$<CONFIG:RelWithDebInfo>:${{{name}_LIBRARIES_TARGETS_RELWITHDEBINFO}} ${{{name}_LINKER_FLAGS_RELWITHDEBINFO_LIST}}>
-                 $<$<CONFIG:MinSizeRel>:${{{name}_LIBRARIES_TARGETS_MINSIZEREL}} ${{{name}_LINKER_FLAGS_MINSIZEREL_LIST}}>
-                 $<$<CONFIG:Debug>:${{{name}_LIBRARIES_TARGETS_DEBUG}} ${{{name}_LINKER_FLAGS_DEBUG_LIST}}>)
-set_property(TARGET {name}::{name} 
+                 $<$<CONFIG:Release>:${{{name}_LIBRARIES_TARGETS_RELEASE}} ${{{name}_SYSTEM_LIBS_RELEASE}} ${{{name}_LINKER_FLAGS_RELEASE_LIST}}>
+                 $<$<CONFIG:RelWithDebInfo>:${{{name}_LIBRARIES_TARGETS_RELWITHDEBINFO}} ${{{name}_SYSTEM_LIBS_RELWITHDEBINFO}} ${{{name}_LINKER_FLAGS_RELWITHDEBINFO_LIST}}>
+                 $<$<CONFIG:MinSizeRel>:${{{name}_LIBRARIES_TARGETS_MINSIZEREL}} ${{{name}_SYSTEM_LIBS_MINSIZEREL}} ${{{name}_LINKER_FLAGS_MINSIZEREL_LIST}}>
+                 $<$<CONFIG:Debug>:${{{name}_LIBRARIES_TARGETS_DEBUG}} ${{{name}_SYSTEM_LIBS_DEBUG}} ${{{name}_LINKER_FLAGS_DEBUG_LIST}}>)
+set_property(TARGET {name}::{name}
              PROPERTY INTERFACE_INCLUDE_DIRECTORIES 
                  $<$<CONFIG:Release>:${{{name}_INCLUDE_DIRS_RELEASE}}>
                  $<$<CONFIG:RelWithDebInfo>:${{{name}_INCLUDE_DIRS_RELWITHDEBINFO}}>
                  $<$<CONFIG:MinSizeRel>:${{{name}_INCLUDE_DIRS_MINSIZEREL}}>
                  $<$<CONFIG:Debug>:${{{name}_INCLUDE_DIRS_DEBUG}}>)
-set_property(TARGET {name}::{name} 
+set_property(TARGET {name}::{name}
              PROPERTY INTERFACE_COMPILE_DEFINITIONS 
                  $<$<CONFIG:Release>:${{{name}_COMPILE_DEFINITIONS_RELEASE}}>
                  $<$<CONFIG:RelWithDebInfo>:${{{name}_COMPILE_DEFINITIONS_RELWITHDEBINFO}}>
                  $<$<CONFIG:MinSizeRel>:${{{name}_COMPILE_DEFINITIONS_MINSIZEREL}}>
                  $<$<CONFIG:Debug>:${{{name}_COMPILE_DEFINITIONS_DEBUG}}>)
-set_property(TARGET {name}::{name} 
+set_property(TARGET {name}::{name}
              PROPERTY INTERFACE_COMPILE_OPTIONS 
                  $<$<CONFIG:Release>:${{{name}_COMPILE_OPTIONS_RELEASE_LIST}}>
                  $<$<CONFIG:RelWithDebInfo>:${{{name}_COMPILE_OPTIONS_RELWITHDEBINFO_LIST}}>
@@ -74,10 +74,10 @@ set_property(TARGET {name}::{name}
             depname = cpp_info.name
             deps = DepsCppCmake(cpp_info)
             ret["{}Config.cmake".format(depname)] = self._find_for_dep(depname, cpp_info)
+            ret["{}Targets.cmake".format(depname)] = self.targets_file.format(name=depname)
 
             find_lib = target_template.format(name=depname, deps=deps,
                                               build_type_suffix=build_type_suffix)
-            ret["{}Targets.cmake".format(depname)] = self.targets_file.format(name=depname)
             ret["{}Target-{}.cmake".format(depname, build_type.lower())] = find_lib
         return ret
 
@@ -97,5 +97,4 @@ set_property(TARGET {name}::{name}
                                               version=cpp_info.version,
                                               find_dependencies_block="\n".join(lines),
                                               target_props_block=targets_props)
-
         return tmp

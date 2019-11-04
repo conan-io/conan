@@ -1,4 +1,4 @@
-_cmake_single_dep_vars = """{deps.find_frameworks}
+_cmake_single_dep_vars = """
 set(CONAN_{dep}_ROOT{build_type} {deps.rootpath})
 set(CONAN_INCLUDE_DIRS_{dep}{build_type} {deps.include_paths})
 set(CONAN_LIB_DIRS_{dep}{build_type} {deps.lib_paths})
@@ -6,8 +6,14 @@ set(CONAN_BIN_DIRS_{dep}{build_type} {deps.bin_paths})
 set(CONAN_RES_DIRS_{dep}{build_type} {deps.res_paths})
 set(CONAN_SRC_DIRS_{dep}{build_type} {deps.src_paths})
 set(CONAN_BUILD_DIRS_{dep}{build_type} {deps.build_paths})
+set(CONAN_FRAMEWORK_DIRS_{dep}{build_type} {deps.framework_paths})
 set(CONAN_LIBS_{dep}{build_type} {deps.libs})
+set(CONAN_PKG_LIBS_{dep}{build_type} {deps.libs})
+set(CONAN_SYSTEM_LIBS_{dep}{build_type} {deps.system_libs})
+set(CONAN_FRAMEWORKS_{dep}{build_type} {deps.frameworks})
+set(CONAN_FRAMEWORKS_FOUND_{dep}{build_type} "")  # Will be filled later
 set(CONAN_DEFINES_{dep}{build_type} {deps.defines})
+set(CONAN_BUILD_MODULES_PATHS_{dep}{build_type} {deps.build_modules_paths})
 # COMPILE_DEFINITIONS are equal to CONAN_DEFINES without -D, for targets
 set(CONAN_COMPILE_DEFINITIONS_{dep}{build_type} {deps.compile_definitions})
 
@@ -21,6 +27,13 @@ set(CONAN_C_FLAGS_{dep}{build_type}_LIST "{deps.cflags_list}")
 set(CONAN_CXX_FLAGS_{dep}{build_type}_LIST "{deps.cxxflags_list}")
 set(CONAN_SHARED_LINKER_FLAGS_{dep}{build_type}_LIST "{deps.sharedlinkflags_list}")
 set(CONAN_EXE_LINKER_FLAGS_{dep}{build_type}_LIST "{deps.exelinkflags_list}")
+
+# Apple Frameworks
+conan_find_apple_frameworks(CONAN_FRAMEWORKS_FOUND_{dep}{build_type} "${{CONAN_FRAMEWORKS_{dep}{build_type}}}")
+# Append to aggregated values variable
+set(CONAN_LIBS_{dep}{build_type} ${{CONAN_PKG_LIBS_{dep}{build_type}}} ${{CONAN_SYSTEM_LIBS_{dep}{build_type}}} ${{CONAN_FRAMEWORKS_FOUND_{dep}{build_type}}})
+# Aggregate package libs and frameworks for conan_package_library_targets()
+set(CONAN_LIBS_FRAMEWORKS_{dep}{build_type} ${{CONAN_PKG_LIBS_{dep}{build_type}}} ${{CONAN_FRAMEWORKS_FOUND_{dep}{build_type}}})
 """
 
 
@@ -83,14 +96,25 @@ set(CONAN_INCLUDE_DIRS{build_type} {deps.include_paths} ${{CONAN_INCLUDE_DIRS{bu
 set(CONAN_LIB_DIRS{build_type} {deps.lib_paths} ${{CONAN_LIB_DIRS{build_type}}})
 set(CONAN_BIN_DIRS{build_type} {deps.bin_paths} ${{CONAN_BIN_DIRS{build_type}}})
 set(CONAN_RES_DIRS{build_type} {deps.res_paths} ${{CONAN_RES_DIRS{build_type}}})
+set(CONAN_FRAMEWORK_DIRS{build_type} {deps.framework_paths} ${{CONAN_FRAMEWORK_DIRS{build_type}}})
 set(CONAN_LIBS{build_type} {deps.libs} ${{CONAN_LIBS{build_type}}})
+set(CONAN_PKG_LIBS{build_type} {deps.libs} ${{CONAN_PKG_LIBS{build_type}}})
+set(CONAN_SYSTEM_LIBS{build_type} {deps.system_libs})
+set(CONAN_FRAMEWORKS{build_type} {deps.frameworks} ${{CONAN_FRAMEWORKS{build_type}}})
+set(CONAN_FRAMEWORKS_FOUND{build_type} "")  # Will be filled later
 set(CONAN_DEFINES{build_type} {deps.defines} ${{CONAN_DEFINES{build_type}}})
+set(CONAN_BUILD_MODULES_PATHS{build_type} {deps.build_modules_paths} ${{CONAN_BUILD_MODULES_PATHS{build_type}}})
 set(CONAN_CMAKE_MODULE_PATH{build_type} {deps.build_paths} ${{CONAN_CMAKE_MODULE_PATH{build_type}}})
 
 set(CONAN_CXX_FLAGS{build_type} "{deps.cxxflags} ${{CONAN_CXX_FLAGS{build_type}}}")
 set(CONAN_SHARED_LINKER_FLAGS{build_type} "{deps.sharedlinkflags} ${{CONAN_SHARED_LINKER_FLAGS{build_type}}}")
 set(CONAN_EXE_LINKER_FLAGS{build_type} "{deps.exelinkflags} ${{CONAN_EXE_LINKER_FLAGS{build_type}}}")
 set(CONAN_C_FLAGS{build_type} "{deps.cflags} ${{CONAN_C_FLAGS{build_type}}}")
+
+# Apple Frameworks
+conan_find_apple_frameworks(CONAN_FRAMEWORKS_FOUND{build_type} "${{CONAN_FRAMEWORKS{build_type}}}")
+# Append to aggregated values variable
+set(CONAN_LIBS{build_type} ${{CONAN_PKG_LIBS{build_type}}} ${{CONAN_SYSTEM_LIBS{build_type}}} ${{CONAN_FRAMEWORKS_FOUND{build_type}}})
 """
 
 
@@ -110,16 +134,21 @@ set(CONAN_CMD_C_FLAGS ${CONAN_C_FLAGS})
 
 
 _target_template = """
-    conan_package_library_targets("${{CONAN_LIBS_{uname}}}" "${{CONAN_LIB_DIRS_{uname}}}"
-                                  CONAN_PACKAGE_TARGETS_{uname} "{deps}" "" {pkg_name})
-    conan_package_library_targets("${{CONAN_LIBS_{uname}_DEBUG}}" "${{CONAN_LIB_DIRS_{uname}_DEBUG}}"
-                                  CONAN_PACKAGE_TARGETS_{uname}_DEBUG "{deps}" "debug" {pkg_name})
-    conan_package_library_targets("${{CONAN_LIBS_{uname}_RELEASE}}" "${{CONAN_LIB_DIRS_{uname}_RELEASE}}"
-                                  CONAN_PACKAGE_TARGETS_{uname}_RELEASE "{deps}" "release" {pkg_name})
-    conan_package_library_targets("${{CONAN_LIBS_{uname}_RELWITHDEBINFO}}" "${{CONAN_LIB_DIRS_{uname}_RELWITHDEBINFO}}"
-                                  CONAN_PACKAGE_TARGETS_{uname}_RELWITHDEBINFO "{deps}" "relwithdebinfo" {pkg_name})
-    conan_package_library_targets("${{CONAN_LIBS_{uname}_MINSIZEREL}}" "${{CONAN_LIB_DIRS_{uname}_MINSIZEREL}}"
-                                  CONAN_PACKAGE_TARGETS_{uname}_MINSIZEREL "{deps}" "minsizerel" {pkg_name})
+    conan_package_library_targets("${{CONAN_LIBS_FRAMEWORKS_{uname}}}" "${{CONAN_LIB_DIRS_{uname}}}"
+                                  CONAN_PACKAGE_TARGETS_{uname} "${{CONAN_SYSTEM_LIBS_{uname}}} {deps}"
+                                  "" {pkg_name})
+    conan_package_library_targets("${{CONAN_LIBS_FRAMEWORKS_{uname}_DEBUG}}" "${{CONAN_LIB_DIRS_{uname}_DEBUG}}"
+                                  CONAN_PACKAGE_TARGETS_{uname}_DEBUG "${{CONAN_SYSTEM_LIBS_{uname}_DEBUG}} {deps}"
+                                  "debug" {pkg_name})
+    conan_package_library_targets("${{CONAN_LIBS_FRAMEWORKS_{uname}_RELEASE}}" "${{CONAN_LIB_DIRS_{uname}_RELEASE}}"
+                                  CONAN_PACKAGE_TARGETS_{uname}_RELEASE "${{CONAN_SYSTEM_LIBS_{uname}_RELEASE}} {deps}"
+                                  "release" {pkg_name})
+    conan_package_library_targets("${{CONAN_LIBS_FRAMEWORKS_{uname}_RELWITHDEBINFO}}" "${{CONAN_LIB_DIRS_{uname}_RELWITHDEBINFO}}"
+                                  CONAN_PACKAGE_TARGETS_{uname}_RELWITHDEBINFO "${{CONAN_SYSTEM_LIBS_{uname}_RELWITHDEBINFO}} {deps}"
+                                  "relwithdebinfo" {pkg_name})
+    conan_package_library_targets("${{CONAN_LIBS_FRAMEWORKS_{uname}_MINSIZEREL}}" "${{CONAN_LIB_DIRS_{uname}_MINSIZEREL}}"
+                                  CONAN_PACKAGE_TARGETS_{uname}_MINSIZEREL "${{CONAN_SYSTEM_LIBS_{uname}_MINSIZEREL}} {deps}"
+                                  "minsizerel" {pkg_name})
 
     add_library({name} INTERFACE IMPORTED)
 
@@ -323,8 +352,11 @@ macro(conan_split_version VERSION_STRING MAJOR MINOR)
 endmacro()
 
 macro(conan_error_compiler_version)
-    message(FATAL_ERROR "Incorrect '${CONAN_COMPILER}' version 'compiler.version=${CONAN_COMPILER_VERSION}'"
-                        " is not the one detected by CMake: '${CMAKE_CXX_COMPILER_ID}=" ${VERSION_MAJOR}.${VERSION_MINOR}')
+    message(FATAL_ERROR "Detected a mismatch for the compiler version between your conan profile settings and CMake: \n"
+                        "Compiler version specified in your conan profile: ${CONAN_COMPILER_VERSION}\n"
+                        "Compiler version detected in CMake: ${VERSION_MAJOR}.${VERSION_MINOR}\n"
+                        "Please check your conan profile settings (conan profile show [default|your_profile_name])"
+           )
 endmacro()
 
 set(_CONAN_CURRENT_DIR ${CMAKE_CURRENT_LIST_DIR})
@@ -544,6 +576,56 @@ macro(conan_target_link_libraries target)
         endforeach()
     endif()
 endmacro()
+
+macro(conan_include_build_modules)
+    if(CMAKE_BUILD_TYPE)
+        if(${CMAKE_BUILD_TYPE} MATCHES "Debug")
+            set(CONAN_BUILD_MODULES_PATHS ${CONAN_BUILD_MODULES_PATHS_DEBUG} ${CONAN_BUILD_MODULES_PATHS})
+        elseif(${CMAKE_BUILD_TYPE} MATCHES "Release")
+            set(CONAN_BUILD_MODULES_PATHS ${CONAN_BUILD_MODULES_PATHS_RELEASE} ${CONAN_BUILD_MODULES_PATHS})
+        elseif(${CMAKE_BUILD_TYPE} MATCHES "RelWithDebInfo")
+            set(CONAN_BUILD_MODULES_PATHS ${CONAN_BUILD_MODULES_PATHS_RELWITHDEBINFO} ${CONAN_BUILD_MODULES_PATHS})
+        elseif(${CMAKE_BUILD_TYPE} MATCHES "MinSizeRel")
+            set(CONAN_BUILD_MODULES_PATHS ${CONAN_BUILD_MODULES_PATHS_MINSIZEREL} ${CONAN_BUILD_MODULES_PATHS})
+        endif()
+    endif()
+
+    foreach(_BUILD_MODULE_PATH ${CONAN_BUILD_MODULES_PATHS})
+        include(${_BUILD_MODULE_PATH})
+    endforeach()
+endmacro()
+"""
+
+apple_frameworks_macro = """
+macro(conan_find_apple_frameworks FRAMEWORKS_FOUND FRAMEWORKS)
+    if(APPLE)
+        if(CMAKE_BUILD_TYPE)
+            if(${CMAKE_BUILD_TYPE} MATCHES "Debug")
+                set(CONAN_FRAMEWORKS ${CONAN_FRAMEWORKS_DEBUG} ${CONAN_FRAMEWORKS})
+                set(CONAN_FRAMEWORK_DIRS ${CONAN_FRAMEWORK_DIRS_DEBUG} ${CONAN_FRAMEWORK_DIRS})
+            elseif(${CMAKE_BUILD_TYPE} MATCHES "Release")
+                set(CONAN_FRAMEWORKS ${CONAN_FRAMEWORKS_RELEASE} ${CONAN_BUILD_MODULES_PATHS})
+                set(CONAN_FRAMEWORK_DIRS ${CONAN_FRAMEWORK_DIRS_RELEASE} ${CONAN_FRAMEWORK_DIRS})
+            elseif(${CMAKE_BUILD_TYPE} MATCHES "RelWithDebInfo")
+                set(CONAN_FRAMEWORKS ${CONAN_FRAMEWORKS_RELWITHDEBINFO} ${CONAN_BUILD_MODULES_PATHS})
+                set(CONAN_FRAMEWORK_DIRS ${CONAN_FRAMEWORK_DIRS_RELWITHDEBINFO} ${CONAN_FRAMEWORK_DIRS})
+            elseif(${CMAKE_BUILD_TYPE} MATCHES "MinSizeRel")
+                set(CONAN_FRAMEWORKS ${CONAN_FRAMEWORKS_MINSIZEREL} ${CONAN_BUILD_MODULES_PATHS})
+                set(CONAN_FRAMEWORK_DIRS ${CONAN_FRAMEWORK_DIRS_MINSIZEREL} ${CONAN_FRAMEWORK_DIRS})
+            endif()
+        endif()
+        
+        foreach(_FRAMEWORK ${FRAMEWORKS})
+            # https://cmake.org/pipermail/cmake-developers/2017-August/030199.html
+            find_library(CONAN_FRAMEWORK_FOUND NAME ${_FRAMEWORK} PATHS ${CONAN_FRAMEWORK_DIRS})
+            if(CONAN_FRAMEWORK_FOUND)
+                list(APPEND ${FRAMEWORKS_FOUND} ${CONAN_FRAMEWORK_FOUND})
+            else()
+                message(FATAL_ERROR "Framework library ${_FRAMEWORK} not found in paths: ${CONAN_FRAMEWORK_DIRS}")
+            endif()
+        endforeach()
+    endif()
+endmacro()
 """
 
 
@@ -605,6 +687,7 @@ macro(conan_basic_setup)
     conan_set_libcxx()
     conan_set_vs_runtime()
     conan_set_find_paths()
+    conan_include_build_modules()
     %%INVOKE_MACROS%%
 endmacro()
 """

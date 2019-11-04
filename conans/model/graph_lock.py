@@ -5,6 +5,7 @@ from conans.client.graph.graph import RECIPE_VIRTUAL, RECIPE_CONSUMER,\
     BINARY_BUILD
 from conans.client.profile_loader import _load_profile
 from conans.errors import ConanException
+from conans.model.info import PACKAGE_ID_UNKNOWN
 from conans.model.options import OptionsValues
 from conans.model.ref import PackageReference, ConanFileReference
 from conans.util.files import load, save
@@ -17,8 +18,8 @@ LOCKFILE_VERSION = "0.1"
 
 class GraphLockFile(object):
 
-    def __init__(self, profile, graph_lock):
-        self.profile = profile
+    def __init__(self, profile_host, graph_lock):
+        self.profile_host = profile_host
         self.graph_lock = graph_lock
 
     @staticmethod
@@ -43,12 +44,12 @@ class GraphLockFile(object):
         if version:
             version = Version(version)
             # Do something with it, migrate, raise...
-        profile = graph_json["profile"]
+        profile_host = graph_json.get("profile_host") or graph_json["profile"]
         # FIXME: Reading private very ugly
-        profile, _ = _load_profile(profile, None, None)
+        profile_host, _ = _load_profile(profile_host, None, None)
         graph_lock = GraphLock.from_dict(graph_json["graph_lock"])
         graph_lock.revisions_enabled = revisions_enabled
-        graph_lock_file = GraphLockFile(profile, graph_lock)
+        graph_lock_file = GraphLockFile(profile_host, graph_lock)
         return graph_lock_file
 
     def save(self, path):
@@ -58,7 +59,7 @@ class GraphLockFile(object):
         save(path, serialized_graph_str)
 
     def dumps(self):
-        result = {"profile": self.profile.dumps(),
+        result = {"profile_host": self.profile_host.dumps(),
                   "graph_lock": self.graph_lock.as_dict(),
                   "version": LOCKFILE_VERSION}
         return json.dumps(result, indent=True)
@@ -139,6 +140,7 @@ class GraphLock(object):
     def root_node_ref(self):
         """ obtain the node in the graph that is not depended by anyone else,
         i.e. the root or downstream consumer
+        Used by graph build-order command
         """
         total = []
         for node in self._nodes.values():
@@ -237,7 +239,7 @@ class GraphLock(object):
                 node_pref = node.pref.copy_clear_revs() if not self.revisions_enabled else node.pref
                 # If the update is compatible (resolved complete PREV) or if the node has
                 # been build, then update the graph
-                if pref.is_compatible_with(node_pref) or \
+                if pref.id == PACKAGE_ID_UNKNOWN or pref.is_compatible_with(node_pref) or \
                         node.binary == BINARY_BUILD or node.id in affected:
                     lock_node.pref = node.pref
                 else:
@@ -285,6 +287,9 @@ class GraphLock(object):
             return self._nodes[node_id].python_requires
         return [r.copy_clear_rev() for r in self._nodes[node_id].python_requires or []]
 
+    def pref(self, node_id):
+        return self._nodes[node_id].pref
+
     def get_node(self, ref):
         """ given a REF, return the Node of the package in the lockfile that correspond to that
         REF, or raise if it cannot find it.
@@ -292,10 +297,10 @@ class GraphLock(object):
         """
         # None reference
         if ref is None:
-            try:
-                return self._nodes[None].pref
-            except KeyError:
-                raise ConanException("Unspecified reference in graph-lock, please specify")
+            # Is a conanfile.txt consumer
+            for id_, node in self._nodes.items():
+                if not node.pref and node.path:
+                    return id_
 
         # First search by ref (without RREV)
         ids = []
@@ -329,21 +334,3 @@ class GraphLock(object):
         if lock_node.pref.ref != ref:
             lock_node.pref = PackageReference(ref, lock_node.pref.id)
             lock_node.modified = True
-
-    def find_consumer_node(self, node, reference):
-        """ similar to get_node(), but taking into account that the consumer node can be a virtual
-        one for some cases of commands, like "conan install <ref>"
-        It will lock the found node, or raise if not found
-        """
-        if reference:
-            assert node.recipe in [RECIPE_CONSUMER, RECIPE_VIRTUAL]
-            node_id = self.get_node(reference)
-            pref = self._nodes[node_id].pref
-            for require in node.conanfile.requires.values():
-                if require.ref.name == pref.ref.name:
-                    require.lock(pref.ref, node_id)
-                    break
-        else:
-            assert node.recipe == RECIPE_CONSUMER
-            node_id = self.get_node(node.ref)
-            node.id = node_id
