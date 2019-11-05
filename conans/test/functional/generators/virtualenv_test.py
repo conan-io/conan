@@ -128,7 +128,7 @@ class WindowsCmdCommands(object):
 
 
 @parameterized_class([{"commands": PosixShellCommands()},
-                      #{"commands": PowerShellCommands()},
+                      {"commands": PowerShellCommands()},
                       {"commands": WindowsCmdCommands()}, ])
 class VirtualEnvIntegrationTestCase(unittest.TestCase):
     env_before = "env_before.txt"
