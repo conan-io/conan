@@ -284,7 +284,7 @@ virtualrunenv
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "activate_run.%s" % ext)))
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "deactivate_run.%s" % ext)))
         print(os.listdir(client.current_folder))
-        environment_contents = load(os.path.join(client.current_folder, "environment_run.env"))
+        environment_contents = load(os.path.join(client.current_folder, "environment_run.%s.env" % ext))
 
         self.assertIn("PATH", environment_contents)
         self.assertIn("LD_LIBRARY_PATH", environment_contents)
@@ -428,7 +428,7 @@ class HelloConan(ConanFile):
         ext = "bat" if platform.system() == "Windows" else "sh"
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "activate.%s" % ext)))
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "deactivate.%s" % ext)))
-        environment_contents = load(os.path.join(client.current_folder, "environment.env"))
+        environment_contents = load(os.path.join(client.current_folder, "environment.%s.env" % ext))
         deactivate_contents = load(os.path.join(client.current_folder, "deactivate.%s" % ext))
         self.assertNotIn("bad value", environment_contents)
         if platform.system() == "Windows":
@@ -674,10 +674,10 @@ PATH=["path_from_A"]
 [ENV_libB]
 PATH=["path_from_B"]""", info)
         if platform.system() != "Windows":
-            activate = load(os.path.join(client.current_folder, "environment.env"))
+            activate = load(os.path.join(client.current_folder, "environment.sh.env"))
             self.assertIn('PATH="path_from_A":"path_from_B"${PATH+:$PATH}', activate)
         else:
-            activate = load(os.path.join(client.current_folder, "environment.env"))
+            activate = load(os.path.join(client.current_folder, "environment.cmd.env"))
             self.assertIn('PATH=path_from_A;path_from_B;%PATH%', activate)
 
     def check_conaninfo_completion_test(self):
