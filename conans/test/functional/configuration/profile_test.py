@@ -57,7 +57,7 @@ class ProfileTest(unittest.TestCase):
         self.assertIn(":".join(["PREPEND_VAR=\"new_path\"", "\"other_path\""]) +
                       "${PREPEND_VAR+:$PREPEND_VAR}", content)
         if platform.system() == "Windows":
-            content = load(os.path.join(self.client.current_folder, "activate.bat"))
+            content = load(os.path.join(self.client.current_folder, "environment.bat.env"))
             self.assertIn(";".join(["PREPEND_VAR=new_path", "other_path", "%PREPEND_VAR%"]),
                           content)
 

@@ -676,7 +676,7 @@ PATH=["path_from_B"]""", info)
             activate = load(os.path.join(client.current_folder, "environment.sh.env"))
             self.assertIn('PATH="path_from_A":"path_from_B"${PATH+:$PATH}', activate)
         else:
-            activate = load(os.path.join(client.current_folder, "environment.cmd.env"))
+            activate = load(os.path.join(client.current_folder, "environment.bat.env"))
             self.assertIn('PATH=path_from_A;path_from_B;%PATH%', activate)
 
     def check_conaninfo_completion_test(self):
