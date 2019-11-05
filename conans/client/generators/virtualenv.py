@@ -65,6 +65,28 @@ cmd_deactivate_tpl = Template(textwrap.dedent("""
     {%- endfor %}
 """))
 
+ps1_activate_tpl = Template(textwrap.dedent("""
+    {%- for it in modified_vars %}
+    $env:OLD_{{it}}=$env:{{it}}
+    {%- endfor %}
+    
+    foreach ($line in Get-Content "{{ environment_file }}") {
+        $var,$value = $line -split '=',2
+        $value_expanded = $ExecutionContext.InvokeCommand.ExpandString($value)
+        Set-Item env:\\$var -Value "$value_expanded"
+    }
+"""))
+
+ps1_deactivate_tpl = Template(textwrap.dedent("""
+    {% for it in modified_vars %}
+    $env:{{it}}=$env:OLD_{{it}}
+    Remove-Item env:OLD_{{it}}
+    {%- endfor %}
+    {%- for it in new_vars %}
+    Remove-Item env:{{it}}
+    {%- endfor %}
+"""))
+
 
 class VirtualEnvGenerator(Generator):
 
@@ -107,7 +129,7 @@ class VirtualEnvGenerator(Generator):
         if flavor == "cmd":
             path_sep, quote_elements, quote_full_value = ";", False, False
         elif flavor == "ps1":
-            path_sep, quote_elements, quote_full_value = ";", False, True
+            path_sep, quote_elements, quote_full_value = ";", False, False
         elif flavor == "sh":
             path_sep, quote_elements, quote_full_value = ":", True, False
 
@@ -184,17 +206,34 @@ class VirtualEnvGenerator(Generator):
         return activate_lines, deactivate_lines, environment_lines
 
     def _ps1_lines(self):
+        ret = list(self._format_values("ps1", self.env.items()))
+        modified_vars = [it[0] for it in ret if it[2]]
+        new_vars = [it[0] for it in ret if not it[2]]
+
+        environment_filepath = os.path.abspath(
+            os.path.join(self.output_path, "environment{}.ps1.env".format(self.suffix)))
+        activate_content = ps1_activate_tpl.render(environment_file=environment_filepath,
+                                                   modified_vars=modified_vars, new_vars=new_vars)
+        activate_lines = activate_content.splitlines()
+        deactivate_content = ps1_deactivate_tpl.render(modified_vars=modified_vars, new_vars=new_vars)
+        deactivate_lines = deactivate_content.splitlines()
+
+        environment_lines = []
+        for name, activate, _ in ret:
+            environment_lines.append("%s=%s" % (name, activate))
+        environment_lines.append('')
+
+        return activate_lines, deactivate_lines, environment_lines
+        """
         activate_lines = ['function global:_old_conan_prompt {""}',
                           '$function:_old_conan_prompt = $function:prompt',
                           'function global:prompt { write-host "(%s) " -nonewline;'
                           ' & $function:_old_conan_prompt }' % self.venv_name]
         deactivate_lines = ['$function:prompt = $function:_old_conan_prompt',
                             'remove-item function:_old_conan_prompt']
-        for name, activate, deactivate in self._format_values("ps1", self.env.items()):
-            activate_lines.append('$env:%s = %s' % (name, activate))
-            deactivate_lines.append('$env:%s = %s' % (name, deactivate))
-        activate_lines.append('')
+
         return activate_lines, deactivate_lines, None
+        """
 
     @property
     def content(self):
@@ -206,9 +245,10 @@ class VirtualEnvGenerator(Generator):
             result["deactivate{}.bat".format(self.suffix)] = os.linesep.join(deactivate)
             result["environment{}.bat.env".format(self.suffix)] = os.linesep.join(envfile)
 
-            activate, deactivate, _ = self._ps1_lines()
+            activate, deactivate, envfile = self._ps1_lines()
             result["activate{}.ps1".format(self.suffix)] = os.linesep.join(activate)
             result["deactivate{}.ps1".format(self.suffix)] = os.linesep.join(deactivate)
+            result["environment{}.ps1.env".format(self.suffix)] = os.linesep.join(envfile)
 
         activate, deactivate, envfile = self._sh_lines()
         result["activate{}.sh".format(self.suffix)] = os.linesep.join(activate)
