@@ -36,7 +36,7 @@ class ConanControllerV2(object):
         @app.route(r_with.package_revision_file, method=["PUT"])
         def upload_package_file(name, version, username, channel, package_id,
                                 the_path, auth_user, revision, p_revision, matrix_params=""):
-            del matrix_params  # Looks like ";key=value;key2=value2" or empty
+            del matrix_params  # Expected ";key=value;key2=value2" or empty
             if "X-Checksum-Deploy" in request.headers:
                 raise NotFoundException("Non checksum storage")
             pref = get_package_ref(name, version, username, channel, package_id,
@@ -60,7 +60,7 @@ class ConanControllerV2(object):
         @app.route(r_with.recipe_revision_file, method=["PUT"])
         def upload_recipe_file(name, version, username, channel, the_path, auth_user, revision,
                                matrix_params=""):
-            del matrix_params  # Looks like ";key=value;key2=value2"
+            del matrix_params  # Expected ";key=value;key2=value2" or empty
             if "X-Checksum-Deploy" in request.headers:
                 raise NotFoundException("Not a checksum storage")
             ref = ConanFileReference(name, version, username, channel, revision)
