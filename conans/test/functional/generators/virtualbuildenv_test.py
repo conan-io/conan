@@ -21,9 +21,9 @@ class TestConan(ConanFile):
         client.save({"conanfile.py": conanfile})
         client.run('install . -g virtualbuildenv -s os=Windows -s compiler="Visual Studio"'
                    ' -s compiler.runtime=MD -s compiler.version=15')
-        bat = load(os.path.join(client.current_folder, "activate_build.bat"))
-        self.assertIn("SET UseEnv=True", bat)
-        self.assertIn('SET CL=-MD -DNDEBUG -O2 -Ob2 %CL%', bat)
+        bat = load(os.path.join(client.current_folder, "environment_build.bat.env"))
+        self.assertIn("UseEnv=True", bat)
+        self.assertIn('CL=-MD -DNDEBUG -O2 -Ob2 %CL%', bat)
 
     def environment_deactivate_test(self):
 
@@ -62,10 +62,6 @@ class TestConan(ConanFile):
         deact_build_file = os.path.join(client.current_folder, "deactivate_build.%s" % extension)
         self.assertTrue(os.path.exists(act_build_file))
         self.assertTrue(os.path.exists(deact_build_file))
-        if in_windows:
-            act_build_content_len = len(load(act_build_file).splitlines())
-            deact_build_content_len = len(load(deact_build_file).splitlines())
-            self.assertEqual(act_build_content_len, deact_build_content_len)
         output = check_output(get_cmd(act_build_file))
         activate_environment = env_output_to_dict(output)
         self.assertNotEqual(normal_environment, activate_environment)
