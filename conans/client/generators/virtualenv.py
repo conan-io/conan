@@ -41,6 +41,30 @@ sh_deactivate_tpl = Template(textwrap.dedent("""
     {%- endfor %}
 """))
 
+cmd_activate_tpl = Template(textwrap.dedent("""
+    @echo off
+    
+    {%- for it in modified_vars %}
+    SET OLD_{{it}}=%{{it}}%
+    {%- endfor %}
+    
+    FOR /F "usebackq tokens=1,* delims={{delim}}" %%i IN ("{{ environment_file }}") DO (
+        SET %%i=%%j
+    )
+"""))
+
+cmd_deactivate_tpl = Template(textwrap.dedent("""
+    @echo off
+    
+    {% for it in modified_vars %}
+    SET {{it}}="$OLD_{{it}}"
+    SET OLD_{{it}}=
+    {%- endfor %}
+    {%- for it in new_vars %}
+    SET {{it}}=
+    {%- endfor %}
+"""))
+
 
 class VirtualEnvGenerator(Generator):
 
