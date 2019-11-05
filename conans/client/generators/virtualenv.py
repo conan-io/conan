@@ -14,7 +14,7 @@ sh_activate_tpl = Template(textwrap.dedent("""
     # DIR="$( cd "$( dirname "$_" )" >/dev/null 2>&1 && pwd )"
 
     {%- for it in modified_vars %}
-    export OLD_{{it}}=${{it}}
+    export OLD_{{it}}="${{it}}"
     {%- endfor %}
 
     while read line; do
