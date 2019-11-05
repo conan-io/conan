@@ -36,17 +36,17 @@ virtualenv
         client.run("create . ")
         client.save({"conanfile.txt": base}, clean_first=True)
         client.run("install . -g virtualenv_python")
-        contents = load(os.path.join(client.current_folder, "environment_run_python.sh.env"))
+
+        if platform.system() != "Windows":
+            contents = load(os.path.join(client.current_folder, "environment_run_python.sh.env"))
+            self.assertIn('PYTHONPATH="/path/to/something"${PYTHONPATH+:$PYTHONPATH}', contents)
+        else:
+            contents = load(os.path.join(client.current_folder, "environment_run_python.bat.env"))
+            self.assertIn('PYTHONPATH=/path/to/something;%PYTHONPATH%', contents)
         self.assertNotIn("OTHER", contents)
         self.assertIn("PATH=", contents)
         self.assertIn("LD_LIBRARY_PATH=", contents)
         self.assertIn("DYLD_LIBRARY_PATH=", contents)
-
-        if platform.system() != "Windows":
-
-            self.assertIn('PYTHONPATH="/path/to/something"${PYTHONPATH+:$PYTHONPATH}', contents)
-        else:
-            self.assertIn('SET PYTHONPATH=/path/to/something;%PYTHONPATH%', contents)
 
     def multiple_value_test(self):
             client = TestClient()
@@ -72,13 +72,15 @@ class BaseConan(ConanFile):
             client.run("create . ")
             client.save({"conanfile.txt": base}, clean_first=True)
             client.run("install . -g virtualenv_python")
-            contents = load(os.path.join(client.current_folder, "environment_run_python.sh.env"))
-            self.assertNotIn("OTHER", contents)
+
             if platform.system() != "Windows":
+                contents = load(os.path.join(client.current_folder, "environment_run_python.sh.env"))
                 self.assertIn('PYTHONPATH="/path/to/something":"/otherpath"'
                               '${PYTHONPATH+:$PYTHONPATH}', contents)
             else:
-                self.assertIn('SET PYTHONPATH=/path/to/something;/otherpath;%PYTHONPATH%', contents)
+                contents = load(os.path.join(client.current_folder, "environment_run_python.bat.env"))
+                self.assertIn('PYTHONPATH=/path/to/something;/otherpath;%PYTHONPATH%', contents)
+            self.assertNotIn("OTHER", contents)
 
     def no_value_declared_test(self):
         client = TestClient()
