@@ -45,11 +45,11 @@ cmd_activate_tpl = Template(textwrap.dedent("""
     @echo off
     
     {%- for it in modified_vars %}
-    SET OLD_{{it}}=%{{it}}%
+    SET "OLD_{{it}}=%{{it}}%"
     {%- endfor %}
     
     FOR /F "usebackq tokens=1,* delims={{delim}}" %%i IN ("{{ environment_file }}") DO (
-        SET %%i=%%j
+        CALL SET "%%i=%%j"
     )
 """))
 
@@ -57,11 +57,11 @@ cmd_deactivate_tpl = Template(textwrap.dedent("""
     @echo off
     
     {% for it in modified_vars %}
-    SET {{it}}="$OLD_{{it}}"
-    SET OLD_{{it}}=
+    SET "{{it}}=%OLD_{{it}}%"
+    SET "OLD_{{it}}="
     {%- endfor %}
     {%- for it in new_vars %}
-    SET {{it}}=
+    SET "{{it}}="
     {%- endfor %}
 """))
 
@@ -90,7 +90,7 @@ class VirtualEnvGenerator(Generator):
         (e.g., cmd, ps1, sh).
         """
         if flavor == "cmd":
-            return "%%%s%%" % name
+            return "%{}%".format(name)
         if flavor == "ps1":
             return "$env:%s" % name
         # flavor == sh
@@ -137,14 +137,15 @@ class VirtualEnvGenerator(Generator):
                 activate_value = activate_value.replace("\\", "\\\\")
 
             # deactivate values
-            value = os.environ.get(name, "")
-            deactivate_value = "\"%s\"" % value if quote_full_value or quote_elements else value
-            yield name, activate_value, deactivate_value
+            existing = name in os.environ
+            #value = os.environ.get(name, "")
+            #deactivate_value = "\"%s\"" % value if quote_full_value or quote_elements else value
+            yield name, activate_value, existing
 
     def _sh_lines(self):
         ret = list(self._format_values("sh", self.env.items()))
-        modified_vars = [it[0] for it in ret if it[2] != '""']
-        new_vars = [it[0] for it in ret if it[2] == '""']
+        modified_vars = [it[0] for it in ret if it[2]]
+        new_vars = [it[0] for it in ret if not it[2]]
 
         environment_filepath = os.path.abspath(
             os.path.join(self.output_path, "environment{}.sh.env".format(self.suffix)))
@@ -155,7 +156,7 @@ class VirtualEnvGenerator(Generator):
         deactivate_lines = deactivate_content.splitlines()
 
         environment_lines = []
-        for name, activate, deactivate in self._format_values("sh", self.env.items()):
+        for name, activate, _ in self._format_values("sh", self.env.items()):
             environment_lines.append("%s=%s" % (name, activate))
 
         environment_lines.append('')
@@ -163,8 +164,8 @@ class VirtualEnvGenerator(Generator):
 
     def _cmd_lines(self):
         ret = list(self._format_values("cmd", self.env.items()))
-        modified_vars = [it[0] for it in ret if it[2] != '""']
-        new_vars = [it[0] for it in ret if it[2] == '""']
+        modified_vars = [it[0] for it in ret if it[2]]
+        new_vars = [it[0] for it in ret if not it[2]]
 
         environment_filepath = os.path.abspath(
             os.path.join(self.output_path, "environment{}.bat.env".format(self.suffix)))
@@ -176,7 +177,7 @@ class VirtualEnvGenerator(Generator):
         deactivate_lines = deactivate_content.splitlines()
 
         environment_lines = []
-        for name, activate, deactivate in ret:
+        for name, activate, _ in ret:
             environment_lines.append("%s=%s" % (name, activate))  # TODO: May need extra quotes here
         environment_lines.append('')
 
