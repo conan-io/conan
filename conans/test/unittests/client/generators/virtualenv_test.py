@@ -33,7 +33,7 @@ class VirtualEnvGeneratorTest(unittest.TestCase):
         cls.result = cls.generator.content
 
     def test_output(self):
-        keys = ["deactivate.sh", "activate.sh", 'environment.env']
+        keys = ["deactivate.sh", "activate.sh", 'environment.sh.env']
         if platform.system() == "Windows":
             keys += ["activate.bat", "deactivate.bat", "activate.ps1",
                      "deactivate.ps1"]
@@ -41,11 +41,11 @@ class VirtualEnvGeneratorTest(unittest.TestCase):
         self.assertListEqual(sorted(keys), sorted(self.result.keys()))
 
     def test_variable(self):
-        self.assertIn("USER_FLAG=\"user_value\"", self.result['environment.env'])
+        self.assertIn("USER_FLAG=\"user_value\"", self.result['environment.sh.env'])
 
     def test_list_variable(self):
-        self.assertIn("PATH=\"another_path\"${PATH+:$PATH}", self.result['environment.env'])
-        self.assertIn("PATH2=\"p1\":\"p2\"${PATH2+:$PATH2}", self.result['environment.env'])
+        self.assertIn("PATH=\"another_path\"${PATH+:$PATH}", self.result['environment.sh.env'])
+        self.assertIn("PATH2=\"p1\":\"p2\"${PATH2+:$PATH2}", self.result['environment.sh.env'])
 
         if platform.system() == "Windows":
             self.assertIn("PATH=another_path;%PATH%", self.result[self.activate_bat])
@@ -56,7 +56,7 @@ class VirtualEnvGeneratorTest(unittest.TestCase):
 
     def test_list_with_spaces(self):
         self.assertIn("CL", VirtualEnvGenerator.append_with_spaces)
-        self.assertIn("CL=\"cl1 cl2 ${CL+ $CL}\"", self.result['environment.env'])
+        self.assertIn("CL=\"cl1 cl2 ${CL+ $CL}\"", self.result['environment.sh.env'])
 
         if platform.system() == "Windows":
             self.assertIn("CL=cl1 cl2 %CL%", self.result[self.activate_bat])

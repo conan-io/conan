@@ -36,7 +36,7 @@ virtualenv
         client.run("create . ")
         client.save({"conanfile.txt": base}, clean_first=True)
         client.run("install . -g virtualenv_python")
-        contents = load(os.path.join(client.current_folder, "environment_python.env"))
+        contents = load(os.path.join(client.current_folder, "environment_run_python.sh.env"))
         self.assertNotIn("OTHER", contents)
         self.assertIn("PATH=", contents)
         self.assertIn("LD_LIBRARY_PATH=", contents)
@@ -72,7 +72,7 @@ class BaseConan(ConanFile):
             client.run("create . ")
             client.save({"conanfile.txt": base}, clean_first=True)
             client.run("install . -g virtualenv_python")
-            contents = load(os.path.join(client.current_folder, "environment_python.env"))
+            contents = load(os.path.join(client.current_folder, "environment_run_python.sh.env"))
             self.assertNotIn("OTHER", contents)
             if platform.system() != "Windows":
                 self.assertIn('PYTHONPATH="/path/to/something":"/otherpath"'

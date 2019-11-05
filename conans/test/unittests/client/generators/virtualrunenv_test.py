@@ -12,7 +12,7 @@ class VirtualRunEnvGeneratorTest(unittest.TestCase):
     activate_sh = "activate_run.sh"
     activate_bat = "activate_run.bat"
     activate_ps1 = "activate_run.ps1"
-    environment_env = "environment_run.env"
+    environment_env = "environment_run.sh.env"
 
     @classmethod
     def setUpClass(cls):
