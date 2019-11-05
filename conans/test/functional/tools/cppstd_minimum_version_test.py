@@ -1,4 +1,5 @@
 import unittest
+from parameterized import parameterized
 from textwrap import dedent
 
 from conans.test.utils.tools import TestClient
@@ -33,32 +34,36 @@ class CppStdMinimumVersionTests(unittest.TestCase):
         self.client = TestClient()
         self.client.save({"conanfile.py": CppStdMinimumVersionTests.CONANFILE})
 
-    def test_cppstd_from_settings(self):
-        profile = CppStdMinimumVersionTests.PROFILE.replace("{}", "compiler.cppstd=17")
+    @parameterized.expand(["17", "gnu17"])
+    def test_cppstd_from_settings(self, cppstd):
+        profile = CppStdMinimumVersionTests.PROFILE.replace("{}", "compiler.cppstd=%s" % cppstd)
         self.client.save({"myprofile":  profile})
         self.client.run("create . user/channel -pr myprofile")
         self.assertIn("valid standard", self.client.out)
 
-    def test_invalid_cppstd_from_settings(self):
-        profile = CppStdMinimumVersionTests.PROFILE.replace("{}", "compiler.cppstd=11")
+    @parameterized.expand(["11", "gnu11"])
+    def test_invalid_cppstd_from_settings(self, cppstd):
+        profile = CppStdMinimumVersionTests.PROFILE.replace("{}", "compiler.cppstd=%s" % cppstd)
         self.client.save({"myprofile": profile})
         self.client.run("create . user/channel -pr myprofile", assert_error=True)
-        self.assertIn("Invalid configuration: Current cppstd (11) is lower than required c++ "
-                      "standard (17).", self.client.out)
+        self.assertIn("Invalid configuration: Current cppstd (%s) is lower than required c++ "
+                      "standard (17)." % cppstd, self.client.out)
 
-    def test_cppstd_from_arguments(self):
+    @parameterized.expand(["17", "gnu17"])
+    def test_cppstd_from_arguments(self, cppstd):
         profile = CppStdMinimumVersionTests.PROFILE.replace("{}", "")
         self.client.save({"myprofile": profile})
-        self.client.run("create . user/channel -pr myprofile -s compiler.cppstd=17")
+        self.client.run("create . user/channel -pr myprofile -s compiler.cppstd=%s" % cppstd)
         self.assertIn("valid standard", self.client.out)
 
-    def test_invalid_cppstd_from_arguments(self):
+    @parameterized.expand(["11", "gnu11"])
+    def test_invalid_cppstd_from_arguments(self, cppstd):
         profile = CppStdMinimumVersionTests.PROFILE.replace("{}", "")
         self.client.save({"myprofile": profile})
-        self.client.run("create . user/channel --pr myprofile -s compiler.cppstd=11",
+        self.client.run("create . user/channel --pr myprofile -s compiler.cppstd=%s" % cppstd,
                         assert_error=True)
-        self.assertIn("Invalid configuration: Current cppstd (11) is lower than required c++ "
-                      "standard (17).", self.client.out)
+        self.assertIn("Invalid configuration: Current cppstd (%s) is lower than required c++ "
+                      "standard (17)." % cppstd, self.client.out)
 
     def test_cppstd_from_compiler(self):
         profile = CppStdMinimumVersionTests.PROFILE.replace("{}", "")
