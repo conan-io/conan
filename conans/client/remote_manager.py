@@ -186,11 +186,11 @@ class RemoteManager(object):
         packages = filter_packages(query, packages)
         return packages
 
-    def remove(self, ref, remote):
+    def remove_recipe(self, ref, remote):
         """
         Removed conans or packages from remote
         """
-        return self._call_remote(remote, "remove", ref)
+        return self._call_remote(remote, "remove_recipe", ref)
 
     def remove_packages(self, ref, remove_ids, remote):
         """
@@ -238,11 +238,10 @@ class RemoteManager(object):
                 pref = pref.copy_with_revs(pref.ref.revision, DEFAULT_REVISION_V1)
         return pref
 
-    def _call_remote(self, remote, method, *argc, **argv):
+    def _call_remote(self, remote, method, *args, **kwargs):
         assert(isinstance(remote, Remote))
-        self._auth_manager.remote = remote
         try:
-            return getattr(self._auth_manager, method)(*argc, **argv)
+            return self._auth_manager.call_rest_api_method(remote, method, *args, **kwargs)
         except ConnectionError as exc:
             raise ConanConnectionError("%s\n\nUnable to connect to %s=%s"
                                        % (str(exc), remote.name, remote.url))
