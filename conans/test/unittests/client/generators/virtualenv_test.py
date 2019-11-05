@@ -35,8 +35,8 @@ class VirtualEnvGeneratorTest(unittest.TestCase):
     def test_output(self):
         keys = ["deactivate.sh", "activate.sh", 'environment.sh.env']
         if platform.system() == "Windows":
-            keys += ["activate.bat", "deactivate.bat", "activate.ps1",
-                     "deactivate.ps1"]
+            keys += ["activate.bat", "deactivate.bat", "environment.bat.env",
+                     "activate.ps1", "deactivate.ps1", "environment.ps1.env"]
 
         self.assertListEqual(sorted(keys), sorted(self.result.keys()))
 
@@ -48,16 +48,16 @@ class VirtualEnvGeneratorTest(unittest.TestCase):
         self.assertIn("PATH2=\"p1\":\"p2\"${PATH2+:$PATH2}", self.result['environment.sh.env'])
 
         if platform.system() == "Windows":
-            self.assertIn("PATH=another_path;%PATH%", self.result[self.activate_bat])
-            self.assertIn('$env:PATH2 = "p1;p2;$env:PATH2"', self.result[self.activate_ps1])
+            self.assertIn("PATH=another_path;%PATH%", self.result["environment.bat.env"])
+            self.assertIn('PATH2=p1;p2;$env:PATH2', self.result["environment.ps1.env"])
 
-            self.assertIn("PATH=another_path;%PATH%", self.result[self.activate_bat])
-            self.assertIn('$env:PATH2 = "p1;p2;$env:PATH2"', self.result[self.activate_ps1])
+            self.assertIn("PATH=another_path;%PATH%", self.result["environment.bat.env"])
+            self.assertIn('PATH2=p1;p2;$env:PATH2', self.result["environment.ps1.env"])
 
     def test_list_with_spaces(self):
         self.assertIn("CL", VirtualEnvGenerator.append_with_spaces)
         self.assertIn("CL=\"cl1 cl2 ${CL+ $CL}\"", self.result['environment.sh.env'])
 
         if platform.system() == "Windows":
-            self.assertIn("CL=cl1 cl2 %CL%", self.result[self.activate_bat])
-            self.assertIn('$env:CL = "cl1 cl2 $env:CL"', self.result[self.activate_ps1])
+            self.assertIn("CL=cl1 cl2 %CL%", self.result["environment.bat.env"])
+            self.assertIn('CL=cl1 cl2 $env:CL', self.result["environment.ps1.env"])

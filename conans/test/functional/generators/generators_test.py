@@ -51,7 +51,8 @@ ycm
                                  'SConscript_conan', 'conanbuildinfo.txt', 'conanbuildinfo.props',
                                  'conanbuildinfo.vsprops', 'conanbuildinfo.xcconfig',
                                  'conan_ycm_flags.json', 'conan_ycm_extra_conf.py',
-                                 'environment.sh.env', GRAPH_INFO_FILE, LOCKFILE] + venv_files),
+                                 'environment.sh.env', "environment.bat.env", "environment.ps1.env",
+                                 GRAPH_INFO_FILE, LOCKFILE] + venv_files),
                          sorted(os.listdir(client.current_folder)))
 
     def test_srcdirs(self):
