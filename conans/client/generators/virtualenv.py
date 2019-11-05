@@ -162,17 +162,25 @@ class VirtualEnvGenerator(Generator):
         return activate_lines, deactivate_lines, environment_lines
 
     def _cmd_lines(self):
-        variables = [("PROMPT", "(%s) %%PROMPT%%" % self.venv_name)]
-        variables.extend(self.env.items())
+        ret = list(self._format_values("cmd", self.env.items()))
+        modified_vars = [it[0] for it in ret if it[2] != '""']
+        new_vars = [it[0] for it in ret if it[2] == '""']
 
-        activate_lines = ["@echo off"]
-        deactivate_lines = ["@echo off"]
-        for name, activate, deactivate in self._format_values("cmd", variables):
-            activate_lines.append("SET %s=%s" % (name, activate))
-            deactivate_lines.append("SET %s=%s" % (name, deactivate))
-        activate_lines.append('')
-        deactivate_lines.append('')
-        return activate_lines, deactivate_lines, None
+        environment_filepath = os.path.abspath(
+            os.path.join(self.output_path, "environment{}.bat.env".format(self.suffix)))
+        activate_content = cmd_activate_tpl.render(environment_file=environment_filepath,
+                                                   modified_vars=modified_vars, new_vars=new_vars,
+                                                   delim="=")  # TODO: Test a env var with '=' in the value, it will require quotes around it
+        activate_lines = activate_content.splitlines()
+        deactivate_content = cmd_deactivate_tpl.render(modified_vars=modified_vars, new_vars=new_vars)
+        deactivate_lines = deactivate_content.splitlines()
+
+        environment_lines = []
+        for name, activate, deactivate in ret:
+            environment_lines.append("%s=%s" % (name, activate))  # TODO: May need extra quotes here
+        environment_lines.append('')
+
+        return activate_lines, deactivate_lines, environment_lines
 
     def _ps1_lines(self):
         activate_lines = ['function global:_old_conan_prompt {""}',
@@ -192,9 +200,10 @@ class VirtualEnvGenerator(Generator):
         os_info = OSInfo()
         result = {}
         if os_info.is_windows and not os_info.is_posix:
-            activate, deactivate, _ = self._cmd_lines()
+            activate, deactivate, envfile = self._cmd_lines()
             result["activate{}.bat".format(self.suffix)] = os.linesep.join(activate)
             result["deactivate{}.bat".format(self.suffix)] = os.linesep.join(deactivate)
+            result["environment{}.bat.env".format(self.suffix)] = os.linesep.join(envfile)
 
             activate, deactivate, _ = self._ps1_lines()
             result["activate{}.ps1".format(self.suffix)] = os.linesep.join(activate)
