@@ -224,16 +224,6 @@ class VirtualEnvGenerator(Generator):
         environment_lines.append('')
 
         return activate_lines, deactivate_lines, environment_lines
-        """
-        activate_lines = ['function global:_old_conan_prompt {""}',
-                          '$function:_old_conan_prompt = $function:prompt',
-                          'function global:prompt { write-host "(%s) " -nonewline;'
-                          ' & $function:_old_conan_prompt }' % self.venv_name]
-        deactivate_lines = ['$function:prompt = $function:_old_conan_prompt',
-                            'remove-item function:_old_conan_prompt']
-
-        return activate_lines, deactivate_lines, None
-        """
 
     @property
     def content(self):
