@@ -1,7 +1,6 @@
 import os
-import traceback
-
 import time
+import traceback
 
 from conans.client.remote_manager import check_compressed_files
 from conans.client.rest.client_routes import ClientV2Router
@@ -12,8 +11,7 @@ from conans.errors import ConanException, NotFoundException, PackageNotFoundExce
 from conans.model.info import ConanInfo
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference
-from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, \
-    PACKAGE_TGZ_NAME
+from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
 from conans.util.files import decode_text
 from conans.util.log import logger
 
@@ -21,10 +19,10 @@ from conans.util.log import logger
 class RestV2Methods(RestCommonMethods):
 
     def __init__(self, remote_url, token, custom_headers, output, requester, verify_ssl,
-                 put_headers=None, checksum_deploy=False):
+                 artifacts_properties=None, checksum_deploy=False):
 
         super(RestV2Methods, self).__init__(remote_url, token, custom_headers, output, requester,
-                                            verify_ssl, put_headers)
+                                            verify_ssl, artifacts_properties)
         self._checksum_deploy = checksum_deploy
 
     @property
@@ -185,7 +183,7 @@ class RestV2Methods(RestCommonMethods):
                 uploader.upload(resource_url, files[filename], auth=self.auth,
                                 dedup=self._checksum_deploy, retry=retry,
                                 retry_wait=retry_wait,
-                                headers=self._put_headers)
+                                headers=self._artifacts_properties)
             except (AuthenticationException, ForbiddenException):
                 raise
             except Exception as exc:
