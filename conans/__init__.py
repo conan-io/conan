@@ -9,6 +9,7 @@ from conans.client.run_environment import RunEnvironment
 from conans.model.conan_file import ConanFile
 from conans.model.options import Options
 from conans.model.settings import Settings
+from conans.model.compatible_package import CompatiblePackage
 from conans.util.files import load
 
 # complex_search: With ORs and not filtering by not restricted settings
@@ -20,4 +21,5 @@ OAUTH_TOKEN = "oauth_token"
 SERVER_CAPABILITIES = [COMPLEX_SEARCH_CAPABILITY, REVISIONS]  # Server is always with revisions
 DEFAULT_REVISION_V1 = "0"
 
-__version__ = '1.20.0-dev'
+__version__ = '1.21.0-dev'
+

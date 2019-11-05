@@ -166,10 +166,10 @@ class ConanApp(object):
         # Wraps an http_requester to inject proxies, certs, etc
         self.requester = ConanRequester(self.config, http_requester)
         # To handle remote connections
-        put_headers = self.cache.read_put_headers()
+        artifacts_properties = self.cache.read_artifacts_properties()
         rest_api_client = RestApiClient(self.out, self.requester,
                                         revisions_enabled=self.config.revisions_enabled,
-                                        put_headers=put_headers)
+                                        artifacts_properties=artifacts_properties)
         # To store user and token
         localdb = LocalDB.create(self.cache.localdb)
         # Wraps RestApiClient to add authentication support (same interface)
