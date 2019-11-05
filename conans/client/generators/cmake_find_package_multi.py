@@ -74,10 +74,10 @@ set_property(TARGET {name}::{name}
             depname = cpp_info.name
             deps = DepsCppCmake(cpp_info)
             ret["{}Config.cmake".format(depname)] = self._find_for_dep(depname, cpp_info)
+            ret["{}Targets.cmake".format(depname)] = self.targets_file.format(name=depname)
 
             find_lib = target_template.format(name=depname, deps=deps,
                                               build_type_suffix=build_type_suffix)
-            ret["{}Targets.cmake".format(depname)] = self.targets_file.format(name=depname)
             ret["{}Target-{}.cmake".format(depname, build_type.lower())] = find_lib
         return ret
 
@@ -97,5 +97,4 @@ set_property(TARGET {name}::{name}
                                               version=cpp_info.version,
                                               find_dependencies_block="\n".join(lines),
                                               target_props_block=targets_props)
-
         return tmp
