@@ -105,6 +105,7 @@ class RestApiClient(object):
 
     def upload_package(self, pref, files_to_upload, deleted, retry, retry_wait):
         return self._get_api().upload_package(pref, files_to_upload, deleted, retry, retry_wait)
+
     def authenticate(self, user, password):
         api_v1 = RestV1Methods(self._remote_url, self._token, self._custom_headers, self._output,
                                self._requester, self._verify_ssl, self._artifacts_properties)
