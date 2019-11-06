@@ -4,7 +4,7 @@ colorama>=0.3.3, <0.5.0
 PyYAML>=3.11, <3.14.0
 patch==1.16
 fasteners>=0.14.1
-six>=1.10.0
+six>=1.10.0,<1.13
 node-semver==0.6.1
 distro>=1.0.2, <1.2.0
 pylint>=1.9.3
