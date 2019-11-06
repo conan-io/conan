@@ -1,7 +1,7 @@
 from conans import CHECKSUM_DEPLOY, REVISIONS, ONLY_V2, OAUTH_TOKEN
 from conans.client.rest.rest_client_v1 import RestV1Methods
 from conans.client.rest.rest_client_v2 import RestV2Methods
-from conans.errors import OnlyV2Available
+from conans.errors import OnlyV2Available, AuthenticationException
 from conans.search.search import filter_packages
 from conans.util.log import logger
 
@@ -94,7 +94,13 @@ class RestApiClient(object):
         if self.refresh_token and self.token:
             token, refresh_token = api_v1.refresh_token(self.token, self.refresh_token)
         else:
-            if self._capable(OAUTH_TOKEN):
+            try:
+                # Check capabilities can raise also 401 until the new Artifactory is released
+                oauth_capable = self._capable(OAUTH_TOKEN)
+            except AuthenticationException:
+                oauth_capable = False
+
+            if oauth_capable:
                 # Artifactory >= 6.13.X
                 token, refresh_token = api_v1.authenticate_oauth(user, password)
             else:
