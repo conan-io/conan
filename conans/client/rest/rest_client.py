@@ -37,7 +37,7 @@ class RestApiClient(object):
         self._remote_url = remote.url
         self._custom_headers = custom_headers
         self._output = output
-        self.requester = requester
+        self._requester = requester
 
         self._verify_ssl = remote.verify_ssl
         self._artifacts_properties = artifacts_properties
@@ -50,7 +50,7 @@ class RestApiClient(object):
         capabilities = self._cached_capabilities.get(self._remote_url)
         if capabilities is None:
             tmp = RestV1Methods(self._remote_url, self._token, self._custom_headers, self._output,
-                                self.requester, self._verify_ssl, self._artifacts_properties)
+                                self._requester, self._verify_ssl, self._artifacts_properties)
             capabilities = tmp.server_capabilities()
             self._cached_capabilities[self._remote_url] = capabilities
             logger.debug("REST: Cached capabilities for the remote: %s" % capabilities)
@@ -63,11 +63,11 @@ class RestApiClient(object):
         if self._revisions_enabled and revisions:
             checksum_deploy = self._capable(CHECKSUM_DEPLOY)
             return RestV2Methods(self._remote_url, self._token, self._custom_headers, self._output,
-                                 self.requester, self._verify_ssl, self._artifacts_properties,
+                                 self._requester, self._verify_ssl, self._artifacts_properties,
                                  checksum_deploy)
         else:
             return RestV1Methods(self._remote_url, self._token, self._custom_headers, self._output,
-                                 self.requester, self._verify_ssl, self._artifacts_properties)
+                                 self._requester, self._verify_ssl, self._artifacts_properties)
 
     def get_recipe_manifest(self, ref):
         return self._get_api().get_recipe_manifest(ref)
@@ -105,10 +105,9 @@ class RestApiClient(object):
 
     def upload_package(self, pref, files_to_upload, deleted, retry, retry_wait):
         return self._get_api().upload_package(pref, files_to_upload, deleted, retry, retry_wait)
-
     def authenticate(self, user, password):
         api_v1 = RestV1Methods(self._remote_url, self._token, self._custom_headers, self._output,
-                               self.requester, self._verify_ssl, self._artifacts_properties)
+                               self._requester, self._verify_ssl, self._artifacts_properties)
 
         if self._refresh_token and self._token:
             token, refresh_token = api_v1.refresh_token(self._token, self._refresh_token)
