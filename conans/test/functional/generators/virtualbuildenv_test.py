@@ -25,7 +25,16 @@ class TestConan(ConanFile):
         self.assertIn("UseEnv=True", bat)
         self.assertIn('CL=-MD -DNDEBUG -O2 -Ob2 %CL%', bat)
 
+    @unittest.expectedFailure
     def environment_deactivate_test(self):
+        """ This test fails. The deactivation script takes the value of some envvars set by
+            the activation script to recover the previous values (set PATH=OLD_PATH). As this
+            test is running each command in a different shell, the envvar OLD_PATH that has
+            been set by the 'activate' script doesn't exist when we run 'deactivate' in a
+            different shell...
+
+            TODO: Remove this test
+        """
 
         in_windows = platform.system() == "Windows"
         env_cmd = "set" if in_windows else "env"
