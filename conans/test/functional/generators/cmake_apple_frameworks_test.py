@@ -17,15 +17,6 @@ class CMakeAppleFrameworksTestCase(unittest.TestCase):
                 self.cpp_info.frameworks.extend(['Foundation', 'CoreServices', 'CoreFoundation'])
     """)
 
-    app_cmakelists = textwrap.dedent("""
-        project(Testing CXX)
-        if (${CONAN_GENERATOR} STREQUAL "cmake")
-            include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-            conan_basic_setup()
-        else()
-            find_package(lib)
-        endif() 
-    """)
     app_conanfile = textwrap.dedent("""
         from conans import ConanFile, CMake
 
