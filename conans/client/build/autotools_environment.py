@@ -192,7 +192,7 @@ class AutoToolsBuildEnvironment(object):
         from six import StringIO  # Python 2 and 3 compatible
         mybuf = StringIO()
         try:
-            self._conanfile.run("%s/configure --help" % configure_path, output=mybuf)
+            self._conanfile.run("%s/configure --help" % configure_path, win_bash=self._win_bash, output=mybuf)
         except ConanException as e:
             self._conanfile.output.warn("Error running `configure --help`: %s" % e)
             return ""
