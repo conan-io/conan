@@ -103,7 +103,7 @@ class TestTokenRefresh(unittest.TestCase):
 
         requester = RequesterWithTokenMock()
         self.rest_client = RestApiClient(mocked_user_io.out,
-                                         requester, revisions_enabled=False, put_headers=None)
+                                         requester, revisions_enabled=False, artifacts_properties=None)
         self.localdb = LocalDBMock()
         self.auth_manager = ConanApiAuthManager(self.rest_client, mocked_user_io, self.localdb)
         self.auth_manager.remote = Remote("myremote", "myurl", True, True)
