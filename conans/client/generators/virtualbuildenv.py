@@ -23,4 +23,3 @@ class VirtualBuildEnvGenerator(VirtualEnvGenerator):
             self.env.update(settings_vars)
         else:
             self.env = AutoToolsBuildEnvironment(conanfile).vars_dict
-
