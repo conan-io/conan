@@ -67,13 +67,13 @@ trace_file = "foo/bar/quotes"
 
 class ClientConfLogTest(unittest.TestCase):
 
+    def run(self, *args, **kwargs):
+        with environment_append({"CONAN_LOGGING_LEVEL": None}):
+            super(ClientConfLogTest, self).run(*args, **kwargs)
+
     def setUp(self):
         self.tmp_dir = temp_folder()
         save(os.path.join(self.tmp_dir, DEFAULT_PROFILE_NAME), default_profile)
-        try:
-            del os.environ["CONAN_LOGGING_LEVEL"]
-        except:
-            pass
 
     def test_log_level_numbers_critical(self):
         save(os.path.join(self.tmp_dir, CONAN_CONF), default_client_conf_log.format("level = 50"))
