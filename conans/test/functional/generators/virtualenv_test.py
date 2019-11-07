@@ -254,22 +254,19 @@ class VirtualEnvIntegrationTestCase(unittest.TestCase):
 
         stdout, environment = self._run_virtualenv(generator)
         
-        cpaths = dict(l.split("=", 1) for l in stdout.splitlines() if l.startswith("__conan_"))
+        cpaths = dict(list(l.split("=", 1) for l in stdout.splitlines() if l.startswith("__conan_"))[::-1])
         self.assertEqual(cpaths["__conan_pre_path__"], cpaths["__conan_post_path__"])
         self.assertEqual(cpaths["__conan_env_path__"], cpaths["__conan_post_path__"])
 
-        epaths = dict(l.split("=", 1) for l in stdout.splitlines() if l.startswith("__exec_"))
+        epaths = dict(list(l.split("=", 1) for l in stdout.splitlines() if l.startswith("__exec_"))[::-1])
         self.assertEqual(epaths["__exec_pre_path__"], epaths["__exec_post_path__"])
-        if self.commands.id == "cmd":  # FIXME: This is a bug, it doesn't take into account the new path
-            self.assertNotEqual(epaths["__exec_env_path__"], os.path.join(self.env_path, self.app))
-        else:
-            self.assertEqual(epaths["__exec_env_path__"], os.path.join(self.env_path, self.app))
+        self.assertEqual(epaths["__exec_env_path__"], os.path.join(self.env_path, self.app))
 
         # With any other path, we keep finding the original one
         generator = VirtualEnvGenerator(ConanFileMock())
         generator.env = {"PATH": [os.path.join(self.test_folder, "wrong")], }
 
         stdout, environment = self._run_virtualenv(generator)
-        epaths = dict(l.split("=", 1) for l in stdout.splitlines() if l.startswith("__exec_"))
+        epaths = dict(list(l.split("=", 1) for l in stdout.splitlines() if l.startswith("__exec_"))[::-1])
         self.assertEqual(epaths["__exec_pre_path__"], epaths["__exec_post_path__"])
         self.assertEqual(epaths["__exec_env_path__"], epaths["__exec_post_path__"])
