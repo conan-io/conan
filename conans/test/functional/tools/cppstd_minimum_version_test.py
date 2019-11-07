@@ -126,9 +126,10 @@ class CppStdMinimumVersionTests(unittest.TestCase):
                                                                                       "True")})
         self.client.save({"myprofile": CppStdMinimumVersionTests.PROFILE.replace("{}", "")})
         with mock.patch("platform.system", mock.MagicMock(return_value=os)):
-            self.client.run("create . user/channel --pr myprofile -s compiler.cppstd=%s" % cppstd,
-                            assert_error=error)
-            self.assertIn(expected, self.client.out)
+            with mock.patch.object(OSInfo, '_get_linux_distro_info'):
+                self.client.run("create . user/channel --pr myprofile -s compiler.cppstd=%s" % cppstd,
+                                assert_error=error)
+                self.assertIn(expected, self.client.out)
 
     def test_gnu_extensions_from_compiler(self):
         self.client.save({"conanfile.py": CppStdMinimumVersionTests.CONANFILE.replace("False",
