@@ -8,7 +8,7 @@ from multiprocessing.pool import ThreadPool
 
 from conans.util import progress_bar
 from conans.util.progress_bar import left_justify_message
-from conans.client.remote_manager import is_package_snapshot_complete
+from conans.client.remote_manager import is_package_snapshot_complete, calc_files_checksum
 from conans.client.source import complete_recipe_sources
 from conans.errors import ConanException, NotFoundException
 from conans.model.manifest import gather_files, FileTreeManifest
@@ -156,7 +156,7 @@ class CmdUpload(object):
             if upload:
                 try:
                     conanfile_path = self._cache.package_layout(ref).conanfile()
-                    conanfile = self._loader.load_class(conanfile_path)
+                    conanfile = self._loader.load_basic(conanfile_path)
                 except NotFoundException:
                     raise NotFoundException(("There is no local conanfile exported as %s" %
                                              str(ref)))
@@ -259,6 +259,7 @@ class CmdUpload(object):
                                        remote=recipe_remote)
 
     def _upload_recipe(self, ref, conanfile, retry, retry_wait, policy, remote, remotes):
+
         current_remote_name = self._cache.package_layout(ref).load_metadata().recipe.remote
 
         if remote.name != current_remote_name:
@@ -270,10 +271,23 @@ class CmdUpload(object):
 
         t1 = time.time()
         the_files = self._compress_recipe_files(ref)
+
+        with self._cache.package_layout(ref).update_metadata() as metadata:
+            metadata.recipe.checksums = calc_files_checksum(the_files)
+
         local_manifest = FileTreeManifest.loads(load(the_files["conanmanifest.txt"]))
 
         remote_manifest = None
         if policy != UPLOAD_POLICY_FORCE:
+            # Check SCM data for auto fields
+            if hasattr(conanfile, "scm") and (
+                    conanfile.scm.get("url") == "auto" or conanfile.scm.get("revision") == "auto"):
+                raise ConanException("The recipe has 'scm.url' or 'scm.revision' with 'auto' "
+                                     "values. Use '--force' to ignore this error or export again "
+                                     "the recipe ('conan export' or 'conan create') in a "
+                                     "repository with no-uncommitted changes or by "
+                                     "using the '--ignore-dirty' option")
+
             remote_manifest = self._check_recipe_date(ref, remote, local_manifest)
         if policy == UPLOAD_POLICY_SKIP:
             return ref
@@ -314,6 +328,10 @@ class CmdUpload(object):
 
         t1 = time.time()
         the_files = self._compress_package_files(pref, integrity_check)
+
+        with self._cache.package_layout(pref.ref).update_metadata() as metadata:
+            metadata.packages[pref.id].checksums = calc_files_checksum(the_files)
+
         if policy == UPLOAD_POLICY_SKIP:
             return None
         files_to_upload, deleted = self._package_files_to_upload(pref, policy, the_files, p_remote)
@@ -357,6 +375,7 @@ class CmdUpload(object):
         src_files, src_symlinks = gather_files(export_src_folder)
         the_files = _compress_recipe_files(files, symlinks, src_files, src_symlinks, export_folder,
                                            self._output)
+
         return the_files
 
     def _compress_package_files(self, pref, integrity_check):

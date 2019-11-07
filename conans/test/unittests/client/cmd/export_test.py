@@ -123,6 +123,9 @@ class ModuleConan(python_requires(baseline).get_conanfile()):
 
         for conanfile in [conanfile1, conanfile2]:
             client.save({"conanfile.py": conanfile})
+            # Add and commit so it do the scm replacements correctly
+            client.run_command("git add .")
+            client.run_command('git commit -m  "commiting"')
             client.run("export . module_name/1.0.0@conan/stable")
             self.assertIn("module_name/1.0.0@conan/stable: "
                           "A new conanfile.py version was exported", client.out)

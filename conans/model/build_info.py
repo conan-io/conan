@@ -19,6 +19,7 @@ class _CppInfo(object):
     """
     def __init__(self):
         self.name = None
+        self.system_libs = []  # Ordered list of system libraries
         self.includedirs = []  # Ordered list of include paths
         self.srcdirs = []  # Ordered list of source paths
         self.libdirs = []  # Directories to find libraries
@@ -34,8 +35,10 @@ class _CppInfo(object):
         self.cxxflags = []  # C++ compilation flags
         self.sharedlinkflags = []  # linker flags
         self.exelinkflags = []  # linker flags
+        self.build_modules = []
         self.rootpath = ""
         self.sysroot = ""
+        self._build_modules_paths = None
         self._include_paths = None
         self._lib_paths = None
         self._bin_paths = None
@@ -55,6 +58,13 @@ class _CppInfo(object):
             return [p for p in abs_paths if os.path.isdir(p)]
         else:
             return abs_paths
+
+    @property
+    def build_modules_paths(self):
+        if self._build_modules_paths is None:
+            self._build_modules_paths = [os.path.join(self.rootpath, p) if not os.path.isabs(p)
+                                         else p for p in self.build_modules]
+        return self._build_modules_paths
 
     @property
     def include_paths(self):
@@ -155,6 +165,7 @@ class _BaseDepsCppInfo(_CppInfo):
         def merge_lists(seq1, seq2):
             return [s for s in seq1 if s not in seq2] + seq2
 
+        self.system_libs = merge_lists(self.system_libs, dep_cpp_info.system_libs)
         self.includedirs = merge_lists(self.includedirs, dep_cpp_info.include_paths)
         self.srcdirs = merge_lists(self.srcdirs, dep_cpp_info.src_paths)
         self.libdirs = merge_lists(self.libdirs, dep_cpp_info.lib_paths)
@@ -172,9 +183,14 @@ class _BaseDepsCppInfo(_CppInfo):
         self.cflags = merge_lists(dep_cpp_info.cflags, self.cflags)
         self.sharedlinkflags = merge_lists(dep_cpp_info.sharedlinkflags, self.sharedlinkflags)
         self.exelinkflags = merge_lists(dep_cpp_info.exelinkflags, self.exelinkflags)
+        self.build_modules = merge_lists(self.build_modules, dep_cpp_info.build_modules_paths)
 
         if not self.sysroot:
             self.sysroot = dep_cpp_info.sysroot
+
+    @property
+    def build_modules_paths(self):
+        return self.build_modules
 
     @property
     def include_paths(self):

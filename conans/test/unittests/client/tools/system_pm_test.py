@@ -2,19 +2,17 @@ import mock
 import platform
 import six
 import unittest
-
 from six import StringIO
 
 from conans import tools
 from conans.client.output import ConanOutput
 from conans.client.tools.files import which
 from conans.client.tools.oss import OSInfo
-from conans.client.tools.system_pm import ChocolateyTool, SystemPackageTool,\
-    AptTool
+from conans.client.tools.system_pm import ChocolateyTool, SystemPackageTool, AptTool
 from conans.errors import ConanException
 from conans.test.unittests.util.tools_test import RunnerMock
-from conans.test.utils.tools import TestBufferConanOutput
 from conans.test.utils.conanfile import MockSettings, MockConanfile
+from conans.test.utils.tools import TestBufferConanOutput
 
 
 class SystemPackageToolTest(unittest.TestCase):
@@ -63,7 +61,7 @@ class SystemPackageToolTest(unittest.TestCase):
         os_info.is_macos = False
         os_info.is_linux = True
         os_info.is_windows = False
-        os_info.linux_distro = "fedora"  # Will instantiate YumTool
+        os_info.linux_distro = "fedora"  # Will instantiate DnfTool
 
         with six.assertRaisesRegex(self, ConanException, "add_repository not implemented"):
             new_out = StringIO()
@@ -150,6 +148,13 @@ class SystemPackageToolTest(unittest.TestCase):
             spt.update()
             self.assertEqual(runner.command_called, "sudo -A apt-get update")
 
+            with mock.patch("conans.client.tools.oss.which", return_value=True):
+                os_info.linux_distro = "fedora"
+                spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
+                spt.update()
+                self.assertEqual(runner.command_called, "sudo -A dnf check-update -y")
+
+            # Without DNF in the path,
             os_info.linux_distro = "fedora"
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             spt.update()
@@ -452,6 +457,8 @@ class SystemPackageToolTest(unittest.TestCase):
                 update_command = "sudo -A apt-get update"
             elif os_info.with_yum:
                 update_command = "sudo -A yum check-update -y"
+            elif os_info.with_dnf:
+                update_command = "sudo -A dnf check-update -y"
             elif os_info.with_zypper:
                 update_command = "sudo -A zypper --non-interactive ref"
             elif os_info.with_pacman:
