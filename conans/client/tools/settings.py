@@ -14,7 +14,7 @@ def cppstd_minimum_required(conanfile, cppstd, gnu_extensions=False):
     :param gnu_extensions: GNU extension is required (e.g gnu17). This option ONLY works on Linux.
     """
     def extract_cpp_version(cppstd):
-        return int(str(cppstd).replace("gnu", ""))
+        return str(cppstd).replace("gnu", "")
 
     current_cppstd = cppstd_from_settings(conanfile.settings)
     if current_cppstd and gnu_extensions and "gnu" not in current_cppstd and OSInfo().is_linux:
