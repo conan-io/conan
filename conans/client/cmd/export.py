@@ -133,6 +133,10 @@ def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
             # Copy the local scm folder to scm_sources in the cache
             mkdir(scm_sources_folder)
             _export_scm(scm_data, local_src_folder, scm_sources_folder, output)
+            # Remove the sources, we want to get the new exported changes from the scm_sources
+            # again: https://github.com/conan-io/conan/issues/5195#issuecomment-551840597
+            sources_folder = package_layout.source()
+            rmdir(sources_folder)
 
         # Execute post-export hook before computing the digest
         hook_manager.execute("post_export", conanfile=conanfile, reference=package_layout.ref,
