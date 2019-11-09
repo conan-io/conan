@@ -98,7 +98,7 @@ default_client_conf = """
 [log]
 run_to_output = True        # environment CONAN_LOG_RUN_TO_OUTPUT
 run_to_file = False         # environment CONAN_LOG_RUN_TO_FILE
-level = 50                  # environment CONAN_LOGGING_LEVEL
+level = critical            # environment CONAN_LOGGING_LEVEL
 # trace_file =              # environment CONAN_TRACE_FILE
 print_run_commands = False  # environment CONAN_PRINT_RUN_COMMANDS
 
@@ -517,7 +517,8 @@ class ConanClientConfigParser(ConfigParser, object):
             if level is None:
                 level = self.get_item("log.level")
             try:
-                level = int(level)
+                parsed_level = ConanClientConfigParser.get_log_level_by_name(level)
+                level = parsed_level if parsed_level is not None else int(level)
             except Exception:
                 level = logging.CRITICAL
             return level
@@ -585,3 +586,16 @@ class ConanClientConfigParser(ConfigParser, object):
             return log_run_to_output.lower() in ("1", "true")
         except ConanException:
             return True
+
+    @staticmethod
+    def get_log_level_by_name(level_name):
+        levels = {
+            "critical": logging.CRITICAL,
+            "error": logging.ERROR,
+            "warning": logging.WARNING,
+            "warn": logging.WARNING,
+            "info": logging.INFO,
+            "debug": logging.DEBUG,
+            "notset": logging.NOTSET
+        }
+        return levels.get(str(level_name).lower())

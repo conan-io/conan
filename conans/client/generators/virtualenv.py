@@ -7,18 +7,20 @@ from conans.model import Generator
 class VirtualEnvGenerator(Generator):
 
     append_with_spaces = ["CPPFLAGS", "CFLAGS", "CXXFLAGS", "LIBS", "LDFLAGS", "CL", "_LINK_"]
+    suffix = ""
+    venv_name = "conanenv"
 
     def __init__(self, conanfile):
         super(VirtualEnvGenerator, self).__init__(conanfile)
         self.conanfile = conanfile
         self.env = conanfile.env
-        self.venv_name = "conanenv"
 
     @property
     def filename(self):
         return
 
-    def _variable_placeholder(self, flavor, name, append_with_spaces):
+    @staticmethod
+    def _variable_placeholder(flavor, name, append_with_spaces):
         """
         :param flavor: flavor of the execution environment
         :param name: variable name
@@ -32,14 +34,14 @@ class VirtualEnvGenerator(Generator):
         # flavor == sh
         return "${%s+ $%s}" % (name, name) if append_with_spaces else "${%s+:$%s}" % (name,  name)
 
-    def format_values(self, flavor, variables):
+    @classmethod
+    def _format_values(cls, flavor, variables):
         """
         Formats the values for the different supported script language flavors.
         :param flavor: flavor of the execution environment
         :param variables: variables to be formatted
         :return:
         """
-        variables = variables or self.env.items()
         if flavor == "cmd":
             path_sep, quote_elements, quote_full_value = ";", False, False
         elif flavor == "ps1":
@@ -47,14 +49,11 @@ class VirtualEnvGenerator(Generator):
         elif flavor == "sh":
             path_sep, quote_elements, quote_full_value = ":", True, False
 
-        ret = []
-        is_list = False
         for name, value in variables:
             # activate values
             if isinstance(value, list):
-                is_list = True
-                append_with_spaces = name in self.append_with_spaces
-                placeholder = self._variable_placeholder(flavor, name, append_with_spaces)
+                append_with_spaces = name in cls.append_with_spaces
+                placeholder = cls._variable_placeholder(flavor, name, append_with_spaces)
                 if append_with_spaces:
                     # Variables joined with spaces look like: CPPFLAGS="one two three"
                     value = " ".join(value+[placeholder])
@@ -76,8 +75,7 @@ class VirtualEnvGenerator(Generator):
             # deactivate values
             value = os.environ.get(name, "")
             deactivate_value = "\"%s\"" % value if quote_full_value or quote_elements else value
-            ret.append((name, activate_value, deactivate_value, path_sep, is_list))
-        return ret
+            yield name, activate_value, deactivate_value
 
     def _sh_lines(self):
         variables = [("OLD_PS1", "$PS1"),
@@ -87,7 +85,7 @@ class VirtualEnvGenerator(Generator):
         activate_lines = []
         deactivate_lines = ["%s=%s" % ("PS1", "$OLD_PS1"), "export PS1"]
 
-        for name, activate, deactivate, _, _ in self.format_values("sh", variables):
+        for name, activate, deactivate in self._format_values("sh", variables):
             activate_lines.append("%s=%s" % (name, activate))
             activate_lines.append("export %s" % name)
             if name != "PS1":
@@ -106,48 +104,22 @@ class VirtualEnvGenerator(Generator):
 
         activate_lines = ["@echo off"]
         deactivate_lines = ["@echo off"]
-        activate_lines.append("SET CONAN_OLD_PROMPT=%PROMPT%")
-
-        for name, activate, deactivate, _, is_list in self.format_values("cmd", variables):
-
-            if is_list:
-                cmd = 'IF defined {name} (goto {name}L2) else (goto {name}L1)\n' \
-                      ':{name}L1\n' \
-                      'SET {name}={activate}\n' \
-                      'SET {name}=%{name}:~0,-1%\n' \
-                      'goto {name}L3\n' \
-                      ':{name}L2\n' \
-                      'SET {name}={activate}\n' \
-                      ':{name}L3\n'.format(name=name, activate=activate)
-                activate_lines.append(cmd)
-            else:
-                activate_lines.append("SET %s=%s" % (name, activate))
+        for name, activate, deactivate in self._format_values("cmd", variables):
+            activate_lines.append("SET %s=%s" % (name, activate))
             deactivate_lines.append("SET %s=%s" % (name, deactivate))
-
-        deactivate_lines.append('SET PROMPT=%CONAN_OLD_PROMPT%')
-        deactivate_lines.append('SET CONAN_OLD_PROMPT=')
-
         activate_lines.append('')
         deactivate_lines.append('')
         return activate_lines, deactivate_lines
 
     def _ps1_lines(self):
-        activate_lines = ['function global:_old_conan_prompt {""}']
-        activate_lines.append('$function:_old_conan_prompt = $function:prompt')
-        activate_lines.append('function global:prompt { write-host "(%s) " -nonewline; '
-                              '& $function:_old_conan_prompt }' % self.venv_name)
-        deactivate_lines = ['$function:prompt = $function:_old_conan_prompt']
-        deactivate_lines.append('remove-item function:_old_conan_prompt')
-        for name, activate, deactivate, path_sep, is_list in self.format_values("ps1", self.env.items()):
-            if is_list:
-                activate_lines.append('if($env:{name} -eq $null) \n'\
-                                      '{{ $env:{name} = {activate}\n'\
-                                      'if($env:{name}.Substring($env:{name}.Length-1,1) -eq \'{sep}\')\n'\
-                                      '{{ $env:{name} = $env:{name}.Substring(0,$env:{name}.Length-1)}}\n'\
-                                      '}}else{{ \n'\
-                                      '$env:{name} = {activate} }}\n'.format(name=name, activate=activate, sep=path_sep))
-            else:
-                activate_lines.append('$env:%s = %s' % (name, activate))
+        activate_lines = ['function global:_old_conan_prompt {""}',
+                          '$function:_old_conan_prompt = $function:prompt',
+                          'function global:prompt { write-host "(%s) " -nonewline;'
+                          ' & $function:_old_conan_prompt }' % self.venv_name]
+        deactivate_lines = ['$function:prompt = $function:_old_conan_prompt',
+                            'remove-item function:_old_conan_prompt']
+        for name, activate, deactivate in self._format_values("ps1", self.env.items()):
+            activate_lines.append('$env:%s = %s' % (name, activate))
             deactivate_lines.append('$env:%s = %s' % (name, deactivate))
         activate_lines.append('')
         return activate_lines, deactivate_lines
@@ -158,15 +130,15 @@ class VirtualEnvGenerator(Generator):
         result = {}
         if os_info.is_windows and not os_info.is_posix:
             activate, deactivate = self._cmd_lines()
-            result["activate.bat"] = os.linesep.join(activate)
-            result["deactivate.bat"] = os.linesep.join(deactivate)
+            result["activate{}.bat".format(self.suffix)] = os.linesep.join(activate)
+            result["deactivate{}.bat".format(self.suffix)] = os.linesep.join(deactivate)
 
             activate, deactivate = self._ps1_lines()
-            result["activate.ps1"] = os.linesep.join(activate)
-            result["deactivate.ps1"] = os.linesep.join(deactivate)
+            result["activate{}.ps1".format(self.suffix)] = os.linesep.join(activate)
+            result["deactivate{}.ps1".format(self.suffix)] = os.linesep.join(deactivate)
 
         activate, deactivate = self._sh_lines()
-        result["activate.sh"] = os.linesep.join(activate)
-        result["deactivate.sh"] = os.linesep.join(deactivate)
+        result["activate{}.sh".format(self.suffix)] = os.linesep.join(activate)
+        result["deactivate{}.sh".format(self.suffix)] = os.linesep.join(deactivate)
 
         return result
