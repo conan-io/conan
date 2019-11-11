@@ -35,7 +35,7 @@ def check_min_cppstd(conanfile, cppstd, gnu_extensions=False):
             raise ConanInvalidConfiguration("Current compiler does not support GNU extensions.")
 
 
-def valid_minimum_cppstd(conanfile, cppstd, gnu_extensions=False):
+def valid_min_cppstd(conanfile, cppstd, gnu_extensions=False):
     """ Validate if current cppstd fits the minimal version required.
 
     :param conanfile: ConanFile instance with cppstd to be compared
