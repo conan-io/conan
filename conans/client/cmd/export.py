@@ -127,16 +127,17 @@ def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
                                                               package_layout.export(), output,
                                                               ignore_dirty)
         # Clear previous scm_folder
+        modified_recipe = False
         scm_sources_folder = package_layout.scm_sources()
         rmdir(scm_sources_folder)
         if local_src_folder and not keep_source:
             # Copy the local scm folder to scm_sources in the cache
             mkdir(scm_sources_folder)
             _export_scm(scm_data, local_src_folder, scm_sources_folder, output)
-            # Remove the sources, we want to get the new exported changes from the scm_sources
-            # again: https://github.com/conan-io/conan/issues/5195#issuecomment-551840597
-            sources_folder = package_layout.source()
-            rmdir(sources_folder)
+            # https://github.com/conan-io/conan/issues/5195#issuecomment-551840597
+            # It will cause the source folder to be removed (needed because the recipe still has
+            # the "auto" with uncommitted changes)
+            modified_recipe = True
 
         # Execute post-export hook before computing the digest
         hook_manager.execute("post_export", conanfile=conanfile, reference=package_layout.ref,
@@ -144,7 +145,7 @@ def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
 
         # Compute the new digest
         manifest = FileTreeManifest.create(package_layout.export(), package_layout.export_sources())
-        modified_recipe = not previous_manifest or previous_manifest != manifest
+        modified_recipe = modified_recipe or not previous_manifest or previous_manifest != manifest
         if modified_recipe:
             output.success('A new %s version was exported' % CONANFILE)
             output.info('Folder: %s' % package_layout.export())
