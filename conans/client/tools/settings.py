@@ -14,7 +14,7 @@ def check_min_cppstd(conanfile, cppstd, gnu_extensions=False):
     :param gnu_extensions: GNU extension is required (e.g gnu17). This option ONLY works on Linux.
     """
     assert (cppstd is not None), "Cannot check invalid cppstd version"
-    assert (cppstd is not None), "conanfile must be a ConanFile object"
+    assert (conanfile is not None), "conanfile must be a ConanFile object"
 
     def less_than(lhs, rhs):
         def extract_cpp_version(cppstd):
