@@ -19,15 +19,16 @@ from conans.util.log import logger
 class RestV2Methods(RestCommonMethods):
 
     def __init__(self, remote_url, token, custom_headers, output, requester, verify_ssl,
-                 artifacts_properties=None, checksum_deploy=False):
+                 artifacts_properties=None, checksum_deploy=False, matrix_params=False):
 
         super(RestV2Methods, self).__init__(remote_url, token, custom_headers, output, requester,
-                                            verify_ssl, artifacts_properties)
+                                            verify_ssl, artifacts_properties, matrix_params)
         self._checksum_deploy = checksum_deploy
 
     @property
     def router(self):
-        return ClientV2Router(self.remote_url.rstrip("/"), self._artifacts_properties)
+        return ClientV2Router(self.remote_url.rstrip("/"), self._artifacts_properties,
+                              self._matrix_params)
 
     def _get_file_list_json(self, url):
         data = self.get_json(url)

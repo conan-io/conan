@@ -31,7 +31,8 @@ class RestV1Methods(RestCommonMethods):
 
     @property
     def router(self):
-        return ClientV1Router(self.remote_url.rstrip("/"), self._artifacts_properties)
+        return ClientV1Router(self.remote_url.rstrip("/"), self._artifacts_properties,
+                              self._matrix_params)
 
     def _download_files(self, file_urls, quiet=False):
         """

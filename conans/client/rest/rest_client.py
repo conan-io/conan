@@ -1,4 +1,4 @@
-from conans import CHECKSUM_DEPLOY, REVISIONS, ONLY_V2, OAUTH_TOKEN
+from conans import CHECKSUM_DEPLOY, REVISIONS, ONLY_V2, OAUTH_TOKEN, MATRIX_PARAMS
 from conans.client.rest.rest_client_v1 import RestV1Methods
 from conans.client.rest.rest_client_v2 import RestV2Methods
 from conans.errors import OnlyV2Available, AuthenticationException
@@ -32,7 +32,8 @@ class RestApiClient(object):
         capabilities = self._cached_capabilities.get(self.remote_url)
         if capabilities is None:
             tmp = RestV1Methods(self.remote_url, self.token, self.custom_headers, self._output,
-                                self.requester, self.verify_ssl, self._artifacts_properties)
+                                self.requester, self.verify_ssl, self._artifacts_properties,
+                                matrix_params=False)
             capabilities = tmp.server_capabilities()
             self._cached_capabilities[self.remote_url] = capabilities
             logger.debug("REST: Cached capabilities for the remote: %s" % capabilities)
@@ -42,14 +43,16 @@ class RestApiClient(object):
 
     def _get_api(self):
         revisions = self._capable(REVISIONS)
+        matrix_params = self._capable(MATRIX_PARAMS)
         if self._revisions_enabled and revisions:
             checksum_deploy = self._capable(CHECKSUM_DEPLOY)
             return RestV2Methods(self.remote_url, self.token, self.custom_headers, self._output,
                                  self.requester, self.verify_ssl, self._artifacts_properties,
-                                 checksum_deploy)
+                                 checksum_deploy, matrix_params)
         else:
             return RestV1Methods(self.remote_url, self.token, self.custom_headers, self._output,
-                                 self.requester, self.verify_ssl, self._artifacts_properties)
+                                 self.requester, self.verify_ssl, self._artifacts_properties,
+                                 matrix_params=matrix_params)
 
     def get_recipe_manifest(self, ref):
         return self._get_api().get_recipe_manifest(ref)
