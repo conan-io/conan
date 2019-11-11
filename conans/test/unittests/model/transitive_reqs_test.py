@@ -23,7 +23,7 @@ from conans.model.settings import Settings, bad_value_msg
 from conans.model.values import Values
 from conans.test.unittests.model.fake_retriever import Retriever
 from conans.test.utils.tools import (NO_SETTINGS_PACKAGE_ID, TestBufferConanOutput,
-                                     test_processed_profile, GenConanfile)
+                                     test_profile, GenConanfile)
 
 hello_ref = ConanFileReference.loads("Hello/1.2@user/testing")
 say_ref = ConanFileReference.loads("Say/0.1@user/testing")
@@ -90,16 +90,16 @@ class GraphTest(unittest.TestCase):
         self.binaries_analyzer = GraphBinariesAnalyzer(cache, self.output, self.remote_manager)
 
     def build_graph(self, content, options="", settings=""):
-        self.loader.cached_conanfiles = {}
+        self.loader._cached_conanfile_classes = {}
         full_settings = Settings.loads(default_settings_yml)
         full_settings.values = Values.loads(settings)
         profile = Profile()
         profile.processed_settings = full_settings
         profile.options = OptionsValues.loads(options)
-        processed_profile = test_processed_profile(profile=profile)
-        root_conan = self.retriever.root(str(content), processed_profile)
+        profile = test_profile(profile=profile)
+        root_conan = self.retriever.root(str(content), profile)
         deps_graph = self.builder.load_graph(root_conan, False, False, self.remotes,
-                                             processed_profile)
+                                             profile_host=profile)
 
         build_mode = BuildMode([], self.output)
         self.binaries_analyzer.evaluate_graph(deps_graph, build_mode=build_mode,
@@ -436,7 +436,7 @@ class ChatConan(ConanFile):
         self.retriever.save_recipe(bye_ref, bye_content2)
         deps_graph = self.build_graph(chat_content)
 
-        self.assertIn("Hello/1.2@user/testing requirement Say/0.1@user/testing overridden by "
+        self.assertIn("Hello/1.2@user/testing: requirement Say/0.1@user/testing overridden by "
                       "your conanfile to Say/0.2@user/testing", self.output)
         self.assertNotIn("Conflict", self.output)
         self.assertEqual(4, len(deps_graph.nodes))
@@ -1472,9 +1472,9 @@ class ConsumerConan(ConanFile):
         self.retriever.save_recipe(libd_ref, self.libd_content)
 
     def build_graph(self, content):
-        processed_profile = test_processed_profile()
-        root_conan = self.retriever.root(content, processed_profile)
-        deps_graph = self.builder.load_graph(root_conan, False, False, None, processed_profile)
+        profile = test_profile()
+        root_conan = self.retriever.root(content, profile)
+        deps_graph = self.builder.load_graph(root_conan, False, False, None, profile_host=profile)
         return deps_graph
 
     def test_avoid_duplicate_expansion(self):
@@ -1496,7 +1496,7 @@ class LibDConan(ConanFile):
 
         with six.assertRaisesRegex(self, ConanException, "Conflict in LibB/0.1@user/testing"):
             self.build_graph(self.consumer_content)
-        self.assertIn("LibB/0.1@user/testing requirement LibA/0.1@user/testing overridden by "
+        self.assertIn("LibB/0.1@user/testing: requirement LibA/0.1@user/testing overridden by "
                       "LibD/0.1@user/testing to LibA/0.2@user/testing", str(self.output))
         self.assertEqual(1, str(self.output).count("LibA requirements()"))
         self.assertEqual(1, str(self.output).count("LibA configure()"))
@@ -1849,10 +1849,10 @@ class ChatConan(ConanFile):
         self.retriever.save_recipe(say_ref, say_content)
         self.retriever.save_recipe(hello_ref, hello_content)
 
-        processed_profile = test_processed_profile(profile=profile)
-        root_conan = self.retriever.root(chat_content, processed_profile)
+        profile = test_profile(profile=profile)
+        root_conan = self.retriever.root(chat_content, profile)
         deps_graph = self.builder.load_graph(root_conan, False, False, None,
-                                             processed_profile=processed_profile)
+                                             profile_host=profile)
 
         build_mode = BuildMode([], self.output)
         self.binaries_analyzer.evaluate_graph(deps_graph, build_mode=build_mode,

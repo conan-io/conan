@@ -76,21 +76,17 @@ def _evaluate(prop_name, prop_value, conan_vars_info):
     conan_vars_info.serialize_min()
     """
 
-    def compatible_prop(setting_value, prop_value):
-        return (prop_value == setting_value) or (prop_value == "None" and setting_value is None)
+    def compatible_prop(setting_value, _prop_value):
+        return (_prop_value == setting_value) or (_prop_value == "None" and setting_value is None)
 
     info_settings = conan_vars_info.get("settings", [])
     info_options = conan_vars_info.get("options", [])
     properties = ["os", "os_build", "compiler", "arch", "arch_build", "build_type"]
 
-    def starts_with_common_settings(prop_name):
-        for setting in properties:
-            if prop_name.startswith(setting + '.'):
-                return True
-        return False
+    def starts_with_common_settings(_prop_name):
+        return any(_prop_name.startswith(setting + '.') for setting in properties)
 
-    if (prop_name in properties or
-            starts_with_common_settings(prop_name)):
+    if prop_name in properties or starts_with_common_settings(prop_name):
         return compatible_prop(info_settings.get(prop_name, None), prop_value)
     else:
         return compatible_prop(info_options.get(prop_name, None), prop_value)
@@ -104,8 +100,7 @@ def search_recipes(cache, pattern=None, ignorecase=True):
         pattern = translate(pattern)
         pattern = re.compile(pattern, re.IGNORECASE) if ignorecase else re.compile(pattern)
 
-    subdirs = list_folder_subdirs(basedir=cache.store, level=4)
-    refs = [ConanFileReference.load_dir_repr(folder) for folder in subdirs]
+    refs = cache.all_refs()
     refs.extend(cache.editable_packages.edited_refs.keys())
     if pattern:
         refs = [r for r in refs if _partial_match(pattern, repr(r))]

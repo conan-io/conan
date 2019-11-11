@@ -34,7 +34,8 @@ class CompilerArgsTest(unittest.TestCase):
         gen = CompilerArgsGenerator(conan_file)
         self.assertEqual('-O2 -Ob2 -DNDEBUG -link mylib.lib other.lib', gen.content)
 
-    def _get_conanfile(self, settings):
+    @staticmethod
+    def _get_conanfile(settings, frameworks=False, system_libs=False):
         conan_file = ConanFileMock()
         conan_file.settings = settings
         conan_file.source_folder = "my_cache_source_folder"
@@ -50,6 +51,11 @@ class CompilerArgsTest(unittest.TestCase):
         cpp_info.cflags.append("c_flag1")
         cpp_info.cxxflags.append("cxx_flag1")
         cpp_info.defines.append("mydefine1")
+        if system_libs:
+            cpp_info.system_libs.append("system_lib1")
+        if frameworks:
+            cpp_info.frameworks = ["AVFoundation", "VideoToolbox"]
+            cpp_info.framework_paths.extend(['path/to/Frameworks1', 'path/to/Frameworks2'])
 
         conan_file.deps_cpp_info.update(cpp_info, "zlib")
         conan_file.env_info = EnvInfo()
@@ -67,8 +73,8 @@ class CompilerArgsTest(unittest.TestCase):
         conan_file = self._get_conanfile(settings)
         gcc = GCCGenerator(conan_file)
         self.assertEqual('-Dmydefine1 -Ipath/to/include1 cxx_flag1 c_flag1 -m32 -O3 -s -DNDEBUG '
-                          '-Wl,-rpath="path/to/lib1" '
-                          '-Lpath/to/lib1 -lmylib -std=gnu++17', gcc.content)
+                         '-Wl,-rpath="path/to/lib1" '
+                         '-Lpath/to/lib1 -lmylib -std=gnu++17', gcc.content)
 
         settings.arch = "x86_64"
         settings.build_type = "Debug"
@@ -76,15 +82,15 @@ class CompilerArgsTest(unittest.TestCase):
 
         gcc = GCCGenerator(conan_file)
         self.assertEqual('-Dmydefine1 -Ipath/to/include1 cxx_flag1 c_flag1 -m64 -g '
-                          '-Wl,-rpath="path/to/lib1" -Lpath/to/lib1 -lmylib '
-                          '-D_GLIBCXX_USE_CXX11_ABI=1 -std=gnu++17',
+                         '-Wl,-rpath="path/to/lib1" -Lpath/to/lib1 -lmylib '
+                         '-D_GLIBCXX_USE_CXX11_ABI=1 -std=gnu++17',
                           gcc.content)
 
         settings.compiler.libcxx = "libstdc++"
         gcc = GCCGenerator(conan_file)
         self.assertEqual('-Dmydefine1 -Ipath/to/include1 cxx_flag1 c_flag1 -m64 -g '
-                          '-Wl,-rpath="path/to/lib1" -Lpath/to/lib1 -lmylib '
-                          '-D_GLIBCXX_USE_CXX11_ABI=0 -std=gnu++17',
+                         '-Wl,-rpath="path/to/lib1" -Lpath/to/lib1 -lmylib '
+                         '-D_GLIBCXX_USE_CXX11_ABI=0 -std=gnu++17',
                           gcc.content)
 
         settings.os = "Windows"
@@ -95,7 +101,7 @@ class CompilerArgsTest(unittest.TestCase):
         gcc = GCCGenerator(conan_file)
         # GCC generator ignores the compiler setting, it is always gcc
         self.assertEqual('-Dmydefine1 -Ipath/to/include1 cxx_flag1 c_flag1 -m32 -O3 -s '
-                          '-DNDEBUG -Wl,-rpath="path/to/lib1" -Lpath/to/lib1 -lmylib',
+                         '-DNDEBUG -Wl,-rpath="path/to/lib1" -Lpath/to/lib1 -lmylib',
                           gcc.content)
 
     def compiler_args_test(self):
@@ -109,7 +115,7 @@ class CompilerArgsTest(unittest.TestCase):
         conan_file = self._get_conanfile(settings)
         gen = CompilerArgsGenerator(conan_file)
         self.assertEqual('-Dmydefine1 -Ipath\\to\\include1 cxx_flag1 c_flag1 -O2 -Ob2 -DNDEBUG '
-                          '-link -LIBPATH:path\\to\\lib1 mylib.lib', gen.content)
+                         '-link -LIBPATH:path\\to\\lib1 mylib.lib', gen.content)
 
         settings = Settings.loads(default_settings_yml)
         settings.os = "Macos"
@@ -120,7 +126,7 @@ class CompilerArgsTest(unittest.TestCase):
         conan_file = self._get_conanfile(settings)
         gen = CompilerArgsGenerator(conan_file)
         self.assertEqual('-Dmydefine1 -Ipath/to/include1 cxx_flag1 c_flag1 -m32 -O3 -DNDEBUG '
-                          '-Wl,-rpath,"path/to/lib1" -Lpath/to/lib1 -lmylib', gen.content)
+                         '-Wl,-rpath,"path/to/lib1" -Lpath/to/lib1 -lmylib', gen.content)
 
         settings = Settings.loads(default_settings_yml)
         settings.os = "Linux"
@@ -133,5 +139,34 @@ class CompilerArgsTest(unittest.TestCase):
         conan_file = self._get_conanfile(settings)
         args = CompilerArgsGenerator(conan_file)
         self.assertEqual('-Dmydefine1 -Ipath/to/include1 cxx_flag1 c_flag1 -m32 -O3 -DNDEBUG '
-                          '-Wl,-rpath,"path/to/lib1" '
-                          '-Lpath/to/lib1 -lmylib', args.content)
+                         '-Wl,-rpath,"path/to/lib1" '
+                         '-Lpath/to/lib1 -lmylib', args.content)
+
+    def apple_frameworks_test(self):
+        settings = Settings.loads(default_settings_yml)
+        settings.os = "Macos"
+        settings.compiler = "apple-clang"
+        settings.compiler.version = "9.1"
+        settings.arch = "x86_64"
+        settings.build_type = "Release"
+
+        conan_file = self._get_conanfile(settings, frameworks=True)
+        args = CompilerArgsGenerator(conan_file)
+        self.assertEqual('-Dmydefine1 -Ipath/to/include1 cxx_flag1 c_flag1 -m64 -O3 -DNDEBUG '
+                         '-Wl,-rpath,"path/to/lib1" -Lpath/to/lib1 -lmylib '
+                         '-framework AVFoundation -framework VideoToolbox '
+                         '-F path/to/Frameworks1 -F path/to/Frameworks2', args.content)
+
+    def system_libs_test(self):
+        settings = Settings.loads(default_settings_yml)
+        settings.os = "Linux"
+        settings.compiler = "gcc"
+        settings.compiler.version = "8"
+        settings.arch = "x86_64"
+        settings.build_type = "Release"
+
+        conan_file = self._get_conanfile(settings, system_libs=True)
+        args = CompilerArgsGenerator(conan_file)
+        self.assertEqual('-Dmydefine1 -Ipath/to/include1 cxx_flag1 c_flag1 -m64 -O3 -s -DNDEBUG '
+                         '-Wl,-rpath="path/to/lib1" -Lpath/to/lib1 -lmylib -lsystem_lib1',
+                         args.content)

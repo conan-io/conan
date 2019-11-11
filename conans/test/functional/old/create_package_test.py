@@ -5,11 +5,11 @@ from mock import Mock
 
 from conans.client.graph.python_requires import ConanPythonRequire
 from conans.client.loader import ConanFileLoader
-from conans.client.packager import create_package
+from conans.client.packager import run_package_method
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE, CONANINFO
 from conans.test.utils.test_files import hello_source_files
-from conans.test.utils.tools import TestBufferConanOutput, TestClient, test_processed_profile
+from conans.test.utils.tools import TestBufferConanOutput, TestClient, test_profile
 
 
 myconan1 = """
@@ -79,10 +79,10 @@ class ExporterTest(unittest.TestCase):
         shutil.copytree(reg_folder, build_folder)
 
         loader = ConanFileLoader(None, TestBufferConanOutput(), ConanPythonRequire(None, None))
-        conanfile = loader.load_consumer(conanfile_path, test_processed_profile())
+        conanfile = loader.load_consumer(conanfile_path, test_profile())
 
-        create_package(conanfile, None, build_folder, build_folder, package_folder, install_folder,
-                       Mock(), conanfile_path, ref, copy_info=True)
+        run_package_method(conanfile, None, build_folder, build_folder, package_folder,
+                           install_folder, Mock(), conanfile_path, ref, copy_info=True)
 
         # test build folder
         self.assertTrue(os.path.exists(build_folder))

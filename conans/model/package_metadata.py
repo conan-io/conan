@@ -9,6 +9,7 @@ class _RecipeMetadata(object):
     def __init__(self):
         self._revision = None
         self.properties = {}
+        self.checksums = {}
         self.remote = None
 
     @property
@@ -22,7 +23,8 @@ class _RecipeMetadata(object):
     def to_dict(self):
         ret = {"revision": self.revision,
                "remote": self.remote,
-               "properties": self.properties}
+               "properties": self.properties,
+               "checksums": self.checksums}
         return ret
 
     @staticmethod
@@ -31,6 +33,7 @@ class _RecipeMetadata(object):
         ret.revision = data["revision"]
         ret.remote = data.get("remote")
         ret.properties = data["properties"]
+        ret.checksums = data.get("checksums", {})
         ret.time = data.get("time")
         return ret
 
@@ -41,6 +44,7 @@ class _BinaryPackageMetadata(object):
         self._revision = None
         self._recipe_revision = None
         self.properties = {}
+        self.checksums = {}
         self.remote = None
 
     @property
@@ -63,7 +67,8 @@ class _BinaryPackageMetadata(object):
         ret = {"revision": self.revision,
                "recipe_revision": self.recipe_revision,
                "remote": self.remote,
-               "properties": self.properties}
+               "properties": self.properties,
+               "checksums": self.checksums}
         return ret
 
     @staticmethod
@@ -72,6 +77,7 @@ class _BinaryPackageMetadata(object):
         ret.revision = data.get("revision")
         ret.recipe_revision = data.get("recipe_revision")
         ret.properties = data.get("properties")
+        ret.checksums = data.get("checksums", {})
         ret.remote = data.get("remote")
         return ret
 

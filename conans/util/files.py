@@ -64,7 +64,7 @@ def set_dirty_context_manager(folder):
     clean_dirty(folder)
 
 
-def decode_text(text):
+def _detect_encoding(text):
     import codecs
     encodings = {codecs.BOM_UTF8: "utf_8_sig",
                  codecs.BOM_UTF16_BE: "utf_16_be",
@@ -79,17 +79,27 @@ def decode_text(text):
     for bom in sorted(encodings, key=len, reverse=True):
         if text.startswith(bom):
             try:
-                return text[len(bom):].decode(encodings[bom])
+                return encodings[bom], len(bom)
             except UnicodeDecodeError:
                 continue
     decoders = ["utf-8", "Windows-1252"]
     for decoder in decoders:
         try:
-            return text.decode(decoder)
+            text.decode(decoder)
+            return decoder, 0
         except UnicodeDecodeError:
             continue
-    logger.warning("can't decode %s" % str(text))
-    return text.decode("utf-8", "ignore")  # Ignore not compatible characters
+    return None, 0
+
+
+def decode_text(text, encoding="auto"):
+    bom_length = 0
+    if encoding == "auto":
+        encoding, bom_length = _detect_encoding(text)
+        if encoding is None:
+            logger.warning("can't decode %s" % str(text))
+            return text.decode("utf-8", "ignore")  # Ignore not compatible characters
+    return text[bom_length:].decode(encoding)
 
 
 def touch(fname, times=None):
@@ -146,33 +156,34 @@ def _generic_algorithm_sum(file_path, algorithm_name):
         return m.hexdigest()
 
 
-def save_append(path, content):
+def save_append(path, content, encoding="utf-8"):
     try:
         os.makedirs(os.path.dirname(path))
     except Exception:
         pass
 
     with open(path, "ab") as handle:
-        handle.write(to_file_bytes(content))
+        handle.write(to_file_bytes(content, encoding=encoding))
 
 
-def save(path, content, only_if_modified=False):
+def save(path, content, only_if_modified=False, encoding="utf-8"):
     """
     Saves a file with given content
     Params:
         path: path to write file to
         content: contents to save in the file
         only_if_modified: file won't be modified if the content hasn't changed
+        encoding: target file text encoding
     """
     try:
         os.makedirs(os.path.dirname(path))
     except Exception:
         pass
 
-    new_content = to_file_bytes(content)
+    new_content = to_file_bytes(content, encoding)
 
     if only_if_modified and os.path.exists(path):
-        old_content = load(path, binary=True)
+        old_content = load(path, binary=True, encoding=encoding)
         if old_content == new_content:
             return
 
@@ -184,25 +195,25 @@ def mkdir_tmp():
     return tempfile.mkdtemp(suffix='tmp_conan')
 
 
-def to_file_bytes(content):
+def to_file_bytes(content, encoding="utf-8"):
     if six.PY3:
         if not isinstance(content, bytes):
-            content = bytes(content, "utf-8")
+            content = bytes(content, encoding)
     elif isinstance(content, unicode):
-        content = content.encode("utf-8")
+        content = content.encode(encoding)
     return content
 
 
-def save_files(path, files, only_if_modified=False):
+def save_files(path, files, only_if_modified=False, encoding="utf-8"):
     for name, content in list(files.items()):
-        save(os.path.join(path, name), content, only_if_modified=only_if_modified)
+        save(os.path.join(path, name), content, only_if_modified=only_if_modified, encoding=encoding)
 
 
-def load(path, binary=False):
+def load(path, binary=False, encoding="auto"):
     """ Loads a file content """
     with open(path, 'rb') as handle:
         tmp = handle.read()
-        return tmp if binary else decode_text(tmp)
+        return tmp if binary else decode_text(tmp, encoding)
 
 
 def relative_dirs(path):
@@ -363,3 +374,59 @@ def exception_message_safe(exc):
         return str(exc)
     except Exception:
         return decode_text(repr(exc))
+
+
+def merge_directories(src, dst, excluded=None):
+    src = os.path.normpath(src)
+    dst = os.path.normpath(dst)
+    excluded = excluded or []
+    excluded = [os.path.normpath(entry) for entry in excluded]
+
+    def is_excluded(origin_path):
+        if origin_path == dst:
+            return True
+        rel_path = os.path.normpath(os.path.relpath(origin_path, src))
+        if rel_path in excluded:
+            return True
+        return False
+
+    def link_to_rel(pointer_src):
+        linkto = os.readlink(pointer_src)
+        if not os.path.isabs(linkto):
+            linkto = os.path.join(os.path.dirname(pointer_src), linkto)
+
+        # Check if it is outside the sources
+        out_of_source = os.path.relpath(linkto, os.path.realpath(src)).startswith(".")
+        if out_of_source:
+            # May warn about out of sources symlink
+            return
+
+        # Create the symlink
+        linkto_rel = os.path.relpath(linkto, os.path.dirname(pointer_src))
+        pointer_dst = os.path.normpath(os.path.join(dst, os.path.relpath(pointer_src, src)))
+        os.symlink(linkto_rel, pointer_dst)
+
+    for src_dir, dirs, files in walk(src, followlinks=True):
+        if is_excluded(src_dir):
+            dirs[:] = []
+            continue
+
+        if os.path.islink(src_dir):
+            link_to_rel(src_dir)
+            dirs[:] = []  # Do not enter subdirectories
+            continue
+
+        # Overwriting the dirs will prevents walk to get into them
+        files[:] = [d for d in files if not is_excluded(os.path.join(src_dir, d))]
+
+        dst_dir = os.path.normpath(os.path.join(dst, os.path.relpath(src_dir, src)))
+        if not os.path.exists(dst_dir):
+            os.makedirs(dst_dir)
+        for file_ in files:
+            src_file = os.path.join(src_dir, file_)
+            dst_file = os.path.join(dst_dir, file_)
+            if os.path.islink(src_file):
+                link_to_rel(src_file)
+            else:
+                shutil.copy2(src_file, dst_file)
+

@@ -53,11 +53,14 @@ class MakeGenerator(Generator):
                      ("BUILD_DIRS", self.assignment_append, cpp_info.build_paths),
                      ("RES_DIRS", self.assignment_append, cpp_info.res_paths),
                      ("LIBS", self.assignment_append, cpp_info.libs),
+                     ("SYSTEM_LIBS", self.assignment_append, cpp_info.system_libs),
                      ("DEFINES", self.assignment_append, cpp_info.defines),
                      ("CFLAGS", self.assignment_append, cpp_info.cflags),
                      ("CXXFLAGS", self.assignment_append, cpp_info.cxxflags),
                      ("SHAREDLINKFLAGS", self.assignment_append, cpp_info.sharedlinkflags),
-                     ("EXELINKFLAGS", self.assignment_append, cpp_info.exelinkflags)]
+                     ("EXELINKFLAGS", self.assignment_append, cpp_info.exelinkflags),
+                     ("FRAMEWORKS", self.assignment_append, cpp_info.frameworks),
+                     ("FRAMEWORK_PATHS", self.assignment_append, cpp_info.framework_paths)]
 
         return [self.create_makefile_var_pkg(var_name, pkg_name, operator, info)
                 for var_name, operator, info in vars_info]
@@ -106,4 +109,4 @@ class MakeGenerator(Generator):
     def all_dep_vars():
         return ["rootpath", "sysroot", "include_dirs", "lib_dirs", "bin_dirs", "build_dirs",
                 "res_dirs", "libs", "defines", "cflags", "cxxflags", "sharedlinkflags",
-                "exelinkflags"]
+                "exelinkflags", "frameworks", "framework_paths", "system_libs"]

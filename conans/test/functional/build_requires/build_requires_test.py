@@ -7,7 +7,6 @@ from parameterized.parameterized import parameterized
 from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient, GenConanfile
-from conans.util.files import load
 
 tool_conanfile = """from conans import ConanFile
 
@@ -73,7 +72,7 @@ class BuildRequiresTest(unittest.TestCase):
                       t.out)
         self.assertIn("catch/0.1@user/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache",
                       t.out)
-        conanbuildinfo = load(os.path.join(t.current_folder, "conanbuildinfo.txt"))
+        conanbuildinfo = t.load("conanbuildinfo.txt")
         self.assertIn('MYENV=["myenvcatch0.1env"]', conanbuildinfo)
         self.assertIn('[libs_catch]', conanbuildinfo)
         self.assertIn("mylibcatch0.1lib", conanbuildinfo)
@@ -155,7 +154,7 @@ Boost/1.0@user/channel
 
         self.assertIn("""Build requirements
     Boost/1.0@user/channel""", client.out)
-        conanbuildinfo = load(os.path.join(client.current_folder, "conanbuildinfo.txt"))
+        conanbuildinfo = client.load("conanbuildinfo.txt")
         self.assertIn('PATH=["myboostpath"]', conanbuildinfo)
 
     def test_dependents(self):
@@ -421,3 +420,34 @@ class package(ConanFile):
         self.assertIn("conanfile.txt: Applying build-requirement: build_req_req/1.0@test/test",
                       client.out)
 
+    def missing_transitive_dependency_test(self):
+        # https://github.com/conan-io/conan/issues/5682
+        client = TestClient()
+        zlib = textwrap.dedent("""
+            from conans import ConanFile
+            class ZlibPkg(ConanFile):
+                def package_info(self):
+                    self.cpp_info.libs = ["myzlib"]
+            """)
+        client.save({"conanfile.py": zlib})
+        client.run("export . zlib/1.0@test/test")
+
+        client.save({"conanfile.py": GenConanfile().with_require_plain("zlib/1.0@test/test")})
+        client.run("export . freetype/1.0@test/test")
+        client.save({"conanfile.py": GenConanfile().with_require_plain("freetype/1.0@test/test")})
+        client.run("export . fontconfig/1.0@test/test")
+        harfbuzz = textwrap.dedent("""
+            from conans import ConanFile
+            class harfbuzz(ConanFile):
+                requires = "freetype/1.0@test/test", "fontconfig/1.0@test/test"
+                def build(self):
+                     self.output.info("ZLIBS LIBS: %s" %self.deps_cpp_info["zlib"].libs)
+            """)
+        client.save({"conanfile.py": harfbuzz})
+        client.run("export . harfbuzz/1.0@test/test")
+
+        client.save({"conanfile.py": GenConanfile()
+                    .with_build_require_plain("fontconfig/1.0@test/test")
+                    .with_build_require_plain("harfbuzz/1.0@test/test")})
+        client.run("install . --build=missing")
+        self.assertIn("ZLIBS LIBS: ['myzlib']", client.out)

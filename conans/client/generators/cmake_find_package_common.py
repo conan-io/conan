@@ -8,6 +8,24 @@ set({name}_COMPILE_OPTIONS{build_type_suffix}_LIST "{deps.cxxflags_list}" "{deps
 set({name}_LIBRARIES_TARGETS{build_type_suffix} "") # Will be filled later, if CMake 3
 set({name}_LIBRARIES{build_type_suffix} "") # Will be filled later
 set({name}_LIBS{build_type_suffix} "") # Same as {name}_LIBRARIES
+set({name}_SYSTEM_LIBS{build_type_suffix} {deps.system_libs})
+set({name}_FRAMEWORK_DIRS{build_type_suffix} {deps.framework_paths})
+set({name}_FRAMEWORKS{build_type_suffix} {deps.frameworks})
+set({name}_FRAMEWORKS_FOUND{build_type_suffix} "") # Will be filled later
+set({name}_BUILD_MODULES_PATHS{build_type_suffix} {deps.build_modules_paths})
+
+# Apple frameworks
+if(APPLE)
+    foreach(_FRAMEWORK ${{{name}_FRAMEWORKS{build_type_suffix}}})
+        # https://cmake.org/pipermail/cmake-developers/2017-August/030199.html
+        find_library(CONAN_FRAMEWORK_FOUND NAME ${{_FRAMEWORK}} PATHS ${{{name}_FRAMEWORK_DIRS{build_type_suffix}}})
+        if(CONAN_FRAMEWORK_FOUND)
+            list(APPEND {name}_FRAMEWORKS_FOUND{build_type_suffix} ${{CONAN_FRAMEWORK_FOUND}})
+        else()
+            message(FATAL_ERROR "Framework library ${{_FRAMEWORK}} not found in paths: ${{{name}_FRAMEWORK_DIRS{build_type_suffix}}}")
+        endif()
+    endforeach()
+endif()
 
 mark_as_advanced({name}_INCLUDE_DIRS{build_type_suffix}
                  {name}_INCLUDES{build_type_suffix}
@@ -48,4 +66,21 @@ foreach(_LIBRARY_NAME ${{{name}_LIBRARY_LIST{build_type_suffix}}})
     endif()
 endforeach()
 set({name}_LIBS{build_type_suffix} ${{{name}_LIBRARIES{build_type_suffix}}})
+
+foreach(_FRAMEWORK ${{{name}_FRAMEWORKS_FOUND{build_type_suffix}}})
+    list(APPEND {name}_LIBRARIES_TARGETS{build_type_suffix} ${{_FRAMEWORK}})
+    list(APPEND {name}_LIBRARIES{build_type_suffix} ${{_FRAMEWORK}})
+endforeach()
+
+foreach(_SYSTEM_LIB ${{{name}_SYSTEM_LIB{build_type_suffix}}})
+    list(APPEND {name}_LIBRARIES_TARGETS{build_type_suffix} ${{_SYSTEM_LIB}})
+    list(APPEND {name}_LIBRARIES{build_type_suffix} ${{_SYSTEM_LIB}})
+endforeach()
+
+set(CMAKE_MODULE_PATH {deps.build_paths} ${{CMAKE_MODULE_PATH}})
+set(CMAKE_PREFIX_PATH {deps.build_paths} ${{CMAKE_PREFIX_PATH}})
+
+foreach(_BUILD_MODULE_PATH ${{{name}_BUILD_MODULES_PATHS{build_type_suffix}}})
+    include(${{_BUILD_MODULE_PATH}})
+endforeach()
 """

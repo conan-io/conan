@@ -498,3 +498,11 @@ class ConanInfo(object):
                 for token in tokens[:-1]:
                     attr = getattr(attr, token)
                 setattr(attr, tokens[-1], value)
+
+    def shared_library_package_id(self):
+        if self.full_options.shared:
+            for dep_name in self.requires.pkg_names:
+                dep_options = self.full_options[dep_name]
+                if "shared" not in dep_options or not self.full_options[dep_name].shared:
+                    self.requires[dep_name].package_revision_mode()
+
