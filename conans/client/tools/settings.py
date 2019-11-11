@@ -1,7 +1,6 @@
 from conans.errors import ConanInvalidConfiguration
 from conans.client.build.cppstd_flags import cppstd_flag, cppstd_from_settings
 from conans.client.tools.oss import OSInfo
-from conans.model.conan_file import ConanFile
 
 
 def check_min_cppstd(conanfile, cppstd, gnu_extensions=False):
@@ -14,8 +13,8 @@ def check_min_cppstd(conanfile, cppstd, gnu_extensions=False):
     :param cppstd: Minimal cppstd version required
     :param gnu_extensions: GNU extension is required (e.g gnu17). This option ONLY works on Linux.
     """
-    assert isinstance(conanfile, ConanFile), "conanfile must be a ConanFile object"
     assert (cppstd is not None), "Cannot check invalid cppstd version"
+    assert (cppstd is not None), "conanfile must be a ConanFile object"
 
     def less_than(lhs, rhs):
         def extract_cpp_version(cppstd):
