@@ -3,7 +3,7 @@ from conans.client.build.cppstd_flags import cppstd_flag, cppstd_from_settings
 from conans.client.tools.oss import OSInfo
 
 
-def cppstd_minimum_required(conanfile, cppstd, gnu_extensions=False):
+def check_min_cppstd(conanfile, cppstd, gnu_extensions=False):
     """ Validate if current cppstd fits the minimal version required.
 
         In case the current cppstd doesn't fit the minimal version required
