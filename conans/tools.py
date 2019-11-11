@@ -196,6 +196,7 @@ run_in_windows_bash = tools_win.run_in_windows_bash
 
 # from conans.client.tools.settings
 cppstd_minimum_required = tools_settings.cppstd_minimum_required
+valid_minimum_cppstd = tools_settings.valid_minimum_cppstd
 
 
 @contextmanager

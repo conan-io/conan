@@ -33,3 +33,18 @@ def cppstd_minimum_required(conanfile, cppstd, gnu_extensions=False):
                                             "c++ standard ({}).".format(cppstd))
         elif OSInfo().is_linux and gnu_extensions and "gnu" not in result:
             raise ConanInvalidConfiguration("Current compiler does not support GNU extensions.")
+
+
+def valid_minimum_cppstd(conanfile, cppstd, gnu_extensions=False):
+    """ Validate if current cppstd fits the minimal version required.
+
+    :param conanfile: ConanFile instance with cppstd to be compared
+    :param cppstd: Minimal cppstd version required
+    :param gnu_extensions: GNU extension is required (e.g gnu17). This option ONLY works on Linux.
+    :return: True, if current cppstd matches the required cppstd version. Otherwise, False.
+    """
+    try:
+        cppstd_minimum_required(conanfile, cppstd, gnu_extensions)
+    except ConanInvalidConfiguration:
+        return False
+    return True
