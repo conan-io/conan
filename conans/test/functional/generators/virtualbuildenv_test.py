@@ -71,4 +71,4 @@ class TestConan(ConanFile):
         self.assertNotEqual(normal_environment, activate_environment)
         output = check_output(get_cmd(deact_build_file))
         deactivate_environment = env_output_to_dict(output)
-        self.assertEqual(normal_environment, deactivate_environment)
+        self.assertDictEqual(normal_environment, deactivate_environment)

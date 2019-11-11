@@ -1,10 +1,14 @@
 import os
 import unittest
 
+from requests.models import Response
+
 from conans.client import tools
+from conans.errors import AuthenticationException
 from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE
-from conans.test.utils.tools import TestClient, TestServer
+from conans.test.utils.tools import TestClient
+from conans.test.utils.tools import TestServer
 from conans.util.files import save
 
 conan_content = """
@@ -119,3 +123,33 @@ class AuthorizeTest(unittest.TestCase):
 
         # Check that login failed once before ok
         self.assertEqual(self.conan.api.app.user_io.login_index["default"], 2)
+
+
+class AuthenticationTest(unittest.TestCase):
+
+    def unauthorized_during_capabilities_test(self):
+
+        class RequesterMock(object):
+
+            def __init__(self, *args, **kwargs):
+                pass
+
+            def get(self, url, *args, **kwargs):
+                if "authenticate" in url:
+                    resp_basic_auth = Response()
+                    resp_basic_auth._content = b"TOKEN"
+                    resp_basic_auth.status_code = 200
+                    resp_basic_auth.headers = {"Content-Type": "text/plain"}
+                    return resp_basic_auth
+
+                if "ping" in url and not kwargs["auth"].token:
+                    raise AuthenticationException(
+                        "I'm an Artifactory without anonymous access that "
+                        "requires authentication for the ping endpoint and "
+                        "I don't return the capabilities")
+                raise Exception("Shouldn't be more remote calls")
+
+        self.client = TestClient(requester_class=RequesterMock, default_server_user=True)
+        self.client.run("user user -p password -r default")
+        self.assertIn("Changed user of remote 'default' from 'None' (anonymous) to 'user'",
+                      self.client.out)

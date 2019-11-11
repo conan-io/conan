@@ -34,12 +34,12 @@ class PkgConfigGenerator(Generator):
     @property
     def content(self):
         ret = {}
-        for _, cpp_info in self.deps_build_info.dependencies:
-            ret["%s.pc" % cpp_info.name] = self.single_pc_file_contents(cpp_info)
+        for depname, cpp_info in self.deps_build_info.dependencies:
+            name = cpp_info.name.lower() if cpp_info.name != depname else depname
+            ret["%s.pc" % name] = self.single_pc_file_contents(name, cpp_info)
         return ret
 
-    def single_pc_file_contents(self, cpp_info):
-        name = cpp_info.name
+    def single_pc_file_contents(self, name, cpp_info):
         prefix_path = cpp_info.rootpath.replace("\\", "/")
         lines = ['prefix=%s' % prefix_path]
 
@@ -61,7 +61,7 @@ class PkgConfigGenerator(Generator):
         lines.append("Description: %s" % description)
         lines.append("Version: %s" % cpp_info.version)
         libdirs_flags = ["-L${%s}" % name for name in libdir_vars]
-        libnames_flags = ["-l%s " % name for name in cpp_info.libs]
+        libnames_flags = ["-l%s " % name for name in (cpp_info.libs + cpp_info.system_libs)]
         shared_flags = cpp_info.sharedlinkflags + cpp_info.exelinkflags
         the_os = (self.conanfile.settings.get_safe("os_build") or
                   self.conanfile.settings.get_safe("os"))

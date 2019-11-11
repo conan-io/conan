@@ -65,13 +65,7 @@ PkgA/0.1@user/testing"""
     def transitive_same_name_test(self):
         # https://github.com/conan-io/conan/issues/1366
         client = TestClient()
-        conanfile = '''
-from conans import ConanFile
-
-class HelloConan(ConanFile):
-    name = "HelloBar"
-    version = "0.1"
-'''
+        conanfile = GenConanfile().with_name("HelloBar").with_version("0.1")
         test_package = '''
 from conans import ConanFile
 
@@ -84,8 +78,9 @@ class HelloTestConan(ConanFile):
         client.run("create . lasote/testing")
         self.assertIn("HelloBar/0.1@lasote/testing: Forced build from source",
                       client.out)
-        client.save({"conanfile.py": conanfile.replace("HelloBar", "Hello") +
-                     "    requires='HelloBar/0.1@lasote/testing'",
+        conanfile = GenConanfile().with_name("Hello").with_version("0.1")\
+                                  .with_require_plain("HelloBar/0.1@lasote/testing")
+        client.save({"conanfile.py": conanfile,
                      "test_package/conanfile.py": test_package.replace("HelloBar", "Hello")})
         client.run("create . lasote/stable")
         self.assertNotIn("HelloBar/0.1@lasote/testing: Forced build from source",
@@ -162,11 +157,7 @@ class HelloTestConan(ConanFile):
 
     def keep_build_error_test(self):
         client = TestClient()
-        conanfile = """from conans import ConanFile
-class MyPkg(ConanFile):
-    pass
-"""
-        client.save({"conanfile.py": conanfile})
+        client.save({"conanfile.py": GenConanfile()})
         client.run("create . Pkg/0.1@lasote/testing --keep-build", assert_error=True)
         self.assertIn("ERROR: --keep-build specified, but build folder not found", client.out)
 
@@ -304,13 +295,7 @@ class Pkg(ConanFile):
 
     def test_error_create_name_version(self):
         client = TestClient()
-        conanfile = """
-from conans import ConanFile
-class TestConan(ConanFile):
-    name = "Hello"
-    version = "1.2"
-"""
-        client.save({"conanfile.py": conanfile})
+        client.save({"conanfile.py": GenConanfile().with_name("Hello").with_version("1.2")})
         client.run("create . Hello/1.2@lasote/stable")
         client.run("create ./ Pkg/1.2@lasote/stable", assert_error=True)
         self.assertIn("ERROR: Package recipe with name Pkg!=Hello", client.out)
@@ -319,11 +304,7 @@ class TestConan(ConanFile):
 
     def create_user_channel_test(self):
         client = TestClient()
-        client.save({"conanfile.py": """from conans import ConanFile
-class MyPkg(ConanFile):
-    name = "Pkg"
-    version = "0.1"
-"""})
+        client.save({"conanfile.py": GenConanfile().with_name("Pkg").with_version("0.1")})
         client.run("create . lasote/channel")
         self.assertIn("Pkg/0.1@lasote/channel: Generating the package", client.out)
         client.run("search")
@@ -394,18 +375,11 @@ class MyTest(ConanFile):
 
     def create_test_package_requires(self):
         client = TestClient()
-        dep_conanfile = """from conans import ConanFile
-class MyPkg(ConanFile):
-    pass
-    """
-        client.save({"conanfile.py": dep_conanfile})
+        client.save({"conanfile.py": GenConanfile()})
         client.run("create . Dep/0.1@user/channel")
         client.run("create . Other/1.0@user/channel")
 
-        conanfile = """from conans import ConanFile
-class MyPkg(ConanFile):
-    requires = "Dep/0.1@user/channel"
-    """
+        conanfile = GenConanfile().with_require_plain("Dep/0.1@user/channel")
         test_conanfile = """from conans import ConanFile
 class MyPkg(ConanFile):
     requires = "Other/1.0@user/channel"
@@ -471,13 +445,7 @@ class HelloTestConan(ConanFile):
                       client.out)
 
     def test_build_folder_handling_test(self):
-        conanfile = '''
-from conans import ConanFile
-
-class ConanLib(ConanFile):
-    name = "Hello"
-    version = "0.1"
-'''
+        conanfile = GenConanfile().with_name("Hello").with_version("0.1")
         test_conanfile = '''
 from conans import ConanFile
 
@@ -526,13 +494,13 @@ class TestConanLib(ConanFile):
         """
         client = TestClient()
         conanfile = textwrap.dedent("""
-        from conans import ConanFile
-
-        class MyPkg(ConanFile):
-
-            def build(self):
-                raise ConanException("Build error")
-        """)
+            from conans import ConanFile
+    
+            class MyPkg(ConanFile):
+    
+                def build(self):
+                    raise ConanException("Build error")
+            """)
         client.save({"conanfile.py": conanfile})
         ref = ConanFileReference("pkg", "0.1", "danimtb", "testing")
         pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID, None)
@@ -543,27 +511,14 @@ class TestConanLib(ConanFile):
 
     def create_with_name_and_version_test(self):
         client = TestClient()
-        conanfile = textwrap.dedent("""
-                from conans import ConanFile
-
-                class MyPkg(ConanFile):
-                    pass
-                """)
-        client.save({"conanfile.py": conanfile})
+        client.save({"conanfile.py": GenConanfile()})
         client.run('create . lib/1.0@')
         self.assertIn("lib/1.0: Created package revision", client.out)
 
     def create_with_only_user_channel_test(self):
         """This should be the recommended way and only from Conan 2.0"""
         client = TestClient()
-        conanfile = textwrap.dedent("""
-                from conans import ConanFile
-
-                class MyPkg(ConanFile):
-                    name = "lib"
-                    version = "1.0"
-                """)
-        client.save({"conanfile.py": conanfile})
+        client.save({"conanfile.py": GenConanfile().with_name("lib").with_version("1.0")})
         client.run('create . @user/channel')
         self.assertIn("lib/1.0@user/channel: Created package revision", client.out)
 
@@ -573,53 +528,30 @@ class TestConanLib(ConanFile):
     def requires_without_user_channel_test(self):
         client = TestClient()
         conanfile = textwrap.dedent('''
-    from conans import ConanFile
-
-    class HelloConan(ConanFile):
-        name = "HelloBar"
-        version = "0.1"
+            from conans import ConanFile
         
-        def package_info(self):
-            self.output.warn("Hello, I'm HelloBar")
-    ''')
+            class HelloConan(ConanFile):
+                name = "HelloBar"
+                version = "0.1"
+                
+                def package_info(self):
+                    self.output.warn("Hello, I'm HelloBar")
+            ''')
 
         client.save({"conanfile.py": conanfile})
         client.run("create .")
 
-        conanfile = textwrap.dedent('''
-    from conans import ConanFile
-
-    class HelloTestConan(ConanFile):
-        requires = "HelloBar/0.1"
-    ''')
-
-        client.save({"conanfile.py": conanfile})
+        client.save({"conanfile.py": GenConanfile().with_require_plain("HelloBar/0.1")})
         client.run("create . consumer/1.0@")
         self.assertIn("HelloBar/0.1: WARN: Hello, I'm HelloBar", client.out)
         self.assertIn("consumer/1.0: Created package revision", client.out)
 
     def conaninfo_contents_without_user_channel_test(self):
         client = TestClient()
-        conanfile = textwrap.dedent('''
-            from conans import ConanFile
-
-            class HelloConan(ConanFile):
-                name = "Hello"
-                version = "0.1"
-        ''')
-
-        client.save({"conanfile.py": conanfile})
+        client.save({"conanfile.py": GenConanfile().with_name("Hello").with_version("0.1")})
         client.run("create .")
-
-        conanfile2 = textwrap.dedent('''
-            from conans import ConanFile
-
-            class ByeConan(ConanFile):
-                name = "Bye"
-                version = "0.1"
-                requires = "Hello/0.1"
-            ''')
-        client.save({"conanfile.py": conanfile2})
+        client.save({"conanfile.py": GenConanfile().with_name("Bye").with_version("0.1")
+                                                   .with_require_plain("Hello/0.1")})
         client.run("create .")
 
         ref = ConanFileReference.loads("Bye/0.1")
