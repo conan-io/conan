@@ -15,7 +15,7 @@ import requests
 from conans.client.output import ConanOutput
 # Tools from conans.client.tools
 from conans.client.tools import files as tools_files, net as tools_net, oss as tools_oss, \
-    system_pm as tools_system_pm, win as tools_win, settings as tools_settings
+    system_pm as tools_system_pm, win as tools_win
 from conans.client.tools.env import *  # pylint: disable=unused-import
 from conans.client.tools.pkg_config import *  # pylint: disable=unused-import
 from conans.client.tools.scm import *  # pylint: disable=unused-import
