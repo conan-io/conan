@@ -119,6 +119,9 @@ class RestV1Methods(RestCommonMethods):
         return {filepath: complete_url(self.remote_url, url) for filepath, url in urls.items()}
 
     def _add_matrix_params(self, urls):
+        if not self._matrix_params:
+            return urls
+
         matrix_str = self.router._matrix_params_str
         ret = {}
         for file, url in urls.items():

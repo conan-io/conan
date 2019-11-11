@@ -12,7 +12,7 @@ class UsersController(object):
     """
     def attach_to(self, app):
 
-        r = BottleRoutes(matrix_params=False)
+        r = BottleRoutes()
 
         @app.route(r.common_authenticate, method=["GET"])
         def authenticate(http_basic_credentials):

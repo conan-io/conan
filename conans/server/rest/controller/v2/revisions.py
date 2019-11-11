@@ -11,7 +11,7 @@ class RevisionsController(object):
     @staticmethod
     def attach_to(app):
 
-        r = BottleRoutes(matrix_params=False)
+        r = BottleRoutes()
 
         @app.route(r.recipe_revisions, method="GET")
         def get_recipe_revisions(name, version, username, channel, auth_user):
