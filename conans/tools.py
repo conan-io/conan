@@ -15,10 +15,11 @@ import requests
 from conans.client.output import ConanOutput
 # Tools from conans.client.tools
 from conans.client.tools import files as tools_files, net as tools_net, oss as tools_oss, \
-    system_pm as tools_system_pm, win as tools_win
+    system_pm as tools_system_pm, win as tools_win, settings as tools_settings
 from conans.client.tools.env import *  # pylint: disable=unused-import
 from conans.client.tools.pkg_config import *  # pylint: disable=unused-import
 from conans.client.tools.scm import *  # pylint: disable=unused-import
+from conans.client.tools.settings import *  # pylint: disable=unused-import
 from conans.client.tools.apple import *
 from conans.client.tools.android import *
 # Tools form conans.util
@@ -192,11 +193,6 @@ WSL = tools_win.WSL
 SFU = tools_win.SFU
 unix_path = tools_win.unix_path
 run_in_windows_bash = tools_win.run_in_windows_bash
-
-
-# from conans.client.tools.settings
-cppstd_minimum_required = tools_settings.cppstd_minimum_required
-valid_minimum_cppstd = tools_settings.valid_minimum_cppstd
 
 
 @contextmanager
