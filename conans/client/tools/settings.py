@@ -4,7 +4,7 @@ from conans.client.tools.oss import OSInfo
 
 
 def check_min_cppstd(conanfile, cppstd, gnu_extensions=False):
-    """ Validate if current cppstd fits the minimal version required.
+    """ Check if current cppstd fits the minimal version required.
 
         In case the current cppstd doesn't fit the minimal version required
         by cppstd, a ConanInvalidConfiguration exception will be raised.
@@ -44,7 +44,7 @@ def valid_min_cppstd(conanfile, cppstd, gnu_extensions=False):
     :return: True, if current cppstd matches the required cppstd version. Otherwise, False.
     """
     try:
-        cppstd_minimum_required(conanfile, cppstd, gnu_extensions)
+        check_min_cppstd(conanfile, cppstd, gnu_extensions)
     except ConanInvalidConfiguration:
         return False
     return True
