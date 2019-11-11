@@ -124,8 +124,8 @@ class RestV1Methods(RestCommonMethods):
 
         matrix_str = self.router._matrix_params_str
         ret = {}
-        for file, url in urls.items():
-            ret[file] = url.replace("v1/files/", "v1/files{}/".format(matrix_str))
+        for filename, url in urls.items():
+            ret[filename] = url.replace("v1/files/", "v1/files{}/".format(matrix_str))
         return ret
 
     def _upload_recipe(self, ref, files_to_upload, retry, retry_wait):
