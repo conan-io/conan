@@ -583,6 +583,7 @@ class TestConanLib(ConanFile):
                         field = field.split(".")[-1]
                         attr = compatible_pkg.settings.compiler
                         setattr(attr, field, value)
+                    self.compatible_packages.append(compatible_pkg)
             """)
         visual_profile = textwrap.dedent("""
             [settings]
@@ -629,6 +630,7 @@ class TestConanLib(ConanFile):
                         field = field.split(".")[-1]
                         attr = compatible_pkg.settings.compiler.base
                         setattr(attr, field, value)
+                    self.compatible_packages.append(compatible_pkg)
             """)
         visual_profile = textwrap.dedent("""
             [settings]
