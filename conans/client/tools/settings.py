@@ -1,6 +1,7 @@
 from conans.errors import ConanInvalidConfiguration
 from conans.client.build.cppstd_flags import cppstd_flag, cppstd_from_settings
 from conans.client.tools.oss import OSInfo
+from conans.model.conan_file import ConanFile
 
 
 def check_min_cppstd(conanfile, cppstd, gnu_extensions=False):
@@ -13,20 +14,32 @@ def check_min_cppstd(conanfile, cppstd, gnu_extensions=False):
     :param cppstd: Minimal cppstd version required
     :param gnu_extensions: GNU extension is required (e.g gnu17). This option ONLY works on Linux.
     """
-    def extract_cpp_version(cppstd):
-        return str(cppstd).replace("gnu", "")
+    assert isinstance(conanfile, ConanFile), "conanfile must be a ConanFile object"
+    assert (cppstd is not None), "Cannot check invalid cppstd version"
+
+    def less_than(lhs, rhs):
+        def extract_cpp_version(cppstd):
+            return str(cppstd).replace("gnu", "")
+
+        def add_millennium(cppstd):
+            return "19%s" % cppstd if cppstd == "98" else "20%s" % cppstd
+
+        lhs = add_millennium(extract_cpp_version(lhs))
+        rhs = add_millennium(extract_cpp_version(rhs))
+        return lhs < rhs
 
     current_cppstd = cppstd_from_settings(conanfile.settings)
     if current_cppstd and gnu_extensions and "gnu" not in current_cppstd and OSInfo().is_linux:
         raise ConanInvalidConfiguration("Current cppstd ({}) does not have GNU extensions, which is"
                                         " required on Linux platform.".format(current_cppstd))
-    elif current_cppstd and extract_cpp_version(current_cppstd) < extract_cpp_version(cppstd):
+    elif current_cppstd and less_than(current_cppstd, cppstd):
         raise ConanInvalidConfiguration("Current cppstd ({}) is lower than required c++ standard "
                                         "({}).".format(current_cppstd, cppstd))
     else:
         if OSInfo().is_linux and gnu_extensions and "gnu" not in cppstd:
             cppstd = "gnu" + cppstd
-        result = cppstd_flag(conanfile.settings.compiler, conanfile.settings.compiler.version,
+        result = cppstd_flag(conanfile.settings.get_safe("compiler"),
+                             conanfile.settings.get_safe("compiler.version"),
                              cppstd)
         if not result:
             raise ConanInvalidConfiguration("Current compiler does not support the required "
