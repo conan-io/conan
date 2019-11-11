@@ -32,8 +32,7 @@ class RestApiClient(object):
         capabilities = self._cached_capabilities.get(self.remote_url)
         if capabilities is None:
             tmp = RestV1Methods(self.remote_url, self.token, self.custom_headers, self._output,
-                                self.requester, self.verify_ssl, self._artifacts_properties,
-                                matrix_params=False)
+                                self.requester, self.verify_ssl, self._artifacts_properties)
             capabilities = tmp.server_capabilities()
             self._cached_capabilities[self.remote_url] = capabilities
             logger.debug("REST: Cached capabilities for the remote: %s" % capabilities)
@@ -52,7 +51,7 @@ class RestApiClient(object):
         else:
             return RestV1Methods(self.remote_url, self.token, self.custom_headers, self._output,
                                  self.requester, self.verify_ssl, self._artifacts_properties,
-                                 matrix_params=matrix_params)
+                                 matrix_params)
 
     def get_recipe_manifest(self, ref):
         return self._get_api().get_recipe_manifest(ref)

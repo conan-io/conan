@@ -157,9 +157,10 @@ class RestV1Methods(RestCommonMethods):
                 output.rewrite_line("Uploading %s" % filename)
             auth, dedup = self._file_server_capabilities(resource_url)
             try:
+                headers = self._artifacts_properties if not self._matrix_params else {}
                 uploader.upload(resource_url, files[filename], auth=auth, dedup=dedup,
                                 retry=retry, retry_wait=retry_wait,
-                                headers=self._artifacts_properties)
+                                headers=headers)
             except Exception as exc:
                 output.error("\nError uploading file: %s, '%s'" % (filename, exc))
                 failed.append(filename)

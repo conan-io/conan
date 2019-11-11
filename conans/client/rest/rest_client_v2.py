@@ -181,10 +181,11 @@ class RestV2Methods(RestCommonMethods):
                 self._output.rewrite_line("Uploading %s" % filename)
             resource_url = urls[filename]
             try:
+                headers = self._artifacts_properties if not self._matrix_params else {}
                 uploader.upload(resource_url, files[filename], auth=self.auth,
                                 dedup=self._checksum_deploy, retry=retry,
                                 retry_wait=retry_wait,
-                                headers=self._artifacts_properties)
+                                headers=headers)
             except (AuthenticationException, ForbiddenException):
                 raise
             except Exception as exc:
