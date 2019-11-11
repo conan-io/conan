@@ -1,10 +1,8 @@
 import unittest
-import mock
 from parameterized import parameterized
 from textwrap import dedent
 
 from conans.test.utils.tools import TestClient
-from conans.client.tools import OSInfo
 
 
 class CppStdMinimumVersionTests(unittest.TestCase):
@@ -12,7 +10,7 @@ class CppStdMinimumVersionTests(unittest.TestCase):
     CONANFILE = dedent("""
         import os
         from conans import ConanFile
-        from conans.tools import check_min_cppstd
+        from conans.tools import check_min_cppstd, valid_min_cppstd
 
         class Fake(ConanFile):
             name = "fake"
@@ -22,6 +20,7 @@ class CppStdMinimumVersionTests(unittest.TestCase):
             def configure(self):
                 check_min_cppstd(self, "17", False)
                 self.output.info("valid standard")
+                assert valid_min_cppstd(self, "17", False)
         """)
 
     PROFILE = dedent("""
@@ -50,246 +49,3 @@ class CppStdMinimumVersionTests(unittest.TestCase):
         self.client.run("create . user/channel -pr myprofile", assert_error=True)
         self.assertIn("Invalid configuration: Current cppstd (%s) is lower than required c++ "
                       "standard (17)." % cppstd, self.client.out)
-
-    @parameterized.expand(["17", "gnu17"])
-    def test_cppstd_from_arguments(self, cppstd):
-        profile = CppStdMinimumVersionTests.PROFILE.replace("{}", "")
-        self.client.save({"myprofile": profile})
-        self.client.run("create . user/channel -pr myprofile -s compiler.cppstd=%s" % cppstd)
-        self.assertIn("valid standard", self.client.out)
-
-    @parameterized.expand(["11", "gnu11"])
-    def test_invalid_cppstd_from_arguments(self, cppstd):
-        profile = CppStdMinimumVersionTests.PROFILE.replace("{}", "")
-        self.client.save({"myprofile": profile})
-        self.client.run("create . user/channel --pr myprofile -s compiler.cppstd=%s" % cppstd,
-                        assert_error=True)
-        self.assertIn("Invalid configuration: Current cppstd (%s) is lower than required c++ "
-                      "standard (17)." % cppstd, self.client.out)
-
-    def test_cppstd_from_compiler(self):
-        profile = CppStdMinimumVersionTests.PROFILE.replace("{}", "")
-        self.client.save({"myprofile": profile})
-        self.client.run("create . user/channel -pr myprofile")
-        self.assertIn("valid standard", self.client.out)
-
-    def test_invalid_cppstd_from_compiler(self):
-        profile = CppStdMinimumVersionTests.PROFILE.replace("{}", "").replace("9", "4.9")
-        self.client.save({"myprofile": profile})
-        self.client.run("create . user/channel -pr myprofile", assert_error=True)
-        self.assertIn("Invalid configuration: Current compiler does not support the required "
-                      "c++ standard (17).", self.client.out)
-
-    @parameterized.expand([["gnu17", "Linux"], ["gnu17", "Windows"]])
-    def test_valid_gnu_extensions_from_settings(self, cppstd, os):
-        self.client.save({"conanfile.py": CppStdMinimumVersionTests.CONANFILE.replace("False",
-                                                                                      "True")})
-        with mock.patch("platform.system", mock.MagicMock(return_value=os)):
-            with mock.patch.object(OSInfo, '_get_linux_distro_info'):
-                profile = CppStdMinimumVersionTests.PROFILE.replace("{}", "compiler.cppstd=%s" %
-                                                                    cppstd)
-                self.client.save({"myprofile": profile})
-                self.client.run("create . user/channel -pr myprofile")
-                self.assertIn("valid standard", self.client.out)
-
-    @parameterized.expand([
-        ["17", "Linux", "Invalid configuration: Current cppstd (17) does not have GNU extensions, "
-                        "which is required on Linux platform.", True],
-        ["17", "Windows", "valid standard", False]])
-    def test_invalid_gnu_extensions_from_settings(self, cppstd, system, expected, error):
-        self.client.save({"conanfile.py": CppStdMinimumVersionTests.CONANFILE.replace("False",
-                                                                                      "True")})
-        with mock.patch("platform.system", mock.MagicMock(return_value=system)):
-            with mock.patch.object(OSInfo, '_get_linux_distro_info'):
-                profile = CppStdMinimumVersionTests.PROFILE.replace("{}", "compiler.cppstd=%s" %
-                                                                    cppstd)
-                self.client.save({"myprofile": profile})
-                self.client.run("create . user/channel -pr myprofile", assert_error=error)
-                self.assertIn(expected, self.client.out)
-
-    @parameterized.expand([["gnu17", "Linux"], ["gnu17", "Windows"]])
-    def test_gnu_extensions_from_arguments(self, cppstd, os):
-        self.client.save({"conanfile.py": CppStdMinimumVersionTests.CONANFILE.replace("False",
-                                                                                      "True")})
-        self.client.save({"myprofile": CppStdMinimumVersionTests.PROFILE.replace("{}", "")})
-        with mock.patch("platform.system", mock.MagicMock(return_value=os)):
-            with mock.patch.object(OSInfo, '_get_linux_distro_info'):
-                self.client.run("create . user/channel -pr myprofile -s compiler.cppstd=%s" %
-                                cppstd)
-                self.assertIn("valid standard", self.client.out)
-
-    @parameterized.expand([["17", "Linux", "Invalid configuration: Current cppstd (17) does not "
-                           "have GNU extensions, which is required on Linux platform.", True],
-                          ["17", "Windows", "valid standard", False]])
-    def test_invalid_gnu_extensions_from_arguments(self, cppstd, os, expected, error):
-        self.client.save({"conanfile.py": CppStdMinimumVersionTests.CONANFILE.replace("False",
-                                                                                      "True")})
-        self.client.save({"myprofile": CppStdMinimumVersionTests.PROFILE.replace("{}", "")})
-        with mock.patch("platform.system", mock.MagicMock(return_value=os)):
-            with mock.patch.object(OSInfo, '_get_linux_distro_info'):
-                self.client.run("create . user/channel --pr myprofile -s compiler.cppstd=%s" % cppstd,
-                                assert_error=error)
-                self.assertIn(expected, self.client.out)
-
-    def test_gnu_extensions_from_compiler(self):
-        self.client.save({"conanfile.py": CppStdMinimumVersionTests.CONANFILE.replace("False",
-                                                                                      "True")})
-        self.client.save({"myprofile": CppStdMinimumVersionTests.PROFILE.replace("{}", "")})
-        with mock.patch("platform.system", mock.MagicMock(return_value="Linux")):
-            with mock.patch.object(OSInfo, '_get_linux_distro_info'):
-                self.client.run("create . user/channel -pr myprofile")
-                self.assertIn("valid standard", self.client.out)
-
-    @parameterized.expand([["Linux", "gnu17"],
-                           ["Windows", "17"]])
-    def test_invalid_gnu_extensions_from_compiler(self, os, expected):
-        self.client.save({"conanfile.py": CppStdMinimumVersionTests.CONANFILE.replace("False",
-                                                                                      "True")})
-        self.client.save({"myprofile": CppStdMinimumVersionTests.PROFILE.replace("{}", "")
-                                                                        .replace("9", "4.9")})
-        with mock.patch("platform.system", mock.MagicMock(return_value=os)):
-            with mock.patch.object(OSInfo, '_get_linux_distro_info'):
-                self.client.run("create . user/channel -pr myprofile", assert_error=True)
-                self.assertIn("Invalid configuration: Current compiler does not support the "
-                              "required c++ standard (%s)." % expected, self.client.out)
-
-
-class ValidMinimumCppSTDTests(unittest.TestCase):
-
-    CONANFILE = dedent("""
-        import os
-        from conans import ConanFile
-        from conans.tools import valid_min_cppstd
-
-        class Fake(ConanFile):
-            name = "fake"
-            version = "0.2"
-            settings = "compiler"
-
-            def configure(self):
-                if valid_min_cppstd(self, "17", False):
-                    self.output.info("effective standard")
-                else:
-                    self.output.error("invalid standard")
-        """)
-
-    PROFILE = dedent("""
-        [settings]
-        compiler=gcc
-        compiler.version=9
-        compiler.libcxx=libstdc++
-        {}
-        """)
-
-    def setUp(self):
-        self.client = TestClient()
-        self.client.save({"conanfile.py": ValidMinimumCppSTDTests.CONANFILE})
-
-    @parameterized.expand(["17", "gnu17"])
-    def test_cppstd_from_settings(self, cppstd):
-        profile = ValidMinimumCppSTDTests.PROFILE.replace("{}", "compiler.cppstd=%s" % cppstd)
-        self.client.save({"myprofile":  profile})
-        self.client.run("create . user/channel -pr myprofile")
-        self.assertIn("effective standard", self.client.out)
-
-    @parameterized.expand(["11", "gnu11"])
-    def test_invalid_cppstd_from_settings(self, cppstd):
-        profile = ValidMinimumCppSTDTests.PROFILE.replace("{}", "compiler.cppstd=%s" % cppstd)
-        self.client.save({"myprofile": profile})
-        self.client.run("create . user/channel -pr myprofile")
-        self.assertIn("invalid standard", self.client.out)
-
-    @parameterized.expand(["17", "gnu17"])
-    def test_cppstd_from_arguments(self, cppstd):
-        profile = ValidMinimumCppSTDTests.PROFILE.replace("{}", "")
-        self.client.save({"myprofile": profile})
-        self.client.run("create . user/channel -pr myprofile -s compiler.cppstd=%s" % cppstd)
-        self.assertIn("effective standard", self.client.out)
-
-    @parameterized.expand(["11", "gnu11"])
-    def test_invalid_cppstd_from_arguments(self, cppstd):
-        profile = ValidMinimumCppSTDTests.PROFILE.replace("{}", "")
-        self.client.save({"myprofile": profile})
-        self.client.run("create . user/channel --pr myprofile -s compiler.cppstd=%s" % cppstd)
-        self.assertIn("invalid standard", self.client.out)
-
-    def test_cppstd_from_compiler(self):
-        profile = ValidMinimumCppSTDTests.PROFILE.replace("{}", "")
-        self.client.save({"myprofile": profile})
-        self.client.run("create . user/channel -pr myprofile")
-        self.assertIn("effective standard", self.client.out)
-
-    def test_invalid_cppstd_from_compiler(self):
-        profile = ValidMinimumCppSTDTests.PROFILE.replace("{}", "").replace("9", "4.9")
-        self.client.save({"myprofile": profile})
-        self.client.run("create . user/channel -pr myprofile")
-        self.assertIn("invalid standard", self.client.out)
-
-    @parameterized.expand([["gnu17", "Linux"], ["gnu17", "Windows"]])
-    def test_valid_gnu_extensions_from_settings(self, cppstd, os):
-        self.client.save({"conanfile.py": ValidMinimumCppSTDTests.CONANFILE.replace("False",
-                                                                                      "True")})
-        with mock.patch("platform.system", mock.MagicMock(return_value=os)):
-            with mock.patch.object(OSInfo, '_get_linux_distro_info'):
-                profile = ValidMinimumCppSTDTests.PROFILE.replace("{}", "compiler.cppstd=%s" %
-                                                                    cppstd)
-                self.client.save({"myprofile": profile})
-                self.client.run("create . user/channel -pr myprofile")
-                self.assertIn("effective standard", self.client.out)
-
-    @parameterized.expand([
-        ["17", "Linux", "invalid standard"],
-        ["17", "Windows", "effective standard"]])
-    def test_invalid_gnu_extensions_from_settings(self, cppstd, system, expected):
-        self.client.save({"conanfile.py": ValidMinimumCppSTDTests.CONANFILE.replace("False",
-                                                                                      "True")})
-        with mock.patch("platform.system", mock.MagicMock(return_value=system)):
-            with mock.patch.object(OSInfo, '_get_linux_distro_info'):
-                profile = ValidMinimumCppSTDTests.PROFILE.replace("{}", "compiler.cppstd=%s" %
-                                                                    cppstd)
-                self.client.save({"myprofile": profile})
-                self.client.run("create . user/channel -pr myprofile")
-                self.assertIn(expected, self.client.out)
-
-    @parameterized.expand([["gnu17", "Linux"], ["gnu17", "Windows"]])
-    def test_gnu_extensions_from_arguments(self, cppstd, os):
-        self.client.save({"conanfile.py": ValidMinimumCppSTDTests.CONANFILE.replace("False",
-                                                                                      "True")})
-        self.client.save({"myprofile": ValidMinimumCppSTDTests.PROFILE.replace("{}", "")})
-        with mock.patch("platform.system", mock.MagicMock(return_value=os)):
-            with mock.patch.object(OSInfo, '_get_linux_distro_info'):
-                self.client.run("create . user/channel -pr myprofile -s compiler.cppstd=%s" %
-                                cppstd)
-                self.assertIn("effective standard", self.client.out)
-
-    @parameterized.expand([["17", "Linux", "invalid standard"],
-                          ["17", "Windows", "effective standard"]])
-    def test_invalid_gnu_extensions_from_arguments(self, cppstd, os, expected):
-        self.client.save({"conanfile.py": ValidMinimumCppSTDTests.CONANFILE.replace("False",
-                                                                                    "True")})
-        self.client.save({"myprofile": ValidMinimumCppSTDTests.PROFILE.replace("{}", "")})
-        with mock.patch("platform.system", mock.MagicMock(return_value=os)):
-            with mock.patch.object(OSInfo, '_get_linux_distro_info'):
-                self.client.run("create . user/channel --pr myprofile -s compiler.cppstd=%s" %
-                                cppstd)
-                self.assertIn(expected, self.client.out)
-
-    def test_gnu_extensions_from_compiler(self):
-        self.client.save({"conanfile.py": ValidMinimumCppSTDTests.CONANFILE.replace("False",
-                                                                                    "True")})
-        self.client.save({"myprofile": CppStdMinimumVersionTests.PROFILE.replace("{}", "")})
-        with mock.patch("platform.system", mock.MagicMock(return_value="Linux")):
-            with mock.patch.object(OSInfo, '_get_linux_distro_info'):
-                self.client.run("create . user/channel -pr myprofile")
-                self.assertIn("effective standard", self.client.out)
-
-    @parameterized.expand(["Linux", "Windows"])
-    def test_invalid_gnu_extensions_from_compiler(self, os):
-        self.client.save({"conanfile.py": ValidMinimumCppSTDTests.CONANFILE.replace("False",
-                                                                                      "True")})
-        self.client.save({"myprofile": ValidMinimumCppSTDTests.PROFILE.replace("{}", "")
-                                                                      .replace("9", "4.9")})
-        with mock.patch("platform.system", mock.MagicMock(return_value=os)):
-            with mock.patch.object(OSInfo, '_get_linux_distro_info'):
-                self.client.run("create . user/channel -pr myprofile")
-                self.assertIn("invalid standard", self.client.out)
