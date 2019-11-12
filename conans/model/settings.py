@@ -233,7 +233,10 @@ class Settings(object):
 
     @staticmethod
     def loads(text):
-        return Settings(yaml.safe_load(text) or {})
+        try:
+            return Settings(yaml.safe_load(text) or {})
+        except yaml.YAMLError as ye:
+            raise ConanException("settings:invalid YAML format:%s" % str(ye))
 
     def validate(self):
         for field in self.fields:
