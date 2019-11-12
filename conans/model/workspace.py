@@ -102,7 +102,7 @@ class Workspace(object):
                 cmake += "macro(conan_workspace_subdirectories)\n"
                 cmake += add_subdirs
                 cmake += "endmacro()"
-            cmake_path = os.path.join(install_folder, "conanworkspace.cmake")
+            cmake_path = os.path.join(self._base_folder, install_folder, "conanworkspace.cmake")
             save(cmake_path, cmake)
 
     def get_editable_dict(self):
