@@ -91,7 +91,7 @@ class AdjustAutoTestCase(unittest.TestCase):
     """
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile, CMake, CMakeToolchain
+        from conans import ConanFile, CMake, CMakeToolchain, CMakeToolchainBuildHelper
 
         class App(ConanFile):
             name = "app"
@@ -111,7 +111,9 @@ class AdjustAutoTestCase(unittest.TestCase):
                 # Do not actually build, just configure
                 if self.options.use_toolchain:
                     # A build helper could be easily added to replace this line
-                    self.run('cmake "%s" -DCMAKE_TOOLCHAIN_FILE=""" + CMakeToolchain.filename + """' % (self.source_folder))
+                    # self.run('cmake "%s" -DCMAKE_TOOLCHAIN_FILE=""" + CMakeToolchain.filename + """' % (self.source_folder))
+                    cmake = CMakeToolchainBuildHelper(self)
+                    cmake.configure(source_folder=".")
                 else:
                     cmake = CMake(self)
                     cmake.configure(source_folder=".")
