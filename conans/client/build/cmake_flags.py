@@ -128,15 +128,13 @@ def build_type_definition(build_type, generator):
 class CMakeDefinitionsBuilder(object):
 
     def __init__(self, conanfile, cmake_system_name=True, make_program=None,
-                 parallel=True, generator=None, set_cmake_flags=False,
-                 forced_build_type=None, output=None):
+                 parallel=True, generator=None, set_cmake_flags=False, output=None):
         self._conanfile = conanfile
         self._forced_cmake_system_name = cmake_system_name
         self._make_program = make_program
         self._parallel = parallel
         self._generator = generator
         self._set_cmake_flags = set_cmake_flags
-        self._forced_build_type = forced_build_type
         self._output = output
 
     def _ss(self, setname):

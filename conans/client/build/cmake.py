@@ -51,7 +51,6 @@ class CMake(BaseCMake):
                                           make_program=make_program, parallel=parallel,
                                           generator=self.generator,
                                           set_cmake_flags=set_cmake_flags,
-                                          forced_build_type=build_type,
                                           output=self._conanfile.output)
         # FIXME CONAN 2.0: CMake() interface should be always the constructor and self.definitions.
         # FIXME CONAN 2.0: Avoid properties and attributes to make the user interface more clear

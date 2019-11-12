@@ -4,6 +4,7 @@ import platform
 from conans.client import tools
 from conans.client.build.base_cmake import BaseCMake, _compute_build_flags
 from conans.client.build.cmake_flags import is_multi_configuration
+from conans.client.toolchain.cmake import CMakeToolchain
 from conans.errors import ConanException
 
 
@@ -11,7 +12,7 @@ def _validate_recipe(conanfile):
     # Toolchain is required
     toolchain_method = getattr(conanfile, "toolchain", None)
     if not toolchain_method or not callable(toolchain_method):
-        raise ConanException("Using 'CMakeToolchain' helper, requires 'toolchain()' method"
+        raise ConanException("Using 'CMakeToolchainHelper' helper, requires 'toolchain()' method"
                              " to be defined.")
 
     forbidden_generators = ["cmake", "cmake_multi", "cmake_paths"]
@@ -20,8 +21,7 @@ def _validate_recipe(conanfile):
                              " or 'cmake_find_package_multi' generators")
 
 
-
-class CMakeToolchain(BaseCMake):
+class CMakeToolchainHelper(BaseCMake):
     """ CMake helper to use together with the toolchain feature, it has the same interface
         as the original 'conans.client.build.cmake.CMake' helper, but it will warn the
         user about arguments forbidden, not used,... and how to achieve the same behavior
@@ -45,7 +45,7 @@ class CMakeToolchain(BaseCMake):
         assert cmake_program is None, "'cmake_program' is handled by the environment"  # FIXME: Not yet
         assert generator_platform is None, "'generator_platform' is handled by the toolchain"
 
-        super(CMakeToolchain, self).__init__(conanfile, parallel, build_type, msbuild_verbosity)
+        super(CMakeToolchainHelper, self).__init__(conanfile, parallel, build_type, msbuild_verbosity)
         self._cmake_program = "cmake"  # Path to CMake should be handled by environment
 
     @property
@@ -56,7 +56,7 @@ class CMakeToolchain(BaseCMake):
     @property
     def runtime(self):
         raise ConanException("Runtime is assigned by the toolchain and it is not known in the"
-                             " CMakeToolchain helper")
+                             " CMakeToolchainHelper helper")
 
     @property
     def is_multi_configuration(self):
@@ -65,7 +65,7 @@ class CMakeToolchain(BaseCMake):
     @property
     def verbose(self):
         raise ConanException("Verbosity is assigned by the toolchain and it is not known in the"
-                             " CMakeToolchain helper")
+                             " CMakeToolchainHelper helper")
 
     def _get_install_prefix(self):
         if self._conanfile.package_folder:
@@ -83,7 +83,8 @@ class CMakeToolchain(BaseCMake):
         if not self._conanfile.should_configure:
             return
 
-        configure_command = self._configure_command(self._cmake_program, None, None, source_dir,
+        defs = {"CMAKE_TOOLCHAIN_FILE": CMakeToolchain.filename}
+        configure_command = self._configure_command(self._cmake_program, None, defs, source_dir,
                                                     build_dir, source_folder, build_folder,
                                                     cache_build_folder)
 
