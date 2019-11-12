@@ -368,7 +368,7 @@ class ConanInfo(object):
         q = self.copy()
         q.full_settings = self.full_settings.copy()
         q.full_options = self.full_options.copy()
-        q.full_requires = self.full_requires.copy()
+        q.full_requires = _PackageReferenceList.loads(self.full_requires.dumps())
         return q
 
     def __eq__(self, other):
