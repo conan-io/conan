@@ -277,17 +277,9 @@ class CMakeDefinitionsBuilder(object):
         os_ = self._ss("os")
         libcxx = self._ss("compiler.libcxx")
         runtime = self._ss("compiler.runtime")
-        build_type = self._ss("build_type")
 
         definitions = OrderedDict()
         definitions.update(runtime_definition(runtime))
-
-        if self._forced_build_type and self._forced_build_type != build_type:
-            self._output.warn("Forced CMake build type ('%s') different from the settings build "
-                              "type ('%s')" % (self._forced_build_type, build_type))
-            build_type = self._forced_build_type
-
-        definitions.update(build_type_definition(build_type, self._generator))
 
         if str(os_) == "Macos":
             if arch == "x86":
@@ -295,9 +287,6 @@ class CMakeDefinitionsBuilder(object):
 
         definitions.update(self._cmake_cross_build_defines())
         definitions.update(self._get_cpp_standard_vars())
-
-        definitions["CONAN_EXPORTED"] = "1"
-        definitions.update(in_local_cache_definition(self._conanfile.in_local_cache))
 
         if compiler:
             definitions["CONAN_COMPILER"] = compiler
