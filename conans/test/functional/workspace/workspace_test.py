@@ -1020,6 +1020,57 @@ class Pkg(ConanFile):
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "ws_install",
                                                     "conanworkspace.cmake")))
 
+    def test_install_folder_rebuilt_requirements(self):
+        # https://github.com/conan-io/conan/issues/6046
+        client = TestClient()
+        tool = dedent("""
+        from conans import ConanFile
+        class Tool(ConanFile):
+            def package_info(self):
+                self.cpp_info.libs = ["MyToolLib"]
+        """)
+        client.save({"conanfile.py": tool})
+        client.run("export . Tool/0.1@user/testing")
+        conanfile = dedent("""
+        from conans import ConanFile
+        import os
+        class Pkg(ConanFile):
+            requires = {deps}
+            build_requires = "Tool/0.1@user/testing"
+            generators = "cmake"
+        """)
+
+        def files(name, depend=None):
+            deps = ('"Hello%s/0.1@lasote/stable"' % depend) if depend else "None"
+            return {"conanfile.py": conanfile.format(deps=deps, name=name)}
+
+        client.save(files("C"), path=os.path.join(client.current_folder, "C"))
+        client.save(files("B", "C"), path=os.path.join(client.current_folder, "B"))
+        client.save(files("A", "B"), path=os.path.join(client.current_folder, "A"))
+
+        project = dedent("""
+                    editables:
+                        HelloB/0.1@lasote/stable:
+                            path: B
+                        HelloC/0.1@lasote/stable:
+                            path: C
+                        HelloA/0.1@lasote/stable:
+                            path: A
+                    layout: layout
+                    root: HelloA/0.1@lasote/stable
+                    workspace_generator: cmake
+                    """)
+        layout = dedent("""
+                    [build_folder]
+                    build
+                    """)
+        client.save({"conanws.yml": project,
+                     "layout": layout})
+
+        client.run("workspace install conanws.yml --install-folder=ws_install --build Tool/0.1@user/testing")
+        self.assertTrue(os.path.exists(os.path.join(client.current_folder, "ws_install",
+                                                    "conanworkspace.cmake")))
+
     def missing_subarguments_test(self):
         client = TestClient()
         client.run("workspace", assert_error=True)
