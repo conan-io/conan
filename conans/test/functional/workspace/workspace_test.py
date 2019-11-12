@@ -1024,11 +1024,11 @@ class Pkg(ConanFile):
         # https://github.com/conan-io/conan/issues/6046
         client = TestClient()
         tool = dedent("""
-        from conans import ConanFile
-        class Tool(ConanFile):
-            def package_info(self):
-                self.cpp_info.libs = ["MyToolLib"]
-        """)
+            from conans import ConanFile
+            class Tool(ConanFile):
+                def package_info(self):
+                    self.cpp_info.libs = ["MyToolLib"]
+            """)
         client.save({"conanfile.py": tool})
         client.run("export . Tool/0.1@user/testing")
         client.save({"conanfile.py": GenConanfile().with_name("HelloB").with_version("0.1")},
