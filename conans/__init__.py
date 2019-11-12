@@ -3,6 +3,7 @@
 from conans.client.build.autotools_environment import AutoToolsBuildEnvironment
 from conans.client.build.cmake import CMake
 from conans.client.toolchain.cmake import CMakeToolchain
+from conans.client.build.cmake_toolchain_build_helper import CMakeToolchainBuildHelper
 from conans.client.build.meson import Meson
 from conans.client.build.msbuild import MSBuild
 from conans.client.build.visual_environment import VisualStudioBuildEnvironment
