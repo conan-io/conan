@@ -47,5 +47,5 @@ class CppStdMinimumVersionTests(unittest.TestCase):
         profile = CppStdMinimumVersionTests.PROFILE.replace("{}", "compiler.cppstd=%s" % cppstd)
         self.client.save({"myprofile": profile})
         self.client.run("create . user/channel -pr myprofile", assert_error=True)
-        self.assertIn("Invalid configuration: Current cppstd (%s) is lower than required c++ "
+        self.assertIn("Invalid configuration: Current cppstd (%s) is lower than required C++ "
                       "standard (17)." % cppstd, self.client.out)

@@ -32,7 +32,7 @@ def check_min_cppstd(conanfile, cppstd, gnu_extensions=False):
         raise ConanInvalidConfiguration("Current cppstd ({}) does not have GNU extensions, which is"
                                         " required on Linux platform.".format(current_cppstd))
     elif current_cppstd and less_than(current_cppstd, cppstd):
-        raise ConanInvalidConfiguration("Current cppstd ({}) is lower than required c++ standard "
+        raise ConanInvalidConfiguration("Current cppstd ({}) is lower than required C++ standard "
                                         "({}).".format(current_cppstd, cppstd))
     else:
         if OSInfo().is_linux and gnu_extensions and "gnu" not in cppstd:
@@ -42,7 +42,7 @@ def check_min_cppstd(conanfile, cppstd, gnu_extensions=False):
                              cppstd)
         if not result:
             raise ConanInvalidConfiguration("Current compiler does not support the required "
-                                            "c++ standard ({}).".format(cppstd))
+                                            "C++ standard ({}).".format(cppstd))
         elif OSInfo().is_linux and gnu_extensions and "gnu" not in result:
             raise ConanInvalidConfiguration("Current compiler does not support GNU extensions.")
 
