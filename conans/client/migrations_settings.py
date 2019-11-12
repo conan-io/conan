@@ -74,6 +74,7 @@ settings_1_10_2 = settings_1_10_1
 settings_1_11_0 = settings_1_10_2
 settings_1_11_1 = settings_1_11_0
 settings_1_11_2 = settings_1_11_1
+settings_1_11_3 = settings_1_11_2
 settings_1_12_0 = """
 # Only for cross building, 'os_build/arch_build' is the system that runs Conan
 os_build: [Windows, WindowsStore, Linux, Macos, FreeBSD, SunOS]
@@ -145,6 +146,7 @@ cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
 settings_1_12_1 = settings_1_12_0
 settings_1_12_2 = settings_1_12_1
 settings_1_12_3 = settings_1_12_2
+settings_1_12_4 = settings_1_12_3
 settings_1_13_0 = """
 # Only for cross building, 'os_build/arch_build' is the system that runs Conan
 os_build: [Windows, WindowsStore, Linux, Macos, FreeBSD, SunOS]
@@ -216,6 +218,7 @@ cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
 settings_1_13_1 = settings_1_13_0
 settings_1_13_2 = settings_1_13_1
 settings_1_13_3 = settings_1_13_2
+settings_1_13_4 = settings_1_13_3
 settings_1_14_0 = """
 # Only for cross building, 'os_build/arch_build' is the system that runs Conan
 os_build: [Windows, WindowsStore, Linux, Macos, FreeBSD, SunOS]
@@ -288,6 +291,8 @@ settings_1_14_1 = settings_1_14_0
 settings_1_14_2 = settings_1_14_1
 settings_1_14_3 = settings_1_14_2
 settings_1_14_4 = settings_1_14_3
+settings_1_14_5 = settings_1_14_4
+settings_1_14_6 = settings_1_14_5
 
 settings_1_15_0 = """
 # Only for cross building, 'os_build/arch_build' is the system that runs Conan
@@ -370,6 +375,7 @@ settings_1_15_1 = settings_1_15_0
 settings_1_15_2 = settings_1_15_1
 settings_1_15_3 = settings_1_15_2
 settings_1_15_4 = settings_1_15_3
+settings_1_15_5 = settings_1_15_4
 
 settings_1_16_0 = """
 # Only for cross building, 'os_build/arch_build' is the system that runs Conan
@@ -799,3 +805,5 @@ cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]  # Depreca
 """
 
 settings_1_20_1 = settings_1_20_0
+settings_1_20_2 = settings_1_20_1
+settings_1_20_3 = settings_1_20_2

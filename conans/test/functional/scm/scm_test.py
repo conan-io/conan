@@ -11,7 +11,7 @@ from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.scm import SCMData
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, SVNLocalRepoTestCase, TestClient, \
-    TestServer, create_local_git_repo
+    TestServer, create_local_git_repo, GenConanfile
 from conans.util.files import load, rmdir, save, to_file_bytes
 
 base = '''
@@ -952,6 +952,32 @@ class ConanLib(ConanFile):
         # The upload with --force should work
         self.client.run("upload lib/0.1@user/channel -r default --force")
         self.assertIn("Uploaded conan recipe", self.client.out)
+
+    def test_double_create(self):
+        # https://github.com/conan-io/conan/issues/5195#issuecomment-551848955
+        self.client = TestClient(default_server_user=True)
+        conanfile = str(GenConanfile().
+                        with_scm({"type": "git", "revision": "auto", "url": "auto"}).
+                        with_import("import os").with_import("from conans import tools").
+                        with_name("lib").
+                        with_version("1.0"))
+        conanfile += """
+    def build(self):
+        contents = tools.load("bla.sh")
+        self.output.warn("Bla? {}".format(contents))
+        """
+        self.client.save({"conanfile.py": conanfile, "myfile.txt": "My file is copied"})
+        create_local_git_repo(folder=self.client.current_folder)
+        self.client.run_command('git remote add origin https://myrepo.com.git')
+        #  modified blah.sh
+        self.client.save({"bla.sh": "bla bla"})
+        self.client.run("create . user/channel")
+        self.assertIn("Bla? bla bla", self.client.out)
+        #  modified blah.sh again
+        self.client.save({"bla.sh": "bla2 bla2"})
+        # Run conan create again
+        self.client.run("create . user/channel")
+        self.assertIn("Bla? bla2 bla2", self.client.out)
 
 
 @attr('svn')

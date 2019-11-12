@@ -244,8 +244,11 @@ class RemoteManager(object):
         try:
             return getattr(self._auth_manager, method)(*argc, **argv)
         except ConnectionError as exc:
-            raise ConanConnectionError("%s\n\nUnable to connect to %s=%s"
-                                       % (str(exc), remote.name, remote.url))
+            raise ConanConnectionError(("%s\n\nUnable to connect to %s=%s\n" +
+                                        "1. Make sure the remote is reachable or,\n" +
+                                        "2. Disable it by using conan remote disable,\n" +
+                                        "Then try again."
+                                        ) % (str(exc), remote.name, remote.url))
         except ConanException as exc:
             exc.remote = remote
             raise
