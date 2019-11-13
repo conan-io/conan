@@ -1,5 +1,6 @@
 # coding=utf-8
 
+import os
 import platform
 import textwrap
 import unittest
@@ -11,6 +12,7 @@ from conans.client.toolchain.cmake import CMakeToolchain
 from conans.client.tools import environment_append
 from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TurboTestClient
+from conans.util.files import rmdir
 
 
 @attr("toolchain")
@@ -139,7 +141,9 @@ class FindPackageMultiTestCase(unittest.TestCase):
     def test_local_conan(self, build_type):
         # TODO: Remove? ...Here just to check another way of building
         # Conan local workflow
-        with self.t.chdir("build"):
+        build_directory = os.path.join(self.t.current_folder, 'build')
+        rmdir(build_directory)
+        with self.t.chdir(build_directory):
             self.t.run("install .. -s build_type={}".format(build_type))
             self.t.run("build ..")
             self.assertIn("Using Conan toolchain", self.t.out)
@@ -159,12 +163,14 @@ class FindPackageMultiTestCase(unittest.TestCase):
 
     @unittest.skipUnless(platform.system() in ["Windows", "Darwin"], "Require multiconfig generator")
     def test_multiconfig_generator(self):
-        with self.t.chdir("build"):
+        build_directory = os.path.join(self.t.current_folder, 'build')
+        rmdir(build_directory)
+        with self.t.chdir(build_directory):
             self.t.run("install .. -s build_type=Debug")
             self.t.run("install .. -s build_type=Release")
 
             # Configure once
-            mgenerator = "Xcode" if platform.system() == "Darwin" else "Visual Studio 15 2017 Win64"
+            mgenerator = "Xcode" if platform.system() == "Darwin" else "Visual Studio 16 2019"
             with environment_append({"CMAKE_GENERATOR": mgenerator}):
                 cmake_configure = 'cmake .. -DCMAKE_TOOLCHAIN_FILE={}'.format(CMakeToolchain.filename)
                 self.t.run_command(cmake_configure)
