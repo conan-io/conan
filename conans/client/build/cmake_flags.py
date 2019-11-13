@@ -128,15 +128,13 @@ def build_type_definition(build_type, generator):
 class CMakeDefinitionsBuilder(object):
 
     def __init__(self, conanfile, cmake_system_name=True, make_program=None,
-                 parallel=True, generator=None, set_cmake_flags=False,
-                 forced_build_type=None, output=None):
+                 parallel=True, generator=None, set_cmake_flags=False, output=None):
         self._conanfile = conanfile
         self._forced_cmake_system_name = cmake_system_name
         self._make_program = make_program
         self._parallel = parallel
         self._generator = generator
         self._set_cmake_flags = set_cmake_flags
-        self._forced_build_type = forced_build_type
         self._output = output
 
     def _ss(self, setname):
@@ -277,17 +275,9 @@ class CMakeDefinitionsBuilder(object):
         os_ = self._ss("os")
         libcxx = self._ss("compiler.libcxx")
         runtime = self._ss("compiler.runtime")
-        build_type = self._ss("build_type")
 
         definitions = OrderedDict()
         definitions.update(runtime_definition(runtime))
-
-        if self._forced_build_type and self._forced_build_type != build_type:
-            self._output.warn("Forced CMake build type ('%s') different from the settings build "
-                              "type ('%s')" % (self._forced_build_type, build_type))
-            build_type = self._forced_build_type
-
-        definitions.update(build_type_definition(build_type, self._generator))
 
         if str(os_) == "Macos":
             if arch == "x86":
@@ -295,9 +285,6 @@ class CMakeDefinitionsBuilder(object):
 
         definitions.update(self._cmake_cross_build_defines())
         definitions.update(self._get_cpp_standard_vars())
-
-        definitions["CONAN_EXPORTED"] = "1"
-        definitions.update(in_local_cache_definition(self._conanfile.in_local_cache))
 
         if compiler:
             definitions["CONAN_COMPILER"] = compiler

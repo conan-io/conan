@@ -13,17 +13,18 @@ from parameterized.parameterized import parameterized_class
 from conans.client.toolchain.cmake import CMakeToolchain
 from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TurboTestClient
-from conans.util.files import load
+from conans.util.files import load, rmdir
 
 
 def compile_local_workflow(testcase, client, profile):
     # Conan local workflow
-    with client.chdir("build"):
+    build_directory = os.path.join(client.current_folder, "build")
+    rmdir(build_directory)
+    with client.chdir(build_directory):
         client.run("install .. --profile={}".format(profile))
         client.run("build ..")
         testcase.assertIn("Using Conan toolchain", client.out)
 
-    build_directory = os.path.join(client.current_folder, "build")
     cmake_cache = load(os.path.join(build_directory, "CMakeCache.txt"))
     if True:
         # TODO: Remove
@@ -61,12 +62,13 @@ def compile_cache_workflow_without_toolchain(testcase, client, profile):
 
 
 def compile_cmake_workflow(testcase, client, profile):
-    with client.chdir("build"):
+    build_directory = os.path.join(client.current_folder, "build")
+    rmdir(build_directory)
+    with client.chdir(build_directory):
         client.run("install .. --profile={}".format(profile))
         client.run_command("cmake .. -DCMAKE_TOOLCHAIN_FILE={}".format(CMakeToolchain.filename))
         testcase.assertIn("Using Conan toolchain", client.out)
 
-    build_directory = os.path.join(client.current_folder, "build")
     cmake_cache = load(os.path.join(build_directory, "CMakeCache.txt"))
     if True:
         # TODO: Remove
@@ -76,10 +78,10 @@ def compile_cmake_workflow(testcase, client, profile):
     return client.out, cmake_cache, build_directory, None
 
 
-@parameterized_class([{"function": compile_cache_workflow_without_toolchain, "use_toolchain": False, "in_cache": True},
-                      {"function": compile_cache_workflow_with_toolchain, "use_toolchain": True, "in_cache": True},
-                      {"function": compile_local_workflow, "use_toolchain": True, "in_cache": False},
-                      {"function": compile_cmake_workflow, "use_toolchain": True, "in_cache": False},
+@parameterized_class([{"function": compile_cache_workflow_without_toolchain, "use_toolchain": False, "in_cache": True, "build_helper": True},
+                      {"function": compile_cache_workflow_with_toolchain, "use_toolchain": True, "in_cache": True, "build_helper": True},
+                      {"function": compile_local_workflow, "use_toolchain": True, "in_cache": False, "build_helper": True},
+                      {"function": compile_cmake_workflow, "use_toolchain": True, "in_cache": False, "build_helper": False},
                       ])
 @attr("toolchain")
 class AdjustAutoTestCase(unittest.TestCase):
@@ -88,7 +90,7 @@ class AdjustAutoTestCase(unittest.TestCase):
     """
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile, CMake, CMakeToolchain
+        from conans import ConanFile, CMake, CMakeToolchain, CMakeToolchainBuildHelper
 
         class App(ConanFile):
             name = "app"
@@ -108,7 +110,9 @@ class AdjustAutoTestCase(unittest.TestCase):
                 # Do not actually build, just configure
                 if self.options.use_toolchain:
                     # A build helper could be easily added to replace this line
-                    self.run('cmake "%s" -DCMAKE_TOOLCHAIN_FILE=""" + CMakeToolchain.filename + """' % (self.source_folder))
+                    # self.run('cmake "%s" -DCMAKE_TOOLCHAIN_FILE=""" + CMakeToolchain.filename + """' % (self.source_folder))
+                    cmake = CMakeToolchainBuildHelper(self)
+                    cmake.configure(source_folder=".")
                 else:
                     cmake = CMake(self)
                     cmake.configure(source_folder=".")
@@ -231,22 +235,17 @@ class AdjustAutoTestCase(unittest.TestCase):
         # self.skipTest("Disabled")
         configure_out, cmake_cache, cmake_cache_keys, _, _ = self._run_configure()
 
-        in_local_cache = "ON" if self.in_cache else "OFF"
-        exported_str = "1"
-        if self.in_cache:
-            self.assertIn(">> CONAN_EXPORTED: {}".format(exported_str), configure_out)
-            self.assertIn(">> CONAN_IN_LOCAL_CACHE: {}".format(in_local_cache), configure_out)
+        in_local_cache = "ON" if self.in_cache else "OFF" if self.build_helper else ""
+        exported_str = "1" if self.build_helper else ""
 
-            type_str = "STRING" if self.use_toolchain else "UNINITIALIZED"
-            self.assertEqual(exported_str, cmake_cache["CONAN_EXPORTED:" + type_str])
-            self.assertEqual(in_local_cache, cmake_cache["CONAN_IN_LOCAL_CACHE:" + type_str])
+        self.assertIn(">> CONAN_EXPORTED: {}".format(exported_str), configure_out)
+        self.assertIn(">> CONAN_IN_LOCAL_CACHE: {}".format(in_local_cache), configure_out)
+        if self.build_helper:
+            self.assertEqual(exported_str, cmake_cache["CONAN_EXPORTED:UNINITIALIZED"])
+            self.assertEqual(in_local_cache, cmake_cache["CONAN_IN_LOCAL_CACHE:UNINITIALIZED"])
         else:
-            self.assertIn(">> CONAN_EXPORTED: {}".format(exported_str), configure_out)
-            self.assertIn(">> CONAN_IN_LOCAL_CACHE: {}".format(in_local_cache), configure_out)
-
-            type_str = "STRING" if self.use_toolchain else "UNINITIALIZED"
-            self.assertEqual(exported_str, cmake_cache["CONAN_EXPORTED:" + type_str])
-            self.assertEqual(in_local_cache, cmake_cache["CONAN_IN_LOCAL_CACHE:" + type_str])
+            self.assertNotIn("CONAN_EXPORTED", cmake_cache_keys)
+            self.assertNotIn("CONAN_IN_LOCAL_CACHE", cmake_cache_keys)
 
     @parameterized.expand([("Debug",), ("Release",)])
     @unittest.skipIf(platform.system() == "Windows", "Windows uses Visual Studio, CMAKE_BUILD_TYPE is not used")

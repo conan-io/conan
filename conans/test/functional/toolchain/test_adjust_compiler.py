@@ -13,18 +13,19 @@ from parameterized.parameterized import parameterized_class
 from conans.client.toolchain.cmake import CMakeToolchain
 from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TurboTestClient
-from conans.util.files import load
+from conans.util.files import load, rmdir
 from conans.client.tools import environment_append
 
 
 def compile_local_workflow(testcase, client, profile):
     # Conan local workflow
-    with client.chdir("build"):
+    build_directory = os.path.join(client.current_folder, "build")
+    rmdir(build_directory)
+    with client.chdir(build_directory):
         client.run("install .. --profile={}".format(profile))
         client.run("build ..")
         testcase.assertIn("Using Conan toolchain", client.out)
 
-    build_directory = os.path.join(client.current_folder, "build")
     cmake_cache = load(os.path.join(build_directory, "CMakeCache.txt"))
     if True:
         # TODO: Remove
@@ -62,12 +63,13 @@ def compile_cache_workflow_without_toolchain(testcase, client, profile):
 
 
 def compile_cmake_workflow(testcase, client, profile):
-    with client.chdir("build"):
+    build_directory = os.path.join(client.current_folder, "build")
+    rmdir(build_directory)
+    with client.chdir(build_directory):
         client.run("install .. --profile={}".format(profile))
         client.run_command("cmake .. -DCMAKE_TOOLCHAIN_FILE={}".format(CMakeToolchain.filename))
         testcase.assertIn("Using Conan toolchain", client.out)
 
-    build_directory = os.path.join(client.current_folder, "build")
     cmake_cache = load(os.path.join(build_directory, "CMakeCache.txt"))
     if True:
         # TODO: Remove
@@ -91,7 +93,7 @@ class AdjustAutoTestCase(unittest.TestCase):
     """
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile, CMake, CMakeToolchain
+        from conans import ConanFile, CMake, CMakeToolchain, CMakeToolchainBuildHelper
 
         class App(ConanFile):
             name = "app"
@@ -111,7 +113,9 @@ class AdjustAutoTestCase(unittest.TestCase):
                 # Do not actually build, just configure
                 if self.options.use_toolchain:
                     # A build helper could be easily added to replace this line
-                    self.run('cmake "%s" -DCMAKE_TOOLCHAIN_FILE=""" + CMakeToolchain.filename + """' % (self.source_folder))
+                    # self.run('cmake "%s" -DCMAKE_TOOLCHAIN_FILE=""" + CMakeToolchain.filename + """' % (self.source_folder))
+                    cmake = CMakeToolchainBuildHelper(self)
+                    cmake.configure(source_folder=".")
                 else:
                     cmake = CMake(self)
                     cmake.configure(source_folder=".")
@@ -335,12 +339,12 @@ class AdjustAutoTestCase(unittest.TestCase):
 
         cache_filepath = os.path.join(self.t.current_folder, "build", "CMakeCache.txt")
         if os.path.exists(cache_filepath):
-            os.unlink(cache_filepath)  # FIXME: Ideally this shouldn't be needed (I need it only here)
+            os.unlink(cache_filepath)  # FIXME: Remove, I'm already deleting the 'build' folder
 
         configure_out, cmake_cache, cmake_cache_keys, _, _ = self._run_configure({"compiler.toolset": compiler_toolset})
 
         #self.assertIn("compiler.toolset={}".format(compiler_toolset), configure_out)
-        self.assertIn("-- Building for: Visual Studio 16 2019")
+        #self.assertIn("-- Building for: Visual Studio 16 2019", configure_out)
         if compiler_toolset == "v140":
             self.assertIn("-- The C compiler identification is MSVC 19.0.24215.1", configure_out)
             self.assertIn("-- The CXX compiler identification is MSVC 19.0.24215.1", configure_out)
