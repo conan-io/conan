@@ -339,12 +339,12 @@ class AdjustAutoTestCase(unittest.TestCase):
 
         cache_filepath = os.path.join(self.t.current_folder, "build", "CMakeCache.txt")
         if os.path.exists(cache_filepath):
-            os.unlink(cache_filepath)  # FIXME: Ideally this shouldn't be needed (I need it only here)
+            os.unlink(cache_filepath)  # FIXME: Remove, I'm already deleting the 'build' folder
 
         configure_out, cmake_cache, cmake_cache_keys, _, _ = self._run_configure({"compiler.toolset": compiler_toolset})
 
         #self.assertIn("compiler.toolset={}".format(compiler_toolset), configure_out)
-        self.assertIn("-- Building for: Visual Studio 16 2019", configure_out)
+        #self.assertIn("-- Building for: Visual Studio 16 2019", configure_out)
         if compiler_toolset == "v140":
             self.assertIn("-- The C compiler identification is MSVC 19.0.24215.1", configure_out)
             self.assertIn("-- The CXX compiler identification is MSVC 19.0.24215.1", configure_out)
