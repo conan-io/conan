@@ -13,17 +13,18 @@ from parameterized.parameterized import parameterized_class
 from conans.client.toolchain.cmake import CMakeToolchain
 from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TurboTestClient
-from conans.util.files import load
+from conans.util.files import load, rmdir
 
 
 def compile_local_workflow(testcase, client, profile):
     # Conan local workflow
-    with client.chdir("build"):
+    build_directory = os.path.join(client.current_folder, "build")
+    rmdir(build_directory)
+    with client.chdir(build_directory):
         client.run("install .. --profile={}".format(profile))
         client.run("build ..")
         testcase.assertIn("Using Conan toolchain", client.out)
 
-    build_directory = os.path.join(client.current_folder, "build")
     cmake_cache = load(os.path.join(build_directory, "CMakeCache.txt"))
     if True:
         # TODO: Remove
@@ -61,12 +62,13 @@ def compile_cache_workflow_without_toolchain(testcase, client, profile):
 
 
 def compile_cmake_workflow(testcase, client, profile):
-    with client.chdir("build"):
+    build_directory = os.path.join(client.current_folder, "build")
+    rmdir(build_directory)
+    with client.chdir(build_directory):
         client.run("install .. --profile={}".format(profile))
         client.run_command("cmake .. -DCMAKE_TOOLCHAIN_FILE={}".format(CMakeToolchain.filename))
         testcase.assertIn("Using Conan toolchain", client.out)
 
-    build_directory = os.path.join(client.current_folder, "build")
     cmake_cache = load(os.path.join(build_directory, "CMakeCache.txt"))
     if True:
         # TODO: Remove

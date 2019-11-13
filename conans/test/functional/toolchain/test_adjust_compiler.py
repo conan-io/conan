@@ -13,18 +13,19 @@ from parameterized.parameterized import parameterized_class
 from conans.client.toolchain.cmake import CMakeToolchain
 from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TurboTestClient
-from conans.util.files import load
+from conans.util.files import load, rmdir
 from conans.client.tools import environment_append
 
 
 def compile_local_workflow(testcase, client, profile):
     # Conan local workflow
-    with client.chdir("build"):
+    build_directory = os.path.join(client.current_folder, "build")
+    rmdir(build_directory)
+    with client.chdir(build_directory):
         client.run("install .. --profile={}".format(profile))
         client.run("build ..")
         testcase.assertIn("Using Conan toolchain", client.out)
 
-    build_directory = os.path.join(client.current_folder, "build")
     cmake_cache = load(os.path.join(build_directory, "CMakeCache.txt"))
     if True:
         # TODO: Remove
@@ -62,12 +63,13 @@ def compile_cache_workflow_without_toolchain(testcase, client, profile):
 
 
 def compile_cmake_workflow(testcase, client, profile):
-    with client.chdir("build"):
+    build_directory = os.path.join(client.current_folder, "build")
+    rmdir(build_directory)
+    with client.chdir(build_directory):
         client.run("install .. --profile={}".format(profile))
         client.run_command("cmake .. -DCMAKE_TOOLCHAIN_FILE={}".format(CMakeToolchain.filename))
         testcase.assertIn("Using Conan toolchain", client.out)
 
-    build_directory = os.path.join(client.current_folder, "build")
     cmake_cache = load(os.path.join(build_directory, "CMakeCache.txt"))
     if True:
         # TODO: Remove
@@ -342,7 +344,7 @@ class AdjustAutoTestCase(unittest.TestCase):
         configure_out, cmake_cache, cmake_cache_keys, _, _ = self._run_configure({"compiler.toolset": compiler_toolset})
 
         #self.assertIn("compiler.toolset={}".format(compiler_toolset), configure_out)
-        self.assertIn("-- Building for: Visual Studio 16 2019")
+        self.assertIn("-- Building for: Visual Studio 16 2019", configure_out)
         if compiler_toolset == "v140":
             self.assertIn("-- The C compiler identification is MSVC 19.0.24215.1", configure_out)
             self.assertIn("-- The CXX compiler identification is MSVC 19.0.24215.1", configure_out)

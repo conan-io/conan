@@ -38,6 +38,7 @@ class CMakeToolchainBuildHelper(BaseCMake):
         #assert generator is None, "'generator' is handled by the toolchain"
         self._is_multiconfiguration = is_multi_configuration(generator)
         self._build_flags = _compute_build_flags(conanfile, generator, parallel, msbuild_verbosity)
+        self.generator = generator  # TODO: I don't want to store the generator here !!!
 
         assert cmake_system_name is None, "'cmake_system_name' is handled by the toolchain"
         assert toolset is None, "'toolset' is handled by the toolchain"
