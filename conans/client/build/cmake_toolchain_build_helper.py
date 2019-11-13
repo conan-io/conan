@@ -3,7 +3,7 @@ import platform
 
 from conans.client import tools
 from conans.client.build.base_cmake import BaseCMake, _compute_build_flags
-from conans.client.build.cmake_flags import is_multi_configuration
+from conans.client.build.cmake_flags import is_multi_configuration, get_generator
 from conans.client.toolchain.cmake import CMakeToolchain
 from conans.errors import ConanException
 
@@ -36,6 +36,7 @@ class CMakeToolchainBuildHelper(BaseCMake):
         _validate_recipe(conanfile)
 
         #assert generator is None, "'generator' is handled by the toolchain"
+        generator = generator or get_generator(conanfile.settings)
         self._is_multiconfiguration = is_multi_configuration(generator)
         self._build_flags = _compute_build_flags(conanfile, generator, parallel, msbuild_verbosity)
         self.generator = generator  # TODO: I don't want to store the generator here !!!
