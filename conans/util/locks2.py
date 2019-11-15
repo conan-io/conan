@@ -3,6 +3,7 @@ Implements locking utilities, including filesystem-based OS-assisted
 shared/exclusive advisory locking.
 """
 
+import ctypes
 import errno
 import os
 from contextlib import contextmanager
@@ -63,6 +64,51 @@ class FileLock(object):
         self._native_fd = None
         self._file.close()
         self._file = None
+
+    def _acquire_nt(self, exclusive, block):
+        self._file = open(self.filepath, 'wb+')
+        self._native_fd = self._file.fileno()
+
+        from . import win32_lockapi
+
+        flags = 0
+        if exclusive:
+            flags |= win32_lockapi.LOCKFILE_EXCLUSIVE_LOCK
+        if not block:
+            flags |= win32_lockapi.LOCKFILE_FAIL_IMMEDIATELY
+
+        okay = win32_lockapi.LockFileEx(
+            win32_lockapi.get_win_handle(self._file),
+            flags,
+            0,
+            0,
+            0,
+            ctypes.pointer(win32_lockapi.OVERLAPPED()),
+        )
+        if not okay:
+            last_error = win32_lockapi.GetLastError()
+            if last_error != win32_lockapi.ERROR_IO_PENDING:
+                raise OSError(last_error)
+            return False
+        self._holds_lock = True
+        return True
+
+    def _release_nt(self):
+        assert self._native_fd is not None, 'Cannot release() a lock that is not held'
+        from . import win32_lockapi
+        okay = win32_lockapi.UnlockFileEx(
+            win32_lockapi.get_win_handle(self._native_fd),
+            0,
+            0,
+            0,
+            ctypes.pointer(win32_lockapi.OVERLAPPED()),
+        )
+        if not okay:
+            raise OSError(win32_lockapi.GetLastError())
+
+        self._holds_lock = False
+        self._native_fd = None
+        self._file.close()
 
     def try_acquire_shared(self):
         """
@@ -164,4 +210,3 @@ def try_hold_lock_shared(lk):
     finally:
         if got_lock:
             lk.release_shared()
-
