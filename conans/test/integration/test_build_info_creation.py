@@ -171,3 +171,56 @@ class MyBuildInfoCreation(unittest.TestCase):
         user_channels = ["", "user/channel"]
         for user_channel in user_channels:
             self._test_buildinfo(client, user_channel)
+
+    @patch("conans.build_info.build_info.get_conan_user_home")
+    @patch("conans.build_info.build_info.ClientCache")
+    @patch("conans.build_info.build_info.requests.put", new=mock_response)
+    def test_build_info_create_scm(self, mock_cache, user_home_mock):
+        base_folder = temp_folder(True)
+        cache_folder = os.path.join(base_folder, ".conan")
+        servers = {"default": TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")],
+                                         users={"lasote": "mypass"})}
+        client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]},
+                            cache_folder=cache_folder)
+
+        mock_cache.return_value = client.cache
+        user_home_mock.return_value = base_folder
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile, load
+            import os
+            class Pkg(ConanFile):
+                {requires}
+                scm = {{"type": "git",
+                       "url": "auto",
+                       "revision": "auto"}}
+                keep_imports = True
+                def imports(self):
+                    self.copy("myfile.txt", folder=True)
+                def package(self):
+                    self.copy("*myfile.txt")
+                """)
+        client.run_command("git init")
+        client.run_command('git config user.email "you@example.com"')
+        client.run_command('git config user.name "Your Name"')
+        client.run_command("git remote add origin https://github.com/fake/fake.git")
+        client.run_command("git add .")
+        client.run_command("git commit -m \"initial commit\"")
+        client.save({"PkgA/conanfile.py": conanfile.format(requires=""),
+                     "PkgA/myfile.txt": "HelloA"})
+        client.run("export PkgA PkgA/0.1@")
+
+        client.run("export PkgB PkgB/0.1@")
+
+        client.run("graph lock PkgA/0.1@")
+
+        client.run("install PkgB PkgB/0.1@ --lockfile --build missing")
+        client.run("upload * --all --confirm -r default")
+
+        sys.argv = ["conan_build_info", "--v2", "start", "MyBuildName", "42"]
+        run()
+        sys.argv = ["conan_build_info", "--v2", "create",
+                    os.path.join(client.current_folder, "buildinfo.json"), "--lockfile",
+                    os.path.join(client.current_folder, LOCKFILE)]
+        run()
+
+
