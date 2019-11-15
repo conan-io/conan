@@ -272,12 +272,66 @@ class HelloConan(ConanFile):
             self.assertIn("Hello Release Hello0", client.out)
 
 
+class CMakeMultiSystemLibsTest(unittest.TestCase):
+
+    def system_libs_test(self):
+        mylib = textwrap.dedent("""
+            import os
+            from conans import ConanFile
+
+            class MyLib(ConanFile):
+
+                def package_info(self):
+                    self.cpp_info.debug.system_libs = ["sys1d"]
+                    self.cpp_info.release.system_libs = ["sys1"]
+                    self.cpp_info.libs = ["lib1"]
+                    self.cpp_info.debug.libs = ["lib1debug"]
+                    self.cpp_info.release.libs = ["lib1release"]
+                """)
+        consumer = textwrap.dedent("""
+            import os
+            from conans import ConanFile
+
+            class Consumer(ConanFile):
+                settings = "build_type"
+                requires = "mylib/1.0@us/ch"
+                generators = "cmake_multi"
+                """)
+        client = TestClient()
+        client.save({"conanfile_mylib.py": mylib, "conanfile_consumer.py": consumer})
+        client.run("create conanfile_mylib.py mylib/1.0@us/ch")
+        client.run("install conanfile_consumer.py -s build_type=Release")
+        content = client.load("conanbuildinfo_release.cmake")
+        self.assertIn("set(CONAN_LIBS_RELEASE ${CONAN_PKG_LIBS_RELEASE} ${CONAN_SYSTEM_LIBS_RELEASE}"
+                      " ${CONAN_FRAMEWORKS_FOUND_RELEASE})", content)
+        self.assertIn("set(CONAN_PKG_LIBS_RELEASE lib1 lib1release ${CONAN_PKG_LIBS_RELEASE})",
+                      content)
+        self.assertIn("set(CONAN_LIBS_MYLIB_RELEASE ${CONAN_PKG_LIBS_MYLIB_RELEASE} "
+                      "${CONAN_SYSTEM_LIBS_MYLIB_RELEASE} ${CONAN_FRAMEWORKS_FOUND_MYLIB_RELEASE})",
+                      content)
+        self.assertIn("set(CONAN_PKG_LIBS_MYLIB_RELEASE lib1 lib1release)", content)
+        self.assertIn("set(CONAN_SYSTEM_LIBS_RELEASE sys1)", content)
+        self.assertIn("set(CONAN_SYSTEM_LIBS_MYLIB_RELEASE sys1)", content)
+
+        client.run("install conanfile_consumer.py -s build_type=Debug")
+        content = client.load("conanbuildinfo_debug.cmake")
+        self.assertIn("set(CONAN_LIBS_DEBUG ${CONAN_PKG_LIBS_DEBUG} ${CONAN_SYSTEM_LIBS_DEBUG} "
+                      "${CONAN_FRAMEWORKS_FOUND_DEBUG})", content)
+        self.assertIn("set(CONAN_LIBS_MYLIB_DEBUG ${CONAN_PKG_LIBS_MYLIB_DEBUG} "
+                      "${CONAN_SYSTEM_LIBS_MYLIB_DEBUG} ${CONAN_FRAMEWORKS_FOUND_MYLIB_DEBUG})",
+                      content)
+        self.assertIn("set(CONAN_PKG_LIBS_DEBUG lib1 lib1debug ${CONAN_PKG_LIBS_DEBUG})", content)
+        self.assertIn("set(CONAN_PKG_LIBS_MYLIB_DEBUG lib1 lib1debug)", content)
+        self.assertIn("set(CONAN_SYSTEM_LIBS_DEBUG sys1d)", content)
+        self.assertIn("set(CONAN_SYSTEM_LIBS_MYLIB_DEBUG sys1d)", content)
+
+
 class CMakeMultiSyntaxTest(unittest.TestCase):
 
     def setUp(self):
         self.client = TestClient()
         cmakelists = textwrap.dedent("""
-            cmake_minimum_required(VERSION 3.12)
+            cmake_minimum_required(VERSION 2.18)
             include(${CMAKE_BINARY_DIR}/conanbuildinfo_multi.cmake)
             conan_basic_setup(NO_OUTPUT_DIRS)
             """)
@@ -302,6 +356,6 @@ class CMakeMultiSyntaxTest(unittest.TestCase):
         Check warning when suing NO_OUTPUT_DIRS
         """
         self.client.run_command("cmake .")
-        self.assertTrue("CMake Warning at conanbuildinfo_multi.cmake", self.client.out)
-        self.assertTrue("Conan: NO_OUTPUT_DIRS has no effect with cmake_multi generator",
-                        self.client.out)
+        self.assertIn("CMake Warning at conanbuildinfo_multi.cmake", self.client.out)
+        self.assertIn("Conan: NO_OUTPUT_DIRS has no effect with cmake_multi generator",
+                      self.client.out)

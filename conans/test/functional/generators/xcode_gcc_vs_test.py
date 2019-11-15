@@ -3,12 +3,12 @@ import re
 import unittest
 
 from conans.model.graph_info import GRAPH_INFO_FILE
+from conans.model.graph_lock import LOCKFILE
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import (BUILD_INFO, BUILD_INFO_CMAKE, BUILD_INFO_GCC, BUILD_INFO_VISUAL_STUDIO,
                           BUILD_INFO_XCODE, CONANFILE_TXT, CONANINFO)
 from conans.test.utils.tools import TestClient
 from conans.util.files import load
-from conans.model.graph_lock import LOCKFILE
 
 
 class VSXCodeGeneratorsTest(unittest.TestCase):
@@ -26,6 +26,7 @@ class Pkg(ConanFile):
         self.cpp_info.libs = ["hello"]
         self.cpp_info.cxxflags = ["-some_cxx_compiler_flag"]
         self.cpp_info.cflags = ["-some_c_compiler_flag"]
+        self.cpp_info.system_libs = ["system_lib1"]
 """})
         client.run("export . Hello/0.1@lasote/stable")
         conanfile_txt = '''[requires]
@@ -68,14 +69,16 @@ xcode
         xmldoc = minidom.parse(os.path.join(client.current_folder, BUILD_INFO_VISUAL_STUDIO))
         definition_group = xmldoc.getElementsByTagName('ItemDefinitionGroup')[0]
         compiler = definition_group.getElementsByTagName("ClCompile")[0]
-
-        elem = compiler.getElementsByTagName("AdditionalIncludeDirectories")
-        include_dirs = elem[0].firstChild.data
-        definitions = compiler.getElementsByTagName("PreprocessorDefinitions")[0].firstChild.data
-
         linker = definition_group.getElementsByTagName("Link")[0]
-        lib_dirs = linker.getElementsByTagName("AdditionalLibraryDirectories")[0].firstChild.data
-        libs = linker.getElementsByTagName("AdditionalDependencies")[0].firstChild.data
+
+        def element_content(node):
+            return node.firstChild.data if node.firstChild else ""
+
+        include_dirs = element_content(xmldoc.getElementsByTagName("ConanIncludeDirectories")[0])
+        definitions = element_content(xmldoc.getElementsByTagName("ConanPreprocessorDefinitions")[0])
+        lib_dirs = element_content(xmldoc.getElementsByTagName("ConanLibraryDirectories")[0])
+        libs = element_content(linker.getElementsByTagName("AdditionalDependencies")[0])
+        system_libs = element_content(linker.getElementsByTagName("AdditionalDependencies")[1])
 
         package_id = os.listdir(client.cache.package_layout(ref).packages())[0]
         pref = PackageReference(ref, package_id)
@@ -87,8 +90,9 @@ xcode
         expected_include_dirs = os.path.join(replaced_path, "include")
 
         self.assertIn(expected_lib_dirs, lib_dirs)
-        self.assertEqual("hello.lib;%(AdditionalDependencies)", libs)
-        self.assertEqual("%(PreprocessorDefinitions)", definitions)
+        self.assertEqual("$(ConanLibraries)%(AdditionalDependencies)", libs)
+        self.assertEqual("$(ConanSystemDeps)%(AdditionalDependencies)", system_libs)
+        self.assertEqual("", definitions)
         self.assertIn(expected_include_dirs, include_dirs)
 
         # CHECK XCODE GENERATOR
@@ -105,4 +109,6 @@ xcode
         self.assertIn('OTHER_CFLAGS = $(inherited) %s' % expected_c_flags, xcode)
         self.assertIn('OTHER_CPLUSPLUSFLAGS = $(inherited) %s' % expected_cpp_flags, xcode)
         self.assertIn('FRAMEWORK_SEARCH_PATHS = $(inherited) "%s"' % package_path.replace("\\", "/"),
+                      xcode)
+        self.assertIn('OTHER_LDFLAGS = $(inherited)  -lhello -lsystem_lib1',
                       xcode)

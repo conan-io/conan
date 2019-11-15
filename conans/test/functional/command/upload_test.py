@@ -5,18 +5,21 @@ import unittest
 from collections import OrderedDict
 
 import itertools
+import requests
 from mock import mock, patch
 from nose.plugins.attrib import attr
 
+from conans import REVISIONS
 from conans.client.cmd.uploader import CmdUpload
 from conans.client.tools.env import environment_append
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import EXPORT_SOURCES_TGZ_NAME, PACKAGE_TGZ_NAME
-from conans.test.utils.conanfile import TestConanFile
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, \
-    TurboTestClient, GenConanfile
+    TurboTestClient, GenConanfile, TestRequester, TestingResponse
+from conans.util.env_reader import get_env
+
 from conans.util.files import gzopen_without_timestamps, is_dirty, save
 
 conanfile = """from conans import ConanFile
@@ -79,7 +82,7 @@ class UploadTest(unittest.TestCase):
     def test_upload_not_existing(self):
         client = TestClient(servers={"default": TestServer()},
                             users={"default": [("lasote", "mypass")]})
-        client.save({"conanfile.py": str(TestConanFile("Hello", "0.1"))})
+        client.save({"conanfile.py": GenConanfile()})
         client.run("export . Hello/0.1@lasote/testing")
         client.run("upload Hello/0.1@lasote/testing -p=123", assert_error=True)
         self.assertIn("ERROR: Binary package Hello/0.1@lasote/testing:123 not found", client.out)
@@ -622,6 +625,7 @@ class Pkg(ConanFile):
         self.assertIn("Uploading conanfile.py", client.out)
         self.assertIn("Uploading conan_export.tgz", client.out)
 
+    @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
     def upload_key_error_test(self):
         files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
         server1 = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")], users={"lasote": "mypass"})
@@ -631,7 +635,6 @@ class Pkg(ConanFile):
         servers["server2"] = server2
         client = TestClient(servers=servers)
         client.save(files)
-        client.run("config set general.revisions_enabled=True")
         client.run("create . user/testing")
         client.run("user lasote -p mypass")
         client.run("user lasote -p mypass -r server2")
@@ -720,3 +723,106 @@ class Pkg(ConanFile):
                    assert_error=True)
 
         self.assertIn("'--query' argument cannot be used together with '--package'", client.out)
+
+    def upload_without_user_channel_test(self):
+        server = TestServer(users={"user": "password"}, write_permissions=[("*/*@*/*", "*")])
+        servers = {"default": server}
+        client = TestClient(servers=servers, users={"default": [("user", "password")]})
+
+        client.save({"conanfile.py": GenConanfile()})
+
+        client.run('create . lib/1.0@')
+        self.assertIn("lib/1.0: Package '{}' created".format(NO_SETTINGS_PACKAGE_ID), client.out)
+        client.run('upload lib/1.0 -c --all')
+        self.assertIn("Uploaded conan recipe 'lib/1.0' to 'default'", client.out)
+
+        # Verify that in the remote it is stored as "_"
+        pref = PackageReference.loads("lib/1.0@#0:{}#0".format(NO_SETTINGS_PACKAGE_ID))
+        path = server.server_store.export(pref.ref)
+        self.assertIn("/lib/1.0/_/_/0/export", path.replace("\\", "/"))
+
+        path = server.server_store.package(pref)
+        self.assertIn("/lib/1.0/_/_/0/package", path.replace("\\", "/"))
+
+        # Should be possible with explicit package
+        client.run('upload lib/1.0:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9')
+        self.assertIn("Uploading package 1/1: 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 to 'default'",
+                      client.out)
+
+    def checksums_metadata_test(self):
+        client = TestClient(default_server_user=True)
+        client.save({"conanfile.py": GenConanfile()})
+        client.run('create . lib/1.0@user/channel')
+        client.run('upload lib/1.0 -c --all -r default')
+        ref = ConanFileReference("lib", "1.0", "user", "channel")
+        metadata = client.cache.package_layout(ref).load_metadata()
+        package_md5 = metadata.packages[NO_SETTINGS_PACKAGE_ID].checksums["conan_package.tgz"]["md5"]
+        package_sha1 = metadata.packages[NO_SETTINGS_PACKAGE_ID].checksums["conan_package.tgz"][
+            "sha1"]
+        recipe_md5 = metadata.recipe.checksums["conanfile.py"]["md5"]
+        recipe_sha1 = metadata.recipe.checksums["conanfile.py"]["sha1"]
+        self.assertEqual(package_md5, "25f53ac9685e07815b990e7c6f21bfd0")
+        self.assertEqual(package_sha1, "be152c82859285658a06816aaaec529a159c33d3")
+        self.assertEqual(recipe_md5, "8eda41e0997f3eacc436fb6c621d7396")
+        self.assertEqual(recipe_sha1, "b97d6b26be5bd02252a44c265755f873cf5ec70b")
+        client.run('remove * -f')
+        client.run('install lib/1.0@user/channel -r default')
+        metadata = client.cache.package_layout(ref).load_metadata()
+        self.assertEqual(
+            metadata.packages[NO_SETTINGS_PACKAGE_ID].checksums["conan_package.tgz"]["md5"],
+            package_md5)
+        self.assertEqual(
+            metadata.packages[NO_SETTINGS_PACKAGE_ID].checksums["conan_package.tgz"]["sha1"],
+            package_sha1)
+        self.assertEqual(metadata.recipe.checksums["conanfile.py"]["md5"], recipe_md5)
+        self.assertEqual(metadata.recipe.checksums["conanfile.py"]["sha1"], recipe_sha1)
+        
+    def upload_without_cleaned_user_test(self):
+        """ When a user is not authenticated, uploads failed first time
+        https://github.com/conan-io/conan/issues/5878
+        """
+
+        class EmptyCapabilitiesResponse(object):
+            def __init__(self):
+                self.ok = False
+                self.headers = {"X-Conan-Server-Capabilities": "",
+                                "Content-Type": "application/json"}
+                self.status_code = 401
+                self.content = b''
+
+        class ErrorApiResponse(object):
+            def __init__(self):
+                self.ok = False
+                self.status_code = 400
+                self.content = "Unsupported Conan v1 repository request for 'conan'"
+
+        class ServerCapabilitiesRequester(TestRequester):
+            def __init__(self, *args, **kwargs):
+                self._first_ping = True
+                super(ServerCapabilitiesRequester, self).__init__(*args, **kwargs)
+
+            def get(self, url, **kwargs):
+                app, url = self._prepare_call(url, kwargs)
+                if app:
+                    if url.endswith("ping") and self._first_ping:
+                        self._first_ping = False
+                        return EmptyCapabilitiesResponse()
+                    elif "Hello0" in url and "1.2.1" in url and "v1" in url:
+                        return ErrorApiResponse()
+                    else:
+                        response = app.get(url, **kwargs)
+                        return TestingResponse(response)
+                else:
+                    return requests.get(url, **kwargs)
+
+        server = TestServer(users={"user": "password"}, write_permissions=[("*/*@*/*", "*")],
+                            server_capabilities=[REVISIONS])
+        servers = {"default": server}
+        client = TestClient(requester_class=ServerCapabilitiesRequester, servers=servers,
+                            revisions_enabled=True)
+        files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
+        client.save(files)
+        client.run("create . user/testing")
+        client.run("user -c")
+        client.run("upload Hello0/1.2.1@user/testing --all -r default")
+        self.assertIn("Uploaded conan recipe 'Hello0/1.2.1@user/testing' to 'default'", client.out)

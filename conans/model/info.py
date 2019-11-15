@@ -141,8 +141,8 @@ class RequirementInfo(object):
         self.version = self.full_version
         self.user = self.full_user
         self.channel = self.full_channel
+        self.package_id = self.full_package_id
         self.recipe_revision = self.full_recipe_revision
-        self.package_id = None
         self.package_revision = None
 
     def package_revision_mode(self):
@@ -475,3 +475,10 @@ class ConanInfo(object):
 
         if self.full_settings.compiler.cppstd:
             self.settings.compiler.cppstd = self.full_settings.compiler.cppstd
+
+    def shared_library_package_id(self):
+        if self.full_options.shared:
+            for dep_name in self.requires.pkg_names:
+                dep_options = self.full_options[dep_name]
+                if "shared" not in dep_options or not self.full_options[dep_name].shared:
+                    self.requires[dep_name].package_revision_mode()

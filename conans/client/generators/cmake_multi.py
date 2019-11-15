@@ -2,7 +2,7 @@ from conans.client.generators.cmake import DepsCppCmake
 from conans.client.generators.cmake_common import (cmake_dependencies, cmake_dependency_vars,
                                                    cmake_global_vars, cmake_macros_multi,
                                                    cmake_package_info, cmake_user_info_vars,
-                                                   generate_targets_section)
+                                                   generate_targets_section, apple_frameworks_macro)
 from conans.model import Generator
 from conans.model.build_info import CppInfo
 
@@ -26,6 +26,8 @@ def extend(cpp_info, config):
         result.cxxflags = cpp_info.cxxflags + config_info.cxxflags
         result.sharedlinkflags = cpp_info.sharedlinkflags + config_info.sharedlinkflags
         result.exelinkflags = cpp_info.exelinkflags + config_info.exelinkflags
+        result.system_libs = add_lists(cpp_info.system_libs, config_info.system_libs)
+        result.build_modules = add_lists(cpp_info.build_modules, config_info.build_modules)
         return result
     return cpp_info
 
@@ -47,7 +49,8 @@ class CMakeMultiGenerator(Generator):
         sections = []
 
         # Per requirement variables
-        for dep_name, dep_cpp_info in self.deps_build_info.dependencies:
+        for _, dep_cpp_info in self.deps_build_info.dependencies:
+            dep_name = dep_cpp_info.name
             # Only the specific of the build_type
             dep_cpp_info = extend(dep_cpp_info, build_type)
             deps = DepsCppCmake(dep_cpp_info)
@@ -70,6 +73,7 @@ class CMakeMultiGenerator(Generator):
     @property
     def _content_multi(self):
         sections = ["include(CMakeParseArguments)"]
+        sections.append(apple_frameworks_macro)
 
         # USER DECLARED VARS
         sections.append("\n### Definition of user declared vars (user_info) ###\n")

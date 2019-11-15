@@ -1,9 +1,12 @@
 import os
-from collections import namedtuple
+from collections import namedtuple, defaultdict
 
 from conans import Options
 from conans.model.conan_file import ConanFile
+from conans.model.env_info import DepsEnvInfo, EnvInfo
+from conans.model.env_info import EnvValues
 from conans.model.options import PackageOptions
+from conans.model.user_info import DepsUserInfo
 from conans.test.utils.tools import TestBufferConanOutput
 
 
@@ -19,9 +22,22 @@ class MockSettings(object):
 MockOptions = MockSettings
 
 
-class MockDepsCppInfo(object):
+class MockCppInfo(object):
+    def __init__(self):
+        self.bin_paths = []
+        self.lib_paths = []
+        self.include_paths = []
+        self.libs = []
+        self.cflags = []
+        self.cppflags = []
+        self.defines = []
+        self.framework_paths = []
+
+
+class MockDepsCppInfo(defaultdict):
 
     def __init__(self):
+        super(MockDepsCppInfo, self).__init__(MockCppInfo)
         self.include_paths = []
         self.lib_paths = []
         self.libs = []
@@ -31,6 +47,11 @@ class MockDepsCppInfo(object):
         self.sharedlinkflags = []
         self.exelinkflags = []
         self.sysroot = ""
+        self.framework_paths = []
+
+    @property
+    def deps(self):
+        return self.keys()
 
 
 class MockConanfile(ConanFile):
@@ -56,61 +77,6 @@ class MockConanfile(ConanFile):
             self.runner(*args, **kwargs)
 
 
-class TestConanFile(object):
-    def __init__(self, name="Hello", version="0.1", settings=None, requires=None, options=None,
-                 default_options=None, package_id=None, build_requires=None, info=None,
-                 private_requires=None, private_first=False):
-        self.name = name
-        self.version = version
-        self.settings = settings
-        self.requires = requires
-        self.private_requires = private_requires
-        self.build_requires = build_requires
-        self.options = options
-        self.default_options = default_options
-        self.package_id = package_id
-        self.info = info
-        self.private_first = private_first
-
-    def __repr__(self):
-        base = """from conans import ConanFile
-
-class {name}Conan(ConanFile):
-    name = "{name}"
-    version = "{version}"
-""".format(name=self.name, version=self.version)
-        if self.settings:
-            base += "    settings = %s\n" % self.settings
-        if self.requires or self.private_requires:
-            if self.private_first:
-                reqs_list = ["('%s', 'private')" % r for r in self.private_requires or []]
-                reqs_list.extend(['"%s"' % r for r in self.requires or []])
-            else:
-                reqs_list = ['"%s"' % r for r in self.requires or []]
-                reqs_list.extend(["('%s', 'private')" % r for r in self.private_requires or []])
-            reqs_list.append("")
-            base += "    requires = %s\n" % (", ".join(reqs_list))
-        if self.build_requires:
-            base += "    build_requires = %s\n" % (", ".join('"%s"' % r
-                                                             for r in self.build_requires))
-        if self.options:
-            base += "    options = %s\n" % str(self.options)
-        if self.default_options:
-            if isinstance(self.default_options, str):
-                base += "    default_options = '%s'\n" % str(self.default_options)
-            else:
-                base += "    default_options = %s\n" % str(self.default_options)
-        if self.package_id:
-            base += "    def package_id(self):\n        %s\n" % self.package_id
-        if self.info:
-            base += """
-    def package_info(self):
-        self.cpp_info.libs = ["mylib{name}{version}lib"]
-        self.env_info.MYENV = ["myenv{name}{version}env"]
-""".format(name=self.name, version=self.version)
-        return base
-
-
 class ConanFileMock(ConanFile):
 
     def __init__(self, shared=None, options=None, options_values=None):
@@ -123,7 +89,8 @@ class ConanFileMock(ConanFile):
         if options_values:
             for var, value in options_values.items():
                 self.options._data[var] = value
-        self.deps_cpp_info = namedtuple("deps_cpp_info", "sysroot")("/path/to/sysroot")
+        self.deps_cpp_info = MockDepsCppInfo()  # ("deps_cpp_info", "sysroot")("/path/to/sysroot")
+        self.deps_cpp_info.sysroot = "/path/to/sysroot"
         self.output = TestBufferConanOutput()
         self.in_local_cache = False
         self.install_folder = "myinstallfolder"
@@ -135,6 +102,10 @@ class ConanFileMock(ConanFile):
         self.should_test = True
         self.generators = []
         self.captured_env = {}
+        self.deps_env_info = DepsEnvInfo()
+        self.env_info = EnvInfo()
+        self.deps_user_info = DepsUserInfo()
+        self._conan_env_values = EnvValues()
 
     def run(self, command):
         self.command = command

@@ -173,3 +173,35 @@ VAR2=23
         self.assertEqual(info.lib_paths, [os.path.join(folder, "lib"), abs_lib])
         self.assertEqual(info.bin_paths, [abs_bin,
                                           os.path.join(folder, "local_bindir")])
+
+    def cpp_info_system_libs_test(self):
+        info1 = CppInfo("folder1")
+        info1.system_libs = ["sysdep1"]
+        info2 = CppInfo("folder2")
+        info2.system_libs = ["sysdep2", "sysdep3"]
+        deps_cpp_info = DepsCppInfo()
+        deps_cpp_info.update(info1, "dep1")
+        deps_cpp_info.update(info2, "dep2")
+        self.assertEqual(["sysdep1", "sysdep2", "sysdep3"], deps_cpp_info.system_libs)
+        self.assertEqual(["sysdep1"], deps_cpp_info["dep1"].system_libs)
+        self.assertEqual(["sysdep2", "sysdep3"], deps_cpp_info["dep2"].system_libs)
+
+    def cpp_info_name_test(self):
+        folder = temp_folder()
+        info = CppInfo(folder)
+        info.name = "MyName"
+        deps_cpp_info = DepsCppInfo()
+        deps_cpp_info.update(info, "myname")
+        self.assertIn("MyName", deps_cpp_info["myname"].name)
+
+    def cpp_info_build_modules_test(self):
+        folder = temp_folder()
+        info = CppInfo(folder)
+        info.build_modules.append("my_module.cmake")
+        info.debug.build_modules = ["mod-release.cmake"]
+        deps_cpp_info = DepsCppInfo()
+        deps_cpp_info.update(info, "myname")
+        self.assertListEqual([os.path.join(folder, "my_module.cmake")],
+                             deps_cpp_info["myname"].build_modules_paths)
+        self.assertListEqual([os.path.join(folder, "mod-release.cmake")],
+                             deps_cpp_info["myname"].debug.build_modules_paths)

@@ -23,6 +23,7 @@ class MakeGeneratorTest(unittest.TestCase):
         save(os.path.join(tmp_folder2, "lib2", "file.a"), "")
         save(os.path.join(tmp_folder1, "bin1", "file.bin"), "")
         save(os.path.join(tmp_folder2, "bin2", "file.bin"), "")
+        save(os.path.join(tmp_folder1, "SystemFrameworks", "file.bin"), "")
 
         conanfile = ConanFile(TestBufferConanOutput(), None)
         conanfile.initialize(Settings({}), EnvValues())
@@ -38,6 +39,9 @@ class MakeGeneratorTest(unittest.TestCase):
         cpp_info.cxxflags = ['-fdollars-in-identifiers']
         cpp_info.sharedlinkflags = ['-framework Cocoa']
         cpp_info.exelinkflags = ['-framework QuartzCore']
+        cpp_info.frameworks = ['AudioUnit']
+        cpp_info.frameworkdirs = ['SystemFrameworks']
+        cpp_info.system_libs = ["system_lib1"]
         conanfile.deps_cpp_info.update(cpp_info, ref.name)
         ref = ConanFileReference.loads("MyPkg2/3.2.3@lasote/stables")
         cpp_info = CppInfo(tmp_folder2)
@@ -51,6 +55,7 @@ class MakeGeneratorTest(unittest.TestCase):
         cpp_info.cxxflags = ['-pthread']
         cpp_info.sharedlinkflags = ['-framework AudioFoundation']
         cpp_info.exelinkflags = ['-framework VideoToolbox']
+        cpp_info.system_libs = ["system_lib2"]
         conanfile.deps_cpp_info.update(cpp_info, ref.name)
         generator = MakeGenerator(conanfile)
         content = generator.content
@@ -80,6 +85,9 @@ CONAN_RES_DIRS_MYPKG1 +=  \\
 CONAN_LIBS_MYPKG1 +=  \\
 libfoo
 
+CONAN_SYSTEM_LIBS_MYPKG1 +=  \\
+system_lib1
+
 CONAN_DEFINES_MYPKG1 +=  \\
 MYDEFINE1
 
@@ -94,6 +102,12 @@ CONAN_SHAREDLINKFLAGS_MYPKG1 +=  \\
 
 CONAN_EXELINKFLAGS_MYPKG1 +=  \\
 -framework QuartzCore
+
+CONAN_FRAMEWORKS_MYPKG1 +=  \\
+AudioUnit
+
+CONAN_FRAMEWORK_PATHS_MYPKG1 +=  \\
+{conan_framework_dirs_mypkg1}
 
 CONAN_ROOT_MYPKG2 ?=  \\
 {conan_root_mypkg2}
@@ -119,6 +133,9 @@ CONAN_RES_DIRS_MYPKG2 +=  \\
 CONAN_LIBS_MYPKG2 +=  \\
 libbar
 
+CONAN_SYSTEM_LIBS_MYPKG2 +=  \\
+system_lib2
+
 CONAN_DEFINES_MYPKG2 +=  \\
 MYDEFINE2
 
@@ -133,6 +150,12 @@ CONAN_SHAREDLINKFLAGS_MYPKG2 +=  \\
 
 CONAN_EXELINKFLAGS_MYPKG2 +=  \\
 -framework VideoToolbox
+
+CONAN_FRAMEWORKS_MYPKG2 +=  \\
+
+
+CONAN_FRAMEWORK_PATHS_MYPKG2 +=  \\
+
 
 CONAN_ROOTPATH +=  \\
 $(CONAN_ROOTPATH_MYPKG1) \\
@@ -185,6 +208,14 @@ $(CONAN_SHAREDLINKFLAGS_MYPKG2)
 CONAN_EXELINKFLAGS +=  \\
 $(CONAN_EXELINKFLAGS_MYPKG1) \\
 $(CONAN_EXELINKFLAGS_MYPKG2)
+
+CONAN_FRAMEWORKS +=  \\
+$(CONAN_FRAMEWORKS_MYPKG1) \\
+$(CONAN_FRAMEWORKS_MYPKG2)
+
+CONAN_FRAMEWORK_PATHS +=  \\
+$(CONAN_FRAMEWORK_PATHS_MYPKG1) \\
+$(CONAN_FRAMEWORK_PATHS_MYPKG2)
 """
         root1 = tmp_folder1.replace('\\', '/')
         root2 = tmp_folder2.replace('\\', '/')
@@ -207,6 +238,7 @@ $(CONAN_EXELINKFLAGS_MYPKG2)
                                                    conan_include_dirs_mypkg2=inc2,
                                                    conan_lib_dirs_mypkg2=lib2,
                                                    conan_bin_dirs_mypkg2=bin2,
-                                                   conan_build_dirs_mypkg2=root2 + "/")
+                                                   conan_build_dirs_mypkg2=root2 + "/",
+                                                   conan_framework_dirs_mypkg1=root1 + "/SystemFrameworks")
         self.maxDiff = None
         self.assertIn(expected_content, content)

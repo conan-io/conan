@@ -14,13 +14,12 @@ from conans.errors import ConanException
 from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
-from conans.paths import PUT_HEADERS
+from conans.paths import ARTIFACTS_PROPERTIES_FILE
 from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
 from conans.paths.package_layouts.package_editable_layout import PackageEditableLayout
 from conans.unicode import get_cwd
 from conans.util.files import list_folder_subdirs, load, normalize, save
 from conans.util.locks import Lock
-
 
 CONAN_CONF = 'conan.conf'
 CONAN_SETTINGS = "settings.yml"
@@ -72,10 +71,12 @@ class ClientCache(object):
         self.editable_packages = EditablePackages(self.cache_folder)
         # paths
         self._store_folder = self.config.storage_path or self.cache_folder
+        # Just call it to make it raise in case of short_paths misconfiguration
+        self.config.short_paths_home
 
     def all_refs(self):
         subdirs = list_folder_subdirs(basedir=self._store_folder, level=4)
-        return [ConanFileReference(*folder.split("/")) for folder in subdirs]
+        return [ConanFileReference.load_dir_repr(folder) for folder in subdirs]
 
     @property
     def store(self):
@@ -92,7 +93,7 @@ class ClientCache(object):
     def config_install_file(self):
         return os.path.join(self.cache_folder, "config_install.json")
 
-    def package_layout(self, ref, short_paths=None, *args, **kwargs):
+    def package_layout(self, ref, short_paths=None):
         assert isinstance(ref, ConanFileReference), "It is a {}".format(type(ref))
         edited_ref = self.editable_packages.get(ref.copy_clear_rev())
         if edited_ref:
@@ -119,16 +120,16 @@ class ClientCache(object):
         return self._no_lock
 
     @property
-    def put_headers_path(self):
-        return join(self.cache_folder, PUT_HEADERS)
+    def artifacts_properties_path(self):
+        return join(self.cache_folder, ARTIFACTS_PROPERTIES_FILE)
 
-    def read_put_headers(self):
+    def read_artifacts_properties(self):
         ret = {}
-        if not os.path.exists(self.put_headers_path):
-            save(self.put_headers_path, "")
+        if not os.path.exists(self.artifacts_properties_path):
+            save(self.artifacts_properties_path, "")
             return ret
         try:
-            contents = load(self.put_headers_path)
+            contents = load(self.artifacts_properties_path)
             for line in contents.splitlines():
                 if line and not line.strip().startswith("#"):
                     tmp = line.split("=", 1)
@@ -139,7 +140,7 @@ class ClientCache(object):
                     ret[str(name)] = str(value)
             return ret
         except Exception:
-            raise ConanException("Invalid %s file!" % self.put_headers_path)
+            raise ConanException("Invalid %s file!" % self.artifacts_properties_path)
 
     @property
     def config(self):

@@ -1,8 +1,13 @@
+import json
 import os
 import unittest
+import six
 
+from conans.errors import ConanException
 from conans.test.utils.tools import TestClient
 from conans.util.files import load
+from conans.test.utils.test_files import temp_folder
+from conans.client.tools import environment_append
 
 
 class ConfigTest(unittest.TestCase):
@@ -90,3 +95,29 @@ class ConfigTest(unittest.TestCase):
     def missing_subarguments_test(self):
         self.client.run("config", assert_error=True)
         self.assertIn("ERROR: Exiting with code: 2", self.client.out)
+
+    def test_config_home_default(self):
+        self.client.run("config home")
+        self.assertIn(self.client.cache.cache_folder, self.client.out)
+        self.client.run("config home --json home.json")
+        self._assert_dict_subset({"home": self.client.cache.cache_folder},
+                                 json.loads(self.client.load("home.json")))
+
+    def test_config_home_custom_home_dir(self):
+        cache_folder = os.path.join(temp_folder(), "custom")
+        with environment_append({"CONAN_USER_HOME": cache_folder}):
+            client = TestClient(cache_folder=cache_folder)
+            client.run("config home")
+            self.assertIn(cache_folder, client.out)
+            client.run("config home --json home.json")
+            self._assert_dict_subset({"home": cache_folder}, json.loads(client.load("home.json")))
+
+    def test_config_home_short_home_dir(self):
+        cache_folder = os.path.join(temp_folder(), "custom")
+        with environment_append({"CONAN_USER_HOME_SHORT": cache_folder}):
+            with six.assertRaisesRegex(self, ConanException, "cannot be a subdirectory of the conan cache"):
+                TestClient(cache_folder=cache_folder)
+
+    def _assert_dict_subset(self, expected, actual):
+        actual = {k: v for k, v in actual.items() if k in expected}
+        self.assertDictEqual(expected, actual)

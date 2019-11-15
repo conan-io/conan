@@ -144,6 +144,16 @@ class ToolsTest(unittest.TestCase):
             with six.assertRaisesRegex(self, ConanException, "Invalid CONAN_CPU_COUNT value"):
                 tools.cpu_count(output=output)
 
+    @patch("conans.client.tools.oss.CpuProperties.get_cpu_period")
+    @patch("conans.client.tools.oss.CpuProperties.get_cpu_quota")
+    def test_cpu_count_in_container(self, get_cpu_quota_mock, get_cpu_period_mock):
+        get_cpu_quota_mock.return_value = 12000
+        get_cpu_period_mock.return_value = 1000
+
+        output = ConanOutput(sys.stdout)
+        cpus = tools.cpu_count(output=output)
+        self.assertEqual(12, cpus)
+
     def get_env_unit_test(self):
         """
         Unit tests tools.get_env
@@ -285,7 +295,8 @@ class HelloConan(ConanFile):
                                            arch="x86", output=self.output)
             self.assertEqual(len(w), 2)
             self.assertTrue(issubclass(w[0].category, DeprecationWarning))
-        self.assertIn('msbuild "project.sln" /p:Configuration="Debug" /p:Platform="x86"', cmd)
+        self.assertIn('msbuild "project.sln" /p:Configuration="Debug" '
+                      '/p:UseEnv=false /p:Platform="x86"', cmd)
         self.assertIn('vcvarsall.bat', cmd)
 
         # tests errors if args not defined
@@ -310,7 +321,8 @@ class HelloConan(ConanFile):
             cmd = tools.msvc_build_command(settings, "project.sln", output=self.output)
             self.assertEqual(len(w), 2)
             self.assertTrue(issubclass(w[0].category, DeprecationWarning))
-        self.assertIn('msbuild "project.sln" /p:Configuration="Debug" /p:Platform="x86"', cmd)
+        self.assertIn('msbuild "project.sln" /p:Configuration="Debug" '
+                      '/p:UseEnv=false /p:Platform="x86"', cmd)
         self.assertIn('vcvarsall.bat', cmd)
 
     @unittest.skipUnless(platform.system() == "Windows", "Requires vswhere")

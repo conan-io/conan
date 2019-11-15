@@ -20,7 +20,7 @@ assign_target_properties = """
     if({name}_INCLUDE_DIRS)
       set_target_properties({name}::{name} PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${{{name}_INCLUDE_DIRS}}")
     endif()
-    set_property(TARGET {name}::{name} PROPERTY INTERFACE_LINK_LIBRARIES ${{{name}_LIBRARIES_TARGETS}} "${{{name}_LINKER_FLAGS_LIST}}")
+    set_property(TARGET {name}::{name} PROPERTY INTERFACE_LINK_LIBRARIES ${{{name}_LIBRARIES_TARGETS}} ${{{name}_SYSTEM_LIBS}} "${{{name}_LINKER_FLAGS_LIST}}")
     set_property(TARGET {name}::{name} PROPERTY INTERFACE_COMPILE_DEFINITIONS ${{{name}_COMPILE_DEFINITIONS}})
     set_property(TARGET {name}::{name} PROPERTY INTERFACE_COMPILE_OPTIONS "${{{name}_COMPILE_OPTIONS_LIST}}")
 """
@@ -48,7 +48,7 @@ endif()
     def content(self):
         ret = {}
         for depname, cpp_info in self.deps_build_info.dependencies:
-            ret["Find%s.cmake" % depname] = self._find_for_dep(depname, cpp_info)
+            ret["Find%s.cmake" % cpp_info.name] = self._find_for_dep(cpp_info.name, cpp_info)
         return ret
 
     def _find_for_dep(self, name, cpp_info):
@@ -56,7 +56,8 @@ endif()
         lines = []
         if cpp_info.public_deps:
             # Here we are generating FindXXX, so find_modules=True
-            lines = find_dependency_lines(name, cpp_info, find_modules=True)
+            public_deps_names = [self.deps_build_info[dep].name for dep in cpp_info.public_deps]
+            lines = find_dependency_lines(name, public_deps_names, find_modules=True)
         find_package_header_block = find_package_header.format(name=name, version=cpp_info.version)
         find_libraries_block = target_template.format(name=name, deps=deps, build_type_suffix="")
         target_props = assign_target_properties.format(name=name, deps=deps)
@@ -69,26 +70,26 @@ endif()
         return tmp
 
 
-def find_dependency_lines(name, cpp_info, find_modules):
+def find_dependency_lines(name, public_deps_names, find_modules):
     lines = ["", "# Library dependencies", "include(CMakeFindDependencyMacro)"]
-    for dep in cpp_info.public_deps:
+    for dep_name in public_deps_names:
         def property_lines(prop):
             lib_t = "%s::%s" % (name, name)
-            dep_t = "%s::%s" % (dep, dep)
+            dep_t = "%s::%s" % (dep_name, dep_name)
             return ["get_target_property(tmp %s %s)" % (dep_t, prop),
                     "if(tmp)",
                     "  set_property(TARGET %s APPEND PROPERTY %s ${tmp})" % (lib_t, prop),
                     'endif()']
 
         if find_modules:
-            lines.append("find_dependency(%s REQUIRED)" % dep)
+            lines.append("find_dependency(%s REQUIRED)" % dep_name)
         else:
             # https://github.com/conan-io/conan/issues/4994
             # https://github.com/conan-io/conan/issues/5040
             lines.append('if(${CMAKE_VERSION} VERSION_LESS "3.9.0")')
-            lines.append('  find_package(%s REQUIRED NO_MODULE)' % dep)
+            lines.append('  find_package(%s REQUIRED NO_MODULE)' % dep_name)
             lines.append("else()")
-            lines.append('  find_dependency(%s REQUIRED NO_MODULE)' % dep)
+            lines.append('  find_dependency(%s REQUIRED NO_MODULE)' % dep_name)
             lines.append("endif()")
 
         lines.extend(property_lines("INTERFACE_LINK_LIBRARIES"))

@@ -15,7 +15,7 @@ from conans.model.package_metadata import PackageMetadata
 from conans.model.ref import ConanFileReference
 from conans.model.ref import PackageReference
 from conans.paths import CONANFILE, SYSTEM_REQS, EXPORT_FOLDER, EXPORT_SRC_FOLDER, SRC_FOLDER, \
-    BUILD_FOLDER, PACKAGES_FOLDER, SYSTEM_REQS_FOLDER, SCM_FOLDER, PACKAGE_METADATA
+    BUILD_FOLDER, PACKAGES_FOLDER, SYSTEM_REQS_FOLDER, PACKAGE_METADATA, SCM_SRC_FOLDER
 from conans.util.files import load, save, rmdir
 from conans.util.locks import Lock, NoLock, ReadLock, SimpleLock, WriteLock
 from conans.util.log import logger
@@ -67,6 +67,10 @@ class PackageCacheLayout(object):
     def source(self):
         return os.path.join(self._base_folder, SRC_FOLDER)
 
+    @short_path
+    def scm_sources(self):
+        return os.path.join(self._base_folder, SCM_SRC_FOLDER)
+
     def builds(self):
         return os.path.join(self._base_folder, BUILD_FOLDER)
 
@@ -102,11 +106,8 @@ class PackageCacheLayout(object):
     @short_path
     def package(self, pref):
         assert isinstance(pref, PackageReference)
-        assert pref.ref == self._ref
+        assert pref.ref == self._ref, "{!r} != {!r}".format(pref.ref, self._ref)
         return os.path.join(self._base_folder, PACKAGES_FOLDER, pref.id)
-
-    def scm_folder(self):
-        return os.path.join(self._base_folder, SCM_FOLDER)
 
     def package_metadata(self):
         return os.path.join(self._base_folder, PACKAGE_METADATA)
@@ -180,15 +181,6 @@ class PackageCacheLayout(object):
             yield metadata
             save(self.package_metadata(), metadata.dumps())
 
-    # Revisions
-    def package_summary_hash(self, pref):
-        package_folder = self.package(pref)
-        try:
-            read_manifest = FileTreeManifest.load(package_folder)
-        except IOError:
-            raise PackageNotFoundException(pref)
-        return read_manifest.summary_hash
-
     # Locks
     def conanfile_read_lock(self, output):
         if self._no_lock:
@@ -239,3 +231,11 @@ class PackageCacheLayout(object):
             return sorted([path for path in os.listdir(abs_path) if not discarded_file(path)])
         else:
             return load(abs_path)
+
+    def packages_ids(self):
+        packages_folder = self.packages()
+        if os.path.exists(packages_folder):
+            pkg_ids = [d for d in os.listdir(packages_folder)]
+        else:
+            pkg_ids = []
+        return pkg_ids

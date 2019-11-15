@@ -4,9 +4,8 @@ import unittest
 from conans.model.info import ConanInfo
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANINFO
-from conans.test.utils.conanfile import TestConanFile
 from conans.test.utils.deprecation import catch_deprecation_warning
-from conans.test.utils.tools import TestClient
+from conans.test.utils.tools import TestClient, GenConanfile
 from conans.util.env_reader import get_env
 from conans.util.files import load
 
@@ -26,18 +25,25 @@ class Pkg(ConanFile):
         client.run('install . -s os=Windows -s compiler="Visual Studio" '
                    '-s compiler.version=15 -s compiler.runtime=MD '
                    '-s os_build=Windows -s arch_build=x86 -s compiler.toolset=v141')
-        conaninfo = load(os.path.join(client.current_folder, "conaninfo.txt"))
+        conaninfo = client.load("conaninfo.txt")
         self.assertNotIn("compiler.toolset=None", conaninfo)
         self.assertNotIn("os_build=None", conaninfo)
         self.assertNotIn("arch_build=None", conaninfo)
 
     def _export(self, name, version, package_id_text=None, requires=None,
-                channel=None, default_option_value="off", settings=None):
-        conanfile = TestConanFile(name, version, requires=requires,
-                                  options={"an_option": ["on", "off"]},
-                                  default_options=[("an_option", "%s" % default_option_value)],
-                                  package_id=package_id_text,
-                                  settings=settings)
+                channel=None, default_option_value='"off"', settings=None):
+        conanfile = GenConanfile().with_name(name).with_version(version)\
+                                  .with_option(option_name="an_option", values=["on", "off"])\
+                                  .with_default_option("an_option", default_option_value)\
+                                  .with_package_id(package_id_text)
+        if settings:
+            for setting in settings:
+                conanfile = conanfile.with_setting(setting)
+
+        if requires:
+            for require in requires:
+                conanfile = conanfile.with_require(ConanFileReference.loads(require))
+
         self.client.save({"conanfile.py": str(conanfile)}, clean_first=True)
         revisions_enabled = self.client.cache.config.revisions_enabled
         self.client.disable_revisions()
@@ -57,7 +63,8 @@ class Pkg(ConanFile):
                      requires=["Hello/1.2.0@lasote/stable"])
 
         # Build the dependencies with --build missing
-        self.client.save({"conanfile.txt": "[requires]\nHello2/2.3.8@lasote/stable"}, clean_first=True)
+        self.client.save({"conanfile.txt": "[requires]\nHello2/2.3.8@lasote/stable"},
+                         clean_first=True)
         self.client.run("install . --build missing")
         self.assertIn("Hello2/2.Y.Z", [line.strip() for line in self.conaninfo.splitlines()])
 
@@ -89,13 +96,15 @@ class Pkg(ConanFile):
                           self.client.out)
 
         # Try to change user and channel too, should be the same, not rebuilt needed
-        self._export("Hello", "1.5.0", package_id_text=None, requires=None, channel="memsharded/testing")
+        self._export("Hello", "1.5.0", package_id_text=None, requires=None,
+                     channel="memsharded/testing")
         self.client.run("install Hello/1.5.0@memsharded/testing --build missing")
         self._export("Hello2", "2.3.8",
                      package_id_text='self.info.requires["Hello"].semver()',
                      requires=["Hello/1.5.0@memsharded/testing"])
 
-        self.client.save({"conanfile.txt": "[requires]\nHello2/2.3.8@lasote/stable"}, clean_first=True)
+        self.client.save({"conanfile.txt": "[requires]\nHello2/2.3.8@lasote/stable"},
+                         clean_first=True)
 
         if not self.client.cache.config.revisions_enabled:
             self.client.run("install .")
@@ -114,18 +123,21 @@ class Pkg(ConanFile):
                      requires=["Hello/1.2.0@lasote/stable"])
 
         # Build the dependencies with --build missing
-        self.client.save({"conanfile.txt": "[requires]\nHello2/2.3.8@lasote/stable"}, clean_first=True)
+        self.client.save({"conanfile.txt": "[requires]\nHello2/2.3.8@lasote/stable"},
+                         clean_first=True)
         self.client.run("install . --build missing")
         self.assertIn("Hello2/2.3.8", self.conaninfo)
 
         # If we change the user and channel should not be needed to rebuild
-        self._export("Hello", "1.2.0", package_id_text=None, requires=None, channel="memsharded/testing")
+        self._export("Hello", "1.2.0", package_id_text=None, requires=None,
+                     channel="memsharded/testing")
         self.client.run("install Hello/1.2.0@memsharded/testing --build missing")
         self._export("Hello2", "2.3.8",
                      package_id_text='self.info.requires["Hello"].full_version_mode()',
                      requires=["Hello/1.2.0@memsharded/testing"])
 
-        self.client.save({"conanfile.txt": "[requires]\nHello2/2.3.8@lasote/stable"}, clean_first=True)
+        self.client.save({"conanfile.txt": "[requires]\nHello2/2.3.8@lasote/stable"},
+                         clean_first=True)
         if not self.client.cache.config.revisions_enabled:
             self.client.run("install .")
             self.assertIn("Hello2/2.3.8@lasote/stable:3ec60bb399a8bcb937b7af196f6685ba878aab02",
@@ -145,7 +157,8 @@ class Pkg(ConanFile):
                      package_id_text='self.info.requires["Hello"].full_version_mode()',
                      requires=["Hello/1.5.0@lasote/stable"])
 
-        self.client.save({"conanfile.txt": "[requires]\nHello2/2.3.8@lasote/stable"}, clean_first=True)
+        self.client.save({"conanfile.txt": "[requires]\nHello2/2.3.8@lasote/stable"},
+                         clean_first=True)
         with self.assertRaises(Exception):
             self.client.run("install .")
         self.assertIn("Can't find a 'Hello2/2.3.8@lasote/stable' package", self.client.out)
@@ -157,30 +170,36 @@ class Pkg(ConanFile):
                      requires=["Hello/1.2.0@lasote/stable"])
 
         # Build the dependencies with --build missing
-        self.client.save({"conanfile.txt": "[requires]\nHello2/2.3.8@lasote/stable"}, clean_first=True)
+        self.client.save({"conanfile.txt": "[requires]\nHello2/2.3.8@lasote/stable"},
+                         clean_first=True)
         self.client.run("install . --build missing")
         self.assertIn("Hello2/2.3.8", self.conaninfo)
 
         # If we change the user and channel should be needed to rebuild
-        self._export("Hello", "1.2.0", package_id_text=None, requires=None, channel="memsharded/testing")
+        self._export("Hello", "1.2.0", package_id_text=None, requires=None,
+                     channel="memsharded/testing")
         self.client.run("install Hello/1.2.0@memsharded/testing --build missing")
         self._export("Hello2", "2.3.8",
                      package_id_text='self.info.requires["Hello"].full_recipe_mode()',
                      requires=["Hello/1.2.0@memsharded/testing"])
 
-        self.client.save({"conanfile.txt": "[requires]\nHello2/2.3.8@lasote/stable"}, clean_first=True)
+        self.client.save({"conanfile.txt": "[requires]\nHello2/2.3.8@lasote/stable"},
+                         clean_first=True)
         with self.assertRaises(Exception):
             self.client.run("install .")
         self.assertIn("Can't find a 'Hello2/2.3.8@lasote/stable' package", self.client.out)
 
-        # If we change only the package ID from hello (one more defaulted option to True) should not affect
-        self._export("Hello", "1.2.0", package_id_text=None, requires=None, default_option_value="on")
+        # If we change only the package ID from hello (one more defaulted option
+        #  to True) should not affect
+        self._export("Hello", "1.2.0", package_id_text=None, requires=None,
+                     default_option_value='"on"')
         self.client.run("install Hello/1.2.0@lasote/stable --build missing")
         self._export("Hello2", "2.3.8",
                      package_id_text='self.info.requires["Hello"].full_recipe_mode()',
                      requires=["Hello/1.2.0@lasote/stable"])
 
-        self.client.save({"conanfile.txt": "[requires]\nHello2/2.3.8@lasote/stable"}, clean_first=True)
+        self.client.save({"conanfile.txt": "[requires]\nHello2/2.3.8@lasote/stable"},
+                         clean_first=True)
 
         self.client.run("install .")
 
@@ -191,14 +210,18 @@ class Pkg(ConanFile):
                      requires=["Hello/1.2.0@lasote/stable"])
 
         # Build the dependencies with --build missing
-        self.client.save({"conanfile.txt": "[requires]\nHello2/2.3.8@lasote/stable"}, clean_first=True)
+        self.client.save({"conanfile.txt": "[requires]\nHello2/2.3.8@lasote/stable"},
+                         clean_first=True)
         self.client.run("install . --build missing")
         self.assertIn("Hello2/2.3.8", self.conaninfo)
 
-        # If we change only the package ID from hello (one more defaulted option to True) should affect
-        self._export("Hello", "1.2.0", package_id_text=None, requires=None, default_option_value="on")
+        # If we change only the package ID from hello (one more defaulted option
+        #  to True) should affect
+        self._export("Hello", "1.2.0", package_id_text=None, requires=None,
+                     default_option_value='"on"')
         self.client.run("install Hello/1.2.0@lasote/stable --build missing")
-        self.client.save({"conanfile.txt": "[requires]\nHello2/2.3.8@lasote/stable"}, clean_first=True)
+        self.client.save({"conanfile.txt": "[requires]\nHello2/2.3.8@lasote/stable"},
+                         clean_first=True)
         with self.assertRaises(Exception):
             self.client.run("install .")
         self.assertIn("Can't find a 'Hello2/2.3.8@lasote/stable' package", self.client.out)
@@ -211,7 +234,8 @@ class Pkg(ConanFile):
                      requires=["Hello/1.2.0@lasote/stable"])
 
         # Build the dependencies with --build missing
-        self.client.save({"conanfile.txt": "[requires]\nHello2/2.3.8@lasote/stable"}, clean_first=True)
+        self.client.save({"conanfile.txt": "[requires]\nHello2/2.3.8@lasote/stable"},
+                         clean_first=True)
         self.client.run("install . --build missing")
         self.assertIn("Hello2/2.3.8", self.conaninfo)
 
@@ -222,7 +246,8 @@ class Pkg(ConanFile):
                      package_id_text='self.info.requires["HelloNew"].unrelated_mode()',
                      requires=["HelloNew/1.2.0@lasote/stable"])
 
-        self.client.save({"conanfile.txt": "[requires]\nHello2/2.3.8@lasote/stable"}, clean_first=True)
+        self.client.save({"conanfile.txt": "[requires]\nHello2/2.3.8@lasote/stable"},
+                         clean_first=True)
         # Not needed to rebuild Hello2, it doesn't matter its requires
         if not self.client.cache.config.revisions_enabled:
             self.client.run("install .")
@@ -240,7 +265,7 @@ class Pkg(ConanFile):
         for package_id in [None, "self.info.vs_toolset_compatible()"]:
             self._export("Hello", "1.2.0", package_id_text=package_id,
                          channel="user/testing",
-                         settings='"compiler"')
+                         settings=["compiler", ])
             self.client.run('install Hello/1.2.0@user/testing '
                             ' -s compiler="Visual Studio" '
                             ' -s compiler.version=14 --build')
@@ -268,7 +293,7 @@ class Pkg(ConanFile):
         # By default is the same to build with native visual or the toolchain
         self._export("Hello", "1.2.0", package_id_text="self.info.vs_toolset_incompatible()",
                      channel="user/testing",
-                     settings='"compiler"',
+                     settings=["compiler", ],
                      )
         self.client.run('install Hello/1.2.0@user/testing '
                         ' -s compiler="Visual Studio" '
@@ -287,7 +312,7 @@ class Pkg(ConanFile):
             self.client.run("remove * -f")
             self._export("Hello", "1.2.0", package_id_text=package_id_text,
                          channel="user/testing",
-                         settings='"os", "os_build", "arch", "arch_build"')
+                         settings=["os", "os_build", "arch", "arch_build"])
             self.client.run('install Hello/1.2.0@user/testing '
                             ' -s os="Windows" '
                             ' -s os_build="Linux"'
@@ -342,7 +367,7 @@ class Pkg(ConanFile):
         self.client.run("remove * -f")
         self._export("Hello", "1.2.0",
                      channel="user/testing",
-                     settings='"os_build", "arch_build"')
+                     settings=["os_build", "arch_build"])
         self.client.run('install Hello/1.2.0@user/testing '
                         ' -s os_build="Linux"'
                         ' -s arch_build="x86"'
@@ -359,7 +384,7 @@ class Pkg(ConanFile):
     def test_standard_version_default_matching(self):
         self._export("Hello", "1.2.0",
                      channel="user/testing",
-                     settings='"compiler"')
+                     settings=["compiler", ])
 
         self.client.run('install Hello/1.2.0@user/testing '
                         ' -s compiler="gcc" -s compiler.libcxx=libstdc++11'
@@ -367,7 +392,7 @@ class Pkg(ConanFile):
 
         self._export("Hello", "1.2.0",
                      channel="user/testing",
-                     settings='"compiler", "cppstd"')
+                     settings=["compiler", "cppstd", ])
 
         with catch_deprecation_warning(self):
             self.client.run('info Hello/1.2.0@user/testing  -s compiler="gcc" '
@@ -390,7 +415,7 @@ class Pkg(ConanFile):
     def test_std_non_matching_with_cppstd(self):
         self._export("Hello", "1.2.0", package_id_text="self.info.default_std_non_matching()",
                      channel="user/testing",
-                     settings='"compiler", "cppstd"'
+                     settings=["compiler", "cppstd", ]
                      )
         self.client.run('install Hello/1.2.0@user/testing'
                         ' -s compiler="gcc" -s compiler.libcxx=libstdc++11'
@@ -406,7 +431,7 @@ class Pkg(ConanFile):
     def test_std_non_matching_with_compiler_cppstd(self):
         self._export("Hello", "1.2.0", package_id_text="self.info.default_std_non_matching()",
                      channel="user/testing",
-                     settings='"compiler"'
+                     settings=["compiler", ]
                      )
         self.client.run('install Hello/1.2.0@user/testing '
                         ' -s compiler="gcc" -s compiler.libcxx=libstdc++11'
@@ -420,7 +445,7 @@ class Pkg(ConanFile):
     def test_std_matching_with_compiler_cppstd(self):
         self._export("Hello", "1.2.0", package_id_text="self.info.default_std_matching()",
                      channel="user/testing",
-                     settings='"compiler"'
+                     settings=["compiler", ]
                      )
         self.client.run('install Hello/1.2.0@user/testing '
                         ' -s compiler="gcc" -s compiler.libcxx=libstdc++11'

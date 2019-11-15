@@ -126,6 +126,8 @@ class ConanFile(object):
         self._conan_user = user
         self._conan_channel = channel
 
+        self.compatible_packages = []
+
     def initialize(self, settings, env):
         if isinstance(self.generators, str):
             self.generators = [self.generators]
@@ -185,8 +187,7 @@ class ConanFile(object):
         if not self._conan_channel:
             self._conan_channel = os.getenv("CONAN_CHANNEL") or self.default_channel
             if not self._conan_channel:
-                raise ConanException("CONAN_CHANNEL environment variable not defined, "
-                                     "but self.channel is used in conanfile")
+                raise ConanException("channel not defined, but self.channel is used in conanfile")
         return self._conan_channel
 
     @property
@@ -194,8 +195,7 @@ class ConanFile(object):
         if not self._conan_user:
             self._conan_user = os.getenv("CONAN_USERNAME") or self.default_user
             if not self._conan_user:
-                raise ConanException("CONAN_USERNAME environment variable not defined, "
-                                     "but self.user is used in conanfile")
+                raise ConanException("user not defined, but self.user is used in conanfile")
         return self._conan_user
 
     def collect_libs(self, folder=None):
@@ -266,8 +266,10 @@ class ConanFile(object):
                 if OSInfo().is_macos and isinstance(command, string_types):
                     # Security policy on macOS clears this variable when executing /bin/sh. To
                     # keep its value, set it again inside the shell when running the command.
-                    command = 'DYLD_LIBRARY_PATH="%s" %s' % (os.environ.get('DYLD_LIBRARY_PATH', ''),
-                                                             command)
+                    command = 'DYLD_LIBRARY_PATH="%s" DYLD_FRAMEWORK_PATH="%s" %s' % \
+                              (os.environ.get('DYLD_LIBRARY_PATH', ''),
+                               os.environ.get("DYLD_FRAMEWORK_PATH", ''),
+                               command)
                 retcode = _run()
         else:
             retcode = _run()

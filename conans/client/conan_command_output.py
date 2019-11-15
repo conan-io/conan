@@ -30,9 +30,15 @@ class CommandOutputer(object):
     def remote_list(self, remotes, raw):
         for r in remotes:
             if raw:
-                self._output.info("%s %s %s" % (r.name, r.url, r.verify_ssl))
+                disabled_str = " True" if r.disabled else ""
+                self._output.info(
+                    "%s %s %s %s" %
+                    (r.name, r.url, r.verify_ssl, disabled_str))
             else:
-                self._output.info("%s: %s [Verify SSL: %s]" % (r.name, r.url, r.verify_ssl))
+                disabled_str = ", Disabled: True" if r.disabled else ""
+                self._output.info(
+                    "%s: %s [Verify SSL: %s%s]" %
+                    (r.name, r.url, r.verify_ssl, disabled_str))
 
     def remote_ref_list(self, refs):
         for reference, remote_name in refs.items():
@@ -109,6 +115,7 @@ class CommandOutputer(object):
         for node in sorted(deps_graph.nodes):
             compact_nodes.setdefault((node.ref, node.package_id), []).append(node)
 
+        build_time_nodes = deps_graph.build_time_nodes()
         remotes = self._cache.registry.load_remotes()
         ret = []
         for (ref, package_id), list_nodes in compact_nodes.items():
@@ -186,8 +193,8 @@ class CommandOutputer(object):
                     item_data["required_by"] = [d.display_name for d in required]
 
             depends = node.neighbors()
-            requires = [d for d in depends if not d.build_require]
-            build_requires = [d for d in depends if d.build_require]
+            requires = [d for d in depends if d not in build_time_nodes]
+            build_requires = [d for d in depends if d in build_time_nodes]
 
             if requires:
                 item_data["requires"] = [repr(d.ref.copy_clear_rev()) for d in requires]
