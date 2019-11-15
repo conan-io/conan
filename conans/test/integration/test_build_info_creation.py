@@ -189,32 +189,33 @@ class MyBuildInfoCreation(unittest.TestCase):
             from conans import ConanFile, load
             import os
             class Pkg(ConanFile):
-                {requires}
-                scm = {{"type": "git",
+                scm = {"type": "git",
                        "url": "auto",
-                       "revision": "auto"}}
+                       "revision": "auto"}
                 keep_imports = True
+                def build(self):
+                    pass
                 def imports(self):
                     self.copy("myfile.txt", folder=True)
                 def package(self):
                     self.copy("*myfile.txt")
                 """)
+
+        client.save({"PkgA/conanfile.py": conanfile,
+                     "PkgA/myfile.txt": "HelloA"})
         client.run_command("git init")
         client.run_command('git config user.email "you@example.com"')
         client.run_command('git config user.name "Your Name"')
         client.run_command("git remote add origin https://github.com/fake/fake.git")
         client.run_command("git add .")
         client.run_command("git commit -m \"initial commit\"")
-        client.save({"PkgA/conanfile.py": conanfile.format(requires=""),
-                     "PkgA/myfile.txt": "HelloA"})
-        client.run("export PkgA PkgA/0.1@")
 
-        client.run("export PkgB PkgB/0.1@")
+        client.run("export PkgA PkgA/0.1@")
 
         client.run("graph lock PkgA/0.1@")
 
-        client.run("install PkgB PkgB/0.1@ --lockfile --build missing")
-        client.run("upload * --all --confirm -r default")
+        client.run("create PkgA PkgA/0.1@ --lockfile")
+        client.run("upload * --all --confirm -r default --force")
 
         sys.argv = ["conan_build_info", "--v2", "start", "MyBuildName", "42"]
         run()
