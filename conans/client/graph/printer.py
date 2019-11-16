@@ -15,7 +15,7 @@ def _get_python_requires(conanfile):
             result.add(py_require.ref)
             result.update(_get_python_requires(py_require.conanfile))
     elif python_requires:
-        result.update(conanfile.py_requires_all_refs.values())
+        result.update(conanfile.python_requires.all_refs())
 
     return result
 

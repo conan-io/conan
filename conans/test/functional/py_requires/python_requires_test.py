@@ -193,10 +193,10 @@ class PyRequiresExtendTest(unittest.TestCase):
             class MyConanfileBase(ConanFile):
                 python_requires = "pkg1/1.0@user/channel", "pkg2/1.0@user/channel"
                 def build(self):
-                    self.output.info("PKG1 : %s" % self.python_requires["pkg1"].myvar)
-                    self.output.info("PKG2 : %s" % self.python_requires["pkg2"].myvar)
-                    self.output.info("PKG1F : %s" % self.python_requires["pkg1"].myfunct())
-                    self.output.info("PKG2F : %s" % self.python_requires["pkg2"].myfunct())
+                    self.output.info("PKG1 : %s" % self.python_requires["pkg1"].module.myvar)
+                    self.output.info("PKG2 : %s" % self.python_requires["pkg2"].module.myvar)
+                    self.output.info("PKG1F : %s" % self.python_requires["pkg1"].module.myfunct())
+                    self.output.info("PKG2F : %s" % self.python_requires["pkg2"].module.myfunct())
             """)
         client.save({"conanfile.py": conanfile})
         client.run("create . Consumer/0.1@user/testing")
@@ -356,8 +356,8 @@ class PyRequiresExtendTest(unittest.TestCase):
             class MyConanfileBase(ConanFile):
                 python_requires = "base2/1.0@user/channel", "base1/1.0@user/channel"
                 def build(self):
-                    self.python_requires["base1"].myhelper.myhelp(self.output)
-                    self.python_requires["base2"].myhelper.myhelp(self.output)
+                    self.python_requires["base1"].module.myhelper.myhelp(self.output)
+                    self.python_requires["base2"].module.myhelper.myhelp(self.output)
             """)
         # This should work, even if there is a local "myhelper.py" file, which could be
         # accidentaly imported (and it was, it was a bug)
@@ -391,7 +391,7 @@ class PyRequiresExtendTest(unittest.TestCase):
                 python_requires = "base/1.1@user/testing"
                 python_requires_extend = "base.MyConanfileBase"
                 def configure(self):
-                    self.output.info("PYTHON REQUIRE VAR %s" % self.python_requires["base"].somevar)
+                    self.output.info("PYTHON REQUIRE VAR %s" % self.python_requires["base"].module.somevar)
         """)
 
         client2.save({"conanfile.py": reuse})
@@ -427,7 +427,7 @@ class PyRequiresExtendTest(unittest.TestCase):
                 python_requires = "base/[>1.0]@user/testing"
                 python_requires_extend = "base.MyConanfileBase"
                 def configure(self):
-                    self.output.info("PYTHON REQUIRE VAR %s" % self.python_requires["base"].somevar)
+                    self.output.info("PYTHON REQUIRE VAR %s" % self.python_requires["base"].module.somevar)
         """)
 
         client2.save({"conanfile.py": reuse})
@@ -472,11 +472,11 @@ class PyRequiresExtendTest(unittest.TestCase):
             class MyConanfileBase(ConanFile):
                 python_requires = "tool/0.1@user/channel"
                 def source(self):
-                    self.output.info("Pkg1 source: %s" % self.python_requires["tool"].var)
+                    self.output.info("Pkg1 source: %s" % self.python_requires["tool"].module.var)
                 def build(self):
-                    self.output.info("Pkg1 build: %s" % self.python_requires["tool"].var)
+                    self.output.info("Pkg1 build: %s" % self.python_requires["tool"].module.var)
                 def package(self):
-                    self.output.info("Pkg1 package: %s" % self.python_requires["tool"].var)
+                    self.output.info("Pkg1 package: %s" % self.python_requires["tool"].module.var)
             """)
         client.save({"conanfile.py": conanfile})
         client.run("source .")
@@ -608,7 +608,7 @@ class PyRequiresExtendTest(unittest.TestCase):
             class Project(ConanFile):
                 python_requires = "python_requires2/{v}@user/test", "python_requires22/{v}@user/test"
                 python_requires_extend = ("python_requires2.PythonRequires2",
-                                      "python_requires22.PythonRequires22")
+                                          "python_requires22.PythonRequires22")
                 def build(self):
                     super(Project, self).build()
                     self.output.info("Project::build")
@@ -654,6 +654,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         client.run("export . tool/0.1@user/channel")
         conanfile = textwrap.dedent("""
             from conans import ConanFile, load
+            import os
             class MyConanfileBase(ConanFile):
                 python_requires = "tool/0.1@user/channel"
                 def source(self):
@@ -678,9 +679,17 @@ class PyRequiresExtendTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile,
                      "name.txt": "MyPkg",
                      "version.txt": "MyVersion"})
-        client.run("export .")
-        self.assertIn("MyPkg/MyVersion: A new conanfile.py version was exported", client.out)
-        client.run("create .")
-        self.assertIn("MyPkg/MyVersion: Pkg1 source: MyPkg:MyVersion", client.out)
-        self.assertIn("MyPkg/MyVersion: Pkg1 build: MyPkg:MyVersion", client.out)
-        self.assertIn("MyPkg/MyVersion: Pkg1 package: MyPkg:MyVersion", client.out)
+        client.run("export . pkg/1.0@user/channel")
+        self.assertIn("pkg/1.0@user/channel: A new conanfile.py version was exported", client.out)
+        client.run("create . pkg/1.0@user/channel")
+        self.assertIn("pkg/1.0@user/channel: Source: tool header: myheader", client.out)
+        self.assertIn("pkg/1.0@user/channel: Source: tool other: otherheader", client.out)
+        self.assertIn("pkg/1.0@user/channel: Build: tool header: myheader", client.out)
+        self.assertIn("pkg/1.0@user/channel: Build: tool other: otherheader", client.out)
+        self.assertIn("pkg/1.0@user/channel: Package: tool header: myheader", client.out)
+        self.assertIn("pkg/1.0@user/channel: Package: tool other: otherheader", client.out)
+
+        # The local flow
+        client.run("install .")
+        client.run("source .")
+        client.run("build .")

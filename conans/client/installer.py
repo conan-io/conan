@@ -436,9 +436,12 @@ class BinaryInstaller(object):
                     "Installer should receive python_require.ref always"
                 complete_recipe_sources(self._remote_manager, self._cache,
                                         python_require.conanfile, python_require.ref, remotes)
-        else:
-            # TODO: implement complete sources for new py_requires
-            pass
+        elif python_requires:
+            for name, py_require in python_requires.items():
+                complete_recipe_sources(self._remote_manager, self._cache,
+                                        py_require.conanfile, py_require.ref, remotes)
+                py_require_layout = self._cache.package_layout(py_require.ref)
+                py_require.exports_sources = py_require_layout.export_sources()
 
         builder = _PackageBuilder(self._cache, output, self._hook_manager, self._remote_manager)
         pref = builder.build_package(node, keep_build, self._recorder, remotes)

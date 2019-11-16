@@ -137,7 +137,7 @@ class GraphLock(object):
                     python_reqs = [r.ref for _, r in python_reqs.items()]
                 elif isinstance(reqs, PyRequires):
                     # If py_requires are defined, they overwrite old python_reqs
-                    python_reqs = node.conanfile.py_requires_all_refs.values()
+                    python_reqs = node.conanfile.python_requires.all_refs()
                 graph_node = GraphLockNode(node.pref if node.ref else None, python_reqs,
                                            node.conanfile.options.values, False, requires, node.path)
                 self._nodes[node.id] = graph_node

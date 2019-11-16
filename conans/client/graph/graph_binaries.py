@@ -256,9 +256,9 @@ class GraphBinariesAnalyzer(object):
 
         # Make sure not duplicated
         indirect_reqs.difference_update(direct_reqs)
-        python_requires = getattr(conanfile, "py_requires_all_refs", None)
-        if python_requires is not None:
-            python_requires = python_requires.values()
+        python_requires = getattr(conanfile, "python_requires", None)
+        if python_requires and not isinstance(python_requires, dict):
+            python_requires = python_requires.all_refs()
         conanfile.info = ConanInfo.create(conanfile.settings.values,
                                           conanfile.options.values,
                                           direct_reqs,
