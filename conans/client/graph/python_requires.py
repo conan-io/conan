@@ -15,6 +15,7 @@ class PyRequire(object):
     def __init__(self, module, conanfile, ref):
         self.module = module
         self.conanfile = conanfile
+        assert isinstance(ref, ConanFileReference)
         self.ref = ref
         self.exports_sources = None
 
@@ -105,7 +106,6 @@ class PyRequireLoader(object):
             # Update the list of transitive, detecting conflicts
             transitive = getattr(conanfile, "python_requires", None)
             if transitive:
-                print "TRANISITIVE ", transitive
                 for name, transitive_py_require in transitive.all_items():
                     existing = result.get(name)
                     if existing and existing.ref != transitive_py_require.ref:

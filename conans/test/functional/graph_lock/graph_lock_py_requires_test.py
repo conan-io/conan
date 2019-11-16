@@ -58,9 +58,9 @@ class GraphLockPyRequiresTest(unittest.TestCase):
                 name = "Pkg"
                 python_requires = "Tool/[>=0.1]@user/channel"
                 def configure(self):
-                    self.output.info("CONFIGURE VAR=%s" % self.python_requires["Tool"].var)
+                    self.output.info("CONFIGURE VAR=%s" % self.python_requires["Tool"].module.var)
                 def build(self):
-                    self.output.info("BUILD VAR=%s" % self.python_requires["Tool"].var)
+                    self.output.info("BUILD VAR=%s" % self.python_requires["Tool"].module.var)
             """)
         client.save({"conanfile.py": consumer})
         client.run("install .")
