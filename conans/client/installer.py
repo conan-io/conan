@@ -11,7 +11,8 @@ from conans.client.importer import remove_imports, run_imports
 from conans.client.packager import run_package_method, update_package_metadata
 from conans.client.recorder.action_recorder import INSTALL_ERROR_BUILDING, INSTALL_ERROR_MISSING, \
     INSTALL_ERROR_MISSING_BUILD_FOLDER
-from conans.client.source import complete_recipe_sources, config_source
+from conans.client.source import complete_recipe_sources, config_source, \
+    complete_python_requires_sources
 from conans.client.tools.env import pythonpath
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
                            conanfile_exception_formatter)
@@ -429,19 +430,7 @@ class BinaryInstaller(object):
     def _build_package(self, node, output, keep_build, remotes):
         conanfile = node.conanfile
         # It is necessary to complete the sources of python requires, which might be used
-        python_requires = getattr(conanfile, "python_requires", None)
-        if isinstance(python_requires, dict):
-            for python_require in conanfile.python_requires.values():
-                assert python_require.ref.revision is not None, \
-                    "Installer should receive python_require.ref always"
-                complete_recipe_sources(self._remote_manager, self._cache,
-                                        python_require.conanfile, python_require.ref, remotes)
-        elif python_requires:
-            for name, py_require in python_requires.items():
-                complete_recipe_sources(self._remote_manager, self._cache,
-                                        py_require.conanfile, py_require.ref, remotes)
-                py_require_layout = self._cache.package_layout(py_require.ref)
-                py_require.exports_sources = py_require_layout.export_sources()
+        complete_python_requires_sources(self._cache, self._remote_manager, conanfile, remotes)
 
         builder = _PackageBuilder(self._cache, output, self._hook_manager, self._remote_manager)
         pref = builder.build_package(node, keep_build, self._recorder, remotes)

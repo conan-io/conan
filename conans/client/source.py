@@ -14,6 +14,22 @@ from conans.util.files import (set_dirty, is_dirty, mkdir, rmdir, set_dirty_cont
                                merge_directories)
 
 
+def complete_python_requires_sources(cache, remote_manager, conanfile, remotes):
+    python_requires = getattr(conanfile, "python_requires", None)
+    if isinstance(python_requires, dict):
+        for python_require in conanfile.python_requires.values():
+            assert python_require.ref.revision is not None, \
+                "Installer should receive python_require.ref always"
+            complete_recipe_sources(remote_manager, cache,
+                                    python_require.conanfile, python_require.ref, remotes)
+    elif python_requires:
+        for name, py_require in python_requires.items():
+            complete_recipe_sources(remote_manager, cache,
+                                    py_require.conanfile, py_require.ref, remotes)
+            py_require_layout = cache.package_layout(py_require.ref)
+            py_require.exports_sources = py_require_layout.export_sources()
+
+
 def complete_recipe_sources(remote_manager, cache, conanfile, ref, remotes):
     """ the "exports_sources" sources are not retrieved unless necessary to build. In some
     occassions, conan needs to get them too, like if uploading to a server, to keep the recipes

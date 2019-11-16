@@ -44,7 +44,7 @@ from conans.client.rest.auth_manager import ConanApiAuthManager
 from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest.rest_client import RestApiClient
 from conans.client.runner import ConanRunner
-from conans.client.source import config_source_local
+from conans.client.source import config_source_local, complete_python_requires_sources
 from conans.client.store.localdb import LocalDB
 from conans.client.userio import UserIO
 from conans.errors import (ConanException, RecipeNotFoundException,
@@ -698,7 +698,7 @@ class ConanAPIV1(object):
 
     @api_method
     def source(self, path, source_folder=None, info_folder=None, cwd=None):
-        self.app.load_remotes()
+        remotes = self.app.load_remotes()
 
         cwd = cwd or get_cwd()
         conanfile_path = _get_conanfile_path(path, cwd, py=True)
@@ -711,6 +711,7 @@ class ConanAPIV1(object):
 
         # only infos if exist
         conanfile = self.app.graph_manager.load_consumer_conanfile(conanfile_path, info_folder)
+        complete_python_requires_sources(self.app.cache, self.app.remote_manager, conanfile, remotes)
         config_source_local(source_folder, conanfile, conanfile_path, self.app.hook_manager)
 
     @api_method

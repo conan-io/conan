@@ -391,7 +391,8 @@ class PyRequiresExtendTest(unittest.TestCase):
                 python_requires = "base/1.1@user/testing"
                 python_requires_extend = "base.MyConanfileBase"
                 def configure(self):
-                    self.output.info("PYTHON REQUIRE VAR %s" % self.python_requires["base"].module.somevar)
+                    self.output.info("PYTHON REQUIRE VAR %s"
+                                     % self.python_requires["base"].module.somevar)
         """)
 
         client2.save({"conanfile.py": reuse})
@@ -427,7 +428,8 @@ class PyRequiresExtendTest(unittest.TestCase):
                 python_requires = "base/[>1.0]@user/testing"
                 python_requires_extend = "base.MyConanfileBase"
                 def configure(self):
-                    self.output.info("PYTHON REQUIRE VAR %s" % self.python_requires["base"].module.somevar)
+                    self.output.info("PYTHON REQUIRE VAR %s"
+                                     % self.python_requires["base"].module.somevar)
         """)
 
         client2.save({"conanfile.py": reuse})
@@ -692,4 +694,8 @@ class PyRequiresExtendTest(unittest.TestCase):
         # The local flow
         client.run("install .")
         client.run("source .")
+        self.assertIn("conanfile.py: Source: tool header: myheader", client.out)
+        self.assertIn("conanfile.py: Source: tool other: otherheader", client.out)
         client.run("build .")
+        self.assertIn("conanfile.py: Build: tool header: myheader", client.out)
+        self.assertIn("conanfile.py: Build: tool other: otherheader", client.out)
