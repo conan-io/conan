@@ -86,8 +86,7 @@ class HelloConan(ConanFile):
         client.run("create . Hello/0.1@lasote/testing")
         client.run("install Hello/0.1@lasote/testing -g json")
 
-        my_json = load(os.path.join(client.current_folder, "conanbuildinfo.json"))
-        my_json = json.loads(my_json)
+        my_json = json.loads(client.load("conanbuildinfo.json"))
 
         # Nodes with cpp_info
         deps_info = my_json["dependencies"][0]
@@ -117,3 +116,26 @@ class HelloConan(ConanFile):
         for dupe in dupe_nodes:
             self.assertEqual(deps_info[dupe], deps_info_debug[dupe])
             self.assertEqual(deps_info[dupe], deps_info_release[dupe])
+
+    def system_libs_test(self):
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+
+            class Lib(ConanFile):
+                settings = "os", "arch"
+                generators = "json"
+
+                def package_info(self):
+                    self.cpp_info.libs = ["LIB1"]
+                    self.cpp_info.system_libs = ["SYSTEM_LIB1"]
+            """)
+        client = TestClient()
+        client.save({'conanfile.py': conanfile})
+
+        client.run("create . Hello/0.1@lasote/testing")
+        client.run("install Hello/0.1@lasote/testing -g json")
+
+        my_json = load(os.path.join(client.current_folder, "conanbuildinfo.json"))
+        my_json = json.loads(my_json)
+        self.assertListEqual(my_json["dependencies"][0]["libs"], ["LIB1"])
+        self.assertListEqual(my_json["dependencies"][0]["system_libs"], ["SYSTEM_LIB1"])

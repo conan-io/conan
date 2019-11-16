@@ -30,8 +30,9 @@ class DepsCppCmake(object):
         self.bin_paths = join_paths(cpp_info.bin_paths)
         self.build_paths = join_paths(cpp_info.build_paths)
         self.src_paths = join_paths(cpp_info.src_paths)
-
+        self.libs_system_frameworks = join_flags(" ", cpp_info.libs + cpp_info.system_libs)
         self.libs = join_flags(" ", cpp_info.libs)
+        self.system_libs = join_flags(" ", cpp_info.system_libs)
 
         framework_paths = join_paths(cpp_info.framework_paths)
         self.find_frameworks = ""
@@ -44,7 +45,7 @@ class DepsCppCmake(object):
                                                      framework=framework,
                                                      framework_paths=framework_paths)
             var = '${%s}' % var
-            self.libs += " " + var
+            self.libs_system_frameworks += " " + var
             self.find_frameworks += find_framework
 
         self.defines = join_defines(cpp_info.defines, "-D")
@@ -64,6 +65,8 @@ class DepsCppCmake(object):
         self.exelinkflags_list = join_flags(";", cpp_info.exelinkflags)
 
         self.rootpath = join_paths([cpp_info.rootpath])
+        self.build_modules_paths = join_paths([path for path in cpp_info.build_modules_paths if
+                                               path.endswith(".cmake")])
 
 
 class CMakeGenerator(Generator):

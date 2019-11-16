@@ -5,7 +5,7 @@ import time
 from collections import defaultdict
 
 from conans.util import progress_bar
-from conans.client.remote_manager import is_package_snapshot_complete
+from conans.client.remote_manager import is_package_snapshot_complete, calc_files_checksum
 from conans.client.source import complete_recipe_sources
 from conans.errors import ConanException, NotFoundException
 from conans.model.manifest import gather_files, FileTreeManifest
@@ -220,6 +220,10 @@ class CmdUpload(object):
 
         t1 = time.time()
         the_files = self._compress_recipe_files(ref)
+
+        with self._cache.package_layout(ref).update_metadata() as metadata:
+            metadata.recipe.checksums = calc_files_checksum(the_files)
+
         local_manifest = FileTreeManifest.loads(load(the_files["conanmanifest.txt"]))
 
         remote_manifest = None
@@ -273,6 +277,10 @@ class CmdUpload(object):
 
         t1 = time.time()
         the_files = self._compress_package_files(pref, integrity_check)
+
+        with self._cache.package_layout(pref.ref).update_metadata() as metadata:
+            metadata.packages[pref.id].checksums = calc_files_checksum(the_files)
+
         if policy == UPLOAD_POLICY_SKIP:
             return None
         files_to_upload, deleted = self._package_files_to_upload(pref, policy, the_files, p_remote)
@@ -316,6 +324,7 @@ class CmdUpload(object):
         src_files, src_symlinks = gather_files(export_src_folder)
         the_files = _compress_recipe_files(files, symlinks, src_files, src_symlinks, export_folder,
                                            self._output)
+
         return the_files
 
     def _compress_package_files(self, pref, integrity_check):

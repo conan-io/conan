@@ -749,6 +749,34 @@ class Pkg(ConanFile):
         self.assertIn("Uploading package 1/1: 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 to 'default'",
                       client.out)
 
+    def checksums_metadata_test(self):
+        client = TestClient(default_server_user=True)
+        client.save({"conanfile.py": GenConanfile()})
+        client.run('create . lib/1.0@user/channel')
+        client.run('upload lib/1.0 -c --all -r default')
+        ref = ConanFileReference("lib", "1.0", "user", "channel")
+        metadata = client.cache.package_layout(ref).load_metadata()
+        package_md5 = metadata.packages[NO_SETTINGS_PACKAGE_ID].checksums["conan_package.tgz"]["md5"]
+        package_sha1 = metadata.packages[NO_SETTINGS_PACKAGE_ID].checksums["conan_package.tgz"][
+            "sha1"]
+        recipe_md5 = metadata.recipe.checksums["conanfile.py"]["md5"]
+        recipe_sha1 = metadata.recipe.checksums["conanfile.py"]["sha1"]
+        self.assertEqual(package_md5, "25f53ac9685e07815b990e7c6f21bfd0")
+        self.assertEqual(package_sha1, "be152c82859285658a06816aaaec529a159c33d3")
+        self.assertEqual(recipe_md5, "8eda41e0997f3eacc436fb6c621d7396")
+        self.assertEqual(recipe_sha1, "b97d6b26be5bd02252a44c265755f873cf5ec70b")
+        client.run('remove * -f')
+        client.run('install lib/1.0@user/channel -r default')
+        metadata = client.cache.package_layout(ref).load_metadata()
+        self.assertEqual(
+            metadata.packages[NO_SETTINGS_PACKAGE_ID].checksums["conan_package.tgz"]["md5"],
+            package_md5)
+        self.assertEqual(
+            metadata.packages[NO_SETTINGS_PACKAGE_ID].checksums["conan_package.tgz"]["sha1"],
+            package_sha1)
+        self.assertEqual(metadata.recipe.checksums["conanfile.py"]["md5"], recipe_md5)
+        self.assertEqual(metadata.recipe.checksums["conanfile.py"]["sha1"], recipe_sha1)
+        
     def upload_without_cleaned_user_test(self):
         """ When a user is not authenticated, uploads failed first time
         https://github.com/conan-io/conan/issues/5878
