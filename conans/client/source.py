@@ -15,17 +15,21 @@ from conans.util.files import (set_dirty, is_dirty, mkdir, rmdir, set_dirty_cont
 
 
 def complete_python_requires_sources(cache, remote_manager, conanfile, remotes):
+    """ The python-requires recipes can "export-sources" some sources or auxiliary files
+    that can be reused from the consumers. But the export-sources is only retrieved when pkgs are
+    built from sources, so for python-requires, this has to be forced when the downstream needs
+    such sources (to copy them in the source() and build() methods """
     python_requires = getattr(conanfile, "python_requires", None)
-    if isinstance(python_requires, dict):
-        for python_require in conanfile.python_requires.values():
+    if isinstance(python_requires, dict):  # Old legacy python_requires
+        for python_require in python_requires.values():
             assert python_require.ref.revision is not None, \
                 "Installer should receive python_require.ref always"
             complete_recipe_sources(remote_manager, cache,
                                     python_require.conanfile, python_require.ref, remotes)
-    elif python_requires:
+    elif python_requires:  # New py_requires
         for name, py_require in python_requires.items():
-            complete_recipe_sources(remote_manager, cache,
-                                    py_require.conanfile, py_require.ref, remotes)
+            complete_recipe_sources(remote_manager, cache, py_require.conanfile, py_require.ref,
+                                    remotes)
             py_require_layout = cache.package_layout(py_require.ref)
             py_require.exports_sources = py_require_layout.export_sources()
 

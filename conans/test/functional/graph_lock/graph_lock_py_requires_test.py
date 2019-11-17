@@ -84,8 +84,7 @@ class GraphLockPyRequiresTest(unittest.TestCase):
         self.assertNotIn("Tool/0.2@user/channel", lock_file)
         lock_file_json = json.loads(lock_file)
         self.assertEqual(1, len(lock_file_json["graph_lock"]["nodes"]))
-        self.assertIn("%s:1e1576940da80e70cd2d2ce2dddeb0571f91c6e3" % ref_b,
-                      lock_file)
+        self.assertIn("%s:1e1576940da80e70cd2d2ce2dddeb0571f91c6e3" % ref_b, lock_file)
         self.assertIn('"Tool/0.1@user/channel#ac4036130c39cab7715b1402e8c211d3"', lock_file)
 
     def install_info_test(self):
@@ -118,10 +117,10 @@ class GraphLockPyRequiresTest(unittest.TestCase):
         self.assertIn("Pkg/0.1@user/channel: BUILD VAR=42", client.out)
         self.assertIn("Tool/0.1@user/channel", client.out)
         self.assertNotIn("Tool/0.2@user/channel", client.out)
-        self._check_lock("Pkg/0.1@user/channel#fc44cf469d43275e9e29dc76f83d1849")
+        self._check_lock("Pkg/0.1@user/channel#67fdc942d6157fc4db1971fd6d6c5c28")
 
     def export_pkg_test(self):
         client = self.client
         client.run("export-pkg . Pkg/0.1@user/channel --install-folder=.  --lockfile")
         self.assertIn("Pkg/0.1@user/channel: CONFIGURE VAR=42", client.out)
-        self._check_lock("Pkg/0.1@user/channel#fc44cf469d43275e9e29dc76f83d1849")
+        self._check_lock("Pkg/0.1@user/channel#67fdc942d6157fc4db1971fd6d6c5c28")

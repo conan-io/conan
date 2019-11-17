@@ -285,7 +285,7 @@ class GraphBinariesAnalyzer(object):
         python_requires = getattr(conanfile, "python_requires", None)
         if python_requires:
             if isinstance(python_requires, dict):
-                python_requires = [r.ref for r in python_requires.values()]
+                python_requires = None  # Legacy python-requires do not change package-ID
             else:
                 python_requires = python_requires.all_refs()
         conanfile.info = ConanInfo.create(conanfile.settings.values,

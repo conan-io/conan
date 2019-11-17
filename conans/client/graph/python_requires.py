@@ -95,6 +95,7 @@ class PyRequireLoader(object):
     def _resolve_py_requires(self, py_requires_refs, lock_python_requires, loader):
         result = PyRequires()
         for py_requires_ref in py_requires_refs:
+            py_requires_ref = self._resolve_ref(py_requires_ref, lock_python_requires)
             try:
                 conanfile, module, new_ref = self._cached_py_requires[py_requires_ref]
             except KeyError:
@@ -114,7 +115,7 @@ class PyRequireLoader(object):
                     result._transitive[name] = transitive_py_require
         return result
 
-    def _load_conanfile(self, loader, lock_python_requires, py_requires_ref):
+    def _resolve_ref(self, py_requires_ref, lock_python_requires):
         ref = ConanFileReference.loads(py_requires_ref)
         if lock_python_requires:
             locked = {r.name: r for r in lock_python_requires}[ref.name]
@@ -124,6 +125,9 @@ class PyRequireLoader(object):
             self._range_resolver.resolve(requirement, "py_require", update=self._update,
                                          remotes=self._remotes)
             ref = requirement.ref
+        return ref
+
+    def _load_conanfile(self, loader, lock_python_requires, ref):
         recipe = self._proxy.get_recipe(ref, self._check_updates, self._update,
                                         remotes=self._remotes, recorder=ActionRecorder())
         path, _, _, new_ref = recipe
