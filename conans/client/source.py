@@ -20,13 +20,15 @@ def complete_python_requires_sources(cache, remote_manager, conanfile, remotes):
     built from sources, so for python-requires, this has to be forced when the downstream needs
     such sources (to copy them in the source() and build() methods """
     python_requires = getattr(conanfile, "python_requires", None)
+    if python_requires is None:
+        return
     if isinstance(python_requires, dict):  # Old legacy python_requires
         for python_require in python_requires.values():
             assert python_require.ref.revision is not None, \
                 "Installer should receive python_require.ref always"
             complete_recipe_sources(remote_manager, cache,
                                     python_require.conanfile, python_require.ref, remotes)
-    elif python_requires:  # New py_requires
+    else:  # New py_requires
         for name, py_require in python_requires.items():
             complete_recipe_sources(remote_manager, cache, py_require.conanfile, py_require.ref,
                                     remotes)
