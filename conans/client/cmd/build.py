@@ -1,6 +1,5 @@
 import os
 
-from conans.client.source import complete_python_requires_sources
 from conans.errors import (ConanException, NotFoundException, conanfile_exception_formatter)
 from conans.model.conan_file import get_env_context_manager
 from conans.paths import CONANFILE, CONANFILE_TXT
@@ -37,8 +36,6 @@ def cmd_build(app, conanfile_path, source_folder, build_folder, package_folder, 
     conan_file.should_build = should_build
     conan_file.should_install = should_install
     conan_file.should_test = should_test
-
-    complete_python_requires_sources(app.cache, app.remote_manager, conan_file, None)
 
     try:
         mkdir(build_folder)

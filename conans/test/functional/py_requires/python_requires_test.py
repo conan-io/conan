@@ -648,7 +648,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         conanfile = textwrap.dedent("""
             from conans import ConanFile
             class MyConanfileBase(ConanFile):
-                exports_sources = "*"
+                exports = "*"
             """)
         client.save({"conanfile.py": conanfile,
                      "file.h": "myheader",
@@ -660,19 +660,19 @@ class PyRequiresExtendTest(unittest.TestCase):
             class MyConanfileBase(ConanFile):
                 python_requires = "tool/0.1@user/channel"
                 def source(self):
-                    sources = self.python_requires["tool"].exports_sources
+                    sources = self.python_requires["tool"].path
                     file_h = os.path.join(sources, "file.h")
                     other_h = os.path.join(sources, "folder/other.h")
                     self.output.info("Source: tool header: %s" % load(file_h))
                     self.output.info("Source: tool other: %s" % load(other_h))
                 def build(self):
-                    sources = self.python_requires["tool"].exports_sources
+                    sources = self.python_requires["tool"].path
                     file_h = os.path.join(sources, "file.h")
                     other_h = os.path.join(sources, "folder/other.h")
                     self.output.info("Build: tool header: %s" % load(file_h))
                     self.output.info("Build: tool other: %s" % load(other_h))           
                 def package(self):
-                    sources = self.python_requires["tool"].exports_sources
+                    sources = self.python_requires["tool"].path
                     file_h = os.path.join(sources, "file.h")
                     other_h = os.path.join(sources, "folder/other.h")
                     self.output.info("Package: tool header: %s" % load(file_h))

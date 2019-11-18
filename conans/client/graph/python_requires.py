@@ -1,3 +1,5 @@
+import os
+
 from collections import namedtuple
 from contextlib import contextmanager
 
@@ -12,11 +14,11 @@ PythonRequire = namedtuple("PythonRequire", ["ref", "module", "conanfile",
 
 
 class PyRequire(object):
-    def __init__(self, module, conanfile, ref):
+    def __init__(self, module, conanfile, ref, path):
         self.module = module
         self.conanfile = conanfile
         self.ref = ref
-        self.exports_sources = None
+        self.path = path
 
 
 class PyRequires(object):
@@ -101,14 +103,16 @@ class PyRequireLoader(object):
         for py_requires_ref in py_requires_refs:
             py_requires_ref = self._resolve_ref(py_requires_ref, lock_python_requires)
             try:
-                conanfile, module, new_ref = self._cached_py_requires[py_requires_ref]
+                py_require = self._cached_py_requires[py_requires_ref]
             except KeyError:
-                conanfile, module, new_ref = self._load_conanfile(loader, lock_python_requires,
-                                                                  py_requires_ref)
-                self._cached_py_requires[py_requires_ref] = conanfile, module, new_ref
-            result[new_ref.name] = PyRequire(module, conanfile, new_ref)
+                conanfile, module, new_ref, path = self._load_conanfile(loader,
+                                                                        lock_python_requires,
+                                                                        py_requires_ref)
+                py_require = PyRequire(module, conanfile, new_ref, path)
+                self._cached_py_requires[py_requires_ref] = py_require
+            result[py_require.ref.name] = py_require
             # Update transitive and check conflicts
-            result.update_transitive(conanfile)
+            result.update_transitive(py_require.conanfile)
         return result
 
     def _resolve_ref(self, py_requires_ref, lock_python_requires):
@@ -131,8 +135,9 @@ class PyRequireLoader(object):
 
         if getattr(conanfile, "alias", None):
             ref = ConanFileReference.loads(conanfile.alias)
-            conanfile, module, new_ref = self._load_conanfile(loader, lock_python_requires, ref)
-        return conanfile, module, new_ref
+            conanfile, module, new_ref, path = self._load_conanfile(loader, lock_python_requires,
+                                                                    ref)
+        return conanfile, module, new_ref, os.path.dirname(path)
 
 
 class ConanPythonRequire(object):
