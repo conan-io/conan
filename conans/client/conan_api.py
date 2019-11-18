@@ -698,7 +698,7 @@ class ConanAPIV1(object):
 
     @api_method
     def source(self, path, source_folder=None, info_folder=None, cwd=None):
-        remotes = self.app.load_remotes()
+        self.app.load_remotes()
 
         cwd = cwd or get_cwd()
         conanfile_path = _get_conanfile_path(path, cwd, py=True)
