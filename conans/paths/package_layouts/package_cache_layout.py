@@ -236,8 +236,6 @@ class PackageCacheLayout(object):
         if self._no_lock:
             return NoLock()
         lk_path = os.path.join(self.base_folder(), 'locks', pref.id)
-        if not os.path.exists(os.path.dirname(lk_path)):
-            os.makedirs(os.path.dirname(lk_path))
         lk = FileLock(lk_path)
         return hold_lock(lk)
 

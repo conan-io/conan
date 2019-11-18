@@ -47,6 +47,9 @@ class FileLock(object):
         # Obtain a new file descriptor
         assert self._native_fd is None, 'FileLock() cannot be used recursively'
         assert self._file is None
+        pardir = os.path.dirname(self.filepath)
+        if not os.path.exists(pardir):
+            os.makedirs(pardir)
         self._file = open(self.filepath, 'wb+')
         self._native_fd = self._file.fileno()
         # Build the flags
@@ -79,6 +82,9 @@ class FileLock(object):
         self._file = None
 
     def _acquire_nt(self, exclusive, block):
+        pardir = os.path.dirname(self.filepath)
+        if not os.path.exists(pardir):
+            os.makedirs(pardir)
         self._file = open(self.filepath, 'wb+')
         self._native_fd = self._file.fileno()
 
