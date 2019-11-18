@@ -110,8 +110,6 @@ class BuildInfoCreator(object):
                 ret[data["checksums"]["sha1"]] = {"md5": data["checksums"],
                                                   "name": "conan_sources.tgz",
                                                   "id": None}
-            else:
-                self._output.warn("Could not retrieve conan_sources.tgz with {}".format(request_url))
 
         return set([Artifact(k, **v) for k, v in ret.items()])
 
