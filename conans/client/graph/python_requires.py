@@ -15,7 +15,6 @@ class PyRequire(object):
     def __init__(self, module, conanfile, ref):
         self.module = module
         self.conanfile = conanfile
-        assert isinstance(ref, ConanFileReference)
         self.ref = ref
         self.exports_sources = None
 
@@ -25,6 +24,17 @@ class PyRequires(object):
     def __init__(self):
         self._pyrequires = {}  # {pkg-name: PythonRequire}
         self._transitive = {}
+
+    def update_transitive(self, conanfile):
+        transitive = getattr(conanfile, "python_requires", None)
+        if not transitive:
+            return
+        for name, transitive_py_require in transitive.all_items():
+            existing = self._pyrequires.get(name)
+            if existing and existing.ref != transitive_py_require.ref:
+                raise ConanException("Conflict in py_requires %s - %s"
+                                     % (existing.ref, transitive_py_require.ref))
+            self._transitive[name] = transitive_py_require
 
     def all_items(self):
         new_dict = self._pyrequires.copy()
@@ -37,12 +47,6 @@ class PyRequires(object):
 
     def items(self):
         return self._pyrequires.items()
-
-    def get(self, item):
-        try:
-            return self._pyrequires[item]
-        except KeyError:
-            return None
 
     def __getitem__(self, item):
         try:
@@ -103,16 +107,8 @@ class PyRequireLoader(object):
                                                                   py_requires_ref)
                 self._cached_py_requires[py_requires_ref] = conanfile, module, new_ref
             result[new_ref.name] = PyRequire(module, conanfile, new_ref)
-
-            # Update the list of transitive, detecting conflicts
-            transitive = getattr(conanfile, "python_requires", None)
-            if transitive:
-                for name, transitive_py_require in transitive.all_items():
-                    existing = result.get(name)
-                    if existing and existing.ref != transitive_py_require.ref:
-                        raise ConanException("Conflict in py_requires %s - %s"
-                                             % (existing.ref, transitive_py_require.ref))
-                    result._transitive[name] = transitive_py_require
+            # Update transitive and check conflicts
+            result.update_transitive(conanfile)
         return result
 
     def _resolve_ref(self, py_requires_ref, lock_python_requires):
@@ -131,12 +127,11 @@ class PyRequireLoader(object):
         recipe = self._proxy.get_recipe(ref, self._check_updates, self._update,
                                         remotes=self._remotes, recorder=ActionRecorder())
         path, _, _, new_ref = recipe
-        conanfile, module = loader.load_basic_module(conanfile_path=path,
-                                                     lock_python_requires=lock_python_requires)
+        conanfile, module = loader.load_basic_module(path, lock_python_requires)
 
         if getattr(conanfile, "alias", None):
-            conanfile, module, new_ref = self._load_conanfile(loader, lock_python_requires,
-                                                              conanfile.alias)
+            ref = ConanFileReference.loads(conanfile.alias)
+            conanfile, module, new_ref = self._load_conanfile(loader, lock_python_requires, ref)
         return conanfile, module, new_ref
 
 
