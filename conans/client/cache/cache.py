@@ -103,7 +103,8 @@ class ClientCache(object):
             check_ref_case(ref, self.store)
             base_folder = os.path.normpath(os.path.join(self.store, ref.dir_repr()))
             return PackageCacheLayout(base_folder=base_folder, ref=ref,
-                                      short_paths=short_paths, no_lock=self._no_locks())
+                                      short_paths=short_paths, no_lock=self._no_locks(),
+                                      locks_dir=self.config.locks_dir_path)
 
     @property
     def registry_path(self):

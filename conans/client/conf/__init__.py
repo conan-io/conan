@@ -439,6 +439,10 @@ class ConanClientConfigParser(ConfigParser, object):
         return result
 
     @property
+    def locks_dir_path(self):
+        return os.path.join(self.storage_path, '.locks')
+
+    @property
     def proxies(self):
         try:  # optional field, might not exist
             proxies = self.get_conf("proxies")

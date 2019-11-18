@@ -14,12 +14,12 @@ from conans.util.files import load, save
 class InfoTest(unittest.TestCase):
 
     def not_found_package_dirty_cache_test(self):
-        # Conan does a lock on the cache, and even if the package doesn't exist
-        # left a trailing folder with the filelocks. This test checks
-        # it will be cleared
+        # Conan stores its lock files in a subdirectory of the storage dir
+        # called `.locks`. This dir will be created by any operation that tries
+        # to take a lock. No other directories/files will be created.
         client = TestClient()
         client.run("info nothing/0.1@user/testing", assert_error=True)
-        self.assertEqual(os.listdir(client.cache.store), [])
+        self.assertEqual(os.listdir(client.cache.store), ['.locks'])
         # This used to fail in Windows, because of the different case
         client.save({"conanfile.py": GenConanfile().with_name("Nothing").with_version("0.1")})
         client.run("export . user/testing")

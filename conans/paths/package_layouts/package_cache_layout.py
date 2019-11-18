@@ -36,13 +36,14 @@ def short_path(func):
 class PackageCacheLayout(object):
     """ This is the package layout for Conan cache """
 
-    def __init__(self, base_folder, ref, short_paths, no_lock):
+    def __init__(self, base_folder, ref, short_paths, no_lock, locks_dir):
         assert isinstance(ref, ConanFileReference)
         self._ref = ref
         self._base_folder = os.path.normpath(base_folder)
         self._short_paths = short_paths
         self._no_lock = no_lock
-        self._repo_lk = FileLock(os.path.join(self._base_folder, '.lock'))
+        lk_name = '{}.lock'.format(ref.dir_repr().replace('/', '_'))
+        self._repo_lk = FileLock(os.path.join(locks_dir, lk_name))
 
     @property
     def ref(self):
