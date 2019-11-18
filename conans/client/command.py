@@ -1012,7 +1012,7 @@ class Command(object):
         parser.add_argument('-f', '--force', default=False, action='store_true',
                             help='Remove without requesting a confirmation')
         parser.add_argument("-l", "--locks", default=False, action="store_true",
-                            help="Remove locks")
+                            help=argparse.SUPPRESS)
         parser.add_argument("-o", "--outdated", default=False, action="store_true",
                             help="Remove only outdated from recipe packages. "
                                  "This flag can only be used with a reference")
@@ -1039,10 +1039,10 @@ class Command(object):
             raise ConanException("'--outdated' argument can only be used with a reference")
 
         if args.locks:
-            if args.pattern_or_reference:
-                raise ConanException("Specifying a pattern is not supported when removing locks")
-            self._conan.remove_locks()
-            self._out.info("Cache locks removed")
+            # `remove --locks` is a no-op, as the locks are now real OS-supported
+            # advisory locks, and the operating system ensures that no one holds
+            # the locks after process termination
+            self._out.warn('`remove --locks` is not longer applicable and is a no-op')
             return
         elif args.system_reqs:
             if args.packages:

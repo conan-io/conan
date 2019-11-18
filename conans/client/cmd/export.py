@@ -114,7 +114,7 @@ def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
         _recreate_folders(package_layout.export_sources())
 
     # Copy sources to target folders
-    with package_layout.conanfile_write_lock(output=output):
+    with package_layout.conanfile_write_lock():
 
         origin_folder = os.path.dirname(conanfile_path)
         export_recipe(conanfile, origin_folder, package_layout.export())

@@ -992,7 +992,7 @@ class ConanAPIV1(object):
 
     @api_method
     def remove_locks(self):
-        self.app.cache.remove_locks()
+        self.app.out.warn('The `remove_locks` API method is a no-op')
 
     @api_method
     def profile_list(self):

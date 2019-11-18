@@ -32,11 +32,6 @@ class DiskRemover(object):
         self.remove_src(package_layout)
         self._remove(package_layout.export(), package_layout.ref, "export folder")
         self._remove(package_layout.export_sources(), package_layout.ref, "export_source folder")
-        for f in package_layout.conanfile_lock_files(output=output):
-            try:
-                os.remove(f)
-            except OSError:
-                pass
 
     def remove(self, package_layout, output):
         self.remove_recipe(package_layout, output=output)
@@ -114,7 +109,6 @@ class ConanRemover(object):
         #  function 'rm_conandir' which already takes care of the linked folder.
         package_layout = self._cache.package_layout(ref, short_paths=False)
 
-        package_layout.remove_package_locks()  # Make sure to clean the locks too
         remover = DiskRemover()
         if src:
             remover.remove_src(package_layout)

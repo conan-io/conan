@@ -2,7 +2,7 @@ import unittest
 import os.path
 import tempfile
 
-from conans.util import locks2
+from conans.util import locks
 
 
 class Deadlock(Exception):
@@ -48,17 +48,17 @@ class ProtoLock(object):
 
 class LockContextManagerTests(unittest.TestCase):
     def _do_lock(self, lk):
-        with locks2.hold_lock(lk):
+        with locks.hold_lock(lk):
             pass
 
     def _do_lock_shared(self, lk):
-        with locks2.hold_lock_shared(lk):
+        with locks.hold_lock_shared(lk):
             pass
 
     def test_ctxman_exclusive(self):
         lk = ProtoLock()
         self.assertFalse(lk.holds_lock())
-        with locks2.hold_lock(lk):
+        with locks.hold_lock(lk):
             self.assertTrue(lk.holds_lock())
             # Another acquire() will block:
             self.assertRaises(Deadlock, lambda: self._do_lock(lk))
@@ -70,7 +70,7 @@ class LockContextManagerTests(unittest.TestCase):
     def test_ctxman_shared(self):
         lk = ProtoLock()
         self.assertFalse(lk.holds_lock())
-        with locks2.hold_lock_shared(lk):
+        with locks.hold_lock_shared(lk):
             self.assertTrue(lk.holds_lock())
             self._do_lock_shared(lk)
             self.assertTrue(lk.holds_lock())
@@ -80,7 +80,7 @@ class LockContextManagerTests(unittest.TestCase):
     def test_ctxman_try_excl(self):
         lk = ProtoLock()
         self.assertFalse(lk.holds_lock())
-        with locks2.try_hold_lock(lk) as got_lock:
+        with locks.try_hold_lock(lk) as got_lock:
             # We get the lock
             self.assertTrue(got_lock)
             self.assertTrue(lk.holds_lock())
@@ -89,11 +89,11 @@ class LockContextManagerTests(unittest.TestCase):
             self.assertRaises(Deadlock, lambda: self._do_lock_shared(lk))
             # Check nested contexts
             self.assertTrue(lk.holds_lock())
-            with locks2.try_hold_lock(lk) as got_lock_again:
+            with locks.try_hold_lock(lk) as got_lock_again:
                 self.assertFalse(got_lock_again)
             # Failing to get a lock doesn't unlock it
             self.assertTrue(lk.holds_lock())
-            with locks2.try_hold_lock_shared(lk) as got_lock_again:
+            with locks.try_hold_lock_shared(lk) as got_lock_again:
                 self.assertFalse(got_lock_again)
             self.assertTrue(lk.holds_lock())
         # Context-exit unlocks:
@@ -102,7 +102,7 @@ class LockContextManagerTests(unittest.TestCase):
     def test_ctxman_try_shared(self):
         lk = ProtoLock()
         self.assertFalse(lk.holds_lock())
-        with locks2.try_hold_lock_shared(lk) as got_lock:
+        with locks.try_hold_lock_shared(lk) as got_lock:
             self.assertTrue(got_lock)
             self.assertTrue(lk.holds_lock())
             # Trying to get exclusive locks blocks
@@ -111,10 +111,10 @@ class LockContextManagerTests(unittest.TestCase):
             self._do_lock_shared(lk)
             # Nested context managers
             self.assertTrue(lk.holds_lock())
-            with locks2.try_hold_lock(lk) as got_lock_again:
+            with locks.try_hold_lock(lk) as got_lock_again:
                 self.assertFalse(got_lock_again)
             self.assertTrue(lk.holds_lock())
-            with locks2.try_hold_lock_shared(lk) as got_lock_again:
+            with locks.try_hold_lock_shared(lk) as got_lock_again:
                 self.assertTrue(got_lock_again)
             self.assertTrue(lk.holds_lock())
         # Context-exit unlocks:
@@ -131,7 +131,7 @@ class FileLockTests(unittest.TestCase):
         os.rmdir(self.temp_dir)
 
     def test_acquire(self):
-        lk = locks2.FileLock(self.lock_path)
+        lk = locks.FileLock(self.lock_path)
         lk.acquire()
         try:
             self.assertTrue(lk.holds_lock())
@@ -140,7 +140,7 @@ class FileLockTests(unittest.TestCase):
         self.assertFalse(lk.holds_lock())
 
     def test_acquire_shared(self):
-        lk = locks2.FileLock(self.lock_path)
+        lk = locks.FileLock(self.lock_path)
         lk.acquire_shared()
         try:
             self.assertTrue(lk.holds_lock())

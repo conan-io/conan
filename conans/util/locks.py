@@ -1,13 +1,19 @@
+"""
+Implements locking utilities, including filesystem-based OS-assisted
+shared/exclusive advisory locking.
+"""
+
+import ctypes
+import errno
 import os
-import time
-
-import fasteners
-
-from conans.util.files import load, save
-from conans.util.log import logger
+from contextlib import contextmanager
 
 
 class NoLock(object):
+    """
+    A context manager that does nothing on enter/exit. Used to represent locks
+    that have been disabled.
+    """
 
     def __enter__(self):
         pass
@@ -16,105 +22,205 @@ class NoLock(object):
         pass
 
 
-class SimpleLock(object):
+class FileLock(object):
+    """
+    Implements OS-supported shared and exclusive locking using the native
+    platform APIs. No matter how the process is terminated, the system will
+    ensure that the locks are released.
 
-    def __init__(self, filename):
-        self._lock = fasteners.InterProcessLock(filename, logger=logger)
+    :param filepath: The path to the file that represents the lock
+    """
+    def __init__(self, filepath):
+        #: The path to the file which is used as a lock.
+        self.filepath = filepath
+        self._file = None
+        self._native_fd = None
+        self._holds_lock = False
+        if os.name == 'nt':
+            self._acquire_method = self._acquire_nt
+            self._release_method = self._release_nt
+        else:
+            self._acquire_method = self._acquire_unix
+            self._release_method = self._release_unix
 
-    def __enter__(self):
-        self._lock.acquire()
-
-    def __exit__(self, exc_type, exc_val, exc_tb):  # @UnusedVariable
-        self._lock.release()
-
-
-READ_BUSY_DELAY = 0.5
-WRITE_BUSY_DELAY = 0.25
-
-
-class Lock(object):
-
-    @staticmethod
-    def clean(folder):
-        if os.path.exists(folder + ".count"):
-            os.remove(folder + ".count")
-        if os.path.exists(folder + ".count.lock"):
-            os.remove(folder + ".count.lock")
-
-    def __init__(self, folder, locked_item, output):
-        self._count_file = folder + ".count"
-        self._count_lock_file = folder + ".count.lock"
-        self._locked_item = locked_item
-        self._output = output
-        self._first_lock = True
-
-    @property
-    def files(self):
-        return self._count_file, self._count_lock_file
-
-    def _info_locked(self):
-        if self._first_lock:
-            self._first_lock = False
-            self._output.info("%s is locked by another concurrent conan process, wait..."
-                              % str(self._locked_item))
-            self._output.info("If not the case, quit, and do 'conan remove --locks'")
-
-    def _readers(self):
+    def _acquire_unix(self, exclusive, block):
+        # Obtain a new file descriptor
+        assert self._native_fd is None, 'FileLock() cannot be used recursively'
+        assert self._file is None
+        self._file = open(self.filepath, 'wb+')
+        self._native_fd = self._file.fileno()
+        # Build the flags
+        import fcntl
+        lk_flags = fcntl.LOCK_EX if exclusive else fcntl.LOCK_SH
+        if not block:
+            lk_flags |= fcntl.LOCK_NB
+        # Take the lock
         try:
-            return int(load(self._count_file))
-        except IOError:
-            return 0
-        except (UnicodeEncodeError, ValueError):
-            self._output.warn("%s does not contain a number!" % self._count_file)
-            return 0
+            n_bytes = 1
+            fcntl.lockf(self._native_fd, lk_flags, n_bytes)
+        except OSError as exc:
+            if exc.errno in (errno.EAGAIN, errno.EACCES):
+                # Failed to take the lock. Never reached when block=True
+                return False
+            # Some other exception...
+            raise
+        # Got it!
+        self._holds_lock = True
+        return True
+
+    def _release_unix(self):
+        assert self._native_fd is not None, 'Cannot release() a lock that is not held'
+        assert self._file is not None
+        import fcntl
+        fcntl.lockf(self._native_fd, fcntl.LOCK_UN)
+        self._holds_lock = False
+        self._native_fd = None
+        self._file.close()
+        self._file = None
+
+    def _acquire_nt(self, exclusive, block):
+        self._file = open(self.filepath, 'wb+')
+        self._native_fd = self._file.fileno()
+
+        from . import win32_lockapi
+
+        flags = 0
+        if exclusive:
+            flags |= win32_lockapi.LOCKFILE_EXCLUSIVE_LOCK
+        if not block:
+            flags |= win32_lockapi.LOCKFILE_FAIL_IMMEDIATELY
+
+        okay = win32_lockapi.LockFileEx(
+            win32_lockapi.get_win_handle(self._file),
+            flags,
+            0,
+            0,
+            0,
+            ctypes.pointer(win32_lockapi.OVERLAPPED()),
+        )
+        if not okay:
+            last_error = win32_lockapi.GetLastError()
+            if last_error != win32_lockapi.ERROR_IO_PENDING:
+                raise OSError(last_error)
+            return False
+        self._holds_lock = True
+        return True
+
+    def _release_nt(self):
+        assert self._native_fd is not None, 'Cannot release() a lock that is not held'
+        from . import win32_lockapi
+        okay = win32_lockapi.UnlockFileEx(
+            win32_lockapi.get_win_handle(self._native_fd),
+            0,
+            0,
+            0,
+            ctypes.pointer(win32_lockapi.OVERLAPPED()),
+        )
+        if not okay:
+            raise OSError(win32_lockapi.GetLastError())
+
+        self._holds_lock = False
+        self._native_fd = None
+        self._file.close()
+        self._file = None
+
+    def try_acquire_shared(self):
+        """
+        Try to acquire shared ownership. Returns ``bool`` of whether the lock
+        was successfully obtained.
+        """
+        return self._acquire_method(exclusive=False, block=False)
+
+    def try_acquire(self):
+        """
+        Try to acquire exclusive ownership. Returns ``bool`` of whether the
+        lock was successfully obtained.
+        """
+        return self._acquire_method(exclusive=True, block=False)
+
+    def acquire_shared(self):
+        """
+        Acquire shared ownership. Blocks until ownership can be obtained.
+        """
+        self._acquire_method(exclusive=False, block=True)
+
+    def acquire(self):
+        """
+        Acquire exclusive ownership. Blocks until ownership can be obtained.
+        """
+        self._acquire_method(exclusive=True, block=True)
+
+    def release_shared(self):
+        """
+        Release shared ownership of the resource.
+        """
+        self._release_method()
+
+    def release(self):
+        """
+        Release exclusive ownership of the resource.
+        """
+        self._release_method()
+
+    def holds_lock(self):
+        """
+        Determine if a lock is currently held.
+        """
+        return self._holds_lock
 
 
-class ReadLock(Lock):
-
-    def __enter__(self):
-        while True:
-            with fasteners.InterProcessLock(self._count_lock_file, logger=logger):
-                readers = self._readers()
-                if readers >= 0:
-                    save(self._count_file, str(readers + 1))
-                    break
-            self._info_locked()
-            time.sleep(READ_BUSY_DELAY)
-
-    def __exit__(self, exc_type, exc_val, exc_tb):   # @UnusedVariable
-        with fasteners.InterProcessLock(self._count_lock_file, logger=logger):
-            readers = self._readers()
-            save(self._count_file, str(readers - 1))
+@contextmanager
+def hold_lock(lk):
+    """
+    Context manager which holds exclusive ownership over the given lockable
+    object ``lk``. Requires ``.acquire()`` and ``.release()`` methods on ``lk``.
+    """
+    lk.acquire()
+    try:
+        yield
+    finally:
+        lk.release()
 
 
-class WriteLock(Lock):
+@contextmanager
+def hold_lock_shared(lk):
+    """
+    Context manager which holds shared ownership over the given lockable object
+    ``lk``. Requires ``.acquire_shared()`` and ``.release_shared()`` methods on
+    ``lk``.
+    """
+    lk.acquire_shared()
+    try:
+        yield
+    finally:
+        lk.release_shared()
 
-    def __enter__(self):
-        while True:
-            with fasteners.InterProcessLock(self._count_lock_file, logger=logger):
-                readers = self._readers()
-                if readers == 0:
-                    save(self._count_file, "-1")
-                    break
-            self._info_locked()
-            time.sleep(WRITE_BUSY_DELAY)
 
-    def __exit__(self, exc_type, exc_val, exc_tb):  # @UnusedVariable
-        with fasteners.InterProcessLock(self._count_lock_file, logger=logger):
-            save(self._count_file, "0")
+@contextmanager
+def try_hold_lock(lk):
+    """
+    Context manager which tries to obtain exclusive ownership over the lock.
+    Yields a ``bool`` of whether the lock was obtained. Requires
+    ``.try_acquire()`` and ``.release()`` methods on ``lk``.
+    """
+    got_lock = lk.try_acquire()
+    try:
+        yield got_lock
+    finally:
+        if got_lock:
+            lk.release()
 
-        if exc_type is not None:
-            # If there was an exception while locking this, might be empty
-            # Try to clean up the trailing filelocks
-            try:
-                os.remove(self._count_file)
-                os.remove(self._count_lock_file)
-                path = os.path.dirname(self._count_file)
-                for _ in range(3):
-                    try:  # Take advantage that os.rmdir does not delete non-empty dirs
-                        os.rmdir(path)
-                    except Exception:
-                        break  # not empty
-                    path = os.path.dirname(path)
-            except Exception:
-                pass
+
+@contextmanager
+def try_hold_lock_shared(lk):
+    """
+    Context manager which tries to obtain shared ownership over the lock.
+    Yields a ``bool`` of whether the lock was obtained. Requires
+    ``.try_acquire_shared()`` and ``.release_shared()`` methods on ``lk``.
+    """
+    got_lock = lk.try_acquire_shared()
+    try:
+        yield got_lock
+    finally:
+        if got_lock:
+            lk.release_shared()

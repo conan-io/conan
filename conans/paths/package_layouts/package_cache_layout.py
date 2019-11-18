@@ -5,8 +5,6 @@ import platform
 from contextlib import contextmanager
 
 
-import fasteners
-
 from conans.errors import NotFoundException, ConanException
 from conans.errors import RecipeNotFoundException, PackageNotFoundException
 from conans.model.manifest import FileTreeManifest
@@ -17,7 +15,7 @@ from conans.model.ref import PackageReference
 from conans.paths import CONANFILE, SYSTEM_REQS, EXPORT_FOLDER, EXPORT_SRC_FOLDER, SRC_FOLDER, \
     BUILD_FOLDER, PACKAGES_FOLDER, SYSTEM_REQS_FOLDER, PACKAGE_METADATA, SCM_SRC_FOLDER
 from conans.util.files import load, save, rmdir
-from conans.util.locks import Lock, NoLock, ReadLock, SimpleLock, WriteLock
+from conans.util.locks import NoLock, FileLock, hold_lock, hold_lock_shared
 from conans.util.log import logger
 
 
@@ -43,6 +41,7 @@ class PackageCacheLayout(object):
         self._base_folder = os.path.normpath(base_folder)
         self._short_paths = short_paths
         self._no_lock = no_lock
+        self._repo_lk = FileLock(os.path.join(self._base_folder, '.lock'))
 
     @property
     def ref(self):
@@ -172,8 +171,8 @@ class PackageCacheLayout(object):
 
     @contextmanager
     def update_metadata(self):
-        lockfile = self.package_metadata() + ".lock"
-        with fasteners.InterProcessLock(lockfile, logger=logger):
+        lk = FileLock(self.package_metadata() + '.lock')
+        with hold_lock(lk):
             try:
                 metadata = self.load_metadata()
             except RecipeNotFoundException:
@@ -182,30 +181,34 @@ class PackageCacheLayout(object):
             save(self.package_metadata(), metadata.dumps())
 
     # Locks
-    def conanfile_read_lock(self, output):
+    def conanfile_read_lock(self):
+        """
+        Get a lock context manager for shared access to this recipe.
+        """
         if self._no_lock:
             return NoLock()
-        return ReadLock(self._base_folder, self._ref, output)
+        return hold_lock_shared(self._repo_lk)
 
-    def conanfile_write_lock(self, output):
+    def conanfile_write_lock(self):
+        """
+        Get a lock context manager for exclusive access to this recipe.
+        """
         if self._no_lock:
             return NoLock()
-        return WriteLock(self._base_folder, self._ref, output)
-
-    def conanfile_lock_files(self, output):
-        if self._no_lock:
-            return ()
-        return WriteLock(self._base_folder, self._ref, output).files
+        return hold_lock(self._repo_lk)
 
     def package_lock(self, pref):
+        """
+        Get a lock context manager for exclusive access to a given binary
+        package ID for this recipe.
+        """
         if self._no_lock:
             return NoLock()
-        return SimpleLock(os.path.join(self._base_folder, "locks", pref.id))
-
-    def remove_package_locks(self):
-        conan_folder = self._base_folder
-        Lock.clean(conan_folder)
-        rmdir(os.path.join(conan_folder, "locks"))
+        lk_path = os.path.join(self.base_folder(), 'locks', pref.id)
+        if not os.path.exists(os.path.dirname(lk_path)):
+            os.makedirs(os.path.dirname(lk_path))
+        lk = FileLock(lk_path)
+        return hold_lock(lk)
 
     # Raw access to file
     def get_path(self, path, package_id=None):

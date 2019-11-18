@@ -19,7 +19,6 @@ from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
 from conans.paths.package_layouts.package_editable_layout import PackageEditableLayout
 from conans.unicode import get_cwd
 from conans.util.files import list_folder_subdirs, load, normalize, save
-from conans.util.locks import Lock
 
 CONAN_CONF = 'conan.conf'
 CONAN_SETTINGS = "settings.yml"
@@ -245,13 +244,6 @@ class ClientCache(object):
                     except OSError:
                         break  # not empty
                 ref_path = os.path.dirname(ref_path)
-
-    def remove_locks(self):
-        folders = list_folder_subdirs(self._store_folder, 4)
-        for folder in folders:
-            conan_folder = os.path.join(self._store_folder, folder)
-            Lock.clean(conan_folder)
-            shutil.rmtree(os.path.join(conan_folder, "locks"), ignore_errors=True)
 
 
 def _mix_settings_with_env(settings):

@@ -182,13 +182,13 @@ class _PackageBuilder(object):
                                                           pref, keep_build, recorder)
         # PREPARE SOURCES
         if not skip_build:
-            with package_layout.conanfile_write_lock(self._output):
+            with package_layout.conanfile_write_lock():
                 set_dirty(build_folder)
                 self._prepare_sources(conanfile, pref, package_layout, conanfile_path, source_folder,
                                       build_folder, remotes)
 
         # BUILD & PACKAGE
-        with package_layout.conanfile_read_lock(self._output):
+        with package_layout.conanfile_read_lock():
             _remove_folder_raising(package_folder)
             mkdir(build_folder)
             os.chdir(build_folder)
