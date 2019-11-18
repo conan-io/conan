@@ -110,7 +110,6 @@ class BuildInfoCreator(object):
                 ret[data["checksums"]["sha1"]] = {"md5": data["checksums"]["md5"],
                                                   "name": "conan_sources.tgz" if not use_id else None,
                                                   "id": "conan_sources.tgz" if use_id else None}
-
         return set([Artifact(k, **v) for k, v in ret.items()])
 
     def _get_recipe_artifacts(self, pref, add_prefix, use_id):

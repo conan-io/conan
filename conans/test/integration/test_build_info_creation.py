@@ -55,6 +55,13 @@ class MyBuildInfoCreation(unittest.TestCase):
         mock_resp.content = None
         return mock_resp
 
+    def mock_response_get(url, data=None, **kwargs):
+        mock_resp = Mock()
+        mock_resp.status_code = 200
+        if "conan_sources.tgz" in url:
+            mock_resp.status_code = 404
+        return mock_resp
+
     def _test_buildinfo(self, client, user_channel):
         conanfile = textwrap.dedent("""
             from conans import ConanFile, load
@@ -174,7 +181,7 @@ class MyBuildInfoCreation(unittest.TestCase):
 
     @patch("conans.build_info.build_info.get_conan_user_home")
     @patch("conans.build_info.build_info.ClientCache")
-    @patch("conans.build_info.build_info.requests.put", new=mock_response)
+    @patch("conans.build_info.build_info.requests.get", new=mock_response_get)
     def test_build_info_create_scm(self, mock_cache, user_home_mock):
         base_folder = temp_folder(True)
         cache_folder = os.path.join(base_folder, ".conan")
@@ -189,20 +196,20 @@ class MyBuildInfoCreation(unittest.TestCase):
             from conans import ConanFile, load
             import os
             class Pkg(ConanFile):
+                name = "PkgA"
+                version = "0.1"
                 scm = {"type": "git",
-                       "url": "auto",
-                       "revision": "auto"}
-                keep_imports = True
-                def build(self):
-                    pass
+                        "url": "auto",
+                        "revision": "auto"}
+            
                 def imports(self):
                     self.copy("myfile.txt", folder=True)
                 def package(self):
                     self.copy("*myfile.txt")
                 """)
 
-        client.save({"PkgA/conanfile.py": conanfile,
-                     "PkgA/myfile.txt": "HelloA"})
+        client.save({"conanfile.py": conanfile,
+                     "myfile.txt": "HelloA"})
         client.run_command("git init")
         client.run_command('git config user.email "you@example.com"')
         client.run_command('git config user.name "Your Name"')
@@ -210,12 +217,12 @@ class MyBuildInfoCreation(unittest.TestCase):
         client.run_command("git add .")
         client.run_command("git commit -m \"initial commit\"")
 
-        client.run("export PkgA PkgA/0.1@")
+        client.run("export .")
 
-        client.run("graph lock PkgA/0.1@")
+        client.run("graph lock .")
 
-        client.run("create PkgA PkgA/0.1@ --lockfile")
-        client.run("upload * --all --confirm -r default --force")
+        client.run("create . --lockfile")
+        client.run("upload * --confirm -r default --force")
 
         sys.argv = ["conan_build_info", "--v2", "start", "MyBuildName", "42"]
         run()
@@ -223,5 +230,5 @@ class MyBuildInfoCreation(unittest.TestCase):
                     os.path.join(client.current_folder, "buildinfo.json"), "--lockfile",
                     os.path.join(client.current_folder, LOCKFILE)]
         run()
-
-
+        if not os.path.exists(os.path.join(client.current_folder, "buildinfo.json")):
+            self.fail("build info create failed")
