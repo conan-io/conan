@@ -15,6 +15,7 @@ def check_min_cppstd(conanfile, cppstd, gnu_extensions=False):
     """
     assert (cppstd is not None), "Cannot check invalid cppstd version"
     assert (conanfile is not None), "conanfile must be a ConanFile object"
+    assert (str(cppstd).isdigit()), "cppstd must be a number"
 
     def less_than(lhs, rhs):
         def extract_cpp_version(cppstd):
