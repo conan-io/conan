@@ -1,11 +1,9 @@
 import os
 
-import fasteners
-
-from conans.client.tools.env import no_op
 from conans.errors import NotFoundException
 from conans.server.store.server_store import REVISIONS_FILE
 from conans.util.files import decode_text, md5sum, path_exists, relative_dirs, rmdir
+from conans.util.locks import FileLock, hold_lock, NoLock
 
 
 class ServerDiskAdapter(object):
@@ -91,12 +89,12 @@ class ServerDiskAdapter(object):
         return os.path.exists(path)
 
     def read_file(self, path, lock_file):
-        with fasteners.InterProcessLock(lock_file) if lock_file else no_op():
+        with hold_lock(FileLock(lock_file)) if lock_file else NoLock():
             with open(path) as f:
                 return f.read()
 
     def write_file(self, path, contents, lock_file):
-        with fasteners.InterProcessLock(lock_file) if lock_file else no_op():
+        with hold_lock(FileLock(lock_file)) if lock_file else NoLock():
             with open(path, "w") as f:
                 f.write(contents)
 

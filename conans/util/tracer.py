@@ -4,12 +4,11 @@ import os
 import time
 from os.path import isdir
 
-import fasteners
-
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.util.files import md5sum, sha1sum
 from conans.util.log import logger
+from conans.util.locks import FileLock, hold_lock
 
 
 # FIXME: Conan 2.0 the traces should have all the revisions information also.
@@ -53,7 +52,8 @@ def _append_to_log(obj):
     """Add a new line to the log file locking the file to protect concurrent access"""
     if _get_tracer_file():
         filepath = _get_tracer_file()
-        with fasteners.InterProcessLock(filepath + ".lock", logger=logger):
+        lk = FileLock(filepath + '.lock')
+        with hold_lock(lk):
             with open(filepath, "a") as logfile:
                 logfile.write(json.dumps(obj, sort_keys=True) + "\n")
 
