@@ -15,8 +15,9 @@ from conans.model.ref import PackageReference
 from conans.paths import CONANFILE, SYSTEM_REQS, EXPORT_FOLDER, EXPORT_SRC_FOLDER, SRC_FOLDER, \
     BUILD_FOLDER, PACKAGES_FOLDER, SYSTEM_REQS_FOLDER, PACKAGE_METADATA, SCM_SRC_FOLDER
 from conans.util.files import load, save, rmdir
-from conans.util.locks import NoLock, FileLock, hold_lock, hold_lock_shared
+from conans.util.locks import NoLock, FileLock, hold_lock, hold_lock_shared, try_hold_lock, try_hold_lock_shared
 from conans.util.log import logger
+from conans.client.output import ConanOutput
 
 
 def short_path(func):
@@ -181,21 +182,51 @@ class PackageCacheLayout(object):
             save(self.package_metadata(), metadata.dumps())
 
     # Locks
-    def conanfile_read_lock(self):
+    @contextmanager
+    def conanfile_read_lock(self, output=None):
         """
         Get a lock context manager for shared access to this recipe.
         """
+        assert output is None or isinstance(output, ConanOutput), repr(output)
         if self._no_lock:
-            return NoLock()
-        return hold_lock_shared(self._repo_lk)
+            yield
+            return
 
-    def conanfile_write_lock(self):
+        with try_hold_lock_shared(self._repo_lk) as got_lock:
+            if got_lock:
+                yield
+                return
+
+        if output:
+            output.warn(
+                'Access to `{}` is locked by another Conan process. Wait...'.format(
+                    self._ref))
+
+        with hold_lock_shared(self._repo_lk):
+            yield
+
+    @contextmanager
+    def conanfile_write_lock(self, output=None):
         """
         Get a lock context manager for exclusive access to this recipe.
         """
+        assert output is None or isinstance(output, ConanOutput), repr(output)
         if self._no_lock:
-            return NoLock()
-        return hold_lock(self._repo_lk)
+            yield
+            return
+
+        with try_hold_lock(self._repo_lk) as got_lock:
+            if got_lock:
+                yield
+                return
+
+        if output:
+            output.warn(
+                'Access to `{}` is locked by another Conan process. Wait...'.format(
+                    self._ref))
+
+        with hold_lock(self._repo_lk):
+            yield
 
     def package_lock(self, pref):
         """

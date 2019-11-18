@@ -29,7 +29,7 @@ class ConanProxy(object):
             # TODO: recorder.recipe_fetched_as_editable(reference)
             return conanfile_path, status, None, ref
 
-        with layout.conanfile_write_lock():
+        with layout.conanfile_write_lock(self._out):
             result = self._get_recipe(layout, ref, check_updates, update, remotes, recorder)
             conanfile_path, status, remote, new_ref = result
 
