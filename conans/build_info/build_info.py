@@ -107,9 +107,9 @@ class BuildInfoCreator(object):
 
             if response.status_code == 200:
                 data = response.json()
-                ret[data["checksums"]["sha1"]] = {"md5": data["checksums"],
-                                                  "name": "conan_sources.tgz",
-                                                  "id": None}
+                ret[data["checksums"]["sha1"]] = {"md5": data["checksums"]["md5"],
+                                                  "name": "conan_sources.tgz" if not use_id else None,
+                                                  "id": "conan_sources.tgz" if use_id else None}
 
         return set([Artifact(k, **v) for k, v in ret.items()])
 
