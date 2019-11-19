@@ -42,7 +42,7 @@ from conans.client.remote_manager import RemoteManager
 from conans.client.remover import ConanRemover
 from conans.client.rest.auth_manager import ConanApiAuthManager
 from conans.client.rest.conan_requester import ConanRequester
-from conans.client.rest.rest_client import RestApiClient
+from conans.client.rest.rest_client import RestApiClientFactory
 from conans.client.runner import ConanRunner
 from conans.client.source import config_source_local
 from conans.client.store.localdb import LocalDB
@@ -167,13 +167,13 @@ class ConanApp(object):
         self.requester = ConanRequester(self.config, http_requester)
         # To handle remote connections
         artifacts_properties = self.cache.read_artifacts_properties()
-        rest_api_client = RestApiClient(self.out, self.requester,
-                                        revisions_enabled=self.config.revisions_enabled,
-                                        artifacts_properties=artifacts_properties)
+        rest_client_factory = RestApiClientFactory(self.out, self.requester,
+                                                   revisions_enabled=self.config.revisions_enabled,
+                                                   artifacts_properties=artifacts_properties)
         # To store user and token
         localdb = LocalDB.create(self.cache.localdb)
         # Wraps RestApiClient to add authentication support (same interface)
-        auth_manager = ConanApiAuthManager(rest_api_client, self.user_io, localdb)
+        auth_manager = ConanApiAuthManager(rest_client_factory, self.user_io, localdb)
         # Handle remote connections
         self.remote_manager = RemoteManager(self.cache, auth_manager, self.out, self.hook_manager)
 
@@ -791,8 +791,7 @@ class ConanAPIV1(object):
         if not password:
             name, password = self.app.user_io.request_login(remote_name=remote_name, username=name)
 
-        _, _, remote_name, prev_user, user = self.app.remote_manager.authenticate(remote, name,
-                                                                                  password)
+        remote_name, prev_user, user = self.app.remote_manager.authenticate(remote, name, password)
         return remote_name, prev_user, user
 
     @api_method
