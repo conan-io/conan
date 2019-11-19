@@ -563,7 +563,7 @@ def check_output(cmd, folder=None, return_code=False, stderr=None):
         try:
             logger.info("Output: in file:{}\nstdout: {}\nstderr:{}".format(output, stdout, stderr))
         except Exception as exc:
-            logger.info("Error logging command output: {}".format(exc))
+            logger.error("Error logging command output: {}".format(exc))
         return output
     finally:
         try:
