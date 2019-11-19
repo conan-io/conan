@@ -220,8 +220,8 @@ def _capture_scm_auto_fields(conanfile, conanfile_dir, destination_folder, outpu
                     "'scm.revision' auto fields. Use --ignore-dirty to force it. The 'conan "
                     "upload' command will prevent uploading recipes with 'auto' values in these "
                     "fields.")
-        local_src_path = scm.get_local_path_to_url(scm_data.url) \
-            if scm_data.url != "auto" else conanfile_dir
+        origin = scm.get_qualified_remote_url(remove_credentials=True)
+        local_src_path = scm.get_local_path_to_url(origin)
         return scm_data, local_src_path
 
     if scm_data.url == "auto":
