@@ -13,6 +13,7 @@ from conans.client.tools.env import environment_append
 from conans.client.tools.files import load, which
 from conans.errors import ConanException, CalledProcessErrorWithStderr
 from conans.model.version import Version
+from conans.util.log import logger
 
 
 def args_to_string(args):
@@ -545,10 +546,11 @@ def check_output(cmd, folder=None, return_code=False, stderr=None):
         # We don't want stderr to print warnings that will mess the pristine outputs
         stderr = stderr or PIPE
         cmd = cmd if isinstance(cmd, six.string_types) else subprocess.list2cmdline(cmd)
-        process = subprocess.Popen("{} > {}".format(cmd, tmp_file), shell=True,
-                                   stderr=stderr, cwd=folder)
-
-        _, stderr = process.communicate()
+        command = "{} > {}".format(cmd, tmp_file)
+        logger.info("Calling command: {}".format(command))
+        process = subprocess.Popen(command, shell=True, stderr=stderr, cwd=folder)
+        stdout, stderr = process.communicate()
+        logger.info("Return code: {}".format(int(process.returncode)))
 
         if return_code:
             return process.returncode
@@ -558,6 +560,10 @@ def check_output(cmd, folder=None, return_code=False, stderr=None):
             raise CalledProcessErrorWithStderr(process.returncode, cmd, output=stderr)
 
         output = load(tmp_file)
+        try:
+            logger.info("Output: in file:{}\nstdout: {}\nstderr:{}".format(output, stdout, stderr))
+        except Exception as exc:
+            logger.error("Error logging command output: {}".format(exc))
         return output
     finally:
         try:

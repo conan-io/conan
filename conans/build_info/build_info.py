@@ -47,13 +47,14 @@ class BuildInfoCreator(object):
         self._user = user
         self._password = password
         self._apikey = apikey
+        self._output = output
         self._conan_cache = ClientCache(os.path.join(get_conan_user_home(), ".conan"), output)
 
     def parse_pref(self, pref):
         ref = ConanFileReference.loads(pref, validate=False)
         rrev = ref.revision.split("#")[0].split(":")[0]
         pid = ref.revision.split("#")[0].split(":")[1]
-        prev = ref.revision.split("#")[1]
+        prev = "" if len(ref.revision.split("#")) == 1 else ref.revision.split("#")[1]
         return {
             "name": ref.name,
             "version": ref.version,
@@ -107,14 +108,9 @@ class BuildInfoCreator(object):
 
             if response.status_code == 200:
                 data = response.json()
-                ret[data["checksums"]["sha1"]] = {"md5": data["checksums"],
-                                                  "name": "conan_sources.tgz",
-                                                  "id": None}
-            elif response.status_code == 401:
-                raise AuthenticationException(response_to_str(response))
-            else:
-                raise RequestErrorException(response_to_str(response))
-
+                ret[data["checksums"]["sha1"]] = {"md5": data["checksums"]["md5"],
+                                                  "name": "conan_sources.tgz" if not use_id else None,
+                                                  "id": "conan_sources.tgz" if use_id else None}
         return set([Artifact(k, **v) for k, v in ret.items()])
 
     def _get_recipe_artifacts(self, pref, add_prefix, use_id):
