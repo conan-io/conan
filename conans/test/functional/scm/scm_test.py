@@ -1,4 +1,5 @@
 import os
+import textwrap
 import unittest
 from collections import namedtuple
 
@@ -170,6 +171,36 @@ class ConanLib(ConanFile):
         folder = self.client.cache.package_layout(ref).source()
         self.assertTrue(os.path.exists(os.path.join(folder, "mysub", "myfile.txt")))
         self.assertFalse(os.path.exists(os.path.join(folder, "mysub", "conanfile.py")))
+
+    def test_ignore_dirty_subfolder(self):
+        # https://github.com/conan-io/conan/issues/6070
+        conanfile = textwrap.dedent("""
+            import os
+            from conans import ConanFile, tools
+
+            class ConanLib(ConanFile):
+                name = "lib"
+                version = "0.1"
+                short_paths = True
+                scm = {
+                    "type": "git",
+                    "url": "auto",
+                    "revision": "auto",
+                }
+
+                def build(self):
+                    path = os.path.join("base_file.txt")
+                    assert os.path.exists(path)
+        """)
+        self.client.save({"test/main/conanfile.py": conanfile, "base_file.txt": "foo"})
+        create_local_git_repo(folder=self.client.current_folder)
+        self.client.run_command('git remote add origin https://myrepo.com.git')
+
+        # Introduce changes
+        self.client.save({"dirty_file.txt": "foo"})
+        # The build() method will verify that the files from the repository are copied ok
+        self.client.run("create test/main/conanfile.py user/channel")
+        self.assertIn("Package '{}' created".format(NO_SETTINGS_PACKAGE_ID), self.client.out)
 
     def test_auto_conanfile_no_root(self):
         """
