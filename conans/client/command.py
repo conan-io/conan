@@ -903,7 +903,7 @@ class Command(object):
                             " folder and any of '-e', '-o', '-pr' or '-s' arguments are used, it "
                             "will raise an error.")
         parser.add_argument("-o", "--options", nargs=1, action=Extender,
-                            help='Define options values, e.g., -o pkg:with_qt=true')
+                            help='Define options values, e.g., -o pkg:with_qt=True')
         parser.add_argument("-pr", "--profile", action=Extender,
                             help='Profile for this package')
         parser.add_argument("-pf", "--package-folder", action=OnceArgument,
@@ -1984,7 +1984,7 @@ def _add_common_install_arguments(parser, build_help, lockfile=True):
                         help='Environment variables that will be set during the package build, '
                              '-e CXX=/usr/bin/clang++')
     parser.add_argument("-o", "--options", nargs=1, action=Extender,
-                        help='Define options values, e.g., -o Pkg:with_qt=true')
+                        help='Define options values, e.g., -o Pkg:with_qt=True')
     parser.add_argument("-pr", "--profile", default=None, action=Extender,
                         help='Apply the specified profile to the install command')
     parser.add_argument("-r", "--remote", action=OnceArgument,
