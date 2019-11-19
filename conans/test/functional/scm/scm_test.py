@@ -2,7 +2,6 @@ import os
 import textwrap
 import unittest
 from collections import namedtuple
-from textwrap import dedent
 
 from nose.plugins.attrib import attr
 from parameterized.parameterized import parameterized
