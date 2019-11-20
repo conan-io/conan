@@ -87,6 +87,7 @@ class RangeResolver(object):
         self._cache = cache
         self._remote_manager = remote_manager
         self._cached_remote_found = {}
+        self._cached_results = {}
         self._result = []
 
     @property
@@ -114,19 +115,23 @@ class RangeResolver(object):
             return
 
         ref = require.ref
-        # The search pattern must be a string
-        search_ref = ConanFileReference(ref.name, "*", ref.user, ref.channel)
-
-        if update:
-            resolved_ref, remote_name = self._resolve_remote(search_ref, version_range, remotes)
-            if not resolved_ref:
+        try:
+            resolved_ref, remote_name = self._cached_results[ref]
+        except KeyError:
+            # The search pattern must be a string
+            search_ref = ConanFileReference(ref.name, "*", ref.user, ref.channel)
+            if update:
+                resolved_ref, remote_name = self._resolve_remote(search_ref, version_range, remotes)
+                if not resolved_ref:
+                    remote_name = None
+                    resolved_ref = self._resolve_local(search_ref, version_range)
+            else:
                 remote_name = None
                 resolved_ref = self._resolve_local(search_ref, version_range)
-        else:
-            remote_name = None
-            resolved_ref = self._resolve_local(search_ref, version_range)
-            if not resolved_ref:
-                resolved_ref, remote_name = self._resolve_remote(search_ref, version_range, remotes)
+                if not resolved_ref:
+                    resolved_ref, remote_name = self._resolve_remote(search_ref, version_range,
+                                                                     remotes)
+                self._cached_results[require.ref] = resolved_ref, remote_name
 
         origin = ("remote '%s'" % remote_name) if remote_name else "local cache"
         if resolved_ref:
