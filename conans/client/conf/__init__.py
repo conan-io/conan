@@ -34,15 +34,15 @@ os:
         version: ["5.0", "6.0", "7.0", "8.0"]
     Linux:
     Macos:
-        version: [None, "10.6", "10.7", "10.8", "10.9", "10.10", "10.11", "10.12", "10.13", "10.14"]
+        version: [None, "10.6", "10.7", "10.8", "10.9", "10.10", "10.11", "10.12", "10.13", "10.14", "10.15"]
     Android:
         api_level: ANY
     iOS:
-        version: ["7.0", "7.1", "8.0", "8.1", "8.2", "8.3", "9.0", "9.1", "9.2", "9.3", "10.0", "10.1", "10.2", "10.3", "11.0", "11.1", "11.2", "11.3", "11.4", "12.0", "12.1"]
+        version: ["7.0", "7.1", "8.0", "8.1", "8.2", "8.3", "9.0", "9.1", "9.2", "9.3", "10.0", "10.1", "10.2", "10.3", "11.0", "11.1", "11.2", "11.3", "11.4", "12.0", "12.1", "12.2", "12.3", "12.4", "13.0", "13.1"]
     watchOS:
-        version: ["4.0", "4.1", "4.2", "4.3", "5.0", "5.1"]
+        version: ["4.0", "4.1", "4.2", "4.3", "5.0", "5.1", "5.2", "5.3", "6.0", "6.1"]
     tvOS:
-        version: ["11.0", "11.1", "11.2", "11.3", "11.4", "12.0", "12.1"]
+        version: ["11.0", "11.1", "11.2", "11.3", "11.4", "12.0", "12.1", "12.2", "12.3", "12.4", "13.0"]
     FreeBSD:
     SunOS:
     AIX:
@@ -61,9 +61,9 @@ compiler:
         version: ["4.1", "4.4", "4.5", "4.6", "4.7", "4.8", "4.9",
                   "5", "5.1", "5.2", "5.3", "5.4", "5.5",
                   "6", "6.1", "6.2", "6.3", "6.4",
-                  "7", "7.1", "7.2", "7.3",
+                  "7", "7.1", "7.2", "7.3", "7.4",
                   "8", "8.1", "8.2", "8.3",
-                  "9", "9.1"]
+                  "9", "9.1", "9.2"]
         libcxx: [libstdc++, libstdc++11]
         threads: [None, posix, win32] #  Windows MinGW
         exception: [None, dwarf2, sjlj, seh] # Windows MinGW
@@ -79,7 +79,7 @@ compiler:
     clang:
         version: ["3.3", "3.4", "3.5", "3.6", "3.7", "3.8", "3.9", "4.0",
                   "5.0", "6.0", "7.0", "7.1",
-                  "8"]
+                  "8", "9", "10"]
         libcxx: [libstdc++, libstdc++11, libc++, c++_shared, c++_static]
         cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
     apple-clang:
@@ -98,7 +98,7 @@ default_client_conf = """
 [log]
 run_to_output = True        # environment CONAN_LOG_RUN_TO_OUTPUT
 run_to_file = False         # environment CONAN_LOG_RUN_TO_FILE
-level = 50                  # environment CONAN_LOGGING_LEVEL
+level = critical            # environment CONAN_LOGGING_LEVEL
 # trace_file =              # environment CONAN_TRACE_FILE
 print_run_commands = False  # environment CONAN_PRINT_RUN_COMMANDS
 
@@ -157,9 +157,8 @@ default_package_id_mode = semver_direct_mode # environment CONAN_DEFAULT_PACKAGE
 path = ./data
 
 [proxies]
-# Empty section will try to use system proxies.
-# If don't want proxy at all, remove section [proxies]
-# As documented in http://docs.python-requests.org/en/latest/user/advanced/#proxies - but see below
+# Empty (or missing) section will try to use system proxies.
+# As documented in https://requests.kennethreitz.org/en/latest/user/advanced/#proxies - but see below
 # for proxies to specific hosts
 # http = http://user:pass@10.10.1.10:3128/
 # http = http://10.10.1.10:3128
@@ -401,6 +400,18 @@ class ConanClientConfigParser(ConfigParser, object):
         return default_package_id_mode
 
     @property
+    def short_paths_home(self):
+        short_paths_home = get_env("CONAN_USER_HOME_SHORT")
+        if short_paths_home:
+            current_dir = os.path.dirname(self.filename)
+            if current_dir == os.path.commonprefix([current_dir, short_paths_home]):
+                raise ConanException("Short path home '{}' (defined by conan.conf variable "
+                                     "'user_home_short', or environment variable "
+                                     "'CONAN_USER_HOME_SHORT') cannot be a subdirectory of "
+                                     "the conan cache '{}'.".format(short_paths_home, current_dir))
+        return short_paths_home
+
+    @property
     def storage_path(self):
         # Try with CONAN_STORAGE_PATH
         result = get_env('CONAN_STORAGE_PATH', None)
@@ -506,7 +517,8 @@ class ConanClientConfigParser(ConfigParser, object):
             if level is None:
                 level = self.get_item("log.level")
             try:
-                level = int(level)
+                parsed_level = ConanClientConfigParser.get_log_level_by_name(level)
+                level = parsed_level if parsed_level is not None else int(level)
             except Exception:
                 level = logging.CRITICAL
             return level
@@ -574,3 +586,16 @@ class ConanClientConfigParser(ConfigParser, object):
             return log_run_to_output.lower() in ("1", "true")
         except ConanException:
             return True
+
+    @staticmethod
+    def get_log_level_by_name(level_name):
+        levels = {
+            "critical": logging.CRITICAL,
+            "error": logging.ERROR,
+            "warning": logging.WARNING,
+            "warn": logging.WARNING,
+            "info": logging.INFO,
+            "debug": logging.DEBUG,
+            "notset": logging.NOTSET
+        }
+        return levels.get(str(level_name).lower())

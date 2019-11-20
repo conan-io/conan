@@ -1,6 +1,6 @@
 from conans.client.generators.cmake_common import cmake_dependencies, cmake_dependency_vars, \
     cmake_global_vars, cmake_macros, cmake_package_info, cmake_settings_info, cmake_user_info_vars, \
-    generate_targets_section
+    generate_targets_section, apple_frameworks_macro
 from conans.model import Generator
 from conans.paths import BUILD_INFO_CMAKE
 
@@ -30,8 +30,10 @@ class DepsCppCmake(object):
         self.bin_paths = join_paths(cpp_info.bin_paths)
         self.build_paths = join_paths(cpp_info.build_paths)
         self.src_paths = join_paths(cpp_info.src_paths)
-
+        self.framework_paths = join_paths(cpp_info.framework_paths)
         self.libs = join_flags(" ", cpp_info.libs)
+        self.system_libs = join_flags(" ", cpp_info.system_libs)
+        self.frameworks = join_flags(" ", cpp_info.frameworks)
         self.defines = join_defines(cpp_info.defines, "-D")
         self.compile_definitions = join_defines(cpp_info.defines)
 
@@ -49,6 +51,8 @@ class DepsCppCmake(object):
         self.exelinkflags_list = join_flags(";", cpp_info.exelinkflags)
 
         self.rootpath = join_paths([cpp_info.rootpath])
+        self.build_modules_paths = join_paths([path for path in cpp_info.build_modules_paths if
+                                               path.endswith(".cmake")])
 
 
 class CMakeGenerator(Generator):
@@ -59,9 +63,11 @@ class CMakeGenerator(Generator):
     @property
     def content(self):
         sections = ["include(CMakeParseArguments)"]
+        sections.append(apple_frameworks_macro)
 
         # Per requirement variables
-        for dep_name, dep_cpp_info in self.deps_build_info.dependencies:
+        for _, dep_cpp_info in self.deps_build_info.dependencies:
+            dep_name = dep_cpp_info.name
             deps = DepsCppCmake(dep_cpp_info)
             dep_flags = cmake_dependency_vars(dep_name, deps=deps)
             sections.append(dep_flags)

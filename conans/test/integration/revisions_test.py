@@ -1,8 +1,9 @@
-import os
-import unittest
+import time
 from collections import OrderedDict
 
-import time
+import json
+import os
+import unittest
 from nose.plugins.attrib import attr
 from parameterized.parameterized import parameterized
 
@@ -369,10 +370,9 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
 
     def test_json_output(self):
         client = TurboTestClient()
-        client.save({"conanfile.py": str(GenConanfile())})
+        client.save({"conanfile.py": GenConanfile()})
         client.run("create . {} --json file.json".format(self.ref.full_str()))
         json_path = os.path.join(client.current_folder, "file.json")
-        import json
         data = json.loads(load(json_path))
         ref = ConanFileReference.loads(data["installed"][0]["recipe"]["id"])
         self.assertIsNotNone(ref.revision)
@@ -424,10 +424,10 @@ class RevisionsInLocalCacheTest(unittest.TestCase):
         msg = "Removing the local binary packages from different recipe revisions"
         if v1:
             self.assertNotIn(msg, client.out)
-            self.assertTrue(client.package_exists(pref_outdated.copy_clear_rev()))
+            self.assertTrue(client.package_exists(pref_outdated.copy_clear_revs()))
         else:
             self.assertIn(msg, client.out)
-            self.assertFalse(client.package_exists(pref_outdated.copy_clear_rev()))
+            self.assertFalse(client.package_exists(pref_outdated.copy_clear_revs()))
 
         self.assertTrue(client.package_exists(pref_ok))
 
@@ -492,18 +492,18 @@ class RemoveWithRevisionsTest(unittest.TestCase):
         layout = self.c_v1.cache.package_layout(pref.ref.copy_clear_rev())
 
         # Assert pref (outdated) is in the cache
-        self.assertTrue(layout.package_exists(pref.copy_clear_rev()))
+        self.assertTrue(layout.package_exists(pref.copy_clear_revs()))
 
         # Assert pref2 is also in the cache
-        self.assertTrue(layout.package_exists(pref2.copy_clear_rev()))
+        self.assertTrue(layout.package_exists(pref2.copy_clear_revs()))
 
         self.c_v1.run("remove {} --outdated -f".format(pref.ref))
 
         # Assert pref (outdated) is not in the cache anymore
-        self.assertFalse(layout.package_exists(pref.copy_clear_rev()))
+        self.assertFalse(layout.package_exists(pref.copy_clear_revs()))
 
         # Assert pref2 is in the cache
-        self.assertTrue(layout.package_exists(pref2.copy_clear_rev()))
+        self.assertTrue(layout.package_exists(pref2.copy_clear_revs()))
 
     @parameterized.expand([(True,), (False,)])
     def test_remove_oudated_packages_remote(self, v1):
@@ -1485,12 +1485,12 @@ class ServerRevisionsIndexes(unittest.TestCase):
         self.assertEqual(pref2.ref.revision, pref3.ref.revision)
         self.assertEqual(pref3.ref.revision, server_pref3.revision)
 
-        pref = pref1.copy_clear_rev().copy_with_revs(pref1.ref.revision, None)
+        pref = pref1.copy_clear_prev()
         revs = [r.revision
                 for r in self.server.server_store.get_package_revisions(pref)]
         self.assertEqual(revs, [pref3.revision, pref2.revision, pref1.revision])
         self.assertEqual(self.server.server_store.get_last_package_revision(pref).revision,
-                          pref3.revision)
+                         pref3.revision)
 
         # Delete the latest from the server
         self.c_v2.run("remove {} -p {}#{} -r default -f".format(pref3.ref.full_str(),
@@ -1552,7 +1552,7 @@ class ServerRevisionsIndexes(unittest.TestCase):
             pref4 = self.c_v2.create(self.ref, conanfile=conanfile)
         self.c_v2.upload_all(self.ref)
 
-        pref = pref1.copy_clear_rev().copy_with_revs(pref1.ref.revision, None)
+        pref = pref1.copy_clear_prev()
         revs = [r.revision
                 for r in self.server.server_store.get_package_revisions(pref)]
         self.assertEqual(revs, [pref4.revision])

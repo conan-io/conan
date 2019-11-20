@@ -7,7 +7,6 @@ from requests.exceptions import ConnectionError
 
 from conans import DEFAULT_REVISION_V1
 from conans.client.cache.remote_registry import Remote
-from conans.client.source import merge_directories
 from conans.errors import ConanConnectionError, ConanException, NotFoundException, \
     NoRestV2Available, PackageNotFoundException
 from conans.paths import EXPORT_SOURCES_DIR_OLD, \
@@ -15,7 +14,8 @@ from conans.paths import EXPORT_SOURCES_DIR_OLD, \
 from conans.search.search import filter_packages
 from conans.util import progress_bar
 from conans.util.env_reader import get_env
-from conans.util.files import make_read_only, mkdir, rmdir, tar_extract, touch_folder
+from conans.util.files import make_read_only, mkdir, rmdir, tar_extract, touch_folder, \
+    merge_directories, md5sum, sha1sum
 from conans.util.log import logger
 # FIXME: Eventually, when all output is done, tracer functions should be moved to the recorder class
 from conans.util.tracer import (log_package_download,
@@ -87,6 +87,8 @@ class RemoteManager(object):
         duration = time.time() - t1
         log_recipe_download(ref, duration, remote.name, zipped_files)
 
+        recipe_checksums = calc_files_checksum(zipped_files)
+
         unzip_and_get_files(zipped_files, dest_folder, EXPORT_TGZ_NAME, output=self._output)
         # Make sure that the source dir is deleted
         package_layout = self._cache.package_layout(ref)
@@ -96,6 +98,7 @@ class RemoteManager(object):
 
         with package_layout.update_metadata() as metadata:
             metadata.recipe.revision = ref.revision
+            metadata.recipe.checksums = recipe_checksums
 
         self._hook_manager.execute("post_download_recipe", conanfile_path=conanfile_path,
                                    reference=ref, remote=remote)
@@ -138,9 +141,12 @@ class RemoteManager(object):
                 raise PackageNotFoundException(pref)
             zipped_files = self._call_remote(remote, "get_package", pref, dest_folder)
 
+            package_checksums = calc_files_checksum(zipped_files)
+
             with self._cache.package_layout(pref.ref).update_metadata() as metadata:
                 metadata.packages[pref.id].revision = pref.revision
                 metadata.packages[pref.id].recipe_revision = pref.ref.revision
+                metadata.packages[pref.id].checksums = package_checksums
 
             duration = time.time() - t1
             log_package_download(pref, duration, remote, zipped_files)
@@ -180,11 +186,11 @@ class RemoteManager(object):
         packages = filter_packages(query, packages)
         return packages
 
-    def remove(self, ref, remote):
+    def remove_recipe(self, ref, remote):
         """
         Removed conans or packages from remote
         """
-        return self._call_remote(remote, "remove", ref)
+        return self._call_remote(remote, "remove_recipe", ref)
 
     def remove_packages(self, ref, remove_ids, remote):
         """
@@ -232,20 +238,26 @@ class RemoteManager(object):
                 pref = pref.copy_with_revs(pref.ref.revision, DEFAULT_REVISION_V1)
         return pref
 
-    def _call_remote(self, remote, method, *argc, **argv):
+    def _call_remote(self, remote, method, *args, **kwargs):
         assert(isinstance(remote, Remote))
-        self._auth_manager.remote = remote
         try:
-            return getattr(self._auth_manager, method)(*argc, **argv)
+            return self._auth_manager.call_rest_api_method(remote, method, *args, **kwargs)
         except ConnectionError as exc:
-            raise ConanConnectionError("%s\n\nUnable to connect to %s=%s"
-                                       % (str(exc), remote.name, remote.url))
+            raise ConanConnectionError(("%s\n\nUnable to connect to %s=%s\n" +
+                                        "1. Make sure the remote is reachable or,\n" +
+                                        "2. Disable it by using conan remote disable,\n" +
+                                        "Then try again."
+                                        ) % (str(exc), remote.name, remote.url))
         except ConanException as exc:
             exc.remote = remote
             raise
         except Exception as exc:
             logger.error(traceback.format_exc())
             raise ConanException(exc, remote=remote)
+
+
+def calc_files_checksum(files):
+    return {file_name: {"md5": md5sum(path), "sha1": sha1sum(path)} for file_name, path in files.items()}
 
 
 def is_package_snapshot_complete(snapshot):
@@ -281,8 +293,8 @@ def unzip_and_get_files(files, destination_dir, tgz_name, output):
 def uncompress_file(src_path, dest_folder, output):
     t1 = time.time()
     try:
-        with progress_bar.open_binary(src_path, desc="Decompressing %s" % os.path.basename(src_path),
-                                      output=output) as file_handler:
+        with progress_bar.open_binary(src_path, output, "Decompressing %s" % os.path.basename(
+                src_path)) as file_handler:
             tar_extract(file_handler, dest_folder)
     except Exception as e:
         error_msg = "Error while downloading/extracting files to %s\n%s\n" % (dest_folder, str(e))

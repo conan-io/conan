@@ -1,10 +1,26 @@
-from collections import defaultdict
-
-from conans import CHECKSUM_DEPLOY, REVISIONS, ONLY_V2
+from conans import CHECKSUM_DEPLOY, REVISIONS, ONLY_V2, OAUTH_TOKEN
 from conans.client.rest.rest_client_v1 import RestV1Methods
 from conans.client.rest.rest_client_v2 import RestV2Methods
-from conans.errors import OnlyV2Available
+from conans.errors import OnlyV2Available, AuthenticationException
+from conans.search.search import filter_packages
 from conans.util.log import logger
+
+
+class RestApiClientFactory(object):
+
+    def __init__(self, output, requester, revisions_enabled, artifacts_properties=None):
+        self._output = output
+        self._requester = requester
+        self._revisions_enabled = revisions_enabled
+        self._artifacts_properties = artifacts_properties
+        self._cached_capabilities = {}
+
+    def new(self, remote, token, refresh_token, custom_headers):
+        tmp = RestApiClient(remote, token, refresh_token, custom_headers,
+                            self._output, self._requester,
+                            self._revisions_enabled, self._cached_capabilities,
+                            self._artifacts_properties)
+        return tmp
 
 
 class RestApiClient(object):
@@ -12,40 +28,46 @@ class RestApiClient(object):
         Rest Api Client for handle remote.
     """
 
-    def __init__(self, output, requester, revisions_enabled, put_headers=None):
+    def __init__(self, remote, token, refresh_token, custom_headers, output, requester,
+                 revisions_enabled, cached_capabilities, artifacts_properties=None):
 
         # Set to instance
-        self.token = None
-        self.remote_url = None
-        self.custom_headers = {}  # Can set custom headers to each request
+        self._token = token
+        self._refresh_token = refresh_token
+        self._remote_url = remote.url
+        self._custom_headers = custom_headers
         self._output = output
-        self.requester = requester
+        self._requester = requester
 
-        # Remote manager will set it to True or False dynamically depending on the remote
-        self.verify_ssl = True
-        self._put_headers = put_headers
+        self._verify_ssl = remote.verify_ssl
+        self._artifacts_properties = artifacts_properties
         self._revisions_enabled = revisions_enabled
 
-        self._cached_capabilities = defaultdict(list)
+        # This dict is shared for all the instances of RestApiClient
+        self._cached_capabilities = cached_capabilities
+
+    def _capable(self, capability):
+        capabilities = self._cached_capabilities.get(self._remote_url)
+        if capabilities is None:
+            tmp = RestV1Methods(self._remote_url, self._token, self._custom_headers, self._output,
+                                self._requester, self._verify_ssl, self._artifacts_properties)
+            capabilities = tmp.server_capabilities()
+            self._cached_capabilities[self._remote_url] = capabilities
+            logger.debug("REST: Cached capabilities for the remote: %s" % capabilities)
+            if not self._revisions_enabled and ONLY_V2 in capabilities:
+                raise OnlyV2Available(self._remote_url)
+        return capability in capabilities
 
     def _get_api(self):
-        if self.remote_url not in self._cached_capabilities:
-            tmp = RestV1Methods(self.remote_url, self.token, self.custom_headers, self._output,
-                                self.requester, self.verify_ssl, self._put_headers)
-            _, _, cap = tmp.server_info()
-            self._cached_capabilities[self.remote_url] = cap
-            logger.debug("REST: Cached capabilities for the remote: %s" % cap)
-            if not self._revisions_enabled and ONLY_V2 in cap:
-                raise OnlyV2Available(self.remote_url)
-
-        if self._revisions_enabled and REVISIONS in self._cached_capabilities[self.remote_url]:
-            checksum_deploy = CHECKSUM_DEPLOY in self._cached_capabilities[self.remote_url]
-            return RestV2Methods(self.remote_url, self.token, self.custom_headers, self._output,
-                                 self.requester, self.verify_ssl, self._put_headers,
+        revisions = self._capable(REVISIONS)
+        if self._revisions_enabled and revisions:
+            checksum_deploy = self._capable(CHECKSUM_DEPLOY)
+            return RestV2Methods(self._remote_url, self._token, self._custom_headers, self._output,
+                                 self._requester, self._verify_ssl, self._artifacts_properties,
                                  checksum_deploy)
         else:
-            return RestV1Methods(self.remote_url, self.token, self.custom_headers, self._output,
-                                 self.requester, self.verify_ssl, self._put_headers)
+            return RestV1Methods(self._remote_url, self._token, self._custom_headers, self._output,
+                                 self._requester, self._verify_ssl, self._artifacts_properties)
 
     def get_recipe_manifest(self, ref):
         return self._get_api().get_recipe_manifest(ref)
@@ -85,11 +107,26 @@ class RestApiClient(object):
         return self._get_api().upload_package(pref, files_to_upload, deleted, retry, retry_wait)
 
     def authenticate(self, user, password):
-        apiv1 = RestV1Methods(self.remote_url, self.token, self.custom_headers, self._output,
-                              self.requester, self.verify_ssl, self._put_headers)
-        # Use v1 for the auth because the "ping" could be also protected so we don't know if
-        # we can use v2
-        return apiv1.authenticate(user, password)
+        api_v1 = RestV1Methods(self._remote_url, self._token, self._custom_headers, self._output,
+                               self._requester, self._verify_ssl, self._artifacts_properties)
+
+        if self._refresh_token and self._token:
+            token, refresh_token = api_v1.refresh_token(self._token, self._refresh_token)
+        else:
+            try:
+                # Check capabilities can raise also 401 until the new Artifactory is released
+                oauth_capable = self._capable(OAUTH_TOKEN)
+            except AuthenticationException:
+                oauth_capable = False
+
+            if oauth_capable:
+                # Artifactory >= 6.13.X
+                token, refresh_token = api_v1.authenticate_oauth(user, password)
+            else:
+                token = api_v1.authenticate(user, password)
+                refresh_token = None
+
+        return token, refresh_token
 
     def check_credentials(self):
         return self._get_api().check_credentials()
@@ -98,16 +135,19 @@ class RestApiClient(object):
         return self._get_api().search(pattern, ignorecase)
 
     def search_packages(self, reference, query):
-        return self._get_api().search_packages(reference, query)
+        # Do not send the query to the server, as it will fail
+        # https://github.com/conan-io/conan/issues/4951
+        package_infos = self._get_api().search_packages(reference, query=None)
+        return filter_packages(query, package_infos)
 
-    def remove_conanfile(self, ref):
+    def remove_recipe(self, ref):
         return self._get_api().remove_conanfile(ref)
 
     def remove_packages(self, ref, package_ids=None):
         return self._get_api().remove_packages(ref, package_ids)
 
-    def server_info(self):
-        return self._get_api().server_info()
+    def server_capabilities(self):
+        return self._get_api().server_capabilities()
 
     def get_recipe_revisions(self, ref):
         return self._get_api().get_recipe_revisions(ref)

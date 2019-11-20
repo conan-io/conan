@@ -4,9 +4,9 @@ from conans.model.ref import ConanFileReference, PackageReference
 from conans.errors import NotFoundException, RecipeNotFoundException
 
 
-def download(ref, package_ids, remote, recipe, remote_manager,
-             cache, out, recorder, loader, hook_manager, remotes):
-
+def download(app, ref, package_ids, remote, recipe, recorder, remotes):
+    out, remote_manager, cache, loader = app.out, app.remote_manager, app.cache, app.loader
+    hook_manager = app.hook_manager
     assert(isinstance(ref, ConanFileReference))
     output = ScopedOutput(str(ref), out)
 
@@ -21,7 +21,7 @@ def download(ref, package_ids, remote, recipe, remote_manager,
         metadata.recipe.remote = remote.name
 
     conan_file_path = cache.package_layout(ref).conanfile()
-    conanfile = loader.load_class(conan_file_path)
+    conanfile = loader.load_basic(conan_file_path)
 
     # Download the sources too, don't be lazy
     complete_recipe_sources(remote_manager, cache, conanfile, ref, remotes)

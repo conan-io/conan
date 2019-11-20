@@ -201,6 +201,8 @@ class Git(SCMBase):
                 url, _ = url.rsplit(None, 1)
                 if remove_credentials and not os.path.exists(url):  # only if not local
                     url = self._remove_credentials_url(url)
+                if os.path.exists(url):  # Windows local directory
+                    url = url.replace("\\", "/")
                 return url
         return None
 

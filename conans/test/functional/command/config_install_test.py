@@ -52,9 +52,8 @@ cpu_count = 1             # environment CONAN_CPU_COUNT
 default_package_id_mode = full_package_mode # environment CONAN_DEFAULT_PACKAGE_ID_MODE
 
 [proxies]
-# Empty section will try to use system proxies.
-# If don't want proxy at all, remove section [proxies]
-# As documented in http://docs.python-requests.org/en/latest/user/advanced/#proxies
+# Empty (or missing) section will try to use system proxies.
+# As documented in https://requests.kennethreitz.org/en/latest/user/advanced/#proxies
 http = http://user:pass@10.10.1.10:3128/
 https = None
 # http = http://10.10.1.10:3128
@@ -145,9 +144,10 @@ class ConfigInstallTest(unittest.TestCase):
         settings_path = self.client.cache.settings_path
         self.assertEqual(load(settings_path).splitlines(), settings_yml.splitlines())
         remotes = self.client.cache.registry.load_remotes()
-        self.assertEqual(list(remotes.values()), [Remote("myrepo1", "https://myrepourl.net", False),
-                                                  Remote("my-repo-2", "https://myrepo2.com", True),
-                                                  ])
+        self.assertEqual(list(remotes.values()), [
+            Remote("myrepo1", "https://myrepourl.net", False, False),
+            Remote("my-repo-2", "https://myrepo2.com", True, False),
+        ])
         self.assertEqual(sorted(os.listdir(self.client.cache.profiles_path)),
                          sorted(["default", "linux", "windows"]))
         self.assertEqual(load(os.path.join(self.client.cache.profiles_path, "linux")).splitlines(),

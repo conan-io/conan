@@ -1,6 +1,7 @@
 import os
 
 from conans.client.generators import write_generators
+from conans.client.graph.build_mode import BuildMode
 from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL
 from conans.client.graph.printer import print_graph
 from conans.client.importer import run_deploy, run_imports
@@ -41,31 +42,32 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
         generators.add("txt")  # Add txt generator by default
 
     out.info("Configuration:")
-    out.writeln(graph_info.profile.dumps())
-    result = graph_manager.load_graph(ref_or_path, create_reference, graph_info, build_modes,
-                                      False, update, remotes, recorder)
-    deps_graph, conanfile = result
-
-    if conanfile.display_name == "virtual":
+    out.writeln(graph_info.profile_host.dumps())
+    deps_graph = graph_manager.load_graph(ref_or_path, create_reference, graph_info, build_modes,
+                                          False, update, remotes, recorder)
+    root_node = deps_graph.root
+    conanfile = root_node.conanfile
+    if root_node.recipe == RECIPE_VIRTUAL:
         out.highlight("Installing package: %s" % str(ref_or_path))
     else:
         conanfile.output.highlight("Installing package")
     print_graph(deps_graph, out)
 
     try:
-        if cross_building(graph_info.profile.processed_settings):
-            settings = get_cross_building_settings(graph_info.profile.processed_settings)
+        if cross_building(graph_info.profile_host.processed_settings):
+            settings = get_cross_building_settings(graph_info.profile_host.processed_settings)
             message = "Cross-build from '%s:%s' to '%s:%s'" % settings
             out.writeln(message, Color.BRIGHT_MAGENTA)
     except ConanException:  # Setting os doesn't exist
         pass
 
-    installer = BinaryInstaller(cache, out, remote_manager, recorder=recorder,
-                                hook_manager=hook_manager)
-
-    installer.install(deps_graph, remotes, keep_build=keep_build, graph_info=graph_info)
-    if graph_info.graph_lock:
-        graph_info.graph_lock.update_check_graph(deps_graph, out)
+    installer = BinaryInstaller(app, recorder=recorder)
+    # TODO: Extract this from the GraphManager, reuse same object, check args earlier
+    build_modes = BuildMode(build_modes, out)
+    installer.install(deps_graph, remotes, build_modes, update, keep_build=keep_build,
+                      graph_info=graph_info)
+    # GraphLock always != None here (because of graph_manager.load_graph)
+    graph_info.graph_lock.update_check_graph(deps_graph, out)
 
     if manifest_folder:
         manifest_manager = ManifestManager(manifest_folder, user_io=user_io, cache=cache)
@@ -85,7 +87,7 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
     if install_folder:
         conanfile.install_folder = install_folder
         # Write generators
-        output = conanfile.output if conanfile.display_name != "virtual" else out
+        output = conanfile.output if root_node.recipe != RECIPE_VIRTUAL else out
         if generators is not False:
             tmp = list(conanfile.generators)  # Add the command line specified generators
             tmp.extend([g for g in generators if g not in tmp])

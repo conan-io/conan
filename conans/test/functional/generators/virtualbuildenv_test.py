@@ -1,5 +1,6 @@
 import os
 import platform
+import textwrap
 import unittest
 
 from conans import load
@@ -45,15 +46,12 @@ class TestConan(ConanFile):
             else:
                 return "bash -c 'source %s && env'" % script_name
 
-        conanfile = """
-from conans import ConanFile
-
-class TestConan(ConanFile):
-    name = "test"
-    version = "1.0"
-    settings = "os", "compiler", "arch", "build_type"
-    generators = "virtualbuildenv"
-"""
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class TestConan(ConanFile):
+                settings = "os", "compiler", "arch", "build_type"
+                generators = "virtualbuildenv"
+            """)
         client = TestClient(path_with_spaces=False)
         client.save({"conanfile.py": conanfile})
         client.run("install .")
@@ -73,4 +71,4 @@ class TestConan(ConanFile):
         self.assertNotEqual(normal_environment, activate_environment)
         output = check_output(get_cmd(deact_build_file))
         deactivate_environment = env_output_to_dict(output)
-        self.assertEqual(normal_environment, deactivate_environment)
+        self.assertDictEqual(normal_environment, deactivate_environment)

@@ -57,6 +57,8 @@ class SystemPackageTool(object):
     def _create_tool(os_info, output):
         if os_info.with_apt:
             return AptTool(output=output)
+        elif os_info.with_dnf:
+            return DnfTool(output=output)
         elif os_info.with_yum:
             return YumTool(output=output)
         elif os_info.with_pacman:
@@ -258,6 +260,19 @@ class YumTool(BaseTool):
         if arch in arch_names:
             return "%s.%s" % (package, arch_names[arch])
         return package
+
+
+class DnfTool(YumTool):
+    def add_repository(self, repository, repo_key=None):
+        raise ConanException("DnfTool::add_repository not implemented")
+
+    def update(self):
+        _run(self._runner, "%sdnf check-update -y" % self._sudo_str, accepted_returns=[0, 100],
+             output=self._output)
+
+    def install(self, package_name):
+        _run(self._runner, "%sdnf install -y %s" % (self._sudo_str, package_name),
+             output=self._output)
 
 
 class BrewTool(BaseTool):

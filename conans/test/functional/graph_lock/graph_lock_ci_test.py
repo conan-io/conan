@@ -7,12 +7,14 @@ from conans.client.graph.graph import BINARY_BUILD
 from conans.model.graph_lock import LOCKFILE
 from conans.model.ref import PackageReference
 from conans.test.utils.tools import TestClient, TestServer
+from conans.util.env_reader import get_env
 from conans.util.files import load
 
 
 class GraphLockCITest(unittest.TestCase):
 
-    def test(self):
+    @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
+    def test_revisions(self):
         conanfile = textwrap.dedent("""
             from conans import ConanFile, load
             import os
@@ -55,7 +57,6 @@ class GraphLockCITest(unittest.TestCase):
         self.assertIn("PkgD/0.1@user/channel: DEP FILE PkgB: HelloB", client.out)
         self.assertIn("PkgD/0.1@user/channel: DEP FILE PkgC: HelloC", client.out)
 
-        client.run("config set general.revisions_enabled=True")
         client.run("upload * --all --confirm")
 
         # FIXME: We need to do this with info, to avoid installing the binaries when we want info
@@ -77,7 +78,6 @@ class GraphLockCITest(unittest.TestCase):
 
         # Do a change in B
         clientb = TestClient(cache_folder=client.cache_folder, servers={"default": test_server})
-        clientb.run("config set general.revisions_enabled=True")
         clientb.save({"conanfile.py": conanfile.format(requires='requires="PkgA/0.1@user/channel"'),
                      "myfile.txt": "ByeB World!!",
                       LOCKFILE: lock_file})
@@ -109,7 +109,6 @@ class GraphLockCITest(unittest.TestCase):
                 pkg_ref = PackageReference.loads(pkg_ref)
                 client_aux = TestClient(cache_folder=client.cache_folder,
                                         servers={"default": test_server})
-                client_aux.run("config set general.revisions_enabled=True")
                 client_aux.save({LOCKFILE: lock_fileaux})
                 client_aux.run("install %s --build=%s --lockfile"
                                % (pkg_ref.ref, pkg_ref.ref.name))
@@ -140,6 +139,7 @@ class GraphLockCITest(unittest.TestCase):
         self.assertIn("PkgC/0.1@user/channel: DEP FILE PkgB: ByeB World!!", client.out)
         self.assertIn("PkgD/0.1@user/channel: DEP FILE PkgB: ByeB World!!", client.out)
 
+    @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
     def test_package_revision_mode(self):
         conanfile = textwrap.dedent("""
             from conans import ConanFile, load
@@ -164,7 +164,6 @@ class GraphLockCITest(unittest.TestCase):
         client = TestClient(servers={"default": test_server},
                             users={"default": [("user", "mypass")]})
         client.run("config set general.default_package_id_mode=package_revision_mode")
-        client.run("config set general.revisions_enabled=True")
         client.save({"conanfile.py": conanfile.format(requires=""),
                      "myfile.txt": "HelloA"})
         client.run("create . PkgA/0.1@user/channel")
@@ -205,7 +204,6 @@ class GraphLockCITest(unittest.TestCase):
 
         # Do a change in B
         clientb = TestClient(cache_folder=client.cache_folder, servers={"default": test_server})
-        clientb.run("config set general.revisions_enabled=True")
         clientb.run("config set general.default_package_id_mode=package_revision_mode")
         clientb.save({"conanfile.py": conanfile.format(requires='requires="PkgA/0.1@user/channel"'),
                      "myfile.txt": "ByeB World!!",
@@ -238,7 +236,6 @@ class GraphLockCITest(unittest.TestCase):
                 pkg_ref = PackageReference.loads(pkg_ref)
                 client_aux = TestClient(cache_folder=client.cache_folder,
                                         servers={"default": test_server})
-                client_aux.run("config set general.revisions_enabled=True")
                 client_aux.save({LOCKFILE: lock_fileaux})
                 client_aux.run("install %s --build=%s --lockfile"
                                % (pkg_ref.ref, pkg_ref.ref.name))
@@ -441,6 +438,8 @@ class GraphLockCITest(unittest.TestCase):
         while to_build:
             _, pkg_ref = to_build[0].pop(0)
             pkg_ref = PackageReference.loads(pkg_ref)
+            self.assertIsNotNone(pkg_ref.ref.revision)
+            self.assertIsNone(pkg_ref.revision)
             client_aux = TestClient(cache_folder=client.cache_folder)
             client_aux.run("config set general.default_package_id_mode=full_package_mode")
             client_aux.save({LOCKFILE: lock_fileaux})

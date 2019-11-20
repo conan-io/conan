@@ -115,7 +115,7 @@ class ConanRequester(object):
         if self.proxies or self._no_proxy_match:
             old_env = dict(os.environ)
             # Clean the proxies from the environ and use the conan specified proxies
-            for var_name in ("http_proxy", "https_proxy", "no_proxy"):
+            for var_name in ("http_proxy", "https_proxy", "ftp_proxy", "all_proxy", "no_proxy"):
                 popped = True if os.environ.pop(var_name, None) else popped
                 popped = True if os.environ.pop(var_name.upper(), None) else popped
         try:
