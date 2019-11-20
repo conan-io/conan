@@ -105,9 +105,9 @@ class PyRequireLoader(object):
             try:
                 py_require = self._cached_py_requires[py_requires_ref]
             except KeyError:
-                conanfile, module, new_ref, path = self._load_conanfile(loader,
-                                                                        lock_python_requires,
-                                                                        py_requires_ref)
+                conanfile, module, new_ref, path = self._load_pyreq_conanfile(loader,
+                                                                              lock_python_requires,
+                                                                              py_requires_ref)
                 py_require = PyRequire(module, conanfile, new_ref, path)
                 self._cached_py_requires[py_requires_ref] = py_require
             result[py_require.ref.name] = py_require
@@ -127,16 +127,20 @@ class PyRequireLoader(object):
             ref = requirement.ref
         return ref
 
-    def _load_conanfile(self, loader, lock_python_requires, ref):
+    def _load_pyreq_conanfile(self, loader, lock_python_requires, ref):
         recipe = self._proxy.get_recipe(ref, self._check_updates, self._update,
                                         remotes=self._remotes, recorder=ActionRecorder())
         path, _, _, new_ref = recipe
-        conanfile, module = loader.load_basic_module(path, lock_python_requires)
+        conanfile, module = loader.load_basic_module(path, lock_python_requires, user=new_ref.user,
+                                                     channel=new_ref.channel)
+        conanfile.name = new_ref.name
+        conanfile.version = new_ref.version
 
         if getattr(conanfile, "alias", None):
             ref = ConanFileReference.loads(conanfile.alias)
-            conanfile, module, new_ref, path = self._load_conanfile(loader, lock_python_requires,
-                                                                    ref)
+            conanfile, module, new_ref, path = self._load_pyreq_conanfile(loader,
+                                                                          lock_python_requires,
+                                                                          ref)
         return conanfile, module, new_ref, os.path.dirname(path)
 
 

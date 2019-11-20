@@ -193,6 +193,10 @@ class PyRequiresExtendTest(unittest.TestCase):
             class MyConanfileBase(ConanFile):
                 python_requires = "pkg1/1.0@user/channel", "pkg2/1.0@user/channel"
                 def build(self):
+                    self.output.info("PKG1 N: %s" % self.python_requires["pkg1"].conanfile.name)
+                    self.output.info("PKG1 V: %s" % self.python_requires["pkg1"].conanfile.version)
+                    self.output.info("PKG1 U: %s" % self.python_requires["pkg1"].conanfile.user)
+                    self.output.info("PKG1 C: %s" % self.python_requires["pkg1"].conanfile.channel)
                     self.output.info("PKG1 : %s" % self.python_requires["pkg1"].module.myvar)
                     self.output.info("PKG2 : %s" % self.python_requires["pkg2"].module.myvar)
                     self.output.info("PKG1F : %s" % self.python_requires["pkg1"].module.myfunct())
@@ -200,6 +204,10 @@ class PyRequiresExtendTest(unittest.TestCase):
             """)
         client.save({"conanfile.py": conanfile})
         client.run("create . Consumer/0.1@user/testing")
+        self.assertIn("Consumer/0.1@user/testing: PKG1 N: pkg1", client.out)
+        self.assertIn("Consumer/0.1@user/testing: PKG1 V: 1.0", client.out)
+        self.assertIn("Consumer/0.1@user/testing: PKG1 U: user", client.out)
+        self.assertIn("Consumer/0.1@user/testing: PKG1 C: channel", client.out)
         self.assertIn("Consumer/0.1@user/testing: PKG1 : 123", client.out)
         self.assertIn("Consumer/0.1@user/testing: PKG2 : 234", client.out)
         self.assertIn("Consumer/0.1@user/testing: PKG1F : 123", client.out)
