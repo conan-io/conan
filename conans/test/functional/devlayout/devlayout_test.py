@@ -3,6 +3,8 @@ import platform
 import textwrap
 import unittest
 
+from parameterized import parameterized
+
 from conans.util.files import mkdir
 from conans.test.utils.tools import TestClient
 
@@ -134,17 +136,21 @@ class DevLayoutTest(unittest.TestCase):
         self.assertIn("Hello World Release!", client.out)
 
     @unittest.skipIf(platform.system() != "Windows", "Needs windows for short_paths")
-    def local_build_test(self):
+    @parameterized.expand([(True,), (False,)])
+    def local_build_test(self, shared):
         client = self.client
         mkdir(os.path.join(client.current_folder, "build"))
         client.run("install .")
+        shared = "-DBUILD_SHARED_LIBS=ON" if shared else ""
         with client.chdir("build"):
-            client.run_command('cmake ../src -G "Visual Studio 15 Win64"')
+            client.run_command('cmake ../src -G "Visual Studio 15 Win64" %s' % shared)
             client.run_command("cmake --build . --config Release")
-            client.run_command(r"Release\\app.exe")
+            with client.chdir("Release"):
+                client.run_command("app.exe")
             self.assertIn("Hello World Release!", client.out)
             client.run_command("cmake --build . --config Debug")
-            client.run_command(r"Debug\\app.exe")
+            with client.chdir("Debug"):
+                client.run_command("app.exe")
             self.assertIn("Hello World Debug!", client.out)
 
         client.run("editable add . pkg/0.1@user/testing")
