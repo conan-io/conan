@@ -171,9 +171,10 @@ class CompatibleIDsTest(unittest.TestCase):
             settings = "compiler"
 
             def package_id(self):
-                p = self.info.clone()
-                p.intel_compatible()
-                self.compatible_packages.append(p)
+                if self.settings.compiler == "intel":
+                    p = self.info.clone()
+                    p.base_compatible()
+                    self.compatible_packages.append(p)
             """)
         visual_profile = textwrap.dedent("""
             [settings]
@@ -210,9 +211,10 @@ class CompatibleIDsTest(unittest.TestCase):
             settings = "compiler"
 
             def package_id(self):
-               compatible_pkg = self.info.clone()
-               compatible_pkg.base_compiler_compatible(intel_compiler_version=16)
-               self.compatible_packages.append(compatible_pkg)
+               if self.settings.compiler == "Visual Studio":
+                   compatible_pkg = self.info.clone()
+                   compatible_pkg.parent_compatible(compiler="intel", version=16)
+                   self.compatible_packages.append(compatible_pkg)
                
             """)
         visual_profile = textwrap.dedent("""
@@ -239,6 +241,45 @@ class CompatibleIDsTest(unittest.TestCase):
                       "package '2ef6f6c768dd0f332dc252b72c30dee116632302'",
                       client.out)
         self.assertIn("Bye/0.1@us/ch:2ef6f6c768dd0f332dc252b72c30dee116632302 - Cache", client.out)
+
+    def intel_package_invalid_subsetting_test(self):
+        """If I specify an invalid subsetting of my base compiler, it won't fail, but it won't
+        file the available package_id"""
+        client = TestClient()
+        ref = ConanFileReference.loads("Bye/0.1@us/ch")
+        conanfile = textwrap.dedent("""
+        from conans import ConanFile
+
+        class Conan(ConanFile):
+            settings = "compiler"
+
+            def package_id(self):
+               if self.settings.compiler == "Visual Studio":
+                   compatible_pkg = self.info.clone()
+                   compatible_pkg.parent_compatible(compiler="intel", version=16, FOO="BAR")
+                   self.compatible_packages.append(compatible_pkg)
+
+            """)
+        visual_profile = textwrap.dedent("""
+            [settings]
+            compiler = Visual Studio
+            compiler.version = 8
+            compiler.runtime = MD
+            """)
+        intel_profile = textwrap.dedent("""
+            [settings]
+            compiler = intel
+            compiler.version = 16
+            compiler.base = Visual Studio
+            compiler.base.version = 8
+            compiler.base.runtime = MD
+            """)
+        client.save({"conanfile.py": conanfile,
+                     "intel_profile": intel_profile,
+                     "visual_profile": visual_profile})
+        client.run("create . %s --profile intel_profile" % ref.full_str())
+        client.run("install %s -p visual_profile" % ref.full_str(), assert_error=True)
+        self.assertIn("Missing prebuilt package for 'Bye/0.1@us/ch'", client.out)
 
     def additional_id_mode_test(self):
         c1 = GenConanfile().with_name("AA").with_version("1.0")

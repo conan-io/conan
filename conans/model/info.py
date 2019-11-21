@@ -488,22 +488,27 @@ class ConanInfo(object):
                 if "shared" not in dep_options or not self.full_options[dep_name].shared:
                     self.requires[dep_name].package_revision_mode()
 
-    def base_compiler_compatible(self, intel_compiler_version):
+    def parent_compatible(self, *_, **kwargs):
         """If a built package for Intel has to be compatible for a Visual/GCC compiler
         (consumer). Transform the visual/gcc full_settings into an intel one"""
-        if self.full_settings.compiler.base:
-            return
 
-        self.settings.compiler = "intel"
+        if "compiler" not in kwargs:
+            raise ConanException("Specify a keyword arg 'compiler' to the 'parent_compiler' "
+                                 "method")
+
+        self.settings.compiler = kwargs["compiler"]
         # You have to use here a specific version or create more than one version of
         # compatible packages
-        self.settings.compiler.version = intel_compiler_version
+        kwargs.pop("compiler")
+        for setting_name in kwargs:
+            # Won't fail even if the setting is not valid, there is no validation at info
+            setattr(self.settings.compiler, setting_name, kwargs[setting_name])
         self.settings.compiler.base = self.full_settings.compiler
         for field in self.full_settings.compiler.fields:
             value = getattr(self.full_settings.compiler, field)
             setattr(self.settings.compiler.base, field, value)
 
-    def intel_compatible(self):
+    def base_compatible(self):
         """If a built package for Visual/GCC has to be compatible for an Intel compiler
           (consumer). Transform the Intel profile into an visual/gcc one"""
         if not self.full_settings.compiler.base:
