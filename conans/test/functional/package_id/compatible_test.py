@@ -201,6 +201,31 @@ class CompatibleIDsTest(unittest.TestCase):
                       client.out)
         self.assertIn("Bye/0.1@us/ch:1151fe341e6b310f7645a76b4d3d524342835acc - Cache", client.out)
 
+    def wrong_base_compatible_test(self):
+        client = TestClient()
+        ref = ConanFileReference.loads("Bye/0.1@us/ch")
+        conanfile = textwrap.dedent("""
+        from conans import ConanFile
+
+        class Conan(ConanFile):
+            settings = "compiler"
+
+            def package_id(self):
+                p = self.info.clone()
+                p.base_compatible()
+                self.compatible_packages.append(p)
+            """)
+        visual_profile = textwrap.dedent("""
+            [settings]
+            compiler = Visual Studio
+            compiler.version = 8
+            compiler.runtime = MD
+            """)
+        client.save({"conanfile.py": conanfile,
+                     "visual_profile": visual_profile})
+        client.run("create . %s --profile visual_profile" % ref.full_str(), assert_error=True)
+        self.assertIn("The compiler 'Visual Studio' has no 'base' sub-setting", client.out)
+
     def intel_package_compatible_with_base_test(self):
         client = TestClient()
         ref = ConanFileReference.loads("Bye/0.1@us/ch")

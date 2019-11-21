@@ -512,7 +512,8 @@ class ConanInfo(object):
         """If a built package for Visual/GCC has to be compatible for an Intel compiler
           (consumer). Transform the Intel profile into an visual/gcc one"""
         if not self.full_settings.compiler.base:
-            return
+            raise ConanException("The compiler '{}' has "
+                                 "no 'base' sub-setting".format(self.full_settings.compiler))
 
         self.settings.compiler = self.full_settings.compiler.base
         for field in self.full_settings.compiler.base.fields:
