@@ -94,7 +94,7 @@ class ConanRemover(object):
     def _remote_remove(self, ref, package_ids, remote):
         assert(isinstance(remote, Remote))
         if package_ids is None:
-            result = self._remote_manager.remove(ref, remote)
+            result = self._remote_manager.remove_recipe(ref, remote)
             return result
         else:
             tmp = self._remote_manager.remove_packages(ref, package_ids, remote)
