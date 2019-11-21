@@ -1,4 +1,5 @@
 import os
+import platform
 import textwrap
 import unittest
 
@@ -6,7 +7,7 @@ from conans.util.files import mkdir
 from conans.test.utils.tools import TestClient
 
 
-class ToolChainTest(unittest.TestCase):
+class DevLayoutTest(unittest.TestCase):
     conanfile = textwrap.dedent("""
         from conans import ConanFile, CMake, CMakeLayout
 
@@ -38,10 +39,9 @@ class ToolChainTest(unittest.TestCase):
         set(CMAKE_CXX_ABI_COMPILED 1)    
         project(HelloWorldLib CXX)
 
-        include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-        conan_basic_setup(NO_OUTPUT_DIRS)
-
         add_library(hello hello.cpp)
+        add_executable(app app.cpp)
+        target_link_libraries(app PRIVATE hello)
         """)
     hellopp = textwrap.dedent("""
         #include "hello.h"
@@ -119,6 +119,7 @@ class ToolChainTest(unittest.TestCase):
                      "src/CMakeLists.txt": self.cmake,
                      "src/hello.cpp": self.hellopp,
                      "src/hello.h": self.helloh,
+                     "src/app.cpp": self.app,
                      "test_package/app.cpp": self.app,
                      "test_package/CMakeLists.txt": self.test_cmake,
                      "test_package/conanfile.py": self.test_conanfile
@@ -132,45 +133,77 @@ class ToolChainTest(unittest.TestCase):
         self.assertIn("pkg/0.1@user/testing package(): Packaged 1 '.h' file: hello.h", client.out)
         self.assertIn("Hello World Release!", client.out)
 
-    def local_flow_test(self):
-        # Local flow
+    @unittest.skipIf(platform.system() != "Windows", "Needs windows for short_paths")
+    def local_build_test(self):
         client = self.client
         mkdir(os.path.join(client.current_folder, "build"))
-        # client.run('install . --build_folder="build_layout.file"')
-        # client.run('install . -s build_type=Debug --build_folder="build_layout.file"')
-        # client.run('editable add . pkg/0.1@user/testing --build_folder="build_layout.file"')
         client.run("install .")
-        client.run("editable add . pkg/0.1@user/testing")
-        client.run("build .")
-        # client.run("package .. -pf=pkg")
-        # print client.out
-        # self.assertIn("conanfile.py: Package 'pkg' created", client.out)
+        with client.chdir("build"):
+            client.run_command('cmake ../src -G "Visual Studio 15 Win64"')
+            client.run_command("cmake --build . --config Release")
+            client.run_command(r"Release\\app.exe")
+            self.assertIn("Hello World Release!", client.out)
+            client.run_command("cmake --build . --config Debug")
+            client.run_command(r"Debug\\app.exe")
+            self.assertIn("Hello World Debug!", client.out)
 
+        client.run("editable add . pkg/0.1@user/testing")
         # Consumer of editable package
         client2 = TestClient(cache_folder=client.cache_folder)
         consumer = textwrap.dedent("""
             import os
-            from conans import ConanFile, CMake, tools
+            from conans import ConanFile, CMake, tools, CMakeLayout
 
             class Consumer(ConanFile):
                 settings = "os", "compiler", "build_type", "arch"
                 requires = "pkg/0.1@user/testing"
-                generators = "cmake"
-
-                def build(self):
-                    cmake = CMake(self)
-                    cmake.configure()
-                    cmake.build()
-                    os.chdir("bin")
-                    self.run(".%sapp" % os.sep)
+                generators = "cmake_find_package_multi"
+                
+                def layout(self):
+                    mylayout = CMakeLayout(self)
+                    mylayout.build = "build"
+                    return mylayout
             """)
 
-        client2.save({"app.cpp": self.app,
-                      "CMakeLists.txt": self.test_cmake,
-                      "conanfile.py": consumer})
-        client2.run("install . -g=cmake")
-        print client2.out
-        client2.run("build .")
-        print client2.out
-        self.assertIn("Hello World Release!", client2.out)
+        test_cmake = textwrap.dedent("""
+            set(CMAKE_CXX_COMPILER_WORKS 1)
+            set(CMAKE_CXX_ABI_COMPILED 1)
+            project(Greet CXX)
+            set(CMAKE_MODULE_PATH ${CMAKE_BINARY_DIR} ${CMAKE_MODULE_PATH})
+            set(CMAKE_PREFIX_PATH ${CMAKE_BINARY_DIR} ${CMAKE_PREFIX_PATH})
+            find_package(pkg)
 
+            add_executable(app app.cpp)
+            target_link_libraries(app pkg::pkg)
+            """)
+        client2.save({"app.cpp": self.app,
+                      "CMakeLists.txt": test_cmake,
+                      "conanfile.py": consumer})
+        client2.run("install .")
+        client2.run("install . -s build_type=Debug")
+        with client2.chdir("build"):
+            client2.run_command('cmake .. -G "Visual Studio 15 Win64"')
+            client2.run_command("cmake --build . --config Release")
+            client2.run_command(r"Release\\app.exe")
+            self.assertIn("Hello World Release!", client2.out)
+            client2.run_command("cmake --build . --config Debug")
+            client2.run_command(r"Debug\\app.exe")
+            self.assertIn("Hello World Debug!", client2.out)
+
+        # do changes
+        client.save({"src/hello.cpp": self.hellopp.replace("World", "Moon")})
+        with client.chdir("build"):
+            client.run_command("cmake --build . --config Release")
+            client.run_command(r"Release\\app.exe")
+            self.assertIn("Hello Moon Release!", client.out)
+            client.run_command("cmake --build . --config Debug")
+            client.run_command(r"Debug\\app.exe")
+            self.assertIn("Hello Moon Debug!", client.out)
+
+        with client2.chdir("build"):
+            client2.run_command("cmake --build . --config Release")
+            client2.run_command(r"Release\\app.exe")
+            self.assertIn("Hello Moon Release!", client2.out)
+            client2.run_command("cmake --build . --config Debug")
+            client2.run_command(r"Debug\\app.exe")
+            self.assertIn("Hello Moon Debug!", client2.out)
