@@ -355,3 +355,64 @@ class CompatibleIDsTest(unittest.TestCase):
         client.run("install BB/1.0@ --update")
         self.assertIn("Using compatible package '9fc42b36e70615fe97acca0afa27e1731868861c'",
                       client.out)
+
+    def package_id_consumers_test(self):
+        # If we fallback to a different binary upstream and we are using a "package_revision_mode"
+        # the current package should have a different binary package ID too.
+        client = TestClient()
+        client.run("config set general.default_package_id_mode=package_revision_mode")
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class Pkg(ConanFile):
+                settings = "os", "compiler"
+                def package_id(self):
+                    compatible = self.info.clone()
+                    compatible.settings.compiler.version = "4.8"
+                    self.compatible_packages.append(compatible)
+                def package_info(self):
+                    self.output.info("PackageInfo!: Gcc version: %s!"
+                                     % self.settings.compiler.version)
+            """)
+        profile = textwrap.dedent("""
+            [settings]
+            os = Linux
+            compiler=gcc
+            compiler.version=4.9
+            compiler.libcxx=libstdc++
+            """)
+        client.save({"conanfile.py": conanfile,
+                     "myprofile": profile})
+        # Create package with gcc 4.8
+        client.run("create . pkg/0.1@user/stable -pr=myprofile -s compiler.version=4.8")
+        self.assertIn("pkg/0.1@user/stable: Package '22c594d7fed4994c59a1eacb24ff6ff48bc5c51c'"
+                      " created", client.out)
+
+        # package can be used with a profile gcc 4.9 falling back to 4.8 binary
+        client.save({"conanfile.py": GenConanfile().with_require_plain("pkg/0.1@user/stable")})
+        client.run("create . consumer/0.1@user/stable -pr=myprofile")
+        self.assertIn("pkg/0.1@user/stable: PackageInfo!: Gcc version: 4.8!", client.out)
+        self.assertIn("pkg/0.1@user/stable:22c594d7fed4994c59a1eacb24ff6ff48bc5c51c - Cache",
+                      client.out)
+        self.assertIn("pkg/0.1@user/stable: Already installed!", client.out)
+        self.assertIn("consumer/0.1@user/stable:15c77f209e7dca571ffe63b19a04a634654e4211 - Build",
+                      client.out)
+        self.assertIn("consumer/0.1@user/stable: Package '15c77f209e7dca571ffe63b19a04a634654e4211'"
+                      " created", client.out)
+
+        # Create package with gcc 4.9
+        client.save({"conanfile.py": conanfile})
+        client.run("create . pkg/0.1@user/stable -pr=myprofile")
+        self.assertIn("pkg/0.1@user/stable: Package '53f56fbd582a1898b3b9d16efd6d3c0ec71e7cfb'"
+                      " created", client.out)
+
+        # Consume it
+        client.save({"conanfile.py": GenConanfile().with_require_plain("pkg/0.1@user/stable")})
+        client.run("create . consumer/0.1@user/stable -pr=myprofile")
+        self.assertIn("pkg/0.1@user/stable: PackageInfo!: Gcc version: 4.9!", client.out)
+        self.assertIn("pkg/0.1@user/stable:53f56fbd582a1898b3b9d16efd6d3c0ec71e7cfb - Cache",
+                      client.out)
+        self.assertIn("pkg/0.1@user/stable: Already installed!", client.out)
+        self.assertIn("consumer/0.1@user/stable:fca9e94084ed6fe0ca149dc9c2d54c0f336f0d7e - Build",
+                      client.out)
+        self.assertIn("consumer/0.1@user/stable: Package 'fca9e94084ed6fe0ca149dc9c2d54c0f336f0d7e'"
+                      " created", client.out)
