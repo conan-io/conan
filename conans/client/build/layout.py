@@ -15,6 +15,7 @@ class Layout(object):
         for include in self.includedirs:
             self._conanfile.copy("*.h", dst="include", src=include)
         self._conanfile.copy("*.lib", dst="lib", src=str(self.libdir))
+        self._conanfile.copy("*.dll", dst="bin", src=str(self.libdir))
         self._conanfile.copy("*.a", dst="lib", src=str(self.libdir))
         self._conanfile.copy("*.exe", dst="bin", src=str(self.bindir))
 

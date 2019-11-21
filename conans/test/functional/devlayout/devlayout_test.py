@@ -15,6 +15,8 @@ class DevLayoutTest(unittest.TestCase):
 
         class Pkg(ConanFile):
             settings = "os", "compiler", "arch", "build_type"
+            options = {"shared": [True, False]}
+            default_options = {"shared": False}
             generators = "cmake"
             exports_sources = "src/*"
             generators = "cmake"
@@ -112,7 +114,8 @@ class DevLayoutTest(unittest.TestCase):
 
             def test(self):
                 os.chdir("bin")
-                self.run(".%sapp" % os.sep)
+                # run_environment is necessary for DLLs
+                self.run(".%sapp" % os.sep, run_environment=True)
         """)
 
     def setUp(self):
@@ -132,6 +135,13 @@ class DevLayoutTest(unittest.TestCase):
         # Cache creation
         client = self.client
         client.run("create . pkg/0.1@user/testing")
+        self.assertIn("pkg/0.1@user/testing package(): Packaged 1 '.h' file: hello.h", client.out)
+        self.assertIn("Hello World Release!", client.out)
+
+    def cache_create_shared_test(self):
+        # Cache creation
+        client = self.client
+        client.run("create . pkg/0.1@user/testing -o pkg:shared=True")
         self.assertIn("pkg/0.1@user/testing package(): Packaged 1 '.h' file: hello.h", client.out)
         self.assertIn("Hello World Release!", client.out)
 
@@ -178,7 +188,7 @@ class DevLayoutTest(unittest.TestCase):
             set(CMAKE_MODULE_PATH ${CMAKE_BINARY_DIR} ${CMAKE_MODULE_PATH})
             set(CMAKE_PREFIX_PATH ${CMAKE_BINARY_DIR} ${CMAKE_PREFIX_PATH})
             find_package(pkg)
-
+            
             add_executable(app app.cpp)
             target_link_libraries(app pkg::pkg)
             """)
@@ -190,6 +200,11 @@ class DevLayoutTest(unittest.TestCase):
         with client2.chdir("build"):
             client2.run_command('cmake .. -G "Visual Studio 15 Win64"')
             client2.run_command("cmake --build . --config Release")
+            # alternative 1: imports() copy DLLs. Does not work for continuous dev
+            #                ok for cached dependencies, different Debug/Release output
+            # alternative 2: virtualrunenv switch debug/release???
+            # alternative 3: environment in cmake => path in MSBuild
+            print client2.current_folder
             client2.run_command(r"Release\\app.exe")
             self.assertIn("Hello World Release!", client2.out)
             client2.run_command("cmake --build . --config Debug")
