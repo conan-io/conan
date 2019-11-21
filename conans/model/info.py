@@ -493,8 +493,8 @@ class ConanInfo(object):
         (consumer). Transform the visual/gcc full_settings into an intel one"""
 
         if "compiler" not in kwargs:
-            raise ConanException("Specify a keyword arg 'compiler' to the 'parent_compiler' "
-                                 "method")
+            raise ConanException("Specify 'compiler' as a keywork argument. e.g: "
+                                 "'parent_compiler(compiler=\"intel\")' ")
 
         self.settings.compiler = kwargs["compiler"]
         # You have to use here a specific version or create more than one version of

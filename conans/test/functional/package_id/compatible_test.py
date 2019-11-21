@@ -242,6 +242,34 @@ class CompatibleIDsTest(unittest.TestCase):
                       client.out)
         self.assertIn("Bye/0.1@us/ch:2ef6f6c768dd0f332dc252b72c30dee116632302 - Cache", client.out)
 
+    def no_valid_compiler_keyword_base_test(self):
+        client = TestClient()
+        ref = ConanFileReference.loads("Bye/0.1@us/ch")
+        conanfile = textwrap.dedent("""
+        from conans import ConanFile
+
+        class Conan(ConanFile):
+            settings = "compiler"
+
+            def package_id(self):
+               if self.settings.compiler == "Visual Studio":
+                   compatible_pkg = self.info.clone()
+                   compatible_pkg.parent_compatible("intel")
+                   self.compatible_packages.append(compatible_pkg)
+
+            """)
+        visual_profile = textwrap.dedent("""
+            [settings]
+            compiler = Visual Studio
+            compiler.version = 8
+            compiler.runtime = MD
+            """)
+        client.save({"conanfile.py": conanfile,
+                     "visual_profile": visual_profile})
+        client.run("create . %s --profile visual_profile" % ref.full_str(), assert_error=True)
+        self.assertIn("Specify 'compiler' as a keywork "
+                      "argument. e.g: 'parent_compiler(compiler=\"intel\")'", client.out)
+
     def intel_package_invalid_subsetting_test(self):
         """If I specify an invalid subsetting of my base compiler, it won't fail, but it won't
         file the available package_id"""
