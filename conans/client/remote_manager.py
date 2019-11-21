@@ -257,7 +257,8 @@ class RemoteManager(object):
 
 
 def calc_files_checksum(files):
-    return {file_name: {"md5": md5sum(path), "sha1": sha1sum(path)} for file_name, path in files.items()}
+    return {file_name: {"md5": md5sum(path), "sha1": sha1sum(path)}
+            for file_name, path in files.items()}
 
 
 def is_package_snapshot_complete(snapshot):
