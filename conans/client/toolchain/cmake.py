@@ -86,22 +86,6 @@ class CMakeToolchain:
         endif()
         
         conan_set_compiler()
-
-
-        {#
-        # Host machine        
-        set(CMAKE_SYSTEM_NAME {{host.os}})
-        set(CMAKE_SYSTEM_VERSION {{host.os_version}})
-        set(CMAKE_SYSTEM_PROCESSOR {{host.arch}})
-
-        # Build machine (only if different)
-        set(CMAKE_HOST_SYSTEM_NAME {{build.os}})
-        set(CMAKE_HOST_SYSTEM_VERSION {{build.os_version}})
-        set(CMAKE_HOST_SYSTEM_PROCESSOR {{build.arch}})
-        
-        set(CMAKE_C_COMPILER {{c_compiler}})
-        set(CMAKE_CXX_COMPILER {{cxx_compiler}})
-        #}
     """)
 
     def __init__(self, conanfile,
