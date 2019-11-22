@@ -49,8 +49,7 @@ class BaseCMake(object):
         self.msbuild_verbosity = os.getenv("CONAN_MSBUILD_VERBOSITY") or msbuild_verbosity
         self.build_dir = None
 
-        self._definitions = {}
-        self._definitions["CONAN_EXPORTED"] = "1"
+        self._definitions = {"CONAN_EXPORTED": "1"}
         self._definitions.update(in_local_cache_definition(self._conanfile.in_local_cache))
 
         # It will trigger the checks and assignment
