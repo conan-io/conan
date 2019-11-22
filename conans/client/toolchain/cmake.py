@@ -55,9 +55,9 @@ class CMakeToolchain:
         
         get_property( _CMAKE_IN_TRY_COMPILE GLOBAL PROPERTY IN_TRY_COMPILE )
         if(NOT _CMAKE_IN_TRY_COMPILE)
-            message(">>>> NOT TRY COMPILE")
+            {% if options.set_vs_runtime %}
             set(CMAKE_PROJECT_INCLUDE "{{ conan_project_include_cmake }}")  # Will be executed after the project
-            include("{{ conan_adjustements_cmake }}")
+            {%- endif %}
 
             # We are going to adjust automagically many things as requested by Conan
             #   these are the things done by 'conan_basic_setup()'
@@ -67,25 +67,22 @@ class CMakeToolchain:
             conan_set_flags("_DEBUG")
             # TODO: Do we want to set flags here if we are going to use targets? Maybe these flags are defined inside the 'toolchain' method of the recipe
             
-            conan_set_rpath()
-            conan_set_std()
-            conan_set_fpic()
+            {% if options.set_rpath %}conan_set_rpath(){% endif %}
+            {% if options.set_std %}conan_set_std(){% endif %}
+            {% if options.set_fpic %}conan_set_fpic(){% endif %}
             
             #conan_check_compiler()
-            conan_set_libcxx()
-            #conan_set_vs_runtime()  # This goes to the after-project() command call
-            conan_set_find_paths()
-            conan_set_find_library_paths()
+            {% if options.set_libcxx %}conan_set_libcxx(){% endif %}
+            {% if options.set_find_paths %}conan_set_find_paths(){% endif %}
+            {% if options.set_find_library_paths %}conan_set_find_library_paths(){% endif %}
             
             set(CMAKE_CXX_FLAGS_INIT "${CONAN_CXX_FLAGS}" CACHE STRING "" FORCE)
             set(CMAKE_C_FLAGS_INIT "${CONAN_C_FLAGS}" CACHE STRING "" FORCE)
             set(CMAKE_SHARED_LINKER_FLAGS_INIT "${CONAN_SHARED_LINKER_FLAGS}" CACHE STRING "" FORCE)
             set(CMAKE_EXE_LINKER_FLAGS_INIT "${CONAN_EXE_LINKER_FLAGS}" CACHE STRING "" FORCE)
-        else()
-            # message(">>>> TRY COMPILE")
         endif()
         
-        conan_set_compiler()
+        {% if options.set_compiler %}conan_set_compiler(){% endif %}
     """)
 
     def __init__(self, conanfile,
@@ -101,6 +98,15 @@ class CMakeToolchain:
                  ):
         self._conanfile = conanfile
         del conanfile
+
+        self.set_rpath = True
+        self.set_std = True
+        self.set_fpic = True
+        self.set_libcxx = True
+        self.set_find_paths = True
+        self.set_find_library_paths = True
+        self.set_compiler = True
+        self.set_vs_runtime = True
 
         generator = generator or get_generator(self._conanfile.settings)
         self._context = {
@@ -145,7 +151,15 @@ class CMakeToolchain:
         # The user can modify these dictionaries, add them to the context in the very last moment
         self._context.update({
             "definitions": self.definitions,
-            "environment": self.environment
+            "environment": self.environment,
+            "options": {"set_rpath": self.set_rpath,
+                        "set_std": self.set_std,
+                        "set_fpic": self.set_fpic,
+                        "set_libcxx": self.set_libcxx,
+                        "set_find_paths": self.set_find_paths,
+                        "set_find_library_paths": self.set_find_library_paths,
+                        "set_compiler": self.set_compiler,
+                        "set_vs_runtime": self.set_vs_runtime}
         })
 
         with open(os.path.join(install_folder, self.filename), "w") as f:
@@ -165,5 +179,5 @@ class CMakeToolchain:
             f.write(content)
 
             # TODO: Remove this, intended only for testing
-            f.write('set(ENV{TOOLCHAIN_ENV} "toolchain_environment")\n')
+            f.write('\n\nset(ENV{TOOLCHAIN_ENV} "toolchain_environment")\n')
             f.write('set(TOOLCHAIN_VAR "toolchain_variable")\n')
