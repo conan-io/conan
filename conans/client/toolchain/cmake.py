@@ -12,7 +12,7 @@ from conans.client.build.cmake_flags import get_generator, get_generator_platfor
 # https://github.com/microsoft/vcpkg/tree/master/scripts/buildsystems
 
 
-class CMakeToolchain:
+class CMakeToolchain(object):
     filename = "conan_toolchain.cmake"
     conan_adjustements = os.path.join(os.path.dirname(__file__), "conan_adjustments.cmake")
     conan_project_include = os.path.join(os.path.dirname(__file__), "conan_project_include.cmake")
