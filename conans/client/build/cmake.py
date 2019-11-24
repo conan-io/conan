@@ -278,6 +278,7 @@ class CMake(object):
         if not self._conanfile.should_test:
             return
         if cross_building(self._conanfile.settings):  # We are cross building
+            settings = self._conanfile.settings
             os_build, arch_build, _, _ = get_cross_building_settings(settings)
             os_host = settings.get_safe("os")
             arch_host = settings.get_safe("arch")
