@@ -6,6 +6,8 @@ from itertools import chain
 from six import StringIO  # Python 2 and 3 compatible
 
 from conans.client import tools
+from conans.client.tools import cross_building
+from conans.client.tools.oss import get_cross_building_settings
 from conans.client.build import defs_to_string, join_arguments
 from conans.client.build.cmake_flags import CMakeDefinitionsBuilder, \
     get_generator, is_multi_configuration, verbose_definition, verbose_definition_name, \
@@ -275,6 +277,12 @@ class CMake(object):
     def test(self, args=None, build_dir=None, target=None, output_on_failure=False):
         if not self._conanfile.should_test:
             return
+        if cross_building(self._conanfile.settings):  # We are cross building
+            os_build, arch_build, _, _ = get_cross_building_settings(settings)
+            os_host = settings.get_safe("os")
+            arch_host = settings.get_safe("arch")
+            if os_host != os_build or arch_host != arch_build:
+                return
         if not target:
             target = "RUN_TESTS" if self.is_multi_configuration else "test"
 
