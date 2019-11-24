@@ -273,6 +273,7 @@ class CMakeDefinitionsBuilder(object):
 
         compiler = self._ss("compiler")
         compiler_version = self._ss("compiler.version")
+        version = self._ss("version")
         arch = self._ss("arch")
         os_ = self._ss("os")
         libcxx = self._ss("compiler.libcxx")
@@ -303,6 +304,13 @@ class CMakeDefinitionsBuilder(object):
             definitions["CONAN_COMPILER"] = compiler
         if compiler_version:
             definitions["CONAN_COMPILER_VERSION"] = str(compiler_version)
+        if version:
+            definitions['PROJECT_VERSION'] = str(version)
+            version_numbers = str(version).split(".")
+            definitions['PROJECT_VERSION_MAJOR'] = str(version_numbers[0]) if len(version_numbers) > 0 else ""
+            definitions['PROJECT_VERSION_MINOR'] = str(version_numbers[1]) if len(version_numbers) > 1 else ""
+            definitions['PROJECT_VERSION_PATCH'] = str(version_numbers[2]) if len(version_numbers) > 2 else ""
+            definitions['PROJECT_VERSION_TWEAK'] = str(version_numbers[3]) if len(version_numbers) > 3 else ""
 
         # C, CXX, LINK FLAGS
         if compiler == "Visual Studio":
