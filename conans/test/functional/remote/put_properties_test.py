@@ -29,7 +29,7 @@ class PutPropertiesTest(unittest.TestCase):
 
         wanted_vars = {"key0": "value",
                        "key1": "with space",
-                       "key2": "with/slash",  # FIXME: Not supported in conan-server
+                       "key2": "with/slash",
                        "key3": "with.dot",
                        "key4": "with;semicolon",
                        "key5": "with~virgul",
@@ -65,7 +65,7 @@ class PutPropertiesTest(unittest.TestCase):
 
         wanted_vars = {"key0": "value",
                        "key1": "with space",
-                       "key2": "with/slash",  # FIXME: Not supported in conan-server
+                       "key2": "with/slash",
                        "key3": "with.dot",
                        "key4": "with;semicolon",
                        "key5": "with~virgul",
