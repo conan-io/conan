@@ -138,10 +138,10 @@ def msvc_build_command(settings, sln_path, targets=None, upgrade_project=True, b
                        output=None):
     """ Do both: set the environment variables and call the .sln build
     """
-    vcvars = vcvars_command(settings, force=force_vcvars, output=output)
+    vcvars_cmd = vcvars_command(settings, force=force_vcvars, output=output)
     build = build_sln_command(settings, sln_path, targets, upgrade_project, build_type, arch,
                               parallel, toolset=toolset, platforms=platforms, output=output)
-    command = "%s && %s" % (vcvars, build)
+    command = "%s && %s" % (vcvars_cmd, build)
     return command
 
 
@@ -178,14 +178,9 @@ def build_sln_command(settings, sln_path, targets=None, upgrade_project=True, bu
 
 def vs_installation_path(version, preference=None):
 
-    vs_installation_path = None
-
     if not preference:
-        env_prefs = get_env("CONAN_VS_INSTALLATION_PREFERENCE", list())
-
-        if env_prefs:
-            preference = env_prefs
-        else:  # default values
+        preference = get_env("CONAN_VS_INSTALLATION_PREFERENCE", list())
+        if not preference:  # default values
             preference = ["Enterprise", "Professional", "Community", "BuildTools"]
 
     # Try with vswhere()
@@ -231,11 +226,11 @@ def vs_installation_path(version, preference=None):
             if vs_path.endswith(sub_path_to_remove):
                 vs_path = vs_path[:-(len(sub_path_to_remove)+1)]
 
-        vs_installation_path = vs_path
+        result_vs_installation_path = vs_path
     else:
-        vs_installation_path = vs_paths[0]
+        result_vs_installation_path = vs_paths[0]
 
-    return vs_installation_path
+    return result_vs_installation_path
 
 
 def vswhere(all_=False, prerelease=False, products=None, requires=None, version="", latest=False,
@@ -334,15 +329,14 @@ def find_windows_10_sdk():
     for key, subkey in hives:
         subkey = r'%s\Microsoft\Microsoft SDKs\Windows\v10.0' % subkey
         installation_folder = _system_registry_key(key, subkey, 'InstallationFolder')
-        if installation_folder:
-            if os.path.isdir(installation_folder):
-                include_dir = os.path.join(installation_folder, 'include')
-                for sdk_version in os.listdir(include_dir):
-                    if (os.path.isdir(os.path.join(include_dir, sdk_version))
-                            and sdk_version.startswith('10.')):
-                        windows_h = os.path.join(include_dir, sdk_version, 'um', 'Windows.h')
-                        if os.path.isfile(windows_h):
-                            return sdk_version
+        if installation_folder and os.path.isdir(installation_folder):
+            include_dir = os.path.join(installation_folder, 'include')
+            for sdk_version in os.listdir(include_dir):
+                if (os.path.isdir(os.path.join(include_dir, sdk_version))
+                        and sdk_version.startswith('10.')):
+                    windows_h = os.path.join(include_dir, sdk_version, 'um', 'Windows.h')
+                    if os.path.isfile(windows_h):
+                        return sdk_version
     return None
 
 
@@ -482,10 +476,10 @@ def vcvars_dict(settings, arch=None, compiler_version=None, force=False, filter_
             pass
 
     if filter_known_paths:
-        def relevant_path(path):
-            path = path.replace("\\", "/").lower()
+        def relevant_path(_path):
+            _path = _path.replace("\\", "/").lower()
             keywords = "msbuild", "visual", "microsoft", "/msvc/", "/vc/", "system32", "windows"
-            return any(word in path for word in keywords)
+            return any(word in _path for word in keywords)
 
         path_key = next((name for name in new_env.keys() if "path" == name.lower()), None)
         if path_key:

@@ -57,7 +57,7 @@ compiler:
         version: ["5.10", "5.11", "5.12", "5.13", "5.14"]
         threads: [None, posix]
         libcxx: [libCstd, libstdcxx, libstlport, libstdc++]
-    gcc:
+    gcc: &gcc
         version: ["4.1", "4.4", "4.5", "4.6", "4.7", "4.8", "4.9",
                   "5", "5.1", "5.2", "5.3", "5.4", "5.5",
                   "6", "6.1", "6.2", "6.3", "6.4",
@@ -68,7 +68,7 @@ compiler:
         threads: [None, posix, win32] #  Windows MinGW
         exception: [None, dwarf2, sjlj, seh] # Windows MinGW
         cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
-    Visual Studio:
+    Visual Studio: &visual_studio
         runtime: [MD, MT, MTd, MDd]
         version: ["8", "9", "10", "11", "12", "14", "15", "16"]
         toolset: [None, v90, v100, v110, v110_xp, v120, v120_xp,
@@ -86,6 +86,15 @@ compiler:
         version: ["5.0", "5.1", "6.0", "6.1", "7.0", "7.3", "8.0", "8.1", "9.0", "9.1", "10.0", "11.0"]
         libcxx: [libstdc++, libc++]
         cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
+    intel:
+        version: ["11", "12", "13", "14", "15", "16", "17", "18", "19"]
+        base:
+            gcc:
+                <<: *gcc
+                threads: [None]
+                exception: [None]
+            Visual Studio:
+                <<: *visual_studio
     qcc:
         version: ["4.4", "5.4"]
         libcxx: [cxx, gpp, cpp, cpp-ne, accp, acpp-ne, ecpp, ecpp-ne]

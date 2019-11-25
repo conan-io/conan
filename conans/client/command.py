@@ -4,7 +4,6 @@ import os
 import sys
 
 import argparse
-import six
 from argparse import ArgumentError
 from difflib import get_close_matches
 
@@ -82,10 +81,10 @@ class SmartFormatter(argparse.HelpFormatter):
         return ''.join(indent + line for line in text.splitlines(True))
 
 
-_QUERY_EXAMPLE = ("os=Windows AND (arch=x86 OR compiler=gcc)")
-_PATTERN_EXAMPLE = ("boost/*")
-_REFERENCE_EXAMPLE = ("MyPackage/1.2@user/channel")
-_PREF_EXAMPLE = ("MyPackage/1.2@user/channel:af7901d8bdfde621d086181aa1c495c25a17b137")
+_QUERY_EXAMPLE = "os=Windows AND (arch=x86 OR compiler=gcc)"
+_PATTERN_EXAMPLE = "boost/*"
+_REFERENCE_EXAMPLE = "MyPackage/1.2@user/channel"
+_PREF_EXAMPLE = "MyPackage/1.2@user/channel:af7901d8bdfde621d086181aa1c495c25a17b137"
 
 _BUILD_FOLDER_HELP = ("Directory for the build process. Defaulted to the current directory. A "
                       "relative path to current directory can also be specified")
@@ -1017,7 +1016,8 @@ class Command(object):
                             help="Remove only outdated from recipe packages. "
                                  "This flag can only be used with a reference")
         parser.add_argument('-p', '--packages', nargs="*", action=Extender,
-                            help="Remove all packages of the specified reference if no specific package ID is provided")
+                            help="Remove all packages of the specified reference if "
+                                 "no specific package ID is provided")
         parser.add_argument('-q', '--query', default=None, action=OnceArgument, help=_QUERY_HELP)
         parser.add_argument('-r', '--remote', action=OnceArgument,
                             help='Will remove from the specified remote')
@@ -1191,10 +1191,11 @@ class Command(object):
         If you provide a pattern, then it will search for existing package
         recipes matching it.  If a full reference is provided
         (pkg/0.1@user/channel) then the existing binary packages for that
-        reference will be displayed.  If no remote is specified, the search
-        will be done in the local cache.  Search is case sensitive, exact case
-        has to be used. For case insensitive file systems, like Windows, case
-        sensitive search can be forced with '--case-sensitive'.
+        reference will be displayed. The default remote is ignored, if no
+        remote is specified, the search will be done in the local cache.
+        Search is case sensitive, exact case has to be used. For case
+        insensitive file systems, like Windows, case sensitive search
+        can be forced with '--case-sensitive'.
         """
         parser = argparse.ArgumentParser(description=self.search.__doc__,
                                          prog="conan search",
@@ -1894,19 +1895,19 @@ class Command(object):
     def _warn_python_version(self):
         version = sys.version_info
         if version.major == 2:
-            self._out.writeln("")
+            self._out.writeln("*"*70, front=Color.BRIGHT_RED)
             self._out.writeln("Python 2 will soon be deprecated. It is strongly "
                               "recommended to use Python >= 3.5 with Conan:",
-                              front=Color.BRIGHT_YELLOW)
+                              front=Color.BRIGHT_RED)
             self._out.writeln("https://docs.conan.io/en/latest/installation.html"
-                              "#python-2-deprecation-notice", front=Color.BRIGHT_YELLOW)
-            self._out.writeln("")
+                              "#python-2-deprecation-notice", front=Color.BRIGHT_RED)
+            self._out.writeln("*"*70, front=Color.BRIGHT_RED)
         elif version.minor == 4:
-            self._out.writeln("")
+            self._out.writeln("*"*70, front=Color.BRIGHT_RED)
             self._out.writeln("Python 3.4 support has been dropped. It is strongly "
                               "recommended to use Python >= 3.5 with Conan",
-                              front=Color.BRIGHT_YELLOW)
-            self._out.writeln("")
+                              front=Color.BRIGHT_RED)
+            self._out.writeln("*"*70, front=Color.BRIGHT_RED)
 
     def run(self, *args):
         """HIDDEN: entry point for executing commands, dispatcher to class
@@ -1916,6 +1917,10 @@ class Command(object):
         try:
             try:
                 command = args[0][0]
+            except IndexError:  # No parameters
+                self._show_help()
+                return False
+            try:
                 commands = self._commands()
                 method = commands[command]
             except KeyError as exc:
@@ -1932,13 +1937,9 @@ class Command(object):
                 self._out.writeln(
                     "'%s' is not a Conan command. See 'conan --help'." % command)
                 self._out.writeln("")
-
                 self._print_similar(command)
-
                 raise ConanException("Unknown command %s" % str(exc))
-            except IndexError:  # No parameters
-                self._show_help()
-                return False
+
             method(args[0][1:])
         except KeyboardInterrupt as exc:
             logger.error(exc)
