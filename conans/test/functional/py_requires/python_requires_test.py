@@ -707,3 +707,48 @@ class PyRequiresExtendTest(unittest.TestCase):
         client.run("build .")
         self.assertIn("conanfile.py: Build: tool header: myheader", client.out)
         self.assertIn("conanfile.py: Build: tool other: otherheader", client.out)
+
+    def reuse_exports_test(self):
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class MyConanfileBase(ConanFile):
+                exports = "*"
+            """)
+        client.save({"conanfile.py": conanfile,
+                     "file.h": "myheader",
+                     "folder/other.h": "otherheader"})
+        client.run("editable add . tool/0.1@user/channel")
+
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile, load
+            import os
+            class MyConanfileBase(ConanFile):
+                python_requires = "tool/0.1@user/channel"
+                def source(self):
+                    sources = self.python_requires["tool"].path
+                    file_h = os.path.join(sources, "file.h")
+                    other_h = os.path.join(sources, "folder/other.h")
+                    self.output.info("Source: tool header: %s" % load(file_h))
+                    self.output.info("Source: tool other: %s" % load(other_h))
+                def build(self):
+                    sources = self.python_requires["tool"].path
+                    file_h = os.path.join(sources, "file.h")
+                    other_h = os.path.join(sources, "folder/other.h")
+                    self.output.info("Build: tool header: %s" % load(file_h))
+                    self.output.info("Build: tool other: %s" % load(other_h))
+            """)
+
+        client2 = TestClient(cache_folder=client.cache_folder)
+        client2.save({"conanfile.py": conanfile,
+                      "name.txt": "MyPkg",
+                      "version.txt": "MyVersion"})
+
+        # The local flow
+        client2.run("install .")
+        client2.run("source .")
+        self.assertIn("conanfile.py: Source: tool header: myheader", client2.out)
+        self.assertIn("conanfile.py: Source: tool other: otherheader", client2.out)
+        client2.run("build .")
+        self.assertIn("conanfile.py: Build: tool header: myheader", client2.out)
+        self.assertIn("conanfile.py: Build: tool other: otherheader", client2.out)
