@@ -83,6 +83,15 @@ class ClientV1Router(ClientCommonRouter):
         base_url = "{}/v1/".format(base_url)
         super(ClientV1Router, self).__init__(base_url, artifact_properties, matrix_params)
 
+    def add_matrix_params(self, urls):
+        if not self._matrix_params_str:
+            return urls
+
+        ret = {}
+        for filename, url in urls.items():
+            ret[filename] = url.replace("v1/files/", "v1/files{}/".format(self._matrix_params_str))
+        return ret
+
     def search_packages(self, ref, query=None):
         ref = ref.copy_clear_rev()
         return super(ClientV1Router, self).search_packages(ref, query)

@@ -118,23 +118,14 @@ class RestV1Methods(RestCommonMethods):
         urls = self.get_json(url, data=data)
         return {filepath: complete_url(self.remote_url, url) for filepath, url in urls.items()}
 
-    def _add_matrix_params(self, urls):
-        if not self._matrix_params:
-            return urls
-
-        matrix_str = self.router._matrix_params_str
-        ret = {}
-        for filename, url in urls.items():
-            ret[filename] = url.replace("v1/files/", "v1/files{}/".format(matrix_str))
-        return ret
-
     def _upload_recipe(self, ref, files_to_upload, retry, retry_wait):
         # Get the upload urls and then upload files
         url = self.router.recipe_upload_urls(ref)
         file_sizes = {filename.replace("\\", "/"): os.stat(abs_path).st_size
                       for filename, abs_path in files_to_upload.items()}
         urls = self._get_file_to_url_dict(url, data=file_sizes)
-        urls = self._add_matrix_params(urls)
+        if self._matrix_params:
+            urls = self.router.add_matrix_params(urls)
         self._upload_files(urls, files_to_upload, self._output, retry, retry_wait)
 
     def _upload_package(self, pref, files_to_upload, retry, retry_wait):
@@ -144,7 +135,8 @@ class RestV1Methods(RestCommonMethods):
                       abs_path in files_to_upload.items()}
         self._output.rewrite_line("Requesting upload urls...")
         urls = self._get_file_to_url_dict(url, data=file_sizes)
-        urls = self._add_matrix_params(urls)
+        if self._matrix_params:
+            urls = self.router.add_matrix_params(urls)
         self._output.rewrite_line("Requesting upload urls...Done!")
         self._output.writeln("")
         self._upload_files(urls, files_to_upload, self._output, retry, retry_wait)
