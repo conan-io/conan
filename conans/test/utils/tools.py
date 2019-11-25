@@ -596,6 +596,25 @@ class SVNLocalRepoTestCase(unittest.TestCase):
             shutil.rmtree(tmp_folder, ignore_errors=False, onerror=try_remove_readonly)
 
 
+class LocalDBMock(object):
+
+    def __init__(self, user=None, access_token=None, refresh_token=None):
+        self.user = user
+        self.access_token = access_token
+        self.refresh_token = refresh_token
+
+    def get_login(self, _):
+        return self.user, self.access_token, self.refresh_token
+
+    def get_username(self, _):
+        return self.user
+
+    def store(self, user, access_token, refresh_token, _):
+        self.user = user
+        self.access_token = access_token
+        self.refresh_token = refresh_token
+
+
 class MockedUserIO(UserIO):
 
     """
@@ -773,7 +792,7 @@ servers["r2"] = TestServer()
 
     def update_servers(self):
         cache = self.cache
-        Remotes().save(cache.registry_path)
+        Remotes().save(cache.remotes_path)
         registry = cache.registry
 
         for name, server in self.servers.items():

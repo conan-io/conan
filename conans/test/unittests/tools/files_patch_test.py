@@ -196,12 +196,12 @@ class ToolsFilesPatchTest(unittest.TestCase):
         conanfile = dedent("""
             from conans import ConanFile, tools
             import os
-            
+
             class ConanFileToolsTest(ConanFile):
                 name = "foobar"
                 version = "0.1.0"
                 exports_sources = "*"
-            
+
                 def build(self):
                     tools.patch(patch_file="add_files.patch")
                     assert os.path.isfile("foo.txt")
@@ -213,13 +213,13 @@ class ToolsFilesPatchTest(unittest.TestCase):
             From: Uilian Ries <uilianries@gmail.com>
             Date: Wed, 16 Oct 2019 14:31:34 -0300
             Subject: [PATCH] add foo
-            
+
             ---
              bar.txt | 3 ++-
              foo.txt | 3 +++
              2 files changed, 5 insertions(+), 1 deletion(-)
              create mode 100644 foo.txt
-            
+
             diff --git a/bar.txt b/bar.txt
             index 0f4ff3a..0bd3158 100644
             --- a/bar.txt
@@ -237,7 +237,7 @@ class ToolsFilesPatchTest(unittest.TestCase):
             +For us, there is no spring.
             +Just the wind that smells fresh before the storm.
             +
-            -- 
+            --
             2.23.0
 
 
@@ -278,3 +278,41 @@ Just the wind that smells fresh before the storm."""), foo_content)
 
         content = load(text_file)
         self.assertEqual(content, msg)
+
+    def test_fuzzy_patch(self):
+        conanfile = dedent("""
+            from conans import ConanFile, tools
+            import os
+
+            class ConanFileToolsTest(ConanFile):
+                name = "fuzz"
+                version = "0.1.0"
+                exports_sources = "*"
+
+                def build(self):
+                    tools.patch(patch_file="fuzzy.patch", fuzz=True)
+        """)
+        source = dedent("""X
+Y
+Z""")
+        patch = dedent("""diff --git a/Jamroot b/Jamroot
+index a6981dd..0c08f09 100644
+--- a/Jamroot
++++ b/Jamroot
+@@ -1,3 +1,4 @@
+ X
+ YYYY
++V
+ W""")
+        expected = dedent("""X
+Y
+V
+Z""")
+        client = TestClient()
+        client.save({"conanfile.py": conanfile,
+                     "fuzzy.patch": patch,
+                     "Jamroot": source})
+        client.run("install .")
+        client.run("build .")
+        content = load(os.path.join(client.current_folder, "Jamroot"))
+        self.assertIn(expected, content)
