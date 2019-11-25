@@ -1,9 +1,11 @@
+import os
 import textwrap
 import unittest
 
 from parameterized import parameterized
 
 from conans.test.utils.tools import TestClient
+from conans.util.files import mkdir
 
 
 class GetVersionNameTest(unittest.TestCase):
@@ -105,3 +107,20 @@ class GetVersionNameTest(unittest.TestCase):
         client.run("export .", assert_error=True)
         self.assertIn("ERROR: conanfile.py: Error in set_version() method, line 5", client.out)
         self.assertIn("name 'error' is not defined", client.out)
+
+    def set_version_current_folder_test(self):
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile, load
+            class Lib(ConanFile):
+                name = "pkg"
+                def set_version(self):
+                    self.version = load("version.txt")
+            """)
+        client.save({"conanfile.py": conanfile,
+                     "version.txt": "2.1"})
+        mkdir(os.path.join(client.current_folder, "build"))
+        with client.chdir("build"):
+            client.run("export .. user/testing")
+            self.assertIn("pkg/2.1@user/testing: A new conanfile.py version was exported",
+                          client.out)
