@@ -111,11 +111,13 @@ class DevLayoutTest(unittest.TestCase):
                 cmake = CMake(self)
                 cmake.configure()
                 cmake.build()
+            
+            def imports(self):
+                self.copy(pattern="*.dll", dst="bin", src="#bindir")
 
             def test(self):
                 os.chdir("bin")
-                # run_environment is necessary for DLLs
-                self.run(".%sapp" % os.sep, run_environment=True)
+                self.run(".%sapp" % os.sep)
         """)
 
     def setUp(self):
@@ -142,10 +144,13 @@ class DevLayoutTest(unittest.TestCase):
         # Cache creation
         client = self.client
         client.run("create . pkg/0.1@user/testing -o pkg:shared=True")
+        self.assertIn("pkg/0.1@user/testing package(): Packaged 1 '.dll' file: hello.dll",
+                      client.out)
         self.assertIn("pkg/0.1@user/testing package(): Packaged 1 '.h' file: hello.h", client.out)
+        self.assertIn("imports(): Copied 1 '.dll' file: hello.dll", client.out)
         self.assertIn("Hello World Release!", client.out)
 
-    @unittest.skipIf(platform.system() != "Windows", "Needs windows for short_paths")
+    @unittest.skipIf(platform.system() != "Windows", "Needs windows")
     @parameterized.expand([(True,), (False,)])
     def local_build_test(self, shared):
         client = self.client
@@ -155,12 +160,10 @@ class DevLayoutTest(unittest.TestCase):
         with client.chdir("build"):
             client.run_command('cmake ../src -G "Visual Studio 15 Win64" %s' % shared)
             client.run_command("cmake --build . --config Release")
-            with client.chdir("Release"):
-                client.run_command("app.exe")
+            client.run_command(r"Release\\app.exe")
             self.assertIn("Hello World Release!", client.out)
             client.run_command("cmake --build . --config Debug")
-            with client.chdir("Debug"):
-                client.run_command("app.exe")
+            client.run_command(r"Debug\\app.exe")
             self.assertIn("Hello World Debug!", client.out)
 
         client.run("editable add . pkg/0.1@user/testing")
@@ -179,6 +182,10 @@ class DevLayoutTest(unittest.TestCase):
                     mylayout = CMakeLayout(self)
                     mylayout.build = "build"
                     return mylayout
+                    
+                def imports(self):
+                    lay = self.layout()
+                    self.copy(pattern="*.dll", dst=lay.bindir, src="#bindir")
             """)
 
         test_cmake = textwrap.dedent("""
@@ -196,15 +203,16 @@ class DevLayoutTest(unittest.TestCase):
                       "CMakeLists.txt": test_cmake,
                       "conanfile.py": consumer})
         client2.run("install .")
+        print client2.out
         client2.run("install . -s build_type=Debug")
         with client2.chdir("build"):
             client2.run_command('cmake .. -G "Visual Studio 15 Win64"')
+            print client2.out
             client2.run_command("cmake --build . --config Release")
             # alternative 1: imports() copy DLLs. Does not work for continuous dev
             #                ok for cached dependencies, different Debug/Release output
             # alternative 2: virtualrunenv switch debug/release???
             # alternative 3: environment in cmake => path in MSBuild
-            print client2.current_folder
             client2.run_command(r"Release\\app.exe")
             self.assertIn("Hello World Release!", client2.out)
             client2.run_command("cmake --build . --config Debug")
@@ -221,6 +229,9 @@ class DevLayoutTest(unittest.TestCase):
             client.run_command(r"Debug\\app.exe")
             self.assertIn("Hello Moon Debug!", client.out)
 
+        # It is necessary to "install" again, to fire the imports() and copy the DLLs
+        client2.run("install .")
+        client2.run("install . -s build_type=Debug")
         with client2.chdir("build"):
             client2.run_command("cmake --build . --config Release")
             client2.run_command(r"Release\\app.exe")

@@ -80,11 +80,13 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
                                      interactive=manifest_interactive)
         manifest_manager.print_log()
 
-    if hasattr(conanfile, "layout"):
-        layout = conanfile.layout()
-        if install_folder:
-            install_folder = os.path.join(install_folder, layout.build)
     if install_folder:
+        build_folder = build_bindir = install_folder
+        if hasattr(conanfile, "layout"):
+            layout = conanfile.layout()
+            build_folder = os.path.join(install_folder, layout.build)
+            build_bindir = os.path.join(install_folder, layout.build_bindir)
+
         conanfile.install_folder = install_folder
         # Write generators
         output = conanfile.output if root_node.recipe != RECIPE_VIRTUAL else out
@@ -92,16 +94,16 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
             tmp = list(conanfile.generators)  # Add the command line specified generators
             tmp.extend([g for g in generators if g not in tmp])
             conanfile.generators = tmp
-            write_generators(conanfile, install_folder, output)
+            write_generators(conanfile, build_folder, output)
         if not isinstance(ref_or_path, ConanFileReference) or use_lock:
             # Write conaninfo
             content = normalize(conanfile.info.dumps())
-            save(os.path.join(install_folder, CONANINFO), content)
+            save(os.path.join(build_bindir, CONANINFO), content)
             output.info("Generated %s" % CONANINFO)
-            graph_info.save(install_folder)
+            graph_info.save(build_bindir)
             output.info("Generated graphinfo")
         if not no_imports:
-            run_imports(conanfile, install_folder)
+            run_imports(conanfile, build_bindir)
         call_system_requirements(conanfile, conanfile.output)
 
         if not create_reference and isinstance(ref_or_path, ConanFileReference):
@@ -109,4 +111,4 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
             neighbours = deps_graph.root.neighbors()
             deploy_conanfile = neighbours[0].conanfile
             if hasattr(deploy_conanfile, "deploy") and callable(deploy_conanfile.deploy):
-                run_deploy(deploy_conanfile, install_folder)
+                run_deploy(deploy_conanfile, build_bindir)
