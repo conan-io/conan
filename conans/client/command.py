@@ -403,7 +403,10 @@ class Command(object):
         else:
             reference = repr(pref.ref)
             if pref.ref.user is None:
-                reference += "@"
+                if pref.revision:
+                    reference = "%s/%s@#%s" % (pref.ref.name, pref.ref.version, pref.ref.revision)
+                else:
+                    reference += "@"
             packages_list = [pref.id]
             if args.package:
                 raise ConanException("Use a full package reference (preferred) or the `--package`"
