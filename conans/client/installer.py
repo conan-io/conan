@@ -6,7 +6,7 @@ from conans.client import tools
 from conans.client.file_copier import report_copied_files
 from conans.client.generators import TXTGenerator, write_generators
 from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_EDITABLE, \
-    BINARY_MISSING, BINARY_SKIP, BINARY_UPDATE
+    BINARY_MISSING, BINARY_SKIP, BINARY_UPDATE, BINARY_UNKNOWN
 from conans.client.importer import remove_imports, run_imports
 from conans.client.packager import run_package_method, update_package_metadata
 from conans.client.recorder.action_recorder import INSTALL_ERROR_BUILDING, INSTALL_ERROR_MISSING, \
@@ -84,11 +84,12 @@ class _PackageBuilder(object):
                          build_folder, remotes):
         export_folder = package_layout.export()
         export_source_folder = package_layout.export_sources()
+        scm_sources_folder = package_layout.scm_sources()
 
         complete_recipe_sources(self._remote_manager, self._cache, conanfile, pref.ref, remotes)
         _remove_folder_raising(build_folder)
 
-        config_source(export_folder, export_source_folder, source_folder,
+        config_source(export_folder, export_source_folder, scm_sources_folder, source_folder,
                       conanfile, self._output, conanfile_path, pref.ref,
                       self._hook_manager, self._cache)
 
@@ -330,7 +331,7 @@ class BinaryInstaller(object):
                         continue
                     assert ref.revision is not None, "Installer should receive RREV always"
                     _handle_system_requirements(conan_file, node.pref, self._cache, output)
-                    if node.package_id == PACKAGE_ID_UNKNOWN:
+                    if node.binary == BINARY_UNKNOWN:
                         self._binaries_analyzer.reevaluate_node(node, remotes, build_mode, update)
                     self._handle_node_cache(node, keep_build, processed_package_refs, remotes)
 
@@ -371,7 +372,7 @@ class BinaryInstaller(object):
                 write_toolchain(node.conanfile, build_folder, output)
                 save(os.path.join(build_folder, CONANINFO), node.conanfile.info.dumps())
                 output.info("Generated %s" % CONANINFO)
-                graph_info_node = GraphInfo(graph_info.profile, root_ref=node.ref)
+                graph_info_node = GraphInfo(graph_info.profile_host, root_ref=node.ref)
                 graph_info_node.options = node.conanfile.options.values
                 graph_info_node.graph_lock = graph_info.graph_lock
                 graph_info_node.save(build_folder)
@@ -402,7 +403,6 @@ class BinaryInstaller(object):
                         pref = self._build_package(node, output, keep_build, remotes)
                     assert node.prev, "Node PREV shouldn't be empty"
                     assert node.pref.revision, "Node PREF revision shouldn't be empty"
-                    assert node.prev is not None, "PREV for %s to be built is None" % str(pref)
                     assert pref.revision is not None, "PREV for %s to be built is None" % str(pref)
                 elif node.binary in (BINARY_UPDATE, BINARY_DOWNLOAD):
                     assert node.prev, "PREV for %s is None" % str(pref)
@@ -452,8 +452,9 @@ class BinaryInstaller(object):
         node_order = [n for n in node.public_closure if n.binary != BINARY_SKIP]
         # List sort is stable, will keep the original order of the closure, but prioritize levels
         conan_file = node.conanfile
+        transitive = node.transitive_closure.values()
         for n in node_order:
-            if n.build_require:
+            if n not in transitive:
                 conan_file.output.info("Applying build-requirement: %s" % str(n.ref))
             conan_file.deps_cpp_info.update(n.conanfile.cpp_info, n.ref.name)
             conan_file.deps_env_info.update(n.conanfile.env_info, n.ref.name)
@@ -477,7 +478,8 @@ class BinaryInstaller(object):
         conanfile.user_info = UserInfo()
 
         # Get deps_cpp_info from upstream nodes
-        public_deps = [name for name, req in conanfile.requires.items() if not req.private]
+        public_deps = [name for name, req in conanfile.requires.items() if not req.private
+                       and not req.override]
         conanfile.cpp_info.public_deps = public_deps
         # Once the node is build, execute package info, so it has access to the
         # package folder and artifacts

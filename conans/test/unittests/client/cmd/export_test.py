@@ -13,6 +13,43 @@ from conans.test.utils.tools import TestClient, TestServer, TurboTestClient
 from conans.util.files import load, save
 
 
+class ExportTest(unittest.TestCase):
+
+    def export_warning_test(self):
+        mixed_conanfile = """
+from conans import ConanFile
+
+class HelloConan(ConanFile):
+    name = "Hello"
+    version = "0.1"
+    exports = "*.h", "*.cpp"
+    settings = "os", "os_build"
+    def package(self):
+        self.copy("*.h", "include")
+"""
+        client = TestClient()
+        client.save({"conanfile.py": mixed_conanfile})
+        client.run("export . Hello/0.1")
+        self.assertIn("This package defines both 'os' and 'os_build'", client.out)
+
+    def export_no_warning_test(self):
+        conanfile = """
+from conans import ConanFile
+
+class HelloConan(ConanFile):
+    name = "Hello"
+    version = "0.1"
+    exports = "*.h", "*.cpp"
+    settings = "os"
+    def package(self):
+        self.copy("*.h", "include")
+"""
+        client = TestClient()
+        client.save({"conanfile.py": conanfile})
+        client.run("export . Hello/0.1")
+        self.assertNotIn("This package defines both 'os' and 'os_build'", client.out)
+
+
 class ReplaceSCMDataInConanfileTest(unittest.TestCase):
     conanfile = """
 from conans import ConanFile
@@ -48,7 +85,8 @@ class ConanLib(ConanFile):
         scm_data = SCMData(conanfile=namedtuple('_', 'scm')(scm=scm_data))
         _replace_scm_data_in_conanfile(self.conanfile_path, scm_data)
         self.assertEqual(load(self.conanfile_path), target_conanfile)
-        _parse_conanfile(conan_file_path=self.conanfile_path)  # Check that the resulting file is valid python code.
+        # Check that the resulting file is valid python code.
+        _parse_conanfile(conan_file_path=self.conanfile_path)
 
     def test_conanfile_after_scm(self):
         scm_data = {'type': 'git',
@@ -87,14 +125,14 @@ class ConanLib(ConanFile):
         conanfile = '''from conans import ConanFile
 
 def get_conanfile():
-    
+
     class BaseConanFile(ConanFile):
         scm = {
-            "type": "git", 
+            "type": "git",
             "url": "auto",
             "revision": "auto"
         }
-    
+
     return BaseConanFile
 
 class Baseline(ConanFile):
@@ -123,6 +161,9 @@ class ModuleConan(python_requires(baseline).get_conanfile()):
 
         for conanfile in [conanfile1, conanfile2]:
             client.save({"conanfile.py": conanfile})
+            # Add and commit so it do the scm replacements correctly
+            client.run_command("git add .")
+            client.run_command('git commit -m  "commiting"')
             client.run("export . module_name/1.0.0@conan/stable")
             self.assertIn("module_name/1.0.0@conan/stable: "
                           "A new conanfile.py version was exported", client.out)

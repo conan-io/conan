@@ -43,7 +43,7 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
         generators.add("txt")  # Add txt generator by default
 
     out.info("Configuration:")
-    out.writeln(graph_info.profile.dumps())
+    out.writeln(graph_info.profile_host.dumps())
     deps_graph = graph_manager.load_graph(ref_or_path, create_reference, graph_info, build_modes,
                                           False, update, remotes, recorder)
     root_node = deps_graph.root
@@ -55,8 +55,8 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
     print_graph(deps_graph, out)
 
     try:
-        if cross_building(graph_info.profile.processed_settings):
-            settings = get_cross_building_settings(graph_info.profile.processed_settings)
+        if cross_building(graph_info.profile_host.processed_settings):
+            settings = get_cross_building_settings(graph_info.profile_host.processed_settings)
             message = "Cross-build from '%s:%s' to '%s:%s'" % settings
             out.writeln(message, Color.BRIGHT_MAGENTA)
     except ConanException:  # Setting os doesn't exist

@@ -22,8 +22,18 @@ class PkgGeneratorTest(unittest.TestCase):
         cpp_info.cflags.append("-Flag1=23")
         cpp_info.version = "1.3"
         cpp_info.description = "My cool description"
-
         conanfile.deps_cpp_info.update(cpp_info, ref.name)
+
+        ref = ConanFileReference.loads("MyPkg1/0.1@lasote/stables")
+        cpp_info = CppInfo("dummy_root_folder1")
+        cpp_info.name = "MYPKG1"
+        cpp_info.defines = ["MYDEFINE11"]
+        cpp_info.cflags.append("-Flag1=21")
+        cpp_info.version = "1.7"
+        cpp_info.description = "My other cool description"
+        cpp_info.public_deps = ["MyPkg"]
+        conanfile.deps_cpp_info.update(cpp_info, ref.name)
+
         ref = ConanFileReference.loads("MyPkg2/0.1@lasote/stables")
         cpp_info = CppInfo("dummy_root_folder2")
         cpp_info.name = ref.name
@@ -46,6 +56,18 @@ Description: Conan package: MyPkg2
 Version: 2.3
 Libs: -L${libdir} -sharedlinkflag -exelinkflag
 Cflags: -I${includedir} -cxxflag -DMYDEFINE2
+Requires: MyPkg
+""")
+
+        self.assertEqual(files["mypkg1.pc"], """prefix=dummy_root_folder1
+libdir=${prefix}/lib
+includedir=${prefix}/include
+
+Name: mypkg1
+Description: My other cool description
+Version: 1.7
+Libs: -L${libdir}
+Cflags: -I${includedir} -Flag1=21 -DMYDEFINE11
 Requires: MyPkg
 """)
 
