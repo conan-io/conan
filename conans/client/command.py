@@ -1344,6 +1344,9 @@ class Command(object):
                             help="Uploads package only if recipe is the same as the remote one")
         parser.add_argument("-j", "--json", default=None, action=OnceArgument,
                             help='json file path where the upload information will be written to')
+        parser.add_argument("--parallel", action='store_true', default=False,
+                            help='Upload files in parallel using multiple threads '
+                                 'The default number of launched threads is 8')
 
         args = parser.parse_args(*args)
 
@@ -1398,7 +1401,8 @@ class Command(object):
                                       query=args.query, remote_name=args.remote,
                                       all_packages=args.all, policy=policy,
                                       confirm=args.confirm, retry=args.retry,
-                                      retry_wait=args.retry_wait, integrity_check=args.check)
+                                      retry_wait=args.retry_wait, integrity_check=args.check,
+                                      parallel_upload=args.parallel)
 
         except ConanException as exc:
             info = exc.info
