@@ -332,7 +332,7 @@ class CMakeDefinitionsBuilder(object):
         # Install to package folder
         try:
             if self._conanfile.package_folder:
-                definitions["CMAKE_INSTALL_PREFIX"] = self._conanfile.package_folder
+                definitions["CMAKE_INSTALL_PREFIX"] = self._conanfile.package_folder.replace("\\", "/")
                 definitions["CMAKE_INSTALL_BINDIR"] = DEFAULT_BIN
                 definitions["CMAKE_INSTALL_SBINDIR"] = DEFAULT_BIN
                 definitions["CMAKE_INSTALL_LIBEXECDIR"] = DEFAULT_BIN

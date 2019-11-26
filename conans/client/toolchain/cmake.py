@@ -173,7 +173,7 @@ class CMakeToolchain(object):
 
         # Build type game
         settings_build_type = self._conanfile.settings.get_safe("build_type")
-        self.definitions.pop("CMAKE_BUILD_TYPE")
+        self.definitions.pop("CMAKE_BUILD_TYPE", None)
         self._context.update({"CMAKE_BUILD_TYPE": build_type or settings_build_type})
 
         # Some variables can go to the environment
