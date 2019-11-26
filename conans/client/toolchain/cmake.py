@@ -15,9 +15,8 @@ from conans.client.build.cmake_flags import get_generator, get_generator_platfor
 class CMakeToolchain(object):
     filename = "conan_toolchain.cmake"
     conan_adjustements = os.path.join(os.path.dirname(__file__), "conan_adjustments.cmake")
-    conan_project_include = os.path.join(os.path.dirname(__file__), "conan_project_include.cmake")
 
-    _template = textwrap.dedent("""
+    _template_toolchain = textwrap.dedent("""
         # Conan generated toolchain file
         
         # Avoid including toolchain file several times (bad if appending to variables like
@@ -85,6 +84,19 @@ class CMakeToolchain(object):
         {% if options.set_compiler %}conan_set_compiler(){% endif %}
     """)
 
+    _template_project_include = textwrap.dedent("""
+        # When using a Conan toolchain, this file is included as the last step of all `project()` calls.
+        #  https://cmake.org/cmake/help/latest/variable/CMAKE_PROJECT_INCLUDE.html
+
+
+        include("{{ conan_adjustements_cmake }}")
+
+        # Now the debug/release stuff
+
+        # Adjustments that depends on the build_type
+        conan_set_vs_runtime()
+    """)
+
     def __init__(self, conanfile,
                  generator=None,
                  cmake_system_name=True,
@@ -110,8 +122,6 @@ class CMakeToolchain(object):
 
         generator = generator or get_generator(self._conanfile.settings)
         self._context = {
-            "conan_adjustements_cmake": self.conan_adjustements.replace("\\", "/"),
-            "conan_project_include_cmake": self.conan_project_include.replace("\\", "/"),
             #"build_type": build_type or self._conanfile.settings.get_safe("build_type"),
             #"generator": generator,
             "generator_platform": generator_platform or
@@ -161,6 +171,13 @@ class CMakeToolchain(object):
                         "set_vs_runtime": self.set_vs_runtime}
         })
 
+        conan_project_include_cmake = os.path.join(install_folder, "conan_project_include.cmake")
+        with open(conan_project_include_cmake, "w") as f:
+            t = Template(self._template_project_include)
+            content = t.render(conan_adjustements_cmake=self.conan_adjustements.replace("\\", "/"),
+                               **self._context)
+            f.write(content)
+
         with open(os.path.join(install_folder, self.filename), "w") as f:
             # TODO: I need the profile_host and profile_build here!
             # TODO: What if the compiler is a build require?
@@ -172,8 +189,10 @@ class CMakeToolchain(object):
             #            "c_compiler": compiler,
             #            "cxx_compiler": compiler+'++'})
 
-            t = Template(self._template)
-            content = t.render(**self._context)
+            t = Template(self._template_toolchain)
+            content = t.render(conan_adjustements_cmake=self.conan_adjustements.replace("\\", "/"),
+                               conan_project_include_cmake=conan_project_include_cmake.replace("\\", "/"),
+                               **self._context)
 
             f.write(content)
 
