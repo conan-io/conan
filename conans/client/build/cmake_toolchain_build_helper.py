@@ -70,7 +70,7 @@ class CMakeToolchainBuildHelper(object):
         generator = generator or get_generator(conanfile.settings)
         self._is_multiconfiguration = is_multi_configuration(generator)
         self._build_flags = _compute_build_flags(conanfile, generator, parallel, msbuild_verbosity)
-        self.generator = generator  # TODO: I don't want to store the generator here !!!
+        self._is_windows_mingw = platform.system() == "Windows" and generator == "MinGW Makefiles"
 
         assert cmake_system_name is None, "'cmake_system_name' is handled by the toolchain"
         assert toolset is None, "'toolset' is handled by the toolchain"
@@ -78,6 +78,8 @@ class CMakeToolchainBuildHelper(object):
         assert set_cmake_flags is None, "'set_cmake_flags' is handled by the toolchain"
         assert cmake_program is None, "'cmake_program' is handled by the environment"  # FIXME: Not yet
         assert generator_platform is None, "'generator_platform' is handled by the toolchain"
+        if not self._is_multiconfiguration:
+            assert build_type is None, "'build_type' is handled by the toolchain in not-multi_config generators"
 
         # Store a reference to useful data
         self._conanfile = conanfile
@@ -204,7 +206,7 @@ class CMakeToolchainBuildHelper(object):
                                                     build_dir, source_folder, build_folder,
                                                     cache_build_folder)
 
-        if platform.system() == "Windows" and self.generator == "MinGW Makefiles":  # TODO: Don't know about generator, why this remove?
+        if self._is_windows_mingw:
             with tools.remove_from_path("sh"):
                 self._run(configure_command)
         else:

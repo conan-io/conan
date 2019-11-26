@@ -28,13 +28,6 @@ class CMakeToolchain(object):
 
         message("Using Conan toolchain through ${CMAKE_TOOLCHAIN_FILE}.")
         
-        # CMAKE_BUILD_TYPE: Use it only if it isn't a multi-config generator
-        get_property(_GENERATOR_IS_MULTI_CONFIG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG )
-        if(NOT _GENERATOR_IS_MULTI_CONFIG)
-            set(CMAKE_BUILD_TYPE "{{ CMAKE_BUILD_TYPE }}" CACHE STRING "Choose the type of build." FORCE)
-        endif()
-        unset(_GENERATOR_IS_MULTI_CONFIG)
-
         # Configure
         # -- CMake::command_line
         {% if generator_platform %}set(CMAKE_GENERATOR_PLATFORM "{{ generator_platform }}"){% endif %}
@@ -88,10 +81,15 @@ class CMakeToolchain(object):
         # When using a Conan toolchain, this file is included as the last step of all `project()` calls.
         #  https://cmake.org/cmake/help/latest/variable/CMAKE_PROJECT_INCLUDE.html
 
-
         include("{{ conan_adjustements_cmake }}")
 
         # Now the debug/release stuff
+        # CMAKE_BUILD_TYPE: Use it only if it isn't a multi-config generator
+        get_property(_GENERATOR_IS_MULTI_CONFIG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG )
+        if(NOT _GENERATOR_IS_MULTI_CONFIG)
+            set(CMAKE_BUILD_TYPE "{{ CMAKE_BUILD_TYPE }}" CACHE STRING "Choose the type of build." FORCE)
+        endif()
+        unset(_GENERATOR_IS_MULTI_CONFIG)
 
         # Adjustments that depends on the build_type
         conan_set_vs_runtime()

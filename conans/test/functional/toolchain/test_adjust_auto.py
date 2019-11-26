@@ -31,6 +31,8 @@ def compile_local_workflow(testcase, client, profile):
         toolcahin = load(os.path.join(build_directory, CMakeToolchain.filename))
         print(toolcahin)
         print("!"*200)
+        print(load(os.path.join(build_directory, "conan_project_include.cmake")))
+        print("!"*200)
     return client.out, cmake_cache, build_directory, None
 
 
@@ -49,6 +51,8 @@ def _compile_cache_workflow(testcase, client, profile, use_toolchain):
         # TODO: Remove
         toolcahin = load(os.path.join(build_directory, CMakeToolchain.filename))
         print(toolcahin)
+        print("!"*200)
+        print(load(os.path.join(build_directory, "conan_project_include.cmake")))
         print("!"*200)
     return client.out, cmake_cache, build_directory, package_layout.package(pref)
 
@@ -74,6 +78,8 @@ def compile_cmake_workflow(testcase, client, profile):
         # TODO: Remove
         toolcahin = load(os.path.join(build_directory, CMakeToolchain.filename))
         print(toolcahin)
+        print("!"*200)
+        print(load(os.path.join(build_directory, "conan_project_include.cmake")))
         print("!"*200)
     return client.out, cmake_cache, build_directory, None
 
