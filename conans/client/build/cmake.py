@@ -11,7 +11,7 @@ from conans.client.build.cmake_flags import CMakeDefinitionsBuilder, \
     get_generator, is_multi_configuration, verbose_definition, verbose_definition_name, \
     cmake_install_prefix_var_name, get_toolset, build_type_definition, \
     cmake_in_local_cache_var_name, runtime_definition_var_name, get_generator_platform, \
-    is_generator_platform_supported, is_toolset_supported, in_local_cache_definition
+    is_generator_platform_supported, is_toolset_supported
 from conans.client.output import ConanOutput
 from conans.client.tools.oss import cpu_count, args_to_string
 from conans.errors import ConanException
@@ -63,19 +63,17 @@ class CMake(object):
                                           make_program=make_program, parallel=parallel,
                                           generator=self.generator,
                                           set_cmake_flags=set_cmake_flags,
+                                          forced_build_type=build_type,
                                           output=self._conanfile.output)
         # FIXME CONAN 2.0: CMake() interface should be always the constructor and self.definitions.
         # FIXME CONAN 2.0: Avoid properties and attributes to make the user interface more clear
 
         self.definitions = builder.get_definitions()
         self.definitions["CONAN_EXPORTED"] = "1"
-        self.definitions.update(in_local_cache_definition(self._conanfile.in_local_cache))
 
         self.toolset = toolset or get_toolset(self._settings)
         self.build_dir = None
         self.msbuild_verbosity = os.getenv("CONAN_MSBUILD_VERBOSITY") or msbuild_verbosity
-
-        self.build_type = self._build_type
 
     @property
     def build_folder(self):
@@ -92,11 +90,9 @@ class CMake(object):
     @build_type.setter
     def build_type(self, build_type):
         settings_build_type = self._settings.get_safe("build_type")
-        if build_type != settings_build_type:
-            self._conanfile.output.warn("Forced CMake build type ('%s') different from the settings"
-                                        " build type ('%s')" % (build_type, settings_build_type))
         self.definitions.pop("CMAKE_BUILD_TYPE", None)
-        self.definitions.update(build_type_definition(build_type, self.generator))
+        self.definitions.update(build_type_definition(build_type, settings_build_type,
+                                                      self.generator, self._conanfile.output))
         self._build_type = build_type
 
     @property
