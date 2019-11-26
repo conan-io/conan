@@ -1,6 +1,7 @@
 import os
 import traceback
 import time
+from copy import copy
 
 from conans.util import progress_bar
 from conans.client.rest import response_to_str
@@ -27,7 +28,7 @@ class FileUploader(object):
         retry_wait = retry_wait if retry_wait is not None else 5
 
         # Send always the header with the Sha1
-        headers = headers or {}
+        headers = copy(headers) or {}
         headers["X-Checksum-Sha1"] = sha1sum(abs_path)
         if dedup:
             dedup_headers = {"X-Checksum-Deploy": "true"}
