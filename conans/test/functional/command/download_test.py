@@ -220,3 +220,36 @@ class Pkg(ConanFile):
         client.run("download pkg/1.0@")
         self.assertIn("pkg/1.0: Downloading pkg/1.0:%s" % NO_SETTINGS_PACKAGE_ID, client.out)
         self.assertIn("pkg/1.0: Package installed %s" % NO_SETTINGS_PACKAGE_ID, client.out)
+
+    def download_revs_disabled_with_rrev_test(self):
+        # https://github.com/conan-io/conan/issues/6106
+        client = TestClient(default_server_user=True, revisions_enabled=False)
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . pkg/1.0@user/channel")
+        client.run("upload * --all --confirm")
+        client.run("remove * -f")
+        client.run("download pkg/1.0@user/channel#fakerevision", assert_error=True)
+        self.assertIn(
+            "ERROR: Revisions not enabled in the client, specify a reference without revision",
+            client.out)
+
+    def download_revs_enabled_with_rrev_test(self):
+        ref = ConanFileReference.loads("pkg/1.0@user/channel")
+        client = TurboTestClient(default_server_user=True, revisions_enabled=True)
+        pref = client.create(ref, conanfile=GenConanfile())
+        client.run("upload * --all --confirm")
+        client.run("remove * -f")
+        client.run("download pkg/1.0@user/channel#{}".format(pref.ref.revision))
+        self.assertIn("pkg/1.0@user/channel: Package installed {}".format(pref.id), client.out)
+
+    def download_revs_enabled_with_prev_test(self):
+        # https://github.com/conan-io/conan/issues/6106
+        ref = ConanFileReference.loads("pkg/1.0@user/channel")
+        client = TurboTestClient(default_server_user=True, revisions_enabled=True)
+        pref = client.create(ref, conanfile=GenConanfile())
+        client.run("upload * --all --confirm")
+        client.run("remove * -f")
+        client.run("download pkg/1.0@user/channel#{}:{}#{}".format(pref.ref.revision,
+                                                                   pref.id,
+                                                                   pref.revision))
+        self.assertIn("pkg/1.0@user/channel: Package installed {}".format(pref.id), client.out)
