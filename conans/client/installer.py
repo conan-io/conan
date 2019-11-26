@@ -360,8 +360,8 @@ class BinaryInstaller(object):
         if hasattr(node.conanfile, "layout"):
             layout = node.conanfile.layout()
             node.conanfile.cpp_info.includedirs = layout.includedirs
-            node.conanfile.cpp_info.libdirs = [layout.libdir]
-            node.conanfile.cpp_info.bindirs = [layout.bindir]
+            node.conanfile.cpp_info.libdirs = [layout.build_libdir]
+            node.conanfile.cpp_info.bindirs = [layout.build_bindir]
             return
         # Try with package-provided file
         editable_cpp_info = package_layout.editable_cpp_info()

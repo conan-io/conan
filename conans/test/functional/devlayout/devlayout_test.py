@@ -39,6 +39,7 @@ class DevLayoutTest(unittest.TestCase):
                 self.cpp_info.libs = ["hello"]
             """)
     cmake = textwrap.dedent("""
+        cmake_minimum_required(VERSION 2.8.12)
         set(CMAKE_CXX_COMPILER_WORKS 1)
         set(CMAKE_CXX_ABI_COMPILED 1)    
         project(HelloWorldLib CXX)
@@ -88,6 +89,7 @@ class DevLayoutTest(unittest.TestCase):
         }
         """)
     test_cmake = textwrap.dedent("""
+        cmake_minimum_required(VERSION 2.8.12)
         set(CMAKE_CXX_COMPILER_WORKS 1)
         set(CMAKE_CXX_ABI_COMPILED 1)
 
@@ -185,10 +187,11 @@ class DevLayoutTest(unittest.TestCase):
                     
                 def imports(self):
                     lay = self.layout()
-                    self.copy(pattern="*.dll", dst=lay.bindir, src="#bindir")
+                    self.copy(pattern="*.dll", dst=lay.build_bindir, src="#bindir")
             """)
 
         test_cmake = textwrap.dedent("""
+            cmake_minimum_required(VERSION 2.8.12)
             set(CMAKE_CXX_COMPILER_WORKS 1)
             set(CMAKE_CXX_ABI_COMPILED 1)
             project(Greet CXX)

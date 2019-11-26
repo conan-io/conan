@@ -84,8 +84,9 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
         build_folder = build_bindir = install_folder
         if hasattr(conanfile, "layout"):
             layout = conanfile.layout()
-            build_folder = os.path.join(install_folder, layout.build)
-            build_bindir = os.path.join(install_folder, layout.build_bindir)
+            conafile_folder = xxx
+            build_folder = os.path.join(conafile_folder, layout.build)
+            build_bindir = os.path.join(conafile_folder, layout.build_bindir)
 
         conanfile.install_folder = install_folder
         # Write generators
