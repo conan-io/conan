@@ -253,7 +253,6 @@ class AdjustAutoTestCase(unittest.TestCase):
         #self.skipTest("Disabled")
         configure_out, cmake_cache, cmake_cache_keys, _, _ = self._run_configure({"build_type": build_type})
 
-        #self.assertIn("build_type={}".format(build_type), configure_out)
         self.assertIn(">> CMAKE_BUILD_TYPE: {}".format(build_type), configure_out)
 
         self.assertEqual(build_type, cmake_cache["CMAKE_BUILD_TYPE:STRING"])

@@ -128,13 +128,15 @@ def build_type_definition(build_type, generator):
 class CMakeDefinitionsBuilder(object):
 
     def __init__(self, conanfile, cmake_system_name=True, make_program=None,
-                 parallel=True, generator=None, set_cmake_flags=False, output=None):
+                 parallel=True, generator=None, set_cmake_flags=False,
+                 forced_build_type=None, output=None):
         self._conanfile = conanfile
         self._forced_cmake_system_name = cmake_system_name
         self._make_program = make_program
         self._parallel = parallel
         self._generator = generator
         self._set_cmake_flags = set_cmake_flags
+        self._forced_build_type = forced_build_type
         self._output = output
 
     def _ss(self, setname):
@@ -275,9 +277,17 @@ class CMakeDefinitionsBuilder(object):
         os_ = self._ss("os")
         libcxx = self._ss("compiler.libcxx")
         runtime = self._ss("compiler.runtime")
+        build_type = self._ss("build_type")
 
         definitions = OrderedDict()
         definitions.update(runtime_definition(runtime))
+
+        if self._forced_build_type and self._forced_build_type != build_type:
+            self._output.warn("Forced CMake build type ('%s') different from the settings build "
+                              "type ('%s')" % (self._forced_build_type, build_type))
+            build_type = self._forced_build_type
+
+        definitions.update(build_type_definition(build_type, self._generator))
 
         if str(os_) == "Macos":
             if arch == "x86":
@@ -320,7 +330,7 @@ class CMakeDefinitionsBuilder(object):
         # Install to package folder
         try:
             if self._conanfile.package_folder:
-                definitions["CMAKE_INSTALL_PREFIX"] = self._conanfile.package_folder.replace("\\", "/")
+                definitions["CMAKE_INSTALL_PREFIX"] = self._conanfile.package_folder
                 definitions["CMAKE_INSTALL_BINDIR"] = DEFAULT_BIN
                 definitions["CMAKE_INSTALL_SBINDIR"] = DEFAULT_BIN
                 definitions["CMAKE_INSTALL_LIBEXECDIR"] = DEFAULT_BIN
