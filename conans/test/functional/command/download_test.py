@@ -241,6 +241,8 @@ class Pkg(ConanFile):
         client.run("remove * -f")
         client.run("download pkg/1.0@user/channel#{}".format(pref.ref.revision))
         self.assertIn("pkg/1.0@user/channel: Package installed {}".format(pref.id), client.out)
+        search_result = client.search("pkg/1.0@user/channel --revisions")[0]
+        self.assertIn(pref.ref.revision, search_result["revision"])
 
     def download_revs_enabled_with_prev_test(self):
         # https://github.com/conan-io/conan/issues/6106
@@ -253,3 +255,8 @@ class Pkg(ConanFile):
                                                                    pref.id,
                                                                    pref.revision))
         self.assertIn("pkg/1.0@user/channel: Package installed {}".format(pref.id), client.out)
+        search_result = client.search("pkg/1.0@user/channel --revisions")[0]
+        self.assertIn(pref.ref.revision, search_result["revision"])
+        search_result = client.search(
+            "pkg/1.0@user/channel#{}:{} --revisions".format(pref.ref.revision, pref.id))[0]
+        self.assertIn(pref.revision, search_result["revision"])
