@@ -282,7 +282,7 @@ class Command(object):
         parser.add_argument("-tbf", "--test-build-folder", action=OnceArgument,
                             help="Working directory of the build process.")
 
-        _add_common_install_arguments(parser, build_help=_help_build_policies)
+        _add_common_install_arguments(parser, build_help=_help_build_policies.format("never"))
         args = parser.parse_args(*args)
         self._warn_python_version()
         return self._conan.test(args.path, args.reference, args.profile, args.settings,
@@ -327,7 +327,7 @@ class Command(object):
                                  ' revision and url even if there are uncommitted changes')
 
         _add_manifests_arguments(parser)
-        _add_common_install_arguments(parser, build_help=_help_build_policies)
+        _add_common_install_arguments(parser, build_help=_help_build_policies.format("package name"))
 
         args = parser.parse_args(*args)
         self._warn_python_version()
@@ -450,7 +450,7 @@ class Command(object):
                             help='Path to a json file where the install information will be '
                             'written')
 
-        _add_common_install_arguments(parser, build_help=_help_build_policies)
+        _add_common_install_arguments(parser, build_help=_help_build_policies.format("never"))
 
         args = parser.parse_args(*args)
         cwd = get_cwd()
@@ -1695,7 +1695,7 @@ class Command(object):
         install_parser.add_argument('path', help='path to workspace definition file (it will look'
                                                  ' for a "conanws.yml" inside if a directory is'
                                                  ' given)')
-        _add_common_install_arguments(install_parser, build_help=_help_build_policies)
+        _add_common_install_arguments(install_parser, build_help=_help_build_policies.format("never"))
         install_parser.add_argument("-if", "--install-folder", action=OnceArgument,
                                     help="Folder where the workspace files will be created"
                                          " (default to current working directory)")
@@ -2020,7 +2020,7 @@ _help_build_policies = '''Optional, use it to choose if you want to build from s
                        Allows multiple --build parameters. 'pattern' is a fnmatch file pattern
                        of a package reference.
 
-    Default behavior: If you don't specify anything, it will be similar to '--build=never', but
+    Default behavior: If you don't specify anything, it will be similar to '--build={}', but
     package recipes can override it with their 'build_policy' attribute in the conanfile.py.
 '''
 
