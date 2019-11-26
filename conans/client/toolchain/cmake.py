@@ -126,14 +126,13 @@ class CMakeToolchain(object):
                                           make_program=make_program, parallel=parallel,
                                           generator=generator,
                                           set_cmake_flags=False,
+                                          forced_build_type=build_type,
                                           output=self._conanfile.output)
         self.definitions = builder.get_definitions()
 
         # Build type game
         settings_build_type = self._conanfile.settings.get_safe("build_type")
-        if build_type and build_type != settings_build_type:
-            self._conanfile.output.warn("Forced CMake build type ('%s') different from the settings"
-                                        " build type ('%s')" % (build_type, settings_build_type))
+        self.definitions.pop("CMAKE_BUILD_TYPE")
         self._context.update({"CMAKE_BUILD_TYPE": build_type or settings_build_type})
 
         # Some variables can go to the environment

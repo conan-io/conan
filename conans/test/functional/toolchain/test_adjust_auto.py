@@ -235,17 +235,18 @@ class AdjustAutoTestCase(unittest.TestCase):
         # self.skipTest("Disabled")
         configure_out, cmake_cache, cmake_cache_keys, _, _ = self._run_configure()
 
-        in_local_cache = "ON" if self.in_cache else "OFF" if self.build_helper else ""
+        in_local_cache = "ON" if self.in_cache else "OFF"
         exported_str = "1" if self.build_helper else ""
 
         self.assertIn(">> CONAN_EXPORTED: {}".format(exported_str), configure_out)
         self.assertIn(">> CONAN_IN_LOCAL_CACHE: {}".format(in_local_cache), configure_out)
         if self.build_helper:
             self.assertEqual(exported_str, cmake_cache["CONAN_EXPORTED:UNINITIALIZED"])
-            self.assertEqual(in_local_cache, cmake_cache["CONAN_IN_LOCAL_CACHE:UNINITIALIZED"])
         else:
             self.assertNotIn("CONAN_EXPORTED", cmake_cache_keys)
-            self.assertNotIn("CONAN_IN_LOCAL_CACHE", cmake_cache_keys)
+
+        type_str = "STRING" if self.use_toolchain else "UNINITIALIZED"
+        self.assertEqual(in_local_cache, cmake_cache["CONAN_IN_LOCAL_CACHE:" + type_str])
 
     @parameterized.expand([("Debug",), ("Release",)])
     @unittest.skipIf(platform.system() == "Windows", "Windows uses Visual Studio, CMAKE_BUILD_TYPE is not used")
