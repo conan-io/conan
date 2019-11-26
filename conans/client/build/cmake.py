@@ -69,6 +69,8 @@ class CMake(object):
         # FIXME CONAN 2.0: Avoid properties and attributes to make the user interface more clear
 
         self.definitions = builder.get_definitions()
+        self.definitions["CONAN_EXPORTED"] = "1"
+
         self.toolset = toolset or get_toolset(self._settings)
         self.build_dir = None
         self.msbuild_verbosity = os.getenv("CONAN_MSBUILD_VERBOSITY") or msbuild_verbosity
@@ -88,11 +90,9 @@ class CMake(object):
     @build_type.setter
     def build_type(self, build_type):
         settings_build_type = self._settings.get_safe("build_type")
-        if build_type != settings_build_type:
-            self._conanfile.output.warn("Forced CMake build type ('%s') different from the settings"
-                                        " build type ('%s')" % (build_type, settings_build_type))
         self.definitions.pop("CMAKE_BUILD_TYPE", None)
-        self.definitions.update(build_type_definition(build_type, self.generator))
+        self.definitions.update(build_type_definition(build_type, settings_build_type,
+                                                      self.generator, self._conanfile.output))
         self._build_type = build_type
 
     @property
