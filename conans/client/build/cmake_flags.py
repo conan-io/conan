@@ -296,6 +296,9 @@ class CMakeDefinitionsBuilder(object):
         definitions.update(self._cmake_cross_build_defines())
         definitions.update(self._get_cpp_standard_vars())
 
+        definitions["CONAN_EXPORTED"] = "1"
+        definitions.update(in_local_cache_definition(self._conanfile.in_local_cache))
+
         if compiler:
             definitions["CONAN_COMPILER"] = compiler
         if compiler_version:

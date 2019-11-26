@@ -12,7 +12,6 @@ from conans.client.build.cmake_flags import CMakeDefinitionsBuilder, \
     cmake_install_prefix_var_name, get_toolset, build_type_definition, \
     cmake_in_local_cache_var_name, runtime_definition_var_name, get_generator_platform, \
     is_generator_platform_supported, is_toolset_supported
-from conans.client.build.cmake_flags import in_local_cache_definition
 from conans.client.output import ConanOutput
 from conans.client.tools.oss import cpu_count, args_to_string
 from conans.errors import ConanException
@@ -70,9 +69,6 @@ class CMake(object):
         # FIXME CONAN 2.0: Avoid properties and attributes to make the user interface more clear
 
         self.definitions = builder.get_definitions()
-        self.definitions["CONAN_EXPORTED"] = "1"
-        self.definitions.update(in_local_cache_definition(self._conanfile.in_local_cache))
-
         self.toolset = toolset or get_toolset(self._settings)
         self.build_dir = None
         self.msbuild_verbosity = os.getenv("CONAN_MSBUILD_VERBOSITY") or msbuild_verbosity
