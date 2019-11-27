@@ -181,10 +181,15 @@ class CmdUpload(object):
                                              "no packages can be uploaded" % str(ref))
                 prefs = []
                 # Gather all the complete PREFS with PREV
-                for package_id in packages_ids:
+                for package in packages_ids:
+                    package_id = package.split("#")[0] if "#" in package else package
+                    package_rev = package.split("#")[1] if "#" in package else None
                     if package_id not in metadata.packages:
                         raise ConanException("Binary package %s:%s not found"
                                              % (str(ref), package_id))
+                    if package_rev and package_rev != metadata.packages[package_id].revision:
+                        raise ConanException("Binary package %s:%s#%s not found"
+                                             % (str(ref), package_id, package_rev))
                     # Filter packages that don't match the recipe revision
                     if self._cache.config.revisions_enabled and ref.revision:
                         rec_rev = metadata.packages[package_id].recipe_revision
