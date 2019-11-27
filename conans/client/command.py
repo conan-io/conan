@@ -407,7 +407,7 @@ class Command(object):
                     reference = "%s/%s@#%s" % (pref.ref.name, pref.ref.version, pref.ref.revision)
                 else:
                     reference += "@"
-            pkgref = "{}#{}".format(pref.id, pref.revision) if pref.revision else "{}".format(pref.id)
+            pkgref = "{}#{}".format(pref.id, pref.revision) if pref.revision else pref.id
             packages_list = [pkgref]
             if args.package:
                 raise ConanException("Use a full package reference (preferred) or the `--package`"
