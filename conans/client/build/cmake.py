@@ -21,7 +21,7 @@ from conans.util.config_parser import get_bool_from_text
 from conans.util.files import mkdir, get_abs_path, walk, decode_text
 
 
-class BaseCMakeHelper(object):
+class BaseCMakeBuildHelper(object):
     """ Just a couple of functions shared between the CMake build helpers """
 
     def _patch_config_paths(self, package_folder):
@@ -116,7 +116,7 @@ class BaseCMakeHelper(object):
             raise ConanException("Error retrieving CMake version: '{}'".format(e))
 
 
-class CMake(BaseCMakeHelper):
+class CMake(BaseCMakeBuildHelper):
 
     def __init__(self, conanfile, generator=None, cmake_system_name=True,
                  parallel=True, build_type=None, toolset=None, make_program=None,

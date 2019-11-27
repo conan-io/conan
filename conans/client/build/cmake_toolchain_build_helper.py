@@ -3,7 +3,7 @@ import platform
 
 from conans.client import tools
 from conans.client.build import defs_to_string, join_arguments
-from conans.client.build.cmake import BaseCMakeHelper
+from conans.client.build.cmake import BaseCMakeBuildHelper
 from conans.client.build.cmake_flags import cmake_in_local_cache_var_name
 from conans.client.build.cmake_flags import in_local_cache_definition
 from conans.client.build.cmake_flags import is_multi_configuration, get_generator, \
@@ -48,7 +48,7 @@ def _compute_build_flags(conanfile, generator, parallel, msbuild_verbosity):
     return args
 
 
-class CMakeToolchainBuildHelper(BaseCMakeHelper):
+class CMakeToolchainBuildHelper(BaseCMakeBuildHelper):
     """ CMake helper to use together with the toolchain feature, it has the same interface
         as the original 'conans.client.build.cmake.CMake' helper, but it will warn the
         user about arguments forbidden, not used,... and how to achieve the same behavior
