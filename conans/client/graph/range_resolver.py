@@ -131,7 +131,7 @@ class RangeResolver(object):
                 if not resolved_ref:
                     resolved_ref, remote_name = self._resolve_remote(search_ref, version_range,
                                                                      remotes)
-                self._cached_results[require.ref] = resolved_ref, remote_name
+            self._cached_results[ref] = resolved_ref, remote_name
 
         origin = ("remote '%s'" % remote_name) if remote_name else "local cache"
         if resolved_ref:
