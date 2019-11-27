@@ -237,6 +237,14 @@ class Pkg(ConanFile):
 
     @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
     def download_revs_enabled_with_rrev_test(self):
+        client = TestClient(default_server_user=True, revisions_enabled=True)
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . pkg/1.0@user/channel")
+        client.run("upload * --all --confirm")
+        client.run("remove * -f")
+        client.run("download pkg/1.0@user/channel#fakerevision", assert_error=True)
+        self.assertIn("ERROR: Recipe not found: 'pkg/1.0@user/channel'", client.out)
+
         ref = ConanFileReference.loads("pkg/1.0@user/channel")
         client = TurboTestClient(default_server_user=True, revisions_enabled=True)
         pref = client.create(ref, conanfile=GenConanfile())
