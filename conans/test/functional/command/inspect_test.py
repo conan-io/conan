@@ -4,7 +4,6 @@ import textwrap
 import unittest
 
 from conans.test.utils.tools import TestClient, TestServer
-from conans.util.files import load
 
 
 class ConanInspectTest(unittest.TestCase):
@@ -70,7 +69,7 @@ class Pkg(ConanFile):
         self.assertIn("name: MyPkg", client.out)
         self.assertIn("version: 1.2.3", client.out)
         client.run("inspect . -a=version -a=name --json=file.json")
-        contents = load(os.path.join(client.current_folder, "file.json"))
+        contents = client.load("file.json")
         self.assertIn('"version": "1.2.3"', contents)
         self.assertIn('"name": "MyPkg"', contents)
 
@@ -131,7 +130,7 @@ default_options:
 """)
 
         client.run("inspect . -a=version -a=name -a=options -a=default_options --json=file.json")
-        contents = load(os.path.join(client.current_folder, "file.json"))
+        contents = client.load("file.json")
         json_contents = json.loads(contents)
         self.assertEqual(json_contents["version"], None)
         self.assertEqual(json_contents["name"], None)

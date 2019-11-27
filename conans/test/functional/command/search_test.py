@@ -382,7 +382,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
 
     def search_html_table_test(self):
         self.client.run("search Hello/1.4.10@myuser/testing --table=table.html")
-        html = load(os.path.join(self.client.current_folder, "table.html"))
+        html = self.client.load("table.html")
         self.assertIn("<h1>Hello/1.4.10@myuser/testing</h1>", html)
         self.assertIn("<td>Linux gcc 4.5 (libstdc++11)</td>", html)
         self.assertIn("<td>Windows Visual Studio 8.1</td>", html)
@@ -394,7 +394,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         self._copy_to_server(self.client.cache, self.servers["search_able"].server_store)
 
         self.client.run("search Hello/1.4.10@myuser/testing -r=all --table=table.html")
-        html = load(os.path.join(self.client.current_folder, "table.html"))
+        html = self.client.load("table.html")
 
         self.assertIn("<h1>Hello/1.4.10@myuser/testing</h1>", html)
         self.assertIn("<h2>'local':</h2>", html)
