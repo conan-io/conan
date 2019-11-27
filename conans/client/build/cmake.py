@@ -116,7 +116,7 @@ class BaseCMakeBuildHelper(object):
             raise ConanException("Error retrieving CMake version: '{}'".format(e))
 
 
-class CMake(BaseCMakeBuildHelper):
+class CMakeBuildHelper(BaseCMakeBuildHelper):
 
     def __init__(self, conanfile, generator=None, cmake_system_name=True,
                  parallel=True, build_type=None, toolset=None, make_program=None,
@@ -138,9 +138,6 @@ class CMake(BaseCMakeBuildHelper):
         :param cmake_program: Path to the custom cmake executable
         :param generator_platform: Generator platform name or none to autodetect (-A cmake option)
         """
-        if not isinstance(conanfile, ConanFile):
-            raise ConanException("First argument of CMake() has to be ConanFile. Use CMake(self)")
-
         self._conanfile = conanfile
         self._settings = conanfile.settings
         self._build_type = build_type or conanfile.settings.get_safe("build_type")
@@ -393,4 +390,4 @@ class CMake(BaseCMakeBuildHelper):
 
     def patch_config_paths(self):
         pf = self.definitions.get(cmake_install_prefix_var_name)
-        return super(CMake, self)._patch_config_paths(package_folder=pf)
+        return super(CMakeBuildHelper, self)._patch_config_paths(package_folder=pf)

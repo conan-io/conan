@@ -22,7 +22,7 @@ class FindPackageMultiTestCase(unittest.TestCase):
     """
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile, CMake, CMakeToolchain, CMakeToolchainBuildHelper
+        from conans import ConanFile, CMake, CMakeToolchain
 
         class App(ConanFile):
             name = "app"
@@ -41,14 +41,7 @@ class FindPackageMultiTestCase(unittest.TestCase):
                 return tc
 
             def build(self):
-                # A build helper could be easily added to replace these two lines
-                # self.run('cmake "%s" -DCMAKE_TOOLCHAIN_FILE=""" + CMakeToolchain.filename + """' % (self.source_folder))
-                # command_str = "cmake --build ."
-                # if CMake(self).is_multi_configuration:
-                #     command_str += " --config {}".format(str(self.settings.build_type))
-                # self.run(command_str)
-
-                cmake = CMakeToolchainBuildHelper(self)
+                cmake = CMake(self)
                 cmake.configure(source_folder=".")
                 cmake.build()
 

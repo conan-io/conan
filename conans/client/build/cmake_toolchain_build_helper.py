@@ -11,20 +11,12 @@ from conans.client.build.cmake_flags import is_multi_configuration, get_generato
 from conans.client.toolchain.cmake import CMakeToolchain
 from conans.client.tools.oss import cpu_count, args_to_string
 from conans.errors import ConanException
-from conans.model.conan_file import ConanFile
 from conans.model.version import Version
 from conans.util.config_parser import get_bool_from_text
 from conans.util.files import mkdir
 
 
 def _validate_recipe(conanfile):
-    # Toolchain is required to use the CMakeToolchainBuildHelper
-    toolchain_method = getattr(conanfile, "toolchain", None)
-    if not toolchain_method or not callable(toolchain_method):
-        raise ConanException("Using 'CMakeToolchainBuildHelper' helper, requires 'toolchain()'"
-                             " method to be defined.")
-
-    return  # TODO: I do want to check this, but then I'd need to rewrite some tests :S
     forbidden_generators = ["cmake", "cmake_multi", "cmake_paths"]
     if any(it in conanfile.generators for it in forbidden_generators):
         raise ConanException("Usage of toolchain is only supported with 'cmake_find_package'"
@@ -59,8 +51,6 @@ class CMakeToolchainBuildHelper(BaseCMakeBuildHelper):
                  parallel=True, build_type=None, toolset=None, make_program=None,
                  set_cmake_flags=None, msbuild_verbosity="minimal", cmake_program=None,
                  generator_platform=None):
-        if not isinstance(conanfile, ConanFile):
-            raise ConanException("First argument of CMake() has to be ConanFile. Use CMake(self)")
         _validate_recipe(conanfile)
 
         # assert generator is None, "'generator' is handled by the toolchain"

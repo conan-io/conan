@@ -6,6 +6,8 @@ import re
 import textwrap
 import unittest
 
+from jinja2 import Template
+
 from nose.plugins.attrib import attr
 from parameterized.parameterized import parameterized
 from parameterized.parameterized import parameterized_class
@@ -98,34 +100,32 @@ class AdjustAutoTestCase(unittest.TestCase):
         Check that it works adjusting values from the toolchain file
     """
 
-    conanfile = textwrap.dedent("""
-        from conans import ConanFile, CMake, CMakeToolchain, CMakeToolchainBuildHelper
+    _conanfile = textwrap.dedent("""
+        from conans import ConanFile, CMake, CMakeToolchain
 
         class App(ConanFile):
             name = "app"
             version = "version"
             settings = "os", "arch", "compiler", "build_type"
             exports = "*.cpp", "*.txt"
-            generators = "cmake_find_package", "cmake"
+            generators = {% if use_toolchain %}"cmake_find_package"{% else %}"cmake"{% endif %}
             options = {"use_toolchain": [True, False], "fPIC": [True, False]}
             default_options = {"use_toolchain": True,
                                "fPIC": False}
 
+            {% if use_toolchain %}
             def toolchain(self):
                 tc = CMakeToolchain(self)
                 return tc
+            {% endif %}
 
             def build(self):
                 # Do not actually build, just configure
-                if self.options.use_toolchain:
-                    # A build helper could be easily added to replace this line
-                    # self.run('cmake "%s" -DCMAKE_TOOLCHAIN_FILE=""" + CMakeToolchain.filename + """' % (self.source_folder))
-                    cmake = CMakeToolchainBuildHelper(self)
-                    cmake.configure(source_folder=".")
-                else:
-                    cmake = CMake(self)
-                    cmake.configure(source_folder=".")
+                cmake = CMake(self)
+                cmake.configure(source_folder=".")
     """)
+    conanfile_toolchain = Template(_conanfile).render(use_toolchain=True)
+    conanfile_no_toolchain = Template(_conanfile).render(use_toolchain=False)
 
     cmakelist = textwrap.dedent("""
         cmake_minimum_required(VERSION 2.8)
@@ -195,7 +195,8 @@ class AdjustAutoTestCase(unittest.TestCase):
         cls.t = TurboTestClient(path_with_spaces=False)
 
         # Prepare the actual consumer package
-        cls.t.save({"conanfile.py": cls.conanfile,
+        conanfile = cls.conanfile_toolchain if cls.use_toolchain else cls.conanfile_no_toolchain
+        cls.t.save({"conanfile.py": conanfile,
                     "CMakeLists.txt": cls.cmakelist,
                     "src/app.cpp": cls.app_cpp})
         # TODO: Remove the app.cpp and the add_executable, probably it is not need to run cmake configure.
