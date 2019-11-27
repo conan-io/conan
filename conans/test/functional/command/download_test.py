@@ -5,6 +5,7 @@ from collections import OrderedDict
 from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import (TestClient, TestServer, NO_SETTINGS_PACKAGE_ID, TurboTestClient,
                                      GenConanfile)
+from conans.util.env_reader import get_env
 from conans.util.files import load
 
 
@@ -221,6 +222,7 @@ class Pkg(ConanFile):
         self.assertIn("pkg/1.0: Downloading pkg/1.0:%s" % NO_SETTINGS_PACKAGE_ID, client.out)
         self.assertIn("pkg/1.0: Package installed %s" % NO_SETTINGS_PACKAGE_ID, client.out)
 
+    @unittest.skipIf(get_env("TESTING_REVISIONS_ENABLED", False), "No sense with revs")
     def download_revs_disabled_with_rrev_test(self):
         # https://github.com/conan-io/conan/issues/6106
         client = TestClient(default_server_user=True, revisions_enabled=False)
@@ -233,6 +235,7 @@ class Pkg(ConanFile):
             "ERROR: Revisions not enabled in the client, specify a reference without revision",
             client.out)
 
+    @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
     def download_revs_enabled_with_rrev_test(self):
         ref = ConanFileReference.loads("pkg/1.0@user/channel")
         client = TurboTestClient(default_server_user=True, revisions_enabled=True)
@@ -257,7 +260,7 @@ class Pkg(ConanFile):
         search_result = client.search("pkg/1.0@ --revisions")[0]
         self.assertIn(pref.ref.revision, search_result["revision"])
 
-
+    @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
     def download_revs_enabled_with_prev_test(self):
         # https://github.com/conan-io/conan/issues/6106
         ref = ConanFileReference.loads("pkg/1.0@user/channel")
