@@ -1,24 +1,20 @@
 import os
 import platform
-import subprocess
-from itertools import chain
-
-from six import StringIO  # Python 2 and 3 compatible
 
 from conans.client import tools
 from conans.client.build import defs_to_string, join_arguments
+from conans.client.build.cmake import BaseCMakeHelper
 from conans.client.build.cmake_flags import cmake_in_local_cache_var_name
 from conans.client.build.cmake_flags import in_local_cache_definition
 from conans.client.build.cmake_flags import is_multi_configuration, get_generator, \
     verbose_definition, verbose_definition_name
-from conans.client.output import ConanOutput
 from conans.client.toolchain.cmake import CMakeToolchain
 from conans.client.tools.oss import cpu_count, args_to_string
 from conans.errors import ConanException
 from conans.model.conan_file import ConanFile
 from conans.model.version import Version
 from conans.util.config_parser import get_bool_from_text
-from conans.util.files import mkdir, walk, decode_text
+from conans.util.files import mkdir
 
 
 def _validate_recipe(conanfile):
@@ -52,7 +48,7 @@ def _compute_build_flags(conanfile, generator, parallel, msbuild_verbosity):
     return args
 
 
-class CMakeToolchainBuildHelper(object):
+class CMakeToolchainBuildHelper(BaseCMakeHelper):
     """ CMake helper to use together with the toolchain feature, it has the same interface
         as the original 'conans.client.build.cmake.CMake' helper, but it will warn the
         user about arguments forbidden, not used,... and how to achieve the same behavior
@@ -260,80 +256,8 @@ class CMakeToolchainBuildHelper(object):
         return None
 
     def patch_config_paths(self):
-        """
-        changes references to the absolute path of the installed package and its dependencies in
-        exported cmake config files to the appropriate conan variable. This makes
-        most (sensible) cmake config files portable.
-        For example, if a package foo installs a file called "fooConfig.cmake" to
-        be used by cmake's find_package method, normally this file will contain
-        absolute paths to the installed package folder, for example it will contain
-        a line such as:
-            SET(Foo_INSTALL_DIR /home/developer/.conan/data/Foo/1.0.0/...)
-        This will cause cmake find_package() method to fail when someone else
-        installs the package via conan.
-        This function will replace such mentions to
-            SET(Foo_INSTALL_DIR ${CONAN_FOO_ROOT})
-        which is a variable that is set by conanbuildinfo.cmake, so that find_package()
-        now correctly works on this conan package.
-        For dependent packages, if a package foo installs a file called "fooConfig.cmake" to
-        be used by cmake's find_package method and if it depends to a package bar,
-        normally this file will contain absolute paths to the bar package folder,
-        for example it will contain a line such as:
-            SET_TARGET_PROPERTIES(foo PROPERTIES
-                  INTERFACE_INCLUDE_DIRECTORIES
-                  "/home/developer/.conan/data/Bar/1.0.0/user/channel/id/include")
-        This function will replace such mentions to
-            SET_TARGET_PROPERTIES(foo PROPERTIES
-                  INTERFACE_INCLUDE_DIRECTORIES
-                  "${CONAN_BAR_ROOT}/include")
-        If the install() method of the CMake object in the conan file is used, this
-        function should be called _after_ that invocation. For example:
-            def build(self):
-                cmake = CMake(self)
-                cmake.configure()
-                cmake.build()
-                cmake.install()
-                cmake.patch_config_paths()
-        """
+        pf = None
+        if self._conanfile.package_folder:
+            pf = self._conanfile.package_folder.replace("\\", "/")
 
-        if not self._conanfile.should_install:
-            return
-        if not self._conanfile.name:
-            raise ConanException("cmake.patch_config_paths() can't work without package name. "
-                                 "Define name in your recipe")
-        pf = self._get_install_prefix()
-        replstr = "${CONAN_%s_ROOT}" % self._conanfile.name.upper()
-        allwalk = chain(walk(self._conanfile.build_folder), walk(self._conanfile.package_folder))
-
-        # We don't want warnings printed because there is no replacement of the abs path.
-        # there could be MANY cmake files in the package and the normal thing is to not find
-        # the abs paths
-        _null_out = ConanOutput(StringIO())
-        for root, _, files in allwalk:
-            for f in files:
-                if f.endswith(".cmake") and not f.startswith("conan"):
-                    path = os.path.join(root, f)
-
-                    tools.replace_path_in_file(path, pf, replstr, strict=False,
-                                               output=_null_out)
-
-                    # patch paths of dependent packages that are found in any cmake files of the
-                    # current package
-                    for dep in self._conanfile.deps_cpp_info.deps:
-                        from_str = self._conanfile.deps_cpp_info[dep].rootpath
-                        dep_str = "${CONAN_%s_ROOT}" % dep.upper()
-                        ret = tools.replace_path_in_file(path, from_str, dep_str, strict=False,
-                                                         output=_null_out)
-                        if ret:
-                            self._conanfile.output.info("Patched paths for %s: %s to %s"
-                                                        % (dep, from_str, dep_str))
-
-    @staticmethod
-    def get_version():
-        try:
-            out, _ = subprocess.Popen(["cmake", "--version"], stdout=subprocess.PIPE).communicate()
-            version_line = decode_text(out).split('\n', 1)[0]
-            version_str = version_line.rsplit(' ', 1)[-1]
-            return Version(version_str)
-        except Exception as e:
-            raise ConanException("Error retrieving CMake version: '{}'".format(e))
+        return super(CMakeToolchainBuildHelper, self)._patch_config_paths(package_folder=pf)

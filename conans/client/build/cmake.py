@@ -21,7 +21,102 @@ from conans.util.config_parser import get_bool_from_text
 from conans.util.files import mkdir, get_abs_path, walk, decode_text
 
 
-class CMake(object):
+class BaseCMakeHelper(object):
+    """ Just a couple of functions shared between the CMake build helpers """
+
+    def _patch_config_paths(self, package_folder):
+        """
+        changes references to the absolute path of the installed package and its dependencies in
+        exported cmake config files to the appropriate conan variable. This makes
+        most (sensible) cmake config files portable.
+
+        For example, if a package foo installs a file called "fooConfig.cmake" to
+        be used by cmake's find_package method, normally this file will contain
+        absolute paths to the installed package folder, for example it will contain
+        a line such as:
+
+            SET(Foo_INSTALL_DIR /home/developer/.conan/data/Foo/1.0.0/...)
+
+        This will cause cmake find_package() method to fail when someone else
+        installs the package via conan.
+
+        This function will replace such mentions to
+
+            SET(Foo_INSTALL_DIR ${CONAN_FOO_ROOT})
+
+        which is a variable that is set by conanbuildinfo.cmake, so that find_package()
+        now correctly works on this conan package.
+
+        For dependent packages, if a package foo installs a file called "fooConfig.cmake" to
+        be used by cmake's find_package method and if it depends to a package bar,
+        normally this file will contain absolute paths to the bar package folder,
+        for example it will contain a line such as:
+
+            SET_TARGET_PROPERTIES(foo PROPERTIES
+                  INTERFACE_INCLUDE_DIRECTORIES
+                  "/home/developer/.conan/data/Bar/1.0.0/user/channel/id/include")
+
+        This function will replace such mentions to
+
+            SET_TARGET_PROPERTIES(foo PROPERTIES
+                  INTERFACE_INCLUDE_DIRECTORIES
+                  "${CONAN_BAR_ROOT}/include")
+
+        If the install() method of the CMake object in the conan file is used, this
+        function should be called _after_ that invocation. For example:
+
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure()
+                cmake.build()
+                cmake.install()
+                cmake.patch_config_paths()
+        """
+
+        if not self._conanfile.should_install:
+            return
+        if not self._conanfile.name:
+            raise ConanException("cmake.patch_config_paths() can't work without package name. "
+                                 "Define name in your recipe")
+        pf = package_folder
+        replstr = "${CONAN_%s_ROOT}" % self._conanfile.name.upper()
+        allwalk = chain(walk(self._conanfile.build_folder), walk(self._conanfile.package_folder))
+
+        # We don't want warnings printed because there is no replacement of the abs path.
+        # there could be MANY cmake files in the package and the normal thing is to not find
+        # the abs paths
+        _null_out = ConanOutput(StringIO())
+        for root, _, files in allwalk:
+            for f in files:
+                if f.endswith(".cmake") and not f.startswith("conan"):
+                    path = os.path.join(root, f)
+
+                    tools.replace_path_in_file(path, pf, replstr, strict=False,
+                                               output=_null_out)
+
+                    # patch paths of dependent packages that are found in any cmake files of the
+                    # current package
+                    for dep in self._conanfile.deps_cpp_info.deps:
+                        from_str = self._conanfile.deps_cpp_info[dep].rootpath
+                        dep_str = "${CONAN_%s_ROOT}" % dep.upper()
+                        ret = tools.replace_path_in_file(path, from_str, dep_str, strict=False,
+                                                         output=_null_out)
+                        if ret:
+                            self._conanfile.output.info("Patched paths for %s: %s to %s"
+                                                        % (dep, from_str, dep_str))
+
+    @staticmethod
+    def get_version():
+        try:
+            out, _ = subprocess.Popen(["cmake", "--version"], stdout=subprocess.PIPE).communicate()
+            version_line = decode_text(out).split('\n', 1)[0]
+            version_str = version_line.rsplit(' ', 1)[-1]
+            return Version(version_str)
+        except Exception as e:
+            raise ConanException("Error retrieving CMake version: '{}'".format(e))
+
+
+class CMake(BaseCMakeHelper):
 
     def __init__(self, conanfile, generator=None, cmake_system_name=True,
                  parallel=True, build_type=None, toolset=None, make_program=None,
@@ -297,92 +392,5 @@ class CMake(object):
         self.definitions.update(verbose_definition(value))
 
     def patch_config_paths(self):
-        """
-        changes references to the absolute path of the installed package and its dependencies in
-        exported cmake config files to the appropriate conan variable. This makes
-        most (sensible) cmake config files portable.
-
-        For example, if a package foo installs a file called "fooConfig.cmake" to
-        be used by cmake's find_package method, normally this file will contain
-        absolute paths to the installed package folder, for example it will contain
-        a line such as:
-
-            SET(Foo_INSTALL_DIR /home/developer/.conan/data/Foo/1.0.0/...)
-
-        This will cause cmake find_package() method to fail when someone else
-        installs the package via conan.
-
-        This function will replace such mentions to
-
-            SET(Foo_INSTALL_DIR ${CONAN_FOO_ROOT})
-
-        which is a variable that is set by conanbuildinfo.cmake, so that find_package()
-        now correctly works on this conan package.
-
-        For dependent packages, if a package foo installs a file called "fooConfig.cmake" to
-        be used by cmake's find_package method and if it depends to a package bar,
-        normally this file will contain absolute paths to the bar package folder,
-        for example it will contain a line such as:
-
-            SET_TARGET_PROPERTIES(foo PROPERTIES
-                  INTERFACE_INCLUDE_DIRECTORIES
-                  "/home/developer/.conan/data/Bar/1.0.0/user/channel/id/include")
-
-        This function will replace such mentions to
-
-            SET_TARGET_PROPERTIES(foo PROPERTIES
-                  INTERFACE_INCLUDE_DIRECTORIES
-                  "${CONAN_BAR_ROOT}/include")
-
-        If the install() method of the CMake object in the conan file is used, this
-        function should be called _after_ that invocation. For example:
-
-            def build(self):
-                cmake = CMake(self)
-                cmake.configure()
-                cmake.build()
-                cmake.install()
-                cmake.patch_config_paths()
-        """
-
-        if not self._conanfile.should_install:
-            return
-        if not self._conanfile.name:
-            raise ConanException("cmake.patch_config_paths() can't work without package name. "
-                                 "Define name in your recipe")
         pf = self.definitions.get(cmake_install_prefix_var_name)
-        replstr = "${CONAN_%s_ROOT}" % self._conanfile.name.upper()
-        allwalk = chain(walk(self._conanfile.build_folder), walk(self._conanfile.package_folder))
-
-        # We don't want warnings printed because there is no replacement of the abs path.
-        # there could be MANY cmake files in the package and the normal thing is to not find
-        # the abs paths
-        _null_out = ConanOutput(StringIO())
-        for root, _, files in allwalk:
-            for f in files:
-                if f.endswith(".cmake") and not f.startswith("conan"):
-                    path = os.path.join(root, f)
-
-                    tools.replace_path_in_file(path, pf, replstr, strict=False,
-                                               output=_null_out)
-
-                    # patch paths of dependent packages that are found in any cmake files of the
-                    # current package
-                    for dep in self._conanfile.deps_cpp_info.deps:
-                        from_str = self._conanfile.deps_cpp_info[dep].rootpath
-                        dep_str = "${CONAN_%s_ROOT}" % dep.upper()
-                        ret = tools.replace_path_in_file(path, from_str, dep_str, strict=False,
-                                                         output=_null_out)
-                        if ret:
-                            self._conanfile.output.info("Patched paths for %s: %s to %s"
-                                                        % (dep, from_str, dep_str))
-
-    @staticmethod
-    def get_version():
-        try:
-            out, _ = subprocess.Popen(["cmake", "--version"], stdout=subprocess.PIPE).communicate()
-            version_line = decode_text(out).split('\n', 1)[0]
-            version_str = version_line.rsplit(' ', 1)[-1]
-            return Version(version_str)
-        except Exception as e:
-            raise ConanException("Error retrieving CMake version: '{}'".format(e))
+        return super(CMake, self)._patch_config_paths(package_folder=pf)
