@@ -367,7 +367,8 @@ class CMakeCppInfoNameTest(unittest.TestCase):
         self.conanfile.initialize(settings, EnvValues())
         ref = ConanFileReference.loads("my_pkg/0.1@lasote/stables")
         cpp_info = CppInfo("dummy_root_folder1")
-        cpp_info.name = "MyPkG"
+        cpp_info.name = "MyUnusedPkGName"
+        cpp_info.names["cmake"] = "MyCustomCMakePkgName"
         self.conanfile.deps_cpp_info.update(cpp_info, ref.name)
         ref = ConanFileReference.loads("my_pkg2/0.1@lasote/stables")
         cpp_info = CppInfo("dummy_root_folder2")
@@ -382,9 +383,11 @@ class CMakeCppInfoNameTest(unittest.TestCase):
         content = content.replace("set(CONAN_DEPENDENCIES my_pkg my_pkg2)", "")
         self.assertNotIn("my_pkg", content)
         self.assertNotIn("MY_PKG", content)
-        self.assertIn('add_library(CONAN_PKG::MyPkG INTERFACE IMPORTED)', content)
+        self.assertNotIn("MyUnusedPkGName", content)
+        self.assertIn('add_library(CONAN_PKG::MyCustomCMakePkgName INTERFACE IMPORTED)', content)
         self.assertIn('add_library(CONAN_PKG::MyPkG2 INTERFACE IMPORTED)', content)
         self.assertNotIn('CONAN_PKG::my_pkg', content)
+        self.assertNotIn('CONAN_PKG::MyUnusedPkGName', content)
         self.assertNotIn('CONAN_PKG::my_pkg2', content)
 
     def cmake_multi_test(self):
@@ -394,42 +397,48 @@ class CMakeCppInfoNameTest(unittest.TestCase):
                       content["conanbuildinfo_debug.cmake"])
         self.assertNotIn("my_pkg", content["conanbuildinfo_multi.cmake"])
         self.assertNotIn("MY_PKG", content["conanbuildinfo_multi.cmake"])
-        self.assertIn('add_library(CONAN_PKG::MyPkG INTERFACE IMPORTED)',
+        self.assertNotIn("MyUnusedPkGName", content["conanbuildinfo_multi.cmake"])
+        self.assertIn('add_library(CONAN_PKG::MyCustomCMakePkgName INTERFACE IMPORTED)',
                       content["conanbuildinfo_multi.cmake"])
         self.assertIn('add_library(CONAN_PKG::MyPkG2 INTERFACE IMPORTED)',
                       content["conanbuildinfo_multi.cmake"])
         self.assertNotIn('CONAN_PKG::my_pkg', content["conanbuildinfo_multi.cmake"])
+        self.assertNotIn('CONAN_PKG::MyUnusedPkGName', content["conanbuildinfo_multi.cmake"])
         self.assertNotIn('CONAN_PKG::my_pkg2', content["conanbuildinfo_multi.cmake"])
 
     def cmake_find_package_test(self):
         generator = CMakeFindPackageGenerator(self.conanfile)
         content = generator.content
-        self.assertIn("FindMyPkG.cmake", content.keys())
+        self.assertIn("FindMyCustomCMakePkgName.cmake", content.keys())
         self.assertIn("FindMyPkG2.cmake", content.keys())
-        self.assertNotIn("my_pkg", content["FindMyPkG.cmake"])
-        self.assertNotIn("MY_PKG", content["FindMyPkG.cmake"])
+        self.assertNotIn("my_pkg", content["FindMyCustomCMakePkgName.cmake"])
+        self.assertNotIn("MY_PKG", content["FindMyCustomCMakePkgName.cmake"])
+        self.assertNotIn("MyUnusedPkGName", content["FindMyCustomCMakePkgName.cmake"])
         self.assertNotIn("my_pkg", content["FindMyPkG2.cmake"])
         self.assertNotIn("MY_PKG", content["FindMyPkG2.cmake"])
-        self.assertIn("add_library(MyPkG::MyPkG INTERFACE IMPORTED)", content["FindMyPkG.cmake"])
+        self.assertNotIn("MyUnusedPkGName", content["FindMyPkG2.cmake"])
+        self.assertIn("add_library(MyCustomCMakePkgName::MyCustomCMakePkgName INTERFACE IMPORTED)", content["FindMyCustomCMakePkgName.cmake"])
         self.assertIn("add_library(MyPkG2::MyPkG2 INTERFACE IMPORTED)", content["FindMyPkG2.cmake"])
-        self.assertIn("find_dependency(MyPkG REQUIRED)", content["FindMyPkG2.cmake"])
+        self.assertIn("find_dependency(MyCustomCMakePkgName REQUIRED)", content["FindMyPkG2.cmake"])
 
     def cmake_find_package_multi_test(self):
         generator = CMakeFindPackageMultiGenerator(self.conanfile)
         content = generator.content
-        six.assertCountEqual(self, ['MyPkG2Targets.cmake', 'MyPkGConfig.cmake', 'MyPkG2Config.cmake',
-                                    'MyPkGTargets.cmake', 'MyPkGTarget-debug.cmake',
-                                    'MyPkG2Target-debug.cmake', 'MyPkGConfigVersion.cmake',
-                                    'MyPkG2ConfigVersion.cmake'], content.keys())
-        self.assertNotIn("my_pkg", content["MyPkGConfig.cmake"])
-        self.assertNotIn("MY_PKG", content["MyPkGConfig.cmake"])
+        six.assertCountEqual(self, ['MyPkG2Targets.cmake', 'MyCustomCMakePkgNameConfig.cmake', 'MyPkG2Config.cmake',
+                                    'MyCustomCMakePkgNameTargets.cmake', 'MyCustomCMakePkgNameTarget-debug.cmake',
+                                    'MyPkG2ConfigVersion.cmake', 'MyCustomCMakePkgNameConfigVersion.cmake',
+                                    'MyPkG2Target-debug.cmake'], content.keys())
+        self.assertNotIn("my_pkg", content["MyCustomCMakePkgNameConfig.cmake"])
+        self.assertNotIn("MY_PKG", content["MyCustomCMakePkgNameConfig.cmake"])
+        self.assertNotIn("MyUnusedPkGName", content["MyCustomCMakePkgNameConfig.cmake"])
         self.assertNotIn("my_pkg", content["MyPkG2Config.cmake"])
         self.assertNotIn("MY_PKG", content["MyPkG2Config.cmake"])
-        self.assertIn("add_library(MyPkG::MyPkG INTERFACE IMPORTED)",
-                      content["MyPkGTargets.cmake"])
+        self.assertNotIn("MyUnusedPkGName", content["MyPkG2Config.cmake"])
+        self.assertIn("add_library(MyCustomCMakePkgName::MyCustomCMakePkgName INTERFACE IMPORTED)",
+                      content["MyCustomCMakePkgNameTargets.cmake"])
         self.assertIn("add_library(MyPkG2::MyPkG2 INTERFACE IMPORTED)",
                       content["MyPkG2Targets.cmake"])
-        self.assertIn("find_dependency(MyPkG REQUIRED NO_MODULE)", content["MyPkG2Config.cmake"])
+        self.assertIn("find_dependency(MyCustomCMakePkgName REQUIRED NO_MODULE)", content["MyPkG2Config.cmake"])
 
 
 class CMakeBuildModulesTest(unittest.TestCase):

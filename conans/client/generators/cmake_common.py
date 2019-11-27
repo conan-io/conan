@@ -189,13 +189,13 @@ def generate_targets_section(dependencies):
                    '    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${CONAN_CMD_SHARED_LINKER_FLAGS}")\n')
     dependencies_dict = {name: dep_info for name, dep_info in dependencies}
     for _, dep_info in dependencies:
-        dep_name = dep_info.name
-        use_deps = ["CONAN_PKG::%s" % dependencies_dict[d].name for d in dep_info.public_deps]
+        dep_name = dep_info.get_name("cmake")
+        use_deps = ["CONAN_PKG::%s" % dependencies_dict[d].get_name('cmake') for d in dep_info.public_deps]
         deps = "" if not use_deps else " ".join(use_deps)
         section.append(_target_template.format(name="CONAN_PKG::%s" % dep_name, deps=deps,
                                                uname=dep_name.upper(), pkg_name=dep_name))
 
-    all_targets = " ".join(["CONAN_PKG::%s" % dep_info.name for _, dep_info in dependencies])
+    all_targets = " ".join(["CONAN_PKG::%s" % dep_info.get_name('cmake') for _, dep_info in dependencies])
     section.append('    set(CONAN_TARGETS %s)\n' % all_targets)
     section.append('endmacro()\n')
     return section
@@ -614,7 +614,7 @@ macro(conan_find_apple_frameworks FRAMEWORKS_FOUND FRAMEWORKS)
                 set(CONAN_FRAMEWORK_DIRS ${CONAN_FRAMEWORK_DIRS_MINSIZEREL} ${CONAN_FRAMEWORK_DIRS})
             endif()
         endif()
-        
+
         foreach(_FRAMEWORK ${FRAMEWORKS})
             # https://cmake.org/pipermail/cmake-developers/2017-August/030199.html
             find_library(CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND NAME ${_FRAMEWORK} PATHS ${CONAN_FRAMEWORK_DIRS})
