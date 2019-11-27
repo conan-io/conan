@@ -122,7 +122,6 @@ class GraphLockVersionRangeTest(unittest.TestCase):
 
     def _check_lock(self, ref_b, rev_b=""):
         lock_file = self.client.load(LOCKFILE)
-        print lock_file
         lock_file_json = json.loads(lock_file)
         self.assertEqual(2, len(lock_file_json["graph_lock"]["nodes"]))
         self.assertIn("PkgA/0.1@user/channel#fa090239f8ba41ad559f8e934494ee2a:"
