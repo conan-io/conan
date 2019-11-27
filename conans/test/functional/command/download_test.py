@@ -244,6 +244,20 @@ class Pkg(ConanFile):
         search_result = client.search("pkg/1.0@user/channel --revisions")[0]
         self.assertIn(pref.ref.revision, search_result["revision"])
 
+        ref = ConanFileReference.loads("pkg/1.0@")
+        servers = {"default": TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")],
+                                         users={"user": "password"})}
+        client = TurboTestClient(servers=servers, revisions_enabled=True,
+                                 users={"default": [("user", "password")]})
+        pref = client.create(ref, conanfile=GenConanfile())
+        client.run("upload * --all --confirm")
+        client.run("remove * -f")
+        client.run("download pkg/1.0@#{}".format(pref.ref.revision))
+        self.assertIn("pkg/1.0: Package installed {}".format(pref.id), client.out)
+        search_result = client.search("pkg/1.0@ --revisions")[0]
+        self.assertIn(pref.ref.revision, search_result["revision"])
+
+
     def download_revs_enabled_with_prev_test(self):
         # https://github.com/conan-io/conan/issues/6106
         ref = ConanFileReference.loads("pkg/1.0@user/channel")
