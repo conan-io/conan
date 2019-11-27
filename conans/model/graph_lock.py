@@ -140,7 +140,8 @@ class GraphLock(object):
 
     @property
     def initial_counter(self):
-        return sorted(self._nodes.keys())[-1]
+        # IDs are string, we need to compute the maximum
+        return max(int(x) for x in self._nodes.keys())
 
     def root_node_ref(self):
         """ obtain the node in the graph that is not depended by anyone else,
@@ -165,7 +166,6 @@ class GraphLock(object):
         """
         graph_lock = GraphLock()
         for id_, node in data["nodes"].items():
-            id_ = int(id_)
             graph_lock._nodes[id_] = GraphLockNode.from_dict(node)
 
         return graph_lock

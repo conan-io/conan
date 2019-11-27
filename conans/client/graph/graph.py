@@ -197,7 +197,7 @@ class DepsGraph(object):
     def add_node(self, node):
         if node.id is None:
             self._node_counter += 1
-            node.id = self._node_counter
+            node.id = str(self._node_counter)
         if not self.nodes:
             self.root = node
         self.nodes.add(node)
