@@ -175,7 +175,7 @@ class AdjustAutoTestCase(unittest.TestCase):
 
         add_executable(app src/app.cpp)
 
-        get_directory_property(_COMPILE_DEFINITONS DIRECTORY ${CMAKE_SOURCE_DIR} COMPILE_DEFINITIONS )
+        get_directory_property(_COMPILE_DEFINITONS DIRECTORY ${CMAKE_SOURCE_DIR} COMPILE_DEFINITIONS)
         message(">> COMPILE_DEFINITONS: ${_COMPILE_DEFINITONS}")
     """)
 

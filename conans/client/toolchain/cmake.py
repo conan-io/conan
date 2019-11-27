@@ -2,14 +2,34 @@
 
 import os
 import textwrap
+from collections import OrderedDict, defaultdict
+
 from jinja2 import Template
 
-from conans.client.build.cmake_flags import get_generator, get_generator_platform, CMakeDefinitionsBuilder, get_toolset
+from conans.client.build.cmake_flags import get_generator, get_generator_platform, \
+    CMakeDefinitionsBuilder, get_toolset
 
 
 # https://stackoverflow.com/questions/30503631/cmake-in-which-order-are-files-parsed-cache-toolchain-etc
 # https://cmake.org/cmake/help/v3.6/manual/cmake-toolchains.7.html
 # https://github.com/microsoft/vcpkg/tree/master/scripts/buildsystems
+
+
+class Definitions(OrderedDict):
+    def __init__(self):
+        self._configuration_types = {}
+
+    def __getattr__(self, item):
+        return self._configuration_types.setdefault(item, dict())
+
+    @property
+    def configuration_types(self):
+        # Reverse index for the configuration_types variables
+        ret = defaultdict(list)
+        for conf, definitions in self._configuration_types.items():
+            for k, v in definitions.items():
+                ret[k].append((conf, v))
+        return ret
 
 
 class CMakeToolchain(object):
@@ -90,6 +110,18 @@ class CMakeToolchain(object):
             set(CMAKE_BUILD_TYPE "{{ CMAKE_BUILD_TYPE }}" CACHE STRING "Choose the type of build." FORCE)
         endif()
         unset(_GENERATOR_IS_MULTI_CONFIG)
+        
+        # Variables scoped to a configuration
+        {%- for it, values in configuration_types_definitions.items() -%}
+            {%- set generator_expression = namespace(str='') %}
+            {%- for conf, value in values -%}
+                {%- set generator_expression.str = generator_expression.str + '$<IF:$<CONFIG:' + conf + '>,"' + value|string + '",' %}
+                {#- {%- if loop.last %}{% set generator_expression.str = generator_expression.str + '"' + it + '-NOTFOUND"' %}{% endif %} -#}
+                {%- if loop.last %}{% set generator_expression.str = generator_expression.str + '""' %}{% endif %}
+            {%- endfor -%}
+            {% for i in range(values|count) %}{%- set generator_expression.str = generator_expression.str + '>' %}{% endfor %}
+        set({{ it }} {{ generator_expression.str }})
+        {%- endfor %}
 
         # Adjustments that depends on the build_type
         conan_set_vs_runtime()
@@ -136,7 +168,8 @@ class CMakeToolchain(object):
                                           set_cmake_flags=False,
                                           forced_build_type=build_type,
                                           output=self._conanfile.output)
-        self.definitions = builder.get_definitions()
+        self.definitions = Definitions()
+        self.definitions.update(builder.get_definitions())
 
         # Build type game
         settings_build_type = self._conanfile.settings.get_safe("build_type")
@@ -173,6 +206,7 @@ class CMakeToolchain(object):
         with open(conan_project_include_cmake, "w") as f:
             t = Template(self._template_project_include)
             content = t.render(conan_adjustements_cmake=self.conan_adjustements.replace("\\", "/"),
+                               configuration_types_definitions=self.definitions.configuration_types,
                                **self._context)
             f.write(content)
 
