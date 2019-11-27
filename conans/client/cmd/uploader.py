@@ -141,6 +141,9 @@ class CmdUpload(object):
 
         for ref in refs:
             metadata = self._cache.package_layout(ref).load_metadata()
+            if ref.revision and ref.revision != metadata.recipe.revision:
+                raise ConanException("Recipe revision {} does not match with the one stored in the "
+                                     "cache {}".format(ref.revision, metadata.recipe.revision))
             ref = ref.copy_with_rev(metadata.recipe.revision)
             remote = remotes.selected
             if remote:
