@@ -9,7 +9,8 @@ from conans.client import tools
 from conans.client.build import defs_to_string, join_arguments
 from conans.client.build.cmake_flags import cmake_in_local_cache_var_name
 from conans.client.build.cmake_flags import in_local_cache_definition
-from conans.client.build.cmake_flags import is_multi_configuration, get_generator
+from conans.client.build.cmake_flags import is_multi_configuration, get_generator, \
+    verbose_definition, verbose_definition_name
 from conans.client.output import ConanOutput
 from conans.client.toolchain.cmake import CMakeToolchain
 from conans.client.tools.oss import cpu_count, args_to_string
@@ -24,8 +25,8 @@ def _validate_recipe(conanfile):
     # Toolchain is required to use the CMakeToolchainBuildHelper
     toolchain_method = getattr(conanfile, "toolchain", None)
     if not toolchain_method or not callable(toolchain_method):
-        raise ConanException("Using 'CMakeToolchainBuildHelper' helper, requires 'toolchain()' method"
-                             " to be defined.")
+        raise ConanException("Using 'CMakeToolchainBuildHelper' helper, requires 'toolchain()'"
+                             " method to be defined.")
 
     return  # TODO: I do want to check this, but then I'd need to rewrite some tests :S
     forbidden_generators = ["cmake", "cmake_multi", "cmake_paths"]
@@ -66,7 +67,7 @@ class CMakeToolchainBuildHelper(object):
             raise ConanException("First argument of CMake() has to be ConanFile. Use CMake(self)")
         _validate_recipe(conanfile)
 
-        #assert generator is None, "'generator' is handled by the toolchain"
+        # assert generator is None, "'generator' is handled by the toolchain"
         generator = generator or get_generator(conanfile.settings)
         self._is_multiconfiguration = is_multi_configuration(generator)
         self._build_flags = _compute_build_flags(conanfile, generator, parallel, msbuild_verbosity)
@@ -76,10 +77,11 @@ class CMakeToolchainBuildHelper(object):
         assert toolset is None, "'toolset' is handled by the toolchain"
         assert make_program is None, "'make_program' is handled by the toolchain"
         assert set_cmake_flags is None, "'set_cmake_flags' is handled by the toolchain"
-        assert cmake_program is None, "'cmake_program' is handled by the environment"  # FIXME: Not yet
+        assert cmake_program is None, "'cmake_program' handled by the environment"  # FIXME: Not yet
         assert generator_platform is None, "'generator_platform' is handled by the toolchain"
         if not self._is_multiconfiguration:
-            assert build_type is None, "'build_type' is handled by the toolchain in not-multi_config generators"
+            assert build_type is None, "'build_type' is handled by the toolchain" \
+                                       " in not-multi_config generators"
 
         # Store a reference to useful data
         self._conanfile = conanfile
@@ -91,8 +93,6 @@ class CMakeToolchainBuildHelper(object):
 
         self._definitions = {"CONAN_EXPORTED": "1"}
         self._definitions.update(in_local_cache_definition(self._conanfile.in_local_cache))
-
-        self.build_type = self._build_type
 
         self._cmake_program = "cmake"  # Path to CMake should be handled by environment
 
@@ -110,11 +110,9 @@ class CMakeToolchainBuildHelper(object):
 
     @build_type.setter
     def build_type(self, build_type):
-        settings_build_type = self._settings.get_safe("build_type")
-        if build_type != settings_build_type:
-            self._conanfile.output.warn("Forced CMake build type ('%s') different from the settings"
-                                        " build type ('%s')" % (build_type, settings_build_type))
-        self._build_type = build_type
+        raise ConanException("Cannot change 'build_type' to CMake build helper when using a"
+                             " toolchain. Assign it in the constructor or let Conan use the"
+                             " one declared in the settings")
 
     @property
     def in_local_cache(self):
@@ -156,102 +154,82 @@ class CMakeToolchainBuildHelper(object):
 
     @property
     def verbose(self):
-        raise ConanException("Verbosity is assigned by the toolchain and it is not known in the"
-                             " CMakeToolchainBuildHelper helper")
+        try:
+            verbose = self._definitions[verbose_definition_name]
+            return get_bool_from_text(str(verbose))
+        except KeyError:
+            return False
 
-    def _get_dirs(self, source_folder, build_folder, source_dir, build_dir, cache_build_folder):
-        if (source_folder or build_folder) and (source_dir or build_dir):
-            raise ConanException("Use 'build_folder'/'source_folder' arguments")
+    @verbose.setter
+    def verbose(self, value):
+        self._definitions.update(verbose_definition(value))
+
+    def _get_dirs(self, source_folder, build_folder, cache_build_folder):
 
         def get_dir(folder, origin):
             if folder:
-                if os.path.isabs(folder):
-                    return folder
                 return os.path.join(origin, folder)
             return origin
 
-        if source_dir or build_dir:  # OLD MODE
-            build_ret = build_dir or self.build_dir or self._conanfile.build_folder
-            source_ret = source_dir or self._conanfile.source_folder
-        else:
-            build_ret = get_dir(build_folder, self._conanfile.build_folder)
-            source_ret = get_dir(source_folder, self._conanfile.source_folder)
+        build_ret = get_dir(build_folder, self._conanfile.build_folder)
+        source_ret = get_dir(source_folder, self._conanfile.source_folder)
 
         if self._conanfile.in_local_cache and cache_build_folder:
             build_ret = get_dir(cache_build_folder, self._conanfile.build_folder)
 
         return source_ret, build_ret
 
-    def _run(self, command):
-        self._conanfile.run(command)
-
-    def _get_install_prefix(self):
-        if self._conanfile.package_folder:
-            return self._conanfile.package_folder.replace("\\", "/")
-        return None
-
     def configure(self, args=None, defs=None, source_dir=None, build_dir=None,
                   source_folder=None, build_folder=None, cache_build_folder=None,
                   pkg_config_paths=None):
         assert args is None, "All the 'args' should be provided in the toolchain"
         assert defs is None, "All the 'defs' should be provided in the toolchain"
+        assert source_dir is None, "'source_dir' is deprecated. Use 'source_folder'"
+        assert build_dir is None, "'build_dir' is deprecated. Use 'source_folder'"
         assert pkg_config_paths is None, "'pkg_config_paths' should be provided in the toolchain"  # TODO: environment?
 
-        # TODO: Deprecate source_dir and build_dir in favor of xxx_folder
         if not self._conanfile.should_configure:
             return
 
         defs = {"CMAKE_TOOLCHAIN_FILE": CMakeToolchain.filename}
-        configure_command = self._configure_command(self._cmake_program, None, defs, source_dir,
-                                                    build_dir, source_folder, build_folder,
+        configure_command = self._configure_command(defs, source_folder, build_folder,
                                                     cache_build_folder)
 
         if self._is_windows_mingw:
             with tools.remove_from_path("sh"):
-                self._run(configure_command)
+                self._conanfile.run(configure_command)
         else:
-            self._run(configure_command)
+            self._conanfile.run(configure_command)
 
-    def _build(self, args=None, build_dir=None, target=None):
-        assert args is None, "Do not use 'args' here, they won't be handled by the toolchain"
-
-        build_command = self._build_command(self._cmake_program, forward_args=self._build_flags,
-                                            args=None, build_dir=build_dir, target=target)
-        self._run(build_command)
-
-    def _configure_command(self, cmake_program, args=None, defs=None, source_dir=None,
-                           build_dir=None, source_folder=None, build_folder=None,
+    def _configure_command(self, defs, source_folder=None, build_folder=None,
                            cache_build_folder=None):
-        args = args or []
-        defs = defs or {}
-        source_dir, self.build_dir = self._get_dirs(source_folder, build_folder,
-                                                    source_dir, build_dir,
-                                                    cache_build_folder)
+        source_dir, self.build_dir = self._get_dirs(source_folder, build_folder, cache_build_folder)
         mkdir(self.build_dir)
         arg_list = join_arguments([
             self.command_line,
-            args_to_string(args),
             defs_to_string(defs),
             args_to_string([source_dir])
         ])
 
-        command = "cd %s && %s %s" % (args_to_string([self.build_dir]), cmake_program, arg_list)
+        command = "cd %s && %s %s" % (args_to_string([self.build_dir]),
+                                      self._cmake_program, arg_list)
         return command
 
-    def _build_command(self, cmake_program, forward_args, args=None, build_dir=None, target=None):
-        args = args or []
-        build_dir = build_dir or self.build_dir or self._conanfile.build_folder
-        if target is not None:
-            args = ["--target", target] + args
+    def _build(self, args=None, build_dir=None, target=None):
+        assert args is None, "Do not use 'args' here, they won't be handled by the toolchain"
 
-        if forward_args:
-            if '--' not in args:
-                args.append('--')
-            args += forward_args
+        build_dir = build_dir or self.build_dir or self._conanfile.build_folder
+
+        args = []
+        if target is not None:
+            args = ["--target", target]
+
+        if self._build_flags:
+            args += ['--'] + self._build_flags
 
         arg_list = [args_to_string([build_dir]), self.build_config, args_to_string(args)]
-        command = "%s --build %s" % (cmake_program, join_arguments(arg_list))
-        return command
+        command = "%s --build %s" % (self._cmake_program, join_arguments(arg_list))
+        self._conanfile.run(command)
 
     def build(self, args=None, build_dir=None, target=None):
         if not self._conanfile.should_build:
@@ -275,6 +253,11 @@ class CMakeToolchainBuildHelper(object):
             env['CTEST_PARALLEL_LEVEL'] = str(cpu_count(self._conanfile.output))
         with tools.environment_append(env):
             self._build(args=args, build_dir=build_dir, target=target)
+
+    def _get_install_prefix(self):
+        if self._conanfile.package_folder:
+            return self._conanfile.package_folder.replace("\\", "/")
+        return None
 
     def patch_config_paths(self):
         """
