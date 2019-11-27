@@ -124,6 +124,9 @@ class CmdUpload(object):
         if package_id or check_valid_ref(reference_or_pattern):
             # Upload package
             ref = ConanFileReference.loads(reference_or_pattern)
+            if ref.revision and not self._cache.config.revisions_enabled:
+                raise ConanException("Revisions not enabled in the client, specify a "
+                                     "reference without revision")
             refs = [ref, ]
             confirm = True
         else:
