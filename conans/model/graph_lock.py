@@ -1,5 +1,6 @@
 import json
 import os
+from collections import OrderedDict
 
 from conans.client.graph.graph import RECIPE_VIRTUAL, RECIPE_CONSUMER,\
     BINARY_BUILD
@@ -137,6 +138,10 @@ class GraphLock(object):
                                            requires, node.path)
                 self._nodes[node.id] = graph_node
 
+    @property
+    def initial_counter(self):
+        return sorted(self._nodes.keys())[-1]
+
     def root_node_ref(self):
         """ obtain the node in the graph that is not depended by anyone else,
         i.e. the root or downstream consumer
@@ -160,6 +165,7 @@ class GraphLock(object):
         """
         graph_lock = GraphLock()
         for id_, node in data["nodes"].items():
+            id_ = int(id_)
             graph_lock._nodes[id_] = GraphLockNode.from_dict(node)
 
         return graph_lock
@@ -169,8 +175,8 @@ class GraphLock(object):
         that can be converted to json
         """
         result = {}
-        nodes = {}
-        for id_, node in self._nodes.items():
+        nodes = OrderedDict()  # Serialized ordered, so lockfiles are more deterministic
+        for id_, node in sorted(self._nodes.items()):
             nodes[id_] = node.as_dict()
         result["nodes"] = nodes
         return result
