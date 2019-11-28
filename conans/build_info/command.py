@@ -75,31 +75,33 @@ def runv2():
                                           help="Command to generate a build info json from a "
                                                "lockfile")
     parser_create.add_argument("build_info_file", type=str,
-                               help="build info json for output")
-    parser_create.add_argument("--lockfile", type=str, required=True, help="input lockfile")
-    parser_create.add_argument("--multi-module", nargs="?", default=True,
-                               help="if enabled, the module_id will be identified by the "
+                               help="Build info json for output")
+    parser_create.add_argument("--lockfile", type=str, required=True, help="Input lockfile")
+    parser_create.add_argument("--multi-module", default=False, action="store_true",
+                               help="If enabled, the module_id will be identified by the "
                                     "recipe reference plus the package ID")
-    parser_create.add_argument("--skip-env", nargs="?", default=True,
-                               help="capture or not the environment")
-    parser_create.add_argument("--user", type=str, nargs="?", default=None, help="user")
-    parser_create.add_argument("--password", type=str, nargs="?", default=None, help="password")
-    parser_create.add_argument("--apikey", type=str, nargs="?", default=None, help="apikey")
+    parser_create.add_argument("--skip-env", default=False, action="store_true",
+                               help="Capture or not the environment")
+    parser_create.add_argument("--user", type=str, nargs="?", default=None, help="remote user")
+    parser_create.add_argument("--password", type=str, nargs="?", default=None, help="remote user "
+                                                                                     "password")
+    parser_create.add_argument("--apikey", type=str, nargs="?", default=None, help="remote apikey")
 
     parser_update = subparsers.add_parser("update",
                                           help="Command to update a build info json with another one")
     parser_update.add_argument("buildinfo", nargs="+", help="buildinfo files to merge")
     parser_update.add_argument("--output-file", default="buildinfo.json",
-                               help="path to generated build info file")
+                               help="Path to generated build info file")
 
     parser_publish = subparsers.add_parser("publish",
                                            help="Command to publish the build info to Artifactory")
     parser_publish.add_argument("buildinfo", type=str,
                                 help="build info to upload")
-    parser_publish.add_argument("--url", type=str, required=True, help="url")
-    parser_publish.add_argument("--user", type=str, nargs="?", default=None, help="user")
-    parser_publish.add_argument("--password", type=str, nargs="?", default=None, help="password")
-    parser_publish.add_argument("--apikey", type=str, nargs="?", default=None, help="apikey")
+    parser_publish.add_argument("--url", type=str, required=True, help="remote url")
+    parser_publish.add_argument("--user", type=str, nargs="?", default=None, help="remote user")
+    parser_publish.add_argument("--password", type=str, nargs="?", default=None, help="remote user "
+                                                                                      "password")
+    parser_publish.add_argument("--apikey", type=str, nargs="?", default=None, help="remote apikey")
 
     def check_credential_arguments():
         if args.user and args.apikey:
