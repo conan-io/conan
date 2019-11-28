@@ -597,4 +597,5 @@ def compress_files(files, symlinks, name, dest_dir, output=None):
 
     duration = time.time() - t1
     log_compressed_files(files, duration, tgz_path)
+
     return tgz_path
