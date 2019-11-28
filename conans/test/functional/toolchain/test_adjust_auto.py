@@ -594,7 +594,8 @@ class AdjustAutoTestCase(unittest.TestCase):
 
         self.assertEqual("/machine:{}".format(arch_str), cmake_cache["CMAKE_SHARED_LINKER_FLAGS:STRING"])
         self.assertEqual("/machine:{}".format(arch_str), cmake_cache["CMAKE_EXE_LINKER_FLAGS:STRING"])
-        self.assertEqual(generator_str, cmake_cache["CMAKE_GENERATOR_PLATFORM:STRING"])
+        type_str = "STRING" if self.use_toolchain else "INTERNAL"
+        self.assertEqual(generator_str, cmake_cache["CMAKE_GENERATOR_PLATFORM:" + type_str])
 
     @parameterized.expand([("x86_64",), ("x86",), ])
     @unittest.skipUnless(platform.system() == "Linux", "Only windows")
