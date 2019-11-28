@@ -10,7 +10,6 @@ import sys
 import tempfile
 import threading
 import unittest
-import textwrap
 import uuid
 from collections import Counter, OrderedDict
 from contextlib import contextmanager
