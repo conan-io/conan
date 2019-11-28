@@ -169,7 +169,7 @@ class ValidMinCppstdTests(unittest.TestCase):
         """ GNU extensions has no effect on Windows for valid_min_cppstd
         """
         with mock.patch("platform.system", mock.MagicMock(return_value="Windows")):
-            conanfile = self._create_conanfile("gcc", "9", "Linux", "gnu17", "libstdc++")
+            conanfile = self._create_conanfile("gcc", "9", "Windows", "gnu17", "libstdc++")
             self.assertTrue(valid_min_cppstd(conanfile, cppstd, True))
 
             conanfile.settings.values["compiler.cppstd"] = "17"
@@ -190,3 +190,14 @@ class ValidMinCppstdTests(unittest.TestCase):
             with mock.patch.object(OSInfo, '_get_linux_distro_info'):
                 with mock.patch("conans.client.tools.settings.cppstd_flag", return_value="1z"):
                     self.assertFalse(valid_min_cppstd(conanfile, "20", True))
+
+    @parameterized.expand(["98", "11", "14", "17"])
+    def test_min_cppstd_mingw_windows(self, cppstd):
+        """ GNU extensions has no effect on Windows when running MingW and cross-building for Linux
+        """
+        with mock.patch("platform.system", mock.MagicMock(return_value="Windows")):
+            conanfile = self._create_conanfile("gcc", "9", "Linux", "gnu17", "libstdc++")
+            self.assertTrue(valid_min_cppstd(conanfile, cppstd, True))
+
+            conanfile.settings.values["compiler.cppstd"] = "17"
+            self.assertTrue(valid_min_cppstd(conanfile, cppstd, True))

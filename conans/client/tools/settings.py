@@ -31,8 +31,14 @@ def check_min_cppstd(conanfile, cppstd, gnu_extensions=False):
         rhs = add_millennium(extract_cpp_version(rhs))
         return lhs < rhs
 
+    def is_linux(conanfile):
+        os = conanfile.settings.get_safe("os_build")
+        if os is not None:
+            return os == "Linux"
+        return OSInfo().is_linux
+
     current_cppstd = cppstd_from_settings(conanfile.settings)
-    if current_cppstd and gnu_extensions and "gnu" not in current_cppstd and OSInfo().is_linux:
+    if current_cppstd and gnu_extensions and "gnu" not in current_cppstd and is_linux(conanfile):
         raise ConanInvalidConfiguration("Current cppstd ({}) does not have GNU extensions, which is"
                                         " required on Linux platform.".format(current_cppstd))
     elif current_cppstd and less_than(current_cppstd, cppstd):
