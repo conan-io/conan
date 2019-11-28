@@ -21,7 +21,7 @@ class JsonOutputTest(unittest.TestCase):
         files = cpp_hello_conan_files("CC", "1.0", build=False)
         self.client.save(files, clean_first=True)
         self.client.run("create . private_user/channel --json=myfile.json")
-        my_json = json.loads(load(os.path.join(self.client.current_folder, "myfile.json")))
+        my_json = json.loads(self.client.load("myfile.json"))
         self.assertFalse(my_json["error"])
         tmp = ConanFileReference.loads(my_json["installed"][0]["recipe"]["id"])
         self.assertEqual(str(tmp), "CC/1.0@private_user/channel")
@@ -38,7 +38,7 @@ class JsonOutputTest(unittest.TestCase):
         self.client.run("upload CC/1.0@private_user/channel -c")
         self.client.run("remove '*' -f")
         self.client.run("install CC/1.0@private_user/channel --json=myfile.json --build missing ")
-        my_json = json.loads(load(os.path.join(self.client.current_folder, "myfile.json")))
+        my_json = json.loads(self.client.load("myfile.json"))
 
         the_time_str = my_json["installed"][0]["recipe"]["time"]
         self.assertIn("T", the_time_str)  # Weak validation of the ISO 8601
@@ -54,7 +54,7 @@ class JsonOutputTest(unittest.TestCase):
         self.client.run("upload CC/1.0@private_user/channel --all -c")
         self.client.run("remove '*' -f")
         self.client.run("install CC/1.0@private_user/channel --json=myfile.json")
-        my_json = json.loads(load(os.path.join(self.client.current_folder, "myfile.json")))
+        my_json = json.loads(self.client.load("myfile.json"))
 
         self.assertFalse(my_json["error"])
         self.assertEqual(my_json["installed"][0]["recipe"]["id"], "CC/1.0@private_user/channel")
@@ -67,7 +67,7 @@ class JsonOutputTest(unittest.TestCase):
         # Force build
         self.client.run("remove '*' -f")
         self.client.run("install CC/1.0@private_user/channel --json=myfile.json --build")
-        my_json = json.loads(load(os.path.join(self.client.current_folder, "myfile.json")))
+        my_json = json.loads(self.client.load("myfile.json"))
 
         self.assertFalse(my_json["error"])
         self.assertEqual(my_json["installed"][0]["recipe"]["id"], "CC/1.0@private_user/channel")
@@ -81,7 +81,7 @@ class JsonOutputTest(unittest.TestCase):
 
         # Missing recipe
         self.client.run("install CC/1.0@private_user/channel --json=myfile.json", assert_error=True)
-        my_json = json.loads(load(os.path.join(self.client.current_folder, "myfile.json")))
+        my_json = json.loads(self.client.load("myfile.json"))
         self.assertTrue(my_json["error"])
         self.assertEqual(len(my_json["installed"]), 1)
         self.assertFalse(my_json["installed"][0]["recipe"]["downloaded"])
@@ -96,7 +96,7 @@ class JsonOutputTest(unittest.TestCase):
         self.client.run("upload CC/1.0@private_user/channel -c")
         self.client.run("remove '*' -f")
         self.client.run("install CC/1.0@private_user/channel --json=myfile.json", assert_error=True)
-        my_json = json.loads(load(os.path.join(self.client.current_folder, "myfile.json")))
+        my_json = json.loads(self.client.load("myfile.json"))
 
         self.assertTrue(my_json["error"])
         self.assertEqual(len(my_json["installed"]), 1)
@@ -118,7 +118,7 @@ class JsonOutputTest(unittest.TestCase):
 
         self.client.save(files, clean_first=True)
         self.client.run("create . private_user/channel --json=myfile.json ", assert_error=True)
-        my_json = json.loads(load(os.path.join(self.client.current_folder, "myfile.json")))
+        my_json = json.loads(self.client.load("myfile.json"))
         self.assertTrue(my_json["error"])
         self.assertEqual(my_json["installed"][0]["packages"][0]["error"]["type"], "building")
         self.assertIsNone(my_json["installed"][0]["packages"][0]["error"]["remote"])
@@ -162,7 +162,7 @@ AA*: CC/1.0@private_user/channel
                                       deps=["AA/1.0@private_user/channel"], build=False)
         self.client.save(files, clean_first=True)
         self.client.run("install . --profile mybr --json=myfile.json --build AA --build BB")
-        my_json = load(os.path.join(self.client.current_folder, "myfile.json"))
+        my_json = self.client.load("myfile.json")
         my_json = json.loads(my_json)
 
         self.assertTrue(my_json["installed"][0]["recipe"]["dependency"])
@@ -193,7 +193,7 @@ AA*: CC/1.0@private_user/channel
             """)
         self.client.save({'conanfile.py': conanfile})
         self.client.run("create . name/version@user/channel --json=myfile.json")
-        my_json = load(os.path.join(self.client.current_folder, "myfile.json"))
+        my_json = self.client.load("myfile.json")
         my_json = json.loads(my_json)
 
         # Nodes with cpp_info

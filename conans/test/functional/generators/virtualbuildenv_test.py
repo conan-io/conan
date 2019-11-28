@@ -21,7 +21,7 @@ class TestConan(ConanFile):
         client.save({"conanfile.py": conanfile})
         client.run('install . -g virtualbuildenv -s os=Windows -s compiler="Visual Studio"'
                    ' -s compiler.runtime=MD -s compiler.version=15')
-        bat = load(os.path.join(client.current_folder, "activate_build.bat"))
+        bat = client.load("activate_build.bat")
         self.assertIn("SET UseEnv=True", bat)
         self.assertIn('SET CL=-MD -DNDEBUG -O2 -Ob2 %CL%', bat)
 
