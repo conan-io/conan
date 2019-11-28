@@ -18,6 +18,7 @@ from conans.client.build.cmake_flags import get_generator, get_generator_platfor
 class Definitions(OrderedDict):
     def __init__(self):
         self._configuration_types = {}
+        super(Definitions, self).__init__()
 
     def __getattr__(self, item):
         return self._configuration_types.setdefault(item, dict())
