@@ -414,7 +414,8 @@ class CMakeCppInfoNameTest(unittest.TestCase):
         content = generator.content
         six.assertCountEqual(self, ['MyPkG2Targets.cmake', 'MyPkGConfig.cmake', 'MyPkG2Config.cmake',
                                     'MyPkGTargets.cmake', 'MyPkGTarget-debug.cmake',
-                                    'MyPkG2Target-debug.cmake'], content.keys())
+                                    'MyPkG2Target-debug.cmake', 'MyPkGConfigVersion.cmake',
+                                    'MyPkG2ConfigVersion.cmake'], content.keys())
         self.assertNotIn("my_pkg", content["MyPkGConfig.cmake"])
         self.assertNotIn("MY_PKG", content["MyPkGConfig.cmake"])
         self.assertNotIn("my_pkg", content["MyPkG2Config.cmake"])
