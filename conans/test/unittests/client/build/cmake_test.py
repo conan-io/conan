@@ -10,7 +10,7 @@ import six
 from parameterized.parameterized import parameterized
 
 from conans.client import tools
-from conans.client.build.cmake import CMake
+from conans.client.build.cmake import CMakeBuildHelper
 from conans.client.build.cmake_flags import cmake_in_local_cache_var_name
 from conans.client.conf import default_settings_yml
 from conans.client.tools.oss import cpu_count
@@ -58,7 +58,7 @@ class CMakeTest(unittest.TestCase):
             save(os.path.join(folder, "file3.cmake"), msg)
             save(os.path.join(folder, "sub", "file3.cmake"), msg)
 
-        cmake = CMake(conanfile, generator="Unix Makefiles")
+        cmake = CMakeBuildHelper(conanfile, generator="Unix Makefiles")
         cmake.patch_config_paths()
         for folder in (conanfile.build_folder, conanfile.package_folder):
             self.assertEqual("Nothing", load(os.path.join(folder, "file1.cmake")))
@@ -95,7 +95,7 @@ class CMakeTest(unittest.TestCase):
             save(os.path.join(folder, "file3.cmake"), msg)
             save(os.path.join(folder, "sub", "file3.cmake"), msg)
 
-        cmake = CMake(conanfile, generator="Unix Makefiles")
+        cmake = CMakeBuildHelper(conanfile, generator="Unix Makefiles")
         cmake.patch_config_paths()
         for folder in (conanfile.build_folder, conanfile.package_folder):
             self.assertEqual("Nothing", load(os.path.join(folder, "file1.cmake")))
@@ -113,7 +113,7 @@ class CMakeTest(unittest.TestCase):
         conanfile.should_build = False
         conanfile.should_install = False
         conanfile.should_test = False
-        cmake = CMake(conanfile, generator="Unix Makefiles")
+        cmake = CMakeBuildHelper(conanfile, generator="Unix Makefiles")
         cmake.configure()
         self.assertIsNone(conanfile.command)
         cmake.build()
@@ -133,7 +133,7 @@ class CMakeTest(unittest.TestCase):
         conanfile.should_install = False
         conanfile.should_test = True
         conanfile.package_folder = temp_folder()
-        cmake = CMake(conanfile, generator="Unix Makefiles")
+        cmake = CMakeBuildHelper(conanfile, generator="Unix Makefiles")
         cmake.configure()
         self.assertIsNone(conanfile.command)
         cmake.build()
@@ -186,7 +186,7 @@ class CMakeTest(unittest.TestCase):
         conanfile = ConanFileMock()
         conanfile.settings = Settings()
         with tools.environment_append({"CONAN_CMAKE_GENERATOR": "My CMake Generator"}):
-            cmake = CMake(conanfile)
+            cmake = CMakeBuildHelper(conanfile)
             self.assertIn('-G "My CMake Generator"', cmake.command_line)
 
     def cmake_generator_platform_test(self):
@@ -195,7 +195,7 @@ class CMakeTest(unittest.TestCase):
 
         with tools.environment_append({"CONAN_CMAKE_GENERATOR": "Green Hills MULTI",
                                        "CONAN_CMAKE_GENERATOR_PLATFORM": "My CMake Platform"}):
-            cmake = CMake(conanfile)
+            cmake = CMakeBuildHelper(conanfile)
             self.assertIn('-G "Green Hills MULTI" -A "My CMake Platform"', cmake.command_line)
 
     def cmake_generator_platform_override_test(self):
@@ -209,7 +209,7 @@ class CMakeTest(unittest.TestCase):
         conanfile.settings = settings
 
         with tools.environment_append({"CONAN_CMAKE_GENERATOR_PLATFORM": "Win64"}):
-            cmake = CMake(conanfile)
+            cmake = CMakeBuildHelper(conanfile)
             self.assertIn('-G "Visual Studio 15 2017" -A "Win64"', cmake.command_line)
 
     def cmake_generator_platform_gcc_test(self):
@@ -224,7 +224,7 @@ class CMakeTest(unittest.TestCase):
             conanfile = ConanFileMock()
             conanfile.settings = settings
 
-            cmake = CMake(conanfile)
+            cmake = CMakeBuildHelper(conanfile)
             self.assertIn('-G "Unix Makefiles"', cmake.command_line)
             self.assertNotIn('-A', cmake.command_line)
 
@@ -241,7 +241,7 @@ class CMakeTest(unittest.TestCase):
         conanfile = ConanFileMock()
         conanfile.settings = settings
 
-        cmake = CMake(conanfile)
+        cmake = CMakeBuildHelper(conanfile)
         self.assertIn('-G "%s"' % generator, cmake.command_line)
         self.assertNotIn('-A', cmake.command_line)
 
@@ -259,7 +259,7 @@ class CMakeTest(unittest.TestCase):
         conanfile = ConanFileMock()
         conanfile.settings = settings
 
-        cmake = CMake(conanfile)
+        cmake = CMakeBuildHelper(conanfile)
         self.assertIn('-G "Visual Studio 16 2019" -A "%s"' % pf, cmake.command_line)
 
     def cmake_generator_platform_vs2019_with_ninja_test(self):
@@ -272,7 +272,7 @@ class CMakeTest(unittest.TestCase):
         conanfile = ConanFileMock()
         conanfile.settings = settings
 
-        cmake = CMake(conanfile, generator="Ninja")
+        cmake = CMakeBuildHelper(conanfile, generator="Ninja")
         self.assertIn('-G "Ninja"', cmake.command_line)
         self.assertNotIn("-A", cmake.command_line)
 
@@ -285,7 +285,7 @@ class CMakeTest(unittest.TestCase):
 
         with tools.environment_append({"CONAN_CMAKE_GENERATOR": "Green Hills MULTI",
                                        "CONAN_CMAKE_GENERATOR_PLATFORM": platform}):
-            cmake = CMake(conanfile)
+            cmake = CMakeBuildHelper(conanfile)
             self.assertIn('-G "Green Hills MULTI" -A "%s"' % platform, cmake.command_line)
 
     @parameterized.expand([('Ninja',),
@@ -304,7 +304,7 @@ class CMakeTest(unittest.TestCase):
         conanfile.settings = settings
 
         with self.assertRaises(ConanException):
-            cmake = CMake(conanfile, generator=generator, generator_platform="x64")
+            cmake = CMakeBuildHelper(conanfile, generator=generator, generator_platform="x64")
             cmake.command_line
 
     def cmake_fpic_test(self):
@@ -327,7 +327,7 @@ class CMakeTest(unittest.TestCase):
             conanfile = ConanFileMock(options='{%s}' % ", ".join(options),
                                       options_values=values)
             conanfile.settings = the_settings
-            cmake = CMake(conanfile)
+            cmake = CMakeBuildHelper(conanfile)
             cmake.configure()
             if expected_option is not None:
                 self.assertEqual(cmake.definitions["CONAN_CMAKE_POSITION_INDEPENDENT_CODE"],
@@ -380,12 +380,12 @@ class CMakeTest(unittest.TestCase):
         st = os.stat(make_path)
         os.chmod(make_path, st.st_mode | stat.S_IEXEC)
         with tools.environment_append({"CONAN_MAKE_PROGRAM": make_path}):
-            cmake = CMake(conanfile)
+            cmake = CMakeBuildHelper(conanfile)
             self.assertEqual(cmake.definitions["CMAKE_MAKE_PROGRAM"], make_path)
 
         # Not existing make
         with tools.environment_append({"CONAN_MAKE_PROGRAM": "fake_path/make"}):
-            cmake = CMake(conanfile)
+            cmake = CMakeBuildHelper(conanfile)
             self.assertNotIn("CMAKE_MAKE_PROGRAM", cmake.definitions)
             self.assertIn("The specified make program 'fake_path/make' cannot be found",
                           conanfile.output)
@@ -427,14 +427,14 @@ class CMakeTest(unittest.TestCase):
             build_expected = quote_var("build")
             source_expected = quote_var("../subdir")
 
-            cmake = CMake(conanfile)
+            cmake = CMakeBuildHelper(conanfile)
             cmake.configure(source_dir="../subdir", build_dir="build")
             self.assertEqual(conanfile.command,
                              full_cmd.format(build_expected=build_expected,
                                              source_expected=source_expected,
                                              base_cmd=base_cmd.format(flags=flags_no_local_cache)))
 
-            cmake = CMake(conanfile)
+            cmake = CMakeBuildHelper(conanfile)
             cmake.configure(build_dir="build")
             build_expected = quote_var("build")
             source_expected = quote_var(os.path.join(self.tempdir, "my_cache_source_folder"))
@@ -443,7 +443,7 @@ class CMakeTest(unittest.TestCase):
                                              source_expected=source_expected,
                                              base_cmd=base_cmd.format(flags=flags_no_local_cache)))
 
-            cmake = CMake(conanfile)
+            cmake = CMakeBuildHelper(conanfile)
             cmake.configure()
             build_expected = quote_var(os.path.join(self.tempdir, "my_cache_build_folder"))
             source_expected = quote_var(os.path.join(self.tempdir, "my_cache_source_folder"))
@@ -452,7 +452,7 @@ class CMakeTest(unittest.TestCase):
                                              source_expected=source_expected,
                                              base_cmd=base_cmd.format(flags=flags_no_local_cache)))
 
-            cmake = CMake(conanfile)
+            cmake = CMakeBuildHelper(conanfile)
             cmake.configure(source_folder="source", build_folder="build")
             build_expected = quote_var(os.path.join(os.path.join(self.tempdir,
                                                                  "my_cache_build_folder", "build")))
@@ -465,7 +465,7 @@ class CMakeTest(unittest.TestCase):
                                              base_cmd=base_cmd.format(flags=flags_no_local_cache)))
 
             conanfile.in_local_cache = True
-            cmake = CMake(conanfile)
+            cmake = CMakeBuildHelper(conanfile)
             cmake.configure(source_folder="source", build_folder="build",
                             cache_build_folder="rel_only_cache")
             build_expected = quote_var(os.path.join(self.tempdir, "my_cache_build_folder",
@@ -478,7 +478,7 @@ class CMakeTest(unittest.TestCase):
                                              base_cmd=base_cmd.format(flags=flags_in_local_cache)))
 
             conanfile.in_local_cache = False
-            cmake = CMake(conanfile)
+            cmake = CMakeBuildHelper(conanfile)
             cmake.configure(source_folder="source", build_folder="build",
                             cache_build_folder="rel_only_cache")
             build_expected = quote_var(os.path.join(self.tempdir, "my_cache_build_folder", "build"))
@@ -490,7 +490,7 @@ class CMakeTest(unittest.TestCase):
                                              base_cmd=base_cmd.format(flags=flags_no_local_cache)))
 
             conanfile.in_local_cache = True
-            cmake = CMake(conanfile)
+            cmake = CMakeBuildHelper(conanfile)
             cmake.configure(build_dir="build", cache_build_folder="rel_only_cache")
             build_expected = quote_var(os.path.join(self.tempdir, "my_cache_build_folder",
                                                     "rel_only_cache"))
@@ -502,7 +502,7 @@ class CMakeTest(unittest.TestCase):
 
             # Raise mixing
             with six.assertRaisesRegex(self, ConanException, "Use 'build_folder'/'source_folder'"):
-                cmake = CMake(conanfile)
+                cmake = CMakeBuildHelper(conanfile)
                 cmake.configure(source_folder="source", build_dir="build")
 
     def build_type_force_test(self):
@@ -516,7 +516,7 @@ class CMakeTest(unittest.TestCase):
         conanfile = ConanFileMock()
         conanfile.settings = settings
         # 2: build_type from settings
-        cmake = CMake(conanfile)
+        cmake = CMakeBuildHelper(conanfile)
         self.assertNotIn('WARN: Forced CMake build type ', conanfile.output)
         self.assertEqual(cmake.build_type, "Release")
 
@@ -529,7 +529,7 @@ class CMakeTest(unittest.TestCase):
         self.assertIn('-DCMAKE_BUILD_TYPE="Debug"', cmake.command_line)
 
         # 2: build_type from constructor
-        cmake = CMake(conanfile, build_type="Debug")
+        cmake = CMakeBuildHelper(conanfile, build_type="Debug")
         expected_output = "WARN: Forced CMake build type ('Debug') different from the settings " \
                           "build type ('Release')"
         self.assertIn(expected_output, conanfile.output)
@@ -546,7 +546,7 @@ class CMakeTest(unittest.TestCase):
         conanfile = ConanFileMock()
         conanfile.settings = settings
         # 2: build_type from settings
-        cmake = CMake(conanfile)
+        cmake = CMakeBuildHelper(conanfile)
         self.assertNotIn('-DCMAKE_BUILD_TYPE="Release"', cmake.command_line)
         self.assertIn("--config Release", cmake.build_config)
 
@@ -558,7 +558,7 @@ class CMakeTest(unittest.TestCase):
         self.assertIn("--config Debug", cmake.build_config)
 
         # 2: build_type from constructor
-        cmake = CMake(conanfile, build_type="Debug")
+        cmake = CMakeBuildHelper(conanfile, build_type="Debug")
         self.assertIn(expected_output, conanfile.output)
         self.assertEqual(cmake.build_type, "Debug")
         self.assertNotIn('-DCMAKE_BUILD_TYPE="Debug"', cmake.command_line)
@@ -581,7 +581,7 @@ class CMakeTest(unittest.TestCase):
                 cross = ("-DCMAKE_SYSTEM_NAME=\"%s\" %s-DCMAKE_SYSROOT=\"/path/to/sysroot\" "
                          % ({"Macos": "Darwin"}.get(os, os), cross_ver)
                          if (platform.system() != os and cmake_system_name) else "")
-                cmake = CMake(conanfile, generator=generator, cmake_system_name=cmake_system_name,
+                cmake = CMakeBuildHelper(conanfile, generator=generator, cmake_system_name=cmake_system_name,
                               set_cmake_flags=set_cmake_flags)
                 new_text = text.replace("-DCONAN_IN_LOCAL_CACHE", "%s-DCONAN_IN_LOCAL_CACHE" % cross)
                 if "Visual Studio" in text:
@@ -769,7 +769,7 @@ build_type: [ Release]
         conanfile = ConanFileMock()
         conanfile.settings = settings
 
-        cmake = CMake(conanfile)
+        cmake = CMakeBuildHelper(conanfile)
         generator = "Unix" if platform.system() != "Windows" else "MinGW"
         cross = ("-DCMAKE_SYSTEM_NAME=\"Linux\" -DCMAKE_SYSROOT=\"/path/to/sysroot\" "
                  if platform.system() != "Linux" else "")
@@ -791,13 +791,13 @@ build_type: [ Release]
         settings.arch = "x86"
         settings.os = "Windows"
         if platform.system() == "Windows":
-            cmake = CMake(conanfile)
+            cmake = CMakeBuildHelper(conanfile)
             self.assertNotIn("-DCMAKE_SYSROOT=", cmake.flags)
 
         # Now activate cross build and check sysroot and system processor
         with(tools.environment_append({"CONAN_CMAKE_SYSTEM_NAME": "Android",
                                        "CONAN_CMAKE_SYSTEM_PROCESSOR": "somevalue"})):
-            cmake = CMake(conanfile)
+            cmake = CMakeBuildHelper(conanfile)
             self.assertEqual(cmake.definitions["CMAKE_SYSROOT"], "/path/to/sysroot")
             self.assertEqual(cmake.definitions["CMAKE_SYSTEM_PROCESSOR"], "somevalue")
 
@@ -809,7 +809,7 @@ build_type: [ Release]
         conanfile = ConanFileMock()
         conanfile.settings = settings
         with self.assertRaises(ConanException):
-            CMake(settings)
+            CMakeBuildHelper(settings)
 
     def test_cores_ancient_visual(self):
         settings = Settings.loads(default_settings_yml)
@@ -822,13 +822,13 @@ build_type: [ Release]
 
         conanfile = ConanFileMock()
         conanfile.settings = settings
-        cmake = CMake(conanfile)
+        cmake = CMakeBuildHelper(conanfile)
 
         cmake.build()
         self.assertNotIn("/m", conanfile.command)
 
         settings.compiler.version = "10"
-        cmake = CMake(conanfile)
+        cmake = CMakeBuildHelper(conanfile)
 
         cmake.build()
         self.assertIn("/m", conanfile.command)
@@ -852,7 +852,7 @@ build_type: [ Release]
 
         conanfile = ConanFileMock()
         conanfile.settings = settings
-        cmake = CMake(conanfile)
+        cmake = CMakeBuildHelper(conanfile)
 
         cross = '-DCMAKE_SYSTEM_NAME="Android"' \
                 ' -DCMAKE_SYSTEM_VERSION="{0}"' \
@@ -887,7 +887,7 @@ build_type: [ Release]
                          conanfile.command)
 
         settings.build_type = "Debug"
-        cmake = CMake(conanfile)
+        cmake = CMakeBuildHelper(conanfile)
         cmake.build()
         self.assertEqual('cmake --build %s %s' %
                          (dot_dir, (CMakeTest.scape('-- -j%i' %
@@ -936,7 +936,7 @@ build_type: [ Release]
                          conanfile.command)
 
         settings.build_type = "Release"
-        cmake = CMake(conanfile)
+        cmake = CMakeBuildHelper(conanfile)
         cmake.build()
         self.assertEqual('cmake --build %s %s' %
                          (dot_dir, (CMakeTest.scape('-- -j%i' %
@@ -963,7 +963,7 @@ build_type: [ Release]
 
         settings.compiler = "gcc"
         settings.compiler.version = "5.4"
-        cmake = CMake(conanfile)
+        cmake = CMakeBuildHelper(conanfile)
         cmake.build()
         self.assertEqual('cmake --build %s' %
                          (CMakeTest.scape('. -- -j%i' % cpu_count(output=conanfile.output))),
@@ -987,7 +987,7 @@ build_type: [ Release]
                                           cpu_count(output=conanfile.output))),
                          conanfile.command)
 
-        cmake = CMake(conanfile, parallel=False)
+        cmake = CMakeBuildHelper(conanfile, parallel=False)
         cmake.build()
         self.assertEqual('cmake --build %s' % CMakeTest.scape('.'), conanfile.command)
 
@@ -1006,7 +1006,7 @@ build_type: [ Release]
 
         conanfile = ConanFileMock()
         conanfile.settings = settings
-        cmake = CMake(conanfile)
+        cmake = CMakeBuildHelper(conanfile)
         cmake.test()
         self.assertIn('cmake --build '
                       '%s' % CMakeTest.scape('. --target RUN_TESTS -- /m:%i' %
@@ -1048,7 +1048,7 @@ build_type: [ Release]
         settings.arch = "x86"
         conanfile.settings = settings
 
-        cmake = CMake(conanfile)
+        cmake = CMakeBuildHelper(conanfile)
         cmake.configure()
         self.assertIn(self.tempdir, conanfile.path)
 
@@ -1064,7 +1064,7 @@ build_type: [ Release]
         settings.arch = "x86"
         conanfile.settings = settings
 
-        cmake = CMake(conanfile)
+        cmake = CMakeBuildHelper(conanfile)
         cmake.configure()
         self.assertNotIn(self.tempdir, conanfile.path)
 
@@ -1078,16 +1078,16 @@ build_type: [ Release]
         settings.compiler.version = "12"
         settings.arch = "x86"
         conanfile.settings = settings
-        cmake = CMake(conanfile)
+        cmake = CMakeBuildHelper(conanfile)
         cmake.configure()
         self.assertEqual(conanfile.captured_env["PKG_CONFIG_PATH"], "/my_install/folder/")
 
         conanfile.generators = []
-        cmake = CMake(conanfile)
+        cmake = CMakeBuildHelper(conanfile)
         cmake.configure()
         self.assertNotIn("PKG_CONFIG_PATH", conanfile.captured_env)
 
-        cmake = CMake(conanfile)
+        cmake = CMakeBuildHelper(conanfile)
         cmake.configure(pkg_config_paths=["reldir1", "/abspath2/to/other"])
         self.assertEqual(conanfile.captured_env["PKG_CONFIG_PATH"],
                          os.path.pathsep.join(["/my_install/folder/reldir1",
@@ -1095,7 +1095,7 @@ build_type: [ Release]
 
         # If there is already a PKG_CONFIG_PATH do not set it
         conanfile.generators = ["pkg_config"]
-        cmake = CMake(conanfile)
+        cmake = CMakeBuildHelper(conanfile)
         with tools.environment_append({"PKG_CONFIG_PATH": "do_not_mess_with_this"}):
             cmake.configure()
             self.assertEqual(conanfile.captured_env["PKG_CONFIG_PATH"], "do_not_mess_with_this")
@@ -1110,19 +1110,19 @@ build_type: [ Release]
 
         conanfile = ConanFileMock(shared=True)
         conanfile.settings = settings
-        cmake = CMake(conanfile)
+        cmake = CMakeBuildHelper(conanfile)
 
         self.assertEqual(cmake.definitions["BUILD_SHARED_LIBS"], "ON")
 
         conanfile = ConanFileMock(shared=False)
         conanfile.settings = settings
-        cmake = CMake(conanfile)
+        cmake = CMakeBuildHelper(conanfile)
 
         self.assertEqual(cmake.definitions["BUILD_SHARED_LIBS"], "OFF")
 
         conanfile = ConanFileMock(shared=None)
         conanfile.settings = settings
-        cmake = CMake(conanfile)
+        cmake = CMakeBuildHelper(conanfile)
 
         self.assertNotIn("BUILD_SHARED_LIBS", cmake.definitions)
 
@@ -1135,7 +1135,7 @@ build_type: [ Release]
 
         conanfile = ConanFileMock()
         conanfile.settings = settings
-        cmake = CMake(conanfile)
+        cmake = CMakeBuildHelper(conanfile)
 
         self.assertNotIn("CMAKE_VERBOSE_MAKEFILE", cmake.definitions)
 
@@ -1165,12 +1165,12 @@ build_type: [ Release]
         conanfile = ConanFileMock()
         conanfile.settings = settings
 
-        cmake = CMake(conanfile, toolset="v141")
+        cmake = CMakeBuildHelper(conanfile, toolset="v141")
         self.assertIn('-T "v141"', cmake.command_line)
 
         # DEPRECATED VARIABLE, NOT MODIFY ANYMORE THE TOOLSET
         with tools.environment_append({"CONAN_CMAKE_TOOLSET": "v141"}):
-            cmake = CMake(conanfile)
+            cmake = CMakeBuildHelper(conanfile)
             self.assertNotIn('-T "v141"', cmake.command_line)
 
         settings = Settings.loads(default_settings_yml)
@@ -1183,7 +1183,7 @@ build_type: [ Release]
         conanfile = ConanFileMock()
         conanfile.settings = settings
 
-        cmake = CMake(conanfile)
+        cmake = CMakeBuildHelper(conanfile)
         self.assertIn('-T "v140"', cmake.command_line)
 
     @parameterized.expand([('Ninja',),
@@ -1202,7 +1202,7 @@ build_type: [ Release]
         conanfile.settings = settings
 
         with self.assertRaises(ConanException):
-            cmake = CMake(conanfile, generator=generator)
+            cmake = CMakeBuildHelper(conanfile, generator=generator)
             cmake.command_line
 
     def test_missing_settings(self):
@@ -1211,7 +1211,7 @@ build_type: [ Release]
             settings.os_build = os_build
             conanfile = ConanFileMock()
             conanfile.settings = settings
-            return CMake(conanfile)
+            return CMakeBuildHelper(conanfile)
 
         cmake = instance_with_os_build("Linux")
         self.assertEqual(cmake.generator, "Unix Makefiles")
@@ -1235,7 +1235,7 @@ build_type: [ Release]
 
             conanfile = ConanFileMock()
             conanfile.settings = settings
-            cmake = CMake(conanfile)
+            cmake = CMakeBuildHelper(conanfile)
             self.assertEqual(cmake.definitions["CMAKE_SYSTEM_VERSION"], "8.1")
 
             settings = Settings.loads(default_settings_yml)
@@ -1244,7 +1244,7 @@ build_type: [ Release]
 
             conanfile = ConanFileMock()
             conanfile.settings = settings
-            cmake = CMake(conanfile)
+            cmake = CMakeBuildHelper(conanfile)
             self.assertEqual(cmake.definitions["CMAKE_SYSTEM_VERSION"], "32")
 
     def install_definitions_test(self):
@@ -1262,14 +1262,14 @@ build_type: [ Release]
                               "CMAKE_INSTALL_DATAROOTDIR": "share"}
 
         # Without package_folder
-        cmake = CMake(conanfile)
+        cmake = CMakeBuildHelper(conanfile)
         for key, value in cmake.definitions.items():
             self.assertNotIn(key, install_defintions.keys())
 
         # With package_folder
         conanfile.package_folder = "my_package_folder"
         install_defintions["CMAKE_INSTALL_PREFIX"] = conanfile.package_folder
-        cmake = CMake(conanfile)
+        cmake = CMakeBuildHelper(conanfile)
         for key, value in install_defintions.items():
             self.assertEqual(cmake.definitions[key], value)
 
@@ -1281,7 +1281,7 @@ build_type: [ Release]
         # No version defined
         conanfile = ConanFileMock()
         conanfile.settings = settings
-        cmake = CMake(conanfile)
+        cmake = CMakeBuildHelper(conanfile)
         self.assertFalse("CMAKE_OSX_DEPLOYMENT_TARGET" in cmake.definitions)
         self.assertFalse("CMAKE_SYSTEM_NAME" in cmake.definitions)
         self.assertFalse("CMAKE_SYSTEM_VERSION" in cmake.definitions)
@@ -1290,7 +1290,7 @@ build_type: [ Release]
         with tools.environment_append({"CONAN_CMAKE_SYSTEM_VERSION": "23"}):
             conanfile = ConanFileMock()
             conanfile.settings = settings
-            cmake = CMake(conanfile)
+            cmake = CMakeBuildHelper(conanfile)
             self.assertEqual(cmake.definitions["CMAKE_SYSTEM_VERSION"], "23")
             self.assertEqual(cmake.definitions["CMAKE_OSX_DEPLOYMENT_TARGET"], "23")
 
@@ -1298,7 +1298,7 @@ build_type: [ Release]
         settings.os.version = "10.9"
         conanfile = ConanFileMock()
         conanfile.settings = settings
-        cmake = CMake(conanfile)
+        cmake = CMakeBuildHelper(conanfile)
         self.assertEqual(cmake.definitions["CMAKE_SYSTEM_VERSION"], "10.9")
         self.assertEqual(cmake.definitions["CMAKE_OSX_DEPLOYMENT_TARGET"], "10.9")
 
@@ -1306,7 +1306,7 @@ build_type: [ Release]
         with tools.environment_append({"CONAN_CMAKE_SYSTEM_VERSION": "23"}):
             conanfile = ConanFileMock()
             conanfile.settings = settings
-            cmake = CMake(conanfile)
+            cmake = CMakeBuildHelper(conanfile)
             self.assertEqual(cmake.definitions["CMAKE_SYSTEM_VERSION"], "23")
             self.assertEqual(cmake.definitions["CMAKE_OSX_DEPLOYMENT_TARGET"], "23")
 
@@ -1330,7 +1330,7 @@ build_type: [ Release]
         settings.compiler.version = version
         conanfile.settings = settings
 
-        cmake = CMake(conanfile, generator=generator)
+        cmake = CMakeBuildHelper(conanfile, generator=generator)
 
         with mock.patch("conans.client.tools.vcvars") as vcvars_mock:
             vcvars_mock.__enter__ = mock.MagicMock(return_value=(mock.MagicMock(), None))
@@ -1352,23 +1352,23 @@ build_type: [ Release]
         settings.compiler.version = "14"
         conanfile.settings = settings
 
-        cmake = CMake(conanfile, parallel=False)
+        cmake = CMakeBuildHelper(conanfile, parallel=False)
         cmake.build()
         self.assertEqual("cmake --build %s" % CMakeTest.scape("."), conanfile.command)
 
-        cmake = CMake(conanfile, cmake_program="use_another_cmake", parallel=False)
+        cmake = CMakeBuildHelper(conanfile, cmake_program="use_another_cmake", parallel=False)
         cmake.build()
         self.assertEqual("use_another_cmake --build %s" % CMakeTest.scape("."), conanfile.command)
 
         with tools.environment_append({"CONAN_CMAKE_PROGRAM": "my_custom_cmake"}):
-            cmake = CMake(conanfile, parallel=False)
+            cmake = CMakeBuildHelper(conanfile, parallel=False)
             cmake.build()
             self.assertEqual("my_custom_cmake --build %s" % CMakeTest.scape("."), conanfile.command)
 
         with tools.environment_append({
             "CONAN_CMAKE_PROGRAM": "cmake_from_environment_has_priority"
         }):
-            cmake = CMake(conanfile, cmake_program="but_not_cmake_from_the_ctor", parallel=False)
+            cmake = CMakeBuildHelper(conanfile, cmake_program="but_not_cmake_from_the_ctor", parallel=False)
             cmake.build()
             self.assertEqual("cmake_from_environment_has_priority --build %s" % CMakeTest.scape("."),
                              conanfile.command)
@@ -1385,20 +1385,20 @@ build_type: [ Release]
         conanfile = ConanFileMock()
         conanfile.settings = settings
 
-        cmake = CMake(conanfile)
+        cmake = CMakeBuildHelper(conanfile)
         cmake.build()
         self.assertIn("/verbosity:minimal", conanfile.command)
 
-        cmake = CMake(conanfile, msbuild_verbosity="quiet")
+        cmake = CMakeBuildHelper(conanfile, msbuild_verbosity="quiet")
         cmake.build()
         self.assertIn("/verbosity:quiet", conanfile.command)
 
-        cmake = CMake(conanfile, msbuild_verbosity=None)
+        cmake = CMakeBuildHelper(conanfile, msbuild_verbosity=None)
         cmake.build()
         self.assertNotIn("/verbosity", conanfile.command)
 
         with tools.environment_append({"CONAN_MSBUILD_VERBOSITY": "detailed"}):
-            cmake = CMake(conanfile)
+            cmake = CMakeBuildHelper(conanfile)
             cmake.build()
             self.assertIn("/verbosity:detailed", conanfile.command)
 
@@ -1410,13 +1410,13 @@ build_type: [ Release]
         settings.compiler.version = "14"
         conanfile.settings = settings
 
-        cmake = CMake(conanfile, parallel=False, generator="NMake Makefiles")
+        cmake = CMakeBuildHelper(conanfile, parallel=False, generator="NMake Makefiles")
         cmake.test()
         self.assertEqual(conanfile.captured_env["CTEST_OUTPUT_ON_FAILURE"], "0")
         self.assertNotIn("CTEST_PARALLEL_LEVEL", conanfile.captured_env)
 
         with tools.environment_append({"CONAN_CPU_COUNT": "666"}):
-            cmake = CMake(conanfile, parallel=True, generator="NMake Makefiles")
+            cmake = CMakeBuildHelper(conanfile, parallel=True, generator="NMake Makefiles")
             cmake.test(output_on_failure=True)
             self.assertEqual(conanfile.captured_env["CTEST_OUTPUT_ON_FAILURE"], "1")
             self.assertEqual(conanfile.captured_env["CTEST_PARALLEL_LEVEL"], "666")
@@ -1427,7 +1427,7 @@ build_type: [ Release]
                                  "compiler.version": "15", "build_type": "Release"})
         conanfile = ConanFileMock()
         conanfile.settings = settings
-        cmake = CMake(conanfile)
+        cmake = CMakeBuildHelper(conanfile)
         self.assertIsNone(cmake.generator)
         self.assertIn("WARN: CMake generator could not be deduced from settings", conanfile.output)
         cmake.configure()
@@ -1440,5 +1440,5 @@ build_type: [ Release]
 
         conanfile = ConanFileMock()
         conanfile.settings = settings
-        cmake = CMake(conanfile)
+        cmake = CMakeBuildHelper(conanfile)
         self.assertEqual(cmake.definitions["CMAKE_SYSTEM_VERSION"], "8.0")
