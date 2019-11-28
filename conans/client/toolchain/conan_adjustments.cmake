@@ -29,16 +29,6 @@ macro(conan_output_dirs_setup)
 endmacro()
 
 
-
-macro(conan_set_flags build_type)
-    conan_message(STATUS "Conan: Adding flags for build_type '${build_type}'")
-    #set(CMAKE_CXX_FLAGS${build_type} "${CMAKE_CXX_FLAGS${build_type}} ${CONAN_CXX_FLAGS${build_type}}")
-    #set(CMAKE_C_FLAGS${build_type} "${CMAKE_C_FLAGS${build_type}} ${CONAN_C_FLAGS${build_type}}")
-    #set(CMAKE_SHARED_LINKER_FLAGS${build_type} "${CMAKE_SHARED_LINKER_FLAGS${build_type}} ${CONAN_SHARED_LINKER_FLAGS${build_type}}")
-    #set(CMAKE_EXE_LINKER_FLAGS${build_type} "${CMAKE_EXE_LINKER_FLAGS${build_type}} ${CONAN_EXE_LINKER_FLAGS${build_type}}")
-endmacro()
-
-
 macro(conan_set_rpath)
     conan_message(STATUS "Conan: Adjusting default RPATHs Conan policies")
     if(APPLE)

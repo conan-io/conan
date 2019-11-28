@@ -72,13 +72,7 @@ class CMakeToolchain(object):
             {%- endif %}
 
             # We are going to adjust automagically many things as requested by Conan
-            #   these are the things done by 'conan_basic_setup()'
-            
-            conan_set_flags("")
-            conan_set_flags("_RELEASE")
-            conan_set_flags("_DEBUG")
-            # TODO: Do we want to set flags here if we are going to use targets? Maybe these flags are defined inside the 'toolchain' method of the recipe
-            
+            #   these are the things done by 'conan_basic_setup()'            
             {% if options.set_rpath %}conan_set_rpath(){% endif %}
             {% if options.set_std %}conan_set_std(){% endif %}
             {% if options.set_fpic %}conan_set_fpic(){% endif %}
