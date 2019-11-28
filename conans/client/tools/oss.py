@@ -4,15 +4,16 @@ import platform
 import subprocess
 import sys
 import tempfile
+from subprocess import PIPE
+
 import math
-from subprocess import CalledProcessError, PIPE
 import six
 
 from conans.client.tools.env import environment_append
 from conans.client.tools.files import load, which
 from conans.errors import ConanException, CalledProcessErrorWithStderr
 from conans.model.version import Version
-from conans.util.fallbacks import default_output
+from conans.util.log import logger
 
 
 def args_to_string(args):
@@ -184,9 +185,12 @@ class OSInfo(object):
 
     @property
     def with_yum(self):
-        return self.is_linux and self.linux_distro in \
-                                 ("centos", "redhat", "fedora", "pidora", "scientific",
-                                  "xenserver", "amazon", "oracle", "rhel")
+        return self.is_linux and self.linux_distro in ("pidora", "fedora", "scientific", "centos", "redhat",
+                                                       "rhel", "xenserver", "amazon", "oracle")
+
+    @property
+    def with_dnf(self):
+        return self.is_linux and self.linux_distro == "fedora" and which('dnf')
 
     @property
     def with_pacman(self):
@@ -416,9 +420,13 @@ class OSInfo(object):
             return None
 
 
-def cross_building(settings, self_os=None, self_arch=None):
+def cross_building(settings, self_os=None, self_arch=None, skip_x64_x86=False):
     ret = get_cross_building_settings(settings, self_os, self_arch)
     build_os, build_arch, host_os, host_arch = ret
+
+    if skip_x64_x86 and host_os is not None and (build_os == host_os) and \
+            host_arch is not None and (build_arch == "x86_64") and (host_arch == "x86"):
+        return False
 
     if host_os is not None and (build_os != host_os):
         return True
@@ -538,10 +546,11 @@ def check_output(cmd, folder=None, return_code=False, stderr=None):
         # We don't want stderr to print warnings that will mess the pristine outputs
         stderr = stderr or PIPE
         cmd = cmd if isinstance(cmd, six.string_types) else subprocess.list2cmdline(cmd)
-        process = subprocess.Popen("{} > {}".format(cmd, tmp_file), shell=True,
-                                   stderr=stderr, cwd=folder)
-
-        _, stderr = process.communicate()
+        command = "{} > {}".format(cmd, tmp_file)
+        logger.info("Calling command: {}".format(command))
+        process = subprocess.Popen(command, shell=True, stderr=stderr, cwd=folder)
+        stdout, stderr = process.communicate()
+        logger.info("Return code: {}".format(int(process.returncode)))
 
         if return_code:
             return process.returncode
@@ -551,6 +560,10 @@ def check_output(cmd, folder=None, return_code=False, stderr=None):
             raise CalledProcessErrorWithStderr(process.returncode, cmd, output=stderr)
 
         output = load(tmp_file)
+        try:
+            logger.info("Output: in file:{}\nstdout: {}\nstderr:{}".format(output, stdout, stderr))
+        except Exception as exc:
+            logger.error("Error logging command output: {}".format(exc))
         return output
     finally:
         try:

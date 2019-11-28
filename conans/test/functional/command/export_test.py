@@ -9,7 +9,7 @@ from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE, CONAN_MANIFEST
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
-from conans.test.utils.tools import TestClient
+from conans.test.utils.tools import TestClient, GenConanfile
 from conans.test.utils.tools import create_local_git_repo
 from conans.util.files import load, save
 
@@ -464,14 +464,7 @@ class ExportMetadataTest(unittest.TestCase):
 
     def test_export_no_params(self):
         client = TestClient()
-        conanfile = textwrap.dedent("""
-                        from conans import ConanFile
-
-                        class MyPkg(ConanFile):
-                            name = "lib"
-                            version = "1.0"
-                        """)
-        client.save({"conanfile.py": conanfile})
+        client.save({"conanfile.py": GenConanfile().with_name("lib").with_version("1.0")})
         client.run('export .')
         client.cache.package_layout(ConanFileReference.loads("lib/1.0@")).export()
         self.assertIn("lib/1.0: A new conanfile.py version was exported", client.out)
@@ -482,13 +475,7 @@ class ExportMetadataTest(unittest.TestCase):
 
     def export_with_name_and_version_test(self):
         client = TestClient()
-        conanfile = textwrap.dedent("""
-                from conans import ConanFile
-
-                class MyPkg(ConanFile):
-                    pass
-                """)
-        client.save({"conanfile.py": conanfile})
+        client.save({"conanfile.py": GenConanfile()})
 
         client.run('export . lib/1.0@')
         self.assertIn("lib/1.0: A new conanfile.py version was exported", client.out)
@@ -496,14 +483,20 @@ class ExportMetadataTest(unittest.TestCase):
     def export_with_only_user_channel_test(self):
         """This should be the recommended way and only from Conan 2.0"""
         client = TestClient()
-        conanfile = textwrap.dedent("""
-                from conans import ConanFile
-
-                class MyPkg(ConanFile):
-                    name = "lib"
-                    version = "1.0"
-                """)
-        client.save({"conanfile.py": conanfile})
+        client.save({"conanfile.py": GenConanfile().with_name("lib").with_version("1.0")})
 
         client.run('export . @user/channel')
         self.assertIn("lib/1.0@user/channel: A new conanfile.py version was exported", client.out)
+
+    def export_conflict_no_user_channel_test(self):
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile()})
+
+        client.run('export . pkg/0.1@user/channel')
+        self.assertIn("pkg/0.1@user/channel: A new conanfile.py version was exported", client.out)
+        client.run('export . pkg/0.1@other/stable')
+        self.assertIn("pkg/0.1@other/stable: A new conanfile.py version was exported", client.out)
+        client.run('export . pkg/0.1@')
+        self.assertIn("pkg/0.1: A new conanfile.py version was exported", client.out)
+        client.run('export . Pkg/0.1@', assert_error=True)
+        self.assertIn("ERROR: Cannot export package with same name but different case", client.out)

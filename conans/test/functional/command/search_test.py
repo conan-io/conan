@@ -8,7 +8,7 @@ from collections import OrderedDict
 
 from mock import patch
 
-from conans import COMPLEX_SEARCH_CAPABILITY, DEFAULT_REVISION_V1
+from conans import DEFAULT_REVISION_V1
 from conans.model.manifest import FileTreeManifest
 from conans.model.package_metadata import PackageMetadata
 from conans.model.ref import ConanFileReference, PackageReference
@@ -132,7 +132,7 @@ class SearchTest(unittest.TestCase):
     def setUp(self):
         self.servers = OrderedDict()
         self.servers["local"] = TestServer(server_capabilities=[])
-        self.servers["search_able"] = TestServer(server_capabilities=[COMPLEX_SEARCH_CAPABILITY])
+        self.servers["search_able"] = TestServer(server_capabilities=[])
 
         self.client = TestClient(servers=self.servers)
 
@@ -736,7 +736,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
     def search_with_no_registry_test(self):
         # https://github.com/conan-io/conan/issues/2589
         client = TestClient()
-        os.remove(client.cache.registry_path)
+        os.remove(client.cache.remotes_path)
         client.run("search nonexist/1.0@lasote/stable -r=myremote", assert_error=True)
         self.assertIn("WARN: Remotes registry file missing, creating default one", client.out)
         self.assertIn("ERROR: No remote 'myremote' defined in remotes", client.out)
@@ -1157,7 +1157,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
 
     def initial_search_without_registry_test(self):
         client = TestClient()
-        os.remove(client.cache.registry_path)
+        os.remove(client.cache.remotes_path)
         client.run("search my_pkg")
         self.assertIn("WARN: Remotes registry file missing, creating default one", client.out)
         self.assertIn("There are no packages matching the 'my_pkg' pattern", client.out)

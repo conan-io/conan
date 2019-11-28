@@ -57,18 +57,18 @@ compiler:
         version: ["5.10", "5.11", "5.12", "5.13", "5.14"]
         threads: [None, posix]
         libcxx: [libCstd, libstdcxx, libstlport, libstdc++]
-    gcc:
+    gcc: &gcc
         version: ["4.1", "4.4", "4.5", "4.6", "4.7", "4.8", "4.9",
                   "5", "5.1", "5.2", "5.3", "5.4", "5.5",
                   "6", "6.1", "6.2", "6.3", "6.4",
-                  "7", "7.1", "7.2", "7.3",
+                  "7", "7.1", "7.2", "7.3", "7.4",
                   "8", "8.1", "8.2", "8.3",
                   "9", "9.1", "9.2"]
         libcxx: [libstdc++, libstdc++11]
         threads: [None, posix, win32] #  Windows MinGW
         exception: [None, dwarf2, sjlj, seh] # Windows MinGW
         cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
-    Visual Studio:
+    Visual Studio: &visual_studio
         runtime: [MD, MT, MTd, MDd]
         version: ["8", "9", "10", "11", "12", "14", "15", "16"]
         toolset: [None, v90, v100, v110, v110_xp, v120, v120_xp,
@@ -79,13 +79,22 @@ compiler:
     clang:
         version: ["3.3", "3.4", "3.5", "3.6", "3.7", "3.8", "3.9", "4.0",
                   "5.0", "6.0", "7.0", "7.1",
-                  "8", "9"]
+                  "8", "9", "10"]
         libcxx: [libstdc++, libstdc++11, libc++, c++_shared, c++_static]
         cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
     apple-clang:
         version: ["5.0", "5.1", "6.0", "6.1", "7.0", "7.3", "8.0", "8.1", "9.0", "9.1", "10.0", "11.0"]
         libcxx: [libstdc++, libc++]
         cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
+    intel:
+        version: ["11", "12", "13", "14", "15", "16", "17", "18", "19"]
+        base:
+            gcc:
+                <<: *gcc
+                threads: [None]
+                exception: [None]
+            Visual Studio:
+                <<: *visual_studio
     qcc:
         version: ["4.4", "5.4"]
         libcxx: [cxx, gpp, cpp, cpp-ne, accp, acpp-ne, ecpp, ecpp-ne]
@@ -98,7 +107,7 @@ default_client_conf = """
 [log]
 run_to_output = True        # environment CONAN_LOG_RUN_TO_OUTPUT
 run_to_file = False         # environment CONAN_LOG_RUN_TO_FILE
-level = 50                  # environment CONAN_LOGGING_LEVEL
+level = critical            # environment CONAN_LOGGING_LEVEL
 # trace_file =              # environment CONAN_TRACE_FILE
 print_run_commands = False  # environment CONAN_PRINT_RUN_COMMANDS
 
@@ -157,9 +166,8 @@ default_package_id_mode = semver_direct_mode # environment CONAN_DEFAULT_PACKAGE
 path = ./data
 
 [proxies]
-# Empty section will try to use system proxies.
-# If don't want proxy at all, remove section [proxies]
-# As documented in http://docs.python-requests.org/en/latest/user/advanced/#proxies - but see below
+# Empty (or missing) section will try to use system proxies.
+# As documented in https://requests.kennethreitz.org/en/latest/user/advanced/#proxies - but see below
 # for proxies to specific hosts
 # http = http://user:pass@10.10.1.10:3128/
 # http = http://10.10.1.10:3128
@@ -518,7 +526,8 @@ class ConanClientConfigParser(ConfigParser, object):
             if level is None:
                 level = self.get_item("log.level")
             try:
-                level = int(level)
+                parsed_level = ConanClientConfigParser.get_log_level_by_name(level)
+                level = parsed_level if parsed_level is not None else int(level)
             except Exception:
                 level = logging.CRITICAL
             return level
@@ -586,3 +595,16 @@ class ConanClientConfigParser(ConfigParser, object):
             return log_run_to_output.lower() in ("1", "true")
         except ConanException:
             return True
+
+    @staticmethod
+    def get_log_level_by_name(level_name):
+        levels = {
+            "critical": logging.CRITICAL,
+            "error": logging.ERROR,
+            "warning": logging.WARNING,
+            "warn": logging.WARNING,
+            "info": logging.INFO,
+            "debug": logging.DEBUG,
+            "notset": logging.NOTSET
+        }
+        return levels.get(str(level_name).lower())
