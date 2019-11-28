@@ -841,8 +841,8 @@ class Pkg(ConanFile):
         client = TurboTestClient(default_server_user=True, revisions_enabled=True)
         pref = client.create(ref, conanfile=GenConanfile())
         client.run("upload pkg/1.0@user/channel#fakerevision --confirm", assert_error=True)
-        self.assertIn("ERROR: Recipe revision fakerevision does not match with the one "
-                      "stored in the cache {}".format(pref.ref.revision), client.out)
+        self.assertIn("ERROR: Recipe revision fakerevision does not match the one stored in the cache {}".
+                      format(pref.ref.revision), client.out)
 
         client.run("upload pkg/1.0@user/channel#{} --confirm".format(pref.ref.revision))
         search_result = client.search("pkg/1.0@user/channel --revisions -r default")[0]
