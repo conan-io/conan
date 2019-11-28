@@ -6,6 +6,7 @@ import unittest
 from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient
 from conans.test.utils.tools import TestServer, TurboTestClient
+from conans.client.tools.env import environment_append
 
 
 @unittest.skipIf(platform.system() == "Windows", "Better to test only in NIX the symlinks")
@@ -55,7 +56,12 @@ class HelloConan(ConanFile):
         client2.run("install {}".format(ref))
         self.assertIn("Downloaded package", client2.out)
 
+        # Broken link is in the installed package (Conan doesn't filter symlink uncompressing)
+        p2_folder = client2.cache.package_layout(pref.ref).package(pref)
+        self.assertTrue(os.path.islink(os.path.join(p2_folder, "link.txt")))
+
     def test_broken_in_local_sources(self):
+        ref = ConanFileReference.loads("symlinks/1.0.0@user/channel")
         conanfile = textwrap.dedent("""
             from conans import ConanFile, CMake
 
@@ -63,19 +69,40 @@ class HelloConan(ConanFile):
                 name = "symlinks"
                 version = "1.0.0"
                 exports_sources = "src/*"
+                
+                def package(self):
+                    self.copy("*", src="src", dst="src", symlinks=True)
             """)
 
-        t = TestClient()
+        t = TurboTestClient(path_with_spaces=False)
         t.save({'conanfile.py': conanfile, 'src/file': "content"})
 
         # Create a broken symlink
-        broken_symlink = os.path.join(t.current_folder, 'src', 'link')
+        broken_symlink = os.path.join(t.current_folder, 'src', 'link.txt')
         os.symlink('not-existing', broken_symlink)
 
-        # Check the bronken symlink locally
+        # Check the broken symlink locally
         self.assertTrue(os.path.islink(broken_symlink))
         self.assertFalse(os.path.exists(broken_symlink))
         self.assertFalse(os.path.exists(os.path.realpath(broken_symlink)))
 
         t.run("export . user/channel", assert_error=True)
         self.assertIn("ERROR: The file is a broken symlink", t.out)
+
+        # Until we deactivate the checks
+        with environment_append({"CONAN_SKIP_BROKEN_SYMLINKS_CHECK": "1"}):
+            # t.run("config set general.skip_broken_symlinks_check=True")
+            pref = t.create(ref, conanfile=None)
+            self.assertIn("Created package", t.out)
+
+        # The broken link should be in sources
+        source_folder = t.cache.package_layout(pref.ref).source()
+        self.assertTrue(os.path.islink(os.path.join(source_folder, "src", "link.txt")))
+
+        # The broken link should be in build
+        build_folder = t.cache.package_layout(pref.ref).build(pref)
+        self.assertTrue(os.path.islink(os.path.join(build_folder, "src", "link.txt")))
+
+        # The broken link should be in package
+        package_folder = t.cache.package_layout(pref.ref).package(pref)
+        self.assertTrue(os.path.islink(os.path.join(package_folder, "src", "link.txt")))

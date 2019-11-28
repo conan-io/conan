@@ -145,6 +145,8 @@ def sha256sum(file_path):
 
 
 def _generic_algorithm_sum(file_path, algorithm_name):
+    if os.path.islink(file_path):
+        return 0
 
     with open(file_path, 'rb') as fh:
         m = hashlib.new(algorithm_name)
@@ -339,7 +341,6 @@ def tar_extract(fileobj, destination_dir):
 
     def safemembers(members):
         base = realpath(abspath(destination_dir))
-
         for finfo in members:
             if badpath(finfo.name, base) or finfo.islnk():
                 logger.warning("file:%s is skipped since it's not safe." % str(finfo.name))

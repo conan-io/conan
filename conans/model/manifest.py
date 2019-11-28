@@ -34,16 +34,15 @@ def gather_files(folder):
                 continue
             abs_path = os.path.join(root, f)
             rel_path = abs_path[len(folder) + 1:].replace("\\", "/")
-            if os.path.exists(abs_path):
-                file_dict[rel_path] = abs_path
-            else:
-                if not get_env("CONAN_SKIP_BROKEN_SYMLINKS_CHECK", False):
-                    raise ConanException("The file is a broken symlink, verify that "
-                                         "you are packaging the needed destination files: '%s'."
-                                         "You can skip this check adjusting the "
-                                         "'general.skip_broken_symlinks_check' at the conan.conf "
-                                         "file."
-                                         % abs_path)
+            file_dict[rel_path] = abs_path
+            if not os.path.exists(abs_path) and \
+                    not get_env("CONAN_SKIP_BROKEN_SYMLINKS_CHECK", False):
+                raise ConanException("The file is a broken symlink, verify that "
+                                     "you are packaging the needed destination files: '%s'."
+                                     "You can skip this check adjusting the "
+                                     "'general.skip_broken_symlinks_check' at the conan.conf "
+                                     "file."
+                                     % abs_path)
 
     return file_dict, symlinks
 
@@ -120,6 +119,9 @@ class FileTreeManifest(object):
 
         file_dict = {}
         for name, filepath in files.items():
+            if os.path.islink(filepath):
+                # We cannot add links to the manifest, as they may point to different files
+                continue
             file_dict[name] = md5sum(filepath)
 
         if exports_sources_folder:

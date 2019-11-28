@@ -583,19 +583,18 @@ def compress_files(files, symlinks, name, dest_dir, output=None):
                                                      "Compressing %s" % name) as pg_file_list:
             for filename, abs_path in pg_file_list:
                 info = tarfile.TarInfo(name=filename)
-                info.size = os.stat(abs_path).st_size
-                info.mode = os.stat(abs_path).st_mode & mask
                 if os.path.islink(abs_path):
                     info.type = tarfile.SYMTYPE
                     info.size = 0  # A symlink shouldn't have size
                     info.linkname = os.readlink(abs_path)  # @UndefinedVariable
                     tgz.addfile(tarinfo=info)
                 else:
+                    info.mode = os.stat(abs_path).st_mode & mask
+                    info.size = os.stat(abs_path).st_size
                     with open(abs_path, 'rb') as file_handler:
                         tgz.addfile(tarinfo=info, fileobj=file_handler)
         tgz.close()
 
     duration = time.time() - t1
     log_compressed_files(files, duration, tgz_path)
-
     return tgz_path

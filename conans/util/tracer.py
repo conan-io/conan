@@ -69,6 +69,8 @@ def _append_action(action_name, props):
 # ############## LOG METHODS ######################
 
 def _file_document(name, path):
+    if os.path.islink(path):
+        return {"name": name, "path": path, "md5": 0, "sha1": 0}
     return {"name": name, "path": path, "md5": md5sum(path), "sha1": sha1sum(path)}
 
 
