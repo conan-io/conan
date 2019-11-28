@@ -136,6 +136,8 @@ class AdjustAutoTestCase(unittest.TestCase):
         message(">> CONAN_EXPORTED: ${CONAN_EXPORTED}")
         message(">> CONAN_IN_LOCAL_CACHE: ${CONAN_IN_LOCAL_CACHE}")
 
+        message(">> CMAKE_GENERATOR_PLATFORM: ${CMAKE_GENERATOR_PLATFORM}")
+        
         message(">> CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
         message(">> CMAKE_CXX_FLAGS: ${CMAKE_CXX_FLAGS}")
         message(">> CMAKE_CXX_FLAGS_DEBUG: ${CMAKE_CXX_FLAGS_DEBUG}")
@@ -587,9 +589,12 @@ class AdjustAutoTestCase(unittest.TestCase):
         arch_str = "x64" if arch == "x86_64" else "X86"
         self.assertIn(">> CMAKE_SHARED_LINKER_FLAGS: /machine:{}".format(arch_str) + extra_blank, configure_out)
         self.assertIn(">> CMAKE_EXE_LINKER_FLAGS: /machine:{}".format(arch_str) + extra_blank, configure_out)
+        generator_str = "x64" if arch == "x86_64" else "Win32"
+        self.assertIn(">> CMAKE_GENERATOR_PLATFORM: {}".format(generator_str), configure_out)
 
         self.assertEqual("/machine:{}".format(arch_str), cmake_cache["CMAKE_SHARED_LINKER_FLAGS:STRING"])
         self.assertEqual("/machine:{}".format(arch_str), cmake_cache["CMAKE_EXE_LINKER_FLAGS:STRING"])
+        self.assertEqual(generator_str, cmake_cache["CMAKE_GENERATOR_PLATFORM:STRING"])
 
     @parameterized.expand([("x86_64",), ("x86",), ])
     @unittest.skipUnless(platform.system() == "Linux", "Only windows")

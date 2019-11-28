@@ -50,8 +50,8 @@ class CMakeToolchain(object):
         
         # Configure
         # -- CMake::command_line
-        {% if generator_platform %}set(CMAKE_GENERATOR_PLATFORM "{{ generator_platform }}"){% endif %}
-        {% if toolset %}set(CMAKE_GENERATOR_TOOLSET "{{ toolset }}"){% endif%}
+        {% if generator_platform %}set(CMAKE_GENERATOR_PLATFORM "{{ generator_platform }}" CACHE STRING "" FORCE){% endif %}
+        {% if toolset %}set(CMAKE_GENERATOR_TOOLSET "{{ toolset }}" CACHE STRING "" FORCE){% endif%}
         
         # --  - CMake.flags --> CMakeDefinitionsBuilder::get_definitions
         {%- for it, value in definitions.items() %}
