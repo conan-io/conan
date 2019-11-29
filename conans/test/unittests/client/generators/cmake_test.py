@@ -1,11 +1,8 @@
 import os
-import platform
 import re
-import textwrap
 import unittest
 
 import six
-from parameterized import parameterized
 
 from conans.client.build.cmake_flags import CMakeDefinitionsBuilder
 from conans.client.conf import default_settings_yml
@@ -20,9 +17,8 @@ from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestBufferConanOutput
-from conans.test.utils.tools import TestClient
 from conans.util.files import save
-from conans.test.utils.tools import TestClient, GenConanfile
+
 
 class _MockSettings(object):
     build_type = None

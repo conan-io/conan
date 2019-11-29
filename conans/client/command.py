@@ -282,7 +282,7 @@ class Command(object):
         parser.add_argument("-tbf", "--test-build-folder", action=OnceArgument,
                             help="Working directory of the build process.")
 
-        _add_common_install_arguments(parser, build_help=_help_build_policies)
+        _add_common_install_arguments(parser, build_help=_help_build_policies.format("never"))
         args = parser.parse_args(*args)
         self._warn_python_version()
         return self._conan.test(args.path, args.reference, args.profile, args.settings,
@@ -327,7 +327,7 @@ class Command(object):
                                  ' revision and url even if there are uncommitted changes')
 
         _add_manifests_arguments(parser)
-        _add_common_install_arguments(parser, build_help=_help_build_policies)
+        _add_common_install_arguments(parser, build_help=_help_build_policies.format("package name"))
 
         args = parser.parse_args(*args)
         self._warn_python_version()
@@ -403,8 +403,12 @@ class Command(object):
         else:
             reference = repr(pref.ref)
             if pref.ref.user is None:
-                reference += "@"
-            packages_list = [pref.id]
+                if pref.ref.revision:
+                    reference = "%s/%s@#%s" % (pref.ref.name, pref.ref.version, pref.ref.revision)
+                else:
+                    reference += "@"
+            pkgref = "{}#{}".format(pref.id, pref.revision) if pref.revision else pref.id
+            packages_list = [pkgref]
             if args.package:
                 raise ConanException("Use a full package reference (preferred) or the `--package`"
                                      " command argument, but not both.")
@@ -450,7 +454,7 @@ class Command(object):
                             help='Path to a json file where the install information will be '
                             'written')
 
-        _add_common_install_arguments(parser, build_help=_help_build_policies)
+        _add_common_install_arguments(parser, build_help=_help_build_policies.format("never"))
 
         args = parser.parse_args(*args)
         cwd = get_cwd()
@@ -1344,6 +1348,9 @@ class Command(object):
                             help="Uploads package only if recipe is the same as the remote one")
         parser.add_argument("-j", "--json", default=None, action=OnceArgument,
                             help='json file path where the upload information will be written to')
+        parser.add_argument("--parallel", action='store_true', default=False,
+                            help='Upload files in parallel using multiple threads '
+                                 'The default number of launched threads is 8')
 
         args = parser.parse_args(*args)
 
@@ -1398,7 +1405,8 @@ class Command(object):
                                       query=args.query, remote_name=args.remote,
                                       all_packages=args.all, policy=policy,
                                       confirm=args.confirm, retry=args.retry,
-                                      retry_wait=args.retry_wait, integrity_check=args.check)
+                                      retry_wait=args.retry_wait, integrity_check=args.check,
+                                      parallel_upload=args.parallel)
 
         except ConanException as exc:
             info = exc.info
@@ -1691,7 +1699,7 @@ class Command(object):
         install_parser.add_argument('path', help='path to workspace definition file (it will look'
                                                  ' for a "conanws.yml" inside if a directory is'
                                                  ' given)')
-        _add_common_install_arguments(install_parser, build_help=_help_build_policies)
+        _add_common_install_arguments(install_parser, build_help=_help_build_policies.format("never"))
         install_parser.add_argument("-if", "--install-folder", action=OnceArgument,
                                     help="Folder where the workspace files will be created"
                                          " (default to current working directory)")
@@ -2016,7 +2024,7 @@ _help_build_policies = '''Optional, use it to choose if you want to build from s
                        Allows multiple --build parameters. 'pattern' is a fnmatch file pattern
                        of a package reference.
 
-    Default behavior: If you don't specify anything, it will be similar to '--build=never', but
+    Default behavior: If you don't specify anything, it will be similar to '--build={}', but
     package recipes can override it with their 'build_policy' attribute in the conanfile.py.
 '''
 
