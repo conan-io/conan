@@ -584,13 +584,15 @@ def compress_files(files, symlinks, name, dest_dir, output=None):
             for filename, abs_path in pg_file_list:
                 info = tarfile.TarInfo(name=filename)
                 if os.path.islink(abs_path):
+                    info.mode = os.lstat(abs_path).st_mode & mask
                     info.type = tarfile.SYMTYPE
                     info.size = 0  # A symlink shouldn't have size
                     info.linkname = os.readlink(abs_path)  # @UndefinedVariable
                     tgz.addfile(tarinfo=info)
                 else:
-                    info.mode = os.stat(abs_path).st_mode & mask
-                    info.size = os.stat(abs_path).st_size
+                    os_stat = os.stat(abs_path)
+                    info.mode = os_stat.st_mode & mask
+                    info.size = os_stat.st_size
                     with open(abs_path, 'rb') as file_handler:
                         tgz.addfile(tarinfo=info, fileobj=file_handler)
         tgz.close()
