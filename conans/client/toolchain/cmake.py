@@ -17,11 +17,14 @@ from conans.client.build.cmake_flags import get_generator, get_generator_platfor
 
 class Definitions(OrderedDict):
     def __init__(self):
-        self._configuration_types = {}
         super(Definitions, self).__init__()
+        self._configuration_types = {}
 
-    def __getattr__(self, item):
-        return self._configuration_types.setdefault(item, dict())
+    def __getitem__(self, item):
+        try:
+            return super(Definitions, self).__getitem__(item)
+        except KeyError:
+            return self._configuration_types.setdefault(item, dict())
 
     @property
     def configuration_types(self):
