@@ -1369,7 +1369,7 @@ class Command(object):
                 raise ConanException("'--query' argument cannot be used together with '--package'")
         else:
             reference = repr(pref.ref)
-            package_id = pref.id
+            package_id = "{}#{}".format(pref.id, pref.revision) if pref.revision else pref.id
 
             if args.package:
                 raise ConanException("Use a full package reference (preferred) or the `--package`"
