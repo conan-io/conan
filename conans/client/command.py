@@ -403,8 +403,12 @@ class Command(object):
         else:
             reference = repr(pref.ref)
             if pref.ref.user is None:
-                reference += "@"
-            packages_list = [pref.id]
+                if pref.ref.revision:
+                    reference = "%s/%s@#%s" % (pref.ref.name, pref.ref.version, pref.ref.revision)
+                else:
+                    reference += "@"
+            pkgref = "{}#{}".format(pref.id, pref.revision) if pref.revision else pref.id
+            packages_list = [pkgref]
             if args.package:
                 raise ConanException("Use a full package reference (preferred) or the `--package`"
                                      " command argument, but not both.")

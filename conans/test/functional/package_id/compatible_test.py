@@ -4,7 +4,6 @@ import unittest
 
 from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient, GenConanfile
-from conans.util.env_reader import get_env
 
 
 class CompatibleIDsTest(unittest.TestCase):

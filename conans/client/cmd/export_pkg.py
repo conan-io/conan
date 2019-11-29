@@ -4,7 +4,6 @@ from conans.client import packager
 from conans.client.graph.graph_manager import load_deps_info
 from conans.errors import ConanException
 from conans.model.conan_file import get_env_context_manager
-from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference
 from conans.util.files import rmdir
 
