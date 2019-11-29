@@ -40,6 +40,8 @@ class CMakeToolchain(object):
     _template_toolchain = textwrap.dedent("""
         # Conan generated toolchain file
         
+        cmake_minimum_required(VERSION 3.15)  # Needed for CMAKE_PROJECT_INCLUDE
+                
         # Avoid including toolchain file several times (bad if appending to variables like
         #   CMAKE_CXX_FLAGS. See https://github.com/android/ndk/issues/323
         if(CONAN_TOOLCHAIN_INCLUDED)
@@ -68,10 +70,8 @@ class CMakeToolchain(object):
         
         get_property( _CMAKE_IN_TRY_COMPILE GLOBAL PROPERTY IN_TRY_COMPILE )
         if(NOT _CMAKE_IN_TRY_COMPILE)
-            {% if options.set_vs_runtime %}
             set(CMAKE_PROJECT_INCLUDE "{{ conan_project_include_cmake }}")  # Will be executed after the project
-            {%- endif %}
-
+            
             # We are going to adjust automagically many things as requested by Conan
             #   these are the things done by 'conan_basic_setup()'            
             {% if options.set_rpath %}conan_set_rpath(){% endif %}
@@ -119,7 +119,7 @@ class CMakeToolchain(object):
         {%- endfor %}
 
         # Adjustments that depends on the build_type
-        conan_set_vs_runtime()
+        {% if options.set_vs_runtime %}conan_set_vs_runtime(){% endif %}
     """)
 
     def __init__(self, conanfile,
