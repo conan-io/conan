@@ -119,9 +119,6 @@ class FileTreeManifest(object):
 
         file_dict = {}
         for name, filepath in files.items():
-            if os.path.islink(filepath):
-                # We cannot add links to the manifest, as they may point to different files
-                continue
             file_dict[name] = md5sum(filepath)
 
         if exports_sources_folder:
