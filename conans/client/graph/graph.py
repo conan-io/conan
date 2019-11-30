@@ -31,6 +31,7 @@ class Node(object):
         self._package_id = None
         self.prev = None
         self.conanfile = conanfile
+        conanfile._node = self
         self.dependencies = []  # Ordered Edges
         self.dependants = set()  # Edges
         self.binary = None

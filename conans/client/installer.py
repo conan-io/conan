@@ -320,7 +320,6 @@ class BinaryInstaller(object):
                                                   out=output, recorder=self._recorder)
 
                 if node.binary == BINARY_EDITABLE:
-                    self.propagate_info(node)
                     self._handle_node_editable(node, graph_info)
                 else:
                     if node.binary == BINARY_SKIP:  # Privates not necessary
@@ -330,9 +329,6 @@ class BinaryInstaller(object):
                     if node.binary == BINARY_UNKNOWN:
                         self._binaries_analyzer.reevaluate_node(node, remotes, build_mode, update)
                     self._handle_node_cache(node, keep_build, processed_package_refs, remotes)
-
-        # Finally, propagate information to root node (ref=None)
-        self.propagate_info(root_node)
 
     @staticmethod
     def _node_concurrently_installed(node, package_folder):
