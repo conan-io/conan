@@ -1,6 +1,5 @@
 import os
 
-from six.moves import urllib
 from six.moves.configparser import ConfigParser, NoSectionError
 
 from conans.errors import ConanException

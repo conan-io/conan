@@ -1,6 +1,5 @@
 import os
 import unittest
-from collections import namedtuple
 
 from conans.client.generators.cmake_paths import CMakePathsGenerator
 from conans.model.build_info import CppInfo

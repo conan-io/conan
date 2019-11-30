@@ -10,7 +10,6 @@ import sys
 import tempfile
 import threading
 import unittest
-import textwrap
 import uuid
 from collections import Counter, OrderedDict
 from contextlib import contextmanager
@@ -1236,7 +1235,8 @@ class TurboTestClient(TestClient):
     def create(self, ref, conanfile=GenConanfile(), args=None, assert_error=False):
         if conanfile:
             self.save({"conanfile.py": conanfile})
-        self.run("create . {} {} --json {}".format(ref.full_str(),
+        full_str = "{}@".format(ref.full_str()) if not ref.user else ref.full_str()
+        self.run("create . {} {} --json {}".format(full_str,
                                                    args or "", self.tmp_json_name),
                  assert_error=assert_error)
         rrev = self.cache.package_layout(ref).recipe_revision()

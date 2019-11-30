@@ -5,7 +5,6 @@ import unittest
 
 from conans.model.graph_info import GRAPH_INFO_FILE
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
-from conans.util.files import load
 from conans.model.graph_lock import LOCKFILE
 
 
@@ -102,7 +101,7 @@ qmake
         client.save({"conanfile.txt": base}, clean_first=True)
         client.run("install . --build")
 
-        qmake = load(os.path.join(client.current_folder, "conanbuildinfo.pri"))
+        qmake = client.load("conanbuildinfo.pri")
         self.assertIn("CONAN_RESDIRS += ", qmake)
         self.assertEqual(qmake.count("CONAN_LIBS += "), 1)
         self.assertIn("CONAN_LIBS_PKG_RELEASE += -lhellor", qmake)
@@ -139,7 +138,7 @@ qmake
         client.save({"conanfile.txt": base}, clean_first=True)
         client.run("install . --build")
 
-        qmake = load(os.path.join(client.current_folder, "conanbuildinfo.pri"))
+        qmake = client.load("conanbuildinfo.pri")
         self.assertIn("CONAN_RESDIRS += ", qmake)
         self.assertEqual(qmake.count("CONAN_LIBS += "), 1)
         self.assertIn("CONAN_LIBS_PKG_NAME_WORLD_RELEASE += -lhellor", qmake)

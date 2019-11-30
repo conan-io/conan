@@ -8,6 +8,16 @@ from conans.client.output import ConanOutput
 
 TIMEOUT_BEAT_SECONDS = 30
 TIMEOUT_BEAT_CHARACTER = '.'
+LEFT_JUSTIFY_DESC = 28
+LEFT_JUSTIFY_MESSAGE = 90
+
+
+def left_justify_message(msg):
+    return msg.ljust(LEFT_JUSTIFY_MESSAGE)
+
+
+def left_justify_description(msg):
+    return msg.ljust(LEFT_JUSTIFY_DESC)
 
 
 class ProgressOutput(ConanOutput):
@@ -34,8 +44,9 @@ class Progress(object):
         if self._print_dot:
             self._last_time = time.time()
         if self._output and self._output.is_terminal and self._description:
-            self._tqdm_bar = tqdm(total=self._total_length, desc=self._description,
-                                  file=self._output, unit="B", leave=True, dynamic_ncols=False,
+            self._tqdm_bar = tqdm(total=self._total_length,
+                                  desc=left_justify_description(self._description),
+                                  file=self._output, unit="B", leave=False, dynamic_ncols=False,
                                   ascii=True, unit_scale=True, unit_divisor=1024)
 
     def pb_update(self, chunk_size):
@@ -62,6 +73,9 @@ class Progress(object):
     def pb_close(self):
         if self._tqdm_bar is not None:
             self._tqdm_bar.close()
+            msg = "\r{} completed [{:1.2f}k]".format(self._description,
+                                                     self._processed_size / 1024.0)
+            tqdm.write(left_justify_message(msg), file=self._output, end="\n")
 
 
 class FileWrapper(Progress):
@@ -95,15 +109,14 @@ class ListWrapper(object):
         self._last_progress = None
         self._i_file = 0
         self._output = output
-        self._desc = desc
+        self._description = desc
         if self._output and not self._output.is_terminal:
             output.write("[")
         elif self._output:
-            self._tqdm_bar = tqdm(total=len(files_list), desc=desc, file=self._output, unit="files ",
-                                  leave=True, dynamic_ncols=False, ascii=True)
-
-    def description(self):
-        return self._desc
+            self._tqdm_bar = tqdm(total=len(files_list),
+                                  desc=left_justify_description(self._description),
+                                  file=self._output, unit="files ", leave=False, dynamic_ncols=False,
+                                  ascii=True)
 
     def update(self):
         self._i_file = self._i_file + 1
@@ -118,6 +131,8 @@ class ListWrapper(object):
     def pb_close(self):
         if self._output and self._output.is_terminal:
             self._tqdm_bar.close()
+            msg = "\r{} completed [{} files]".format(self._description, self._total_length)
+            tqdm.write(left_justify_message(msg), file=self._output, end="\n")
         elif self._output:
             self._output.writeln("]")
 
