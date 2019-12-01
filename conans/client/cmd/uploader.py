@@ -123,6 +123,9 @@ class CmdUpload(object):
         if package_id or check_valid_ref(reference_or_pattern):
             # Upload package
             ref = ConanFileReference.loads(reference_or_pattern)
+            if ref.revision and not self._cache.config.revisions_enabled:
+                raise ConanException("Revisions not enabled in the client, specify a "
+                                     "reference without revision")
             refs = [ref, ]
             confirm = True
         else:
@@ -140,6 +143,9 @@ class CmdUpload(object):
 
         for ref in refs:
             metadata = self._cache.package_layout(ref).load_metadata()
+            if ref.revision and ref.revision != metadata.recipe.revision:
+                raise ConanException("Recipe revision {} does not match the one stored in the cache {}"
+                                     .format(ref.revision, metadata.recipe.revision))
             ref = ref.copy_with_rev(metadata.recipe.revision)
             remote = remotes.selected
             if remote:
@@ -180,10 +186,14 @@ class CmdUpload(object):
                                              "no packages can be uploaded" % str(ref))
                 prefs = []
                 # Gather all the complete PREFS with PREV
-                for package_id in packages_ids:
+                for package in packages_ids:
+                    package_id, prev = package.split("#") if "#" in package else (package, None)
                     if package_id not in metadata.packages:
                         raise ConanException("Binary package %s:%s not found"
                                              % (str(ref), package_id))
+                    if prev and prev != metadata.packages[package_id].revision:
+                        raise ConanException("Binary package %s:%s#%s not found"
+                                             % (str(ref), package_id, prev))
                     # Filter packages that don't match the recipe revision
                     if self._cache.config.revisions_enabled and ref.revision:
                         rec_rev = metadata.packages[package_id].recipe_revision
