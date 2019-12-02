@@ -37,11 +37,9 @@ def _parse_profile(contents):
 
 
 class BuildInfoCreator(object):
-    def __init__(self, output, build_info_file, lockfile, capture_env=False,
-                 user=None, password=None, apikey=None):
+    def __init__(self, output, build_info_file, lockfile, user=None, password=None, apikey=None):
         self._build_info_file = build_info_file
         self._lockfile = lockfile
-        self._capture_env = capture_env
         self._user = user
         self._password = password
         self._apikey = apikey
@@ -207,12 +205,6 @@ class BuildInfoCreator(object):
                "buildAgent": {"name": "Conan Client", "version": "1.X"},
                "modules": list(modules.values())}
 
-        if self._capture_env:
-            excluded = ["secret", "key", "password"]
-            environment = {"buildInfo.env.{}".format(k): v for k, v in os.environ.items() if
-                           k not in excluded}
-            ret["properties"] = environment
-
         def dump_custom_types(obj):
             if isinstance(obj, set):
                 artifacts = [{k: v for k, v in o._asdict().items() if v is not None} for o in obj]
@@ -223,9 +215,9 @@ class BuildInfoCreator(object):
             f.write(json.dumps(ret, indent=4, default=dump_custom_types))
 
 
-def create_build_info(output, build_info_file, lockfile, capture_env, user, password,
+def create_build_info(output, build_info_file, lockfile, user, password,
                       apikey):
-    bi = BuildInfoCreator(output, build_info_file, lockfile, capture_env, user, password,
+    bi = BuildInfoCreator(output, build_info_file, lockfile, user, password,
                           apikey)
     bi.create()
 

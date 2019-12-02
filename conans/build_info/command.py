@@ -77,8 +77,6 @@ def runv2():
     parser_create.add_argument("build_info_file", type=str,
                                help="build info json for output")
     parser_create.add_argument("--lockfile", type=str, required=True, help="input lockfile")
-    parser_create.add_argument("--capture-env", default=False, action="store_true",
-                               help="capture or not the environment")
     parser_create.add_argument("--user", type=str, nargs="?", default=None, help="user")
     parser_create.add_argument("--password", type=str, nargs="?", default=None, help="password")
     parser_create.add_argument("--apikey", type=str, nargs="?", default=None, help="apikey")
@@ -116,7 +114,7 @@ def runv2():
         if args.subcommand == "create":
             check_credential_arguments()
             create_build_info(output, args.build_info_file, args.lockfile,
-                              args.capture_env, args.user, args.password, args.apikey)
+                              args.user, args.password, args.apikey)
         if args.subcommand == "update":
             update_build_info(args.buildinfo, args.output_file)
         if args.subcommand == "publish":
