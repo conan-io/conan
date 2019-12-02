@@ -808,3 +808,4 @@ settings_1_20_1 = settings_1_20_0
 settings_1_20_2 = settings_1_20_1
 settings_1_20_3 = settings_1_20_2
 settings_1_20_4 = settings_1_20_3
+settings_1_20_5 = settings_1_20_4
