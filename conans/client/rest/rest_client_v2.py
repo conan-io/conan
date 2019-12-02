@@ -19,15 +19,16 @@ from conans.util.log import logger
 class RestV2Methods(RestCommonMethods):
 
     def __init__(self, remote_url, token, custom_headers, output, requester, verify_ssl,
-                 artifacts_properties=None, checksum_deploy=False):
+                 artifacts_properties=None, checksum_deploy=False, matrix_params=False):
 
         super(RestV2Methods, self).__init__(remote_url, token, custom_headers, output, requester,
-                                            verify_ssl, artifacts_properties)
+                                            verify_ssl, artifacts_properties, matrix_params)
         self._checksum_deploy = checksum_deploy
 
     @property
     def router(self):
-        return ClientV2Router(self.remote_url.rstrip("/"))
+        return ClientV2Router(self.remote_url.rstrip("/"), self._artifacts_properties,
+                              self._matrix_params)
 
     def _get_file_list_json(self, url):
         data = self.get_json(url)
@@ -161,11 +162,11 @@ class RestV2Methods(RestCommonMethods):
 
     def _upload_recipe(self, ref, files_to_upload, retry, retry_wait):
         # Direct upload the recipe
-        urls = {fn: self.router.recipe_file(ref, fn) for fn in files_to_upload}
+        urls = {fn: self.router.recipe_file(ref, fn, add_matrix_params=True) for fn in files_to_upload}
         self._upload_files(files_to_upload, urls, retry, retry_wait)
 
     def _upload_package(self, pref, files_to_upload, retry, retry_wait):
-        urls = {fn: self.router.package_file(pref, fn)
+        urls = {fn: self.router.package_file(pref, fn, add_matrix_params=True)
                 for fn in files_to_upload}
         self._upload_files(files_to_upload, urls, retry, retry_wait)
 
@@ -180,10 +181,11 @@ class RestV2Methods(RestCommonMethods):
                 self._output.rewrite_line("Uploading %s" % filename)
             resource_url = urls[filename]
             try:
+                headers = self._artifacts_properties if not self._matrix_params else {}
                 uploader.upload(resource_url, files[filename], auth=self.auth,
                                 dedup=self._checksum_deploy, retry=retry,
                                 retry_wait=retry_wait,
-                                headers=self._artifacts_properties)
+                                headers=headers)
             except (AuthenticationException, ForbiddenException):
                 raise
             except Exception as exc:
