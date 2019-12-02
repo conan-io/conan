@@ -14,7 +14,7 @@ sh_activate_tpl = Template(textwrap.dedent("""
     # DIR="$( cd "$( dirname "$_" )" >/dev/null 2>&1 && pwd )"
 
     {%- for it in modified_vars %}
-    export OLD_{{it}}="${{it}}"
+    export CONAN_OLD_{{it}}="${{it}}"
     {%- endfor %}
 
     while read line; do
@@ -33,8 +33,8 @@ sh_deactivate_tpl = Template(textwrap.dedent("""
     unset CONAN_OLD_PS1
 
     {% for it in modified_vars %}
-    export {{it}}="$OLD_{{it}}"
-    unset OLD_{{it}}
+    export {{it}}="$CONAN_OLD_{{it}}"
+    unset CONAN_OLD_{{it}}
     {%- endfor %}
     {%- for it in new_vars %}
     unset {{it}}
@@ -45,7 +45,7 @@ cmd_activate_tpl = Template(textwrap.dedent("""
     @echo off
     
     {%- for it in modified_vars %}
-    SET "OLD_{{it}}=%{{it}}%"
+    SET "CONAN_OLD_{{it}}=%{{it}}%"
     {%- endfor %}
     
     FOR /F "usebackq tokens=1,* delims={{delim}}" %%i IN ("{{ environment_file }}") DO (
@@ -63,8 +63,8 @@ cmd_deactivate_tpl = Template(textwrap.dedent("""
     SET "CONAN_OLD_PROMPT="
     
     {% for it in modified_vars %}
-    SET "{{it}}=%OLD_{{it}}%"
-    SET "OLD_{{it}}="
+    SET "{{it}}=%CONAN_OLD_{{it}}%"
+    SET "CONAN_OLD_{{it}}="
     {%- endfor %}
     {%- for it in new_vars %}
     SET "{{it}}="
@@ -73,7 +73,7 @@ cmd_deactivate_tpl = Template(textwrap.dedent("""
 
 ps1_activate_tpl = Template(textwrap.dedent("""
     {%- for it in modified_vars %}
-    $env:OLD_{{it}}=$env:{{it}}
+    $env:CONAN_OLD_{{it}}=$env:{{it}}
     {%- endfor %}
     
     foreach ($line in Get-Content "{{ environment_file }}") {
@@ -92,8 +92,8 @@ ps1_deactivate_tpl = Template(textwrap.dedent("""
     remove-item function:_old_conan_prompt
     
     {% for it in modified_vars %}
-    $env:{{it}}=$env:OLD_{{it}}
-    Remove-Item env:OLD_{{it}}
+    $env:{{it}}=$env:CONAN_OLD_{{it}}
+    Remove-Item env:CONAN_OLD_{{it}}
     {%- endfor %}
     {%- for it in new_vars %}
     Remove-Item env:{{it}}
