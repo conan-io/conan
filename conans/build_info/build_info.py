@@ -41,7 +41,6 @@ class BuildInfoCreator(object):
                  user=None, password=None, apikey=None):
         self._build_info_file = build_info_file
         self._lockfile = lockfile
-        self._multi_module = True
         self._capture_env = capture_env
         self._user = user
         self._password = password
@@ -172,16 +171,16 @@ class BuildInfoCreator(object):
                 recipe_key = self._get_reference(pref)
                 modules[recipe_key]["id"] = recipe_key
                 modules[recipe_key]["artifacts"].update(
-                    self._get_recipe_artifacts(pref, add_prefix=not self._multi_module,
+                    self._get_recipe_artifacts(pref, add_prefix=False,
                                                use_id=False))
                 # TODO: what about `python_requires`?
                 # TODO: can we associate any properties to the recipe? Profile/options may be different per lockfile
 
                 # Create module for the package_id
-                package_key = self._get_package_reference(pref) if self._multi_module else recipe_key
+                package_key = self._get_package_reference(pref)
                 modules[package_key]["id"] = package_key
                 modules[package_key]["artifacts"].update(
-                    self._get_package_artifacts(pref, add_prefix=not self._multi_module,
+                    self._get_package_artifacts(pref, add_prefix=False,
                                                 use_id=False))
 
                 # Recurse requires
