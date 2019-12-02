@@ -342,6 +342,7 @@ def tar_extract(fileobj, destination_dir):
 
         for finfo in members:
             if badpath(finfo.name, base) or finfo.islnk():
+                logger.warning("file:%s is skipped since it's not safe." % str(finfo.name))
                 continue
             else:
                 # Fixes unzip a windows zipped file in linux

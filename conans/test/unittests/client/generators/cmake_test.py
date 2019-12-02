@@ -1,9 +1,8 @@
 import os
 import re
 import unittest
-import six
 
-from mock import patch
+import six
 
 from conans.client.build.cmake_flags import CMakeDefinitionsBuilder
 from conans.client.conf import default_settings_yml
@@ -342,12 +341,18 @@ endmacro()""", macro)
 
         generator = CMakeGenerator(conanfile)
         content = generator.content
-        self.assertIn('find_library(CONAN_FRAMEWORK_FOUND NAME ${_FRAMEWORK} PATHS '
-                      '${CONAN_FRAMEWORK_DIRS})', content)
+        self.assertIn('find_library(CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND NAME ${_FRAMEWORK} PATHS'
+                      ' ${CONAN_FRAMEWORK_DIRS})', content)
         self.assertIn('set(CONAN_FRAMEWORK_DIRS "path/to/Frameworks1"\n\t\t\t"path/to/Frameworks2" '
                       '${CONAN_FRAMEWORK_DIRS})', content)
         self.assertIn('set(CONAN_LIBS ${CONAN_PKG_LIBS} ${CONAN_SYSTEM_LIBS} '
                       '${CONAN_FRAMEWORKS_FOUND})', content)
+
+        generator = CMakeFindPackageGenerator(conanfile)
+        content = generator.content
+        content = content['FindMyPkg.cmake']
+        self.assertIn('find_library(CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND NAME ${_FRAMEWORK} PATHS'
+                      ' ${MyPkg_FRAMEWORK_DIRS})', content)
 
 
 class CMakeCppInfoNameTest(unittest.TestCase):

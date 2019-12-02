@@ -1,4 +1,5 @@
 import os
+import textwrap
 import unittest
 from collections import namedtuple
 
@@ -11,7 +12,7 @@ from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.scm import SCMData
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, SVNLocalRepoTestCase, TestClient, \
-    TestServer, create_local_git_repo
+    TestServer, create_local_git_repo, GenConanfile
 from conans.util.files import load, rmdir, save, to_file_bytes
 
 base = '''
@@ -170,6 +171,36 @@ class ConanLib(ConanFile):
         folder = self.client.cache.package_layout(ref).source()
         self.assertTrue(os.path.exists(os.path.join(folder, "mysub", "myfile.txt")))
         self.assertFalse(os.path.exists(os.path.join(folder, "mysub", "conanfile.py")))
+
+    def test_ignore_dirty_subfolder(self):
+        # https://github.com/conan-io/conan/issues/6070
+        conanfile = textwrap.dedent("""
+            import os
+            from conans import ConanFile, tools
+
+            class ConanLib(ConanFile):
+                name = "lib"
+                version = "0.1"
+                short_paths = True
+                scm = {
+                    "type": "git",
+                    "url": "auto",
+                    "revision": "auto",
+                }
+
+                def build(self):
+                    path = os.path.join("base_file.txt")
+                    assert os.path.exists(path)
+        """)
+        self.client.save({"test/main/conanfile.py": conanfile, "base_file.txt": "foo"})
+        create_local_git_repo(folder=self.client.current_folder)
+        self.client.run_command('git remote add origin https://myrepo.com.git')
+
+        # Introduce changes
+        self.client.save({"dirty_file.txt": "foo"})
+        # The build() method will verify that the files from the repository are copied ok
+        self.client.run("create test/main/conanfile.py user/channel")
+        self.assertIn("Package '{}' created".format(NO_SETTINGS_PACKAGE_ID), self.client.out)
 
     def test_auto_conanfile_no_root(self):
         """
@@ -952,6 +983,32 @@ class ConanLib(ConanFile):
         # The upload with --force should work
         self.client.run("upload lib/0.1@user/channel -r default --force")
         self.assertIn("Uploaded conan recipe", self.client.out)
+
+    def test_double_create(self):
+        # https://github.com/conan-io/conan/issues/5195#issuecomment-551848955
+        self.client = TestClient(default_server_user=True)
+        conanfile = str(GenConanfile().
+                        with_scm({"type": "git", "revision": "auto", "url": "auto"}).
+                        with_import("import os").with_import("from conans import tools").
+                        with_name("lib").
+                        with_version("1.0"))
+        conanfile += """
+    def build(self):
+        contents = tools.load("bla.sh")
+        self.output.warn("Bla? {}".format(contents))
+        """
+        self.client.save({"conanfile.py": conanfile, "myfile.txt": "My file is copied"})
+        create_local_git_repo(folder=self.client.current_folder)
+        self.client.run_command('git remote add origin https://myrepo.com.git')
+        #  modified blah.sh
+        self.client.save({"bla.sh": "bla bla"})
+        self.client.run("create . user/channel")
+        self.assertIn("Bla? bla bla", self.client.out)
+        #  modified blah.sh again
+        self.client.save({"bla.sh": "bla2 bla2"})
+        # Run conan create again
+        self.client.run("create . user/channel")
+        self.assertIn("Bla? bla2 bla2", self.client.out)
 
 
 @attr('svn')

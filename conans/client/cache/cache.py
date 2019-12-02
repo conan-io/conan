@@ -82,10 +82,6 @@ class ClientCache(object):
     def store(self):
         return self._store_folder
 
-    def package(self, pref, short_paths=False):
-        # TODO: This is deprecated, only used in testing
-        return self.package_layout(pref.ref, short_paths).package(pref)
-
     def installed_as_editable(self, ref):
         return isinstance(self.package_layout(ref), PackageEditableLayout)
 
@@ -107,7 +103,7 @@ class ClientCache(object):
                                       short_paths=short_paths, no_lock=self._no_locks())
 
     @property
-    def registry_path(self):
+    def remotes_path(self):
         return join(self.cache_folder, REMOTES)
 
     @property
@@ -172,8 +168,7 @@ class ClientCache(object):
         if os.path.isabs(self.config.default_profile):
             return self.config.default_profile
         else:
-            return join(self.cache_folder, PROFILES_FOLDER,
-                        self.config.default_profile)
+            return join(self.cache_folder, PROFILES_FOLDER, self.config.default_profile)
 
     @property
     def hooks_path(self):
@@ -261,8 +256,8 @@ def _mix_settings_with_env(settings):
     need to specify all the subsettings, the file defaulted will be
     ignored"""
 
-    def get_env_value(name):
-        env_name = "CONAN_ENV_%s" % name.upper().replace(".", "_")
+    def get_env_value(name_):
+        env_name = "CONAN_ENV_%s" % name_.upper().replace(".", "_")
         return os.getenv(env_name, None)
 
     def get_setting_name(env_name):

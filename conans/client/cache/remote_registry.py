@@ -61,7 +61,7 @@ def migrate_registry_file(cache, out):
     folder = cache.cache_folder
     reg_json_path = os.path.join(folder, "registry.json")
     reg_txt_path = os.path.join(folder, "registry.txt")
-    remotes_path = cache.registry_path
+    remotes_path = cache.remotes_path
 
     def add_ref_remote(reference, remotes, remote_name):
         ref = ConanFileReference.loads(reference, validate=True)
@@ -292,7 +292,7 @@ class RemoteRegistry(object):
     def __init__(self, cache, output):
         self._cache = cache
         self._output = output
-        self._filename = cache.registry_path
+        self._filename = cache.remotes_path
 
     def _validate_url(self, url):
         """ Check if URL contains protocol and address

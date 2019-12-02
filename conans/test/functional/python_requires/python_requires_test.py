@@ -9,7 +9,6 @@ from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient, TestServer, \
     NO_SETTINGS_PACKAGE_ID, create_local_git_repo, GenConanfile
-from conans.util.files import load
 
 
 class PythonExtendTest(unittest.TestCase):
@@ -250,7 +249,7 @@ class MyConanfileBase(source.SourceBuild, package.PackageInfo):
             """)
         client.save({"conanfile.py": conanfile})
         client.run("install . pkg/0.1@user/channel")
-        lockfile = load(os.path.join(client.current_folder, "conan.lock"))
+        lockfile = client.load("conan.lock")
         self.assertIn("base/1.0@user/channel#e41727b922c6ae54b216a58442893f3a", lockfile)
         self.assertIn("helper/1.0@user/channel#98457e1f8d9174ed053747634ce0ea1a", lockfile)
         client.run("source .")

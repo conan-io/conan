@@ -88,4 +88,3 @@ class LocalDB(object):
                 connection.commit()
             except Exception as e:
                 raise ConanException("Could not store credentials %s" % str(e))
-
