@@ -101,7 +101,7 @@ class MyBuildInfoCreation(unittest.TestCase):
         run()
         sys.argv = ["conan_build_info", "--v2", "create",
                     os.path.join(client.current_folder, "buildinfo1.json"), "--lockfile",
-                    os.path.join(client.current_folder, LOCKFILE)]
+                    os.path.join(client.current_folder, LOCKFILE), "--multi-module"]
         run()
 
         shutil.copy(os.path.join(client.current_folder, "temp.lock"),
@@ -112,18 +112,18 @@ class MyBuildInfoCreation(unittest.TestCase):
 
         sys.argv = ["conan_build_info", "--v2", "create",
                     os.path.join(client.current_folder, "buildinfo2.json"), "--lockfile",
-                    os.path.join(client.current_folder, LOCKFILE)]
+                    os.path.join(client.current_folder, LOCKFILE), "--multi-module"]
         run()
 
         user_channel = "@" + user_channel if len(user_channel) > 2 else user_channel
-        with open(os.path.join(client.current_folder, "buildinfo1.json")) as f:
-            buildinfo = json.load(f)
-            self.assertEqual(buildinfo["name"], "MyBuildName")
-            self.assertEqual(buildinfo["number"], "42")
-            ids_list = [item["id"] for item in buildinfo["modules"]]
-            self.assertTrue("PkgB/0.1{}".format(user_channel) in ids_list)
-            self.assertTrue("PkgB/0.1{}:09f152eb7b3e0a6e15a2a3f464245864ae8f8644".format(
-                user_channel) in ids_list)
+        f = client.load("buildinfo1.json")
+        buildinfo = json.loads(f)
+        self.assertEqual(buildinfo["name"], "MyBuildName")
+        self.assertEqual(buildinfo["number"], "42")
+        ids_list = [item["id"] for item in buildinfo["modules"]]
+        self.assertTrue("PkgB/0.1{}".format(user_channel) in ids_list)
+        self.assertTrue("PkgB/0.1{}:09f152eb7b3e0a6e15a2a3f464245864ae8f8644".format(
+            user_channel) in ids_list)
 
         sys.argv = ["conan_build_info", "--v2", "update",
                     os.path.join(client.current_folder, "buildinfo1.json"),
