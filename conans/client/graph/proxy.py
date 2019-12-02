@@ -19,6 +19,7 @@ class ConanProxy(object):
         self._cache = cache
         self._out = output
         self._remote_manager = remote_manager
+        self._cached_alias = {}
 
     def get_recipe(self, ref, check_updates, update, remotes, recorder):
         layout = self._cache.package_layout(ref)

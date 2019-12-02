@@ -5,7 +5,7 @@ import unittest
 from parameterized.parameterized import parameterized
 
 from conans.client.tools.files import replace_in_file
-from conans.test.utils.tools import TestClient, TestServer
+from conans.test.utils.tools import TestClient, TestServer, GenConanfile
 
 
 class ConanAliasTest(unittest.TestCase):
@@ -510,3 +510,16 @@ class Pkg(ConanFile):
 
         t.run("inspect {} -a description".format(reference2))
         self.assertIn("description: None", t.out)  # The alias conanfile doesn't have description
+
+    def test_not_override_package(self):
+        # https://github.com/conan-io/conan/issues/5468
+        t = TestClient()
+        t.save({"conanfile.py": GenConanfile()})
+        t.run("create . CA/1.0@user/testing")
+        t.run("alias CA/ALIAS@user/testing CA/1.0@user/testing")
+        t.save({"conanfile.py": GenConanfile().with_require_plain("CA/1.0@user/testing")})
+        t.run("create . CB/1.0@user/testing")
+        t.save({"conanfile.py": GenConanfile().with_require_plain("CB/1.0@user/testing")
+                                              .with_build_require_plain("CA/ALIAS@user/testing")})
+        t.run("create . CC/1.0@user/testing")
+        print t.out

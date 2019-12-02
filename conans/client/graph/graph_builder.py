@@ -10,6 +10,12 @@ from conans.model.requires import Requirements, Requirement
 from conans.util.log import logger
 
 
+class AliasResolver(object):
+    def __init__(self, proxy):
+        self._cached_alias = {}
+        self._proxy = proxy
+
+
 class DepsGraphBuilder(object):
     """ Responsible for computing the dependencies graph DepsGraph
     """
