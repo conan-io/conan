@@ -23,7 +23,7 @@ sh_activate_tpl = Template(textwrap.dedent("""
     done < "{{ environment_file }}"
 
     export CONAN_OLD_PS1=$PS1
-    export PS1="(conanenv) $PS1"
+    export PS1="({{venv_name}}) $PS1"
 
 """))
 
@@ -51,10 +51,16 @@ cmd_activate_tpl = Template(textwrap.dedent("""
     FOR /F "usebackq tokens=1,* delims={{delim}}" %%i IN ("{{ environment_file }}") DO (
         CALL SET "%%i=%%j"
     )
+    
+    SET "CONAN_OLD_PROMPT=%PROMPT%"
+    SET "PROMPT=({{venv_name}}) %PROMPT%"
 """))
 
 cmd_deactivate_tpl = Template(textwrap.dedent("""
     @echo off
+    
+    SET "PROMPT=%CONAN_OLD_PROMPT%"
+    SET "CONAN_OLD_PROMPT="
     
     {% for it in modified_vars %}
     SET "{{it}}=%OLD_{{it}}%"
@@ -75,9 +81,16 @@ ps1_activate_tpl = Template(textwrap.dedent("""
         $value_expanded = $ExecutionContext.InvokeCommand.ExpandString($value)
         Set-Item env:\\$var -Value "$value_expanded"
     }
+    
+    function global:_old_conan_prompt {""}
+    $function:_old_conan_prompt = $function:prompt
+    function global:prompt { write-host "({{venv_name}}) " -nonewline; & $function:_old_conan_prompt }
 """))
 
 ps1_deactivate_tpl = Template(textwrap.dedent("""
+    $function:prompt = $function:_old_conan_prompt
+    remove-item function:_old_conan_prompt
+    
     {% for it in modified_vars %}
     $env:{{it}}=$env:OLD_{{it}}
     Remove-Item env:OLD_{{it}}
@@ -172,7 +185,8 @@ class VirtualEnvGenerator(Generator):
         environment_filepath = os.path.abspath(
             os.path.join(self.output_path, "environment{}.sh.env".format(self.suffix)))
         activate_content = sh_activate_tpl.render(environment_file=environment_filepath,
-                                                  modified_vars=modified_vars, new_vars=new_vars)
+                                                  modified_vars=modified_vars, new_vars=new_vars,
+                                                  venv_name=self.venv_name)
         activate_lines = activate_content.splitlines()
         deactivate_content = sh_deactivate_tpl.render(modified_vars=modified_vars, new_vars=new_vars)
         deactivate_lines = deactivate_content.splitlines()
@@ -193,7 +207,8 @@ class VirtualEnvGenerator(Generator):
             os.path.join(self.output_path, "environment{}.bat.env".format(self.suffix)))
         activate_content = cmd_activate_tpl.render(environment_file=environment_filepath,
                                                    modified_vars=modified_vars, new_vars=new_vars,
-                                                   delim="=")  # TODO: Test a env var with '=' in the value, it will require quotes around it
+                                                   delim="=",  # TODO: Test a env var with '=' in the value, it will require quotes around it
+                                                   venv_name=self.venv_name)
         activate_lines = activate_content.splitlines()
         deactivate_content = cmd_deactivate_tpl.render(modified_vars=modified_vars, new_vars=new_vars)
         deactivate_lines = deactivate_content.splitlines()
@@ -213,7 +228,8 @@ class VirtualEnvGenerator(Generator):
         environment_filepath = os.path.abspath(
             os.path.join(self.output_path, "environment{}.ps1.env".format(self.suffix)))
         activate_content = ps1_activate_tpl.render(environment_file=environment_filepath,
-                                                   modified_vars=modified_vars, new_vars=new_vars)
+                                                   modified_vars=modified_vars, new_vars=new_vars,
+                                                   venv_name=self.venv_name)
         activate_lines = activate_content.splitlines()
         deactivate_content = ps1_deactivate_tpl.render(modified_vars=modified_vars, new_vars=new_vars)
         deactivate_lines = deactivate_content.splitlines()
