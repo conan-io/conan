@@ -42,7 +42,7 @@ from conans.client.remote_manager import RemoteManager
 from conans.client.remover import ConanRemover
 from conans.client.rest.auth_manager import ConanApiAuthManager
 from conans.client.rest.conan_requester import ConanRequester
-from conans.client.rest.rest_client import RestApiClientFactory
+from conans.client.rest.rest_client import RestApiClient
 from conans.client.runner import ConanRunner
 from conans.client.source import config_source_local
 from conans.client.store.localdb import LocalDB
@@ -166,14 +166,14 @@ class ConanApp(object):
         # Wraps an http_requester to inject proxies, certs, etc
         self.requester = ConanRequester(self.config, http_requester)
         # To handle remote connections
-        artifacts_properties = self.cache.read_artifacts_properties()
-        rest_client_factory = RestApiClientFactory(self.out, self.requester,
-                                                   revisions_enabled=self.config.revisions_enabled,
-                                                   artifacts_properties=artifacts_properties)
+        put_headers = self.cache.read_put_headers()
+        rest_api_client = RestApiClient(self.out, self.requester,
+                                        revisions_enabled=self.config.revisions_enabled,
+                                        put_headers=put_headers)
         # To store user and token
         localdb = LocalDB.create(self.cache.localdb)
         # Wraps RestApiClient to add authentication support (same interface)
-        auth_manager = ConanApiAuthManager(rest_client_factory, self.user_io, localdb)
+        auth_manager = ConanApiAuthManager(rest_api_client, self.user_io, localdb)
         # Handle remote connections
         self.remote_manager = RemoteManager(self.cache, auth_manager, self.out, self.hook_manager)
 
@@ -791,7 +791,8 @@ class ConanAPIV1(object):
         if not password:
             name, password = self.app.user_io.request_login(remote_name=remote_name, username=name)
 
-        remote_name, prev_user, user = self.app.remote_manager.authenticate(remote, name, password)
+        _, _, remote_name, prev_user, user = self.app.remote_manager.authenticate(remote, name,
+                                                                                  password)
         return remote_name, prev_user, user
 
     @api_method
@@ -868,8 +869,7 @@ class ConanAPIV1(object):
 
     @api_method
     def upload(self, pattern, package=None, remote_name=None, all_packages=False, confirm=False,
-               retry=None, retry_wait=None, integrity_check=False, policy=None, query=None,
-               parallel_upload=False):
+               retry=None, retry_wait=None, integrity_check=False, policy=None, query=None):
         """ Uploads a package recipe and the generated binary packages to a specified remote
         """
         upload_recorder = UploadRecorder()
@@ -878,8 +878,7 @@ class ConanAPIV1(object):
         remotes = self.app.load_remotes(remote_name=remote_name)
         try:
             uploader.upload(pattern, remotes, upload_recorder, package, all_packages, confirm,
-                            retry, retry_wait, integrity_check, policy, query=query,
-                            parallel_upload=parallel_upload)
+                            retry, retry_wait, integrity_check, policy, query=query)
             return upload_recorder.get_info()
         except ConanException as exc:
             upload_recorder.error = True

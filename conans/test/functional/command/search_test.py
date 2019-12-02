@@ -382,7 +382,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
 
     def search_html_table_test(self):
         self.client.run("search Hello/1.4.10@myuser/testing --table=table.html")
-        html = self.client.load("table.html")
+        html = load(os.path.join(self.client.current_folder, "table.html"))
         self.assertIn("<h1>Hello/1.4.10@myuser/testing</h1>", html)
         self.assertIn("<td>Linux gcc 4.5 (libstdc++11)</td>", html)
         self.assertIn("<td>Windows Visual Studio 8.1</td>", html)
@@ -394,7 +394,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         self._copy_to_server(self.client.cache, self.servers["search_able"].server_store)
 
         self.client.run("search Hello/1.4.10@myuser/testing -r=all --table=table.html")
-        html = self.client.load("table.html")
+        html = load(os.path.join(self.client.current_folder, "table.html"))
 
         self.assertIn("<h1>Hello/1.4.10@myuser/testing</h1>", html)
         self.assertIn("<h2>'local':</h2>", html)
@@ -736,7 +736,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
     def search_with_no_registry_test(self):
         # https://github.com/conan-io/conan/issues/2589
         client = TestClient()
-        os.remove(client.cache.remotes_path)
+        os.remove(client.cache.registry_path)
         client.run("search nonexist/1.0@lasote/stable -r=myremote", assert_error=True)
         self.assertIn("WARN: Remotes registry file missing, creating default one", client.out)
         self.assertIn("ERROR: No remote 'myremote' defined in remotes", client.out)
@@ -1157,7 +1157,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
 
     def initial_search_without_registry_test(self):
         client = TestClient()
-        os.remove(client.cache.remotes_path)
+        os.remove(client.cache.registry_path)
         client.run("search my_pkg")
         self.assertIn("WARN: Remotes registry file missing, creating default one", client.out)
         self.assertIn("There are no packages matching the 'my_pkg' pattern", client.out)

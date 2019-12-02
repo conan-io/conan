@@ -184,8 +184,8 @@ class GraphBinariesAnalyzer(object):
                                                    % (node.package_id, package_id))
                         node._package_id = package_id
                         # So they are available in package_info() method
-                        node.conanfile.settings.values = compatible_package.settings
-                        node.conanfile.options.values = compatible_package.options
+                        node.conanfile.settings = compatible_package.settings
+                        node.conanfile.options = compatible_package.options
                         break
                     else:
                         node.binary = BINARY_MISSING

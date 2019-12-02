@@ -22,7 +22,7 @@ class MyBuildInfoCreation(unittest.TestCase):
                                               TestBufferConanOutput())
         sys.argv = ["conan_build_info", "--v2", "start", "MyBuildName", "42"]
         run()
-        with open(mock_cache.return_value.artifacts_properties_path) as f:
+        with open(mock_cache.return_value.put_headers_path) as f:
             content = f.read()
             self.assertIn("MyBuildName", content)
             self.assertIn("42", content)
@@ -34,7 +34,7 @@ class MyBuildInfoCreation(unittest.TestCase):
                                               TestBufferConanOutput())
         sys.argv = ["conan_build_info", "--v2", "stop"]
         run()
-        with open(mock_cache.return_value.artifacts_properties_path) as f:
+        with open(mock_cache.return_value.put_headers_path) as f:
             content = f.read()
             self.assertEqual("", content)
 
@@ -53,13 +53,6 @@ class MyBuildInfoCreation(unittest.TestCase):
         if not buildinfo["name"] == "MyBuildInfo" or not buildinfo["number"] == "42":
             mock_resp.status_code = 400
         mock_resp.content = None
-        return mock_resp
-
-    def mock_response_get(url, data=None, **kwargs):
-        mock_resp = Mock()
-        mock_resp.status_code = 200
-        if "conan_sources.tgz" in url:
-            mock_resp.status_code = 404
         return mock_resp
 
     def _test_buildinfo(self, client, user_channel):
@@ -108,7 +101,7 @@ class MyBuildInfoCreation(unittest.TestCase):
         run()
         sys.argv = ["conan_build_info", "--v2", "create",
                     os.path.join(client.current_folder, "buildinfo1.json"), "--lockfile",
-                    os.path.join(client.current_folder, LOCKFILE), "--multi-module"]
+                    os.path.join(client.current_folder, LOCKFILE)]
         run()
 
         shutil.copy(os.path.join(client.current_folder, "temp.lock"),
@@ -119,18 +112,18 @@ class MyBuildInfoCreation(unittest.TestCase):
 
         sys.argv = ["conan_build_info", "--v2", "create",
                     os.path.join(client.current_folder, "buildinfo2.json"), "--lockfile",
-                    os.path.join(client.current_folder, LOCKFILE), "--multi-module"]
+                    os.path.join(client.current_folder, LOCKFILE)]
         run()
 
         user_channel = "@" + user_channel if len(user_channel) > 2 else user_channel
-        f = client.load("buildinfo1.json")
-        buildinfo = json.loads(f)
-        self.assertEqual(buildinfo["name"], "MyBuildName")
-        self.assertEqual(buildinfo["number"], "42")
-        ids_list = [item["id"] for item in buildinfo["modules"]]
-        self.assertTrue("PkgB/0.1{}".format(user_channel) in ids_list)
-        self.assertTrue("PkgB/0.1{}:09f152eb7b3e0a6e15a2a3f464245864ae8f8644".format(
-            user_channel) in ids_list)
+        with open(os.path.join(client.current_folder, "buildinfo1.json")) as f:
+            buildinfo = json.load(f)
+            self.assertEqual(buildinfo["name"], "MyBuildName")
+            self.assertEqual(buildinfo["number"], "42")
+            ids_list = [item["id"] for item in buildinfo["modules"]]
+            self.assertTrue("PkgB/0.1{}".format(user_channel) in ids_list)
+            self.assertTrue("PkgB/0.1{}:09f152eb7b3e0a6e15a2a3f464245864ae8f8644".format(
+                user_channel) in ids_list)
 
         sys.argv = ["conan_build_info", "--v2", "update",
                     os.path.join(client.current_folder, "buildinfo1.json"),
@@ -178,57 +171,3 @@ class MyBuildInfoCreation(unittest.TestCase):
         user_channels = ["", "user/channel"]
         for user_channel in user_channels:
             self._test_buildinfo(client, user_channel)
-
-    @patch("conans.build_info.build_info.get_conan_user_home")
-    @patch("conans.build_info.build_info.ClientCache")
-    @patch("conans.build_info.build_info.requests.get", new=mock_response_get)
-    def test_build_info_create_scm(self, mock_cache, user_home_mock):
-        base_folder = temp_folder(True)
-        cache_folder = os.path.join(base_folder, ".conan")
-        servers = {"default": TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")],
-                                         users={"lasote": "mypass"})}
-        client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]},
-                            cache_folder=cache_folder)
-
-        mock_cache.return_value = client.cache
-        user_home_mock.return_value = base_folder
-        conanfile = textwrap.dedent("""
-            from conans import ConanFile, load
-            import os
-            class Pkg(ConanFile):
-                name = "PkgA"
-                version = "0.1"
-                scm = {"type": "git",
-                        "url": "auto",
-                        "revision": "auto"}
-            
-                def imports(self):
-                    self.copy("myfile.txt", folder=True)
-                def package(self):
-                    self.copy("*myfile.txt")
-                """)
-
-        client.save({"conanfile.py": conanfile,
-                     "myfile.txt": "HelloA"})
-        client.run_command("git init")
-        client.run_command('git config user.email "you@example.com"')
-        client.run_command('git config user.name "Your Name"')
-        client.run_command("git remote add origin https://github.com/fake/fake.git")
-        client.run_command("git add .")
-        client.run_command("git commit -m \"initial commit\"")
-
-        client.run("export .")
-
-        client.run("graph lock .")
-
-        client.run("create . --lockfile")
-        client.run("upload * --confirm -r default --force")
-
-        sys.argv = ["conan_build_info", "--v2", "start", "MyBuildName", "42"]
-        run()
-        sys.argv = ["conan_build_info", "--v2", "create",
-                    os.path.join(client.current_folder, "buildinfo.json"), "--lockfile",
-                    os.path.join(client.current_folder, LOCKFILE)]
-        run()
-        if not os.path.exists(os.path.join(client.current_folder, "buildinfo.json")):
-            self.fail("build info create failed")

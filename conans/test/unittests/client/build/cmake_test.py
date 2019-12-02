@@ -411,13 +411,12 @@ class CMakeTest(unittest.TestCase):
                           if platform.system() != "Linux" else ""
             generator = "MinGW Makefiles" if platform.system() == "Windows" else "Unix Makefiles"
 
-            flags = '{} -DCONAN_COMPILER="gcc" ' \
+            flags = '-DCONAN_EXPORTED="1"{} -DCONAN_COMPILER="gcc" ' \
                     '-DCONAN_COMPILER_VERSION="6.3" ' \
                     '-DCONAN_CXX_FLAGS="-m32" -DCONAN_SHARED_LINKER_FLAGS="-m32" ' \
-                    '-DCONAN_C_FLAGS="-m32" -DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" ' \
-                    '-DCONAN_EXPORTED="1"'
-            flags_in_local_cache = flags.format('-D' + cmake_in_local_cache_var_name + '="ON"')
-            flags_no_local_cache = flags.format('-D' + cmake_in_local_cache_var_name + '="OFF"')
+                    '-DCONAN_C_FLAGS="-m32" -DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON"'
+            flags_in_local_cache = flags.format(' -D' + cmake_in_local_cache_var_name + '="ON"')
+            flags_no_local_cache = flags.format(' -D' + cmake_in_local_cache_var_name + '="OFF"')
 
             base_cmd = 'cmake -G "{generator}" -DCMAKE_BUILD_TYPE="Release" {linux_stuff}' \
                        '{{flags}} -Wno-dev'
@@ -583,7 +582,7 @@ class CMakeTest(unittest.TestCase):
                          if (platform.system() != os and cmake_system_name) else "")
                 cmake = CMake(conanfile, generator=generator, cmake_system_name=cmake_system_name,
                               set_cmake_flags=set_cmake_flags)
-                new_text = text.replace("-DCONAN_IN_LOCAL_CACHE", "%s-DCONAN_IN_LOCAL_CACHE" % cross)
+                new_text = text.replace("-DCONAN_EXPORTED", "%s-DCONAN_EXPORTED" % cross)
                 if "Visual Studio" in text:
                     cores = ('-DCONAN_CXX_FLAGS="/MP{0}" '
                              '-DCONAN_C_FLAGS="/MP{0}" '.format(tools.cpu_count(conanfile.output)))
@@ -593,65 +592,64 @@ class CMakeTest(unittest.TestCase):
                 self.assertEqual(new_text, cmake.command_line)
                 self.assertEqual(build_config, cmake.build_config)
 
-        check('-G "Visual Studio 12 2013" -DCONAN_IN_LOCAL_CACHE="OFF" '
+        check('-G "Visual Studio 12 2013" -DCONAN_EXPORTED="1" -DCONAN_IN_LOCAL_CACHE="OFF" '
               '-DCONAN_COMPILER="Visual Studio" -DCONAN_COMPILER_VERSION="12" '
-              '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -DCONAN_EXPORTED="1" -Wno-dev',
+              '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -Wno-dev',
               "")
 
-        check('-G "Custom Generator" -DCONAN_IN_LOCAL_CACHE="OFF" '
+        check('-G "Custom Generator" -DCONAN_EXPORTED="1" -DCONAN_IN_LOCAL_CACHE="OFF" '
               '-DCONAN_COMPILER="Visual Studio" -DCONAN_COMPILER_VERSION="12" '
-              '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -DCONAN_EXPORTED="1" -Wno-dev',
+              '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -Wno-dev',
               '', generator="Custom Generator")
 
-        check('-G "Custom Generator" -DCONAN_IN_LOCAL_CACHE="OFF" '
+        check('-G "Custom Generator" -DCONAN_EXPORTED="1" -DCONAN_IN_LOCAL_CACHE="OFF" '
               '-DCONAN_COMPILER="Visual Studio" -DCONAN_COMPILER_VERSION="12" '
-              '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -DCONAN_EXPORTED="1" -Wno-dev',
+              '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -Wno-dev',
               '', generator="Custom Generator", set_cmake_flags=True)
 
         settings.build_type = "Debug"
-        check('-G "Visual Studio 12 2013" -DCONAN_IN_LOCAL_CACHE="OFF" '
+        check('-G "Visual Studio 12 2013" -DCONAN_EXPORTED="1" -DCONAN_IN_LOCAL_CACHE="OFF" '
               '-DCONAN_COMPILER="Visual Studio" -DCONAN_COMPILER_VERSION="12" '
-              '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -DCONAN_EXPORTED="1" -Wno-dev',
+              '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -Wno-dev',
               '--config Debug')
 
         settings.arch = "x86_64"
-        check('-G "Visual Studio 12 2013 Win64" -DCONAN_IN_LOCAL_CACHE="OFF" '
+        check('-G "Visual Studio 12 2013 Win64" -DCONAN_EXPORTED="1" -DCONAN_IN_LOCAL_CACHE="OFF" '
               '-DCONAN_COMPILER="Visual Studio" -DCONAN_COMPILER_VERSION="12" '
-              '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -DCONAN_EXPORTED="1" -Wno-dev',
+              '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -Wno-dev',
               '--config Debug')
 
         settings.compiler = "gcc"
         settings.compiler.version = "4.8"
         generator = "MinGW Makefiles" if platform.system() == "Windows" else "Unix Makefiles"
-        check('-G "%s" -DCMAKE_BUILD_TYPE="Debug" -DCONAN_IN_LOCAL_CACHE="OFF" '
+        check('-G "%s" -DCMAKE_BUILD_TYPE="Debug" -DCONAN_EXPORTED="1" -DCONAN_IN_LOCAL_CACHE="OFF" '
               '-DCONAN_COMPILER="gcc" -DCONAN_COMPILER_VERSION="4.8" -DCONAN_CXX_FLAGS="-m64" '
               '-DCONAN_SHARED_LINKER_FLAGS="-m64" -DCONAN_C_FLAGS="-m64" '
-              '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -DCONAN_EXPORTED="1" '
-              '-Wno-dev' % generator, "")
+              '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -Wno-dev' % generator, "")
 
         settings.os = "Linux"
         settings.arch = "x86"
-        check('-G "%s" -DCMAKE_BUILD_TYPE="Debug" '
-              '-DCONAN_IN_LOCAL_CACHE="OFF" -DCONAN_COMPILER="gcc" '
+        check('-G "%s" -DCMAKE_BUILD_TYPE="Debug"'
+              ' -DCONAN_EXPORTED="1" -DCONAN_IN_LOCAL_CACHE="OFF" -DCONAN_COMPILER="gcc" '
               '-DCONAN_COMPILER_VERSION="4.8" -DCONAN_CXX_FLAGS="-m32" '
               '-DCONAN_SHARED_LINKER_FLAGS="-m32" -DCONAN_C_FLAGS="-m32" '
-              '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -DCONAN_EXPORTED="1" -Wno-dev' % generator,
+              '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -Wno-dev' % generator,
               "")
 
         settings.arch = "x86_64"
-        check('-G "%s" -DCMAKE_BUILD_TYPE="Debug" '
-              '-DCONAN_IN_LOCAL_CACHE="OFF" -DCONAN_COMPILER="gcc" '
+        check('-G "%s" -DCMAKE_BUILD_TYPE="Debug"'
+              ' -DCONAN_EXPORTED="1" -DCONAN_IN_LOCAL_CACHE="OFF" -DCONAN_COMPILER="gcc" '
               '-DCONAN_COMPILER_VERSION="4.8" -DCONAN_CXX_FLAGS="-m64" '
               '-DCONAN_SHARED_LINKER_FLAGS="-m64" -DCONAN_C_FLAGS="-m64" '
-              '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -DCONAN_EXPORTED="1" -Wno-dev' % generator,
+              '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -Wno-dev' % generator,
               "")
 
-        check('-G "%s" -DCMAKE_BUILD_TYPE="Debug" '
-              '-DCONAN_IN_LOCAL_CACHE="OFF" -DCONAN_COMPILER="gcc" '
+        check('-G "%s" -DCMAKE_BUILD_TYPE="Debug"'
+              ' -DCONAN_EXPORTED="1" -DCONAN_IN_LOCAL_CACHE="OFF" -DCONAN_COMPILER="gcc" '
               '-DCONAN_COMPILER_VERSION="4.8" -DCONAN_CXX_FLAGS="-m64" '
               '-DCONAN_SHARED_LINKER_FLAGS="-m64" -DCONAN_C_FLAGS="-m64" '
               '-DCMAKE_CXX_FLAGS="-m64" -DCMAKE_SHARED_LINKER_FLAGS="-m64" -DCMAKE_C_FLAGS="-m64" '
-              '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -DCONAN_EXPORTED="1" '
+              '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" '
               '-Wno-dev' % generator,
               "", set_cmake_flags=True)
 
@@ -659,55 +657,55 @@ class CMakeTest(unittest.TestCase):
         settings.compiler = "clang"
         settings.compiler.version = "3.8"
         settings.arch = "x86"
-        check('-G "%s" -DCMAKE_BUILD_TYPE="Debug" '
-              '-DCONAN_IN_LOCAL_CACHE="OFF" -DCONAN_COMPILER="clang" '
+        check('-G "%s" -DCMAKE_BUILD_TYPE="Debug"'
+              ' -DCONAN_EXPORTED="1" -DCONAN_IN_LOCAL_CACHE="OFF" -DCONAN_COMPILER="clang" '
               '-DCONAN_COMPILER_VERSION="3.8" -DCONAN_CXX_FLAGS="-m32" '
               '-DCONAN_SHARED_LINKER_FLAGS="-m32" -DCONAN_C_FLAGS="-m32" '
-              '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -DCONAN_EXPORTED="1" -Wno-dev' % generator,
+              '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -Wno-dev' % generator,
               "")
 
         settings.arch = "x86_64"
-        check('-G "%s" -DCMAKE_BUILD_TYPE="Debug" '
-              '-DCONAN_IN_LOCAL_CACHE="OFF" -DCONAN_COMPILER="clang" '
+        check('-G "%s" -DCMAKE_BUILD_TYPE="Debug"'
+              ' -DCONAN_EXPORTED="1" -DCONAN_IN_LOCAL_CACHE="OFF" -DCONAN_COMPILER="clang" '
               '-DCONAN_COMPILER_VERSION="3.8" -DCONAN_CXX_FLAGS="-m64" '
               '-DCONAN_SHARED_LINKER_FLAGS="-m64" -DCONAN_C_FLAGS="-m64" '
-              '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -DCONAN_EXPORTED="1" -Wno-dev' % generator,
+              '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -Wno-dev' % generator,
               "")
 
         settings.os = "SunOS"
         settings.compiler = "sun-cc"
         settings.compiler.version = "5.10"
         settings.arch = "x86"
-        check('-G "%s" -DCMAKE_BUILD_TYPE="Debug" '
-              '-DCONAN_IN_LOCAL_CACHE="OFF" -DCONAN_COMPILER="sun-cc" '
+        check('-G "%s" -DCMAKE_BUILD_TYPE="Debug"'
+              ' -DCONAN_EXPORTED="1" -DCONAN_IN_LOCAL_CACHE="OFF" -DCONAN_COMPILER="sun-cc" '
               '-DCONAN_COMPILER_VERSION="5.10" -DCONAN_CXX_FLAGS="-m32" '
               '-DCONAN_SHARED_LINKER_FLAGS="-m32" -DCONAN_C_FLAGS="-m32" '
-              '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -DCONAN_EXPORTED="1" -Wno-dev' % generator,
+              '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -Wno-dev' % generator,
               "")
 
         settings.arch = "x86_64"
-        check('-G "%s" -DCMAKE_BUILD_TYPE="Debug" '
-              '-DCONAN_IN_LOCAL_CACHE="OFF" -DCONAN_COMPILER="sun-cc" '
+        check('-G "%s" -DCMAKE_BUILD_TYPE="Debug"'
+              ' -DCONAN_EXPORTED="1" -DCONAN_IN_LOCAL_CACHE="OFF" -DCONAN_COMPILER="sun-cc" '
               '-DCONAN_COMPILER_VERSION="5.10" -DCONAN_CXX_FLAGS="-m64" '
               '-DCONAN_SHARED_LINKER_FLAGS="-m64" -DCONAN_C_FLAGS="-m64" '
-              '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -DCONAN_EXPORTED="1" -Wno-dev' % generator,
+              '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -Wno-dev' % generator,
               "")
 
         settings.arch = "sparc"
 
-        check('-G "%s" -DCMAKE_BUILD_TYPE="Debug" -DCONAN_IN_LOCAL_CACHE="OFF" '
+        check('-G "%s" -DCMAKE_BUILD_TYPE="Debug" -DCONAN_EXPORTED="1" -DCONAN_IN_LOCAL_CACHE="OFF" '
               '-DCONAN_COMPILER="sun-cc" '
               '-DCONAN_COMPILER_VERSION="5.10" -DCONAN_CXX_FLAGS="-m32" '
               '-DCONAN_SHARED_LINKER_FLAGS="-m32" -DCONAN_C_FLAGS="-m32" '
-              '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -DCONAN_EXPORTED="1" -Wno-dev' % generator,
+              '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -Wno-dev' % generator,
               "")
 
         settings.arch = "sparcv9"
-        check('-G "%s" -DCMAKE_BUILD_TYPE="Debug" -DCONAN_IN_LOCAL_CACHE="OFF" '
+        check('-G "%s" -DCMAKE_BUILD_TYPE="Debug" -DCONAN_EXPORTED="1" -DCONAN_IN_LOCAL_CACHE="OFF" '
               '-DCONAN_COMPILER="sun-cc" '
               '-DCONAN_COMPILER_VERSION="5.10" -DCONAN_CXX_FLAGS="-m64" '
               '-DCONAN_SHARED_LINKER_FLAGS="-m64" -DCONAN_C_FLAGS="-m64" '
-              '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -DCONAN_EXPORTED="1" -Wno-dev' % generator,
+              '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -Wno-dev' % generator,
               "")
 
         settings.compiler = "Visual Studio"
@@ -715,28 +713,28 @@ class CMakeTest(unittest.TestCase):
         settings.os = "WindowsStore"
         settings.os.version = "8.1"
         settings.build_type = "Debug"
-        check('-G "Visual Studio 12 2013" -DCONAN_IN_LOCAL_CACHE="OFF" '
+        check('-G "Visual Studio 12 2013" -DCONAN_EXPORTED="1" -DCONAN_IN_LOCAL_CACHE="OFF" '
               '-DCONAN_COMPILER="Visual Studio" -DCONAN_COMPILER_VERSION="12" '
-              '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -DCONAN_EXPORTED="1" -Wno-dev',
+              '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -Wno-dev',
               "--config Debug")
 
         settings.os.version = "10.0"
-        check('-G "Visual Studio 12 2013" -DCONAN_IN_LOCAL_CACHE="OFF" '
+        check('-G "Visual Studio 12 2013" -DCONAN_EXPORTED="1" -DCONAN_IN_LOCAL_CACHE="OFF" '
               '-DCONAN_COMPILER="Visual Studio" -DCONAN_COMPILER_VERSION="12" '
-              '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -DCONAN_EXPORTED="1" -Wno-dev',
+              '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -Wno-dev',
               "--config Debug")
 
         settings.compiler.version = "15"
         settings.arch = "armv8"
-        check('-G "Visual Studio 15 2017 ARM" -DCONAN_IN_LOCAL_CACHE="OFF" '
+        check('-G "Visual Studio 15 2017 ARM" -DCONAN_EXPORTED="1" -DCONAN_IN_LOCAL_CACHE="OFF" '
               '-DCONAN_COMPILER="Visual Studio" -DCONAN_COMPILER_VERSION="15" '
-              '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -DCONAN_EXPORTED="1" -Wno-dev',
+              '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -Wno-dev',
               "--config Debug")
 
         settings.arch = "x86_64"
-        check('-G "Visual Studio 15 2017 Win64" -DCONAN_IN_LOCAL_CACHE="OFF" '
+        check('-G "Visual Studio 15 2017 Win64" -DCONAN_EXPORTED="1" -DCONAN_IN_LOCAL_CACHE="OFF" '
               '-DCONAN_COMPILER="Visual Studio" -DCONAN_COMPILER_VERSION="15" '
-              '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -DCONAN_EXPORTED="1" -Wno-dev',
+              '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -Wno-dev',
               "--config Debug")
 
         settings.compiler = "Visual Studio"
@@ -747,9 +745,9 @@ class CMakeTest(unittest.TestCase):
         settings.build_type = "Debug"
         check('-G "Visual Studio 9 2008" '
               '-A "Your platform name (ARMv4I)" '
-              '-DCONAN_IN_LOCAL_CACHE="OFF" '
+              '-DCONAN_EXPORTED="1" -DCONAN_IN_LOCAL_CACHE="OFF" '
               '-DCONAN_COMPILER="Visual Studio" -DCONAN_COMPILER_VERSION="9" '
-              '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -DCONAN_EXPORTED="1" -Wno-dev',
+              '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -Wno-dev',
               "--config Debug")
 
     def deleted_os_test(self):
@@ -773,12 +771,11 @@ build_type: [ Release]
         generator = "Unix" if platform.system() != "Windows" else "MinGW"
         cross = ("-DCMAKE_SYSTEM_NAME=\"Linux\" -DCMAKE_SYSROOT=\"/path/to/sysroot\" "
                  if platform.system() != "Linux" else "")
-        self.assertEqual('-G "%s Makefiles" %s-DCONAN_IN_LOCAL_CACHE="OFF" '
+        self.assertEqual('-G "%s Makefiles" %s-DCONAN_EXPORTED="1" -DCONAN_IN_LOCAL_CACHE="OFF" '
                          '-DCONAN_COMPILER="gcc" '
                          '-DCONAN_COMPILER_VERSION="4.9" -DCONAN_CXX_FLAGS="-m64" '
                          '-DCONAN_SHARED_LINKER_FLAGS="-m64" -DCONAN_C_FLAGS="-m64" '
-                         '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -DCONAN_EXPORTED="1" '
-                         '-Wno-dev' % (generator, cross),
+                         '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -Wno-dev' % (generator, cross),
                          cmake.command_line)
 
     def test_sysroot(self):
@@ -867,10 +864,9 @@ build_type: [ Release]
         cmake.configure()
 
         self.assertEqual('cd {0} && cmake -G "MinGW Makefiles" '
-                         '{1} -DCONAN_IN_LOCAL_CACHE="OFF"'
+                         '{1} -DCONAN_EXPORTED="1" -DCONAN_IN_LOCAL_CACHE="OFF"'
                          ' -DCONAN_COMPILER="{2}" -DCONAN_COMPILER_VERSION="{3}"'
                          ' -DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON"'
-                         ' -DCONAN_EXPORTED="1"' 
                          ' -Wno-dev {0}'.format(dot_dir, cross, settings.compiler,
                                                 settings.compiler.version),
                          conanfile.command)
@@ -908,9 +904,9 @@ build_type: [ Release]
             escaped_args = "'--foo \"bar\"' -DSHARED=\"True\" '/source'"
 
         self.assertEqual('cd {0} && cmake -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE="Debug" '
-                         '{1} -DCONAN_IN_LOCAL_CACHE="OFF" '
+                         '{1} -DCONAN_EXPORTED="1" -DCONAN_IN_LOCAL_CACHE="OFF" '
                          '-DCONAN_COMPILER="{2}" -DCONAN_COMPILER_VERSION="{3}" '
-                         '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -DCONAN_EXPORTED="1" '
+                         '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" '
                          '-Wno-dev {4}'.format(tempdir, cross, settings.compiler,
                                                settings.compiler.version, escaped_args),
                          conanfile.command)

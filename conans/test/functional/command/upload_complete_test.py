@@ -17,7 +17,7 @@ from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.test_files import hello_conan_files, hello_source_files, temp_folder, \
     uncompress_packaged_files
 from conans.test.utils.tools import (NO_SETTINGS_PACKAGE_ID, TestClient, TestRequester, TestServer,
-                                     MockedUserIO, TestBufferConanOutput, GenConanfile)
+                                     MockedUserIO, TestBufferConanOutput)
 from conans.util.files import load, mkdir, save
 
 myconan1 = """
@@ -55,19 +55,6 @@ class FailPairFilesUploader(BadConnectionUploader):
         self.counter_fail += 1
         if self.counter_fail % 2 == 1:
             raise ConnectionError("Pair file, error!")
-        else:
-            return super(BadConnectionUploader, self).put(*args, **kwargs)
-
-
-class FailOnReferencesUploader(BadConnectionUploader):
-    fail_on = ["lib1", "lib3"]
-
-    def __init__(self, *args, **kwargs):
-        super(BadConnectionUploader, self).__init__(*args, **kwargs)
-
-    def put(self, *args, **kwargs):
-        if any(ref in args[0] for ref in self.fail_on):
-            raise ConnectionError("Connection fails with lib2 and lib4 references!")
         else:
             return super(BadConnectionUploader, self).put(*args, **kwargs)
 
@@ -265,53 +252,6 @@ class UploadTest(unittest.TestCase):
         client.run('config set general.retry_wait=0')
         client.run("upload Hello* --confirm --all")
         self.assertEqual(str(client.out).count("ERROR: Pair file, error!"), 6)
-
-    def upload_parallel_error_test(self):
-        """Cause an error in the parallel transfer and see some message"""
-        client = TestClient(requester_class=FailOnReferencesUploader, default_server_user=True)
-        client.save({"conanfile.py": GenConanfile()})
-        client.run('user -p password -r default user')
-        for index in range(4):
-            client.run('create . lib{}/1.0@user/channel'.format(index))
-        client.run('upload lib* --parallel -c --all -r default', assert_error=True)
-        self.assertIn("Connection fails with lib2 and lib4 references!", client.out)
-        self.assertIn("Execute upload again to retry upload the failed files", client.out)
-
-    def upload_parallel_success_test(self):
-        """Upload 2 packages in parallel with success"""
-
-        client = TestClient(default_server_user=True)
-        client.save({"conanfile.py": GenConanfile()})
-        client.run('create . lib0/1.0@user/channel')
-        self.assertIn("lib0/1.0@user/channel: Package '{}' created".format(NO_SETTINGS_PACKAGE_ID),
-                      client.out)
-        client.run('create . lib1/1.0@user/channel')
-        self.assertIn("lib1/1.0@user/channel: Package '{}' created".format(NO_SETTINGS_PACKAGE_ID),
-                      client.out)
-        client.run('user -p password -r default user')
-        client.run('upload lib* --parallel -c --all -r default')
-        self.assertIn("Uploading lib0/1.0@user/channel to remote 'default'", client.out)
-        self.assertIn("Uploading lib1/1.0@user/channel to remote 'default'", client.out)
-        client.run('search lib0/1.0@user/channel -r default')
-        self.assertIn("lib0/1.0@user/channel", client.out)
-        client.run('search lib1/1.0@user/channel -r default')
-        self.assertIn("lib1/1.0@user/channel", client.out)
-
-    def upload_parallel_fail_on_interaction_test(self):
-        """Upload 2 packages in parallel and fail because non_interactive forced"""
-
-        client = TestClient(default_server_user=True)
-        client.save({"conanfile.py": GenConanfile()})
-        num_references = 2
-        for index in range(num_references):
-            client.run('create . lib{}/1.0@user/channel'.format(index))
-            self.assertIn("lib{}/1.0@user/channel: Package '{}' created".format(
-                index,
-                NO_SETTINGS_PACKAGE_ID),
-                client.out)
-        client.run('user -c')
-        client.run('upload lib* --parallel -c --all -r default', assert_error=True)
-        self.assertIn("ERROR: Conan interactive mode disabled. [Remote: default]", client.out)
 
     def upload_with_pattern_and_package_error_test(self):
         files = hello_conan_files("Hello1", "1.2.1")

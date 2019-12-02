@@ -6,7 +6,7 @@ import six
 
 from conans.client.cmd.export_linter import conan_linter
 from conans.client.file_copier import FileCopier
-from conans.client.output import Color, ScopedOutput
+from conans.client.output import ScopedOutput
 from conans.client.remover import DiskRemover
 from conans.errors import ConanException
 from conans.model.manifest import FileTreeManifest
@@ -54,6 +54,7 @@ def check_casing_conflict(cache, ref):
 
 def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
                export=True, graph_lock=None, ignore_dirty=False):
+
     """ Export the recipe
     param conanfile_path: the original source directory of the user containing a
                        conanfile.py
@@ -94,8 +95,6 @@ def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
         if graph_lock:
             graph_lock.update_exported_ref(node_id, ref)
         return ref
-
-    _check_settings_for_warnings(conanfile, output)
 
     hook_manager.execute("pre_export", conanfile=conanfile, conanfile_path=conanfile_path,
                          reference=package_layout.ref)
@@ -199,27 +198,6 @@ def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
     return ref
 
 
-def _check_settings_for_warnings(conanfile, output):
-    if not conanfile.settings:
-        return
-    try:
-        if not 'os_build' in conanfile.settings:
-            return
-        if not 'os' in conanfile.settings:
-            return
-
-        output.writeln("*"*60, front=Color.BRIGHT_RED)
-        output.writeln("  This package defines both 'os' and 'os_build' ",
-                       front=Color.BRIGHT_RED)
-        output.writeln("  Please use 'os' for libraries and 'os_build'",
-                       front=Color.BRIGHT_RED)
-        output.writeln("  only for build-requires used for cross-building",
-                       front=Color.BRIGHT_RED)
-        output.writeln("*"*60, front=Color.BRIGHT_RED)
-    except ConanException:
-        pass
-
-
 def _capture_scm_auto_fields(conanfile, conanfile_dir, destination_folder, output, ignore_dirty):
     """Deduce the values for the scm auto fields or functions assigned to 'url' or 'revision'
        and replace the conanfile.py contents.
@@ -242,8 +220,8 @@ def _capture_scm_auto_fields(conanfile, conanfile_dir, destination_folder, outpu
                     "'scm.revision' auto fields. Use --ignore-dirty to force it. The 'conan "
                     "upload' command will prevent uploading recipes with 'auto' values in these "
                     "fields.")
-        origin = scm.get_qualified_remote_url(remove_credentials=True)
-        local_src_path = scm.get_local_path_to_url(origin)
+        local_src_path = scm.get_local_path_to_url(scm_data.url) \
+            if scm_data.url != "auto" else conanfile_dir
         return scm_data, local_src_path
 
     if scm_data.url == "auto":

@@ -6,6 +6,7 @@ from parameterized.parameterized import parameterized
 
 from conans.client.tools.files import replace_in_file
 from conans.test.utils.tools import TestClient, TestServer
+from conans.util.files import load
 
 
 class ConanAliasTest(unittest.TestCase):
@@ -157,7 +158,7 @@ class Pkg(ConanFile):
 """
         client.save({"conanfile.py": consumer})
         client.run("info . --graph=file.dot")
-        graphfile = client.load("file.dot")
+        graphfile = load(os.path.join(client.current_folder, "file.dot"))
         self.assertIn('"CB/0.1@user/testing" -> {"CA/0.1@user/testing"}', graphfile)
         self.assertTrue(('"CD/0.1@user/testing" -> {"CA/0.1@user/testing" "CB/0.1@user/testing"}' in graphfile) or
                         ('"CD/0.1@user/testing" -> {"CB/0.1@user/testing" "CA/0.1@user/testing"}' in graphfile))
@@ -210,7 +211,7 @@ class Pkg(ConanFile):
 """
         client.save({"conanfile.py": consumer})
         client.run("info . --graph=file.dot")
-        graphfile = client.load("file.dot")
+        graphfile = load(os.path.join(client.current_folder, "file.dot"))
         self.assertIn('"CM/0.1@user/testing" -> {"CL/0.1@user/testing"}', graphfile)
         self.assertTrue(('"CL/0.1@user/testing" -> {"CK/0.1@user/testing" "CH/0.1@user/testing"}' in graphfile) or
                         ('"CL/0.1@user/testing" -> {"CH/0.1@user/testing" "CK/0.1@user/testing"}' in graphfile))
@@ -254,7 +255,7 @@ class Pkg(ConanFile):
                 {"conanfile.txt": "[requires]\nLibA/latest@user/testing\nLibB/latest@user/testing"},
                 clean_first=True)
         client.run("info conanfile.txt --graph=file.dot")
-        graphfile = client.load("file.dot")
+        graphfile = load(os.path.join(client.current_folder, "file.dot"))
         self.assertIn('"LibA/0.1@user/testing" -> {"LibC/0.1@user/testing"}', graphfile)
         self.assertIn('"LibB/0.1@user/testing" -> {"LibC/0.1@user/testing"}', graphfile)
         self.assertIn('"LibC/0.1@user/testing" -> {"LibD/0.1@user/testing"}', graphfile)
@@ -313,7 +314,7 @@ class Pkg(ConanFile):
         client.save({"conanfile.txt": "[requires]\nLibA/latest@user/testing\nLibB/latest@user/testing"},
                     clean_first=True)
         client.run("info conanfile.txt --graph=file.dot")
-        graphfile = client.load("file.dot")
+        graphfile = load(os.path.join(client.current_folder, "file.dot"))
         self.assertIn('"LibA/0.1@user/testing" -> {"LibC/0.1@user/testing"}', graphfile)
         self.assertIn('"LibB/0.1@user/testing" -> {"LibC/0.1@user/testing"}', graphfile)
         self.assertIn('"LibC/0.1@user/testing" -> {"LibD/0.1@user/testing"}', graphfile)
@@ -362,7 +363,7 @@ class Pkg(ConanFile):
         client.save({"conanfile.txt": "[requires]\nLibA/[~0.1]@user/testing\nLibB/[~0.1]@user/testing"},
                     clean_first=True)
         client.run("info conanfile.txt --graph=file.dot")
-        graphfile = client.load("file.dot")
+        graphfile = load(os.path.join(client.current_folder, "file.dot"))
         self.assertIn('"LibA/sha1@user/testing" -> {"LibC/sha1@user/testing"}', graphfile)
         self.assertIn('"LibB/sha1@user/testing" -> {"LibC/sha1@user/testing"}', graphfile)
         self.assertIn('"LibC/sha1@user/testing" -> {"LibD/sha1@user/testing"}', graphfile)

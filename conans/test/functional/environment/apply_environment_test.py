@@ -283,7 +283,7 @@ virtualrunenv
         ext = "bat" if platform.system() == "Windows" else "sh"
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "activate_run.%s" % ext)))
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "deactivate_run.%s" % ext)))
-        activate_contents = client.load("activate_run.%s" % ext)
+        activate_contents = load(os.path.join(client.current_folder, "activate_run.%s" % ext))
 
         self.assertIn("PATH", activate_contents)
         self.assertIn("LD_LIBRARY_PATH", activate_contents)
@@ -427,8 +427,8 @@ class HelloConan(ConanFile):
         ext = "bat" if platform.system() == "Windows" else "sh"
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "activate.%s" % ext)))
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "deactivate.%s" % ext)))
-        activate_contents = client.load("activate.%s" % ext)
-        deactivate_contents = client.load("deactivate.%s" % ext)
+        activate_contents = load(os.path.join(client.current_folder, "activate.%s" % ext))
+        deactivate_contents = load(os.path.join(client.current_folder, "deactivate.%s" % ext))
         self.assertNotIn("bad value", activate_contents)
         if platform.system() == "Windows":
             self.assertIn("var1=good value", activate_contents)
@@ -665,7 +665,7 @@ virtualenv
 """
         client.save({"conanfile.txt": conanfile}, clean_first=True)
         client.run("install .")
-        info = client.load("conanbuildinfo.txt")
+        info = load(os.path.join(client.current_folder, "conanbuildinfo.txt"))
         info = info.replace("\r\n", "\n")
         self.assertIn("""
 [ENV_libA]
@@ -673,10 +673,10 @@ PATH=["path_from_A"]
 [ENV_libB]
 PATH=["path_from_B"]""", info)
         if platform.system() != "Windows":
-            activate = client.load("activate.sh")
+            activate = load(os.path.join(client.current_folder, "activate.sh"))
             self.assertIn('PATH="path_from_A":"path_from_B"${PATH+:$PATH}', activate)
         else:
-            activate = client.load("activate.bat")
+            activate = load(os.path.join(client.current_folder, "activate.bat"))
             self.assertIn('PATH=path_from_A;path_from_B;%PATH%', activate)
 
     def check_conaninfo_completion_test(self):

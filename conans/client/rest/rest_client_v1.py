@@ -130,9 +130,10 @@ class RestV1Methods(RestCommonMethods):
         url = self.router.package_upload_urls(pref)
         file_sizes = {filename: os.stat(abs_path).st_size for filename,
                       abs_path in files_to_upload.items()}
-        logger.debug("Requesting upload urls...")
+        self._output.rewrite_line("Requesting upload urls...")
         urls = self._get_file_to_url_dict(url, data=file_sizes)
-        logger.debug("Requesting upload urls...Done!")
+        self._output.rewrite_line("Requesting upload urls...Done!")
+        self._output.writeln("")
         self._upload_files(urls, files_to_upload, self._output, retry, retry_wait)
 
     def _upload_files(self, file_urls, files, output, retry, retry_wait):
@@ -148,7 +149,7 @@ class RestV1Methods(RestCommonMethods):
             try:
                 uploader.upload(resource_url, files[filename], auth=auth, dedup=dedup,
                                 retry=retry, retry_wait=retry_wait,
-                                headers=self._artifacts_properties)
+                                headers=self._put_headers)
             except Exception as exc:
                 output.error("\nError uploading file: %s, '%s'" % (filename, exc))
                 failed.append(filename)

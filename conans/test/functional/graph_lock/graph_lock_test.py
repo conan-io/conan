@@ -65,7 +65,7 @@ class GraphLockCustomFilesTest(unittest.TestCase):
 
     def _check_lock(self, ref_b, rev_b=""):
         ref_b = repr(ConanFileReference.loads(ref_b))
-        lock_file = self.client.load("custom.lock")
+        lock_file = load(os.path.join(self.client.current_folder, "custom.lock"))
         lock_file_json = json.loads(lock_file)
         self.assertEqual(lock_file_json["version"], LOCKFILE_VERSION)
         self.assertEqual(2, len(lock_file_json["graph_lock"]["nodes"]))

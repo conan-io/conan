@@ -16,7 +16,7 @@ class RequesterMockTrue(object):
         pass
 
     def get(self, url, *args, **kwargs):
-        assert "cacert.pem" in kwargs["verify"], "TEST FAILURE: cacert.pem not in verify kwarg"
+        assert("cacert.pem" in kwargs["verify"])
         return resp
 
 
@@ -26,7 +26,7 @@ class RequesterMockFalse(object):
         pass
 
     def get(self, url, *args, **kwargs):
-        assert kwargs["verify"] is False, "TEST FAILURE: verify arg is not False"
+        assert(kwargs["verify"] is False)
         return resp
 
 
@@ -48,7 +48,7 @@ class VerifySSLTest(unittest.TestCase):
         self.client.run("remote list")
         self.assertIn("Verify SSL: True", self.client.out)
 
-        # Verify that SSL is checked in requests
+        # Verify that SSL is checked in requrests
         self.client.run("search op* -r myremote")
 
         # Verify that SSL is not checked in requests
