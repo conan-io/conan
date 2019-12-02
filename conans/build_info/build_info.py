@@ -213,10 +213,8 @@ class BuildInfoCreator(object):
             f.write(json.dumps(ret, indent=4, default=dump_custom_types))
 
 
-def create_build_info(output, build_info_file, lockfile, user, password,
-                      apikey):
-    bi = BuildInfoCreator(output, build_info_file, lockfile, user, password,
-                          apikey)
+def create_build_info(output, build_info_file, lockfile, user, password, apikey):
+    bi = BuildInfoCreator(output, build_info_file, lockfile, user, password, apikey)
     bi.create()
 
 
