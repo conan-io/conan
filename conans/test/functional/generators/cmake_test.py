@@ -5,7 +5,6 @@ import unittest
 
 from nose.plugins.attrib import attr
 
-from conans import load
 from conans.client.tools import replace_in_file
 from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient, GenConanfile, TurboTestClient

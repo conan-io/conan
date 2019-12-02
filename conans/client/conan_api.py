@@ -430,6 +430,9 @@ class ConanAPIV1(object):
         # Install packages without settings (fixed ids or all)
         if check_valid_ref(reference):
             ref = ConanFileReference.loads(reference)
+            if ref.revision and not self.app.config.revisions_enabled:
+                raise ConanException("Revisions not enabled in the client, specify a "
+                                     "reference without revision")
             if packages and ref.revision is None:
                 for package_id in packages:
                     if "#" in package_id:
@@ -868,7 +871,8 @@ class ConanAPIV1(object):
 
     @api_method
     def upload(self, pattern, package=None, remote_name=None, all_packages=False, confirm=False,
-               retry=None, retry_wait=None, integrity_check=False, policy=None, query=None):
+               retry=None, retry_wait=None, integrity_check=False, policy=None, query=None,
+               parallel_upload=False):
         """ Uploads a package recipe and the generated binary packages to a specified remote
         """
         upload_recorder = UploadRecorder()
@@ -877,7 +881,8 @@ class ConanAPIV1(object):
         remotes = self.app.load_remotes(remote_name=remote_name)
         try:
             uploader.upload(pattern, remotes, upload_recorder, package, all_packages, confirm,
-                            retry, retry_wait, integrity_check, policy, query=query)
+                            retry, retry_wait, integrity_check, policy, query=query,
+                            parallel_upload=parallel_upload)
             return upload_recorder.get_info()
         except ConanException as exc:
             upload_recorder.error = True
