@@ -153,33 +153,30 @@ class VirtualEnvIntegrationTestCase(unittest.TestCase):
             os.chmod(os.path.join(self.test_folder, p), 0o755)
 
     def _run_virtualenv(self, generator):
-        with environment_append({"PATH": [self.ori_path, ]}):
-            # FIXME: I need this context because restore values for the 'deactivate' script are
-            #        generated at the 'generator.content' and not when the 'activate' is called.
-            generator.output_path = self.test_folder
-            save_files(self.test_folder, generator.content)
+        generator.output_path = self.test_folder
+        save_files(self.test_folder, generator.content)
 
-            # Generate the list of commands to execute
-            shell_commands = [
-                self.commands.dump_env.format(filename=self.env_before),
-                self.commands.find_program.format(program="conan", variable="__conan_pre_path__"),
-                self.commands.find_program.format(program=self.app, variable="__exec_pre_path__"),
-                self.commands.activate,
-                self.commands.dump_env.format(filename=self.env_activated),
-                self.commands.find_program.format(program="conan", variable="__conan_env_path__"),
-                self.commands.find_program.format(program=self.app, variable="__exec_env_path__"),
-                self.commands.deactivate,
-                self.commands.dump_env.format(filename=self.env_after),
-                self.commands.find_program.format(program="conan", variable="__conan_post_path__"),
-                self.commands.find_program.format(program=self.app, variable="__exec_post_path__"),
-                "",
-            ]
+        # Generate the list of commands to execute
+        shell_commands = [
+            self.commands.dump_env.format(filename=self.env_before),
+            self.commands.find_program.format(program="conan", variable="__conan_pre_path__"),
+            self.commands.find_program.format(program=self.app, variable="__exec_pre_path__"),
+            self.commands.activate,
+            self.commands.dump_env.format(filename=self.env_activated),
+            self.commands.find_program.format(program="conan", variable="__conan_env_path__"),
+            self.commands.find_program.format(program=self.app, variable="__exec_env_path__"),
+            self.commands.deactivate,
+            self.commands.dump_env.format(filename=self.env_after),
+            self.commands.find_program.format(program="conan", variable="__conan_post_path__"),
+            self.commands.find_program.format(program=self.app, variable="__exec_post_path__"),
+            "",
+        ]
 
-            # Execute
-            shell = subprocess.Popen(self.commands.shell, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                                     stderr=subprocess.PIPE, cwd=self.test_folder)
-            (stdout, stderr) = shell.communicate(to_file_bytes("\n".join(shell_commands)))
-            stdout, stderr = decode_text(stdout), decode_text(stderr)
+        # Execute
+        shell = subprocess.Popen(self.commands.shell, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                 stderr=subprocess.PIPE, cwd=self.test_folder)
+        (stdout, stderr) = shell.communicate(to_file_bytes("\n".join(shell_commands)))
+        stdout, stderr = decode_text(stdout), decode_text(stderr)
 
         # Consistency checks
         self.assertFalse(stderr, "Running shell resulted in error, output:\n%s" % stdout)
@@ -245,7 +242,6 @@ class VirtualEnvIntegrationTestCase(unittest.TestCase):
         self.assertEqual(environment["PATH"], os.pathsep.join([
             os.path.join(self.test_folder, "bin"),
             r'other\path',
-            self.ori_path,
             existing_path
         ]))
         # FIXME: extra separator in Windows
