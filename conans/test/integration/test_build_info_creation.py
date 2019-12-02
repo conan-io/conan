@@ -131,17 +131,17 @@ class MyBuildInfoCreation(unittest.TestCase):
                     "--output-file", os.path.join(client.current_folder, "mergedbuildinfo.json")]
         run()
 
-        with open(os.path.join(client.current_folder, "mergedbuildinfo.json")) as f:
-            buildinfo = json.load(f)
-            self.assertEqual(buildinfo["name"], "MyBuildName")
-            self.assertEqual(buildinfo["number"], "42")
-            ids_list = [item["id"] for item in buildinfo["modules"]]
-            self.assertTrue("PkgC/0.1{}".format(user_channel) in ids_list)
-            self.assertTrue("PkgB/0.1{}".format(user_channel) in ids_list)
-            self.assertTrue("PkgC/0.1{}:09f152eb7b3e0a6e15a2a3f464245864ae8f8644".format(
-                user_channel) in ids_list)
-            self.assertTrue("PkgB/0.1{}:09f152eb7b3e0a6e15a2a3f464245864ae8f8644".format(
-                user_channel) in ids_list)
+        f = client.load("mergedbuildinfo.json")
+        buildinfo = json.loads(f)
+        self.assertEqual(buildinfo["name"], "MyBuildName")
+        self.assertEqual(buildinfo["number"], "42")
+        ids_list = [item["id"] for item in buildinfo["modules"]]
+        self.assertTrue("PkgC/0.1{}".format(user_channel) in ids_list)
+        self.assertTrue("PkgB/0.1{}".format(user_channel) in ids_list)
+        self.assertTrue("PkgC/0.1{}:09f152eb7b3e0a6e15a2a3f464245864ae8f8644".format(
+            user_channel) in ids_list)
+        self.assertTrue("PkgB/0.1{}:09f152eb7b3e0a6e15a2a3f464245864ae8f8644".format(
+            user_channel) in ids_list)
 
         sys.argv = ["conan_build_info", "--v2", "publish",
                     os.path.join(client.current_folder, "mergedbuildinfo.json"), "--url",
