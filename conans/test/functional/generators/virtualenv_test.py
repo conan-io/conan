@@ -173,9 +173,10 @@ class VirtualEnvIntegrationTestCase(unittest.TestCase):
         ]
 
         # Execute
-        shell = subprocess.Popen(self.commands.shell, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                                 stderr=subprocess.PIPE, cwd=self.test_folder)
-        (stdout, stderr) = shell.communicate(to_file_bytes("\n".join(shell_commands)))
+        with environment_append({"PATH": [self.ori_path, ]}):
+            shell = subprocess.Popen(self.commands.shell, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                     stderr=subprocess.PIPE, cwd=self.test_folder)
+            (stdout, stderr) = shell.communicate(to_file_bytes("\n".join(shell_commands)))
         stdout, stderr = decode_text(stdout), decode_text(stderr)
 
         # Consistency checks
@@ -242,6 +243,7 @@ class VirtualEnvIntegrationTestCase(unittest.TestCase):
         self.assertEqual(environment["PATH"], os.pathsep.join([
             os.path.join(self.test_folder, "bin"),
             r'other\path',
+            self.ori_path,
             existing_path
         ]))
         # FIXME: extra separator in Windows
