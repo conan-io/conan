@@ -1,5 +1,5 @@
 from conans.errors import ConanInvalidConfiguration, ConanException
-from conans.client.build.cppstd_flags import cppstd_flag, cppstd_from_settings
+from conans.client.build.cppstd_flags import cppstd_from_settings, cppstd_default
 from conans.client.tools.oss import OSInfo
 
 
@@ -8,6 +8,12 @@ def check_min_cppstd(conanfile, cppstd, gnu_extensions=False):
 
         In case the current cppstd doesn't fit the minimal version required
         by cppstd, a ConanInvalidConfiguration exception will be raised.
+
+        1. If settings.compiler.cppstd, the tool will use settings.compiler.cppstd to compare
+        2. It not settings.compiler.cppstd, the tool will use compiler to compare (reading the
+           default from cppstd_default)
+        3. If not settings.compiler is present (not declared in settings) will raise because it
+           cannot compare.
 
     :param conanfile: ConanFile instance with cppstd to be compared
     :param cppstd: Minimal cppstd version required
@@ -38,23 +44,27 @@ def check_min_cppstd(conanfile, cppstd, gnu_extensions=False):
         return OSInfo().is_linux
 
     current_cppstd = cppstd_from_settings(conanfile.settings)
-    if current_cppstd and gnu_extensions and "gnu" not in current_cppstd and is_linux(conanfile):
-        raise ConanInvalidConfiguration("Current cppstd ({}) does not have GNU extensions, which is"
-                                        " required on Linux platform.".format(current_cppstd))
-    elif current_cppstd and less_than(current_cppstd, cppstd):
-        raise ConanInvalidConfiguration("Current cppstd ({}) is lower than required C++ standard "
-                                        "({}).".format(current_cppstd, cppstd))
+    if current_cppstd:
+        if gnu_extensions and "gnu" not in current_cppstd and is_linux(conanfile):
+            raise ConanInvalidConfiguration("Current cppstd ({}) does not have GNU extensions, "
+                                            "which is required on Linux platform."
+                                            .format(current_cppstd))
+        elif current_cppstd and less_than(current_cppstd, cppstd):
+            raise ConanInvalidConfiguration("Current cppstd ({}) is lower than the required C++ "
+                                            "standard ({}).".format(current_cppstd, cppstd))
     else:
-        if OSInfo().is_linux and gnu_extensions and "gnu" not in cppstd:
-            cppstd = "gnu" + cppstd
-        result = cppstd_flag(conanfile.settings.get_safe("compiler"),
-                             conanfile.settings.get_safe("compiler.version"),
-                             cppstd)
-        if not result:
-            raise ConanInvalidConfiguration("Current compiler does not support the required "
-                                            "C++ standard ({}).".format(cppstd))
-        elif OSInfo().is_linux and gnu_extensions and "gnu" not in result:
+        compiler = conanfile.settings.get_safe("compiler")
+        compiler_version = conanfile.settings.get_safe("compiler.version")
+        if not compiler or not compiler_version:
+            raise ConanException("Could not obtain cppstd because there is no compiler in "
+                                 "settings.")
+        compiler_cppstd = cppstd_default(compiler, compiler_version)
+        if is_linux(conanfile) and gnu_extensions and "gnu" not in compiler_cppstd:
             raise ConanInvalidConfiguration("Current compiler does not support GNU extensions.")
+        elif less_than(compiler_cppstd, cppstd):
+            raise ConanInvalidConfiguration("Default compiler C++ standard ({}) is lower than the "
+                                            "required C++ standard ({}).".format(compiler_cppstd,
+                                                                                 cppstd))
 
 
 def valid_min_cppstd(conanfile, cppstd, gnu_extensions=False):
