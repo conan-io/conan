@@ -32,8 +32,8 @@ def check_min_cppstd(conanfile, cppstd, gnu_extensions=False):
         rhs = add_millennium(extract_cpp_version(rhs))
         return lhs < rhs
 
-    def check_required_gnu_extension():
-        if not gnu_extensions or "gnu" in current_cppstd:
+    def check_required_gnu_extension(_cppstd):
+        if not gnu_extensions or "gnu" in _cppstd:
             return
         oss = conanfile.settings.get_safe("os")
         if not oss:
@@ -56,7 +56,7 @@ def check_min_cppstd(conanfile, cppstd, gnu_extensions=False):
 
     current_cppstd = deduced_cppstd()
 
-    check_required_gnu_extension()
+    check_required_gnu_extension(current_cppstd)
 
     if less_than(current_cppstd, cppstd):
         raise ConanInvalidConfiguration("Current cppstd ({}) is lower than the required C++ "
