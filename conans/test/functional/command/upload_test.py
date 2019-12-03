@@ -826,3 +826,46 @@ class Pkg(ConanFile):
         client.run("user -c")
         client.run("upload Hello0/1.2.1@user/testing --all -r default")
         self.assertIn("Uploaded conan recipe 'Hello0/1.2.1@user/testing' to 'default'", client.out)
+
+    @unittest.skipIf(get_env("TESTING_REVISIONS_ENABLED", False), "No sense with revs")
+    def upload_with_rev_revs_disabled_test(self):
+        client = TestClient(default_server_user=True, revisions_enabled=False)
+        client.run("upload pkg/1.0@user/channel#fakerevision --confirm", assert_error=True)
+        self.assertIn(
+            "ERROR: Revisions not enabled in the client, specify a reference without revision",
+            client.out)
+
+    @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
+    def upload_with_recipe_revision_test(self):
+        ref = ConanFileReference.loads("pkg/1.0@user/channel")
+        client = TurboTestClient(default_server_user=True, revisions_enabled=True)
+        pref = client.create(ref, conanfile=GenConanfile())
+        client.run("upload pkg/1.0@user/channel#fakerevision --confirm", assert_error=True)
+        self.assertIn("ERROR: Recipe revision fakerevision does not match the one stored in the cache {}".
+                      format(pref.ref.revision), client.out)
+
+        client.run("upload pkg/1.0@user/channel#{} --confirm".format(pref.ref.revision))
+        search_result = client.search("pkg/1.0@user/channel --revisions -r default")[0]
+        self.assertIn(pref.ref.revision, search_result["revision"])
+
+    @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
+    def upload_with_package_revision_test(self):
+        ref = ConanFileReference.loads("pkg/1.0@user/channel")
+        client = TurboTestClient(default_server_user=True, revisions_enabled=True)
+        pref = client.create(ref, conanfile=GenConanfile())
+        client.run(
+            "upload pkg/1.0@user/channel#{}:{}#fakeprev --confirm".format(pref.ref.revision, pref.id),
+            assert_error=True)
+        self.assertIn(
+            "ERROR: Binary package pkg/1.0@user/channel:{}#fakeprev not found".format(pref.id),
+            client.out)
+
+        client.run(
+            "upload pkg/1.0@user/channel#{}:{}#{} --confirm".format(pref.ref.revision, pref.id,
+                                                                    pref.revision))
+        search_result = client.search("pkg/1.0@user/channel --revisions -r default")[0]
+        self.assertIn(pref.ref.revision, search_result["revision"])
+        search_result = client.search(
+            "pkg/1.0@user/channel#{}:{} --revisions  -r default".format(pref.ref.revision, pref.id))[
+            0]
+        self.assertIn(pref.revision, search_result["revision"])

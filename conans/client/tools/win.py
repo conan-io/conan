@@ -280,7 +280,7 @@ def vswhere(all_=False, prerelease=False, products=None, requires=None, version=
         arguments.append("-requires")
         arguments.extend(requires)
 
-    if len(version) is not 0:
+    if len(version) != 0:
         arguments.append("-version")
         arguments.append(version)
 
@@ -290,7 +290,7 @@ def vswhere(all_=False, prerelease=False, products=None, requires=None, version=
     if legacy:
         arguments.append("-legacy")
 
-    if len(property_) is not 0:
+    if len(property_) != 0:
         arguments.append("-property")
         arguments.append(property_)
 

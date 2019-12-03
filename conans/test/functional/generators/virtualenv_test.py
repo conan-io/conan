@@ -249,27 +249,26 @@ class VirtualEnvIntegrationTestCase(unittest.TestCase):
 
     def test_find_program(self):
         # If we add the path, we should found the env/executable instead of ori/executable
+        # Watch out! 'cmd' returns all the paths where the executable is found, so we need to
+        #   take into account the first match (iterate in reverse order)
         generator = VirtualEnvGenerator(ConanFileMock())
         generator.env = {"PATH": [self.env_path], }
 
         stdout, environment = self._run_virtualenv(generator)
         
-        cpaths = dict(l.split("=", 1) for l in stdout.splitlines() if l.startswith("__conan_"))
+        cpaths = dict(l.split("=", 1) for l in reversed(stdout.splitlines()) if l.startswith("__conan_"))
         self.assertEqual(cpaths["__conan_pre_path__"], cpaths["__conan_post_path__"])
         self.assertEqual(cpaths["__conan_env_path__"], cpaths["__conan_post_path__"])
 
-        epaths = dict(l.split("=", 1) for l in stdout.splitlines() if l.startswith("__exec_"))
+        epaths = dict(l.split("=", 1) for l in reversed(stdout.splitlines()) if l.startswith("__exec_"))
         self.assertEqual(epaths["__exec_pre_path__"], epaths["__exec_post_path__"])
-        if self.commands.id == "cmd":  # FIXME: This is a bug, it doesn't take into account the new path
-            self.assertNotEqual(epaths["__exec_env_path__"], os.path.join(self.env_path, self.app))
-        else:
-            self.assertEqual(epaths["__exec_env_path__"], os.path.join(self.env_path, self.app))
+        self.assertEqual(epaths["__exec_env_path__"], os.path.join(self.env_path, self.app))
 
         # With any other path, we keep finding the original one
         generator = VirtualEnvGenerator(ConanFileMock())
         generator.env = {"PATH": [os.path.join(self.test_folder, "wrong")], }
 
         stdout, environment = self._run_virtualenv(generator)
-        epaths = dict(l.split("=", 1) for l in stdout.splitlines() if l.startswith("__exec_"))
+        epaths = dict(l.split("=", 1) for l in reversed(stdout.splitlines()) if l.startswith("__exec_"))
         self.assertEqual(epaths["__exec_pre_path__"], epaths["__exec_post_path__"])
         self.assertEqual(epaths["__exec_env_path__"], epaths["__exec_post_path__"])

@@ -9,7 +9,7 @@ from conans.util import progress_bar
 from conans.client.rest import response_to_str
 from conans.errors import AuthenticationException, ConanConnectionError, ConanException, \
     NotFoundException, ForbiddenException, RequestErrorException
-from conans.util.files import mkdir, sha1sum
+from conans.util.files import mkdir, sha1sum, to_file_bytes
 from conans.util.log import logger
 from conans.util.tracer import log_download
 
@@ -61,11 +61,11 @@ class FileUploader(object):
         file_name = os.path.basename(abs_path)
         description = "Uploading {}".format(file_name)
 
-        def load_in_chunks(file, size):
+        def load_in_chunks(_file, size):
             """Lazy function (generator) to read a file piece by piece.
             Default chunk size: 1k."""
             while True:
-                chunk = file.read(size)
+                chunk = _file.read(size)
                 if not chunk:
                     break
                 yield chunk
