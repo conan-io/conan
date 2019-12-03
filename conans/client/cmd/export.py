@@ -4,7 +4,6 @@ import shutil
 
 import six
 
-from conans.client.cmd.export_linter import conan_linter
 from conans.client.file_copier import FileCopier
 from conans.client.output import Color, ScopedOutput
 from conans.client.remover import DiskRemover
@@ -102,7 +101,6 @@ def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
     logger.debug("EXPORT: %s" % conanfile_path)
 
     output.highlight("Exporting package recipe")
-    conan_linter(conanfile_path, output)
     output = conanfile.output
 
     # Get previous digest

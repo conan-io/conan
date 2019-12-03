@@ -165,6 +165,9 @@ endif()
 if(NOT DEFINED Hello0_INCLUDE_DIRS)
     message(FATAL_ERROR "Hello0_INCLUDE_DIRS not declared")
 endif()
+if(NOT DEFINED Hello0_INCLUDE_DIR)
+    message(FATAL_ERROR "Hello0_INCLUDE_DIR not declared")
+endif()
 if(NOT DEFINED Hello0_INCLUDES)
     message(FATAL_ERROR "Hello0_INCLUDES not declared")
 endif()
@@ -357,6 +360,7 @@ message("Target libs: ${tmp}")
         package_path = client.cache.package_layout(ref).package(pref)
         modules_path = os.path.join(package_path, "share", "cmake")
         self.assertEqual(set(os.listdir(modules_path)), {"FindFindModule.cmake", "my-module.cmake"})
+
         consumer = textwrap.dedent("""
             from conans import ConanFile, CMake
 

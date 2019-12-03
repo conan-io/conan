@@ -4,13 +4,12 @@ import fasteners
 
 from conans.client.tools.env import no_op
 from conans.errors import NotFoundException
-from conans.server.store.server_store import REVISIONS_FILE
 from conans.util.files import decode_text, md5sum, path_exists, relative_dirs, rmdir
 
 
 class ServerDiskAdapter(object):
-    '''Manage access to disk files with common methods required
-    for conan operations'''
+    """Manage access to disk files with common methods required
+    for conan operations"""
     def __init__(self, base_url, base_storage_path, updown_auth_manager):
         """
         :param: base_url Base url for generate urls to download and upload operations"""
@@ -22,10 +21,10 @@ class ServerDiskAdapter(object):
 
     # ONLY USED BY APIV1
     def get_download_urls(self, paths, user=None):
-        '''Get the urls for download the specified files using s3 signed request.
+        """Get the urls for download the specified files using s3 signed request.
         returns a dict with this structure: {"filepath": "http://..."}
 
-        paths is a list of path files '''
+        paths is a list of path files """
 
         assert isinstance(paths, list)
         ret = {}
@@ -41,10 +40,10 @@ class ServerDiskAdapter(object):
 
     # ONLY USED BY APIV1
     def get_upload_urls(self, paths_sizes, user=None):
-        '''Get the urls for upload the specified files using s3 signed request.
+        """Get the urls for upload the specified files using s3 signed request.
         returns a dict with this structure: {"filepath": "http://..."}
 
-        paths_sizes is a dict of {path: size_in_bytes} '''
+        paths_sizes is a dict of {path: size_in_bytes} """
         assert isinstance(paths_sizes, dict)
         ret = {}
         for filepath, filesize in paths_sizes.items():
@@ -76,13 +75,13 @@ class ServerDiskAdapter(object):
         return abs_paths
 
     def delete_folder(self, path):
-        '''Delete folder from disk. Path already contains base dir'''
+        """Delete folder from disk. Path already contains base dir"""
         if not path_exists(path, self._store_folder):
             raise NotFoundException("")
         rmdir(path)
 
     def delete_file(self, path):
-        '''Delete files from bucket. Path already contains base dir'''
+        """Delete files from bucket. Path already contains base dir"""
         if not path_exists(path, self._store_folder):
             raise NotFoundException("")
         os.remove(path)

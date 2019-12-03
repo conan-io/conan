@@ -5,6 +5,7 @@ from collections import OrderedDict
 from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import (TestClient, TestServer, NO_SETTINGS_PACKAGE_ID, TurboTestClient,
                                      GenConanfile)
+from conans.util.env_reader import get_env
 from conans.util.files import load
 
 
@@ -220,3 +221,75 @@ class Pkg(ConanFile):
         client.run("download pkg/1.0@")
         self.assertIn("pkg/1.0: Downloading pkg/1.0:%s" % NO_SETTINGS_PACKAGE_ID, client.out)
         self.assertIn("pkg/1.0: Package installed %s" % NO_SETTINGS_PACKAGE_ID, client.out)
+
+    @unittest.skipIf(get_env("TESTING_REVISIONS_ENABLED", False), "No sense with revs")
+    def download_revs_disabled_with_rrev_test(self):
+        # https://github.com/conan-io/conan/issues/6106
+        client = TestClient(revisions_enabled=False)
+        client.run("download pkg/1.0@user/channel#fakerevision", assert_error=True)
+        self.assertIn(
+            "ERROR: Revisions not enabled in the client, specify a reference without revision",
+            client.out)
+
+    @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
+    def download_revs_enabled_with_fake_rrev_test(self):
+        client = TestClient(default_server_user=True, revisions_enabled=True)
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . pkg/1.0@user/channel")
+        client.run("upload * --all --confirm")
+        client.run("remove * -f")
+        client.run("download pkg/1.0@user/channel#fakerevision", assert_error=True)
+        self.assertIn("ERROR: Recipe not found: 'pkg/1.0@user/channel'", client.out)
+
+    @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
+    def download_revs_enabled_with_rrev_test(self):
+        ref = ConanFileReference.loads("pkg/1.0@user/channel")
+        client = TurboTestClient(default_server_user=True, revisions_enabled=True)
+        pref = client.create(ref, conanfile=GenConanfile())
+        client.run("upload pkg/1.0@user/channel --all --confirm")
+        # create new revision from recipe
+        client.create(ref, conanfile=GenConanfile().with_build_msg("new revision"))
+        client.run("upload pkg/1.0@user/channel --all --confirm")
+        client.run("remove * -f")
+        client.run("download pkg/1.0@user/channel#{}".format(pref.ref.revision))
+        self.assertIn("pkg/1.0@user/channel: Package installed {}".format(pref.id), client.out)
+        search_result = client.search("pkg/1.0@user/channel --revisions")[0]
+        self.assertIn(pref.ref.revision, search_result["revision"])
+
+    @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
+    def download_revs_enabled_with_rrev_no_user_channel_test(self):
+        ref = ConanFileReference.loads("pkg/1.0@")
+        servers = {"default": TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")],
+                                         users={"user": "password"})}
+        client = TurboTestClient(servers=servers, revisions_enabled=True,
+                                 users={"default": [("user", "password")]})
+        pref = client.create(ref, conanfile=GenConanfile())
+        client.run("upload pkg/1.0@ --all --confirm")
+        # create new revision from recipe
+        client.create(ref, conanfile=GenConanfile().with_build_msg("new revision"))
+        client.run("upload pkg/1.0@ --all --confirm")
+        client.run("remove * -f")
+        client.run("download pkg/1.0@#{}".format(pref.ref.revision))
+        self.assertIn("pkg/1.0: Package installed {}".format(pref.id), client.out)
+        search_result = client.search("pkg/1.0@ --revisions")[0]
+        self.assertIn(pref.ref.revision, search_result["revision"])
+
+    @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
+    def download_revs_enabled_with_prev_test(self):
+        # https://github.com/conan-io/conan/issues/6106
+        ref = ConanFileReference.loads("pkg/1.0@user/channel")
+        client = TurboTestClient(default_server_user=True, revisions_enabled=True)
+        pref = client.create(ref, conanfile=GenConanfile())
+        client.run("upload pkg/1.0@user/channel --all --confirm")
+        client.create(ref, conanfile=GenConanfile().with_build_msg("new revision"))
+        client.run("upload pkg/1.0@user/channel --all --confirm")
+        client.run("remove * -f")
+        client.run("download pkg/1.0@user/channel#{}:{}#{}".format(pref.ref.revision,
+                                                                   pref.id,
+                                                                   pref.revision))
+        self.assertIn("pkg/1.0@user/channel: Package installed {}".format(pref.id), client.out)
+        search_result = client.search("pkg/1.0@user/channel --revisions")[0]
+        self.assertIn(pref.ref.revision, search_result["revision"])
+        search_result = client.search(
+            "pkg/1.0@user/channel#{}:{} --revisions".format(pref.ref.revision, pref.id))[0]
+        self.assertIn(pref.revision, search_result["revision"])
