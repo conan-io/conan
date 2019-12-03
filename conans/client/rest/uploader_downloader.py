@@ -9,7 +9,7 @@ from conans.util import progress_bar
 from conans.client.rest import response_to_str
 from conans.errors import AuthenticationException, ConanConnectionError, ConanException, \
     NotFoundException, ForbiddenException, RequestErrorException
-from conans.util.files import mkdir, sha1sum, to_file_bytes
+from conans.util.files import mkdir, sha1sum
 from conans.util.log import logger
 from conans.util.tracer import log_download
 
@@ -176,7 +176,7 @@ class FileDownloader(object):
                 with open(path, 'wb') as file_handler:
                     for chunk in chunks:
                         assert ((six.PY3 and isinstance(chunk, bytes)) or
-                                (six.PY2 and isinstance(chunk, str)), "download chunk not binary")
+                                (six.PY2 and isinstance(chunk, str)))
                         file_handler.write(chunk)
                         downloaded_size += len(chunk)
             else:
