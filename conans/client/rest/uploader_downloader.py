@@ -3,6 +3,8 @@ import traceback
 import time
 from copy import copy
 
+import six
+
 from conans.util import progress_bar
 from conans.client.rest import response_to_str
 from conans.errors import AuthenticationException, ConanConnectionError, ConanException, \
@@ -173,7 +175,9 @@ class FileDownloader(object):
                 mkdir(os.path.dirname(path))
                 with open(path, 'wb') as file_handler:
                     for chunk in chunks:
-                        file_handler.write(to_file_bytes(chunk))
+                        assert ((six.PY3 and isinstance(chunk, bytes)) or
+                                (six.PY2 and isinstance(chunk, str)), "download chunk not binary")
+                        file_handler.write(chunk)
                         downloaded_size += len(chunk)
             else:
                 ret_data = bytearray()
