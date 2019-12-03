@@ -11,36 +11,13 @@ from conans.tools import check_min_cppstd, valid_min_cppstd
 
 class UserInputTests(unittest.TestCase):
 
-    def test_check_none_cppstd(self):
-        """ Cppstd must use a valid number as described in settings.yml
-        """
-        conanfile = MockConanfile(MockSettings({}))
-        with self.assertRaises(ConanException) as asserts:
-            check_min_cppstd(conanfile, None, False)
-        self.assertEqual("Cannot check invalid cppstd version", str(asserts.exception))
-
-        with self.assertRaises(ConanException) as asserts:
-            valid_min_cppstd(conanfile, None, False)
-        self.assertEqual("Cannot check invalid cppstd version", str(asserts.exception))
-
-    def test_check_none_conanfile(self):
-        """ conanfile must be a ConanFile object
-        """
-        with self.assertRaises(ConanException) as raises:
-            check_min_cppstd(None, "17", False)
-        self.assertEqual("conanfile must be a ConanFile object", str(raises.exception))
-
-        with self.assertRaises(ConanException) as raises:
-            valid_min_cppstd(None, "17", False)
-        self.assertEqual("conanfile must be a ConanFile object", str(raises.exception))
-
     def test_check_cppstd_type(self):
         """ cppstd must be a number
         """
         conanfile = MockConanfile(MockSettings({}))
         with self.assertRaises(ConanException) as raises:
             check_min_cppstd(conanfile, "gnu17", False)
-        self.assertEqual("cppstd must be a number", str(raises.exception))
+        self.assertEqual("cppstd parameter must be a number", str(raises.exception))
 
 
 class CheckMinCppStdTests(unittest.TestCase):
@@ -86,8 +63,7 @@ class CheckMinCppStdTests(unittest.TestCase):
                 conanfile.settings.values["compiler.cppstd"] = "17"
                 with self.assertRaises(ConanInvalidConfiguration) as raises:
                     check_min_cppstd(conanfile, cppstd, True)
-                self.assertEqual("Current cppstd (17) does not have GNU extensions, which is "
-                                 "required on Linux platform.", str(raises.exception))
+                self.assertEqual("The cppstd GNU extension is required", str(raises.exception))
 
     @parameterized.expand(["98", "11", "14", "17"])
     def test_check_min_cppstd_from_settings_with_extension_windows(self, cppstd):
@@ -106,8 +82,8 @@ class CheckMinCppStdTests(unittest.TestCase):
         conanfile = self._create_conanfile("gcc", "9", "Linux", None, "libstdc++")
         with self.assertRaises(ConanInvalidConfiguration) as raises:
             check_min_cppstd(conanfile, "42", False)
-        self.assertEqual("Default compiler C++ standard (gnu14) is lower than the required C++ "
-                         "standard (42).", str(raises.exception))
+        self.assertEqual("Current cppstd (gnu14) is lower than the required C++ standard (42).",
+                         str(raises.exception))
 
     def test_check_min_cppstd_gnu_compiler_extension(self):
         """ Current compiler must support GNU extension on Linux when extensions is required
@@ -118,15 +94,15 @@ class CheckMinCppStdTests(unittest.TestCase):
                 with mock.patch("conans.client.tools.settings.cppstd_default", return_value="17"):
                     with self.assertRaises(ConanInvalidConfiguration) as raises:
                         check_min_cppstd(conanfile, "17", True)
-                    self.assertEqual("Current compiler does not support GNU extensions.",
-                                     str(raises.exception))
+                    self.assertEqual("The cppstd GNU extension is required", str(raises.exception))
 
     def test_no_compiler_declared(self):
         conanfile = self._create_conanfile(None, None, "Linux", None, "libstdc++")
         with self.assertRaises(ConanException) as raises:
             check_min_cppstd(conanfile, "14", False)
-        self.assertEqual("Could not obtain cppstd because there is no compiler in settings.",
-                         str(raises.exception))
+        self.assertEqual("Could not obtain cppstd because there is no declared compiler in the "
+                         "'settings' field of the recipe.", str(raises.exception))
+
 
 class ValidMinCppstdTests(unittest.TestCase):
 
@@ -199,11 +175,11 @@ class ValidMinCppstdTests(unittest.TestCase):
 
     @parameterized.expand(["98", "11", "14", "17"])
     def test_min_cppstd_mingw_windows(self, cppstd):
-        """ GNU extensions has no effect on Windows when running MingW and cross-building for Linux
+        """ GNU extensions HAS effect on Windows when running a cross-building for Linux
         """
         with mock.patch("platform.system", mock.MagicMock(return_value="Windows")):
             conanfile = self._create_conanfile("gcc", "9", "Linux", "gnu17", "libstdc++")
             self.assertTrue(valid_min_cppstd(conanfile, cppstd, True))
 
             conanfile.settings.values["compiler.cppstd"] = "17"
-            self.assertTrue(valid_min_cppstd(conanfile, cppstd, True))
+            self.assertFalse(valid_min_cppstd(conanfile, cppstd, True))
