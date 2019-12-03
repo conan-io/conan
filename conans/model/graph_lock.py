@@ -14,7 +14,7 @@ from conans.model.version import Version
 
 
 LOCKFILE = "conan.lock"
-LOCKFILE_VERSION = "0.1"
+LOCKFILE_VERSION = "0.2"
 
 
 class GraphLockFile(object):
@@ -44,6 +44,9 @@ class GraphLockFile(object):
         version = graph_json.get("version")
         if version:
             version = Version(version)
+            if version < "0.2":
+                raise ConanException("This lockfile was created with a previous incompatible "
+                                     "version. Please regenerate the lockfile")
             # Do something with it, migrate, raise...
         profile_host = graph_json.get("profile_host") or graph_json["profile"]
         # FIXME: Reading private very ugly

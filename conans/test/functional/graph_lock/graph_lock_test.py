@@ -117,6 +117,16 @@ class ReproducibleLockfiles(unittest.TestCase):
         lockfile2 = client.load("conan.lock")
         self.assertEqual(lockfile, lockfile2)
 
+    def error_old_format_test(self):
+        client = TestClient()
+        client.save({"conanfile.txt": ""})
+        client.run("install .")
+        lockfile = client.load("conan.lock")
+        lockfile = lockfile.replace('"0.2"', '"0.1"').replace('"0"', '"UUID"')
+        client.save({"conan.lock": lockfile})
+        client.run("install . --lockfile", assert_error=True)
+        self.assertIn("This lockfile was created with a previous incompatible version", client.out)
+
 
 class GraphLockVersionRangeTest(unittest.TestCase):
     consumer = GenConanfile().with_name("PkgB").with_version("0.1")\
