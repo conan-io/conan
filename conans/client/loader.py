@@ -71,7 +71,7 @@ class ConanFileLoader(object):
         """ loads the basic conanfile object and evaluates its name and version
         """
         conanfile = self.load_basic(conanfile_path, lock_python_requires, user, channel)
-
+        conanfile.recipe_folder = os.path.dirname(conanfile_path)
         if hasattr(conanfile, "set_name"):
             if conanfile.name:
                 raise ConanException("Conanfile defined package 'name', set_name() redundant")
@@ -82,6 +82,8 @@ class ConanFileLoader(object):
                 raise ConanException("Conanfile defined package 'version', set_version() redundant")
             with conanfile_exception_formatter("conanfile.py", "set_version"):
                 conanfile.set_version()
+        # Make sure this is nowhere else available
+        del conanfile.recipe_folder
 
         # Export does a check on existing name & version
         if name:
