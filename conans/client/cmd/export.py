@@ -101,9 +101,6 @@ def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
     logger.debug("EXPORT: %s" % conanfile_path)
 
     output.highlight("Exporting package recipe")
-    if os.getenv("CONAN_PYLINT_WERR") or os.getenv("CONAN_PYLINTRC"):
-        output.warn("CONAN_PYLINT_WERR and CONAN_PYLINTRC no longer have effect. Recipe linting "
-                    "has been moved to a hook. Check https://github.com/conan-io/hooks")
     output = conanfile.output
 
     # Get previous digest

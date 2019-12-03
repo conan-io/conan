@@ -491,17 +491,3 @@ class ExportMetadataTest(unittest.TestCase):
         self.assertIn("pkg/0.1: A new conanfile.py version was exported", client.out)
         client.run('export . Pkg/0.1@', assert_error=True)
         self.assertIn("ERROR: Cannot export package with same name but different case", client.out)
-
-    def test_warning_as_errors(self):
-        client = TestClient()
-        client.save({CONANFILE: GenConanfile()})
-        client.run("config set general.pylint_werr=True")
-        client.run("export . pkg/0.1@user/stable")
-        self.assertIn("WARN: CONAN_PYLINT_WERR and CONAN_PYLINTRC no longer have effect",
-                      client.out)
-        client = TestClient()
-        client.save({CONANFILE: GenConanfile()})
-        client.run("config set general.pylintrc=something")
-        client.run("export . pkg/0.1@user/stable")
-        self.assertIn("WARN: CONAN_PYLINT_WERR and CONAN_PYLINTRC no longer have effect",
-                      client.out)
