@@ -1,11 +1,9 @@
 import os
 import platform
 import textwrap
-
-import six
-import textwrap
 import unittest
 
+import six
 from nose.plugins.attrib import attr
 
 from conans.client.tools import replace_in_file
@@ -295,19 +293,32 @@ class Consumer(ConanFile):
 project(consumer)
 cmake_minimum_required(VERSION 3.1)
 find_package(Test)
-message("Libraries to Link: ${Test_LIBS}")
+message("Libraries to link: ${Test_LIBS}")
 message("Version: ${Test_VERSION}")
+message("Frameworks: ${Test_FRAMEWORKS}")
+message("Frameworks found: ${Test_FRAMEWORKS_FOUND}")
 
 get_target_property(tmp Test::Test INTERFACE_LINK_LIBRARIES)
 message("Target libs: ${tmp}")
 """
         client.save({"conanfile.py": conanfile, "CMakeLists.txt": cmakelists})
         client.run("create . user/channel --build missing")
-        six.assertRegex(self, str(client.out), "-- Library .*Foundation\\.framework not "
-                                               "found in package, might be system one")
-        six.assertRegex(self, str(client.out), "Libraries to Link: .*Foundation\\.framework")
-        six.assertRegex(self, str(client.out), "Target libs: .*Foundation\\.framework")
+        self.assertIn("Libraries to link:", client.out)
+        self.assertIn('Found Test: 0.1 (found version "0.1")', client.out)
         self.assertIn("Version: 0.1", client.out)
+        self.assertIn("Frameworks: Foundation", client.out)
+        six.assertRegex(self, str(client.out),
+                        r"Frameworks found: [^\s]*/System/Library/Frameworks/Foundation.framework")
+        six.assertRegex(self, str(client.out),
+                        r"Target libs: [^\s]*/System/Library/Frameworks/Foundation.framework;;")
+
+        self.assertNotIn("Foundation.framework not found in package, might be system one",
+                         client.out)
+        if six.PY2:
+            self.assertNotRegexpMatches(str(client.out),
+                                        r"Libraries to link: .*Foundation\.framework")
+        else:
+            self.assertNotRegex(str(client.out), r"Libraries to link: .*Foundation\.framework")
 
     def build_modules_test(self):
         conanfile = textwrap.dedent("""
@@ -348,8 +359,8 @@ message("Target libs: ${tmp}")
         pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID, None)
         package_path = client.cache.package_layout(ref).package(pref)
         modules_path = os.path.join(package_path, "share", "cmake")
-        self.assertSetEqual(set(os.listdir(modules_path)),
-                            {"FindFindModule.cmake", "my-module.cmake"})
+        self.assertEqual(set(os.listdir(modules_path)), {"FindFindModule.cmake", "my-module.cmake"})
+
         consumer = textwrap.dedent("""
             from conans import ConanFile, CMake
 

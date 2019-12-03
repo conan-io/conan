@@ -119,7 +119,12 @@ def runtime_definition(runtime):
     return {runtime_definition_var_name: "/%s" % runtime} if runtime else {}
 
 
-def build_type_definition(build_type, generator):
+def build_type_definition(new_build_type, old_build_type, generator, output):
+    if new_build_type and new_build_type != old_build_type:
+        output.warn("Forced CMake build type ('%s') different from the settings build "
+                          "type ('%s')" % (new_build_type, old_build_type))
+
+    build_type = new_build_type or old_build_type
     if build_type and not is_multi_configuration(generator):
         return {"CMAKE_BUILD_TYPE": build_type}
     return {}
@@ -281,13 +286,8 @@ class CMakeDefinitionsBuilder(object):
 
         definitions = OrderedDict()
         definitions.update(runtime_definition(runtime))
-
-        if self._forced_build_type and self._forced_build_type != build_type:
-            self._output.warn("Forced CMake build type ('%s') different from the settings build "
-                              "type ('%s')" % (self._forced_build_type, build_type))
-            build_type = self._forced_build_type
-
-        definitions.update(build_type_definition(build_type, self._generator))
+        definitions.update(build_type_definition(self._forced_build_type, build_type,
+                                                 self._generator, self._output))
 
         if str(os_) == "Macos":
             if arch == "x86":
@@ -296,7 +296,6 @@ class CMakeDefinitionsBuilder(object):
         definitions.update(self._cmake_cross_build_defines())
         definitions.update(self._get_cpp_standard_vars())
 
-        definitions["CONAN_EXPORTED"] = "1"
         definitions.update(in_local_cache_definition(self._conanfile.in_local_cache))
 
         if compiler:

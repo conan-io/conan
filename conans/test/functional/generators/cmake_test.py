@@ -5,7 +5,6 @@ import unittest
 
 from nose.plugins.attrib import attr
 
-from conans import load
 from conans.client.tools import replace_in_file
 from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient, GenConanfile, TurboTestClient
@@ -142,17 +141,18 @@ CONAN_BASIC_SETUP()
         client.run("install conanfile_consumer.py")
 
         content = client.load("conanbuildinfo.cmake")
-        self.assertIn("set(CONAN_LIBS lib1 sys1 ${CONAN_LIBS})", content)
-        self.assertIn("set(CONAN_LIBS_MYLIB lib1 sys1)", content)
+        self.assertIn("set(CONAN_LIBS ${CONAN_PKG_LIBS} ${CONAN_SYSTEM_LIBS} ${CONAN_FRAMEWORKS_FOUND})",
+                      content)
+        self.assertIn("set(CONAN_LIBS_MYLIB ${CONAN_PKG_LIBS_MYLIB} ${CONAN_SYSTEM_LIBS_MYLIB} ${CONAN_FRAMEWORKS_FOUND_MYLIB})",
+                      content)
         self.assertIn("set(CONAN_PKG_LIBS_MYLIB lib1)", content)
-        self.assertIn("set(CONAN_SYSTEM_LIBS sys1 ${CONAN_SYSTEM_LIBS})", content)
+        self.assertIn("set(CONAN_SYSTEM_LIBS sys1)", content)
         self.assertIn("set(CONAN_SYSTEM_LIBS_MYLIB sys1)", content)
 
         # Check target has libraries and system deps available
         client.run_command("cmake .")
         self.assertIn("Target libs: CONAN_LIB::mylib_lib1;", client.out)
         self.assertIn("CONAN_LIB::mylib_lib1 system libs: sys1", client.out)
-        print(client.out)
 
     def targets_system_libs_test(self):
         mylib = GenConanfile().with_package_info(cpp_info={"libs": ["lib1", "lib11"],

@@ -1,9 +1,8 @@
 import os
 import re
 import unittest
-import six
 
-from mock import patch
+import six
 
 from conans.client.build.cmake_flags import CMakeDefinitionsBuilder
 from conans.client.conf import default_settings_yml
@@ -342,14 +341,18 @@ endmacro()""", macro)
 
         generator = CMakeGenerator(conanfile)
         content = generator.content
-        self.assertIn('find_library(CONAN_FRAMEWORK_OPENGL OpenGL PATHS '
-                      '"path/to/Frameworks1"\n\t\t\t"path/to/Frameworks2")', content)
-        self.assertIn('find_library(CONAN_FRAMEWORK_OPENCL OpenCL PATHS '
-                      '"path/to/Frameworks1"\n\t\t\t"path/to/Frameworks2")', content)
-        self.assertIn('set(CONAN_LIBS_MYPKG  ${CONAN_FRAMEWORK_OPENGL} ${CONAN_FRAMEWORK_OPENCL})',
-                      content)  #FIXME: Add a CONAN_FRAMEWORKS_MYPKG
-        self.assertIn('set(CONAN_LIBS  ${CONAN_FRAMEWORK_OPENGL} '
-                      '${CONAN_FRAMEWORK_OPENCL} ${CONAN_LIBS})', content)
+        self.assertIn('find_library(CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND NAME ${_FRAMEWORK} PATHS'
+                      ' ${CONAN_FRAMEWORK_DIRS})', content)
+        self.assertIn('set(CONAN_FRAMEWORK_DIRS "path/to/Frameworks1"\n\t\t\t"path/to/Frameworks2" '
+                      '${CONAN_FRAMEWORK_DIRS})', content)
+        self.assertIn('set(CONAN_LIBS ${CONAN_PKG_LIBS} ${CONAN_SYSTEM_LIBS} '
+                      '${CONAN_FRAMEWORKS_FOUND})', content)
+
+        generator = CMakeFindPackageGenerator(conanfile)
+        content = generator.content
+        content = content['FindMyPkg.cmake']
+        self.assertIn('find_library(CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND NAME ${_FRAMEWORK} PATHS'
+                      ' ${MyPkg_FRAMEWORK_DIRS})', content)
 
 
 class CMakeCppInfoNameTest(unittest.TestCase):
@@ -416,7 +419,8 @@ class CMakeCppInfoNameTest(unittest.TestCase):
         content = generator.content
         six.assertCountEqual(self, ['MyPkG2Targets.cmake', 'MyPkGConfig.cmake', 'MyPkG2Config.cmake',
                                     'MyPkGTargets.cmake', 'MyPkGTarget-debug.cmake',
-                                    'MyPkG2Target-debug.cmake'], content.keys())
+                                    'MyPkG2Target-debug.cmake', 'MyPkGConfigVersion.cmake',
+                                    'MyPkG2ConfigVersion.cmake'], content.keys())
         self.assertNotIn("my_pkg", content["MyPkGConfig.cmake"])
         self.assertNotIn("MY_PKG", content["MyPkGConfig.cmake"])
         self.assertNotIn("my_pkg", content["MyPkG2Config.cmake"])

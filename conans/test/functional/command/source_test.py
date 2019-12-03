@@ -5,7 +5,7 @@ import six
 
 from conans.paths import BUILD_INFO, CONANFILE
 from conans.test.utils.tools import TestClient
-from conans.util.files import load, mkdir
+from conans.util.files import mkdir
 
 
 class SourceTest(unittest.TestCase):
@@ -278,4 +278,4 @@ class ConanLib(ConanFile):
         client.run("source .")
         self.assertIn("conanfile.py: Configuring sources in", client.out)
         self.assertIn("conanfile.py: Running source!", client.out)
-        self.assertEqual("Hello World", load(os.path.join(client.current_folder, "file1.txt")))
+        self.assertEqual("Hello World", client.load("file1.txt"))
