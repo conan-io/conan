@@ -22,23 +22,29 @@ def check_min_cppstd(conanfile, cppstd, gnu_extensions=False):
         raise ConanException("cppstd parameter must be a number")
 
     def less_than(lhs, rhs):
-        def extract_cpp_version(cppstd):
-            return str(cppstd).replace("gnu", "")
+        def extract_cpp_version(_cppstd):
+            return str(_cppstd).replace("gnu", "")
 
-        def add_millennium(cppstd):
-            return "19%s" % cppstd if cppstd == "98" else "20%s" % cppstd
+        def add_millennium(_cppstd):
+            return "19%s" % _cppstd if _cppstd == "98" else "20%s" % _cppstd
 
-        lhs = add_millennium(extract_cpp_version(lhs))
-        rhs = add_millennium(extract_cpp_version(rhs))
+        def extract_revision(_cppstd):
+            return {"1z": "17",
+                    "1x": "11",
+                    "1y": "14",
+                    "0x": "11"}.get(_cppstd, _cppstd)
+
+        lhs = add_millennium(extract_cpp_version(extract_revision(lhs)))
+        rhs = add_millennium(extract_cpp_version(extract_revision(rhs)))
         return lhs < rhs
 
     def check_required_gnu_extension(_cppstd):
         if not gnu_extensions or "gnu" in _cppstd:
             return
-        oss = conanfile.settings.get_safe("os")
+        oss = conanfile.settings.get_safe("os") or conanfile.settings.get_safe("os_build")
         if not oss:
-            raise ConanInvalidConfiguration("The 'os' setting is not declared and it is needed to "
-                                            "check if the gnu extension is required.")
+            raise ConanException("The 'os' setting is not declared and it is needed to "
+                                 "check if the gnu extension is required.")
         if oss == "Linux":
             raise ConanInvalidConfiguration("The cppstd GNU extension is required")
 
@@ -55,7 +61,6 @@ def check_min_cppstd(conanfile, cppstd, gnu_extensions=False):
         return cppstd_default(compiler, compiler_version)
 
     current_cppstd = deduced_cppstd()
-
     check_required_gnu_extension(current_cppstd)
 
     if less_than(current_cppstd, cppstd):
