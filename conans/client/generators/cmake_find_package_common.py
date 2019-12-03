@@ -1,6 +1,6 @@
 target_template = """
 set({name}_INCLUDE_DIRS{build_type_suffix} {deps.include_paths})
-set({name}_INCLUDE_DIR{build_type_suffix} {include_dir})
+set({name}_INCLUDE_DIR{build_type_suffix} {deps.include_path})
 set({name}_INCLUDES{build_type_suffix} {deps.include_paths})
 set({name}_DEFINITIONS{build_type_suffix} {deps.defines})
 set({name}_LINKER_FLAGS{build_type_suffix}_LIST "{deps.sharedlinkflags_list}" "{deps.exelinkflags_list}")

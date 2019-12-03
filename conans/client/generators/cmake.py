@@ -8,7 +8,11 @@ from conans.paths import BUILD_INFO_CMAKE
 class DepsCppCmake(object):
     def __init__(self, cpp_info):
         def join_paths(paths):
-            # Paths are doubled quoted, and escaped (but spaces)
+            """
+            Paths are doubled quoted, and escaped (but spaces)
+            e.g: set(LIBFOO_INCLUDE_DIRS "/path/to/included/dir" "/path/to/included/dir2")
+            """
+
             return "\n\t\t\t".join('"%s"'
                                    % p.replace('\\', '/').replace('$', '\\$').replace('"', '\\"')
                                    for p in paths)
@@ -24,7 +28,15 @@ class DepsCppCmake(object):
                                    replace('"', '\\"'))
                                    for v in values)
 
+        def join_paths_single_var(values):
+            """
+            semicolon-separated list of dirs:
+            e.g: set(LIBFOO_INCLUDE_DIR "/path/to/included/dir;/path/to/included/dir2")
+            """
+            return '"%s"' % ";".join(p.replace('\\', '/').replace('$', '\\$') for p in values)
+
         self.include_paths = join_paths(cpp_info.include_paths)
+        self.include_path = join_paths_single_var(cpp_info.include_paths)
         self.lib_paths = join_paths(cpp_info.lib_paths)
         self.res_paths = join_paths(cpp_info.res_paths)
         self.bin_paths = join_paths(cpp_info.bin_paths)
