@@ -33,13 +33,7 @@ def check_min_cppstd(conanfile, cppstd, gnu_extensions=False):
         return lhs < rhs
 
     def check_required_gnu_extension(_cppstd):
-        if not gnu_extensions or "gnu" in _cppstd:
-            return
-        oss = conanfile.settings.get_safe("os")
-        if not oss:
-            raise ConanException("The 'os' setting is not declared and it is needed to "
-                                 "check if the gnu extension is required.")
-        if oss == "Linux":
+        if gnu_extensions and "gnu" not in _cppstd:
             raise ConanInvalidConfiguration("The cppstd GNU extension is required")
 
     def deduced_cppstd():
