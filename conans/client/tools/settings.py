@@ -16,7 +16,7 @@ def check_min_cppstd(conanfile, cppstd, gnu_extensions=False):
 
     :param conanfile: ConanFile instance with cppstd to be compared
     :param cppstd: Minimal cppstd version required
-    :param gnu_extensions: GNU extension is required (e.g gnu17). This option ONLY works on Linux.
+    :param gnu_extensions: GNU extension is required (e.g gnu17)
     """
     if not str(cppstd).isdigit():
         raise ConanException("cppstd parameter must be a number")
