@@ -48,3 +48,13 @@ def transform_conanfile(node):
 MANAGER.register_transform(
     astroid.ClassDef, transform_conanfile,
     lambda node: node.qname() == "conans.model.conan_file.ConanFile")
+
+
+def _python_requires_member():
+    return astroid.parse("""
+        from conans.client.graph.python_requires import ConanPythonRequire
+        python_requires = ConanPythonRequire()
+        """)
+
+
+astroid.register_module_extender(astroid.MANAGER, "conans", _python_requires_member)

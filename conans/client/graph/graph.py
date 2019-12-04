@@ -1,5 +1,3 @@
-import uuid
-
 from conans.model.ref import PackageReference
 
 
@@ -54,8 +52,6 @@ class Node(object):
 
     @property
     def id(self):
-        if self._id is None:
-            self._id = str(uuid.uuid1())
         return self._id
 
     @id.setter
@@ -192,12 +188,16 @@ class Edge(object):
 
 
 class DepsGraph(object):
-    def __init__(self):
+    def __init__(self, initial_node_id=None):
         self.nodes = set()
         self.root = None
         self.aliased = {}
+        self._node_counter = initial_node_id if initial_node_id is not None else -1
 
     def add_node(self, node):
+        if node.id is None:
+            self._node_counter += 1
+            node.id = str(self._node_counter)
         if not self.nodes:
             self.root = node
         self.nodes.add(node)

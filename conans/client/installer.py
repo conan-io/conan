@@ -191,35 +191,35 @@ class _PackageBuilder(object):
         with package_layout.conanfile_read_lock(self._output):
             _remove_folder_raising(package_folder)
             mkdir(build_folder)
-            os.chdir(build_folder)
-            self._output.info('Building your package in %s' % build_folder)
-            try:
-                if getattr(conanfile, 'no_copy_source', False):
-                    conanfile.source_folder = source_folder
-                else:
-                    conanfile.source_folder = build_folder
+            with tools.chdir(build_folder):
+                self._output.info('Building your package in %s' % build_folder)
+                try:
+                    if getattr(conanfile, 'no_copy_source', False):
+                        conanfile.source_folder = source_folder
+                    else:
+                        conanfile.source_folder = build_folder
 
-                if not skip_build:
-                    with get_env_context_manager(conanfile):
-                        conanfile.build_folder = build_folder
-                        conanfile.package_folder = package_folder
-                        # In local cache, install folder always is build_folder
-                        conanfile.install_folder = build_folder
-                        self._build(conanfile, pref, build_folder)
-                    clean_dirty(build_folder)
+                    if not skip_build:
+                        with get_env_context_manager(conanfile):
+                            conanfile.build_folder = build_folder
+                            conanfile.package_folder = package_folder
+                            # In local cache, install folder always is build_folder
+                            conanfile.install_folder = build_folder
+                            self._build(conanfile, pref, build_folder)
+                        clean_dirty(build_folder)
 
-                prev = self._package(conanfile, pref, package_layout, conanfile_path, build_folder,
-                                     package_folder)
-                assert prev
-                node.prev = prev
-                log_file = os.path.join(build_folder, RUN_LOG_NAME)
-                log_file = log_file if os.path.exists(log_file) else None
-                log_package_built(pref, time.time() - t1, log_file)
-                recorder.package_built(pref)
-            except ConanException as exc:
-                recorder.package_install_error(pref, INSTALL_ERROR_BUILDING,
-                                               str(exc), remote_name=None)
-                raise exc
+                    prev = self._package(conanfile, pref, package_layout, conanfile_path, build_folder,
+                                         package_folder)
+                    assert prev
+                    node.prev = prev
+                    log_file = os.path.join(build_folder, RUN_LOG_NAME)
+                    log_file = log_file if os.path.exists(log_file) else None
+                    log_package_built(pref, time.time() - t1, log_file)
+                    recorder.package_built(pref)
+                except ConanException as exc:
+                    recorder.package_install_error(pref, INSTALL_ERROR_BUILDING,
+                                                   str(exc), remote_name=None)
+                    raise exc
 
             return node.pref
 

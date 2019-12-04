@@ -440,3 +440,28 @@ class CompatibleIDsTest(unittest.TestCase):
                       client.out)
         self.assertIn("consumer/0.1@user/stable: Package 'fca9e94084ed6fe0ca149dc9c2d54c0f336f0d7e'"
                       " created", client.out)
+
+    def build_missing_test(self):
+        # https://github.com/conan-io/conan/issues/6133
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+
+            class Conan(ConanFile):
+                settings = "os"
+
+                def package_id(self):
+                   if self.settings.os == "Windows":
+                       compatible = self.info.clone()
+                       compatible.settings.os = "Linux"
+                       self.compatible_packages.append(compatible)
+                """)
+
+        client.save({"conanfile.py": conanfile})
+        client.run("create . pkg/0.1@user/testing -s os=Linux")
+
+        client.save({"conanfile.py": GenConanfile().with_require_plain("pkg/0.1@user/testing")})
+        client.run("install . -s os=Windows --build=missing")
+        self.assertIn("pkg/0.1@user/testing:cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31 - Cache",
+                      client.out)
+        self.assertIn("pkg/0.1@user/testing: Already installed!", client.out)

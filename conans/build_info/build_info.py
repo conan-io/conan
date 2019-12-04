@@ -38,12 +38,9 @@ def _parse_profile(contents):
 
 
 class BuildInfoCreator(object):
-    def __init__(self, output, build_info_file, lockfile, multi_module=True, skip_env=True,
-                 user=None, password=None, apikey=None):
+    def __init__(self, output, build_info_file, lockfile, user=None, password=None, apikey=None):
         self._build_info_file = build_info_file
         self._lockfile = lockfile
-        self._multi_module = multi_module
-        self._skip_env = skip_env
         self._user = user
         self._password = password
         self._apikey = apikey
@@ -113,7 +110,7 @@ class BuildInfoCreator(object):
                                                   "id": "conan_sources.tgz" if use_id else None}
         return set([Artifact(k, **v) for k, v in ret.items()])
 
-    def _get_recipe_artifacts(self, pref, add_prefix, use_id):
+    def _get_recipe_artifacts(self, pref, is_dependency):
         r = self.parse_pref(pref)
         if r.get("user") and r.get("channel"):
             ref = "{name}/{version}@{user}/{channel}#{rrev}".format(**r)
@@ -122,15 +119,15 @@ class BuildInfoCreator(object):
         reference = ConanFileReference.loads(ref)
         package_layout = self._conan_cache.package_layout(reference)
         metadata = package_layout.load_metadata()
-        name_format = "{} :: {{}}".format(self._get_reference(pref)) if add_prefix else "{}"
+        name_format = "{} :: {{}}".format(self._get_reference(pref)) if is_dependency else "{}"
         if r.get("user") and r.get("channel"):
             url = "{user}/{name}/{version}/{channel}/{rrev}/export".format(**r)
         else:
             url = "_/{name}/{version}/_/{rrev}/export".format(**r)
 
-        return self._get_metadata_artifacts(metadata, url, name_format=name_format, use_id=use_id)
+        return self._get_metadata_artifacts(metadata, url, name_format=name_format, use_id=is_dependency)
 
-    def _get_package_artifacts(self, pref, add_prefix, use_id):
+    def _get_package_artifacts(self, pref, is_dependency):
         r = self.parse_pref(pref)
         if r.get("user") and r.get("channel"):
             ref = "{name}/{version}@{user}/{channel}#{rrev}".format(**r)
@@ -139,12 +136,12 @@ class BuildInfoCreator(object):
         reference = ConanFileReference.loads(ref)
         package_layout = self._conan_cache.package_layout(reference)
         metadata = package_layout.load_metadata()
-        name_format = "{} :: {{}}".format(self._get_package_reference(pref)) if add_prefix else "{}"
+        name_format = "{} :: {{}}".format(self._get_package_reference(pref)) if is_dependency else "{}"
         if r.get("user") and r.get("channel"):
             url = "{user}/{name}/{version}/{channel}/{rrev}/package/{pid}/{prev}".format(**r)
         else:
             url = "_/{name}/{version}/_/{rrev}/package/{pid}/{prev}".format(**r)
-        arts = self._get_metadata_artifacts(metadata, url, name_format=name_format, use_id=use_id,
+        arts = self._get_metadata_artifacts(metadata, url, name_format=name_format, use_id=is_dependency,
                                             package_id=r["pid"])
         return arts
 
@@ -153,7 +150,7 @@ class BuildInfoCreator(object):
 
         def _gather_deps(node_uid, contents, func):
             node_content = contents["graph_lock"]["nodes"].get(node_uid)
-            artifacts = func(node_content["pref"], add_prefix=True, use_id=True)
+            artifacts = func(node_content["pref"], is_dependency=True)
             for _, id_node in node_content.get("requires", {}).items():
                 artifacts.update(_gather_deps(id_node, contents, func))
             return artifacts
@@ -169,17 +166,15 @@ class BuildInfoCreator(object):
                 recipe_key = self._get_reference(pref)
                 modules[recipe_key]["id"] = recipe_key
                 modules[recipe_key]["artifacts"].update(
-                    self._get_recipe_artifacts(pref, add_prefix=not self._multi_module,
-                                               use_id=False))
+                    self._get_recipe_artifacts(pref, is_dependency=False))
                 # TODO: what about `python_requires`?
                 # TODO: can we associate any properties to the recipe? Profile/options may be different per lockfile
 
                 # Create module for the package_id
-                package_key = self._get_package_reference(pref) if self._multi_module else recipe_key
+                package_key = self._get_package_reference(pref)
                 modules[package_key]["id"] = package_key
                 modules[package_key]["artifacts"].update(
-                    self._get_package_artifacts(pref, add_prefix=not self._multi_module,
-                                                use_id=False))
+                    self._get_package_artifacts(pref, is_dependency=False))
 
                 # Recurse requires
                 if node.get("requires"):
@@ -205,12 +200,6 @@ class BuildInfoCreator(object):
                "buildAgent": {"name": "Conan Client", "version": "1.X"},
                "modules": list(modules.values())}
 
-        if not self._skip_env:
-            excluded = ["secret", "key", "password"]
-            environment = {"buildInfo.env.{}".format(k): v for k, v in os.environ.items() if
-                           k not in excluded}
-            ret["properties"] = environment
-
         def dump_custom_types(obj):
             if isinstance(obj, set):
                 artifacts = [{k: v for k, v in o._asdict().items() if v is not None} for o in obj]
@@ -221,10 +210,8 @@ class BuildInfoCreator(object):
             f.write(json.dumps(ret, indent=4, default=dump_custom_types))
 
 
-def create_build_info(output, build_info_file, lockfile, multi_module, skip_env, user, password,
-                      apikey):
-    bi = BuildInfoCreator(output, build_info_file, lockfile, multi_module, skip_env, user, password,
-                          apikey)
+def create_build_info(output, build_info_file, lockfile, user, password, apikey):
+    bi = BuildInfoCreator(output, build_info_file, lockfile, user, password, apikey)
     bi.create()
 
 
