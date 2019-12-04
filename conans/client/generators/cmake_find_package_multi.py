@@ -30,6 +30,7 @@ file(GLOB CONFIG_FILES "${{_DIR}}/{name}Target-*.cmake")
 foreach(f ${{CONFIG_FILES}})
   include(${{f}})
 endforeach()
+    
 """
 
     target_properties = """
