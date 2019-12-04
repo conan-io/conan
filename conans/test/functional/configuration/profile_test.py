@@ -53,11 +53,11 @@ class ProfileTest(unittest.TestCase):
                        env=[("A_VAR", "A_VALUE"), ("PREPEND_VAR", ["new_path", "other_path"])],
                        package_env={"Hello0": [("OTHER_VAR", "2")]})
         self.client.run("install . -pr envs -g virtualenv")
-        content = self.client.load("activate.sh")
+        content = self.client.load("environment.sh.env")
         self.assertIn(":".join(["PREPEND_VAR=\"new_path\"", "\"other_path\""]) +
                       "${PREPEND_VAR+:$PREPEND_VAR}", content)
         if platform.system() == "Windows":
-            content = self.client.load("activate.bat")
+            content = self.client.load("environment.bat.env")
             self.assertIn(";".join(["PREPEND_VAR=new_path", "other_path", "%PREPEND_VAR%"]),
                           content)
 

@@ -20,13 +20,14 @@ class VirtualBuildEnvGeneratorGCCTest(unittest.TestCase):
                                            "build_type": "Release"})
 
         cls.generator = VirtualBuildEnvGenerator(conanfile)
+        cls.generator.output_path = "not-used"
         cls.result = cls.generator.content
 
     def test_output(self):
-        keys = ["deactivate_build.sh", "activate_build.sh"]
+        keys = ["deactivate_build.sh", "activate_build.sh", "environment_build.sh.env"]
         if platform.system() == "Windows":
-            keys += ["activate_build.bat", "deactivate_build.bat",
-                     "activate_build.ps1", "deactivate_build.ps1"]
+            keys += ["activate_build.bat", "deactivate_build.bat", "environment_build.bat.env",
+                     "activate_build.ps1", "deactivate_build.ps1", "environment_build.ps1.env"]
 
         self.assertListEqual(sorted(keys), sorted(self.result.keys()))
 
@@ -38,32 +39,24 @@ class VirtualBuildEnvGeneratorGCCTest(unittest.TestCase):
         self.assertEqual(self.generator.env["LIBS"], [])
 
     def test_scripts(self):
-        self.assertIn('CPPFLAGS="-DNDEBUG ${CPPFLAGS+ $CPPFLAGS}"', self.result[self.activate_sh])
-        self.assertIn('CXXFLAGS="-O3 -s --sysroot=/path/to/sysroot ${CXXFLAGS+ $CXXFLAGS}"',
-                      self.result[self.activate_sh])
-        self.assertIn('CFLAGS="-O3 -s --sysroot=/path/to/sysroot ${CFLAGS+ $CFLAGS}"',
-                      self.result[self.activate_sh])
-        self.assertIn('LDFLAGS="--sysroot=/path/to/sysroot ${LDFLAGS+ $LDFLAGS}"',
-                      self.result[self.activate_sh])
-        self.assertIn('LIBS="${LIBS+ $LIBS}"', self.result[self.activate_sh])
+        content = self.result["environment_build.sh.env"]
+        self.assertIn('CPPFLAGS="-DNDEBUG ${CPPFLAGS+ $CPPFLAGS}"', content)
+        self.assertIn('CXXFLAGS="-O3 -s --sysroot=/path/to/sysroot ${CXXFLAGS+ $CXXFLAGS}"', content)
+        self.assertIn('CFLAGS="-O3 -s --sysroot=/path/to/sysroot ${CFLAGS+ $CFLAGS}"', content)
+        self.assertIn('LDFLAGS="--sysroot=/path/to/sysroot ${LDFLAGS+ $LDFLAGS}"', content)
+        self.assertIn('LIBS="${LIBS+ $LIBS}"', content)
 
         if platform.system() == "Windows":
-            self.assertIn('SET CPPFLAGS=-DNDEBUG %CPPFLAGS%',
-                          self.result[self.activate_bat])
-            self.assertIn('SET CXXFLAGS=-O3 -s --sysroot=/path/to/sysroot %CXXFLAGS%',
-                          self.result[self.activate_bat])
-            self.assertIn('SET CFLAGS=-O3 -s --sysroot=/path/to/sysroot %CFLAGS%',
-                          self.result[self.activate_bat])
-            self.assertIn('SET LDFLAGS=--sysroot=/path/to/sysroot %LDFLAGS%',
-                          self.result[self.activate_bat])
-            self.assertIn('SET LIBS=%LIBS%', self.result[self.activate_bat])
+            content = self.result["environment_build.bat.env"]
+            self.assertIn('CPPFLAGS=-DNDEBUG %CPPFLAGS%', content)
+            self.assertIn('CXXFLAGS=-O3 -s --sysroot=/path/to/sysroot %CXXFLAGS%', content)
+            self.assertIn('CFLAGS=-O3 -s --sysroot=/path/to/sysroot %CFLAGS%', content)
+            self.assertIn('LDFLAGS=--sysroot=/path/to/sysroot %LDFLAGS%', content)
+            self.assertIn('LIBS=%LIBS%', content)
 
-            self.assertIn('$env:CPPFLAGS = "-DNDEBUG $env:CPPFLAGS"',
-                          self.result[self.activate_ps1])
-            self.assertIn('$env:CXXFLAGS = "-O3 -s --sysroot=/path/to/sysroot $env:CXXFLAGS"',
-                          self.result[self.activate_ps1])
-            self.assertIn('$env:CFLAGS = "-O3 -s --sysroot=/path/to/sysroot $env:CFLAGS"',
-                          self.result[self.activate_ps1])
-            self.assertIn('$env:LDFLAGS = "--sysroot=/path/to/sysroot $env:LDFLAGS"',
-                          self.result[self.activate_ps1])
-            self.assertIn('$env:LIBS = "$env:LIBS"', self.result[self.activate_ps1])
+            content = self.result["environment_build.ps1.env"]
+            self.assertIn('CPPFLAGS=-DNDEBUG $env:CPPFLAGS', content)
+            self.assertIn('CXXFLAGS=-O3 -s --sysroot=/path/to/sysroot $env:CXXFLAGS', content)
+            self.assertIn('CFLAGS=-O3 -s --sysroot=/path/to/sysroot $env:CFLAGS', content)
+            self.assertIn('LDFLAGS=--sysroot=/path/to/sysroot $env:LDFLAGS', content)
+            self.assertIn('LIBS=$env:LIBS', content)
