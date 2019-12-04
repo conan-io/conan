@@ -614,7 +614,6 @@ macro(conan_find_apple_frameworks FRAMEWORKS_FOUND FRAMEWORKS)
                 set(CONAN_FRAMEWORK_DIRS ${CONAN_FRAMEWORK_DIRS_MINSIZEREL} ${CONAN_FRAMEWORK_DIRS})
             endif()
         endif()
-
         foreach(_FRAMEWORK ${FRAMEWORKS})
             # https://cmake.org/pipermail/cmake-developers/2017-August/030199.html
             find_library(CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND NAME ${_FRAMEWORK} PATHS ${CONAN_FRAMEWORK_DIRS})
