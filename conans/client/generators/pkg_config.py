@@ -39,7 +39,7 @@ class PkgConfigGenerator(Generator):
             ret["%s.pc" % name] = self.single_pc_file_contents(name, cpp_info)
         return ret
 
-    def single_pc_file_contents(self, cpp_info, name):
+    def single_pc_file_contents(self, name, cpp_info):
         prefix_path = cpp_info.rootpath.replace("\\", "/")
         lines = ['prefix=%s' % prefix_path]
 
