@@ -83,7 +83,7 @@ class CMakeMultiGenerator(Generator):
                                            version=self.conanfile.version))
 
         # TARGETS
-        sections.extend(generate_targets_section(self.deps_build_info.dependencies))
+        sections.extend(generate_targets_section(self.deps_build_info.dependencies, "cmake_multi"))
         # MACROS
         sections.append(cmake_macros_multi)
 
