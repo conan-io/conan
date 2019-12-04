@@ -35,6 +35,8 @@ class PkgConfigGenerator(Generator):
     def content(self):
         ret = {}
         for depname, cpp_info in self.deps_build_info.dependencies:
+            # the name for the pc will be converted to lowercase when cpp_info.name is specified
+            # but with cpp_info.names["pkg_config"] will be literal
             if cpp_info.name and cpp_info.get_name("pkg_config") != cpp_info.name:
                 name = cpp_info.get_name("pkg_config")
             else:
