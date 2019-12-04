@@ -1,5 +1,6 @@
 import json
 import os
+from collections import OrderedDict
 
 from conans.client.graph.graph import RECIPE_VIRTUAL, RECIPE_CONSUMER,\
     BINARY_BUILD
@@ -13,7 +14,7 @@ from conans.model.version import Version
 
 
 LOCKFILE = "conan.lock"
-LOCKFILE_VERSION = "0.1"
+LOCKFILE_VERSION = "0.2"
 
 
 class GraphLockFile(object):
@@ -43,6 +44,9 @@ class GraphLockFile(object):
         version = graph_json.get("version")
         if version:
             version = Version(version)
+            if version < "0.2":
+                raise ConanException("This lockfile was created with a previous incompatible "
+                                     "version. Please regenerate the lockfile")
             # Do something with it, migrate, raise...
         profile_host = graph_json.get("profile_host") or graph_json["profile"]
         # FIXME: Reading private very ugly
@@ -137,6 +141,11 @@ class GraphLock(object):
                                            requires, node.path)
                 self._nodes[node.id] = graph_node
 
+    @property
+    def initial_counter(self):
+        # IDs are string, we need to compute the maximum
+        return max(int(x) for x in self._nodes.keys())
+
     def root_node_ref(self):
         """ obtain the node in the graph that is not depended by anyone else,
         i.e. the root or downstream consumer
@@ -169,8 +178,8 @@ class GraphLock(object):
         that can be converted to json
         """
         result = {}
-        nodes = {}
-        for id_, node in self._nodes.items():
+        nodes = OrderedDict()  # Serialized ordered, so lockfiles are more deterministic
+        for id_, node in sorted(self._nodes.items()):
             nodes[id_] = node.as_dict()
         result["nodes"] = nodes
         return result
