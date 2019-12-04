@@ -86,9 +86,8 @@ class PkgConfigGenerator(Generator):
              ["-D%s" % d for d in cpp_info.defines]]))
 
         if cpp_info.public_deps:
-            pkg_config_names = []
-            for public_dep in cpp_info.public_deps:
-                pkg_config_names += [self.deps_build_info[public_dep].get_name("pkg_config")]
+            pkg_config_names = [self.deps_build_info[public_dep].get_name("pkg_config") for
+                                public_dep in cpp_info.public_deps]
             public_deps = " ".join(pkg_config_names)
             lines.append("Requires: %s" % public_deps)
         return "\n".join(lines) + "\n"
