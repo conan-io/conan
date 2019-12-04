@@ -48,7 +48,7 @@ endif()
     def content(self):
         ret = {}
         for _, cpp_info in self.deps_build_info.dependencies:
-            depname = cpp_info.get_name('cmake')
+            depname = cpp_info.get_name("cmake_find_package")
             deps_cpp_cmake = DepsCppCmake(cpp_info)
             ret["Find%s.cmake" % depname] = self._find_for_dep(depname, cpp_info)
         return ret
@@ -58,7 +58,7 @@ endif()
         lines = []
         if cpp_info.public_deps:
             # Here we are generating FindXXX, so find_modules=True
-            public_deps_names = [self.deps_build_info[dep].get_name('cmake') for dep in cpp_info.public_deps]
+            public_deps_names = [self.deps_build_info[dep].get_name("cmake_find_package") for dep in cpp_info.public_deps]
             lines = find_dependency_lines(name, public_deps_names, find_modules=True)
         find_package_header_block = find_package_header.format(name=name, version=cpp_info.version)
         find_libraries_block = target_template.format(name=name, deps=deps, build_type_suffix="")
