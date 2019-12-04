@@ -36,7 +36,7 @@ class PkgConfigGenerator(Generator):
         ret = {}
         for depname, cpp_info in self.deps_build_info.dependencies:
             name = cpp_info.get_name("pkg_config")
-            ret["%s.pc" % name] = self.single_pc_file_contents(cpp_info, name)
+            ret["%s.pc" % name] = self.single_pc_file_contents(name, cpp_info)
         return ret
 
     def single_pc_file_contents(self, cpp_info, name):
