@@ -8,7 +8,6 @@ import six
 
 from conans.client import tools
 from conans.client.output import ConanOutput
-from conans.client.rest.uploader_downloader import print_progress
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
 from conans.util.files import load, save
@@ -41,16 +40,6 @@ class PkgConan(ConanFile):
         client.run("source .")
         self.assertIn("TEXT", client.out)
         self.assertIn("ENDTEXT", client.out)
-
-    def print_progress_test(self):
-        stream = six.StringIO()
-        output = ConanOutput(stream)
-        for units in range(50):
-            print_progress(output, units)
-        output_str = stream.getvalue()
-        self.assertNotIn("=", output_str)
-        self.assertNotIn("[", output_str)
-        self.assertNotIn("]", output_str)
 
     def unzip_output_test(self):
         tmp_dir = temp_folder()
