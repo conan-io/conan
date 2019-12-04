@@ -49,7 +49,6 @@ endif()
         ret = {}
         for _, cpp_info in self.deps_build_info.dependencies:
             depname = cpp_info.get_name("cmake_find_package")
-            deps_cpp_cmake = DepsCppCmake(cpp_info)
             ret["Find%s.cmake" % depname] = self._find_for_dep(depname, cpp_info)
         return ret
 
