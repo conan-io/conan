@@ -56,7 +56,7 @@ class FileUploader(object):
                               ref_or_package=ref_or_package)
         return ret
 
-    def _upload_file(self, url, abs_path,  headers, auth, ref_or_package):
+    def _upload_file(self, url, abs_path,  headers, auth, ref_or_package=None):
 
         file_size = os.stat(abs_path).st_size
         file_name = os.path.basename(abs_path)
