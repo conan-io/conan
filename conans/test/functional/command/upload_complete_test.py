@@ -442,6 +442,7 @@ class TestConan(ConanFile):
     def upload_all_test(self):
         """Upload conans and package together"""
         # Try to upload all conans and packages
+        self.client.run('user -p mypass -r default lasote')
         self.client.run('upload %s --all' % str(self.ref))
         lines = [line.strip() for line in str(self.client.out).splitlines()
                  if line.startswith("Uploading")]
