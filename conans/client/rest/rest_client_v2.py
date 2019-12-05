@@ -163,14 +163,14 @@ class RestV2Methods(RestCommonMethods):
     def _upload_recipe(self, ref, files_to_upload, retry, retry_wait):
         # Direct upload the recipe
         urls = {fn: self.router.recipe_file(ref, fn, add_matrix_params=True) for fn in files_to_upload}
-        self._upload_files(files_to_upload, urls, retry, retry_wait)
+        self._upload_files(files_to_upload, urls, retry, retry_wait, ref_or_package=str(ref))
 
     def _upload_package(self, pref, files_to_upload, retry, retry_wait):
         urls = {fn: self.router.package_file(pref, fn, add_matrix_params=True)
                 for fn in files_to_upload}
-        self._upload_files(files_to_upload, urls, retry, retry_wait)
+        self._upload_files(files_to_upload, urls, retry, retry_wait, ref_or_package=str(pref))
 
-    def _upload_files(self, files, urls, retry, retry_wait):
+    def _upload_files(self, files, urls, retry, retry_wait, ref_or_package=None):
         t1 = time.time()
         failed = []
         uploader = FileUploader(self.requester, self._output, self.verify_ssl)
@@ -183,9 +183,8 @@ class RestV2Methods(RestCommonMethods):
             try:
                 headers = self._artifacts_properties if not self._matrix_params else {}
                 uploader.upload(resource_url, files[filename], auth=self.auth,
-                                dedup=self._checksum_deploy, retry=retry,
-                                retry_wait=retry_wait,
-                                headers=headers)
+                                dedup=self._checksum_deploy, retry=retry, retry_wait=retry_wait,
+                                headers=headers, ref_or_package=ref_or_package)
             except (AuthenticationException, ForbiddenException):
                 raise
             except Exception as exc:

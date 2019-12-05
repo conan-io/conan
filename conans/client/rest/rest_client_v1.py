@@ -126,7 +126,7 @@ class RestV1Methods(RestCommonMethods):
         urls = self._get_file_to_url_dict(url, data=file_sizes)
         if self._matrix_params:
             urls = self.router.add_matrix_params(urls)
-        self._upload_files(urls, files_to_upload, self._output, retry, retry_wait)
+        self._upload_files(urls, files_to_upload, self._output, retry, retry_wait, ref_or_package=str(ref))
 
     def _upload_package(self, pref, files_to_upload, retry, retry_wait):
         # Get the upload urls and then upload files
@@ -138,9 +138,9 @@ class RestV1Methods(RestCommonMethods):
         if self._matrix_params:
             urls = self.router.add_matrix_params(urls)
         logger.debug("Requesting upload urls...Done!")
-        self._upload_files(urls, files_to_upload, self._output, retry, retry_wait)
+        self._upload_files(urls, files_to_upload, self._output, retry, retry_wait, ref_or_package=str(pref))
 
-    def _upload_files(self, file_urls, files, output, retry, retry_wait):
+    def _upload_files(self, file_urls, files, output, retry, retry_wait, ref_or_package=None):
         t1 = time.time()
         failed = []
         uploader = FileUploader(self.requester, output, self.verify_ssl)
@@ -154,7 +154,7 @@ class RestV1Methods(RestCommonMethods):
                 headers = self._artifacts_properties if not self._matrix_params else {}
                 uploader.upload(resource_url, files[filename], auth=auth, dedup=dedup,
                                 retry=retry, retry_wait=retry_wait,
-                                headers=headers)
+                                headers=headers, ref_or_package=ref_or_package)
             except Exception as exc:
                 output.error("\nError uploading file: %s, '%s'" % (filename, exc))
                 failed.append(filename)
