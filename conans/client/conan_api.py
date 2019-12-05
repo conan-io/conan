@@ -343,6 +343,8 @@ class ConanAPIV1(object):
                                  not not_export, graph_lock=graph_info.graph_lock,
                                  ignore_dirty=ignore_dirty)
 
+            self.app.range_resolver.clear_output()  # invalidate version range output
+
             # The new_ref contains the revision
             # To not break existing things, that they used this ref without revision
             ref = new_ref.copy_clear_rev()
