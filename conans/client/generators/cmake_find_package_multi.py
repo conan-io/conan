@@ -98,7 +98,7 @@ endif()
         build_type = self.conanfile.settings.get_safe("build_type")
         build_type_suffix = "_{}".format(build_type.upper()) if build_type else ""
         for _, cpp_info in self.deps_build_info.dependencies:
-            depname = cpp_info.name
+            depname = cpp_info.get_name("cmake_find_package_multi")
             deps = DepsCppCmake(cpp_info)
             ret["{}Config.cmake".format(depname)] = self._find_for_dep(depname, cpp_info)
             ret["{}Targets.cmake".format(depname)] = self.targets_file.format(name=depname)
@@ -117,7 +117,7 @@ endif()
         lines = []
         if cpp_info.public_deps:
             # Here we are generating only Config files, so do not search for FindXXX modules
-            public_deps_names = [self.deps_build_info[dep].name for dep in cpp_info.public_deps]
+            public_deps_names = [self.deps_build_info[dep].get_name("cmake_find_package_multi") for dep in cpp_info.public_deps]
             lines = find_dependency_lines(name, public_deps_names, find_modules=False)
 
         targets_props = self.target_properties.format(name=name)
