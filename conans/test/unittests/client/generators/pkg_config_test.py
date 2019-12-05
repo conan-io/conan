@@ -1,4 +1,3 @@
-import textwrap
 import unittest
 
 from conans.client.conf import default_settings_yml
