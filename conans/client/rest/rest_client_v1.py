@@ -148,7 +148,7 @@ class RestV1Methods(RestCommonMethods):
         # or conanamanifest.txt with missing files due to a network failure
         for filename, resource_url in sorted(file_urls.items()):
             if output and not output.is_terminal:
-                output.rewrite_line("Uploading %s" % filename)
+                output.writeln("Uploading %s" % filename)
             auth, dedup = self._file_server_capabilities(resource_url)
             try:
                 headers = self._artifacts_properties if not self._matrix_params else {}
