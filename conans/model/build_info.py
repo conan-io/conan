@@ -110,9 +110,7 @@ class _CppInfo(object):
         return self._framework_paths
 
     def get_name(self, generator):
-        if generator in self.names:
-            return self.names[generator]
-        return self.name
+        return self.names.get(generator, self.name)
 
     # Compatibility for 'cppflags' (old style property to allow decoration)
     @deprecation.deprecated(deprecated_in="1.13", removed_in="2.0", details="Use 'cxxflags' instead")
