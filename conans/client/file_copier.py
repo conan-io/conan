@@ -175,7 +175,11 @@ class FileCopier(object):
             link = os.readlink(src_link)
             # Absoluted path symlinks are a problem, convert it to relative
             if os.path.isabs(link):
-                link = os.path.relpath(link, os.path.dirname(src_link))
+                try:
+                    link = os.path.relpath(link, os.path.dirname(src_link))
+                except ValueError:
+                    # https://github.com/conan-io/conan/issues/6197 fails if Windows and other Drive
+                    continue
 
             dst_link = os.path.join(dst, linked_folder)
             try:
