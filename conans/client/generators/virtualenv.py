@@ -10,8 +10,6 @@ from conans.model import Generator
 
 sh_activate_tpl = Template(textwrap.dedent("""
     #!/usr/bin/env sh
-    # DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-    # DIR="$( cd "$( dirname "$_" )" >/dev/null 2>&1 && pwd )"
 
     {%- for it in modified_vars %}
     export CONAN_OLD_{{it}}="${{it}}"
