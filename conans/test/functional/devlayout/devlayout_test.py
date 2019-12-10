@@ -20,6 +20,7 @@ class DevLayoutTest(unittest.TestCase):
             generators = "cmake"
             exports_sources = "src/*"
             generators = "cmake"
+            # IDEA TO HAVE THIS SIMPLIFIED DECLARATION: layout = "cmake"
 
             def layout(self):
                 mylayout = CMakeLayout(self)
@@ -33,6 +34,7 @@ class DevLayoutTest(unittest.TestCase):
                 cmake.build()
 
             def package(self):
+                # WITH THE SIMPLIFIED DECLARATION, THIS WILL NOT BE POSSIBLE
                 self.layout().package()
 
             def package_info(self):
