@@ -9,7 +9,7 @@ from conans.model import Generator
 
 
 sh_activate_tpl = Template(textwrap.dedent("""
-    #!/usr/bin/env bash
+    #!/usr/bin/env sh
     # DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
     # DIR="$( cd "$( dirname "$_" )" >/dev/null 2>&1 && pwd )"
 
@@ -28,7 +28,7 @@ sh_activate_tpl = Template(textwrap.dedent("""
 """))
 
 sh_deactivate_tpl = Template(textwrap.dedent("""
-    #!/usr/bin/env bash
+    #!/usr/bin/env sh
     export PS1="$CONAN_OLD_PS1"
     unset CONAN_OLD_PS1
 
