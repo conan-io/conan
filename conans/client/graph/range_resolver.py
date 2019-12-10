@@ -91,9 +91,10 @@ class RangeResolver(object):
 
     @property
     def output(self):
-        result = self._result
+        return self._result
+
+    def clear_output(self):
         self._result = []
-        return result
 
     def resolve(self, require, base_conanref, update, remotes):
         version_range = require.version_range

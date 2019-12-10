@@ -32,14 +32,14 @@ class Pkg(ConanFile):
         client.save({"conanfile.py": conanfile.replace("pass", "requires='PkgA/0.1@user/channel'")})
         client.run("install . -g=cmake")
         self.assertIn("PkgC/0.1@user/channel:%s - Cache" % NO_SETTINGS_PACKAGE_ID, client.out)
-        conanbuildinfo = load(os.path.join(client.current_folder, "conanbuildinfo.txt"))
+        conanbuildinfo = client.load("conanbuildinfo.txt")
         self.assertIn("[libs];PkgA;PkgC", ";".join(conanbuildinfo.splitlines()))
         self.assertIn("PkgC/0.1/user/channel/package", conanbuildinfo)
         self.assertIn("[includedirs_PkgC]", conanbuildinfo)
         conanbuildinfo = client.load("conanbuildinfo.cmake")
         self.assertIn("set(CONAN_LIBS PkgA PkgC ${CONAN_LIBS})", conanbuildinfo)
         client.run("info . --graph=file.html")
-        html = load(os.path.join(client.current_folder, "file.html"))
+        html = client.load("file.html")
         self.assertEqual(1, html.count("label: 'PkgC/0.1', shape: 'box'"))
 
     def test_private_regression_skip(self):

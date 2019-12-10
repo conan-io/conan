@@ -217,7 +217,7 @@ class MyTest(ConanFile):
         save(viscss_path, "")
         client.save({"conanfile.txt": ""})
         client.run("info . --graph=file.html")
-        html = load(os.path.join(client.current_folder, "file.html"))
+        html = client.load("file.html")
         self.assertIn("<body>", html)
         self.assertNotIn("cloudflare", html)
         self.assertIn(visjs_path, html)
@@ -437,7 +437,7 @@ class MyTest(ConanFile):
         self.client.run("info Hello1/0.1@lasote/stable -bo=Hello0/0.1@lasote/stable "
                         "--json=file.json")
         self.assertEqual('{"groups": [["Hello0/0.1@lasote/stable"], ["Hello1/0.1@lasote/stable"]]}',
-                         load(os.path.join(self.client.current_folder, "file.json")))
+                         self.client.load("file.json"))
 
         self.client.run("info Hello1/0.1@lasote/stable -bo=Hello0/0.1@lasote/stable --json")
         self.assertIn('{"groups": [["Hello0/0.1@lasote/stable"], ["Hello1/0.1@lasote/stable"]]}',

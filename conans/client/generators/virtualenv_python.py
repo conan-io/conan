@@ -11,5 +11,3 @@ class VirtualEnvPythonGenerator(VirtualRunEnvGenerator):
         ppath = conanfile.env.get("PYTHONPATH")
         if ppath:
             self.env.update({"PYTHONPATH": [ppath, ] if not isinstance(ppath, list) else ppath})
-
-

@@ -3,11 +3,13 @@ import traceback
 import time
 from copy import copy
 
+import six
+
 from conans.util import progress_bar
 from conans.client.rest import response_to_str
 from conans.errors import AuthenticationException, ConanConnectionError, ConanException, \
     NotFoundException, ForbiddenException, RequestErrorException
-from conans.util.files import mkdir, save_append, sha1sum, to_file_bytes
+from conans.util.files import mkdir, sha1sum
 from conans.util.log import logger
 from conans.util.tracer import log_download
 
@@ -59,11 +61,11 @@ class FileUploader(object):
         file_name = os.path.basename(abs_path)
         description = "Uploading {}".format(file_name)
 
-        def load_in_chunks(file, size):
+        def load_in_chunks(_file, size):
             """Lazy function (generator) to read a file piece by piece.
             Default chunk size: 1k."""
             while True:
-                chunk = file.read(size)
+                chunk = _file.read(size)
                 if not chunk:
                     break
                 yield chunk
@@ -173,7 +175,9 @@ class FileDownloader(object):
                 mkdir(os.path.dirname(path))
                 with open(path, 'wb') as file_handler:
                     for chunk in chunks:
-                        file_handler.write(to_file_bytes(chunk))
+                        assert ((six.PY3 and isinstance(chunk, bytes)) or
+                                (six.PY2 and isinstance(chunk, str)))
+                        file_handler.write(chunk)
                         downloaded_size += len(chunk)
             else:
                 ret_data = bytearray()

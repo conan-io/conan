@@ -1,7 +1,6 @@
 import os
 import stat
 import tarfile
-import threading
 import time
 from collections import defaultdict
 from multiprocessing.pool import ThreadPool
@@ -97,8 +96,8 @@ class CmdUpload(object):
             self._output.info("Uploading to remote '{}':".format(remote.name))
 
             def upload_ref(ref_conanfile_prefs):
-                ref, conanfile, prefs = ref_conanfile_prefs
-                self._upload_ref(conanfile, ref, prefs, retry, retry_wait,
+                _ref, _conanfile, _prefs = ref_conanfile_prefs
+                self._upload_ref(_conanfile, _ref, _prefs, retry, retry_wait,
                                  integrity_check, policy, remote, upload_recorder, remotes)
 
             self._upload_thread_pool.map(upload_ref,
@@ -124,6 +123,9 @@ class CmdUpload(object):
         if package_id or check_valid_ref(reference_or_pattern):
             # Upload package
             ref = ConanFileReference.loads(reference_or_pattern)
+            if ref.revision and not self._cache.config.revisions_enabled:
+                raise ConanException("Revisions not enabled in the client, specify a "
+                                     "reference without revision")
             refs = [ref, ]
             confirm = True
         else:
@@ -141,6 +143,9 @@ class CmdUpload(object):
 
         for ref in refs:
             metadata = self._cache.package_layout(ref).load_metadata()
+            if ref.revision and ref.revision != metadata.recipe.revision:
+                raise ConanException("Recipe revision {} does not match the one stored in the cache {}"
+                                     .format(ref.revision, metadata.recipe.revision))
             ref = ref.copy_with_rev(metadata.recipe.revision)
             remote = remotes.selected
             if remote:
@@ -181,16 +186,20 @@ class CmdUpload(object):
                                              "no packages can be uploaded" % str(ref))
                 prefs = []
                 # Gather all the complete PREFS with PREV
-                for package_id in packages_ids:
+                for package in packages_ids:
+                    package_id, prev = package.split("#") if "#" in package else (package, None)
                     if package_id not in metadata.packages:
                         raise ConanException("Binary package %s:%s not found"
                                              % (str(ref), package_id))
+                    if prev and prev != metadata.packages[package_id].revision:
+                        raise ConanException("Binary package %s:%s#%s not found"
+                                             % (str(ref), package_id, prev))
                     # Filter packages that don't match the recipe revision
                     if self._cache.config.revisions_enabled and ref.revision:
                         rec_rev = metadata.packages[package_id].recipe_revision
                         if ref.revision != rec_rev:
                             self._output.warn("Skipping package '%s', it doesn't belong to the"
-                                                   " current recipe revision" % package_id)
+                                              " current recipe revision" % package_id)
                             continue
                     package_revision = metadata.packages[package_id].revision
                     assert package_revision is not None, "PREV cannot be None to upload"
@@ -390,8 +399,7 @@ class CmdUpload(object):
                                  % (pref, pref.ref, pref.id))
         tgz_path = os.path.join(package_folder, PACKAGE_TGZ_NAME)
         if is_dirty(tgz_path):
-            self._output.warn("%s: Removing %s, marked as dirty"
-                                   % (str(pref), PACKAGE_TGZ_NAME))
+            self._output.warn("%s: Removing %s, marked as dirty" % (str(pref), PACKAGE_TGZ_NAME))
             os.remove(tgz_path)
             clean_dirty(tgz_path)
         # Get all the files in that directory
@@ -429,7 +437,7 @@ class CmdUpload(object):
                 except NotFoundException:
                     # This is weird, the manifest still not there, better upload everything
                     self._output.warn("The remote recipe doesn't have the 'conanmanifest.txt' "
-                                           "file and will be uploaded: '{}'".format(ref))
+                                      "file and will be uploaded: '{}'".format(ref))
                     return files_to_upload, deleted
 
             if remote_manifest == local_manifest:
@@ -477,7 +485,7 @@ class CmdUpload(object):
             diff = read_manifest.difference(expected_manifest)
             for fname, (h1, h2) in diff.items():
                 self._output.warn("Mismatched checksum '%s' (manifest: %s, file: %s)"
-                                       % (fname, h1, h2))
+                                  % (fname, h1, h2))
 
             if PACKAGE_TGZ_NAME in files:
                 try:

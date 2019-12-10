@@ -8,14 +8,9 @@ fasteners>=0.14.1
 six>=1.10.0,<1.13.0
 node-semver==0.6.1
 distro>=1.0.2, <1.2.0
-pylint>=1.9.3, <2.0; python_version < '3'
-pylint>=2.0,!=2.3.0; python_version >= '3'
 future>=0.16.0, <0.19.0
 pygments>=2.0, <3.0
-astroid>=1.6.5, <2.0; python_version < '3'
-astroid>=2.2.0; python_version >= '3'
 deprecation>=2.0, <2.1
 tqdm>=4.28.1, <5
 Jinja2>=2.3, <3
 python-dateutil>=2.7.0, <3
-typed-ast<1.4; python_version == '3.4' and platform_system=='Windows'

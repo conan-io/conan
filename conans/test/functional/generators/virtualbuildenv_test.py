@@ -21,11 +21,21 @@ class TestConan(ConanFile):
         client.save({"conanfile.py": conanfile})
         client.run('install . -g virtualbuildenv -s os=Windows -s compiler="Visual Studio"'
                    ' -s compiler.runtime=MD -s compiler.version=15')
-        bat = load(os.path.join(client.current_folder, "activate_build.bat"))
-        self.assertIn("SET UseEnv=True", bat)
-        self.assertIn('SET CL=-MD -DNDEBUG -O2 -Ob2 %CL%', bat)
+        bat = client.load("environment_build.bat.env")
+        self.assertIn("UseEnv=True", bat)
+        self.assertIn('CL=-MD -DNDEBUG -O2 -Ob2 %CL%', bat)
 
     def environment_deactivate_test(self):
+        if platform.system() == "Windows":
+            """ This test fails. The deactivation script takes the value of some envvars set by
+                the activation script to recover the previous values (set PATH=OLD_PATH). As this
+                test is running each command in a different shell, the envvar OLD_PATH that has
+                been set by the 'activate' script doesn't exist when we run 'deactivate' in a
+                different shell...
+
+                TODO: Remove this test
+            """
+            self.skipTest("This won't work in Windows")
 
         in_windows = platform.system() == "Windows"
         env_cmd = "set" if in_windows else "env"
@@ -62,10 +72,6 @@ class TestConan(ConanFile):
         deact_build_file = os.path.join(client.current_folder, "deactivate_build.%s" % extension)
         self.assertTrue(os.path.exists(act_build_file))
         self.assertTrue(os.path.exists(deact_build_file))
-        if in_windows:
-            act_build_content_len = len(load(act_build_file).splitlines())
-            deact_build_content_len = len(load(deact_build_file).splitlines())
-            self.assertEqual(act_build_content_len, deact_build_content_len)
         output = check_output(get_cmd(act_build_file))
         activate_environment = env_output_to_dict(output)
         self.assertNotEqual(normal_environment, activate_environment)

@@ -274,6 +274,132 @@ class RequirementsInfo(object):
             r.package_revision_mode()
 
 
+class PythonRequireInfo(object):
+
+    def __init__(self, ref, default_package_id_mode):
+        self._ref = ref
+        self._name = None
+        self._version = None
+        self._user = None
+        self._channel = None
+        self._revision = None
+
+        try:
+            getattr(self, default_package_id_mode)()
+        except AttributeError:
+            raise ConanException("'%s' is not a known package_id_mode" % default_package_id_mode)
+
+    @property
+    def sha(self):
+        vals = [n for n in (self._name, self._version, self._user, self._channel, self._revision)
+                if n]
+        return "/".join(vals)
+
+    def semver_mode(self):
+        self._name = self._ref.name
+        self._version = self._ref.version.stable()
+        self._user = self._channel = None
+        self._revision = None
+
+    def full_version_mode(self):
+        self._name = self._ref.name
+        self._version = self._ref.version
+        self._user = self._channel = None
+        self._revision = None
+
+    def patch_mode(self):
+        self._name = self._ref.name
+        self._version = self._ref.version.patch()
+        self._user = self._channel = None
+        self._revision = None
+
+    def minor_mode(self):
+        self._name = self._ref.name
+        self._version = self._ref.version.minor()
+        self._user = self._channel = None
+        self._revision = None
+
+    def major_mode(self):
+        self._name = self._ref.name
+        self._version = self._ref.version.major()
+        self._user = self._channel = None
+        self._revision = None
+
+    def full_recipe_mode(self):
+        self._name = self._ref.name
+        self._version = self._ref.version
+        self._user = self._ref.user
+        self._channel = self._ref.channel
+        self._revision = None
+
+    def recipe_revision_mode(self):
+        self._name = self._ref.name
+        self._version = self._ref.version
+        self._user = self._ref.user
+        self._channel = self._ref.channel
+        self._revision = self._ref.revision
+
+
+class PythonRequiresInfo(object):
+
+    def __init__(self, refs, default_package_id_mode):
+        self._default_package_id_mode = default_package_id_mode
+        if refs:
+            self._refs = [PythonRequireInfo(r, default_package_id_mode=default_package_id_mode)
+                          for r in sorted(refs)]
+        else:
+            self._refs = None
+
+    def copy(self):
+        # For build_id() implementation
+        return PythonRequiresInfo(self._refs, self._default_package_id_mode)
+
+    def __bool__(self):
+        return bool(self._refs)
+
+    def __nonzero__(self):
+        return self.__bool__()
+
+    def clear(self):
+        self._refs = None
+
+    @property
+    def sha(self):
+        result = [r.sha for r in self._refs]
+        return sha1('\n'.join(result).encode())
+
+    def unrelated_mode(self):
+        self._refs = None
+
+    def semver_mode(self):
+        for r in self._refs:
+            r.semver_mode()
+
+    def patch_mode(self):
+        for r in self._refs:
+            r.patch_mode()
+
+    def minor_mode(self):
+        for r in self._refs:
+            r.minor_mode()
+
+    def major_mode(self):
+        for r in self._refs:
+            r.major_mode()
+
+    def full_version_mode(self):
+        for r in self._refs:
+            r.full_version_mode()
+
+    def full_recipe_mode(self):
+        for r in self._refs:
+            r.full_recipe_mode()
+
+    def recipe_revision_mode(self):
+        for r in self._refs:
+            r.recipe_revision_mode()
+
+
 class _PackageReferenceList(list):
     @staticmethod
     def loads(text):
@@ -296,10 +422,12 @@ class ConanInfo(object):
         result.settings = self.settings.copy()
         result.options = self.options.copy()
         result.requires = self.requires.copy()
+        result.python_requires = self.python_requires.copy()
         return result
 
     @staticmethod
-    def create(settings, options, prefs_direct, prefs_indirect, default_package_id_mode):
+    def create(settings, options, prefs_direct, prefs_indirect, default_package_id_mode,
+               python_requires, default_python_requires_id_mode):
         result = ConanInfo()
         result.full_settings = settings
         result.settings = settings.copy()
@@ -315,6 +443,7 @@ class ConanInfo(object):
         result.vs_toolset_compatible()
         result.discard_build_settings()
         result.default_std_matching()
+        result.python_requires = PythonRequiresInfo(python_requires, default_python_requires_id_mode)
         return result
 
     @staticmethod
@@ -399,8 +528,7 @@ class ConanInfo(object):
         """ The package_id of a conans is the sha1 of its specific requirements,
         options and settings
         """
-        result = []
-        result.append(self.settings.sha)
+        result = [self.settings.sha]
         # Only are valid requires for OPtions those Non-Dev who are still in requires
         self.options.filter_used(self.requires.pkg_names)
         result.append(self.options.sha)
@@ -408,6 +536,8 @@ class ConanInfo(object):
         if requires_sha is None:
             return PACKAGE_ID_UNKNOWN
         result.append(requires_sha)
+        if self.python_requires:
+            result.append(self.python_requires.sha)
         package_id = sha1('\n'.join(result).encode())
         return package_id
 
