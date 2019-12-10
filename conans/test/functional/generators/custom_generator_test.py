@@ -1,4 +1,3 @@
-import os
 import textwrap
 import unittest
 
@@ -6,7 +5,6 @@ from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE, CONANFILE_TXT
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import TestClient, TestServer
-from conans.util.files import load
 
 generator = """
 from conans.model import Generator
@@ -93,7 +91,7 @@ class CustomGeneratorTest(unittest.TestCase):
         files = {CONANFILE_TXT: consumer}
         client.save(files, clean_first=True)
         client.run("install . --build")
-        generated = load(os.path.join(client.current_folder, "customfile.gen"))
+        generated = client.load("customfile.gen")
         self.assertEqual(generated, "My custom generator content")
 
         # Test retrieval from remote
@@ -102,7 +100,7 @@ class CustomGeneratorTest(unittest.TestCase):
         client.save(files)
         client.run("install . --build")
 
-        generated = load(os.path.join(client.current_folder, "customfile.gen"))
+        generated = client.load("customfile.gen")
         self.assertEqual(generated, "My custom generator content")
 
     def multifile_test(self):
@@ -121,7 +119,7 @@ class CustomGeneratorTest(unittest.TestCase):
                       "Property 'filename' not used",
                       client.out)
         for i in (1, 2):
-            generated = load(os.path.join(client.current_folder, "file%d.gen" % i))
+            generated = client.load("file%d.gen" % i)
             self.assertEqual(generated, "CustomContent%d" % i)
 
     def export_template_generator_test(self):
@@ -146,7 +144,7 @@ class MyCustomGeneratorWithTemplatePackage(ConanFile):
         client.run("create . gen/0.1@user/stable")
 
         client.run("install gen/0.1@user/stable -g=MyCustomTemplateGenerator")
-        generated = load(os.path.join(client.current_folder, "customfile.gen"))
+        generated = client.load("customfile.gen")
         self.assertEqual(generated, "Template: Hello")
 
     def install_folder_test(self):
@@ -169,6 +167,6 @@ class MyCustomGeneratorWithTemplatePackage(ConanFile):
         client.save({CONANFILE: templated_generator, "mytemplate.txt": "Template: %s"})
         client.run("create . gen/0.1@user/stable")
         client.run("install gen/0.1@user/stable -g=MyGenerator")
-        generated = load(os.path.join(client.current_folder, "customfile.gen"))
+        generated = client.load("customfile.gen")
         self.assertEqual(generated, client.current_folder)
 

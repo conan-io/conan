@@ -22,7 +22,7 @@ class MyBuildInfoCreation(unittest.TestCase):
                                               TestBufferConanOutput())
         sys.argv = ["conan_build_info", "--v2", "start", "MyBuildName", "42"]
         run()
-        with open(mock_cache.return_value.put_headers_path) as f:
+        with open(mock_cache.return_value.artifacts_properties_path) as f:
             content = f.read()
             self.assertIn("MyBuildName", content)
             self.assertIn("42", content)
@@ -34,7 +34,7 @@ class MyBuildInfoCreation(unittest.TestCase):
                                               TestBufferConanOutput())
         sys.argv = ["conan_build_info", "--v2", "stop"]
         run()
-        with open(mock_cache.return_value.put_headers_path) as f:
+        with open(mock_cache.return_value.artifacts_properties_path) as f:
             content = f.read()
             self.assertEqual("", content)
 

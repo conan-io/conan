@@ -2,14 +2,15 @@ import datetime
 import json
 import os
 from collections import defaultdict, namedtuple
-from six.moves.urllib.parse import urlparse, urljoin
 
 import requests
+from six.moves.urllib.parse import urlparse, urljoin
 
 from conans.client.cache.cache import ClientCache
 from conans.client.rest import response_to_str
 from conans.errors import AuthenticationException, RequestErrorException, ConanException
 from conans.model.ref import ConanFileReference
+from conans.paths import ARTIFACTS_PROPERTIES_PUT_PREFIX
 from conans.paths import get_conan_user_home
 from conans.util.files import save
 
@@ -188,12 +189,12 @@ class BuildInfoCreator(object):
         return modules
 
     def create(self):
-        properties = self._conan_cache.read_put_headers()
+        properties = self._conan_cache.read_artifacts_properties()
         modules = self.process_lockfile()
         # Add extra information
         ret = {"version": "1.0.1",
-               "name": properties["artifact_property_build.name"],
-               "number": properties["artifact_property_build.number"],
+               "name": properties[ARTIFACTS_PROPERTIES_PUT_PREFIX + "build.name"],
+               "number": properties[ARTIFACTS_PROPERTIES_PUT_PREFIX + "build.number"],
                "type": "GENERIC",
                "started": datetime.datetime.utcnow().isoformat().split(".")[0] + ".000Z",
                "buildAgent": {"name": "Conan Client", "version": "1.X"},
@@ -205,8 +206,7 @@ class BuildInfoCreator(object):
                 return sorted(artifacts, key=lambda u: u.get("name") or u.get("id"))
             raise TypeError
 
-        with open(self._build_info_file, "w") as f:
-            f.write(json.dumps(ret, indent=4, default=dump_custom_types))
+        save(self._build_info_file, json.dumps(ret, indent=4, default=dump_custom_types))
 
 
 def create_build_info(output, build_info_file, lockfile, user, password, apikey):
@@ -216,9 +216,9 @@ def create_build_info(output, build_info_file, lockfile, user, password, apikey)
 
 def start_build_info(output, build_name, build_number):
     paths = ClientCache(os.path.join(get_conan_user_home(), ".conan"), output)
-    content = "artifact_property_build.name={}\n" \
-              "artifact_property_build.number={}\n".format(build_name, build_number)
-    artifact_properties_file = paths.put_headers_path
+    content = ARTIFACTS_PROPERTIES_PUT_PREFIX + "build.name={}\n".format(build_name) + \
+              ARTIFACTS_PROPERTIES_PUT_PREFIX + "build.number={}\n".format(build_number)
+    artifact_properties_file = paths.artifacts_properties_path
     try:
         save(artifact_properties_file, content)
     except Exception:
@@ -227,7 +227,7 @@ def start_build_info(output, build_name, build_number):
 
 def stop_build_info(output):
     paths = ClientCache(os.path.join(get_conan_user_home(), ".conan"), output)
-    artifact_properties_file = paths.put_headers_path
+    artifact_properties_file = paths.artifacts_properties_path
     try:
         save(artifact_properties_file, "")
     except Exception:
@@ -300,8 +300,6 @@ def update_build_info(buildinfo, output_file):
     for it in buildinfo:
         with open(it) as json_data:
             data = json.load(json_data)
-
         build_info = merge_buildinfo(build_info, data)
 
-    with open(output_file, "w") as f:
-        f.write(json.dumps(build_info, indent=4))
+    save(output_file, json.dumps(build_info, indent=4))

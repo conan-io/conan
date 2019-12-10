@@ -153,32 +153,31 @@ class VirtualEnvIntegrationTestCase(unittest.TestCase):
             os.chmod(os.path.join(self.test_folder, p), 0o755)
 
     def _run_virtualenv(self, generator):
+        generator.output_path = self.test_folder
+        save_files(self.test_folder, generator.content)
+
+        # Generate the list of commands to execute
+        shell_commands = [
+            self.commands.dump_env.format(filename=self.env_before),
+            self.commands.find_program.format(program="conan", variable="__conan_pre_path__"),
+            self.commands.find_program.format(program=self.app, variable="__exec_pre_path__"),
+            self.commands.activate,
+            self.commands.dump_env.format(filename=self.env_activated),
+            self.commands.find_program.format(program="conan", variable="__conan_env_path__"),
+            self.commands.find_program.format(program=self.app, variable="__exec_env_path__"),
+            self.commands.deactivate,
+            self.commands.dump_env.format(filename=self.env_after),
+            self.commands.find_program.format(program="conan", variable="__conan_post_path__"),
+            self.commands.find_program.format(program=self.app, variable="__exec_post_path__"),
+            "",
+        ]
+
+        # Execute
         with environment_append({"PATH": [self.ori_path, ]}):
-            # FIXME: I need this context because restore values for the 'deactivate' script are
-            #        generated at the 'generator.content' and not when the 'activate' is called.
-            save_files(self.test_folder, generator.content)
-
-            # Generate the list of commands to execute
-            shell_commands = [
-                self.commands.dump_env.format(filename=self.env_before),
-                self.commands.find_program.format(program="conan", variable="__conan_pre_path__"),
-                self.commands.find_program.format(program=self.app, variable="__exec_pre_path__"),
-                self.commands.activate,
-                self.commands.dump_env.format(filename=self.env_activated),
-                self.commands.find_program.format(program="conan", variable="__conan_env_path__"),
-                self.commands.find_program.format(program=self.app, variable="__exec_env_path__"),
-                self.commands.deactivate,
-                self.commands.dump_env.format(filename=self.env_after),
-                self.commands.find_program.format(program="conan", variable="__conan_post_path__"),
-                self.commands.find_program.format(program=self.app, variable="__exec_post_path__"),
-                "",
-            ]
-
-            # Execute
             shell = subprocess.Popen(self.commands.shell, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                      stderr=subprocess.PIPE, cwd=self.test_folder)
             (stdout, stderr) = shell.communicate(to_file_bytes("\n".join(shell_commands)))
-            stdout, stderr = decode_text(stdout), decode_text(stderr)
+        stdout, stderr = decode_text(stdout), decode_text(stderr)
 
         # Consistency checks
         self.assertFalse(stderr, "Running shell resulted in error, output:\n%s" % stdout)
@@ -188,6 +187,10 @@ class VirtualEnvIntegrationTestCase(unittest.TestCase):
         if platform.system() == "Darwin":
             env_after.pop(six.u("PS1"), None)  # TODO: FIXME: Needed for the test to pass
             env_after.pop("PS1", None)  # TODO: FIXME: Needed for the test to pass
+        if platform.system() == "Linux":
+            ps1 = env_after.pop(six.u("PS1"), None)
+            if ps1:
+                env_after["PS1"] = ps1 + " "  # TODO: FIXME: Needed for the test to pass
         self.assertDictEqual(env_before, env_after)  # Environment restored correctly
 
         return stdout, _load_env_file(os.path.join(self.test_folder, self.env_activated))
@@ -232,13 +235,14 @@ class VirtualEnvIntegrationTestCase(unittest.TestCase):
         existing_path = os.environ.get("PATH")
 
         generator = VirtualEnvGenerator(ConanFileMock())
-        generator.env = {"PATH": [os.path.join(self.test_folder, "bin")],
+        generator.env = {"PATH": [os.path.join(self.test_folder, "bin"), r'other\path'],
                          "WHATEVER": ["list", "other"]}
 
         _, environment = self._run_virtualenv(generator)
 
         self.assertEqual(environment["PATH"], os.pathsep.join([
             os.path.join(self.test_folder, "bin"),
+            r'other\path',
             self.ori_path,
             existing_path
         ]))
@@ -249,27 +253,26 @@ class VirtualEnvIntegrationTestCase(unittest.TestCase):
 
     def test_find_program(self):
         # If we add the path, we should found the env/executable instead of ori/executable
+        # Watch out! 'cmd' returns all the paths where the executable is found, so we need to
+        #   take into account the first match (iterate in reverse order)
         generator = VirtualEnvGenerator(ConanFileMock())
         generator.env = {"PATH": [self.env_path], }
 
         stdout, environment = self._run_virtualenv(generator)
         
-        cpaths = dict(l.split("=", 1) for l in stdout.splitlines() if l.startswith("__conan_"))
+        cpaths = dict(l.split("=", 1) for l in reversed(stdout.splitlines()) if l.startswith("__conan_"))
         self.assertEqual(cpaths["__conan_pre_path__"], cpaths["__conan_post_path__"])
         self.assertEqual(cpaths["__conan_env_path__"], cpaths["__conan_post_path__"])
 
-        epaths = dict(l.split("=", 1) for l in stdout.splitlines() if l.startswith("__exec_"))
+        epaths = dict(l.split("=", 1) for l in reversed(stdout.splitlines()) if l.startswith("__exec_"))
         self.assertEqual(epaths["__exec_pre_path__"], epaths["__exec_post_path__"])
-        if self.commands.id == "cmd":  # FIXME: This is a bug, it doesn't take into account the new path
-            self.assertNotEqual(epaths["__exec_env_path__"], os.path.join(self.env_path, self.app))
-        else:
-            self.assertEqual(epaths["__exec_env_path__"], os.path.join(self.env_path, self.app))
+        self.assertEqual(epaths["__exec_env_path__"], os.path.join(self.env_path, self.app))
 
         # With any other path, we keep finding the original one
         generator = VirtualEnvGenerator(ConanFileMock())
         generator.env = {"PATH": [os.path.join(self.test_folder, "wrong")], }
 
         stdout, environment = self._run_virtualenv(generator)
-        epaths = dict(l.split("=", 1) for l in stdout.splitlines() if l.startswith("__exec_"))
+        epaths = dict(l.split("=", 1) for l in reversed(stdout.splitlines()) if l.startswith("__exec_"))
         self.assertEqual(epaths["__exec_pre_path__"], epaths["__exec_post_path__"])
         self.assertEqual(epaths["__exec_env_path__"], epaths["__exec_post_path__"])

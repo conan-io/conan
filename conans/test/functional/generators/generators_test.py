@@ -5,7 +5,6 @@ import unittest
 
 from conans.model.graph_info import GRAPH_INFO_FILE
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
-from conans.util.files import load
 from conans.model.graph_lock import LOCKFILE
 
 
@@ -41,10 +40,10 @@ ycm
         client.save(files)
         client.run("install . --build")
 
-        venv_files = ["activate.sh", "deactivate.sh"]
+        venv_files = ["activate.sh", "deactivate.sh", "environment.sh.env"]
         if platform.system() == "Windows":
-            venv_files.extend(["activate.bat", "deactivate.bat", "activate.ps1",
-                               "deactivate.ps1"])
+            venv_files.extend(["activate.bat", "deactivate.bat", "environment.bat.env",
+                               "activate.ps1", "deactivate.ps1", "environment.ps1.env"])
 
         self.assertEqual(sorted(['conanfile.txt', 'conaninfo.txt', 'conanbuildinfo.cmake',
                                  'conanbuildinfo.gcc', 'conanbuildinfo.qbs', 'conanbuildinfo.pri',
@@ -102,7 +101,7 @@ qmake
         client.save({"conanfile.txt": base}, clean_first=True)
         client.run("install . --build")
 
-        qmake = load(os.path.join(client.current_folder, "conanbuildinfo.pri"))
+        qmake = client.load("conanbuildinfo.pri")
         self.assertIn("CONAN_RESDIRS += ", qmake)
         self.assertEqual(qmake.count("CONAN_LIBS += "), 1)
         self.assertIn("CONAN_LIBS_PKG_RELEASE += -lhellor", qmake)
@@ -139,7 +138,7 @@ qmake
         client.save({"conanfile.txt": base}, clean_first=True)
         client.run("install . --build")
 
-        qmake = load(os.path.join(client.current_folder, "conanbuildinfo.pri"))
+        qmake = client.load("conanbuildinfo.pri")
         self.assertIn("CONAN_RESDIRS += ", qmake)
         self.assertEqual(qmake.count("CONAN_LIBS += "), 1)
         self.assertIn("CONAN_LIBS_PKG_NAME_WORLD_RELEASE += -lhellor", qmake)

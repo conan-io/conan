@@ -19,6 +19,7 @@ class _CppInfo(object):
     """
     def __init__(self):
         self.name = None
+        self.names = {}
         self.system_libs = []  # Ordered list of system libraries
         self.includedirs = []  # Ordered list of include paths
         self.srcdirs = []  # Ordered list of source paths
@@ -107,6 +108,9 @@ class _CppInfo(object):
         if self._framework_paths is None:
             self._framework_paths = self._filter_paths(self.frameworkdirs)
         return self._framework_paths
+
+    def get_name(self, generator):
+        return self.names.get(generator, self.name)
 
     # Compatibility for 'cppflags' (old style property to allow decoration)
     @deprecation.deprecated(deprecated_in="1.13", removed_in="2.0", details="Use 'cxxflags' instead")

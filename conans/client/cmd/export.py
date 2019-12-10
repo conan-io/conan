@@ -4,9 +4,8 @@ import shutil
 
 import six
 
-from conans.client.cmd.export_linter import conan_linter
 from conans.client.file_copier import FileCopier
-from conans.client.output import ScopedOutput
+from conans.client.output import Color, ScopedOutput
 from conans.client.remover import DiskRemover
 from conans.errors import ConanException
 from conans.model.manifest import FileTreeManifest
@@ -54,7 +53,6 @@ def check_casing_conflict(cache, ref):
 
 def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
                export=True, graph_lock=None, ignore_dirty=False):
-
     """ Export the recipe
     param conanfile_path: the original source directory of the user containing a
                        conanfile.py
@@ -82,7 +80,7 @@ def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
         node_id = graph_lock.get_node(ref)
         python_requires = graph_lock.python_requires(node_id)
         # TODO: check that the locked python_requires are different from the loaded ones
-        app.range_resolver.output  # invalidate previous version range output
+        app.range_resolver.clear_output()  # invalidate previous version range output
         conanfile = loader.load_export(conanfile_path, conanfile.name, conanfile.version,
                                        ref.user, ref.channel, python_requires)
 
@@ -96,12 +94,13 @@ def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
             graph_lock.update_exported_ref(node_id, ref)
         return ref
 
+    _check_settings_for_warnings(conanfile, output)
+
     hook_manager.execute("pre_export", conanfile=conanfile, conanfile_path=conanfile_path,
                          reference=package_layout.ref)
     logger.debug("EXPORT: %s" % conanfile_path)
 
     output.highlight("Exporting package recipe")
-    conan_linter(conanfile_path, output)
     output = conanfile.output
 
     # Get previous digest
@@ -196,6 +195,27 @@ def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
     if graph_lock:
         graph_lock.update_exported_ref(node_id, ref)
     return ref
+
+
+def _check_settings_for_warnings(conanfile, output):
+    if not conanfile.settings:
+        return
+    try:
+        if not 'os_build' in conanfile.settings:
+            return
+        if not 'os' in conanfile.settings:
+            return
+
+        output.writeln("*"*60, front=Color.BRIGHT_RED)
+        output.writeln("  This package defines both 'os' and 'os_build' ",
+                       front=Color.BRIGHT_RED)
+        output.writeln("  Please use 'os' for libraries and 'os_build'",
+                       front=Color.BRIGHT_RED)
+        output.writeln("  only for build-requires used for cross-building",
+                       front=Color.BRIGHT_RED)
+        output.writeln("*"*60, front=Color.BRIGHT_RED)
+    except ConanException:
+        pass
 
 
 def _capture_scm_auto_fields(conanfile, conanfile_dir, destination_folder, output, ignore_dirty):

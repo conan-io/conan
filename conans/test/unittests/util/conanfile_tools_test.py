@@ -36,8 +36,7 @@ class Pkg(ConanFile):
         client.save({"conanfile.py": conanfile,
                      "myfile.txt": "World"})
         client.run("source .")
-        self.assertEqual("WorldHello",
-                         load(os.path.join(client.current_folder, "myfile.txt")))
+        self.assertEqual("WorldHello", client.load("myfile.txt"))
 
     def test_untar(self):
         tmp_dir = temp_folder()

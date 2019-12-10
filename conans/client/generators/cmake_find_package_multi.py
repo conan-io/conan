@@ -61,6 +61,33 @@ set_property(TARGET {name}::{name}
                  $<$<CONFIG:Debug>:${{{name}_COMPILE_OPTIONS_DEBUG_LIST}}>) 
     """
 
+# https://gitlab.kitware.com/cmake/cmake/blob/master/Modules/BasicConfigVersion-SameMajorVersion.cmake.in
+    version_template = """
+set(PACKAGE_VERSION "{version}")
+
+if(PACKAGE_VERSION VERSION_LESS PACKAGE_FIND_VERSION)
+  set(PACKAGE_VERSION_COMPATIBLE FALSE)
+else()
+
+  if("{version}" MATCHES "^([0-9]+)\\\\.")
+    set(CVF_VERSION_MAJOR "${{CMAKE_MATCH_1}}")
+  else()
+    set(CVF_VERSION_MAJOR "{version}")
+  endif()
+
+  if(PACKAGE_FIND_VERSION_MAJOR STREQUAL CVF_VERSION_MAJOR)
+    set(PACKAGE_VERSION_COMPATIBLE TRUE)
+  else()
+    set(PACKAGE_VERSION_COMPATIBLE FALSE)
+  endif()
+
+  if(PACKAGE_FIND_VERSION STREQUAL PACKAGE_VERSION)
+      set(PACKAGE_VERSION_EXACT TRUE)
+  endif()
+
+endif()
+"""
+
     @property
     def filename(self):
         pass
@@ -71,7 +98,7 @@ set_property(TARGET {name}::{name}
         build_type = self.conanfile.settings.get_safe("build_type")
         build_type_suffix = "_{}".format(build_type.upper()) if build_type else ""
         for _, cpp_info in self.deps_build_info.dependencies:
-            depname = cpp_info.name
+            depname = cpp_info.get_name("cmake_find_package_multi")
             deps = DepsCppCmake(cpp_info)
             ret["{}Config.cmake".format(depname)] = self._find_for_dep(depname, cpp_info)
             ret["{}Targets.cmake".format(depname)] = self.targets_file.format(name=depname)
@@ -79,6 +106,8 @@ set_property(TARGET {name}::{name}
             find_lib = target_template.format(name=depname, deps=deps,
                                               build_type_suffix=build_type_suffix)
             ret["{}Target-{}.cmake".format(depname, build_type.lower())] = find_lib
+            ret["{}ConfigVersion.cmake".format(depname)] = self.version_template.\
+                format(version=cpp_info.version)
         return ret
 
     def _build_type_suffix(self, build_type):
@@ -88,7 +117,7 @@ set_property(TARGET {name}::{name}
         lines = []
         if cpp_info.public_deps:
             # Here we are generating only Config files, so do not search for FindXXX modules
-            public_deps_names = [self.deps_build_info[dep].name for dep in cpp_info.public_deps]
+            public_deps_names = [self.deps_build_info[dep].get_name("cmake_find_package_multi") for dep in cpp_info.public_deps]
             lines = find_dependency_lines(name, public_deps_names, find_modules=False)
 
         targets_props = self.target_properties.format(name=name)

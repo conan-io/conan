@@ -190,9 +190,13 @@ VAR2=23
         folder = temp_folder()
         info = CppInfo(folder)
         info.name = "MyName"
+        info.names["my_generator"] = "MyNameForMyGenerator"
         deps_cpp_info = DepsCppInfo()
         deps_cpp_info.update(info, "myname")
         self.assertIn("MyName", deps_cpp_info["myname"].name)
+        self.assertIn("MyNameForMyGenerator", deps_cpp_info["myname"].names["my_generator"])
+        self.assertIn("MyName", deps_cpp_info["myname"].get_name("my_undefined_generator"))
+        self.assertIn("MyNameForMyGenerator", deps_cpp_info["myname"].get_name("my_generator"))
 
     def cpp_info_build_modules_test(self):
         folder = temp_folder()
