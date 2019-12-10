@@ -84,7 +84,7 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
         build_folder = build_bindir = install_folder
         if hasattr(conanfile, "layout"):
             layout = conanfile.layout()
-            conafile_folder = xxx
+            conafile_folder = install_folder # FIXME: Error,
             build_folder = os.path.join(conafile_folder, layout.build)
             build_bindir = os.path.join(conafile_folder, layout.build_bindir)
 
