@@ -79,7 +79,7 @@ class CMakeGenerator(Generator):
 
         # Per requirement variables
         for _, dep_cpp_info in self.deps_build_info.dependencies:
-            dep_name = dep_cpp_info.name
+            dep_name = dep_cpp_info.get_name("cmake")
             deps = DepsCppCmake(dep_cpp_info)
             dep_flags = cmake_dependency_vars(dep_name, deps=deps)
             sections.append(dep_flags)
@@ -106,7 +106,7 @@ class CMakeGenerator(Generator):
             sections.append(dep_flags)
 
         # TARGETS
-        sections.extend(generate_targets_section(self.deps_build_info.dependencies))
+        sections.extend(generate_targets_section(self.deps_build_info.dependencies, "cmake"))
 
         # MACROS
         sections.append(cmake_macros)
