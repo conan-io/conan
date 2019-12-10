@@ -443,8 +443,10 @@ class SystemPackageToolTest(unittest.TestCase):
             expected_package = "chocolatey"
         # The expected should be installed on development/testing machines
         self.assertTrue(spt._tool.installed(expected_package))
+        self.assertTrue(spt.installed(expected_package))
         # This package hopefully doesn't exist
         self.assertFalse(spt._tool.installed("oidfjgesiouhrgioeurhgielurhgaeiorhgioearhgoaeirhg"))
+        self.assertFalse(spt.installed("oidfjgesiouhrgioeurhgielurhgaeiorhgioearhgoaeirhg"))
 
     def system_package_tool_fail_when_not_0_returned_test(self):
         def get_linux_error_message():
