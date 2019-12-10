@@ -884,7 +884,7 @@ ProgramFiles(x86)=C:\Program Files (x86)
         out = TestBufferConanOutput()
         # Test: File name cannot be deduced from '?file=1'
         with six.assertRaisesRegex(self, ConanException,
-                                   "Cannot deduce file name form url. Use 'filename' parameter."):
+                                   "Cannot deduce file name from url. Use 'filename' parameter."):
             tools.get("http://localhost:%s/?file=1" % thread.port, output=out)
 
         # Test: Works with filename parameter instead of '?file=1'
