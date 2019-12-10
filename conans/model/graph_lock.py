@@ -15,7 +15,7 @@ from conans.model.version import Version
 
 
 LOCKFILE = "conan.lock"
-LOCKFILE_VERSION = "0.2"
+LOCKFILE_VERSION = "0.3"
 
 
 class GraphLockFile(object):
@@ -71,11 +71,12 @@ class GraphLockFile(object):
 
 
 class GraphLockNode(object):
-    def __init__(self, pref, python_requires, options, modified, requires, path):
+    def __init__(self, pref, python_requires, options, modified, requires, path, added=False):
         self.pref = pref
         self.python_requires = python_requires
         self.options = options
         self.modified = modified
+        self.added = added
         self.requires = requires
         self.path = path
 
@@ -91,9 +92,10 @@ class GraphLockNode(object):
                                for ref in python_requires]
         options = OptionsValues.loads(data["options"])
         modified = data.get("modified")
+        added = data.get("added")
         requires = data.get("requires", {})
         path = data.get("path")
-        return GraphLockNode(pref, python_requires, options, modified, requires, path)
+        return GraphLockNode(pref, python_requires, options, modified, requires, path, added)
 
     def as_dict(self):
         """ returns the object serialized as a dict of plain python types
@@ -110,6 +112,8 @@ class GraphLockNode(object):
             result["requires"] = self.requires
         if self.path:
             result["path"] = self.path
+        if self.added:
+            result["added"] = self.added
         return result
 
 
@@ -119,32 +123,36 @@ class GraphLock(object):
         self._nodes = {}  # {numeric id: PREF or None}
         self.revisions_enabled = None
 
-        if graph:
+        if graph is not None:
             for node in graph.nodes:
                 if node.recipe == RECIPE_VIRTUAL:
                     continue
-                requires = {}
-                for edge in node.dependencies:
-                    requires[repr(edge.require.ref)] = edge.dst.id
-                # It is necessary to lock the transitive python-requires too, for this node
-                python_reqs = None
-                reqs = getattr(node.conanfile, "python_requires", {})
-                if isinstance(reqs, dict):  # Old python_requires
-                    python_reqs = {}
-                    while reqs:
-                        python_reqs.update(reqs)
-                        partial = {}
-                        for req in reqs.values():
-                            partial.update(getattr(req.conanfile, "python_requires", {}))
-                        reqs = partial
+                self._add_node(node)
 
-                    python_reqs = [r.ref for _, r in python_reqs.items()]
-                elif isinstance(reqs, PyRequires):
-                    # If py_requires are defined, they overwrite old python_reqs
-                    python_reqs = node.conanfile.python_requires.all_refs()
-                graph_node = GraphLockNode(node.pref if node.ref else None, python_reqs,
-                                           node.conanfile.options.values, False, requires, node.path)
-                self._nodes[node.id] = graph_node
+    def _add_node(self, node, added=False):
+        requires = {}
+        for edge in node.dependencies:
+            requires[repr(edge.require.ref)] = edge.dst.id
+        # It is necessary to lock the transitive python-requires too, for this node
+        python_reqs = None
+        reqs = getattr(node.conanfile, "python_requires", {})
+        if isinstance(reqs, dict):  # Old python_requires
+            python_reqs = {}
+            while reqs:
+                python_reqs.update(reqs)
+                partial = {}
+                for req in reqs.values():
+                    partial.update(getattr(req.conanfile, "python_requires", {}))
+                reqs = partial
+
+            python_reqs = [r.ref for _, r in python_reqs.items()]
+        elif isinstance(reqs, PyRequires):
+            # If py_requires are defined, they overwrite old python_reqs
+            python_reqs = node.conanfile.python_requires.all_refs()
+        graph_node = GraphLockNode(node.pref if node.ref else None, python_reqs,
+                                   node.conanfile.options.values, False, requires, node.path,
+                                   added)
+        self._nodes[node.id] = graph_node
 
     @property
     def initial_counter(self):
@@ -247,7 +255,9 @@ class GraphLock(object):
             except KeyError:
                 if node.recipe == RECIPE_CONSUMER:
                     continue  # If the consumer node is not found, could be a test_package
-                raise
+                self._add_node(node, added=True)
+                continue
+                # raise
             if lock_node.pref:
                 pref = lock_node.pref.copy_clear_revs() if not self.revisions_enabled else lock_node.pref
                 node_pref = node.pref.copy_clear_revs() if not self.revisions_enabled else node.pref
@@ -271,7 +281,10 @@ class GraphLock(object):
         except KeyError:  # If the consumer node is not found, could be a test_package
             if node.recipe == RECIPE_CONSUMER:
                 return
-            raise ConanException("The node ID %s was not found in the lock" % node.id)
+            msg = "The node ID %s-'%s' was not found in the lock" % (node.id, node.name)
+            print(msg)
+            return
+            # raise ConanException(msg)
 
         locked_requires = locked_node.requires or {}
         if self.revisions_enabled:
@@ -287,14 +300,16 @@ class GraphLock(object):
             # Not new unlocked dependencies at this stage
             try:
                 locked_pref, locked_id = prefs[require.ref.name]
+                require.lock(locked_pref.ref, locked_id)
             except KeyError:
                 msg = "'%s' cannot be found in lockfile for this package\n" % require.ref.name
                 if build_requires:
                     msg += "Make sure it was locked with --build arguments while creating lockfile"
                 else:
                     msg += "If it is a new requirement, you need to create a new lockile"
-                raise ConanException(msg)
-            require.lock(locked_pref.ref, locked_id)
+                print(msg)
+                #raise ConanException(msg)
+
 
     def python_requires(self, node_id):
         if self.revisions_enabled:

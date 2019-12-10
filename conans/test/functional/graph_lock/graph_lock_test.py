@@ -122,7 +122,7 @@ class ReproducibleLockfiles(unittest.TestCase):
         client.save({"conanfile.txt": ""})
         client.run("install .")
         lockfile = client.load("conan.lock")
-        lockfile = lockfile.replace('"0.2"', '"0.1"').replace('"0"', '"UUID"')
+        lockfile = lockfile.replace('"0.3"', '"0.1"').replace('"0"', '"UUID"')
         client.save({"conan.lock": lockfile})
         client.run("install . --lockfile", assert_error=True)
         self.assertIn("This lockfile was created with a previous incompatible version", client.out)
@@ -683,8 +683,11 @@ class GraphLockModifyConanfileTestCase(unittest.TestCase):
         # https://github.com/conan-io/conan/issues/5807
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
+        client.run("create . zlib/1.0@")
         client.run("graph lock .")
         client.save({"conanfile.py": GenConanfile().with_require_plain("zlib/1.0")})
-        client.run("install . --lockfile", assert_error=True)
+        client.run("install . --lockfile")
+        print client.out
+        print client.load("conan.lock")
         self.assertIn("ERROR: 'zlib' cannot be found in lockfile for this package", client.out)
         self.assertIn("If it is a new requirement, you need to create a new lockile", client.out)
