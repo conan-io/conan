@@ -60,9 +60,9 @@ class FileUploader(object):
 
         file_size = os.stat(abs_path).st_size
         file_name = os.path.basename(abs_path)
-        description = "Uploading {}".format(
-            file_name) if not ref_or_package else "Uploading {}: {}".format(ref_or_package,
-                                                                            file_name)
+        description = "Uploading {}".format(file_name)
+        post_description = "Uploaded {}".format(
+            file_name) if not ref_or_package else "Uploaded {}: {}".format(ref_or_package, file_name)
 
         def load_in_chunks(_file, size):
             """Lazy function (generator) to read a file piece by piece.
@@ -74,7 +74,7 @@ class FileUploader(object):
                 yield chunk
 
         with open(abs_path, mode='rb') as file_handler:
-            progress = progress_bar.Progress(file_size, self.output, description)
+            progress = progress_bar.Progress(file_size, self.output, description, post_description)
             chunk_size = 1024
             data = progress.update(load_in_chunks(file_handler, chunk_size), chunk_size)
             iterable_to_file = IterableToFileAdapter(data, file_size)

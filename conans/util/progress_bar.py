@@ -34,12 +34,14 @@ class ProgressOutput(ConanOutput):
 
 
 class Progress(object):
-    def __init__(self, length, output, description):
+    def __init__(self, length, output, description, post_description=None):
         self._tqdm_bar = None
         self._total_length = length
         self._output = output
         self._processed_size = 0
         self._description = description
+        self._post_description = "{} completed".format(
+            self._description) if not post_description else post_description
         self._last_time = time.time()
         if self._output and self._output.is_terminal and self._description:
             self._tqdm_bar = tqdm(total=self._total_length,
@@ -69,16 +71,15 @@ class Progress(object):
     def pb_close(self):
         if self._tqdm_bar is not None:
             self._tqdm_bar.close()
-            msg = "\r{} completed [{:1.2f}k]".format(self._description,
-                                                     self._processed_size / 1024.0)
+            msg = "\r{} [{:1.2f}k]".format(self._post_description, self._processed_size / 1024.0)
             tqdm.write(left_justify_message(msg), file=self._output, end="\n")
 
 
 class FileWrapper(Progress):
-    def __init__(self, fileobj, output, description):
+    def __init__(self, fileobj, output, description, post_description=None):
         self._fileobj = fileobj
         self.seek(0, os.SEEK_END)
-        super(FileWrapper, self).__init__(self.tell(), output, description)
+        super(FileWrapper, self).__init__(self.tell(), output, description, post_description)
         self.seek(0)
 
     def seekable(self):
@@ -98,14 +99,16 @@ class FileWrapper(Progress):
 
 
 class ListWrapper(object):
-    def __init__(self, files_list, output, desc=None):
+    def __init__(self, files_list, output, description, post_description=None):
         self._files_list = files_list
         self._total_length = len(self._files_list)
         self._iterator = iter(self._files_list)
         self._last_progress = None
         self._i_file = 0
         self._output = output
-        self._description = desc
+        self._description = description
+        self._post_description = "{} completed".format(
+            self._description) if not post_description else post_description
         self._last_time = time.time()
         if self._output and self._output.is_terminal:
             self._tqdm_bar = tqdm(total=len(files_list),
@@ -124,7 +127,7 @@ class ListWrapper(object):
     def pb_close(self):
         if self._output and self._output.is_terminal:
             self._tqdm_bar.close()
-            msg = "\r{} completed [{} files]".format(self._description, self._total_length)
+            msg = "\r{} [{} files]".format(self._post_description, self._total_length)
             tqdm.write(left_justify_message(msg), file=self._output, end="\n")
 
     def __iter__(self):
