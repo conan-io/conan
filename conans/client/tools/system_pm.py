@@ -143,6 +143,9 @@ class SystemPackageTool(object):
             return parsed_packages
         return packages
 
+    def installed(self, package_name):
+        return self._tool.installed(package_name)
+
     def _installed(self, packages):
         if not packages:
             return True
