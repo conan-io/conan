@@ -116,15 +116,19 @@ class MultiRemotesTest(unittest.TestCase):
         client.run("install Hello0/0.0@lasote/stable --update")
         self.assertIn("Hello0/0.0@lasote/stable from 'default' - Cache", client.out)
 
-        # Now check that it really updates in case of new version uploaded to the associated remote
+        # Check that it really updates from the indicated remote
+        client.run("install Hello0/0.0@lasote/stable --update -r local")
+        self.assertIn("Hello0/0.0@lasote/stable from 'local' - Updated", client.out)
+
+        # Check that it really updates in case of newer package uploaded to the associated remote
         client_b = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")],
                                                            "local": [("lasote", "mypass")]})
         self._create(client_b, "Hello0", "0.0", modifier="  ")
         client_b.run("install Hello0/0.0@lasote/stable --build missing")
-        client_b.run("upload Hello0/0.0@lasote/stable --all -r default")
+        client_b.run("upload Hello0/0.0@lasote/stable --all -r local")
         client_b.run("remove '*' -f")
         client.run("install Hello0/0.0@lasote/stable --update")
-        self.assertIn("Hello0/0.0@lasote/stable from 'default' - Updated", client.out)
+        self.assertIn("Hello0/0.0@lasote/stable from 'local' - Updated", client.out)
 
 
 class MultiRemoteTest(unittest.TestCase):
