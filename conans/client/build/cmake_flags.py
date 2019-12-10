@@ -26,7 +26,7 @@ def get_toolset(settings):
     return None
 
 
-def get_generator(settings):
+def get_generator(settings, add_platform=None):
     if "CONAN_CMAKE_GENERATOR" in os.environ:
         return os.environ["CONAN_CMAKE_GENERATOR"]
 
@@ -43,6 +43,7 @@ def get_generator(settings):
         return "Unix Makefiles"
 
     if compiler == "Visual Studio":
+        add_platform = Version(compiler_version) < "16" if (add_platform is None) else add_platform
         _visuals = {'8': '8 2005',
                     '9': '9 2008',
                     '10': '10 2010',
@@ -53,7 +54,7 @@ def get_generator(settings):
                     '16': '16 2019'}
         base = "Visual Studio %s" % _visuals.get(compiler_version,
                                                  "UnknownVersion %s" % compiler_version)
-        if os_host != "WindowsCE" and Version(compiler_version) < "16":
+        if os_host != "WindowsCE" and add_platform:
             if arch == "x86_64":
                 base += " Win64"
             elif "arm" in arch:
@@ -67,7 +68,7 @@ def get_generator(settings):
     return "Unix Makefiles"
 
 
-def get_generator_platform(settings, generator):
+def get_generator_platform(settings, generator, force_vs_return=False):
     if "CONAN_CMAKE_GENERATOR_PLATFORM" in os.environ:
         return os.environ["CONAN_CMAKE_GENERATOR_PLATFORM"]
 
@@ -78,7 +79,8 @@ def get_generator_platform(settings, generator):
     if settings.get_safe("os") == "WindowsCE":
         return settings.get_safe("os.platform")
 
-    if compiler == "Visual Studio" and Version(compiler_version) >= "16" \
+    if compiler == "Visual Studio" and \
+            (Version(compiler_version) >= "16" or force_vs_return) \
             and "Visual" in generator:
         return {"x86": "Win32",
                 "x86_64": "x64",

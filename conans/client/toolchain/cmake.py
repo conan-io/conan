@@ -148,12 +148,12 @@ class CMakeToolchain(object):
         self.set_compiler = True
         self.set_vs_runtime = True
 
-        generator = generator or get_generator(self._conanfile.settings)
+        generator = generator or get_generator(self._conanfile.settings, add_platform=False)
         self._context = {
             #"build_type": build_type or self._conanfile.settings.get_safe("build_type"),
             #"generator": generator,
             "generator_platform": generator_platform or
-                                  get_generator_platform(self._conanfile.settings, generator),
+                                  get_generator_platform(self._conanfile.settings, generator, force_vs_return=True),
             # "parallel": parallel,  # TODO: This is for the --build
             # '-Wno-dev'  # TODO: Can I add this to a CMake variable?
             "toolset": toolset or get_toolset(self._conanfile.settings)
