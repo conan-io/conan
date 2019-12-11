@@ -59,11 +59,11 @@ Cflags: -I${includedir} -cxxflag -DMYDEFINE2
 Requires: my_pkg
 """)
 
-        self.assertEqual(files["mypkg1.pc"], """prefix=dummy_root_folder1
+        self.assertEqual(files["MYPKG1.pc"], """prefix=dummy_root_folder1
 libdir=${prefix}/lib
 includedir=${prefix}/include
 
-Name: mypkg1
+Name: MYPKG1
 Description: My other cool description
 Version: 1.7
 Libs: -L${libdir}
