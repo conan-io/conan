@@ -263,12 +263,12 @@ class ConanAPIV1(object):
             ref = ConanFileReference.loads(path)
         except ConanException:
             conanfile_path = _get_conanfile_path(path, get_cwd(), py=True)
-            conanfile = self.app.loader.load_basic(conanfile_path)
+            conanfile = self.app.loader.load_named(conanfile_path, None, None, None, None)
         else:
             update = True if remote_name else False
             result = self.app.proxy.get_recipe(ref, update, update, remotes, ActionRecorder())
             conanfile_path, _, _, ref = result
-            conanfile = self.app.loader.load_basic(conanfile_path)
+            conanfile = self.app.loader.load_named(conanfile_path, None, None, None, None)
             conanfile.name = ref.name
             conanfile.version = ref.version
 
