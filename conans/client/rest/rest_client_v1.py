@@ -158,7 +158,7 @@ class RestV1Methods(RestCommonMethods):
                 headers = self._artifacts_properties if not self._matrix_params else {}
                 uploader.upload(resource_url, files[filename], auth=auth, dedup=dedup,
                                 retry=retry, retry_wait=retry_wait,
-                                headers=headers, ref_or_package=ref_or_package)
+                                headers=headers, display_name=display_name)
             except Exception as exc:
                 output.error("\nError uploading file: %s, '%s'" % (filename, exc))
                 failed.append(filename)
