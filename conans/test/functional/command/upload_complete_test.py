@@ -448,13 +448,13 @@ class TestConan(ConanFile):
                  if line.startswith("Uploading")]
         self.assertEqual(lines, ["Uploading to remote 'default':",
                                  "Uploading Hello/1.2.1@frodo/stable to remote 'default'",
-                                 "Uploading conan_export.tgz",
-                                 "Uploading conanfile.py",
-                                 "Uploading conanmanifest.txt",
+                                 "Uploading Hello/1.2.1@frodo/stable -> conan_export.tgz",
+                                 "Uploading Hello/1.2.1@frodo/stable -> conanfile.py",
+                                 "Uploading Hello/1.2.1@frodo/stable -> conanmanifest.txt",
                                  "Uploading package 1/1: myfakeid to 'default'",
-                                 "Uploading conan_package.tgz",
-                                 "Uploading conaninfo.txt",
-                                 "Uploading conanmanifest.txt",
+                                 "Uploading Hello/1.2.1@frodo/stable:myfa -> conan_package.tgz",
+                                 "Uploading Hello/1.2.1@frodo/stable:myfa -> conaninfo.txt",
+                                 "Uploading Hello/1.2.1@frodo/stable:myfa -> conanmanifest.txt",
                                  ])
         if self.client.cache.config.revisions_enabled:
             layout = self.client.cache.package_layout(self.ref)
