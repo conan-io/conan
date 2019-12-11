@@ -54,7 +54,7 @@ class Progress(object):
             self._tqdm_bar.update(chunk_size)
         elif self._output and time.time() - self._last_time > TIMEOUT_BEAT_SECONDS:
             self._last_time = time.time()
-            tqdm.write(TIMEOUT_BEAT_CHARACTER, file=self._output, end="\n")
+            self._output.write(TIMEOUT_BEAT_CHARACTER)
 
     def update(self, chunks, chunk_size=1024):
         for chunk in chunks:
