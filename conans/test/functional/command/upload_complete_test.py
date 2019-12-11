@@ -371,7 +371,7 @@ class TestConan(ConanFile):
         self.client.run("export . lasote/stable")
         self.assertIn("WARN: Conanfile doesn't have 'license'", self.client.out)
         self.client.run("upload Hello/1.2@lasote/stable")
-        self.assertIn("Uploading conanmanifest.txt", self.client.out)
+        self.assertIn("Uploading Hello/1.2@lasote/stable -> conanmanifest.txt", self.client.out)
 
     def single_binary_test(self):
         """ basic installation of a new conans
