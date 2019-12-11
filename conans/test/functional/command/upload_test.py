@@ -546,7 +546,7 @@ class MyPkg(ConanFile):
         client.run("upload Hello0/1.2.1@frodo/stable -r default --all")
 
         # check for upload message
-        self.assertIn("Uploading conan_package.tgz", client.out)
+        self.assertIn("Uploading Hello0/1.2.1@frodo/stable:34b5 -> conan_package.tgz", client.out)
 
         # check if compressed files are re-used
         self.assertNotIn("Compressing recipe...", client.out)
@@ -621,9 +621,9 @@ class Pkg(ConanFile):
         client.run("user -c")
         client.run("user lasote -p mypass")
         client.run("upload Hello0/1.2.1@user/testing")
-        self.assertIn("Uploading conanmanifest.txt", client.out)
-        self.assertIn("Uploading conanfile.py", client.out)
-        self.assertIn("Uploading conan_export.tgz", client.out)
+        self.assertIn("Uploading Hello0/1.2.1@user/testing -> conanmanifest.txt", client.out)
+        self.assertIn("Uploading Hello0/1.2.1@user/testing -> conanfile.py", client.out)
+        self.assertIn("Uploading Hello0/1.2.1@user/testing -> conan_export.tgz", client.out)
 
     @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
     def upload_key_error_test(self):
