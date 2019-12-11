@@ -165,9 +165,9 @@ class UploadTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile})
         client.run("create . user/testing")
         client.run("upload Hello0/*@user/testing --confirm --all")
-        self.assertIn("Uploading conanmanifest.txt", client.out)
-        self.assertIn("Uploading conan_package.tgz", client.out)
-        self.assertIn("Uploading conanfile.py", client.out)
+        self.assertIn("Uploading Hello0/1.2.1@user/testing:5ab8 -> conanmanifest.txt", client.out)
+        self.assertIn("Uploading Hello0/1.2.1@user/testing:5ab8 -> conan_package.tgz", client.out)
+        self.assertIn("Uploading Hello0/1.2.1@user/testing -> conanfile.py", client.out)
 
     def query_upload_test(self):
         client = self._client()
