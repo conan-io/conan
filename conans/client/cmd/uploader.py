@@ -546,13 +546,13 @@ def _compress_recipe_files(files, symlinks, src_files, src_symlinks, dest_folder
     sources_tgz_path = files.pop(EXPORT_SOURCES_TGZ_NAME, None)
 
     def add_tgz(tgz_name, tgz_path, tgz_files, tgz_symlinks, msg):
-        if tgz_path:
-            result[tgz_name] = tgz_path
-        elif tgz_files:
-            if output and not output.is_terminal:
-                output.writeln(msg)
-            tgz_path = compress_files(tgz_files, tgz_symlinks, tgz_name, dest_folder, output)
-            result[tgz_name] = tgz_path
+        #if tgz_path:
+        #    result[tgz_name] = tgz_path
+        #elif tgz_files:
+        if output and not output.is_terminal:
+            output.writeln(msg)
+        tgz_path = compress_files(tgz_files, tgz_symlinks, tgz_name, dest_folder, output)
+        result[tgz_name] = tgz_path
 
     add_tgz(EXPORT_TGZ_NAME, export_tgz_path, files, symlinks, "Compressing recipe...")
     add_tgz(EXPORT_SOURCES_TGZ_NAME, sources_tgz_path, src_files, src_symlinks,
@@ -563,11 +563,11 @@ def _compress_recipe_files(files, symlinks, src_files, src_symlinks, dest_folder
 
 def _compress_package_files(files, symlinks, dest_folder, output):
     tgz_path = files.get(PACKAGE_TGZ_NAME)
-    if not tgz_path:
-        if output and not output.is_terminal:
-            output.writeln("Compressing package...")
-        tgz_files = {f: path for f, path in files.items() if f not in [CONANINFO, CONAN_MANIFEST]}
-        tgz_path = compress_files(tgz_files, symlinks, PACKAGE_TGZ_NAME, dest_folder, output)
+    #if not tgz_path:
+    if output and not output.is_terminal:
+        output.writeln("Compressing package...")
+    tgz_files = {f: path for f, path in files.items() if f not in [CONANINFO, CONAN_MANIFEST]}
+    tgz_path = compress_files(tgz_files, symlinks, PACKAGE_TGZ_NAME, dest_folder, output)
 
     return {PACKAGE_TGZ_NAME: tgz_path,
             CONANINFO: files[CONANINFO],
