@@ -503,8 +503,8 @@ class TestConan(ConanFile):
 
         # Repeat transfer, to make sure it is uploading again
         self.client.run('upload %s --force' % str(self.ref))
-        self.assertIn("Uploading conan_export.tgz", self.client.out)
-        self.assertIn("Uploading conanfile.py", self.client.out)
+        self.assertIn("Uploading Hello/1.2.1@frodo/stable -> conan_export.tgz", self.client.out)
+        self.assertIn("Uploading Hello/1.2.1@frodo/stable -> conanfile.py", self.client.out)
 
     def upload_json_test(self):
         conanfile = """
