@@ -371,7 +371,7 @@ class TestConan(ConanFile):
         self.client.run("export . lasote/stable")
         self.assertIn("WARN: Conanfile doesn't have 'license'", self.client.out)
         self.client.run("upload Hello/1.2@lasote/stable")
-        self.assertIn("Uploading Hello/1.2@lasote/stable -> conanmanifest.txt", self.client.out)
+        self.assertIn("Uploading conanmanifest.txt", self.client.out)
 
     def single_binary_test(self):
         """ basic installation of a new conans
@@ -448,13 +448,13 @@ class TestConan(ConanFile):
                  if line.startswith("Uploading")]
         self.assertEqual(lines, ["Uploading to remote 'default':",
                                  "Uploading Hello/1.2.1@frodo/stable to remote 'default'",
-                                 "Uploading Hello/1.2.1@frodo/stable -> conan_export.tgz",
-                                 "Uploading Hello/1.2.1@frodo/stable -> conanfile.py",
-                                 "Uploading Hello/1.2.1@frodo/stable -> conanmanifest.txt",
+                                 "Uploading conan_export.tgz",
+                                 "Uploading conanfile.py",
+                                 "Uploading conanmanifest.txt",
                                  "Uploading package 1/1: myfakeid to 'default'",
-                                 "Uploading Hello/1.2.1@frodo/stable:myfa -> conan_package.tgz",
-                                 "Uploading Hello/1.2.1@frodo/stable:myfa -> conaninfo.txt",
-                                 "Uploading Hello/1.2.1@frodo/stable:myfa -> conanmanifest.txt",
+                                 "Uploading conan_package.tgz",
+                                 "Uploading conaninfo.txt",
+                                 "Uploading conanmanifest.txt",
                                  ])
         if self.client.cache.config.revisions_enabled:
             layout = self.client.cache.package_layout(self.ref)
@@ -503,8 +503,8 @@ class TestConan(ConanFile):
 
         # Repeat transfer, to make sure it is uploading again
         self.client.run('upload %s --force' % str(self.ref))
-        self.assertIn("Uploading Hello/1.2.1@frodo/stable -> conan_export.tgz", self.client.out)
-        self.assertIn("Uploading Hello/1.2.1@frodo/stable -> conanfile.py", self.client.out)
+        self.assertIn("Uploading conan_export.tgz", self.client.out)
+        self.assertIn("Uploading conanfile.py", self.client.out)
 
     def upload_json_test(self):
         conanfile = """

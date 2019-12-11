@@ -151,7 +151,7 @@ class RestV1Methods(RestCommonMethods):
         for filename, resource_url in sorted(file_urls.items()):
             if output and not output.is_terminal:
                 msg = "Uploading: %s" % filename if not display_name else (
-                            "Uploading %s -> %s" % (display_name, filename))
+                            "Uploading %s -> %s" % (filename, display_name))
                 output.writeln(msg)
             auth, dedup = self._file_server_capabilities(resource_url)
             try:

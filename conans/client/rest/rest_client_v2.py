@@ -181,7 +181,7 @@ class RestV2Methods(RestCommonMethods):
         for filename in sorted(files):
             if self._output and not self._output.is_terminal:
                 msg = "Uploading: %s" % filename if not display_name else (
-                            "Uploading %s -> %s" % (display_name, filename))
+                            "Uploading %s -> %s" % (filename, display_name))
                 self._output.writeln(msg)
             resource_url = urls[filename]
             try:
