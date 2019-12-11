@@ -75,6 +75,8 @@ class DepsGraphBuilder(object):
 
     def _resolve_ranges(self, graph, requires, consumer, update, remotes):
         for require in requires:
+            if require.locked_id:
+                continue
             self._resolver.resolve(require, consumer, update, remotes)
             # if the range is resolved, check if it is an alias
             alias = graph.aliased.get(require.ref)
@@ -113,15 +115,17 @@ class DepsGraphBuilder(object):
 
         if graph_lock:
             graph_lock.lock_node(node, node.conanfile.requires.values())
-            new_reqs = None
-        if not node.graph_lock_node:  # If not graph_lock, or lock_node() couldn't find node
-            # propagation of requirements only necessary if not locked
-            new_reqs = node.conanfile.requires.update(down_reqs, self._output, node.ref, down_ref)
-            # if there are version-ranges, resolve them before expanding each of the requirements
-            self._resolve_deps(dep_graph, node, update, remotes)
+
+        new_reqs = node.conanfile.requires.update(down_reqs, self._output, node.ref, down_ref)
+        # if there are version-ranges, resolve them before expanding each of the requirements
+        self._resolve_deps(dep_graph, node, update, remotes)
 
         # Expand each one of the current requirements
-        for name, require in node.conanfile.requires.items():
+        locked, not_locked = [], []
+        for name, req in node.conanfile.requires.items():
+            locked.append((name, req)) if req.locked_id else not_locked.append((name, req))
+
+        for name, require in locked + not_locked:
             if require.override:
                 continue
             self._handle_require(name, node, require, dep_graph, check_updates, update,

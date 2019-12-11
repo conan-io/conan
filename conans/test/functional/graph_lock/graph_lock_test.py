@@ -684,10 +684,18 @@ class GraphLockModifyConanfileTestCase(unittest.TestCase):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . zlib/1.0@")
-        client.run("graph lock .")
-        client.save({"conanfile.py": GenConanfile().with_require_plain("zlib/1.0")})
-        client.run("install . --lockfile")
-        print client.out
-        print client.load("conan.lock")
-        self.assertIn("ERROR: 'zlib' cannot be found in lockfile for this package", client.out)
-        self.assertIn("If it is a new requirement, you need to create a new lockile", client.out)
+
+        client2 = TestClient(cache_folder=client.cache_folder)
+        client2.save({"conanfile.py": GenConanfile()})
+        client2.run("graph lock .")
+        client2.save({"conanfile.py": GenConanfile().with_require_plain("zlib/1.0")})
+        client2.run("install . --lockfile")
+        self.assertIn("zlib/1.0:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache", client2.out)
+        print client2.load("conan.lock")
+        lock_file_json = json.loads(client2.load("conan.lock"))
+        self.assertEqual(2, len(lock_file_json["graph_lock"]["nodes"]))
+        self.assertEqual("zlib/1.0#f3367e0e7d170aa12abccb175fee5f97:"
+                         "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9#83c38d3b4e5f1b8450434436eec31b00",
+                         lock_file_json["graph_lock"]["nodes"]["1"]["pref"])
+        self.assertEqual(True, lock_file_json["graph_lock"]["nodes"]["1"]["added"])
+        self.assertEqual(True, lock_file_json["graph_lock"]["nodes"]["1"]["modified"])

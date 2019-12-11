@@ -133,7 +133,7 @@ class Requirements(OrderedDict):
         for name, req in self.items():
             if req.private:
                 continue
-            if name in down_reqs:
+            if name in down_reqs and not req.locked_id:
                 other_req = down_reqs[name]
                 # update dependency
                 other_ref = other_req.ref
@@ -148,7 +148,6 @@ class Requirements(OrderedDict):
                     output.warn(msg)
                     req.ref = other_ref
                     # FIXME: We should compute the intersection of version_ranges
-                    assert not req.locked_id, "We cannot override a locked requirement"
                     if req.version_range and not other_req.version_range:
                         req.range_ref = other_req.range_ref  # Override
 

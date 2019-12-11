@@ -306,12 +306,20 @@ class GraphLockCITest(unittest.TestCase):
         self.assertIn("PkgD/0.1@user/channel: DEP FILE PkgC: HelloC", client.out)
 
         client.run("graph lock PkgD/0.1@user/channel")
-        lock_file = load(os.path.join(client.current_folder, LOCKFILE))
+        lock_file = client.load(LOCKFILE)
         initial_lock_file = lock_file
-        self.assertIn("PkgB/0.1@user/channel", lock_file)
-        self.assertIn("PkgA/0.1@user/channel", lock_file)
-        self.assertIn("PkgC/0.1@user/channel", lock_file)
-        self.assertIn("PkgD/0.1@user/channel", lock_file)
+        self.assertIn("PkgA/0.1@user/channel#189390ce059842ce984e0502c52cf736:"
+                      "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9#5ba7f606729949527141beef73c72bc8",
+                      lock_file)
+        self.assertIn("PkgB/0.1@user/channel#fa97c46bf83849a5db4564327b3cfada:"
+                      "096f747d204735584fa0115bcbd7482d424094bc#aedbc184c721dd1d93896e0494392108",
+                      lock_file)
+        self.assertIn("PkgC/0.1@user/channel#c6f95948619d28d9d96b0ae86c46a482:"
+                      "f6d5dbb6f309dbf8519278bae8d07d3b739b3dec#de5dabc761668d5b97157dbf3eb40ca1",
+                      lock_file)
+        self.assertIn("PkgD/0.1@user/channel#fce78c934bc0de73eeb05eb4060fc2b7:"
+                      "de4467a3fa6ef01b09b7464e85553fb4be2d2096#a4ff125f400ac721e935976b4a2b1880",
+                      lock_file)
 
         # Do a change in B
         clientb = TestClient(cache_folder=client.cache_folder)
@@ -320,19 +328,47 @@ class GraphLockCITest(unittest.TestCase):
                      "myfile.txt": "ByeB World!!",
                       LOCKFILE: lock_file})
         clientb.run("create . PkgB/0.2@user/channel --lockfile")
-        lock_fileb = load(os.path.join(clientb.current_folder, LOCKFILE))
-        self.assertIn("PkgB/0.2@user/channel", lock_fileb)
-        self.assertIn("PkgA/0.1@user/channel", lock_fileb)
-        self.assertIn("PkgC/0.1@user/channel", lock_fileb)
-        self.assertIn("PkgD/0.1@user/channel", lock_fileb)
+        lock_fileb = clientb.load(LOCKFILE)
+        lock_file_json = json.loads(lock_fileb)
+        print lock_fileb
+        # ONLY PkgB changes
+        self.assertIn("PkgA/0.1@user/channel#189390ce059842ce984e0502c52cf736:"
+                      "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9#5ba7f606729949527141beef73c72bc8",
+                      lock_fileb)
+        self.assertIn("PkgB/0.2@user/channel#5db9f1469df844f4c2be22114d19f1cb:"
+                      "096f747d204735584fa0115bcbd7482d424094bc#b679ab3ac3bb090ea157d884b252eb30",
+                      lock_fileb)
+        self.assertIn("PkgC/0.1@user/channel#c6f95948619d28d9d96b0ae86c46a482:"
+                      "f6d5dbb6f309dbf8519278bae8d07d3b739b3dec#de5dabc761668d5b97157dbf3eb40ca1",
+                      lock_fileb)
+        self.assertIn("PkgD/0.1@user/channel#fce78c934bc0de73eeb05eb4060fc2b7:"
+                      "de4467a3fa6ef01b09b7464e85553fb4be2d2096#a4ff125f400ac721e935976b4a2b1880",
+                      lock_fileb)
+        self.assertEqual(BINARY_BUILD, lock_file_json["graph_lock"]["nodes"]["3"]["modified"])
 
         # Go back to main orchestrator
         client.save({"new_lock/%s" % LOCKFILE: lock_fileb})
         client.run("graph update-lock . new_lock")
         client.run("graph build-order . --json=build_order.json --build=missing")
-        lock_fileb = load(os.path.join(client.current_folder, LOCKFILE))
-        json_file = os.path.join(client.current_folder, "build_order.json")
-        to_build = json.loads(load(json_file))
+        print client.out
+        lock_fileb = client.load(LOCKFILE)
+        print "LOCKFILE ", lock_fileb
+        self.assertIn("PkgA/0.1@user/channel#189390ce059842ce984e0502c52cf736:"
+                      "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9#5ba7f606729949527141beef73c72bc8",
+                      lock_fileb)
+        self.assertIn("PkgB/0.2@user/channel#5db9f1469df844f4c2be22114d19f1cb:"
+                      "096f747d204735584fa0115bcbd7482d424094bc#b679ab3ac3bb090ea157d884b252eb30",
+                      lock_fileb)
+        self.assertIn("PkgC/0.1@user/channel#c6f95948619d28d9d96b0ae86c46a482:"
+                      "f6d5dbb6f309dbf8519278bae8d07d3b739b3dec#de5dabc761668d5b97157dbf3eb40ca1",
+                      lock_fileb)
+        self.assertIn("PkgD/0.1@user/channel#fce78c934bc0de73eeb05eb4060fc2b7:"
+                      "de4467a3fa6ef01b09b7464e85553fb4be2d2096#a4ff125f400ac721e935976b4a2b1880",
+                      lock_fileb)
+        json_file = client.load("build_order.json")
+        print "BUILD_ORDER" , json_file
+        return
+        to_build = json.loads(json_file)
         lock_fileaux = lock_fileb
         while to_build:
             for _, pkg_ref in to_build[0]:
@@ -342,7 +378,9 @@ class GraphLockCITest(unittest.TestCase):
                 client_aux.save({LOCKFILE: lock_fileaux})
                 client_aux.run("install %s --build=%s --lockfile"
                                % (pkg_ref.ref, pkg_ref.ref.name))
-                lock_fileaux = load(os.path.join(client_aux.current_folder, LOCKFILE))
+                lock_fileaux = client_aux.load(LOCKFILE)
+                print "****************+ AUX ", pkg_ref
+                print lock_fileaux
                 client.save({"new_lock/%s" % LOCKFILE: lock_fileaux})
                 client.run("graph update-lock . new_lock")
 
@@ -351,8 +389,10 @@ class GraphLockCITest(unittest.TestCase):
             output = str(client.out).splitlines()[-1]
             to_build = eval(output)
 
-        new_lockfile = load(os.path.join(client.current_folder, LOCKFILE))
+        new_lockfile = client.load(LOCKFILE)
+        print new_lockfile
         client.run("install PkgD/0.1@user/channel --lockfile")
+        print client.out
         self.assertIn("PkgC/0.1@user/channel: DEP FILE PkgB: ByeB World!!", client.out)
         self.assertIn("PkgD/0.1@user/channel: DEP FILE PkgB: ByeB World!!", client.out)
 

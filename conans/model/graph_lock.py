@@ -101,9 +101,8 @@ class GraphLockNode(object):
         """ returns the object serialized as a dict of plain python types
         that can be converted to json
         """
-        result = {}
-        result["pref"] = repr(self.pref) if self.pref else None
-        result["options"] = self.options.dumps()
+        result = {"pref": repr(self.pref) if self.pref else None,
+                  "options": self.options.dumps()}
         if self.python_requires:
             result["python_requires"] = [repr(r) for r in self.python_requires]
         if self.modified:
@@ -129,7 +128,7 @@ class GraphLock(object):
                     continue
                 self._add_node(node)
 
-    def _add_node(self, node, added=False):
+    def _add_node(self, node, added=False, modified=False):
         requires = {}
         for edge in node.dependencies:
             requires[repr(edge.require.ref)] = edge.dst.id
@@ -150,7 +149,7 @@ class GraphLock(object):
             # If py_requires are defined, they overwrite old python_reqs
             python_reqs = node.conanfile.python_requires.all_refs()
         graph_node = GraphLockNode(node.pref if node.ref else None, python_reqs,
-                                   node.conanfile.options.values, False, requires, node.path,
+                                   node.conanfile.options.values, modified, requires, node.path,
                                    added)
         self._nodes[node.id] = graph_node
 
@@ -265,7 +264,8 @@ class GraphLock(object):
                 # been build, then update the graph
                 if pref.id == PACKAGE_ID_UNKNOWN or pref.is_compatible_with(node_pref) or \
                         node.binary == BINARY_BUILD or node.id in affected:
-                    lock_node.pref = node.pref
+                    # lock_node.pref = node.pref
+                    self._add_node(node, added=lock_node.added, modified=lock_node.modified)
                 else:
                     raise ConanException("Mismatch between lock and graph:\nLock:  %s\nGraph: %s"
                                          % (repr(pref), repr(node.pref)))
