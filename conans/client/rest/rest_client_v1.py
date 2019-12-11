@@ -126,7 +126,7 @@ class RestV1Methods(RestCommonMethods):
         urls = self._get_file_to_url_dict(url, data=file_sizes)
         if self._matrix_params:
             urls = self.router.add_matrix_params(urls)
-        self._upload_files(urls, files_to_upload, self._output, retry, retry_wait, ref_or_package=str(ref))
+        self._upload_files(urls, files_to_upload, self._output, retry, retry_wait, display_name=str(ref))
 
     def _upload_package(self, pref, files_to_upload, retry, retry_wait):
         # Get the upload urls and then upload files
@@ -140,9 +140,9 @@ class RestV1Methods(RestCommonMethods):
         logger.debug("Requesting upload urls...Done!")
         short_pref_name = "%s:%s" % (pref.ref, pref.id[0:4])
         self._upload_files(urls, files_to_upload, self._output, retry, retry_wait,
-                           ref_or_package=short_pref_name)
+                           display_name=short_pref_name)
 
-    def _upload_files(self, file_urls, files, output, retry, retry_wait, ref_or_package=None):
+    def _upload_files(self, file_urls, files, output, retry, retry_wait, display_name=None):
         t1 = time.time()
         failed = []
         uploader = FileUploader(self.requester, output, self.verify_ssl)
@@ -150,8 +150,8 @@ class RestV1Methods(RestCommonMethods):
         # or conanamanifest.txt with missing files due to a network failure
         for filename, resource_url in sorted(file_urls.items()):
             if output and not output.is_terminal:
-                msg = "Uploading: %s" % filename if not ref_or_package else (
-                            "Uploading %s -> %s" % (ref_or_package, filename))
+                msg = "Uploading: %s" % filename if not display_name else (
+                            "Uploading %s -> %s" % (display_name, filename))
                 output.writeln(msg)
             auth, dedup = self._file_server_capabilities(resource_url)
             try:

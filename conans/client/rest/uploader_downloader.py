@@ -23,7 +23,7 @@ class FileUploader(object):
         self.verify = verify
 
     def upload(self, url, abs_path, auth=None, dedup=False, retry=None, retry_wait=None,
-               headers=None, ref_or_package=None):
+               headers=None, display_name=None):
         retry = retry if retry is not None else self.requester.retry
         retry = retry if retry is not None else 1
         retry_wait = retry_wait if retry_wait is not None else self.requester.retry_wait
@@ -53,16 +53,16 @@ class FileUploader(object):
 
         ret = call_with_retry(self.output, retry, retry_wait, self._upload_file, url,
                               abs_path=abs_path, headers=headers, auth=auth,
-                              ref_or_package=ref_or_package)
+                              display_name=display_name)
         return ret
 
-    def _upload_file(self, url, abs_path,  headers, auth, ref_or_package=None):
+    def _upload_file(self, url, abs_path,  headers, auth, display_name=None):
 
         file_size = os.stat(abs_path).st_size
         file_name = os.path.basename(abs_path)
         description = "Uploading {}".format(file_name)
         post_description = "Uploaded {}".format(
-            file_name) if not ref_or_package else "Uploaded {} -> {}".format(ref_or_package, file_name)
+            file_name) if not display_name else "Uploaded {} -> {}".format(display_name, file_name)
 
         def load_in_chunks(_file, size):
             """Lazy function (generator) to read a file piece by piece.

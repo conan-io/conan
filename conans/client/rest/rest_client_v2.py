@@ -163,16 +163,16 @@ class RestV2Methods(RestCommonMethods):
     def _upload_recipe(self, ref, files_to_upload, retry, retry_wait):
         # Direct upload the recipe
         urls = {fn: self.router.recipe_file(ref, fn, add_matrix_params=True) for fn in files_to_upload}
-        self._upload_files(files_to_upload, urls, retry, retry_wait, ref_or_package=str(ref))
+        self._upload_files(files_to_upload, urls, retry, retry_wait, display_name=str(ref))
 
     def _upload_package(self, pref, files_to_upload, retry, retry_wait):
         urls = {fn: self.router.package_file(pref, fn, add_matrix_params=True)
                 for fn in files_to_upload}
 
         short_pref_name = "%s:%s" % (pref.ref, pref.id[0:4])
-        self._upload_files(files_to_upload, urls, retry, retry_wait, ref_or_package=short_pref_name)
+        self._upload_files(files_to_upload, urls, retry, retry_wait, display_name=short_pref_name)
 
-    def _upload_files(self, files, urls, retry, retry_wait, ref_or_package=None):
+    def _upload_files(self, files, urls, retry, retry_wait, display_name=None):
         t1 = time.time()
         failed = []
         uploader = FileUploader(self.requester, self._output, self.verify_ssl)
@@ -180,15 +180,15 @@ class RestV2Methods(RestCommonMethods):
         # or conanamanifest.txt with missing files due to a network failure
         for filename in sorted(files):
             if self._output and not self._output.is_terminal:
-                msg = "Uploading: %s" % filename if not ref_or_package else (
-                            "Uploading %s -> %s" % (ref_or_package, filename))
+                msg = "Uploading: %s" % filename if not display_name else (
+                            "Uploading %s -> %s" % (display_name, filename))
                 self._output.writeln(msg)
             resource_url = urls[filename]
             try:
                 headers = self._artifacts_properties if not self._matrix_params else {}
                 uploader.upload(resource_url, files[filename], auth=self.auth,
                                 dedup=self._checksum_deploy, retry=retry, retry_wait=retry_wait,
-                                headers=headers, ref_or_package=ref_or_package)
+                                headers=headers, display_name=display_name)
             except (AuthenticationException, ForbiddenException):
                 raise
             except Exception as exc:
