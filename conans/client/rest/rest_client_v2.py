@@ -180,7 +180,9 @@ class RestV2Methods(RestCommonMethods):
         # or conanamanifest.txt with missing files due to a network failure
         for filename in sorted(files):
             if self._output and not self._output.is_terminal:
-                self._output.writeln("Uploading %s" % filename)
+                msg = "Uploading: %s" % filename if not ref_or_package else (
+                            "Uploading %s -> %s" % (ref_or_package, filename))
+                self._output.writeln(msg)
             resource_url = urls[filename]
             try:
                 headers = self._artifacts_properties if not self._matrix_params else {}

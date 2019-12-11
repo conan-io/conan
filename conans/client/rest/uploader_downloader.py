@@ -62,7 +62,7 @@ class FileUploader(object):
         file_name = os.path.basename(abs_path)
         description = "Uploading {}".format(file_name)
         post_description = "Uploaded {}".format(
-            file_name) if not ref_or_package else "Uploaded {}: {}".format(ref_or_package, file_name)
+            file_name) if not ref_or_package else "Uploaded {} -> {}".format(ref_or_package, file_name)
 
         def load_in_chunks(_file, size):
             """Lazy function (generator) to read a file piece by piece.
