@@ -140,7 +140,7 @@ class RestV1Methods(RestCommonMethods):
         logger.debug("Requesting upload urls...Done!")
         short_pref_name = "%s:%s" % (pref.ref, pref.id[0:4])
         self._upload_files(urls, files_to_upload, self._output, retry, retry_wait,
-                           ref_or_package=str(short_pref_name))
+                           ref_or_package=short_pref_name)
 
     def _upload_files(self, file_urls, files, output, retry, retry_wait, ref_or_package=None):
         t1 = time.time()
