@@ -5,7 +5,6 @@ import unittest
 from nose.plugins.attrib import attr
 
 from conans.test.utils.tools import TestClient
-from conans.util.files import load
 
 conanfile_py = """
 from conans import ConanFile

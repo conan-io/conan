@@ -1,8 +1,10 @@
 import json
 import os
+from collections import OrderedDict
 
 from conans.client.graph.graph import RECIPE_VIRTUAL, RECIPE_CONSUMER,\
     BINARY_BUILD
+from conans.client.graph.python_requires import PyRequires
 from conans.client.profile_loader import _load_profile
 from conans.errors import ConanException
 from conans.model.info import PACKAGE_ID_UNKNOWN
@@ -13,7 +15,7 @@ from conans.model.version import Version
 
 
 LOCKFILE = "conan.lock"
-LOCKFILE_VERSION = "0.1"
+LOCKFILE_VERSION = "0.2"
 
 
 class GraphLockFile(object):
@@ -43,6 +45,9 @@ class GraphLockFile(object):
         version = graph_json.get("version")
         if version:
             version = Version(version)
+            if version < "0.2":
+                raise ConanException("This lockfile was created with a previous incompatible "
+                                     "version. Please regenerate the lockfile")
             # Do something with it, migrate, raise...
         profile_host = graph_json.get("profile_host") or graph_json["profile"]
         # FIXME: Reading private very ugly
@@ -122,20 +127,29 @@ class GraphLock(object):
                 for edge in node.dependencies:
                     requires[repr(edge.require.ref)] = edge.dst.id
                 # It is necessary to lock the transitive python-requires too, for this node
-                python_reqs = {}
+                python_reqs = None
                 reqs = getattr(node.conanfile, "python_requires", {})
-                while reqs:
-                    python_reqs.update(reqs)
-                    partial = {}
-                    for req in reqs.values():
-                        partial.update(getattr(req.conanfile, "python_requires", {}))
-                    reqs = partial
+                if isinstance(reqs, dict):  # Old python_requires
+                    python_reqs = {}
+                    while reqs:
+                        python_reqs.update(reqs)
+                        partial = {}
+                        for req in reqs.values():
+                            partial.update(getattr(req.conanfile, "python_requires", {}))
+                        reqs = partial
 
-                python_reqs = [r.ref for _, r in python_reqs.items()] if python_reqs else None
-                graph_node = GraphLockNode(node.pref if node.ref else None,
-                                           python_reqs, node.conanfile.options.values, False,
-                                           requires, node.path)
+                    python_reqs = [r.ref for _, r in python_reqs.items()]
+                elif isinstance(reqs, PyRequires):
+                    # If py_requires are defined, they overwrite old python_reqs
+                    python_reqs = node.conanfile.python_requires.all_refs()
+                graph_node = GraphLockNode(node.pref if node.ref else None, python_reqs,
+                                           node.conanfile.options.values, False, requires, node.path)
                 self._nodes[node.id] = graph_node
+
+    @property
+    def initial_counter(self):
+        # IDs are string, we need to compute the maximum
+        return max(int(x) for x in self._nodes.keys())
 
     def root_node_ref(self):
         """ obtain the node in the graph that is not depended by anyone else,
@@ -169,8 +183,8 @@ class GraphLock(object):
         that can be converted to json
         """
         result = {}
-        nodes = {}
-        for id_, node in self._nodes.items():
+        nodes = OrderedDict()  # Serialized ordered, so lockfiles are more deterministic
+        for id_, node in sorted(self._nodes.items()):
             nodes[id_] = node.as_dict()
         result["nodes"] = nodes
         return result

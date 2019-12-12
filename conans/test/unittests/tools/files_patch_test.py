@@ -7,8 +7,7 @@ from parameterized.parameterized import parameterized
 from conans.client.graph.python_requires import ConanPythonRequire
 from conans.client.loader import ConanFileLoader
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient, TestBufferConanOutput,\
-    test_profile
+from conans.test.utils.tools import TestClient, TestBufferConanOutput, test_profile
 from conans.util.files import save, load
 
 base_conanfile = '''
@@ -82,8 +81,7 @@ class ToolsFilesPatchTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile,
                      "example.patch": patch})
         client.run("source .")
-        self.assertEqual(load(os.path.join(client.current_folder, "newfile")),
-                         "New file!")
+        self.assertEqual(client.load("newfile"), "New file!")
 
     def test_patch_strip_delete(self):
         conanfile = dedent("""
@@ -249,10 +247,10 @@ class ToolsFilesPatchTest(unittest.TestCase):
                      "bar.txt": bar})
         client.run("install .")
         client.run("build .")
-        bar_content = load(os.path.join(client.current_folder, "bar.txt"))
+        bar_content = client.load("bar.txt")
         self.assertIn(dedent("""Yo no creo en brujas, pero que las hay, las hay
                              """), bar_content)
-        foo_content = load(os.path.join(client.current_folder, "foo.txt"))
+        foo_content = client.load("foo.txt")
         self.assertIn(dedent("""For us, there is no spring.
 Just the wind that smells fresh before the storm."""), foo_content)
         self.assertIn("Running build()", client.out)
@@ -314,5 +312,5 @@ Z""")
                      "Jamroot": source})
         client.run("install .")
         client.run("build .")
-        content = load(os.path.join(client.current_folder, "Jamroot"))
+        content = client.load("Jamroot")
         self.assertIn(expected, content)

@@ -25,7 +25,7 @@ from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
 from conans.client.graph.graph_manager import GraphManager
 from conans.client.graph.printer import print_graph
 from conans.client.graph.proxy import ConanProxy
-from conans.client.graph.python_requires import ConanPythonRequire
+from conans.client.graph.python_requires import ConanPythonRequire, PyRequireLoader
 from conans.client.graph.range_resolver import RangeResolver
 from conans.client.hook_manager import HookManager
 from conans.client.importer import run_imports, undo_imports
@@ -188,7 +188,8 @@ class ConanApp(object):
         self.proxy = ConanProxy(self.cache, self.out, self.remote_manager)
         self.range_resolver = RangeResolver(self.cache, self.remote_manager)
         self.python_requires = ConanPythonRequire(self.proxy, self.range_resolver)
-        self.loader = ConanFileLoader(self.runner, self.out, self.python_requires)
+        self.pyreq_loader = PyRequireLoader(self.proxy, self.range_resolver)
+        self.loader = ConanFileLoader(self.runner, self.out, self.python_requires, self.pyreq_loader)
 
         self.binaries_analyzer = GraphBinariesAnalyzer(self.cache, self.out, self.remote_manager)
         self.graph_manager = GraphManager(self.out, self.cache, self.remote_manager, self.loader,
@@ -200,6 +201,7 @@ class ConanApp(object):
             remotes.select(remote_name)
         self.python_requires.enable_remotes(update=update, check_updates=check_updates,
                                             remotes=remotes)
+        self.pyreq_loader.enable_remotes(update=update, check_updates=check_updates, remotes=remotes)
         return remotes
 
 
@@ -261,7 +263,7 @@ class ConanAPIV1(object):
             ref = ConanFileReference.loads(path)
         except ConanException:
             conanfile_path = _get_conanfile_path(path, get_cwd(), py=True)
-            conanfile = self.app.loader.load_basic(conanfile_path)
+            conanfile = self.app.loader.load_named(conanfile_path, None, None, None, None)
         else:
             update = True if remote_name else False
             result = self.app.proxy.get_recipe(ref, update, update, remotes, ActionRecorder())
@@ -340,6 +342,8 @@ class ConanAPIV1(object):
             new_ref = cmd_export(self.app, conanfile_path, name, version, user, channel, keep_source,
                                  not not_export, graph_lock=graph_info.graph_lock,
                                  ignore_dirty=ignore_dirty)
+
+            self.app.range_resolver.clear_output()  # invalidate version range output
 
             # The new_ref contains the revision
             # To not break existing things, that they used this ref without revision
@@ -430,6 +434,9 @@ class ConanAPIV1(object):
         # Install packages without settings (fixed ids or all)
         if check_valid_ref(reference):
             ref = ConanFileReference.loads(reference)
+            if ref.revision and not self.app.config.revisions_enabled:
+                raise ConanException("Revisions not enabled in the client, specify a "
+                                     "reference without revision")
             if packages and ref.revision is None:
                 for package_id in packages:
                     if "#" in package_id:
@@ -689,10 +696,9 @@ class ConanAPIV1(object):
                                  "--build-folder and package folder can't be the same")
         conanfile = self.app.graph_manager.load_consumer_conanfile(conanfile_path, install_folder,
                                                                    deps_info_required=True)
-        with get_env_context_manager(conanfile):
-            packager.run_package_method(conanfile, None, source_folder, build_folder, package_folder,
-                                        install_folder, self.app.hook_manager, conanfile_path, None,
-                                        local=True, copy_info=True)
+        packager.run_package_method(conanfile, None, source_folder, build_folder, package_folder,
+                                    install_folder, self.app.hook_manager, conanfile_path, None,
+                                    local=True, copy_info=True)
 
     @api_method
     def source(self, path, source_folder=None, info_folder=None, cwd=None):

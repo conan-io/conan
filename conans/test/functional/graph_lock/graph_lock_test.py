@@ -65,7 +65,7 @@ class GraphLockCustomFilesTest(unittest.TestCase):
 
     def _check_lock(self, ref_b, rev_b=""):
         ref_b = repr(ConanFileReference.loads(ref_b))
-        lock_file = load(os.path.join(self.client.current_folder, "custom.lock"))
+        lock_file = self.client.load("custom.lock")
         lock_file_json = json.loads(lock_file)
         self.assertEqual(lock_file_json["version"], LOCKFILE_VERSION)
         self.assertEqual(2, len(lock_file_json["graph_lock"]["nodes"]))
@@ -91,6 +91,41 @@ class GraphLockCustomFilesTest(unittest.TestCase):
         client.save({"conanfile.py": self.consumer})
         client.run("install . --lockfile=custom.lock")
         self._check_lock("PkgB/0.1@")
+
+
+class ReproducibleLockfiles(unittest.TestCase):
+    def reproducible_lockfile_test(self):
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile().with_name("PkgA").with_version("0.1")})
+        client.run("create . PkgA/0.1@user/channel")
+
+        # Use a consumer with a version range
+        client.save({"conanfile.py": GenConanfile().with_name("PkgB").with_version("0.1")
+                                                   .with_require_plain("PkgA/[>=0.1]@user/channel")})
+        client.run("graph lock .")
+        lockfile = client.load(LOCKFILE)
+        client.run("graph lock .")
+        lockfile2 = client.load(LOCKFILE)
+        self.assertEqual(lockfile, lockfile2)
+
+    def reproducible_lockfile_txt_test(self):
+        client = TestClient()
+        client.save({"conanfile.txt": ""})
+        client.run("install .")
+        lockfile = client.load("conan.lock")
+        client.run("install .")
+        lockfile2 = client.load("conan.lock")
+        self.assertEqual(lockfile, lockfile2)
+
+    def error_old_format_test(self):
+        client = TestClient()
+        client.save({"conanfile.txt": ""})
+        client.run("install .")
+        lockfile = client.load("conan.lock")
+        lockfile = lockfile.replace('"0.2"', '"0.1"').replace('"0"', '"UUID"')
+        client.save({"conan.lock": lockfile})
+        client.run("install . --lockfile", assert_error=True)
+        self.assertIn("This lockfile was created with a previous incompatible version", client.out)
 
 
 class GraphLockVersionRangeTest(unittest.TestCase):
@@ -121,7 +156,7 @@ class GraphLockVersionRangeTest(unittest.TestCase):
         client.save({"conanfile.py": str(self.consumer)})
 
     def _check_lock(self, ref_b, rev_b=""):
-        lock_file = load(os.path.join(self.client.current_folder, LOCKFILE))
+        lock_file = self.client.load(LOCKFILE)
         lock_file_json = json.loads(lock_file)
         self.assertEqual(2, len(lock_file_json["graph_lock"]["nodes"]))
         self.assertIn("PkgA/0.1@user/channel#fa090239f8ba41ad559f8e934494ee2a:"
@@ -382,9 +417,10 @@ class GraphLockRevisionTest(unittest.TestCase):
         self._check_lock("PkgB/0.1@")
 
         # If we create a new PkgA revision, for example adding info
-        client.save({"conanfile.py": GenConanfile().with_name("PkgA").with_version("0.1")
-                                        .with_package_info(cpp_info={"libs": ["mylibPkgA0.1lib"]},
-                                                           env_info={"MYENV": ["myenvPkgA0.1env"]})})
+        pkga = GenConanfile().with_name("PkgA").with_version("0.1")
+        pkga.with_package_info(cpp_info={"libs": ["mylibPkgA0.1lib"]},
+                               env_info={"MYENV": ["myenvPkgA0.1env"]})
+        client.save({"conanfile.py": pkga})
 
         client.run("create . PkgA/0.1@user/channel")
         client.save({"conanfile.py": str(consumer)})

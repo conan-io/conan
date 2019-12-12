@@ -1,6 +1,5 @@
 import os
 
-from six.moves import urllib
 from six.moves.configparser import ConfigParser, NoSectionError
 
 from conans.errors import ConanException
@@ -124,9 +123,7 @@ default_package_id_mode = semver_direct_mode # environment CONAN_DEFAULT_PACKAGE
 # verbose_traceback = False           # environment CONAN_VERBOSE_TRACEBACK
 # error_on_override = False           # environment CONAN_ERROR_ON_OVERRIDE
 # bash_path = ""                      # environment CONAN_BASH_PATH (only windows)
-# recipe_linter = False               # environment CONAN_RECIPE_LINTER
 # read_only_cache = True              # environment CONAN_READ_ONLY_CACHE
-# pylintrc = path/to/pylintrc_file    # environment CONAN_PYLINTRC
 # cache_no_locks = True               # environment CONAN_CACHE_NO_LOCKS
 # user_home_short = your_path         # environment CONAN_USER_HOME_SHORT
 # use_always_short_paths = False      # environment CONAN_USE_ALWAYS_SHORT_PATHS
@@ -207,16 +204,13 @@ class ConanClientConfigParser(ConfigParser, object):
                "CONAN_COMPRESSION_LEVEL": self._env_c("general.compression_level", "CONAN_COMPRESSION_LEVEL", "9"),
                "CONAN_NON_INTERACTIVE": self._env_c("general.non_interactive", "CONAN_NON_INTERACTIVE", "False"),
                "CONAN_SKIP_BROKEN_SYMLINKS_CHECK": self._env_c("general.skip_broken_symlinks_check", "CONAN_SKIP_BROKEN_SYMLINKS_CHECK", "False"),
-               "CONAN_PYLINTRC": self._env_c("general.pylintrc", "CONAN_PYLINTRC", None),
                "CONAN_CACHE_NO_LOCKS": self._env_c("general.cache_no_locks", "CONAN_CACHE_NO_LOCKS", "False"),
-               "CONAN_PYLINT_WERR": self._env_c("general.pylint_werr", "CONAN_PYLINT_WERR", None),
                "CONAN_SYSREQUIRES_SUDO": self._env_c("general.sysrequires_sudo", "CONAN_SYSREQUIRES_SUDO", "False"),
                "CONAN_SYSREQUIRES_MODE": self._env_c("general.sysrequires_mode", "CONAN_SYSREQUIRES_MODE", "enabled"),
                "CONAN_REQUEST_TIMEOUT": self._env_c("general.request_timeout", "CONAN_REQUEST_TIMEOUT", None),
                "CONAN_RETRY": self._env_c("general.retry", "CONAN_RETRY", None),
                "CONAN_RETRY_WAIT": self._env_c("general.retry_wait", "CONAN_RETRY_WAIT", None),
                "CONAN_VS_INSTALLATION_PREFERENCE": self._env_c("general.vs_installation_preference", "CONAN_VS_INSTALLATION_PREFERENCE", None),
-               "CONAN_RECIPE_LINTER": self._env_c("general.recipe_linter", "CONAN_RECIPE_LINTER", "True"),
                "CONAN_CPU_COUNT": self._env_c("general.cpu_count", "CONAN_CPU_COUNT", None),
                "CONAN_READ_ONLY_CACHE": self._env_c("general.read_only_cache", "CONAN_READ_ONLY_CACHE", None),
                "CONAN_USER_HOME_SHORT": self._env_c("general.user_home_short", "CONAN_USER_HOME_SHORT", None),
@@ -406,6 +400,16 @@ class ConanClientConfigParser(ConfigParser, object):
                 default_package_id_mode = self.get_item("general.default_package_id_mode")
         except ConanException:
             return "semver_direct_mode"
+        return default_package_id_mode
+
+    @property
+    def default_python_requires_id_mode(self):
+        try:
+            default_package_id_mode = get_env("CONAN_DEFAULT_PYTHON_REQUIRES_ID_MODE")
+            if default_package_id_mode is None:
+                default_package_id_mode = self.get_item("general.default_python_requires_id_mode")
+        except ConanException:
+            return "minor_mode"
         return default_package_id_mode
 
     @property

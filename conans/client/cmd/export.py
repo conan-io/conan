@@ -4,7 +4,6 @@ import shutil
 
 import six
 
-from conans.client.cmd.export_linter import conan_linter
 from conans.client.file_copier import FileCopier
 from conans.client.output import Color, ScopedOutput
 from conans.client.remover import DiskRemover
@@ -81,7 +80,7 @@ def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
         node_id = graph_lock.get_node(ref)
         python_requires = graph_lock.python_requires(node_id)
         # TODO: check that the locked python_requires are different from the loaded ones
-        app.range_resolver.output  # invalidate previous version range output
+        app.range_resolver.clear_output()  # invalidate previous version range output
         conanfile = loader.load_export(conanfile_path, conanfile.name, conanfile.version,
                                        ref.user, ref.channel, python_requires)
 
@@ -102,7 +101,6 @@ def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
     logger.debug("EXPORT: %s" % conanfile_path)
 
     output.highlight("Exporting package recipe")
-    conan_linter(conanfile_path, output)
     output = conanfile.output
 
     # Get previous digest

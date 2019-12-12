@@ -1,7 +1,102 @@
 import os
+import platform
+import textwrap
+
+from jinja2 import Template
 
 from conans.client.tools.oss import OSInfo
 from conans.model import Generator
+
+
+sh_activate_tpl = Template(textwrap.dedent("""
+    #!/usr/bin/env sh
+
+    {%- for it in modified_vars %}
+    export CONAN_OLD_{{it}}="${{it}}"
+    {%- endfor %}
+
+    while read line; do
+        LINE="$(eval echo $line)";
+        export "$LINE";
+    done < "{{ environment_file }}"
+
+    export CONAN_OLD_PS1=$PS1
+    export PS1="({{venv_name}}) $PS1"
+
+"""))
+
+sh_deactivate_tpl = Template(textwrap.dedent("""
+    #!/usr/bin/env sh
+    export PS1="$CONAN_OLD_PS1"
+    unset CONAN_OLD_PS1
+
+    {% for it in modified_vars %}
+    export {{it}}="$CONAN_OLD_{{it}}"
+    unset CONAN_OLD_{{it}}
+    {%- endfor %}
+    {%- for it in new_vars %}
+    unset {{it}}
+    {%- endfor %}
+"""))
+
+cmd_activate_tpl = Template(textwrap.dedent("""
+    @echo off
+    
+    {%- for it in modified_vars %}
+    SET "CONAN_OLD_{{it}}=%{{it}}%"
+    {%- endfor %}
+    
+    FOR /F "usebackq tokens=1,* delims={{delim}}" %%i IN ("{{ environment_file }}") DO (
+        CALL SET "%%i=%%j"
+    )
+    
+    SET "CONAN_OLD_PROMPT=%PROMPT%"
+    SET "PROMPT=({{venv_name}}) %PROMPT%"
+"""))
+
+cmd_deactivate_tpl = Template(textwrap.dedent("""
+    @echo off
+    
+    SET "PROMPT=%CONAN_OLD_PROMPT%"
+    SET "CONAN_OLD_PROMPT="
+    
+    {% for it in modified_vars %}
+    SET "{{it}}=%CONAN_OLD_{{it}}%"
+    SET "CONAN_OLD_{{it}}="
+    {%- endfor %}
+    {%- for it in new_vars %}
+    SET "{{it}}="
+    {%- endfor %}
+"""))
+
+ps1_activate_tpl = Template(textwrap.dedent("""
+    {%- for it in modified_vars %}
+    $env:CONAN_OLD_{{it}}=$env:{{it}}
+    {%- endfor %}
+    
+    foreach ($line in Get-Content "{{ environment_file }}") {
+        $var,$value = $line -split '=',2
+        $value_expanded = $ExecutionContext.InvokeCommand.ExpandString($value)
+        Set-Item env:\\$var -Value "$value_expanded"
+    }
+    
+    function global:_old_conan_prompt {""}
+    $function:_old_conan_prompt = $function:prompt
+    function global:prompt { write-host "({{venv_name}}) " -nonewline; & $function:_old_conan_prompt }
+"""))
+
+ps1_deactivate_tpl = Template(textwrap.dedent("""
+    $function:prompt = $function:_old_conan_prompt
+    remove-item function:_old_conan_prompt
+    
+    {% for it in modified_vars %}
+    $env:{{it}}=$env:CONAN_OLD_{{it}}
+    Remove-Item env:CONAN_OLD_{{it}}
+    {%- endfor %}
+    {%- for it in new_vars %}
+    Remove-Item env:{{it}}
+    {%- endfor %}
+"""))
 
 
 class VirtualEnvGenerator(Generator):
@@ -28,7 +123,7 @@ class VirtualEnvGenerator(Generator):
         (e.g., cmd, ps1, sh).
         """
         if flavor == "cmd":
-            return "%%%s%%" % name
+            return "%{}%".format(name)
         if flavor == "ps1":
             return "$env:%s" % name
         # flavor == sh
@@ -45,7 +140,7 @@ class VirtualEnvGenerator(Generator):
         if flavor == "cmd":
             path_sep, quote_elements, quote_full_value = ";", False, False
         elif flavor == "ps1":
-            path_sep, quote_elements, quote_full_value = ";", False, True
+            path_sep, quote_elements, quote_full_value = ";", False, False
         elif flavor == "sh":
             path_sep, quote_elements, quote_full_value = ":", True, False
 
@@ -71,74 +166,97 @@ class VirtualEnvGenerator(Generator):
                 # single value
                 value = "\"%s\"" % value if quote_elements else value
             activate_value = "\"%s\"" % value if quote_full_value else value
+            if platform.system() != "Windows":
+                activate_value = activate_value.replace("\\", "\\\\")
 
             # deactivate values
-            value = os.environ.get(name, "")
-            deactivate_value = "\"%s\"" % value if quote_full_value or quote_elements else value
-            yield name, activate_value, deactivate_value
+            existing = name in os.environ
+            #value = os.environ.get(name, "")
+            #deactivate_value = "\"%s\"" % value if quote_full_value or quote_elements else value
+            yield name, activate_value, existing
 
     def _sh_lines(self):
-        variables = [("OLD_PS1", "$PS1"),
-                     ("PS1", "(%s) $PS1" % self.venv_name)]
-        variables.extend(self.env.items())
+        ret = list(self._format_values("sh", self.env.items()))
+        modified_vars = [it[0] for it in ret if it[2]]
+        new_vars = [it[0] for it in ret if not it[2]]
 
-        activate_lines = []
-        deactivate_lines = ["%s=%s" % ("PS1", "$OLD_PS1"), "export PS1"]
+        environment_filepath = os.path.abspath(
+            os.path.join(self.output_path, "environment{}.sh.env".format(self.suffix)))
+        activate_content = sh_activate_tpl.render(environment_file=environment_filepath,
+                                                  modified_vars=modified_vars, new_vars=new_vars,
+                                                  venv_name=self.venv_name)
+        activate_lines = activate_content.splitlines()
+        deactivate_content = sh_deactivate_tpl.render(modified_vars=modified_vars, new_vars=new_vars)
+        deactivate_lines = deactivate_content.splitlines()
 
-        for name, activate, deactivate in self._format_values("sh", variables):
-            activate_lines.append("%s=%s" % (name, activate))
-            activate_lines.append("export %s" % name)
-            if name != "PS1":
-                if deactivate == '""':
-                    deactivate_lines.append("unset %s" % name)
-                else:
-                    deactivate_lines.append("%s=%s" % (name, deactivate))
-                    deactivate_lines.append("export %s" % name)
-        activate_lines.append('')
-        deactivate_lines.append('')
-        return activate_lines, deactivate_lines
+        environment_lines = []
+        for name, activate, _ in self._format_values("sh", self.env.items()):
+            environment_lines.append("%s=%s" % (name, activate))
+
+        environment_lines.append('')
+        return activate_lines, deactivate_lines, environment_lines
 
     def _cmd_lines(self):
-        variables = [("PROMPT", "(%s) %%PROMPT%%" % self.venv_name)]
-        variables.extend(self.env.items())
+        ret = list(self._format_values("cmd", self.env.items()))
+        modified_vars = [it[0] for it in ret if it[2]]
+        new_vars = [it[0] for it in ret if not it[2]]
 
-        activate_lines = ["@echo off"]
-        deactivate_lines = ["@echo off"]
-        for name, activate, deactivate in self._format_values("cmd", variables):
-            activate_lines.append("SET %s=%s" % (name, activate))
-            deactivate_lines.append("SET %s=%s" % (name, deactivate))
-        activate_lines.append('')
-        deactivate_lines.append('')
-        return activate_lines, deactivate_lines
+        environment_filepath = os.path.abspath(
+            os.path.join(self.output_path, "environment{}.bat.env".format(self.suffix)))
+        activate_content = cmd_activate_tpl.render(environment_file=environment_filepath,
+                                                   modified_vars=modified_vars, new_vars=new_vars,
+                                                   delim="=",  # TODO: Test a env var with '=' in the value, it will require quotes around it
+                                                   venv_name=self.venv_name)
+        activate_lines = activate_content.splitlines()
+        deactivate_content = cmd_deactivate_tpl.render(modified_vars=modified_vars, new_vars=new_vars)
+        deactivate_lines = deactivate_content.splitlines()
+
+        environment_lines = []
+        for name, activate, _ in ret:
+            environment_lines.append("%s=%s" % (name, activate))  # TODO: May need extra quotes here
+        environment_lines.append('')
+
+        return activate_lines, deactivate_lines, environment_lines
 
     def _ps1_lines(self):
-        activate_lines = ['function global:_old_conan_prompt {""}',
-                          '$function:_old_conan_prompt = $function:prompt',
-                          'function global:prompt { write-host "(%s) " -nonewline;'
-                          ' & $function:_old_conan_prompt }' % self.venv_name]
-        deactivate_lines = ['$function:prompt = $function:_old_conan_prompt',
-                            'remove-item function:_old_conan_prompt']
-        for name, activate, deactivate in self._format_values("ps1", self.env.items()):
-            activate_lines.append('$env:%s = %s' % (name, activate))
-            deactivate_lines.append('$env:%s = %s' % (name, deactivate))
-        activate_lines.append('')
-        return activate_lines, deactivate_lines
+        ret = list(self._format_values("ps1", self.env.items()))
+        modified_vars = [it[0] for it in ret if it[2]]
+        new_vars = [it[0] for it in ret if not it[2]]
+
+        environment_filepath = os.path.abspath(
+            os.path.join(self.output_path, "environment{}.ps1.env".format(self.suffix)))
+        activate_content = ps1_activate_tpl.render(environment_file=environment_filepath,
+                                                   modified_vars=modified_vars, new_vars=new_vars,
+                                                   venv_name=self.venv_name)
+        activate_lines = activate_content.splitlines()
+        deactivate_content = ps1_deactivate_tpl.render(modified_vars=modified_vars, new_vars=new_vars)
+        deactivate_lines = deactivate_content.splitlines()
+
+        environment_lines = []
+        for name, activate, _ in ret:
+            environment_lines.append("%s=%s" % (name, activate))
+        environment_lines.append('')
+
+        return activate_lines, deactivate_lines, environment_lines
 
     @property
     def content(self):
         os_info = OSInfo()
         result = {}
         if os_info.is_windows and not os_info.is_posix:
-            activate, deactivate = self._cmd_lines()
+            activate, deactivate, envfile = self._cmd_lines()
             result["activate{}.bat".format(self.suffix)] = os.linesep.join(activate)
             result["deactivate{}.bat".format(self.suffix)] = os.linesep.join(deactivate)
+            result["environment{}.bat.env".format(self.suffix)] = os.linesep.join(envfile)
 
-            activate, deactivate = self._ps1_lines()
+            activate, deactivate, envfile = self._ps1_lines()
             result["activate{}.ps1".format(self.suffix)] = os.linesep.join(activate)
             result["deactivate{}.ps1".format(self.suffix)] = os.linesep.join(deactivate)
+            result["environment{}.ps1.env".format(self.suffix)] = os.linesep.join(envfile)
 
-        activate, deactivate = self._sh_lines()
+        activate, deactivate, envfile = self._sh_lines()
         result["activate{}.sh".format(self.suffix)] = os.linesep.join(activate)
         result["deactivate{}.sh".format(self.suffix)] = os.linesep.join(deactivate)
+        result["environment{}.sh.env".format(self.suffix)] = os.linesep.join(envfile)
 
         return result

@@ -1,6 +1,5 @@
 import unittest
 
-from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient, GenConanfile
 

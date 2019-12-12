@@ -53,11 +53,11 @@ class ProfileTest(unittest.TestCase):
                        env=[("A_VAR", "A_VALUE"), ("PREPEND_VAR", ["new_path", "other_path"])],
                        package_env={"Hello0": [("OTHER_VAR", "2")]})
         self.client.run("install . -pr envs -g virtualenv")
-        content = load(os.path.join(self.client.current_folder, "activate.sh"))
+        content = self.client.load("environment.sh.env")
         self.assertIn(":".join(["PREPEND_VAR=\"new_path\"", "\"other_path\""]) +
                       "${PREPEND_VAR+:$PREPEND_VAR}", content)
         if platform.system() == "Windows":
-            content = load(os.path.join(self.client.current_folder, "activate.bat"))
+            content = self.client.load("environment.bat.env")
             self.assertIn(";".join(["PREPEND_VAR=new_path", "other_path", "%PREPEND_VAR%"]),
                           content)
 
@@ -213,13 +213,13 @@ class ProfileTest(unittest.TestCase):
         self.client.save(files)
         self.client.run("export . lasote/stable")
         self.client.run("install . --build missing -pr vs_12_86")
-        info = load(os.path.join(self.client.current_folder, "conaninfo.txt"))
+        info = self.client.load("conaninfo.txt")
         for setting, value in profile_settings.items():
             self.assertIn("%s=%s" % (setting, value), info)
 
         # Try to override some settings in install command
         self.client.run("install . --build missing -pr vs_12_86 -s compiler.version=14")
-        info = load(os.path.join(self.client.current_folder, "conaninfo.txt"))
+        info = self.client.load("conaninfo.txt")
         for setting, value in profile_settings.items():
             if setting != "compiler.version":
                 self.assertIn("%s=%s" % (setting, value), info)
@@ -237,7 +237,7 @@ class ProfileTest(unittest.TestCase):
                        package_settings=package_settings)
         # Try to override some settings in install command
         self.client.run("install . --build missing -pr vs_12_86_Hello0_gcc -s compiler.version=14")
-        info = load(os.path.join(self.client.current_folder, "conaninfo.txt"))
+        info = self.client.load("conaninfo.txt")
         self.assertIn("compiler=gcc", info)
         self.assertIn("compiler.libcxx=libstdc++11", info)
 
@@ -248,7 +248,7 @@ class ProfileTest(unittest.TestCase):
                        package_settings=package_settings)
         # Try to override some settings in install command
         self.client.run("install . --build missing -pr vs_12_86_Hello0_gcc -s compiler.version=14")
-        info = load(os.path.join(self.client.current_folder, "conaninfo.txt"))
+        info = self.client.load("conaninfo.txt")
         self.assertIn("compiler=Visual Studio", info)
         self.assertNotIn("compiler.libcxx", info)
 
@@ -260,7 +260,7 @@ class ProfileTest(unittest.TestCase):
         # Try to override some settings in install command
         self.client.run("install . --build missing -pr vs_12_86_Hello0_gcc"
                         " -s compiler.version=14 -s Hello0:compiler.libcxx=libstdc++")
-        info = load(os.path.join(self.client.current_folder, "conaninfo.txt"))
+        info = self.client.load("conaninfo.txt")
         self.assertIn("compiler=gcc", info)
         self.assertNotIn("compiler.libcxx=libstdc++11", info)
         self.assertIn("compiler.libcxx=libstdc++", info)
@@ -287,7 +287,7 @@ class ProfileTest(unittest.TestCase):
                         package_settings=package_settings)
         # Try to override some settings in install command
         self.client.run("install . lasote/testing -pr myprofile")
-        info = load(os.path.join(self.client.current_folder, "conaninfo.txt"))
+        info = self.client.load("conaninfo.txt")
         self.assertIn("compiler=gcc", info)
         self.assertIn("compiler.libcxx=libstdc++11", info)
         self.assertIn("compiler.version=4.8", info)
@@ -298,7 +298,7 @@ class ProfileTest(unittest.TestCase):
                         package_settings=package_settings)
         # Try to override some settings in install command
         self.client.run("install . lasote/testing -pr myprofile")
-        info = load(os.path.join(self.client.current_folder, "conaninfo.txt"))
+        info = self.client.load("conaninfo.txt")
         self.assertIn("compiler=Visual Studio", info)
         self.assertIn("compiler.runtime=MD", info)
         self.assertIn("compiler.version=12", info)
@@ -314,7 +314,7 @@ class ProfileTest(unittest.TestCase):
 
         self.client.save(files)
         self.client.run("install . --build missing -pr vs_12_86")
-        info = load(os.path.join(self.client.current_folder, "conaninfo.txt"))
+        info = self.client.load("conaninfo.txt")
         self.assertIn("language=1", info)
         self.assertIn("static=False", info)
 

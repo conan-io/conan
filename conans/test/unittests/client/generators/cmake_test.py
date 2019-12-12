@@ -1,11 +1,8 @@
 import os
-import platform
 import re
-import textwrap
 import unittest
 
 import six
-from parameterized import parameterized
 
 from conans.client.build.cmake_flags import CMakeDefinitionsBuilder
 from conans.client.conf import default_settings_yml
@@ -20,9 +17,8 @@ from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestBufferConanOutput
-from conans.test.utils.tools import TestClient
 from conans.util.files import save
-from conans.test.utils.tools import TestClient, GenConanfile
+
 
 class _MockSettings(object):
     build_type = None
@@ -423,7 +419,8 @@ class CMakeCppInfoNameTest(unittest.TestCase):
         content = generator.content
         six.assertCountEqual(self, ['MyPkG2Targets.cmake', 'MyPkGConfig.cmake', 'MyPkG2Config.cmake',
                                     'MyPkGTargets.cmake', 'MyPkGTarget-debug.cmake',
-                                    'MyPkG2Target-debug.cmake'], content.keys())
+                                    'MyPkG2Target-debug.cmake', 'MyPkGConfigVersion.cmake',
+                                    'MyPkG2ConfigVersion.cmake'], content.keys())
         self.assertNotIn("my_pkg", content["MyPkGConfig.cmake"])
         self.assertNotIn("MY_PKG", content["MyPkGConfig.cmake"])
         self.assertNotIn("my_pkg", content["MyPkG2Config.cmake"])
@@ -433,6 +430,90 @@ class CMakeCppInfoNameTest(unittest.TestCase):
         self.assertIn("add_library(MyPkG2::MyPkG2 INTERFACE IMPORTED)",
                       content["MyPkG2Targets.cmake"])
         self.assertIn("find_dependency(MyPkG REQUIRED NO_MODULE)", content["MyPkG2Config.cmake"])
+
+
+class CMakeCppInfoNamesTest(unittest.TestCase):
+    """
+    Test cpp_info.names["generator"] values are applied in generators instead of the cpp_info.name
+    """
+
+    def setUp(self):
+        self.conanfile = ConanFile(TestBufferConanOutput(), None)
+        settings = _MockSettings()
+        settings.build_type = "Debug"
+        self.conanfile.initialize(settings, EnvValues())
+        ref = ConanFileReference.loads("my_pkg/0.1@lasote/stables")
+        cpp_info = CppInfo("dummy_root_folder1")
+        cpp_info.name = "MyPkG"
+        cpp_info.names["cmake"] = "MyCMakeName"
+        cpp_info.names["cmake_multi"] = "MyCMakeMultiName"
+        cpp_info.names["cmake_find_package"] = "MyCMakeFindPackageName"
+        cpp_info.names["cmake_find_package_multi"] = "MyCMakeFindPackageMultiName"
+        self.conanfile.deps_cpp_info.update(cpp_info, ref.name)
+        ref = ConanFileReference.loads("my_pkg2/0.1@lasote/stables")
+        cpp_info = CppInfo("dummy_root_folder2")
+        cpp_info.name = "MyPkG2"
+        cpp_info.names["cmake"] = "MyCMakeName2"
+        cpp_info.names["cmake_multi"] = "MyCMakeMultiName2"
+        cpp_info.names["cmake_find_package"] = "MyCMakeFindPackageName2"
+        cpp_info.names["cmake_find_package_multi"] = "MyCMakeFindPackageMultiName2"
+        cpp_info.public_deps = ["my_pkg"]
+        self.conanfile.deps_cpp_info.update(cpp_info, ref.name)
+
+    def cmake_test(self):
+        generator = CMakeGenerator(self.conanfile)
+        content = generator.content
+        self.assertNotIn("MyPkG", content)
+        self.assertNotIn("MyPkG2", content)
+        self.assertIn('add_library(CONAN_PKG::MyCMakeName INTERFACE IMPORTED)', content)
+        self.assertIn('add_library(CONAN_PKG::MyCMakeName2 INTERFACE IMPORTED)', content)
+
+    def cmake_multi_test(self):
+        generator = CMakeMultiGenerator(self.conanfile)
+        content = generator.content
+        self.assertNotIn("MyPkG", content["conanbuildinfo_multi.cmake"])
+        self.assertNotIn("MyPkG2", content["conanbuildinfo_multi.cmake"])
+        self.assertIn('add_library(CONAN_PKG::MyCMakeMultiName INTERFACE IMPORTED)',
+                      content["conanbuildinfo_multi.cmake"])
+        self.assertIn('add_library(CONAN_PKG::MyCMakeMultiName2 INTERFACE IMPORTED)',
+                      content["conanbuildinfo_multi.cmake"])
+
+    def cmake_find_package_test(self):
+        generator = CMakeFindPackageGenerator(self.conanfile)
+        content = generator.content
+        self.assertIn("FindMyCMakeFindPackageName.cmake", content.keys())
+        self.assertIn("FindMyCMakeFindPackageName2.cmake", content.keys())
+        self.assertNotIn("MyPkG", content["FindMyCMakeFindPackageName.cmake"])
+        self.assertNotIn("MyPkG2", content["FindMyCMakeFindPackageName2.cmake"])
+        self.assertIn("add_library(MyCMakeFindPackageName::MyCMakeFindPackageName INTERFACE IMPORTED)",
+                      content["FindMyCMakeFindPackageName.cmake"])
+        self.assertIn("add_library(MyCMakeFindPackageName2::MyCMakeFindPackageName2 INTERFACE IMPORTED)",
+                      content["FindMyCMakeFindPackageName2.cmake"])
+        self.assertIn("find_dependency(MyCMakeFindPackageName REQUIRED)",
+                      content["FindMyCMakeFindPackageName2.cmake"])
+
+    def cmake_find_package_multi_test(self):
+        generator = CMakeFindPackageMultiGenerator(self.conanfile)
+        content = generator.content
+        six.assertCountEqual(self, ['MyCMakeFindPackageMultiName2Targets.cmake',
+                                    'MyCMakeFindPackageMultiNameConfig.cmake',
+                                    'MyCMakeFindPackageMultiName2Config.cmake',
+                                    'MyCMakeFindPackageMultiNameTargets.cmake',
+                                    'MyCMakeFindPackageMultiNameTarget-debug.cmake',
+                                    'MyCMakeFindPackageMultiName2Target-debug.cmake',
+                                    'MyCMakeFindPackageMultiNameConfigVersion.cmake',
+                                    'MyCMakeFindPackageMultiName2ConfigVersion.cmake'],
+                             content.keys())
+        self.assertNotIn("MyPkG", content["MyCMakeFindPackageMultiNameConfig.cmake"])
+        self.assertNotIn("MyPkG", content["MyCMakeFindPackageMultiName2Config.cmake"])
+        self.assertIn(
+            "add_library(MyCMakeFindPackageMultiName::MyCMakeFindPackageMultiName INTERFACE IMPORTED)",
+            content["MyCMakeFindPackageMultiNameTargets.cmake"])
+        self.assertIn(
+            "add_library(MyCMakeFindPackageMultiName2::MyCMakeFindPackageMultiName2 INTERFACE IMPORTED)",
+            content["MyCMakeFindPackageMultiName2Targets.cmake"])
+        self.assertIn("find_dependency(MyCMakeFindPackageMultiName REQUIRED NO_MODULE)",
+                      content["MyCMakeFindPackageMultiName2Config.cmake"])
 
 
 class CMakeBuildModulesTest(unittest.TestCase):

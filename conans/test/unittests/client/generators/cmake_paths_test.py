@@ -1,6 +1,5 @@
 import os
 import unittest
-from collections import namedtuple
 
 from conans.client.generators.cmake_paths import CMakePathsGenerator
 from conans.model.build_info import CppInfo
@@ -68,3 +67,15 @@ class CMakePathsGeneratorTest(unittest.TestCase):
         conanfile.deps_cpp_info.update(cpp_info, "pkg_reference_name")
         generator = CMakePathsGenerator(conanfile)
         self.assertIn('set(CONAN_PKGCMAKENAME_ROOT', generator.content)
+
+    def cpp_info_names_test(self):
+        settings = _MockSettings("Release")
+        conanfile = ConanFile(TestBufferConanOutput(), None)
+        conanfile.initialize(settings, EnvValues())
+        tmp = temp_folder()
+        cpp_info = CppInfo(tmp)
+        cpp_info.name = "PkgCMakeName"
+        cpp_info.names["cmake_paths"] = "MyCMakePathsPkgName"
+        conanfile.deps_cpp_info.update(cpp_info, "pkg_reference_name")
+        generator = CMakePathsGenerator(conanfile)
+        self.assertIn('set(CONAN_MYCMAKEPATHSPKGNAME_ROOT', generator.content)

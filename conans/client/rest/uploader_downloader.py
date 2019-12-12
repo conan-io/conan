@@ -3,11 +3,13 @@ import traceback
 import time
 from copy import copy
 
+import six
+
 from conans.util import progress_bar
 from conans.client.rest import response_to_str
 from conans.errors import AuthenticationException, ConanConnectionError, ConanException, \
     NotFoundException, ForbiddenException, RequestErrorException
-from conans.util.files import mkdir, save_append, sha1sum, to_file_bytes
+from conans.util.files import mkdir, sha1sum
 from conans.util.log import logger
 from conans.util.tracer import log_download
 
@@ -21,7 +23,7 @@ class FileUploader(object):
         self.verify = verify
 
     def upload(self, url, abs_path, auth=None, dedup=False, retry=None, retry_wait=None,
-               headers=None):
+               headers=None, display_name=None):
         retry = retry if retry is not None else self.requester.retry
         retry = retry if retry is not None else 1
         retry_wait = retry_wait if retry_wait is not None else self.requester.retry_wait
@@ -50,26 +52,29 @@ class FileUploader(object):
                 return response
 
         ret = call_with_retry(self.output, retry, retry_wait, self._upload_file, url,
-                              abs_path=abs_path, headers=headers, auth=auth)
+                              abs_path=abs_path, headers=headers, auth=auth,
+                              display_name=display_name)
         return ret
 
-    def _upload_file(self, url, abs_path,  headers, auth):
+    def _upload_file(self, url, abs_path,  headers, auth, display_name=None):
 
         file_size = os.stat(abs_path).st_size
         file_name = os.path.basename(abs_path)
         description = "Uploading {}".format(file_name)
+        post_description = "Uploaded {}".format(
+            file_name) if not display_name else "Uploaded {} -> {}".format(file_name, display_name)
 
-        def load_in_chunks(file, size):
+        def load_in_chunks(_file, size):
             """Lazy function (generator) to read a file piece by piece.
             Default chunk size: 1k."""
             while True:
-                chunk = file.read(size)
+                chunk = _file.read(size)
                 if not chunk:
                     break
                 yield chunk
 
         with open(abs_path, mode='rb') as file_handler:
-            progress = progress_bar.Progress(file_size, self.output, description, print_dot=True)
+            progress = progress_bar.Progress(file_size, self.output, description, post_description)
             chunk_size = 1024
             data = progress.update(load_in_chunks(file_handler, chunk_size), chunk_size)
             iterable_to_file = IterableToFileAdapter(data, file_size)
@@ -173,7 +178,9 @@ class FileDownloader(object):
                 mkdir(os.path.dirname(path))
                 with open(path, 'wb') as file_handler:
                     for chunk in chunks:
-                        file_handler.write(to_file_bytes(chunk))
+                        assert ((six.PY3 and isinstance(chunk, bytes)) or
+                                (six.PY2 and isinstance(chunk, str)))
+                        file_handler.write(chunk)
                         downloaded_size += len(chunk)
             else:
                 ret_data = bytearray()
@@ -188,7 +195,7 @@ class FileDownloader(object):
             total_length = response.headers.get('content-length') or len(response.content)
             total_length = int(total_length)
             description = "Downloading {}".format(os.path.basename(file_path)) if file_path else None
-            progress = progress_bar.Progress(total_length, self.output, description, print_dot=False)
+            progress = progress_bar.Progress(total_length, self.output, description)
 
             chunk_size = 1024 if not file_path else 1024 * 100
             encoding = response.headers.get('content-encoding')
@@ -214,11 +221,6 @@ class FileDownloader(object):
             # If this part failed, it means problems with the connection to server
             raise ConanConnectionError("Download failed, check server, possibly try again\n%s"
                                        % str(e))
-
-
-def print_progress(output, units, progress=""):
-    if output.is_terminal:
-        output.rewrite_line("[%s%s] %s" % ('=' * units, ' ' * (50 - units), progress))
 
 
 def call_with_retry(out, retry, retry_wait, method, *args, **kwargs):
