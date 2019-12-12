@@ -40,7 +40,7 @@ def compile_local_workflow(testcase, client, profile):
 def _compile_cache_workflow(testcase, client, profile, use_toolchain):
     # Compile the app in the cache
     pref = client.create(ref=ConanFileReference.loads("app/version@user/channel"), conanfile=None,
-                         args=" --profile={} -o use_toolchain={}".format(profile, use_toolchain))
+                         args=" --profile={}".format(profile))
     if use_toolchain:
         testcase.assertIn("Using Conan toolchain", client.out)
 
@@ -499,11 +499,7 @@ class AdjustAutoTestCase(unittest.TestCase):
 
         self.assertIn(">> CMAKE_INSTALL_NAME_DIR: ", configure_out)
         self.assertIn(">> CMAKE_SKIP_RPATH: 1", configure_out)
-
-        if self.use_toolchain:
-            self.assertEqual("1", cmake_cache["CMAKE_SKIP_RPATH:BOOL"])
-        else:
-            self.assertEqual("NO", cmake_cache["CMAKE_SKIP_RPATH:BOOL"])
+        self.assertEqual("1", cmake_cache["CMAKE_SKIP_RPATH:BOOL"])
 
     def test_find_paths(self):
         #self.skipTest("Disabled")

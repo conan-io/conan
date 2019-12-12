@@ -22,12 +22,9 @@ class Definitions(OrderedDict):
         self._configuration_types = {}
 
     def __getitem__(self, item):
-        print(item)
         try:
-            print("try")
             return super(Definitions, self).__getitem__(item)
         except KeyError:
-            print("except")
             return self._configuration_types.setdefault(item, dict())
 
     @property
