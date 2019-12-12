@@ -151,7 +151,9 @@ class BuildInfoCreator(object):
         def _gather_deps(node_uid, contents, func):
             node_content = contents["graph_lock"]["nodes"].get(node_uid)
             artifacts = func(node_content["pref"], is_dependency=True)
-            for _, id_node in node_content.get("requires", {}).items():
+            for id_node in node_content.get("requires", []):
+                artifacts.update(_gather_deps(id_node, contents, func))
+            for id_node in node_content.get("build_requires", []):
                 artifacts.update(_gather_deps(id_node, contents, func))
             return artifacts
 
@@ -161,7 +163,7 @@ class BuildInfoCreator(object):
         # Gather modules, their artifacts and recursively all required artifacts
         for _, node in data["graph_lock"]["nodes"].items():
             pref = node["pref"]
-            if node.get("modified"):  # Work only on generated nodes
+            if node.get("status"):  # Work only on generated nodes
                 # Create module for the recipe reference
                 recipe_key = self._get_reference(pref)
                 modules[recipe_key]["id"] = recipe_key
@@ -177,12 +179,12 @@ class BuildInfoCreator(object):
                     self._get_package_artifacts(pref, is_dependency=False))
 
                 # Recurse requires
-                if node.get("requires"):
-                    for _, node_id in node["requires"].items():
-                        modules[recipe_key]["dependencies"].update(
-                            _gather_deps(node_id, data, self._get_recipe_artifacts))
-                        modules[package_key]["dependencies"].update(
-                            _gather_deps(node_id, data, self._get_package_artifacts))
+                node_ids = node.get("requires", []) + node.get("build_requires", [])
+                for node_id in node_ids:
+                    modules[recipe_key]["dependencies"].update(
+                        _gather_deps(node_id, data, self._get_recipe_artifacts))
+                    modules[package_key]["dependencies"].update(
+                        _gather_deps(node_id, data, self._get_package_artifacts))
 
                 # TODO: Is the recipe a 'dependency' of the package
 

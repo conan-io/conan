@@ -160,7 +160,7 @@ class GraphLock(object):
         previous = node.graph_lock_node
         status = previous.status if previous else None
         if added:
-            if node.status:
+            if status:
                 raise ConanException("Error in added, previous status %s" % status)
             status = GraphLockNode.STATUS_ADDED
         graph_node = GraphLockNode(node.pref if node.ref else None, python_reqs,
