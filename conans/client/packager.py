@@ -62,12 +62,12 @@ def run_package_method(conanfile, package_id, source_folder, build_folder, packa
     conanfile.build_folder = build_folder
 
     with get_env_context_manager(conanfile):
-        _do_run_package_method(conanfile, package_id, source_folder, build_folder, package_folder,
-                               install_folder, hook_manager, conanfile_path, ref, local, copy_info)
+        return _call_package(conanfile, package_id, source_folder, build_folder, package_folder,
+                             install_folder, hook_manager, conanfile_path, ref, local, copy_info)
 
 
-def _do_run_package_method(conanfile, package_id, source_folder, build_folder, package_folder,
-                           install_folder, hook_manager, conanfile_path, ref, local, copy_info):
+def _call_package(conanfile, package_id, source_folder, build_folder, package_folder,
+                  install_folder, hook_manager, conanfile_path, ref, local, copy_info):
     output = conanfile.output
     try:
         hook_manager.execute("pre_package", conanfile=conanfile, conanfile_path=conanfile_path,
