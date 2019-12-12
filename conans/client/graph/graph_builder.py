@@ -15,6 +15,35 @@ class AliasResolver(object):
         self._cached_alias = {}
         self._proxy = proxy
 
+    def resolve_cached(self, require):
+        alias = graph.aliased.get(require.ref)
+        if alias:
+            require.ref = alias
+
+
+""" CALL TREE
+def load_graph():
+    node = root_node
+    load_deps(node)
+        config_node(node)
+            node.conanfile.requirements()
+            resolve_cached_alias(node.conanfile.requires)                       ***
+        resolve_deps(node)
+            resolve_ranges(node)
+                resolve_cached_alias(node.conanfile.requires)                   ***
+        for req in node.conanfile.requires:
+            handle_require(req)
+                if req.name not in graph:  # New node
+                    new_node = create_new_node(req)
+                        if alias => create_new_node(alias)  # recurse alias     ***
+                    load_deps(new_node)
+                else:  # Node already in graph, closing diamond
+                    resolve_cached_alias(req)                                   ***
+                    check_conflicts(req)
+                    if need_recurse:  # to check for extra conflicts
+                        load_deps(previous_node)    
+"""
+
 
 class DepsGraphBuilder(object):
     """ Responsible for computing the dependencies graph DepsGraph

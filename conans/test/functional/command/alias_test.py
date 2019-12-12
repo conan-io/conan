@@ -511,7 +511,7 @@ class Pkg(ConanFile):
         t.run("inspect {} -a description".format(reference2))
         self.assertIn("description: None", t.out)  # The alias conanfile doesn't have description
 
-    def test_not_override_package(self):
+    def test_not_conflicting_alias(self):
         # https://github.com/conan-io/conan/issues/5468
         t = TestClient()
         t.save({"conanfile.py": GenConanfile()})
