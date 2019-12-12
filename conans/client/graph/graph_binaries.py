@@ -38,11 +38,11 @@ class GraphBinariesAnalyzer(object):
         with_deps_to_build = False
         # For cascade mode, we need to check also the "modified" status of the lockfile if exists
         # modified nodes have already been built, so they shouldn't be built again
-        if build_mode.cascade and not (node.graph_lock_node and node.graph_lock_node.modified):
+        if build_mode.cascade and not (node.graph_lock_node and node.graph_lock_node.status):
             for dep in node.dependencies:
                 dep_node = dep.dst
                 if (dep_node.binary == BINARY_BUILD or
-                        (dep_node.graph_lock_node and dep_node.graph_lock_node.modified)):
+                        (dep_node.graph_lock_node and dep_node.graph_lock_node.status)):
                     with_deps_to_build = True
                     break
         if build_mode.forced(conanfile, ref, with_deps_to_build):
