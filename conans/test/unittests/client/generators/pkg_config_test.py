@@ -148,7 +148,7 @@ Description: Conan package: my_pkg2_custom_name
 Version: 2.3
 Libs: -L${libdir} -sharedlinkflag -exelinkflag
 Cflags: -I${includedir} -cxxflag -DMYDEFINE2
-Requires: my_pkg_custom_name my_pkg1_custom_name zlib
+Requires: my_pkg_custom_name my_pkg1_custom_name
 """)
         self.assertEqual(files["my_pkg1_custom_name.pc"], """prefix=dummy_root_folder1
 libdir=${prefix}/lib
@@ -179,7 +179,7 @@ Description: Conan package: BZip2
 Version: 2.3
 Libs: -L${libdir} -sharedlinkflag -exelinkflag
 Cflags: -I${includedir} -cxxflag -DMYDEFINE2
-Requires: my_pkg_custom_name my_pkg1_custom_name
+Requires: my_pkg_custom_name my_pkg1_custom_name zlib
 """)
 
     def apple_frameworks_test(self):
