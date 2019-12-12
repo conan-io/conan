@@ -442,18 +442,19 @@ class TestConan(ConanFile):
     def upload_all_test(self):
         """Upload conans and package together"""
         # Try to upload all conans and packages
+        self.client.run('user -p mypass -r default lasote')
         self.client.run('upload %s --all' % str(self.ref))
         lines = [line.strip() for line in str(self.client.out).splitlines()
                  if line.startswith("Uploading")]
         self.assertEqual(lines, ["Uploading to remote 'default':",
                                  "Uploading Hello/1.2.1@frodo/stable to remote 'default'",
-                                 "Uploading conan_export.tgz",
-                                 "Uploading conanfile.py",
-                                 "Uploading conanmanifest.txt",
+                                 "Uploading conan_export.tgz -> Hello/1.2.1@frodo/stable",
+                                 "Uploading conanfile.py -> Hello/1.2.1@frodo/stable",
+                                 "Uploading conanmanifest.txt -> Hello/1.2.1@frodo/stable",
                                  "Uploading package 1/1: myfakeid to 'default'",
-                                 "Uploading conan_package.tgz",
-                                 "Uploading conaninfo.txt",
-                                 "Uploading conanmanifest.txt",
+                                 "Uploading conan_package.tgz -> Hello/1.2.1@frodo/stable:myfa",
+                                 "Uploading conaninfo.txt -> Hello/1.2.1@frodo/stable:myfa",
+                                 "Uploading conanmanifest.txt -> Hello/1.2.1@frodo/stable:myfa",
                                  ])
         if self.client.cache.config.revisions_enabled:
             layout = self.client.cache.package_layout(self.ref)
