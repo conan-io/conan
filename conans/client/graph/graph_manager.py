@@ -251,6 +251,7 @@ class GraphManager(object):
             for msg in version_ranges_output:
                 self._output.info("    %s" % msg)
             self._output.writeln("")
+            self._resolver.clear_output()
 
         build_mode.report_matches()
         return deps_graph

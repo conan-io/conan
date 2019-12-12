@@ -1040,7 +1040,7 @@ class Pkg(ConanFile):
         project = dedent("""
             editables:
                 HelloB/0.1:
-                    path: B            
+                    path: B
                 HelloA/0.1:
                     path: A
             layout: layout

@@ -25,7 +25,7 @@ from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
 from conans.client.graph.graph_manager import GraphManager
 from conans.client.graph.printer import print_graph
 from conans.client.graph.proxy import ConanProxy
-from conans.client.graph.python_requires import ConanPythonRequire
+from conans.client.graph.python_requires import ConanPythonRequire, PyRequireLoader
 from conans.client.graph.range_resolver import RangeResolver
 from conans.client.hook_manager import HookManager
 from conans.client.importer import run_imports, undo_imports
@@ -188,7 +188,8 @@ class ConanApp(object):
         self.proxy = ConanProxy(self.cache, self.out, self.remote_manager)
         self.range_resolver = RangeResolver(self.cache, self.remote_manager)
         self.python_requires = ConanPythonRequire(self.proxy, self.range_resolver)
-        self.loader = ConanFileLoader(self.runner, self.out, self.python_requires)
+        self.pyreq_loader = PyRequireLoader(self.proxy, self.range_resolver)
+        self.loader = ConanFileLoader(self.runner, self.out, self.python_requires, self.pyreq_loader)
 
         self.binaries_analyzer = GraphBinariesAnalyzer(self.cache, self.out, self.remote_manager)
         self.graph_manager = GraphManager(self.out, self.cache, self.remote_manager, self.loader,
@@ -200,6 +201,7 @@ class ConanApp(object):
             remotes.select(remote_name)
         self.python_requires.enable_remotes(update=update, check_updates=check_updates,
                                             remotes=remotes)
+        self.pyreq_loader.enable_remotes(update=update, check_updates=check_updates, remotes=remotes)
         return remotes
 
 
@@ -340,6 +342,8 @@ class ConanAPIV1(object):
             new_ref = cmd_export(self.app, conanfile_path, name, version, user, channel, keep_source,
                                  not not_export, graph_lock=graph_info.graph_lock,
                                  ignore_dirty=ignore_dirty)
+
+            self.app.range_resolver.clear_output()  # invalidate version range output
 
             # The new_ref contains the revision
             # To not break existing things, that they used this ref without revision

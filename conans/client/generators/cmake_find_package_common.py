@@ -1,5 +1,6 @@
 target_template = """
 set({name}_INCLUDE_DIRS{build_type_suffix} {deps.include_paths})
+set({name}_INCLUDE_DIR{build_type_suffix} {deps.include_path})
 set({name}_INCLUDES{build_type_suffix} {deps.include_paths})
 set({name}_RES_DIRS{build_type_suffix} {deps.res_paths})
 set({name}_DEFINITIONS{build_type_suffix} {deps.defines})
@@ -29,6 +30,7 @@ if(APPLE)
 endif()
 
 mark_as_advanced({name}_INCLUDE_DIRS{build_type_suffix}
+                 {name}_INCLUDE_DIR{build_type_suffix}
                  {name}_INCLUDES{build_type_suffix}
                  {name}_DEFINITIONS{build_type_suffix}
                  {name}_LINKER_FLAGS{build_type_suffix}_LIST

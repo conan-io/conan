@@ -35,7 +35,12 @@ class PkgConfigGenerator(Generator):
     def content(self):
         ret = {}
         for depname, cpp_info in self.deps_build_info.dependencies:
-            name = cpp_info.name.lower() if cpp_info.name != depname else depname
+            # the name for the pc will be converted to lowercase when cpp_info.name is specified
+            # but with cpp_info.names["pkg_config"] will be literal
+            if cpp_info.name and cpp_info.get_name("pkg_config") != cpp_info.name:
+                name = cpp_info.get_name("pkg_config")
+            else:
+                name = cpp_info.name.lower() if cpp_info.name != depname else depname
             ret["%s.pc" % name] = self.single_pc_file_contents(name, cpp_info)
         return ret
 
@@ -83,7 +88,9 @@ class PkgConfigGenerator(Generator):
              ["-D%s" % d for d in cpp_info.defines]]))
 
         if cpp_info.public_deps:
-            public_deps = " ".join(cpp_info.public_deps)
+            pkg_config_names = [self.deps_build_info[public_dep].get_name("pkg_config") for
+                                public_dep in cpp_info.public_deps]
+            public_deps = " ".join(pkg_config_names)
             lines.append("Requires: %s" % public_deps)
         return "\n".join(lines) + "\n"
 

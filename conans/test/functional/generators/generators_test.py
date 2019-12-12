@@ -40,10 +40,10 @@ ycm
         client.save(files)
         client.run("install . --build")
 
-        venv_files = ["activate.sh", "deactivate.sh"]
+        venv_files = ["activate.sh", "deactivate.sh", "environment.sh.env"]
         if platform.system() == "Windows":
-            venv_files.extend(["activate.bat", "deactivate.bat", "activate.ps1",
-                               "deactivate.ps1"])
+            venv_files.extend(["activate.bat", "deactivate.bat", "environment.bat.env",
+                               "activate.ps1", "deactivate.ps1", "environment.ps1.env"])
 
         self.assertEqual(sorted(['conanfile.txt', 'conaninfo.txt', 'conanbuildinfo.cmake',
                                  'conanbuildinfo.gcc', 'conanbuildinfo.qbs', 'conanbuildinfo.pri',

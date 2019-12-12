@@ -29,7 +29,8 @@ class DepsGraphBuilder(object):
     def load_graph(self, root_node, check_updates, update, remotes, profile_host,
                    graph_lock=None):
         check_updates = check_updates or update
-        dep_graph = DepsGraph()
+        initial = graph_lock.initial_counter if graph_lock else None
+        dep_graph = DepsGraph(initial_node_id=initial)
         # compute the conanfile entry point for this dependency graph
         name = root_node.name
         root_node.public_closure = OrderedDict([(name, root_node)])
@@ -328,7 +329,7 @@ class DepsGraphBuilder(object):
         conanfile_path, recipe_status, remote, new_ref = result
 
         locked_id = requirement.locked_id
-        lock_python_requires = graph_lock.python_requires(locked_id) if locked_id else None
+        lock_python_requires = graph_lock.python_requires(locked_id) if locked_id is not None else None
         dep_conanfile = self._loader.load_conanfile(conanfile_path, profile,
                                                     ref=requirement.ref,
                                                     lock_python_requires=lock_python_requires)
@@ -354,7 +355,7 @@ class DepsGraphBuilder(object):
         new_node.ancestors = current_node.ancestors.copy()
         new_node.ancestors.add(current_node.name)
 
-        if locked_id:
+        if locked_id is not None:
             new_node.id = locked_id
 
         dep_graph.add_node(new_node)
