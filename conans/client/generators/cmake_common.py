@@ -649,6 +649,40 @@ class CMakeCommonMacros:
         endmacro()
     """)
 
+    conan_set_find_paths = textwrap.dedent("""
+        macro(conan_set_find_paths)
+            # CMAKE_MODULE_PATH does not have Debug/Release config, but there are variables
+            # CONAN_CMAKE_MODULE_PATH_DEBUG to be used by the consumer
+            # CMake can find findXXX.cmake files in the root of packages
+            set(CMAKE_MODULE_PATH ${CONAN_CMAKE_MODULE_PATH} ${CMAKE_MODULE_PATH})
+        
+            # Make find_package() to work
+            set(CMAKE_PREFIX_PATH ${CONAN_CMAKE_MODULE_PATH} ${CMAKE_PREFIX_PATH})
+        
+            # Set the find root path (cross build)
+            set(CMAKE_FIND_ROOT_PATH ${CONAN_CMAKE_FIND_ROOT_PATH} ${CMAKE_FIND_ROOT_PATH})
+            if(CONAN_CMAKE_FIND_ROOT_PATH_MODE_PROGRAM)
+                set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM ${CONAN_CMAKE_FIND_ROOT_PATH_MODE_PROGRAM})
+            endif()
+            if(CONAN_CMAKE_FIND_ROOT_PATH_MODE_LIBRARY)
+                set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ${CONAN_CMAKE_FIND_ROOT_PATH_MODE_LIBRARY})
+            endif()
+            if(CONAN_CMAKE_FIND_ROOT_PATH_MODE_INCLUDE)
+                set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ${CONAN_CMAKE_FIND_ROOT_PATH_MODE_INCLUDE})
+            endif()
+        endmacro()
+    """)
+
+    conan_set_find_library_paths = textwrap.dedent("""
+        macro(conan_set_find_library_paths)
+            # CMAKE_INCLUDE_PATH, CMAKE_LIBRARY_PATH does not have Debug/Release config, but there are variables
+            # CONAN_INCLUDE_DIRS_DEBUG/RELEASE CONAN_LIB_DIRS_DEBUG/RELEASE to be used by the consumer
+            # For find_library
+            set(CMAKE_INCLUDE_PATH ${CONAN_INCLUDE_DIRS} ${CMAKE_INCLUDE_PATH})
+            set(CMAKE_LIBRARY_PATH ${CONAN_LIB_DIRS} ${CMAKE_LIBRARY_PATH})
+        endmacro()
+    """)
+
 
 _cmake_common_macros = "\n".join([
     CMakeCommonMacros.conan_message,
@@ -772,39 +806,12 @@ endmacro()
     return result
 
 
-cmake_macros = _conan_basic_setup_common(["conan_set_find_library_paths()"]) + """
-macro(conan_set_find_paths)
-    # CMAKE_MODULE_PATH does not have Debug/Release config, but there are variables
-    # CONAN_CMAKE_MODULE_PATH_DEBUG to be used by the consumer
-    # CMake can find findXXX.cmake files in the root of packages
-    set(CMAKE_MODULE_PATH ${CONAN_CMAKE_MODULE_PATH} ${CMAKE_MODULE_PATH})
-
-    # Make find_package() to work
-    set(CMAKE_PREFIX_PATH ${CONAN_CMAKE_MODULE_PATH} ${CMAKE_PREFIX_PATH})
-
-    # Set the find root path (cross build)
-    set(CMAKE_FIND_ROOT_PATH ${CONAN_CMAKE_FIND_ROOT_PATH} ${CMAKE_FIND_ROOT_PATH})
-    if(CONAN_CMAKE_FIND_ROOT_PATH_MODE_PROGRAM)
-        set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM ${CONAN_CMAKE_FIND_ROOT_PATH_MODE_PROGRAM})
-    endif()
-    if(CONAN_CMAKE_FIND_ROOT_PATH_MODE_LIBRARY)
-        set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ${CONAN_CMAKE_FIND_ROOT_PATH_MODE_LIBRARY})
-    endif()
-    if(CONAN_CMAKE_FIND_ROOT_PATH_MODE_INCLUDE)
-        set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ${CONAN_CMAKE_FIND_ROOT_PATH_MODE_INCLUDE})
-    endif()
-endmacro()
-
-macro(conan_set_find_library_paths)
-    # CMAKE_INCLUDE_PATH, CMAKE_LIBRARY_PATH does not have Debug/Release config, but there are variables
-    # CONAN_INCLUDE_DIRS_DEBUG/RELEASE CONAN_LIB_DIRS_DEBUG/RELEASE to be used by the consumer
-    # For find_library
-    set(CMAKE_INCLUDE_PATH ${CONAN_INCLUDE_DIRS} ${CMAKE_INCLUDE_PATH})
-    set(CMAKE_LIBRARY_PATH ${CONAN_LIB_DIRS} ${CMAKE_LIBRARY_PATH})
-endmacro()
-
-""" + CMakeCommonMacros.conan_set_vs_runtime + """
-
+cmake_macros = "\n".join([
+    _conan_basic_setup_common(["conan_set_find_library_paths()"]),
+    CMakeCommonMacros.conan_set_find_paths,
+    CMakeCommonMacros.conan_set_find_library_paths,
+    CMakeCommonMacros.conan_set_vs_runtime
+    ]) + """
 macro(conan_flags_setup)
     # Macro maintained for backwards compatibility
     conan_set_find_library_paths()
