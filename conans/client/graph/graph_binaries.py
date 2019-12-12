@@ -255,7 +255,7 @@ class GraphBinariesAnalyzer(object):
             transitive_reqs.update(nconan.info.requires.refs())
 
             conanfile.options.propagate_downstream(ref, nconan.info.full_options)
-            # Might be never used, but update original requirement, just in case
+            # Update the requirements to contain the full revision. Later in lockfiles
             conanfile.requires[ref.name].ref = ref
 
         # There might be options that are not upstream, backup them, might be for build-requires

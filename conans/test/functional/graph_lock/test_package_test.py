@@ -1,17 +1,12 @@
-import json
-import os
 import textwrap
 import unittest
 
-from conans.model.graph_lock import LOCKFILE, LOCKFILE_VERSION
-from conans.model.ref import ConanFileReference
-from conans.test.utils.tools import TestClient, TestServer, GenConanfile
-from conans.util.env_reader import get_env
-from conans.util.files import load
+from conans.test.utils.tools import TestClient, GenConanfile
 
 
-class GraphLockErrorsTest(unittest.TestCase):
-    def error_test(self):
+class GraphLockTestPackageTest(unittest.TestCase):
+    def augment_test_package_requires(self):
+        # https://github.com/conan-io/conan/issues/6067
         client = TestClient()
         client.save({"conanfile.py": GenConanfile().with_name("tool").with_version("0.1")})
         client.run("create .")
@@ -28,8 +23,9 @@ class GraphLockErrorsTest(unittest.TestCase):
                      "profile": "[build_requires]\ntool/0.1\n"})
 
         client.run("export .")
-        client.run("graph lock consumer.txt -pr=profile --lockfile bug.lock --build missing")
-        lock = client.load("bug.lock")
-        print lock
-        client.run("create . -pr=profile --lockfile bug.lock --build missing")
-        print client.out
+        client.run("graph lock consumer.txt -pr=profile --build missing")
+        lock = client.load("conan.lock")
+        client.run("create . -pr=profile --lockfile --build missing")
+        self.assertIn("tool/0.1:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache", client.out)
+        self.assertIn("dep/0.1: Applying build-requirement: tool/0.1", client.out)
+        self.assertIn("dep/0.1 (test package): Running test()", client.out)

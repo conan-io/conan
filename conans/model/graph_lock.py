@@ -96,8 +96,8 @@ class GraphLockNode(object):
                                for ref in python_requires]
         options = OptionsValues.loads(data["options"])
         status = data.get("status")
-        requires = data.get("requires", {})
-        build_requires = data.get("build_requires", {})
+        requires = data.get("requires", [])
+        build_requires = data.get("build_requires", [])
         path = data.get("path")
         return GraphLockNode(pref, python_requires, options, requires, build_requires, path, status)
 
@@ -133,13 +133,13 @@ class GraphLock(object):
                 self._upsert_node(node)
 
     def _upsert_node(self, node, added=False):
-        requires = {}
-        build_requires = {}
+        requires = []
+        build_requires = []
         for edge in node.dependencies:
             if edge.build_require:
-                build_requires[repr(edge.require.ref)] = edge.dst.id
+                build_requires.append(edge.dst.id)
             else:
-                requires[repr(edge.require.ref)] = edge.dst.id
+                requires.append(edge.dst.id)
         # It is necessary to lock the transitive python-requires too, for this node
         python_reqs = None
         reqs = getattr(node.conanfile, "python_requires", {})
@@ -156,15 +156,17 @@ class GraphLock(object):
         elif isinstance(reqs, PyRequires):
             # If py_requires are defined, they overwrite old python_reqs
             python_reqs = node.conanfile.python_requires.all_refs()
-        previous = self._nodes.get(node.id)
+
+        previous = node.graph_lock_node
         status = previous.status if previous else None
         if added:
-            if status:
+            if node.status:
                 raise ConanException("Error in added, previous status %s" % status)
             status = GraphLockNode.STATUS_ADDED
         graph_node = GraphLockNode(node.pref if node.ref else None, python_reqs,
                                    node.conanfile.options.values, requires, build_requires,
                                    node.path, status)
+        node.graph_lock_node = graph_node
         self._nodes[node.id] = graph_node
 
     @property
@@ -179,7 +181,8 @@ class GraphLock(object):
         """
         total = []
         for node in self._nodes.values():
-            total.extend(node.requires.values())
+            total.extend(node.requires)
+            total.extend(node.build_requires)
         roots = set(self._nodes).difference(total)
         assert len(roots) == 1
         root_node = self._nodes[roots.pop()]
@@ -243,8 +246,10 @@ class GraphLock(object):
         """
         result = []
         for id_, node in self._nodes.items():
-            if node_id in node.requires.values():
+            if node_id in node.requires:
                 result.append(id_)
+            if node_id in node.build_requires:
+                    result.append(id_)
         return result
 
     def update_check_graph(self, deps_graph, output):
@@ -270,8 +275,9 @@ class GraphLock(object):
                 node_pref = node.pref.copy_clear_revs() if not self.revisions_enabled else node.pref
                 # If the update is compatible (resolved complete PREV) or if the node has
                 # been build, then update the graph
-                if pref.id == PACKAGE_ID_UNKNOWN or pref.is_compatible_with(node_pref) or \
-                        node.binary == BINARY_BUILD or node.id in affected:
+                if (pref.id == PACKAGE_ID_UNKNOWN or pref.is_compatible_with(node_pref) or
+                        node.binary == BINARY_BUILD or node.id in affected or
+                        node.recipe == RECIPE_CONSUMER):
                     # lock_node.pref = node.pref
                     self._upsert_node(node)
                 else:
@@ -289,37 +295,30 @@ class GraphLock(object):
         except KeyError:  # If the consumer node is not found, could be a test_package
             if node.recipe == RECIPE_CONSUMER:
                 return
-            msg = "The node ID %s-'%s' was not found in the lock" % (node.id, node.name)
-            print(msg)
+            node.conanfile.output.warn("Package can't be locked, not found in the lockfile")
             return
-            # raise ConanException(msg)
 
         if build_requires:
-            locked_requires = locked_node.build_requires or {}
+            locked_requires = locked_node.build_requires or []
         else:
-            locked_requires = locked_node.requires or {}
+            locked_requires = locked_node.requires or []
         if self.revisions_enabled:
             prefs = {self._nodes[id_].pref.ref.name: (self._nodes[id_].pref, id_)
-                     for id_ in locked_requires.values()}
+                     for id_ in locked_requires}
         else:
             prefs = {self._nodes[id_].pref.ref.name: (self._nodes[id_].pref.copy_clear_revs(), id_)
-                     for id_ in locked_requires.values()}
+                     for id_ in locked_requires}
 
         node.graph_lock_node = locked_node
         node.conanfile.options.values = locked_node.options
         for require in requires:
-            # Not new unlocked dependencies at this stage
             try:
                 locked_pref, locked_id = prefs[require.ref.name]
                 require.lock(locked_pref.ref, locked_id)
             except KeyError:
-                msg = "'%s' cannot be found in lockfile for this package\n" % require.ref.name
-                if build_requires:
-                    msg += "Make sure it was locked with --build arguments while creating lockfile"
-                else:
-                    msg += "If it is a new requirement, you need to create a new lockile"
-                print(msg)
-                #raise ConanException(msg)
+                t = "Build-require" if build_requires else "Require"
+                msg = "%s '%s' cannot be found in lockfile" % (t, require.ref.name)
+                node.conanfile.output.warn(msg)
 
     def python_requires(self, node_id):
         if self.revisions_enabled:
