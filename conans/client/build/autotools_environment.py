@@ -15,6 +15,7 @@ from conans.client.tools.oss import OSInfo, args_to_string, cpu_count, cross_bui
 from conans.client.tools.win import unix_path
 from conans.errors import ConanException
 from conans.model.build_info import DEFAULT_BIN, DEFAULT_INCLUDE, DEFAULT_LIB, DEFAULT_SHARE
+from conans.tools import chdir
 from conans.util.files import get_abs_path
 
 
@@ -132,6 +133,12 @@ class AutoToolsBuildEnvironment(object):
         else:
             configure_dir = "."
 
+        build_folder = os.getcwd()  # Cannot make it conanfile.build_folder, might be breaking
+        if hasattr(self._conanfile, "layout"):
+            layout = self._conanfile.layout()
+            configure_dir = os.path.join(self._conanfile.source_folder, layout.src)
+            build_folder = os.path.join(self._conanfile.build_folder, layout.build)
+
         triplet_args = []
 
         if build is not False:  # Skipped by user
@@ -186,7 +193,8 @@ class AutoToolsBuildEnvironment(object):
                 command = '%s/configure %s %s' % (configure_dir, args_to_string(args),
                                                   " ".join(triplet_args))
                 self._conanfile.output.info("Calling:\n > %s" % command)
-                self._conanfile.run(command, win_bash=self._win_bash, subsystem=self.subsystem)
+                self._conanfile.run(command, win_bash=self._win_bash, subsystem=self.subsystem,
+                                    cwd=build_folder)
 
     def _configure_help_output(self, configure_path):
         from six import StringIO  # Python 2 and 3 compatible
@@ -221,9 +229,16 @@ class AutoToolsBuildEnvironment(object):
             str_args = args_to_string(args)
             cpu_count_option = (("-j%s" % cpu_count(output=self._conanfile.output))
                                 if "-j" not in str_args else None)
+
+            build_folder = os.getcwd()  # Cannot make it conanfile.build_folder, might be breaking
+            if hasattr(self._conanfile, "layout"):
+                layout = self._conanfile.layout()
+                build_folder = os.path.join(self._conanfile.build_folder, layout.build)
+
             self._conanfile.run("%s" % join_arguments([make_program, target, str_args,
                                                        cpu_count_option]),
-                                win_bash=self._win_bash, subsystem=self.subsystem)
+                                win_bash=self._win_bash, subsystem=self.subsystem,
+                                cwd=build_folder)
 
     def install(self, args="", make_program=None, vars=None):
         if not self._conanfile.should_install:

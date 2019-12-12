@@ -16,8 +16,8 @@ from conans.paths import CONANINFO
 from conans.util.files import normalize, save
 
 
-def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, build_modes=None,
-                 update=False, manifest_folder=None, manifest_verify=False,
+def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None,
+                 build_modes=None, update=False, manifest_folder=None, manifest_verify=False,
                  manifest_interactive=False, generators=None, no_imports=False,
                  create_reference=None, keep_build=False, use_lock=False, recorder=None):
     """ Fetch and build all dependencies for the given reference
@@ -81,12 +81,13 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
         manifest_manager.print_log()
 
     if install_folder:
-        build_folder = build_bindir = install_folder
+        # !! FIXME: this is not true
+        build_folder = build_bindir = layout_install_folder = install_folder
         if hasattr(conanfile, "layout"):
             layout = conanfile.layout()
-            conafile_folder = install_folder # FIXME: Error,
-            build_folder = os.path.join(conafile_folder, layout.build)
-            build_bindir = os.path.join(conafile_folder, layout.build_bindir)
+            build_bindir = os.path.join(build_folder, layout.build_bindir)
+            # FIXME: the write_generators do it internally, this is a mess
+            layout_install_folder = os.path.join(build_folder, layout.installdir)
 
         conanfile.install_folder = install_folder
         # Write generators
@@ -95,13 +96,13 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
             tmp = list(conanfile.generators)  # Add the command line specified generators
             tmp.extend([g for g in generators if g not in tmp])
             conanfile.generators = tmp
-            write_generators(conanfile, build_folder, output)
+            write_generators(conanfile, install_folder, output)
         if not isinstance(ref_or_path, ConanFileReference) or use_lock:
             # Write conaninfo
             content = normalize(conanfile.info.dumps())
             save(os.path.join(build_bindir, CONANINFO), content)
             output.info("Generated %s" % CONANINFO)
-            graph_info.save(build_bindir)
+            graph_info.save(layout_install_folder)
             output.info("Generated graphinfo")
         if not no_imports:
             run_imports(conanfile, build_bindir)

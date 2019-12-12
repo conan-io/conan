@@ -1,6 +1,8 @@
 import logging
 import os
 import platform
+import shutil
+
 import sys
 from contextlib import contextmanager
 from fnmatch import fnmatch
@@ -50,6 +52,26 @@ def human_size(size_bytes):
         formatted_size = str(round(num, ndigits=precision))
 
     return "%s%s" % (formatted_size, suffix)
+
+
+def flat_dir(folder):
+    dest = os.path.abspath(os.path.join(folder, os.pardir))
+    __copytree(folder, dest)
+    shutil.rmtree(folder)
+
+
+def __copytree(src, dst, symlinks=False, ignore=None):
+    # FIXME: Copy paste from https://stackoverflow.com/questions/1868714/how-do-i-copy-an-entire-directory-of-files-into-an-existing-directory-using-pyth
+    if not os.path.exists(dst):
+        os.makedirs(dst)
+    for item in os.listdir(src):
+        s = os.path.join(src, item)
+        d = os.path.join(dst, item)
+        if os.path.isdir(s):
+            __copytree(s, d, symlinks, ignore)
+        else:
+            if not os.path.exists(d) or os.stat(s).st_mtime - os.stat(d).st_mtime > 1:
+                shutil.copy2(s, d)
 
 
 def unzip(filename, destination=".", keep_permissions=False, pattern=None, output=None):

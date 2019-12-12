@@ -13,6 +13,7 @@ def cmd_build(app, conanfile_path, source_folder, build_folder, package_folder, 
     """ Call to build() method saved on the conanfile.py
     param conanfile_path: path to a conanfile.py
     """
+
     logger.debug("BUILD: folder '%s'" % build_folder)
     logger.debug("BUILD: Conanfile at '%s'" % conanfile_path)
 

@@ -1,3 +1,4 @@
+import os
 import traceback
 from os.path import join
 
@@ -86,6 +87,10 @@ registered_generators.add("deploy", DeployGenerator)
 def write_generators(conanfile, path, output):
     """ produces auxiliary files, required to build a project or a package.
     """
+    if hasattr(conanfile, "layout"):
+        layout = conanfile.layout()
+        path = os.path.join(path, layout.installdir)
+
     for generator_name in conanfile.generators:
         try:
             generator_class = registered_generators[generator_name]

@@ -710,12 +710,17 @@ class ConanAPIV1(object):
         source_folder = _make_abs_path(source_folder, cwd)
         info_folder = _make_abs_path(info_folder, cwd)
 
-        mkdir(source_folder)
         if not os.path.exists(info_folder):
             raise ConanException("Specified info-folder doesn't exist")
 
         # only infos if exist
         conanfile = self.app.graph_manager.load_consumer_conanfile(conanfile_path, info_folder)
+
+        if hasattr(conanfile, "layout"):
+            layout = conanfile.layout()
+            source_folder = os.path.join(source_folder, layout.src)
+
+        mkdir(source_folder)
         config_source_local(source_folder, conanfile, conanfile_path, self.app.hook_manager)
 
     @api_method

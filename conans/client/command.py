@@ -2043,6 +2043,7 @@ def main(args):
         5: SIGTERM
         6: Invalid configuration (done)
     """
+    input("debugger")
     try:
         conan_api, _, _ = Conan.factory()
     except ConanMigrationError:  # Error migrating
