@@ -22,9 +22,12 @@ class Definitions(OrderedDict):
         self._configuration_types = {}
 
     def __getitem__(self, item):
+        print(item)
         try:
+            print("try")
             return super(Definitions, self).__getitem__(item)
         except KeyError:
+            print("except")
             return self._configuration_types.setdefault(item, dict())
 
     @property
@@ -39,6 +42,55 @@ class Definitions(OrderedDict):
 
 class CMakeToolchain(object):
     filename = "conan_toolchain.cmake"
+
+    _conan_set_libcxx = textwrap.dedent("""
+        macro(conan_set_libcxx)
+            if(DEFINED CONAN_LIBCXX)
+                conan_message(STATUS "Conan: C++ stdlib: ${CONAN_LIBCXX}")
+                if(CONAN_COMPILER STREQUAL "clang" OR CONAN_COMPILER STREQUAL "apple-clang")
+                    if(CONAN_LIBCXX STREQUAL "libstdc++" OR CONAN_LIBCXX STREQUAL "libstdc++11" )
+                        set(CONAN_CXX_FLAGS "${CONAN_CXX_FLAGS} -stdlib=libstdc++")
+                    elseif(CONAN_LIBCXX STREQUAL "libc++")
+                        set(CONAN_CXX_FLAGS "${CONAN_CXX_FLAGS} -stdlib=libc++")
+                    endif()
+                endif()
+                if(CONAN_COMPILER STREQUAL "sun-cc")
+                    if(CONAN_LIBCXX STREQUAL "libCstd")
+                        set(CONAN_CXX_FLAGS "${CONAN_CXX_FLAGS} -library=Cstd")
+                    elseif(CONAN_LIBCXX STREQUAL "libstdcxx")
+                        set(CONAN_CXX_FLAGS "${CONAN_CXX_FLAGS} -library=stdcxx4")
+                    elseif(CONAN_LIBCXX STREQUAL "libstlport")
+                        set(CONAN_CXX_FLAGS "${CONAN_CXX_FLAGS} -library=stlport4")
+                    elseif(CONAN_LIBCXX STREQUAL "libstdc++")
+                        set(CONAN_CXX_FLAGS "${CONAN_CXX_FLAGS} -library=stdcpp")
+                    endif()
+                endif()
+                if(CONAN_LIBCXX STREQUAL "libstdc++11")
+                    add_definitions(-D_GLIBCXX_USE_CXX11_ABI=1)
+                elseif(CONAN_LIBCXX STREQUAL "libstdc++")
+                    add_definitions(-D_GLIBCXX_USE_CXX11_ABI=0)
+                endif()
+            endif()
+        endmacro()
+    """)
+
+    _conan_set_compiler = textwrap.dedent("""
+        macro(conan_set_compiler)
+            if(CONAN_COMPILER STREQUAL "gcc")
+                conan_message(STATUS "Conan: Adjust compiler: ${CONAN_COMPILER} ${CONAN_COMPILER_VERSION}")
+                set(CMAKE_C_COMPILER gcc-${CONAN_COMPILER_VERSION})
+                #set(CMAKE_C_COMPILER_VERSION 7.4.0) # ${CONAN_COMPILER_VERSION})
+                set(CMAKE_CXX_COMPILER g++-${CONAN_COMPILER_VERSION})
+                #set(CMAKE_CXX_COMPILER_VERSION 7.4.0) # ${CONAN_COMPILER_VERSION})
+            elseif(CONAN_COMPILER STREQUAL "clang")
+                conan_message(STATUS "Conan: Adjust compiler: ${CONAN_COMPILER} ${CONAN_COMPILER_VERSION}")
+                set(CMAKE_C_COMPILER clang-${CONAN_COMPILER_VERSION})
+                #set(CMAKE_C_COMPILER_VERSION 7.4.0) # ${CONAN_COMPILER_VERSION})
+                set(CMAKE_CXX_COMPILER clang++-${CONAN_COMPILER_VERSION})
+                #set(CMAKE_CXX_COMPILER_VERSION 7.4.0) # ${CONAN_COMPILER_VERSION})
+            endif()
+        endmacro()
+    """)
 
     _template_toolchain = textwrap.dedent("""
         # Conan generated toolchain file
@@ -55,22 +107,6 @@ class CMakeToolchain(object):
         
         ########### Utility macros and functions ###########
         {{ cmake_macros_and_functions }}
-        
-        macro(conan_set_compiler)
-            if(CONAN_COMPILER STREQUAL "gcc")
-                conan_message(STATUS "Conan: Adjust compiler: ${CONAN_COMPILER} ${CONAN_COMPILER_VERSION}")
-                set(CMAKE_C_COMPILER gcc-${CONAN_COMPILER_VERSION})
-                #set(CMAKE_C_COMPILER_VERSION 7.4.0) # ${CONAN_COMPILER_VERSION})
-                set(CMAKE_CXX_COMPILER g++-${CONAN_COMPILER_VERSION})
-                #set(CMAKE_CXX_COMPILER_VERSION 7.4.0) # ${CONAN_COMPILER_VERSION})
-            elseif(CONAN_COMPILER STREQUAL "clang")
-                conan_message(STATUS "Conan: Adjust compiler: ${CONAN_COMPILER} ${CONAN_COMPILER_VERSION}")
-                set(CMAKE_C_COMPILER clang-${CONAN_COMPILER_VERSION})
-                #set(CMAKE_C_COMPILER_VERSION 7.4.0) # ${CONAN_COMPILER_VERSION})
-                set(CMAKE_CXX_COMPILER clang++-${CONAN_COMPILER_VERSION})
-                #set(CMAKE_CXX_COMPILER_VERSION 7.4.0) # ${CONAN_COMPILER_VERSION})
-            endif()
-        endmacro()
         ########### End of Utility macros and functions ###########
         
         # Configure
@@ -247,12 +283,12 @@ class CMakeToolchain(object):
                                    CMakeCommonMacros.conan_set_rpath,
                                    CMakeCommonMacros.conan_set_std,
                                    CMakeCommonMacros.conan_set_fpic,
-                                   CMakeCommonMacros.conan_set_libcxx,
+                                   self._conan_set_libcxx,
                                    CMakeCommonMacros.conan_set_find_paths,
                                    CMakeCommonMacros.conan_set_find_library_paths,
+                                   self._conan_set_compiler
                                ]),
                                **self._context)
-
             f.write(content)
 
             # TODO: Remove this, intended only for testing
