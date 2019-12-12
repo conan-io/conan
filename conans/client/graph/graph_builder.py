@@ -9,6 +9,29 @@ from conans.model.ref import ConanFileReference
 from conans.model.requires import Requirements, Requirement
 from conans.util.log import logger
 
+"""
+def load_graph():
+    node = root_node
+    expand_node(node)
+        get_node_requirements(node) # Evaluate requirements() and version ranges
+            node.conanfile.requirements()
+            resolve_cached_alias(node.conanfile.requires)
+            resolve_ranges(node)
+                resolve_cached_alias(node.conanfile.requires)
+
+        for req in node.conanfile.requires:
+            expand_require(req)
+                if req.name not in graph:  # New node
+                    new_node = create_new_node(req)
+                        if alias => create_new_node(alias)  # recurse alias
+                    expand_node(new_node)
+                else:  # Node already in graph, closing diamond
+                    resolve_cached_alias(req)
+                    check_conflicts(req)
+                    if need_recurse:  # to check for extra conflicts
+                        expand_node(previous_node)    
+"""
+
 
 class DepsGraphBuilder(object):
     """ Responsible for computing the dependencies graph DepsGraph
