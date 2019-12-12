@@ -248,6 +248,8 @@ class CMakeToolchain(object):
                                    CMakeCommonMacros.conan_set_std,
                                    CMakeCommonMacros.conan_set_fpic,
                                    CMakeCommonMacros.conan_set_libcxx,
+                                   CMakeCommonMacros.conan_set_find_paths,
+                                   CMakeCommonMacros.conan_set_find_library_paths,
                                ]),
                                **self._context)
 

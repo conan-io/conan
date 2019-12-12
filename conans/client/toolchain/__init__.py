@@ -17,6 +17,7 @@ def write_toolchain(conanfile, path, output):
 
         # Dump also files for the virtualenv
         venv = VirtualEnvGenerator(conanfile)
+        venv.output_path = path
 
         for it_run, value in run_environment.items():
             if it_run in venv.env:
