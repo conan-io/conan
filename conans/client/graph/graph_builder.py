@@ -315,11 +315,8 @@ class DepsGraphBuilder(object):
 
         return new_options
 
-    def _create_new_node(self, current_node, dep_graph, requirement, check_updates,
-                         update, remotes, profile, graph_lock, alias_ref=None):
-        """ creates and adds a new node to the dependency graph
-        """
-
+    def _resolve_recipe(self, current_node, dep_graph, requirement, check_updates,
+                        update, remotes, profile, graph_lock, alias_ref=None):
         try:
             result = self._proxy.get_recipe(requirement.ref, check_updates, update,
                                             remotes, self._recorder)
@@ -342,9 +339,18 @@ class DepsGraphBuilder(object):
             alias_ref = alias_ref or new_ref.copy_clear_rev()
             requirement.ref = ConanFileReference.loads(dep_conanfile.alias)
             dep_graph.aliased[alias_ref] = requirement.ref
-            return self._create_new_node(current_node, dep_graph, requirement,
-                                         check_updates, update, remotes, profile, graph_lock,
-                                         alias_ref=alias_ref)
+            return self._resolve_recipe(current_node, dep_graph, requirement,
+                                        check_updates, update, remotes, profile, graph_lock,
+                                        alias_ref=alias_ref)
+
+        return new_ref, dep_conanfile, recipe_status, remote, locked_id
+
+    def _create_new_node(self, current_node, dep_graph, requirement, check_updates,
+                         update, remotes, profile, graph_lock):
+
+        result = self._resolve_recipe(current_node, dep_graph, requirement, check_updates, update,
+                                      remotes, profile, graph_lock)
+        new_ref, dep_conanfile, recipe_status, remote, locked_id = result
 
         logger.debug("GRAPH: new_node: %s" % str(new_ref))
         new_node = Node(new_ref, dep_conanfile)
