@@ -8,6 +8,7 @@ from jinja2 import Template
 
 from conans.client.build.cmake_flags import get_generator, get_generator_platform, \
     CMakeDefinitionsBuilder, get_toolset
+from conans.client.generators.cmake_common import CMakeCommonMacros
 
 
 # https://stackoverflow.com/questions/30503631/cmake-in-which-order-are-files-parsed-cache-toolchain-etc
@@ -38,11 +39,9 @@ class Definitions(OrderedDict):
 
 class CMakeToolchain(object):
     filename = "conan_toolchain.cmake"
-    conan_adjustements = os.path.join(os.path.dirname(__file__), "conan_adjustments.cmake")
 
     _template_toolchain = textwrap.dedent("""
         # Conan generated toolchain file
-        
         cmake_minimum_required(VERSION 3.15)  # Needed for CMAKE_PROJECT_INCLUDE
                 
         # Avoid including toolchain file several times (bad if appending to variables like
@@ -53,6 +52,26 @@ class CMakeToolchain(object):
         set(CONAN_TOOLCHAIN_INCLUDED true)
 
         message("Using Conan toolchain through ${CMAKE_TOOLCHAIN_FILE}.")
+        
+        ########### Utility macros and functions ###########
+        {{ cmake_macros_and_functions }}
+        
+        macro(conan_set_compiler)
+            if(CONAN_COMPILER STREQUAL "gcc")
+                conan_message(STATUS "Conan: Adjust compiler: ${CONAN_COMPILER} ${CONAN_COMPILER_VERSION}")
+                set(CMAKE_C_COMPILER gcc-${CONAN_COMPILER_VERSION})
+                #set(CMAKE_C_COMPILER_VERSION 7.4.0) # ${CONAN_COMPILER_VERSION})
+                set(CMAKE_CXX_COMPILER g++-${CONAN_COMPILER_VERSION})
+                #set(CMAKE_CXX_COMPILER_VERSION 7.4.0) # ${CONAN_COMPILER_VERSION})
+            elseif(CONAN_COMPILER STREQUAL "clang")
+                conan_message(STATUS "Conan: Adjust compiler: ${CONAN_COMPILER} ${CONAN_COMPILER_VERSION}")
+                set(CMAKE_C_COMPILER clang-${CONAN_COMPILER_VERSION})
+                #set(CMAKE_C_COMPILER_VERSION 7.4.0) # ${CONAN_COMPILER_VERSION})
+                set(CMAKE_CXX_COMPILER clang++-${CONAN_COMPILER_VERSION})
+                #set(CMAKE_CXX_COMPILER_VERSION 7.4.0) # ${CONAN_COMPILER_VERSION})
+            endif()
+        endmacro()
+        ########### End of Utility macros and functions ###########
         
         # Configure
         # -- CMake::command_line
@@ -68,8 +87,6 @@ class CMakeToolchain(object):
         {%- for it, value in environment.items() %}
         set(ENV{{ '{' }}{{ it }}{{ '}' }} "{{ value }}")
         {%- endfor %}
-        
-        include("{{ conan_adjustements_cmake }}")
         
         get_property( _CMAKE_IN_TRY_COMPILE GLOBAL PROPERTY IN_TRY_COMPILE )
         if(NOT _CMAKE_IN_TRY_COMPILE)
@@ -98,7 +115,9 @@ class CMakeToolchain(object):
         # When using a Conan toolchain, this file is included as the last step of all `project()` calls.
         #  https://cmake.org/cmake/help/latest/variable/CMAKE_PROJECT_INCLUDE.html
 
-        include("{{ conan_adjustements_cmake }}")
+        ########### Utility macros and functions ###########
+        {{ cmake_macros_and_functions }}
+        ########### End of Utility macros and functions ###########
 
         # Now the debug/release stuff
         # CMAKE_BUILD_TYPE: Use it only if it isn't a multi-config generator
@@ -202,8 +221,11 @@ class CMakeToolchain(object):
         conan_project_include_cmake = os.path.join(install_folder, "conan_project_include.cmake")
         with open(conan_project_include_cmake, "w") as f:
             t = Template(self._template_project_include)
-            content = t.render(conan_adjustements_cmake=self.conan_adjustements.replace("\\", "/"),
-                               configuration_types_definitions=self.definitions.configuration_types,
+            content = t.render(configuration_types_definitions=self.definitions.configuration_types,
+                               cmake_macros_and_functions="\n".join([
+                                   CMakeCommonMacros.conan_message,
+                                   CMakeCommonMacros.conan_set_vs_runtime
+                               ]),
                                **self._context)
             f.write(content)
 
@@ -219,8 +241,14 @@ class CMakeToolchain(object):
             #            "cxx_compiler": compiler+'++'})
 
             t = Template(self._template_toolchain)
-            content = t.render(conan_adjustements_cmake=self.conan_adjustements.replace("\\", "/"),
-                               conan_project_include_cmake=conan_project_include_cmake.replace("\\", "/"),
+            content = t.render(conan_project_include_cmake=conan_project_include_cmake.replace("\\", "/"),
+                               cmake_macros_and_functions="\n".join([
+                                   CMakeCommonMacros.conan_message,
+                                   CMakeCommonMacros.conan_set_rpath,
+                                   CMakeCommonMacros.conan_set_std,
+                                   CMakeCommonMacros.conan_set_fpic,
+                                   CMakeCommonMacros.conan_set_libcxx,
+                               ]),
                                **self._context)
 
             f.write(content)
