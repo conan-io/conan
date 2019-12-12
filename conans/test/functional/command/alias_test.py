@@ -5,7 +5,7 @@ import unittest
 from parameterized.parameterized import parameterized
 
 from conans.client.tools.files import replace_in_file
-from conans.test.utils.tools import TestClient, TestServer
+from conans.test.utils.tools import TestClient, TestServer, GenConanfile
 
 
 class ConanAliasTest(unittest.TestCase):
@@ -13,25 +13,15 @@ class ConanAliasTest(unittest.TestCase):
     def alias_overriden_test(self):
         # https://github.com/conan-io/conan/issues/3353
         client = TestClient()
-        conanfile = """from conans import ConanFile
-class Pkg(ConanFile):
-    pass
-"""
-        client.save({"conanfile.py": conanfile})
+
+        client.save({"conanfile.py": GenConanfile()})
         client.run("export . PkgA/0.1@user/testing")
         client.run("alias PkgA/latest@user/testing PkgA/0.1@user/testing")
-        conanfile = """from conans import ConanFile
-class Pkg(ConanFile):
-    requires = "PkgA/latest@user/testing"
-"""
-        client.save({"conanfile.py": conanfile})
+        client.save({"conanfile.py": GenConanfile().with_require_plain("PkgA/latest@user/testing")})
         client.run("export . PkgB/0.1@user/testing")
         client.run("alias PkgB/latest@user/testing PkgB/0.1@user/testing")
-        conanfile = """from conans import ConanFile
-class Pkg(ConanFile):
-    requires = "PkgA/latest@user/testing", "PkgB/latest@user/testing"
-"""
-        client.save({"conanfile.py": conanfile})
+        client.save({"conanfile.py": GenConanfile().with_require_plain("PkgA/latest@user/testing")
+                                                   .with_require_plain("PkgB/latest@user/testing")})
         client.run("info .")
         self.assertNotIn("overridden", client.out)
 
@@ -372,26 +362,15 @@ class Pkg(ConanFile):
     def alias_bug_test(self):
         # https://github.com/conan-io/conan/issues/2252
         client = TestClient()
-        conanfile = """from conans import ConanFile
-class Pkg(ConanFile):
-    pass
-"""
-        client.save({"conanfile.py": conanfile})
+        client.save({"conanfile.py": GenConanfile()})
         client.run("create . Pkg/0.1@user/testing")
         client.run("alias Pkg/latest@user/testing Pkg/0.1@user/testing")
-        dep_conanfile = """from conans import ConanFile
-class Pkg(ConanFile):
-    requires = "Pkg/latest@user/testing"
-"""
-        client.save({"conanfile.py": dep_conanfile})
+        client.save({"conanfile.py": GenConanfile().with_require_plain("Pkg/latest@user/testing")})
         client.run("create . Pkg1/0.1@user/testing")
         client.run("create . Pkg2/0.1@user/testing")
 
-        root_conanfile = """from conans import ConanFile
-class Pkg(ConanFile):
-    requires = "Pkg1/0.1@user/testing", "Pkg2/0.1@user/testing"
-"""
-        client.save({"conanfile.py": root_conanfile})
+        client.save({"conanfile.py": GenConanfile().with_require_plain("Pkg1/0.1@user/testing")
+                                                   .with_require_plain("Pkg2/0.1@user/testing")})
         client.run("create . PkgRoot/0.1@user/testing")
         self.assertNotIn("Pkg/latest@user/testing", client.out)
         self.assertIn("Pkg/0.1@user/testing: Already installed!", client.out)
@@ -400,20 +379,14 @@ class Pkg(ConanFile):
 
     def transitive_alias_test(self):
         client = TestClient()
-        conanfile = """from conans import ConanFile
-class Pkg(ConanFile):
-    pass
-"""
-        client.save({"conanfile.py": conanfile})
+        client.save({"conanfile.py": GenConanfile()})
         client.run("create . Pkg/0.1@user/testing")
         client.run("alias Pkg/latest@user/testing Pkg/0.1@user/testing")
         client.run("alias Pkg/superlatest@user/testing Pkg/latest@user/testing")
         client.run("alias Pkg/megalatest@user/testing Pkg/superlatest@user/testing")
-        dep_conanfile = """from conans import ConanFile
-class Pkg(ConanFile):
-    requires = "Pkg/megalatest@user/testing"
-"""
-        client.save({"conanfile.py": dep_conanfile})
+
+        client.save({"conanfile.py":
+                     GenConanfile().with_require_plain("Pkg/megalatest@user/testing")})
         client.run("create . Consumer/0.1@user/testing")
         self.assertIn("Pkg/0.1@user/testing: Already installed!", client.out)
         self.assertNotIn("latest@user", client.out)
@@ -429,14 +402,7 @@ class Pkg(ConanFile):
         servers = {"default": test_server}
         client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
         for i in (1, 2):
-            conanfile = textwrap.dedent("""
-                from conans import ConanFile
-
-                class TestConan(ConanFile):
-                    name = "Hello"
-                    version = "0.%s"
-                    """ % i)
-            client.save({"conanfile.py": conanfile})
+            client.save({"conanfile.py": GenConanfile().with_name("Hello").with_version("0.%s" % i)})
             client.run("export . lasote/channel")
 
         client.run("alias Hello/0.X@lasote/channel Hello/0.1@lasote/channel")

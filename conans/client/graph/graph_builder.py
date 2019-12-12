@@ -195,7 +195,9 @@ class DepsGraphBuilder(object):
         else:  # a public node already exist with this name
             self._resolve_cached_alias([require], graph)
             # As we are closing a diamond, there can be conflicts. This will raise if conflicts
-            self._conflicting_references(previous.ref, require.ref, node.ref)
+            conflict = self._conflicting_references(previous.ref, require.ref, node.ref)
+            if conflict:
+                raise ConanException(conflict)
 
             # Add current ancestors to the previous node and upstream deps
             union = node.ancestors.union([node.name])
@@ -224,19 +226,19 @@ class DepsGraphBuilder(object):
     def _conflicting_references(previous_ref, new_ref, consumer_ref=None):
         if previous_ref.copy_clear_rev() != new_ref.copy_clear_rev():
             if consumer_ref:
-                raise ConanException("Conflict in %s\n"
-                                     "    Requirement %s conflicts with already defined %s\n"
-                                     "    To change it, override it in your base requirements"
-                                     % (consumer_ref, new_ref, previous_ref))
+                return ("Conflict in %s\n"
+                        "    Requirement %s conflicts with already defined %s\n"
+                        "    To change it, override it in your base requirements"
+                        % (consumer_ref, new_ref, previous_ref))
             return True
         # Computed node, if is Editable, has revision=None
         # If new_ref.revision is None we cannot assume any conflict, the user hasn't specified
         # a revision, so it's ok any previous_ref
         if previous_ref.revision and new_ref.revision and previous_ref.revision != new_ref.revision:
             if consumer_ref:
-                raise ConanException("Conflict in %s\n"
-                                     "    Different revisions of %s has been requested"
-                                     % (consumer_ref, new_ref))
+                return ("Conflict in %s\n"
+                        "    Different revisions of %s has been requested"
+                        % (consumer_ref, new_ref))
             return True
         return False
 
