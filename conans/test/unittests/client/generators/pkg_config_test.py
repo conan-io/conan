@@ -116,8 +116,32 @@ Cflags: -I${includedir} -Flag1=23 -DMYDEFINE1
         cpp_info.cxxflags = ["-cxxflag"]
         cpp_info.public_deps = ["MyPkg", "MyPkg1"]
         conanfile.deps_cpp_info.update(cpp_info, ref.name)
+
+        ref = ConanFileReference.loads("bzip2/0.1@lasote/stables")
+        cpp_info = CppInfo("dummy_root_folder2")
+        cpp_info.name = "BZip2"
+        cpp_info.names["pkg_config"] = "BZip2"
+        cpp_info.defines = ["MYDEFINE2"]
+        cpp_info.version = "2.3"
+        cpp_info.exelinkflags = ["-exelinkflag"]
+        cpp_info.sharedlinkflags = ["-sharedlinkflag"]
+        cpp_info.cxxflags = ["-cxxflag"]
+        cpp_info.public_deps = ["MyPkg", "MyPkg1"]
+        conanfile.deps_cpp_info.update(cpp_info, ref.name)
         generator = PkgConfigGenerator(conanfile)
         files = generator.content
+
+        self.assertEqual(files["BZip2.pc"], """prefix=dummy_root_folder2
+libdir=${prefix}/lib
+includedir=${prefix}/include
+
+Name: BZip2
+Description: Conan package: BZip2
+Version: 2.3
+Libs: -L${libdir} -sharedlinkflag -exelinkflag
+Cflags: -I${includedir} -cxxflag -DMYDEFINE2
+Requires: my_pkg_custom_name my_pkg1_custom_name
+""")
 
         self.assertEqual(files["my_pkg2_custom_name.pc"], """prefix=dummy_root_folder2
 libdir=${prefix}/lib
