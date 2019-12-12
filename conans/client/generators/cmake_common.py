@@ -630,6 +630,25 @@ class CMakeCommonMacros:
         endmacro()
     """)
 
+    conan_set_vs_runtime = textwrap.dedent("""
+        macro(conan_set_vs_runtime)
+            if(CONAN_LINK_RUNTIME)
+                foreach(flag CMAKE_C_FLAGS_RELEASE CMAKE_CXX_FLAGS_RELEASE
+                             CMAKE_C_FLAGS_RELWITHDEBINFO CMAKE_CXX_FLAGS_RELWITHDEBINFO
+                             CMAKE_C_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_MINSIZEREL)
+                    if(DEFINED ${flag})
+                        string(REPLACE "/MD" ${CONAN_LINK_RUNTIME} ${flag} "${${flag}}")
+                    endif()
+                endforeach()
+                foreach(flag CMAKE_C_FLAGS_DEBUG CMAKE_CXX_FLAGS_DEBUG)
+                    if(DEFINED ${flag})
+                        string(REPLACE "/MDd" ${CONAN_LINK_RUNTIME} ${flag} "${${flag}}")
+                    endif()
+                endforeach()
+            endif()
+        endmacro()
+    """)
+
 
 _cmake_common_macros = "\n".join([
     CMakeCommonMacros.conan_message,
@@ -784,22 +803,7 @@ macro(conan_set_find_library_paths)
     set(CMAKE_LIBRARY_PATH ${CONAN_LIB_DIRS} ${CMAKE_LIBRARY_PATH})
 endmacro()
 
-macro(conan_set_vs_runtime)
-    if(CONAN_LINK_RUNTIME)
-        foreach(flag CMAKE_C_FLAGS_RELEASE CMAKE_CXX_FLAGS_RELEASE
-                     CMAKE_C_FLAGS_RELWITHDEBINFO CMAKE_CXX_FLAGS_RELWITHDEBINFO
-                     CMAKE_C_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_MINSIZEREL)
-            if(DEFINED ${flag})
-                string(REPLACE "/MD" ${CONAN_LINK_RUNTIME} ${flag} "${${flag}}")
-            endif()
-        endforeach()
-        foreach(flag CMAKE_C_FLAGS_DEBUG CMAKE_CXX_FLAGS_DEBUG)
-            if(DEFINED ${flag})
-                string(REPLACE "/MDd" ${CONAN_LINK_RUNTIME} ${flag} "${${flag}}")
-            endif()
-        endforeach()
-    endif()
-endmacro()
+""" + CMakeCommonMacros.conan_set_vs_runtime + """
 
 macro(conan_flags_setup)
     # Macro maintained for backwards compatibility
@@ -832,26 +836,7 @@ if(EXISTS ${CMAKE_CURRENT_LIST_DIR}/conanbuildinfo_relwithdebinfo.cmake)
     include(${CMAKE_CURRENT_LIST_DIR}/conanbuildinfo_relwithdebinfo.cmake)
 endif()
 
-macro(conan_set_vs_runtime)
-    # This conan_set_vs_runtime is MORE opinionated than the regular one. It will
-    # Leave the defaults MD (MDd) or replace them with MT (MTd) but taking into account the
-    # debug, forcing MXd for debug builds. It will generate MSVCRT warnings if the dependencies
-    # are installed with "conan install" and the wrong build time.
-    if(CONAN_LINK_RUNTIME MATCHES "MT")
-        foreach(flag CMAKE_C_FLAGS_RELEASE CMAKE_CXX_FLAGS_RELEASE
-                     CMAKE_C_FLAGS_RELWITHDEBINFO CMAKE_CXX_FLAGS_RELWITHDEBINFO
-                     CMAKE_C_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_MINSIZEREL)
-            if(DEFINED ${flag})
-                string(REPLACE "/MD" "/MT" ${flag} "${${flag}}")
-            endif()
-        endforeach()
-        foreach(flag CMAKE_C_FLAGS_DEBUG CMAKE_CXX_FLAGS_DEBUG)
-            if(DEFINED ${flag})
-                string(REPLACE "/MDd" "/MTd" ${flag} "${${flag}}")
-            endif()
-        endforeach()
-    endif()
-endmacro()
+""" + CMakeCommonMacros.conan_set_vs_runtime + """
 
 macro(conan_set_find_paths)
     if(CMAKE_BUILD_TYPE)
