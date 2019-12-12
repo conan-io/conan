@@ -195,7 +195,7 @@ class DepsGraphBuilder(object):
         # build_requires and private will create a new node if it is not in the current closure
         if not previous or ((require.build_require or require.private) and not previous_closure):
             # new node, must be added and expanded (node -> new_node)
-            new_node = self._create_new_node(node, graph, require, name, check_updates, update,
+            new_node = self._create_new_node(node, graph, require, check_updates, update,
                                              remotes, profile_host, graph_lock)
 
             # The closure of a new node starts with just itself
@@ -232,6 +232,8 @@ class DepsGraphBuilder(object):
             # As we are closing a diamond, there can be conflicts. This will raise if conflicts
             conflict = self._conflicting_references(previous.ref, require.ref, node.ref)
             if conflict:
+                result = self._resolve_recipe(node, graph, require, check_updates,
+                                              update, remotes, profile_host, graph_lock)
                 raise ConanException(conflict)
 
             # Add current ancestors to the previous node and upstream deps
@@ -350,8 +352,8 @@ class DepsGraphBuilder(object):
 
         return new_options
 
-    def _create_new_node(self, current_node, dep_graph, requirement, name_req, check_updates,
-                         update, remotes, profile, graph_lock, alias_ref=None):
+    def _resolve_recipe(self, current_node, dep_graph, requirement, check_updates,
+                        update, remotes, profile, graph_lock, alias_ref=None):
         """ creates and adds a new node to the dependency graph
         """
 
@@ -377,9 +379,20 @@ class DepsGraphBuilder(object):
             alias_ref = alias_ref or new_ref.copy_clear_rev()
             requirement.ref = ConanFileReference.loads(dep_conanfile.alias)
             dep_graph.aliased[alias_ref] = requirement.ref
-            return self._create_new_node(current_node, dep_graph, requirement, name_req,
-                                         check_updates, update, remotes, profile, graph_lock,
-                                         alias_ref=alias_ref)
+            return self._resolve_recipe(current_node, dep_graph, requirement,
+                                        check_updates, update, remotes, profile, graph_lock,
+                                        alias_ref=alias_ref)
+
+        return new_ref, dep_conanfile, recipe_status, remote, locked_id
+
+    def _create_new_node(self, current_node, dep_graph, requirement, check_updates,
+                         update, remotes, profile, graph_lock, alias_ref=None):
+        """ creates and adds a new node to the dependency graph
+        """
+
+        result = self._resolve_recipe(current_node, dep_graph, requirement, check_updates,
+                                      update, remotes, profile, graph_lock, alias_ref)
+        new_ref, dep_conanfile, recipe_status, remote, locked_id = result
 
         logger.debug("GRAPH: new_node: %s" % str(new_ref))
         new_node = Node(new_ref, dep_conanfile)
