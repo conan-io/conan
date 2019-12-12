@@ -7,28 +7,6 @@ function(conan_message MESSAGE_OUTPUT)
 endfunction()
 
 
-macro(conan_output_dirs_setup)
-    conan_message(STATUS "Conan: Adjusting output directories")
-    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin)
-    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-
-    set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lib)
-    set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY})
-    set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELWITHDEBINFO ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY})
-    set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_MINSIZEREL ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY})
-    set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY})
-
-    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lib)
-    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
-    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELWITHDEBINFO ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
-    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_MINSIZEREL ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
-    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
-endmacro()
-
-
 macro(conan_set_rpath)
     conan_message(STATUS "Conan: Adjusting default RPATHs Conan policies")
     if(APPLE)
@@ -75,74 +53,6 @@ macro(conan_set_fpic)
         set(CMAKE_POSITION_INDEPENDENT_CODE ${CONAN_CMAKE_POSITION_INDEPENDENT_CODE})
     endif()
 endmacro()
-
-
-function(conan_check_compiler)
-    if(CONAN_DISABLE_CHECK_COMPILER)
-        conan_message(STATUS "WARN: Disabled conan compiler checks")
-        return()
-    endif()
-    if(NOT DEFINED CMAKE_CXX_COMPILER_ID)
-        if(DEFINED CMAKE_C_COMPILER_ID)
-            conan_message(STATUS "This project seems to be plain C, using '${CMAKE_C_COMPILER_ID}' compiler")
-            set(CMAKE_CXX_COMPILER_ID ${CMAKE_C_COMPILER_ID})
-            set(CMAKE_CXX_COMPILER_VERSION ${CMAKE_C_COMPILER_VERSION})
-        else()
-            message(FATAL_ERROR "This project seems to be plain C, but no compiler defined")
-        endif()
-    endif()
-    if(NOT CMAKE_CXX_COMPILER_ID AND NOT CMAKE_C_COMPILER_ID)
-        # This use case happens when compiler is not identified by CMake, but the compilers are there and work
-        conan_message(STATUS "*** WARN: CMake was not able to identify a C or C++ compiler ***")
-        conan_message(STATUS "*** WARN: Disabling compiler checks. Please make sure your settings match your environment ***")
-        return()
-    endif()
-    if(NOT DEFINED CONAN_COMPILER)
-        conan_get_compiler(CONAN_COMPILER CONAN_COMPILER_VERSION)
-        if(NOT DEFINED CONAN_COMPILER)
-            conan_message(STATUS "WARN: CONAN_COMPILER variable not set, please make sure yourself that "
-                          "your compiler and version matches your declared settings")
-            return()
-        endif()
-    endif()
-
-    if(NOT CMAKE_HOST_SYSTEM_NAME STREQUAL ${CMAKE_SYSTEM_NAME})
-        set(CROSS_BUILDING 1)
-    endif()
-
-    # If using VS, verify toolset
-    if (CONAN_COMPILER STREQUAL "Visual Studio")
-        if (CONAN_SETTINGS_COMPILER_TOOLSET MATCHES "LLVM" OR
-            CONAN_SETTINGS_COMPILER_TOOLSET MATCHES "clang")
-            set(EXPECTED_CMAKE_CXX_COMPILER_ID "Clang")
-        elseif (CONAN_SETTINGS_COMPILER_TOOLSET MATCHES "Intel")
-            set(EXPECTED_CMAKE_CXX_COMPILER_ID "Intel")
-        else()
-            set(EXPECTED_CMAKE_CXX_COMPILER_ID "MSVC")
-        endif()
-
-        if (NOT CMAKE_CXX_COMPILER_ID MATCHES ${EXPECTED_CMAKE_CXX_COMPILER_ID})
-            message(FATAL_ERROR "Incorrect '${CONAN_COMPILER}'. Toolset specifies compiler as '${EXPECTED_CMAKE_CXX_COMPILER_ID}' "
-                                "but CMake detected '${CMAKE_CXX_COMPILER_ID}'")
-        endif()
-
-    # Avoid checks when cross compiling, apple-clang crashes because its APPLE but not apple-clang
-    # Actually CMake is detecting "clang" when you are using apple-clang, only if CMP0025 is set to NEW will detect apple-clang
-    elseif((CONAN_COMPILER STREQUAL "gcc" AND NOT CMAKE_CXX_COMPILER_ID MATCHES "GNU") OR
-        (CONAN_COMPILER STREQUAL "apple-clang" AND NOT CROSS_BUILDING AND (NOT APPLE OR NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")) OR
-        (CONAN_COMPILER STREQUAL "clang" AND NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang") OR
-        (CONAN_COMPILER STREQUAL "sun-cc" AND NOT CMAKE_CXX_COMPILER_ID MATCHES "SunPro") )
-        message(FATAL_ERROR "Incorrect '${CONAN_COMPILER}', is not the one detected by CMake: '${CMAKE_CXX_COMPILER_ID}'")
-    endif()
-
-
-    if(NOT DEFINED CONAN_COMPILER_VERSION)
-        conan_message(STATUS "WARN: CONAN_COMPILER_VERSION variable not set, please make sure yourself "
-                             "that your compiler version matches your declared settings")
-        return()
-    endif()
-    check_compiler_version()
-endfunction()
 
 
 macro(conan_set_libcxx)

@@ -81,7 +81,6 @@ class CMakeToolchain(object):
             {% if options.set_std %}conan_set_std(){% endif %}
             {% if options.set_fpic %}conan_set_fpic(){% endif %}
             
-            #conan_check_compiler()
             {% if options.set_libcxx %}conan_set_libcxx(){% endif %}
             {% if options.set_find_paths %}conan_set_find_paths(){% endif %}
             {% if options.set_find_library_paths %}conan_set_find_library_paths(){% endif %}
