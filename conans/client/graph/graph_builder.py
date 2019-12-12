@@ -160,7 +160,7 @@ class DepsGraphBuilder(object):
         # build_requires and private will create a new node if it is not in the current closure
         if not previous or ((require.build_require or require.private) and not previous_closure):
             # new node, must be added and expanded (node -> new_node)
-            new_node = self._create_new_node(node, graph, require, name, check_updates, update,
+            new_node = self._create_new_node(node, graph, require, check_updates, update,
                                              remotes, profile_host, graph_lock)
 
             # The closure of a new node starts with just itself
@@ -315,7 +315,7 @@ class DepsGraphBuilder(object):
 
         return new_options
 
-    def _create_new_node(self, current_node, dep_graph, requirement, name_req, check_updates,
+    def _create_new_node(self, current_node, dep_graph, requirement, check_updates,
                          update, remotes, profile, graph_lock, alias_ref=None):
         """ creates and adds a new node to the dependency graph
         """
@@ -342,7 +342,7 @@ class DepsGraphBuilder(object):
             alias_ref = alias_ref or new_ref.copy_clear_rev()
             requirement.ref = ConanFileReference.loads(dep_conanfile.alias)
             dep_graph.aliased[alias_ref] = requirement.ref
-            return self._create_new_node(current_node, dep_graph, requirement, name_req,
+            return self._create_new_node(current_node, dep_graph, requirement,
                                          check_updates, update, remotes, profile, graph_lock,
                                          alias_ref=alias_ref)
 
