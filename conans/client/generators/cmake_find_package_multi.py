@@ -103,7 +103,13 @@ endif()
             ret["{}Config.cmake".format(depname)] = self._find_for_dep(depname, cpp_info)
             ret["{}Targets.cmake".format(depname)] = self.targets_file.format(name=depname)
 
-            find_lib = target_template.format(name=depname, deps=deps,
+            # If any config matches the build_type one
+            deps_extra = None
+            for config, config_cpp_info in cpp_info.configs.items():
+                if config.lower() == build_type.lower():
+                    deps_extra = DepsCppCmake(config_cpp_info)
+
+            find_lib = target_template.format(name=depname, deps=deps, deps_extra=deps_extra,
                                               build_type_suffix=build_type_suffix)
             ret["{}Target-{}.cmake".format(depname, build_type.lower())] = find_lib
             ret["{}ConfigVersion.cmake".format(depname)] = self.version_template.\
