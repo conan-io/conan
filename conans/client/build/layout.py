@@ -8,13 +8,17 @@ class Layout(object):
         # build time layout
         self.src = ""  # relative to source_folder
         self.build = "build"  # relative to build_folder
-        self.includedirs = [""]  # relative to build_folder??? to both??
+        self.includedirs = [""]  # relative to build_folder (and source_folder) in the cache
+        # TODO: To be able to declare an includedir in case we have headers in build and src
+        #       but enabling the override of the build by command line we would need to do
+        #       something like: `includedirs = ["src", self.build]` but the value of self.build
+        #       might be blocked if the "constructor" provided another one
 
-        # Where the libs and dlls are, relative to build_folder
+        # Where the libs and dll's are, relative to build_folder.${self.build}. Default self.build
         self._build_libdir = None
         self._build_bindir = None
 
-        # Where to put install files: lockfiles, etc relative to install_folder
+        # Where to put install files: lock-files, etc relative to install_folder
         self._installdir = None
 
         # package layout
@@ -33,7 +37,7 @@ class Layout(object):
 
     @property
     def build_libdir(self):
-        return self._build_libdir or self.build
+        return os.path.join(self.build, self._build_libdir) if self._build_libdir is not None else self.build
 
     @build_libdir.setter
     def build_libdir(self, v):
@@ -41,7 +45,7 @@ class Layout(object):
 
     @property
     def build_bindir(self):
-        return self._build_bindir or self.build
+        return os.path.join(self.build, self._build_bindir) if self._build_bindir is not None else self.build
 
     @build_bindir.setter
     def build_bindir(self, v):
@@ -76,7 +80,6 @@ class Layout(object):
     def imports(self):
         # FIXME: Not very flexible. Useless?
         #        Good enough for default?
-        self._conanfile.copy("*.a", dst=self.build_bindir, keep_path=False)  # FIXME: Remove this
         self._conanfile.copy("*.dll", dst=self.build_bindir, keep_path=False)
         self._conanfile.copy("*.dylib", dst=self.build_libdir, keep_path=False)
         self._conanfile.copy("*.so", dst=self.build_libdir, keep_path=False)
@@ -106,3 +109,14 @@ class CMakeLayout(Layout):
         else:
             self.build_libdir = ""
             self.build_bindir = ""
+
+
+class CLionLayout(Layout):
+
+    def __init__(self, conanfile):
+        super(CLionLayout, self).__init__(conanfile)
+        self.src = ""
+        self.build = "cmake-build-{}".format(str(conanfile.settings.build_type).lower())
+        self.build_libdir = ""  # If removed output dirs in conan basic setup
+        self.build_bindir = ""
+        self.includedirs = [self.build]

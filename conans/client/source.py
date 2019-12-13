@@ -94,22 +94,27 @@ def config_source(export_folder, export_source_folder, scm_sources_folder,
 
     if not os.path.exists(src_folder):  # No source folder, need to get it
         with set_dirty_context_manager(src_folder):
+            mkdir(src_folder)
 
-            if hasattr(conanfile, "layout"):
-                layout = conanfile.layout()
-                source_folder = os.path.join(src_folder, layout.src)
+            #if hasattr(conanfile, "layout"):
+            #    layout = conanfile.layout()
+            #    layout_source_folder = os.path.join(src_folder, layout.src)
+            #    mkdir(layout_source_folder)
 
-            mkdir(source_folder)
+            # FIXME: !! Not clear at all that this should be like this:
+            #        source() method has to be relative to the layout but the others
+            #        scm cloned sources, exported and exported sources, respond to a "local"
+            #        layout that would already contain the correct folders?
 
             def get_sources_from_exports():
                 # First of all get the exported scm sources (if auto) or clone (if fixed)
-                _run_cache_scm(conanfile, scm_sources_folder, source_folder, output)
+                _run_cache_scm(conanfile, scm_sources_folder, src_folder, output)
                 # so self exported files have precedence over python_requires ones
-                merge_directories(export_folder, source_folder)
+                merge_directories(export_folder, src_folder)
                 # Now move the export-sources to the right location
-                merge_directories(export_source_folder, source_folder)
+                merge_directories(export_source_folder, src_folder)
 
-            _run_source(conanfile, conanfile_path, source_folder, hook_manager, reference,
+            _run_source(conanfile, conanfile_path, src_folder, hook_manager, reference,
                         cache, get_sources_from_exports=get_sources_from_exports)
 
 

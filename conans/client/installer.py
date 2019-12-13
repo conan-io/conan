@@ -205,7 +205,13 @@ class _PackageBuilder(object):
                             conanfile.build_folder = build_folder
                             conanfile.package_folder = package_folder
                             # In local cache, install folder always is build_folder
+                            # NOT ANYMORE, the install_folder is modified according to the layout
+                            # as in the "conan build" the "-if" is pointed to the place where
+                            # the installation files are
                             conanfile.install_folder = build_folder
+                            if hasattr(node.conanfile, "layout"):
+                                layout = node.conanfile.layout()
+                                conanfile.install_folder = layout.install_folder
                             self._build(conanfile, pref, build_folder)
                         clean_dirty(build_folder)
 
