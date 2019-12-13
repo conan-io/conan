@@ -95,7 +95,7 @@ endif()
     @property
     def content(self):
         ret = {}
-        build_type = self.conanfile.settings.build_type
+        build_type = str(self.conanfile.settings.build_type)
         build_type_suffix = "_{}".format(build_type.upper()) if build_type else ""
         for _, cpp_info in self.deps_build_info.dependencies:
             depname = cpp_info.get_name("cmake_find_package_multi")
