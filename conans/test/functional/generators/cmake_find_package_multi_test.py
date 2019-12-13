@@ -348,3 +348,40 @@ class Conan(ConanFile):
             self.assertIn("hello found: 1", client.out)
         else:
             self.assertIn("hello found: 0", client.out)
+
+    def cpp_info_config_test(self):
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            
+            class Requirement(ConanFile):
+                name = "requirement"
+                version = "version"
+            
+                settings = "os", "arch", "compiler", "build_type"
+            
+                def package_info(self):
+                    self.cpp_info.libs = ["lib_both"]
+                    self.cpp_info.debug.libs = ["lib_debug"]
+                    self.cpp_info.release.libs = ["lib_release"]
+                    
+                    self.cpp_info.cxxflags = ["-req_both"]
+                    self.cpp_info.debug.cxxflags = ["-req_debug"]
+                    self.cpp_info.release.cxxflags = ["-req_release"]
+        """)
+        t = TestClient()
+        t.save({"conanfile.py": conanfile})
+        t.run("create . -s build_type=Release")
+        t.run("create . -s build_type=Debug")
+
+        t.run("install requirement/version@ -g cmake_find_package_multi -s build_type=Release")
+        t.run("install requirement/version@ -g cmake_find_package_multi -s build_type=Debug")
+        content_release = t.load("requirementTarget-release.cmake")
+        content_debug = t.load("requirementTarget-debug.cmake")
+
+        self.assertIn('set(requirement_COMPILE_OPTIONS_RELEASE_LIST "-req_both;-req_release" "")',
+                      content_release)
+        self.assertIn('set(requirement_COMPILE_OPTIONS_DEBUG_LIST "-req_both;-req_debug" "")',
+                      content_debug)
+
+        self.assertIn('set(requirement_LIBRARY_LIST_RELEASE lib_both lib_release)', content_release)
+        self.assertIn('set(requirement_LIBRARY_LIST_DEBUG lib_both lib_debug)', content_debug)
