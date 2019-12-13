@@ -9,33 +9,37 @@ from conans.model.ref import ConanFileReference
 from conans.model.requires import Requirements, Requirement
 from conans.util.log import logger
 
-"""
-def load_graph():
-    node = root_node
-    expand_node(node)
-        get_node_requirements(node) # Evaluate requirements() and version ranges
-            node.conanfile.requirements()
-            resolve_cached_alias(node.conanfile.requires)
-            resolve_ranges(node)
-                resolve_cached_alias(node.conanfile.requires)
-
-        for req in node.conanfile.requires:
-            expand_require(req)
-                if req.name not in graph:  # New node
-                    new_node = create_new_node(req)
-                        if alias => create_new_node(alias)  # recurse alias
-                    expand_node(new_node)
-                else:  # Node already in graph, closing diamond
-                    resolve_cached_alias(req)
-                    check_conflicts(req)
-                    if need_recurse:  # to check for extra conflicts
-                        expand_node(previous_node)    
-"""
-
 
 class DepsGraphBuilder(object):
-    """ Responsible for computing the dependencies graph DepsGraph
     """
+    This is a summary, in pseudo-code of the execution and structure of the graph
+    resolution algorithm
+
+    load_graph(root_node)
+        init root_node
+        expand_node(root_node)
+            # 1. Evaluate requirements(), overrides, and version ranges
+            get_node_requirements(node)
+                node.conanfile.requirements()                         # call the requirements()
+                resolve_cached_alias(node.conanfile.requires)         # replace cached alias
+                update_requires_from_downstream(down_requires)        # process overrides
+                resolve_ranges(node)                                  # resolve version-ranges
+                    resolve_cached_alias(node.conanfile.requires)     # replace cached alias again
+
+            # 2. Process each requires of this node
+            for req in node.conanfile.requires:
+                expand_require(req)
+                    if req.name not in graph:                         # New node
+                        new_node = create_new_node(req)               # fetch and load conanfile.py
+                            if alias => create_new_node(alias)        # recurse alias
+                        expand_node(new_node)                         # recursion
+                    else:                                             # Node exists, closing diamond
+                        resolve_cached_alias(req)
+                        check_conflicts(req)                          # diamonds can cause conflicts
+                        if need_recurse:                              # check for conflicts upstream
+                            expand_node(previous_node)                # recursion
+    """
+
     def __init__(self, proxy, output, loader, resolver, recorder):
         self._proxy = proxy
         self._output = output
@@ -43,8 +47,7 @@ class DepsGraphBuilder(object):
         self._resolver = resolver
         self._recorder = recorder
 
-    def load_graph(self, root_node, check_updates, update, remotes, profile_host,
-                   graph_lock=None):
+    def load_graph(self, root_node, check_updates, update, remotes, profile_host, graph_lock=None):
         check_updates = check_updates or update
         initial = graph_lock.initial_counter if graph_lock else None
         dep_graph = DepsGraph(initial_node_id=initial)
@@ -65,7 +68,6 @@ class DepsGraphBuilder(object):
 
     def extend_build_requires(self, graph, node, build_requires_refs, check_updates, update,
                               remotes, profile_host, graph_lock):
-
         # The options that will be defined in the node will be the real options values that have
         # been already propagated downstream from the dependency graph. This will override any
         # other possible option in the build_requires dependency graph. This means that in theory
@@ -131,7 +133,8 @@ class DepsGraphBuilder(object):
 
     def _get_node_requirements(self, node, graph, down_ref, down_options, down_reqs, graph_lock,
                                update, remotes):
-        """ compute the requirements of a node, evaluating requirements() and solving version-ranges
+        """ compute the requirements of a node, evaluating requirements(), propagating
+         the downstream requirements and overrides and solving version-ranges
         """
         # basic node configuration: calling configure() and requirements()
         new_options = self._config_node(node, down_ref, down_options)
@@ -343,7 +346,7 @@ class DepsGraphBuilder(object):
         return new_options
 
     def _resolve_recipe(self, current_node, dep_graph, requirement, check_updates,
-                        update, remotes, profile, graph_lock, alias_ref=None):
+                        update, remotes, profile, graph_lock, original_ref=None):
         try:
             result = self._proxy.get_recipe(requirement.ref, check_updates, update,
                                             remotes, self._recorder)
@@ -363,12 +366,14 @@ class DepsGraphBuilder(object):
             dep_conanfile.develop = True
 
         if getattr(dep_conanfile, "alias", None):
-            alias_ref = alias_ref or new_ref.copy_clear_rev()
-            requirement.ref = ConanFileReference.loads(dep_conanfile.alias)
-            dep_graph.aliased[alias_ref] = requirement.ref
-            return self._resolve_recipe(current_node, dep_graph, requirement,
-                                        check_updates, update, remotes, profile, graph_lock,
-                                        alias_ref=alias_ref)
+            new_ref_norev = new_ref.copy_clear_rev()
+            pointed_ref = ConanFileReference.loads(dep_conanfile.alias)
+            dep_graph.aliased[new_ref_norev] = pointed_ref  # Caching the alias
+            requirement.ref = pointed_ref
+            if original_ref:  # So transitive alias resolve to the latest in the chain
+                dep_graph.aliased[original_ref] = pointed_ref
+            return self._resolve_recipe(current_node, dep_graph, requirement, check_updates,
+                                        update, remotes, profile, graph_lock, original_ref)
 
         return new_ref, dep_conanfile, recipe_status, remote, locked_id
 
