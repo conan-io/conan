@@ -649,6 +649,29 @@ class CMakeCommonMacros:
         endmacro()
     """)
 
+    conan_set_vs_runtime_preserve_build_type = textwrap.dedent("""
+        macro(conan_set_vs_runtime)
+            # This conan_set_vs_runtime is MORE opinionated than the regular one. It will
+            # Leave the defaults MD (MDd) or replace them with MT (MTd) but taking into account the
+            # debug, forcing MXd for debug builds. It will generate MSVCRT warnings if the dependencies
+            # are installed with "conan install" and the wrong build type.
+            if(CONAN_LINK_RUNTIME MATCHES "MT")
+                foreach(flag CMAKE_C_FLAGS_RELEASE CMAKE_CXX_FLAGS_RELEASE
+                                 CMAKE_C_FLAGS_RELWITHDEBINFO CMAKE_CXX_FLAGS_RELWITHDEBINFO
+                                 CMAKE_C_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_MINSIZEREL)
+                    if(DEFINED ${flag})
+                        string(REPLACE "/MD" "/MT" ${flag} "${${flag}}")
+                    endif()
+                endforeach()
+                foreach(flag CMAKE_C_FLAGS_DEBUG CMAKE_CXX_FLAGS_DEBUG)
+                    if(DEFINED ${flag})
+                        string(REPLACE "/MDd" "/MTd" ${flag} "${${flag}}")
+                    endif()
+                endforeach()
+            endif()
+        endmacro()
+    """)
+
     conan_set_find_paths = textwrap.dedent("""
         macro(conan_set_find_paths)
             # CMAKE_MODULE_PATH does not have Debug/Release config, but there are variables
@@ -673,6 +696,27 @@ class CMakeCommonMacros:
         endmacro()
     """)
 
+    conan_set_find_paths_multi = textwrap.dedent("""
+        macro(conan_set_find_paths)
+            if(CMAKE_BUILD_TYPE)
+                MESSAGE("BUILD TYPE: ${CMAKE_BUILD_TYPE}")
+                if(${CMAKE_BUILD_TYPE} MATCHES "Debug")
+                    set(CMAKE_PREFIX_PATH ${CONAN_CMAKE_MODULE_PATH_DEBUG} ${CMAKE_PREFIX_PATH})
+                    set(CMAKE_MODULE_PATH ${CONAN_CMAKE_MODULE_PATH_DEBUG} ${CMAKE_MODULE_PATH})
+                elseif(${CMAKE_BUILD_TYPE} MATCHES "Release")
+                    set(CMAKE_PREFIX_PATH ${CONAN_CMAKE_MODULE_PATH_RELEASE} ${CMAKE_PREFIX_PATH})
+                    set(CMAKE_MODULE_PATH ${CONAN_CMAKE_MODULE_PATH_RELEASE} ${CMAKE_MODULE_PATH})
+                elseif(${CMAKE_BUILD_TYPE} MATCHES "RelWithDebInfo")
+                    set(CMAKE_PREFIX_PATH ${CONAN_CMAKE_MODULE_PATH_RELWITHDEBINFO} ${CMAKE_PREFIX_PATH})
+                    set(CMAKE_MODULE_PATH ${CONAN_CMAKE_MODULE_PATH_RELWITHDEBINFO} ${CMAKE_MODULE_PATH})
+                elseif(${CMAKE_BUILD_TYPE} MATCHES "MinSizeRel")
+                    set(CMAKE_PREFIX_PATH ${CONAN_CMAKE_MODULE_PATH_MINSIZEREL} ${CMAKE_PREFIX_PATH})
+                    set(CMAKE_MODULE_PATH ${CONAN_CMAKE_MODULE_PATH_MINSIZEREL} ${CMAKE_MODULE_PATH})
+                endif()
+            endif()
+        endmacro()
+    """)
+
     conan_set_find_library_paths = textwrap.dedent("""
         macro(conan_set_find_library_paths)
             # CMAKE_INCLUDE_PATH, CMAKE_LIBRARY_PATH does not have Debug/Release config, but there are variables
@@ -680,6 +724,37 @@ class CMakeCommonMacros:
             # For find_library
             set(CMAKE_INCLUDE_PATH ${CONAN_INCLUDE_DIRS} ${CMAKE_INCLUDE_PATH})
             set(CMAKE_LIBRARY_PATH ${CONAN_LIB_DIRS} ${CMAKE_LIBRARY_PATH})
+        endmacro()
+    """)
+
+    apple_frameworks_macro = textwrap.dedent("""
+        macro(conan_find_apple_frameworks FRAMEWORKS_FOUND FRAMEWORKS)
+            if(APPLE)
+                if(CMAKE_BUILD_TYPE)
+                    if(${CMAKE_BUILD_TYPE} MATCHES "Debug")
+                        set(CONAN_FRAMEWORKS ${CONAN_FRAMEWORKS_DEBUG} ${CONAN_FRAMEWORKS})
+                        set(CONAN_FRAMEWORK_DIRS ${CONAN_FRAMEWORK_DIRS_DEBUG} ${CONAN_FRAMEWORK_DIRS})
+                    elseif(${CMAKE_BUILD_TYPE} MATCHES "Release")
+                        set(CONAN_FRAMEWORKS ${CONAN_FRAMEWORKS_RELEASE} ${CONAN_BUILD_MODULES_PATHS})
+                        set(CONAN_FRAMEWORK_DIRS ${CONAN_FRAMEWORK_DIRS_RELEASE} ${CONAN_FRAMEWORK_DIRS})
+                    elseif(${CMAKE_BUILD_TYPE} MATCHES "RelWithDebInfo")
+                        set(CONAN_FRAMEWORKS ${CONAN_FRAMEWORKS_RELWITHDEBINFO} ${CONAN_BUILD_MODULES_PATHS})
+                        set(CONAN_FRAMEWORK_DIRS ${CONAN_FRAMEWORK_DIRS_RELWITHDEBINFO} ${CONAN_FRAMEWORK_DIRS})
+                    elseif(${CMAKE_BUILD_TYPE} MATCHES "MinSizeRel")
+                        set(CONAN_FRAMEWORKS ${CONAN_FRAMEWORKS_MINSIZEREL} ${CONAN_BUILD_MODULES_PATHS})
+                        set(CONAN_FRAMEWORK_DIRS ${CONAN_FRAMEWORK_DIRS_MINSIZEREL} ${CONAN_FRAMEWORK_DIRS})
+                    endif()
+                endif()
+                foreach(_FRAMEWORK ${FRAMEWORKS})
+                    # https://cmake.org/pipermail/cmake-developers/2017-August/030199.html
+                    find_library(CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND NAME ${_FRAMEWORK} PATHS ${CONAN_FRAMEWORK_DIRS})
+                    if(CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND)
+                        list(APPEND ${FRAMEWORKS_FOUND} ${CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND})
+                    else()
+                        message(FATAL_ERROR "Framework library ${_FRAMEWORK} not found in paths: ${CONAN_FRAMEWORK_DIRS}")
+                    endif()
+                endforeach()
+            endif()
         endmacro()
     """)
 
@@ -704,38 +779,6 @@ _cmake_common_macros = "\n".join([
     CMakeCommonMacros.conan_target_link_libraries,
     CMakeCommonMacros.conan_include_build_modules,
 ])
-
-
-apple_frameworks_macro = """
-macro(conan_find_apple_frameworks FRAMEWORKS_FOUND FRAMEWORKS)
-    if(APPLE)
-        if(CMAKE_BUILD_TYPE)
-            if(${CMAKE_BUILD_TYPE} MATCHES "Debug")
-                set(CONAN_FRAMEWORKS ${CONAN_FRAMEWORKS_DEBUG} ${CONAN_FRAMEWORKS})
-                set(CONAN_FRAMEWORK_DIRS ${CONAN_FRAMEWORK_DIRS_DEBUG} ${CONAN_FRAMEWORK_DIRS})
-            elseif(${CMAKE_BUILD_TYPE} MATCHES "Release")
-                set(CONAN_FRAMEWORKS ${CONAN_FRAMEWORKS_RELEASE} ${CONAN_BUILD_MODULES_PATHS})
-                set(CONAN_FRAMEWORK_DIRS ${CONAN_FRAMEWORK_DIRS_RELEASE} ${CONAN_FRAMEWORK_DIRS})
-            elseif(${CMAKE_BUILD_TYPE} MATCHES "RelWithDebInfo")
-                set(CONAN_FRAMEWORKS ${CONAN_FRAMEWORKS_RELWITHDEBINFO} ${CONAN_BUILD_MODULES_PATHS})
-                set(CONAN_FRAMEWORK_DIRS ${CONAN_FRAMEWORK_DIRS_RELWITHDEBINFO} ${CONAN_FRAMEWORK_DIRS})
-            elseif(${CMAKE_BUILD_TYPE} MATCHES "MinSizeRel")
-                set(CONAN_FRAMEWORKS ${CONAN_FRAMEWORKS_MINSIZEREL} ${CONAN_BUILD_MODULES_PATHS})
-                set(CONAN_FRAMEWORK_DIRS ${CONAN_FRAMEWORK_DIRS_MINSIZEREL} ${CONAN_FRAMEWORK_DIRS})
-            endif()
-        endif()
-        foreach(_FRAMEWORK ${FRAMEWORKS})
-            # https://cmake.org/pipermail/cmake-developers/2017-August/030199.html
-            find_library(CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND NAME ${_FRAMEWORK} PATHS ${CONAN_FRAMEWORK_DIRS})
-            if(CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND)
-                list(APPEND ${FRAMEWORKS_FOUND} ${CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND})
-            else()
-                message(FATAL_ERROR "Framework library ${_FRAMEWORK} not found in paths: ${CONAN_FRAMEWORK_DIRS}")
-            endif()
-        endforeach()
-    endif()
-endmacro()
-"""
 
 
 def _conan_basic_setup_common(addtional_macros, cmake_multi=False):
@@ -810,57 +853,43 @@ cmake_macros = "\n".join([
     _conan_basic_setup_common(["conan_set_find_library_paths()"]),
     CMakeCommonMacros.conan_set_find_paths,
     CMakeCommonMacros.conan_set_find_library_paths,
-    CMakeCommonMacros.conan_set_vs_runtime
-    ]) + """
-macro(conan_flags_setup)
-    # Macro maintained for backwards compatibility
-    conan_set_find_library_paths()
-    conan_global_flags()
-    conan_set_rpath()
-    conan_set_vs_runtime()
-    conan_set_libcxx()
-endmacro()
-""" + _cmake_common_macros
+    CMakeCommonMacros.conan_set_vs_runtime,
+    textwrap.dedent("""
+        macro(conan_flags_setup)
+            # Macro maintained for backwards compatibility
+            conan_set_find_library_paths()
+            conan_global_flags()
+            conan_set_rpath()
+            conan_set_vs_runtime()
+            conan_set_libcxx()
+        endmacro()
+        """),
+    _cmake_common_macros])
 
-cmake_macros_multi = """
-if(EXISTS ${CMAKE_CURRENT_LIST_DIR}/conanbuildinfo_release.cmake)
-    include(${CMAKE_CURRENT_LIST_DIR}/conanbuildinfo_release.cmake)
-else()
-    message(FATAL_ERROR "No conanbuildinfo_release.cmake, please install the Release conf first")
-endif()
 
-if(EXISTS ${CMAKE_CURRENT_LIST_DIR}/conanbuildinfo_debug.cmake)
-    include(${CMAKE_CURRENT_LIST_DIR}/conanbuildinfo_debug.cmake)
-else()
-    message(FATAL_ERROR "No conanbuildinfo_debug.cmake, please install the Debug conf first")
-endif()
-
-if(EXISTS ${CMAKE_CURRENT_LIST_DIR}/conanbuildinfo_minsizerel.cmake)
-    include(${CMAKE_CURRENT_LIST_DIR}/conanbuildinfo_minsizerel.cmake)
-endif()
-
-if(EXISTS ${CMAKE_CURRENT_LIST_DIR}/conanbuildinfo_relwithdebinfo.cmake)
-    include(${CMAKE_CURRENT_LIST_DIR}/conanbuildinfo_relwithdebinfo.cmake)
-endif()
-
-""" + CMakeCommonMacros.conan_set_vs_runtime + """
-
-macro(conan_set_find_paths)
-    if(CMAKE_BUILD_TYPE)
-        MESSAGE("BUILD TYPE: ${CMAKE_BUILD_TYPE}")
-        if(${CMAKE_BUILD_TYPE} MATCHES "Debug")
-            set(CMAKE_PREFIX_PATH ${CONAN_CMAKE_MODULE_PATH_DEBUG} ${CMAKE_PREFIX_PATH})
-            set(CMAKE_MODULE_PATH ${CONAN_CMAKE_MODULE_PATH_DEBUG} ${CMAKE_MODULE_PATH})
-        elseif(${CMAKE_BUILD_TYPE} MATCHES "Release")
-            set(CMAKE_PREFIX_PATH ${CONAN_CMAKE_MODULE_PATH_RELEASE} ${CMAKE_PREFIX_PATH})
-            set(CMAKE_MODULE_PATH ${CONAN_CMAKE_MODULE_PATH_RELEASE} ${CMAKE_MODULE_PATH})
-        elseif(${CMAKE_BUILD_TYPE} MATCHES "RelWithDebInfo")
-            set(CMAKE_PREFIX_PATH ${CONAN_CMAKE_MODULE_PATH_RELWITHDEBINFO} ${CMAKE_PREFIX_PATH})
-            set(CMAKE_MODULE_PATH ${CONAN_CMAKE_MODULE_PATH_RELWITHDEBINFO} ${CMAKE_MODULE_PATH})
-        elseif(${CMAKE_BUILD_TYPE} MATCHES "MinSizeRel")
-            set(CMAKE_PREFIX_PATH ${CONAN_CMAKE_MODULE_PATH_MINSIZEREL} ${CMAKE_PREFIX_PATH})
-            set(CMAKE_MODULE_PATH ${CONAN_CMAKE_MODULE_PATH_MINSIZEREL} ${CMAKE_MODULE_PATH})
+cmake_macros_multi = "\n".join([
+    textwrap.dedent("""
+        if(EXISTS ${CMAKE_CURRENT_LIST_DIR}/conanbuildinfo_release.cmake)
+            include(${CMAKE_CURRENT_LIST_DIR}/conanbuildinfo_release.cmake)
+        else()
+            message(FATAL_ERROR "No conanbuildinfo_release.cmake, please install the Release conf first")
         endif()
-    endif()
-endmacro()
-""" + _conan_basic_setup_common([], cmake_multi=True) + _cmake_common_macros
+        
+        if(EXISTS ${CMAKE_CURRENT_LIST_DIR}/conanbuildinfo_debug.cmake)
+            include(${CMAKE_CURRENT_LIST_DIR}/conanbuildinfo_debug.cmake)
+        else()
+            message(FATAL_ERROR "No conanbuildinfo_debug.cmake, please install the Debug conf first")
+        endif()
+        
+        if(EXISTS ${CMAKE_CURRENT_LIST_DIR}/conanbuildinfo_minsizerel.cmake)
+            include(${CMAKE_CURRENT_LIST_DIR}/conanbuildinfo_minsizerel.cmake)
+        endif()
+        
+        if(EXISTS ${CMAKE_CURRENT_LIST_DIR}/conanbuildinfo_relwithdebinfo.cmake)
+            include(${CMAKE_CURRENT_LIST_DIR}/conanbuildinfo_relwithdebinfo.cmake)
+        endif()
+        """),
+    CMakeCommonMacros.conan_set_vs_runtime_preserve_build_type,
+    CMakeCommonMacros.conan_set_find_paths_multi,
+    _conan_basic_setup_common([], cmake_multi=True),
+    _cmake_common_macros])
