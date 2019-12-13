@@ -21,11 +21,11 @@ class Definitions(OrderedDict):
         super(Definitions, self).__init__()
         self._configuration_types = {}
 
-    def __getitem__(self, item):
+    def __getattr__(self, config):
         try:
-            return super(Definitions, self).__getitem__(item)
+            return super(Definitions, self).__getitem__(config)
         except KeyError:
-            return self._configuration_types.setdefault(item, dict())
+            return self._configuration_types.setdefault(config, dict())
 
     @property
     def configuration_types(self):
@@ -257,7 +257,7 @@ class CMakeToolchain(object):
             content = t.render(configuration_types_definitions=self.definitions.configuration_types,
                                cmake_macros_and_functions="\n".join([
                                    CMakeCommonMacros.conan_message,
-                                   CMakeCommonMacros.conan_set_vs_runtime
+                                   CMakeCommonMacros.conan_set_vs_runtime  # TODO: Shall I use CMakeCommonMacros.conan_set_vs_runtime_preserve_build_type instead?
                                ]),
                                **self._context)
             f.write(content)
