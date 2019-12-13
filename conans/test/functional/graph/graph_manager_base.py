@@ -50,6 +50,37 @@ class GraphManagerTest(unittest.TestCase):
                        binaries)
         return app
 
+    def recipe_cache(self, reference, requires=None):
+        ref = ConanFileReference.loads(reference)
+        conanfile = GenConanfile()
+        if requires:
+            for r in requires:
+                conanfile.with_require_plain(r)
+        layout = self.cache.package_layout(ref)
+        conanfile = conanfile.with_package_info(
+            cpp_info={"libs": ["mylib{}{}lib".format(ref.name, ref.version)]},
+            env_info={"MYENV": ["myenv{}{}env".format(ref.name, ref.version)]})
+        save(layout.conanfile(), str(conanfile))
+        # Need to complete de metadata = revision + manifest
+        with layout.update_metadata() as metadata:
+            metadata.recipe.revision = "123"
+        manifest = FileTreeManifest.create(layout.export())
+        manifest.save(layout.export())
+
+    @staticmethod
+    def recipe_consumer(reference=None, requires=None):
+        path = temp_folder()
+        path = os.path.join(path, "conanfile.py")
+        conanfile = GenConanfile()
+        if reference:
+            ref = ConanFileReference.loads(reference)
+            conanfile.with_name(ref.name).with_version(ref.version)
+        if requires:
+            for r in requires:
+                conanfile.with_require_plain(r)
+        save(path, str(conanfile))
+        return path
+
     def _cache_recipe(self, ref, test_conanfile, revision=None):
         if isinstance(test_conanfile, GenConanfile):
             name, version = test_conanfile._name, test_conanfile._version
@@ -67,7 +98,10 @@ class GraphManagerTest(unittest.TestCase):
         path = temp_folder()
         path = os.path.join(path, "conanfile.py")
         save(path, str(content))
+        return self.build_consumer(path, profile_build_requires, ref, create_ref, install)
 
+    def build_consumer(self, path, profile_build_requires=None, ref=None, create_ref=None,
+                       install=True):
         profile = Profile()
         if profile_build_requires:
             profile.build_requires = profile_build_requires
@@ -88,7 +122,12 @@ class GraphManagerTest(unittest.TestCase):
             binary_installer.install(deps_graph, None, build_mode, update, False, graph_info)
         return deps_graph
 
-    def _check_node(self, node, ref, deps, build_deps, dependents, closure):
+    def _check_node(self, node, ref, deps=None, build_deps=None, dependents=None, closure=None):
+        build_deps = build_deps or []
+        dependents = dependents or []
+        closure = closure or []
+        deps = deps or []
+
         conanfile = node.conanfile
         ref = ConanFileReference.loads(str(ref))
         self.assertEqual(repr(node.ref), repr(ref))
@@ -103,8 +142,7 @@ class GraphManagerTest(unittest.TestCase):
         # The recipe requires is resolved to the reference WITH revision!
         self.assertEqual(len(deps), len(conanfile.requires))
         for dep in deps:
-            self.assertEqual(conanfile.requires[dep.name].ref,
-                             dep.ref)
+            self.assertEqual(conanfile.requires[dep.name].ref, dep.ref)
 
         self.assertEqual(closure, node.public_closure)
         libs = []

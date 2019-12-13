@@ -263,7 +263,7 @@ class ConanAPIV1(object):
             ref = ConanFileReference.loads(path)
         except ConanException:
             conanfile_path = _get_conanfile_path(path, get_cwd(), py=True)
-            conanfile = self.app.loader.load_basic(conanfile_path)
+            conanfile = self.app.loader.load_named(conanfile_path, None, None, None, None)
         else:
             update = True if remote_name else False
             result = self.app.proxy.get_recipe(ref, update, update, remotes, ActionRecorder())
@@ -696,10 +696,9 @@ class ConanAPIV1(object):
                                  "--build-folder and package folder can't be the same")
         conanfile = self.app.graph_manager.load_consumer_conanfile(conanfile_path, install_folder,
                                                                    deps_info_required=True)
-        with get_env_context_manager(conanfile):
-            packager.run_package_method(conanfile, None, source_folder, build_folder, package_folder,
-                                        install_folder, self.app.hook_manager, conanfile_path, None,
-                                        local=True, copy_info=True)
+        packager.run_package_method(conanfile, None, source_folder, build_folder, package_folder,
+                                    install_folder, self.app.hook_manager, conanfile_path, None,
+                                    local=True, copy_info=True)
 
     @api_method
     def source(self, path, source_folder=None, info_folder=None, cwd=None):
