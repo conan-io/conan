@@ -25,7 +25,7 @@ class Layout(object):
         self.libdir = "lib"
         self.bindir = "bin"
         self.includedir = "include"
-        self.builddir = "build"
+        self.builddir = "build"  # TODO: ???
 
     @property
     def installdir(self):
@@ -97,6 +97,7 @@ class CMakeLayout(Layout):
         super(CMakeLayout, self).__init__(conanfile)
         # Only input to build is the source directory, include not a thing here
         # relative to conanfile
+        # FIXME: This is not true many times, the CMakeList.txt is typically in the root
         self.src = "src"
         # Output of build, relative to conanfile
         self.includedirs = ["src"]

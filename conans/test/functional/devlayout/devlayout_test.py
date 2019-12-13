@@ -208,11 +208,9 @@ class DevLayoutTest(unittest.TestCase):
                       "CMakeLists.txt": test_cmake,
                       "conanfile.py": consumer})
         client2.run("install .")
-        print client2.out
         client2.run("install . -s build_type=Debug")
         with client2.chdir("build"):
             client2.run_command('cmake .. -G "Visual Studio 15 Win64"')
-            print client2.out
             client2.run_command("cmake --build . --config Release")
             # alternative 1: imports() copy DLLs. Does not work for continuous dev
             #                ok for cached dependencies, different Debug/Release output
