@@ -223,6 +223,7 @@ class DepsGraphBuilder(object):
             # As we are closing a diamond, there can be conflicts. This will raise if conflicts
             conflict = self._conflicting_references(previous.ref, require.ref, node.ref)
             if conflict:  # It is possible to get conflict from alias, try to resolve it
+                print "RETRYING CONFLICT"
                 self._resolve_recipe(node, graph, require, check_updates,
                                      update, remotes, profile_host, graph_lock)
                 conflict = self._conflicting_references(previous.ref, require.ref, node.ref)
@@ -266,9 +267,9 @@ class DepsGraphBuilder(object):
         # a revision, so it's ok any previous_ref
         if previous_ref.revision and new_ref.revision and previous_ref.revision != new_ref.revision:
             if consumer_ref:
-                return ("Conflict in %s\n"
-                        "    Different revisions of %s has been requested"
-                        % (consumer_ref, new_ref))
+                raise ConanException("Conflict in %s\n"
+                                     "    Different revisions of %s has been requested"
+                                     % (consumer_ref, new_ref))
             return True
         return False
 
