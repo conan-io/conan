@@ -33,30 +33,6 @@ def load_graph():
 """
 
 
-""" CALL TREE
-def load_graph():
-    node = root_node
-    load_deps(node)
-        config_node(node)
-            node.conanfile.requirements()
-            resolve_cached_alias(node.conanfile.requires)                       ***
-        resolve_deps(node)
-            resolve_ranges(node)
-                resolve_cached_alias(node.conanfile.requires)                   ***
-        for req in node.conanfile.requires:
-            handle_require(req)
-                if req.name not in graph:  # New node
-                    new_node = create_new_node(req)
-                        if alias => create_new_node(alias)  # recurse alias     ***
-                    load_deps(new_node)
-                else:  # Node already in graph, closing diamond
-                    resolve_cached_alias(req)                                   ***
-                    check_conflicts(req)
-                    if need_recurse:  # to check for extra conflicts
-                        load_deps(previous_node)    
-"""
-
-
 class DepsGraphBuilder(object):
     """ Responsible for computing the dependencies graph DepsGraph
     """
@@ -243,7 +219,7 @@ class DepsGraphBuilder(object):
             self._resolve_cached_alias([require], graph)
             # As we are closing a diamond, there can be conflicts. This will raise if conflicts
             conflict = self._conflicting_references(previous.ref, require.ref, node.ref)
-            if conflict:
+            if conflict:  # It is possible to get conflict from alias, try to resolve it
                 self._resolve_recipe(node, graph, require, check_updates,
                                      update, remotes, profile_host, graph_lock)
                 conflict = self._conflicting_references(previous.ref, require.ref, node.ref)
