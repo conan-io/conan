@@ -152,13 +152,12 @@ class _PackageBuilder(object):
 
         package_id = pref.id
         # Do the actual copy, call the conanfile.package() method
-        with get_env_context_manager(conanfile):
-            # Could be source or build depends no_copy_source
-            source_folder = conanfile.source_folder
-            install_folder = build_folder  # While installing, the infos goes to build folder
-            prev = run_package_method(conanfile, package_id, source_folder, build_folder,
-                                      package_folder, install_folder, self._hook_manager,
-                                      conanfile_path, pref.ref)
+        # Could be source or build depends no_copy_source
+        source_folder = conanfile.source_folder
+        install_folder = build_folder  # While installing, the infos goes to build folder
+        prev = run_package_method(conanfile, package_id, source_folder, build_folder,
+                                  package_folder, install_folder, self._hook_manager,
+                                  conanfile_path, pref.ref)
 
         update_package_metadata(prev, package_layout, package_id, pref.ref.revision)
 
