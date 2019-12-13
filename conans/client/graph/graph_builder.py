@@ -10,27 +10,33 @@ from conans.model.requires import Requirements, Requirement
 from conans.util.log import logger
 
 """
-def load_graph():
-    node = root_node
-    expand_node(node)
-        get_node_requirements(node) # Evaluate requirements(), overrides, and version ranges
-            node.conanfile.requirements()
-            resolve_cached_alias(node.conanfile.requires)
-            update_requires_from_downstream(down_requires)
-            resolve_ranges(node)
-                resolve_cached_alias(node.conanfile.requires)
+This is a summary, in pseudo-code of the execution and structure of the graph
+resolution algorithm
 
+
+load_graph(root_node)
+    init root_node
+    expand_node(root_node)
+        # 1. Evaluate requirements(), overrides, and version ranges
+        get_node_requirements(node)
+            node.conanfile.requirements()                           # call the requirements()
+            resolve_cached_alias(node.conanfile.requires)           # replace cached alias
+            update_requires_from_downstream(down_requires)          # process overrides
+            resolve_ranges(node)                                    # resolve version-ranges
+                resolve_cached_alias(node.conanfile.requires)       # replace cached alias again
+
+        # 2. Process each requires of this node
         for req in node.conanfile.requires:
             expand_require(req)
-                if req.name not in graph:  # New node
-                    new_node = create_new_node(req)
-                        if alias => create_new_node(alias)  # recurse alias
-                    expand_node(new_node)
-                else:  # Node already in graph, closing diamond
+                if req.name not in graph:                           # New node
+                    new_node = create_new_node(req)                 # fetch and load conanfile.py
+                        if alias => create_new_node(alias)          # recurse alias
+                    expand_node(new_node)                           # recursion
+                else:                                               # Node exists, closing diamond
                     resolve_cached_alias(req)
-                    check_conflicts(req)
-                    if need_recurse:  # to check for extra conflicts
-                        expand_node(previous_node)
+                    check_conflicts(req)                            # diamonds can cause conflicts
+                    if need_recurse:                                # check for conflicts upstream
+                        expand_node(previous_node)                  # recursion
 """
 
 
