@@ -348,3 +348,32 @@ class Conan(ConanFile):
             self.assertIn("hello found: 1", client.out)
         else:
             self.assertIn("hello found: 0", client.out)
+
+    def test_no_build_type_test(self):
+        client = TestClient()
+        client.run("new req/version")
+        client.run("create .")
+
+        cmakelists = textwrap.dedent("""
+            cmake_minimum_required(VERSION 3.1)
+            project(consumer)
+            find_package(req)
+            message(STATUS "hello found: ${{hello_FOUND}}")
+        """)
+
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile, CMake
+
+            class Conan(ConanFile):
+                settings = "os", "arch", "compiler"
+                requires = "req/version"
+                generators = "cmake_find_package_multi"
+
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+        """)
+
+        client.save({"conanfile.py": conanfile, "CMakeLists.txt": cmakelists})
+        client.run("install .", assert_error=True)
+        self.assertIn("ERROR: 'settings.build_type' doesn't exist", client.out)

@@ -95,7 +95,7 @@ endif()
     @property
     def content(self):
         ret = {}
-        build_type = self.conanfile.settings.get_safe("build_type")
+        build_type = self.conanfile.settings.build_type
         build_type_suffix = "_{}".format(build_type.upper()) if build_type else ""
         for _, cpp_info in self.deps_build_info.dependencies:
             depname = cpp_info.get_name("cmake_find_package_multi")
@@ -109,9 +109,6 @@ endif()
             ret["{}ConfigVersion.cmake".format(depname)] = self.version_template.\
                 format(version=cpp_info.version)
         return ret
-
-    def _build_type_suffix(self, build_type):
-        return
 
     def _find_for_dep(self, name, cpp_info):
         lines = []
