@@ -15,7 +15,7 @@ class _VSSettings(object):
             raise ConanException("Undefined Visual Studio version %s" %
                                  settings.get_safe("compiler.version"))
 
-        self._props = [("Configuration", settings.get_safe("build_type")),
+        self._props = [("Configuration", settings.build_type),
                        ("Platform", {'x86': 'Win32',
                                      'x86_64': 'x64'}.get(settings.get_safe("arch"))),
                        ("PlatformToolset", toolset)]
