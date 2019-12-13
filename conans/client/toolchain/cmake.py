@@ -183,7 +183,6 @@ class CMakeToolchain(object):
                  build_type=None,
                  toolset=None,
                  make_program=None,
-                 msbuild_verbosity="minimal",
                  # cmake_program=None,  # TODO: cmake program should be considered in the environment
                  generator_platform=None
                  ):
@@ -200,15 +199,11 @@ class CMakeToolchain(object):
         self.set_vs_runtime = True
 
         generator = generator or get_generator(self._conanfile.settings, add_platform=False)
-        self._context = {
-            #"build_type": build_type or self._conanfile.settings.get_safe("build_type"),
-            #"generator": generator,
-            "generator_platform": generator_platform or
-                                  get_generator_platform(self._conanfile.settings, generator, force_vs_return=True),
-            # "parallel": parallel,  # TODO: This is for the --build
-            # '-Wno-dev'  # TODO: Can I add this to a CMake variable?
-            "toolset": toolset or get_toolset(self._conanfile.settings)
-        }
+        self._generator_platform = generator_platform or \
+                                   get_generator_platform(self._conanfile.settings, generator,
+                                                          force_vs_return=True)
+        self._toolset = toolset or get_toolset(self._conanfile.settings)
+        self._build_type = build_type or self._conanfile.settings.get_safe("build_type")
 
         builder = CMakeDefinitionsBuilder(self._conanfile,
                                           cmake_system_name=cmake_system_name,
@@ -219,26 +214,22 @@ class CMakeToolchain(object):
                                           output=self._conanfile.output)
         self.definitions = Definitions()
         self.definitions.update(builder.get_definitions())
-
-        # Build type game
-        settings_build_type = self._conanfile.settings.get_safe("build_type")
         self.definitions.pop("CMAKE_BUILD_TYPE", None)
-        self._context.update({"CMAKE_BUILD_TYPE": build_type or settings_build_type})
 
         # Some variables can go to the environment
         # TODO: Do we need this or can we move it to environment stuff
         self.environment = {}
-        set_env = "pkg_config" in self._conanfile.generators and "PKG_CONFIG_PATH" not in os.environ
-        if set_env:
+        if "pkg_config" in self._conanfile.generators and "PKG_CONFIG_PATH" not in os.environ:
             self.environment.update({
                 "PKG_CONFIG_PATH": self._conanfile.install_folder
             })
 
-        # self._msbuild_verbosity = os.getenv("CONAN_MSBUILD_VERBOSITY") or msbuild_verbosity  # TODO: This is for the --build
-
     def dump(self, install_folder):
         # The user can modify these dictionaries, add them to the context in the very last moment
-        self._context.update({
+        context = {
+            "CMAKE_BUILD_TYPE": self._build_type,
+            "generator_platform": self._generator_platform,
+            "toolset": self._toolset,
             "definitions": self.definitions,
             "environment": self.environment,
             "options": {"set_rpath": self.set_rpath,
@@ -249,7 +240,7 @@ class CMakeToolchain(object):
                         "set_find_library_paths": self.set_find_library_paths,
                         "set_compiler": self.set_compiler,
                         "set_vs_runtime": self.set_vs_runtime}
-        })
+        }
 
         conan_project_include_cmake = os.path.join(install_folder, "conan_project_include.cmake")
         with open(conan_project_include_cmake, "w") as f:
@@ -259,7 +250,7 @@ class CMakeToolchain(object):
                                    CMakeCommonMacros.conan_message,
                                    CMakeCommonMacros.conan_set_vs_runtime  # TODO: Shall I use CMakeCommonMacros.conan_set_vs_runtime_preserve_build_type instead?
                                ]),
-                               **self._context)
+                               **context)
             f.write(content)
 
         with open(os.path.join(install_folder, self.filename), "w") as f:
@@ -285,9 +276,5 @@ class CMakeToolchain(object):
                                    CMakeCommonMacros.conan_set_find_library_paths,
                                    self._conan_set_compiler
                                ]),
-                               **self._context)
+                               **context)
             f.write(content)
-
-            # TODO: Remove this, intended only for testing
-            f.write('\n\nset(ENV{TOOLCHAIN_ENV} "toolchain_environment")\n')
-            f.write('set(TOOLCHAIN_VAR "toolchain_variable")\n')
