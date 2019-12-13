@@ -262,9 +262,9 @@ class DepsGraphBuilder(object):
         # a revision, so it's ok any previous_ref
         if previous_ref.revision and new_ref.revision and previous_ref.revision != new_ref.revision:
             if consumer_ref:
-                return ("Conflict in %s\n"
-                        "    Different revisions of %s has been requested"
-                        % (consumer_ref, new_ref))
+                raise ConanException("Conflict in %s\n"
+                                     "    Different revisions of %s has been requested"
+                                     % (consumer_ref, new_ref))
             return True
         return False
 
