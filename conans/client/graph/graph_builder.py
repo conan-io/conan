@@ -88,7 +88,7 @@ class DepsGraphBuilder(object):
         self._resolve_ranges(graph, requires, scope, update, remotes)
 
         for require in requires:
-            self._expand_require(node, require, graph, check_updates, update,
+            self._expand_require(require, node, graph, check_updates, update,
                                  remotes, profile_host, new_reqs, new_options, graph_lock)
 
         new_nodes = set(n for n in graph.nodes if n.package_id is None)
@@ -115,7 +115,7 @@ class DepsGraphBuilder(object):
         for require in node.conanfile.requires.values():
             if require.override:
                 continue
-            self._expand_require(node, require, graph, check_updates, update,
+            self._expand_require(require, node, graph, check_updates, update,
                                  remotes, profile_host, new_reqs, new_options, graph_lock)
 
     def _resolve_ranges(self, graph, requires, consumer, update, remotes):
@@ -167,7 +167,7 @@ class DepsGraphBuilder(object):
 
         return new_options, new_reqs
 
-    def _expand_require(self, node, require, graph, check_updates, update,
+    def _expand_require(self, require, node, graph, check_updates, update,
                         remotes, profile_host, new_reqs, new_options, graph_lock):
         # Handle a requirement of a node. There are 2 possibilities
         #    node -(require)-> new_node (creates a new node in the graph)
