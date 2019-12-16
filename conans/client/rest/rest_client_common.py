@@ -23,8 +23,8 @@ class JWTAuth(AuthBase):
 
 
 def get_exception_from_error(error_code):
-    tmp = {k: v for k, v in EXCEPTION_CODE_MAPPING.items()  # All except NotFound
-           if k not in (RecipeNotFoundException, PackageNotFoundException)}
+    tmp = {v: k for k, v in EXCEPTION_CODE_MAPPING.items()  # All except NotFound
+           if v not in (RecipeNotFoundException, PackageNotFoundException)}
     if error_code in tmp:
         logger.debug("REST ERROR: %s" % str(tmp[error_code]))
         return tmp[error_code]
