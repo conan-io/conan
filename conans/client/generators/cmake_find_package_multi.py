@@ -1,28 +1,8 @@
-from itertools import chain
-
 from conans.client.generators.cmake import DepsCppCmake
 from conans.client.generators.cmake_find_package import find_dependency_lines
 from conans.client.generators.cmake_find_package_common import target_template
+from conans.client.generators.cmake_multi import extend
 from conans.model import Generator
-
-
-class _CppInfoCombined(object):
-    """ Behaves like a DepsCppCmake object, but concatenates the values returned from
-        several objects
-    """
-    def __init__(self, cpp_info):
-        self._cpp_info_list = [cpp_info]
-
-    def append(self, cpp_info):
-        self._cpp_info_list.append(cpp_info)
-
-    def __getattr__(self, item):
-        value = getattr(self._cpp_info_list[0], item)
-        if isinstance(value, (list, tuple, set)):
-            return list(chain(*[getattr(it, item) for it in self._cpp_info_list]))
-        else:
-            # TODO: Which one shall I return? The last one will be more specific (if it is the config one)
-            return getattr(self._cpp_info_list[-1], item)
 
 
 class CMakeFindPackageMultiGenerator(Generator):
@@ -120,16 +100,14 @@ endif()
         build_type_suffix = "_{}".format(build_type.upper()) if build_type else ""
         for _, cpp_info in self.deps_build_info.dependencies:
             depname = cpp_info.get_name("cmake_find_package_multi")
-            deps = _CppInfoCombined(cpp_info)
             ret["{}Config.cmake".format(depname)] = self._find_for_dep(depname, cpp_info)
             ret["{}Targets.cmake".format(depname)] = self.targets_file.format(name=depname)
 
-            # If any config matches the build_type one
-            for config, config_cpp_info in cpp_info.configs.items():
-                if config.lower() == build_type.lower():
-                    deps.append(config_cpp_info)
+            # If any config matches the build_type one, add it to the cpp_info
+            dep_cpp_info = extend(cpp_info, build_type.lower())
+            deps = DepsCppCmake(dep_cpp_info)
 
-            find_lib = target_template.format(name=depname, deps=DepsCppCmake(deps),
+            find_lib = target_template.format(name=depname, deps=deps,
                                               build_type_suffix=build_type_suffix)
             ret["{}Target-{}.cmake".format(depname, build_type.lower())] = find_lib
             ret["{}ConfigVersion.cmake".format(depname)] = self.version_template.\
