@@ -46,7 +46,7 @@ cmd_activate_tpl = Template(textwrap.dedent("""
     SET "CONAN_OLD_{{it}}=%{{it}}%"
     {%- endfor %}
     
-    FOR /F "usebackq tokens=1,* delims={{delim}}" %%i IN ("{{ environment_file }}") DO (
+    FOR /F "usebackq tokens=1,* delims==" %%i IN ("{{ environment_file }}") DO (
         CALL SET "%%i=%%j"
     )
     
@@ -137,12 +137,10 @@ class VirtualEnvGenerator(Generator):
         :param variables: variables to be formatted
         :return:
         """
-        if flavor == "cmd":
-            path_sep, quote_elements, quote_full_value = ";", False, False
-        elif flavor == "ps1":
-            path_sep, quote_elements, quote_full_value = ";", False, False
+        if flavor in ["cmd", "ps1"]:
+            path_sep, quote_elements = ";", False
         elif flavor == "sh":
-            path_sep, quote_elements, quote_full_value = ":", True, False
+            path_sep, quote_elements = ":", True
 
         for name, value in variables:
             # activate values
@@ -165,16 +163,14 @@ class VirtualEnvGenerator(Generator):
             else:
                 # single value
                 value = "\"%s\"" % value if quote_elements else value
-            activate_value = "\"%s\"" % value if quote_full_value else value
             if platform.system() != "Windows":
-                activate_value = activate_value.replace("\\", "\\\\")
+                value = value.replace("\\", "\\\\")
 
             # deactivate values
             existing = name in os.environ
-            yield name, activate_value, existing
+            yield name, value, existing
 
-    def _files(self, flavor, activate_tpl, deactivate_tpl, environment_infix=None, **tpl_context):
-        environment_infix = environment_infix or flavor
+    def _files(self, flavor, activate_tpl, deactivate_tpl, environment_infix):
         ret = list(self._format_values(flavor, self.env.items()))
         modified_vars = [it[0] for it in ret if it[2]]
         new_vars = [it[0] for it in ret if not it[2]]
@@ -183,9 +179,8 @@ class VirtualEnvGenerator(Generator):
                                                             format(self.suffix, environment_infix)))
         activate_content = activate_tpl.render(environment_file=environment_filepath,
                                                modified_vars=modified_vars, new_vars=new_vars,
-                                               venv_name=self.venv_name, **tpl_context)
-        deactivate_content = deactivate_tpl.render(modified_vars=modified_vars, new_vars=new_vars,
-                                                   **tpl_context)
+                                               venv_name=self.venv_name)
+        deactivate_content = deactivate_tpl.render(modified_vars=modified_vars, new_vars=new_vars)
 
         environment_lines = []
         for name, activate, _ in ret:
@@ -196,23 +191,20 @@ class VirtualEnvGenerator(Generator):
 
     @property
     def content(self):
-        os_info = OSInfo()
         result = {}
+
+        def _call_files(flavor, activate_tpl, deactivate_tpl, environment_infix=None):
+            environment_infix = environment_infix or flavor
+            activate, deactivate, envfile = self._files(flavor, activate_tpl, deactivate_tpl,
+                                                        environment_infix)
+            result["activate{}.{}".format(self.suffix, environment_infix)] = activate
+            result["deactivate{}.{}".format(self.suffix, environment_infix)] = deactivate
+            result["environment{}.{}.env".format(self.suffix, environment_infix)] = envfile
+
+        os_info = OSInfo()
         if os_info.is_windows and not os_info.is_posix:
-            activate, deactivate, envfile = self._files('cmd', cmd_activate_tpl, cmd_deactivate_tpl,
-                                                        environment_infix='bat', delim="=")
-            result["activate{}.bat".format(self.suffix)] = activate
-            result["deactivate{}.bat".format(self.suffix)] = deactivate
-            result["environment{}.bat.env".format(self.suffix)] = envfile
-
-            activate, deactivate, envfile = self._files('ps1', ps1_activate_tpl, ps1_deactivate_tpl)
-            result["activate{}.ps1".format(self.suffix)] = activate
-            result["deactivate{}.ps1".format(self.suffix)] = deactivate
-            result["environment{}.ps1.env".format(self.suffix)] = envfile
-
-        activate, deactivate, envfile = self._files('sh', sh_activate_tpl, sh_deactivate_tpl)
-        result["activate{}.sh".format(self.suffix)] = activate
-        result["deactivate{}.sh".format(self.suffix)] = deactivate
-        result["environment{}.sh.env".format(self.suffix)] = envfile
+            _call_files('cmd', cmd_activate_tpl, cmd_deactivate_tpl, 'bat')
+            _call_files('ps1', ps1_activate_tpl, ps1_deactivate_tpl)
+        _call_files("sh", sh_activate_tpl, sh_deactivate_tpl)
 
         return result
