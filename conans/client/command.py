@@ -1249,7 +1249,7 @@ class Command(object):
                 # Show revisions of a ref
                 if ref:
                     info = self._conan.get_recipe_revisions(repr(ref), remote_name=args.remote)
-                    self._outputer.print_revisions(ref, info, remote_name=args.remote)
+                    self._outputer.print_revisions(ref, info, args.raw, remote_name=args.remote)
                     return
 
                 # Show revisions of pref
@@ -1259,7 +1259,7 @@ class Command(object):
                     pass
                 else:
                     info = self._conan.get_package_revisions(repr(pref), remote_name=args.remote)
-                    self._outputer.print_revisions(ref, info, remote_name=args.remote)
+                    self._outputer.print_revisions(ref, info, args.raw, remote_name=args.remote)
                     return
 
                 # A pattern: Listing references by pattern but showing revisions
@@ -1286,7 +1286,7 @@ class Command(object):
                                                    outdated=args.outdated)
                 # search is done for one reference
                 self._outputer.print_search_packages(info["results"], ref, args.query,
-                                                     args.table, outdated=args.outdated)
+                                                     args.table, args.raw, outdated=args.outdated)
             else:
                 if args.table:
                     raise ConanException("'--table' argument can only be used with a reference")
