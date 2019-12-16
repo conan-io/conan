@@ -170,21 +170,18 @@ class VirtualEnvGenerator(Generator):
             existing = name in os.environ
             yield name, value, existing
 
-    def _files(self, flavor, activate_tpl, deactivate_tpl, environment_infix):
+    def _files(self, flavor, activate_tpl, deactivate_tpl, environment_filename):
         ret = list(self._format_values(flavor, self.env.items()))
-        modified_vars = [it[0] for it in ret if it[2]]
-        new_vars = [it[0] for it in ret if not it[2]]
+        modified_vars = [name for name, _, existing in ret if existing]
+        new_vars = [name for name, _, existing in ret if not existing]
 
-        environment_filepath = os.path.abspath(os.path.join(self.output_path, "environment{}.{}.env".
-                                                            format(self.suffix, environment_infix)))
+        environment_filepath = os.path.abspath(os.path.join(self.output_path, environment_filename))
         activate_content = activate_tpl.render(environment_file=environment_filepath,
                                                modified_vars=modified_vars, new_vars=new_vars,
                                                venv_name=self.venv_name)
         deactivate_content = deactivate_tpl.render(modified_vars=modified_vars, new_vars=new_vars)
 
-        environment_lines = []
-        for name, activate, _ in ret:
-            environment_lines.append("%s=%s" % (name, activate))
+        environment_lines = ["{}={}".format(name, value) for name, value, _ in ret]
         environment_lines.append('')
 
         return activate_content, deactivate_content, os.linesep.join(environment_lines)
@@ -195,11 +192,13 @@ class VirtualEnvGenerator(Generator):
 
         def _call_files(flavor, activate_tpl, deactivate_tpl, environment_infix=None):
             environment_infix = environment_infix or flavor
+            environment_filename = "environment{}.{}.env".format(self.suffix, environment_infix)
             activate, deactivate, envfile = self._files(flavor, activate_tpl, deactivate_tpl,
-                                                        environment_infix)
+                                                        environment_filename)
+
             result["activate{}.{}".format(self.suffix, environment_infix)] = activate
             result["deactivate{}.{}".format(self.suffix, environment_infix)] = deactivate
-            result["environment{}.{}.env".format(self.suffix, environment_infix)] = envfile
+            result[environment_filename] = envfile
 
         os_info = OSInfo()
         if os_info.is_windows and not os_info.is_posix:
