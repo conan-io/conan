@@ -22,24 +22,19 @@ class JWTAuth(AuthBase):
         return request
 
 
-def _base_error(error_code):
-    return int(str(error_code)[0] + "00")
-
-
 def get_exception_from_error(error_code):
-    try:
-        tmp = {}
-        for key, value in EXCEPTION_CODE_MAPPING.items():
-            if key not in (RecipeNotFoundException, PackageNotFoundException):
-                tmp[value] = key
-        if error_code in tmp:
-            logger.debug("REST ERROR: %s" % str(tmp[error_code]))
-            return tmp[error_code]
-        else:
-            logger.debug("REST ERROR: %s" % str(_base_error(error_code)))
-            return tmp[_base_error(error_code)]
-    except KeyError:
-        return None
+    tmp = {k: v for k, v in EXCEPTION_CODE_MAPPING.items()  # All except NotFound
+           if k not in (RecipeNotFoundException, PackageNotFoundException)}
+    if error_code in tmp:
+        logger.debug("REST ERROR: %s" % str(tmp[error_code]))
+        return tmp[error_code]
+    else:
+        base_error = int(str(error_code)[0] + "00")
+        logger.debug("REST ERROR: %s" % str(base_error))
+        try:
+            return tmp[base_error]
+        except KeyError:
+            return None
 
 
 def handle_return_deserializer(deserializer=None):
@@ -63,7 +58,6 @@ class RestCommonMethods(object):
 
     def __init__(self, remote_url, token, custom_headers, output, requester, verify_ssl,
                  artifacts_properties=None, matrix_params=False):
-
         self.token = token
         self.remote_url = remote_url
         self.custom_headers = custom_headers
@@ -175,7 +169,6 @@ class RestCommonMethods(object):
         headers = self.custom_headers
         if data:  # POST request
             headers.update({'Content-type': 'application/json',
-                            'Accept': 'text/plain',
                             'Accept': 'application/json'})
             logger.debug("REST: post: %s" % url)
             response = self.requester.post(url, auth=self.auth, headers=headers,
@@ -248,11 +241,3 @@ class RestCommonMethods(object):
         package_infos = self.get_json(url)
         return package_infos
 
-    def _post_json(self, url, payload):
-        logger.debug("REST: post: %s" % url)
-        response = self.requester.post(url,
-                                       auth=self.auth,
-                                       headers=self.custom_headers,
-                                       verify=self.verify_ssl,
-                                       json=payload)
-        return response

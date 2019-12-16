@@ -126,7 +126,8 @@ class RestV1Methods(RestCommonMethods):
         urls = self._get_file_to_url_dict(url, data=file_sizes)
         if self._matrix_params:
             urls = self.router.add_matrix_params(urls)
-        self._upload_files(urls, files_to_upload, self._output, retry, retry_wait, display_name=str(ref))
+        self._upload_files(urls, files_to_upload, self._output, retry, retry_wait,
+                           display_name=str(ref))
 
     def _upload_package(self, pref, files_to_upload, retry, retry_wait):
         # Get the upload urls and then upload files
@@ -308,3 +309,12 @@ class RestV1Methods(RestCommonMethods):
 
     def get_latest_package_revision(self, pref):
         raise NoRestV2Available("The remote doesn't support revisions")
+
+    def _post_json(self, url, payload):
+        logger.debug("REST: post: %s" % url)
+        response = self.requester.post(url,
+                                       auth=self.auth,
+                                       headers=self.custom_headers,
+                                       verify=self.verify_ssl,
+                                       json=payload)
+        return response
