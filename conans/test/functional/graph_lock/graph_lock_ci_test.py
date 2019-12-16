@@ -3,8 +3,7 @@ import os
 import textwrap
 import unittest
 
-from conans.client.graph.graph import BINARY_BUILD
-from conans.model.graph_lock import LOCKFILE
+from conans.model.graph_lock import LOCKFILE, GraphLockNode
 from conans.model.ref import PackageReference
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.env_reader import get_env
@@ -59,7 +58,6 @@ class GraphLockCITest(unittest.TestCase):
 
         client.run("upload * --all --confirm")
 
-        # FIXME: We need to do this with info, to avoid installing the binaries when we want info
         client.run("graph lock PkgD/0.1@user/channel")
         lock_file = load(os.path.join(client.current_folder, LOCKFILE))
         initial_lock_file = lock_file
@@ -95,7 +93,7 @@ class GraphLockCITest(unittest.TestCase):
         self.assertIn("PkgD/0.1@user/channel#d3d184611fb757faa65e4d4203198579:"
                       "7e4312d9a6d3726436d62a6b508f361d13e65354#55f822331b182e54b5144e578ba9135b",
                       lock_fileb)
-        self.assertIn('"modified": "%s"' % BINARY_BUILD, lock_fileb)
+        self.assertIn('"status": "%s"' % GraphLockNode.STATUS_BUILT, lock_fileb)
         # Go back to main orchestrator
         client.save({"new_lock/%s" % LOCKFILE: lock_fileb})
         client.run("graph update-lock . new_lock")
@@ -222,7 +220,7 @@ class GraphLockCITest(unittest.TestCase):
         self.assertIn("PkgD/0.1@user/channel#d3d184611fb757faa65e4d4203198579:"
                       "d80dd9662f447164906643ab88a1ed4e7b12925b#50246cbe82411551e5ebc5bcc75f1a9a",
                       lock_fileb)
-        self.assertIn('"modified": "%s"' % BINARY_BUILD, lock_fileb)
+        self.assertIn('"status": "%s"' % GraphLockNode.STATUS_BUILT, lock_fileb)
         # Go back to main orchestrator
         client.save({"new_lock/%s" % LOCKFILE: lock_fileb})
         client.run("graph update-lock . new_lock")
@@ -523,14 +521,13 @@ class GraphLockCITest(unittest.TestCase):
         client.run("export . PkgB/0.1@user/channel")
         client.save({"conanfile.py": conanfile.format(requires='requires="PkgB/0.1@user/channel"')})
         client.run("export . PkgC/0.1@user/channel")
-        conanfileD = conanfile.format(requires='requires="PkgC/0.1@user/channel"')
-        conanfileD = conanfileD.replace('default_options = {"myoption": 1}',
+        conanfiled = conanfile.format(requires='requires="PkgC/0.1@user/channel"')
+        conanfiled = conanfiled.replace('default_options = {"myoption": 1}',
                                         'default_options = {"myoption": 2, "PkgC:myoption": 3,'
                                         '"PkgB:myoption": 4, "PkgA:myoption": 5}')
-        client.save({"conanfile.py": conanfileD})
+        client.save({"conanfile.py": conanfiled})
         client.run("export . PkgD/0.1@user/channel")
 
-        # FIXME: We need to do this with info, to avoid installing the binaries when we want info
         client.run("profile new myprofile")
         # To make sure we can provide a profile as input
         client.run("graph lock PkgD/0.1@user/channel -pr=myprofile")
