@@ -190,14 +190,14 @@ class VirtualEnvGenerator(Generator):
     def content(self):
         result = {}
 
-        def _call_files(flavor, activate_tpl, deactivate_tpl, environment_infix=None):
-            environment_infix = environment_infix or flavor
-            environment_filename = "environment{}.{}.env".format(self.suffix, environment_infix)
+        def _call_files(flavor, activate_tpl, deactivate_tpl, file_ext=None):
+            file_ext = file_ext or flavor
+            environment_filename = "environment{}.{}.env".format(self.suffix, file_ext)
             activate, deactivate, envfile = self._files(flavor, activate_tpl, deactivate_tpl,
                                                         environment_filename)
 
-            result["activate{}.{}".format(self.suffix, environment_infix)] = activate
-            result["deactivate{}.{}".format(self.suffix, environment_infix)] = deactivate
+            result["activate{}.{}".format(self.suffix, file_ext)] = activate
+            result["deactivate{}.{}".format(self.suffix, file_ext)] = deactivate
             result[environment_filename] = envfile
 
         os_info = OSInfo()
