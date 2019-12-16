@@ -102,7 +102,7 @@ endif()
             # If any config matches the build_type one, add it to the cpp_info
             dep_cpp_info = extend(cpp_info, build_type.lower())
 
-            depname = dep_cpp_info.get_name("cmake_find_package_multi")
+            depname = cpp_info.get_name("cmake_find_package_multi")
             ret["{}Config.cmake".format(depname)] = self._find_for_dep(depname, dep_cpp_info)
             ret["{}Targets.cmake".format(depname)] = self.targets_file.format(name=depname)
 
