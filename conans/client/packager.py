@@ -6,6 +6,7 @@ from conans.client.output import ScopedOutput
 from conans.client.tools.files import chdir
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
                            conanfile_exception_formatter)
+from conans.model.conan_file import get_env_context_manager
 from conans.model.manifest import FileTreeManifest
 from conans.paths import CONANINFO
 from conans.util.files import mkdir, rmdir, save
@@ -55,18 +56,24 @@ def run_package_method(conanfile, package_id, source_folder, build_folder, packa
     output.info("Generating the package")
     output.info("Package folder %s" % package_folder)
 
-    try:
-        conanfile.package_folder = package_folder
-        conanfile.source_folder = source_folder
-        conanfile.install_folder = install_folder
-        conanfile.build_folder = build_folder
+    conanfile.package_folder = package_folder
+    conanfile.source_folder = source_folder
+    conanfile.install_folder = install_folder
+    conanfile.build_folder = build_folder
 
+    with get_env_context_manager(conanfile):
+        return _call_package(conanfile, package_id, source_folder, build_folder, package_folder,
+                             install_folder, hook_manager, conanfile_path, ref, local, copy_info)
+
+
+def _call_package(conanfile, package_id, source_folder, build_folder, package_folder,
+                  install_folder, hook_manager, conanfile_path, ref, local, copy_info):
+    output = conanfile.output
+    try:
         hook_manager.execute("pre_package", conanfile=conanfile, conanfile_path=conanfile_path,
                              reference=ref, package_id=package_id)
 
-        package_output = ScopedOutput("%s package()" % output.scope, output)
         output.highlight("Calling package()")
-
         folders = [source_folder, build_folder] if source_folder != build_folder else [build_folder]
         conanfile.copy = FileCopier(folders, package_folder)
         with conanfile_exception_formatter(str(conanfile), "package"):
@@ -89,6 +96,7 @@ def run_package_method(conanfile, package_id, source_folder, build_folder, packa
                          reference=ref, package_id=package_id)
 
     manifest = _create_aux_files(install_folder, package_folder, conanfile, copy_info)
+    package_output = ScopedOutput("%s package()" % output.scope, output)
     _report_files_from_manifest(package_output, manifest)
     package_id = package_id or os.path.basename(package_folder)
 
