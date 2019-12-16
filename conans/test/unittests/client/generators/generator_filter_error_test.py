@@ -41,7 +41,7 @@ llvm/5.0@user/channel
                      "test_package/conanfile.py": test,
                      "myprofile": myprofile}, clean_first=True)
         client.run("create . MyLib/0.1@user/channel -pr=myprofile")
-        content = load(os.path.join(client.current_folder,
+        content = client.load(os.path.join(
                                     "test_package/build/91852f76fac8dd11832a54cf197288f5fd7d18f4"
                                     "/conanbuildinfo.txt"))
         self.assertIn("/data/MyLib/0.1/user/channel/package/"
