@@ -273,7 +273,6 @@ class CMakeDefinitionsBuilder(object):
 
         compiler = self._ss("compiler")
         compiler_version = self._ss("compiler.version")
-        version = self._ss("version")
         arch = self._ss("arch")
         os_ = self._ss("os")
         libcxx = self._ss("compiler.libcxx")
@@ -304,6 +303,9 @@ class CMakeDefinitionsBuilder(object):
             definitions["CONAN_COMPILER"] = compiler
         if compiler_version:
             definitions["CONAN_COMPILER_VERSION"] = str(compiler_version)
+
+        # CMake Project Version setting
+        version = self._conanfile.version
         if version:
             definitions['PROJECT_VERSION'] = str(version)
             version_numbers = str(version).split(".")
