@@ -31,7 +31,7 @@ class GraphLockPyRequiresTransitiveTest(unittest.TestCase):
             """)
         client.save({"conanfile.py": conanfile})
         client.run("install . pkg/0.1@user/channel")
-        lockfile = load(os.path.join(client.current_folder, "conan.lock"))
+        lockfile = client.load("conan.lock")
         self.assertIn("base/1.0@user/channel#f3367e0e7d170aa12abccb175fee5f97", lockfile)
         self.assertIn("helper/1.0@user/channel#539219485c7a9e8e19561db523512b39", lockfile)
         client.run("source .")
@@ -79,7 +79,7 @@ class GraphLockPyRequiresTest(unittest.TestCase):
 
     def _check_lock(self, ref_b):
         ref_b = repr(ConanFileReference.loads(ref_b, validate=False))
-        lock_file = load(os.path.join(self.client.current_folder, LOCKFILE))
+        lock_file = self.client.load(LOCKFILE)
         self.assertIn("Tool/0.1@user/channel", lock_file)
         self.assertNotIn("Tool/0.2@user/channel", lock_file)
         lock_file_json = json.loads(lock_file)

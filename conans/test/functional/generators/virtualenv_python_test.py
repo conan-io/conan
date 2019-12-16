@@ -38,10 +38,10 @@ virtualenv
         client.run("install . -g virtualenv_python")
 
         if platform.system() != "Windows":
-            contents = load(os.path.join(client.current_folder, "environment_run_python.sh.env"))
+            contents = client.load("environment_run_python.sh.env")
             self.assertIn('PYTHONPATH="/path/to/something"${PYTHONPATH+:$PYTHONPATH}', contents)
         else:
-            contents = load(os.path.join(client.current_folder, "environment_run_python.bat.env"))
+            contents = client.load("environment_run_python.bat.env")
             self.assertIn('PYTHONPATH=/path/to/something;%PYTHONPATH%', contents)
         self.assertNotIn("OTHER", contents)
         self.assertIn("PATH=", contents)
@@ -74,11 +74,11 @@ class BaseConan(ConanFile):
             client.run("install . -g virtualenv_python")
 
             if platform.system() != "Windows":
-                contents = load(os.path.join(client.current_folder, "environment_run_python.sh.env"))
+                contents = client.load("environment_run_python.sh.env")
                 self.assertIn('PYTHONPATH="/path/to/something":"/otherpath"'
                               '${PYTHONPATH+:$PYTHONPATH}', contents)
             else:
-                contents = load(os.path.join(client.current_folder, "environment_run_python.bat.env"))
+                contents = client.load("environment_run_python.bat.env")
                 self.assertIn('PYTHONPATH=/path/to/something;/otherpath;%PYTHONPATH%', contents)
             self.assertNotIn("OTHER", contents)
 
@@ -97,5 +97,5 @@ virtualenv
         client.save({"conanfile.txt": base}, clean_first=True)
         client.run("install . -g virtualenv_python")
         name = "activate_run_python.sh" if platform.system() != "Windows" else "activate_run_python.bat"
-        contents = load(os.path.join(client.current_folder, name))
+        contents = client.load(name)
         self.assertNotIn("PYTHONPATH", contents)
