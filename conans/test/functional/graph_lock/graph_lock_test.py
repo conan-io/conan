@@ -685,25 +685,9 @@ class GraphLockBuildRequireErrorTestCase(unittest.TestCase):
         self.assertEqual(zlib, nodes["4"]["pref"])
 
         # Using the graphlock there is no warning message
-        client.run("graph build-order . --build cascade --build outdated --json=bo.json")
-        lock = json.loads(client.load("conan.lock"))
-        nodes = lock["graph_lock"]["nodes"]
-        self.assertEqual(7, len(nodes))
-        self.assertEqual(fmpe, nodes["1"]["pref"])
-        # FIXME: Why not revisions?
-        self.assertEqual(['5', '6'], nodes["1"]["build_requires"])
-        self.assertEqual(font, nodes["2"]["pref"])
-        self.assertEqual(harf, nodes["3"]["pref"])
-        self.assertEqual(zlib, nodes["4"]["pref"])
-        self.assertEqual(font, nodes["5"]["pref"])
-        self.assertEqual("added", nodes["5"]["status"])
-        self.assertEqual(harf, nodes["6"]["pref"])
-        self.assertEqual("added", nodes["6"]["status"])
-
-        build_order = json.loads(client.load("bo.json"))
-        self.assertEqual([["5", font]], build_order[0])
-        self.assertEqual([["6", harf]], build_order[1])
-        self.assertEqual([["1", fmpe], ["4", zlib]], build_order[2])
+        client.run("graph build-order . --build cascade --build outdated", assert_error=True)
+        self.assertIn("ERROR: 'fontconfig' cannot be found in lockfile for this package", client.out)
+        self.assertIn("Make sure it was locked ", client.out)
 
 
 class GraphLockModifyConanfileTestCase(unittest.TestCase):
@@ -718,11 +702,6 @@ class GraphLockModifyConanfileTestCase(unittest.TestCase):
         client2.save({"conanfile.py": GenConanfile()})
         client2.run("graph lock .")
         client2.save({"conanfile.py": GenConanfile().with_require_plain("zlib/1.0")})
-        client2.run("install . --lockfile")
-        self.assertIn("zlib/1.0:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache", client2.out)
-        lock_file_json = json.loads(client2.load("conan.lock"))
-        self.assertEqual(2, len(lock_file_json["graph_lock"]["nodes"]))
-        self.assertEqual("zlib/1.0#f3367e0e7d170aa12abccb175fee5f97:"
-                         "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9#83c38d3b4e5f1b8450434436eec31b00",
-                         lock_file_json["graph_lock"]["nodes"]["1"]["pref"])
-        self.assertEqual("added", lock_file_json["graph_lock"]["nodes"]["1"]["status"])
+        client2.run("install . --lockfile", assert_error=True)
+        self.assertIn("ERROR: 'zlib' cannot be found in lockfile for this package", client2.out)
+        self.assertIn("If it is a new requirement, you need to create a new lockile", client2.out)

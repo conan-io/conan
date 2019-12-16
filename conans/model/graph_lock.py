@@ -73,7 +73,6 @@ class GraphLockFile(object):
 class GraphLockNode(object):
     STATUS_EXPORTED = "exported"
     STATUS_BUILT = "built"
-    STATUS_ADDED = "added"
 
     def __init__(self, pref, python_requires, options, requires, build_requires, path, status=None):
         self.pref = pref
@@ -132,7 +131,7 @@ class GraphLock(object):
                     continue
                 self._upsert_node(node)
 
-    def _upsert_node(self, node, added=False):
+    def _upsert_node(self, node):
         requires = []
         build_requires = []
         for edge in node.dependencies:
@@ -159,10 +158,6 @@ class GraphLock(object):
 
         previous = node.graph_lock_node
         status = previous.status if previous else None
-        if added:
-            if status:
-                raise ConanException("Error in added, previous status %s" % status)
-            status = GraphLockNode.STATUS_ADDED
         graph_node = GraphLockNode(node.pref if node.ref else None, python_reqs,
                                    node.conanfile.options.values, requires, build_requires,
                                    node.path, status)
@@ -267,9 +262,7 @@ class GraphLock(object):
             except KeyError:
                 if node.recipe == RECIPE_CONSUMER:
                     continue  # If the consumer node is not found, could be a test_package
-                self._upsert_node(node, added=True)
-                continue
-                # raise
+                raise
             if lock_node.pref:
                 pref = lock_node.pref.copy_clear_revs() if not self.revisions_enabled else lock_node.pref
                 node_pref = node.pref.copy_clear_revs() if not self.revisions_enabled else node.pref
@@ -278,7 +271,6 @@ class GraphLock(object):
                 if (pref.id == PACKAGE_ID_UNKNOWN or pref.is_compatible_with(node_pref) or
                         node.binary == BINARY_BUILD or node.id in affected or
                         node.recipe == RECIPE_CONSUMER):
-                    # lock_node.pref = node.pref
                     self._upsert_node(node)
                 else:
                     raise ConanException("Mismatch between lock and graph:\nLock:  %s\nGraph: %s"
@@ -295,8 +287,7 @@ class GraphLock(object):
         except KeyError:  # If the consumer node is not found, could be a test_package
             if node.recipe == RECIPE_CONSUMER:
                 return
-            node.conanfile.output.warn("Package can't be locked, not found in the lockfile")
-            return
+            raise ConanException("The node ID %s was not found in the lock" % node.id)
 
         if build_requires:
             locked_requires = locked_node.build_requires or []
@@ -316,9 +307,12 @@ class GraphLock(object):
                 locked_pref, locked_id = prefs[require.ref.name]
                 require.lock(locked_pref.ref, locked_id)
             except KeyError:
-                t = "Build-require" if build_requires else "Require"
-                msg = "%s '%s' cannot be found in lockfile" % (t, require.ref.name)
-                node.conanfile.output.warn(msg)
+                msg = "'%s' cannot be found in lockfile for this package\n" % require.ref.name
+                if build_requires:
+                    msg += "Make sure it was locked with --build arguments while creating lockfile"
+                else:
+                    msg += "If it is a new requirement, you need to create a new lockile"
+                raise ConanException(msg)
 
     def python_requires(self, node_id):
         if self.revisions_enabled:
