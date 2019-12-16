@@ -132,14 +132,14 @@ zlib/0.1@lasote/testing
         client.run("install . -o zlib:shared=True --build=missing")
         self.assertIn("zlib/0.1@lasote/testing:2a623e3082a38f90cd2c3d12081161412de331b0",
                       client.out)
-        conaninfo = load(os.path.join(client.current_folder, CONANINFO))
+        conaninfo = client.load(CONANINFO)
         self.assertIn("zlib:shared=True", conaninfo)
 
         # Options not cached anymore
         client.run("install . --build=missing")
         self.assertIn("zlib/0.1@lasote/testing:%s" % NO_SETTINGS_PACKAGE_ID,
                       client.out)
-        conaninfo = load(os.path.join(client.current_folder, CONANINFO))
+        conaninfo = client.load(CONANINFO)
         self.assertNotIn("zlib:shared=True", conaninfo)
 
     def test_default_options(self):

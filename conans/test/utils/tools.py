@@ -1240,8 +1240,7 @@ class TurboTestClient(TestClient):
                                                    args or "", self.tmp_json_name),
                  assert_error=assert_error)
         rrev = self.cache.package_layout(ref).recipe_revision()
-        json_path = os.path.join(self.current_folder, self.tmp_json_name)
-        data = json.loads(load(json_path))
+        data = json.loads(self.load(self.tmp_json_name))
         if assert_error:
             return None
         package_id = data["installed"][0]["packages"][0]["id"]
@@ -1268,8 +1267,7 @@ class TurboTestClient(TestClient):
                                                        args or "", self.tmp_json_name),
                  assert_error=assert_error)
         rrev = self.cache.package_layout(ref).recipe_revision()
-        json_path = os.path.join(self.current_folder, self.tmp_json_name)
-        data = json.loads(load(json_path))
+        data = json.loads(self.load(self.tmp_json_name))
         if assert_error:
             return None
         package_id = data["installed"][0]["packages"][0]["id"]
@@ -1294,8 +1292,7 @@ class TurboTestClient(TestClient):
         self.run("search {} --json {} {} {}".format(pattern, self.tmp_json_name, remote,
                                                     args or ""),
                  assert_error=assert_error)
-        json_path = os.path.join(self.current_folder, self.tmp_json_name)
-        data = json.loads(load(json_path))
+        data = json.loads(self.load(self.tmp_json_name))
         return data
 
     def massive_uploader(self, ref, revisions, num_prev, remote=None):
