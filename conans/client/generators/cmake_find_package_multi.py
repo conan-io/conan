@@ -99,19 +99,19 @@ endif()
         build_type = self.conanfile.settings.get_safe("build_type")
         build_type_suffix = "_{}".format(build_type.upper()) if build_type else ""
         for _, cpp_info in self.deps_build_info.dependencies:
-            depname = cpp_info.get_name("cmake_find_package_multi")
-            ret["{}Config.cmake".format(depname)] = self._find_for_dep(depname, cpp_info)
-            ret["{}Targets.cmake".format(depname)] = self.targets_file.format(name=depname)
-
             # If any config matches the build_type one, add it to the cpp_info
             dep_cpp_info = extend(cpp_info, build_type.lower())
-            deps = DepsCppCmake(dep_cpp_info)
 
+            depname = dep_cpp_info.get_name("cmake_find_package_multi")
+            ret["{}Config.cmake".format(depname)] = self._find_for_dep(depname, dep_cpp_info)
+            ret["{}Targets.cmake".format(depname)] = self.targets_file.format(name=depname)
+
+            deps = DepsCppCmake(dep_cpp_info)
             find_lib = target_template.format(name=depname, deps=deps,
                                               build_type_suffix=build_type_suffix)
             ret["{}Target-{}.cmake".format(depname, build_type.lower())] = find_lib
             ret["{}ConfigVersion.cmake".format(depname)] = self.version_template.\
-                format(version=cpp_info.version)
+                format(version=dep_cpp_info.version)
         return ret
 
     def _build_type_suffix(self, build_type):
