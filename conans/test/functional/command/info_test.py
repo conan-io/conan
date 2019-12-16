@@ -618,7 +618,7 @@ class MyTest(ConanFile):
         client.save({"conanfile.py": conanfile}, clean_first=True)
         client.run("export . lasote/testing")
         client.run("info Pkg/0.2@lasote/testing --graph file.html")
-        html_content = load(html_path)
+        html_content = client.load("file.html")
         self.assertIn("<h3>Pkg/0.2@lasote/testing</h3>", html_content)
         self.assertIn("<li><b>topics</b>: foo", html_content)
 
