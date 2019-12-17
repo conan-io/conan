@@ -292,7 +292,7 @@ class OpenSSLConan(ConanFile):
     name = "openssl"
     version = "2.0.1"
 """
-        save(os.path.join(self.client.current_folder, CONANFILE), content)
+        self.client.save({CONANFILE: content})
         self.client.run("export . lasote/stable")
         ref = ConanFileReference.loads('openssl/2.0.1@lasote/stable')
         reg_path = self.client.cache.package_layout(ref).export()
@@ -307,7 +307,7 @@ class OpenSSLConan(ConanFile):
     version = "2.0.1"
     exports = ('*.txt', '*.h')
 """
-        save(os.path.join(self.client.current_folder, CONANFILE), content)
+        self.client.save({CONANFILE: content})
         self.client.run("export . lasote/stable")
         self.assertEqual(sorted(os.listdir(reg_path)),
                          ['CMakeLists.txt', CONANFILE, CONAN_MANIFEST,
@@ -322,7 +322,7 @@ class OpenSSLConan(ConanFile):
     version = "2.0.1"
     exports = ['*.txt', '*.h']
 """
-        save(os.path.join(self.client.current_folder, CONANFILE), content)
+        self.client.save({CONANFILE: content})
         self.client.run("export . lasote/stable")
         self.assertEqual(sorted(os.listdir(reg_path)),
                          ['CMakeLists.txt', CONANFILE, CONAN_MANIFEST, 'helloHello0.h'])

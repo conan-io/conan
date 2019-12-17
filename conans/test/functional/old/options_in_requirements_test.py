@@ -48,5 +48,5 @@ class BoostConan(ConanFile):
         files = {"conanfile.txt": "[requires]\nBoostDbg/1.0@lasote/testing"}
         client.save(files, clean_first=True)
         client.run("install . -o BoostDbg:shared=True --build=missing")
-        conaninfo = load(os.path.join(client.current_folder, CONANINFO))
+        conaninfo = client.load(CONANINFO)
         self.assertIn("zlib:shared=True", conaninfo)
