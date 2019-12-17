@@ -267,8 +267,8 @@ class GraphLock(object):
                     continue  # If the consumer node is not found, could be a test_package
                 raise
             if lock_node.pref:
-                pref = lock_node.pref.copy_clear_revs() if not self.revisions_enabled else lock_node.pref
-                node_pref = node.pref.copy_clear_revs() if not self.revisions_enabled else node.pref
+                pref = lock_node.pref if self.revisions_enabled else lock_node.pref.copy_clear_revs()
+                node_pref = node.pref if self.revisions_enabled else node.pref.copy_clear_revs()
                 # If the update is compatible (resolved complete PREV) or if the node has
                 # been build, then update the graph
                 if (pref.id == PACKAGE_ID_UNKNOWN or pref.is_compatible_with(node_pref) or

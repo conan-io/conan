@@ -9,7 +9,9 @@ from six.moves.urllib.parse import urlparse, urljoin
 from conans.client.cache.cache import ClientCache
 from conans.client.rest import response_to_str
 from conans.errors import AuthenticationException, RequestErrorException, ConanException
+from conans.model.graph_lock import LOCKFILE_VERSION
 from conans.model.ref import ConanFileReference
+from conans.model.version import Version
 from conans.paths import ARTIFACTS_PROPERTIES_PUT_PREFIX
 from conans.paths import get_conan_user_home
 from conans.util.files import save
@@ -159,6 +161,11 @@ class BuildInfoCreator(object):
 
         with open(self._lockfile) as json_data:
             data = json.load(json_data)
+
+        version = Version(data["version"])
+        if version < LOCKFILE_VERSION:
+            raise ConanException("This lockfile was created with a previous incompatible version "
+                                 "of Conan. Please update all your Conan clients")
 
         # Gather modules, their artifacts and recursively all required artifacts
         for _, node in data["graph_lock"]["nodes"].items():
