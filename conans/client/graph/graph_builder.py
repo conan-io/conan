@@ -120,6 +120,8 @@ class DepsGraphBuilder(object):
 
     def _resolve_ranges(self, graph, requires, consumer, update, remotes):
         for require in requires:
+            if require.locked_id:  # if it is locked, nothing to resolved
+                continue
             self._resolver.resolve(require, consumer, update, remotes)
         self._resolve_cached_alias(requires, graph)
 
@@ -143,27 +145,26 @@ class DepsGraphBuilder(object):
 
         if graph_lock:  # No need to evaluate, they are hardcoded in lockfile
             graph_lock.lock_node(node, node.conanfile.requires.values())
-            new_reqs = None
-        else:
-            # propagation of requirements only necessary if not locked
-            new_reqs = node.conanfile.requires.update(down_reqs, self._output, node.ref, down_ref)
-            # if there are version-ranges, resolve them before expanding each of the requirements
-            # Resolve possible version ranges of the current node requirements
-            # new_reqs is a shallow copy of what is propagated upstream, so changes done by the
-            # RangeResolver are also done in new_reqs, and then propagated!
-            conanfile = node.conanfile
-            scope = conanfile.display_name
-            self._resolve_ranges(graph, conanfile.requires.values(), scope, update, remotes)
 
-            if not hasattr(conanfile, "_conan_evaluated_requires"):
-                conanfile._conan_evaluated_requires = conanfile.requires.copy()
-            elif conanfile.requires != conanfile._conan_evaluated_requires:
-                raise ConanException("%s: Incompatible requirements obtained in different "
-                                     "evaluations of 'requirements'\n"
-                                     "    Previous requirements: %s\n"
-                                     "    New requirements: %s"
-                                     % (scope, list(conanfile._conan_evaluated_requires.values()),
-                                        list(conanfile.requires.values())))
+        # propagation of requirements only necessary if not locked
+        new_reqs = node.conanfile.requires.update(down_reqs, self._output, node.ref, down_ref)
+        # if there are version-ranges, resolve them before expanding each of the requirements
+        # Resolve possible version ranges of the current node requirements
+        # new_reqs is a shallow copy of what is propagated upstream, so changes done by the
+        # RangeResolver are also done in new_reqs, and then propagated!
+        conanfile = node.conanfile
+        scope = conanfile.display_name
+        self._resolve_ranges(graph, conanfile.requires.values(), scope, update, remotes)
+
+        if not hasattr(conanfile, "_conan_evaluated_requires"):
+            conanfile._conan_evaluated_requires = conanfile.requires.copy()
+        elif conanfile.requires != conanfile._conan_evaluated_requires:
+            raise ConanException("%s: Incompatible requirements obtained in different "
+                                 "evaluations of 'requirements'\n"
+                                 "    Previous requirements: %s\n"
+                                 "    New requirements: %s"
+                                 % (scope, list(conanfile._conan_evaluated_requires.values()),
+                                    list(conanfile.requires.values())))
 
         return new_options, new_reqs
 

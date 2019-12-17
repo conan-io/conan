@@ -27,9 +27,8 @@ class GraphLockTestPackageTest(unittest.TestCase):
         client.run("export .")
         client.run("graph lock consumer.txt -pr=profile --build missing")
         lock = client.load("conan.lock")
-        client.run("create . -pr=profile --lockfile --build missing", assert_error=True)
-        self.assertIn("ERROR: The node ID 5 was not found in the lock", client.out)
-        # This would be the expected succesful output
-        # self.assertIn("tool/0.1:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache", client.out)
-        # self.assertIn("dep/0.1: Applying build-requirement: tool/0.1", client.out)
-        # self.assertIn("dep/0.1 (test package): Running test()", client.out)
+        # Check lock
+        client.run("create . -pr=profile --lockfile --build missing")
+        self.assertIn("tool/0.1:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache", client.out)
+        self.assertIn("dep/0.1: Applying build-requirement: tool/0.1", client.out)
+        self.assertIn("dep/0.1 (test package): Running test()", client.out)
