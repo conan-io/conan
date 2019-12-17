@@ -163,7 +163,7 @@ class BuildInfoCreator(object):
         # Gather modules, their artifacts and recursively all required artifacts
         for _, node in data["graph_lock"]["nodes"].items():
             pref = node["pref"]
-            if node.get("status"):  # Work only on generated nodes
+            if node.get("modified"):  # Work only on generated nodes
                 # Create module for the recipe reference
                 recipe_key = self._get_reference(pref)
                 modules[recipe_key]["id"] = recipe_key

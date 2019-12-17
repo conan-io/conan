@@ -46,8 +46,8 @@ xcode
                                  BUILD_INFO_XCODE, CONANINFO, GRAPH_INFO_FILE, LOCKFILE]),
                          sorted(os.listdir(client.current_folder)))
 
-        cmake = load(os.path.join(client.current_folder, BUILD_INFO_CMAKE))
-        gcc = load(os.path.join(client.current_folder, BUILD_INFO_GCC))
+        cmake = client.load(BUILD_INFO_CMAKE)
+        gcc = client.load(BUILD_INFO_GCC)
 
         self.assertIn("CONAN_INCLUDE_DIRS", cmake)
         self.assertIn("CONAN_LIB_DIRS", cmake)
@@ -96,7 +96,7 @@ xcode
         self.assertIn(expected_include_dirs, include_dirs)
 
         # CHECK XCODE GENERATOR
-        xcode = load(os.path.join(client.current_folder, BUILD_INFO_XCODE))
+        xcode = client.load(BUILD_INFO_XCODE)
 
         expected_c_flags = '-some_c_compiler_flag'
         expected_cpp_flags = '-some_cxx_compiler_flag'

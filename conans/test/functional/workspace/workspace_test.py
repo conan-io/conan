@@ -237,9 +237,9 @@ class WorkspaceTest(unittest.TestCase):
         self.assertIn("HelloC/0.1@lasote/stable from user folder - Editable", client.out)
         self.assertIn("HelloD/0.1@lasote/stable from user folder - Editable", client.out)
 
-        a_cmake = load(os.path.join(client.current_folder, "A", "conanbuildinfo.cmake"))
+        a_cmake = client.load(os.path.join("A", "conanbuildinfo.cmake"))
         self.assertIn("set(CONAN_LIBS helloC helloD ${CONAN_LIBS})", a_cmake)
-        b_cmake = load(os.path.join(client.current_folder, "B", "conanbuildinfo.cmake"))
+        b_cmake = client.load(os.path.join("B", "conanbuildinfo.cmake"))
         self.assertIn("set(CONAN_LIBS helloD ${CONAN_LIBS})", b_cmake)
 
     def transitivity_test(self):
@@ -284,9 +284,9 @@ class WorkspaceTest(unittest.TestCase):
         self.assertIn("HelloC/0.1@lasote/stable from user folder - Editable", client.out)
         self.assertIn("HelloD/0.1@lasote/stable from user folder - Editable", client.out)
 
-        a_cmake = load(os.path.join(client.current_folder, "A", "conanbuildinfo.cmake"))
+        a_cmake = client.load(os.path.join("A", "conanbuildinfo.cmake"))
         self.assertIn("set(CONAN_LIBS helloB helloC helloD ${CONAN_LIBS})", a_cmake)
-        b_cmake = load(os.path.join(client.current_folder, "B", "conanbuildinfo.cmake"))
+        b_cmake = client.load(os.path.join("B", "conanbuildinfo.cmake"))
         self.assertIn("set(CONAN_LIBS helloC helloD ${CONAN_LIBS})", b_cmake)
 
     def missing_layout_cmake_test(self):
@@ -750,8 +750,7 @@ class Pkg(ConanFile):
         self.assertIn("HelloA/0.1@lasote/stable: Applying build-requirement: Tool/0.1@user/testing",
                       client.out)
         for sub in ("A", "B", "C"):
-            conanbuildinfo = load(os.path.join(client.current_folder, sub, "build",
-                                               "conanbuildinfo.cmake"))
+            conanbuildinfo = client.load(os.path.join(sub, "build", "conanbuildinfo.cmake"))
             self.assertIn("set(CONAN_LIBS_TOOL MyToolLib)", conanbuildinfo)
 
     def use_build_requires_editable_test(self):
@@ -798,8 +797,7 @@ class Pkg(ConanFile):
         self.assertIn("HelloA/0.1@lasote/stable: Applying build-requirement: Tool/0.1@user/testing",
                       client.out)
 
-        conanbuildinfo = load(os.path.join(client.current_folder, "A", "build",
-                                           "conanbuildinfo.cmake"))
+        conanbuildinfo = client.load(os.path.join("A", "build", "conanbuildinfo.cmake"))
         self.assertIn("set(CONAN_LIBS_TOOL MyToolLib)", conanbuildinfo)
 
     def per_package_layout_test(self):
@@ -842,7 +840,7 @@ class Pkg(ConanFile):
         self.assertIn("HelloB/0.1@lasote/stable from user folder - Editable", client.out)
         self.assertIn("HelloC/0.1@lasote/stable from user folder - Editable", client.out)
 
-        cmake = load(os.path.join(client.current_folder, "A", "build", "conanbuildinfo.cmake"))
+        cmake = client.load(os.path.join("A", "build", "conanbuildinfo.cmake"))
         self.assertIn("myincludeC", cmake)
         self.assertIn("myincludeB", cmake)
 
@@ -930,7 +928,7 @@ class Pkg(ConanFile):
         self.assertIn("HelloB/0.1@lasote/stable from user folder - Editable", client.out)
         self.assertIn("HelloC/0.1@lasote/stable from user folder - Editable", client.out)
 
-        conanws_cmake = load(os.path.join(client.current_folder, "conanworkspace.cmake"))
+        conanws_cmake = client.load("conanworkspace.cmake")
         self.assertIn("macro(conan_workspace_subdirectories)", conanws_cmake)
         for p in ("HelloC", "HelloB", "HelloA"):
             self.assertIn("add_subdirectory(${PACKAGE_%s_SRC} ${PACKAGE_%s_BUILD})" % (p, p),
@@ -968,7 +966,7 @@ class Pkg(ConanFile):
 
         # For the right folder, it works
         client.run('workspace install "{}"'.format(ws_folder))
-        conanws_cmake = load(os.path.join(client.current_folder, "conanworkspace.cmake"))
+        conanws_cmake = client.load("conanworkspace.cmake")
         self.assertIn("macro(conan_workspace_subdirectories)", conanws_cmake)
 
         # For a non existing folder, it will try to load the default filename (it fails)

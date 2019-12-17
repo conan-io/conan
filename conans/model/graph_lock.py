@@ -71,14 +71,16 @@ class GraphLockFile(object):
 
 
 class GraphLockNode(object):
-    STATUS_EXPORTED = "exported"
-    STATUS_BUILT = "built"
+    # if recipe is exported, it will modify lockfile. No packageID or prev
+    MODIFIED_EXPORTED = "exported"
+    MODIFIED_BUILT = "built"
 
-    def __init__(self, pref, python_requires, options, requires, build_requires, path, status=None):
+    def __init__(self, pref, python_requires, options, requires, build_requires, path,
+                 modified=None):
         self.pref = pref
         self.python_requires = python_requires
         self.options = options
-        self.status = status
+        self.modified = modified  # variable
         self.requires = requires
         self.build_requires = build_requires
         self.path = path
@@ -94,11 +96,12 @@ class GraphLockNode(object):
             python_requires = [ConanFileReference.loads(ref, validate=False)
                                for ref in python_requires]
         options = OptionsValues.loads(data["options"])
-        status = data.get("status")
+        modified = data.get("modified")
         requires = data.get("requires", [])
         build_requires = data.get("build_requires", [])
         path = data.get("path")
-        return GraphLockNode(pref, python_requires, options, requires, build_requires, path, status)
+        return GraphLockNode(pref, python_requires, options, requires, build_requires, path,
+                             modified)
 
     def as_dict(self):
         """ returns the object serialized as a dict of plain python types
@@ -108,8 +111,8 @@ class GraphLockNode(object):
                   "options": self.options.dumps()}
         if self.python_requires:
             result["python_requires"] = [repr(r) for r in self.python_requires]
-        if self.status:
-            result["status"] = self.status
+        if self.modified:
+            result["modified"] = self.modified
         if self.requires:
             result["requires"] = self.requires
         if self.build_requires:
@@ -157,10 +160,10 @@ class GraphLock(object):
             python_reqs = node.conanfile.python_requires.all_refs()
 
         previous = node.graph_lock_node
-        status = previous.status if previous else None
+        modified = previous.modified if previous else None
         graph_node = GraphLockNode(node.pref if node.ref else None, python_reqs,
                                    node.conanfile.options.values, requires, build_requires,
-                                   node.path, status)
+                                   node.path, modified)
         node.graph_lock_node = graph_node
         self._nodes[node.id] = graph_node
 
@@ -214,7 +217,7 @@ class GraphLock(object):
         value is a temporary one when packages are being rebuilt.
         """
         for id_, node in new_lock._nodes.items():
-            if node.status:
+            if node.modified:
                 self._nodes[id_] = node
 
     def _closure_affected(self):
@@ -222,7 +225,7 @@ class GraphLock(object):
         package marked as "modified"
         """
         closure = set()
-        current = [id_ for id_, node in self._nodes.items() if node.status is not None]
+        current = [id_ for id_, node in self._nodes.items() if node.modified]
         # closure.update(current)
         while current:
             new_current = set()
@@ -244,7 +247,7 @@ class GraphLock(object):
             if node_id in node.requires:
                 result.append(id_)
             if node_id in node.build_requires:
-                    result.append(id_)
+                result.append(id_)
         return result
 
     def update_check_graph(self, deps_graph, output):
@@ -365,4 +368,4 @@ class GraphLock(object):
         lock_node = self._nodes[node_id]
         if lock_node.pref.ref != ref:
             lock_node.pref = PackageReference(ref, lock_node.pref.id)
-            lock_node.status = GraphLockNode.STATUS_EXPORTED
+            lock_node.modified = GraphLockNode.MODIFIED_EXPORTED

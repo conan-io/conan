@@ -59,7 +59,7 @@ class GraphLockCITest(unittest.TestCase):
         client.run("upload * --all --confirm")
 
         client.run("graph lock PkgD/0.1@user/channel")
-        lock_file = load(os.path.join(client.current_folder, LOCKFILE))
+        lock_file = client.load(LOCKFILE)
         initial_lock_file = lock_file
         self.assertIn("PkgB/0.1@user/channel#c51f99a8622d6c837cd9dcd2595e43e4:"
                       "5bf1ba84b5ec8663764a406f08a7f9ae5d3d5fb5#e7f906f2f693abccb3dc3419c4270413",
@@ -93,7 +93,7 @@ class GraphLockCITest(unittest.TestCase):
         self.assertIn("PkgD/0.1@user/channel#d3d184611fb757faa65e4d4203198579:"
                       "7e4312d9a6d3726436d62a6b508f361d13e65354#55f822331b182e54b5144e578ba9135b",
                       lock_fileb)
-        self.assertIn('"status": "%s"' % GraphLockNode.STATUS_BUILT, lock_fileb)
+        self.assertIn('"modified": "%s"' % GraphLockNode.MODIFIED_BUILT, lock_fileb)
         # Go back to main orchestrator
         client.save({"new_lock/%s" % LOCKFILE: lock_fileb})
         client.run("graph update-lock . new_lock")
@@ -115,11 +115,11 @@ class GraphLockCITest(unittest.TestCase):
                 client.run("graph update-lock . new_lock")
 
             client.run("graph build-order . --build=cascade")
-            lock_fileaux = load(os.path.join(client.current_folder, LOCKFILE))
+            lock_fileaux = client.load(LOCKFILE)
             output = str(client.out).splitlines()[-1]
             to_build = eval(output)
 
-        new_lockfile = load(os.path.join(client.current_folder, LOCKFILE))
+        new_lockfile = client.load(LOCKFILE)
         client.run("install PkgD/0.1@user/channel --lockfile")
         self.assertIn("PkgC/0.1@user/channel: DEP FILE PkgB: ByeB World!!", client.out)
         self.assertIn("PkgD/0.1@user/channel: DEP FILE PkgB: ByeB World!!", client.out)
@@ -185,7 +185,7 @@ class GraphLockCITest(unittest.TestCase):
         client.run("upload * --all --confirm")
 
         client.run("graph lock PkgD/0.1@user/channel")
-        lock_file = load(os.path.join(client.current_folder, LOCKFILE))
+        lock_file = client.load(LOCKFILE)
         initial_lock_file = lock_file
         self.assertIn("PkgB/0.1@user/channel#c51f99a8622d6c837cd9dcd2595e43e4:"
                       "6e9742c2106791c1c777da8ccfb12a1408385d8d#f25c123185dcbd2fe326cecb0d73edaa",
@@ -220,7 +220,7 @@ class GraphLockCITest(unittest.TestCase):
         self.assertIn("PkgD/0.1@user/channel#d3d184611fb757faa65e4d4203198579:"
                       "d80dd9662f447164906643ab88a1ed4e7b12925b#50246cbe82411551e5ebc5bcc75f1a9a",
                       lock_fileb)
-        self.assertIn('"status": "%s"' % GraphLockNode.STATUS_BUILT, lock_fileb)
+        self.assertIn('"modified": "%s"' % GraphLockNode.MODIFIED_BUILT, lock_fileb)
         # Go back to main orchestrator
         client.save({"new_lock/%s" % LOCKFILE: lock_fileb})
         client.run("graph update-lock . new_lock")
@@ -237,16 +237,16 @@ class GraphLockCITest(unittest.TestCase):
                 client_aux.save({LOCKFILE: lock_fileaux})
                 client_aux.run("install %s --build=%s --lockfile"
                                % (pkg_ref.ref, pkg_ref.ref.name))
-                lock_fileaux = load(os.path.join(client_aux.current_folder, LOCKFILE))
+                lock_fileaux = client_aux.load(LOCKFILE)
                 client.save({"new_lock/%s" % LOCKFILE: lock_fileaux})
                 client.run("graph update-lock . new_lock")
 
             client.run("graph build-order . --build=cascade")
-            lock_fileaux = load(os.path.join(client.current_folder, LOCKFILE))
+            lock_fileaux = client.load(LOCKFILE)
             output = str(client.out).splitlines()[-1]
             to_build = eval(output)
 
-        new_lockfile = load(os.path.join(client.current_folder, LOCKFILE))
+        new_lockfile = client.load(LOCKFILE)
         client.run("install PkgD/0.1@user/channel --lockfile")
         self.assertIn("PkgC/0.1@user/channel: DEP FILE PkgB: ByeB World!!", client.out)
         self.assertIn("PkgD/0.1@user/channel: DEP FILE PkgB: ByeB World!!", client.out)
@@ -341,13 +341,14 @@ class GraphLockCITest(unittest.TestCase):
         self.assertIn("PkgD/0.1@user/channel#fce78c934bc0de73eeb05eb4060fc2b7:"
                       "de4467a3fa6ef01b09b7464e85553fb4be2d2096#a4ff125f400ac721e935976b4a2b1880",
                       lock_fileb)
-        self.assertEqual("built", lock_file_json["graph_lock"]["nodes"]["3"]["status"])
+        self.assertEqual("built", lock_file_json["graph_lock"]["nodes"]["3"]["modified"])
 
         # Go back to main orchestrator
         client.save({"new_lock/%s" % LOCKFILE: lock_fileb})
         client.run("graph update-lock . new_lock")
         client.run("graph build-order . --json=build_order.json --build=missing")
         lock_fileb = client.load(LOCKFILE)
+
         self.assertIn("PkgA/0.1@user/channel#189390ce059842ce984e0502c52cf736:"
                       "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9#5ba7f606729949527141beef73c72bc8",
                       lock_fileb)
@@ -376,7 +377,7 @@ class GraphLockCITest(unittest.TestCase):
                 client.run("graph update-lock . new_lock")
 
             client.run("graph build-order . --build=missing")
-            lock_fileaux = load(os.path.join(client.current_folder, LOCKFILE))
+            lock_fileaux = client.load(LOCKFILE)
             output = str(client.out).splitlines()[-1]
             to_build = eval(output)
 
@@ -436,7 +437,7 @@ class GraphLockCITest(unittest.TestCase):
         self.assertIn("PkgD/0.1@user/channel: DEP FILE PkgC: HelloC", client.out)
 
         client.run("graph lock PkgD/0.1@user/channel")
-        lock_file = load(os.path.join(client.current_folder, LOCKFILE))
+        lock_file = client.load(LOCKFILE)
         initial_lock_file = lock_file
         self.assertIn("PkgB/0.1@user/channel", lock_file)
         self.assertIn("PkgA/0.1@user/channel", lock_file)
@@ -460,7 +461,7 @@ class GraphLockCITest(unittest.TestCase):
         client.save({"new_lock/%s" % LOCKFILE: lock_fileb})
         client.run("graph update-lock . new_lock")
         client.run("graph build-order . --json=build_order.json --build=missing")
-        lock_fileb = load(os.path.join(client.current_folder, LOCKFILE))
+        lock_fileb = client.load(LOCKFILE)
         json_file = os.path.join(client.current_folder, "build_order.json")
         to_build = json.loads(load(json_file))
         lock_fileaux = lock_fileb
@@ -479,11 +480,11 @@ class GraphLockCITest(unittest.TestCase):
             client.run("graph update-lock . new_lock")
 
             client.run("graph build-order . --build=missing")
-            lock_fileaux = load(os.path.join(client.current_folder, LOCKFILE))
+            lock_fileaux = client.load(LOCKFILE)
             output = str(client.out).splitlines()[-1]
             to_build = eval(output)
 
-        new_lockfile = load(os.path.join(client.current_folder, LOCKFILE))
+        new_lockfile = client.load(LOCKFILE)
         client.run("install PkgD/0.1@user/channel --lockfile")
         self.assertIn("PkgB/0.1@user/channel: DEP FILE PkgA: ByeA World!!", client.out)
         self.assertIn("PkgC/0.1@user/channel: DEP FILE PkgA: ByeA World!!", client.out)
@@ -531,7 +532,7 @@ class GraphLockCITest(unittest.TestCase):
         client.run("profile new myprofile")
         # To make sure we can provide a profile as input
         client.run("graph lock PkgD/0.1@user/channel -pr=myprofile")
-        lock_file = load(os.path.join(client.current_folder, LOCKFILE))
+        lock_file = client.load(LOCKFILE)
 
         client2 = TestClient(cache_folder=client.cache_folder)
         client2.save({"conanfile.py": conanfile.format(requires=""), LOCKFILE: lock_file})
