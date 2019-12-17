@@ -138,8 +138,10 @@ def log_package_built(pref, duration, log_run=None):
 
 def log_client_rest_api_call(url, method, duration, headers):
     headers = copy.copy(headers)
-    headers["Authorization"] = MASKED_FIELD
-    headers["X-Client-Anonymous-Id"] = MASKED_FIELD
+    if "Authorization" in headers:
+        headers["Authorization"] = MASKED_FIELD
+    if "X-Client-Anonymous-Id" in headers:
+        headers["X-Client-Anonymous-Id"] = MASKED_FIELD
     if "signature=" in url:
         url = url.split("signature=")[0] + "signature=%s" % MASKED_FIELD
     _append_action("REST_API_CALL", {"method": method, "url": url,
