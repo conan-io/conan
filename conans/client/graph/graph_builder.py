@@ -326,11 +326,8 @@ class DepsGraphBuilder(object):
         lock_python_requires = graph_lock.python_requires(locked_id) if locked_id is not None else None
         dep_conanfile = self._loader.load_conanfile(conanfile_path, profile,
                                                     ref=requirement.ref,
-                                                    lock_python_requires=lock_python_requires)
-        if recipe_status == RECIPE_EDITABLE:
-            dep_conanfile.in_local_cache = False
-            dep_conanfile.develop = True
-
+                                                    lock_python_requires=lock_python_requires,
+                                                    editable=(recipe_status == RECIPE_EDITABLE))
         if getattr(dep_conanfile, "alias", None):
             alias_ref = alias_ref or new_ref.copy_clear_rev()
             requirement.ref = ConanFileReference.loads(dep_conanfile.alias)

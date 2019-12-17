@@ -87,9 +87,8 @@ registered_generators.add("deploy", DeployGenerator)
 def write_generators(conanfile, path, output):
     """ produces auxiliary files, required to build a project or a package.
     """
-    if hasattr(conanfile, "layout"):
-        layout = conanfile.layout()
-        path = os.path.join(path, layout.installdir)
+    if conanfile.lyt:
+        path = os.path.join(path, conanfile.lyt.build.installdir)
 
     for generator_name in conanfile.generators:
         try:

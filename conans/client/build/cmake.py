@@ -158,9 +158,8 @@ class CMake(object):
             return origin
 
         if hasattr(self._conanfile, "layout"):
-            layout = self._conanfile.layout()
-            source_ret = layout.source_folder
-            build_ret = layout.build_folder
+            source_ret = self._conanfile.lyt.source_folder
+            build_ret = self._conanfile.lyt.build_folder
         elif source_dir or build_dir:  # OLD MODE
             build_ret = build_dir or self.build_dir or self._conanfile.build_folder
             source_ret = source_dir or self._conanfile.source_folder

@@ -134,10 +134,10 @@ class AutoToolsBuildEnvironment(object):
             configure_dir = "."
 
         build_folder = os.getcwd()  # Cannot make it conanfile.build_folder, might be breaking
-        if hasattr(self._conanfile, "layout"):
-            layout = self._conanfile.layout()
-            configure_dir = os.path.join(self._conanfile.source_folder, layout.src)
-            build_folder = os.path.join(self._conanfile.build_folder, layout.build)
+        if self._conanfile.lyt:
+            layout = self._conanfile.lyt
+            configure_dir = os.path.join(self._conanfile.source_folder, layout.build.src_folder)
+            build_folder = os.path.join(self._conanfile.build_folder, layout.build.folder)
 
         triplet_args = []
 
@@ -231,9 +231,8 @@ class AutoToolsBuildEnvironment(object):
                                 if "-j" not in str_args else None)
 
             build_folder = os.getcwd()  # Cannot make it conanfile.build_folder, might be breaking
-            if hasattr(self._conanfile, "layout"):
-                layout = self._conanfile.layout()
-                build_folder = os.path.join(self._conanfile.build_folder, layout.build)
+            if self._conanfile.lyt:
+                build_folder = self._conanfile.lyt.build_folder
 
             self._conanfile.run("%s" % join_arguments([make_program, target, str_args,
                                                        cpu_count_option]),

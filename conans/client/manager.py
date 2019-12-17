@@ -83,11 +83,10 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None,
     if install_folder:
         # !! FIXME: this is not true
         build_folder = build_bindir = layout_install_folder = install_folder
-        if hasattr(conanfile, "layout"):
-            layout = conanfile.layout()
-            build_bindir = os.path.join(build_folder, layout.build_bindir)
-            # FIXME: the write_generators do it internally, this is a mess
-            layout_install_folder = os.path.join(build_folder, layout.installdir)
+        if conanfile.lyt:
+            build_bindir = os.path.join(build_folder, conanfile.lyt.build.bindir)
+            # FIXME: the write_generators does this internally, this is a mess
+            layout_install_folder = os.path.join(build_folder, conanfile.lyt.build.installdir)
 
         conanfile.install_folder = install_folder
         # Write generators

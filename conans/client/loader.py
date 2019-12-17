@@ -164,6 +164,7 @@ class ConanFileLoader(object):
         conanfile.in_local_cache = False
         try:
             self._initialize_conanfile(conanfile, profile_host)
+            load_layout_file(os.path.dirname(conanfile_path), conanfile)
 
             # The consumer specific
             conanfile.develop = True
@@ -178,7 +179,8 @@ class ConanFileLoader(object):
         except Exception as e:  # re-raise with file name
             raise ConanException("%s: %s" % (conanfile_path, str(e)))
 
-    def load_conanfile(self, conanfile_path, profile, ref, lock_python_requires=None):
+    def load_conanfile(self, conanfile_path, profile, ref, lock_python_requires=None,
+                       editable=False):
         """ load a conanfile with a full reference, name, version, user and channel are obtained
         from the reference, not evaluated. Main way to load from the cache
         """
@@ -191,6 +193,10 @@ class ConanFileLoader(object):
             conanfile.develop = True
         try:
             self._initialize_conanfile(conanfile, profile)
+            if editable:
+                load_layout_file(os.path.dirname(conanfile_path), conanfile)
+                conanfile.in_local_cache = False
+                conanfile.develop = True
             return conanfile
         except ConanInvalidConfiguration:
             raise
@@ -362,3 +368,24 @@ def _parse_conanfile(conan_file_path):
         sys.path.pop(0)
 
     return loaded, module_id
+
+
+def load_layout_file(conanfile_folder, conanfile):
+    file_path = os.path.join(conanfile_folder, ".conan_layout.py")
+    if not os.path.exists(file_path):
+        return
+
+    import six
+    if six.PY2:
+        raise ConanException("The .conan_layout.py feature is Python3 only")
+
+    import importlib.util
+
+    module_name = 'conan_layout'
+
+    spec = importlib.util.spec_from_file_location(module_name, file_path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    import types
+    # attach function as a method class
+    conanfile.layout = types.MethodType(module.layout, conanfile)

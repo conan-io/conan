@@ -208,9 +208,8 @@ class _PackageBuilder(object):
                             # as in the "conan build" the "-if" is pointed to the place where
                             # the installation files are
                             conanfile.install_folder = build_folder
-                            if hasattr(node.conanfile, "layout"):
-                                layout = node.conanfile.layout()
-                                conanfile.install_folder = layout.install_folder
+                            if node.conanfile.lyt:
+                                conanfile.install_folder = node.conanfile.lyt.install_folder
                             self._build(conanfile, pref, build_folder)
                         clean_dirty(build_folder)
 
@@ -357,12 +356,12 @@ class BinaryInstaller(object):
 
         node.conanfile.cpp_info.filter_empty = False
 
-        if hasattr(node.conanfile, "layout"):
-            layout = node.conanfile.layout()
+        if node.conanfile.lyt:
+            layout = node.conanfile.lyt
             node.conanfile.cpp_info.includedirs = [os.path.join(base_path, d)
-                                                   for d in layout.includedirs]
-            node.conanfile.cpp_info.libdirs = [os.path.join(base_path, layout.build_libdir)]
-            node.conanfile.cpp_info.bindirs = [os.path.join(base_path, layout.build_bindir)]
+                                                   for d in layout.build.includedirs]
+            node.conanfile.cpp_info.libdirs = [os.path.join(base_path, layout.build.libdir)]
+            node.conanfile.cpp_info.bindirs = [os.path.join(base_path, layout.build.bindir)]
             return
         # Try with package-provided file
         editable_cpp_info = package_layout.editable_cpp_info()

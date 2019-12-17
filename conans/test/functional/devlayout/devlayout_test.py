@@ -35,7 +35,7 @@ class DevLayoutTest(unittest.TestCase):
 
             def package(self):
                 # WITH THE SIMPLIFIED DECLARATION, THIS WILL NOT BE POSSIBLE
-                self.layout().package()
+                self.lyt.package()
 
             def package_info(self):
                 self.cpp_info.libs = ["hello"]
@@ -188,8 +188,7 @@ class DevLayoutTest(unittest.TestCase):
                     return mylayout
                     
                 def imports(self):
-                    lay = self.layout()
-                    self.copy(pattern="*.dll", dst=lay.build_bindir, src="#bindir")
+                    self.copy(pattern="*.dll", dst=self.lyt.build_bindir, src="#bindir")
             """)
 
         test_cmake = textwrap.dedent("""

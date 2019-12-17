@@ -4,6 +4,7 @@ from conans.client.command import main
 
 
 def run():
+    input("Attach the debugger and press a key")
     main(sys.argv[1:])
 
 

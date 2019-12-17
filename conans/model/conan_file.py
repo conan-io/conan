@@ -274,5 +274,12 @@ class ConanFile(object):
         """
         raise ConanException("You need to create a method 'test' in your test/conanfile.py")
 
+    @property
+    def lyt(self):
+        if not hasattr(self, "layout"):
+            return None
+
+        return self.layout() if callable(getattr(self, "layout")) else self.layout
+
     def __repr__(self):
         return self.display_name
