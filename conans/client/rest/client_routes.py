@@ -259,13 +259,6 @@ class ClientV2Router(ClientCommonRouter):
         """url for the package with or without revisions"""
         return _format_pref(self.routes.package_revision, pref)
 
-    def _for_recipe_root(self, ref):
-        return _format_ref(self.routes.recipe, ref.copy_clear_rev())
-
-    def _for_package_root(self, pref):
-        pref = pref.copy_with_revs(None, None)
-        return _format_pref(self.routes.package, pref)
-
     @staticmethod
     def _format_ref_path(url, ref, path, matrix_params):
         ret = url.format(name=ref.name, version=ref.version, username=ref.user or "_",

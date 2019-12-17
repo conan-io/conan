@@ -1,0 +1,4 @@
+{"_action": "COMMAND", "name": "authenticate", "parameters": {"password": "**********", "remote_name": "local", "skip_auth": false}, "time": 1576586392.9823859}
+{"_action": "COMMAND", "name": "get_remote_by_name", "parameters": {}, "time": 1576586392.9913964}
+{"_action": "REST_API_CALL", "duration": 2.0527937412261963, "headers": {"User-Agent": "Conan/1.22.0-dev (Python 3.7.4) python-requests/2.22.0", "X-Client-Anonymous-Id": "**********", "X-Client-Id": "user"}, "method": "GET", "time": 1576586395.057119, "url": "http://localhost:9300/v1/ping"}
+{"_action": "REST_API_CALL", "duration": 2.0232863426208496, "headers": {"User-Agent": "Conan/1.22.0-dev (Python 3.7.4) python-requests/2.22.0", "X-Client-Anonymous-Id": "**********", "X-Client-Id": "user"}, "method": "GET", "time": 1576586397.0804052, "url": "http://localhost:9300/v1/users/authenticate"}
