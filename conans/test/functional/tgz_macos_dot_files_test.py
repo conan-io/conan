@@ -16,9 +16,6 @@ from conans.test.utils.tools import TestClient, TestServer
 @unittest.skipUnless(platform.system() == "Darwin", "Requires OSX")
 class TgzMacosDotFilesTest(unittest.TestCase):
 
-    def _add_macos_metadata_to_file(self, filepath):
-        subprocess.call(["xattr", "-w", "name", "value", filepath])
-
     def _test_for_metadata_in_zip_file(self, tgz, annotated_file, dot_file_expected):
         tmp_folder = tempfile.mkdtemp()
         try:
@@ -79,7 +76,11 @@ class TgzMacosDotFilesTest(unittest.TestCase):
         t = TestClient(path_with_spaces=False, servers=servers,
                        users={"default": [("lasote", "mypass")]})
         t.save(files={'conanfile.py': conanfile, 'file.txt': "content"})
-        self._add_macos_metadata_to_file(os.path.join(t.current_folder, 'file.txt'))
+
+        def _add_macos_metadata_to_file(filepath):
+            subprocess.call(["xattr", "-w", "name", "value", filepath])
+
+        _add_macos_metadata_to_file(os.path.join(t.current_folder, 'file.txt'))
         t.run("create . lasote/channel")
 
         # Check if the metadata travels through the Conan commands
@@ -91,7 +92,7 @@ class TgzMacosDotFilesTest(unittest.TestCase):
         self._test_for_metadata(pkg_folder, 'file.txt', dot_file_expected=False)
 
         # 2) If we add metadata to a file, it will be there
-        self._add_macos_metadata_to_file(os.path.join(pkg_folder, 'file.txt'))
+        _add_macos_metadata_to_file(os.path.join(pkg_folder, 'file.txt'))
         self._test_for_metadata(pkg_folder, 'file.txt', dot_file_expected=True)
 
         # 3) In the upload process, the metadata is lost again
