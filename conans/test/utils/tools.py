@@ -929,6 +929,7 @@ class GenConanfile(object):
         self._package_files_env = {}
         self._build_messages = []
         self._scm = {}
+        self._layout_text = None
         self._requires = []
         self._requirements = []
         self._build_requires = []
@@ -938,6 +939,10 @@ class GenConanfile(object):
 
     def with_name(self, name):
         self._name = name
+        return self
+
+    def with_text_layout(self, layout):
+        self._layout_text = layout
         return self
 
     def with_version(self, version):
@@ -1033,6 +1038,12 @@ class GenConanfile(object):
         if not self._version:
             return ""
         return "version = '{}'".format(self._version)
+
+    @property
+    def _layout_text_line(self):
+        if not self._layout_text:
+            return ""
+        return "layout = '{}'".format(self._layout_text)
 
     @property
     def _scm_line(self):
@@ -1190,6 +1201,8 @@ class GenConanfile(object):
             ret.append("    {}".format(self._requirements_method))
         if self._build_requires_line:
             ret.append("    {}".format(self._build_requires_line))
+        if self._layout_text:
+            ret.append("    {}".format(self._layout_text_line))
         if self._scm:
             ret.append("    {}".format(self._scm_line))
         if self._revision_mode_line:

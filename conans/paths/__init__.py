@@ -51,6 +51,7 @@ DEFAULT_PROFILE_NAME = "default"
 PACKAGE_METADATA = "metadata.json"
 CACERT_FILE = "cacert.pem"  # Server authorities file
 DATA_YML = "conandata.yml"
+LAYOUT_PY = "conan_layout.py"
 
 # Directories
 EXPORT_FOLDER = "export"

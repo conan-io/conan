@@ -20,6 +20,9 @@ class Layout(object):
         self.pkg_includedir = "include"
         self.pkg_builddir = "build"
 
+    def __str__(self):
+        return str(self.__dict__)
+
     # Getters, relative to base
     @property
     def build_lib_folder(self):
@@ -58,6 +61,7 @@ class Layout(object):
                               src=self.build_lib_folder, keep_path=False)
         self._conan_file.copy("*.dll", dst=self.pkg_bindir,
                               src=self.build_bin_folder, keep_path=False)
+        # FIXME: What about the linux/mac apps without extension, we need a pattern
         self._conan_file.copy("*.exe", dst=self.pkg_bindir,
                               src=self.build_bin_folder, keep_path=False)
 
@@ -88,7 +92,6 @@ class CMakeLayout(Layout):
         super(CMakeLayout, self).__init__(conanfile)
         # Only input to build is the source directory, include not a thing here
         # relative to conanfile
-        # FIXME: "src" is not true in most caseses, the CMakeList.txt is typically in the root
         self.src = ""
         # Output of build, relative to conanfile
         self.build = "build"

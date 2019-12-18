@@ -5,8 +5,9 @@ import unittest
 
 from parameterized import parameterized
 
+from conans.model.ref import ConanFileReference
 from conans.util.files import mkdir
-from conans.test.utils.tools import TestClient
+from conans.test.utils.tools import TestClient, TurboTestClient
 
 
 class DevLayoutTest(unittest.TestCase):
@@ -137,10 +138,71 @@ class DevLayoutTest(unittest.TestCase):
 
     def cache_create_test(self):
         # Cache creation
-        client = self.client
-        client.run("create . pkg/0.1@user/testing")
+        client = TurboTestClient(cache_folder=self.client.cache_folder,
+                                 current_folder=self.client.current_folder)
+        ref = ConanFileReference.loads("pkg/0.1@user/testing")
+        pref = client.create(ref, conanfile=None)  # Use the created conanfile
         self.assertIn("pkg/0.1@user/testing package(): Packaged 1 '.h' file: hello.h", client.out)
         self.assertIn("Hello World Release!", client.out)
+        pl = client.cache.package_layout(ref)
+        # There is a "build" subfolder also in the cache
+        self.assertTrue(os.path.exists(os.path.join(pl.build(pref.copy_clear_revs()), "build")))
+
+    def cache_custom_layout_test(self):
+        # We can even change the src and the package layout and it works
+        client = TurboTestClient()
+        conanfile = textwrap.dedent("""
+                from conans import ConanFile, CMake, Layout
+
+                class Pkg(ConanFile):
+                    settings = "os", "compiler", "arch", "build_type"
+                    generators = "cmake"
+                    exports_sources = "src/*"
+                    
+                    def layout(self):
+                        ly = Layout(self)
+                        ly.src = "src"
+                        ly.build = "my_custom_build"
+                        ly.pkg_libdir = "lib_custom"
+                        ly.pkg_bindir = "bin_custom"
+                        return ly
+
+                    def build(self):
+                        cmake = CMake(self) # Opt-in is defined having toolchain
+                        cmake.configure()
+                        cmake.build()
+
+                    def package(self):
+                        self.lyt.package()
+
+                    def package_info(self):
+                        self.lyt.package_info()
+                        self.cpp_info.libs = ["hello"]
+                    """)
+        client.save({"conanfile.py": conanfile,
+                     "src/CMakeLists.txt": self.cmake.replace("src/", ""),  # NOW IS AT "src"
+                     "src/hello.cpp": self.hellopp,
+                     "src/hello.h": self.helloh,
+                     "src/app.cpp": self.app,
+                     "test_package/app.cpp": self.app,
+                     "test_package/CMakeLists.txt": self.test_cmake,
+                     "test_package/conanfile.py": self.test_conanfile
+                     })
+        ref = ConanFileReference.loads("pkg/0.1@user/testing")
+        pref = client.create(ref, conanfile=None)  # Use the created conanfile
+        self.assertIn("pkg/0.1@user/testing package(): Packaged 1 '.h' file: hello.h", client.out)
+        self.assertIn("Hello World Release!", client.out)
+        pl = client.cache.package_layout(ref)
+        # There is a "my_custom_build" subfolder also in the cache
+        self.assertTrue(os.path.exists(os.path.join(pl.build(pref.copy_clear_revs()),
+                                                    "my_custom_build")))
+
+        # There is a "lib_custom" subfolder in the package
+        lib_folder = os.path.join(pl.package(pref.copy_clear_revs()), "lib_custom")
+        self.assertTrue(os.path.exists(lib_folder))
+        # The lib is there
+        contents = os.listdir(lib_folder)
+        self.assertIn("hello", contents[0])
 
     @unittest.skipIf(platform.system() != "Windows", "Needs windows")
     def cache_create_shared_test(self):

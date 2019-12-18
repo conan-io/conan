@@ -20,7 +20,7 @@ from conans.model.options import OptionsValues
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
 from conans.model.values import Values
-from conans.paths import DATA_YML
+from conans.paths import DATA_YML, LAYOUT_PY
 from conans.util.files import load
 
 
@@ -149,7 +149,7 @@ class ConanFileLoader(object):
                 tmp_settings.values = Values.from_list(pkg_settings)
 
         conanfile.initialize(tmp_settings, profile.env_values)
-        ensure_callable_layout(conanfile)
+        load_recipe_layout(conanfile)
 
     def load_consumer(self, conanfile_path, profile_host, name=None, version=None, user=None,
                       channel=None, lock_python_requires=None):
@@ -214,7 +214,6 @@ class ConanFileLoader(object):
         path, basename = os.path.split(conan_txt_path)
         display_name = "%s (%s)" % (basename, ref) if ref and ref.name else basename
         conanfile = self._parse_conan_txt(contents, path, display_name, profile_host)
-        ensure_callable_layout(conanfile)
         return conanfile
 
     def _parse_conan_txt(self, contents, path, display_name, profile):
@@ -257,7 +256,7 @@ class ConanFileLoader(object):
                              profile_host.env_values)
         conanfile.settings = profile_host.processed_settings.copy_values()
 
-        ensure_callable_layout(conanfile)
+        load_recipe_layout(conanfile)
 
         for reference in references:
             conanfile.requires.add_ref(reference)
@@ -376,27 +375,23 @@ def _parse_conanfile(conan_file_path):
     return loaded, module_id
 
 
-def ensure_callable_layout(conanfile):
+def load_recipe_layout(conanfile):
 
-    if not hasattr(conanfile, "layout"):
+    if conanfile.layout is None:
         return
 
     if callable(conanfile.layout):
+        conanfile.lyt = conanfile.layout()
         return  # Already defined method
     if isinstance(conanfile.layout, str):
-        closure_lyt = conanfile.layout
+        from conans import CMakeLayout, CLionLayout
 
-        def layout(self):
-            from conans import CMakeLayout, CLionLayout
-            # TODO: Others? "base" make sense?
-            if closure_lyt == "cmake":
-                return CMakeLayout(self)
-            elif closure_lyt == "clion":
-                return CLionLayout(self)
-            else:
-                raise ConanException("Invalid layout type: {}".format(closure_lyt))
-
-        conanfile.layout = types.MethodType(layout, conanfile)
+        if conanfile.layout == "cmake":
+            conanfile.lyt = CMakeLayout(conanfile)
+        elif conanfile.layout == "clion":
+            conanfile.lyt = CLionLayout(conanfile)
+        else:
+            raise ConanException("Invalid layout type: {}".format(conanfile.layout))
     else:
         raise ConanException("Unexpected layout type declared in the "
                              "conanfile: {}".format(conanfile.layout.__class__))
@@ -405,13 +400,13 @@ def ensure_callable_layout(conanfile):
 def load_overrides_layout_file(conanfile_folder, conanfile):
     """Only for local methods and editables, developer overrides with priority over the
     recipe declarations"""
-    file_path = os.path.join(conanfile_folder, ".conan_layout.py")
+    file_path = os.path.join(conanfile_folder, LAYOUT_PY)
     if not os.path.exists(file_path):
         return False
 
     import six
     if six.PY2:
-        raise ConanException("The .conan_layout.py feature is Python3 only")
+        raise ConanException("The {} feature is Python3 only".format(LAYOUT_PY))
 
     import importlib.util
 
@@ -426,5 +421,5 @@ def load_overrides_layout_file(conanfile_folder, conanfile):
                              "{}".format(file_path, conanfile.layout.__class__))
 
     # attach function as a method class
-    conanfile.layout = types.MethodType(module.layout, conanfile)
+    conanfile.lyt = module.layout(conanfile)
     return True
