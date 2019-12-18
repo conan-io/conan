@@ -153,7 +153,7 @@ class RestCommonMethods(object):
         """Get information about the server: status, version, type and capabilities"""
         url = self.router.ping()
         logger.debug("REST: ping: %s" % url)
-        if self.token is None and user and password:
+        if user and password:
             # This can happen in "conan user" cmd. Instead of empty token, use HttpBasic
             auth = HTTPBasicAuth(user, password)
         else:
