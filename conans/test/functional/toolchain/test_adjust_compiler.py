@@ -19,6 +19,8 @@ from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TurboTestClient
 from conans.util.files import load, rmdir
 
+_running_ci = 'JOB_NAME' in os.environ
+
 
 def compile_local_workflow(testcase, client, profile):
     # Conan local workflow
@@ -234,6 +236,9 @@ class AdjustAutoTestCase(unittest.TestCase):
         if not self.use_toolchain:
             self.skipTest("It doesn't work without toolchain")
 
+        if _running_ci and compiler_version == "8":
+            self.skipTest("GCC 8 not available in Jenkins")
+
         cache_filepath = os.path.join(self.t.current_folder, "build", "CMakeCache.txt")
         if os.path.exists(cache_filepath):
             os.unlink(cache_filepath)  # FIXME: Ideally this shouldn't be needed (I need it only here)
@@ -257,6 +262,9 @@ class AdjustAutoTestCase(unittest.TestCase):
     def test_compiler_linux(self, compiler, compiler_version):
         if not self.use_toolchain:
             self.skipTest("It doesn't work without toolchain")
+
+        if _running_ci and compiler == "clang":
+            self.skipTest("Clang not available in Jenkins")
 
         cache_filepath = os.path.join(self.t.current_folder, "build", "CMakeCache.txt")
         if os.path.exists(cache_filepath):
