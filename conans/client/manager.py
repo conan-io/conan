@@ -84,9 +84,9 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None,
         # !! FIXME: this is not true
         build_bindir = install_folder
         if conanfile.lyt:
-            build_bindir = conanfile.lyt.build_bin_folder  # FIXME: Not sure about this
-            # FIXME: the write_generators does this internally, this is a mess
-            install_folder = conanfile.lyt.build_install_folder
+            # FIXME: Not sure about this build_bindir
+            build_bindir = os.path.join(install_folder, conanfile.lyt.build_bin_folder)
+            install_folder = os.path.join(install_folder, conanfile.lyt.build_install_folder)
 
         conanfile.install_folder = install_folder
         # Write generators

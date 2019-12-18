@@ -149,6 +149,7 @@ class ConanFileLoader(object):
                 tmp_settings.values = Values.from_list(pkg_settings)
 
         conanfile.initialize(tmp_settings, profile.env_values)
+        ensure_callable_layout(conanfile)
 
     def load_consumer(self, conanfile_path, profile_host, name=None, version=None, user=None,
                       channel=None, lock_python_requires=None):
@@ -166,7 +167,7 @@ class ConanFileLoader(object):
         conanfile.in_local_cache = False
         try:
             self._initialize_conanfile(conanfile, profile_host)
-            load_layout(os.path.dirname(conanfile_path), conanfile)
+            load_overrides_layout_file(os.path.dirname(conanfile_path), conanfile)
 
             # The consumer specific
             conanfile.develop = True
@@ -196,7 +197,7 @@ class ConanFileLoader(object):
         try:
             self._initialize_conanfile(conanfile, profile)
             if editable:
-                load_layout(os.path.dirname(conanfile_path), conanfile)
+                load_overrides_layout_file(os.path.dirname(conanfile_path), conanfile)
                 conanfile.in_local_cache = False
                 conanfile.develop = True
             return conanfile
@@ -213,6 +214,7 @@ class ConanFileLoader(object):
         path, basename = os.path.split(conan_txt_path)
         display_name = "%s (%s)" % (basename, ref) if ref and ref.name else basename
         conanfile = self._parse_conan_txt(contents, path, display_name, profile_host)
+        ensure_callable_layout(conanfile)
         return conanfile
 
     def _parse_conan_txt(self, contents, path, display_name, profile):
@@ -254,6 +256,8 @@ class ConanFileLoader(object):
         conanfile.initialize(profile_host.processed_settings.copy(),
                              profile_host.env_values)
         conanfile.settings = profile_host.processed_settings.copy_values()
+
+        ensure_callable_layout(conanfile)
 
         for reference in references:
             conanfile.requires.add_ref(reference)
@@ -372,20 +376,19 @@ def _parse_conanfile(conan_file_path):
     return loaded, module_id
 
 
-def load_layout(conanfile_folder, conanfile):
-    loaded = load_layout_file(conanfile_folder, conanfile)
-
-    if loaded:
-        return  # The external file has priority
+def ensure_callable_layout(conanfile):
 
     if not hasattr(conanfile, "layout"):
         return
 
+    if callable(conanfile.layout):
+        return  # Already defined method
     if isinstance(conanfile.layout, str):
         closure_lyt = conanfile.layout
 
         def layout(self):
             from conans import CMakeLayout, CLionLayout
+            # TODO: Others? "base" make sense?
             if closure_lyt == "cmake":
                 return CMakeLayout(self)
             elif closure_lyt == "clion":
@@ -399,7 +402,9 @@ def load_layout(conanfile_folder, conanfile):
                              "conanfile: {}".format(conanfile.layout.__class__))
 
 
-def load_layout_file(conanfile_folder, conanfile):
+def load_overrides_layout_file(conanfile_folder, conanfile):
+    """Only for local methods and editables, developer overrides with priority over the
+    recipe declarations"""
     file_path = os.path.join(conanfile_folder, ".conan_layout.py")
     if not os.path.exists(file_path):
         return False

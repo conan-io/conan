@@ -15,7 +15,6 @@ from conans.client.tools.oss import OSInfo, args_to_string, cpu_count, cross_bui
 from conans.client.tools.win import unix_path
 from conans.errors import ConanException
 from conans.model.build_info import DEFAULT_BIN, DEFAULT_INCLUDE, DEFAULT_LIB, DEFAULT_SHARE
-from conans.tools import chdir
 from conans.util.files import get_abs_path
 
 
@@ -133,7 +132,9 @@ class AutoToolsBuildEnvironment(object):
         else:
             configure_dir = "."
 
-        build_folder = os.getcwd()  # Cannot make it conanfile.build_folder, might be breaking
+        # FIXME: 2.0. This probably should be conanfile.build_folder but it will be breaking
+        #             (now the configure is run in cwd and should be run in the build folder)
+        build_folder = os.getcwd()
         if self._conanfile.lyt:
             configure_dir = os.path.join(self._conanfile.source_folder, self._conanfile.lyt.src)
             build_folder = os.path.join(self._conanfile.build_folder, self._conanfile.lyt.build)
@@ -229,9 +230,12 @@ class AutoToolsBuildEnvironment(object):
             cpu_count_option = (("-j%s" % cpu_count(output=self._conanfile.output))
                                 if "-j" not in str_args else None)
 
-            build_folder = os.getcwd()  # Cannot make it conanfile.build_folder, might be breaking
+            # FIXME: 2.0. This probably should be conanfile.build_folder but it will be breaking
+            #             (now the configure is run in cwd and should be run in the build folder)
+            build_folder = os.getcwd()
             if self._conanfile.lyt:
-                build_folder = self._conanfile.lyt.build
+                build_folder = os.path.join(self._conanfile.build_folder,
+                                            self._conanfile.lyt.build)
 
             self._conanfile.run("%s" % join_arguments([make_program, target, str_args,
                                                        cpu_count_option]),

@@ -213,7 +213,8 @@ class _PackageBuilder(object):
                             # the installation files are
                             conanfile.install_folder = build_folder
                             if node.conanfile.lyt:
-                                conanfile.install_folder = node.conanfile.lyt.install_folder
+                                lyi = node.conanfile.lyt.build_install_folder
+                                conanfile.install_folder = os.path.join(build_folder, lyi)
                             self._build(conanfile, pref, build_folder)
                         clean_dirty(build_folder)
 

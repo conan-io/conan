@@ -39,12 +39,6 @@ class Layout(object):
 
     # Getters, useful for recipes, relative to self._conanfile.xxx
     @property
-    def install_folder(self):
-        installdir = self.build_installdir if self.build_installdir is not None \
-            else self.build
-        return os.path.join(self._conan_file.install_folder, installdir)
-
-    @property
     def build_folder(self):
         return os.path.join(self._conan_file.build_folder, self.build)
 
