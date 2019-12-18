@@ -116,12 +116,6 @@ class FindPackageMultiTestCase(unittest.TestCase):
         self.assertIn('>> DEFINITIONS_RELEASE: $<IF:$', self.t.out)
         self.assertIn('>> DEFINITIONS_VALUE: $<IF:$', self.t.out)
 
-        # TODO: Remove these printing
-        build_folder = self.t.cache.package_layout(pref.ref).build(pref)
-        print("*"*200)
-        print(load(os.path.join(build_folder, "conan_project_include.cmake")))
-        print("!"*200)
-
         # Run the app and check it has been properly compiled
         package_layout = self.t.cache.package_layout(pref.ref)
         app_str = "app.exe" if platform.system() == "Windows" else "./app"

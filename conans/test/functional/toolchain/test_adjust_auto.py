@@ -27,13 +27,6 @@ def compile_local_workflow(testcase, client, profile):
         testcase.assertIn("Using Conan toolchain", client.out)
 
     cmake_cache = load(os.path.join(build_directory, "CMakeCache.txt"))
-    if True:
-        # TODO: Remove
-        toolcahin = load(os.path.join(build_directory, CMakeToolchain.filename))
-        print(toolcahin)
-        print("!"*200)
-        print(load(os.path.join(build_directory, "conan_project_include.cmake")))
-        print("!"*200)
     return client.out, cmake_cache, build_directory, None
 
 
@@ -47,14 +40,6 @@ def _compile_cache_workflow(testcase, client, profile, use_toolchain):
     package_layout = client.cache.package_layout(pref.ref)
     build_directory = package_layout.build(pref)
     cmake_cache = load(os.path.join(build_directory, "CMakeCache.txt"))
-
-    if use_toolchain:
-        # TODO: Remove
-        toolcahin = load(os.path.join(build_directory, CMakeToolchain.filename))
-        print(toolcahin)
-        print("!"*200)
-        print(load(os.path.join(build_directory, "conan_project_include.cmake")))
-        print("!"*200)
     return client.out, cmake_cache, build_directory, package_layout.package(pref)
 
 
@@ -75,13 +60,6 @@ def compile_cmake_workflow(testcase, client, profile):
         testcase.assertIn("Using Conan toolchain", client.out)
 
     cmake_cache = load(os.path.join(build_directory, "CMakeCache.txt"))
-    if True:
-        # TODO: Remove
-        toolcahin = load(os.path.join(build_directory, CMakeToolchain.filename))
-        print(toolcahin)
-        print("!"*200)
-        print(load(os.path.join(build_directory, "conan_project_include.cmake")))
-        print("!"*200)
     return client.out, cmake_cache, build_directory, None
 
 
@@ -228,16 +206,7 @@ class AdjustAutoTestCase(unittest.TestCase):
             key, value = line.split("=", 1)
             cmake_cache_items[key] = value
         cmake_cache_keys = [item.split(":")[0] for item in cmake_cache_items.keys()]
-
-        self._print_things(configure_out, cmake_cache_items)
         return configure_out, cmake_cache_items, cmake_cache_keys, build_directory, package_directory
-
-    def _print_things(self, configure_out, cmake_cache):
-        # TODO: Remove this functions
-        print("\n".join(configure_out))
-        print("*"*200)
-        from pprint import pprint
-        pprint(cmake_cache)
 
     def test_conan_stuff(self):
         # self.skipTest("Disabled")
