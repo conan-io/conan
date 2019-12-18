@@ -245,7 +245,7 @@ class AdjustAutoTestCase(unittest.TestCase):
         self.assertEqual("/usr/bin/gcc-ar-{}".format(compiler_version), cmake_cache["CMAKE_C_COMPILER_AR:FILEPATH"])
         self.assertEqual("/usr/bin/gcc-ranlib-{}".format(compiler_version), cmake_cache["CMAKE_C_COMPILER_RANLIB:FILEPATH"])
 
-    @parameterized.expand([("gcc", "7", ), ("clang", "6.0"), ])
+    @parameterized.expand([("gcc", "5", ), ("clang", "6.0"), ])
     @unittest.skipUnless(platform.system() == "Linux", "Only linux")
     def test_compiler_linux(self, compiler, compiler_version):
         if not self.use_toolchain:
@@ -262,13 +262,13 @@ class AdjustAutoTestCase(unittest.TestCase):
             import re
             from conans.client.conf.detect import _execute
             _, output = _execute("gcc-{} --version".format(compiler_version))
-            m = re.match(r".*(?P<version>\d\.\d\.\d)$", output.split("\\n")[0])
+            m = re.match(r".*(?P<version>\d\.\d\.\d)(\s\d+)?$", output.split("\\n")[0])
             return m.group("version")
 
         id_str = "GNU" if compiler == "gcc" else "Clang"
         cxx_compiler = "g++" if compiler == "gcc" else "clang++"
         full_version_str = gcc_version_full() if compiler == "gcc" else "6.0.0"
-        self.assertTrue(full_version_str.startswith(compiler_version))
+        self.assertTrue(full_version_str.startswith(compiler_version), "{} not starting with {}".format(full_version_str, compiler_version))
         self.assertIn("-- The C compiler identification is {} {}".format(id_str, full_version_str), configure_out)
         self.assertIn("-- The CXX compiler identification is {} {}".format(id_str, full_version_str), configure_out)
         self.assertIn("-- Check for working C compiler: /usr/bin/{}-{} -- works".format(compiler, compiler_version), configure_out)
