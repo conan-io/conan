@@ -378,6 +378,9 @@ def load_layout(conanfile_folder, conanfile):
     if loaded:
         return  # The external file has priority
 
+    if not hasattr(conanfile, "layout"):
+        return
+
     if isinstance(conanfile.layout, str):
         closure_lyt = conanfile.layout
 

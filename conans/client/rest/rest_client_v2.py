@@ -162,7 +162,8 @@ class RestV2Methods(RestCommonMethods):
 
     def _upload_recipe(self, ref, files_to_upload, retry, retry_wait):
         # Direct upload the recipe
-        urls = {fn: self.router.recipe_file(ref, fn, add_matrix_params=True) for fn in files_to_upload}
+        urls = {fn: self.router.recipe_file(ref, fn, add_matrix_params=True)
+                for fn in files_to_upload}
         self._upload_files(files_to_upload, urls, retry, retry_wait, display_name=str(ref))
 
     def _upload_package(self, pref, files_to_upload, retry, retry_wait):
