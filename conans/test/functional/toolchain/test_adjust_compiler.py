@@ -214,7 +214,7 @@ class AdjustAutoTestCase(unittest.TestCase):
         cmake_cache_keys = [item.split(":")[0] for item in cmake_cache_items.keys()]
         return configure_out, cmake_cache_items, cmake_cache_keys, build_directory, package_directory
 
-    @parameterized.expand([("7",), ("8",), ])
+    @parameterized.expand([("5",), ("8",), ])
     @unittest.skipUnless(platform.system() == "Linux", "Only linux")
     def test_compiler_version_linux(self, compiler_version):
         if not self.use_toolchain:
@@ -230,7 +230,7 @@ class AdjustAutoTestCase(unittest.TestCase):
             import re
             from conans.client.conf.detect import _execute
             _, output = _execute("gcc-{} --version".format(compiler_version))
-            m = re.match(r".*(?P<version>\d\.\d\.\d)$", output.split("\\n")[0])
+            m = re.match(r".*(?P<version>\d\.\d\.\d)(\s\d+)?$", output.splitlines()[0])
             return m.group("version")
 
         full_version_str = gcc_version_full()
@@ -262,7 +262,7 @@ class AdjustAutoTestCase(unittest.TestCase):
             import re
             from conans.client.conf.detect import _execute
             _, output = _execute("gcc-{} --version".format(compiler_version))
-            m = re.match(r".*(?P<version>\d\.\d\.\d)(\s\d+)?$", output.split("\\n")[0])
+            m = re.match(r".*(?P<version>\d\.\d\.\d)(\s\d+)?$", output.splitlines()[0])
             return m.group("version")
 
         id_str = "GNU" if compiler == "gcc" else "Clang"
