@@ -156,7 +156,7 @@ class AuthenticationTest(unittest.TestCase):
                 elif "search" in url:
                     if kwargs["auth"].token != "TOKEN":
                         raise Exception("Bad JWT Token")
-                    resp_basic_auth._content = '{"results": []}'
+                    resp_basic_auth._content = b'{"results": []}'
                     resp_basic_auth.headers = {"Content-Type": "application/json"}
                 else:
                     raise Exception("Shouldn't be more remote calls")
