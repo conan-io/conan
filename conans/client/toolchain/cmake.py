@@ -247,7 +247,6 @@ class CMakeToolchain(object):
             t = Template(self._template_project_include)
             content = t.render(configuration_types_definitions=self.definitions.configuration_types,
                                cmake_macros_and_functions="\n".join([
-                                   CMakeCommonMacros.conan_message,
                                    CMakeCommonMacros.conan_set_vs_runtime  # TODO: Shall I use CMakeCommonMacros.conan_set_vs_runtime_preserve_build_type instead?
                                ]),
                                **context)
@@ -258,12 +257,6 @@ class CMakeToolchain(object):
             # TODO: What if the compiler is a build require?
             # TODO: Add all the stuff related to settings (ALL settings or just _MY_ settings?)
             # TODO: I would want to have here the path to the compiler too
-            # compiler = "clang" if self._conanfile.settings.compiler == "apple-clang" else self._conanfile.settings.compiler
-            # self._context.update({"os": self._conanfile.settings.os,
-            #            "arch": self._conanfile.settings.arch,
-            #            "c_compiler": compiler,
-            #            "cxx_compiler": compiler+'++'})
-
             t = Template(self._template_toolchain)
             content = t.render(conan_project_include_cmake=conan_project_include_cmake.replace("\\", "/"),
                                cmake_macros_and_functions="\n".join([
