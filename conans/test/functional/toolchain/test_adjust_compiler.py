@@ -232,9 +232,14 @@ class AdjustAutoTestCase(unittest.TestCase):
 
         def gcc_version_full():
             import re
+            import six
             from conans.client.conf.detect import _execute
             _, output = _execute("gcc-{} --version".format(compiler_version))
-            m = re.match(r".*(?P<version>\d\.\d\.\d)(\s\d+)?$", output.splitlines()[0])
+            output = str(output) if six.PY2 else output
+            line = output.splitlines()[0] if six.PY2 else output.split('\\n')[0]
+            m = re.match(r".*(?P<version>\d\.\d\.\d)(\s\d+)?$", line)
+            if not m:
+                self.fail("Cannot find version in line '{}'".format(line))
             return m.group("version")
 
         full_version_str = gcc_version_full()
@@ -264,9 +269,14 @@ class AdjustAutoTestCase(unittest.TestCase):
 
         def gcc_version_full():
             import re
+            import six
             from conans.client.conf.detect import _execute
             _, output = _execute("gcc-{} --version".format(compiler_version))
-            m = re.match(r".*(?P<version>\d\.\d\.\d)(\s\d+)?$", output.splitlines()[0])
+            output = str(output) if six.PY2 else output
+            line = output.splitlines()[0] if six.PY2 else output.split('\\n')[0]
+            m = re.match(r".*(?P<version>\d\.\d\.\d)(\s\d+)?$", line)
+            if not m:
+                self.fail("Cannot find version in line '{}'".format(line))
             return m.group("version")
 
         id_str = "GNU" if compiler == "gcc" else "Clang"
