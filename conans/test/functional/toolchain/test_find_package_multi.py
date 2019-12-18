@@ -54,7 +54,7 @@ class FindPackageMultiTestCase(unittest.TestCase):
         project(App CXX)
         
         if(CONAN_TOOLCHAIN_INCLUDED AND CMAKE_VERSION VERSION_LESS "3.15")
-            include("conan_project_include.cmake")
+            include("${CMAKE_BINARY_DIR}/conan_project_include.cmake")
         endif()
         
         find_package(requirement REQUIRED)
