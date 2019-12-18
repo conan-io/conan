@@ -6,17 +6,18 @@ import re
 import textwrap
 import unittest
 
+import six
 from jinja2 import Template
-
 from nose.plugins.attrib import attr
 from parameterized.parameterized import parameterized
 from parameterized.parameterized import parameterized_class
 
+from conans.client.conf.detect import _execute
 from conans.client.toolchain.cmake import CMakeToolchain
+from conans.client.tools import environment_append
 from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TurboTestClient
 from conans.util.files import load, rmdir
-from conans.client.tools import environment_append
 
 
 def compile_local_workflow(testcase, client, profile):
@@ -183,6 +184,15 @@ class AdjustAutoTestCase(unittest.TestCase):
                     "src/app.cpp": cls.app_cpp})
         # TODO: Remove the app.cpp and the add_executable, probably it is not need to run cmake configure.
 
+    def _gcc_version_full(self, compiler_version):
+        _, output = _execute("gcc-{} --version".format(compiler_version))
+        output = str(output) if six.PY2 else output
+        line = output.splitlines()[0] if six.PY2 else output.split('\\n')[0]
+        m = re.match(r".*(?P<version>\d\.\d\.\d)(\s\d+)?$", line)
+        if not m:
+            self.fail("Cannot find version in line '{}'".format(line))
+        return m.group("version")
+
     def _run_configure(self, settings_dict=None, options_dict=None):
         # Build the profile according to the settings provided
         settings_lines = "\n".join(
@@ -230,19 +240,7 @@ class AdjustAutoTestCase(unittest.TestCase):
 
         configure_out, cmake_cache, cmake_cache_keys, _, _ = self._run_configure({"compiler.version": compiler_version})
 
-        def gcc_version_full():
-            import re
-            import six
-            from conans.client.conf.detect import _execute
-            _, output = _execute("gcc-{} --version".format(compiler_version))
-            output = str(output) if six.PY2 else output
-            line = output.splitlines()[0] if six.PY2 else output.split('\\n')[0]
-            m = re.match(r".*(?P<version>\d\.\d\.\d)(\s\d+)?$", line)
-            if not m:
-                self.fail("Cannot find version in line '{}'".format(line))
-            return m.group("version")
-
-        full_version_str = gcc_version_full()
+        full_version_str = self._gcc_version_full(compiler_version)
         self.assertTrue(full_version_str.startswith(compiler_version))
         self.assertIn("-- The C compiler identification is GNU {}".format(full_version_str), configure_out)
         self.assertIn("-- The CXX compiler identification is GNU {}".format(full_version_str), configure_out)
@@ -267,21 +265,9 @@ class AdjustAutoTestCase(unittest.TestCase):
         configure_out, cmake_cache, cmake_cache_keys, _, _ = self._run_configure({"compiler": compiler,
                                                                                   "compiler.version": compiler_version})
 
-        def gcc_version_full():
-            import re
-            import six
-            from conans.client.conf.detect import _execute
-            _, output = _execute("gcc-{} --version".format(compiler_version))
-            output = str(output) if six.PY2 else output
-            line = output.splitlines()[0] if six.PY2 else output.split('\\n')[0]
-            m = re.match(r".*(?P<version>\d\.\d\.\d)(\s\d+)?$", line)
-            if not m:
-                self.fail("Cannot find version in line '{}'".format(line))
-            return m.group("version")
-
         id_str = "GNU" if compiler == "gcc" else "Clang"
         cxx_compiler = "g++" if compiler == "gcc" else "clang++"
-        full_version_str = gcc_version_full() if compiler == "gcc" else "6.0.0"
+        full_version_str = self._gcc_version_full(compiler_version) if compiler == "gcc" else "6.0.0"
         self.assertTrue(full_version_str.startswith(compiler_version), "{} not starting with {}".format(full_version_str, compiler_version))
         self.assertIn("-- The C compiler identification is {} {}".format(id_str, full_version_str), configure_out)
         self.assertIn("-- The CXX compiler identification is {} {}".format(id_str, full_version_str), configure_out)
