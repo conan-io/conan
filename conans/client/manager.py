@@ -82,11 +82,11 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None,
 
     if install_folder:
         # !! FIXME: this is not true
-        build_folder = build_bindir = layout_install_folder = install_folder
+        build_bindir = install_folder
         if conanfile.lyt:
-            build_bindir = os.path.join(build_folder, conanfile.lyt.build.bindir)
+            build_bindir = conanfile.lyt.build_bin_folder  # FIXME: Not sure about this
             # FIXME: the write_generators does this internally, this is a mess
-            layout_install_folder = os.path.join(build_folder, conanfile.lyt.build.installdir)
+            install_folder = conanfile.lyt.build_install_folder
 
         conanfile.install_folder = install_folder
         # Write generators
@@ -101,7 +101,7 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None,
             content = normalize(conanfile.info.dumps())
             save(os.path.join(build_bindir, CONANINFO), content)
             output.info("Generated %s" % CONANINFO)
-            graph_info.save(layout_install_folder)
+            graph_info.save(install_folder)
             output.info("Generated graphinfo")
         if not no_imports:
             run_imports(conanfile, build_bindir)
@@ -114,5 +114,5 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None,
             if hasattr(deploy_conanfile, "deploy") and callable(deploy_conanfile.deploy):
                 run_deploy(deploy_conanfile, build_bindir)
 
-        # FIXME: Return this is a terrible smell
-        return layout_install_folder
+        # FIXME: Returning this is a terrible smell
+        return install_folder

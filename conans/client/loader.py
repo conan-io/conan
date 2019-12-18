@@ -2,6 +2,8 @@ import fnmatch
 import imp
 import inspect
 import os
+import types
+
 import sys
 import uuid
 
@@ -164,7 +166,7 @@ class ConanFileLoader(object):
         conanfile.in_local_cache = False
         try:
             self._initialize_conanfile(conanfile, profile_host)
-            load_layout_file(os.path.dirname(conanfile_path), conanfile)
+            load_layout(os.path.dirname(conanfile_path), conanfile)
 
             # The consumer specific
             conanfile.develop = True
@@ -194,7 +196,7 @@ class ConanFileLoader(object):
         try:
             self._initialize_conanfile(conanfile, profile)
             if editable:
-                load_layout_file(os.path.dirname(conanfile_path), conanfile)
+                load_layout(os.path.dirname(conanfile_path), conanfile)
                 conanfile.in_local_cache = False
                 conanfile.develop = True
             return conanfile
@@ -370,10 +372,34 @@ def _parse_conanfile(conan_file_path):
     return loaded, module_id
 
 
+def load_layout(conanfile_folder, conanfile):
+    loaded = load_layout_file(conanfile_folder, conanfile)
+
+    if loaded:
+        return  # The external file has priority
+
+    if isinstance(conanfile.layout, str):
+        closure_lyt = conanfile.layout
+
+        def layout(self):
+            from conans import CMakeLayout, CLionLayout
+            if closure_lyt == "cmake":
+                return CMakeLayout(self)
+            elif closure_lyt == "clion":
+                return CLionLayout(self)
+            else:
+                raise ConanException("Invalid layout type: {}".format(closure_lyt))
+
+        conanfile.layout = types.MethodType(layout, conanfile)
+    else:
+        raise ConanException("Unexpected layout type declared in the "
+                             "conanfile: {}".format(conanfile.layout.__class__))
+
+
 def load_layout_file(conanfile_folder, conanfile):
     file_path = os.path.join(conanfile_folder, ".conan_layout.py")
     if not os.path.exists(file_path):
-        return
+        return False
 
     import six
     if six.PY2:
@@ -381,11 +407,16 @@ def load_layout_file(conanfile_folder, conanfile):
 
     import importlib.util
 
+    # FIXME: The module name has to be scoped to avoid collisions
     module_name = 'conan_layout'
 
     spec = importlib.util.spec_from_file_location(module_name, file_path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    import types
+    if not callable(module.layout):
+        raise ConanException("Unexpected layout type declared at {}: "
+                             "{}".format(file_path, conanfile.layout.__class__))
+
     # attach function as a method class
     conanfile.layout = types.MethodType(module.layout, conanfile)
+    return True

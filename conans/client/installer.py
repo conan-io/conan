@@ -107,6 +107,10 @@ class _PackageBuilder(object):
     def _build(self, conanfile, pref, build_folder):
         # Read generators from conanfile and generate the needed files
         logger.info("GENERATORS: Writing generators")
+
+        if conanfile.lyt:
+            build_folder = os.path.join(build_folder, conanfile.lyt.build_install_folder)
+
         write_generators(conanfile, build_folder, self._output)
 
         # Build step might need DLLs, binaries as protoc to generate source files
@@ -359,9 +363,9 @@ class BinaryInstaller(object):
         if node.conanfile.lyt:
             layout = node.conanfile.lyt
             node.conanfile.cpp_info.includedirs = [os.path.join(base_path, d)
-                                                   for d in layout.build.includedirs]
-            node.conanfile.cpp_info.libdirs = [os.path.join(base_path, layout.build.libdir)]
-            node.conanfile.cpp_info.bindirs = [os.path.join(base_path, layout.build.bindir)]
+                                                   for d in layout.build_includedirs]
+            node.conanfile.cpp_info.libdirs = [os.path.join(base_path, layout.build_libdir)]
+            node.conanfile.cpp_info.bindirs = [os.path.join(base_path, layout.build_bindir)]
             return
         # Try with package-provided file
         editable_cpp_info = package_layout.editable_cpp_info()
@@ -375,9 +379,13 @@ class BinaryInstaller(object):
                                                     settings=node.conanfile.settings,
                                                     options=node.conanfile.options)
             if build_folder is not None:
-                # FIXME: Layouts here?
                 build_folder = os.path.join(base_path, build_folder)
                 output = node.conanfile.output
+
+                if node.conanfile.lyt:
+                    build_folder = os.path.join(build_folder,
+                                                node.conanfile.lyt.build_install_folder)
+
                 write_generators(node.conanfile, build_folder, output)
                 save(os.path.join(build_folder, CONANINFO), node.conanfile.info.dumps())
                 output.info("Generated %s" % CONANINFO)

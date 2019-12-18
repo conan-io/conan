@@ -135,9 +135,8 @@ class AutoToolsBuildEnvironment(object):
 
         build_folder = os.getcwd()  # Cannot make it conanfile.build_folder, might be breaking
         if self._conanfile.lyt:
-            layout = self._conanfile.lyt
-            configure_dir = os.path.join(self._conanfile.source_folder, layout.build.src_folder)
-            build_folder = os.path.join(self._conanfile.build_folder, layout.build.folder)
+            configure_dir = os.path.join(self._conanfile.source_folder, self._conanfile.lyt.src)
+            build_folder = os.path.join(self._conanfile.build_folder, self._conanfile.lyt.build)
 
         triplet_args = []
 
@@ -232,7 +231,7 @@ class AutoToolsBuildEnvironment(object):
 
             build_folder = os.getcwd()  # Cannot make it conanfile.build_folder, might be breaking
             if self._conanfile.lyt:
-                build_folder = self._conanfile.lyt.build_folder
+                build_folder = self._conanfile.lyt.build
 
             self._conanfile.run("%s" % join_arguments([make_program, target, str_args,
                                                        cpu_count_option]),
