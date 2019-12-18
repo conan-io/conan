@@ -105,6 +105,10 @@ class AdjustAutoTestCase(unittest.TestCase):
         cmake_minimum_required(VERSION 2.8)
         project(App C CXX)
         
+        if(CONAN_TOOLCHAIN_INCLUDED AND CMAKE_VERSION VERSION_LESS "3.15")
+            include("conan_project_include.cmake")
+        endif()
+        
         if(NOT CMAKE_TOOLCHAIN_FILE)
             message(">> Not using toolchain")
             include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)

@@ -53,6 +53,10 @@ class FindPackageMultiTestCase(unittest.TestCase):
         cmake_minimum_required(VERSION 2.8)
         project(App CXX)
         
+        if(CONAN_TOOLCHAIN_INCLUDED AND CMAKE_VERSION VERSION_LESS "3.15")
+            include("conan_project_include.cmake")
+        endif()
+        
         find_package(requirement REQUIRED)
 
         add_executable(app src/app.cpp)
