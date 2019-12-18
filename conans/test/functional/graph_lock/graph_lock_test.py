@@ -619,6 +619,39 @@ class GraphLockConsumerBuildOrderTest(unittest.TestCase):
         client.run("graph build-order conan.lock --build=missing")
         self.assertIn("test4/0.1", client.out)
 
+    def package_revision_mode_build_order_test(self):
+        # https://github.com/conan-io/conan/issues/6232
+        client = TestClient()
+        client.run("config set general.default_package_id_mode=package_revision_mode")
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("export . libb/0.1@")
+        client.run("export . libc/0.1@")
+        client.save({"conanfile.py": GenConanfile().with_require_plain("libc/0.1")})
+        client.run("export . liba/0.1@")
+        client.save({"conanfile.py": GenConanfile().with_require_plain("liba/0.1")
+                                                   .with_require_plain("libb/0.1")})
+        client.run("export . app/0.1@")
+
+        client.run("graph lock app/0.1@ --build=missing")
+        client.run("graph build-order . --build=missing --json=bo.json")
+        self.assertIn("app/0.1:Package_ID_unknown - Unknown", client.out)
+        self.assertIn("liba/0.1:Package_ID_unknown - Unknown", client.out)
+        self.assertIn("libb/0.1:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Build", client.out)
+        self.assertIn("libc/0.1:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Build", client.out)
+        bo = client.load("bo.json")
+        bo = json.loads(bo)
+        libc_level = bo[0]
+        self.assertEqual("3", libc_level[0][0])
+        self.assertIn("libc/0.1", libc_level[0][1])
+        liba_level = bo[1]
+        self.assertEqual("2", liba_level[0][0])
+        self.assertIn("liba/0.1", liba_level[0][1])
+        self.assertEqual("4", liba_level[1][0])
+        self.assertIn("libb/0.1", liba_level[1][1])
+        libc_level = bo[2]
+        self.assertEqual("1", libc_level[0][0])
+        self.assertIn("app/0.1", libc_level[0][1])
+
 
 class GraphLockWarningsTestCase(unittest.TestCase):
 
