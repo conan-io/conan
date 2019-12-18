@@ -91,7 +91,7 @@ class CMakeToolchain(object):
 
     _template_toolchain = textwrap.dedent("""
         # Conan generated toolchain file
-        cmake_minimum_required(VERSION 3.15)  # Needed for CMAKE_PROJECT_INCLUDE
+        cmake_minimum_required(VERSION 3.0)  # Needed for targets
                 
         # Avoid including toolchain file several times (bad if appending to variables like
         #   CMAKE_CXX_FLAGS. See https://github.com/android/ndk/issues/323
@@ -123,7 +123,17 @@ class CMakeToolchain(object):
         
         get_property( _CMAKE_IN_TRY_COMPILE GLOBAL PROPERTY IN_TRY_COMPILE )
         if(NOT _CMAKE_IN_TRY_COMPILE)
-            set(CMAKE_PROJECT_INCLUDE "{{ conan_project_include_cmake }}")  # Will be executed after the project
+            if(CMAKE_VERSION VERSION_LESS "3.15")
+                message(WARNING 
+                    " CMake version less than 3.15 doesn't support CMAKE_PROJECT_INCLUDE variable\\n"
+                    " used by Conan toolchain to work. In order to get the same behavior you will\\n"
+                    " need to manually include the generated file after your 'project()' call:\\n\\n"
+                    " include(\\"{{conan_project_include_cmake}}\\")\\n\\n"
+                    " This file contains some definitions and extra adjustments that depend on\\n"
+                    " the build_type and it cannot be done in the toolchain.")
+            else()
+                set(CMAKE_PROJECT_INCLUDE "{{ conan_project_include_cmake }}")  # Will be executed after the 'project()' command
+            endif()
             
             # We are going to adjust automagically many things as requested by Conan
             #   these are the things done by 'conan_basic_setup()'            
@@ -147,6 +157,10 @@ class CMakeToolchain(object):
     _template_project_include = textwrap.dedent("""
         # When using a Conan toolchain, this file is included as the last step of all `project()` calls.
         #  https://cmake.org/cmake/help/latest/variable/CMAKE_PROJECT_INCLUDE.html
+
+        if (NOT CONAN_TOOLCHAIN_INCLUDED)
+            message(FATAL_ERROR "This file is expected to be used together with the Conan toolchain")
+        endif()
 
         ########### Utility macros and functions ###########
         {{ cmake_macros_and_functions }}
