@@ -61,10 +61,10 @@ class Layout(object):
         self._conan_file.copy("*.exe", dst=self.pkg_bindir,
                               src=self.build_bin_folder, keep_path=False)
 
-        self._conan_file.copy("*.so", dst=self.pkg_bindir,
-                              src=self.build_bin_folder, keep_path=False)
-        self._conan_file.copy("*.so.*", dst=self.pkg_bindir,
-                              src=self.build_bin_folder, keep_path=False)
+        self._conan_file.copy("*.so", dst=self.pkg_libdir,
+                              src=self.build_lib_folder, keep_path=False)
+        self._conan_file.copy("*.so.*", dst=self.pkg_libdir,
+                              src=self.build_lib_folder, keep_path=False)
         self._conan_file.copy("*.a", dst=self.pkg_libdir,
                               src=self.build_lib_folder, keep_path=False)
 

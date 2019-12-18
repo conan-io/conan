@@ -39,6 +39,9 @@ class DevLayoutTest(unittest.TestCase):
         set(CMAKE_CXX_COMPILER_WORKS 1)
         set(CMAKE_CXX_ABI_COMPILED 1)    
         project(HelloWorldLib CXX)
+        
+        include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+        conan_basic_setup()
 
         add_library(hello src/hello.cpp)
         add_executable(app src/app.cpp)
@@ -92,7 +95,6 @@ class DevLayoutTest(unittest.TestCase):
         project(Greet CXX)
 
         include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-        MESSAGE("!! CONANBUILDINFO=>${CMAKE_BINARY_DIR}/conanbuildinfo.cmake")
         conan_basic_setup()
 
         add_executable(app app.cpp)
@@ -140,10 +142,12 @@ class DevLayoutTest(unittest.TestCase):
         self.assertIn("pkg/0.1@user/testing package(): Packaged 1 '.h' file: hello.h", client.out)
         self.assertIn("Hello World Release!", client.out)
 
+    @unittest.skipIf(platform.system() != "Windows", "Needs windows")
     def cache_create_shared_test(self):
         # Cache creation
         client = self.client
         client.run("create . pkg/0.1@user/testing -o pkg:shared=True")
+
         self.assertIn("pkg/0.1@user/testing package(): Packaged 1 '.dll' file: hello.dll",
                       client.out)
         self.assertIn("pkg/0.1@user/testing package(): Packaged 1 '.h' file: hello.h", client.out)

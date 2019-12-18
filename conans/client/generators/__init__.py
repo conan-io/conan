@@ -1,4 +1,3 @@
-import os
 import traceback
 from os.path import join
 

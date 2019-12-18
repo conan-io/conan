@@ -354,7 +354,6 @@ class DepsGraphBuilder(object):
         conanfile_path, recipe_status, remote, new_ref = result
 
         locked_id = requirement.locked_id
-
         lock_py_requires = graph_lock.python_requires(locked_id) if locked_id is not None else None
         dep_conanfile = self._loader.load_conanfile(conanfile_path, profile, ref=requirement.ref,
                                                     lock_python_requires=lock_py_requires,
