@@ -196,54 +196,41 @@ class TransitiveGraphTest(GraphManagerTest):
     def test_diamond_conflict(self):
         # app -> libb0.1 -> liba0.1
         #    \-> libc0.1 -> liba0.2
-        liba_ref = ConanFileReference.loads("liba/0.1@user/testing")
-        liba_ref2 = ConanFileReference.loads("liba/0.2@user/testing")
-        libb_ref = ConanFileReference.loads("libb/0.1@user/testing")
-        libc_ref = ConanFileReference.loads("libc/0.1@user/testing")
-        self._cache_recipe(liba_ref, GenConanfile().with_name("liba").with_version("0.1"))
-        self._cache_recipe(liba_ref2, GenConanfile().with_name("liba").with_version("0.2"))
-        self._cache_recipe(libb_ref, GenConanfile().with_name("libb").with_version("0.1")
-                                                   .with_require(liba_ref))
-        self._cache_recipe(libc_ref, GenConanfile().with_name("libc").with_version("0.1")
-                                                   .with_require(liba_ref2))
-        with six.assertRaisesRegex(self, ConanException,
-                                   "Requirement liba/0.2@user/testing conflicts"):
-            self.build_graph(GenConanfile().with_name("app").with_version("0.1")
-                                           .with_require(libb_ref)
-                                           .with_require(libc_ref))
+        self.recipe_cache("liba/0.1")
+        self.recipe_cache("liba/0.2")
+        self.recipe_cache("libb/0.1", ["liba/0.1"])
+        self.recipe_cache("libc/0.1", ["liba/0.2"])
+
+        consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "libc/0.1"])
+
+        with six.assertRaisesRegex(self, ConanException, "Requirement liba/0.2 conflicts"):
+            self.build_consumer(consumer)
 
     def test_loop(self):
         # app -> libc0.1 -> libb0.1 -> liba0.1 ->|
         #             \<-------------------------|
-        liba_ref = ConanFileReference.loads("liba/0.1@user/testing")
-        libb_ref = ConanFileReference.loads("libb/0.1@user/testing")
-        libc_ref = ConanFileReference.loads("libc/0.1@user/testing")
-        self._cache_recipe(liba_ref, GenConanfile().with_name("liba").with_version("0.1")
-                                                   .with_require(libc_ref))
-        self._cache_recipe(libb_ref, GenConanfile().with_name("libb").with_version("0.1")
-                                                   .with_require(liba_ref))
-        self._cache_recipe(libc_ref, GenConanfile().with_name("libc").with_version("0.1")
-                                                   .with_require(libb_ref))
-        with six.assertRaisesRegex(self, ConanException, "Loop detected: 'liba/0.1@user/testing' "
-                                   "requires 'libc/0.1@user/testing'"):
-            self.build_graph(GenConanfile().with_name("app").with_version("0.1")
-                                           .with_require(libc_ref))
+        self.recipe_cache("liba/0.1", ["libc/0.1"])
+        self.recipe_cache("libb/0.1", ["liba/0.1"])
+        self.recipe_cache("libc/0.1", ["libb/0.1"])
+
+        consumer = self.recipe_consumer("app/0.1", ["libc/0.1"])
+
+        with six.assertRaisesRegex(self, ConanException,
+                                   "Loop detected: 'liba/0.1' requires 'libc/0.1'"):
+            self.build_consumer(consumer)
 
     def test_self_loop(self):
-        ref1 = ConanFileReference.loads("base/1.0@user/testing")
-        self._cache_recipe(ref1, GenConanfile().with_name("base").with_version("0.1"))
-        ref = ConanFileReference.loads("base/aaa@user/testing")
-        with six.assertRaisesRegex(self, ConanException, "Loop detected: 'base/aaa@user/testing' "
-                                   "requires 'base/aaa@user/testing'"):
-            self.build_graph(GenConanfile().with_name("base").with_version("aaa")
-                                           .with_require(ref1), ref=ref, create_ref=ref)
+        self.recipe_cache("liba/0.1")
+        consumer = self.recipe_consumer("liba/0.2", ["liba/0.1"])
+        with six.assertRaisesRegex(self, ConanException,
+                                   "Loop detected: 'liba/0.2' requires 'liba/0.1'"):
+            self.build_consumer(consumer)
 
     @parameterized.expand([("recipe", ), ("profile", )])
     def test_basic_build_require(self, build_require):
         # app -(br)-> tool0.1
         tool_ref = ConanFileReference.loads("tool/0.1@user/testing")
-        self._cache_recipe(tool_ref, GenConanfile().with_name("tool")
-                                                                  .with_version("0.1"))
+        self._cache_recipe(tool_ref, GenConanfile().with_name("tool").with_version("0.1"))
         if build_require == "recipe":
             deps_graph = self.build_graph(GenConanfile().with_name("app").with_version("0.1")
                                                         .with_build_require(tool_ref))
