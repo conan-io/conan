@@ -2,6 +2,7 @@
 
 import os
 import textwrap
+import six
 from collections import OrderedDict, defaultdict
 
 from jinja2 import Template
@@ -21,11 +22,18 @@ class Definitions(OrderedDict):
         super(Definitions, self).__init__()
         self._configuration_types = {}
 
-    def __getattr__(self, config):
-        try:
-            return super(Definitions, self).__getitem__(config)
-        except KeyError:
-            return self._configuration_types.setdefault(config, dict())
+    if six.PY2:
+        def __getitem__(self, config):
+            try:
+                return super(Definitions, self).__getitem__(config)
+            except KeyError:
+                return self._configuration_types.setdefault(config, dict())
+    else:
+        def __getattr__(self, config):
+            try:
+                return super(Definitions, self).__getitem__(config)
+            except KeyError:
+                return self._configuration_types.setdefault(config, dict())
 
     @property
     def configuration_types(self):
