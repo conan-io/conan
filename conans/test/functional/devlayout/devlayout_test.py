@@ -18,26 +18,20 @@ class DevLayoutTest(unittest.TestCase):
             options = {"shared": [True, False]}
             default_options = {"shared": False}
             generators = "cmake"
-            exports_sources = "src/*"
+            exports_sources = "src/*", "CMakeLists.txt"
             generators = "cmake"
-            # IDEA TO HAVE THIS SIMPLIFIED DECLARATION: layout = "cmake"
-
-            def layout(self):
-                mylayout = CMakeLayout(self)
-                # Default, will be overriden by local "build-folder" arg
-                mylayout.build = "build"
-                return mylayout
-
+            layout = "cmake"
+            
             def build(self):
                 cmake = CMake(self) # Opt-in is defined having toolchain
                 cmake.configure()
                 cmake.build()
 
             def package(self):
-                # WITH THE SIMPLIFIED DECLARATION, THIS WILL NOT BE POSSIBLE
                 self.lyt.package()
 
             def package_info(self):
+                self.lyt.package_info()
                 self.cpp_info.libs = ["hello"]
             """)
     cmake = textwrap.dedent("""
@@ -46,8 +40,8 @@ class DevLayoutTest(unittest.TestCase):
         set(CMAKE_CXX_ABI_COMPILED 1)    
         project(HelloWorldLib CXX)
 
-        add_library(hello hello.cpp)
-        add_executable(app app.cpp)
+        add_library(hello src/hello.cpp)
+        add_executable(app src/app.cpp)
         target_link_libraries(app PRIVATE hello)
         """)
     hellopp = textwrap.dedent("""
@@ -98,9 +92,11 @@ class DevLayoutTest(unittest.TestCase):
         project(Greet CXX)
 
         include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+        MESSAGE("!! CONANBUILDINFO=>${CMAKE_BINARY_DIR}/conanbuildinfo.cmake")
         conan_basic_setup()
 
         add_executable(app app.cpp)
+        MESSAGE(" CONAN LIBS=> ${CONAN_LIBS}")
         target_link_libraries(app ${CONAN_LIBS})
         """)
     test_conanfile = textwrap.dedent("""
@@ -127,7 +123,7 @@ class DevLayoutTest(unittest.TestCase):
     def setUp(self):
         client = TestClient()
         client.save({"conanfile.py": self.conanfile,
-                     "src/CMakeLists.txt": self.cmake,
+                     "CMakeLists.txt": self.cmake,
                      "src/hello.cpp": self.hellopp,
                      "src/hello.h": self.helloh,
                      "src/app.cpp": self.app,
@@ -154,8 +150,8 @@ class DevLayoutTest(unittest.TestCase):
         self.assertIn("imports(): Copied 1 '.dll' file: hello.dll", client.out)
         self.assertIn("Hello World Release!", client.out)
 
-    @unittest.skipIf(platform.system() != "Windows", "Needs windows")
     @parameterized.expand([(True,), (False,)])
+    @unittest.skipIf(platform.system() != "Windows", "Needs windows")
     def local_build_test(self, shared):
         client = self.client
         mkdir(os.path.join(client.current_folder, "build"))
@@ -181,11 +177,7 @@ class DevLayoutTest(unittest.TestCase):
                 settings = "os", "compiler", "build_type", "arch"
                 requires = "pkg/0.1@user/testing"
                 generators = "cmake_find_package_multi"
-                
-                def layout(self):
-                    mylayout = CMakeLayout(self)
-                    mylayout.build = "build"
-                    return mylayout
+                layout = "cmake"
                     
                 def imports(self):
                     self.copy(pattern="*.dll", dst=self.lyt.build_bindir, src="#bindir")

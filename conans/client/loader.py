@@ -416,7 +416,7 @@ def load_overrides_layout_file(conanfile_folder, conanfile):
     import importlib.util
 
     # FIXME: The module name has to be scoped to avoid collisions
-    module_name = 'conan_layout'
+    module_name = '{}.conan_layout'.format(conanfile_folder)
 
     spec = importlib.util.spec_from_file_location(module_name, file_path)
     module = importlib.util.module_from_spec(spec)

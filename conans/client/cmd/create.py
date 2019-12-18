@@ -33,6 +33,10 @@ def create(app, ref, graph_info, remotes, update, build_modes,
     test_conanfile_path = _get_test_conanfile_path(test_folder, conanfile_path)
 
     if test_conanfile_path:
+        # FIXME: !! With test_package it is not loading the .conan_layout.py because the passed
+        #        folder is the test_package one! the main recipe is exported already! and recipes
+        #        in the cache doesn't have the .conan_layout.py!
+        # FIXME: Should we block the export of the conan_layout.py file?
         install_build_and_test(app, test_conanfile_path, ref, graph_info, remotes, update,
                                build_modes=build_modes,
                                manifest_folder=manifest_folder,

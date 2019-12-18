@@ -77,7 +77,7 @@ class Layout(object):
 
     def package_info(self):
         # Make sure the ``package()`` and ``cpp_info`` are consistent
-        self._conan_file.cpp_info.includedirs = self.pkg_includedir
+        self._conan_file.cpp_info.includedirs = [self.pkg_includedir]
         self._conan_file.cpp_info.libdirs = [self.pkg_libdir]
         self._conan_file.cpp_info.bindirs = [self.pkg_bindir]
         self._conan_file.cpp_info.buildirs = [self.pkg_builddir]
