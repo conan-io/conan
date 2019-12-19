@@ -3,13 +3,15 @@ import platform
 import textwrap
 import unittest
 
+from nose.plugins.attrib import attr
 from parameterized import parameterized
 
 from conans.model.ref import ConanFileReference
-from conans.util.files import mkdir
 from conans.test.utils.tools import TestClient, TurboTestClient
+from conans.util.files import mkdir
 
 
+@attr("slow")
 class DevLayoutTest(unittest.TestCase):
     conanfile = textwrap.dedent("""
         from conans import ConanFile, CMake, CMakeLayout
@@ -246,7 +248,7 @@ class DevLayoutTest(unittest.TestCase):
                 layout = "cmake"
                     
                 def imports(self):
-                    self.copy(pattern="*.dll", dst=self.lyt.build_bindir, src="#bindir")
+                    self.copy(pattern="*.dll", dst=self.lyt.build_bin_folder, src="#bindir")
             """)
 
         test_cmake = textwrap.dedent("""
@@ -299,3 +301,7 @@ class DevLayoutTest(unittest.TestCase):
             client2.run_command("cmake --build . --config Debug")
             client2.run_command(r"Debug\\app.exe")
             self.assertIn("Hello Moon Debug!", client2.out)
+
+    # TODO: Same local test for linux
+    # TODO: A test doing source(), checking correct dirs
+    # TODO: In other place: Test mocked autotools and cmake with layout

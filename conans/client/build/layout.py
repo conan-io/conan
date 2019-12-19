@@ -96,8 +96,8 @@ class CMakeLayout(Layout):
         # Output of build, relative to conanfile
         self.build = "build"
         # Output of build, relative to self.build_folder
-        build_type = conanfile.settings.build_type
-        if conanfile.settings.compiler == "Visual Studio":
+        build_type = conanfile.settings.get_safe("build_type")
+        if conanfile.settings.get_safe("compiler") == "Visual Studio":
             self.build_libdir = str(build_type)
             self.build_bindir = str(build_type)
             # self.installdir = os.path.join(self.build, str(build_type))
@@ -111,7 +111,9 @@ class CLionLayout(Layout):
     def __init__(self, conanfile):
         super(CLionLayout, self).__init__(conanfile)
         self.src = ""
-        self.build = "cmake-build-{}".format(str(conanfile.settings.build_type).lower())
+        # FIXME: What it should be if no build_type declared?
+        build_type = conanfile.settings.get_safe("build_type", "release")
+        self.build = "cmake-build-{}".format(str(build_type.lower()))
         self.build_libdir = ""  # If removed output dirs in conan basic setup
         self.build_bindir = ""
         self.build_includedirs = [self.build, ""]

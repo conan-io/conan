@@ -168,11 +168,71 @@ class LayoutLoadTest(unittest.TestCase):
         client.run("install lib/1.0@")
         self.assertIn("Here, being reused: overwritten_build", client.out)
 
-    def layout_available_methods(self):
-        # build method etc
-        # PENDING
+    def layout_available_methods_test(self):
+        """Test the available methods from the layout, even without declared settings"""
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+           import os
+           from conans import ConanFile, CMake
+
+           class Pkg(ConanFile):
+               layout = "cmake"
+
+               def build(self):
+                   assert os.path.join(self.build_folder, self.lyt.build) == self.lyt.build_folder
+                   assert os.path.join(self.source_folder, self.lyt.src) == self.lyt.source_folder
+                   assert self.lyt.build_lib_folder == \
+                          os.path.join(self.lyt.build, self.lyt.build_libdir)
+                   assert self.lyt.build_bin_folder == \
+                          os.path.join(self.lyt.build, self.lyt.build_bindir)
+
+               """)
+        client.save({"conanfile.py": conanfile})
+        client.run("create . lib/1.0@")
+
+    def returning_non_layout_in_method_test(self):
+        """If you forget to return the layout in the method..."""
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+                   import os
+                   from conans import ConanFile, CMake
+
+                   class Pkg(ConanFile):
+                       def layout(self):
+                           pass
+                           
+                       def build(self):
+                           self.lyt.build_folder
+                           
+                       """)
+        client.save({"conanfile.py": conanfile})
+        client.run("create . lib/1.0@", assert_error=True)
+        self.assertIn("The layout() method is not returning a Layout object", client.out)
+
+    def invalid_layout_type_test(self):
+        """If you forget to return the layout in the method..."""
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+                   import os
+                   from conans import ConanFile, CMake
+
+                   class Pkg(ConanFile):
+                       layout = 34
+
+                       def build(self):
+                           self.lyt.build_folder
+
+                       """)
+        client.save({"conanfile.py": conanfile})
+        client.run("create . lib/1.0@", assert_error=True)
+        self.assertIn("Unexpected layout type declared in the conanfile: <class 'int'>",
+                      client.out)
+
+    def invalid_layout_override_test(self):
+        # TODO: - without function
+        #       - returning other stuff
         pass
 
-    def returning_non_layout_in_method(self):
-        # Control, typical that you forget to return the ly
+    def check_layout_override_py2_only_test(self):
+        # TODO: Also skip the others with override for py2
         pass
