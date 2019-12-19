@@ -163,12 +163,11 @@ class DevLayoutTest(unittest.TestCase):
                     exports_sources = "src/*"
                     
                     def layout(self):
-                        ly = Layout(self)
-                        ly.src = "src"
-                        ly.build = "my_custom_build"
-                        ly.pkg_libdir = "lib_custom"
-                        ly.pkg_bindir = "bin_custom"
-                        return ly
+                        self.lyt = Layout(self)
+                        self.lyt.src = "src"
+                        self.lyt.build = "my_custom_build"
+                        self.lyt.pkg_libdir = "lib_custom"
+                        self.lyt.pkg_bindir = "bin_custom"
 
                     def build(self):
                         cmake = CMake(self) # Opt-in is defined having toolchain
@@ -388,10 +387,9 @@ class DevLayoutTest(unittest.TestCase):
                     generators = "cmake"
                 
                     def layout(self):
-                       ly = Layout(self)
-                       ly.build_libdir = "lib"
-                       ly.build_includedirs = ["src"]
-                       return ly
+                       self.lyt = Layout(self)
+                       self.lyt.build_libdir = "lib"
+                       self.lyt.build_includedirs = ["src"]
 
                     def build(self):
                         cmake = CMake(self)
@@ -448,13 +446,15 @@ class DevLayoutTest(unittest.TestCase):
         client.run("build .")
         self.assertIn("Built target app", client.out)
 
-    # TODO: Same local test for linux
+# TODO: another class without really building to check all the output dirs are correct and following
+#       the layout
     # TODO: A test doing source(), checking correct dirs
-    # TODO: In other place: Test mocked autotools and cmake with layout
     # TODO: Alter install folder and see everything works, verify where the files are put
-    # TODO: Test to demonstrate multiconfig?
     # TODO: Editable packages includedirs
-    # TODO: Add missing test for .package() where the includedirs are copied from the correct folders => local methods too (editable)
+
+# TODO: Same local test for linux
+
+    # TODO: In other place: Test mocked autotools and cmake with layout
+    # TODO: Test to demonstrate multiconfig?
     # TODO: Test the export of the layout file is blocked
-    # TODO: Test without OUTPUT DIRS
     # TODO: Test changing layout in the test_package folder

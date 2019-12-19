@@ -16,10 +16,9 @@ class LayoutLoadTest(unittest.TestCase):
                   settings = "os", "compiler", "arch", "build_type"
                   
                   def layout(self):
-                      the_ly = CMakeLayout(self)
-                      the_ly.build = "mybuild"
-                      the_ly.src = "mysrc"
-                      return the_ly
+                      self.lyt = CMakeLayout(self)
+                      self.lyt.build = "mybuild"
+                      self.lyt.src = "mysrc"
 
                   def assert_layout(self):
                       assert self.lyt.build == "mybuild"
@@ -92,10 +91,9 @@ class LayoutLoadTest(unittest.TestCase):
         from conans import Layout
         
         def layout(self):
-            ly = Layout(self)
-            ly.build = "overwritten_build"
-            ly.src = "overwritten_src"
-            return ly
+            self.lyt = Layout(self)
+            self.lyt.build = "overwritten_build"
+            self.lyt.src = "overwritten_src"
         """)
         client.save({"conanfile.py": conanfile, LAYOUT_PY: override_layout})
         client.run("install .")
@@ -125,10 +123,9 @@ class LayoutLoadTest(unittest.TestCase):
         from conans import Layout
 
         def layout(self):
-            ly = Layout(self)
-            ly.build = "overwritten_build"
-            ly.src = "overwritten_src"
-            return ly
+            self.lyt = Layout(self)
+            self.lyt.build = "overwritten_build"
+            self.lyt.src = "overwritten_src"
         """)
         client.save({"conanfile.py": conanfile, LAYOUT_PY: override_layout})
         client.run("create . lib/1.0@")
@@ -156,10 +153,9 @@ class LayoutLoadTest(unittest.TestCase):
         from conans import Layout
 
         def layout(self):
-            ly = Layout(self)
-            ly.build = "overwritten_build"
-            ly.src = "overwritten_src"
-            return ly
+            self.lyt = Layout(self)
+            self.lyt.build = "overwritten_build"
+            self.lyt.src = "overwritten_src"
         """)
         client.save({"conanfile.py": conanfile, LAYOUT_PY: override_layout})
         client.run("install . ")
@@ -191,7 +187,7 @@ class LayoutLoadTest(unittest.TestCase):
         client.run("create . lib/1.0@")
 
     def returning_non_layout_in_method_test(self):
-        """If you forget to return the layout in the method..."""
+        """If you assign the layout badly in the method..."""
         client = TestClient()
         conanfile = textwrap.dedent("""
                    import os
@@ -207,7 +203,8 @@ class LayoutLoadTest(unittest.TestCase):
                        """)
         client.save({"conanfile.py": conanfile})
         client.run("create . lib/1.0@", assert_error=True)
-        self.assertIn("The layout() method is not returning a Layout object", client.out)
+        self.assertIn("The layout() method is not assigning a Layout object to self.lyt",
+                      client.out)
 
     def invalid_layout_type_test(self):
         """If you forget to return the layout in the method..."""

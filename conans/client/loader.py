@@ -382,9 +382,9 @@ def load_recipe_layout(conanfile):
         return
 
     if callable(conanfile.layout):
-        conanfile.lyt = conanfile.layout()
+        conanfile.layout()
         if not isinstance(conanfile.lyt, Layout):
-            raise ConanException("The layout() method is not returning a Layout object")
+            raise ConanException("The layout() method is not assigning a Layout object to self.lyt")
         return  # Already defined method
     if isinstance(conanfile.layout, str):
         from conans import CMakeLayout, CLionLayout
@@ -424,7 +424,7 @@ def load_overrides_layout_file(conanfile_folder, conanfile):
                              "{}".format(file_path, conanfile.layout.__class__))
 
     # attach function as a method class
-    conanfile.lyt = module.layout(conanfile)
+    module.layout(conanfile)
     if not isinstance(conanfile.lyt, Layout):
-        raise ConanException("The layout() method is not returning a Layout object")
+        raise ConanException("The layout() method is not assigning a Layout object to self.lyt")
     return True
