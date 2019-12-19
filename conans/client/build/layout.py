@@ -112,7 +112,7 @@ class CLionLayout(Layout):
         super(CLionLayout, self).__init__(conanfile)
         self.src = ""
         # FIXME: What it should be if no build_type declared?
-        build_type = conanfile.settings.get_safe("build_type", "release")
+        build_type = conanfile.settings.get_safe("build_type") or "release"
         self.build = "cmake-build-{}".format(str(build_type.lower()))
         self.build_libdir = ""  # If removed output dirs in conan basic setup
         self.build_bindir = ""

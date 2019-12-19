@@ -302,12 +302,83 @@ class DevLayoutTest(unittest.TestCase):
             client2.run_command(r"Debug\\app.exe")
             self.assertIn("Hello Moon Debug!", client2.out)
 
+    def test_clion_layout(self):
+        """It is not necessary to have the IDE to follow the clion layout"""
+        client = TurboTestClient()
+        conanfile = textwrap.dedent("""
+                from conans import ConanFile, CMake
+
+                class Pkg(ConanFile):
+                    settings = "os", "compiler", "arch", "build_type"
+                    exports_sources = "src/*", "CMakeLists.txt"
+                    generators = "cmake"
+                    layout = "clion"
+
+                    def build(self):
+                        cmake = CMake(self)
+                        cmake.configure()
+                        cmake.build()
+
+                    def package(self):
+                        self.lyt.package()
+
+                    def package_info(self):
+                        self.lyt.package_info()
+                        self.cpp_info.libs = ["hello"]
+                    """)
+        client.save({"conanfile.py": conanfile,
+                     "CMakeLists.txt": self.cmake,
+                     "src/hello.cpp": self.hellopp,
+                     "src/hello.h": self.helloh,
+                     "src/app.cpp": self.app,
+                     "test_package/app.cpp": self.app,
+                     "test_package/CMakeLists.txt": self.test_cmake,
+                     "test_package/conanfile.py": self.test_conanfile
+                     })
+        ref = ConanFileReference.loads("pkg/0.1@user/testing")
+        pref = client.create(ref, conanfile=None)  # Use the created conanfile
+        self.assertIn("pkg/0.1@user/testing package(): Packaged 1 '.h' file: hello.h", client.out)
+        self.assertIn("Hello World Release!", client.out)
+        pl = client.cache.package_layout(ref)
+        # There is a "cmake-build-release" sub-folder also in the cache
+        self.assertTrue(os.path.exists(os.path.join(pl.build(pref.copy_clear_revs()),
+                                                    "cmake-build-release")))
+        # The library is generated in that subfolder
+        lib_folder = os.path.join(pl.build(pref.copy_clear_revs()), "cmake-build-release", "lib")
+        self.assertTrue("hello" in os.listdir(lib_folder)[0])
+
+        # We can repeat the create now with debug
+        pref = client.create(ref, conanfile=None, args="-s build_type=Debug")
+        self.assertIn("pkg/0.1@user/testing package(): Packaged 1 '.h' file: hello.h", client.out)
+        self.assertIn("Hello World Debug!", client.out)
+        pl = client.cache.package_layout(ref)
+        self.assertTrue(os.path.exists(os.path.join(pl.build(pref.copy_clear_revs()),
+                                                    "cmake-build-debug")))
+
+        # The library is generated in that sub-folder
+        lib_folder = os.path.join(pl.build(pref.copy_clear_revs()), "cmake-build-debug", "lib")
+        self.assertTrue("hello" in os.listdir(lib_folder)[0])
+
+        # If we use the local methods, the layout is also the same as the cache
+        client.run("install .")
+        self.assertTrue(os.path.exists(os.path.join(client.current_folder, "cmake-build-release")))
+        self.assertFalse(os.path.exists(os.path.join(client.current_folder, "cmake-build-debug")))
+
+        client.run("install . -s build_type=Debug")
+        self.assertTrue(os.path.exists(os.path.join(client.current_folder, "cmake-build-debug")))
+
+        # We can build and package, everything will be as expected
+        client.run("build . -if=cmake-build-release")
+        client.run("package . -if=cmake-build-release")
+        lib_package_folder = os.path.join(client.current_folder, "package", "lib")
+        self.assertTrue("hello" in os.listdir(lib_package_folder)[0])  # The library is there
+
     # TODO: Same local test for linux
     # TODO: A test doing source(), checking correct dirs
     # TODO: In other place: Test mocked autotools and cmake with layout
     # TODO: Alter install folder and see everything works, verify where the files are put
     # TODO: Test to demonstrate multiconfig?
-    # TODO: Add a test for clion layout
     # TODO: Add missing test for .package() where the includedirs are copied from the correct folders
     # TODO: Test the export of the layout file is blocked
     # TODO: Test without OUTPUT DIRS
+    # TODO: Test changing layout in the test_package folder
