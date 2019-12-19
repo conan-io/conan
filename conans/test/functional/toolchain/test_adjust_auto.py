@@ -232,7 +232,6 @@ class AdjustAutoTestCase(unittest.TestCase):
     @parameterized.expand([("Debug",), ("Release",)])
     @unittest.skipIf(platform.system() == "Windows", "Windows uses Visual Studio, CMAKE_BUILD_TYPE is not used")
     def test_build_type(self, build_type):
-        #self.skipTest("Disabled")
         configure_out, cmake_cache, cmake_cache_keys, _, _ = self._run_configure({"build_type": build_type})
 
         self.assertIn(">> CMAKE_BUILD_TYPE: {}".format(build_type), configure_out)
@@ -242,7 +241,6 @@ class AdjustAutoTestCase(unittest.TestCase):
     @parameterized.expand([("libc++",), ])  # ("libstdc++",), is deprecated
     @unittest.skipIf(platform.system() != "Darwin", "libcxx for Darwin")
     def test_libcxx_macos(self, libcxx):
-        #self.skipTest("Disabled")
         configure_out, cmake_cache, cmake_cache_keys, _, _ = self._run_configure({"compiler.libcxx": libcxx})
 
         #self.assertIn("compiler.libcxx={}".format(libcxx), configure_out)
@@ -267,7 +265,6 @@ class AdjustAutoTestCase(unittest.TestCase):
         self.assertEqual(libcxx, cmake_cache["CONAN_LIBCXX:" + type_str])
 
     def test_install_paths(self):
-        #self.skipTest("Disabled")
         configure_out, cmake_cache, cmake_cache_keys, _, package_dir = self._run_configure()
 
         value_f = lambda u: u if self.in_cache else ""
@@ -306,7 +303,6 @@ class AdjustAutoTestCase(unittest.TestCase):
 
     @unittest.skipIf(platform.system() != "Darwin", "Only MacOS")
     def test_ccxx_flags_macos(self):
-        #self.skipTest("Disabled")
         configure_out, cmake_cache, cmake_cache_keys, _, _ = self._run_configure()
 
         extra_blank = "" if self.use_toolchain else " "  # FIXME: There is an extra blank for no-toolchain
@@ -339,7 +335,6 @@ class AdjustAutoTestCase(unittest.TestCase):
 
     @unittest.skipIf(platform.system() != "Windows", "Not in Windows")
     def test_ccxx_flags_win(self):
-        # self.skipTest("Disabled")
         configure_out, cmake_cache, cmake_cache_keys, _, _ = self._run_configure()
 
         mp1_prefix = "/MP1 " if self.use_toolchain else ""
@@ -411,7 +406,6 @@ class AdjustAutoTestCase(unittest.TestCase):
     @parameterized.expand([("gnu14",), ("14", ), ])
     @unittest.skipIf(platform.system() == "Windows", "Not for windows")
     def test_stdcxx_flags(self, cppstd):
-        # self.skipTest("Disabled")
         configure_out, cmake_cache, cmake_cache_keys, _, _ = self._run_configure({"compiler.cppstd": cppstd})
 
         extensions_str = "ON" if "gnu" in cppstd else "OFF"
@@ -431,9 +425,8 @@ class AdjustAutoTestCase(unittest.TestCase):
             self.assertEqual("14", cmake_cache["CONAN_CMAKE_CXX_STANDARD:STRING"])
 
     @parameterized.expand([("14",), ("17",), ])
-    @unittest.skipUnless(platform.system() == "Windows", "IOnly for windows")
+    @unittest.skipUnless(platform.system() == "Windows", "Only for windows")
     def test_stdcxx_flags_windows(self, cppstd):
-        #self.skipTest("Disabled")
         configure_out, cmake_cache, cmake_cache_keys, _, _ = self._run_configure({"compiler.cppstd": cppstd})
 
         #self.assertIn("compiler.cppstd={}".format(cppstd), configure_out)
@@ -453,7 +446,6 @@ class AdjustAutoTestCase(unittest.TestCase):
     @parameterized.expand([("True",), ("False", ), ])
     @unittest.skipIf(platform.system() == "Windows", "fPIC is not used for Windows")
     def test_fPIC(self, fpic):
-        #self.skipTest("Disabled")
         configure_out, cmake_cache, cmake_cache_keys, _, _ = self._run_configure(options_dict={"app:fPIC": fpic})
 
         fpic_str = "ON" if fpic == "True" else "OFF"
@@ -467,7 +459,6 @@ class AdjustAutoTestCase(unittest.TestCase):
 
     @unittest.skipIf(platform.system() != "Darwin", "rpath is only handled for Darwin")
     def test_rpath(self):
-        #self.skipTest("Disabled")
         configure_out, cmake_cache, cmake_cache_keys, _, _ = self._run_configure()
 
         self.assertIn(">> CMAKE_INSTALL_NAME_DIR: ", configure_out)
@@ -475,7 +466,6 @@ class AdjustAutoTestCase(unittest.TestCase):
         self.assertEqual("1", cmake_cache["CMAKE_SKIP_RPATH:BOOL"])
 
     def test_find_paths(self):
-        #self.skipTest("Disabled")
         configure_out, cmake_cache, cmake_cache_keys, build_directory, _ = self._run_configure()
 
         # TODO: CONAN_CMAKE_MODULE_PATH, we are not populating that variable! never?!
@@ -493,7 +483,6 @@ class AdjustAutoTestCase(unittest.TestCase):
         self.assertNotIn("CMAKE_PREFIX_PATH", cmake_cache_keys)
 
     def test_find_library_paths(self):
-        #self.skipTest("Disabled")
         configure_out, cmake_cache, cmake_cache_keys, _, _ = self._run_configure()
 
         self.assertIn(">> CMAKE_INCLUDE_PATH: ", configure_out)

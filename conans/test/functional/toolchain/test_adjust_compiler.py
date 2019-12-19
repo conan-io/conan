@@ -294,6 +294,9 @@ class AdjustAutoTestCase(unittest.TestCase):
         if not self.use_toolchain:
             self.skipTest("It doesn't work without toolchain")
 
+        if _running_ci and compiler_version == "16":
+            self.skipTest("VS 2019 not available in Jenkins")
+
         cache_filepath = os.path.join(self.t.current_folder, "build", "CMakeCache.txt")
         if os.path.exists(cache_filepath):
             os.unlink(cache_filepath)  # FIXME: Ideally this shouldn't be needed (I need it only here)
