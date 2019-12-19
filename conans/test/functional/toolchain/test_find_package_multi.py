@@ -167,9 +167,12 @@ class FindPackageMultiTestCase(unittest.TestCase):
             self.t.run("install .. -s build_type=Release")
 
             # Configure once
-            mgenerator = "Xcode" if platform.system() == "Darwin" else "Visual Studio 16 2019"
+            mgenerator = "Xcode" if platform.system() == "Darwin" else "Visual Studio 14 2015 Win64"
             with environment_append({"CMAKE_GENERATOR": mgenerator}):
-                cmake_configure = 'cmake .. -DCMAKE_TOOLCHAIN_FILE={}'.format(CMakeToolchain.filename)
+                # FIXME: There is a bug in CMake < 3.15, the environment variable for Xcode is
+                #   not considered, we need to pass '-G Xcode' or it will use 'Unix Makefiles'!
+                cmake_configure = 'cmake .. -G "{}" -DCMAKE_TOOLCHAIN_FILE={}'.format(
+                    mgenerator, CMakeToolchain.filename)
                 self.t.run_command(cmake_configure)
                 self.assertIn("Using Conan toolchain", self.t.out)
 

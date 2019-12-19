@@ -321,6 +321,8 @@ class AdjustAutoTestCase(unittest.TestCase):
     @parameterized.expand([("v140",), ("v141",), ("v142",), ])
     @unittest.skipUnless(platform.system() == "Windows", "Only Windows")
     def test_compiler_toolset_win(self, compiler_toolset):
+        if _running_ci and compiler_toolset == "v142":
+            self.skipTest("Toolset v142 is not available in Jenkins")
 
         # TODO: What if the toolset is not installed for the CMAKE_GENERATOR given?
 
