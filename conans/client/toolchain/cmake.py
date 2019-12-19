@@ -2,7 +2,6 @@
 
 import os
 import textwrap
-import six
 from collections import OrderedDict, defaultdict
 
 from jinja2 import Template
@@ -18,22 +17,17 @@ from conans.client.generators.cmake_common import CMakeCommonMacros
 
 
 class Definitions(OrderedDict):
+    _configuration_types = None
+
     def __init__(self):
         super(Definitions, self).__init__()
         self._configuration_types = {}
 
-    if six.PY2:
-        def __getitem__(self, config):
-            try:
-                return super(Definitions, self).__getitem__(config)
-            except KeyError:
-                return self._configuration_types.setdefault(config, dict())
-    else:
-        def __getattr__(self, config):
-            try:
-                return super(Definitions, self).__getitem__(config)
-            except KeyError:
-                return self._configuration_types.setdefault(config, dict())
+    def __getattribute__(self, config):
+        try:
+            return super(Definitions, self).__getattribute__(config)
+        except AttributeError:
+            return self._configuration_types.setdefault(config, dict())
 
     @property
     def configuration_types(self):
