@@ -108,10 +108,11 @@ class _PackageBuilder(object):
         # Read generators from conanfile and generate the needed files
         logger.info("GENERATORS: Writing generators")
 
+        install_folder = build_folder
         if conanfile.lyt:
-            build_folder = os.path.join(build_folder, conanfile.lyt.build_install_folder)
+            install_folder = os.path.join(build_folder, conanfile.lyt.build_install_folder)
 
-        write_generators(conanfile, build_folder, self._output)
+        write_generators(conanfile, install_folder, self._output)
 
         # Build step might need DLLs, binaries as protoc to generate source files
         # So execute imports() before build, storing the list of copied_files
