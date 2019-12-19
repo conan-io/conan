@@ -337,7 +337,7 @@ class AdjustAutoTestCase(unittest.TestCase):
 
         self.assertEqual("", cmake_cache["CMAKE_EXE_LINKER_FLAGS:STRING"])
 
-    @unittest.skipIf(platform.system() != "Windows", "Only Windows")
+    @unittest.skipIf(platform.system() != "Windows", "Not in Windows")
     def test_ccxx_flags_win(self):
         # self.skipTest("Disabled")
         configure_out, cmake_cache, cmake_cache_keys, _, _ = self._run_configure()
@@ -567,7 +567,7 @@ class AdjustAutoTestCase(unittest.TestCase):
         self.assertEqual(generator_str, cmake_cache["CMAKE_GENERATOR_PLATFORM:" + type_str])
 
     @parameterized.expand([("x86_64",), ("x86",), ])
-    @unittest.skipUnless(platform.system() == "Linux", "Only windows")
+    @unittest.skipUnless(platform.system() == "Linux", "Only linux")
     def test_arch_linux(self, arch):
         cache_filepath = os.path.join(self.t.current_folder, "build", "CMakeCache.txt")
         if os.path.exists(cache_filepath):
