@@ -118,7 +118,7 @@ class DevLayoutTest(unittest.TestCase):
                 cmake.build()
             
             def imports(self):
-                self.copy(pattern="*.dll", dst="bin", src="#bindir")
+                self.copy(pattern="*.dll", dst="bin", src="bindir")
 
             def test(self):
                 os.chdir("bin")
@@ -248,7 +248,7 @@ class DevLayoutTest(unittest.TestCase):
                 layout = "cmake"
                     
                 def imports(self):
-                    self.copy(pattern="*.dll", dst=self.lyt.build_bin_folder, src="#bindir")
+                    self.copy(pattern="*.dll", dst=self.lyt.build_bin_folder, src="bindir")
             """)
 
         test_cmake = textwrap.dedent("""
@@ -305,3 +305,9 @@ class DevLayoutTest(unittest.TestCase):
     # TODO: Same local test for linux
     # TODO: A test doing source(), checking correct dirs
     # TODO: In other place: Test mocked autotools and cmake with layout
+    # TODO: Alter install folder and see everything works, verify where the files are put
+    # TODO: Test to demonstrate multiconfig?
+    # TODO: Add a test for clion layout
+    # TODO: Add missing test for .package() where the includedirs are copied from the correct folders
+    # TODO: Test the export of the layout file is blocked
+    # TODO: Test without OUTPUT DIRS
