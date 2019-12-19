@@ -14,7 +14,7 @@ class DevLayoutModelTest(unittest.TestCase):
         self.assertEqual(ly.src, "")
         self.assertEqual(ly.build_libdir, "")
         self.assertEqual(ly.build_bindir, "")
-        self.assertEqual(ly.build_includedirs, [""])
+        self.assertEqual(ly.build_includedirs, [ly.build, ly.src])
         self.assertIsNone(ly.build_installdir)
         self.assertEqual(ly.pkg_libdir, "lib")
         self.assertEqual(ly.pkg_bindir, "bin")

@@ -12,7 +12,8 @@ class Layout(object):
         self.build_libdir = ""  # Relative to self.build
         # TODO: To discuss, are we sure we want only 1 value?
         self.build_bindir = ""  # Relative to self.build
-        self.build_includedirs = [""]  # Relative to self.build (and or self.src)
+        # Relative to root, needed to specify "build/x" or "src/x"
+        self.build_includedirs = [self.build, self.src]
         self.build_installdir = None  # Not relative to self.build
 
         self.pkg_libdir = "lib"
@@ -31,10 +32,6 @@ class Layout(object):
     @property
     def build_bin_folder(self):
         return os.path.join(self.build, self.build_bindir)
-
-    @property
-    def build_include_folders(self):
-        return [os.path.join(self.build, f) for f in self.build_includedirs]
 
     @property
     def build_install_folder(self):
@@ -116,4 +113,4 @@ class CLionLayout(Layout):
         self.build = "cmake-build-{}".format(str(build_type.lower()))
         self.build_libdir = ""  # If removed output dirs in conan basic setup
         self.build_bindir = ""
-        self.build_includedirs = [self.build, ""]
+        self.build_includedirs = [self.build, self.src]
