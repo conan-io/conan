@@ -108,7 +108,7 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None,
             neighbours = deps_graph.root.neighbors()
             deploy_conanfile = neighbours[0].conanfile
             if hasattr(deploy_conanfile, "deploy") and callable(deploy_conanfile.deploy):
-                run_deploy(deploy_conanfile, build_bindir)
+                run_deploy(deploy_conanfile, install_folder)
 
         # FIXME: Returning this is a terrible smell
         return install_folder
