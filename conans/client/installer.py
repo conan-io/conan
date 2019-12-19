@@ -368,6 +368,8 @@ class BinaryInstaller(object):
                                                    for d in layout.build_includedirs]
             node.conanfile.cpp_info.libdirs = [os.path.join(base_path, layout.build_lib_folder)]
             node.conanfile.cpp_info.bindirs = [os.path.join(base_path, layout.build_bin_folder)]
+            node.conanfile.cpp_info.builddirs = [os.path.join(base_path, layout.build_builddir)]
+            node.conanfile.cpp_info.resdirs = [os.path.join(base_path, layout.build_resdir)]
             return
         # Try with package-provided file
         editable_cpp_info = package_layout.editable_cpp_info()

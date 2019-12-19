@@ -34,3 +34,7 @@ class DevLayoutModelTest(unittest.TestCase):
     def folders_test(self):
         # TODO: default install dir, other composed...
         pass
+
+    def package_test(self):
+        # COMPLETE layout with patterns and test
+        pass

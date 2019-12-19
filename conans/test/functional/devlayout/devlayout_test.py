@@ -7,7 +7,7 @@ from nose.plugins.attrib import attr
 from parameterized import parameterized
 
 from conans.model.ref import ConanFileReference
-from conans.test.utils.tools import TestClient, TurboTestClient
+from conans.test.utils.tools import TestClient, TurboTestClient, GenConanfile
 from conans.util.files import mkdir
 from replace_version import replace_in_file
 
@@ -439,22 +439,17 @@ class DevLayoutTest(unittest.TestCase):
 
         # If we fix the build_libdir in the layout of the editable using the root
         # (because there is no adjustements of output dirs) then it works
-        replace_in_file(os.path.join(tmp_folder, "conanfile.py"), 'ly.build_libdir = "lib"',
-                        'ly.build_libdir = ""')
+        replace_in_file(os.path.join(tmp_folder, "conanfile.py"), 'self.lyt.build_libdir = "lib"',
+                        'self.lyt.build_libdir = ""')
         client.run("install .")
         self.assertIn("pkg/0.1@user/testing from user folder - Editable", client.out)
         client.run("build .")
         self.assertIn("Built target app", client.out)
 
-# TODO: another class without really building to check all the output dirs are correct and following
-#       the layout
-    # TODO: A test doing source(), checking correct dirs
-    # TODO: Alter install folder and see everything works, verify where the files are put
-    # TODO: Editable packages includedirs
 
-# TODO: Same local test for linux
+# TODO: Same local test for linux (Use cmake manually, with editable, like the reality)
 
     # TODO: In other place: Test mocked autotools and cmake with layout
-    # TODO: Test to demonstrate multiconfig?
+    # TODO: Test to demonstrate multi-config? => RUN ALL IN WINDOWS
     # TODO: Test the export of the layout file is blocked
     # TODO: Test changing layout in the test_package folder

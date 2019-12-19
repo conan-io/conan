@@ -81,11 +81,7 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None,
         manifest_manager.print_log()
 
     if install_folder:
-        # !! FIXME: this is not true
-        build_bindir = install_folder
         if conanfile.lyt:
-            # FIXME: Not sure about this build_bindir
-            build_bindir = os.path.join(install_folder, conanfile.lyt.build_bin_folder)
             install_folder = os.path.join(install_folder, conanfile.lyt.build_install_folder)
 
         conanfile.install_folder = install_folder
@@ -99,12 +95,12 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None,
         if not isinstance(ref_or_path, ConanFileReference) or use_lock:
             # Write conaninfo
             content = normalize(conanfile.info.dumps())
-            save(os.path.join(build_bindir, CONANINFO), content)
+            save(os.path.join(install_folder, CONANINFO), content)
             output.info("Generated %s" % CONANINFO)
             graph_info.save(install_folder)
             output.info("Generated graphinfo")
         if not no_imports:
-            run_imports(conanfile, build_bindir)
+            run_imports(conanfile, install_folder)
         call_system_requirements(conanfile, conanfile.output)
 
         if not create_reference and isinstance(ref_or_path, ConanFileReference):

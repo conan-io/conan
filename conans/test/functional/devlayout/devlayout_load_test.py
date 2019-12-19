@@ -1,8 +1,10 @@
 import textwrap
 import unittest
 
+from urllib3.packages import six
+
 from conans.paths import LAYOUT_PY
-from conans.test.utils.tools import TestClient
+from conans.test.utils.tools import TestClient, GenConanfile
 
 
 class LayoutLoadTest(unittest.TestCase):
@@ -73,6 +75,7 @@ class LayoutLoadTest(unittest.TestCase):
         # Virtual load
         client.run("install lib/1.0@")
 
+    @unittest.skipIf(six.PY2, "Needs PY3")
     def load_layout_py_local_methods_test(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
@@ -131,6 +134,7 @@ class LayoutLoadTest(unittest.TestCase):
         client.run("create . lib/1.0@")
         self.assertIn("Here, building", client.out)
 
+    @unittest.skipIf(six.PY2, "Needs PY3")
     def editable_load_layout_create_test(self):
         """If the package is in editable mode, the LAYOUT_PY is also used"""
         client = TestClient()
@@ -225,11 +229,35 @@ class LayoutLoadTest(unittest.TestCase):
         self.assertIn("Unexpected layout type declared in the conanfile: <class 'int'>",
                       client.out)
 
+    @unittest.skipIf(six.PY2, "Needs PY3")
     def invalid_layout_override_test(self):
-        # TODO: - without function
-        #       - returning other stuff
-        pass
+        client = TestClient()
+        conanfile = GenConanfile().with_text_layout("cmake")
+        overwrite = """
+def wrong_function():
+    pass
+"""
+        client.save({"conanfile.py": conanfile, LAYOUT_PY: overwrite})
+        client.run("install .", assert_error=True)
+        self.assertIn("The file {} has no 'layout()' method".format(LAYOUT_PY), client.out)
 
+        overwrite = """
+def layout(self):
+    pass # Not assigning 
+"""
+        client.save({LAYOUT_PY: overwrite})
+        client.run("install .", assert_error=True)
+        self.assertIn("The layout() method is not assigning a Layout object to self.ly",
+                      client.out)
+
+    @unittest.skipUnless(six.PY2, "Needs PY2")
     def check_layout_override_py2_only_test(self):
-        # TODO: Also skip the others with override for py2
-        pass
+        client = TestClient()
+        conanfile = GenConanfile().with_text_layout("cmake")
+        overwrite = """
+def layout(self):
+    pass
+        """
+        client.save({"conanfile.py": conanfile, LAYOUT_PY: overwrite})
+        client.run("install .", assert_error=True)
+        self.assertIn("The {} feature is Python3 only".format(LAYOUT_PY), client.out)

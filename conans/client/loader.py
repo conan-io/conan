@@ -419,11 +419,14 @@ def load_overrides_layout_file(conanfile_folder, conanfile):
     spec = importlib.util.spec_from_file_location(module_name, file_path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
+    if not hasattr(module, "layout"):
+        raise ConanException("The file {} has no 'layout()' method".format(LAYOUT_PY))
     if not callable(module.layout):
         raise ConanException("Unexpected layout type declared at {}: "
                              "{}".format(file_path, conanfile.layout.__class__))
 
     # attach function as a method class
+    conanfile.lyt = None  # Invalidate the one from the recipe to validate it is correct here
     module.layout(conanfile)
     if not isinstance(conanfile.lyt, Layout):
         raise ConanException("The layout() method is not assigning a Layout object to self.lyt")

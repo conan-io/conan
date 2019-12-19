@@ -14,12 +14,15 @@ class Layout(object):
         self.build_bindir = ""  # Relative to self.build
         # Relative to root, needed to specify "build/x" or "src/x"
         self.build_includedirs = [self.build, self.src]
-        self.build_installdir = None  # Not relative to self.build
+        self.build_installdir = None  # Relative to root
+        self.build_builddir = ""  # Relative to root
+        self.build_resdir = ""  # Relative to root
 
         self.pkg_libdir = "lib"
         self.pkg_bindir = "bin"
         self.pkg_includedir = "include"
-        self.pkg_builddir = "build"
+        self.pkg_builddir = ""
+        self.pkg_resdir = ""
 
     def __str__(self):
         return str(self.__dict__)
@@ -46,28 +49,31 @@ class Layout(object):
     def source_folder(self):
         return os.path.join(self._conan_file.source_folder, self.src)
 
-    def package(self):
-        # FIXME: Not very flexible. Useless? What if I want to copy only some patterns
-        #        Good enough for default?
-        #        Proposal kwargs: header_patterns=None, lib_patterns=None, exe_patterns=None
-        #        2Proposal: Declare the patterns in the layout too?
+    def package(self, header_patterns=None, bin_patterns=None, lib_patterns=None,
+                build_patterns=None, res_patterns=None):
+
+        header_patterns = header_patterns or ["*.h"]
+        bin_patterns = bin_patterns or ["*.exe", "*.dll"]
+        lib_patterns = lib_patterns or ["*.so", "*.so.*", "*.a", "*.lib"]
+        build_patterns = build_patterns or []
+        res_patterns = res_patterns or []
+
         for include in self.build_includedirs:
-            self._conan_file.copy("*.h", dst=self.pkg_includedir, src=include, keep_path=False)
-
-        self._conan_file.copy("*.lib", dst=self.pkg_libdir,
-                              src=self.build_lib_folder, keep_path=False)
-        self._conan_file.copy("*.dll", dst=self.pkg_bindir,
-                              src=self.build_bin_folder, keep_path=False)
-        # FIXME: What about the linux/mac apps without extension, we need a pattern
-        self._conan_file.copy("*.exe", dst=self.pkg_bindir,
-                              src=self.build_bin_folder, keep_path=False)
-
-        self._conan_file.copy("*.so", dst=self.pkg_libdir,
-                              src=self.build_lib_folder, keep_path=False)
-        self._conan_file.copy("*.so.*", dst=self.pkg_libdir,
-                              src=self.build_lib_folder, keep_path=False)
-        self._conan_file.copy("*.a", dst=self.pkg_libdir,
-                              src=self.build_lib_folder, keep_path=False)
+            for pat in header_patterns:
+                self._conan_file.copy(pat, dst=self.pkg_includedir,
+                                      src=include, keep_path=False)
+        for pat in lib_patterns:
+            self._conan_file.copy(pat, dst=self.pkg_libdir,
+                                  src=self.build_lib_folder, keep_path=False)
+        for pat in bin_patterns:
+            self._conan_file.copy(pat, dst=self.pkg_bindir,
+                                  src=self.build_bin_folder, keep_path=False)
+        for pat in build_patterns:
+            self._conan_file.copy(pat, dst=self.pkg_builddir,
+                                  src=self.build_builddir, keep_path=False)
+        for pat in res_patterns:
+            self._conan_file.copy(pat, dst=self.pkg_resdir,
+                                  src=self.build_resdir, keep_path=False)
 
     def imports(self):
         # FIXME: Not very flexible. Useless?
