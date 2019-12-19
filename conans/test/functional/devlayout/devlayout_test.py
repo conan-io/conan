@@ -9,6 +9,7 @@ from parameterized import parameterized
 from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient, TurboTestClient
 from conans.util.files import mkdir
+from replace_version import replace_in_file
 
 
 @attr("slow")
@@ -373,12 +374,87 @@ class DevLayoutTest(unittest.TestCase):
         lib_package_folder = os.path.join(client.current_folder, "package", "lib")
         self.assertTrue("hello" in os.listdir(lib_package_folder)[0])  # The library is there
 
+    def disable_output_dirs_test(self):
+        """If we disable the output dirs, the layout have to change accordingly, if
+        we use a wrong layout the libs/headers are not copied and not propagated
+        correctly for the editable-consumers"""
+        client = TurboTestClient()
+        conanfile = textwrap.dedent("""
+                from conans import ConanFile, CMake, Layout
+
+                class Pkg(ConanFile):
+                    settings = "os", "compiler", "arch", "build_type"
+                    exports_sources = "src/*", "CMakeLists.txt"
+                    generators = "cmake"
+                
+                    def layout(self):
+                       ly = Layout(self)
+                       ly.build_libdir = "lib"
+                       ly.build_includedirs = ["src"]
+                       return ly
+
+                    def build(self):
+                        cmake = CMake(self)
+                        cmake.configure()
+                        cmake.build()
+
+                    def package(self):
+                        self.lyt.package()
+
+                    def package_info(self):
+                        self.lyt.package_info()
+                        self.cpp_info.libs = ["hello"]
+                    """)
+        client.save({"conanfile.py": conanfile,
+                     "CMakeLists.txt": self.cmake.replace("conan_basic_setup()",
+                                                          "conan_basic_setup(NO_OUTPUT_DIRS)"),
+                     "src/hello.cpp": self.hellopp,
+                     "src/hello.h": self.helloh,
+                     "src/app.cpp": self.app,
+                     "test_package/app.cpp": self.app,
+                     "test_package/CMakeLists.txt": self.test_cmake,
+                     "test_package/conanfile.py": self.test_conanfile
+                     })
+        ref = ConanFileReference.loads("pkg/0.1@user/testing")
+        client.create(ref, conanfile=None, assert_error=True)
+        # No library packaged correctly
+        self.assertNotIn("Packaged 1 '.lib'", client.out)
+        self.assertNotIn("Packaged 1 '.a'", client.out)
+
+        # If the package is editable it also fail to find the library, I'll use the test_package
+        # as a regular consumer injecting the reference
+        client.run("editable add . pkg/0.1@user/testing")
+        client.run("install .")
+        client.run("build . -if=build")
+        tc = self.test_conanfile.replace('generators = "cmake"',
+                                         'generators = "cmake"\n'
+                                         '    requires = "pkg/0.1@user/testing"')
+        client.save({"test_package/conanfile.py": tc})
+        tmp_folder = client.current_folder
+        client.current_folder = os.path.join(client.current_folder, "test_package")
+        client.run("install .")
+        self.assertIn("pkg/0.1@user/testing from user folder - Editable", client.out)
+        client.run("build .", assert_error=True)
+        # FIXME: Fis this assert for all OSS
+        if platform.system() == "Linux":
+            self.assertIn("/usr/bin/ld: cannot find -lhello", client.out)
+
+        # If we fix the build_libdir in the layout of the editable using the root
+        # (because there is no adjustements of output dirs) then it works
+        replace_in_file(os.path.join(tmp_folder, "conanfile.py"), 'ly.build_libdir = "lib"',
+                        'ly.build_libdir = ""')
+        client.run("install .")
+        self.assertIn("pkg/0.1@user/testing from user folder - Editable", client.out)
+        client.run("build .")
+        self.assertIn("Built target app", client.out)
+
     # TODO: Same local test for linux
     # TODO: A test doing source(), checking correct dirs
     # TODO: In other place: Test mocked autotools and cmake with layout
     # TODO: Alter install folder and see everything works, verify where the files are put
     # TODO: Test to demonstrate multiconfig?
-    # TODO: Add missing test for .package() where the includedirs are copied from the correct folders
+    # TODO: Editable packages includedirs
+    # TODO: Add missing test for .package() where the includedirs are copied from the correct folders => local methods too (editable)
     # TODO: Test the export of the layout file is blocked
     # TODO: Test without OUTPUT DIRS
     # TODO: Test changing layout in the test_package folder
