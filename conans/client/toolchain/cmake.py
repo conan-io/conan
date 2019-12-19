@@ -129,8 +129,10 @@ class CMakeToolchain(object):
                 message(WARNING 
                     " CMake version less than 3.15 doesn't support CMAKE_PROJECT_INCLUDE variable\\n"
                     " used by Conan toolchain to work. In order to get the same behavior you will\\n"
-                    " need to manually include the generated file after your 'project()' call:\\n"
-                    "     include(\\"{{conan_project_include_cmake}}\\")\\n"
+                    " need to manually include the generated file after your 'project()' call in the\\n"
+                    " main CMakeLists.txt file:\\n\\n"
+                    "     project(YourProject C CXX)\\n"
+                    "     include(\\"{{conan_project_include_cmake}}\\")\\n\\n"
                     " This file contains some definitions and extra adjustments that depend on\\n"
                     " the build_type and it cannot be done in the toolchain.")
             else()
