@@ -20,7 +20,7 @@ sh_activate_tpl = Template(textwrap.dedent("""
         export "$LINE";
     done < "{{ environment_file }}"
 
-    export CONAN_OLD_PS1=$PS1
+    export CONAN_OLD_PS1="$PS1"
     export PS1="({{venv_name}}) $PS1"
 
 """))
