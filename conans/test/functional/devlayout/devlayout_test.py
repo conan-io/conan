@@ -538,9 +538,7 @@ class DevLayoutTest(unittest.TestCase):
             client.run_command(r"./app")
             self.assertIn("Hello Moon Debug!", client.out)
 
-        # It is necessary to "install" again, to fire the imports() and copy the DLLs
-        client2.run("install .")
-        client2.run("install . -s build_type=Debug")
+        # It is NOT necessary to "install" again, to fire the imports() nor to copy the shared
         with client2.chdir("cmake-build-release"):
             client2.run_command("cmake --build . ")
             client2.run_command("./app")
