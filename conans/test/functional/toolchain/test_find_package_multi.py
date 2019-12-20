@@ -9,8 +9,9 @@ from nose.plugins.attrib import attr
 from parameterized.parameterized import parameterized
 
 from conans.client.toolchain.cmake import CMakeToolchain
-from conans.client.tools import environment_append
+from conans.client.tools import environment_append, latest_visual_studio_version_installed
 from conans.model.ref import ConanFileReference
+from conans.test.utils.tools import TestBufferConanOutput
 from conans.test.utils.tools import TurboTestClient
 from conans.util.files import rmdir
 
@@ -167,7 +168,9 @@ class FindPackageMultiTestCase(unittest.TestCase):
             self.t.run("install .. -s build_type=Release")
 
             # Configure once
-            mgenerator = "Xcode" if platform.system() == "Darwin" else "Visual Studio 16 2019"
+            vs_version = latest_visual_studio_version_installed(TestBufferConanOutput())
+            vs_generator = "Visual Studio 15 2017" if vs_version == "15" else "Visual Studio 16 2019"
+            mgenerator = "Xcode" if platform.system() == "Darwin" else vs_generator
             with environment_append({"CMAKE_GENERATOR": mgenerator}):
                 # FIXME: There is a bug in CMake < 3.15, the environment variable for Xcode is
                 #   not considered, we need to pass '-G Xcode' or it will use 'Unix Makefiles'!
