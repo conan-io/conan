@@ -1,13 +1,9 @@
-
-class RestRoutesCommon(object):
+class RestRoutes(object):
     ping = "ping"
     common_search = "conans/search"
     common_authenticate = "users/authenticate"
     oauth_authenticate = "users/token"
     common_check_credentials = "users/check_credentials"
-
-
-class RestRoutes(RestRoutesCommon):
 
     def __init__(self, matrix_params=False):
         if matrix_params:
@@ -126,4 +122,3 @@ class RestRoutes(RestRoutesCommon):
     @property
     def common_search_packages_revision(self):
         return "%s/search" % self.recipe_revision
-

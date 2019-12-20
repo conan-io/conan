@@ -379,6 +379,8 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                          "Hello/1.4.12@myuser/testing\n"
                          "Hello/1.5.10@myuser/testing\n"
                          "helloTest/1.4.10@myuser/stable\n", self.client.out)
+        self.client.run("search Hello/1.4.10@myuser/testing --raw")
+        self.assertNotIn("Existing packages for recipe", self.client.out)
 
     def search_html_table_test(self):
         self.client.run("search Hello/1.4.10@myuser/testing --table=table.html")
@@ -1343,6 +1345,10 @@ class Test(ConanFile):
         self.assertEqual(j[0]["revision"], "a94417fca6b55779c3b158f2ff50c40a")
         self.assertIsNotNone(j[0]["time"])
         self.assertEqual(len(j), 1)
+
+        # raw argument
+        client.run("search lib/1.0@user/testing --raw --revisions")
+        self.assertNotIn("Revisions for", client.out)
 
     def search_package_revisions_test(self):
         test_server = TestServer(users={"user": "password"})  # exported users and passwords

@@ -103,7 +103,7 @@ class ConanLib(ConanFile):
             self.client.save({"conanfile.py": conanfile2}, clean_first=True)
             self.client.run("install conanfile.py -e MY_IMPORT_PATH=%s" % folder)
             self.assertEqual("Hello",
-                             load(os.path.join(self.client.current_folder, folder, "file1.txt")))
+                             self.client.load(os.path.join(folder, "file1.txt")))
 
     def imports_error_test(self):
         self.client.save({"conanfile.txt": test1}, clean_first=True)
@@ -173,7 +173,7 @@ class ConanLib(ConanFile):
         self.assertIn("Removed imports manifest file", self.client.out)
 
     def _check_manifest(self):
-        manifest_content = load(os.path.join(self.client.current_folder, IMPORTS_MANIFESTS))
+        manifest_content = self.client.load(IMPORTS_MANIFESTS)
         manifest = FileTreeManifest.loads(manifest_content)
         self.assertEqual(manifest.file_sums,
                          {os.path.join(self.client.current_folder, "file1.txt"):

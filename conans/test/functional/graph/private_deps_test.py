@@ -327,7 +327,7 @@ class PrivateDepsTest(unittest.TestCase):
         client.run('build .')
 
         # assert Hello3 only depends on Hello2, and Hello1
-        build_info_cmake = load(os.path.join(client.current_folder, BUILD_INFO_CMAKE))
+        build_info_cmake = client.load(BUILD_INFO_CMAKE)
         # Ensure it does not depend on Hello0 to build, as private in dlls
         self.assertNotIn("Hello0", repr(build_info_cmake))
 
@@ -336,7 +336,7 @@ class PrivateDepsTest(unittest.TestCase):
         self.assertEqual(['Hello Hello3', 'Hello Hello1', 'Hello Hello0'],
                          str(client.out).splitlines()[-3:])
 
-        conan_info = ConanInfo.loads(load(os.path.join(client.current_folder, CONANINFO)))
+        conan_info = ConanInfo.loads(client.load(CONANINFO))
         self.assertEqual("language=0\nstatic=True", conan_info.options.dumps())
 
         # Try to upload and reuse the binaries
