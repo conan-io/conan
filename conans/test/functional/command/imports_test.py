@@ -6,7 +6,7 @@ from conans.client.importer import IMPORTS_MANIFESTS
 from conans.model.manifest import FileTreeManifest
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
-from conans.util.files import load, mkdir
+from conans.util.files import mkdir
 
 conanfile = """
 from conans import ConanFile
@@ -216,7 +216,7 @@ class ConanLib(ConanFile):
 
 
 class SymbolicImportsTest(unittest.TestCase):
-    """ Tests to cover the functionality of importing from #bindirs, #libdirs, etc
+    """ Tests to cover the functionality of importing from @bindirs, @libdirs, etc
     """
     def setUp(self):
         pkg = textwrap.dedent("""
@@ -239,13 +239,12 @@ class SymbolicImportsTest(unittest.TestCase):
         consumer = textwrap.dedent("""
             from conans import ConanFile, load
             class Pkg(ConanFile):
-                exports = "*"
                 requires = "pkg/0.1"
                 def build(self):
                     self.output.info("MSG: %s" % load("myfile.txt"))
                 def imports(self):
-                    self.copy("*", src="#bindirs", dst="bin")
-                    self.copy("*", src="#libdirs", dst="lib")
+                    self.copy("*", src="@bindirs", dst="bin")
+                    self.copy("*", src="@libdirs", dst="lib")
             """)
         self.consumer = TestClient(cache_folder=self.client.cache_folder)
         self.consumer.save({"conanfile.py": consumer}, clean_first=True)
@@ -256,6 +255,20 @@ class SymbolicImportsTest(unittest.TestCase):
         self.assertEqual("hello world", self.consumer.load("bin/myfile.bin"))
         self.assertEqual("bye world", self.consumer.load("lib/myfile.lib"))
         self.assertEqual("bye moon", self.consumer.load("lib/myfile.a"))
+
+    def error_unknown_test(self):
+        self.client.run("create . pkg/0.1@")
+        consumer = textwrap.dedent("""
+            from conans import ConanFile
+            class Pkg(ConanFile):
+                requires = "pkg/0.1"
+                def imports(self):
+                    self.copy("*", src="@unknown_unexisting_dir", dst="bin")
+            """)
+        self.consumer.save({"conanfile.py": consumer}, clean_first=True)
+        self.consumer.run("install .", assert_error=True)
+        self.assertIn("Import from unknown package folder '@unknown_unexisting_dir'",
+                      self.consumer.out)
 
     def imports_symbolic_from_editable_test(self):
         layout = textwrap.dedent("""

@@ -156,20 +156,21 @@ class _FileImporter(object):
                 [(pkg, cpp_info) for pkg, cpp_info in self._conanfile.deps_cpp_info.dependencies
                  if fnmatch.fnmatch(pkg, root_package)])
 
+        symbolic_dir_name = src[1:] if src.startswith("@") else None
+        src_dirs = [src]  # hardcoded src="bin" origin
         for pkg_name, cpp_info in pkgs:
             final_dst_path = os.path.join(real_dst_folder, pkg_name) if folder else real_dst_folder
             file_copier = FileCopier([cpp_info.rootpath], final_dst_path)
-            if src.startswith("#"):  # Syntax for package folder symbolic names instead of hardcoded
-                dir_name = src[1:]
+            if symbolic_dir_name:  # Syntax for package folder symbolic names instead of hardcoded
                 try:
-                    cpp_info_dirs = getattr(cpp_info, dir_name)
+                    src_dirs = getattr(cpp_info, symbolic_dir_name)
+                    if not isinstance(src_dirs, list):  # it can return a "config" CppInfo item!
+                        raise AttributeError
                 except AttributeError:
-                    raise ConanException("Import from unknown package folder '#%s' % dir_name)")
-                for info_dir in cpp_info_dirs:
-                    files = file_copier(pattern, src=info_dir, links=True, ignore_case=ignore_case,
-                                        excludes=excludes, keep_path=keep_path)
-                    self.copied_files.update(files)
-            else:  # Hardcoded packages names "bin", "lib"
-                files = file_copier(pattern, src=src, links=True, ignore_case=ignore_case,
+                    raise ConanException("Import from unknown package folder '@%s'"
+                                         % symbolic_dir_name)
+
+            for src_dir in src_dirs:
+                files = file_copier(pattern, src=src_dir, links=True, ignore_case=ignore_case,
                                     excludes=excludes, keep_path=keep_path)
                 self.copied_files.update(files)
