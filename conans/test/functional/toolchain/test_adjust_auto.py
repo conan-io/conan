@@ -16,6 +16,8 @@ from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TurboTestClient
 from conans.util.files import load, rmdir
 
+_running_ci = 'JOB_NAME' in os.environ
+
 
 def compile_local_workflow(testcase, client, profile):
     # Conan local workflow
@@ -534,13 +536,17 @@ class AdjustAutoTestCase(unittest.TestCase):
         type_str = "STRING" if self.use_toolchain else "UNINITIALIZED"
         self.assertEqual("/{}".format(runtime), cmake_cache["CONAN_LINK_RUNTIME:" + type_str])
 
-    @parameterized.expand([("x86_64",), ("x86",), ])
+    @parameterized.expand([("15", "x86_64",), ("15", "x86",), ("16", "x86_64"), ("16", "x86")])
     @unittest.skipUnless(platform.system() == "Windows", "Only windows")
-    def test_arch_win(self, arch):
+    def test_arch_win(self, compiler_version, arch):
+        if _running_ci and compiler_version == "16":
+            self.skipTest("Visual Studio 16 is not available in the CI")
+
         cache_filepath = os.path.join(self.t.current_folder, "build", "CMakeCache.txt")
         if os.path.exists(cache_filepath):
             os.unlink(cache_filepath)  # FIXME: Ideally this shouldn't be needed (I need it only here)
-        configure_out, cmake_cache, cmake_cache_keys, _, _ = self._run_configure({"arch": arch})
+        configure_out, cmake_cache, cmake_cache_keys, _, _ = self._run_configure({"arch": arch,
+                                                                                  "compiler.version": compiler_version})
 
         extra_blank = "" if self.use_toolchain else " "
 
@@ -548,12 +554,14 @@ class AdjustAutoTestCase(unittest.TestCase):
         self.assertIn(">> CMAKE_SHARED_LINKER_FLAGS: /machine:{}".format(arch_str) + extra_blank, configure_out)
         self.assertIn(">> CMAKE_EXE_LINKER_FLAGS: /machine:{}".format(arch_str) + extra_blank, configure_out)
         generator_str = "x64" if arch == "x86_64" else "Win32"
-        self.assertIn(">> CMAKE_GENERATOR_PLATFORM: {}".format(generator_str), configure_out)
+        if self.use_toolchain or compiler_version == "16":
+            self.assertIn(">> CMAKE_GENERATOR_PLATFORM: {}".format(generator_str), configure_out)
 
         self.assertEqual("/machine:{}".format(arch_str), cmake_cache["CMAKE_SHARED_LINKER_FLAGS:STRING"])
         self.assertEqual("/machine:{}".format(arch_str), cmake_cache["CMAKE_EXE_LINKER_FLAGS:STRING"])
-        type_str = "STRING" if self.use_toolchain else "INTERNAL"
-        self.assertEqual(generator_str, cmake_cache["CMAKE_GENERATOR_PLATFORM:" + type_str])
+        if self.use_toolchain or compiler_version == "16":
+            type_str = "STRING" if self.use_toolchain else "INTERNAL"
+            self.assertEqual(generator_str, cmake_cache["CMAKE_GENERATOR_PLATFORM:" + type_str])
 
     @parameterized.expand([("x86_64",), ("x86",), ])
     @unittest.skipUnless(platform.system() == "Linux", "Only linux")
