@@ -1,6 +1,7 @@
 from conans.client.generators.cmake import DepsCppCmake
 from conans.client.generators.cmake_find_package import find_dependency_lines
 from conans.client.generators.cmake_find_package_common import target_template
+from conans.client.generators.cmake_multi import extend
 from conans.model import Generator
 
 
@@ -98,16 +99,19 @@ endif()
         build_type = self.conanfile.settings.get_safe("build_type")
         build_type_suffix = "_{}".format(build_type.upper()) if build_type else ""
         for _, cpp_info in self.deps_build_info.dependencies:
+            # If any config matches the build_type one, add it to the cpp_info
+            dep_cpp_info = extend(cpp_info, build_type.lower())
+
             depname = cpp_info.get_name("cmake_find_package_multi")
-            deps = DepsCppCmake(cpp_info)
-            ret["{}Config.cmake".format(depname)] = self._find_for_dep(depname, cpp_info)
+            ret["{}Config.cmake".format(depname)] = self._find_for_dep(depname, dep_cpp_info)
             ret["{}Targets.cmake".format(depname)] = self.targets_file.format(name=depname)
 
+            deps = DepsCppCmake(dep_cpp_info)
             find_lib = target_template.format(name=depname, deps=deps,
                                               build_type_suffix=build_type_suffix)
             ret["{}Target-{}.cmake".format(depname, build_type.lower())] = find_lib
             ret["{}ConfigVersion.cmake".format(depname)] = self.version_template.\
-                format(version=cpp_info.version)
+                format(version=dep_cpp_info.version)
         return ret
 
     def _build_type_suffix(self, build_type):
