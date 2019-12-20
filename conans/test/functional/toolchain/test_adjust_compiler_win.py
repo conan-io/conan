@@ -255,10 +255,10 @@ class AdjustAutoTestCase(unittest.TestCase):
             self.assertRegexIn(r"-- The C compiler identification is MSVC 19\.16\.270\d{2}\.\d", configure_out)
             self.assertRegexIn(r"-- The CXX compiler identification is MSVC 19\.16\.270\d{2}\.\d", configure_out)
             self.assertRegexIn(r"-- Check for working C compiler: C:\/Program Files \(x86\)\/"
-                               r"Microsoft Visual Studio\/2017\/Community\/VC\/Tools\/"
+                               r"Microsoft Visual Studio\/2017\/(BuildTools|Community)\/VC\/Tools\/"
                                r"MSVC\/14\.16\.27023\/bin\/Hostx86\/x64\/cl\.exe -- works", configure_out)
             self.assertRegexIn(r"-- Check for working CXX compiler: C:\/Program Files \(x86\)\/"
-                               r"Microsoft Visual Studio\/2017\/Community\/VC\/Tools\/"
+                               r"Microsoft Visual Studio\/2017\/(BuildTools|Community)\/VC\/Tools\/"
                                r"MSVC\/14\.16\.27023\/bin\/Hostx86\/x64\/cl\.exe -- works", configure_out)
         else:
             self.assertRegexIn(r"-- The C compiler identification is MSVC 19\.24\.28314\.0", configure_out)
@@ -314,11 +314,13 @@ class AdjustAutoTestCase(unittest.TestCase):
                                r"MSVC\/14\.24\.28314\/bin\/Hostx64\/x64\/cl\.exe -- works", configure_out)
 
         if compiler_toolset == "v140":
-            self.assertEqual("C:/Program Files (x86)/Microsoft Visual Studio 14.0/VC/bin/amd64/link.exe",
-                             cmake_cache["CMAKE_LINKER:FILEPATH"])
+            six.assertRegex(self, cmake_cache["CMAKE_LINKER:FILEPATH"],
+                            r"C:\/Program Files \(x86\)\/Microsoft Visual Studio 14\.0\/VC\/"
+                            r"bin\/(x86_)?amd64\/link\.exe")
         elif compiler_toolset == "v141":
-            self.assertEqual("C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/"
-                             "MSVC/14.16.27023/bin/HostX64/x64/link.exe", cmake_cache["CMAKE_LINKER:FILEPATH"])
+            six.assertRegex(self, cmake_cache["CMAKE_LINKER:FILEPATH"],
+                            r"C:\/Program Files \(x86\)\/Microsoft Visual Studio\/(2017\/BuildTools|2019\/Community)\/"
+                            r"VC\/Tools\/MSVC\/14\.16\.27023\/bin\/Host(x86|X64)\/x64\/link\.exe")
         else:
             self.assertEqual("C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/"
                              "MSVC/14.24.28314/bin/Hostx64/x64/link.exe", cmake_cache["CMAKE_LINKER:FILEPATH"])
