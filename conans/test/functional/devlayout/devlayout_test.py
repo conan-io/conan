@@ -6,10 +6,10 @@ import unittest
 from nose.plugins.attrib import attr
 from parameterized import parameterized
 
+from conans.client.tools import replace_in_file
 from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient, TurboTestClient, GenConanfile
 from conans.util.files import mkdir
-from replace_version import replace_in_file
 
 
 @attr("slow")
