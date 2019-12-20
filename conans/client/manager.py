@@ -81,6 +81,7 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None,
         manifest_manager.print_log()
 
     if install_folder:
+        base_install_folder = install_folder
         if conanfile.lyt:
             install_folder = os.path.join(install_folder, conanfile.lyt.build_install_folder)
 
@@ -100,7 +101,8 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None,
             graph_info.save(install_folder)
             output.info("Generated graphinfo")
         if not no_imports:
-            run_imports(conanfile, install_folder)
+            # The imports will adjust the rest of the path, call with base install folder not with layout
+            run_imports(conanfile, base_install_folder)
         call_system_requirements(conanfile, conanfile.output)
 
         if not create_reference and isinstance(ref_or_path, ConanFileReference):

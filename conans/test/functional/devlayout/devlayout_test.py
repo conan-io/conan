@@ -101,8 +101,7 @@ class DevLayoutTest(unittest.TestCase):
         include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
         conan_basic_setup()
 
-        add_executable(app app.cpp)
-        MESSAGE(" CONAN LIBS=> ${CONAN_LIBS}")
+        add_executable(app src/app.cpp)
         target_link_libraries(app ${CONAN_LIBS})
         """)
     test_conanfile = textwrap.dedent("""
@@ -112,6 +111,7 @@ class DevLayoutTest(unittest.TestCase):
         class Test(ConanFile):
             settings = "os", "compiler", "build_type", "arch"
             generators = "cmake"
+            layout = "cmake"
 
             def build(self):
                 cmake = CMake(self)
@@ -119,10 +119,10 @@ class DevLayoutTest(unittest.TestCase):
                 cmake.build()
             
             def imports(self):
-                self.copy(pattern="*.dll", dst="bin", src="bindir")
+                self.lyt.imports()
 
             def test(self):
-                os.chdir("bin")
+                os.chdir(self.lyt.build_bin_folder)
                 self.run(".%sapp" % os.sep)
         """)
 
@@ -133,7 +133,7 @@ class DevLayoutTest(unittest.TestCase):
                      "src/hello.cpp": self.hellopp,
                      "src/hello.h": self.helloh,
                      "src/app.cpp": self.app,
-                     "test_package/app.cpp": self.app,
+                     "test_package/src/app.cpp": self.app,
                      "test_package/CMakeLists.txt": self.test_cmake,
                      "test_package/conanfile.py": self.test_conanfile
                      })
@@ -186,7 +186,7 @@ class DevLayoutTest(unittest.TestCase):
                      "src/hello.cpp": self.hellopp,
                      "src/hello.h": self.helloh,
                      "src/app.cpp": self.app,
-                     "test_package/app.cpp": self.app,
+                     "test_package/src/app.cpp": self.app,
                      "test_package/CMakeLists.txt": self.test_cmake,
                      "test_package/conanfile.py": self.test_conanfile
                      })
@@ -248,7 +248,7 @@ class DevLayoutTest(unittest.TestCase):
                 layout = "cmake"
                     
                 def imports(self):
-                    self.copy(pattern="*.dll", dst=self.lyt.build_bin_folder, src="bindir")
+                    self.lyt.imports()
             """)
 
         test_cmake = textwrap.dedent("""
@@ -331,7 +331,7 @@ class DevLayoutTest(unittest.TestCase):
                      "src/hello.cpp": self.hellopp,
                      "src/hello.h": self.helloh,
                      "src/app.cpp": self.app,
-                     "test_package/app.cpp": self.app,
+                     "test_package/src/app.cpp": self.app,
                      "test_package/CMakeLists.txt": self.test_cmake,
                      "test_package/conanfile.py": self.test_conanfile
                      })
@@ -414,7 +414,7 @@ class DevLayoutTest(unittest.TestCase):
                      "src/hello.cpp": self.hellopp,
                      "src/hello.h": self.helloh,
                      "src/app.cpp": self.app,
-                     "test_package/app.cpp": self.app,
+                     "test_package/src/app.cpp": self.app,
                      "test_package/CMakeLists.txt": self.test_cmake,
                      "test_package/conanfile.py": self.test_conanfile
                      })
@@ -437,7 +437,7 @@ class DevLayoutTest(unittest.TestCase):
         client.current_folder = os.path.join(client.current_folder, "test_package")
         client.run("install .")
         self.assertIn("pkg/0.1@user/testing from user folder - Editable", client.out)
-        client.run("build .", assert_error=True)
+        client.run("build . -if=build", assert_error=True)
         if platform.system() == "Linux":
             self.assertIn("cannot find -lhello", client.out)
         elif platform.system() == "Macos":
@@ -450,8 +450,9 @@ class DevLayoutTest(unittest.TestCase):
                               'self.lyt.build_libdir = ""')
         client.run("install .")
         self.assertIn("pkg/0.1@user/testing from user folder - Editable", client.out)
-        client.run("build .")
-        exe_path = os.path.join(client.current_folder, "bin", "app.exe" if platform.system() == "Windows" else "app")
+        client.run("build . -if=build")
+        exe_path = os.path.join(client.current_folder, "build", "Release",
+                                "app.exe" if platform.system() == "Windows" else "app")
         self.assertTrue(os.path.exists(exe_path), client.out)
 
 

@@ -54,7 +54,7 @@ class Layout(object):
 
         header_patterns = header_patterns or ["*.h"]
         bin_patterns = bin_patterns or ["*.exe", "*.dll"]
-        lib_patterns = lib_patterns or ["*.so", "*.so.*", "*.a", "*.lib"]
+        lib_patterns = lib_patterns or ["*.so", "*.so.*", "*.a", "*.lib", "*.dylib"]
         build_patterns = build_patterns or []
         res_patterns = res_patterns or []
 
@@ -75,12 +75,20 @@ class Layout(object):
             self._conan_file.copy(pat, dst=self.pkg_resdir,
                                   src=self.build_resdir, keep_path=False)
 
-    def imports(self):
-        # FIXME: Not very flexible. Useless?
-        #        Good enough for default?
-        self._conan_file.copy("*.dll", dst=self.build_bin_folder, keep_path=False)
-        self._conan_file.copy("*.dylib", dst=self.build_lib_folder, keep_path=False)
-        self._conan_file.copy("*.so", dst=self.build_lib_folder, keep_path=False)
+    def imports(self, bin_patterns=None, lib_patterns=None, build_patterns=None, res_patterns=None):
+        bin_patterns = bin_patterns or ["*.exe", "*.dll"]
+        lib_patterns = lib_patterns or ["*.so", "*.so.*", "*.dylib"]
+        build_patterns = build_patterns or []
+        res_patterns = res_patterns or []
+
+        for pat in lib_patterns:
+            self._conan_file.copy(pat, dst=self.build_lib_folder, src="@libdirs", keep_path=False)
+        for pat in bin_patterns:
+            self._conan_file.copy(pat, dst=self.build_bin_folder, src="@bindirs", keep_path=False)
+        for pat in build_patterns:
+            self._conan_file.copy(pat, dst=self.build_builddir, src="@builddirs", keep_path=False)
+        for pat in res_patterns:
+            self._conan_file.copy(pat, dst=self.build_resdir, src="@resdirs", keep_path=False)
 
     def package_info(self):
         # Make sure the ``package()`` and ``cpp_info`` are consistent
