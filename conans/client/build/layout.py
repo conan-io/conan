@@ -116,7 +116,9 @@ class CMakeLayout(DefaultLayout):
         self.build = "build"
         # Output of build, relative to self.build_folder
         build_type = conanfile.settings.get_safe("build_type")
-        # FIXME: This is false, only when the generator is visual studio
+        # NOTE: This is false, only when the generator is visual studio
+        #       in that case the user has to redeclare the layout, this is just a
+        #       good-enough-general-purpose template
         if conanfile.settings.get_safe("compiler") == "Visual Studio":
             self.build_libdir = str(build_type)
             self.build_bindir = str(build_type)
