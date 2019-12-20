@@ -46,12 +46,12 @@ class RestApiClient(object):
         # This dict is shared for all the instances of RestApiClient
         self._cached_capabilities = cached_capabilities
 
-    def _capable(self, capability):
+    def _capable(self, capability, user=None, password=None):
         capabilities = self._cached_capabilities.get(self._remote_url)
         if capabilities is None:
             tmp = RestV1Methods(self._remote_url, self._token, self._custom_headers, self._output,
                                 self._requester, self._verify_ssl, self._artifacts_properties)
-            capabilities = tmp.server_capabilities()
+            capabilities = tmp.server_capabilities(user, password)
             self._cached_capabilities[self._remote_url] = capabilities
             logger.debug("REST: Cached capabilities for the remote: %s" % capabilities)
             if not self._revisions_enabled and ONLY_V2 in capabilities:
@@ -116,7 +116,7 @@ class RestApiClient(object):
         else:
             try:
                 # Check capabilities can raise also 401 until the new Artifactory is released
-                oauth_capable = self._capable(OAUTH_TOKEN)
+                oauth_capable = self._capable(OAUTH_TOKEN, user, password)
             except AuthenticationException:
                 oauth_capable = False
 

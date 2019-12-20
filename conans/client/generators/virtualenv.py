@@ -46,7 +46,7 @@ cmd_activate_tpl = Template(textwrap.dedent("""
     SET "CONAN_OLD_{{it}}=%{{it}}%"
     {%- endfor %}
     
-    FOR /F "usebackq tokens=1,* delims={{delim}}" %%i IN ("{{ environment_file }}") DO (
+    FOR /F "usebackq tokens=1,* delims==" %%i IN ("{{ environment_file }}") DO (
         CALL SET "%%i=%%j"
     )
     
@@ -137,12 +137,10 @@ class VirtualEnvGenerator(Generator):
         :param variables: variables to be formatted
         :return:
         """
-        if flavor == "cmd":
-            path_sep, quote_elements, quote_full_value = ";", False, False
-        elif flavor == "ps1":
-            path_sep, quote_elements, quote_full_value = ";", False, False
+        if flavor in ["cmd", "ps1"]:
+            path_sep, quote_elements = ";", False
         elif flavor == "sh":
-            path_sep, quote_elements, quote_full_value = ":", True, False
+            path_sep, quote_elements = ":", True
 
         for name, value in variables:
             # activate values
@@ -165,98 +163,47 @@ class VirtualEnvGenerator(Generator):
             else:
                 # single value
                 value = "\"%s\"" % value if quote_elements else value
-            activate_value = "\"%s\"" % value if quote_full_value else value
             if platform.system() != "Windows":
-                activate_value = activate_value.replace("\\", "\\\\")
+                value = value.replace("\\", "\\\\")
 
             # deactivate values
             existing = name in os.environ
-            #value = os.environ.get(name, "")
-            #deactivate_value = "\"%s\"" % value if quote_full_value or quote_elements else value
-            yield name, activate_value, existing
+            yield name, value, existing
 
-    def _sh_lines(self):
-        ret = list(self._format_values("sh", self.env.items()))
-        modified_vars = [it[0] for it in ret if it[2]]
-        new_vars = [it[0] for it in ret if not it[2]]
+    def _files(self, flavor, activate_tpl, deactivate_tpl, environment_filename):
+        ret = list(self._format_values(flavor, self.env.items()))
+        modified_vars = [name for name, _, existing in ret if existing]
+        new_vars = [name for name, _, existing in ret if not existing]
 
-        environment_filepath = os.path.abspath(
-            os.path.join(self.output_path, "environment{}.sh.env".format(self.suffix)))
-        activate_content = sh_activate_tpl.render(environment_file=environment_filepath,
-                                                  modified_vars=modified_vars, new_vars=new_vars,
-                                                  venv_name=self.venv_name)
-        activate_lines = activate_content.splitlines()
-        deactivate_content = sh_deactivate_tpl.render(modified_vars=modified_vars, new_vars=new_vars)
-        deactivate_lines = deactivate_content.splitlines()
+        environment_filepath = os.path.abspath(os.path.join(self.output_path, environment_filename))
+        activate_content = activate_tpl.render(environment_file=environment_filepath,
+                                               modified_vars=modified_vars, new_vars=new_vars,
+                                               venv_name=self.venv_name)
+        deactivate_content = deactivate_tpl.render(modified_vars=modified_vars, new_vars=new_vars)
 
-        environment_lines = []
-        for name, activate, _ in self._format_values("sh", self.env.items()):
-            environment_lines.append("%s=%s" % (name, activate))
-
-        environment_lines.append('')
-        return activate_lines, deactivate_lines, environment_lines
-
-    def _cmd_lines(self):
-        ret = list(self._format_values("cmd", self.env.items()))
-        modified_vars = [it[0] for it in ret if it[2]]
-        new_vars = [it[0] for it in ret if not it[2]]
-
-        environment_filepath = os.path.abspath(
-            os.path.join(self.output_path, "environment{}.bat.env".format(self.suffix)))
-        activate_content = cmd_activate_tpl.render(environment_file=environment_filepath,
-                                                   modified_vars=modified_vars, new_vars=new_vars,
-                                                   delim="=",  # TODO: Test a env var with '=' in the value, it will require quotes around it
-                                                   venv_name=self.venv_name)
-        activate_lines = activate_content.splitlines()
-        deactivate_content = cmd_deactivate_tpl.render(modified_vars=modified_vars, new_vars=new_vars)
-        deactivate_lines = deactivate_content.splitlines()
-
-        environment_lines = []
-        for name, activate, _ in ret:
-            environment_lines.append("%s=%s" % (name, activate))  # TODO: May need extra quotes here
+        environment_lines = ["{}={}".format(name, value) for name, value, _ in ret]
         environment_lines.append('')
 
-        return activate_lines, deactivate_lines, environment_lines
-
-    def _ps1_lines(self):
-        ret = list(self._format_values("ps1", self.env.items()))
-        modified_vars = [it[0] for it in ret if it[2]]
-        new_vars = [it[0] for it in ret if not it[2]]
-
-        environment_filepath = os.path.abspath(
-            os.path.join(self.output_path, "environment{}.ps1.env".format(self.suffix)))
-        activate_content = ps1_activate_tpl.render(environment_file=environment_filepath,
-                                                   modified_vars=modified_vars, new_vars=new_vars,
-                                                   venv_name=self.venv_name)
-        activate_lines = activate_content.splitlines()
-        deactivate_content = ps1_deactivate_tpl.render(modified_vars=modified_vars, new_vars=new_vars)
-        deactivate_lines = deactivate_content.splitlines()
-
-        environment_lines = []
-        for name, activate, _ in ret:
-            environment_lines.append("%s=%s" % (name, activate))
-        environment_lines.append('')
-
-        return activate_lines, deactivate_lines, environment_lines
+        return activate_content, deactivate_content, os.linesep.join(environment_lines)
 
     @property
     def content(self):
-        os_info = OSInfo()
         result = {}
+
+        def _call_files(flavor, activate_tpl, deactivate_tpl, file_ext=None):
+            file_ext = file_ext or flavor
+            environment_filename = "environment{}.{}.env".format(self.suffix, file_ext)
+            activate, deactivate, envfile = self._files(flavor, activate_tpl, deactivate_tpl,
+                                                        environment_filename)
+
+            result["activate{}.{}".format(self.suffix, file_ext)] = activate
+            result["deactivate{}.{}".format(self.suffix, file_ext)] = deactivate
+            result[environment_filename] = envfile
+
+        os_info = OSInfo()
         if os_info.is_windows and not os_info.is_posix:
-            activate, deactivate, envfile = self._cmd_lines()
-            result["activate{}.bat".format(self.suffix)] = os.linesep.join(activate)
-            result["deactivate{}.bat".format(self.suffix)] = os.linesep.join(deactivate)
-            result["environment{}.bat.env".format(self.suffix)] = os.linesep.join(envfile)
-
-            activate, deactivate, envfile = self._ps1_lines()
-            result["activate{}.ps1".format(self.suffix)] = os.linesep.join(activate)
-            result["deactivate{}.ps1".format(self.suffix)] = os.linesep.join(deactivate)
-            result["environment{}.ps1.env".format(self.suffix)] = os.linesep.join(envfile)
-
-        activate, deactivate, envfile = self._sh_lines()
-        result["activate{}.sh".format(self.suffix)] = os.linesep.join(activate)
-        result["deactivate{}.sh".format(self.suffix)] = os.linesep.join(deactivate)
-        result["environment{}.sh.env".format(self.suffix)] = os.linesep.join(envfile)
+            _call_files('cmd', cmd_activate_tpl, cmd_deactivate_tpl, 'bat')
+            _call_files('ps1', ps1_activate_tpl, ps1_deactivate_tpl)
+        _call_files("sh", sh_activate_tpl, sh_deactivate_tpl)
 
         return result
