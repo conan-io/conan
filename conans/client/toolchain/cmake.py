@@ -267,7 +267,7 @@ class CMakeToolchain(object):
             t = Template(self._template_project_include)
             content = t.render(configuration_types_definitions=self.definitions.configuration_types,
                                cmake_macros_and_functions="\n".join([
-                                   CMakeCommonMacros.conan_set_vs_runtime  # TODO: Shall I use CMakeCommonMacros.conan_set_vs_runtime_preserve_build_type instead?
+                                   CMakeCommonMacros.conan_set_vs_runtime_preserve_build_type
                                ]),
                                **context)
             f.write(content)
