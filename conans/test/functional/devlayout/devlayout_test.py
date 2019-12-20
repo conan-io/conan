@@ -6,9 +6,9 @@ import unittest
 from nose.plugins.attrib import attr
 from parameterized import parameterized
 
-from conans.client.tools import replace_in_file
+from conans import tools
 from conans.model.ref import ConanFileReference
-from conans.test.utils.tools import TestClient, TurboTestClient, GenConanfile
+from conans.test.utils.tools import TestClient, TurboTestClient
 from conans.util.files import mkdir
 
 
@@ -45,7 +45,7 @@ class DevLayoutTest(unittest.TestCase):
         project(HelloWorldLib CXX)
         
         include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-        conan_basic_setup()
+        conan_basic_setup(NO_OUTPUT_DIRS)
 
         add_library(hello src/hello.cpp)
         add_executable(app src/app.cpp)
@@ -204,7 +204,8 @@ class DevLayoutTest(unittest.TestCase):
         self.assertTrue(os.path.exists(lib_folder))
         # The lib is there
         contents = os.listdir(lib_folder)
-        self.assertIn("hello", contents[0])
+        libname = "hello.lib" if platform.system() == "Windows" else "libhello.a"
+        self.assertIn(libname, contents)
 
     @unittest.skipIf(platform.system() != "Windows", "Needs windows")
     def cache_create_shared_test(self):
@@ -212,8 +213,7 @@ class DevLayoutTest(unittest.TestCase):
         client = self.client
         client.run("create . pkg/0.1@user/testing -o pkg:shared=True")
 
-        self.assertIn("pkg/0.1@user/testing package(): Packaged 1 '.dll' file: hello.dll",
-                      client.out)
+        self.assertIn("pkg/0.1@user/testing package(): Packaged 1 '.dll' file: hello.dll", client.out)
         self.assertIn("pkg/0.1@user/testing package(): Packaged 1 '.h' file: hello.h", client.out)
         self.assertIn("imports(): Copied 1 '.dll' file: hello.dll", client.out)
         self.assertIn("Hello World Release!", client.out)
@@ -226,7 +226,7 @@ class DevLayoutTest(unittest.TestCase):
         client.run("install .")
         shared = "-DBUILD_SHARED_LIBS=ON" if shared else ""
         with client.chdir("build"):
-            client.run_command('cmake ../src -G "Visual Studio 15 Win64" %s' % shared)
+            client.run_command('cmake ../ -G "Visual Studio 15 Win64" %s' % shared)
             client.run_command("cmake --build . --config Release")
             client.run_command(r"Release\\app.exe")
             self.assertIn("Hello World Release!", client.out)
@@ -341,11 +341,14 @@ class DevLayoutTest(unittest.TestCase):
         self.assertIn("Hello World Release!", client.out)
         pl = client.cache.package_layout(ref)
         # There is a "cmake-build-release" sub-folder also in the cache
-        self.assertTrue(os.path.exists(os.path.join(pl.build(pref.copy_clear_revs()),
-                                                    "cmake-build-release")))
+        build_path = os.path.join(pl.build(pref.copy_clear_revs()), "cmake-build-release")
+        if platform.system() == "Windows":
+            # The clion layout append the build type also
+            build_path = os.path.join(build_path, "Release")
+        self.assertTrue(os.path.exists(build_path))
         # The library is generated in that subfolder
-        lib_folder = os.path.join(pl.build(pref.copy_clear_revs()), "cmake-build-release", "lib")
-        self.assertTrue("hello" in os.listdir(lib_folder)[0])
+        libname = "hello.lib" if platform.system() == "Windows" else "libhello.a"
+        self.assertIn(libname, os.listdir(build_path))
 
         # We can repeat the create now with debug
         pref = client.create(ref, conanfile=None, args="-s build_type=Debug")
@@ -356,8 +359,11 @@ class DevLayoutTest(unittest.TestCase):
                                                     "cmake-build-debug")))
 
         # The library is generated in that sub-folder
-        lib_folder = os.path.join(pl.build(pref.copy_clear_revs()), "cmake-build-debug", "lib")
-        self.assertTrue("hello" in os.listdir(lib_folder)[0])
+        lib_folder = os.path.join(pl.build(pref.copy_clear_revs()), "cmake-build-debug")
+        if platform.system() == "Windows":
+            # The clion layout append the build type also
+            lib_folder = os.path.join(lib_folder, "Debug")
+        self.assertIn(libname, os.listdir(lib_folder))
 
         # If we use the local methods, the layout is also the same as the cache
         client.run("install .")
@@ -371,10 +377,10 @@ class DevLayoutTest(unittest.TestCase):
         client.run("build . -if=cmake-build-release")
         client.run("package . -if=cmake-build-release")
         lib_package_folder = os.path.join(client.current_folder, "package", "lib")
-        self.assertTrue("hello" in os.listdir(lib_package_folder)[0])  # The library is there
+        self.assertIn(libname, os.listdir(lib_package_folder))  # The library is there
 
     def disable_output_dirs_test(self):
-        """If we disable the output dirs, the layout have to change accordingly, if
+        """If we have disabled the output dirs, the layout have to change accordingly, if
         we use a wrong layout the libs/headers are not copied and not propagated
         correctly for the editable-consumers"""
         client = TurboTestClient()
@@ -404,8 +410,7 @@ class DevLayoutTest(unittest.TestCase):
                         self.cpp_info.libs = ["hello"]
                     """)
         client.save({"conanfile.py": conanfile,
-                     "CMakeLists.txt": self.cmake.replace("conan_basic_setup()",
-                                                          "conan_basic_setup(NO_OUTPUT_DIRS)"),
+                     "CMakeLists.txt": self.cmake,
                      "src/hello.cpp": self.hellopp,
                      "src/hello.h": self.helloh,
                      "src/app.cpp": self.app,
@@ -434,22 +439,23 @@ class DevLayoutTest(unittest.TestCase):
         self.assertIn("pkg/0.1@user/testing from user folder - Editable", client.out)
         client.run("build .", assert_error=True)
         # FIXME: Fis this assert for all OSS
-        if platform.system() == "Linux":
-            self.assertIn("/usr/bin/ld: cannot find -lhello", client.out)
-
+        if platform.system() != "Windows":
+            self.assertIn("cannot find -lhello", client.out)
+        else:
+            self.assertIn("cannot open input file 'hello.lib'", client.out)
         # If we fix the build_libdir in the layout of the editable using the root
         # (because there is no adjustements of output dirs) then it works
-        replace_in_file(os.path.join(tmp_folder, "conanfile.py"), 'self.lyt.build_libdir = "lib"',
-                        'self.lyt.build_libdir = ""')
+        tools.replace_in_file(os.path.join(tmp_folder, "conanfile.py"), 'self.lyt.build_libdir = "lib"',
+                              'self.lyt.build_libdir = ""')
         client.run("install .")
         self.assertIn("pkg/0.1@user/testing from user folder - Editable", client.out)
         client.run("build .")
-        self.assertIn("Built target app", client.out)
+        exe_path = os.path.join(client.current_folder, "bin", "app.exe" if platform.system() == "Windows" else "app")
+        self.assertTrue(os.path.exists(exe_path), client.out)
 
 
 # TODO: Same local test for linux (Use cmake manually, with editable, like the reality)
 
     # TODO: In other place: Test mocked autotools and cmake with layout
-    # TODO: Test to demonstrate multi-config? => RUN ALL IN WINDOWS
     # TODO: Test the export of the layout file is blocked
     # TODO: Test changing layout in the test_package folder

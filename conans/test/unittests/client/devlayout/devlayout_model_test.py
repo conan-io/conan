@@ -19,7 +19,8 @@ class DevLayoutModelTest(unittest.TestCase):
         self.assertEqual(ly.pkg_libdir, "lib")
         self.assertEqual(ly.pkg_bindir, "bin")
         self.assertEqual(ly.pkg_includedir, "include")
-        self.assertEqual(ly.pkg_builddir, "build")
+        self.assertEqual(ly.pkg_builddir, "")
+        self.assertEqual(ly.pkg_resdir, "")
 
     def clion_defaults_test(self):
         # Depending on build type

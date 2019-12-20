@@ -91,6 +91,13 @@ class Layout(object):
 
 
 class CMakeLayout(Layout):
+    """
+        /CMakeLists.txt
+        /src/foo.h
+        /src/foo.cpp
+        /build/Release/<build files> <= Visual only
+        /build/<build files> <= Others
+    """
     def __init__(self, conanfile):
         super(CMakeLayout, self).__init__(conanfile)
         # Only input to build is the source directory, include not a thing here
@@ -107,9 +114,17 @@ class CMakeLayout(Layout):
         else:
             self.build_libdir = ""
             self.build_bindir = ""
+        self.build_includedirs = [self.build, "src"]
 
 
 class CLionLayout(Layout):
+    """
+        /CMakeLists.txt
+        /src/foo.h
+        /src/foo.cpp
+        /cmake-build-release/Release/<build files> <= Visual only
+        /cmake-build-release/<build files> <= Others
+    """
 
     def __init__(self, conanfile):
         super(CLionLayout, self).__init__(conanfile)
@@ -117,6 +132,10 @@ class CLionLayout(Layout):
         # FIXME: What it should be if no build_type declared?
         build_type = conanfile.settings.get_safe("build_type") or "release"
         self.build = "cmake-build-{}".format(str(build_type.lower()))
-        self.build_libdir = ""  # If removed output dirs in conan basic setup
-        self.build_bindir = ""
         self.build_includedirs = [self.build, self.src]
+        if conanfile.settings.get_safe("compiler") == "Visual Studio":
+            self.build_libdir = str(build_type)
+            self.build_bindir = str(build_type)
+        else:
+            self.build_libdir = ""
+            self.build_bindir = ""

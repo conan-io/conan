@@ -90,20 +90,20 @@ class DevLayoutNoBuildTest(unittest.TestCase):
         client2 = TestClient(cache_folder=client.cache_folder)
         client2.save({"conanfile.py": GenConanfile().with_require_plain("lib/1.0")})
         client2.run("install .")
-        txt_contents = client2.load("conanbuildinfo.txt")
+        txt_contents = client2.load("conanbuildinfo.txt").replace("\r\n", "\n")
         # Verify everything points to the correct build layout
+        curfolder = client.current_folder.replace("\\", "/")
         includes_line = "[includedirs]\n" \
                         "{}/unzipped-folder\n" \
-                        "{}/build-folder/include\n".format(client.current_folder,
-                                                           client.current_folder)
+                        "{}/build-folder/include\n".format(curfolder, curfolder)
         self.assertIn(includes_line, txt_contents)
-        libs_line = "[libdirs]\n{}/build-folder/my_libdir\n\n".format(client.current_folder)
+        libs_line = "[libdirs]\n{}/build-folder/my_libdir\n\n".format(curfolder)
         self.assertIn(libs_line, txt_contents)
-        bins_line = "[bindirs]\n{}/build-folder/my_bindir\n\n".format(client.current_folder)
+        bins_line = "[bindirs]\n{}/build-folder/my_bindir\n\n".format(curfolder)
         self.assertIn(bins_line, txt_contents)
-        res_line = "[resdirs]\n{}/my_resdir\n\n".format(client.current_folder)
+        res_line = "[resdirs]\n{}/my_resdir\n\n".format(curfolder)
         self.assertIn(res_line, txt_contents)
-        builds_line = "[builddirs]\n{}/my_builddir\n\n".format(client.current_folder)
+        builds_line = "[builddirs]\n{}/my_builddir\n\n".format(curfolder)
         self.assertIn(builds_line, txt_contents)
 
         # Verify that the layout is kept in the cache
