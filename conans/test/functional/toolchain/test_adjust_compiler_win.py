@@ -252,8 +252,8 @@ class AdjustAutoTestCase(unittest.TestCase):
 
         self.assertIn("-- Building for: {}".format(compiler_name), configure_out)
         if compiler_version == "15":
-            self.assertRegexIn(r"-- The C compiler identification is MSVC 19\.16\.27034\.0", configure_out)
-            self.assertRegexIn(r"-- The CXX compiler identification is MSVC 19\.16\.27034\.0", configure_out)
+            self.assertRegexIn(r"-- The C compiler identification is MSVC 19\.16\.270\d{2}\.\d", configure_out)
+            self.assertRegexIn(r"-- The CXX compiler identification is MSVC 19\.16\.270\d{2}\.\d", configure_out)
             self.assertRegexIn(r"-- Check for working C compiler: C:\/Program Files \(x86\)\/"
                                r"Microsoft Visual Studio\/2017\/Community\/VC\/Tools\/"
                                r"MSVC\/14\.16\.27023\/bin\/Hostx86\/x64\/cl\.exe -- works", configure_out)
@@ -288,24 +288,24 @@ class AdjustAutoTestCase(unittest.TestCase):
         # self.assertIn("compiler.toolset={}".format(compiler_toolset), configure_out)
         # self.assertIn("-- Building for: Visual Studio 16 2019", configure_out)
         if compiler_toolset == "v140":
-            self.assertRegexIn("-- The C compiler identification is MSVC 19.0.24245.0", configure_out)
-            self.assertRegexIn("-- The CXX compiler identification is MSVC 19.0.24245.0", configure_out)
+            self.assertRegexIn(r"-- The C compiler identification is MSVC 19\.0\.242\d{2}\.\d", configure_out)
+            self.assertRegexIn(r"-- The CXX compiler identification is MSVC 19\.0\.242\d{2}\.\d", configure_out)
             self.assertRegexIn(r"-- Check for working C compiler: C:\/Program Files \(x86\)\/"
-                               r"Microsoft Visual Studio 14\.0\/VC\/bin\/amd64\/cl\.exe -- works", configure_out)
+                               r"Microsoft Visual Studio 14\.0\/VC\/bin\/(x86_)?amd64\/cl\.exe -- works", configure_out)
             self.assertRegexIn(r"-- Check for working CXX compiler: C:\/Program Files \(x86\)\/"
-                               r"Microsoft Visual Studio 14\.0\/VC\/bin\/amd64\/cl\.exe -- works", configure_out)
+                               r"Microsoft Visual Studio 14\.0\/VC\/bin\/(x86_)?amd64\/cl\.exe -- works", configure_out)
         elif compiler_toolset == "v141":
-            self.assertRegexIn("-- The C compiler identification is MSVC 19.16.27034.0", configure_out)
-            self.assertRegexIn("-- The CXX compiler identification is MSVC 19.16.27034.0", configure_out)
+            self.assertRegexIn(r"-- The C compiler identification is MSVC 19\.16\.270\d{2}\.\d", configure_out)
+            self.assertRegexIn(r"-- The CXX compiler identification is MSVC 19\.16\.270\d{2}\.\d", configure_out)
             self.assertRegexIn(r"-- Check for working C compiler: C:\/Program Files \(x86\)\/"
-                               r"Microsoft Visual Studio\/2019\/Community\/VC\/Tools\/"
-                               r"MSVC\/14\.16\.27023\/bin\/HostX64\/x64\/cl\.exe -- works", configure_out)
+                               r"Microsoft Visual Studio\/(2017\/BuildTools|2019\/Community)\/VC\/Tools\/"
+                               r"MSVC\/14\.16\.27023\/bin\/Host(x86|X64)\/x64\/cl\.exe -- works", configure_out)
             self.assertRegexIn(r"-- Check for working CXX compiler: C:\/Program Files \(x86\)\/"
-                               r"Microsoft Visual Studio\/2019\/Community\/VC\/Tools\/"
-                               r"MSVC\/14\.16\.27023\/bin\/HostX64\/x64\/cl\.exe -- works", configure_out)
+                               r"Microsoft Visual Studio\/(2017\/BuildTools|2019\/Community)\/VC\/Tools\/"
+                               r"MSVC\/14\.16\.27023\/bin\/Host(x86|X64)\/x64\/cl\.exe -- works", configure_out)
         else:
-            self.assertRegexIn("-- The C compiler identification is MSVC 19.24.28314.0", configure_out)
-            self.assertRegexIn("-- The CXX compiler identification is MSVC 19.24.28314.0", configure_out)
+            self.assertRegexIn(r"-- The C compiler identification is MSVC 19\.24\.28314\.0", configure_out)
+            self.assertRegexIn(r"-- The CXX compiler identification is MSVC 19\.24\.28314\.0", configure_out)
             self.assertRegexIn(r"-- Check for working C compiler: C:\/Program Files \(x86\)\/"
                                r"Microsoft Visual Studio\/2019\/Community\/VC\/Tools\/"
                                r"MSVC\/14\.24\.28314\/bin\/Hostx64\/x64\/cl\.exe -- works", configure_out)
