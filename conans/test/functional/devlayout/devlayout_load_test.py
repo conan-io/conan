@@ -226,7 +226,7 @@ class LayoutLoadTest(unittest.TestCase):
                        """)
         client.save({"conanfile.py": conanfile})
         client.run("create . lib/1.0@", assert_error=True)
-        self.assertIn("Unexpected layout type declared in the conanfile: <class 'int'>",
+        self.assertIn("Unexpected layout type declared in the conanfile: 'int'",
                       client.out)
 
     @unittest.skipIf(six.PY2, "Needs PY3")

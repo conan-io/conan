@@ -27,7 +27,8 @@ class RunnerMockWithHelp(RunnerMock):
         self.return_ok = return_ok
         self.available_args = available_args or []
 
-    def __call__(self, command, output=None, win_bash=False, subsystem=None):  # @UnusedVariable
+    def __call__(self, command, output=None, win_bash=False,
+                 subsystem=None, cwd=None):  # @UnusedVariable
         if "configure --help" in command:
             output.write(" ".join(self.available_args))
         else:
@@ -517,7 +518,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
 
         class RunnerMockWithHelpFailing(RunnerMockWithHelp):
             def __call__(self, command, output=None, win_bash=False,
-                         subsystem=None):  # @UnusedVariable
+                         subsystem=None, cwd=None):  # @UnusedVariable
                 if "configure --help" in command:
                     raise ConanException("Help not available")
                 else:

@@ -397,7 +397,7 @@ def load_recipe_layout(conanfile):
             raise ConanException("Invalid layout type: {}".format(conanfile.layout))
     else:
         raise ConanException("Unexpected layout type declared in the "
-                             "conanfile: {}".format(conanfile.layout.__class__))
+                             "conanfile: '{}'".format(conanfile.layout.__class__.__name__))
 
 
 def load_overrides_layout_file(conanfile_folder, conanfile):
@@ -423,7 +423,7 @@ def load_overrides_layout_file(conanfile_folder, conanfile):
         raise ConanException("The file {} has no 'layout()' method".format(LAYOUT_PY))
     if not callable(module.layout):
         raise ConanException("Unexpected layout type declared at {}: "
-                             "{}".format(file_path, conanfile.layout.__class__))
+                             "'{}'".format(file_path, conanfile.layout.__class__.__name__))
 
     # attach function as a method class
     conanfile.lyt = None  # Invalidate the one from the recipe to validate it is correct here
