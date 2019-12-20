@@ -99,7 +99,7 @@ class DevLayoutTest(unittest.TestCase):
         project(Greet CXX)
 
         include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-        conan_basic_setup()
+        conan_basic_setup(NO_OUTPUT_DIRS)
 
         add_executable(app src/app.cpp)
         target_link_libraries(app ${CONAN_LIBS})
@@ -451,8 +451,10 @@ class DevLayoutTest(unittest.TestCase):
         client.run("install .")
         self.assertIn("pkg/0.1@user/testing from user folder - Editable", client.out)
         client.run("build . -if=build")
-        exe_path = os.path.join(client.current_folder, "build", "Release",
-                                "app.exe" if platform.system() == "Windows" else "app")
+        if platform.system() == "Windows":
+            exe_path = os.path.join(client.current_folder, "build", "Release", "app.exe")
+        else:
+            exe_path = os.path.join(client.current_folder, "build", "app")
         self.assertTrue(os.path.exists(exe_path), client.out)
 
 
