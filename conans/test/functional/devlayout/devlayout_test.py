@@ -438,10 +438,11 @@ class DevLayoutTest(unittest.TestCase):
         client.run("install .")
         self.assertIn("pkg/0.1@user/testing from user folder - Editable", client.out)
         client.run("build .", assert_error=True)
-        # FIXME: Fis this assert for all OSS
-        if platform.system() != "Windows":
+        if platform.system() == "Linux":
             self.assertIn("cannot find -lhello", client.out)
-        else:
+        elif platform.system() == "Macos":
+            self.assertIn("library not found for -lhello", client.out)
+        elif platform.system() == "Windows":
             self.assertIn("cannot open input file 'hello.lib'", client.out)
         # If we fix the build_libdir in the layout of the editable using the root
         # (because there is no adjustements of output dirs) then it works
