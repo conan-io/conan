@@ -67,7 +67,7 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
     installer.install(deps_graph, remotes, build_modes, update, keep_build=keep_build,
                       graph_info=graph_info)
     # GraphLock always != None here (because of graph_manager.load_graph)
-    graph_info.graph_lock.update_check_graph(deps_graph, out)
+    graph_info.graph_lock.update_check_graph(deps_graph, out, root_node)
 
     if manifest_folder:
         manifest_manager = ManifestManager(manifest_folder, user_io=user_io, cache=cache)

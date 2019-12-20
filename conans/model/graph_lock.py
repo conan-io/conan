@@ -254,7 +254,7 @@ class GraphLock(object):
                 result.append(id_)
         return result
 
-    def update_check_graph(self, deps_graph, output):
+    def update_check_graph(self, deps_graph, output, root_node):
         """ update the lockfile, checking for security that only nodes that are being built
         from sources can change their PREF, or nodes that depend on some other "modified"
         package, because their binary-id can change too
@@ -283,6 +283,29 @@ class GraphLock(object):
                 else:
                     raise ConanException("Mismatch between lock and graph:\nLock:  %s\nGraph: %s"
                                          % (repr(pref), repr(node.pref)))
+
+        self._remove_orphans(root_node.id)
+
+    def _remove_orphans(self, root_node_id):
+        # Remove nodes that no longer connected to the root_node_id, downstream or upstream
+        graph_ids = {root_node_id}
+        open_ids = [root_node_id]
+        while open_ids:
+            new_open_ids = set()
+            for open_id in open_ids:
+                print "OPEN ID ", open_id, type(open_id)
+                node = self._nodes[open_id]
+                new_open_ids.update(node.requires)
+                new_open_ids.update(node.build_requires)
+                # all dependants of open_id too
+                new_open_ids.update([i for i, n in self._nodes.items()
+                                     if open_id in n.requires or open_id in n.build_requires])
+
+            new_open_ids.difference_update(graph_ids)
+            graph_ids.update(new_open_ids)
+            open_ids = new_open_ids
+
+        self._nodes = {id_: n for id_, n in self._nodes.items() if id_ in graph_ids}
 
     def lock_node(self, node, requires, build_requires=False):
         """ apply options and constraints on requirements of a node, given the information from

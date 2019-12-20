@@ -146,7 +146,7 @@ class DepsGraphBuilder(object):
         if graph_lock:  # No need to evaluate, they are hardcoded in lockfile
             graph_lock.lock_node(node, node.conanfile.requires.values())
 
-        # propagation of requirements only necessary if not locked
+        # propagation of requirements can be necessary if some nodes are not locked
         new_reqs = node.conanfile.requires.update(down_reqs, self._output, node.ref, down_ref)
         # if there are version-ranges, resolve them before expanding each of the requirements
         # Resolve possible version ranges of the current node requirements
