@@ -1,6 +1,6 @@
 import unittest
 
-from conans import Layout
+from conans import DefaultLayout
 from conans.test.utils.conanfile import MockConanfile, MockSettings
 
 
@@ -9,7 +9,7 @@ class DevLayoutModelTest(unittest.TestCase):
     def base_class_defaults_test(self):
         settings = MockSettings({})
         cf = MockConanfile(settings)
-        ly = Layout(cf)
+        ly = DefaultLayout(cf)
         self.assertEqual(ly.build, "build")
         self.assertEqual(ly.src, "")
         self.assertEqual(ly.build_libdir, "")
@@ -22,11 +22,6 @@ class DevLayoutModelTest(unittest.TestCase):
         self.assertEqual(ly.pkg_builddir, "")
         self.assertEqual(ly.pkg_resdir, "")
 
-    def clion_defaults_test(self):
-        # Depending on build type
-        # TODO
-        pass
-
     def cmake_defaults_test(self):
         # Depending on build type
         # TODO
@@ -37,5 +32,9 @@ class DevLayoutModelTest(unittest.TestCase):
         pass
 
     def package_test(self):
-        # COMPLETE layout with patterns and test
+        # TODO: COMPLETE layout with patterns and test
+        pass
+
+    def package_test(self):
+        # TODO: COMPLETE layout with patterns and test
         pass

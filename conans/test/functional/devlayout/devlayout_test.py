@@ -149,13 +149,14 @@ class DevLayoutTest(unittest.TestCase):
         self.assertIn("Hello World Release!", client.out)
         pl = client.cache.package_layout(ref)
         # There is a "build" subfolder also in the cache
-        self.assertTrue(os.path.exists(os.path.join(pl.build(pref.copy_clear_revs()), "build")))
+        self.assertTrue(os.path.exists(os.path.join(pl.build(pref.copy_clear_revs()),
+                                                    "cmake-build-release")))
 
     def cache_custom_layout_test(self):
         # We can even change the src and the package layout and it works
         client = TurboTestClient()
         conanfile = textwrap.dedent("""
-                from conans import ConanFile, CMake, Layout
+                from conans import ConanFile, CMake, DefaultLayout
 
                 class Pkg(ConanFile):
                     settings = "os", "compiler", "arch", "build_type"
@@ -163,7 +164,7 @@ class DevLayoutTest(unittest.TestCase):
                     exports_sources = "src/*"
                     
                     def layout(self):
-                        self.lyt = Layout(self)
+                        self.lyt = DefaultLayout(self)
                         self.lyt.src = "src"
                         self.lyt.build = "my_custom_build"
                         self.lyt.pkg_libdir = "lib_custom"
@@ -302,8 +303,10 @@ class DevLayoutTest(unittest.TestCase):
             client2.run_command(r"Debug\\app.exe")
             self.assertIn("Hello Moon Debug!", client2.out)
 
-    def test_clion_layout(self):
-        """It is not necessary to have the IDE to follow the clion layout"""
+    @unittest.skipIf(platform.system() == "Windows", "No windows, because by default the cmake "
+                                                     "layout assume single build folder")
+    def test_cmake_multi_build_folder_layout(self):
+        """Similar to what clion does"""
         client = TurboTestClient()
         conanfile = textwrap.dedent("""
                 from conans import ConanFile, CMake
@@ -312,7 +315,7 @@ class DevLayoutTest(unittest.TestCase):
                     settings = "os", "compiler", "arch", "build_type"
                     exports_sources = "src/*", "CMakeLists.txt"
                     generators = "cmake"
-                    layout = "clion"
+                    layout = "cmake"
 
                     def build(self):
                         cmake = CMake(self)
@@ -342,9 +345,6 @@ class DevLayoutTest(unittest.TestCase):
         pl = client.cache.package_layout(ref)
         # There is a "cmake-build-release" sub-folder also in the cache
         build_path = os.path.join(pl.build(pref.copy_clear_revs()), "cmake-build-release")
-        if platform.system() == "Windows":
-            # The clion layout append the build type also
-            build_path = os.path.join(build_path, "Release")
         self.assertTrue(os.path.exists(build_path))
         # The library is generated in that subfolder
         libname = "hello.lib" if platform.system() == "Windows" else "libhello.a"
@@ -360,9 +360,6 @@ class DevLayoutTest(unittest.TestCase):
 
         # The library is generated in that sub-folder
         lib_folder = os.path.join(pl.build(pref.copy_clear_revs()), "cmake-build-debug")
-        if platform.system() == "Windows":
-            # The clion layout append the build type also
-            lib_folder = os.path.join(lib_folder, "Debug")
         self.assertIn(libname, os.listdir(lib_folder))
 
         # If we use the local methods, the layout is also the same as the cache
@@ -385,7 +382,7 @@ class DevLayoutTest(unittest.TestCase):
         correctly for the editable-consumers"""
         client = TurboTestClient()
         conanfile = textwrap.dedent("""
-                from conans import ConanFile, CMake, Layout
+                from conans import ConanFile, CMake, DefaultLayout
 
                 class Pkg(ConanFile):
                     settings = "os", "compiler", "arch", "build_type"
@@ -393,7 +390,7 @@ class DevLayoutTest(unittest.TestCase):
                     generators = "cmake"
                 
                     def layout(self):
-                       self.lyt = Layout(self)
+                       self.lyt = DefaultLayout(self)
                        self.lyt.build_libdir = "lib"
                        self.lyt.build_includedirs = ["src"]
 
@@ -437,7 +434,10 @@ class DevLayoutTest(unittest.TestCase):
         client.current_folder = os.path.join(client.current_folder, "test_package")
         client.run("install .")
         self.assertIn("pkg/0.1@user/testing from user folder - Editable", client.out)
-        client.run("build . -if=build", assert_error=True)
+        if platform.system() == "Windows":
+            client.run("build . -if=build", assert_error=True)
+        else:
+            client.run("build . -if=cmake-build-release", assert_error=True)
         if platform.system() == "Linux":
             self.assertIn("cannot find -lhello", client.out)
         elif platform.system() == "Macos":
@@ -450,11 +450,12 @@ class DevLayoutTest(unittest.TestCase):
                               'self.lyt.build_libdir = ""')
         client.run("install .")
         self.assertIn("pkg/0.1@user/testing from user folder - Editable", client.out)
-        client.run("build . -if=build")
         if platform.system() == "Windows":
+            client.run("build . -if=build")
             exe_path = os.path.join(client.current_folder, "build", "Release", "app.exe")
         else:
-            exe_path = os.path.join(client.current_folder, "build", "app")
+            client.run("build . -if=cmake-build-release")
+            exe_path = os.path.join(client.current_folder, "cmake-build-release", "app")
         self.assertTrue(os.path.exists(exe_path), client.out)
 
     @parameterized.expand([(True,), (False,)])
@@ -462,8 +463,6 @@ class DevLayoutTest(unittest.TestCase):
     def local_build_test_single_config(self, shared):
         client = self.client
         mkdir(os.path.join(client.current_folder, "build"))
-        client.save({"conanfile.py": self.conanfile.replace('layout = "cmake"',
-                                                            'layout = "clion"')})
         shared = "-DBUILD_SHARED_LIBS=ON" if shared else ""
 
         client.run("install .")
@@ -490,7 +489,7 @@ class DevLayoutTest(unittest.TestCase):
                 settings = "os", "compiler", "build_type", "arch"
                 requires = "pkg/0.1@user/testing"
                 generators = "cmake_find_package_multi"
-                layout = "clion"
+                layout = "cmake"
 
                 def imports(self):
                     self.lyt.imports()

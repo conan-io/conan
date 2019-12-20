@@ -9,7 +9,7 @@ import uuid
 
 import yaml
 
-from conans import Layout
+from conans import DefaultLayout
 from conans.client.generators import registered_generators
 from conans.client.loader_txt import ConanFileTextLoader
 from conans.client.tools.files import chdir
@@ -383,16 +383,17 @@ def load_recipe_layout(conanfile):
 
     if callable(conanfile.layout):
         conanfile.layout()
-        if not isinstance(conanfile.lyt, Layout):
-            raise ConanException("The layout() method is not assigning a Layout object to self.lyt")
+        if not isinstance(conanfile.lyt, DefaultLayout):
+            raise ConanException("The layout() method is not assigning a DefaultLayout "
+                                 "object to self.lyt")
         return  # Already defined method
     if isinstance(conanfile.layout, str):
-        from conans import CMakeLayout, CLionLayout
+        from conans import CMakeLayout
 
         if conanfile.layout == "cmake":
             conanfile.lyt = CMakeLayout(conanfile)
-        elif conanfile.layout == "clion":
-            conanfile.lyt = CLionLayout(conanfile)
+        elif conanfile.layout == "default":
+            conanfile.lyt = DefaultLayout(conanfile)
         else:
             raise ConanException("Invalid layout type: {}".format(conanfile.layout))
     else:
@@ -428,6 +429,6 @@ def load_overrides_layout_file(conanfile_folder, conanfile):
     # attach function as a method class
     conanfile.lyt = None  # Invalidate the one from the recipe to validate it is correct here
     module.layout(conanfile)
-    if not isinstance(conanfile.lyt, Layout):
-        raise ConanException("The layout() method is not assigning a Layout object to self.lyt")
+    if not isinstance(conanfile.lyt, DefaultLayout):
+        raise ConanException("The layout() method is not assigning a DefaultLayout object to self.lyt")
     return True

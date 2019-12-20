@@ -1,7 +1,7 @@
 import os
 
 
-class Layout(object):
+class DefaultLayout(object):
     def __init__(self, conan_file):
         self._conan_file = conan_file
 
@@ -98,13 +98,14 @@ class Layout(object):
         self._conan_file.cpp_info.buildirs = [self.pkg_builddir]
 
 
-class CMakeLayout(Layout):
+class CMakeLayout(DefaultLayout):
     """
         /CMakeLists.txt
         /src/foo.h
         /src/foo.cpp
         /build/Release/<build files> <= Visual only
-        /build/<build files> <= Others
+        /cmake-build-release/<build files> <= Others, when
+        /build <=
     """
     def __init__(self, conanfile):
         super(CMakeLayout, self).__init__(conanfile)
@@ -115,32 +116,14 @@ class CMakeLayout(Layout):
         self.build = "build"
         # Output of build, relative to self.build_folder
         build_type = conanfile.settings.get_safe("build_type")
+        # FIXME: This is false, only when the generator is visual studio
         if conanfile.settings.get_safe("compiler") == "Visual Studio":
             self.build_libdir = str(build_type)
             self.build_bindir = str(build_type)
-            # self.installdir = os.path.join(self.build, str(build_type))
         else:
-            self.build_libdir = ""
-            self.build_bindir = ""
+            if conanfile.settings.get_safe("build_type"):
+                build_type = conanfile.settings.get_safe("build_type") or "release"
+                self.build = "cmake-build-{}".format(str(build_type.lower()))
+            else:
+                self.build = "build"
         self.build_includedirs = [self.build, "src"]
-
-
-class CLionLayout(CMakeLayout):
-    """
-        /CMakeLists.txt
-        /src/foo.h
-        /src/foo.cpp
-        /cmake-build-release/Release/<build files> <= Visual only
-        /cmake-build-release/<build files> <= Others
-    """
-
-    def __init__(self, conanfile):
-        super(CLionLayout, self).__init__(conanfile)
-        self.src = ""
-        # FIXME: What it should be if no build_type declared?
-        build_type = conanfile.settings.get_safe("build_type") or "release"
-        self.build = "cmake-build-{}".format(str(build_type.lower()))
-        if conanfile.settings.get_safe("compiler") == "Visual Studio":
-            self.build_libdir = str(build_type)
-            self.build_bindir = str(build_type)
-

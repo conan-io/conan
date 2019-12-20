@@ -48,7 +48,7 @@ class DevLayoutNoBuildTest(unittest.TestCase):
     def test_everything_match(self):
         layout = """
     def layout(self):
-        lyt = Layout(self)
+        lyt = DefaultLayout(self)
         lyt.src = "unzipped-folder"
         lyt.build = "build-folder"
         lyt.build_libdir = "my_libdir"

@@ -47,6 +47,7 @@ class LayoutLoadTest(unittest.TestCase):
         """Declare the layout using the layout text attribute"""
         client = TestClient()
         conanfile = textwrap.dedent("""
+           import platform
            from conans import ConanFile, CMake
     
            class Pkg(ConanFile):
@@ -55,7 +56,8 @@ class LayoutLoadTest(unittest.TestCase):
                
                def assert_layout(self):
                    assert self.layout == "cmake"
-                   assert self.lyt.build == "build"
+                   assert self.lyt.build == "build" if platform.system == "Windows" \
+                                else "cmake-build-{}".format(str(self.settings.build_type))
                    assert self.lyt.src == ""
     
                def build(self):
@@ -91,10 +93,10 @@ class LayoutLoadTest(unittest.TestCase):
                    self.output.warn("Here, building")
                """)
         override_layout = textwrap.dedent("""
-        from conans import Layout
+        from conans import DefaultLayout
         
         def layout(self):
-            self.lyt = Layout(self)
+            self.lyt = DefaultLayout(self)
             self.lyt.build = "overwritten_build"
             self.lyt.src = "overwritten_src"
         """)
@@ -123,10 +125,10 @@ class LayoutLoadTest(unittest.TestCase):
                    self.output.warn("Here, building")
                """)
         override_layout = textwrap.dedent("""
-        from conans import Layout
+        from conans import DefaultLayout
 
         def layout(self):
-            self.lyt = Layout(self)
+            self.lyt = DefaultLayout(self)
             self.lyt.build = "overwritten_build"
             self.lyt.src = "overwritten_src"
         """)
@@ -154,10 +156,10 @@ class LayoutLoadTest(unittest.TestCase):
                     self.output.warn("Here, being reused: {}".format(self.lyt.build))
                """)
         override_layout = textwrap.dedent("""
-        from conans import Layout
+        from conans import DefaultLayout
 
         def layout(self):
-            self.lyt = Layout(self)
+            self.lyt = DefaultLayout(self)
             self.lyt.build = "overwritten_build"
             self.lyt.src = "overwritten_src"
         """)
@@ -207,7 +209,7 @@ class LayoutLoadTest(unittest.TestCase):
                        """)
         client.save({"conanfile.py": conanfile})
         client.run("create . lib/1.0@", assert_error=True)
-        self.assertIn("The layout() method is not assigning a Layout object to self.lyt",
+        self.assertIn("The layout() method is not assigning a DefaultLayout object to self.lyt",
                       client.out)
 
     def invalid_layout_type_test(self):
@@ -247,7 +249,7 @@ def layout(self):
 """
         client.save({LAYOUT_PY: overwrite})
         client.run("install .", assert_error=True)
-        self.assertIn("The layout() method is not assigning a Layout object to self.ly",
+        self.assertIn("The layout() method is not assigning a DefaultLayout object to self.ly",
                       client.out)
 
     @unittest.skipUnless(six.PY2, "Needs PY2")
