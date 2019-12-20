@@ -220,7 +220,7 @@ class DevLayoutTest(unittest.TestCase):
 
     @parameterized.expand([(True,), (False,)])
     @unittest.skipIf(platform.system() != "Windows", "Needs windows")
-    def local_build_test(self, shared):
+    def local_muticonfig_build_test(self, shared):
         client = self.client
         mkdir(os.path.join(client.current_folder, "build"))
         client.run("install .")
@@ -457,8 +457,99 @@ class DevLayoutTest(unittest.TestCase):
             exe_path = os.path.join(client.current_folder, "build", "app")
         self.assertTrue(os.path.exists(exe_path), client.out)
 
+    @parameterized.expand([(True,), (False,)])
+    @unittest.skipIf(platform.system() == "Windows", "No windows")
+    def local_build_test_single_config(self, shared):
+        client = self.client
+        mkdir(os.path.join(client.current_folder, "build"))
+        client.save({"conanfile.py": self.conanfile.replace('layout = "cmake"',
+                                                            'layout = "clion"')})
+        shared = "-DBUILD_SHARED_LIBS=ON" if shared else ""
 
-# TODO: Same local test for linux (Use cmake manually, with editable, like the reality)
+        client.run("install .")
+        with client.chdir("cmake-build-release"):
+            client.run_command('cmake ../  %s -DCMAKE_BUILD_TYPE=Release' % shared)
+            client.run_command("cmake --build .")
+            client.run_command(r"./app")
+            self.assertIn("Hello World Release!", client.out)
+        client.run("install . -s build_type=Debug")
+        with client.chdir("cmake-build-debug"):
+            client.run_command('cmake ../  %s -DCMAKE_BUILD_TYPE=Debug' % shared)
+            client.run_command("cmake --build .")
+            client.run_command(r"./app")
+            self.assertIn("Hello World Debug!", client.out)
+
+        client.run("editable add . pkg/0.1@user/testing")
+        # Consumer of editable package
+        client2 = TestClient(cache_folder=client.cache_folder)
+        consumer = textwrap.dedent("""
+            import os
+            from conans import ConanFile, CMake, tools, CMakeLayout
+
+            class Consumer(ConanFile):
+                settings = "os", "compiler", "build_type", "arch"
+                requires = "pkg/0.1@user/testing"
+                generators = "cmake_find_package_multi"
+                layout = "clion"
+
+                def imports(self):
+                    self.lyt.imports()
+            """)
+
+        test_cmake = textwrap.dedent("""
+            cmake_minimum_required(VERSION 2.8.12)
+            set(CMAKE_CXX_COMPILER_WORKS 1)
+            set(CMAKE_CXX_ABI_COMPILED 1)
+            project(Greet CXX)
+            set(CMAKE_MODULE_PATH ${CMAKE_BINARY_DIR} ${CMAKE_MODULE_PATH})
+            set(CMAKE_PREFIX_PATH ${CMAKE_BINARY_DIR} ${CMAKE_PREFIX_PATH})
+            find_package(pkg)
+
+            add_executable(app src/app.cpp)
+            target_link_libraries(app pkg::pkg)
+            """)
+        client2.save({"src/app.cpp": self.app,
+                      "CMakeLists.txt": test_cmake,
+                      "conanfile.py": consumer})
+        client2.run("install .")
+        client2.run("install . -s build_type=Debug")
+        with client2.chdir("cmake-build-release"):
+            client2.run_command('cmake .. -DCMAKE_BUILD_TYPE=Release')
+            client2.run_command("cmake --build . ")
+            client2.run_command("./app")
+            self.assertIn("Hello World Release!", client2.out)
+
+        with client2.chdir("cmake-build-debug"):
+            client2.run_command('cmake .. -DCMAKE_BUILD_TYPE=Debug')
+            client2.run_command("cmake --build . ")
+            client2.run_command("./app")
+            self.assertIn("Hello World Debug!", client2.out)
+
+        # do changes
+        client.save({"src/hello.cpp": self.hellopp.replace("World", "Moon")})
+        with client.chdir("cmake-build-release"):
+            client.run_command("cmake .. -DCMAKE_BUILD_TYPE=Release")
+            client.run_command("cmake --build .")
+            client.run_command(r"./app")
+            self.assertIn("Hello Moon Release!", client.out)
+        with client.chdir("cmake-build-debug"):
+            client.run_command("cmake .. -DCMAKE_BUILD_TYPE=Debug")
+            client.run_command("cmake --build .")
+            client.run_command(r"./app")
+            self.assertIn("Hello Moon Debug!", client.out)
+
+        # It is necessary to "install" again, to fire the imports() and copy the DLLs
+        client2.run("install .")
+        client2.run("install . -s build_type=Debug")
+        with client2.chdir("cmake-build-release"):
+            client2.run_command("cmake --build . ")
+            client2.run_command("./app")
+            self.assertIn("Hello Moon Release!", client2.out)
+
+        with client2.chdir("cmake-build-debug"):
+            client2.run_command("cmake --build . ")
+            client2.run_command("./app")
+            self.assertIn("Hello Moon Debug!", client2.out)
 
     # TODO: In other place: Test mocked autotools and cmake with layout
     # TODO: Test the export of the layout file is blocked

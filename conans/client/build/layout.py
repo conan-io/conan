@@ -125,7 +125,7 @@ class CMakeLayout(Layout):
         self.build_includedirs = [self.build, "src"]
 
 
-class CLionLayout(Layout):
+class CLionLayout(CMakeLayout):
     """
         /CMakeLists.txt
         /src/foo.h
@@ -140,10 +140,7 @@ class CLionLayout(Layout):
         # FIXME: What it should be if no build_type declared?
         build_type = conanfile.settings.get_safe("build_type") or "release"
         self.build = "cmake-build-{}".format(str(build_type.lower()))
-        self.build_includedirs = [self.build, self.src]
         if conanfile.settings.get_safe("compiler") == "Visual Studio":
             self.build_libdir = str(build_type)
             self.build_bindir = str(build_type)
-        else:
-            self.build_libdir = ""
-            self.build_bindir = ""
+
