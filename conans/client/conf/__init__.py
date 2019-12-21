@@ -75,17 +75,17 @@ compiler:
                   LLVM-vs2013, LLVM-vs2013_xp, LLVM-vs2014, LLVM-vs2014_xp,
                   LLVM-vs2017, LLVM-vs2017_xp, v141, v141_xp, v141_clang_c2, v142]
         cppstd: [None, 14, 17, 20]
-    clang:
+    clang: &clang
         version: ["3.3", "3.4", "3.5", "3.6", "3.7", "3.8", "3.9", "4.0",
                   "5.0", "6.0", "7.0", "7.1",
                   "8", "9", "10"]
         libcxx: [libstdc++, libstdc++11, libc++, c++_shared, c++_static]
         cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
-    apple-clang:
+    apple-clang: &apple-clang
         version: ["5.0", "5.1", "6.0", "6.1", "7.0", "7.3", "8.0", "8.1", "9.0", "9.1", "10.0", "11.0"]
         libcxx: [libstdc++, libc++]
         cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
-    intel:
+    intel: &intel
         version: ["11", "12", "13", "14", "15", "16", "17", "18", "19"]
         base:
             gcc:
@@ -94,6 +94,25 @@ compiler:
                 exception: [None]
             Visual Studio:
                 <<: *visual_studio
+    nvcc:
+        version: ["6.0", "6.5", 
+                  "7.0", "7.5", 
+                  "8.0", 
+                  "9.0", "9.1", "9.2", 
+                  "10.0", "10.1", "10.2"]
+        base:
+            gcc:
+                <<: *gcc
+            intel:
+                <<: *intel              
+            clang:
+                <<: *clang
+            apple-clang:
+                <<: *apple-clang
+            Visual Studio:
+                <<: *visual_studio
+        libcxx: [None, libcu++]
+        cppstd: [None, 03, 11, 14]
     qcc:
         version: ["4.4", "5.4"]
         libcxx: [cxx, gpp, cpp, cpp-ne, accp, acpp-ne, ecpp, ecpp-ne]
