@@ -33,19 +33,18 @@ from conans.client.tools.version import Version
 # This global variables are intended to store the configuration of the running Conan application
 _global_output = None
 _global_requester = None
+_global_config = None
 
 
-def set_global_instances(the_output, the_requester):
+def set_global_instances(the_output, the_requester, config):
     global _global_output
     global _global_requester
-
-    old_output, old_requester = _global_output, _global_requester
+    global _global_config
 
     # TODO: pass here the configuration file, and make the work here (explicit!)
     _global_output = the_output
     _global_requester = the_requester
-
-    return old_output, old_requester
+    _global_config = config
 
 
 def get_global_instances():
@@ -53,7 +52,8 @@ def get_global_instances():
 
 
 # Assign a default, will be overwritten in the factory of the ConanAPI
-set_global_instances(the_output=ConanOutput(sys.stdout, sys.stderr, True), the_requester=requests)
+set_global_instances(the_output=ConanOutput(sys.stdout, sys.stderr, True), the_requester=requests,
+                     config=None)
 
 
 """

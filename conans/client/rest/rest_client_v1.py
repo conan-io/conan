@@ -41,7 +41,7 @@ class RestV1Methods(RestCommonMethods):
         Its a generator, so it yields elements for memory performance
         """
         output = self._output if not quiet else None
-        downloader = FileDownloader(self.requester, output, self.verify_ssl)
+        downloader = FileDownloader(self.requester, output, self.verify_ssl, self._config)
         # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz
         # can be < conanfile, conaninfo, and sent always the last, so smaller files go first
         for filename, resource_url in sorted(file_urls.items(), reverse=True):
@@ -146,7 +146,7 @@ class RestV1Methods(RestCommonMethods):
     def _upload_files(self, file_urls, files, output, retry, retry_wait, display_name=None):
         t1 = time.time()
         failed = []
-        uploader = FileUploader(self.requester, output, self.verify_ssl)
+        uploader = FileUploader(self.requester, output, self.verify_ssl, self._config)
         # conan_package.tgz and conan_export.tgz are uploaded first to avoid uploading conaninfo.txt
         # or conanamanifest.txt with missing files due to a network failure
         for filename, resource_url in sorted(file_urls.items()):
@@ -176,7 +176,7 @@ class RestV1Methods(RestCommonMethods):
 
         It writes downloaded files to disk (appending to file, only keeps chunks in memory)
         """
-        downloader = FileDownloader(self.requester, self._output, self.verify_ssl)
+        downloader = FileDownloader(self.requester, self._output, self.verify_ssl, self._config)
         ret = {}
         # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz
         # can be < conanfile, conaninfo, and sent always the last, so smaller files go first
@@ -258,7 +258,7 @@ class RestV1Methods(RestCommonMethods):
                         ret.append(tmp)
             return sorted(ret)
         else:
-            downloader = FileDownloader(self.requester, None, self.verify_ssl)
+            downloader = FileDownloader(self.requester, None, self.verify_ssl, self._config)
             auth, _ = self._file_server_capabilities(urls[path])
             content = downloader.download(urls[path], auth=auth)
 

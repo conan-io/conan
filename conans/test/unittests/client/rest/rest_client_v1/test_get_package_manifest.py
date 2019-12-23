@@ -21,7 +21,7 @@ class GetPackageManifestTestCase(unittest.TestCase):
              patch.object(RestV1Methods, "_download_files", return_value=returned_files):
 
             v1 = RestV1Methods(remote_url, token=None, custom_headers=None, output=None,
-                               requester=None, verify_ssl=None)
+                               requester=None, config=None, verify_ssl=None)
             with self.assertRaises(ConanException) as exc:
                 v1.get_package_manifest(pref=pref)
 
