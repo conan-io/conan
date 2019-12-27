@@ -416,8 +416,10 @@ class ConanClientConfigParser(ConfigParser, object):
     def short_paths_home(self):
         short_paths_home = get_env("CONAN_USER_HOME_SHORT")
         if short_paths_home:
-            current_dir = os.path.dirname(self.filename)
-            if current_dir == os.path.commonprefix([current_dir, short_paths_home]):
+            current_dir = os.path.dirname(os.path.normpath(os.path.normcase(self.filename)))
+            short_paths_dir = os.path.normpath(os.path.normcase(short_paths_home))
+            if current_dir == short_paths_dir  or \
+                    short_paths_dir.startswith(current_dir + os.path.sep):
                 raise ConanException("Short path home '{}' (defined by conan.conf variable "
                                      "'user_home_short', or environment variable "
                                      "'CONAN_USER_HOME_SHORT') cannot be a subdirectory of "
