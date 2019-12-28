@@ -17,16 +17,6 @@ mark_as_advanced({name}_FOUND {name}_VERSION)
 """
 
 
-assign_target_properties = """
-    if({name}_INCLUDE_DIRS)
-      set_target_properties({name}::{name} PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${{{name}_INCLUDE_DIRS}}")
-    endif()
-    set_property(TARGET {name}::{name} PROPERTY INTERFACE_LINK_LIBRARIES ${{{name}_LIBRARIES_TARGETS}} ${{{name}_SYSTEM_LIBS}} "${{{name}_LINKER_FLAGS_LIST}}")
-    set_property(TARGET {name}::{name} PROPERTY INTERFACE_COMPILE_DEFINITIONS ${{{name}_COMPILE_DEFINITIONS}})
-    set_property(TARGET {name}::{name} PROPERTY INTERFACE_COMPILE_OPTIONS "${{{name}_COMPILE_OPTIONS_LIST}}")
-"""
-
-
 class CMakeFindPackageGenerator(Generator):
     template = """
 {find_package_header_block}
@@ -34,9 +24,11 @@ class CMakeFindPackageGenerator(Generator):
 if(NOT ${{CMAKE_VERSION}} VERSION_LESS "3.0")
     # Target approach
     if(NOT TARGET {name}::{name})
-        add_library({name}::{name} INTERFACE IMPORTED)
-        {assign_target_properties_block}
         {find_dependencies_block}
+
+        add_library({name}::{name} INTERFACE IMPORTED)
+        target_link_libraries({name}::{name} INTERFACE ${{{name}_LIBRARIES_TARGETS}} ${{{name}_SYSTEM_LIBS}} "${{{name}_LINKER_FLAGS_LIST}}")
+        
     endif()
 endif()
 """
@@ -67,30 +59,33 @@ endif()
             lines = find_dependency_lines(name, public_deps_names, find_modules=True)
         find_package_header_block = find_package_header.format(name=name, version=dep_cpp_info.version)
         find_libraries_block = target_template.format(name=name, deps=deps, build_type_suffix="")
-        target_props = assign_target_properties.format(name=name, deps=deps)
         tmp = self.template.format(name=name, deps=deps,
                                    version=dep_cpp_info.version,
-                                   find_dependencies_block="\n".join(lines),
+                                   find_dependencies_block="\n    ".join(lines),
                                    find_libraries_block=find_libraries_block,
-                                   find_package_header_block=find_package_header_block,
-                                   assign_target_properties_block=target_props)
+                                   find_package_header_block=find_package_header_block)
         return tmp
 
 
 def find_dependency_lines(name, public_deps_names, find_modules):
     lines = ["", "# Library dependencies", "include(CMakeFindDependencyMacro)"]
     for dep_name in public_deps_names:
-        def property_lines(prop):
-            lib_t = "%s::%s" % (name, name)
-            dep_t = "%s::%s" % (dep_name, dep_name)
-            return ["get_target_property(tmp %s %s)" % (dep_t, prop),
-                    "if(tmp)",
-                    "  set_property(TARGET %s APPEND PROPERTY %s ${tmp})" % (lib_t, prop),
-                    'endif()']
-
         if find_modules:
+            lines.append("")
             lines.append("find_dependency(%s REQUIRED)" % dep_name)
+            lines.append("foreach(_actual_target ${%s_LIBRARIES_ACTUAL_TARGETS})" % (name))
+            lines.append("    target_link_libraries(${_actual_target} INTERFACE ${%s_LIBRARIES_TARGETS})" % dep_name)
+            lines.append('    message("${_actual_target} ---> ${%s_LIBRARIES_TARGETS}")' % dep_name)
+            lines.append("endforeach()")
         else:
+            def property_lines(prop):
+                lib_t = "%s::%s" % (name, name)
+                dep_t = "%s::%s" % (dep_name, dep_name)
+                return ["get_target_property(tmp %s %s)" % (dep_t, prop),
+                        "if(tmp)",
+                        "  set_property(TARGET %s APPEND PROPERTY %s ${tmp})" % (lib_t, prop),
+                        'endif()']
+
             # https://github.com/conan-io/conan/issues/4994
             # https://github.com/conan-io/conan/issues/5040
             lines.append('if(${CMAKE_VERSION} VERSION_LESS "3.9.0")')
@@ -99,7 +94,7 @@ def find_dependency_lines(name, public_deps_names, find_modules):
             lines.append('  find_dependency(%s REQUIRED NO_MODULE)' % dep_name)
             lines.append("endif()")
 
-        lines.extend(property_lines("INTERFACE_LINK_LIBRARIES"))
-        lines.extend(property_lines("INTERFACE_COMPILE_DEFINITIONS"))
-        lines.extend(property_lines("INTERFACE_INCLUDE_DIRECTORIES"))
+            lines.extend(property_lines("INTERFACE_LINK_LIBRARIES"))
+            lines.extend(property_lines("INTERFACE_COMPILE_DEFINITIONS"))
+            lines.extend(property_lines("INTERFACE_INCLUDE_DIRECTORIES"))
     return ["    {}".format(l) for l in lines]
