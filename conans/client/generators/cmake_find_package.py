@@ -29,6 +29,20 @@ if(NOT ${{CMAKE_VERSION}} VERSION_LESS "3.0")
         add_library({name}::{name} INTERFACE IMPORTED)
         target_link_libraries({name}::{name} INTERFACE ${{{name}_LIBRARIES_TARGETS}} ${{{name}_SYSTEM_LIBS}} "${{{name}_LINKER_FLAGS_LIST}}")
         
+        # Some more data has to be assigned to the targets (or to the _INTERFACE IMPORTED_ one if there are no actual targets)
+        set(_TARGETS_TO_POPULATE "${{{name}_LIBRARIES_ACTUAL_TARGETS}}")
+        if (NOT _TARGETS_TO_POPULATE)
+            set(_TARGETS_TO_POPULATE "{name}::{name}")
+        endif()
+        
+        if({name}_INCLUDE_DIRS)
+            set_target_properties(${{_TARGETS_TO_POPULATE}} PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${{{name}_INCLUDE_DIRS}}")
+        endif()
+        #set_property(TARGET {name}::{name} PROPERTY INTERFACE_LINK_LIBRARIES ${{{name}_LIBRARIES_TARGETS}} ${{{name}_SYSTEM_LIBS}} "${{{name}_LINKER_FLAGS_LIST}}")
+        set_target_properties(${{_TARGETS_TO_POPULATE}} PROPERTIES 
+            INTERFACE_COMPILE_DEFINITIONS "${{{name}_COMPILE_DEFINITIONS}}"
+            INTERFACE_COMPILE_OPTIONS "${{{name}_COMPILE_OPTIONS_LIST}}")
+           
     endif()
 endif()
 """
@@ -73,7 +87,7 @@ def find_dependency_lines(name, public_deps_names, find_modules):
         if find_modules:
             lines.append("")
             lines.append("find_dependency(%s REQUIRED)" % dep_name)
-            lines.append("foreach(_actual_target ${%s_LIBRARIES_ACTUAL_TARGETS})" % (name))
+            lines.append("foreach(_actual_target ${%s_LIBRARIES_ACTUAL_TARGETS})" % name)
             lines.append("    target_link_libraries(${_actual_target} INTERFACE ${%s_LIBRARIES_TARGETS})" % dep_name)
             lines.append('    message("${_actual_target} ---> ${%s_LIBRARIES_TARGETS}")' % dep_name)
             lines.append("endforeach()")

@@ -411,7 +411,15 @@ cmake_minimum_required(VERSION 3.1)
 find_package(MYHELLO2)
 
 get_target_property(tmp MYHELLO2::MYHELLO2 INTERFACE_LINK_LIBRARIES)
-message("Target libs: ${tmp}")
+message("Target libs (hello2): ${tmp}")
+
+get_target_property(tmp MYHELLO::MYHELLO INTERFACE_LINK_LIBRARIES)
+message("Target libs (hello): ${tmp}")
+
+get_target_property(tmp CONAN_LIB::MYHELLO2_hello INTERFACE_LINK_LIBRARIES)
+message("Target libs (CONAN_LIB::MYHELLO2_hello): ${tmp}")
+
+
 """
         conanfile = """
 from conans import ConanFile, CMake
@@ -430,8 +438,9 @@ class Conan(ConanFile):
         client.run("build .")
         self.assertIn('Found MYHELLO2: 1.0 (found version "1.0")', client.out)
         self.assertIn('Found MYHELLO: 1.0 (found version "1.0")', client.out)
-        self.assertIn("Target libs: CONAN_LIB::MYHELLO2_hello;;;CONAN_LIB::MYHELLO_hello",
-                      client.out)
+        self.assertIn("Target libs (hello2): CONAN_LIB::MYHELLO2_hello;;", client.out)
+        self.assertIn("Target libs (hello): CONAN_LIB::MYHELLO_hello;;", client.out)
+        self.assertIn("Target libs (CONAN_LIB::MYHELLO2_hello): CONAN_LIB::MYHELLO_hello", client.out)
 
     def cpp_info_config_test(self):
         conanfile = textwrap.dedent("""
