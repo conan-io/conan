@@ -1,5 +1,6 @@
 import os
 import shutil
+from urlparse import urlsplit, urljoin
 
 from conans.util.files import mkdir
 from conans.util.locks import SimpleLock
@@ -14,7 +15,7 @@ class CachedFileDownloader(object):
 
     def download(self, url, file_path=None, auth=None, retry=None, retry_wait=None, overwrite=False,
                  headers=None, checksum=None):
-        """ compatible interface
+        """ compatible interface + checksum
         """
         h = self._get_hash(url, checksum)
         lock = os.path.join(self._cache_folder, "locks", h)
@@ -33,6 +34,8 @@ class CachedFileDownloader(object):
 
     @staticmethod
     def _get_hash(url, checksum=None):
+        urltokens = urlsplit(url)
+        url = urljoin(*urltokens[0:2])
         if checksum is not None:
             url += checksum
         h = sha256(url)
