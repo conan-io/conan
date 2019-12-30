@@ -4,6 +4,7 @@ import traceback
 
 from conans.client.remote_manager import check_compressed_files
 from conans.client.rest.client_routes import ClientV2Router
+from conans.client.rest.download_cache import CachedFileDownloader
 from conans.client.rest.rest_client_common import RestCommonMethods, get_exception_from_error
 from conans.client.rest.uploader_downloader import FileDownloader, FileUploader
 from conans.errors import ConanException, NotFoundException, PackageNotFoundException, \
@@ -39,6 +40,8 @@ class RestV2Methods(RestCommonMethods):
     def _get_remote_file_contents(self, url):
         # We don't want traces in output of these downloads, they are ugly in output
         downloader = FileDownloader(self.requester, None, self.verify_ssl, self._config)
+        if self._config.download_cache:
+            downloader = CachedFileDownloader(self._config.download_cache, downloader)
         contents = downloader.download(url, auth=self.auth)
         return contents
 
@@ -204,6 +207,8 @@ class RestV2Methods(RestCommonMethods):
 
     def _download_and_save_files(self, urls, dest_folder, files):
         downloader = FileDownloader(self.requester, self._output, self.verify_ssl, self._config)
+        if self._config.download_cache:
+            downloader = CachedFileDownloader(self._config.download_cache, downloader)
         # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz
         # can be < conanfile, conaninfo, and sent always the last, so smaller files go first
         for filename in sorted(files, reverse=True):

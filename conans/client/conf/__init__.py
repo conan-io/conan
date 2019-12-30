@@ -393,6 +393,14 @@ class ConanClientConfigParser(ConfigParser, object):
             return False
 
     @property
+    def download_cache(self):
+        try:
+            download_cache = self.get_item("storage.download_cache")
+            return download_cache
+        except ConanException:
+            return None
+
+    @property
     def default_package_id_mode(self):
         try:
             default_package_id_mode = get_env("CONAN_DEFAULT_PACKAGE_ID_MODE")
