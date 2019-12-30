@@ -33,6 +33,8 @@ class DownloadCacheTest(unittest.TestCase):
         client.run("remove * -f")
         client.run("install mypkg/0.1@user/testing")
         content = load(log_trace_file)
+        print content
+        return
         self.assertEqual(7, content.count('"_action": "DOWNLOAD"'))
         # 6 files cached, plus "locks" folder = 7
         self.assertEqual(7, len(os.listdir(cache_folder)))

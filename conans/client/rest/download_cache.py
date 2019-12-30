@@ -21,11 +21,8 @@ class CachedFileDownloader(object):
         cached_path = os.path.join(self._cache_folder, h)
         with SimpleLock(lock):
             if not os.path.exists(cached_path):
-                print "DOWNLOADING FILE ", url, cached_path
                 self._file_downloader.download(url, cached_path, auth, retry, retry_wait,
                                                overwrite, headers)
-            else:
-                print "REUSING CACHED ", url, cached_path
             if file_path is not None:
                 mkdir(os.path.dirname(file_path))
                 shutil.copy2(cached_path, file_path)

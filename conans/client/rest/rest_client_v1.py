@@ -35,7 +35,7 @@ class RestV1Methods(RestCommonMethods):
         return ClientV1Router(self.remote_url.rstrip("/"), self._artifacts_properties,
                               self._matrix_params)
 
-    def _download_files(self, file_urls, quiet=False):
+    def _download_files(self, file_urls, snapshot_md5, quiet=False):
         """
         :param: file_urls is a dict with {filename: url}
 
@@ -70,8 +70,9 @@ class RestV1Methods(RestCommonMethods):
         url = self.router.recipe_manifest(ref)
         urls = self._get_file_to_url_dict(url)
 
+        md5s = self.get_recipe_snapshot(ref) if self._config.download_cache else None
         # Get the digest
-        contents = self._download_files(urls, quiet=True)
+        contents = self._download_files(urls, md5s, quiet=True)
         # Unroll generator and decode shas (plain text)
         contents = {key: decode_text(value) for key, value in dict(contents).items()}
         return FileTreeManifest.loads(contents[CONAN_MANIFEST])
@@ -84,7 +85,8 @@ class RestV1Methods(RestCommonMethods):
         urls = self._get_file_to_url_dict(url)
 
         # Get the digest
-        contents = self._download_files(urls, quiet=True)
+        md5s = self.get_package_snapshot(pref) if self._config.download_cache else None
+        contents = self._download_files(urls, md5s, quiet=True)
         try:
             # Unroll generator and decode shas (plain text)
             content = dict(contents)[CONAN_MANIFEST]
@@ -107,8 +109,9 @@ class RestV1Methods(RestCommonMethods):
         if CONANINFO not in urls:
             raise NotFoundException("Package %s doesn't have the %s file!" % (pref,
                                                                               CONANINFO))
+        md5s = self.get_package_snapshot(pref) if self._config.download_cache else None
         # Get the info (in memory)
-        contents = self._download_files({CONANINFO: urls[CONANINFO]}, quiet=True)
+        contents = self._download_files({CONANINFO: urls[CONANINFO]}, md5s, quiet=True)
         # Unroll generator and decode shas (plain text)
         contents = {key: decode_text(value) for key, value in dict(contents).items()}
         return ConanInfo.loads(contents[CONANINFO])
