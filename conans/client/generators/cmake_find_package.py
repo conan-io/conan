@@ -27,7 +27,9 @@ if(NOT ${{CMAKE_VERSION}} VERSION_LESS "3.0")
         {find_dependencies_block}
 
         add_library({name}::{name} INTERFACE IMPORTED)
-        target_link_libraries({name}::{name} INTERFACE ${{{name}_LIBRARIES_TARGETS}} ${{{name}_SYSTEM_LIBS}} "${{{name}_LINKER_FLAGS_LIST}}")
+        # target_link_libraries({name}::{name} INTERFACE ${{{name}_LIBRARIES_TARGETS}} ${{{name}_SYSTEM_LIBS}} "${{{name}_LINKER_FLAGS_LIST}}")
+        set_property(TARGET {name}::{name} PROPERTY INTERFACE_LINK_LIBRARIES ${{{name}_LIBRARIES_TARGETS}} ${{{name}_SYSTEM_LIBS}} "${{{name}_LINKER_FLAGS_LIST}}")
+    
         
         # Some more data has to be assigned to the targets (or to the _INTERFACE IMPORTED_ one if there are no actual targets)
         set(_TARGETS_TO_POPULATE "${{{name}_LIBRARIES_ACTUAL_TARGETS}}")
