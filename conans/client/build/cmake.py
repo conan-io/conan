@@ -13,6 +13,7 @@ from conans.client.build.cmake_flags import CMakeDefinitionsBuilder, \
     cmake_in_local_cache_var_name, runtime_definition_var_name, get_generator_platform, \
     is_generator_platform_supported, is_toolset_supported
 from conans.client.output import ConanOutput
+from conans.client.tools.env import environment_append
 from conans.client.tools.oss import cpu_count, args_to_string
 from conans.errors import ConanException
 from conans.model.conan_file import ConanFile
@@ -213,7 +214,7 @@ class CMake(object):
                       and "PKG_CONFIG_PATH" not in os.environ
             pkg_env = {"PKG_CONFIG_PATH": self._conanfile.install_folder} if set_env else {}
 
-        with tools.environment_append(pkg_env):
+        with environment_append(pkg_env):
             command = "cd %s && %s %s" % (args_to_string([self.build_dir]), self._cmake_program,
                                           arg_list)
             if platform.system() == "Windows" and self.generator == "MinGW Makefiles":
@@ -278,10 +279,10 @@ class CMake(object):
         if not target:
             target = "RUN_TESTS" if self.is_multi_configuration else "test"
 
-        env = {'CTEST_OUTPUT_ON_FAILURE': '1' if output_on_failure else '0'}
+        test_env = {'CTEST_OUTPUT_ON_FAILURE': '1' if output_on_failure else '0'}
         if self.parallel:
-            env['CTEST_PARALLEL_LEVEL'] = str(cpu_count(self._conanfile.output))
-        with tools.environment_append(env):
+            test_env['CTEST_PARALLEL_LEVEL'] = str(cpu_count(self._conanfile.output))
+        with environment_append(test_env):
             self._build(args=args, build_dir=build_dir, target=target)
 
     @property
