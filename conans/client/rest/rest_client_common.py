@@ -149,13 +149,16 @@ class RestCommonMethods(object):
                                  verify=self.verify_ssl)
         return ret
 
-    def server_capabilities(self):
+    def server_capabilities(self, user=None, password=None):
         """Get information about the server: status, version, type and capabilities"""
         url = self.router.ping()
         logger.debug("REST: ping: %s" % url)
-
-        ret = self.requester.get(url, auth=self.auth, headers=self.custom_headers,
-                                 verify=self.verify_ssl)
+        if user and password:
+            # This can happen in "conan user" cmd. Instead of empty token, use HttpBasic
+            auth = HTTPBasicAuth(user, password)
+        else:
+            auth = self.auth
+        ret = self.requester.get(url, auth=auth, headers=self.custom_headers, verify=self.verify_ssl)
 
         server_capabilities = ret.headers.get('X-Conan-Server-Capabilities', "")
         if not server_capabilities and not ret.ok:
