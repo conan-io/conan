@@ -104,7 +104,7 @@ class SettingsCppStdTests(DefaultCppTestCase):
 
     def test_value_default(self):
         # Explicit value (equals to default) passed to setting 'cppstd'
-        cppstd = cppstd_default(self.compiler, self.compiler_version)
+        cppstd = cppstd_default(self.compiler, self.compiler_version, None, None)
         with catch_deprecation_warning(self):
             id_with, output = self._get_id(with_cppstd=True, settings_values={"cppstd": cppstd})
         self.assertIn(">>>> settings: ['compiler', 'cppstd', 'os']", output)
@@ -144,7 +144,7 @@ class SettingsCompilerCppStdTests(DefaultCppTestCase):
 
     def test_value_default(self):
         # Explicit value (equals to default) passed to setting 'compiler.cppstd'
-        cppstd = cppstd_default(self.compiler, self.compiler_version)
+        cppstd = cppstd_default(self.compiler, self.compiler_version, None, None)
         id_with, output = self._get_id(settings_values={"compiler.cppstd": cppstd})
         self.assertIn(">>>> settings: ['compiler', 'os']", output)
         self.assertIn(">>>> cppstd: None", output)

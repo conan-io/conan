@@ -42,15 +42,23 @@ def architecture_flag(compiler, arch, os=None):
                 return '-maix32'
             elif str(arch) in ['ppc64']:
                 return '-maix64'
+    if str(compiler) in ['nvcc']:
+        if str(arch) in ['x86', 'armv7']:
+            return '-m32'
+        else:
+            return '-m64'
     return ""
 
 
-def libcxx_define(compiler, libcxx):
+def libcxx_define(compiler, libcxx, compiler_base):
 
     if not compiler or not libcxx:
         return ""
-
+    if str(compiler) in ["nvcc"]:
+        return libcxx_define(compiler_base, libcxx, None)
     if str(compiler) in ['gcc', 'clang', 'apple-clang']:
+        if not libcxx:
+            return ""
         if str(libcxx) == 'libstdc++':
             return '_GLIBCXX_USE_CXX11_ABI=0'
         elif str(libcxx) == 'libstdc++11':
@@ -58,12 +66,17 @@ def libcxx_define(compiler, libcxx):
     return ""
 
 
-def libcxx_flag(compiler, libcxx):
+def libcxx_flag(compiler, libcxx, compiler_base=None):
     """
     returns flag specific to the target C++ standard library
     """
     if not compiler or not libcxx:
         return ""
+
+    if str(compiler) in ['nvcc']:
+        if compiler_base and compiler_base in ['clang', 'apple-clang']:
+            base_flag = libcxx_flag(compiler_base, libcxx)
+            return "-Xcompiler %s" % base_flag
     if str(compiler) in ['clang', 'apple-clang']:
         if str(libcxx) in ['libstdc++', 'libstdc++11']:
             return '-stdlib=libstdc++'
@@ -79,11 +92,16 @@ def libcxx_flag(compiler, libcxx):
     return ""
 
 
-def pic_flag(compiler=None):
+def pic_flag(compiler=None, compiler_base=None):
     """
     returns PIC (position independent code) flags, such as -fPIC
     """
-    if not compiler or compiler == 'Visual Studio':
+    if not compiler:
+        return ""
+    if compiler == "nvcc":
+        base_flag = pic_flag(compiler_base, None)
+        return "-Xcompiler %s" % base_flag if base_flag else ""
+    if compiler == 'Visual Studio':
         return ""
     return '-fPIC'
 
@@ -126,6 +144,13 @@ def build_type_flags(compiler, build_type, vs_toolset=None):
                      "RelWithDebInfo": ["-O2", "-g"],
                      "MinSizeRel": ["-Os"],
                      }.get(build_type, [])
+            return flags
+        elif str(compiler) == "nvcc":
+            flags = {"Debug": ["-g"],
+                     "Release": ["-O3"],
+                     "RelWithDebInfo": ["-O2", "-g"],
+                     "MinSizeRel": [""],
+                    }.get(build_type, [])
             return flags
         elif str(compiler) == "sun-cc":
             # https://github.com/Kitware/CMake/blob/f3bbb37b253a1f4a26809d6f132b3996aa2e16fc/
@@ -213,21 +238,42 @@ def parallel_compiler_cl_flag(output=None):
     return "/MP%s" % cpu_count(output=output)
 
 
-def format_frameworks(frameworks, compiler=None):
+def format_frameworks(frameworks, compiler=None, compiler_base=None):
     """
     returns an appropriate compiler flags to link with Apple Frameworks
     or an empty array, if Apple Frameworks aren't supported by the given compiler
     """
+    framework_flags = []
+    for framework in frameworks:
+        framework_flag = _format_framework(framework, compiler, compiler_base)
+        if framework_flag:
+            framework_flags.append(framework_flag)
+    return framework_flags
+
+def _format_framework(framework, compiler=None, compiler_base=None):
+    if str(compiler) in ["nvcc"]:
+        base_flag = _format_framework(framework, compiler_base)
+        return "-Xlinker %s" % base_flag if base_flag else None
     if str(compiler) not in ["clang", "gcc", "apple-clang"]:
-        return []
-    return ["-framework %s" % framework for framework in frameworks]
+        return None
+    return "-framework %s" % framework
 
-
-def format_framework_paths(framework_paths, compiler=None):
+def format_framework_paths(framework_paths, compiler=None, compiler_base=None):
     """
     returns an appropriate compiler flags to specify Apple Frameworks search paths
     or an empty array, if Apple Frameworks aren't supported by the given compiler
     """
+    framework_flags = []
+    for framework_path in framework_paths:
+        framework_flag = _format_framework_path(framework_path, compiler, compiler_base)
+        if framework_flag:
+            framework_flags.append(framework_flag)
+    return framework_flags
+
+def _format_framework_path(framework_path, compiler=None, compiler_base=None):
+    if str(compiler) in ["nvcc"]:
+        base_flag = _format_framework_path(framework_path, compiler_base)
+        return "-Xlinker %s" % base_flag if base_flag else None
     if str(compiler) not in ["clang", "gcc", "apple-clang"]:
-        return []
-    return ["-F %s" % adjust_path(framework_path) for framework_path in framework_paths]
+        return None
+    return "-F %s" % adjust_path(framework_path)

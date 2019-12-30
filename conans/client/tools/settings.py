@@ -46,7 +46,9 @@ def check_min_cppstd(conanfile, cppstd, gnu_extensions=False):
         if not compiler or not compiler_version:
             raise ConanException("Could not obtain cppstd because there is no declared "
                                  "compiler in the 'settings' field of the recipe.")
-        return cppstd_default(compiler, compiler_version)
+        compiler_base = conanfile.settings.get_safe("compiler.base")
+        compiler_base_version = conanfile.settings.get_safe("compiler.base.version")
+        return cppstd_default(compiler, compiler_version, compiler_base, compiler_base_version)
 
     current_cppstd = deduced_cppstd()
     check_required_gnu_extension(current_cppstd)

@@ -593,10 +593,13 @@ class ConanInfo(object):
         same as specifying None, packages are the same
         """
 
-        if (self.full_settings.compiler and
-                self.full_settings.compiler.version):
+        if self.full_settings.compiler and self.full_settings.compiler.version:
+            compiler_base = self.full_settings.compiler.base
+            compiler_base_version = compiler_base.version if compiler_base else None
             default = cppstd_default(str(self.full_settings.compiler),
-                                     str(self.full_settings.compiler.version))
+                                     str(self.full_settings.compiler.version),
+                                     str(compiler_base),
+                                     str(compiler_base_version))
 
             if str(self.full_settings.cppstd) == default:
                 self.settings.cppstd = None

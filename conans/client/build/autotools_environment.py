@@ -43,6 +43,7 @@ class AutoToolsBuildEnvironment(object):
         self._compiler = conanfile.settings.get_safe("compiler")
         self._compiler_version = conanfile.settings.get_safe("compiler.version")
         self._compiler_runtime = conanfile.settings.get_safe("compiler.runtime")
+        self._compiler_base = conanfile.settings.get_safe("compiler.base")
         self._libcxx = conanfile.settings.get_safe("compiler.libcxx")
         self._cppstd = cppstd_from_settings(conanfile.settings)
 
@@ -286,7 +287,9 @@ class AutoToolsBuildEnvironment(object):
             ret.append(btf)
 
         # CXX11 ABI
-        abif = libcxx_define(compiler=self._compiler, libcxx=self._libcxx)
+        abif = libcxx_define(compiler=self._compiler,
+                             compiler_base=self._compiler_base,
+                             libcxx=self._libcxx)
         if abif:
             ret.append(abif)
         return ret
@@ -313,7 +316,7 @@ class AutoToolsBuildEnvironment(object):
 
         tmp_compilation_flags = copy.copy(self.flags)
         if self.fpic:
-            tmp_compilation_flags.append(pic_flag(self._compiler))
+            tmp_compilation_flags.append(pic_flag(self._compiler, self._compiler_base))
 
         cxx_flags = append(tmp_compilation_flags, self.cxx_flags, self.cppstd_flag)
         c_flags = tmp_compilation_flags

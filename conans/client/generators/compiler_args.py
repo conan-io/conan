@@ -66,9 +66,14 @@ class CompilerArgsGenerator(Generator):
         flags.extend(self._deps_build_info.sharedlinkflags)
         flags.extend(self._deps_build_info.exelinkflags)
         flags.extend(self._libcxx_flags())
-        flags.extend(format_frameworks(self._deps_build_info.frameworks, compiler=self.compiler))
+        flags.extend(format_frameworks(self._deps_build_info.frameworks,
+                                       compiler=self.compiler,
+                                       compiler_base=self.conanfile.settings.get_safe(
+                                           "compiler.base")))
         flags.extend(format_framework_paths(self._deps_build_info.framework_paths,
-                                            compiler=self.compiler))
+                                            compiler=self.compiler,
+                                            compiler_base=self.conanfile.settings.get_safe(
+                                           "compiler.base")))
         cppstd = cppstd_from_settings(self.conanfile.settings)
         flags.append(cppstd_flag(self.conanfile.settings.get_safe("compiler"),
                                  self.conanfile.settings.get_safe("compiler.version"),
@@ -82,12 +87,13 @@ class CompilerArgsGenerator(Generator):
     def _libcxx_flags(self):
         libcxx = self.conanfile.settings.get_safe("compiler.libcxx")
         compiler = self.conanfile.settings.get_safe("compiler")
+        compiler_base = self.conanfile.settings.get_safe("compiler.base")
 
         lib_flags = []
-        if libcxx:
-            stdlib_define = libcxx_define(compiler=compiler, libcxx=libcxx)
+        stdlib_define = libcxx_define(compiler=compiler, compiler_base=compiler_base, libcxx=libcxx)
+        if stdlib_define:
             lib_flags.extend(format_defines([stdlib_define]))
-            cxxf = libcxx_flag(compiler=compiler, libcxx=libcxx)
+            cxxf = libcxx_flag(compiler=compiler, compiler_base=compiler_base, libcxx=libcxx)
             if cxxf:
                 lib_flags.append(cxxf)
 

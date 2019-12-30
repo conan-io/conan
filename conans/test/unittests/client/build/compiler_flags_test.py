@@ -13,14 +13,17 @@ from conans.client.build.compiler_flags import adjust_path, architecture_flag, b
 class CompilerFlagsTest(unittest.TestCase):
 
     @parameterized.expand([("gcc", "x86", None, "-m32"),
+                           ('nvcc', "x86", None, "-m32"),
                            ("clang", "x86", None, "-m32"),
                            ("sun-cc", "x86", None, "-m32"),
                            ("gcc", "x86_64", None, "-m64"),
+                           ("nvcc", "x86_64", None, "-m64"),
                            ("clang", "x86_64", None, "-m64"),
                            ("sun-cc", "x86_64", None, "-m64"),
                            ("sun-cc", "sparc", None, "-m32"),
                            ("sun-cc", "sparcv9", None, "-m64"),
                            ("gcc", "armv7", None, ""),
+                           ("nvcc", "armv7", None, "-m32"),
                            ("clang", "armv7", None, ""),
                            ("sun-cc", "armv7", None, ""),
                            ("gcc", "s390", None, "-m31"),
@@ -33,36 +36,54 @@ class CompilerFlagsTest(unittest.TestCase):
                            ("Visual Studio", "x86_64", None, ""),
                            ("gcc", "ppc32", "AIX", "-maix32"),
                            ("gcc", "ppc64", "AIX", "-maix64"),
+                           ("nvcc", "ppc64", None, "-m64"),
                            ])
     def test_arch_flag(self, compiler, arch, os, flag):
         self.assertEqual(architecture_flag(compiler=compiler, arch=arch, os=os), flag)
 
-    @parameterized.expand([("gcc", "libstdc++", "_GLIBCXX_USE_CXX11_ABI=0"),
-                           ("gcc", "libstdc++11", "_GLIBCXX_USE_CXX11_ABI=1"),
-                           ("clang", "libstdc++", "_GLIBCXX_USE_CXX11_ABI=0"),
-                           ("clang", "libstdc++11", "_GLIBCXX_USE_CXX11_ABI=1"),
-                           ("clang", "libc++", ""),
-                           ("Visual Studio", None, ""),
+    @parameterized.expand([("gcc", None, "libstdc++", "_GLIBCXX_USE_CXX11_ABI=0"),
+                           ("gcc", None, "libstdc++11", "_GLIBCXX_USE_CXX11_ABI=1"),
+                           ("clang", None, "libstdc++", "_GLIBCXX_USE_CXX11_ABI=0"),
+                           ("clang", None, "libstdc++11", "_GLIBCXX_USE_CXX11_ABI=1"),
+                           ("clang", None, "libc++", ""),
+                           ("Visual Studio", None, None, ""),
+                           ("nvcc", "gcc", "libstdc++", "_GLIBCXX_USE_CXX11_ABI=0"),
+                           ("nvcc", "gcc", "libstdc++11", "_GLIBCXX_USE_CXX11_ABI=1"),
+                           ("nvcc", "clang", "libstdc++", "_GLIBCXX_USE_CXX11_ABI=0"),
+                           ("nvcc", "clang", "libstdc++11", "_GLIBCXX_USE_CXX11_ABI=1"),
+                           ("nvcc", "clang", "libc++", ""),
+                           ("nvcc", "Visual Studio", None, "")
                            ])
-    def test_libcxx_define(self, compiler, libcxx, define):
-        self.assertEqual(libcxx_define(compiler=compiler, libcxx=libcxx), define)
+    def test_libcxx_define(self, compiler, compiler_base, libcxx, define):
+        self.assertEqual(libcxx_define(compiler=compiler, compiler_base=compiler_base,
+        libcxx=libcxx), define)
 
-    @parameterized.expand([("gcc", "libstdc++", ""),
-                           ("gcc", "libstdc++11", ""),
-                           ("clang", "libstdc++", "-stdlib=libstdc++"),
-                           ("clang", "libstdc++11", "-stdlib=libstdc++"),
-                           ("clang", "libc++", "-stdlib=libc++"),
-                           ("apple-clang", "libstdc++", "-stdlib=libstdc++"),
-                           ("apple-clang", "libstdc++11", "-stdlib=libstdc++"),
-                           ("apple-clang", "libc++", "-stdlib=libc++"),
-                           ("Visual Studio", None, ""),
-                           ("sun-cc", "libCstd", "-library=Cstd"),
-                           ("sun-cc", "libstdcxx", "-library=stdcxx4"),
-                           ("sun-cc", "libstlport", "-library=stlport4"),
-                           ("sun-cc", "libstdc++", "-library=stdcpp")
+    @parameterized.expand([("gcc", None, "libstdc++", ""),
+                           ("gcc", None, "libstdc++11", ""),
+                           ("clang", None, "libstdc++", "-stdlib=libstdc++"),
+                           ("clang", None, "libstdc++11", "-stdlib=libstdc++"),
+                           ("clang", None, "libc++", "-stdlib=libc++"),
+                           ("apple-clang", None, "libstdc++", "-stdlib=libstdc++"),
+                           ("apple-clang", None, "libstdc++11", "-stdlib=libstdc++"),
+                           ("apple-clang", None, "libc++", "-stdlib=libc++"),
+                           ("Visual Studio", None, None, ""),
+                           ("nvcc", "gcc", "libstdc++", ""),
+                           ("nvcc", "gcc", "libstdc++11", ""),
+                           ("nvcc", "clang", "libstdc++", "-Xcompiler -stdlib=libstdc++"),
+                           ("nvcc", "clang", "libstdc++11", "-Xcompiler -stdlib=libstdc++"),
+                           ("nvcc", "clang", "libc++", "-Xcompiler -stdlib=libc++"),
+                           ("nvcc", "apple-clang", "libstdc++", "-Xcompiler -stdlib=libstdc++"),
+                           ("nvcc", "apple-clang", "libstdc++11", "-Xcompiler -stdlib=libstdc++"),
+                           ("nvcc", "apple-clang", "libc++", "-Xcompiler -stdlib=libc++"),
+                           ("nvcc", "Visual Studio", None, ""),
+                           ("sun-cc", None, "libCstd", "-library=Cstd"),
+                           ("sun-cc", None, "libstdcxx", "-library=stdcxx4"),
+                           ("sun-cc", None, "libstlport", "-library=stlport4"),
+                           ("sun-cc", None, "libstdc++", "-library=stdcpp")
                            ])
-    def test_libcxx_flags(self, compiler, libcxx, flag):
-        self.assertEqual(libcxx_flag(compiler=compiler, libcxx=libcxx), flag)
+    def test_libcxx_flags(self, compiler, compiler_base, libcxx, flag):
+        self.assertEqual(libcxx_flag(compiler=compiler, compiler_base=compiler_base, libcxx=libcxx),
+        flag)
 
     @parameterized.expand([("cxx",),
                            ("gpp",),
@@ -77,14 +98,16 @@ class CompilerFlagsTest(unittest.TestCase):
         self.assertEqual(arch_flags, '-Y _%s' % libcxx)
 
     def test_pic_flags(self):
-        flag = pic_flag()
-        self.assertEqual(flag, '')
+        self.assertEqual(pic_flag(), '')
 
-        flags = pic_flag(compiler='gcc')
-        self.assertEqual(flags, '-fPIC')
+        self.assertEqual(pic_flag(compiler='gcc'), '-fPIC')
+        self.assertEqual(pic_flag(compiler='clang'), '-fPIC')
+        self.assertEqual(pic_flag(compiler='Visual Studio'), "")
 
-        flags = pic_flag(compiler='Visual Studio')
-        self.assertEqual(flags, "")
+        self.assertEqual(pic_flag(compiler="nvcc", compiler_base="gcc"), "-Xcompiler -fPIC")
+        self.assertEqual(pic_flag(compiler="nvcc", compiler_base="clang"), "-Xcompiler -fPIC")
+        self.assertEqual(pic_flag(compiler="nvcc", compiler_base="Visual Studio"), "")
+
 
     @parameterized.expand([("Visual Studio", "Debug", None, "-Zi -Ob0 -Od"),
                            ("Visual Studio", "Release", None, "-O2 -Ob2"),
@@ -106,13 +129,19 @@ class CompilerFlagsTest(unittest.TestCase):
                            ("apple-clang", "Release", None, "-O3"),
                            ("apple-clang", "RelWithDebInfo", None, "-O2 -g"),
                            ("apple-clang", "MinSizeRel", None, "-Os"),
+                           ("nvcc", "Debug", None, "-g"),
+                           ("nvcc", "Release", None, "-O3"),
+                           ("nvcc", "RelWithDebInfo", None, "-O2 -g"),
+                           ("nvcc", "MinSizeRel", None, ""),
                            ("sun-cc", "Debug", None, "-g"),
                            ("sun-cc", "Release", None, "-xO3"),
                            ("sun-cc", "RelWithDebInfo", None, "-xO2 -g"),
                            ("sun-cc", "MinSizeRel", None, "-xO2 -xspace"),
                            ])
     def test_build_type_flags(self, compiler, build_type, vs_toolset, flags):
-        self.assertEqual(' '.join(build_type_flags(compiler=compiler, build_type=build_type, vs_toolset=vs_toolset)),
+        self.assertEqual(' '.join(build_type_flags(compiler=compiler,
+                                                   build_type=build_type,
+                                                   vs_toolset=vs_toolset)),
                          flags)
 
     def test_build_type_define(self):

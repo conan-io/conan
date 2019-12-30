@@ -26,6 +26,7 @@ def cppstd_flag(compiler, compiler_version, cppstd):
     if not compiler or not compiler_version or not cppstd:
         return ""
     func = {"gcc": _cppstd_gcc,
+            "nvcc": _cppstd_nvcc,
             "clang": _cppstd_clang,
             "apple-clang": _cppstd_apple_clang,
             "Visual Studio": _cppstd_visualstudio}.get(str(compiler), None)
@@ -35,7 +36,10 @@ def cppstd_flag(compiler, compiler_version, cppstd):
     return flag
 
 
-def cppstd_default(compiler, compiler_version):
+def cppstd_default(compiler, compiler_version, compiler_base, compiler_base_version):
+    if compiler == "nvcc":
+        return cppstd_default(compiler_base, compiler_base_version, None, None)
+
     default = {"gcc": _gcc_cppstd_default(compiler_version),
                "clang": _clang_cppstd_default(compiler_version),
                "apple-clang": "gnu98",  # Confirmed in apple-clang 9.1 with a simple "auto i=1;"
@@ -201,4 +205,20 @@ def _cppstd_gcc(gcc_version, cppstd):
             "14": v14, "gnu14": vgnu14,
             "17": v17, "gnu17": vgnu17,
             "20": v20, "gnu20": vgnu20}.get(cppstd)
+    return "-std=%s" % flag if flag else None
+
+def _cppstd_nvcc(nvcc_version, cppstd):
+    """https://gist.github.com/ax3l/9489132"""
+    v03 = v11 = v14 = None
+
+    if Version(nvcc_version) >= "6.5":
+        v11 = "c++11"
+
+    if Version(nvcc_version) >= "9.0":
+        v03 = "c++03"
+        v14 = "c++14"
+
+    flag = {"03": v03,
+            "11": v11,
+            "14": v14}.get(cppstd)
     return "-std=%s" % flag if flag else None
