@@ -6,6 +6,7 @@ import subprocess
 from conans.client import tools
 from conans.client.build.visual_environment import (VisualStudioBuildEnvironment,
                                                     vs_build_type_flags, vs_std_cpp)
+from conans.client.tools.env import environment_append
 from conans.client.tools.oss import cpu_count
 from conans.client.tools.win import vcvars_command
 from conans.errors import ConanException
@@ -76,7 +77,7 @@ class MSBuild(object):
         property_file_name = property_file_name or "conan_build.props"
         self.build_env.parallel = parallel
 
-        with tools.environment_append(self.build_env.vars):
+        with environment_append(self.build_env.vars):
             # Path for custom properties file
             props_file_contents = self._get_props_file_contents(definitions)
             property_file_name = os.path.abspath(property_file_name)
