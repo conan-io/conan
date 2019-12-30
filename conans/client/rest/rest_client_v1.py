@@ -6,6 +6,7 @@ from six.moves.urllib.parse import parse_qs, urljoin, urlparse, urlsplit
 
 from conans.client.remote_manager import check_compressed_files
 from conans.client.rest.client_routes import ClientV1Router
+from conans.client.rest.download_cache import CachedFileDownloader
 from conans.client.rest.rest_client_common import RestCommonMethods, handle_return_deserializer
 from conans.client.rest.uploader_downloader import FileDownloader, FileUploader
 from conans.errors import ConanException, NotFoundException, NoRestV2Available, \
@@ -170,13 +171,16 @@ class RestV1Methods(RestCommonMethods):
         else:
             logger.debug("UPLOAD: \nAll uploaded! Total time: %s\n" % str(time.time() - t1))
 
-    def _download_files_to_folder(self, file_urls, to_folder):
+    def _download_files_to_folder(self, file_urls, to_folder, snapshot_md5):
         """
         :param: file_urls is a dict with {filename: abs_path}
 
         It writes downloaded files to disk (appending to file, only keeps chunks in memory)
         """
         downloader = FileDownloader(self.requester, self._output, self.verify_ssl, self._config)
+        download_cache = self._config.download_cache
+        if download_cache:
+            downloader = CachedFileDownloader(self._config.download_cache, downloader)
         ret = {}
         # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz
         # can be < conanfile, conaninfo, and sent always the last, so smaller files go first
@@ -185,7 +189,11 @@ class RestV1Methods(RestCommonMethods):
                 self._output.writeln("Downloading %s" % filename)
             auth, _ = self._file_server_capabilities(resource_url)
             abs_path = os.path.join(to_folder, filename)
-            downloader.download(resource_url, abs_path, auth=auth)
+            if download_cache:
+                md5 = snapshot_md5[filename]
+                downloader.download(resource_url, abs_path, auth=auth, checksum=md5)
+            else:
+                downloader.download(resource_url, abs_path, auth=auth)
             ret[filename] = abs_path
         return ret
 
@@ -193,7 +201,8 @@ class RestV1Methods(RestCommonMethods):
         urls = self._get_recipe_urls(ref)
         urls.pop(EXPORT_SOURCES_TGZ_NAME, None)
         check_compressed_files(EXPORT_TGZ_NAME, urls)
-        zipped_files = self._download_files_to_folder(urls, dest_folder)
+        md5s = self.get_recipe_snapshot(ref) if self._config.download_cache else None
+        zipped_files = self._download_files_to_folder(urls, dest_folder, md5s)
         return zipped_files
 
     def get_recipe_sources(self, ref, dest_folder):
@@ -202,7 +211,8 @@ class RestV1Methods(RestCommonMethods):
         if EXPORT_SOURCES_TGZ_NAME not in urls:
             return None
         urls = {EXPORT_SOURCES_TGZ_NAME: urls[EXPORT_SOURCES_TGZ_NAME]}
-        zipped_files = self._download_files_to_folder(urls, dest_folder)
+        md5s = self.get_recipe_snapshot(ref) if self._config.download_cache else None
+        zipped_files = self._download_files_to_folder(urls, dest_folder, md5s)
         return zipped_files
 
     def _get_recipe_urls(self, ref):
@@ -215,7 +225,8 @@ class RestV1Methods(RestCommonMethods):
     def get_package(self, pref, dest_folder):
         urls = self._get_package_urls(pref)
         check_compressed_files(PACKAGE_TGZ_NAME, urls)
-        zipped_files = self._download_files_to_folder(urls, dest_folder)
+        md5s = self.get_package_snapshot(pref) if self._config.download_cache else None
+        zipped_files = self._download_files_to_folder(urls, dest_folder, md5s)
         return zipped_files
 
     def _get_package_urls(self, pref):

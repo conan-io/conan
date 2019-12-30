@@ -13,17 +13,19 @@ class CachedFileDownloader(object):
         self._file_downloader = file_downloader
 
     def download(self, url, file_path=None, auth=None, retry=None, retry_wait=None, overwrite=False,
-                 headers=None):
+                 headers=None, checksum=None):
         """ compatible interface
         """
-        cached_path = self._get_path(url)
-        with SimpleLock(cached_path + ".lock"):
+        h = self._get_hash(url, checksum)
+        lock = os.path.join(self._cache_folder, "locks", h)
+        cached_path = os.path.join(self._cache_folder, h)
+        with SimpleLock(lock):
             if not os.path.exists(cached_path):
-                print "NOT CACHED; DOWNLOADING ", url
+                print "DOWNLOADING FILE ", url, cached_path
                 self._file_downloader.download(url, cached_path, auth, retry, retry_wait,
                                                overwrite, headers)
             else:
-                print "USING CACHED VERSION OF ", url
+                print "REUSING CACHED ", url, cached_path
             if file_path is not None:
                 mkdir(os.path.dirname(file_path))
                 shutil.copy2(cached_path, file_path)
@@ -32,10 +34,10 @@ class CachedFileDownloader(object):
                     tmp = handle.read()
                 return tmp
 
-    def _get_path(self, url, checksum=None):
+    @staticmethod
+    def _get_hash(url, checksum=None):
         if checksum is not None:
             url += checksum
         h = sha256(url)
-        p = os.path.join(self._cache_folder, h)
-        return p
+        return h
 
