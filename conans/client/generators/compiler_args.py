@@ -5,7 +5,7 @@ from conans.client.build.compiler_flags import (architecture_flag, build_type_de
                                                 rpath_flags, sysroot_flag,
                                                 visual_linker_option_separator, visual_runtime,
                                                 format_frameworks, format_framework_paths)
-from conans.client.build.cppstd_flags import cppstd_flag, cppstd_from_settings
+from conans.client.build.cppstd_flags import cppstd_flag, cppstd_from_settings, libcxx_from_settings
 from conans.model import Generator
 from conans.paths import BUILD_INFO_COMPILER_ARGS
 
@@ -85,7 +85,7 @@ class CompilerArgsGenerator(Generator):
         return " ".join(flag for flag in flags if flag)
 
     def _libcxx_flags(self):
-        libcxx = self.conanfile.settings.get_safe("compiler.libcxx")
+        libcxx = libcxx_from_settings(self.conanfile.settings)
         compiler = self.conanfile.settings.get_safe("compiler")
         compiler_base = self.conanfile.settings.get_safe("compiler.base")
 

@@ -3,6 +3,22 @@ import warnings
 from conans.errors import ConanException
 from conans.model.version import Version
 
+def libcxx_from_settings(settings):
+    libcxx = settings.get_safe("compiler.libcxx")
+    libcxx_base = settings.get_safe("compiler.base.libcxx")
+
+    if not libcxx and not libcxx_base:
+        return None
+
+    if libcxx and libcxx_base:
+        # Both should never arrive with a value to build_helpers
+        warnings.warn("Both settings, 'compiler.libcxx' and 'compiler.base.libcxx', should never "
+                      "arrive with values to build_helpers")
+        if libcxx != libcxx_base:
+            raise ConanException("Can't decide value for libcxx, settings mismatch: "
+                                 "'compiler.libcxx={}', 'compiler.base.libcxx={}'".format(
+                libcxx, libcxx_base))
+    return libcxx_base or libcxx
 
 def cppstd_from_settings(settings):
     cppstd = settings.get_safe("cppstd")
