@@ -589,7 +589,7 @@ def run_in_windows_bash(conanfile, bashcmd, cwd=None, subsystem=None, msys_mingw
                                 "MINGW64"),
                     "MSYS2_PATH_TYPE": "inherit"}
     else:
-        env_vars = {}
+        env_vars = None
 
     with environment_append(env_vars):
 
