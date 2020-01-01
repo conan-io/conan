@@ -23,11 +23,14 @@ def libcxx_from_settings(settings):
 def cppstd_from_settings(settings):
     cppstd = settings.get_safe("cppstd")
     compiler_cppstd = settings.get_safe("compiler.cppstd")
+    compiler_base_cppstd = settings.get_safe('compiler.base.cppstd')
 
-    if not cppstd and not compiler_cppstd:
+    if not cppstd and not compiler_cppstd and not compiler_base_cppstd:
         return None
 
-    if cppstd and compiler_cppstd:
+    if any(s1 and s2 for s1, s2 in [(cppstd, compiler_cppstd),
+                                    (cppstd, compiler_base_cppstd),
+                                    (compiler_cppstd, compiler_base_cppstd)]):
         # Both should never arrive with a value to build_helpers
         warnings.warn("Both settings, 'cppstd' and 'compiler.cppstd', should never arrive"
                       " with values to build_helpers")
@@ -35,7 +38,7 @@ def cppstd_from_settings(settings):
             raise ConanException("Can't decide value for C++ standard, settings mismatch: "
                                  "'cppstd={}', 'compiler.cppstd='".format(cppstd, compiler_cppstd))
 
-    return compiler_cppstd or cppstd
+    return compiler_cppstd or compiler_base_cppstd or cppstd
 
 
 def cppstd_flag(compiler, compiler_version, cppstd):
@@ -234,7 +237,8 @@ def _cppstd_nvcc(nvcc_version, cppstd):
         v03 = "c++03"
         v14 = "c++14"
 
-    flag = {"03": v03,
+    flag = { "3": v03,
+            "03": v03,
             "11": v11,
             "14": v14}.get(cppstd)
     return "-std=%s" % flag if flag else None

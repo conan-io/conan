@@ -129,7 +129,7 @@ class CompilerFlagsTest(unittest.TestCase):
                            ("apple-clang", "Release", None, "-O3"),
                            ("apple-clang", "RelWithDebInfo", None, "-O2 -g"),
                            ("apple-clang", "MinSizeRel", None, "-Os"),
-                           ("nvcc", "Debug", None, "-g"),
+                           ("nvcc", "Debug", None, "-O0 -g"),
                            ("nvcc", "Release", None, "-O3"),
                            ("nvcc", "RelWithDebInfo", None, "-O2 -g"),
                            ("nvcc", "MinSizeRel", None, ""),

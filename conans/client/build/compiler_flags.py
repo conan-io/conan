@@ -16,7 +16,7 @@ from conans.client.tools.win import unix_path
 def rpath_flags(os_build, compiler, lib_paths):
     if not os_build:
         return []
-    if compiler in ("clang", "apple-clang", "gcc"):
+    if compiler in ("clang", "apple-clang", "gcc", "nvcc"):
         rpath_separator = "," if os_build in ["Macos", "iOS", "watchOS", "tvOS"] else "="
         return ['-Wl,-rpath%s"%s"' % (rpath_separator, x.replace("\\", "/"))
                 for x in lib_paths if x]
@@ -146,7 +146,7 @@ def build_type_flags(compiler, build_type, vs_toolset=None):
                      }.get(build_type, [])
             return flags
         elif str(compiler) == "nvcc":
-            flags = {"Debug": ["-g"],
+            flags = {"Debug": ["-O0", "-g"],
                      "Release": ["-O3"],
                      "RelWithDebInfo": ["-O2", "-g"],
                      "MinSizeRel": [""],
@@ -237,6 +237,10 @@ def format_libraries(libraries, compiler=None):
 def parallel_compiler_cl_flag(output=None):
     return "/MP%s" % cpu_count(output=output)
 
+def format_flags(flags, compiler):
+    if str(compiler) != "nvcc":
+        return flags
+    return ["-Xcompiler %s" % flag for flag in flags]
 
 def format_frameworks(frameworks, compiler=None, compiler_base=None):
     """
@@ -253,7 +257,7 @@ def format_frameworks(frameworks, compiler=None, compiler_base=None):
 def _format_framework(framework, compiler=None, compiler_base=None):
     if str(compiler) in ["nvcc"]:
         base_flag = _format_framework(framework, compiler_base)
-        return "-Xlinker %s" % base_flag if base_flag else None
+        return "-Xcompiler %s" % base_flag if base_flag else None
     if str(compiler) not in ["clang", "gcc", "apple-clang"]:
         return None
     return "-framework %s" % framework
@@ -273,7 +277,7 @@ def format_framework_paths(framework_paths, compiler=None, compiler_base=None):
 def _format_framework_path(framework_path, compiler=None, compiler_base=None):
     if str(compiler) in ["nvcc"]:
         base_flag = _format_framework_path(framework_path, compiler_base)
-        return "-Xlinker %s" % base_flag if base_flag else None
+        return "-Xcompiler %s" % base_flag if base_flag else None
     if str(compiler) not in ["clang", "gcc", "apple-clang"]:
         return None
     return "-F %s" % adjust_path(framework_path)

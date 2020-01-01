@@ -142,6 +142,53 @@ class CompilerArgsTest(unittest.TestCase):
                          '-Wl,-rpath,"path/to/lib1" '
                          '-Lpath/to/lib1 -lmylib', args.content)
 
+        settings = Settings.loads(default_settings_yml)
+        settings.os = "Linux"
+        settings.arch = "x86"
+        settings.compiler = "nvcc"
+        settings.compiler.version = "10.2"
+        settings.compiler.base = "gcc"
+        settings.compiler.base.version = "6.3"
+        settings.arch = "x86"
+        settings.build_type = "Release"
+
+        conan_file = self._get_conanfile(settings)
+        gen = CompilerArgsGenerator(conan_file)
+        self.assertEqual('-Dmydefine1 -Ipath/to/include1 -Xcompiler cxx_flag1 -Xcompiler c_flag1 '
+                         '-m32 -O3 -DNDEBUG '
+                         '-Wl,-rpath="path/to/lib1" -Lpath/to/lib1 -lmylib', gen.content)
+
+        settings.compiler.cppstd = "11"
+        settings.compiler.base.libcxx = "libstdc++11"
+        settings.arch = "x86_64"
+        settings.build_type = "Debug"
+
+        gen = CompilerArgsGenerator(conan_file)
+        self.assertEqual('-Dmydefine1 -Ipath/to/include1 -Xcompiler cxx_flag1 -Xcompiler c_flag1 '
+                         '-m64 -O0 -g '
+                         '-Wl,-rpath="path/to/lib1" -Lpath/to/lib1 -lmylib '
+                         '-D_GLIBCXX_USE_CXX11_ABI=1 -std=c++11', gen.content)
+
+        settings.compiler.cppstd = "3"
+        settings.compiler.base.libcxx = "libstdc++"
+
+        gen = CompilerArgsGenerator(conan_file)
+        self.assertEqual('-Dmydefine1 -Ipath/to/include1 -Xcompiler cxx_flag1 -Xcompiler c_flag1 '
+                         '-m64 -O0 -g '
+                         '-Wl,-rpath="path/to/lib1" -Lpath/to/lib1 -lmylib '
+                         '-D_GLIBCXX_USE_CXX11_ABI=0 -std=c++03', gen.content)
+
+        settings.os = "Macos"
+        settings.compiler.cppstd = "14"
+        settings.compiler.base = "apple-clang"
+        settings.compiler.base.version = "9.0"
+        self.assertEqual('-Dmydefine1 -Ipath/to/include1 -Xcompiler cxx_flag1 -Xcompiler c_flag1 '
+                         '-m64 -O0 -g '
+                         '-Wl,-rpath,"path/to/lib1" -Lpath/to/lib1 -lmylib '
+                         '-std=c++14', gen.content)
+
+        gen = CompilerArgsGenerator(conan_file)
+
     def apple_frameworks_test(self):
         settings = Settings.loads(default_settings_yml)
         settings.os = "Macos"
@@ -156,6 +203,22 @@ class CompilerArgsTest(unittest.TestCase):
                          '-Wl,-rpath,"path/to/lib1" -Lpath/to/lib1 -lmylib '
                          '-framework AVFoundation -framework VideoToolbox '
                          '-F path/to/Frameworks1 -F path/to/Frameworks2', args.content)
+
+        settings.compiler = "nvcc"
+        settings.compiler.version = "10.2"
+        settings.compiler.base = "apple-clang"
+        settings.compiler.base.version = "9.1"
+        settings.arch = "x86_64"
+        settings.build_type = "Release"
+
+        conan_file = self._get_conanfile(settings, frameworks=True)
+        args = CompilerArgsGenerator(conan_file)
+        self.assertEqual('-Dmydefine1 -Ipath/to/include1 -Xcompiler cxx_flag1 -Xcompiler c_flag1 '
+                         '-m64 -O3 -DNDEBUG '
+                         '-Wl,-rpath,"path/to/lib1" -Lpath/to/lib1 -lmylib '
+                         '-Xcompiler -framework AVFoundation -Xcompiler -framework VideoToolbox '
+                         '-Xcompiler -F path/to/Frameworks1 -Xcompiler -F path/to/Frameworks2',
+                         args.content)
 
     def system_libs_test(self):
         settings = Settings.loads(default_settings_yml)
