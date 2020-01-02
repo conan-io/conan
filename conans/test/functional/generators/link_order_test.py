@@ -210,3 +210,48 @@ class LinkOrderTest(unittest.TestCase):
                         libs.append(libname)
 
         self.assertListEqual(self._expected_link_order, libs)
+
+    def test_cmake_multi(self):
+        t = TestClient(cache_folder=self._cache_folder)
+        t.save({
+            'conanfile.txt': textwrap.dedent("""
+                [requires]
+                libD/version
+                [generators]
+                cmake_multi
+                """),
+            'CMakeLists.txt': textwrap.dedent("""
+                cmake_minimum_required(VERSION 2.8.12)
+                project(executable CXX)
+
+                include(${CMAKE_BINARY_DIR}/conanbuildinfo_multi.cmake)
+                conan_basic_setup(TARGETS)
+
+                add_executable(example main.cpp)
+                target_link_libraries(example CONAN_PKG::libD)
+                """),
+            'main.cpp': textwrap.dedent("""
+                int main() {return 0;}
+                """)
+        })
+
+        t.run("install . -s build_type=Release")
+        t.run("install . -s build_type=Debug")
+        t.run_command("cmake . -G Xcode -DCMAKE_MODULE_PATH=. -DCMAKE_VERBOSE_MAKEFILE:BOOL=True")
+        t.run_command("cmake --build .")
+
+        # Get the actual link order from the CMake call
+        libs = []
+        for line in t.load(os.path.join('executable.xcodeproj', 'project.pbxproj')).splitlines():
+            if 'OTHER_LDFLAGS = " -Wl,-search_paths_first -Wl,-headerpad_max_install_names' in line.strip():
+                _, links = line.split('OTHER_LDFLAGS = " -Wl,-search_paths_first -Wl,-headerpad_max_install_names')
+                if links.strip() == '";':
+                    continue
+                for it_lib in links.strip().split():
+                    if it_lib.startswith("-l"):
+                        libs.append(it_lib[2:].strip('";'))
+                    else:
+                        _, libname = it_lib.rsplit('/', 1)
+                        libs.append(libname.strip('";'))
+
+        self.assertListEqual(self._expected_link_order, libs)
