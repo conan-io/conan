@@ -8,7 +8,10 @@ from conans.model import Generator
 class CMakeFindPackageMultiGenerator(Generator):
     config_xxx_template = """
 
-conan_cmake_minimum_required("cmake_find_package_multi")
+# Requires CMake > 3.0
+if(${{CMAKE_VERSION}} VERSION_LESS "3.0")
+   message(FATAL_ERROR "The 'cmake_find_package_multi' generator only works with CMake > 3.0" )
+endif()
 
 include(${{CMAKE_CURRENT_LIST_DIR}}/{name}Targets.cmake)
 
@@ -125,7 +128,6 @@ endif()
                                               find_dependencies_block="\n".join(lines),
                                               target_props_block=targets_props)
 
-        return "\n".join([CMakeFindPackageCommonMacros.cmake_minimum_required,
-                          CMakeFindPackageCommonMacros.apple_frameworks_macro,
-                          CMakeFindPackageMultiGenerator.conan_package_library_targets,
+        return "\n".join([CMakeFindPackageCommonMacros.apple_frameworks_macro,
+                          CMakeFindPackageCommonMacros.conan_package_library_targets,
                           tmp])

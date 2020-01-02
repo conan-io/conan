@@ -79,15 +79,6 @@ endforeach()
 
 
 class CMakeFindPackageCommonMacros:
-    cmake_minimum_required = textwrap.dedent("""
-        function(conan_cmake_minimum_required generator_name)
-            # Requires CMake > 3.0
-            if(${CMAKE_VERSION} VERSION_LESS "3.0")
-               message(FATAL_ERROR "The '${generator_name}' generator only works with CMake > 3.0" )
-            endif()
-        endfunction()
-    """)
-
     apple_frameworks_macro = textwrap.dedent("""
         macro(conan_find_apple_frameworks FRAMEWORKS_FOUND FRAMEWORKS)
             if(APPLE)
