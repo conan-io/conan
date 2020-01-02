@@ -236,7 +236,7 @@ class LinkOrderTest(unittest.TestCase):
         })
 
         t.run("install . -s build_type=Release")
-        t.run("install . -s build_type=Debug")
+        t.save({"conanbuildinfo_debug.cmake": "# just be there"})
         t.run_command("cmake . -G Xcode -DCMAKE_MODULE_PATH=. -DCMAKE_VERBOSE_MAKEFILE:BOOL=True")
         t.run_command("cmake --build .")
 
@@ -248,6 +248,7 @@ class LinkOrderTest(unittest.TestCase):
                 if links.strip() == '";':
                     continue
                 for it_lib in links.strip().split():
+                    print(it_lib)
                     if it_lib.startswith("-l"):
                         libs.append(it_lib[2:].strip('";'))
                     else:
