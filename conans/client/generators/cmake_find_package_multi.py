@@ -1,6 +1,6 @@
 from conans.client.generators.cmake import DepsCppCmake
 from conans.client.generators.cmake_find_package import find_dependency_lines
-from conans.client.generators.cmake_find_package_common import target_template
+from conans.client.generators.cmake_find_package_common import target_template, CMakeFindPackageCommonMacros
 from conans.client.generators.cmake_multi import extend
 from conans.model import Generator
 
@@ -8,10 +8,7 @@ from conans.model import Generator
 class CMakeFindPackageMultiGenerator(Generator):
     config_xxx_template = """
 
-# Requires CMake > 3.0
-if(${{CMAKE_VERSION}} VERSION_LESS "3.0")
-   message(FATAL_ERROR "The 'cmake_find_package_multi' only works with CMake > 3.0" )
-endif()
+conan_cmake_minimum_required("cmake_find_package_multi")
 
 include(${{CMAKE_CURRENT_LIST_DIR}}/{name}Targets.cmake)
 
@@ -127,4 +124,7 @@ endif()
                                               version=cpp_info.version,
                                               find_dependencies_block="\n".join(lines),
                                               target_props_block=targets_props)
-        return tmp
+
+        return "\n".join([CMakeFindPackageCommonMacros.cmake_minimum_required,
+                          CMakeFindPackageCommonMacros.apple_frameworks_macro,
+                          tmp])

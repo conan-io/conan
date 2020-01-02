@@ -1,3 +1,5 @@
+import textwrap
+
 target_template = """
 set({name}_INCLUDE_DIRS{build_type_suffix} {deps.include_paths})
 set({name}_INCLUDE_DIR{build_type_suffix} {deps.include_path})
@@ -16,18 +18,7 @@ set({name}_FRAMEWORKS{build_type_suffix} {deps.frameworks})
 set({name}_FRAMEWORKS_FOUND{build_type_suffix} "") # Will be filled later
 set({name}_BUILD_MODULES_PATHS{build_type_suffix} {deps.build_modules_paths})
 
-# Apple frameworks
-if(APPLE)
-    foreach(_FRAMEWORK ${{{name}_FRAMEWORKS{build_type_suffix}}})
-        # https://cmake.org/pipermail/cmake-developers/2017-August/030199.html
-        find_library(CONAN_FRAMEWORK_${{_FRAMEWORK}}_FOUND NAME ${{_FRAMEWORK}} PATHS ${{{name}_FRAMEWORK_DIRS{build_type_suffix}}})
-        if(CONAN_FRAMEWORK_${{_FRAMEWORK}}_FOUND)
-            list(APPEND {name}_FRAMEWORKS_FOUND{build_type_suffix} ${{CONAN_FRAMEWORK_${{_FRAMEWORK}}_FOUND}})
-        else()
-            message(FATAL_ERROR "Framework library ${{_FRAMEWORK}} not found in paths: ${{{name}_FRAMEWORK_DIRS{build_type_suffix}}}")
-        endif()
-    endforeach()
-endif()
+conan_find_apple_frameworks({name}_FRAMEWORKS_FOUND{build_type_suffix} "${{{name}_FRAMEWORKS{build_type_suffix}}}")
 
 mark_as_advanced({name}_INCLUDE_DIRS{build_type_suffix}
                  {name}_INCLUDE_DIR{build_type_suffix}
@@ -49,18 +40,16 @@ foreach(_LIBRARY_NAME ${{{name}_LIBRARY_LIST{build_type_suffix}}})
                  NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
     if(CONAN_FOUND_LIBRARY)
         list(APPEND {name}_LIBRARIES{build_type_suffix} ${{CONAN_FOUND_LIBRARY}})
-        if(NOT ${{CMAKE_VERSION}} VERSION_LESS "3.0")
+        # Create a micro-target for each lib/a found
+        set(_LIB_NAME CONAN_LIB::{name}_${{_LIBRARY_NAME}}{build_type_suffix})
+        if(NOT TARGET ${{_LIB_NAME}})
             # Create a micro-target for each lib/a found
-            set(_LIB_NAME CONAN_LIB::{name}_${{_LIBRARY_NAME}}{build_type_suffix})
-            if(NOT TARGET ${{_LIB_NAME}})
-                # Create a micro-target for each lib/a found
-                add_library(${{_LIB_NAME}} UNKNOWN IMPORTED)
-                set_target_properties(${{_LIB_NAME}} PROPERTIES IMPORTED_LOCATION ${{CONAN_FOUND_LIBRARY}})
-            else()
-                message(STATUS "Skipping already existing target: ${{_LIB_NAME}}")
-            endif()
-            list(APPEND {name}_LIBRARIES_TARGETS{build_type_suffix} ${{_LIB_NAME}})
+            add_library(${{_LIB_NAME}} UNKNOWN IMPORTED)
+            set_target_properties(${{_LIB_NAME}} PROPERTIES IMPORTED_LOCATION ${{CONAN_FOUND_LIBRARY}})
+        else()
+            message(STATUS "Skipping already existing target: ${{_LIB_NAME}}")
         endif()
+        list(APPEND {name}_LIBRARIES_TARGETS{build_type_suffix} ${{_LIB_NAME}})
         message(STATUS "Found: ${{CONAN_FOUND_LIBRARY}}")
     else()
         message(STATUS "Library ${{_LIBRARY_NAME}} not found in package, might be system one")
@@ -87,3 +76,30 @@ foreach(_BUILD_MODULE_PATH ${{{name}_BUILD_MODULES_PATHS{build_type_suffix}}})
     include(${{_BUILD_MODULE_PATH}})
 endforeach()
 """
+
+
+class CMakeFindPackageCommonMacros:
+    cmake_minimum_required = textwrap.dedent("""
+        function(conan_cmake_minimum_required generator_name)
+            # Requires CMake > 3.0
+            if(${CMAKE_VERSION} VERSION_LESS "3.0")
+               message(FATAL_ERROR "The '${generator_name}' generator only works with CMake > 3.0" )
+            endif()
+        endfunction()
+    """)
+
+    apple_frameworks_macro = textwrap.dedent("""
+        macro(conan_find_apple_frameworks FRAMEWORKS_FOUND FRAMEWORKS)
+            if(APPLE)
+                foreach(_FRAMEWORK ${FRAMEWORKS})
+                    # https://cmake.org/pipermail/cmake-developers/2017-August/030199.html
+                    find_library(CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND NAME ${_FRAMEWORK} PATHS ${CONAN_FRAMEWORK_DIRS})
+                    if(CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND)
+                        list(APPEND ${FRAMEWORKS_FOUND} ${CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND})
+                    else()
+                        message(FATAL_ERROR "Framework library ${_FRAMEWORK} not found in paths: ${CONAN_FRAMEWORK_DIRS}")
+                    endif()
+                endforeach()
+            endif()
+        endmacro()
+    """)
