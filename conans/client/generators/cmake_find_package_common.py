@@ -20,7 +20,7 @@ set({name}_FRAMEWORKS{build_type_suffix} {deps.frameworks})
 set({name}_FRAMEWORKS_FOUND{build_type_suffix} "") # Will be filled later
 set({name}_BUILD_MODULES_PATHS{build_type_suffix} {deps.build_modules_paths})
 
-conan_find_apple_frameworks({name}_FRAMEWORKS_FOUND{build_type_suffix} "${{{name}_FRAMEWORKS{build_type_suffix}}}")
+conan_find_apple_frameworks({name}_FRAMEWORKS_FOUND{build_type_suffix} "${{{name}_FRAMEWORKS{build_type_suffix}}}" "${{{name}_FRAMEWORK_DIRS{build_type_suffix}}}")
 
 mark_as_advanced({name}_INCLUDE_DIRS{build_type_suffix}
                  {name}_INCLUDE_DIR{build_type_suffix}
@@ -69,15 +69,15 @@ class CMakeFindPackageCommonMacros:
     conan_message = CMakeCommonMacros.conan_message
 
     apple_frameworks_macro = textwrap.dedent("""
-        macro(conan_find_apple_frameworks FRAMEWORKS_FOUND FRAMEWORKS)
+        macro(conan_find_apple_frameworks FRAMEWORKS_FOUND FRAMEWORKS FRAMEWORKS_DIRS)
             if(APPLE)
                 foreach(_FRAMEWORK ${FRAMEWORKS})
                     # https://cmake.org/pipermail/cmake-developers/2017-August/030199.html
-                    find_library(CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND NAME ${_FRAMEWORK} PATHS ${CONAN_FRAMEWORK_DIRS})
+                    find_library(CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND NAME ${_FRAMEWORK} PATHS ${FRAMEWORKS_DIRS})
                     if(CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND)
                         list(APPEND ${FRAMEWORKS_FOUND} ${CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND})
                     else()
-                        message(FATAL_ERROR "Framework library ${_FRAMEWORK} not found in paths: ${CONAN_FRAMEWORK_DIRS}")
+                        message(FATAL_ERROR "Framework library ${_FRAMEWORK} not found in paths: ${FRAMEWORKS_DIRS}")
                     endif()
                 endforeach()
             endif()
