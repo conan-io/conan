@@ -128,6 +128,7 @@ endif()
                                               find_dependencies_block="\n".join(lines),
                                               target_props_block=targets_props)
 
-        return "\n".join([CMakeFindPackageCommonMacros.apple_frameworks_macro,
+        return "\n".join([CMakeFindPackageCommonMacros.conan_message,
+                          CMakeFindPackageCommonMacros.apple_frameworks_macro,
                           CMakeFindPackageCommonMacros.conan_package_library_targets,
                           tmp])

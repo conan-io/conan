@@ -1,5 +1,7 @@
 import textwrap
 
+from conans.client.generators.cmake_common import CMakeCommonMacros
+
 target_template = """
 set({name}_INCLUDE_DIRS{build_type_suffix} {deps.include_paths})
 set({name}_INCLUDE_DIR{build_type_suffix} {deps.include_path})
@@ -34,6 +36,14 @@ mark_as_advanced({name}_INCLUDE_DIRS{build_type_suffix}
 # Find the real .lib/.a and add them to {name}_LIBS and {name}_LIBRARY_LIST
 set({name}_LIBRARY_LIST{build_type_suffix} {deps.libs})
 set({name}_LIB_DIRS{build_type_suffix} {deps.lib_paths})
+
+# conan_package_library_targets("${{{name}_LIBRARY_LIST{build_type_suffix}}}"  # libraries
+#                               "${{{name}_LIB_DIRS{build_type_suffix}}}"      # package_libdir
+#                               {name}_LIBRARIES{build_type_suffix}            # out_libraries
+#                               {name}_LIBRARIES_TARGETS{build_type_suffix}    # out_libraries_targets
+#                               "{build_type_suffix}"                          # build_type
+#                               "{name}")                                      # package_name
+
 foreach(_LIBRARY_NAME ${{{name}_LIBRARY_LIST{build_type_suffix}}})
     unset(CONAN_FOUND_LIBRARY CACHE)
     find_library(CONAN_FOUND_LIBRARY NAME ${{_LIBRARY_NAME}} PATHS ${{{name}_LIB_DIRS{build_type_suffix}}}
@@ -59,6 +69,7 @@ foreach(_LIBRARY_NAME ${{{name}_LIBRARY_LIST{build_type_suffix}}})
         list(APPEND {name}_LIBRARIES{build_type_suffix} ${{_LIBRARY_NAME}})
     endif()
 endforeach()
+
 set({name}_LIBS{build_type_suffix} ${{{name}_LIBRARIES{build_type_suffix}}})
 
 foreach(_FRAMEWORK ${{{name}_FRAMEWORKS_FOUND{build_type_suffix}}})
@@ -81,6 +92,8 @@ endforeach()
 
 
 class CMakeFindPackageCommonMacros:
+    conan_message = CMakeCommonMacros.conan_message
+
     apple_frameworks_macro = textwrap.dedent("""
         macro(conan_find_apple_frameworks FRAMEWORKS_FOUND FRAMEWORKS)
             if(APPLE)
@@ -98,27 +111,33 @@ class CMakeFindPackageCommonMacros:
     """)
 
     conan_package_library_targets = textwrap.dedent("""
-        function(conan_package_library_targets libraries package_libdir libraries_abs_path deps build_type package_name)
+        function(conan_package_library_targets libraries package_libdir out_libraries out_libraries_target build_type package_name)
             foreach(_LIBRARY_NAME ${libraries})
                 unset(CONAN_FOUND_LIBRARY CACHE)
                 find_library(CONAN_FOUND_LIBRARY NAME ${_LIBRARY_NAME} PATHS ${package_libdir}
                              NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
                 if(CONAN_FOUND_LIBRARY)
                     conan_message(STATUS "Library ${_LIBRARY_NAME} found ${CONAN_FOUND_LIBRARY}")
-                    
-                    set(_LIB_NAME CONAN_LIB::${package_name}_${_LIBRARY_NAME}${build_type})
-                    add_library(${_LIB_NAME} UNKNOWN IMPORTED)
-                    set_target_properties(${_LIB_NAME} PROPERTIES IMPORTED_LOCATION ${CONAN_FOUND_LIBRARY})
-                    string(REPLACE " " ";" deps_list "${deps}")
-                    set_property(TARGET ${_LIB_NAME} PROPERTY INTERFACE_LINK_LIBRARIES ${deps_list})
-                    set(CONAN_FULLPATH_LIBS ${CONAN_FULLPATH_LIBS} ${_LIB_NAME})
+                    list(APPEND ${out_libraries} ${CONAN_FOUND_LIBRARY})
+                    if(NOT ${CMAKE_VERSION} VERSION_LESS "3.0")
+                        # Create a micro-target for each lib/a found
+                        set(_LIB_NAME CONAN_LIB::${package_name}_${_LIBRARY_NAME}${build_type})
+                        if(NOT TARGET ${_LIB_NAME})
+                            # Create a micro-target for each lib/a found
+                            add_library(${_LIB_NAME} UNKNOWN IMPORTED)
+                            set_target_properties(${_LIB_NAME} PROPERTIES IMPORTED_LOCATION ${CONAN_FOUND_LIBRARY})
+                        else()
+                            conan_message(STATUS "Skipping already existing target: ${_LIB_NAME}")
+                        endif()
+                        list(APPEND ${out_libraries_target} ${_LIB_NAME})
+                    endif()
+                    conan_message(STATUS "Found: ${CONAN_FOUND_LIBRARY}")
                 else()
                     conan_message(STATUS "Library ${_LIBRARY_NAME} not found in package, might be system one")
-                    
-                    set(CONAN_FULLPATH_LIBS ${CONAN_FULLPATH_LIBS} ${_LIBRARY_NAME})
+                    list(APPEND ${out_libraries_target} ${_LIBRARY_NAME})
+                    list(APPEND ${out_libraries} ${_LIBRARY_NAME})
                 endif()
             endforeach()
             unset(CONAN_FOUND_LIBRARY CACHE)
-            set(${libraries_abs_path} ${CONAN_FULLPATH_LIBS} PARENT_SCOPE)
         endfunction()
     """)
