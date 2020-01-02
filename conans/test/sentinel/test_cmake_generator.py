@@ -57,7 +57,7 @@ class CMakeGeneratorSentinel(unittest.TestCase):
         # Remove this TestCase in v1.22
         self.assertEqual(semver.compare(__version__, "1.22.0", loose=False), -1, "Remove this TestCase")
 
-    def _generate_conanfile(self):
+    def _generate_conanfile(self, with_names=None):
         conanfile = ConanFile(TestBufferConanOutput(), None)
         settings = _MockSettings()
         settings.build_type = "Debug"
@@ -66,6 +66,8 @@ class CMakeGeneratorSentinel(unittest.TestCase):
         ref = ConanFileReference.loads("my_pkg/0.1@lasote/stables")
         cpp_info = CppInfo("dummy_root_folder1")
         cpp_info.name = "alternate_name"
+        if with_names:
+            cpp_info.names[with_names] = "alternate_name"
         conanfile.deps_cpp_info.update(cpp_info, ref.name)
         return conanfile
 
@@ -78,6 +80,20 @@ class CMakeGeneratorSentinel(unittest.TestCase):
 
     def test_cmake_multi_generator(self):
         conanfile = self._generate_conanfile()
+        generator = CMakeMultiGenerator(conanfile)
+        content = generator.content['conanbuildinfo_multi.cmake']
+        self.assertIn("CONAN_PKG::alternate_name", content)
+        self.assertNotIn("CONAN_PKG::my_pkg", content)
+
+    def test_cmake_generator_with_names(self):
+        conanfile = self._generate_conanfile(with_names='cmake')
+        generator = CMakeGenerator(conanfile)
+        content = generator.content
+        self.assertIn("CONAN_PKG::alternate_name", content)
+        self.assertNotIn("CONAN_PKG::my_pkg", content)
+
+    def test_cmake_multi_generator_with_names(self):
+        conanfile = self._generate_conanfile(with_names='cmake_multi')
         generator = CMakeMultiGenerator(conanfile)
         content = generator.content['conanbuildinfo_multi.cmake']
         self.assertIn("CONAN_PKG::alternate_name", content)
