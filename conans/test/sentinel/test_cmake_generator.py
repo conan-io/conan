@@ -43,6 +43,8 @@ class CMakeGeneratorSentinel(unittest.TestCase):
         In v1.21.1 we introduced a workaround to bypass the `cpp_info.name` for the `cmake` generator, that
         behavior should be reverted and the recipes in `conan-center-index` should be fixed.
 
+        *** These tests HAVE TO pass in v1.22 ***
+
         Rationale
         https://github.com/conan-io/conan/issues/6269#issuecomment-570182130
 
