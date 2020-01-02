@@ -13,6 +13,10 @@ from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestBufferConanOutput
 
 
+# More info: https://github.com/conan-io/conan/pull/6292
+assert semver.compare(__version__, "1.22.0", loose=False) == -1, "File to be removed in v1.22 (tests should pass)"
+
+
 class _MockSettings(object):
     build_type = None
     os = None
