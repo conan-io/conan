@@ -50,7 +50,6 @@ from conans.client.tools.env import environment_append
 from conans.client.userio import UserIO
 from conans.errors import (ConanException, RecipeNotFoundException,
                            PackageNotFoundException, NoRestV2Available, NotFoundException)
-from conans.model.conan_file import get_env_context_manager
 from conans.model.editable_layout import get_editable_abs_path
 from conans.model.graph_info import GraphInfo, GRAPH_INFO_FILE
 from conans.model.graph_lock import GraphLockFile, LOCKFILE
@@ -168,8 +167,7 @@ class ConanApp(object):
         self.requester = ConanRequester(self.config, http_requester)
         # To handle remote connections
         artifacts_properties = self.cache.read_artifacts_properties()
-        rest_client_factory = RestApiClientFactory(self.out, self.requester,
-                                                   revisions_enabled=self.config.revisions_enabled,
+        rest_client_factory = RestApiClientFactory(self.out, self.requester, self.config,
                                                    artifacts_properties=artifacts_properties)
         # To store user and token
         localdb = LocalDB.create(self.cache.localdb)
@@ -179,7 +177,7 @@ class ConanApp(object):
         self.remote_manager = RemoteManager(self.cache, auth_manager, self.out, self.hook_manager)
 
         # Adjust global tool variables
-        set_global_instances(self.out, self.requester)
+        set_global_instances(self.out, self.requester, self.config)
 
         self.runner = runner or ConanRunner(self.config.print_commands_to_output,
                                             self.config.generate_run_log_file,
