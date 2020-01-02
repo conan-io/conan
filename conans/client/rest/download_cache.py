@@ -46,6 +46,6 @@ class CachedFileDownloader(object):
         url = urljoin(*urltokens[0:2])
         if checksum is not None:
             url += checksum
-        h = sha256(url)
+        h = sha256(url.encode())
         return h
 
