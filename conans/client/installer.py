@@ -207,8 +207,8 @@ class _PackageBuilder(object):
                             self._build(conanfile, pref, build_folder)
                         clean_dirty(build_folder)
 
-                    prev = self._package(conanfile, pref, package_layout, conanfile_path, build_folder,
-                                         package_folder)
+                    prev = self._package(conanfile, pref, package_layout, conanfile_path,
+                                         build_folder, package_folder)
                     assert prev
                     node.prev = prev
                     log_file = os.path.join(build_folder, RUN_LOG_NAME)

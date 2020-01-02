@@ -6,7 +6,7 @@ from six import StringIO
 
 import conans
 from conans import __version__ as client_version
-from conans.client import packager, tools
+from conans.client import packager
 from conans.client.cache.cache import ClientCache
 from conans.client.cmd.build import cmd_build
 from conans.client.cmd.create import create
@@ -46,6 +46,7 @@ from conans.client.rest.rest_client import RestApiClientFactory
 from conans.client.runner import ConanRunner
 from conans.client.source import config_source_local
 from conans.client.store.localdb import LocalDB
+from conans.client.tools.env import environment_append
 from conans.client.userio import UserIO
 from conans.errors import (ConanException, RecipeNotFoundException,
                            PackageNotFoundException, NoRestV2Available, NotFoundException)
@@ -76,7 +77,7 @@ def api_method(f):
         try:
             api.create_app(quiet_output=quiet_output)
             log_command(f.__name__, kwargs)
-            with tools.environment_append(api.app.cache.config.env_vars):
+            with environment_append(api.app.cache.config.env_vars):
                 return f(api, *args, **kwargs)
         except Exception as exc:
             if quiet_output:
