@@ -226,7 +226,6 @@ class CMakeCommonMacros:
                     set(CONAN_FULLPATH_LIBS ${CONAN_FULLPATH_LIBS} ${_LIBRARY_NAME})
                 endif()
             endforeach()
-            unset(CONAN_FOUND_LIBRARY CACHE)
             set(${libraries_abs_path} ${CONAN_FULLPATH_LIBS} PARENT_SCOPE)
         endfunction()
     """)
