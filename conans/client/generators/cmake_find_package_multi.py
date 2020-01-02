@@ -127,4 +127,5 @@ endif()
 
         return "\n".join([CMakeFindPackageCommonMacros.cmake_minimum_required,
                           CMakeFindPackageCommonMacros.apple_frameworks_macro,
+                          CMakeFindPackageMultiGenerator.conan_package_library_targets,
                           tmp])

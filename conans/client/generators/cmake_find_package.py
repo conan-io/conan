@@ -77,7 +77,8 @@ endif()
                                    assign_target_properties_block=target_props,
                                    macros_and_functions="\n".join([
                                        CMakeFindPackageCommonMacros.cmake_minimum_required,
-                                       CMakeFindPackageCommonMacros.apple_frameworks_macro
+                                       CMakeFindPackageCommonMacros.apple_frameworks_macro,
+                                       CMakeFindPackageCommonMacros.conan_package_library_targets,
                                    ]))
         return tmp
 
