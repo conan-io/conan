@@ -1,6 +1,7 @@
 import os
 import shutil
-from urlparse import urlsplit, urljoin
+
+from six.moves.urllib_parse import urlsplit, urljoin
 
 from conans.util.files import mkdir
 from conans.util.locks import SimpleLock
@@ -15,7 +16,7 @@ class CachedFileDownloader(object):
 
     def download(self, url, file_path=None, auth=None, retry=None, retry_wait=None, overwrite=False,
                  headers=None, checksum=None):
-        """ compatible interface + checksum
+        """ compatible interface of FileDownloader + checksum
         """
         h = self._get_hash(url, checksum)
         lock = os.path.join(self._cache_folder, "locks", h)
@@ -34,6 +35,13 @@ class CachedFileDownloader(object):
 
     @staticmethod
     def _get_hash(url, checksum=None):
+        """ For Api V2, the cached downloads always have recipe and package REVISIONS in the URL,
+        making them immutable, and perfect for cached downloads of artifacts. For V2 checksum
+        will always be None.
+        For ApiV1, the checksum is obtained from the server via "get_snapshot()" methods, but
+        the URL in the apiV1 contains the signature=xxx for signed urls, but that can change,
+        so better strip it from the URL before the hash
+        """
         urltokens = urlsplit(url)
         url = urljoin(*urltokens[0:2])
         if checksum is not None:
