@@ -37,38 +37,12 @@ mark_as_advanced({name}_INCLUDE_DIRS{build_type_suffix}
 set({name}_LIBRARY_LIST{build_type_suffix} {deps.libs})
 set({name}_LIB_DIRS{build_type_suffix} {deps.lib_paths})
 
-# conan_package_library_targets("${{{name}_LIBRARY_LIST{build_type_suffix}}}"  # libraries
-#                               "${{{name}_LIB_DIRS{build_type_suffix}}}"      # package_libdir
-#                               {name}_LIBRARIES{build_type_suffix}            # out_libraries
-#                               {name}_LIBRARIES_TARGETS{build_type_suffix}    # out_libraries_targets
-#                               "{build_type_suffix}"                          # build_type
-#                               "{name}")                                      # package_name
-
-foreach(_LIBRARY_NAME ${{{name}_LIBRARY_LIST{build_type_suffix}}})
-    unset(CONAN_FOUND_LIBRARY CACHE)
-    find_library(CONAN_FOUND_LIBRARY NAME ${{_LIBRARY_NAME}} PATHS ${{{name}_LIB_DIRS{build_type_suffix}}}
-                 NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
-    if(CONAN_FOUND_LIBRARY)
-        list(APPEND {name}_LIBRARIES{build_type_suffix} ${{CONAN_FOUND_LIBRARY}})
-        if(NOT ${{CMAKE_VERSION}} VERSION_LESS "3.0")
-            # Create a micro-target for each lib/a found
-            set(_LIB_NAME CONAN_LIB::{name}_${{_LIBRARY_NAME}}{build_type_suffix})
-            if(NOT TARGET ${{_LIB_NAME}})
-                # Create a micro-target for each lib/a found
-                add_library(${{_LIB_NAME}} UNKNOWN IMPORTED)
-                set_target_properties(${{_LIB_NAME}} PROPERTIES IMPORTED_LOCATION ${{CONAN_FOUND_LIBRARY}})
-            else()
-                message(STATUS "Skipping already existing target: ${{_LIB_NAME}}")
-            endif()
-            list(APPEND {name}_LIBRARIES_TARGETS{build_type_suffix} ${{_LIB_NAME}})
-        endif()
-        message(STATUS "Found: ${{CONAN_FOUND_LIBRARY}}")
-    else()
-        message(STATUS "Library ${{_LIBRARY_NAME}} not found in package, might be system one")
-        list(APPEND {name}_LIBRARIES_TARGETS{build_type_suffix} ${{_LIBRARY_NAME}})
-        list(APPEND {name}_LIBRARIES{build_type_suffix} ${{_LIBRARY_NAME}})
-    endif()
-endforeach()
+conan_package_library_targets("${{{name}_LIBRARY_LIST{build_type_suffix}}}"  # libraries
+                              "${{{name}_LIB_DIRS{build_type_suffix}}}"      # package_libdir
+                              {name}_LIBRARIES{build_type_suffix}            # out_libraries
+                              {name}_LIBRARIES_TARGETS{build_type_suffix}    # out_libraries_targets
+                              "{build_type_suffix}"                          # build_type
+                              "{name}")                                      # package_name
 
 set({name}_LIBS{build_type_suffix} ${{{name}_LIBRARIES{build_type_suffix}}})
 
@@ -118,7 +92,7 @@ class CMakeFindPackageCommonMacros:
                              NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
                 if(CONAN_FOUND_LIBRARY)
                     conan_message(STATUS "Library ${_LIBRARY_NAME} found ${CONAN_FOUND_LIBRARY}")
-                    list(APPEND ${out_libraries} ${CONAN_FOUND_LIBRARY})
+                    list(APPEND _out_libraries ${CONAN_FOUND_LIBRARY})
                     if(NOT ${CMAKE_VERSION} VERSION_LESS "3.0")
                         # Create a micro-target for each lib/a found
                         set(_LIB_NAME CONAN_LIB::${package_name}_${_LIBRARY_NAME}${build_type})
@@ -129,15 +103,17 @@ class CMakeFindPackageCommonMacros:
                         else()
                             conan_message(STATUS "Skipping already existing target: ${_LIB_NAME}")
                         endif()
-                        list(APPEND ${out_libraries_target} ${_LIB_NAME})
+                        list(APPEND _out_libraries_target ${_LIB_NAME})
                     endif()
                     conan_message(STATUS "Found: ${CONAN_FOUND_LIBRARY}")
                 else()
                     conan_message(STATUS "Library ${_LIBRARY_NAME} not found in package, might be system one")
-                    list(APPEND ${out_libraries_target} ${_LIBRARY_NAME})
-                    list(APPEND ${out_libraries} ${_LIBRARY_NAME})
+                    list(APPEND _out_libraries_target ${_LIBRARY_NAME})
+                    list(APPEND _out_libraries ${_LIBRARY_NAME})
                 endif()
             endforeach()
             unset(CONAN_FOUND_LIBRARY CACHE)
+            set(${out_libraries} ${_out_libraries} PARENT_SCOPE)
+            set(${out_libraries_target} ${_out_libraries_target} PARENT_SCOPE)
         endfunction()
     """)
