@@ -1,7 +1,7 @@
 import os
 import shutil
 
-from six.moves.urllib_parse import urlsplit, urljoin
+from six.moves.urllib_parse import urlsplit, urlunsplit
 
 from conans.util.files import mkdir
 from conans.util.locks import SimpleLock
@@ -43,7 +43,8 @@ class CachedFileDownloader(object):
         so better strip it from the URL before the hash
         """
         urltokens = urlsplit(url)
-        url = urljoin(*urltokens[0:2])
+        # append empty query and fragment before unsplit
+        url = urlunsplit(urltokens[0:3]+("", ""))
         if checksum is not None:
             url += checksum
         h = sha256(url.encode())
