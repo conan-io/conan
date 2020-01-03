@@ -55,9 +55,6 @@ class LinkOrderTest(unittest.TestCase):
         int main() {return 0;}
     """)
 
-    _expected_link_order = ['liblibD.a', 'libD2.a', 'liblibB.a', 'libB2.a', 'liblibC.a', 'libC2.a',
-                            'liblibA.a', 'libA2.a', 'pthread', 'm']
-
     @classmethod
     def setUpClass(cls):
         libA_ref = ConanFileReference.loads("libA/version")
@@ -90,6 +87,15 @@ class LinkOrderTest(unittest.TestCase):
         t.run("create libB")
         t.run("create libC")
         t.run("create libD")
+
+    def _validate_link_order(self, libs):
+        # These are the first libraries and order is mandatory
+        mandatory = ['liblibD.a', 'libD2.a', 'liblibB.a', 'libB2.a', 'liblibC.a', 'libC2.a', 'liblibA.a', 'libA2.a',]
+        self.assertListEqual(mandatory, libs[:len(mandatory)])
+
+        # These libraries must be at the end, and the order is not mandatory
+        any_order = {'pthread', 'm'}
+        self.assertSetEqual(set(libs[len(mandatory):]), any_order)
 
     @staticmethod
     def _get_link_order_from_cmake(content):
@@ -184,6 +190,7 @@ class LinkOrderTest(unittest.TestCase):
         else:
             t.run_command("cmake . {} -DCMAKE_VERBOSE_MAKEFILE:BOOL=True"
                           " -DCMAKE_BUILD_TYPE=Release".format(extra_cmake))
+
             t.run_command("cmake --build .")
             # Get the actual link order from the CMake call
             libs = self._get_link_order_from_cmake(str(t.out))
@@ -196,7 +203,7 @@ class LinkOrderTest(unittest.TestCase):
 
         t = self._create_find_package_project(multi=True)
         libs = self._run_and_get_lib_order(t, generator, find_package_config=True)
-        self.assertListEqual(self._expected_link_order, libs)
+        self._validate_link_order(libs)
 
     @parameterized.expand([(None,), ("Xcode",)])
     def test_cmake_find_package(self, generator):
@@ -205,7 +212,7 @@ class LinkOrderTest(unittest.TestCase):
 
         t = self._create_find_package_project(multi=False)
         libs = self._run_and_get_lib_order(t, generator)
-        self.assertListEqual(self._expected_link_order, libs)
+        self._validate_link_order(libs)
 
     @parameterized.expand([(None,), ("Xcode",)])
     def test_cmake(self, generator):
@@ -214,7 +221,7 @@ class LinkOrderTest(unittest.TestCase):
 
         t = self._create_cmake_project(multi=False)
         libs = self._run_and_get_lib_order(t, generator)
-        self.assertListEqual(self._expected_link_order, libs)
+        self._validate_link_order(libs)
 
     @parameterized.expand([(None,), ("Xcode",)])
     def test_cmake_multi(self, generator):
@@ -223,4 +230,4 @@ class LinkOrderTest(unittest.TestCase):
 
         t = self._create_cmake_project(multi=True)
         libs = self._run_and_get_lib_order(t, generator)
-        self.assertListEqual(self._expected_link_order, libs)
+        self._validate_link_order(libs)
