@@ -172,22 +172,29 @@ class LinkOrderTest(unittest.TestCase):
         t.save({"conanbuildinfo_debug.cmake": "# just be there"})
         return t
 
-    @parameterized.expand([(None,), ("Xcode",)])
-    def test_find_package_multi(self, generator):
-        if generator == "Xcode" and platform.system() != "Darwin":
-            self.skipTest("Xcode is needed")
-
-        t = self._create_find_package_project(multi=True)
+    def _run_and_get_lib_order(self, t, generator, find_package_config=False):
+        extra_cmake = "-DCMAKE_PREFIX_PATH=." if find_package_config else "-DCMAKE_MODULE_PATH=."
         if generator == "Xcode":
-            t.run_command("cmake . -G Xcode -DCMAKE_PREFIX_PATH=. -DCMAKE_VERBOSE_MAKEFILE:BOOL=True")
+            t.run_command("cmake . -G Xcode {} -DCMAKE_VERBOSE_MAKEFILE:BOOL=True"
+                          " -DCMAKE_CONFIGURATION_TYPES=Release".format(extra_cmake))
             t.run_command("cmake --build .")
             # Get the actual link order from the CMake call
             libs = self._get_link_order_from_xcode(t.load(os.path.join('executable.xcodeproj', 'project.pbxproj')))
         else:
-            t.run_command("cmake . -DCMAKE_PREFIX_PATH=. -DCMAKE_VERBOSE_MAKEFILE:BOOL=True -DCMAKE_BUILD_TYPE=Release")
+            t.run_command("cmake . {} -DCMAKE_VERBOSE_MAKEFILE:BOOL=True"
+                          " -DCMAKE_BUILD_TYPE=Release".format(extra_cmake))
             t.run_command("cmake --build .")
             # Get the actual link order from the CMake call
             libs = self._get_link_order_from_cmake(str(t.out))
+        return libs
+
+    @parameterized.expand([(None,), ("Xcode",)])
+    def test_cmake_find_package_multi(self, generator):
+        if generator == "Xcode" and platform.system() != "Darwin":
+            self.skipTest("Xcode is needed")
+
+        t = self._create_find_package_project(multi=True)
+        libs = self._run_and_get_lib_order(t, generator, find_package_config=True)
         self.assertListEqual(self._expected_link_order, libs)
 
     @parameterized.expand([(None,), ("Xcode",)])
@@ -196,17 +203,7 @@ class LinkOrderTest(unittest.TestCase):
             self.skipTest("Xcode is needed")
 
         t = self._create_find_package_project(multi=False)
-        if generator == "Xcode":
-            t.run_command("cmake . -G Xcode -DCMAKE_MODULE_PATH=. -DCMAKE_VERBOSE_MAKEFILE:BOOL=True"
-                          " -DCMAKE_CONFIGURATION_TYPES=Release")
-            t.run_command("cmake --build .")
-            # Get the actual link order from the CMake call
-            libs = self._get_link_order_from_xcode(t.load(os.path.join('executable.xcodeproj', 'project.pbxproj')))
-        else:
-            t.run_command("cmake . -DCMAKE_MODULE_PATH=. -DCMAKE_VERBOSE_MAKEFILE:BOOL=True")
-            t.run_command("cmake --build .")
-            # Get the actual link order from the CMake call
-            libs = self._get_link_order_from_cmake(str(t.out))
+        libs = self._run_and_get_lib_order(t, generator)
         self.assertListEqual(self._expected_link_order, libs)
 
     @parameterized.expand([(None,), ("Xcode",)])
@@ -215,17 +212,7 @@ class LinkOrderTest(unittest.TestCase):
             self.skipTest("Xcode is needed")
 
         t = self._create_cmake_project(multi=False)
-        if generator == "Xcode":
-            t.run_command("cmake . -G Xcode -DCMAKE_MODULE_PATH=. -DCMAKE_VERBOSE_MAKEFILE:BOOL=True"
-                          " -DCMAKE_CONFIGURATION_TYPES=Release")
-            t.run_command("cmake --build .")
-            # Get the actual link order from the CMake call
-            libs = self._get_link_order_from_xcode(t.load(os.path.join('executable.xcodeproj', 'project.pbxproj')))
-        else:
-            t.run_command("cmake . -DCMAKE_MODULE_PATH=. -DCMAKE_VERBOSE_MAKEFILE:BOOL=True")
-            t.run_command("cmake --build .")
-            # Get the actual link order from the CMake call
-            libs = self._get_link_order_from_cmake(str(t.out))
+        libs = self._run_and_get_lib_order(t, generator)
         self.assertListEqual(self._expected_link_order, libs)
 
     @parameterized.expand([(None,), ("Xcode",)])
@@ -234,15 +221,5 @@ class LinkOrderTest(unittest.TestCase):
             self.skipTest("Xcode is needed")
 
         t = self._create_cmake_project(multi=True)
-        if generator == "Xcode":
-            t.run_command("cmake . -G Xcode -DCMAKE_MODULE_PATH=. -DCMAKE_VERBOSE_MAKEFILE:BOOL=True"
-                          " -DCMAKE_CONFIGURATION_TYPES=Release")
-            t.run_command("cmake --build .")
-            # Get the actual link order from the CMake call
-            libs = self._get_link_order_from_xcode(t.load(os.path.join('executable.xcodeproj', 'project.pbxproj')))
-        else:
-            t.run_command("cmake . -G Xcode -DCMAKE_MODULE_PATH=. -DCMAKE_VERBOSE_MAKEFILE:BOOL=True")
-            t.run_command("cmake --build .")
-            # Get the actual link order from the CMake call
-            libs = self._get_link_order_from_xcode(t.load(os.path.join('executable.xcodeproj', 'project.pbxproj')))
+        libs = self._run_and_get_lib_order(t, generator)
         self.assertListEqual(self._expected_link_order, libs)
