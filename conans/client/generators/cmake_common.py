@@ -157,7 +157,8 @@ _target_template = """
                                                                  $<$<CONFIG:Release>:${{CONAN_PACKAGE_TARGETS_{uname}_RELEASE}} ${{CONAN_SHARED_LINKER_FLAGS_{uname}_RELEASE_LIST}} ${{CONAN_EXE_LINKER_FLAGS_{uname}_RELEASE_LIST}}>
                                                                  $<$<CONFIG:RelWithDebInfo>:${{CONAN_PACKAGE_TARGETS_{uname}_RELWITHDEBINFO}} ${{CONAN_SHARED_LINKER_FLAGS_{uname}_RELWITHDEBINFO_LIST}} ${{CONAN_EXE_LINKER_FLAGS_{uname}_RELWITHDEBINFO_LIST}}>
                                                                  $<$<CONFIG:MinSizeRel>:${{CONAN_PACKAGE_TARGETS_{uname}_MINSIZEREL}} ${{CONAN_SHARED_LINKER_FLAGS_{uname}_MINSIZEREL_LIST}} ${{CONAN_EXE_LINKER_FLAGS_{uname}_MINSIZEREL_LIST}}>
-                                                                 $<$<CONFIG:Debug>:${{CONAN_PACKAGE_TARGETS_{uname}_DEBUG}} ${{CONAN_SHARED_LINKER_FLAGS_{uname}_DEBUG_LIST}} ${{CONAN_EXE_LINKER_FLAGS_{uname}_DEBUG_LIST}}>)
+                                                                 $<$<CONFIG:Debug>:${{CONAN_PACKAGE_TARGETS_{uname}_DEBUG}} ${{CONAN_SHARED_LINKER_FLAGS_{uname}_DEBUG_LIST}} ${{CONAN_EXE_LINKER_FLAGS_{uname}_DEBUG_LIST}}>
+                                                                 {deps})
     set_property(TARGET {name} PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${{CONAN_INCLUDE_DIRS_{uname}}}
                                                                       $<$<CONFIG:Release>:${{CONAN_INCLUDE_DIRS_{uname}_RELEASE}}>
                                                                       $<$<CONFIG:RelWithDebInfo>:${{CONAN_INCLUDE_DIRS_{uname}_RELWITHDEBINFO}}>
