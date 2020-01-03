@@ -56,7 +56,7 @@ class LinkOrderTest(unittest.TestCase):
     """)
 
     _expected_link_order = ['liblibD.a', 'libD2.a', 'liblibB.a', 'libB2.a', 'liblibC.a', 'libC2.a',
-                            'liblibA.a', 'libA2.a', 'm', 'pthread']
+                            'liblibA.a', 'libA2.a', 'pthread', 'm']
 
     @classmethod
     def setUpClass(cls):
