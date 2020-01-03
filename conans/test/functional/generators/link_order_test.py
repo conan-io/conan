@@ -120,19 +120,16 @@ class LinkOrderTest(unittest.TestCase):
                         libs.append(libname.strip('";'))
         return libs
 
-    @parameterized.expand([(None,), ("Xcode",)])
-    def test_find_package_multi(self, generator):
-        if generator == "Xcode" and platform.system() != "Darwin":
-            self.skipTest("Xcode is needed")
-
+    def _create_find_package_project(self, multi):
+        generator = "cmake_find_package_multi" if multi else "cmake_find_package"
         t = TestClient(cache_folder=self._cache_folder)
         t.save({
             'conanfile.txt': textwrap.dedent("""
                 [requires]
                 libD/version
                 [generators]
-                cmake_find_package_multi
-                """),
+                {}
+                """.format(generator)),
             'CMakeLists.txt': textwrap.dedent("""
                 cmake_minimum_required(VERSION 2.8.12)
                 project(executable CXX)
@@ -145,6 +142,42 @@ class LinkOrderTest(unittest.TestCase):
         })
 
         t.run("install . -s build_type=Release")
+        return t
+
+    def _create_cmake_project(self, multi):
+        generator = "cmake_multi" if multi else "cmake"
+        include_cmake_file = "conanbuildinfo_multi" if multi else "conanbuildinfo"
+        t = TestClient(cache_folder=self._cache_folder)
+        t.save({
+            'conanfile.txt': textwrap.dedent("""
+                [requires]
+                libD/version
+                [generators]
+                {}
+                """.format(generator)),
+            'CMakeLists.txt': textwrap.dedent("""
+                cmake_minimum_required(VERSION 2.8.12)
+                project(executable CXX)
+
+                include(${{CMAKE_BINARY_DIR}}/{}.cmake)
+                conan_basic_setup(TARGETS NO_OUTPUT_DIRS)
+
+                add_executable(example main.cpp)
+                target_link_libraries(example CONAN_PKG::libD)
+                """.format(include_cmake_file)),
+            'main.cpp': self.main_cpp
+        })
+
+        t.run("install . -s build_type=Release")
+        t.save({"conanbuildinfo_debug.cmake": "# just be there"})
+        return t
+
+    @parameterized.expand([(None,), ("Xcode",)])
+    def test_find_package_multi(self, generator):
+        if generator == "Xcode" and platform.system() != "Darwin":
+            self.skipTest("Xcode is needed")
+
+        t = self._create_find_package_project(multi=True)
         if generator == "Xcode":
             t.run_command("cmake . -G Xcode -DCMAKE_PREFIX_PATH=. -DCMAKE_VERBOSE_MAKEFILE:BOOL=True")
             t.run_command("cmake --build .")
@@ -162,26 +195,7 @@ class LinkOrderTest(unittest.TestCase):
         if generator == "Xcode" and platform.system() != "Darwin":
             self.skipTest("Xcode is needed")
 
-        t = TestClient(cache_folder=self._cache_folder)
-        t.save({
-            'conanfile.txt': textwrap.dedent("""
-                [requires]
-                libD/version
-                [generators]
-                cmake_find_package
-                """),
-            'CMakeLists.txt': textwrap.dedent("""
-                cmake_minimum_required(VERSION 2.8.12)
-                project(executable CXX)
-
-                find_package(libD)
-                add_executable(example main.cpp)
-                target_link_libraries(example libD::libD)
-                """),
-            'main.cpp': self.main_cpp
-        })
-
-        t.run("install .")
+        t = self._create_find_package_project(multi=False)
         if generator == "Xcode":
             t.run_command("cmake . -G Xcode -DCMAKE_MODULE_PATH=. -DCMAKE_VERBOSE_MAKEFILE:BOOL=True"
                           " -DCMAKE_CONFIGURATION_TYPES=Release")
@@ -200,28 +214,7 @@ class LinkOrderTest(unittest.TestCase):
         if generator == "Xcode" and platform.system() != "Darwin":
             self.skipTest("Xcode is needed")
 
-        t = TestClient(cache_folder=self._cache_folder)
-        t.save({
-            'conanfile.txt': textwrap.dedent("""
-                [requires]
-                libD/version
-                [generators]
-                cmake
-                """),
-            'CMakeLists.txt': textwrap.dedent("""
-                cmake_minimum_required(VERSION 2.8.12)
-                project(executable CXX)
-
-                include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-                conan_basic_setup(TARGETS NO_OUTPUT_DIRS)
-                
-                add_executable(example main.cpp)
-                target_link_libraries(example CONAN_PKG::libD)
-                """),
-            'main.cpp': self.main_cpp
-        })
-
-        t.run("install .")
+        t = self._create_cmake_project(multi=False)
         if generator == "Xcode":
             t.run_command("cmake . -G Xcode -DCMAKE_MODULE_PATH=. -DCMAKE_VERBOSE_MAKEFILE:BOOL=True"
                           " -DCMAKE_CONFIGURATION_TYPES=Release")
@@ -240,29 +233,7 @@ class LinkOrderTest(unittest.TestCase):
         if generator == "Xcode" and platform.system() != "Darwin":
             self.skipTest("Xcode is needed")
 
-        t = TestClient(cache_folder=self._cache_folder)
-        t.save({
-            'conanfile.txt': textwrap.dedent("""
-                [requires]
-                libD/version
-                [generators]
-                cmake_multi
-                """),
-            'CMakeLists.txt': textwrap.dedent("""
-                cmake_minimum_required(VERSION 2.8.12)
-                project(executable CXX)
-
-                include(${CMAKE_BINARY_DIR}/conanbuildinfo_multi.cmake)
-                conan_basic_setup(TARGETS)
-
-                add_executable(example main.cpp)
-                target_link_libraries(example CONAN_PKG::libD)
-                """),
-            'main.cpp': self.main_cpp
-        })
-
-        t.run("install . -s build_type=Release")
-        t.save({"conanbuildinfo_debug.cmake": "# just be there"})
+        t = self._create_cmake_project(multi=True)
         if generator == "Xcode":
             t.run_command("cmake . -G Xcode -DCMAKE_MODULE_PATH=. -DCMAKE_VERBOSE_MAKEFILE:BOOL=True"
                           " -DCMAKE_CONFIGURATION_TYPES=Release")
