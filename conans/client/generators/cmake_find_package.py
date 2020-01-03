@@ -21,7 +21,7 @@ assign_target_properties = """
         if({name}_INCLUDE_DIRS)
           set_target_properties({name}::{name} PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${{{name}_INCLUDE_DIRS}}")
         endif()
-        set_property(TARGET {name}::{name} PROPERTY INTERFACE_LINK_LIBRARIES ${{{name}_LIBRARIES_TARGETS}} "${{{name}_LINKER_FLAGS_LIST}}")
+        set_property(TARGET {name}::{name} PROPERTY INTERFACE_LINK_LIBRARIES "${{{name}_LIBRARIES_TARGETS}};{deps_names};${{{name}_LINKER_FLAGS_LIST}}")
         set_property(TARGET {name}::{name} PROPERTY INTERFACE_COMPILE_DEFINITIONS ${{{name}_COMPILE_DEFINITIONS}})
         set_property(TARGET {name}::{name} PROPERTY INTERFACE_COMPILE_OPTIONS "${{{name}_COMPILE_OPTIONS_LIST}}")
 """
@@ -68,10 +68,9 @@ endif()
             # Here we are generating FindXXX, so find_modules=True
             lines = find_dependency_lines(public_deps_names, find_modules=True)
         find_package_header_block = find_package_header.format(name=name, version=dep_cpp_info.version)
-        find_libraries_block = target_template.format(name=name, deps=deps, build_type_suffix="",
-                                                      deps_names=" ".join(["{n}::{n}".format(n=n)
-                                                                           for n in public_deps_names]))
-        target_props = assign_target_properties.format(name=name, deps=deps)
+        deps_names = ";".join(["{n}::{n}".format(n=n) for n in public_deps_names])
+        find_libraries_block = target_template.format(name=name, deps=deps, build_type_suffix="", deps_names=deps_names)
+        target_props = assign_target_properties.format(name=name, deps=deps, deps_names=deps_names)
         tmp = self.template.format(name=name, deps=deps,
                                    version=dep_cpp_info.version,
                                    find_dependencies_block="\n        ".join(lines),

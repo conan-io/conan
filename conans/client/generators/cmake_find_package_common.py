@@ -38,11 +38,11 @@ set({name}_LIBRARY_LIST{build_type_suffix} {deps.libs})
 set({name}_LIB_DIRS{build_type_suffix} {deps.lib_paths})
 
 # Gather all the libraries that should be linked to the targets (do not touch existing variables):
-set(_{name}_SYSTEM_LIBS{build_type_suffix} ${{{name}_FRAMEWORKS_FOUND{build_type_suffix}}} ${{{name}_SYSTEM_LIBS{build_type_suffix}}})
+set(_{name}_DEPENDENCIES{build_type_suffix} "${{{name}_FRAMEWORKS_FOUND{build_type_suffix}}} ${{{name}_SYSTEM_LIBS{build_type_suffix}}} {deps_names}")
 
 conan_package_library_targets("${{{name}_LIBRARY_LIST{build_type_suffix}}}"  # libraries
                               "${{{name}_LIB_DIRS{build_type_suffix}}}"      # package_libdir
-                              "${{_{name}_SYSTEM_LIBS{build_type_suffix}}} {deps_names}"  # deps
+                              "${{_{name}_DEPENDENCIES{build_type_suffix}}}"  # deps
                               {name}_LIBRARIES{build_type_suffix}            # out_libraries
                               {name}_LIBRARIES_TARGETS{build_type_suffix}    # out_libraries_targets
                               "{build_type_suffix}"                          # build_type
@@ -55,7 +55,7 @@ foreach(_FRAMEWORK ${{{name}_FRAMEWORKS_FOUND{build_type_suffix}}})
     list(APPEND {name}_LIBRARIES{build_type_suffix} ${{_FRAMEWORK}})
 endforeach()
 
-foreach(_SYSTEM_LIB ${{{name}_SYSTEM_LIB{build_type_suffix}}})
+foreach(_SYSTEM_LIB ${{{name}_SYSTEM_LIBS{build_type_suffix}}})
     list(APPEND {name}_LIBRARIES_TARGETS{build_type_suffix} ${{_SYSTEM_LIB}})
     list(APPEND {name}_LIBRARIES{build_type_suffix} ${{_SYSTEM_LIB}})
 endforeach()
