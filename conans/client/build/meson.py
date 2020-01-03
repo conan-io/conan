@@ -1,5 +1,7 @@
 import os
+import platform
 import subprocess
+
 
 from conans.client import tools
 from conans.client.build import defs_to_string, join_arguments
@@ -159,14 +161,25 @@ class Meson(object):
 
     @property
     def _vcvars_needed(self):
-        return self._compiler == "Visual Studio" and self.backend == "ninja"
+        return (self._compiler == "Visual Studio" and self.backend == "ninja" and
+                platform.system() == "Windows")
 
     def _run(self, command):
-        with tools.vcvars(self._settings,
-                          output=self._conanfile.output) if self._vcvars_needed else tools.no_op():
+        def _build():
             env_build = AutoToolsBuildEnvironment(self._conanfile)
             with environment_append(env_build.vars):
                 self._conanfile.run(command)
+
+        if self._vcvars_needed:
+            vcvars_dict = tools.vcvars_dict(self._settings, output=self._conanfile.output)
+            if vcvars_dict:
+                with environment_append(vcvars_dict):
+                    with environment_append(self._conanfile.env):
+                        _build()
+            else:
+                _build()
+        else:
+            _build()
 
     def build(self, args=None, build_dir=None, targets=None):
         if not self._conanfile.should_build:

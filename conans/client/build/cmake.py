@@ -175,10 +175,15 @@ class CMake(object):
         the_os = self._settings.get_safe("os")
         is_clangcl = the_os == "Windows" and compiler == "clang"
         is_msvc = compiler == "Visual Studio"
-        if (is_msvc or is_clangcl) and self.generator in ["Ninja", "NMake Makefiles",
-                                                          "NMake Makefiles JOM"]:
-            with tools.vcvars(self._settings, force=True, filter_known_paths=False,
-                              output=self._conanfile.output):
+        if ((is_msvc or is_clangcl) and platform.system() == "Windows" and
+                self.generator in ["Ninja", "NMake Makefiles", "NMake Makefiles JOM"]):
+            vcvars_dict = tools.vcvars_dict(self._settings, force=True, filter_known_paths=False,
+                                            output=self._conanfile.output)
+            if vcvars_dict:
+                with environment_append(vcvars_dict):
+                    with environment_append(self._conanfile.env):
+                        self._conanfile.run(command)
+            else:
                 self._conanfile.run(command)
         else:
             self._conanfile.run(command)
