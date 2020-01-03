@@ -60,10 +60,6 @@ foreach(_SYSTEM_LIB ${{{name}_SYSTEM_LIB{build_type_suffix}}})
     list(APPEND {name}_LIBRARIES{build_type_suffix} ${{_SYSTEM_LIB}})
 endforeach()
 
-# TODO: These are here to check for regressions in tests
-message(">> {name}_LIBRARIES_TARGETS{build_type_suffix}: ${{{name}_LIBRARIES_TARGETS{build_type_suffix}}}")
-message(">> {name}_LIBRARIES{build_type_suffix}: ${{{name}_LIBRARIES{build_type_suffix}}}")
-
 set(CMAKE_MODULE_PATH {deps.build_paths} ${{CMAKE_MODULE_PATH}})
 set(CMAKE_PREFIX_PATH {deps.build_paths} ${{CMAKE_PREFIX_PATH}})
 
