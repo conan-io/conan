@@ -77,7 +77,8 @@ class LinkOrderTest(unittest.TestCase):
 
     _expected_link_order = ['liblibD.a', 'libD2.a', 'liblibB.a', 'libB2.a', 'liblibC.a', 'libC2.a',
                             'liblibA.a', 'libA2.a', 'system_assumed', 'system_lib', 'header_system_assumed',
-                            'header_system_lib', 'Carbon', 'CoreAudio']
+                            'header_system_lib', 'Carbon', 'CoreAudio', 'header2_system_assumed',
+                            'header2_system_lib', 'Security']
 
     @classmethod
     def setUpClass(cls):
@@ -92,9 +93,9 @@ class LinkOrderTest(unittest.TestCase):
         cls._cache_folder = t.cache_folder
         t.save({
             'libH2/conanfile.py': cls.conanfile_headeronly.render(ref=libH_ref,
-                                                                 libs_system=["header2_system_assumed"],
-                                                                 system_libs=["header2_system_lib"],
-                                                                 frameworks=["Security"]),
+                                                                  libs_system=["header2_system_assumed"],
+                                                                  system_libs=["header2_system_lib"],
+                                                                  frameworks=["Security"]),
             'libH/conanfile.py': cls.conanfile_headeronly.render(ref=libH_ref,
                                                                  requires=[libH2_ref],
                                                                  libs_system=["header_system_assumed"],
