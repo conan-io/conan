@@ -58,6 +58,10 @@ class LinkOrderTest(unittest.TestCase):
             name = "{{ref.name}}"
             version = "{{ref.version}}"
             
+            {% if requires %}
+            requires = {% for req in requires %}"{{ req }}"{% if not loop.last %}, {% endif %}{% endfor %}
+            {% endif %}
+            
             def package_id(self):
                 self.info.header_only()
         
@@ -95,10 +99,10 @@ class LinkOrderTest(unittest.TestCase):
         cls._cache_folder = t.cache_folder
         t.save({
             'libZ/conanfile.py': cls.conanfile.render(ref=libZ_ref,
-                                                      libs_extra=["Z2"], libs_system=["z2_system_assumed"],
-                                                      system_libs=["z2_system_lib"],
-                                                      frameworks=["IOKit"]),
-            'libH2/conanfile.py': cls.conanfile_headeronly.render(ref=libH_ref,
+                                                      libs_extra=["Z2"], libs_system=["system_assumed"],
+                                                      system_libs=["system_lib"],
+                                                      frameworks=["Carbon"]),
+            'libH2/conanfile.py': cls.conanfile_headeronly.render(ref=libH2_ref,
                                                                   libs_system=["header2_system_assumed"],
                                                                   system_libs=["header2_system_lib"],
                                                                   frameworks=["Security"]),
