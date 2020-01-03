@@ -417,9 +417,8 @@ class HelloConan(ConanFile):
         with tools.environment_append(env):
             self.assertTrue(vswhere())
 
+    @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
     def vcvars_echo_test(self):
-        if platform.system() != "Windows":
-            return
         settings = Settings.loads(default_settings_yml)
         settings.os = "Windows"
         settings.compiler = "Visual Studio"
@@ -436,6 +435,29 @@ class HelloConan(ConanFile):
             cmd = tools.vcvars_command(settings, output=self.output)
             runner(cmd + " && set vs140comntools")
             self.assertNotIn("vcvarsall.bat", str(output))
+            self.assertIn("Conan:vcvars already set", str(output))
+            self.assertIn("VS140COMNTOOLS=", str(output))
+
+    @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
+    def vcvars_with_store_echo_test(self):
+        settings = Settings.loads(default_settings_yml)
+        settings.os = "WindowsStore"
+        settings.os.version = "8.1"
+        settings.compiler = "Visual Studio"
+        settings.compiler.version = "14"
+        cmd = tools.vcvars_command(settings, output=self.output)
+        output = TestBufferConanOutput()
+        runner = ConanRunner(print_commands_to_output=True, output=output)
+        runner(cmd + " && set vs140comntools")
+        self.assertIn("vcvarsall.bat", str(output))
+        self.assertIn("VS140COMNTOOLS=", str(output))
+        with tools.environment_append({"VisualStudioVersion": "14"}):
+            output = TestBufferConanOutput()
+            runner = ConanRunner(print_commands_to_output=True, output=output)
+            cmd = tools.vcvars_command(settings, output=self.output)
+            runner(cmd + " && set vs140comntools")
+            self.assertNotIn("vcvarsall.bat", str(output))
+            self.assertNotIn("store 8.1", str(output))
             self.assertIn("Conan:vcvars already set", str(output))
             self.assertIn("VS140COMNTOOLS=", str(output))
 
