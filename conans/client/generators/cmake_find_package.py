@@ -66,7 +66,7 @@ endif()
                              dep_cpp_info.public_deps]
         if dep_cpp_info.public_deps:
             # Here we are generating FindXXX, so find_modules=True
-            lines = find_dependency_lines(name, public_deps_names, find_modules=True)
+            lines = find_dependency_lines(public_deps_names, find_modules=True)
         find_package_header_block = find_package_header.format(name=name, version=dep_cpp_info.version)
         find_libraries_block = target_template.format(name=name, deps=deps, build_type_suffix="",
                                                       deps_names=" ".join(["{n}::{n}".format(n=n)
@@ -86,7 +86,7 @@ endif()
         return tmp
 
 
-def find_dependency_lines(name, public_deps_names, find_modules):
+def find_dependency_lines(public_deps_names, find_modules):
     lines = ["", "# Library dependencies", "include(CMakeFindDependencyMacro)"]
     for dep_name in public_deps_names:
         if find_modules:

@@ -121,7 +121,7 @@ endif()
         if cpp_info.public_deps:
             # Here we are generating only Config files, so do not search for FindXXX modules
             public_deps_names = [self.deps_build_info[dep].get_name("cmake_find_package_multi") for dep in cpp_info.public_deps]
-            lines = find_dependency_lines(name, public_deps_names, find_modules=False)
+            lines = find_dependency_lines(public_deps_names, find_modules=False)
 
         targets_props = self.target_properties.format(name=name)
 
