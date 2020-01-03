@@ -212,7 +212,7 @@ class CMake(object):
             # read wrong files
             set_env = "pkg_config" in self._conanfile.generators \
                       and "PKG_CONFIG_PATH" not in os.environ
-            pkg_env = {"PKG_CONFIG_PATH": self._conanfile.install_folder} if set_env else {}
+            pkg_env = {"PKG_CONFIG_PATH": self._conanfile.install_folder} if set_env else None
 
         with environment_append(pkg_env):
             command = "cd %s && %s %s" % (args_to_string([self.build_dir]), self._cmake_program,
