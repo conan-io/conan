@@ -48,6 +48,7 @@ class LinkOrderTest(unittest.TestCase):
                 {% endfor %}
 
                 {% if system_libs %}self.cpp_info.system_libs = [{% for it in system_libs %}"{{ it }}"{% if not loop.last %}, {% endif %}{% endfor %}]{% endif %}
+                {% if frameworks %}self.cpp_info.frameworks.extend([{% for it in frameworks %}"{{ it }}"{% if not loop.last %}, {% endif %}{% endfor %}]){% endif %}
     """))
 
     conanfile_headeronly= Template(textwrap.dedent("""
@@ -66,7 +67,8 @@ class LinkOrderTest(unittest.TestCase):
                 self.cpp_info.libs.append("{{ it }}")
                 {% endfor %}
 
-                {% if system_libs %}self.cpp_info.system_libs = [{% for it in system_libs %}"{{ it }}"{% if not loop.last %}, {% endif %}{% endfor %}]{% endif %}                
+                {% if system_libs %}self.cpp_info.system_libs = [{% for it in system_libs %}"{{ it }}"{% if not loop.last %}, {% endif %}{% endfor %}]{% endif %}
+                {% if frameworks %}self.cpp_info.frameworks.extend([{% for it in frameworks %}"{{ it }}"{% if not loop.last %}, {% endif %}{% endfor %}]){% endif %}
     """))
 
     main_cpp = textwrap.dedent("""
@@ -74,7 +76,8 @@ class LinkOrderTest(unittest.TestCase):
     """)
 
     _expected_link_order = ['liblibD.a', 'libD2.a', 'liblibB.a', 'libB2.a', 'liblibC.a', 'libC2.a',
-                            'liblibA.a', 'libA2.a', 'system_assumed', 'system_lib']
+                            'liblibA.a', 'libA2.a', 'system_assumed', 'system_lib', 'header_system_assumed',
+                            'header_system_lib', 'Carbon', 'CoreAudio']
 
     @classmethod
     def setUpClass(cls):
@@ -89,23 +92,28 @@ class LinkOrderTest(unittest.TestCase):
         t.save({
             'libH/conanfile.py': cls.conanfile_headeronly.render(ref=libH_ref,
                                                                  lib_system=["header_system_assumed"],
-                                                                 system_libs=["header_system_lib"]),
+                                                                 system_libs=["header_system_lib"],
+                                                                 frameworks=["CoreAudio"]),
             'libA/conanfile.py': cls.conanfile.render(ref=libA_ref,
                                                       requires=[libH_ref],
                                                       libs_extra=["A2"], libs_system=["system_assumed"],
-                                                      system_libs=["system_lib"]),
+                                                      system_libs=["system_lib"],
+                                                      frameworks=["Carbon"]),
             'libB/conanfile.py': cls.conanfile.render(ref=libB_ref,
                                                       requires=[libA_ref],
                                                       libs_extra=["B2"], libs_system=["system_assumed"],
-                                                      system_libs=["system_lib"]),
+                                                      system_libs=["system_lib"],
+                                                      frameworks=["Carbon"]),
             'libC/conanfile.py': cls.conanfile.render(ref=libC_ref,
                                                       requires=[libA_ref],
                                                       libs_extra=["C2"], libs_system=["system_assumed"],
-                                                      system_libs=["system_lib"]),
+                                                      system_libs=["system_lib"],
+                                                      frameworks=["Carbon"]),
             'libD/conanfile.py': cls.conanfile.render(ref=libD_ref,
                                                       requires=[libB_ref, libC_ref],
                                                       libs_extra=["D2"], libs_system=["system_assumed"],
-                                                      system_libs=["system_lib"]),
+                                                      system_libs=["system_lib"],
+                                                      frameworks=["Carbon"]),
         })
 
         # Create all of them
@@ -124,9 +132,15 @@ class LinkOrderTest(unittest.TestCase):
                 for it_lib in links.split():
                     if it_lib.startswith("-l"):
                         libs.append(it_lib[2:])
+                    elif it_lib == "-framework":
+                        continue
                     else:
-                        _, libname = it_lib.rsplit('/', 1)
-                        libs.append(libname)
+                        try:
+                            _, libname = it_lib.rsplit('/', 1)
+                        except ValueError:
+                            libname = it_lib
+                        finally:
+                            libs.append(libname)
         return libs
 
     @staticmethod
@@ -142,9 +156,15 @@ class LinkOrderTest(unittest.TestCase):
                         continue
                     if it_lib.startswith("-l"):
                         libs.append(it_lib[2:].strip('";'))
+                    elif it_lib == "-framework":
+                        continue
                     else:
-                        _, libname = it_lib.rsplit('/', 1)
-                        libs.append(libname.strip('";'))
+                        try:
+                            _, libname = it_lib.rsplit('/', 1)
+                        except ValueError:
+                            libname = it_lib
+                        finally:
+                            libs.append(libname.strip('";'))
         return libs
 
     def _create_find_package_project(self, multi):
