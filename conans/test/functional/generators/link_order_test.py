@@ -91,7 +91,7 @@ class LinkOrderTest(unittest.TestCase):
         cls._cache_folder = t.cache_folder
         t.save({
             'libH/conanfile.py': cls.conanfile_headeronly.render(ref=libH_ref,
-                                                                 lib_system=["header_system_assumed"],
+                                                                 libs_system=["header_system_assumed"],
                                                                  system_libs=["header_system_lib"],
                                                                  frameworks=["CoreAudio"]),
             'libA/conanfile.py': cls.conanfile.render(ref=libA_ref,
