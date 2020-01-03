@@ -110,7 +110,7 @@ endif()
             public_deps_names = [self.deps_build_info[dep].get_name("cmake_find_package_multi") for dep in
                                  cpp_info.public_deps]
             find_lib = target_template.format(name=depname, deps=deps, build_type_suffix=build_type_suffix,
-                                              deps_names=" ".join(["{n}::{n}".format(n=n) for n in public_deps_names]))
+                                              deps_names=";".join(["{n}::{n}".format(n=n) for n in public_deps_names]))
             ret["{}Target-{}.cmake".format(depname, build_type.lower())] = find_lib
             ret["{}ConfigVersion.cmake".format(depname)] = self.version_template.\
                 format(version=dep_cpp_info.version)
