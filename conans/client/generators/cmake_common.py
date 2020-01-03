@@ -1,6 +1,9 @@
 import textwrap
 
 _cmake_single_dep_vars = """
+#################
+###  {dep}
+#################
 set(CONAN_{dep}_ROOT{build_type} {deps.rootpath})
 set(CONAN_INCLUDE_DIRS_{dep}{build_type} {deps.include_paths})
 set(CONAN_LIB_DIRS_{dep}{build_type} {deps.lib_paths})
