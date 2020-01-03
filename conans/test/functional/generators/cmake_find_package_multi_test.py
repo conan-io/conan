@@ -235,7 +235,9 @@ project(consumer)
 find_package(MYHELLO2)
 
 get_target_property(tmp MYHELLO2::MYHELLO2 INTERFACE_LINK_LIBRARIES)
-message("Target libs: ${tmp}")
+message("Target libs (hello2): ${tmp}")
+get_target_property(tmp MYHELLO::MYHELLO INTERFACE_LINK_LIBRARIES)
+message("Target libs (hello): ${tmp}")
 """
         conanfile = """
 from conans import ConanFile, CMake
@@ -253,11 +255,12 @@ class Conan(ConanFile):
         client.save({"conanfile.py": conanfile, "CMakeLists.txt": cmakelists})
         client.run("install .")
         client.run("build .")
-        self.assertIn("Target libs: $<$<CONFIG:Release>:CONAN_LIB::MYHELLO2_hello_RELEASE;>;"
+        self.assertIn("Target libs (hello2): $<$<CONFIG:Release>:CONAN_LIB::MYHELLO2_hello_RELEASE;MYHELLO::MYHELLO;>;"
                       "$<$<CONFIG:RelWithDebInfo>:;>;"
                       "$<$<CONFIG:MinSizeRel>:;>;"
-                      "$<$<CONFIG:Debug>:;>;$"
-                      "<$<CONFIG:Release>:CONAN_LIB::MYHELLO_hello_RELEASE;>;"
+                      "$<$<CONFIG:Debug>:;>",
+                      client.out)
+        self.assertIn("Target libs (hello): $<$<CONFIG:Release>:CONAN_LIB::MYHELLO_hello_RELEASE;>;"
                       "$<$<CONFIG:RelWithDebInfo>:;>;"
                       "$<$<CONFIG:MinSizeRel>:;>;"
                       "$<$<CONFIG:Debug>:;>",
