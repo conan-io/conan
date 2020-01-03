@@ -81,6 +81,7 @@ class LinkOrderTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        libH2_ref = ConanFileReference.loads("header2/version")
         libH_ref = ConanFileReference.loads("header/version")
         libA_ref = ConanFileReference.loads("libA/version")
         libB_ref = ConanFileReference.loads("libB/version")
@@ -90,7 +91,12 @@ class LinkOrderTest(unittest.TestCase):
         t = TestClient(path_with_spaces=False)
         cls._cache_folder = t.cache_folder
         t.save({
+            'libH2/conanfile.py': cls.conanfile_headeronly.render(ref=libH_ref,
+                                                                 libs_system=["header2_system_assumed"],
+                                                                 system_libs=["header2_system_lib"],
+                                                                 frameworks=["Security"]),
             'libH/conanfile.py': cls.conanfile_headeronly.render(ref=libH_ref,
+                                                                 requires=[libH2_ref],
                                                                  libs_system=["header_system_assumed"],
                                                                  system_libs=["header_system_lib"],
                                                                  frameworks=["CoreAudio"]),
@@ -117,6 +123,7 @@ class LinkOrderTest(unittest.TestCase):
         })
 
         # Create all of them
+        t.run("create libH2")
         t.run("create libH")
         t.run("create libA")
         t.run("create libB")
