@@ -446,20 +446,10 @@ class HelloConan(ConanFile):
         settings.compiler = "Visual Studio"
         settings.compiler.version = "14"
         cmd = tools.vcvars_command(settings, output=self.output)
-        output = TestBufferConanOutput()
-        runner = ConanRunner(print_commands_to_output=True, output=output)
-        runner(cmd + " && set vs140comntools")
-        self.assertIn("vcvarsall.bat", str(output))
-        self.assertIn("VS140COMNTOOLS=", str(output))
+        self.assertIn("store 8.1", cmd)
         with tools.environment_append({"VisualStudioVersion": "14"}):
-            output = TestBufferConanOutput()
-            runner = ConanRunner(print_commands_to_output=True, output=output)
             cmd = tools.vcvars_command(settings, output=self.output)
-            runner(cmd + " && set vs140comntools")
-            self.assertNotIn("vcvarsall.bat", str(output))
-            self.assertNotIn("store 8.1", str(output))
-            self.assertIn("Conan:vcvars already set", str(output))
-            self.assertIn("VS140COMNTOOLS=", str(output))
+            self.assertEqual("echo Conan:vcvars already set", cmd)
 
     @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
     def vcvars_env_not_duplicated_path_test(self):
