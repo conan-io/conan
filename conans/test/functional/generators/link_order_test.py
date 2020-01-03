@@ -78,6 +78,8 @@ class LinkOrderTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        libZ_ref = ConanFileReference.loads("libZ/version")
+        libH2_ref = ConanFileReference.loads("header2/version")
         libH_ref = ConanFileReference.loads("header/version")
         libA_ref = ConanFileReference.loads("libA/version")
         libB_ref = ConanFileReference.loads("libB/version")
@@ -87,7 +89,16 @@ class LinkOrderTest(unittest.TestCase):
         t = TestClient(path_with_spaces=False)
         cls._cache_folder = t.cache_folder
         t.save({
+            'libZ/conanfile.py': cls.conanfile.render(ref=libZ_ref,
+                                                      libs_extra=["Z2"], libs_system=["z2_system_assumed"],
+                                                      system_libs=["z2_system_lib"],
+                                                      frameworks=["IOKit"]),
+            'libH2/conanfile.py': cls.conanfile_headeronly.render(ref=libH_ref,
+                                                                  libs_system=["header2_system_assumed"],
+                                                                  system_libs=["header2_system_lib"],
+                                                                  frameworks=["Security"]),
             'libH/conanfile.py': cls.conanfile_headeronly.render(ref=libH_ref,
+                                                                 requires=[libH2_ref, libZ_ref],
                                                                  libs_system=["header_system_assumed"],
                                                                  system_libs=["header_system_lib"],
                                                                  frameworks=["CoreAudio"]),
@@ -114,6 +125,8 @@ class LinkOrderTest(unittest.TestCase):
         })
 
         # Create all of them
+        t.run("create libZ")
+        t.run("create libH2")
         t.run("create libH")
         t.run("create libA")
         t.run("create libB")
@@ -122,12 +135,15 @@ class LinkOrderTest(unittest.TestCase):
 
     def _validate_link_order(self, libs):
         # These are the first libraries and order is mandatory
-        mandatory = ['liblibD.a', 'libD2.a', 'liblibB.a', 'libB2.a', 'liblibC.a', 'libC2.a', 'liblibA.a', 'libA2.a',]
+        mandatory = ['liblibD.a', 'libD2.a', 'liblibB.a', 'libB2.a', 'liblibC.a', 'libC2.a',
+                     'liblibA.a', 'libA2.a', 'liblibZ.a', 'libZ2.a',]
         self.assertListEqual(mandatory, libs[:len(mandatory)])
 
         # These libraries must be at the end, and the order is not mandatory
         any_order = {'system_assumed', 'system_lib', 'header_system_assumed', 'header_system_lib',
-                     'Carbon', 'CoreAudio'}
+                     'header2_system_assumed', 'header2_system_lib', 'z2_system_assumed', 'z2_system_lib',
+                     'Carbon', 'CoreAudio', 'IOKit', 'Security'}
+
         self.assertSetEqual(set(libs[len(mandatory):]), any_order)
 
     @staticmethod
