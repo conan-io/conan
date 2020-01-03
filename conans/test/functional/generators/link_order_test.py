@@ -7,7 +7,7 @@ from jinja2 import Template
 
 from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient
-
+from parameterized import parameterized
 
 class LinkOrderTest(unittest.TestCase):
     """ Check that the link order of libraries is preserved when using CMake generators
@@ -50,6 +50,10 @@ class LinkOrderTest(unittest.TestCase):
                 {% if system_libs %}self.cpp_info.system_libs = [{% for it in system_libs %}"{{ it }}"{% if not loop.last %}, {% endif %}{% endfor %}]{% endif %}
     """))
 
+    main_cpp = textwrap.dedent("""
+        int main() {return 0;}
+    """)
+
     _expected_link_order = ['liblibD.a', 'libD2.a', 'liblibB.a', 'libB2.a', 'liblibC.a', 'libC2.a',
                             'liblibA.a', 'libA2.a', 'm', 'pthread']
 
@@ -86,8 +90,41 @@ class LinkOrderTest(unittest.TestCase):
         t.run("create libC")
         t.run("create libD")
 
-    @unittest.skipIf(platform.system() != "Darwin", "Xcode is needed")
-    def test_xcode_find_package_multi(self):
+    @staticmethod
+    def _get_link_order_from_cmake(content):
+        libs = []
+        for it in content.splitlines():
+            if 'main.cpp.o  -o example' in it:
+                _, links = it.split("main.cpp.o  -o example")
+                for it_lib in links.split():
+                    if it_lib.startswith("-l"):
+                        libs.append(it_lib[2:])
+                    else:
+                        _, libname = it_lib.rsplit('/', 1)
+                        libs.append(libname)
+        return libs
+
+    @staticmethod
+    def _get_link_order_from_xcode(content):
+        libs = []
+        for line in content.splitlines():
+            if 'OTHER_LDFLAGS = " -Wl,-search_paths_first -Wl,-headerpad_max_install_names' in line.strip():
+                _, links = line.split('OTHER_LDFLAGS = " -Wl,-search_paths_first -Wl,-headerpad_max_install_names')
+                if links.strip() == '";':
+                    continue
+                for it_lib in links.strip().split():
+                    if it_lib.startswith("-l"):
+                        libs.append(it_lib[2:].strip('";'))
+                    else:
+                        _, libname = it_lib.rsplit('/', 1)
+                        libs.append(libname.strip('";'))
+        return libs
+
+    @parameterized.expand([(None,), ("Xcode",)])
+    def test_find_package_multi(self, generator):
+        if generator == "Xcode" and platform.system() != "Darwin":
+            self.skipTest("Xcode is needed")
+
         t = TestClient(cache_folder=self._cache_folder)
         t.save({
             'conanfile.txt': textwrap.dedent("""
@@ -104,32 +141,27 @@ class LinkOrderTest(unittest.TestCase):
                 add_executable(example main.cpp)
                 target_link_libraries(example libD::libD)
                 """),
-            'main.cpp': textwrap.dedent("""
-                int main() {return 0;}
-                """)
+            'main.cpp': self.main_cpp
         })
 
         t.run("install . -s build_type=Release")
-        t.run_command("cmake . -G Xcode -DCMAKE_PREFIX_PATH=. -DCMAKE_VERBOSE_MAKEFILE:BOOL=True")
-        t.run_command("cmake --build .")
-
-        # Get the actual link order from the CMake call
-        libs = []
-        for line in t.load(os.path.join('executable.xcodeproj', 'project.pbxproj')).splitlines():
-            if 'OTHER_LDFLAGS = " -Wl,-search_paths_first -Wl,-headerpad_max_install_names' in line.strip():
-                _, links = line.split('OTHER_LDFLAGS = " -Wl,-search_paths_first -Wl,-headerpad_max_install_names')
-                if links == '  ";':
-                    continue
-                for it_lib in links.strip().split():
-                    if it_lib.startswith("-l"):
-                        libs.append(it_lib[2:])
-                    else:
-                        _, libname = it_lib.rsplit('/', 1)
-                        libs.append(libname.strip('";'))
-
+        if generator == "Xcode":
+            t.run_command("cmake . -G Xcode -DCMAKE_PREFIX_PATH=. -DCMAKE_VERBOSE_MAKEFILE:BOOL=True")
+            t.run_command("cmake --build .")
+            # Get the actual link order from the CMake call
+            libs = self._get_link_order_from_xcode(t.load(os.path.join('executable.xcodeproj', 'project.pbxproj')))
+        else:
+            t.run_command("cmake . -DCMAKE_PREFIX_PATH=. -DCMAKE_VERBOSE_MAKEFILE:BOOL=True -DCMAKE_BUILD_TYPE=Release")
+            t.run_command("cmake --build .")
+            # Get the actual link order from the CMake call
+            libs = self._get_link_order_from_cmake(str(t.out))
         self.assertListEqual(self._expected_link_order, libs)
 
-    def test_cmake_find_package(self):
+    @parameterized.expand([(None,), ("Xcode",)])
+    def test_cmake_find_package(self, generator):
+        if generator == "Xcode" and platform.system() != "Darwin":
+            self.skipTest("Xcode is needed")
+
         t = TestClient(cache_folder=self._cache_folder)
         t.save({
             'conanfile.txt': textwrap.dedent("""
@@ -146,30 +178,28 @@ class LinkOrderTest(unittest.TestCase):
                 add_executable(example main.cpp)
                 target_link_libraries(example libD::libD)
                 """),
-            'main.cpp': textwrap.dedent("""
-                int main() {return 0;}
-                """)
+            'main.cpp': self.main_cpp
         })
 
         t.run("install .")
-        t.run_command("cmake . -DCMAKE_MODULE_PATH=. -DCMAKE_VERBOSE_MAKEFILE:BOOL=True")
-        t.run_command("cmake --build .")
-
-        # Get the actual link order from the CMake call
-        libs = []
-        for it in str(t.out).splitlines():
-            if 'main.cpp.o  -o example' in it:
-                _, links = it.split("main.cpp.o  -o example")
-                for it_lib in links.split():
-                    if it_lib.startswith("-l"):
-                        libs.append(it_lib[2:])
-                    else:
-                        _, libname = it_lib.rsplit('/', 1)
-                        libs.append(libname)
-
+        if generator == "Xcode":
+            t.run_command("cmake . -G Xcode -DCMAKE_MODULE_PATH=. -DCMAKE_VERBOSE_MAKEFILE:BOOL=True"
+                          " -DCMAKE_CONFIGURATION_TYPES=Release")
+            t.run_command("cmake --build .")
+            # Get the actual link order from the CMake call
+            libs = self._get_link_order_from_xcode(t.load(os.path.join('executable.xcodeproj', 'project.pbxproj')))
+        else:
+            t.run_command("cmake . -DCMAKE_MODULE_PATH=. -DCMAKE_VERBOSE_MAKEFILE:BOOL=True")
+            t.run_command("cmake --build .")
+            # Get the actual link order from the CMake call
+            libs = self._get_link_order_from_cmake(str(t.out))
         self.assertListEqual(self._expected_link_order, libs)
 
-    def test_cmake(self):
+    @parameterized.expand([(None,), ("Xcode",)])
+    def test_cmake(self, generator):
+        if generator == "Xcode" and platform.system() != "Darwin":
+            self.skipTest("Xcode is needed")
+
         t = TestClient(cache_folder=self._cache_folder)
         t.save({
             'conanfile.txt': textwrap.dedent("""
@@ -183,35 +213,33 @@ class LinkOrderTest(unittest.TestCase):
                 project(executable CXX)
 
                 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-                conan_basic_setup(TARGETS)
+                conan_basic_setup(TARGETS NO_OUTPUT_DIRS)
                 
                 add_executable(example main.cpp)
                 target_link_libraries(example CONAN_PKG::libD)
                 """),
-            'main.cpp': textwrap.dedent("""
-                int main() {return 0;}
-                """)
+            'main.cpp': self.main_cpp
         })
 
         t.run("install .")
-        t.run_command("cmake . -DCMAKE_MODULE_PATH=. -DCMAKE_VERBOSE_MAKEFILE:BOOL=True")
-        t.run_command("cmake --build .")
-
-        # Get the actual link order from the CMake call
-        libs = []
-        for it in str(t.out).splitlines():
-            if 'main.cpp.o  -o bin/example' in it:
-                _, links = it.split("main.cpp.o  -o bin/example")
-                for it_lib in links.split():
-                    if it_lib.startswith("-l"):
-                        libs.append(it_lib[2:])
-                    else:
-                        _, libname = it_lib.rsplit('/', 1)
-                        libs.append(libname)
-
+        if generator == "Xcode":
+            t.run_command("cmake . -G Xcode -DCMAKE_MODULE_PATH=. -DCMAKE_VERBOSE_MAKEFILE:BOOL=True"
+                          " -DCMAKE_CONFIGURATION_TYPES=Release")
+            t.run_command("cmake --build .")
+            # Get the actual link order from the CMake call
+            libs = self._get_link_order_from_xcode(t.load(os.path.join('executable.xcodeproj', 'project.pbxproj')))
+        else:
+            t.run_command("cmake . -DCMAKE_MODULE_PATH=. -DCMAKE_VERBOSE_MAKEFILE:BOOL=True")
+            t.run_command("cmake --build .")
+            # Get the actual link order from the CMake call
+            libs = self._get_link_order_from_cmake(str(t.out))
         self.assertListEqual(self._expected_link_order, libs)
 
-    def test_cmake_multi(self):
+    @parameterized.expand([(None,), ("Xcode",)])
+    def test_cmake_multi(self, generator):
+        if generator == "Xcode" and platform.system() != "Darwin":
+            self.skipTest("Xcode is needed")
+
         t = TestClient(cache_folder=self._cache_folder)
         t.save({
             'conanfile.txt': textwrap.dedent("""
@@ -230,29 +258,20 @@ class LinkOrderTest(unittest.TestCase):
                 add_executable(example main.cpp)
                 target_link_libraries(example CONAN_PKG::libD)
                 """),
-            'main.cpp': textwrap.dedent("""
-                int main() {return 0;}
-                """)
+            'main.cpp': self.main_cpp
         })
 
         t.run("install . -s build_type=Release")
         t.save({"conanbuildinfo_debug.cmake": "# just be there"})
-        t.run_command("cmake . -G Xcode -DCMAKE_MODULE_PATH=. -DCMAKE_VERBOSE_MAKEFILE:BOOL=True")
-        t.run_command("cmake --build .")
-
-        # Get the actual link order from the CMake call
-        libs = []
-        for line in t.load(os.path.join('executable.xcodeproj', 'project.pbxproj')).splitlines():
-            if 'OTHER_LDFLAGS = " -Wl,-search_paths_first -Wl,-headerpad_max_install_names' in line.strip():
-                _, links = line.split('OTHER_LDFLAGS = " -Wl,-search_paths_first -Wl,-headerpad_max_install_names')
-                if links.strip() == '";':
-                    continue
-                for it_lib in links.strip().split():
-                    print(it_lib)
-                    if it_lib.startswith("-l"):
-                        libs.append(it_lib[2:].strip('";'))
-                    else:
-                        _, libname = it_lib.rsplit('/', 1)
-                        libs.append(libname.strip('";'))
-
+        if generator == "Xcode":
+            t.run_command("cmake . -G Xcode -DCMAKE_MODULE_PATH=. -DCMAKE_VERBOSE_MAKEFILE:BOOL=True"
+                          " -DCMAKE_CONFIGURATION_TYPES=Release")
+            t.run_command("cmake --build .")
+            # Get the actual link order from the CMake call
+            libs = self._get_link_order_from_xcode(t.load(os.path.join('executable.xcodeproj', 'project.pbxproj')))
+        else:
+            t.run_command("cmake . -G Xcode -DCMAKE_MODULE_PATH=. -DCMAKE_VERBOSE_MAKEFILE:BOOL=True")
+            t.run_command("cmake --build .")
+            # Get the actual link order from the CMake call
+            libs = self._get_link_order_from_xcode(t.load(os.path.join('executable.xcodeproj', 'project.pbxproj')))
         self.assertListEqual(self._expected_link_order, libs)
