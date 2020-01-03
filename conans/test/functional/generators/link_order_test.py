@@ -139,12 +139,15 @@ class LinkOrderTest(unittest.TestCase):
 
     def _validate_link_order(self, libs):
         # Check that all the libraries are there:
-        self.assertEqual(len(libs), 19)
-        self.assertSetEqual(set(libs), {'liblibD.a', 'libD2.a', 'liblibB.a', 'libB2.a', 'liblibC.a', 'libC2.a',
+        self.assertEqual(len(libs), 19 if platform.system() == "Darwin" else 16)
+        expected_libs = {'liblibD.a', 'libD2.a', 'liblibB.a', 'libB2.a', 'liblibC.a', 'libC2.a',
                                         'liblibA.a', 'libA2.a', 'liblibZ.a', 'libZ2.a',
-                                        'header_system_assumed', 'header_system_lib', 'CoreAudio',
-                                        'header2_system_assumed', 'header2_system_lib', 'Security',
-                                        'system_assumed', 'system_lib', 'Carbon'})
+                                        'header_system_assumed', 'header_system_lib',
+                                        'header2_system_assumed', 'header2_system_lib',
+                                        'system_assumed', 'system_lib'}
+        if platform.system() == "Darwin":
+            expected_libs.update(['CoreAudio', 'Security', 'Carbon'])
+        self.assertSetEqual(set(libs), expected_libs)
 
         # These are the first libraries and order is mandatory
         mandatory_1 = ['liblibD.a', 'libD2.a', 'liblibB.a', 'libB2.a', 'liblibC.a', 'libC2.a',
@@ -152,10 +155,11 @@ class LinkOrderTest(unittest.TestCase):
         self.assertListEqual(mandatory_1, libs[:len(mandatory_1)])
 
         # Then, libZ ones must be before system libraries that are consuming
-        self.assertLess(libs.index('liblibZ.a'),
-                        min(libs.index('system_assumed'), libs.index('system_lib'), libs.index('Carbon')))
-        self.assertLess(libs.index('libZ2.a'),
-                        min(libs.index('system_assumed'), libs.index('system_lib'), libs.index('Carbon')))
+        self.assertLess(libs.index('liblibZ.a'), min(libs.index('system_assumed'), libs.index('system_lib')))
+        self.assertLess(libs.index('libZ2.a'), min(libs.index('system_assumed'), libs.index('system_lib')))
+        if platform.system() == "Darwin":
+            self.assertLess(libs.index('liblibZ.a'), libs.index('Carbon'))
+            self.assertLess(libs.index('libZ2.a'), libs.index('Carbon'))
 
     @staticmethod
     def _get_link_order_from_cmake(content):
