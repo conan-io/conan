@@ -138,17 +138,24 @@ class LinkOrderTest(unittest.TestCase):
         t.run("create libD")
 
     def _validate_link_order(self, libs):
+        # Check that all the libraries are there:
+        self.assertEqual(len(libs), 19)
+        self.assertSetEqual(set(libs), {'liblibD.a', 'libD2.a', 'liblibB.a', 'libB2.a', 'liblibC.a', 'libC2.a',
+                                        'liblibA.a', 'libA2.a', 'liblibZ.a', 'libZ2.a',
+                                        'header_system_assumed', 'header_system_lib', 'CoreAudio',
+                                        'header2_system_assumed', 'header2_system_lib', 'Security',
+                                        'system_assumed', 'system_lib', 'Carbon'})
+
         # These are the first libraries and order is mandatory
-        mandatory = ['liblibD.a', 'libD2.a', 'liblibB.a', 'libB2.a', 'liblibC.a', 'libC2.a',
-                     'liblibA.a', 'libA2.a', 'liblibZ.a', 'libZ2.a',]
-        self.assertListEqual(mandatory, libs[:len(mandatory)])
+        mandatory_1 = ['liblibD.a', 'libD2.a', 'liblibB.a', 'libB2.a', 'liblibC.a', 'libC2.a',
+                       'liblibA.a', 'libA2.a', ]
+        self.assertListEqual(mandatory_1, libs[:len(mandatory_1)])
 
-        # These libraries must be at the end, and the order is not mandatory
-        any_order = {'system_assumed', 'system_lib', 'header_system_assumed', 'header_system_lib',
-                     'header2_system_assumed', 'header2_system_lib', 'z2_system_assumed', 'z2_system_lib',
-                     'Carbon', 'CoreAudio', 'IOKit', 'Security'}
-
-        self.assertSetEqual(set(libs[len(mandatory):]), any_order)
+        # Then, libZ ones must be before system libraries that are consuming
+        self.assertLess(libs.index('liblibZ.a'),
+                        min(libs.index('system_assumed'), libs.index('system_lib'), libs.index('Carbon')))
+        self.assertLess(libs.index('libZ2.a'),
+                        min(libs.index('system_assumed'), libs.index('system_lib'), libs.index('Carbon')))
 
     @staticmethod
     def _get_link_order_from_cmake(content):
