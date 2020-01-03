@@ -34,8 +34,6 @@ set(CONAN_EXE_LINKER_FLAGS_{dep}{build_type}_LIST "{deps.exelinkflags_list}")
 conan_find_apple_frameworks(CONAN_FRAMEWORKS_FOUND_{dep}{build_type} "${{CONAN_FRAMEWORKS_{dep}{build_type}}}")
 # Append to aggregated values variable
 set(CONAN_LIBS_{dep}{build_type} ${{CONAN_PKG_LIBS_{dep}{build_type}}} ${{CONAN_SYSTEM_LIBS_{dep}{build_type}}} ${{CONAN_FRAMEWORKS_FOUND_{dep}{build_type}}})
-# Aggregate package libs and frameworks for conan_package_library_targets()
-set(CONAN_LIBS_FRAMEWORKS_{dep}{build_type} ${{CONAN_PKG_LIBS_{dep}{build_type}}} ${{CONAN_FRAMEWORKS_FOUND_{dep}{build_type}}})
 """
 
 
@@ -136,30 +134,40 @@ set(CONAN_CMD_C_FLAGS ${CONAN_C_FLAGS})
 
 
 _target_template = """
-    conan_package_library_targets("${{CONAN_LIBS_FRAMEWORKS_{uname}}}" "${{CONAN_LIB_DIRS_{uname}}}"
-                                  CONAN_PACKAGE_TARGETS_{uname} "${{CONAN_SYSTEM_LIBS_{uname}}} {deps}"
+    set(_CONAN_PKG_LIBS_{uname}_DEPENDENCIES "${{CONAN_SYSTEM_LIBS_{uname}}} ${{CONAN_FRAMEWORKS_FOUND_{uname}}} {deps}")
+    string(REPLACE " " ";" _CONAN_PKG_LIBS_{uname}_DEPENDENCIES "${{_CONAN_PKG_LIBS_{uname}_DEPENDENCIES}}")
+    conan_package_library_targets("${{CONAN_PKG_LIBS_{uname}}}" "${{CONAN_LIB_DIRS_{uname}}}"
+                                  CONAN_PACKAGE_TARGETS_{uname} "${{_CONAN_PKG_LIBS_{uname}_DEPENDENCIES}}"
                                   "" {pkg_name})
-    conan_package_library_targets("${{CONAN_LIBS_FRAMEWORKS_{uname}_DEBUG}}" "${{CONAN_LIB_DIRS_{uname}_DEBUG}}"
-                                  CONAN_PACKAGE_TARGETS_{uname}_DEBUG "${{CONAN_SYSTEM_LIBS_{uname}_DEBUG}} {deps}"
+    set(_CONAN_PKG_LIBS_{uname}_DEPENDENCIES_DEBUG "${{CONAN_SYSTEM_LIBS_{uname}_DEBUG}} ${{CONAN_FRAMEWORKS_FOUND_{uname}_DEBUG}} {deps}")
+    string(REPLACE " " ";" _CONAN_PKG_LIBS_{uname}_DEPENDENCIES_DEBUG "${{_CONAN_PKG_LIBS_{uname}_DEPENDENCIES_DEBUG}}")
+    conan_package_library_targets("${{CONAN_PKG_LIBS_{uname}_DEBUG}}" "${{CONAN_LIB_DIRS_{uname}_DEBUG}}"
+                                  CONAN_PACKAGE_TARGETS_{uname}_DEBUG "${{_CONAN_PKG_LIBS_{uname}_DEPENDENCIES_DEBUG}}"
                                   "debug" {pkg_name})
-    conan_package_library_targets("${{CONAN_LIBS_FRAMEWORKS_{uname}_RELEASE}}" "${{CONAN_LIB_DIRS_{uname}_RELEASE}}"
-                                  CONAN_PACKAGE_TARGETS_{uname}_RELEASE "${{CONAN_SYSTEM_LIBS_{uname}_RELEASE}} {deps}"
+    set(_CONAN_PKG_LIBS_{uname}_DEPENDENCIES_RELEASE "${{CONAN_SYSTEM_LIBS_{uname}_RELEASE}} ${{CONAN_FRAMEWORKS_FOUND_{uname}_RELEASE}} {deps}")
+    string(REPLACE " " ";" _CONAN_PKG_LIBS_{uname}_DEPENDENCIES_RELEASE "${{_CONAN_PKG_LIBS_{uname}_DEPENDENCIES_RELEASE}}")
+    conan_package_library_targets("${{CONAN_PKG_LIBS_{uname}_RELEASE}}" "${{CONAN_LIB_DIRS_{uname}_RELEASE}}"
+                                  CONAN_PACKAGE_TARGETS_{uname}_RELEASE "${{_CONAN_PKG_LIBS_{uname}_DEPENDENCIES_RELEASE}}"
                                   "release" {pkg_name})
-    conan_package_library_targets("${{CONAN_LIBS_FRAMEWORKS_{uname}_RELWITHDEBINFO}}" "${{CONAN_LIB_DIRS_{uname}_RELWITHDEBINFO}}"
-                                  CONAN_PACKAGE_TARGETS_{uname}_RELWITHDEBINFO "${{CONAN_SYSTEM_LIBS_{uname}_RELWITHDEBINFO}} {deps}"
+    set(_CONAN_PKG_LIBS_{uname}_DEPENDENCIES_RELWITHDEBINFO "${{CONAN_SYSTEM_LIBS_{uname}_RELWITHDEBINFO}} ${{CONAN_FRAMEWORKS_FOUND_{uname}_RELWITHDEBINFO}} {deps}")
+    string(REPLACE " " ";" _CONAN_PKG_LIBS_{uname}_DEPENDENCIES_RELWITHDEBINFO "${{_CONAN_PKG_LIBS_{uname}_DEPENDENCIES_RELWITHDEBINFO}}")
+    conan_package_library_targets("${{CONAN_PKG_LIBS_{uname}_RELWITHDEBINFO}}" "${{CONAN_LIB_DIRS_{uname}_RELWITHDEBINFO}}"
+                                  CONAN_PACKAGE_TARGETS_{uname}_RELWITHDEBINFO "${{_CONAN_PKG_LIBS_{uname}_DEPENDENCIES_RELWITHDEBINFO}}"
                                   "relwithdebinfo" {pkg_name})
-    conan_package_library_targets("${{CONAN_LIBS_FRAMEWORKS_{uname}_MINSIZEREL}}" "${{CONAN_LIB_DIRS_{uname}_MINSIZEREL}}"
-                                  CONAN_PACKAGE_TARGETS_{uname}_MINSIZEREL "${{CONAN_SYSTEM_LIBS_{uname}_MINSIZEREL}} {deps}"
+    set(_CONAN_PKG_LIBS_{uname}_DEPENDENCIES_MINSIZEREL "${{CONAN_SYSTEM_LIBS_{uname}_MINSIZEREL}} ${{CONAN_FRAMEWORKS_FOUND_{uname}_MINSIZEREL}} {deps}")
+    string(REPLACE " " ";" _CONAN_PKG_LIBS_{uname}_DEPENDENCIES_MINSIZEREL "${{_CONAN_PKG_LIBS_{uname}_DEPENDENCIES_MINSIZEREL}}")
+    conan_package_library_targets("${{CONAN_PKG_LIBS_{uname}_MINSIZEREL}}" "${{CONAN_LIB_DIRS_{uname}_MINSIZEREL}}"
+                                  CONAN_PACKAGE_TARGETS_{uname}_MINSIZEREL "${{_CONAN_PKG_LIBS_{uname}_DEPENDENCIES_MINSIZEREL}}"
                                   "minsizerel" {pkg_name})
 
     add_library({name} INTERFACE IMPORTED)
 
     # Property INTERFACE_LINK_FLAGS do not work, necessary to add to INTERFACE_LINK_LIBRARIES
-    set_property(TARGET {name} PROPERTY INTERFACE_LINK_LIBRARIES ${{CONAN_PACKAGE_TARGETS_{uname}}} ${{CONAN_SHARED_LINKER_FLAGS_{uname}_LIST}} ${{CONAN_EXE_LINKER_FLAGS_{uname}_LIST}}
-                                                                 $<$<CONFIG:Release>:${{CONAN_PACKAGE_TARGETS_{uname}_RELEASE}} ${{CONAN_SHARED_LINKER_FLAGS_{uname}_RELEASE_LIST}} ${{CONAN_EXE_LINKER_FLAGS_{uname}_RELEASE_LIST}}>
-                                                                 $<$<CONFIG:RelWithDebInfo>:${{CONAN_PACKAGE_TARGETS_{uname}_RELWITHDEBINFO}} ${{CONAN_SHARED_LINKER_FLAGS_{uname}_RELWITHDEBINFO_LIST}} ${{CONAN_EXE_LINKER_FLAGS_{uname}_RELWITHDEBINFO_LIST}}>
-                                                                 $<$<CONFIG:MinSizeRel>:${{CONAN_PACKAGE_TARGETS_{uname}_MINSIZEREL}} ${{CONAN_SHARED_LINKER_FLAGS_{uname}_MINSIZEREL_LIST}} ${{CONAN_EXE_LINKER_FLAGS_{uname}_MINSIZEREL_LIST}}>
-                                                                 $<$<CONFIG:Debug>:${{CONAN_PACKAGE_TARGETS_{uname}_DEBUG}} ${{CONAN_SHARED_LINKER_FLAGS_{uname}_DEBUG_LIST}} ${{CONAN_EXE_LINKER_FLAGS_{uname}_DEBUG_LIST}}>)
+    set_property(TARGET {name} PROPERTY INTERFACE_LINK_LIBRARIES ${{CONAN_PACKAGE_TARGETS_{uname}}} ${{_CONAN_PKG_LIBS_{uname}_DEPENDENCIES}} ${{CONAN_SHARED_LINKER_FLAGS_{uname}_LIST}} ${{CONAN_EXE_LINKER_FLAGS_{uname}_LIST}}
+                                                                 $<$<CONFIG:Release>:${{CONAN_PACKAGE_TARGETS_{uname}_RELEASE}} ${{_CONAN_PKG_LIBS_{uname}_DEPENDENCIES_RELEASE}} ${{CONAN_SHARED_LINKER_FLAGS_{uname}_RELEASE_LIST}} ${{CONAN_EXE_LINKER_FLAGS_{uname}_RELEASE_LIST}}>
+                                                                 $<$<CONFIG:RelWithDebInfo>:${{CONAN_PACKAGE_TARGETS_{uname}_RELWITHDEBINFO}} ${{_CONAN_PKG_LIBS_{uname}_DEPENDENCIES_RELWITHDEBINFO}} ${{CONAN_SHARED_LINKER_FLAGS_{uname}_RELWITHDEBINFO_LIST}} ${{CONAN_EXE_LINKER_FLAGS_{uname}_RELWITHDEBINFO_LIST}}>
+                                                                 $<$<CONFIG:MinSizeRel>:${{CONAN_PACKAGE_TARGETS_{uname}_MINSIZEREL}} ${{_CONAN_PKG_LIBS_{uname}_DEPENDENCIES_MINSIZEREL}} ${{CONAN_SHARED_LINKER_FLAGS_{uname}_MINSIZEREL_LIST}} ${{CONAN_EXE_LINKER_FLAGS_{uname}_MINSIZEREL_LIST}}>
+                                                                 $<$<CONFIG:Debug>:${{CONAN_PACKAGE_TARGETS_{uname}_DEBUG}} ${{_CONAN_PKG_LIBS_{uname}_DEPENDENCIES_DEBUG}} ${{CONAN_SHARED_LINKER_FLAGS_{uname}_DEBUG_LIST}} ${{CONAN_EXE_LINKER_FLAGS_{uname}_DEBUG_LIST}}>)
     set_property(TARGET {name} PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${{CONAN_INCLUDE_DIRS_{uname}}}
                                                                       $<$<CONFIG:Release>:${{CONAN_INCLUDE_DIRS_{uname}_RELEASE}}>
                                                                       $<$<CONFIG:RelWithDebInfo>:${{CONAN_INCLUDE_DIRS_{uname}_RELWITHDEBINFO}}>
