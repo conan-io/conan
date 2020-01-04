@@ -26,6 +26,7 @@ class CachedFileDownloader(object):
                 self._file_downloader.download(url, cached_path, auth, retry, retry_wait,
                                                overwrite, headers)
             if file_path is not None:
+                file_path = os.path.abspath(file_path)
                 mkdir(os.path.dirname(file_path))
                 shutil.copy2(cached_path, file_path)
             else:
