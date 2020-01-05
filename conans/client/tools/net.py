@@ -62,7 +62,7 @@ def download(url, filename, verify=True, out=None, retry=None, retry_wait=None, 
 
     downloader = FileDownloader(requester=requester, output=out, verify=verify, config=config)
     checksum = sha256 or sha1 or md5
-    if config.download_cache and checksum:
+    if config and config.download_cache and checksum:
         downloader = CachedFileDownloader(config.download_cache, downloader)
         downloader.download(url, filename, retry=retry, retry_wait=retry_wait, overwrite=overwrite,
                             auth=auth, headers=headers, checksum=checksum)
