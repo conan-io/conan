@@ -15,7 +15,7 @@ sh_activate_tpl = Template(textwrap.dedent("""
     export CONAN_OLD_{{it}}="${{it}}"
     {%- endfor %}
 
-    while read line; do
+    while read -r line; do
         LINE="$(eval echo $line)";
         export "$LINE";
     done < "{{ environment_file }}"
@@ -129,6 +129,21 @@ class VirtualEnvGenerator(Generator):
         # flavor == sh
         return "${%s+ $%s}" % (name, name) if append_with_spaces else "${%s+:$%s}" % (name,  name)
 
+    @staticmethod
+    def is_existing_path(possible_path):
+        if (os.path.exists(possible_path)):
+            return True
+        return False
+
+    @staticmethod
+    def fix_slashes(flavor, path):
+        if flavor in ["cmd", "ps1"]:
+            # need backslashes \
+            path = path.replace('/', '\\')
+        if flavor == "sh":
+            path = path.replace('\\', '/')
+        return path
+
     @classmethod
     def _format_values(cls, flavor, variables):
         """
@@ -153,18 +168,27 @@ class VirtualEnvGenerator(Generator):
                     # Variables joined with spaces look like: CPPFLAGS="one two three"
                     value = " ".join(value+[placeholder])
                     value = "\"%s\"" % value if quote_elements else value
+                    if cls.is_existing_path(value):
+                        value = cls.fix_slashes(flavor, value)
                 else:
+                    values = {}
+                    for v in value:
+                        if cls.is_existing_path(value):
+                            v = cls.fix_slashes(flavor, value)
+                        values.append(v)
                     # Quoted variables joined with pathset may look like:
                     # PATH="one path":"two paths"
                     # Unquoted variables joined with pathset may look like: PATH=one path;two paths
-                    value = ["\"%s\"" % v for v in value] if quote_elements else value
+                    values = ["\"%s\"" % v for v in values] if quote_elements else values
                     if flavor == "sh":
-                        value = path_sep.join(value) + placeholder
+                        value = path_sep.join(values) + placeholder
                     else:
-                        value = path_sep.join(value + [placeholder])
+                        value = path_sep.join(values + [placeholder])
             else:
                 # single value
                 value = "\"%s\"" % value if quote_elements else value
+                if cls.is_existing_path(value):
+                    value = cls.fix_slashes(flavor, value)
             activate_value = "\"%s\"" % value if quote_full_value else value
             if platform.system() != "Windows":
                 activate_value = activate_value.replace("\\", "\\\\")
