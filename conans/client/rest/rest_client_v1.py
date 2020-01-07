@@ -42,13 +42,15 @@ class RestV1Methods(RestCommonMethods):
         Its a generator, so it yields elements for memory performance
         """
         downloader = FileDownloader(self.requester, None, self.verify_ssl, self._config)
-        if self._config.download_cache:
-            downloader = CachedFileDownloader(self._config.download_cache, downloader)
+        download_cache = self._config.download_cache
+        if download_cache:
+            assert snapshot_md5 is not None, "if download_cache is set, we need the file checksums"
+            downloader = CachedFileDownloader(download_cache, downloader)
         # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz
         # can be < conanfile, conaninfo, and sent always the last, so smaller files go first
         for filename, resource_url in sorted(file_urls.items(), reverse=True):
             auth, _ = self._file_server_capabilities(resource_url)
-            if self._config.download_cache:
+            if download_cache:
                 md5 = snapshot_md5[filename]
                 contents = downloader.download(resource_url, auth=auth, checksum=md5)
             else:
@@ -186,7 +188,8 @@ class RestV1Methods(RestCommonMethods):
         downloader = FileDownloader(self.requester, self._output, self.verify_ssl, self._config)
         download_cache = self._config.download_cache
         if download_cache:
-            downloader = CachedFileDownloader(self._config.download_cache, downloader)
+            assert snapshot_md5 is not None, "if download_cache is set, we need the file checksums"
+            downloader = CachedFileDownloader(download_cache, downloader)
 
         ret = {}
         # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz
