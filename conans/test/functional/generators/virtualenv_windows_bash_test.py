@@ -59,7 +59,7 @@ class VirtualenvWindowsBashTestCase(unittest.TestCase):
 
     def _run_environment(self):
         stdout, _ = subprocess.Popen(["where", "conan"], stdout=subprocess.PIPE).communicate()
-        conan_path = decode_text(stdout)
+        conan_path = decode_text(stdout).splitlines()[0]  # Get the first one (Windows returns all found)
 
         # All the commands are listed in a sh file:
         commands_file = os.path.join(self.test_folder, 'commands.sh')
@@ -85,8 +85,6 @@ class VirtualenvWindowsBashTestCase(unittest.TestCase):
             f.write(". ./deactivate.sh\n")
             f.write("echo __exec_post_path__=$(which executable)\n")
             f.write("env > env_after.txt\n")
-
-            f.write("$()")
 
         cmd = r'C:\Windows\System32\cmd.exe /c ""C:\Program Files\Git\bin\sh.exe" --login -i "{}""'.format(commands_file)
         shell = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=self.test_folder)
