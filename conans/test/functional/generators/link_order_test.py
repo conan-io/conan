@@ -198,7 +198,7 @@ class LinkOrderTest(unittest.TestCase):
                             libs.append(libname)
                 break
             # Windows
-            if 'example.exe" /INCREMENTAL /NOLOGO' in it:
+            if 'example.exe" /INCREMENTAL:NO /NOLOGO' in it:
                 for it_lib in it.split():
                     it_lib = it_lib.strip()
                     if it_lib.endswith(".lib"):
@@ -298,8 +298,8 @@ class LinkOrderTest(unittest.TestCase):
         else:
             t.run_command("cmake . {} -DCMAKE_VERBOSE_MAKEFILE:BOOL=True"
                           " -DCMAKE_BUILD_TYPE=Release".format(extra_cmake))
-            t.run_command("cmake --build .", assert_error=True)
-            print(t.out)
+            extra_build = "--config Release" if platform.system() == "Windows" else ""  # Windows uses VS
+            t.run_command("cmake --build . {}".format(extra_build), assert_error=True)
             # Get the actual link order from the CMake call
             libs = self._get_link_order_from_cmake(str(t.out))
         return libs
