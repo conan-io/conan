@@ -203,8 +203,7 @@ class MyTest(ConanFile):
         # arbitrary case - file will be named according to argument
         arg_filename = "test.html"
         self.client.run("info . --graph=%s" % arg_filename)
-        arg_filename = os.path.join(self.client.current_folder, arg_filename)
-        html = load(arg_filename)
+        html = self.client.load(arg_filename)
         self.assertIn("<body>", html)
         self.assertIn("{ from: 0, to: 1 }", html)
         self.assertIn("id: 0, label: 'Hello0/0.1'", html)
@@ -244,8 +243,7 @@ class AConan(ConanFile):
         self.assertEqual(len(pkgs), 1)
 
         client.run("info . -pr=myprofile --dry-build=missing --graph=file.html")
-        html_path = os.path.join(client.current_folder, "file.html")
-        html = load(html_path)
+        html = client.load("file.html")
         self.assertIn("html", html)
         # To check that this node is not duplicated
         self.assertEqual(1, html.count("label: 'dep/0.1'"))
@@ -611,8 +609,7 @@ class MyTest(ConanFile):
 
         # Topics as tuple
         client.run("info Pkg/0.2@lasote/testing --graph file.html")
-        html_path = os.path.join(client.current_folder, "file.html")
-        html_content = load(html_path)
+        html_content = client.load("file.html")
         self.assertIn("<h3>Pkg/0.2@lasote/testing</h3>", html_content)
         self.assertIn("<li><b>topics</b>: (\"foo\", \"bar\", \"qux\")</li><ul>", html_content)
 
@@ -621,7 +618,7 @@ class MyTest(ConanFile):
         client.save({"conanfile.py": conanfile}, clean_first=True)
         client.run("export . lasote/testing")
         client.run("info Pkg/0.2@lasote/testing --graph file.html")
-        html_content = load(html_path)
+        html_content = client.load("file.html")
         self.assertIn("<h3>Pkg/0.2@lasote/testing</h3>", html_content)
         self.assertIn("<li><b>topics</b>: foo", html_content)
 
@@ -632,7 +629,7 @@ class MyTest(ConanFile):
         client.save({"conanfile.py": str(conanfile)})
         client.run("install .")
         path = os.path.join(client.current_folder, "graph_info.json")
-        graph_info = load(path)
+        graph_info = client.load(path)
         graph_info = json.loads(graph_info)
         graph_info.pop("root")
         save(path, json.dumps(graph_info))

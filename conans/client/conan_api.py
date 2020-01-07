@@ -6,7 +6,7 @@ from six import StringIO
 
 import conans
 from conans import __version__ as client_version
-from conans.client import packager, tools
+from conans.client import packager
 from conans.client.cache.cache import ClientCache
 from conans.client.cmd.build import cmd_build
 from conans.client.cmd.create import create
@@ -46,10 +46,10 @@ from conans.client.rest.rest_client import RestApiClientFactory
 from conans.client.runner import ConanRunner
 from conans.client.source import config_source_local
 from conans.client.store.localdb import LocalDB
+from conans.client.tools.env import environment_append
 from conans.client.userio import UserIO
 from conans.errors import (ConanException, RecipeNotFoundException,
                            PackageNotFoundException, NoRestV2Available, NotFoundException)
-from conans.model.conan_file import get_env_context_manager
 from conans.model.editable_layout import get_editable_abs_path
 from conans.model.graph_info import GraphInfo, GRAPH_INFO_FILE
 from conans.model.graph_lock import GraphLockFile, LOCKFILE
@@ -77,7 +77,7 @@ def api_method(f):
         try:
             api.create_app(quiet_output=quiet_output)
             log_command(f.__name__, kwargs)
-            with tools.environment_append(api.app.cache.config.env_vars):
+            with environment_append(api.app.cache.config.env_vars):
                 return f(api, *args, **kwargs)
         except Exception as exc:
             if quiet_output:
@@ -167,8 +167,7 @@ class ConanApp(object):
         self.requester = ConanRequester(self.config, http_requester)
         # To handle remote connections
         artifacts_properties = self.cache.read_artifacts_properties()
-        rest_client_factory = RestApiClientFactory(self.out, self.requester,
-                                                   revisions_enabled=self.config.revisions_enabled,
+        rest_client_factory = RestApiClientFactory(self.out, self.requester, self.config,
                                                    artifacts_properties=artifacts_properties)
         # To store user and token
         localdb = LocalDB.create(self.cache.localdb)
@@ -178,7 +177,7 @@ class ConanApp(object):
         self.remote_manager = RemoteManager(self.cache, auth_manager, self.out, self.hook_manager)
 
         # Adjust global tool variables
-        set_global_instances(self.out, self.requester)
+        set_global_instances(self.out, self.requester, self.config)
 
         self.runner = runner or ConanRunner(self.config.print_commands_to_output,
                                             self.config.generate_run_log_file,
@@ -263,7 +262,7 @@ class ConanAPIV1(object):
             ref = ConanFileReference.loads(path)
         except ConanException:
             conanfile_path = _get_conanfile_path(path, get_cwd(), py=True)
-            conanfile = self.app.loader.load_basic(conanfile_path)
+            conanfile = self.app.loader.load_named(conanfile_path, None, None, None, None)
         else:
             update = True if remote_name else False
             result = self.app.proxy.get_recipe(ref, update, update, remotes, ActionRecorder())
@@ -696,10 +695,9 @@ class ConanAPIV1(object):
                                  "--build-folder and package folder can't be the same")
         conanfile = self.app.graph_manager.load_consumer_conanfile(conanfile_path, install_folder,
                                                                    deps_info_required=True)
-        with get_env_context_manager(conanfile):
-            packager.run_package_method(conanfile, None, source_folder, build_folder, package_folder,
-                                        install_folder, self.app.hook_manager, conanfile_path, None,
-                                        local=True, copy_info=True)
+        packager.run_package_method(conanfile, None, source_folder, build_folder, package_folder,
+                                    install_folder, self.app.hook_manager, conanfile_path, None,
+                                    local=True, copy_info=True)
 
     @api_method
     def source(self, path, source_folder=None, info_folder=None, cwd=None):

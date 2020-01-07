@@ -372,8 +372,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         client = TurboTestClient()
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . {} --json file.json".format(self.ref.full_str()))
-        json_path = os.path.join(client.current_folder, "file.json")
-        data = json.loads(load(json_path))
+        data = json.loads(client.load("file.json"))
         ref = ConanFileReference.loads(data["installed"][0]["recipe"]["id"])
         self.assertIsNotNone(ref.revision)
 

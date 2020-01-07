@@ -32,7 +32,7 @@ class AuthorizeTest(unittest.TestCase):
                                       [(str(self.ref), "pepe,nacho@gmail.com")],  # write permissions
                                       users={"lasote": "mypass",
                                              "pepe": "pepepass",
-                                             "nacho@gmail.com": "nachopass",})  # exported users and passwords
+                                             "nacho@gmail.com": "nachopass"})  # exported creds
         self.servers["default"] = self.test_server
 
     def retries_test(self):
@@ -134,22 +134,37 @@ class AuthenticationTest(unittest.TestCase):
             def __init__(self, *args, **kwargs):
                 pass
 
-            def get(self, url, *args, **kwargs):
+            @staticmethod
+            def get(url, **kwargs):
+                resp_basic_auth = Response()
+                resp_basic_auth.status_code = 200
                 if "authenticate" in url:
-                    resp_basic_auth = Response()
+                    if kwargs["auth"].password != "PASSWORD!":
+                        raise Exception("Bad password")
                     resp_basic_auth._content = b"TOKEN"
-                    resp_basic_auth.status_code = 200
                     resp_basic_auth.headers = {"Content-Type": "text/plain"}
-                    return resp_basic_auth
+                elif "ping" in url:
+                    token = getattr(kwargs["auth"], "token", None)
+                    password = getattr(kwargs["auth"], "password", None)
+                    if token and token != "TOKEN":
+                        raise Exception("Bad JWT Token")
+                    if not token and not password:
+                        raise AuthenticationException(
+                            "I'm an Artifactory without anonymous access that "
+                            "requires authentication for the ping endpoint and "
+                            "I don't return the capabilities")
+                elif "search" in url:
+                    if kwargs["auth"].token != "TOKEN":
+                        raise Exception("Bad JWT Token")
+                    resp_basic_auth._content = b'{"results": []}'
+                    resp_basic_auth.headers = {"Content-Type": "application/json"}
+                else:
+                    raise Exception("Shouldn't be more remote calls")
+                return resp_basic_auth
 
-                if "ping" in url and not kwargs["auth"].token:
-                    raise AuthenticationException(
-                        "I'm an Artifactory without anonymous access that "
-                        "requires authentication for the ping endpoint and "
-                        "I don't return the capabilities")
-                raise Exception("Shouldn't be more remote calls")
-
-        self.client = TestClient(requester_class=RequesterMock, default_server_user=True)
-        self.client.run("user user -p password -r default")
+        client = TestClient(requester_class=RequesterMock, default_server_user=True)
+        client.run("user user -p PASSWORD! -r=default")
         self.assertIn("Changed user of remote 'default' from 'None' (anonymous) to 'user'",
-                      self.client.out)
+                      client.out)
+        client.run("search pkg -r=default")
+        self.assertIn("There are no packages matching the 'pkg' pattern", client.out)

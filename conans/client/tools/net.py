@@ -12,7 +12,7 @@ def get(url, md5='', sha1='', sha256='', destination=".", filename="", keep_perm
     """ high level downloader + unzipper + (optional hash checker) + delete temporary zip
     """
     if not filename and ("?" in url or "=" in url):
-        raise ConanException("Cannot deduce file name form url. Use 'filename' parameter.")
+        raise ConanException("Cannot deduce file name from url. Use 'filename' parameter.")
 
     filename = filename or os.path.basename(url)
     download(url, filename, out=output, requester=requester, verify=verify, retry=retry,
@@ -58,14 +58,15 @@ def download(url, filename, verify=True, out=None, retry=None, retry_wait=None, 
 
     out = default_output(out, 'conans.client.tools.net.download')
     requester = default_requester(requester, 'conans.client.tools.net.download')
+    from conans.tools import _global_config as config
 
     # It might be possible that users provide their own requester
-    retry = retry if retry is not None else getattr(requester, "retry", None)
+    retry = retry if retry is not None else config.retry
     retry = retry if retry is not None else 1
-    retry_wait = retry_wait if retry_wait is not None else getattr(requester, "retry_wait", None)
+    retry_wait = retry_wait if retry_wait is not None else config.retry_wait
     retry_wait = retry_wait if retry_wait is not None else 5
 
-    downloader = FileDownloader(requester=requester, output=out, verify=verify)
+    downloader = FileDownloader(requester=requester, output=out, verify=verify, config=config)
     downloader.download(url, filename, retry=retry, retry_wait=retry_wait, overwrite=overwrite,
                         auth=auth, headers=headers)
     out.writeln("")

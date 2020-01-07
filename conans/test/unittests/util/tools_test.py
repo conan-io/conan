@@ -441,8 +441,8 @@ class HelloConan(ConanFile):
 
     @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
     def vcvars_env_not_duplicated_path_test(self):
-        """vcvars is not looking at the current values of the env vars, with PATH it is a problem because you
-        can already have set some of the vars and accumulate unnecessary entries."""
+        """vcvars is not looking at the current values of the env vars, with PATH it is a problem
+        because you can already have set some of the vars and accumulate unnecessary entries."""
         settings = Settings.loads(default_settings_yml)
         settings.os = "Windows"
         settings.compiler = "Visual Studio"
@@ -684,6 +684,24 @@ ProgramFiles(x86)=C:\Program Files (x86)
             self.assertIn('^&^& PATH=\\^"/cygdrive/other/path:/cygdrive/path/to/somewhere:$PATH\\^" '
                           '^&^& MYVAR=34 ^&^& a_command.bat ^', conanfile._conan_runner.command)
 
+    def download_retries_errors_test(self):
+        out = TestBufferConanOutput()
+
+        # Retry arguments override defaults
+        with six.assertRaisesRegex(self, ConanException, "Error downloading"):
+            tools.download("http://fakeurl3.es/nonexists",
+                           os.path.join(temp_folder(), "file.txt"), out=out,
+                           requester=requests,
+                           retry=2, retry_wait=1)
+        self.assertEqual(str(out).count("Waiting 1 seconds to retry..."), 2)
+
+        # Not found error
+        with six.assertRaisesRegex(self, NotFoundException, "Not found: "):
+            tools.download("http://google.es/FILE_NOT_FOUND",
+                           os.path.join(temp_folder(), "README.txt"), out=out,
+                           requester=requests,
+                           retry=2, retry_wait=0)
+
     @attr("slow")
     def download_retries_test(self):
         http_server = StoppableThreadBottle()
@@ -714,44 +732,6 @@ ProgramFiles(x86)=C:\Program Files (x86)
 
         out = TestBufferConanOutput()
 
-        # Connection error
-        # Default behaviour
-        with six.assertRaisesRegex(self, ConanException, "Error downloading"):
-            tools.download("http://fakeurl3.es/nonexists",
-                           os.path.join(temp_folder(), "file.txt"), out=out,
-                           requester=requests)
-        self.assertEqual(str(out).count("Waiting 5 seconds to retry..."), 1)
-
-        # Retry arguments override defaults
-        with six.assertRaisesRegex(self, ConanException, "Error downloading"):
-            tools.download("http://fakeurl3.es/nonexists",
-                           os.path.join(temp_folder(), "file.txt"), out=out,
-                           requester=requests,
-                           retry=2, retry_wait=1)
-        self.assertEqual(str(out).count("Waiting 1 seconds to retry..."), 2)
-
-        # Retry default values from the config
-        class MockRequester(object):
-            retry = 2
-            retry_wait = 0
-
-            def get(self, *args, **kwargs):
-                return requests.get(*args, **kwargs)
-
-        with six.assertRaisesRegex(self, ConanException, "Error downloading"):
-            tools.download("http://fakeurl3.es/nonexists",
-                           os.path.join(temp_folder(), "file.txt"), out=out,
-                           requester=MockRequester())
-        self.assertEqual(str(out).count("Waiting 0 seconds to retry..."), 2)
-
-        # Not found error
-        with six.assertRaisesRegex(self, NotFoundException, "Not found: "):
-            tools.download("http://google.es/FILE_NOT_FOUND",
-                           os.path.join(temp_folder(), "README.txt"), out=out,
-                           requester=requests,
-                           retry=2, retry_wait=0)
-
-        # And OK
         dest = os.path.join(temp_folder(), "manual.html")
         tools.download("http://localhost:%s/manual.html" % http_server.port, dest, out=out, retry=3,
                        retry_wait=0, requester=requests)
@@ -773,16 +753,17 @@ ProgramFiles(x86)=C:\Program Files (x86)
         # Not authorized
         with self.assertRaises(ConanException):
             tools.download("http://localhost:%s/basic-auth/user/passwd" % http_server.port, dest,
-                           overwrite=True, requester=requests, out=out)
+                           overwrite=True, requester=requests, out=out, retry=0, retry_wait=0)
 
         # Authorized
         tools.download("http://localhost:%s/basic-auth/user/passwd" % http_server.port, dest,
-                       auth=("user", "passwd"), overwrite=True, requester=requests, out=out)
+                       auth=("user", "passwd"), overwrite=True, requester=requests, out=out,
+                       retry=0, retry_wait=0)
 
         # Authorized using headers
         tools.download("http://localhost:%s/basic-auth/user/passwd" % http_server.port, dest,
                        headers={"Authorization": "Basic dXNlcjpwYXNzd2Q="}, overwrite=True,
-                       requester=requests, out=out)
+                       requester=requests, out=out, retry=0, retry_wait=0)
         http_server.stop()
 
     @parameterized.expand([
@@ -884,13 +865,13 @@ ProgramFiles(x86)=C:\Program Files (x86)
         out = TestBufferConanOutput()
         # Test: File name cannot be deduced from '?file=1'
         with six.assertRaisesRegex(self, ConanException,
-                                   "Cannot deduce file name form url. Use 'filename' parameter."):
+                                   "Cannot deduce file name from url. Use 'filename' parameter."):
             tools.get("http://localhost:%s/?file=1" % thread.port, output=out)
 
         # Test: Works with filename parameter instead of '?file=1'
         with tools.chdir(tools.mkdir_tmp()):
             tools.get("http://localhost:%s/?file=1" % thread.port, filename="sample.tar.gz",
-                      requester=requests, output=out)
+                      requester=requests, output=out, retry=0, retry_wait=0)
             self.assertTrue(os.path.exists("test_folder"))
 
         # Test: Use a different endpoint but still not the filename one
@@ -898,9 +879,10 @@ ProgramFiles(x86)=C:\Program Files (x86)
             from zipfile import BadZipfile
             with self.assertRaises(BadZipfile):
                 tools.get("http://localhost:%s/this_is_not_the_file_name" % thread.port,
-                          requester=requests, output=out)
+                          requester=requests, output=out, retry=0, retry_wait=0)
             tools.get("http://localhost:%s/this_is_not_the_file_name" % thread.port,
-                      filename="sample.tar.gz", requester=requests, output=out)
+                      filename="sample.tar.gz", requester=requests, output=out,
+                      retry=0, retry_wait=0)
             self.assertTrue(os.path.exists("test_folder"))
         thread.stop()
 
@@ -934,17 +916,17 @@ ProgramFiles(x86)=C:\Program Files (x86)
         out = TestBufferConanOutput()
         with tools.chdir(tools.mkdir_tmp()):
             tools.get("http://localhost:%s/test.txt.gz" % thread.port, requester=requests,
-                      output=out)
+                      output=out, retry=0, retry_wait=0)
             self.assertTrue(os.path.exists("test.txt"))
             self.assertEqual(load("test.txt"), "hello world zipped!")
         with tools.chdir(tools.mkdir_tmp()):
             tools.get("http://localhost:%s/test.txt.gz" % thread.port, requester=requests,
-                      output=out, destination="myfile.doc")
+                      output=out, destination="myfile.doc", retry=0, retry_wait=0)
             self.assertTrue(os.path.exists("myfile.doc"))
             self.assertEqual(load("myfile.doc"), "hello world zipped!")
         with tools.chdir(tools.mkdir_tmp()):
             tools.get("http://localhost:%s/test.txt.gz" % thread.port, requester=requests,
-                      output=out, destination="mytemp/myfile.txt")
+                      output=out, destination="mytemp/myfile.txt", retry=0, retry_wait=0)
             self.assertTrue(os.path.exists("mytemp/myfile.txt"))
             self.assertEqual(load("mytemp/myfile.txt"), "hello world zipped!")
 
