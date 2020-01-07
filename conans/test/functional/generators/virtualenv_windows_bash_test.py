@@ -1,27 +1,16 @@
-import unittest
-import textwrap
 import os
 import platform
 import subprocess
 import textwrap
 import unittest
 
-import six
-from parameterized.parameterized import parameterized_class
-
-from conans.client.generators.virtualenv import VirtualEnvGenerator
-from conans.client.tools import OSInfo
-from conans.client.tools.env import environment_append
-from conans.model.ref import ConanFileReference
-from conans.test.functional.graph.graph_manager_base import GraphManagerTest
-from conans.test.utils.conanfile import ConanFileMock
-from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import GenConanfile
-from conans.util.files import decode_text, load, save_files, to_file_bytes
-from conans.test.utils.tools import TestClient
 from conans.test.functional.generators.virtualenv_test import _load_env_file
+from conans.test.utils.test_files import temp_folder
+from conans.test.utils.tools import TestClient
+from conans.util.files import decode_text
 
 
+@unittest.skipIf(platform.system() != "Windows", "Only for Windows")
 class VirtualenvWindowsBashTestCase(unittest.TestCase):
     """
     We are running the full example inside Bash (generation of environment files and activate/deactivate), so we need
