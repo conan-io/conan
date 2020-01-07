@@ -29,8 +29,13 @@ class LinkOrderTest(unittest.TestCase):
             def build(self):
                 with open("lib" + self.name + ".a", "w+") as f:
                     f.write("fake library content")
+                with open(self.name + ".lib", "w+") as f:
+                    f.write("fake library content")
+                    
                 {% for it in libs_extra %}
                 with open("lib{{ it }}.a", "w+") as f:
+                    f.write("fake library content")
+                with open("{{ it }}.lib", "w+") as f:
                     f.write("fake library content")
                 {% endfor %}
             
@@ -139,24 +144,35 @@ class LinkOrderTest(unittest.TestCase):
 
     def _validate_link_order(self, libs):
         # Check that all the libraries are there:
-        self.assertEqual(len(libs), 19 if platform.system() == "Darwin" else 16)
-        expected_libs = {'liblibD.a', 'libD2.a', 'liblibB.a', 'libB2.a', 'liblibC.a', 'libC2.a',
-                                        'liblibA.a', 'libA2.a', 'liblibZ.a', 'libZ2.a',
-                                        'header_system_assumed', 'header_system_lib',
-                                        'header2_system_assumed', 'header2_system_lib',
-                                        'system_assumed', 'system_lib'}
+        self.assertEqual(len(libs), 19 if platform.system() == "Darwin" else 16 if platform.system() == "Linux" else 26)
+        # - Regular libs
+        ext = ".lib" if platform.system() == "Windows" else ".a"
+        prefix = "" if platform.system() == "Windows" else "lib"
+        expected_libs = {prefix + it + ext for it in ['libD', 'D2', 'libB', 'B2', 'libC', 'C2',
+                                                      'libA', 'A2', 'libZ', 'Z2']}
+        # - System libs
+        ext_system = ".lib" if platform.system() == "Windows" else ""
+        expected_libs.update([it + ext_system for it in ['header_system_assumed', 'header_system_lib',
+                                                         'header2_system_assumed', 'header2_system_lib',
+                                                         'system_assumed', 'system_lib']])
+        # - Add MacOS frameworks
         if platform.system() == "Darwin":
             expected_libs.update(['CoreAudio', 'Security', 'Carbon'])
+        # - Add Windows libs
+        if platform.system() == "Windows":
+            expected_libs.update(['kernel32.lib', 'user32.lib', 'gdi32.lib', 'winspool.lib', 'shell32.lib', 'ole32.lib',
+                                  'oleaut32.lib', 'uuid.lib', 'comdlg32.lib', 'advapi32.lib'])
         self.assertSetEqual(set(libs), expected_libs)
 
         # These are the first libraries and order is mandatory
-        mandatory_1 = ['liblibD.a', 'libD2.a', 'liblibB.a', 'libB2.a', 'liblibC.a', 'libC2.a',
-                       'liblibA.a', 'libA2.a', ]
+        mandatory_1 = [prefix + it + ext for it in ['libD', 'D2', 'libB', 'B2', 'libC', 'C2', 'libA', 'A2', ]]
         self.assertListEqual(mandatory_1, libs[:len(mandatory_1)])
 
         # Then, libZ ones must be before system libraries that are consuming
-        self.assertLess(libs.index('liblibZ.a'), min(libs.index('system_assumed'), libs.index('system_lib')))
-        self.assertLess(libs.index('libZ2.a'), min(libs.index('system_assumed'), libs.index('system_lib')))
+        self.assertLess(libs.index(prefix + 'libZ' + ext),
+                        min(libs.index('system_assumed' + ext_system), libs.index('system_lib' + ext_system)))
+        self.assertLess(libs.index(prefix + 'Z2' + ext),
+                        min(libs.index('system_assumed' + ext_system), libs.index('system_lib' + ext_system)))
         if platform.system() == "Darwin":
             self.assertLess(libs.index('liblibZ.a'), libs.index('Carbon'))
             self.assertLess(libs.index('libZ2.a'), libs.index('Carbon'))
@@ -165,6 +181,7 @@ class LinkOrderTest(unittest.TestCase):
     def _get_link_order_from_cmake(content):
         libs = []
         for it in content.splitlines():
+            # This is for Linux and Mac
             if 'main.cpp.o  -o example' in it:
                 _, links = it.split("main.cpp.o  -o example")
                 for it_lib in links.split():
@@ -179,6 +196,19 @@ class LinkOrderTest(unittest.TestCase):
                             libname = it_lib
                         finally:
                             libs.append(libname)
+                break
+            # Windows
+            if 'example.exe" /INCREMENTAL /NOLOGO' in it:
+                for it_lib in it.split():
+                    it_lib = it_lib.strip()
+                    if it_lib.endswith(".lib"):
+                        try:
+                            _, libname = it_lib.rsplit('\\', 1)
+                        except ValueError:
+                            libname = it_lib
+                        finally:
+                            libs.append(libname)
+                break
         return libs
 
     @staticmethod
@@ -269,6 +299,7 @@ class LinkOrderTest(unittest.TestCase):
             t.run_command("cmake . {} -DCMAKE_VERBOSE_MAKEFILE:BOOL=True"
                           " -DCMAKE_BUILD_TYPE=Release".format(extra_cmake))
             t.run_command("cmake --build .", assert_error=True)
+            print(t.out)
             # Get the actual link order from the CMake call
             libs = self._get_link_order_from_cmake(str(t.out))
         return libs
