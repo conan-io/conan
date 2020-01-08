@@ -138,6 +138,7 @@ class CachedDownloaderUnitTest(unittest.TestCase):
         def download(index):
             if index % 2:
                 content = self.cached_downloader.download("slow_testurl")
+                content = content.decode("utf-8")
             else:
                 file_path = os.path.join(folder, "myfile%s.txt" % index)
                 self.cached_downloader.download("slow_testurl", file_path)
