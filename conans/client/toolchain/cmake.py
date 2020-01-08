@@ -9,6 +9,7 @@ from jinja2 import Template
 from conans.client.build.cmake_flags import get_generator, get_generator_platform, \
     CMakeDefinitionsBuilder, get_toolset
 from conans.client.generators.cmake_common import CMakeCommonMacros
+from conans.util.files import save
 
 
 # https://stackoverflow.com/questions/30503631/cmake-in-which-order-are-files-parsed-cache-toolchain-etc
@@ -263,31 +264,29 @@ class CMakeToolchain(object):
         }
 
         conan_project_include_cmake = os.path.join(install_folder, "conan_project_include.cmake")
-        with open(conan_project_include_cmake, "w") as f:
-            t = Template(self._template_project_include)
-            content = t.render(configuration_types_definitions=self.definitions.configuration_types,
-                               cmake_macros_and_functions="\n".join([
-                                   CMakeCommonMacros.conan_set_vs_runtime_preserve_build_type
-                               ]),
-                               **context)
-            f.write(content)
+        t = Template(self._template_project_include)
+        content = t.render(configuration_types_definitions=self.definitions.configuration_types,
+                           cmake_macros_and_functions="\n".join([
+                               CMakeCommonMacros.conan_set_vs_runtime_preserve_build_type
+                           ]),
+                           **context)
+        save(conan_project_include_cmake, content)
 
-        with open(os.path.join(install_folder, self.filename), "w") as f:
-            # TODO: I need the profile_host and profile_build here!
-            # TODO: What if the compiler is a build require?
-            # TODO: Add all the stuff related to settings (ALL settings or just _MY_ settings?)
-            # TODO: I would want to have here the path to the compiler too
-            t = Template(self._template_toolchain)
-            content = t.render(conan_project_include_cmake=conan_project_include_cmake.replace("\\", "/"),
-                               cmake_macros_and_functions="\n".join([
-                                   CMakeCommonMacros.conan_message,
-                                   CMakeCommonMacros.conan_set_rpath,
-                                   CMakeCommonMacros.conan_set_std,
-                                   CMakeCommonMacros.conan_set_fpic,
-                                   self._conan_set_libcxx,
-                                   CMakeCommonMacros.conan_set_find_paths,
-                                   CMakeCommonMacros.conan_set_find_library_paths,
-                                   self._conan_set_compiler
-                               ]),
-                               **context)
-            f.write(content)
+        # TODO: I need the profile_host and profile_build here!
+        # TODO: What if the compiler is a build require?
+        # TODO: Add all the stuff related to settings (ALL settings or just _MY_ settings?)
+        # TODO: I would want to have here the path to the compiler too
+        t = Template(self._template_toolchain)
+        content = t.render(conan_project_include_cmake=conan_project_include_cmake.replace("\\", "/"),
+                           cmake_macros_and_functions="\n".join([
+                               CMakeCommonMacros.conan_message,
+                               CMakeCommonMacros.conan_set_rpath,
+                               CMakeCommonMacros.conan_set_std,
+                               CMakeCommonMacros.conan_set_fpic,
+                               self._conan_set_libcxx,
+                               CMakeCommonMacros.conan_set_find_paths,
+                               CMakeCommonMacros.conan_set_find_library_paths,
+                               self._conan_set_compiler
+                           ]),
+                           **context)
+        save(os.path.join(install_folder, self.filename), content)
