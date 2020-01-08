@@ -132,10 +132,10 @@ class CMake(object):
         generator = self.generator
         generator_platform = None
 
-        if self.generator == "Visual Studio 16 2019" and self.generator_platform:
-            generator_platform = self.generator_platform
-        else:
-            if self.generator_platform:
+        if self.generator_platform:
+            if self.generator == "Visual Studio 16 2019":
+                generator_platform = self.generator_platform
+            else:
                 if 'Visual Studio' in generator and self._settings.get_safe("os") != "WindowsCE":
                     if self.generator_platform == "x64":
                         generator += " Win64"
