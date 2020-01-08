@@ -228,10 +228,10 @@ class CMakeTest(unittest.TestCase):
         self.assertIn('-G "Unix Makefiles"', cmake.command_line)
         self.assertNotIn('-A', cmake.command_line)
 
-    @parameterized.expand([('x86', 'Visual Studio 15 2017', 'Win32'),
-                           ('x86_64', 'Visual Studio 15 2017', 'x64'),
-                           ('armv7', 'Visual Studio 15 2017', 'ARM')])
-    def cmake_generator_platform_vs2017_test(self, arch, generator, generator_platform):
+    @parameterized.expand([('x86', 'Visual Studio 15 2017'),
+                           ('x86_64', 'Visual Studio 15 2017 Win64'),
+                           ('armv7', 'Visual Studio 15 2017 ARM')])
+    def cmake_generator_platform_vs2017_test(self, arch, generator):
         settings = Settings.loads(default_settings_yml)
         settings.os = "Windows"
         settings.compiler = "Visual Studio"
@@ -243,7 +243,7 @@ class CMakeTest(unittest.TestCase):
 
         cmake = CMake(conanfile)
         self.assertIn('-G "%s"' % generator, cmake.command_line)
-        self.assertIn('-A "%s"' % generator_platform, cmake.command_line)
+        self.assertNotIn('-A', cmake.command_line)
 
     @parameterized.expand([('x86', 'Win32'),
                            ('x86_64', 'x64'),
@@ -593,7 +593,7 @@ class CMakeTest(unittest.TestCase):
                 self.assertEqual(new_text, cmake.command_line)
                 self.assertEqual(build_config, cmake.build_config)
 
-        check('-G "Visual Studio 12 2013" -A "Win32" -DCONAN_IN_LOCAL_CACHE="OFF" '
+        check('-G "Visual Studio 12 2013" -DCONAN_IN_LOCAL_CACHE="OFF" '
               '-DCONAN_COMPILER="Visual Studio" -DCONAN_COMPILER_VERSION="12" '
               '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -DCONAN_EXPORTED="1" -Wno-dev',
               "")
@@ -609,13 +609,13 @@ class CMakeTest(unittest.TestCase):
               '', generator="Custom Generator", set_cmake_flags=True)
 
         settings.build_type = "Debug"
-        check('-G "Visual Studio 12 2013" -A "Win32" -DCONAN_IN_LOCAL_CACHE="OFF" '
+        check('-G "Visual Studio 12 2013" -DCONAN_IN_LOCAL_CACHE="OFF" '
               '-DCONAN_COMPILER="Visual Studio" -DCONAN_COMPILER_VERSION="12" '
               '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -DCONAN_EXPORTED="1" -Wno-dev',
               '--config Debug')
 
         settings.arch = "x86_64"
-        check('-G "Visual Studio 12 2013" -A "x64" -DCONAN_IN_LOCAL_CACHE="OFF" '
+        check('-G "Visual Studio 12 2013 Win64" -DCONAN_IN_LOCAL_CACHE="OFF" '
               '-DCONAN_COMPILER="Visual Studio" -DCONAN_COMPILER_VERSION="12" '
               '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -DCONAN_EXPORTED="1" -Wno-dev',
               '--config Debug')
@@ -734,7 +734,7 @@ class CMakeTest(unittest.TestCase):
               "--config Debug")
 
         settings.arch = "x86_64"
-        check('-G "Visual Studio 15 2017" -A "x64" -DCONAN_IN_LOCAL_CACHE="OFF" '
+        check('-G "Visual Studio 15 2017 Win64" -DCONAN_IN_LOCAL_CACHE="OFF" '
               '-DCONAN_COMPILER="Visual Studio" -DCONAN_COMPILER_VERSION="15" '
               '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -DCONAN_EXPORTED="1" -Wno-dev',
               "--config Debug")

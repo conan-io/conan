@@ -129,16 +129,30 @@ class CMake(object):
                                  'Please check your conan profile to either remove the toolset,'
                                  ' or change the CMake generator.' % self.generator)
 
-        args = []
-        if Version(self.get_version()) >= "3.1":
-            args.append('-G "{}"'.format(self.generator))
-            if self.generator_platform:
-                args.append('-A "{}"'.format(self.generator_platform))
+        generator = self.generator
+        generator_platform = None
+
+        if self.generator == "Visual Studio 16 2019" and self.generator_platform:
+            generator_platform = self.generator_platform
         else:
-            generator = self.generator
             if self.generator_platform:
-                generator = generator + " " + self.generator_platform
-            args.append('-G "{}"'.format(generator))
+                if 'Visual Studio' in generator and self._settings.get_safe("os") != "WindowsCE":
+                    if self.generator_platform == "x64":
+                        generator += " Win64"
+                    elif self.generator_platform == "ARM":
+                        generator += " ARM"
+                    elif self.generator_platform == "ARM64":
+                        generator_platform = self.generator_platform  # Not supported appended to generator
+                    elif self.generator_platform == "Win32":
+                        pass
+                    else:
+                        generator_platform = self.generator_platform
+                else:
+                    generator_platform = self.generator_platform
+
+        args = ['-G "{}"'.format(generator)] if generator else []
+        if generator_platform:
+            args.append('-A "{}"'.format(generator_platform))
 
         args.append(self.flags)
         args.append('-Wno-dev')
