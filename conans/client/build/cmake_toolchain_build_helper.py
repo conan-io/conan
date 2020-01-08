@@ -240,11 +240,6 @@ class CMakeToolchainBuildHelper(BaseCMakeBuildHelper):
         with tools.environment_append(env):
             self._build(args=args, build_dir=build_dir, target=target)
 
-    def _get_install_prefix(self):
-        if self._conanfile.package_folder:
-            return self._conanfile.package_folder.replace("\\", "/")
-        return None
-
     def patch_config_paths(self):
         pf = None
         if self._conanfile.package_folder:
