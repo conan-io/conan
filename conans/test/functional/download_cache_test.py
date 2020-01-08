@@ -168,7 +168,7 @@ class CachedDownloaderUnitTest(unittest.TestCase):
         self.assertEqual(self.file_downloader.calls["testurl"], 1)
         # Try direct content
         content = self.cached_downloader.download("testurl")
-        self.assertEqual(content, "testurl")
+        self.assertEqual(content.decode("utf-8"), "testurl")
         self.assertEqual(self.file_downloader.calls["testurl"], 1)
 
         # Try another file
@@ -183,7 +183,7 @@ class CachedDownloaderUnitTest(unittest.TestCase):
     def test_content_first(self):
         # first calling content without path also caches
         content = self.cached_downloader.download("testurl")
-        self.assertEqual(content, "testurl")
+        self.assertEqual(content.decode("utf-8"), "testurl")  # content is binary here
         self.assertEqual(self.file_downloader.calls["testurl"], 1)
         # Now the file
         folder = temp_folder()
