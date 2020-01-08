@@ -118,15 +118,28 @@ class CMake(object):
 
     @property
     def command_line(self):
-        args = ['-G "%s"' % self.generator] if self.generator else []
-        if self.generator_platform:
-            if is_generator_platform_supported(self.generator):
-                args.append('-A "%s"' % self.generator_platform)
-            else:
-                raise ConanException('CMake does not support generator platform with generator '
-                                     '"%s:. Please check your conan profile to either remove the '
-                                     'generator platform, or change the CMake generator.'
-                                     % self.generator)
+        if self.generator_platform and not is_generator_platform_supported(self.generator):
+            raise ConanException('CMake does not support generator platform with generator '
+                                 '"%s:. Please check your conan profile to either remove the '
+                                 'generator platform, or change the CMake generator.'
+                                 % self.generator)
+
+        if self.toolset and not is_toolset_supported(self.generator):
+            raise ConanException('CMake does not support toolsets with generator "%s:.'
+                                 'Please check your conan profile to either remove the toolset,'
+                                 ' or change the CMake generator.' % self.generator)
+
+        args = []
+        if Version(self.get_version()) >= "3.1":
+            args.append('-G "{}"'.format(self.generator))
+            if self.generator_platform:
+                args.append('-A "{}"'.format(self.generator_platform))
+        else:
+            generator = self.generator
+            if self.generator_platform:
+                generator = generator + " " + self.generator_platform
+            args.append('-G "{}"'.format(generator))
+
         args.append(self.flags)
         args.append('-Wno-dev')
 
