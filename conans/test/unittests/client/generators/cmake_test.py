@@ -392,8 +392,7 @@ class CMakeCppInfoNameTest(unittest.TestCase):
         content = generator.content
         self.assertIn("set(CONAN_DEPENDENCIES_DEBUG my_pkg my_pkg2)",
                       content["conanbuildinfo_debug.cmake"])
-        self.assertNotIn("mypkg", content["conanbuildinfo_multi.cmake"])
-        self.assertNotIn("MYPKG", content["conanbuildinfo_multi.cmake"])
+        self.assertNotIn("MyPkG", content["conanbuildinfo_multi.cmake"])
         self.assertIn('add_library(CONAN_PKG::my_pkg INTERFACE IMPORTED)',
                       content["conanbuildinfo_multi.cmake"])
         self.assertIn('add_library(CONAN_PKG::my_pkg2 INTERFACE IMPORTED)',
