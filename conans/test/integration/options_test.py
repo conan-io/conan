@@ -204,22 +204,6 @@ class MyConanFile(ConanFile):
         self.assertNotIn("None evaluation", client.out)
         self.assertNotIn("String evaluation", client.out)
 
-    def test_default_options_unicode(self):
-        conanfile = textwrap.dedent("""
-            from conans import ConanFile
-            
-            class Recipe(ConanFile):
-                options = {"config": "ANY"}
-                default_options = {"config": u"unicode_option_value"}
-        """)
-
-        t = TestClient()
-        t.save({"conanfile.py": conanfile})
-        t.run("export . name/version@")
-
-        print(t.out)
-        self.assertIn("name/version: Exported revision:", t.out)
-
     def general_scope_options_test(self):
         # https://github.com/conan-io/conan/issues/2538
         client = TestClient()
