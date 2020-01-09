@@ -25,7 +25,7 @@ from conans.client.runner import ConanRunner
 from conans.client.tools.files import replace_in_file, which
 from conans.client.tools.oss import check_output, OSInfo
 from conans.client.tools.win import vcvars_dict, vswhere
-from conans.errors import ConanException, NotFoundException
+from conans.errors import ConanException, NotFoundException, AuthenticationException
 from conans.model.build_info import CppInfo
 from conans.model.settings import Settings
 from conans.test.utils.conanfile import ConanFileMock
@@ -798,7 +798,7 @@ ProgramFiles(x86)=C:\Program Files (x86)
         out = TestBufferConanOutput()
         dest = os.path.join(temp_folder(), "manual.html")
         # Not authorized
-        with self.assertRaises(ConanException):
+        with six.assertRaisesRegex(self, AuthenticationException, "403"):
             tools.download("http://localhost:%s/forbidden" % http_server.port, dest,
                            requester=requests, out=out)
 
