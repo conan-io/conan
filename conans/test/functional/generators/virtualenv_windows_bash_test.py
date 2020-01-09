@@ -60,8 +60,8 @@ class VirtualenvWindowsBashTestCase(unittest.TestCase):
 
         # All the commands are listed in a sh file:
         commands_file = os.path.join(test_folder, 'commands.sh')
-        conan_path = os.path.dirname(conan_path)
-        conan_user_home = os.path.dirname(t.cache_folder)
+        conan_path = os.path.dirname(conan_path).replace('\\', '/').replace('C:', '/c')
+        conan_user_home = os.path.dirname(t.cache_folder).replace('\\', '/').replace('C:', '/c')
         save(commands_file, textwrap.dedent("""
             export USER_VAR=existing_value
             export ANOTHER=existing_value
