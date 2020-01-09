@@ -31,7 +31,7 @@ class VirtualenvWindowsBashTestCase(unittest.TestCase):
 
             def package_info(self):
                 # Basic variable
-                self.env_info.USER_VAR = r"some value with space and \ (backslash)"
+                self.env_info.USER_VAR = r"some value with space and \\ (backslash)"
                 self.env_info.ANOTHER = "data"
                 
                 # List variable
@@ -54,16 +54,14 @@ class VirtualenvWindowsBashTestCase(unittest.TestCase):
         t.save({"conanfile.py": self.conanfile})
         t.run("create . name/version@")
 
-        cache_folder = os.path.dirname(t.cache_folder)
-
         # Locate the Conan we are actually using (it should be the one in this commit)
         stdout, _ = subprocess.Popen(["where", "conan"], stdout=subprocess.PIPE).communicate()
         conan_path = decode_text(stdout).splitlines()[0]  # Get the first one (Windows returns all found)
 
         # All the commands are listed in a sh file:
         commands_file = os.path.join(test_folder, 'commands.sh')
-        conan_path = os.path.dirname(conan_path).replace('\\', '/').replace('C:', '/c')
-        conan_user_home = cache_folder.replace('\\', '/').replace('C:', '/c')
+        conan_path = os.path.dirname(conan_path)
+        conan_user_home = os.path.dirname(t.cache_folder)
         save(commands_file, textwrap.dedent("""
             export USER_VAR=existing_value
             export ANOTHER=existing_value
@@ -107,7 +105,7 @@ class VirtualenvWindowsBashTestCase(unittest.TestCase):
         epaths = dict(line.split("=", 1) for line in reversed(stdout.splitlines()) if line.startswith("__exec_"))
         self.assertEqual(epaths["__exec_pre_path__"], "")
         self.assertEqual(epaths["__exec_post_path__"], "")
-        self.assertTrue(len(epaths["__exec_env_path__"]) > 0)
+        self.assertTrue(len(epaths["__exec_env_path__"].strip()) > 0)
         self.assertIn("EXECUTABLE IN PACKAGE!!", stdout)
 
         # Test variable which is a list
