@@ -1033,11 +1033,8 @@ build_type: [ Release]
                          '%s' % CMakeTest.scape('. --target test'),
                          conanfile.command)
 
+    @unittest.skipIf(platform.system() != "Windows", "Only for Windows")
     def test_clean_sh_path(self):
-
-        if platform.system() != "Windows":
-            return
-
         os.environ["PATH"] = os.environ.get("PATH", "") + os.pathsep + self.tempdir
         save(os.path.join(self.tempdir, "sh.exe"), "Fake sh")
         conanfile = ConanFileMock()
@@ -1052,7 +1049,7 @@ build_type: [ Release]
         cmake.configure()
         self.assertIn(self.tempdir, conanfile.path)
 
-        cmake.generator = "MinGW Makefiles"
+        cmake = CMake(conanfile, generator="MinGW Makefiles")
         cmake.configure()
         self.assertNotIn(self.tempdir, conanfile.path)
 
