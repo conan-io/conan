@@ -54,7 +54,6 @@ class UploaderUnitTest(unittest.TestCase):
 
     def test_500_raises_internal_error(self):
         out = TestBufferConanOutput()
-        auth = namedtuple("auth", "token")(None)
         uploader = FileUploader(_MockRequester(500), out, verify=False, config=_ConfigMock())
         f = tempfile.mktemp()
         save(f, "some contents")
