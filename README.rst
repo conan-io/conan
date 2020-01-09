@@ -214,10 +214,6 @@ These should work for OS X:
     $ export CONAN_COMPILER=clang
     $ export CONAN_COMPILER_VERSION=3.5
 
-Finally, some tests use conan to package Go-lang
-libraries, so you might **need to install go-lang** in your computer and
-add it to the path.
-
 You can run the actual tests like this:
 
 .. code-block:: bash
