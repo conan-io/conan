@@ -5,6 +5,7 @@ import codecs
 import os
 import shutil
 import tempfile
+import textwrap
 import unittest
 import uuid
 
@@ -14,7 +15,7 @@ from conans.client.cmd.export import _replace_scm_data_in_conanfile
 from conans.client.graph.python_requires import ConanPythonRequire
 from conans.client.loader import parse_conanfile
 from conans.test.utils.tools import try_remove_readonly
-from conans.util.files import load
+from conans.util.files import load, save
 
 
 class ASTReplacementTest(unittest.TestCase):
@@ -131,8 +132,7 @@ class LibConan(ConanFile):
         self.assertIn(comment, load(conanfile))
         _replace_scm_data_in_conanfile(conanfile, self.scm_data)
         self._check_result(conanfile)
-        # FIXME: We lost the multiline comment
-        # self.assertIn(comment, load(conanfile))
+        self.assertIn(comment, load(conanfile))
 
     # Something below the comment
     def test_comment_and_attribute(self):
@@ -149,7 +149,49 @@ class LibConan(ConanFile):
         self.assertIn(comment, load(conanfile))
         _replace_scm_data_in_conanfile(conanfile, self.scm_data)
         self._check_result(conanfile)
-        # FIXME: We lost the multiline comment
         self.assertIn("    url=23", load(conanfile))
-        # self.assertIn(comment, load(conanfile))
+        self.assertIn(comment, load(conanfile))
+
+
+class ASTReplacementPrivateFieldsTestCase(unittest.TestCase):
+    python_requires = ConanPythonRequire(None, None)
+    conanfile_str = textwrap.dedent("""
+        import os
+        from conans import ConanFile
+
+        def get_username():
+            return "the-username"
+
+        class Recipe(ConanFile):
+            scm = {"type": "git", "username": get_username(),
+                   "url": "auto",
+                   "revision": "auto",
+                   "password": os.environ.get("PASSWORD")}
+    """)
+
+    def test_username_password(self):
+        """ Username and password shouldn't be replaced in the SCM dictionary:
+            https://github.com/conan-io/conan/issues/6275
+        """
+
+        conanfile = os.path.join(tempfile.mkdtemp(), str(uuid.uuid4()))
+        save(conanfile, self.conanfile_str)
+
+        scm_data = {'type': 'git',
+                    'url': 'this-is-the-url',
+                    'revision': '42',
+                    'username': "PRIVATE",
+                    'password': "PRIVATE", }
+        _replace_scm_data_in_conanfile(conanfile, scm_data)
+
+        try:
+            # Check it is loadable by Conan machinery
+            _, conanfile_loaded = parse_conanfile(conanfile, python_requires=self.python_requires)
+        except Exception as e:
+            self.fail("Invalid conanfile: {}".format(e))
+
+        content = load(conanfile)
+        self.assertNotIn("PRIVATE", content)
+        self.assertIn("'username': get_username()", content)
+        self.assertIn("'password': os.environ.get(\"PASSWORD\")", content)
 

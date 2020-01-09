@@ -265,6 +265,18 @@ def _capture_scm_auto_fields(conanfile, conanfile_dir, destination_folder, outpu
     return scm_data, local_src_path
 
 
+def _get_raw_scm_member(source, ast_dict_node, member):
+    try:
+        idx_member = [it.value for it in ast_dict_node.keys].index(member)
+    except ValueError:
+        # member not found in AST dictionary
+        return None
+    else:
+        value = ast_dict_node.values[idx_member]
+        source_segment = ast.get_source_segment(source, value)
+        return source_segment
+
+
 def _replace_scm_data_in_conanfile(conanfile_path, scm_data):
     # Parsing and replacing the SCM field
     content = load(conanfile_path)
@@ -296,31 +308,27 @@ def _replace_scm_data_in_conanfile(conanfile_path, scm_data):
                     line = lines[stmt.lineno - 1]
                     tab_size = len(line) - len(line.lstrip())
                     if isinstance(stmt.targets[0], ast.Name) and stmt.targets[0].id == "scm":
-                        try:
-                            if i + 1 == len(statements):  # Last statement in my ClassDef
-                                if i_body + 1 == len(tree.body):  # Last statement over all
-                                    next_line = len(lines)
-                                else:
-                                    next_line = tree.body[i_body+1].lineno - 1
-                            else:
-                                next_line = statements[i+1].lineno - 1
-                                next_line_content = lines[next_line].strip()
-                                if (next_line_content.endswith('"""') or
-                                        next_line_content.endswith("'''")):
-                                    next_line += 1
-                        except IndexError:
-                            next_line = stmt.lineno
-                        replace = [line for line in lines[(stmt.lineno-1):next_line]]
-                        to_replace.append("".join(replace).lstrip())
-                        comments = [line.strip('\n') for line in replace
-                                    if line.strip().startswith("#") or not line.strip()]
+                        to_replace = [ast.get_source_segment(content, stmt), ]
+
+                        # Everything from outside is a string between quotes
+                        scm_data = {k: "'{}'".format(v) for k, v in scm_data.items()}
+
+                        # Look for username/password, they won't be substituted
+                        # TODO: This won't work if SCM is stored in the parent class
+                        username_raw_value = _get_raw_scm_member(content, stmt.value, "username")
+                        if username_raw_value:
+                            # TODO: Add output
+                            scm_data.update({"username": username_raw_value})
+                        password_raw_value = _get_raw_scm_member(content, stmt.value, "password")
+                        if password_raw_value:
+                            # TODO: Add output
+                            scm_data.update({"password": password_raw_value})
                         break
 
     if len(to_replace) > 1:
         raise ConanException("The conanfile.py defines more than one class level 'scm' attribute")
 
-    new_text = "scm = " + ",\n          ".join(str(scm_data).split(",")) + "\n"
-
+    new_text = "scm = {" + ",\n           ".join(["'{}': {}".format(k, v) for k, v in scm_data.items()]) + "}\n"
     if len(to_replace) == 0:
         # SCM exists, but not found in the conanfile, probably inherited from superclass
         # FIXME: This will inject the lines only the latest class declared in the conanfile
