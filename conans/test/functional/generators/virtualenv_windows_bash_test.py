@@ -7,7 +7,7 @@ import unittest
 from conans.test.functional.generators.virtualenv_test import _load_env_file
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
-from conans.util.files import decode_text
+from conans.util.files import decode_text, save
 
 
 @unittest.skipIf(platform.system() != "Windows", "Only for Windows")
@@ -18,16 +18,14 @@ class VirtualenvWindowsBashTestCase(unittest.TestCase):
     we should test the same cases
     """
 
-    maxDiff = None
     conanfile = textwrap.dedent("""
         import os
-        from conans import ConanFile
+        from conans import ConanFile, tools
         
         class Recipe(ConanFile):
             def build(self):
-                with open("executable.exe", "w+") as f:
-                    f.write("echo EXECUTABLE IN PACKAGE!!")
-            
+                tools.save("executable.exe", "echo EXECUTABLE IN PACKAGE!!")
+
             def package(self):
                 self.copy("*.exe", dst="bin")
 
@@ -48,81 +46,73 @@ class VirtualenvWindowsBashTestCase(unittest.TestCase):
                 
     """)
 
-    @classmethod
-    def setUpClass(cls):
+    def setUp(self):
+        test_folder = temp_folder(path_with_spaces=False)
+
         cache_folder = os.path.join(temp_folder(path_with_spaces=False), ".conan")
         t = TestClient(cache_folder=cache_folder)
-        t.save({"conanfile.py": cls.conanfile})
+        t.save({"conanfile.py": self.conanfile})
         t.run("create . name/version@")
 
-        cls.cache_folder = os.path.dirname(t.cache_folder)
+        cache_folder = os.path.dirname(t.cache_folder)
 
-    def _run_environment(self):
+        # Locate the Conan we are actually using (it should be the one in this commit)
         stdout, _ = subprocess.Popen(["where", "conan"], stdout=subprocess.PIPE).communicate()
         conan_path = decode_text(stdout).splitlines()[0]  # Get the first one (Windows returns all found)
 
         # All the commands are listed in a sh file:
-        commands_file = os.path.join(self.test_folder, 'commands.sh')
-        with open(commands_file, 'w+') as f:
-            # Dirty environment
-            f.write("export USER_VAR=existing_value\n")
-            f.write("export ANOTHER=existing_value\n")
-            f.write("export WHATEVER=existing_value\n")
-            f.write("export WHATEVER2=existing_value\n")
-            f.write("export CFLAGS=existing_value\n")
-
-            f.write("export PATH={}:$PATH\n".format(os.path.dirname(conan_path).replace('\\', '/').replace('C:', '/c')))
-            f.write("export CONAN_USER_HOME={}\n".format(self.cache_folder.replace('\\', '/').replace('C:', '/c')))
-            f.write("conan install name/version@ -g virtualenv -g virtualrunenv\n")
-
-            f.write("env > env_before.txt\n")
-            f.write("echo 'Start to find executable'\n")
-            f.write("echo __exec_pre_path__=$(which executable)\n")
-            f.write(". ./activate.sh\n")
-            f.write("env > env_activated.txt\n")
-            f.write("echo __exec_env_path__=$(which executable)\n")
-            f.write("executable\n")
-            f.write(". ./deactivate.sh\n")
-            f.write("echo __exec_post_path__=$(which executable)\n")
-            f.write("env > env_after.txt\n")
+        commands_file = os.path.join(test_folder, 'commands.sh')
+        conan_path = os.path.dirname(conan_path).replace('\\', '/').replace('C:', '/c')
+        conan_user_home = cache_folder.replace('\\', '/').replace('C:', '/c')
+        save(commands_file, textwrap.dedent("""
+            export USER_VAR=existing_value
+            export ANOTHER=existing_value
+            export WHATEVER=existing_value
+            export WHATEVER2=existing_value
+            export CFLAGS=existing_value
+            
+            export PATH={conan_path}:$PATH
+            export CONAN_USER_HOME={conan_user_home}
+            conan install name/version@ -g virtualenv -g virtualrunenv
+            
+            env > env_before.txt
+            echo 'Start to find executable'
+            echo __exec_pre_path__=$(which executable)
+            . ./activate.sh
+            env > env_activated.txt
+            echo __exec_env_path__=$(which executable)
+            executable
+            . ./deactivate.sh
+            echo __exec_post_path__=$(which executable)
+            env > env_after.txt
+        """.format(conan_path=conan_path, conan_user_home=conan_user_home)))
 
         cmd = r'C:\Windows\System32\cmd.exe /c ""C:\Program Files\Git\bin\sh.exe" --login -i "{}""'.format(commands_file)
-        shell = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=self.test_folder)
+        shell = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=test_folder)
         (stdout, stderr) = shell.communicate()
         stdout, stderr = decode_text(stdout), decode_text(stderr)
 
-        env_before = _load_env_file(os.path.join(self.test_folder, "env_before.txt"))
-        env_after = _load_env_file(os.path.join(self.test_folder, "env_after.txt"))
+        env_before = _load_env_file(os.path.join(test_folder, "env_before.txt"))
+        env_after = _load_env_file(os.path.join(test_folder, "env_after.txt"))
         self.assertDictEqual(env_before, env_after)  # Environment restored correctly
 
-        return stdout, _load_env_file(os.path.join(self.test_folder, "env_activated.txt"))
+        # Environment once activated
+        environment = _load_env_file(os.path.join(test_folder, "env_activated.txt"))
 
-    def test_basic_variable(self):
-        self.test_folder = temp_folder(path_with_spaces=False)
-        _, environment = self._run_environment()
-
+        # Test a basic variable
         self.assertEqual(environment["USER_VAR"], r"some value with space and \ (backslash)")
         self.assertEqual(environment["ANOTHER"], "data")
 
-    def test_find_program(self):
-        self.test_folder = temp_folder(path_with_spaces=False)
-        stdout, _ = self._run_environment()
-
+        # Test find program
         epaths = dict(line.split("=", 1) for line in reversed(stdout.splitlines()) if line.startswith("__exec_"))
         self.assertEqual(epaths["__exec_pre_path__"], "")
         self.assertEqual(epaths["__exec_post_path__"], "")
         self.assertTrue(len(epaths["__exec_env_path__"]) > 0)
         self.assertIn("EXECUTABLE IN PACKAGE!!", stdout)
 
-    def test_list_variable(self):
-        self.test_folder = temp_folder(path_with_spaces=False)
-        _, environment = self._run_environment()
-
+        # Test variable which is a list
         self.assertEqual(environment["WHATEVER"], "list:other:existing_value")
         self.assertEqual(environment["WHATEVER2"], "list:existing_value")
 
-    def test_list_with_spaces(self):
-        self.test_folder = temp_folder(path_with_spaces=False)
-        _, environment = self._run_environment()
-
+        # Variable: list with spaces
         self.assertEqual(environment["CFLAGS"], "cflags1 cflags2  existing_value")  # FIXME: extra blank
