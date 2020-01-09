@@ -46,7 +46,7 @@ class VirtualenvWindowsBashTestCase(unittest.TestCase):
                 
     """)
 
-    def setUp(self):
+    def test_git_shell(self):
         test_folder = temp_folder(path_with_spaces=False)
 
         cache_folder = os.path.join(temp_folder(path_with_spaces=False), ".conan")
