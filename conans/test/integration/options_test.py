@@ -2,6 +2,7 @@ import os
 import textwrap
 import unittest
 
+from conans.client.tools.env import environment_append
 from conans.paths import CONANINFO
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, GenConanfile
 from conans.util.files import load
@@ -203,6 +204,24 @@ class MyConanFile(ConanFile):
         self.assertIn("Boolean evaluation", client.out)
         self.assertNotIn("None evaluation", client.out)
         self.assertNotIn("String evaluation", client.out)
+
+    def test_default_options_unicode(self):
+        conanfile = textwrap.dedent("""
+            import os
+            from conans import ConanFile
+            
+            class Recipe(ConanFile):
+                options = {"config": "ANY"}
+                default_options = {"config": os.environ["OPTION_VALUE"]}
+        """)
+
+        t = TestClient()
+        t.save({"conanfile.py": conanfile})
+        with environment_append({"OPTION_VALUE": "whatever"}):
+            t.run("export . name/version@")
+
+        print(t.out)
+        self.assertIn("name/version: Exported revision:", t.out)
 
     def general_scope_options_test(self):
         # https://github.com/conan-io/conan/issues/2538
