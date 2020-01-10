@@ -275,12 +275,12 @@ def _replace_scm_data_in_recipe(package_layout, scm_data, scm_to_conandata):
             conandata_yml = yaml.safe_load(load(conandata_path))
             if '.conan' in conandata_yml:
                 raise ConanException("Field '.conan' inside '{}' file is reserved to Conan usage.".format(DATA_YML))
-        scm_data_copied = scm_data.copy()
+        scm_data_copied = scm_data.as_dict()
         scm_data_copied.pop('username', None)
         scm_data_copied.pop('password', None)
         conandata_yml['.conan'] = {'scm_data': scm_data_copied}
 
-        yaml.safe_dump(conandata_yml, default_flow_style=False)
+        save(conandata_path, yaml.safe_dump(conandata_yml, default_flow_style=False))
     else:
         _replace_scm_data_in_conanfile(package_layout.conanfile(), scm_data)
 
