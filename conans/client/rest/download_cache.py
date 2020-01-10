@@ -1,5 +1,6 @@
 import os
 import shutil
+from threading import Lock
 
 from six.moves.urllib_parse import urlsplit, urlunsplit
 
@@ -13,6 +14,7 @@ class CachedFileDownloader(object):
     def __init__(self, cache_folder, file_downloader):
         self._cache_folder = cache_folder
         self._file_downloader = file_downloader
+        self._thread_locks = {}
 
     def download(self, url, file_path=None, auth=None, retry=None, retry_wait=None, overwrite=False,
                  headers=None, checksum=None):
@@ -22,17 +24,24 @@ class CachedFileDownloader(object):
         lock = os.path.join(self._cache_folder, "locks", h)
         cached_path = os.path.join(self._cache_folder, h)
         with SimpleLock(lock):
-            if not os.path.exists(cached_path):
-                self._file_downloader.download(url, cached_path, auth, retry, retry_wait,
-                                               overwrite, headers)
-            if file_path is not None:
-                file_path = os.path.abspath(file_path)
-                mkdir(os.path.dirname(file_path))
-                shutil.copy2(cached_path, file_path)
-            else:
-                with open(cached_path, 'rb') as handle:
-                    tmp = handle.read()
-                return tmp
+            # Once the process has access, make sure multithread is locked too
+            # as SimpleLock doesn't work multithread
+            thread_lock = self._thread_locks.setdefault(lock, Lock())
+            thread_lock.acquire()
+            try:
+                if not os.path.exists(cached_path):
+                    self._file_downloader.download(url, cached_path, auth, retry, retry_wait,
+                                                   overwrite, headers)
+                if file_path is not None:
+                    file_path = os.path.abspath(file_path)
+                    mkdir(os.path.dirname(file_path))
+                    shutil.copy2(cached_path, file_path)
+                else:
+                    with open(cached_path, 'rb') as handle:
+                        tmp = handle.read()
+                    return tmp
+            finally:
+                thread_lock.release()
 
     @staticmethod
     def _get_hash(url, checksum=None):
@@ -50,4 +59,3 @@ class CachedFileDownloader(object):
             url += checksum
         h = sha256(url.encode())
         return h
-
