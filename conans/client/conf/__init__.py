@@ -155,6 +155,7 @@ default_package_id_mode = semver_direct_mode # environment CONAN_DEFAULT_PACKAGE
 # temp_test_folder = True             # environment CONAN_TEMP_TEST_FOLDER
 
 # cacert_path                         # environment CONAN_CACERT_PATH
+# scm_to_conandata                    # environment CONAN_SCM_TO_CONANDATA
 
 [storage]
 # This is the default path, but you can write your own. It must be an absolute path or a
@@ -389,6 +390,16 @@ class ConanClientConfigParser(ConfigParser, object):
                 except ConanException:
                     return False
             return revisions_enabled.lower() in ("1", "true")
+        except ConanException:
+            return False
+
+    @property
+    def scm_to_conandata(self):
+        try:
+            scm_to_conandata = get_env("CONAN_SCM_TO_CONANDATA")
+            if scm_to_conandata is None:
+                scm_to_conandata = self.get_item("general.scm_to_conandata")
+            return scm_to_conandata.lower() in ("1", "true")
         except ConanException:
             return False
 
