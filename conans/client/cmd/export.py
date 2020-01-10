@@ -201,9 +201,9 @@ def _check_settings_for_warnings(conanfile, output):
     if not conanfile.settings:
         return
     try:
-        if not 'os_build' in conanfile.settings:
+        if 'os_build' not in conanfile.settings:
             return
-        if not 'os' in conanfile.settings:
+        if 'os' not in conanfile.settings:
             return
 
         output.writeln("*"*60, front=Color.BRIGHT_RED)
