@@ -1,28 +1,18 @@
 import os
+import tempfile
 import textwrap
 import unittest
 
 import yaml
 
-from conans.model.ref import ConanFileReference
-from conans.paths import DATA_YML
-from conans.test.utils.tools import TestClient, create_local_git_repo
-from conans.util.files import load, save_files
-import codecs
-import os
-import shutil
-import tempfile
-import unittest
-from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestBufferConanOutput, TestClient
-import uuid
-
-import six
-
-from conans.client.cmd.export import _replace_scm_data_in_conanfile
 from conans.client.graph.python_requires import ConanPythonRequire
 from conans.client.loader import ConanFileLoader
-from conans.test.utils.tools import try_remove_readonly
+from conans.model.ref import ConanFileReference
+from conans.paths import DATA_YML
+from conans.test.utils.tools import TestBufferConanOutput, TestClient
+from conans.test.utils.tools import create_local_git_repo
 from conans.util.files import load
+from conans.util.files import save_files
 
 
 class SCMDataToConanDataTestCase(unittest.TestCase):
@@ -107,7 +97,7 @@ class SCMDataToConanDataTestCase(unittest.TestCase):
                        "username": "myuser", "password": os.environ.get("SECRET", None),}
         """)
         t = TestClient()
-        save_files({'conanfile.py': conanfile,
+        t.save({'conanfile.py': conanfile,
                 DATA_YML: yaml.safe_dump({'.conan': {'scm_data': {}}}, default_flow_style=False)})
 
         # Without activating the behavior, it works
