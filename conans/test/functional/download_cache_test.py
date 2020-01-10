@@ -80,6 +80,22 @@ class DownloadCacheTest(unittest.TestCase):
         client = TestClient()
         cache_folder = temp_folder()
         client.run('config set storage.download_cache="%s"' % cache_folder)
+        # badchecksums are not cached
+        conanfile = textwrap.dedent("""
+           from conans import ConanFile, tools
+           class Pkg(ConanFile):
+               def source(self):
+                   tools.download("http://localhost:%s/myfile.txt", "myfile.txt",
+                                  md5="kk")
+           """ % http_server.port)
+        client.save({"conanfile.py": conanfile})
+        client.run("source .", assert_error=True)
+        self.assertIn("ConanException: md5 signature failed", client.out)
+        self.assertIn("Provided signature: kk", client.out)
+        self.assertIn("Computed signature: 9893532233caff98cd083a116b013c0b", client.out)
+        self.assertEqual(1, len(os.listdir(cache_folder)))  # Nothing was cached
+
+        # This is the right checksum
         conanfile = textwrap.dedent("""
             from conans import ConanFile, tools
             class Pkg(ConanFile):

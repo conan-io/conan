@@ -52,7 +52,7 @@ class RestV1Methods(RestCommonMethods):
             auth, _ = self._file_server_capabilities(resource_url)
             if download_cache:
                 md5 = snapshot_md5[filename]
-                contents = downloader.download(resource_url, auth=auth, checksum=md5)
+                contents = downloader.download(resource_url, auth=auth, md5=md5)
             else:
                 contents = downloader.download(resource_url, auth=auth)
             yield os.path.normpath(filename), contents
@@ -201,7 +201,7 @@ class RestV1Methods(RestCommonMethods):
             abs_path = os.path.join(to_folder, filename)
             if download_cache:
                 md5 = snapshot_md5[filename]
-                downloader.download(resource_url, abs_path, auth=auth, checksum=md5)
+                downloader.download(resource_url, abs_path, auth=auth, md5=md5)
             else:
                 downloader.download(resource_url, abs_path, auth=auth)
             ret[filename] = abs_path
