@@ -7,6 +7,7 @@ import yaml
 
 from conans.client.graph.python_requires import ConanPythonRequire
 from conans.client.loader import ConanFileLoader
+from conans.client.tools.env import environment_append
 from conans.model.ref import ConanFileReference
 from conans.paths import DATA_YML
 from conans.test.utils.tools import TestBufferConanOutput, TestClient
@@ -40,6 +41,13 @@ class SCMDataToConanDataTestCase(unittest.TestCase):
         conan_data = yaml.safe_load(exported_conandata)
         self.assertDictEqual(conan_data['.conan']['scm_data'], {"type": "git", "url": "myurl", "revision": "myrev"})
 
+        # Check the recipe gets the proper values
+        t.run("inspect name/version@ -a scm")
+        self.assertIn("password: None", t.out)
+        with environment_append({"SECRET": "42"}):
+            t.run("inspect name/version@ -a scm")
+            self.assertIn("password: 42", t.out)
+
     def test_save_special_chars(self):
         conanfile = textwrap.dedent("""
             import os
@@ -62,6 +70,14 @@ class SCMDataToConanDataTestCase(unittest.TestCase):
         conan_data = yaml.safe_load(exported_conandata)
         self.assertDictEqual(conan_data['.conan']['scm_data'], {"type": "git", "url": 'weir"d', "revision": 123,
                                                                 "subfolder": "weir\"d", "submodule": "don't"})
+
+        # Check the recipe gets the proper values
+        t.run("inspect name/version@ -a scm")
+        self.assertIn("revision: 123", t.out)
+        self.assertIn('subfolder: weir"d', t.out)
+        self.assertIn("submodule: don't", t.out)
+        self.assertIn("revision: 123", t.out)
+        self.assertIn('url: weir"d', t.out)
 
     def test_auto_is_replaced(self):
         conanfile = textwrap.dedent("""
@@ -86,6 +102,12 @@ class SCMDataToConanDataTestCase(unittest.TestCase):
         conan_data = yaml.safe_load(exported_conandata)
         self.assertDictEqual(conan_data['.conan']['scm_data'], {"type": "git", "url": 'https://myrepo.com.git',
                                                                 "revision": commit})
+
+        # Check the recipe gets the proper values
+        t.run("inspect name/version@ -a scm")
+        self.assertIn("revision: {}".format(commit), t.out)
+        self.assertIn("type: git", t.out)
+        self.assertIn("url: https://myrepo.com.git", t.out)
 
     def test_existing_field(self):
         conanfile = textwrap.dedent("""
