@@ -65,7 +65,6 @@ class ConanFileLoader(object):
             if conan_data and '.conan' in conan_data:
                 scm_data = conan_data['.conan'].get('scm_data')
                 if scm_data:
-                    assert hasattr(conanfile, 'scm')  # TODO: Remove the assert, just in case, but this has to be true
                     conanfile.scm.update(scm_data)
 
             self._cached_conanfile_classes[conanfile_path] = (conanfile, lock_python_requires, module)
