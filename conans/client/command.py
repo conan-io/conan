@@ -1910,6 +1910,7 @@ class Command(object):
                                             " you to use Python >= 3.5 with Conan.", width), front=Color.BRIGHT_RED)
             self._out.writeln("*"*width, front=Color.BRIGHT_RED)
 
+            self._out.writeln(os.environ)
             if os.environ.get('USE_UNSUPPORTED_CONAN_WITH_PYTHON_2', 0):
                 # IMPORTANT: This environment variable is not a silver buller. Python 2 is currently deprecated
                 # and some libraries we use as dependencies have stopped supporting it. Conan might fail to run
