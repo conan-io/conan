@@ -645,6 +645,7 @@ class GraphLockWarningsTestCase(unittest.TestCase):
         # Using the graphlock there is no warning message
         client.run("graph build-order conan.lock")
         self.assertNotIn("overridden", client.out)
+        self.assertNotIn("WARN", client.out)
 
 
 class GraphLockBuildRequireErrorTestCase(unittest.TestCase):

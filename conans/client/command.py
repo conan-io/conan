@@ -1913,8 +1913,8 @@ class Command(object):
                 # IMPORTANT: This environment variable is not a silver buller. Python 2 is currently deprecated
                 # and some libraries we use as dependencies have stopped supporting it. Conan might fail to run
                 # and we are no longer fixing errors related to Python 2.
-                self._out.warn(textwrap.fill("Python 2 deprecation notice has been bypassed"
-                                             " by envvar 'USE_UNSUPPORTED_CONAN_WITH_PYTHON_2'", width))
+                self._out.writeln(textwrap.fill("Python 2 deprecation notice has been bypassed"
+                                                " by envvar 'USE_UNSUPPORTED_CONAN_WITH_PYTHON_2'", width))
             else:
                 self._out.writeln(textwrap.fill("If you really need to run Conan with Python 2 in your"
                                                 " CI without this interactive input, please contact us"
