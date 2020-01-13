@@ -1911,9 +1911,16 @@ class Command(object):
             self._out.writeln("*"*width, front=Color.BRIGHT_RED)
 
             if os.environ.get('USE_UNSUPPORTED_CONAN_WITH_PYTHON_2', 0):
+                # IMPORTANT: This environment variable is not a silver buller. Python 2 is currently deprecated
+                # and some libraries we use as dependencies have stopped supporting it. Conan might fail to run
+                # and we are no longer fixing errors related to Python 2.
                 self._out.warn(textwrap.fill("Python 2 deprecation notice has been bypassed"
                                              " by envvar 'USE_UNSUPPORTED_CONAN_WITH_PYTHON_2'", width))
             else:
+                self._out.writeln(textwrap.fill("If you really need to run Conan with Python 2 in your"
+                                                " CI without this interactive input, please contact us"
+                                                " at info@conan.io", width), front=Color.BRIGHT_RED)
+                self._out.writeln("*" * width, front=Color.BRIGHT_RED)
                 self._out.write(textwrap.fill("Understood the risk, keep going [y/N]: ", width,
                                               drop_whitespace=False), front=Color.BRIGHT_RED)
                 ret = raw_input().lower()
