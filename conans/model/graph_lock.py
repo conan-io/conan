@@ -160,7 +160,7 @@ class GraphLock(object):
             python_reqs = node.conanfile.python_requires.all_refs()
 
         previous = node.graph_lock_node
-        modified = previous.modified if previous else None
+        modified = node.graph_lock_node.modified if node.graph_lock_node else None
         graph_node = GraphLockNode(node.pref if node.ref else None, python_reqs,
                                    node.conanfile.options.values, requires, build_requires,
                                    node.path, modified)
