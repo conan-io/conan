@@ -15,7 +15,7 @@ sh_activate_tpl = Template(textwrap.dedent("""
     export CONAN_OLD_{{it}}="${{it}}"
     {%- endfor %}
 
-    while read line; do
+    while read -r line; do
         LINE="$(eval echo $line)";
         export "$LINE";
     done < "{{ environment_file }}"
