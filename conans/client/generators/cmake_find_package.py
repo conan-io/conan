@@ -94,18 +94,24 @@ def find_dependency_lines(name, public_deps_names, find_modules):
                     "  set_property(TARGET %s APPEND PROPERTY %s ${tmp})" % (lib_t, prop),
                     'endif()']
 
+        lines.append("if(NOT %s_FOUND)" % dep_name)
+
         if find_modules:
             lines.append("\n")
-            lines.append("find_dependency(%s REQUIRED)" % dep_name)
+            lines.append("  find_dependency(%s REQUIRED)" % dep_name)
         else:
             # https://github.com/conan-io/conan/issues/4994
             # https://github.com/conan-io/conan/issues/5040
             lines.append("\n")
-            lines.append('if(${CMAKE_VERSION} VERSION_LESS "3.9.0")')
-            lines.append('  find_package(%s REQUIRED NO_MODULE)' % dep_name)
-            lines.append("else()")
-            lines.append('  find_dependency(%s REQUIRED NO_MODULE)' % dep_name)
-            lines.append("endif()")
+            lines.append('  if(${CMAKE_VERSION} VERSION_LESS "3.9.0")')
+            lines.append('    find_package(%s REQUIRED NO_MODULE)' % dep_name)
+            lines.append("  else()")
+            lines.append('    find_dependency(%s REQUIRED NO_MODULE)' % dep_name)
+            lines.append("  endif()")
+
+        lines.append("else()")
+        lines.append("  message(STATUS \"Dependency %s already found\")" % dep_name)
+        lines.append("endif()")
 
         lines.extend(property_lines("INTERFACE_LINK_LIBRARIES"))
         lines.extend(property_lines("INTERFACE_COMPILE_DEFINITIONS"))
