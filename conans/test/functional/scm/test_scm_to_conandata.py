@@ -39,14 +39,16 @@ class SCMDataToConanDataTestCase(unittest.TestCase):
         self.assertEqual(exported_conanfile, conanfile)
         exported_conandata = load(os.path.join(package_layout.export(), DATA_YML))
         conan_data = yaml.safe_load(exported_conandata)
-        self.assertDictEqual(conan_data['.conan']['scm_data'], {"type": "git", "url": "myurl", "revision": "myrev"})
+        self.assertDictEqual(conan_data['.conan']['scm'], {"type": "git", "url": "myurl", "revision": "myrev"})
 
         # Check the recipe gets the proper values
         t.run("inspect name/version@ -a scm")
         self.assertIn("password: None", t.out)
+        self.assertIn("username: myuser", t.out)
         with environment_append({"SECRET": "42"}):
             t.run("inspect name/version@ -a scm")
             self.assertIn("password: 42", t.out)
+            self.assertIn("username: myuser", t.out)
 
     def test_save_special_chars(self):
         conanfile = textwrap.dedent("""
@@ -68,8 +70,8 @@ class SCMDataToConanDataTestCase(unittest.TestCase):
         self.assertEqual(exported_conanfile, conanfile)
         exported_conandata = load(os.path.join(package_layout.export(), DATA_YML))
         conan_data = yaml.safe_load(exported_conandata)
-        self.assertDictEqual(conan_data['.conan']['scm_data'], {"type": "git", "url": 'weir"d', "revision": 123,
-                                                                "subfolder": "weir\"d", "submodule": "don't"})
+        self.assertDictEqual(conan_data['.conan']['scm'], {"type": "git", "url": 'weir"d', "revision": 123,
+                                                           "subfolder": "weir\"d", "submodule": "don't"})
 
         # Check the recipe gets the proper values
         t.run("inspect name/version@ -a scm")
@@ -100,8 +102,8 @@ class SCMDataToConanDataTestCase(unittest.TestCase):
         self.assertEqual(exported_conanfile, conanfile)
         exported_conandata = load(os.path.join(package_layout.export(), DATA_YML))
         conan_data = yaml.safe_load(exported_conandata)
-        self.assertDictEqual(conan_data['.conan']['scm_data'], {"type": "git", "url": 'https://myrepo.com.git',
-                                                                "revision": commit})
+        self.assertDictEqual(conan_data['.conan']['scm'], {"type": "git", "url": 'https://myrepo.com.git',
+                                                           "revision": commit})
 
         # Check the recipe gets the proper values
         t.run("inspect name/version@ -a scm")
@@ -145,7 +147,7 @@ class ParseSCMFromConanDataTestCase(unittest.TestCase):
         """)
         conan_data = {
             'something_else': {},
-            '.conan': {'scm_data': {
+            '.conan': {'scm': {
                 'type': 'git',
                 'url': 'http://myrepo.com',
                 'shallow': False,
@@ -156,4 +158,4 @@ class ParseSCMFromConanDataTestCase(unittest.TestCase):
                                  DATA_YML: yaml.safe_dump(conan_data, default_flow_style=False)})
 
         conanfile, _ = self.loader.load_basic_module(conanfile_path=os.path.join(test_folder, 'conanfile.py'))
-        self.assertDictEqual(conanfile.scm, conan_data['.conan']['scm_data'])
+        self.assertDictEqual(conanfile.scm, conan_data['.conan']['scm'])

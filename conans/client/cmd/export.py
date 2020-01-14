@@ -278,7 +278,7 @@ def _replace_scm_data_in_recipe(package_layout, scm_data, scm_to_conandata):
         scm_data_copied = scm_data.as_dict()
         scm_data_copied.pop('username', None)
         scm_data_copied.pop('password', None)
-        conandata_yml['.conan'] = {'scm_data': scm_data_copied}
+        conandata_yml['.conan'] = {'scm': scm_data_copied}
 
         save(conandata_path, yaml.safe_dump(conandata_yml, default_flow_style=False))
     else:

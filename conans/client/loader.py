@@ -63,7 +63,7 @@ class ConanFileLoader(object):
             conan_data = self._load_data(conanfile_path)
             conanfile.conan_data = conan_data
             if conan_data and '.conan' in conan_data:
-                scm_data = conan_data['.conan'].get('scm_data')
+                scm_data = conan_data['.conan'].get('scm')
                 if scm_data:
                     conanfile.scm.update(scm_data)
 
