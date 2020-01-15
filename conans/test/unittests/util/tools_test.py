@@ -793,7 +793,7 @@ ProgramFiles(x86)=C:\Program Files (x86)
         # Not authorized
         with six.assertRaisesRegex(self, AuthenticationException, "403"):
             tools.download("http://localhost:%s/forbidden" % http_server.port, dest,
-                           requester=requests, out=out)
+                           requester=requests, out=out, retry=0, retry_wait=0)
 
         http_server.stop()
 
