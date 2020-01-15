@@ -10,7 +10,7 @@ from collections import namedtuple
 import mock
 import requests
 import six
-from bottle import request, static_file
+from bottle import request, static_file, HTTPError
 from mock.mock import mock_open, patch
 from nose.plugins.attrib import attr
 from parameterized import parameterized
@@ -25,7 +25,7 @@ from conans.client.runner import ConanRunner
 from conans.client.tools.files import replace_in_file, which
 from conans.client.tools.oss import check_output, OSInfo
 from conans.client.tools.win import vcvars_dict, vswhere
-from conans.errors import ConanException, NotFoundException
+from conans.errors import ConanException, NotFoundException, AuthenticationException
 from conans.model.build_info import CppInfo
 from conans.model.settings import Settings
 from conans.test.utils.conanfile import ConanFileMock
@@ -776,6 +776,25 @@ ProgramFiles(x86)=C:\Program Files (x86)
         tools.download("http://localhost:%s/basic-auth/user/passwd" % http_server.port, dest,
                        headers={"Authorization": "Basic dXNlcjpwYXNzd2Q="}, overwrite=True,
                        requester=requests, out=out, retry=0, retry_wait=0)
+        http_server.stop()
+
+    @attr("slow")
+    def download_unathorized_test(self):
+        http_server = StoppableThreadBottle()
+
+        @http_server.server.get('/forbidden')
+        def get_forbidden():
+            return HTTPError(403, "Access denied.")
+
+        http_server.run_server()
+
+        out = TestBufferConanOutput()
+        dest = os.path.join(temp_folder(), "manual.html")
+        # Not authorized
+        with six.assertRaisesRegex(self, AuthenticationException, "403"):
+            tools.download("http://localhost:%s/forbidden" % http_server.port, dest,
+                           requester=requests, out=out)
+
         http_server.stop()
 
     @parameterized.expand([

@@ -378,26 +378,25 @@ class CMakeCppInfoNameTest(unittest.TestCase):
         content = generator.content
         self.assertIn("set(CONAN_DEPENDENCIES my_pkg my_pkg2)", content)
         content = content.replace("set(CONAN_DEPENDENCIES my_pkg my_pkg2)", "")
-        self.assertNotIn("my_pkg", content)
-        self.assertNotIn("MY_PKG", content)
-        self.assertIn('add_library(CONAN_PKG::MyPkG INTERFACE IMPORTED)', content)
-        self.assertIn('add_library(CONAN_PKG::MyPkG2 INTERFACE IMPORTED)', content)
-        self.assertNotIn('CONAN_PKG::my_pkg', content)
-        self.assertNotIn('CONAN_PKG::my_pkg2', content)
+        self.assertNotIn("MyPkG", content)
+        self.assertNotIn("MYPKG", content)
+        self.assertIn('add_library(CONAN_PKG::my_pkg INTERFACE IMPORTED)', content)
+        self.assertIn('add_library(CONAN_PKG::my_pkg2 INTERFACE IMPORTED)', content)
+        self.assertNotIn('CONAN_PKG::MyPkG', content)
+        self.assertNotIn('CONAN_PKG::MyPkG2', content)
 
     def cmake_multi_test(self):
         generator = CMakeMultiGenerator(self.conanfile)
         content = generator.content
         self.assertIn("set(CONAN_DEPENDENCIES_DEBUG my_pkg my_pkg2)",
                       content["conanbuildinfo_debug.cmake"])
-        self.assertNotIn("my_pkg", content["conanbuildinfo_multi.cmake"])
-        self.assertNotIn("MY_PKG", content["conanbuildinfo_multi.cmake"])
-        self.assertIn('add_library(CONAN_PKG::MyPkG INTERFACE IMPORTED)',
+        self.assertNotIn("MyPkG", content["conanbuildinfo_multi.cmake"])
+        self.assertIn('add_library(CONAN_PKG::my_pkg INTERFACE IMPORTED)',
                       content["conanbuildinfo_multi.cmake"])
-        self.assertIn('add_library(CONAN_PKG::MyPkG2 INTERFACE IMPORTED)',
+        self.assertIn('add_library(CONAN_PKG::my_pkg2 INTERFACE IMPORTED)',
                       content["conanbuildinfo_multi.cmake"])
-        self.assertNotIn('CONAN_PKG::my_pkg', content["conanbuildinfo_multi.cmake"])
-        self.assertNotIn('CONAN_PKG::my_pkg2', content["conanbuildinfo_multi.cmake"])
+        self.assertNotIn('CONAN_PKG::MyPkG', content["conanbuildinfo_multi.cmake"])
+        self.assertNotIn('CONAN_PKG::MyPkG2', content["conanbuildinfo_multi.cmake"])
 
     def cmake_find_package_test(self):
         generator = CMakeFindPackageGenerator(self.conanfile)
