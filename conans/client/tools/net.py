@@ -61,9 +61,9 @@ def download(url, filename, verify=True, out=None, retry=None, retry_wait=None, 
     from conans.tools import _global_config as config
 
     # It might be possible that users provide their own requester
-    retry = retry if retry is not None else config.retry
+    retry = retry if retry is not None else getattr(config, "retry", None)
     retry = retry if retry is not None else 1
-    retry_wait = retry_wait if retry_wait is not None else config.retry_wait
+    retry_wait = retry_wait if retry_wait is not None else getattr(config, "retry_wait", None)
     retry_wait = retry_wait if retry_wait is not None else 5
 
     downloader = FileDownloader(requester=requester, output=out, verify=verify, config=config)
