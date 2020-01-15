@@ -36,6 +36,12 @@ from conans.util.env_reader import get_env
 from conans.util.files import load, md5, mkdir, save
 
 
+class ConfigMock:
+    def __init__(self):
+        self.retry = 0
+        self.retry_wait = 0
+
+
 class RunnerMock(object):
     def __init__(self, return_ok=True):
         self.command_called = None
@@ -779,8 +785,10 @@ ProgramFiles(x86)=C:\Program Files (x86)
         http_server.stop()
 
     @attr("slow")
-    def download_unathorized_test(self):
+    @patch("conans.tools._global_config")
+    def download_unathorized_test(self, mock_config):
         http_server = StoppableThreadBottle()
+        mock_config.return_value = ConfigMock()
 
         @http_server.server.get('/forbidden')
         def get_forbidden():
