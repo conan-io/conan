@@ -230,12 +230,10 @@ class CMakeGeneratorTest(unittest.TestCase):
 
     if(NOT ARGUMENTS_SKIP_RPATH AND NOT ARGUMENTS_KEEP_RPATHS)
         # Parameter has renamed, but we keep the compatibility with old SKIP_RPATH
-        conan_message(STATUS "Conan: Adjusting default RPATHs Conan policies")
         conan_set_rpath()
     endif()
 
     if(NOT ARGUMENTS_SKIP_STD)
-        conan_message(STATUS "Conan: Adjusting language standard")
         conan_set_std()
     endif()
 

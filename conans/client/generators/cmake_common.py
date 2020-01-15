@@ -289,14 +289,15 @@ class CMakeCommonMacros:
 
     conan_set_std = textwrap.dedent("""
         macro(conan_set_std)
+            conan_message(STATUS "Conan: Adjusting language standard")
             # Do not warn "Manually-specified variables were not used by the project"
             set(ignorevar "${CONAN_STD_CXX_FLAG}${CONAN_CMAKE_CXX_STANDARD}${CONAN_CMAKE_CXX_EXTENSIONS}")
             if (CMAKE_VERSION VERSION_LESS "3.1" OR
                 (CMAKE_VERSION VERSION_LESS "3.12" AND ("${CONAN_CMAKE_CXX_STANDARD}" STREQUAL "20" OR "${CONAN_CMAKE_CXX_STANDARD}" STREQUAL "gnu20")))
-            if(CONAN_STD_CXX_FLAG)
-                conan_message(STATUS "Conan setting CXX_FLAGS flags: ${CONAN_STD_CXX_FLAG}")
-                set(CMAKE_CXX_FLAGS "${CONAN_STD_CXX_FLAG} ${CMAKE_CXX_FLAGS}")
-            endif()
+                if(CONAN_STD_CXX_FLAG)
+                    conan_message(STATUS "Conan setting CXX_FLAGS flags: ${CONAN_STD_CXX_FLAG}")
+                    set(CMAKE_CXX_FLAGS "${CONAN_STD_CXX_FLAG} ${CMAKE_CXX_FLAGS}")
+                endif()
             else()
                 if(CONAN_CMAKE_CXX_STANDARD)
                     conan_message(STATUS "Conan setting CPP STANDARD: ${CONAN_CMAKE_CXX_STANDARD} WITH EXTENSIONS ${CONAN_CMAKE_CXX_EXTENSIONS}")
@@ -309,6 +310,7 @@ class CMakeCommonMacros:
 
     conan_set_rpath = textwrap.dedent("""
         macro(conan_set_rpath)
+            conan_message(STATUS "Conan: Adjusting default RPATHs Conan policies")
             if(APPLE)
                 # https://cmake.org/Wiki/CMake_RPATH_handling
                 # CONAN GUIDE: All generated libraries should have the id and dependencies to other
@@ -822,12 +824,10 @@ macro(conan_basic_setup)
 
     if(NOT ARGUMENTS_SKIP_RPATH AND NOT ARGUMENTS_KEEP_RPATHS)
         # Parameter has renamed, but we keep the compatibility with old SKIP_RPATH
-        conan_message(STATUS "Conan: Adjusting default RPATHs Conan policies")
         conan_set_rpath()
     endif()
 
     if(NOT ARGUMENTS_SKIP_STD)
-        conan_message(STATUS "Conan: Adjusting language standard")
         conan_set_std()
     endif()
 
