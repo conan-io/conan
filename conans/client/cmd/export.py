@@ -1,6 +1,7 @@
 import ast
 import os
 import shutil
+import sys
 
 import six
 import yaml
@@ -18,6 +19,7 @@ from conans.util.files import is_dirty, load, rmdir, save, set_dirty, remove, mk
     merge_directories
 from conans.util.log import logger
 
+isPY38 = bool(sys.version_info.major == 3 and sys.version_info.minor == 8)
 
 def export_alias(package_layout, target_ref, output, revisions_enabled):
     revision_mode = "hash"
@@ -323,7 +325,14 @@ def _replace_scm_data_in_conanfile(conanfile_path, scm_data):
                                 else:
                                     next_line = tree.body[i_body+1].lineno - 1
                             else:
-                                next_line = statements[i+1].lineno - 1
+                                # Next statement can be a comment or anything else
+                                next_statement = statements[i+1]
+                                if isPY38 and isinstance(next_statement, ast.Expr):
+                                    # Python 3.8 properly parses multiline comments with start and end lines,
+                                    #  here we preserve the same (wrong) implementation of previous releases
+                                    next_line = next_statement.end_lineno - 1
+                                else:
+                                    next_line = next_statement.lineno - 1
                                 next_line_content = lines[next_line].strip()
                                 if (next_line_content.endswith('"""') or
                                         next_line_content.endswith("'''")):
