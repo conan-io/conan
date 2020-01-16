@@ -16,17 +16,17 @@ from conans.util.tracer import log_download
 
 class FileUploader(object):
 
-    def __init__(self, requester, output, verify, chunk_size=1000):
-        self.chunk_size = chunk_size
-        self.output = output
-        self.requester = requester
-        self.verify = verify
+    def __init__(self, requester, output, verify, config):
+        self._output = output
+        self._requester = requester
+        self._config = config
+        self._verify_ssl = verify
 
     def upload(self, url, abs_path, auth=None, dedup=False, retry=None, retry_wait=None,
                headers=None, display_name=None):
-        retry = retry if retry is not None else self.requester.retry
+        retry = retry if retry is not None else self._config.retry
         retry = retry if retry is not None else 1
-        retry_wait = retry_wait if retry_wait is not None else self.requester.retry_wait
+        retry_wait = retry_wait if retry_wait is not None else self._config.retry_wait
         retry_wait = retry_wait if retry_wait is not None else 5
 
         # Send always the header with the Sha1
@@ -36,8 +36,8 @@ class FileUploader(object):
             dedup_headers = {"X-Checksum-Deploy": "true"}
             if headers:
                 dedup_headers.update(headers)
-            response = self.requester.put(url, data="", verify=self.verify, headers=dedup_headers,
-                                          auth=auth)
+            response = self._requester.put(url, data="", verify=self._verify_ssl,
+                                           headers=dedup_headers, auth=auth)
             if response.status_code == 400:
                 raise RequestErrorException(response_to_str(response))
 
@@ -45,15 +45,15 @@ class FileUploader(object):
                 raise AuthenticationException(response_to_str(response))
 
             if response.status_code == 403:
-                if auth.token is None:
+                if auth is None or auth.token is None:
                     raise AuthenticationException(response_to_str(response))
                 raise ForbiddenException(response_to_str(response))
             if response.status_code == 201:  # Artifactory returns 201 if the file is there
                 return response
 
-        ret = call_with_retry(self.output, retry, retry_wait, self._upload_file, url,
-                              abs_path=abs_path, headers=headers, auth=auth,
-                              display_name=display_name)
+        ret = _call_with_retry(self._output, retry, retry_wait, self._upload_file, url,
+                               abs_path=abs_path, headers=headers, auth=auth,
+                               display_name=display_name)
         return ret
 
     def _upload_file(self, url, abs_path,  headers, auth, display_name=None):
@@ -74,13 +74,13 @@ class FileUploader(object):
                 yield chunk
 
         with open(abs_path, mode='rb') as file_handler:
-            progress = progress_bar.Progress(file_size, self.output, description, post_description)
+            progress = progress_bar.Progress(file_size, self._output, description, post_description)
             chunk_size = 1024
             data = progress.update(load_in_chunks(file_handler, chunk_size), chunk_size)
             iterable_to_file = IterableToFileAdapter(data, file_size)
             try:
-                response = self.requester.put(url, data=iterable_to_file, verify=self.verify,
-                                              headers=headers, auth=auth)
+                response = self._requester.put(url, data=iterable_to_file, verify=self._verify_ssl,
+                                               headers=headers, auth=auth)
 
                 if response.status_code == 400:
                     raise RequestErrorException(response_to_str(response))
@@ -89,7 +89,7 @@ class FileUploader(object):
                     raise AuthenticationException(response_to_str(response))
 
                 if response.status_code == 403:
-                    if auth.token is None:
+                    if auth is None or auth.token is None:
                         raise AuthenticationException(response_to_str(response))
                     raise ForbiddenException(response_to_str(response))
 
@@ -120,17 +120,17 @@ class IterableToFileAdapter(object):
 
 class FileDownloader(object):
 
-    def __init__(self, requester, output, verify, chunk_size=1000):
-        self.chunk_size = chunk_size
-        self.output = output
-        self.requester = requester
-        self.verify = verify
+    def __init__(self, requester, output, verify, config):
+        self._output = output
+        self._requester = requester
+        self._verify_ssl = verify
+        self._config = config
 
     def download(self, url, file_path=None, auth=None, retry=None, retry_wait=None, overwrite=False,
                  headers=None):
-        retry = retry if retry is not None else self.requester.retry
+        retry = retry if retry is not None else self._config.retry
         retry = retry if retry is not None else 2
-        retry_wait = retry_wait if retry_wait is not None else self.requester.retry_wait
+        retry_wait = retry_wait if retry_wait is not None else self._config.retry_wait
         retry_wait = retry_wait if retry_wait is not None else 0
 
         if file_path and not os.path.isabs(file_path):
@@ -138,21 +138,21 @@ class FileDownloader(object):
 
         if file_path and os.path.exists(file_path):
             if overwrite:
-                if self.output:
-                    self.output.warn("file '%s' already exists, overwriting" % file_path)
+                if self._output:
+                    self._output.warn("file '%s' already exists, overwriting" % file_path)
             else:
                 # Should not happen, better to raise, probably we had to remove
                 # the dest folder before
                 raise ConanException("Error, the file to download already exists: '%s'" % file_path)
 
-        return call_with_retry(self.output, retry, retry_wait, self._download_file, url, auth,
-                               headers, file_path)
+        return _call_with_retry(self._output, retry, retry_wait, self._download_file, url, auth,
+                                headers, file_path)
 
     def _download_file(self, url, auth, headers, file_path):
         t1 = time.time()
         try:
-            response = self.requester.get(url, stream=True, verify=self.verify, auth=auth,
-                                          headers=headers)
+            response = self._requester.get(url, stream=True, verify=self._verify_ssl, auth=auth,
+                                           headers=headers)
         except Exception as exc:
             raise ConanException("Error downloading file %s: '%s'" % (url, exc))
 
@@ -160,7 +160,8 @@ class FileDownloader(object):
             if response.status_code == 404:
                 raise NotFoundException("Not found: %s" % url)
             elif response.status_code == 403:
-                if auth.token is None:
+                if auth is None or (hasattr(auth, "token") and auth.token is None):
+                    # TODO: This is a bit weird, why this conversion? Need to investigate
                     raise AuthenticationException(response_to_str(response))
                 raise ForbiddenException(response_to_str(response))
             elif response.status_code == 401:
@@ -195,7 +196,7 @@ class FileDownloader(object):
             total_length = response.headers.get('content-length') or len(response.content)
             total_length = int(total_length)
             description = "Downloading {}".format(os.path.basename(file_path)) if file_path else None
-            progress = progress_bar.Progress(total_length, self.output, description)
+            progress = progress_bar.Progress(total_length, self._output, description)
 
             chunk_size = 1024 if not file_path else 1024 * 100
             encoding = response.headers.get('content-encoding')
@@ -223,7 +224,7 @@ class FileDownloader(object):
                                        % str(e))
 
 
-def call_with_retry(out, retry, retry_wait, method, *args, **kwargs):
+def _call_with_retry(out, retry, retry_wait, method, *args, **kwargs):
     for counter in range(retry + 1):
         try:
             return method(*args, **kwargs)

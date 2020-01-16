@@ -421,18 +421,18 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False, vcva
             if vcvars_ver:
                 command.append("-vcvars_ver=%s" % vcvars_ver)
 
-    if os_setting == 'WindowsStore':
-        os_version_setting = settings.get_safe("os.version")
-        if os_version_setting == '8.1':
-            command.append('store 8.1')
-        elif os_version_setting == '10.0':
-            windows_10_sdk = find_windows_10_sdk()
-            if not windows_10_sdk:
-                raise ConanException("cross-compiling for WindowsStore 10 (UWP), "
-                                     "but Windows 10 SDK wasn't found")
-            command.append('store %s' % windows_10_sdk)
-        else:
-            raise ConanException('unsupported Windows Store version %s' % os_version_setting)
+        if os_setting == 'WindowsStore':
+            os_version_setting = settings.get_safe("os.version")
+            if os_version_setting == '8.1':
+                command.append('store 8.1')
+            elif os_version_setting == '10.0':
+                windows_10_sdk = find_windows_10_sdk()
+                if not windows_10_sdk:
+                    raise ConanException("cross-compiling for WindowsStore 10 (UWP), "
+                                         "but Windows 10 SDK wasn't found")
+                command.append('store %s' % windows_10_sdk)
+            else:
+                raise ConanException('unsupported Windows Store version %s' % os_version_setting)
     return " ".join(command)
 
 
@@ -589,7 +589,7 @@ def run_in_windows_bash(conanfile, bashcmd, cwd=None, subsystem=None, msys_mingw
                                 "MINGW64"),
                     "MSYS2_PATH_TYPE": "inherit"}
     else:
-        env_vars = {}
+        env_vars = None
 
     with environment_append(env_vars):
 

@@ -155,6 +155,7 @@ default_package_id_mode = semver_direct_mode # environment CONAN_DEFAULT_PACKAGE
 # temp_test_folder = True             # environment CONAN_TEMP_TEST_FOLDER
 
 # cacert_path                         # environment CONAN_CACERT_PATH
+# scm_to_conandata                    # environment CONAN_SCM_TO_CONANDATA
 
 [storage]
 # This is the default path, but you can write your own. It must be an absolute path or a
@@ -393,6 +394,16 @@ class ConanClientConfigParser(ConfigParser, object):
             return False
 
     @property
+    def scm_to_conandata(self):
+        try:
+            scm_to_conandata = get_env("CONAN_SCM_TO_CONANDATA")
+            if scm_to_conandata is None:
+                scm_to_conandata = self.get_item("general.scm_to_conandata")
+            return scm_to_conandata.lower() in ("1", "true")
+        except ConanException:
+            return False
+
+    @property
     def default_package_id_mode(self):
         try:
             default_package_id_mode = get_env("CONAN_DEFAULT_PACKAGE_ID_MODE")
@@ -416,8 +427,10 @@ class ConanClientConfigParser(ConfigParser, object):
     def short_paths_home(self):
         short_paths_home = get_env("CONAN_USER_HOME_SHORT")
         if short_paths_home:
-            current_dir = os.path.dirname(self.filename)
-            if current_dir == os.path.commonprefix([current_dir, short_paths_home]):
+            current_dir = os.path.dirname(os.path.normpath(os.path.normcase(self.filename)))
+            short_paths_dir = os.path.normpath(os.path.normcase(short_paths_home))
+            if current_dir == short_paths_dir  or \
+                    short_paths_dir.startswith(current_dir + os.path.sep):
                 raise ConanException("Short path home '{}' (defined by conan.conf variable "
                                      "'user_home_short', or environment variable "
                                      "'CONAN_USER_HOME_SHORT') cannot be a subdirectory of "
