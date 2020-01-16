@@ -33,7 +33,8 @@ class MSBuild(object):
     def build(self, project_file, targets=None, upgrade_project=True, build_type=None, arch=None,
               parallel=True, force_vcvars=False, toolset=None, platforms=None, use_env=True,
               vcvars_ver=None, winsdk_version=None, properties=None, output_binary_log=None,
-              property_file_name=None, verbosity=None, definitions=None):
+              property_file_name=None, verbosity=None, definitions=None,
+              user_property_file_name=None):
         """
         :param project_file: Path to the .sln file.
         :param targets: List of targets to build.
@@ -73,7 +74,6 @@ class MSBuild(object):
         the build. Use value of None to set compiler definition with no value.
         :return: status code of the MSBuild command invocation
         """
-
         property_file_name = property_file_name or "conan_build.props"
         self.build_env.parallel = parallel
 
@@ -91,13 +91,15 @@ class MSBuild(object):
                                        toolset=toolset, platforms=platforms,
                                        use_env=use_env, properties=properties,
                                        output_binary_log=output_binary_log,
-                                       verbosity=verbosity)
+                                       verbosity=verbosity,
+                                       user_property_file_name=user_property_file_name)
             command = "%s && %s" % (vcvars, command)
             return self._conanfile.run(command)
 
     def get_command(self, project_file, props_file_path=None, targets=None, upgrade_project=True,
                     build_type=None, arch=None, parallel=True, toolset=None, platforms=None,
-                    use_env=False, properties=None, output_binary_log=None, verbosity=None):
+                    use_env=False, properties=None, output_binary_log=None, verbosity=None,
+                    user_property_file_name=None):
 
         targets = targets or []
         properties = properties or {}
@@ -173,9 +175,10 @@ class MSBuild(object):
         if verbosity:
             command.append('/verbosity:%s' % verbosity)
 
-        if props_file_path:
-            command.append('/p:ForceImportBeforeCppTargets="%s"'
-                           % os.path.abspath(props_file_path))
+        if props_file_path or user_property_file_name:
+            paths = [os.path.abspath(p) for p in (props_file_path, user_property_file_name) if p]
+            paths = ";".join(paths)
+            command.append('/p:ForceImportBeforeCppTargets="%s"' % paths)
 
         for name, value in properties.items():
             command.append('/p:%s="%s"' % (name, value))
