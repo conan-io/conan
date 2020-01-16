@@ -236,8 +236,8 @@ class AutoToolsBuildEnvironment(object):
         """Not the -L"""
         ret = copy.copy(self._deps_cpp_info.sharedlinkflags)
         ret.extend(self._deps_cpp_info.exelinkflags)
-        ret.extend(format_frameworks(self._deps_cpp_info.frameworks))
-        ret.extend(format_framework_paths(self._deps_cpp_info.framework_paths))
+        ret.extend(format_frameworks(self._deps_cpp_info.frameworks, compiler=self._compiler))
+        ret.extend(format_framework_paths(self._deps_cpp_info.framework_paths, compiler=self._compiler))
         arch_flag = architecture_flag(compiler=self._compiler, os=self._os, arch=self._arch)
         if arch_flag:
             ret.append(arch_flag)
