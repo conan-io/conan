@@ -51,11 +51,15 @@ class AutoToolsConfigureTest(unittest.TestCase):
         conanfile.deps_cpp_info.exelinkflags.append("exe_link_flag")
         conanfile.deps_cpp_info.sysroot = "/path/to/folder"
 
+    def _creat_deps_cpp_info(self):
+        deps_cpp_info = namedtuple("Deps", "libs, include_paths, lib_paths, defines, cflags, "
+                                           "cxxflags, sharedlinkflags, exelinkflags, sysroot, "
+                                           "frameworks, framework_paths, system_libs")
+        return deps_cpp_info([], [], [], [], [], [], [], [], "", [], [], [])
+
     def target_triple_test(self):
         conan_file = ConanFileMock()
-        deps_cpp_info = namedtuple("Deps", "libs, include_paths, lib_paths, defines, cflags, "
-                                           "cxxflags, sharedlinkflags, exelinkflags, sysroot")
-        conan_file.deps_cpp_info = deps_cpp_info([], [], [], [], [], [], [], [], "")
+        conan_file.deps_cpp_info = self._creat_deps_cpp_info()
         conan_file.settings = MockSettings({"os_target":"Linux", "arch_target":"x86_64"})
         be = AutoToolsBuildEnvironment(conan_file)
         expected = "x86_64-linux-gnu"
@@ -63,9 +67,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
 
     def partial_build_test(self):
         conan_file = ConanFileMock()
-        deps_cpp_info = namedtuple("Deps", "libs, include_paths, lib_paths, defines, cflags, "
-                                           "cxxflags, sharedlinkflags, exelinkflags, sysroot")
-        conan_file.deps_cpp_info = deps_cpp_info([], [], [], [], [], [], [], [], "")
+        conan_file.deps_cpp_info = self._creat_deps_cpp_info()
         conan_file.settings = Settings()
         be = AutoToolsBuildEnvironment(conan_file)
         conan_file.should_configure = False
@@ -78,9 +80,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
 
     def warn_when_no_triplet_test(self):
         conan_file = ConanFileMock()
-        deps_cpp_info = namedtuple("Deps", "libs, include_paths, lib_paths, defines, cflags, "
-                                           "cxxflags, sharedlinkflags, exelinkflags, sysroot")
-        conan_file.deps_cpp_info = deps_cpp_info([], [], [], [], [], [], [], [], "")
+        conan_file.deps_cpp_info = self._creat_deps_cpp_info()
         conan_file.settings = MockSettings({"arch": "UNKNOWN_ARCH", "os": "Linux"})
         AutoToolsBuildEnvironment(conan_file)
         self.assertIn("Unknown 'UNKNOWN_ARCH' machine, Conan doesn't know "
