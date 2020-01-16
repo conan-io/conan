@@ -4,6 +4,7 @@ import subprocess
 import textwrap
 import unittest
 
+from conans.client.tools import which
 from conans.test.functional.generators.virtualenv_test import _load_env_file
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
@@ -13,9 +14,9 @@ from conans.util.files import decode_text, save
 @unittest.skipIf(platform.system() != "Windows", "Only for Windows")
 class VirtualenvWindowsBashTestCase(unittest.TestCase):
     """
-    We are running the full example inside Bash (generation of environment files and activate/deactivate), so we need
-    to use actual Conan recipes and run an example. We cannot use the same approach as in 'virtualenv_test.py', but
-    we should test the same cases
+    We are running the full example inside Bash (generation of environment files and
+    activate/deactivate), so we need to use actual Conan recipes and run an example.
+    We cannot use the same approach as in 'virtualenv_test.py', but we should test the same cases
     """
 
     conanfile = textwrap.dedent("""
@@ -56,7 +57,8 @@ class VirtualenvWindowsBashTestCase(unittest.TestCase):
 
         # Locate the Conan we are actually using (it should be the one in this commit)
         stdout, _ = subprocess.Popen(["where", "conan"], stdout=subprocess.PIPE).communicate()
-        conan_path = decode_text(stdout).splitlines()[0]  # Get the first one (Windows returns all found)
+        # Get the first one (Windows returns all found)
+        conan_path = decode_text(stdout).splitlines()[0]
 
         # All the commands are listed in a sh file:
         commands_file = os.path.join(test_folder, 'commands.sh')
@@ -85,9 +87,12 @@ class VirtualenvWindowsBashTestCase(unittest.TestCase):
             env > env_after.txt
         """.format(conan_path=conan_path, conan_user_home=conan_user_home)))
 
-        cmd = r'C:\Windows\System32\cmd.exe /c ""C:\Program Files\Git\bin\sh.exe" --login -i "{}""'.format(commands_file)
-        shell = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=test_folder)
-        (stdout, stderr) = shell.communicate()
+        sh_path= which("sh.exe")
+        cmd = r'C:\Windows\System32\cmd.exe /c ""{}" --login -i "{}""'.format(sh_path,
+                                                                              commands_file)
+        shell = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                 cwd=test_folder)
+        stdout, stderr = shell.communicate()
         stdout, stderr = decode_text(stdout), decode_text(stderr)
 
         env_before = _load_env_file(os.path.join(test_folder, "env_before.txt"))
@@ -102,7 +107,8 @@ class VirtualenvWindowsBashTestCase(unittest.TestCase):
         self.assertEqual(environment["ANOTHER"], "data")
 
         # Test find program
-        epaths = dict(line.split("=", 1) for line in reversed(stdout.splitlines()) if line.startswith("__exec_"))
+        epaths = dict(line.split("=", 1) for line in reversed(stdout.splitlines())
+                      if line.startswith("__exec_"))
         self.assertEqual(epaths["__exec_pre_path__"], "")
         self.assertEqual(epaths["__exec_post_path__"], "")
         self.assertTrue(len(epaths["__exec_env_path__"].strip()) > 0)
@@ -113,4 +119,5 @@ class VirtualenvWindowsBashTestCase(unittest.TestCase):
         self.assertEqual(environment["WHATEVER2"], "list:existing_value")
 
         # Variable: list with spaces
-        self.assertEqual(environment["CFLAGS"], "cflags1 cflags2  existing_value")  # FIXME: extra blank
+        # FIXME: extra blank
+        self.assertEqual(environment["CFLAGS"], "cflags1 cflags2  existing_value")
