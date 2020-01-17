@@ -900,3 +900,5 @@ compiler:
 build_type: [None, Debug, Release, RelWithDebInfo, MinSizeRel]
 cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]  # Deprecated, use compiler.cppstd
 """
+
+settings_1_21_1 = settings_1_21_0
