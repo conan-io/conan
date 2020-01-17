@@ -1,7 +1,6 @@
 import os
 import platform
 import re
-import subprocess
 import xml.etree.ElementTree as ET
 from subprocess import CalledProcessError
 
@@ -12,7 +11,8 @@ from conans.client.tools.files import chdir
 from conans.errors import ConanException
 from conans.model.version import Version
 from conans.util.files import decode_text, to_file_bytes, walk, mkdir
-from conans.util.runners import check_output_runner, version_runner, muted_runner, input_runner
+from conans.util.runners import check_output_runner, version_runner, muted_runner, input_runner, \
+    pyinstaller_bundle_env_cleaned
 
 
 def _check_repo(cmd, folder, msg=None):
@@ -55,10 +55,11 @@ class SCMBase(object):
         command = "%s %s" % (self.cmd_command, command)
         with chdir(self.folder) if self.folder else no_op():
             with environment_append({"LC_ALL": "en_US.UTF-8"}) if self._force_eng else no_op():
-                if not self._runner:
-                    return check_output_runner(command).strip()
-                else:
-                    return self._runner(command)
+                with pyinstaller_bundle_env_cleaned():
+                    if not self._runner:
+                        return check_output_runner(command).strip()
+                    else:
+                        return self._runner(command)
 
     def get_url_with_credentials(self, url):
         if not self._username or not self._password:
@@ -361,7 +362,7 @@ class SVN(SCMBase):
         if self.version >= SVN.API_CHANGE_VERSION:
             try:
                 output = self.run("status -u -r {} --xml".format(self.get_revision()))
-            except subprocess.CalledProcessError:
+            except CalledProcessError:
                 return False
             else:
                 root = ET.fromstring(output)

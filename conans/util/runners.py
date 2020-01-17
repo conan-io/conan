@@ -1,12 +1,39 @@
 import os
 import subprocess
+import sys
 import tempfile
+from contextlib import contextmanager
 
 import six
 
 from conans.client.tools.files import load
 from conans.errors import CalledProcessErrorWithStderr
 from conans.util.log import logger
+
+
+if getattr(sys, 'frozen', False) and 'LD_LIBRARY_PATH' in os.environ:
+
+    # http://pyinstaller.readthedocs.io/en/stable/runtime-information.html#ld-library-path-libpath-considerations
+    pyinstaller_bundle_dir = os.environ['LD_LIBRARY_PATH'].replace(
+        os.environ.get('LD_LIBRARY_PATH_ORIG', ''), ''
+    ).strip(';:')
+
+    @contextmanager
+    def pyinstaller_bundle_env_cleaned():
+        """Removes the pyinstaller bundle directory from LD_LIBRARY_PATH
+
+        :return: None
+        """
+        ld_library_path = os.environ['LD_LIBRARY_PATH']
+        os.environ['LD_LIBRARY_PATH'] = ld_library_path.replace(pyinstaller_bundle_dir,
+                                                                '').strip(';:')
+        yield
+        os.environ['LD_LIBRARY_PATH'] = ld_library_path
+
+else:
+    @contextmanager
+    def pyinstaller_bundle_env_cleaned():
+        yield
 
 
 def version_runner(cmd, shell=False):
@@ -16,7 +43,7 @@ def version_runner(cmd, shell=False):
 
 
 def muted_runner(cmd, folder=None):
-    # Used by tools/scm
+    # Used by tools/scm check_repo only (see if repo ok with status)
     process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=folder)
     process.communicate()
     return process.returncode
@@ -48,7 +75,7 @@ def detect_runner(command):
 
 
 def check_output_runner(cmd, stderr=None):
-    # Used to run several utilities, like Pacman detect, AIX version, uname,
+    # Used to run several utilities, like Pacman detect, AIX version, uname, SCM
     tmp_file = tempfile.mktemp()
     try:
         # We don't want stderr to print warnings that will mess the pristine outputs
