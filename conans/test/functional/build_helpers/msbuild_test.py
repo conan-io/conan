@@ -112,7 +112,8 @@ class HelloConan(ConanFile):
                 def build(self):
                     msbuild = MSBuild(self)
                     msbuild.build("MyProject.sln", verbosity="normal",
-                        user_property_file_name="myuser.props")
+                                  definitions={"MyCustomDef": "MyCustomValue"},
+                                  user_property_file_name="myuser.props")
         
                 def package(self):
                     self.copy(pattern="*.exe")
@@ -139,6 +140,7 @@ class HelloConan(ConanFile):
         client.run('create . Hello/1.2.1@lasote/stable')
         self.assertNotIn("/EHsc /MD", client.out)
         self.assertIn("/EHsc /MT", client.out)
+        self.assertIn("/D MyCustomDef=MyCustomValue", client.out)
         self.assertIn("Packaged 1 '.exe' file: MyProject.exe", client.out)
 
         full_ref = "Hello/1.2.1@lasote/stable:6cc50b139b9c3d27b3e9042d5f5372d327b3a9f7"

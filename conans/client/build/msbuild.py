@@ -72,6 +72,7 @@ class MSBuild(object):
         :param verbosity: Specifies verbosity level (/verbosity: parameter)
         :param definitions: Dictionary with additional compiler definitions to be applied during
         the build. Use value of None to set compiler definition with no value.
+        :param user_property_file_name: Specify a user provided .props file with custom definitions
         :return: status code of the MSBuild command invocation
         """
         property_file_name = property_file_name or "conan_build.props"
