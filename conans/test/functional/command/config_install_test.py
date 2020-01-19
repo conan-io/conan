@@ -448,11 +448,11 @@ class Pkg(ConanFile):
         fake_url = "https://fakeurl.com/myconf.zip"
 
         def download_verify_false(obj, url, filename, **kwargs):  # @UnusedVariable
-            self.assertFalse(obj.verify)
+            self.assertFalse(obj._verify_ssl)
             self._create_zip(filename)
 
         def download_verify_true(obj, url, filename, **kwargs):  # @UnusedVariable
-            self.assertTrue(obj.verify)
+            self.assertTrue(obj._verify_ssl)
             self._create_zip(filename)
 
         with patch.object(FileDownloader, 'download', new=download_verify_false):
