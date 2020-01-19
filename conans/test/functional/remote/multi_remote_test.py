@@ -36,12 +36,14 @@ class ExportsSourcesMissingTest(unittest.TestCase):
         self.assertIn("Probably it was installed from a remote that is no longer available.",
                       client2.out)
 
-        # Failure because remote is disconnected
-        client2 = TestClient(servers=servers, users={"new_server": [("user", "password")]})
+        # Failure because remote removed the package
+        client2 = TestClient(servers=servers, users={"new_server": [("user", "password")],
+                                                     "default":  [("user", "password")]})
         client2.run("install pkg/0.1@user/testing")
-        client2.run("remote add default http://someweird__conan_URL -f")
+        client2.run("remove * -r=default -f")
         client2.run("upload pkg/0.1@user/testing --all -r=new_server", assert_error=True)
-        self.assertIn("Unable to connect to default=http://someweird__conan_URL", client2.out)
+        self.assertIn("ERROR: Recipe not found: 'pkg/0.1@user/testing'. [Remote: default]",
+                      client2.out)
         self.assertIn("The 'pkg/0.1@user/testing' package has 'exports_sources' but sources "
                       "not found in local cache.", client2.out)
         self.assertIn("Probably it was installed from a remote that is no longer available.",
@@ -57,7 +59,8 @@ class MultiRemotesTest(unittest.TestCase):
         self.servers["default"] = default_server
         self.servers["local"] = local_server
 
-    def _create(self, client, number, version, deps=None, export=True, modifier=""):
+    @staticmethod
+    def _create(client, number, version, deps=None, export=True, modifier=""):
         files = cpp_hello_conan_files(number, version, deps, build=False)
         # To avoid building
         files = {CONANFILE: files[CONANFILE].replace("config(", "config2(") + modifier}
@@ -243,13 +246,13 @@ class MultiRemoteTest(unittest.TestCase):
         client.run("user lasote -p mypass -r s1")
         client.run("upload MyLib* -r s1 -c")
 
-        servers["s1"].fake_url = "http://asdlhaljksdhlajkshdljakhsd"  # Do not exist
+        servers["s1"].fake_url = "http://asdlhaljksdhlajkshdljakhsd.com"  # Do not exist
         client2 = TestClient(servers=servers, users=self.users)
         err = client2.run("install MyLib/0.1@conan/testing --build=missing", assert_error=True)
         self.assertTrue(err)
         self.assertIn("MyLib/0.1@conan/testing: Trying with 's0'...", client2.out)
         self.assertIn("MyLib/0.1@conan/testing: Trying with 's1'...", client2.out)
-        self.assertIn("Unable to connect to s1=http://asdlhaljksdhlajkshdljakhsd", client2.out)
+        self.assertIn("Unable to connect to s1=http://asdlhaljksdhlajkshdljakhsd.com", client2.out)
         # s2 is not even tried
         self.assertNotIn("MyLib/0.1@conan/testing: Trying with 's2'...", client2.out)
 

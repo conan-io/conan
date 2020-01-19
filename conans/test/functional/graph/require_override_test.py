@@ -22,7 +22,8 @@ class RequireOverrideTest(unittest.TestCase):
     def test_override(self):
         self.client.save({"conanfile.py": GenConanfile()})
         self.client.run("export . libA/1.0@user/channel")
-        self.client.run("export . libA/1.0@user/channel")
+        # It is necessary to create libA/2.0 to have a conflict, otherwise it is missing
+        self.client.run("export . libA/2.0@user/channel")
 
         for req_method in (False, True):
             self._save(req_method, ["libA/1.0@user/channel"])

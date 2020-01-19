@@ -59,10 +59,15 @@ class ConanFileLoader(object):
             if self._pyreq_loader:
                 self._pyreq_loader.load_py_requires(conanfile, lock_python_requires, self)
 
-            conanfile.conan_data = self._load_data(conanfile_path)
+            # Load and populate dynamic fields from the data file
+            conan_data = self._load_data(conanfile_path)
+            conanfile.conan_data = conan_data
+            if conan_data and '.conan' in conan_data:
+                scm_data = conan_data['.conan'].get('scm')
+                if scm_data:
+                    conanfile.scm.update(scm_data)
 
-            self._cached_conanfile_classes[conanfile_path] = (conanfile, lock_python_requires,
-                                                              module)
+            self._cached_conanfile_classes[conanfile_path] = (conanfile, lock_python_requires, module)
             return conanfile(self._output, self._runner, display, user, channel), module
         except ConanException as e:
             raise ConanException("Error loading conanfile at '{}': {}".format(conanfile_path, e))

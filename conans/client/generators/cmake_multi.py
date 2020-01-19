@@ -15,6 +15,7 @@ def extend(cpp_info, config):
         def add_lists(seq1, seq2):
             return seq1 + [s for s in seq2 if s not in seq1]
         result = CppInfo(config_info.rootpath)
+        result.filter_empty = cpp_info.filter_empty
         result.includedirs = add_lists(cpp_info.includedirs, config_info.includedirs)
         result.libdirs = add_lists(cpp_info.libdirs, config_info.libdirs)
         result.bindirs = add_lists(cpp_info.bindirs, config_info.bindirs)
@@ -49,8 +50,8 @@ class CMakeMultiGenerator(Generator):
         sections = []
 
         # Per requirement variables
-        for _, dep_cpp_info in self.deps_build_info.dependencies:
-            dep_name = dep_cpp_info.get_name("cmake_multi")
+        for name, dep_cpp_info in self.deps_build_info.dependencies:
+            dep_name = dep_cpp_info.get_name("cmake_multi", name)
             # Only the specific of the build_type
             dep_cpp_info = extend(dep_cpp_info, build_type)
             deps = DepsCppCmake(dep_cpp_info)

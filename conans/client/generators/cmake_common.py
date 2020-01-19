@@ -190,14 +190,14 @@ def generate_targets_section(dependencies, generator_name):
                    '    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${CONAN_CMD_C_FLAGS}")\n'
                    '    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${CONAN_CMD_SHARED_LINKER_FLAGS}")\n')
     dependencies_dict = {name: dep_info for name, dep_info in dependencies}
-    for _, dep_info in dependencies:
-        dep_name = dep_info.get_name(generator_name)
-        use_deps = ["CONAN_PKG::%s" % dependencies_dict[d].get_name(generator_name) for d in dep_info.public_deps]
+    for name, dep_info in dependencies:
+        dep_name = dep_info.get_name(generator_name, name)
+        use_deps = ["CONAN_PKG::%s" % dependencies_dict[d].get_name(generator_name, d) for d in dep_info.public_deps]
         deps = "" if not use_deps else " ".join(use_deps)
         section.append(_target_template.format(name="CONAN_PKG::%s" % dep_name, deps=deps,
                                                uname=dep_name.upper(), pkg_name=dep_name))
 
-    all_targets = " ".join(["CONAN_PKG::%s" % dep_info.get_name(generator_name) for _, dep_info in dependencies])
+    all_targets = " ".join(["CONAN_PKG::%s" % dep_info.get_name(generator_name, name) for name, dep_info in dependencies])
     section.append('    set(CONAN_TARGETS %s)\n' % all_targets)
     section.append('endmacro()\n')
     return section
@@ -289,14 +289,15 @@ class CMakeCommonMacros:
 
     conan_set_std = textwrap.dedent("""
         macro(conan_set_std)
+            conan_message(STATUS "Conan: Adjusting language standard")
             # Do not warn "Manually-specified variables were not used by the project"
             set(ignorevar "${CONAN_STD_CXX_FLAG}${CONAN_CMAKE_CXX_STANDARD}${CONAN_CMAKE_CXX_EXTENSIONS}")
             if (CMAKE_VERSION VERSION_LESS "3.1" OR
                 (CMAKE_VERSION VERSION_LESS "3.12" AND ("${CONAN_CMAKE_CXX_STANDARD}" STREQUAL "20" OR "${CONAN_CMAKE_CXX_STANDARD}" STREQUAL "gnu20")))
-            if(CONAN_STD_CXX_FLAG)
-                conan_message(STATUS "Conan setting CXX_FLAGS flags: ${CONAN_STD_CXX_FLAG}")
-                set(CMAKE_CXX_FLAGS "${CONAN_STD_CXX_FLAG} ${CMAKE_CXX_FLAGS}")
-            endif()
+                if(CONAN_STD_CXX_FLAG)
+                    conan_message(STATUS "Conan setting CXX_FLAGS flags: ${CONAN_STD_CXX_FLAG}")
+                    set(CMAKE_CXX_FLAGS "${CONAN_STD_CXX_FLAG} ${CMAKE_CXX_FLAGS}")
+                endif()
             else()
                 if(CONAN_CMAKE_CXX_STANDARD)
                     conan_message(STATUS "Conan setting CPP STANDARD: ${CONAN_CMAKE_CXX_STANDARD} WITH EXTENSIONS ${CONAN_CMAKE_CXX_EXTENSIONS}")
@@ -309,6 +310,7 @@ class CMakeCommonMacros:
 
     conan_set_rpath = textwrap.dedent("""
         macro(conan_set_rpath)
+            conan_message(STATUS "Conan: Adjusting default RPATHs Conan policies")
             if(APPLE)
                 # https://cmake.org/Wiki/CMake_RPATH_handling
                 # CONAN GUIDE: All generated libraries should have the id and dependencies to other
@@ -735,13 +737,13 @@ class CMakeCommonMacros:
                         set(CONAN_FRAMEWORKS ${CONAN_FRAMEWORKS_DEBUG} ${CONAN_FRAMEWORKS})
                         set(CONAN_FRAMEWORK_DIRS ${CONAN_FRAMEWORK_DIRS_DEBUG} ${CONAN_FRAMEWORK_DIRS})
                     elseif(${CMAKE_BUILD_TYPE} MATCHES "Release")
-                        set(CONAN_FRAMEWORKS ${CONAN_FRAMEWORKS_RELEASE} ${CONAN_BUILD_MODULES_PATHS})
+                        set(CONAN_FRAMEWORKS ${CONAN_FRAMEWORKS_RELEASE} ${CONAN_FRAMEWORKS})
                         set(CONAN_FRAMEWORK_DIRS ${CONAN_FRAMEWORK_DIRS_RELEASE} ${CONAN_FRAMEWORK_DIRS})
                     elseif(${CMAKE_BUILD_TYPE} MATCHES "RelWithDebInfo")
-                        set(CONAN_FRAMEWORKS ${CONAN_FRAMEWORKS_RELWITHDEBINFO} ${CONAN_BUILD_MODULES_PATHS})
+                        set(CONAN_FRAMEWORKS ${CONAN_FRAMEWORKS_RELWITHDEBINFO} ${CONAN_FRAMEWORKS})
                         set(CONAN_FRAMEWORK_DIRS ${CONAN_FRAMEWORK_DIRS_RELWITHDEBINFO} ${CONAN_FRAMEWORK_DIRS})
                     elseif(${CMAKE_BUILD_TYPE} MATCHES "MinSizeRel")
-                        set(CONAN_FRAMEWORKS ${CONAN_FRAMEWORKS_MINSIZEREL} ${CONAN_BUILD_MODULES_PATHS})
+                        set(CONAN_FRAMEWORKS ${CONAN_FRAMEWORKS_MINSIZEREL} ${CONAN_FRAMEWORKS})
                         set(CONAN_FRAMEWORK_DIRS ${CONAN_FRAMEWORK_DIRS_MINSIZEREL} ${CONAN_FRAMEWORK_DIRS})
                     endif()
                 endif()
@@ -822,12 +824,10 @@ macro(conan_basic_setup)
 
     if(NOT ARGUMENTS_SKIP_RPATH AND NOT ARGUMENTS_KEEP_RPATHS)
         # Parameter has renamed, but we keep the compatibility with old SKIP_RPATH
-        conan_message(STATUS "Conan: Adjusting default RPATHs Conan policies")
         conan_set_rpath()
     endif()
 
     if(NOT ARGUMENTS_SKIP_STD)
-        conan_message(STATUS "Conan: Adjusting language standard")
         conan_set_std()
     endif()
 

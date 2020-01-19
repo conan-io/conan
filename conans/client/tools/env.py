@@ -39,30 +39,32 @@ def environment_append(env_vars):
                      If the value is set to None, then that environment variable is unset.
     :return: None
     """
+    if not env_vars:
+        yield
+        return
+
     unset_vars = []
-    for key in env_vars.keys():
-        if env_vars[key] is None:
-            unset_vars.append(key)
-    for var in unset_vars:
-        env_vars.pop(var, None)
+    apply_vars = {}
     for name, value in env_vars.items():
-        if isinstance(value, list):
-            env_vars[name] = os.pathsep.join(value)
+        if value is None:
+            unset_vars.append(name)
+        elif isinstance(value, list):
+            apply_vars[name] = os.pathsep.join(value)
             old = os.environ.get(name)
             if old:
-                env_vars[name] += os.pathsep + old
-    if env_vars or unset_vars:
-        old_env = dict(os.environ)
-        os.environ.update(env_vars)
-        for var in unset_vars:
-            os.environ.pop(var, None)
-        try:
-            yield
-        finally:
-            os.environ.clear()
-            os.environ.update(old_env)
-    else:
+                apply_vars[name] += os.pathsep + old
+        else:
+            apply_vars[name] = value
+
+    old_env = dict(os.environ)
+    os.environ.update(apply_vars)
+    for var in unset_vars:
+        os.environ.pop(var, None)
+    try:
         yield
+    finally:
+        os.environ.clear()
+        os.environ.update(old_env)
 
 
 @contextmanager
