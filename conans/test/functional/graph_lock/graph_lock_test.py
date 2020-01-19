@@ -688,3 +688,48 @@ class GraphLockModifyConanfileTestCase(unittest.TestCase):
         client.run("install . --lockfile", assert_error=True)
         self.assertIn("ERROR: 'zlib' cannot be found in lockfile for this package", client.out)
         self.assertIn("If it is a new requirement, you need to create a new lockile", client.out)
+
+
+class LockFileOptionsTest(unittest.TestCase):
+    def test_options(self):
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class Pkg(ConanFile):
+                options = {"myopt": [1, 2, 3]}
+                default_options = {"myopt": 1}
+                def requirements(self):
+                    self.output.info("ReqDep WITH OPTION: %s!!" % self.options.myopt)
+            """)
+        client.save({"conanfile.py": conanfile})
+        client.run("create . dep/1.0@ -o dep:myopt=2")
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class Pkg(ConanFile):
+                name = "mypkg"
+                version = "1.0"
+                requires = "dep/1.0"
+                options = {"myoption": [1, 2, 3, 4, 5]}
+                default_options = {"myoption": 1}
+                def requirements(self):
+                    self.output.info("Requirements WITH OPTION: %s!!" % self.options.myoption)
+                def build(self):
+                    self.output.info("BUILDING WITH OPTION: %s!!" % self.options.myoption)
+                def package_info(self):
+                    self.output.info("PACKAGE_INFO OPTION: %s!!" % self.options.myoption)
+                """)
+
+        client.save({"conanfile.py": conanfile})
+        client.run("install . -o mypkg:myoption=2 -o dep:myopt=2")
+        print client.out
+        self.assertIn("Requirements WITH OPTION: 2!!", client.out)
+        self.assertIn("ReqDep WITH OPTION: 2!!", client.out)
+
+        client.run("install . --lockfile")
+        print client.out
+        self.assertIn("Requirements WITH OPTION: 2!!", client.out)
+        self.assertIn("ReqDep WITH OPTION: 2!!", client.out)
+        client.run("create . --lockfile")
+        print client.out
+        self.assertIn("Requirements WITH OPTION: 2!!", client.out)
+        self.assertIn("ReqDep WITH OPTION: 2!!", client.out)
