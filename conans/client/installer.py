@@ -2,6 +2,7 @@ import os
 import shutil
 import time
 from collections import OrderedDict
+from multiprocessing.pool import ThreadPool
 
 from conans.client import tools
 from conans.client.file_copier import report_copied_files
@@ -298,19 +299,20 @@ class BinaryInstaller(object):
         self._binaries_analyzer = app.binaries_analyzer
         self._hook_manager = app.hook_manager
 
-    def install(self, deps_graph, remotes, build_mode, update, keep_build=False, graph_info=None):
+    def install(self, deps_graph, remotes, build_mode, update, keep_build=False, graph_info=None,
+                parallel_downloads=True):
         # order by levels and separate the root node (ref=None) from the rest
         nodes_by_level = deps_graph.by_levels()
         root_level = nodes_by_level.pop()
         root_node = root_level[0]
         # Get the nodes in order and if we have to build them
         self._out.info("Installing (downloading, building) binaries...")
-        self._build(nodes_by_level, keep_build, root_node, graph_info, remotes, build_mode, update)
+        self._build(nodes_by_level, keep_build, root_node, graph_info, remotes, build_mode, update,
+                    parallel_downloads)
 
     @staticmethod
     def _classify(nodes_by_level):
-        missing = []
-        downloads = []
+        missing, downloads = [], []
         for level in nodes_by_level:
             for node in level:
                 if node.binary == BINARY_MISSING:
@@ -323,7 +325,7 @@ class BinaryInstaller(object):
         if not missing:
             return
 
-        missing_prefs= set()
+        missing_prefs = set()
         for node in missing:
             missing_prefs.add(node.pref)
         for pref in sorted(missing_prefs):
@@ -338,40 +340,49 @@ class BinaryInstaller(object):
         raise_package_not_found_error(conanfile, ref, package_id, dependencies,
                                       out=conanfile.output, recorder=self._recorder)
 
-    def _download(self, downloads):
+    def _download(self, downloads, parallel):
         if not downloads:
             return
 
         download_prefs = OrderedDict()
-        for node in downloads:
-            download_prefs[node.pref] = node.conanfile  # It doesn't matter which one if multiple
+        for node_down in downloads:
+            assert node_down.prev, "PREV for %s is None" % str(node_down.pref)
+            download_prefs[node_down.pref] = node_down  # It doesn't matter which one if multiple
 
-        for pref, conanfile in download_prefs.items():
+        def _download_pkg(args):
+            pref, node = args
+            conanfile = node.conanfile
             layout = self._cache.package_layout(pref.ref, conanfile.short_paths)
             package_folder = layout.package(pref)
             output = conanfile.output
-            assert node.prev, "PREV for %s is None" % str(pref)
             with layout.package_lock(pref):
                 with set_dirty_context_manager(package_folder):
-                    assert pref.revision is not None, "Installer should receive #PREV always"
-                    self._remote_manager.get_package(pref, package_folder,
-                                                     node.binary_remote, output,
-                                                     self._recorder)
+                    self._remote_manager.get_package(pref, package_folder, node.binary_remote,
+                                                     output, self._recorder)
                     output.info("Downloaded package revision %s" % pref.revision)
                     with layout.update_metadata() as metadata:
                         metadata.packages[pref.id].remote = node.binary_remote.name
 
-    def _build(self, nodes_by_level, keep_build, root_node, graph_info, remotes, build_mode, update):
+        if parallel:
+            thread_pool = ThreadPool(8)
+            thread_pool.map(_download_pkg, [(p, n) for (p, n) in download_prefs.items()])
+            thread_pool.close()
+            thread_pool.join()
+        else:
+            for pref_, node_ in download_prefs.items():
+                _download_pkg((pref_, node_))
+
+    def _build(self, nodes_by_level, keep_build, root_node, graph_info, remotes, build_mode, update,
+               parallel_downloads):
         missing, downloads = self._classify(nodes_by_level)
         self._raise_missing(missing)
-        self._download(downloads)
+        self._download(downloads, parallel=parallel_downloads)
 
         processed_package_refs = set()
         for level in nodes_by_level:
             for node in level:
                 ref, conan_file = node.ref, node.conanfile
                 output = conan_file.output
-
                 self._propagate_info(node)
                 if node.binary == BINARY_EDITABLE:
                     self._handle_node_editable(node, graph_info)
