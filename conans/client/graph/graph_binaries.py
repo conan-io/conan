@@ -27,7 +27,6 @@ class GraphBinariesAnalyzer(object):
         if upstream_manifest != read_manifest:
             if upstream_manifest.time > read_manifest.time:
                 output.warn("Current package is older than remote upstream one")
-                node.update_manifest = upstream_manifest
                 return True
             else:
                 output.warn("Current package is newer than remote upstream one")
