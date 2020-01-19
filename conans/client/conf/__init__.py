@@ -394,6 +394,18 @@ class ConanClientConfigParser(ConfigParser, object):
             return False
 
     @property
+    def parallel_download(self):
+        try:
+            parallel = self.get_item("general.parallel_download")
+        except ConanException:
+            return None
+
+        try:
+            return int(parallel) if parallel is not None else None
+        except ValueError:
+            raise ConanException("Specify a numeric parameter for 'parallel_download'")
+
+    @property
     def scm_to_conandata(self):
         try:
             scm_to_conandata = get_env("CONAN_SCM_TO_CONANDATA")

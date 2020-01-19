@@ -299,16 +299,14 @@ class BinaryInstaller(object):
         self._binaries_analyzer = app.binaries_analyzer
         self._hook_manager = app.hook_manager
 
-    def install(self, deps_graph, remotes, build_mode, update, keep_build=False, graph_info=None,
-                parallel_downloads=True):
+    def install(self, deps_graph, remotes, build_mode, update, keep_build=False, graph_info=None):
         # order by levels and separate the root node (ref=None) from the rest
         nodes_by_level = deps_graph.by_levels()
         root_level = nodes_by_level.pop()
         root_node = root_level[0]
         # Get the nodes in order and if we have to build them
         self._out.info("Installing (downloading, building) binaries...")
-        self._build(nodes_by_level, keep_build, root_node, graph_info, remotes, build_mode, update,
-                    parallel_downloads)
+        self._build(nodes_by_level, keep_build, root_node, graph_info, remotes, build_mode, update)
 
     @staticmethod
     def _classify(nodes_by_level):
@@ -340,7 +338,11 @@ class BinaryInstaller(object):
         raise_package_not_found_error(conanfile, ref, package_id, dependencies,
                                       out=conanfile.output, recorder=self._recorder)
 
-    def _download(self, downloads, parallel):
+    def _download(self, downloads):
+        """ executes the download of packages (both download and update), only once for a given
+        PREF, even if node duplicated
+        :param downloads: all nodes t obe downloaded or updated, included repetitions
+        """
         if not downloads:
             return
 
@@ -363,8 +365,10 @@ class BinaryInstaller(object):
                     with layout.update_metadata() as metadata:
                         metadata.packages[pref.id].remote = node.binary_remote.name
 
-        if parallel:
-            thread_pool = ThreadPool(8)
+        parallel = self._cache.config.parallel_download
+        if parallel is not None:
+            self._out.info("Downloading binary packages in %s parallel threads" % parallel)
+            thread_pool = ThreadPool(parallel)
             thread_pool.map(_download_pkg, [(p, n) for (p, n) in download_prefs.items()])
             thread_pool.close()
             thread_pool.join()
@@ -372,11 +376,10 @@ class BinaryInstaller(object):
             for pref_, node_ in download_prefs.items():
                 _download_pkg((pref_, node_))
 
-    def _build(self, nodes_by_level, keep_build, root_node, graph_info, remotes, build_mode, update,
-               parallel_downloads):
+    def _build(self, nodes_by_level, keep_build, root_node, graph_info, remotes, build_mode, update):
         missing, downloads = self._classify(nodes_by_level)
         self._raise_missing(missing)
-        self._download(downloads, parallel=parallel_downloads)
+        self._download(downloads)
 
         processed_package_refs = set()
         for level in nodes_by_level:
