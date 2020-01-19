@@ -309,8 +309,7 @@ class BinaryInstaller(object):
 
     @staticmethod
     def _classify(nodes_by_level):
-        missing = []
-        downloads = []
+        missing, downloads = [], []
         for level in nodes_by_level:
             for node in level:
                 if node.binary == BINARY_MISSING:
@@ -323,7 +322,7 @@ class BinaryInstaller(object):
         if not missing:
             return
 
-        missing_prefs= set()
+        missing_prefs = set()
         for node in missing:
             missing_prefs.add(node.pref)
         for pref in sorted(missing_prefs):
@@ -339,27 +338,34 @@ class BinaryInstaller(object):
                                       out=conanfile.output, recorder=self._recorder)
 
     def _download(self, downloads):
+        """ executes the download of packages (both download and update), only once for a given
+        PREF, even if node duplicated
+        :param downloads: all nodes t obe downloaded or updated, included repetitions
+        """
         if not downloads:
             return
 
         download_prefs = OrderedDict()
-        for node in downloads:
-            download_prefs[node.pref] = node.conanfile  # It doesn't matter which one if multiple
+        for node_down in downloads:
+            assert node_down.prev, "PREV for %s is None" % str(node_down.pref)
+            download_prefs[node_down.pref] = node_down  # It doesn't matter which one if multiple
 
-        for pref, conanfile in download_prefs.items():
+        def _download_pkg(pref, node):
+            conanfile = node.conanfile
             layout = self._cache.package_layout(pref.ref, conanfile.short_paths)
             package_folder = layout.package(pref)
             output = conanfile.output
-            assert node.prev, "PREV for %s is None" % str(pref)
             with layout.package_lock(pref):
                 with set_dirty_context_manager(package_folder):
-                    assert pref.revision is not None, "Installer should receive #PREV always"
-                    self._remote_manager.get_package(pref, package_folder,
-                                                     node.binary_remote, output,
-                                                     self._recorder)
+                    self._remote_manager.get_package(pref, package_folder, node.binary_remote,
+                                                     output, self._recorder)
                     output.info("Downloaded package revision %s" % pref.revision)
                     with layout.update_metadata() as metadata:
                         metadata.packages[pref.id].remote = node.binary_remote.name
+
+        for pref_, node_ in download_prefs.items():
+            # prepared for parallel download
+            _download_pkg(pref_, node_)
 
     def _build(self, nodes_by_level, keep_build, root_node, graph_info, remotes, build_mode, update):
         missing, downloads = self._classify(nodes_by_level)
