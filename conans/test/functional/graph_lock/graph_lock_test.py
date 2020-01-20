@@ -122,7 +122,7 @@ class ReproducibleLockfiles(unittest.TestCase):
         client.save({"conanfile.txt": ""})
         client.run("install .")
         lockfile = client.load("conan.lock")
-        lockfile = lockfile.replace('"0.2"', '"0.1"').replace('"0"', '"UUID"')
+        lockfile = lockfile.replace('"0.3"', '"0.1"').replace('"0"', '"UUID"')
         client.save({"conan.lock": lockfile})
         client.run("install . --lockfile", assert_error=True)
         self.assertIn("This lockfile was created with a previous incompatible version", client.out)
@@ -670,6 +670,19 @@ class GraphLockBuildRequireErrorTestCase(unittest.TestCase):
 
         # Building the graphlock we get the message
         client.run("graph lock variant.py")
+        fmpe = "ffmpeg/1.0#5522e93e2abfbd455e6211fe4d0531a2:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
+        font = "fontconfig/1.0#f3367e0e7d170aa12abccb175fee5f97:"\
+               "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
+        harf = "harfbuzz/1.0#3172f5e84120f235f75f8dd90fdef84f:"\
+               "ea61889683885a5517800e8ebb09547d1d10447a"
+        zlib = "zlib/1.0#f3367e0e7d170aa12abccb175fee5f97:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
+        lock = json.loads(client.load("conan.lock"))
+        nodes = lock["graph_lock"]["nodes"]
+        self.assertEqual(5, len(nodes))
+        self.assertEqual(fmpe, nodes["1"]["pref"])
+        self.assertEqual(font, nodes["2"]["pref"])
+        self.assertEqual(harf, nodes["3"]["pref"])
+        self.assertEqual(zlib, nodes["4"]["pref"])
 
         # Using the graphlock there is no warning message
         client.run("graph build-order . --build cascade --build outdated", assert_error=True)
@@ -683,8 +696,12 @@ class GraphLockModifyConanfileTestCase(unittest.TestCase):
         # https://github.com/conan-io/conan/issues/5807
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
-        client.run("graph lock .")
-        client.save({"conanfile.py": GenConanfile().with_require_plain("zlib/1.0")})
-        client.run("install . --lockfile", assert_error=True)
-        self.assertIn("ERROR: 'zlib' cannot be found in lockfile for this package", client.out)
-        self.assertIn("If it is a new requirement, you need to create a new lockile", client.out)
+        client.run("create . zlib/1.0@")
+
+        client2 = TestClient(cache_folder=client.cache_folder)
+        client2.save({"conanfile.py": GenConanfile()})
+        client2.run("graph lock .")
+        client2.save({"conanfile.py": GenConanfile().with_require_plain("zlib/1.0")})
+        client2.run("install . --lockfile", assert_error=True)
+        self.assertIn("ERROR: 'zlib' cannot be found in lockfile for this package", client2.out)
+        self.assertIn("If it is a new requirement, you need to create a new lockile", client2.out)
