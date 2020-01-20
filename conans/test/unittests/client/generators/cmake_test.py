@@ -349,8 +349,8 @@ endmacro()""", macro)
         generator = CMakeFindPackageGenerator(conanfile)
         content = generator.content
         content = content['FindMyPkg.cmake']
-        self.assertIn('find_library(CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND NAME ${_FRAMEWORK} PATHS'
-                      ' ${MyPkg_FRAMEWORK_DIRS})', content)
+        self.assertIn('conan_find_apple_frameworks(MyPkg_FRAMEWORKS_FOUND "${MyPkg_FRAMEWORKS}"'
+                      ' "${MyPkg_FRAMEWORK_DIRS}")', content)
 
 
 class CMakeCppInfoNameTest(unittest.TestCase):
