@@ -137,9 +137,9 @@ class InfoFoldersTest(unittest.TestCase):
             ref = ConanFileReference.loads(self.reference1)
             id_ = re.search(r'ID:\s*([a-z0-9]*)', str(client.out)).group(1)
             pref = PackageReference(ref, id_)
-            for path in (client.cache.package_layout(ref, True).source(),
-                         client.cache.package_layout(ref, True).build(pref),
-                         client.cache.package_layout(ref, True).package(pref)):
+            for path in (client.cache.package_layout(ref).source(),
+                         client.cache.package_layout(ref).build(pref),
+                         client.cache.package_layout(ref).package(pref)):
                 self.assertFalse(os.path.exists(path))
                 self.assertTrue(os.path.exists(os.path.dirname(path)))
 

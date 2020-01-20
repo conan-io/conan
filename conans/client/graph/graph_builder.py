@@ -1,7 +1,8 @@
 import time
 from collections import OrderedDict
 
-from conans.client.graph.graph import DepsGraph, Node, RECIPE_EDITABLE
+from conans.client.graph.graph import DepsGraph, Node, RECIPE_EDITABLE, RECIPE_DOWNLOADED, \
+    RECIPE_UPDATED
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
                            conanfile_exception_formatter)
 from conans.model.conan_file import get_env_context_manager
@@ -362,6 +363,11 @@ class DepsGraphBuilder(object):
         lock_py_requires = graph_lock.python_requires(locked_id) if locked_id is not None else None
         dep_conanfile = self._loader.load_conanfile(conanfile_path, profile, ref=requirement.ref,
                                                     lock_python_requires=lock_py_requires)
+
+        if recipe_status in (RECIPE_DOWNLOADED, RECIPE_UPDATED):
+            layout = self._proxy._cache.package_layout(new_ref)
+            layout.short_paths = dep_conanfile.short_paths
+
         if recipe_status == RECIPE_EDITABLE:
             dep_conanfile.in_local_cache = False
             dep_conanfile.develop = True

@@ -204,7 +204,7 @@ class GraphBinariesAnalyzer(object):
         if self._evaluate_build(node, build_mode):
             return
 
-        package_layout = self._cache.package_layout(pref.ref, short_paths=conanfile.short_paths)
+        package_layout = self._cache.package_layout(pref.ref)
         package_folder = package_layout.package(pref)
         metadata = self._evaluate_clean_pkg_folder_dirty(node, package_layout, package_folder, pref)
 

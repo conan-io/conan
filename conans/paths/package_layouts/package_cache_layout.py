@@ -27,7 +27,7 @@ def short_path(func):
 
         def wrap(self, *args, **kwargs):
             p = func(self, *args, **kwargs)
-            return path_shortener(p, self._short_paths)
+            return path_shortener(p, self.short_paths)
 
         return wrap
     else:
@@ -37,12 +37,32 @@ def short_path(func):
 class PackageCacheLayout(object):
     """ This is the package layout for Conan cache """
 
-    def __init__(self, base_folder, ref, short_paths, no_lock):
+    def __init__(self, base_folder, ref, no_lock):
         assert isinstance(ref, ConanFileReference)
         self._ref = ref
         self._base_folder = os.path.normpath(base_folder)
-        self._short_paths = short_paths
         self._no_lock = no_lock
+        self._short_paths = None
+
+    @property
+    def short_paths(self):
+        if self._short_paths is None:
+            if platform.system() == "Windows":
+                self._short_paths = os.path.exists(os.path.join(self._base_folder, ".short_paths"))
+            else:
+                self._short_paths = False
+        return self._short_paths
+
+    @short_paths.setter
+    def short_paths(self, value):
+        assert self._short_paths is None, "self._short_paths should be None when assigning"
+        if platform.system() == "Windows":
+            p = os.path.join(self._base_folder, ".short_paths")
+            if value is True and not os.path.exists(p):
+                save(p, "")
+            elif value is False and os.path.exists(p):
+                os.remove(p)
+            self._short_paths = value
 
     @property
     def ref(self):

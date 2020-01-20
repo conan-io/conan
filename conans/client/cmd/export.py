@@ -89,7 +89,8 @@ def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
                                        ref.user, ref.channel, python_requires)
 
     check_casing_conflict(cache=cache, ref=ref)
-    package_layout = cache.package_layout(ref, short_paths=conanfile.short_paths)
+    package_layout = cache.package_layout(ref)
+    package_layout.short_paths = conanfile.short_paths
     if not export:
         metadata = package_layout.load_metadata()
         recipe_revision = metadata.recipe.revision

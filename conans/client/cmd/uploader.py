@@ -391,7 +391,7 @@ class CmdUpload(object):
 
         t1 = time.time()
         # existing package, will use short paths if defined
-        package_folder = self._cache.package_layout(pref.ref, short_paths=None).package(pref)
+        package_folder = self._cache.package_layout(pref.ref).package(pref)
 
         if is_dirty(package_folder):
             raise ConanException("Package %s is corrupted, aborting upload.\n"
@@ -477,7 +477,7 @@ class CmdUpload(object):
         self._output.rewrite_line("Checking package integrity...")
 
         # short_paths = None is enough if there exist short_paths
-        layout = self._cache.package_layout(pref.ref, short_paths=None)
+        layout = self._cache.package_layout(pref.ref)
         read_manifest, expected_manifest = layout.package_manifests(pref)
 
         if read_manifest != expected_manifest:

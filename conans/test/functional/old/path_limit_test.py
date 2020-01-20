@@ -120,7 +120,7 @@ class PathLengthLimitTest(unittest.TestCase):
         client.save(files)
         client.run("export . user/channel")
         ref = ConanFileReference.loads("lib/0.1@user/channel")
-        source_folder = client.cache.package_layout(ref, False).export_sources()
+        source_folder = client.cache.package_layout(ref).export_sources()
         if platform.system() == "Windows":
             source_folder = load(os.path.join(source_folder, ".conan_link"))
         self.assertTrue(os.path.exists(source_folder))
@@ -169,7 +169,7 @@ class PathLengthLimitTest(unittest.TestCase):
         client.run("search lib/0.1@user/channel")
         self.assertIn("Package_ID: %s" % NO_SETTINGS_PACKAGE_ID, client.out)
 
-        package_folder = client.cache.package_layout(pref.ref, short_paths=None).package(pref)
+        package_folder = client.cache.package_layout(pref.ref).package(pref)
         file1 = load(os.path.join(package_folder, "myfile.txt"))
         self.assertEqual("Hello extra path length", file1)
         file2 = load(os.path.join(package_folder, "myfile2.txt"))
@@ -212,9 +212,9 @@ class ConanLib(ConanFile):
 
         if platform.system() == "Windows":
             ref = ConanFileReference.loads("lib/0.1@user/channel")
-            source_folder = client.cache.package_layout(ref, False).source()
-            build_folder = client.cache.package_layout(ref, False).build(pref)
-            package_folder = client.cache.package_layout(ref, False).package(pref)
+            source_folder = client.cache.package_layout(ref).source()
+            build_folder = client.cache.package_layout(ref).build(pref)
+            package_folder = client.cache.package_layout(ref).package(pref)
             link_source = os.path.join(source_folder, ".conan_link")
             link_build = os.path.join(build_folder, ".conan_link")
             link_package = os.path.join(package_folder, ".conan_link")
@@ -257,12 +257,12 @@ class ConanLib(ConanFile):
         client.run("install lib/0.1@user/channel --build")
         # print client.paths.store
         pref = PackageReference.loads("lib/0.1@user/channel:%s" % NO_SETTINGS_PACKAGE_ID)
-        package_folder = client.cache.package_layout(pref.ref, short_paths=None).package(pref)
+        package_folder = client.cache.package_layout(pref.ref).package(pref)
         file1 = load(os.path.join(package_folder, "myfile.txt"))
         self.assertEqual("Hello world!", file1)
 
         client.run("install lib/0.1@user/channel --build")
         pref = PackageReference.loads("lib/0.1@user/channel:%s" % NO_SETTINGS_PACKAGE_ID)
-        package_folder = client.cache.package_layout(pref.ref, short_paths=None).package(pref)
+        package_folder = client.cache.package_layout(pref.ref).package(pref)
         file1 = load(os.path.join(package_folder, "myfile.txt"))
         self.assertEqual("Hello world!", file1)

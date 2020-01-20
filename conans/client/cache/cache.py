@@ -89,7 +89,7 @@ class ClientCache(object):
     def config_install_file(self):
         return os.path.join(self.cache_folder, "config_install.json")
 
-    def package_layout(self, ref, short_paths=None):
+    def package_layout(self, ref):
         assert isinstance(ref, ConanFileReference), "It is a {}".format(type(ref))
         edited_ref = self.editable_packages.get(ref.copy_clear_rev())
         if edited_ref:
@@ -100,7 +100,7 @@ class ClientCache(object):
             check_ref_case(ref, self.store)
             base_folder = os.path.normpath(os.path.join(self.store, ref.dir_repr()))
             return PackageCacheLayout(base_folder=base_folder, ref=ref,
-                                      short_paths=short_paths, no_lock=self._no_locks())
+                                      no_lock=self._no_locks())
 
     @property
     def remotes_path(self):

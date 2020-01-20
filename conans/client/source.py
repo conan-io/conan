@@ -19,7 +19,7 @@ def complete_recipe_sources(remote_manager, cache, conanfile, ref, remotes):
     occassions, conan needs to get them too, like if uploading to a server, to keep the recipes
     complete
     """
-    package_layout = cache.package_layout(ref, conanfile.short_paths)
+    package_layout = cache.package_layout(ref)
     sources_folder = package_layout.export_sources()
     if os.path.exists(sources_folder):
         return None

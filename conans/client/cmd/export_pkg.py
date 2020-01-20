@@ -32,7 +32,7 @@ def export_pkg(app, recorder, full_ref, source_folder, build_folder, package_fol
     package_id = nodes[0].package_id
     output.info("Packaging to %s" % package_id)
     pref = PackageReference(ref, package_id)
-    layout = cache.package_layout(ref, short_paths=conanfile.short_paths)
+    layout = cache.package_layout(ref)
     dest_package_folder = layout.package(pref)
 
     if os.path.exists(dest_package_folder):

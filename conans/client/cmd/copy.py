@@ -11,7 +11,6 @@ def _prepare_sources(cache, ref, remote_manager, loader, remotes):
     conan_file_path = cache.package_layout(ref).conanfile()
     conanfile = loader.load_basic(conan_file_path)
     complete_recipe_sources(remote_manager, cache, conanfile, ref, remotes)
-    return conanfile.short_paths
 
 
 def cmd_copy(ref, user_channel, package_ids, cache, user_io, remote_manager, loader, remotes,
@@ -24,20 +23,20 @@ def cmd_copy(ref, user_channel, package_ids, cache, user_io, remote_manager, loa
     layout = cache.package_layout(ref)
     src_metadata = layout.load_metadata()
     ref = ref.copy_with_rev(src_metadata.recipe.revision)
-    short_paths = _prepare_sources(cache, ref, remote_manager, loader, remotes)
+    _prepare_sources(cache, ref, remote_manager, loader, remotes)
     package_ids = layout.packages_ids() if package_ids is True else (package_ids or [])
-    package_copy(ref, user_channel, package_ids, cache, user_io, short_paths, force)
+    package_copy(ref, user_channel, package_ids, cache, user_io, force)
 
 
-def package_copy(src_ref, user_channel, package_ids, cache, user_io, short_paths=False,
-                 force=False):
+def package_copy(src_ref, user_channel, package_ids, cache, user_io, force=False):
     dest_ref = ConanFileReference.loads("%s/%s@%s" % (src_ref.name,
                                                       src_ref.version,
                                                       user_channel))
     # Generate metadata
-    src_layout = cache.package_layout(src_ref, short_paths)
+    src_layout = cache.package_layout(src_ref)
     src_metadata = src_layout.load_metadata()
-    dst_layout = cache.package_layout(dest_ref, short_paths)
+    dst_layout = cache.package_layout(dest_ref)
+    dst_layout.short_paths = src_layout.short_paths
 
     # Copy export
     export_origin = src_layout.export()

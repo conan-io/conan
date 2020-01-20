@@ -1033,7 +1033,7 @@ class ConanAPIV1(object):
             path = "conanfile.py" if not package_id else "conaninfo.txt"
 
         if not remote_name:
-            package_layout = self.app.cache.package_layout(ref, short_paths=None)
+            package_layout = self.app.cache.package_layout(ref)
             return package_layout.get_path(path=path, package_id=package_id), path
         else:
             remote = self.get_remote_by_name(remote_name)

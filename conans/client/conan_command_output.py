@@ -138,7 +138,7 @@ class CommandOutputer(object):
 
             # Paths
             if isinstance(ref, ConanFileReference) and grab_paths:
-                package_layout = self._cache.package_layout(ref, conanfile.short_paths)
+                package_layout = self._cache.package_layout(ref)
                 item_data["export_folder"] = package_layout.export()
                 item_data["source_folder"] = package_layout.source()
                 # @todo: check if this is correct or if it must always be package_id

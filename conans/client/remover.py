@@ -112,7 +112,7 @@ class ConanRemover(object):
 
         # Get the package layout using 'short_paths=False', remover will make use of the
         #  function 'rm_conandir' which already takes care of the linked folder.
-        package_layout = self._cache.package_layout(ref, short_paths=False)
+        package_layout = self._cache.package_layout(ref)
 
         package_layout.remove_package_locks()  # Make sure to clean the locks too
         remover = DiskRemover()

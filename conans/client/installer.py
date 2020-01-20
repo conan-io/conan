@@ -172,7 +172,7 @@ class _PackageBuilder(object):
         conanfile = node.conanfile
         pref = node.pref
 
-        package_layout = self._cache.package_layout(pref.ref, conanfile.short_paths)
+        package_layout = self._cache.package_layout(pref.ref)
         source_folder = package_layout.source()
         conanfile_path = package_layout.conanfile()
         package_folder = package_layout.package(pref)
@@ -385,7 +385,7 @@ class BinaryInstaller(object):
         conanfile = node.conanfile
         output = conanfile.output
 
-        layout = self._cache.package_layout(pref.ref, conanfile.short_paths)
+        layout = self._cache.package_layout(pref.ref)
         package_folder = layout.package(pref)
 
         with layout.package_lock(pref):
