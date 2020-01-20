@@ -6,6 +6,7 @@ import textwrap
 import unittest
 
 from mock import patch, Mock
+from six import StringIO
 
 from conans.client.cache.cache import ClientCache
 from conans.model.graph_lock import LOCKFILE
@@ -232,3 +233,29 @@ class MyBuildInfoCreation(unittest.TestCase):
         run()
         if not os.path.exists(os.path.join(client.current_folder, "buildinfo.json")):
             self.fail("build info create failed")
+
+    @patch("conans.build_info.build_info.get_conan_user_home")
+    @patch("conans.build_info.build_info.ClientCache")
+    def test_build_info_old_lockfile_version(self, mock_cache, user_home_mock):
+        base_folder = temp_folder(True)
+        cache_folder = os.path.join(base_folder, ".conan")
+        client = TestClient(cache_folder=cache_folder)
+        client.save({"conan.lock": '{"version": "0.2"}'})
+        mock_cache.return_value = client.cache
+        user_home_mock.return_value = cache_folder
+
+        sys.argv = ["conan_build_info", "--v2", "start", "MyBuildName", "42"]
+        run()
+        sys.argv = ["conan_build_info", "--v2", "create",
+                    os.path.join(client.current_folder, "buildinfo.json"), "--lockfile",
+                    os.path.join(client.current_folder, "conan.lock")]
+
+        old_stderr = sys.stderr
+        try:
+            result = StringIO()
+            sys.stderr = result
+            run()
+            result = result.getvalue()
+            self.assertIn("This lockfile was created with a previous incompatible version", result)
+        finally:
+            sys.stderr = old_stderr
