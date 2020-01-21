@@ -119,7 +119,7 @@ def _load_profile(text, profile_path, default_folder):
         inherited_profile = Profile()
         cwd = os.path.dirname(os.path.abspath(profile_path)) if profile_path else None
         profile_parser = ProfileParser(text)
-        inherited_vars = profile_parser.vars
+        inherited_vars = profile_parser.vars.copy()
         # Iterate the includes and call recursive to get the profile and variables
         # from parent profiles
         for include in profile_parser.includes:

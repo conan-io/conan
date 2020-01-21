@@ -340,3 +340,25 @@ PYTHONPATH=$PROFILE_DIR/my_python_tools
 
         profile, _ = read_profile("Myprofile.txt", None, tmp)
         assert_path(profile)
+
+    def include_order_test(self):
+        tmp = temp_folder()
+
+        def save_profile(txt, name):
+            abs_profile_path = os.path.join(tmp, name)
+            save(abs_profile_path, txt)
+
+        profile1 = """
+MYVAR=fromProfile1
+        """
+        save_profile(profile1, "profile1.txt")
+
+        profile2 = """
+include(./profile1.txt)
+MYVAR=fromProfile2
+        """
+        save_profile(profile2, "profile2.txt")
+        profile, variables = read_profile("./profile2.txt", tmp, None)
+
+        self.assertEqual(variables, {"MYVAR": "fromProfile2",
+                                     "PROFILE_DIR": tmp.replace('\\', '/')})
