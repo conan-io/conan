@@ -1,5 +1,4 @@
 os: linux
-sudo: required
 dist: trusty
 language: python
 
@@ -10,7 +9,9 @@ matrix:
           if: branch =~ ^release.* OR branch =~ ^master
         - python: 3.6
         - python: 3.7
-          dist: xenial
+          dist: bionic
+        - python: 3.8
+          dist: bionic
         - language: generic
           os: osx
           osx_image: xcode8.3
@@ -28,7 +29,7 @@ before_script:
   - export PYTHONPATH=$PYTHONPATH:$(pwd)
 
 # command to run tests
-script: 
+script:
   - ulimit -n 2048 # Error with py3 and OSX, max file descriptors
   - ./.ci/travis/run.sh
 
