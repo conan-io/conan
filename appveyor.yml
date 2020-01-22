@@ -6,7 +6,7 @@
     environment:
       matrix:
         - PYTHON: "C:\\Python27"
-        - PYTHON: "C:\\Python35"
+        - PYTHON: "C:\\Python38"
     build: false
     cache:
         - C:\mingw64-> appveyor.yml
@@ -20,7 +20,7 @@
 -
     environment:
       matrix:
-        - PYTHON: "C:\\Python35"
+        - PYTHON: "C:\\Python38"
     build: false
     cache:
         - C:\mingw64-> appveyor.yml
