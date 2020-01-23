@@ -122,6 +122,7 @@ class Meson(object):
         cpu_translate = {
             'armv8': ('aarch64', 'aarch64', 'little'),
             'x86': ('x86', 'x86', 'little'),
+            'x86_64': ('x86_64', 'x86_64', 'little')
         }
         cpu_family, cpu, endian = cpu_translate[str(self._conanfile.settings.arch)]
         cflags = ', '.join(repr(x) for x in os.environ.get('CFLAGS', '').split(' '))
