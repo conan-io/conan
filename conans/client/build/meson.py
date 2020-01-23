@@ -118,6 +118,43 @@ class Meson(object):
     def flags(self):
         return defs_to_string(self.options)
 
+    def _configure_cross_compile(self, cross_filename, environ_append):
+        cpu_translate = {
+            'armv8': ('aarch64', 'aarch64', 'little'),
+            'x86': ('x86', 'x86', 'little'),
+        }
+        cpu_family, cpu, endian = cpu_translate[str(self._conanfile.settings.arch)]
+        cflags = ', '.join(repr(x) for x in os.environ.get('CFLAGS', '').split(' '))
+        cc = os.environ.get('CC', 'cc')
+        cpp = os.environ.get('CXX', 'c++')
+        with open(cross_filename, "w") as fd:
+            fd.write("""
+                [host_machine]
+                system = '{os}'
+                cpu_family = '{cpu_family}'
+                cpu = '{cpu}'
+                endian = '{endian}'
+
+                [properties]
+                needs_exe_wrapper = true
+                c_args = [{cflags}]
+
+                [binaries]
+                c = '{cc}'
+                cpp = '{cpp}'
+            """.format(os=self._os.lower(),
+                       cpu_family=cpu_family,
+                       cpu=cpu,
+                       endian=endian,
+                       cflags=cflags,
+                       cc=cc,
+                       cpp=cpp))
+        environ_append.update({'CC': None,
+                               'CXX': None,
+                               'CFLAGS': None,
+                               'CXXFLAGS': None,
+                               'CPPFLAGS': None})
+
     def configure(self, args=None, defs=None, source_dir=None, build_dir=None,
                   pkg_config_paths=None, cache_build_folder=None,
                   build_folder=None, source_folder=None):
@@ -147,14 +184,22 @@ class Meson(object):
               "Release": "release"}.get(str(self.build_type), "")
 
         build_type = "--buildtype=%s" % bt
+        cross_option = None
+        environ_append = {"PKG_CONFIG_PATH": pc_paths}
+        if tools.cross_building(self._conanfile.settings):
+            cross_filename = os.path.join(self.build_dir, "cross_file.txt")
+            cross_option = "--cross-file=%s" % cross_filename
+            self._configure_cross_compile(cross_filename, environ_append)
+
         arg_list = join_arguments([
             "--backend=%s" % self.backend,
             self.flags,
             args_to_string(args),
-            build_type
+            build_type,
+            cross_option,
         ])
         command = 'meson "%s" "%s" %s' % (source_dir, self.build_dir, arg_list)
-        with environment_append({"PKG_CONFIG_PATH": pc_paths}):
+        with environment_append(environ_append):
             self._run(command)
 
     @property
