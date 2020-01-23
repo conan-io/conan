@@ -100,7 +100,7 @@ class MesonTest(unittest.TestCase):
         build_expected = os.path.join(self.tempdir, "my_cache_build_folder", "build")
         source_expected = os.path.join(self.tempdir, "my_cache_source_folder", "source")
         cross_file = os.path.join(build_expected, "cross_file.txt")
-        cmd_expected = 'meson "%s" "%s" --backend=ninja %s --buildtype=releas --cross-file=%s' \
+        cmd_expected = 'meson "%s" "%s" --backend=ninja %s --buildtype=release --cross-file=%s' \
                        % (source_expected, build_expected, defs_to_string(defs), cross_file)
         self._check_commands(cmd_expected, conan_file.command)
 
