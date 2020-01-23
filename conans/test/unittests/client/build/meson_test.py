@@ -91,6 +91,7 @@ class MesonTest(unittest.TestCase):
         meson.configure()
         source_expected = os.path.join(self.tempdir, "my_cache_source_folder")
         build_expected = os.path.join(self.tempdir, "my_cache_build_folder")
+        cross_file = os.path.join(build_expected, "cross_file.txt")
         cmd_expected = 'meson "%s" "%s" --backend=ninja %s --buildtype=release --cross-file=%s' \
                        % (source_expected, build_expected, defs_to_string(defs), cross_file)
         self._check_commands(cmd_expected, conan_file.command)
@@ -98,6 +99,7 @@ class MesonTest(unittest.TestCase):
         meson.configure(source_folder="source", build_folder="build")
         build_expected = os.path.join(self.tempdir, "my_cache_build_folder", "build")
         source_expected = os.path.join(self.tempdir, "my_cache_source_folder", "source")
+        cross_file = os.path.join(build_expected, "cross_file.txt")
         cmd_expected = 'meson "%s" "%s" --backend=ninja %s --buildtype=releas --cross-file=%s' \
                        % (source_expected, build_expected, defs_to_string(defs), cross_file)
         self._check_commands(cmd_expected, conan_file.command)
@@ -107,6 +109,7 @@ class MesonTest(unittest.TestCase):
                         cache_build_folder="rel_only_cache")
         build_expected = os.path.join(self.tempdir, "my_cache_build_folder", "rel_only_cache")
         source_expected = os.path.join(self.tempdir, "my_cache_source_folder", "source")
+        cross_file = os.path.join(build_expected, "cross_file.txt")
         cmd_expected = 'meson "%s" "%s" --backend=ninja %s --buildtype=release --cross-file=%s' \
                        % (source_expected, build_expected, defs_to_string(defs), cross_file)
         self._check_commands(cmd_expected, conan_file.command)
@@ -116,6 +119,7 @@ class MesonTest(unittest.TestCase):
                         cache_build_folder="rel_only_cache")
         build_expected = os.path.join(self.tempdir, "my_cache_build_folder", "build")
         source_expected = os.path.join(self.tempdir, "my_cache_source_folder", "source")
+        cross_file = os.path.join(build_expected, "cross_file.txt")
         cmd_expected = 'meson "%s" "%s" --backend=ninja %s --buildtype=release --cross-file=%s' \
                        % (source_expected, build_expected, defs_to_string(defs), cross_file)
         self._check_commands(cmd_expected, conan_file.command)
@@ -124,6 +128,7 @@ class MesonTest(unittest.TestCase):
         meson.configure(build_dir="build", cache_build_folder="rel_only_cache")
         build_expected = os.path.join(self.tempdir, "my_cache_build_folder", "rel_only_cache")
         source_expected = os.path.join(self.tempdir, "my_cache_source_folder")
+        cross_file = os.path.join(build_expected, "cross_file.txt")
         cmd_expected = 'meson "%s" "%s" --backend=ninja %s --buildtype=release --cross-file=%s' \
                        % (source_expected, build_expected, defs_to_string(defs), cross_file)
         self._check_commands(cmd_expected, conan_file.command)
@@ -134,6 +139,7 @@ class MesonTest(unittest.TestCase):
                         defs={'default_library': 'static'})
         build_expected = os.path.join(self.tempdir, "my_cache_build_folder", "build")
         source_expected = os.path.join(self.tempdir, "my_cache_source_folder", "source")
+        cross_file = os.path.join(build_expected, "cross_file.txt")
         cmd_expected = 'meson "%s" "%s" --backend=ninja %s %s --buildtype=release --cross-file=%s' \
                        % (source_expected, build_expected, args_to_string(args),
                           defs_to_string(defs), cross_file)
