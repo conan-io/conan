@@ -639,18 +639,19 @@ class GraphLockConsumerBuildOrderTest(unittest.TestCase):
         self.assertIn("libb/0.1:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Build", client.out)
         self.assertIn("libc/0.1:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Build", client.out)
         bo = client.load("bo.json")
-        bo = json.loads(bo)
-        libc_level = bo[0]
-        self.assertEqual("3", libc_level[0][0])
-        self.assertIn("libc/0.1", libc_level[0][1])
-        liba_level = bo[1]
-        self.assertEqual("2", liba_level[0][0])
-        self.assertIn("liba/0.1", liba_level[0][1])
-        self.assertEqual("4", liba_level[1][0])
-        self.assertIn("libb/0.1", liba_level[1][1])
-        libc_level = bo[2]
-        self.assertEqual("1", libc_level[0][0])
-        self.assertIn("app/0.1", libc_level[0][1])
+        build_order = json.loads(bo)
+        expected = [
+            # First level
+            [['3',
+              'libc/0.1#f3367e0e7d170aa12abccb175fee5f97:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9']],
+            # second level
+            [['2', 'liba/0.1#7086607aa6efbad8e2527748e3ee8237:Package_ID_unknown'],
+             ['4',
+              'libb/0.1#f3367e0e7d170aa12abccb175fee5f97:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9']],
+            # last level to build
+            [['1', 'app/0.1#7742ee9e2f19af4f9ed7619f231ca871:Package_ID_unknown']]
+        ]
+        self.assertEqual(build_order, expected)
 
 
 class GraphLockWarningsTestCase(unittest.TestCase):
