@@ -48,7 +48,7 @@ class FileUploader(object):
                 raise AuthenticationException(response_to_str(response))
 
             if response.status_code == 403:
-                if auth.token is None:
+                if auth is None or auth.token is None:
                     raise AuthenticationException(response_to_str(response))
                 raise ForbiddenException(response_to_str(response))
             if response.status_code == 201:  # Artifactory returns 201 if the file is there
@@ -92,7 +92,7 @@ class FileUploader(object):
                     raise AuthenticationException(response_to_str(response))
 
                 if response.status_code == 403:
-                    if auth.token is None:
+                    if auth is None or auth.token is None:
                         raise AuthenticationException(response_to_str(response))
                     raise ForbiddenException(response_to_str(response))
 
@@ -163,7 +163,8 @@ class FileDownloader(object):
             if response.status_code == 404:
                 raise NotFoundException("Not found: %s" % url)
             elif response.status_code == 403:
-                if auth.token is None:
+                if auth is None or (hasattr(auth, "token") and auth.token is None):
+                    # TODO: This is a bit weird, why this conversion? Need to investigate
                     raise AuthenticationException(response_to_str(response))
                 raise ForbiddenException(response_to_str(response))
             elif response.status_code == 401:

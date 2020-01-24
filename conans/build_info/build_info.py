@@ -9,7 +9,9 @@ from six.moves.urllib.parse import urlparse, urljoin
 from conans.client.cache.cache import ClientCache
 from conans.client.rest import response_to_str
 from conans.errors import AuthenticationException, RequestErrorException, ConanException
+from conans.model.graph_lock import LOCKFILE_VERSION
 from conans.model.ref import ConanFileReference
+from conans.model.version import Version
 from conans.paths import ARTIFACTS_PROPERTIES_PUT_PREFIX
 from conans.paths import get_conan_user_home
 from conans.util.files import save
@@ -151,12 +153,19 @@ class BuildInfoCreator(object):
         def _gather_deps(node_uid, contents, func):
             node_content = contents["graph_lock"]["nodes"].get(node_uid)
             artifacts = func(node_content["pref"], is_dependency=True)
-            for _, id_node in node_content.get("requires", {}).items():
+            for id_node in node_content.get("requires", []):
+                artifacts.update(_gather_deps(id_node, contents, func))
+            for id_node in node_content.get("build_requires", []):
                 artifacts.update(_gather_deps(id_node, contents, func))
             return artifacts
 
         with open(self._lockfile) as json_data:
             data = json.load(json_data)
+
+        version = Version(data["version"])
+        if version < LOCKFILE_VERSION:
+            raise ConanException("This lockfile was created with a previous incompatible version "
+                                 "of Conan. Please update all your Conan clients")
 
         # Gather modules, their artifacts and recursively all required artifacts
         for _, node in data["graph_lock"]["nodes"].items():
@@ -177,12 +186,12 @@ class BuildInfoCreator(object):
                     self._get_package_artifacts(pref, is_dependency=False))
 
                 # Recurse requires
-                if node.get("requires"):
-                    for _, node_id in node["requires"].items():
-                        modules[recipe_key]["dependencies"].update(
-                            _gather_deps(node_id, data, self._get_recipe_artifacts))
-                        modules[package_key]["dependencies"].update(
-                            _gather_deps(node_id, data, self._get_package_artifacts))
+                node_ids = node.get("requires", []) + node.get("build_requires", [])
+                for node_id in node_ids:
+                    modules[recipe_key]["dependencies"].update(
+                        _gather_deps(node_id, data, self._get_recipe_artifacts))
+                    modules[package_key]["dependencies"].update(
+                        _gather_deps(node_id, data, self._get_package_artifacts))
 
                 # TODO: Is the recipe a 'dependency' of the package
 
