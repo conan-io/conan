@@ -5,7 +5,7 @@ from collections import namedtuple
 import six
 
 from conans.client.rest.uploader_downloader import FileUploader
-from conans.errors import AuthenticationException, ForbiddenException
+from conans.errors import AuthenticationException, ForbiddenException, InternalErrorException
 from conans.test.utils.tools import TestBufferConanOutput
 from conans.util.files import save
 
@@ -54,3 +54,11 @@ class UploaderUnitTest(unittest.TestCase):
         uploader = FileUploader(MockRequester(403), self.out, verify=False, config=_ConfigMock())
         with six.assertRaisesRegex(self, ForbiddenException, "tururu"):
             uploader.upload("fake_url", self.f, auth=auth)
+
+    def test_500_raises_internal_error(self):
+        out = TestBufferConanOutput()
+        uploader = FileUploader(MockRequester(500), out, verify=False, config=_ConfigMock())
+        f = tempfile.mktemp()
+        save(f, "some contents")
+        with six.assertRaisesRegex(self, InternalErrorException, "tururu"):
+            uploader.upload("fake_url", self.f, dedup=True)
