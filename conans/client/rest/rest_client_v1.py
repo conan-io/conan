@@ -34,19 +34,16 @@ class RestV1Methods(RestCommonMethods):
         return ClientV1Router(self.remote_url.rstrip("/"), self._artifacts_properties,
                               self._matrix_params)
 
-    def _download_files(self, file_urls, quiet=False):
+    def _download_files(self, file_urls):
         """
         :param: file_urls is a dict with {filename: url}
 
         Its a generator, so it yields elements for memory performance
         """
-        output = self._output if not quiet else None
-        downloader = FileDownloader(self.requester, output, self.verify_ssl)
+        downloader = FileDownloader(self.requester, None, self.verify_ssl, self._config)
         # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz
         # can be < conanfile, conaninfo, and sent always the last, so smaller files go first
         for filename, resource_url in sorted(file_urls.items(), reverse=True):
-            if output and not output.is_terminal:
-                output.writeln("Downloading %s" % filename)
             auth, _ = self._file_server_capabilities(resource_url)
             contents = downloader.download(resource_url, auth=auth)
             yield os.path.normpath(filename), contents
@@ -70,7 +67,7 @@ class RestV1Methods(RestCommonMethods):
         urls = self._get_file_to_url_dict(url)
 
         # Get the digest
-        contents = self._download_files(urls, quiet=True)
+        contents = self._download_files(urls)
         # Unroll generator and decode shas (plain text)
         contents = {key: decode_text(value) for key, value in dict(contents).items()}
         return FileTreeManifest.loads(contents[CONAN_MANIFEST])
@@ -83,7 +80,7 @@ class RestV1Methods(RestCommonMethods):
         urls = self._get_file_to_url_dict(url)
 
         # Get the digest
-        contents = self._download_files(urls, quiet=True)
+        contents = self._download_files(urls)
         try:
             # Unroll generator and decode shas (plain text)
             content = dict(contents)[CONAN_MANIFEST]
@@ -107,7 +104,7 @@ class RestV1Methods(RestCommonMethods):
             raise NotFoundException("Package %s doesn't have the %s file!" % (pref,
                                                                               CONANINFO))
         # Get the info (in memory)
-        contents = self._download_files({CONANINFO: urls[CONANINFO]}, quiet=True)
+        contents = self._download_files({CONANINFO: urls[CONANINFO]})
         # Unroll generator and decode shas (plain text)
         contents = {key: decode_text(value) for key, value in dict(contents).items()}
         return ConanInfo.loads(contents[CONANINFO])
@@ -126,7 +123,8 @@ class RestV1Methods(RestCommonMethods):
         urls = self._get_file_to_url_dict(url, data=file_sizes)
         if self._matrix_params:
             urls = self.router.add_matrix_params(urls)
-        self._upload_files(urls, files_to_upload, self._output, retry, retry_wait, display_name=str(ref))
+        self._upload_files(urls, files_to_upload, self._output, retry, retry_wait,
+                           display_name=str(ref))
 
     def _upload_package(self, pref, files_to_upload, retry, retry_wait):
         # Get the upload urls and then upload files
@@ -145,7 +143,7 @@ class RestV1Methods(RestCommonMethods):
     def _upload_files(self, file_urls, files, output, retry, retry_wait, display_name=None):
         t1 = time.time()
         failed = []
-        uploader = FileUploader(self.requester, output, self.verify_ssl)
+        uploader = FileUploader(self.requester, output, self.verify_ssl, self._config)
         # conan_package.tgz and conan_export.tgz are uploaded first to avoid uploading conaninfo.txt
         # or conanamanifest.txt with missing files due to a network failure
         for filename, resource_url in sorted(file_urls.items()):
@@ -175,7 +173,7 @@ class RestV1Methods(RestCommonMethods):
 
         It writes downloaded files to disk (appending to file, only keeps chunks in memory)
         """
-        downloader = FileDownloader(self.requester, self._output, self.verify_ssl)
+        downloader = FileDownloader(self.requester, self._output, self.verify_ssl, self._config)
         ret = {}
         # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz
         # can be < conanfile, conaninfo, and sent always the last, so smaller files go first
@@ -257,7 +255,7 @@ class RestV1Methods(RestCommonMethods):
                         ret.append(tmp)
             return sorted(ret)
         else:
-            downloader = FileDownloader(self.requester, None, self.verify_ssl)
+            downloader = FileDownloader(self.requester, None, self.verify_ssl, self._config)
             auth, _ = self._file_server_capabilities(urls[path])
             content = downloader.download(urls[path], auth=auth)
 
@@ -308,3 +306,12 @@ class RestV1Methods(RestCommonMethods):
 
     def get_latest_package_revision(self, pref):
         raise NoRestV2Available("The remote doesn't support revisions")
+
+    def _post_json(self, url, payload):
+        logger.debug("REST: post: %s" % url)
+        response = self.requester.post(url,
+                                       auth=self.auth,
+                                       headers=self.custom_headers,
+                                       verify=self.verify_ssl,
+                                       json=payload)
+        return response

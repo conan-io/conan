@@ -10,7 +10,8 @@ from conans.model.version import Version
 
 
 def _execute(command):
-    proc = Popen(command, shell=True, bufsize=1, stdout=PIPE, stderr=STDOUT)
+    proc = Popen(command, shell=True, bufsize=1, universal_newlines=True, stdout=PIPE,
+                 stderr=STDOUT)
 
     output_buffer = []
     while True:

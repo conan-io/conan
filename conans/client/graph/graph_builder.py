@@ -222,8 +222,13 @@ class DepsGraphBuilder(object):
             self._resolve_cached_alias([require], graph)
             # As we are closing a diamond, there can be conflicts. This will raise if conflicts
             conflict = self._conflicting_references(previous.ref, require.ref, node.ref)
-            if conflict:
-                raise ConanException(conflict)
+            if conflict:  # It is possible to get conflict from alias, try to resolve it
+                self._resolve_recipe(node, graph, require, check_updates,
+                                     update, remotes, profile_host, graph_lock)
+                # Maybe it was an ALIAS, so we can check conflict again
+                conflict = self._conflicting_references(previous.ref, require.ref, node.ref)
+                if conflict:
+                    raise ConanException(conflict)
 
             # Add current ancestors to the previous node and upstream deps
             union = node.ancestors.union([node.name])

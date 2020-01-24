@@ -1,6 +1,7 @@
 from conans.client.generators.cmake import DepsCppCmake
 from conans.client.generators.cmake_find_package import find_dependency_lines
-from conans.client.generators.cmake_find_package_common import target_template
+from conans.client.generators.cmake_find_package_common import target_template, CMakeFindPackageCommonMacros
+from conans.client.generators.cmake_multi import extend
 from conans.model import Generator
 
 
@@ -9,7 +10,7 @@ class CMakeFindPackageMultiGenerator(Generator):
 
 # Requires CMake > 3.0
 if(${{CMAKE_VERSION}} VERSION_LESS "3.0")
-   message(FATAL_ERROR "The 'cmake_find_package_multi' only works with CMake > 3.0" )
+   message(FATAL_ERROR "The 'cmake_find_package_multi' generator only works with CMake > 3.0" )
 endif()
 
 include(${{CMAKE_CURRENT_LIST_DIR}}/{name}Targets.cmake)
@@ -95,23 +96,23 @@ endif()
     @property
     def content(self):
         ret = {}
-        build_type = self.conanfile.settings.get_safe("build_type")
+        build_type = str(self.conanfile.settings.build_type)
         build_type_suffix = "_{}".format(build_type.upper()) if build_type else ""
         for _, cpp_info in self.deps_build_info.dependencies:
+            # If any config matches the build_type one, add it to the cpp_info
+            dep_cpp_info = extend(cpp_info, build_type.lower())
+
             depname = cpp_info.get_name("cmake_find_package_multi")
-            deps = DepsCppCmake(cpp_info)
-            ret["{}Config.cmake".format(depname)] = self._find_for_dep(depname, cpp_info)
+            ret["{}Config.cmake".format(depname)] = self._find_for_dep(depname, dep_cpp_info)
             ret["{}Targets.cmake".format(depname)] = self.targets_file.format(name=depname)
 
+            deps = DepsCppCmake(dep_cpp_info)
             find_lib = target_template.format(name=depname, deps=deps,
                                               build_type_suffix=build_type_suffix)
             ret["{}Target-{}.cmake".format(depname, build_type.lower())] = find_lib
             ret["{}ConfigVersion.cmake".format(depname)] = self.version_template.\
-                format(version=cpp_info.version)
+                format(version=dep_cpp_info.version)
         return ret
-
-    def _build_type_suffix(self, build_type):
-        return
 
     def _find_for_dep(self, name, cpp_info):
         lines = []
@@ -126,4 +127,8 @@ endif()
                                               version=cpp_info.version,
                                               find_dependencies_block="\n".join(lines),
                                               target_props_block=targets_props)
-        return tmp
+
+        return "\n".join([CMakeFindPackageCommonMacros.conan_message,
+                          CMakeFindPackageCommonMacros.apple_frameworks_macro,
+                          CMakeFindPackageCommonMacros.conan_package_library_targets,
+                          tmp])

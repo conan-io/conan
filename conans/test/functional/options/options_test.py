@@ -1,10 +1,8 @@
-import os
 import textwrap
 import unittest
 
 from conans.paths import CONANINFO
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, GenConanfile
-from conans.util.files import load
 
 
 class OptionsTest(unittest.TestCase):
