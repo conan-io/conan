@@ -57,7 +57,7 @@ class UploaderUnitTest(unittest.TestCase):
 
     def test_500_raises_internal_error(self):
         out = TestBufferConanOutput()
-        uploader = FileUploader(_MockRequester(500), out, verify=False, config=_ConfigMock())
+        uploader = FileUploader(MockRequester(500), out, verify=False, config=_ConfigMock())
         f = tempfile.mktemp()
         save(f, "some contents")
         with six.assertRaisesRegex(self, InternalErrorException, "tururu"):
