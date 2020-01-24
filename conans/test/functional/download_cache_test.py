@@ -100,8 +100,8 @@ class DownloadCacheTest(unittest.TestCase):
             from conans import ConanFile, tools
             class Pkg(ConanFile):
                 def source(self):
-                    tools.download("http://localhost:%s/myfile.txt", "myfile.txt",
-                                   md5="9893532233caff98cd083a116b013c0b")
+                    md5 = "9893532233caff98cd083a116b013c0b"  # py38 count lines differently
+                    tools.download("http://localhost:%s/myfile.txt", "myfile.txt", md5=md5)
             """ % http_server.port)
         client.save({"conanfile.py": conanfile})
         client.run("source .")
