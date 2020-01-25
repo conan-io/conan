@@ -1,11 +1,13 @@
 import os
 import platform
 import textwrap
+import re
 
 from jinja2 import Template
 
 from conans.client.tools.oss import OSInfo
 from conans.model import Generator
+from conans.tools import unix_path
 
 
 sh_activate_tpl = Template(textwrap.dedent("""
@@ -152,6 +154,16 @@ class VirtualEnvGenerator(Generator):
                     value = " ".join(value+[placeholder])
                     value = "\"%s\"" % value if quote_elements else value
                 else:
+                    # for Bash running in Windows, normalize Windows paths to Unix paths
+                    # they will be translated back by mysys2/cygwin
+                    # WSL won't pass them to Windows apps at all
+                    if flavor == "sh" and platform.system() == "Windows":
+                        def normalize_path(part):
+                            if re.match(r"^[A-Za-z]:\\", part):
+                                return unix_path(part)
+                            else:
+                                return part
+                        value = [normalize_path(part) for part in value]
                     # Quoted variables joined with pathset may look like:
                     # PATH="one path":"two paths"
                     # Unquoted variables joined with pathset may look like: PATH=one path;two paths
