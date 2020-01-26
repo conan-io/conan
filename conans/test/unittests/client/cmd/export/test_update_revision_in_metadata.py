@@ -19,8 +19,7 @@ class UpdateRevisionInMetadataTests(unittest.TestCase):
 
     def setUp(self):
         ref = ConanFileReference.loads("lib/version@user/channel")
-        self.package_layout = PackageCacheLayout(base_folder=temp_folder(), ref=ref,
-                                                 short_paths=False, no_lock=True)
+        self.package_layout = PackageCacheLayout(base_folder=temp_folder(), ref=ref, no_lock=True)
         self.output = TestBufferConanOutput()
 
     def test_scm_warn_not_pristine(self):

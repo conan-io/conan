@@ -140,8 +140,7 @@ def _migrate_full_metadata(cache, out):
     for ref in refs:
         try:
             base_folder = os.path.normpath(os.path.join(cache.store, ref.dir_repr()))
-            layout = PackageCacheLayout(base_folder=base_folder, ref=ref, short_paths=None,
-                                        no_lock=True)
+            layout = PackageCacheLayout(base_folder=base_folder, ref=ref, no_lock=True)
             with layout.update_metadata() as metadata:
                 # Updating the RREV
                 if metadata.recipe.revision is None:
