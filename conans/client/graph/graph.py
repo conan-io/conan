@@ -277,10 +277,7 @@ class DepsGraph(object):
             new_level = []
             for n in level:
                 if n.binary in (BINARY_UNKNOWN, BINARY_BUILD) and n.pref not in total_prefs:
-                    if n.binary == BINARY_UNKNOWN:  # Avoid "Package_ID_Unknown", not parseable
-                        new_level.append((n.id, n.ref))
-                    else:
-                        new_level.append((n.id, n.pref.copy_clear_prev()))
+                    new_level.append((n.id, n.pref.copy_clear_prev()))
                     total_prefs.add(n.pref)
             if new_level:
                 result.append(new_level)
