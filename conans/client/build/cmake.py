@@ -158,12 +158,8 @@ class CMake(object):
         args.append('-Wno-dev')
 
         if self.toolset:
-            if is_toolset_supported(self.generator):
-                args.append('-T "%s"' % self.toolset)
-            else:
-                raise ConanException('CMake does not support toolsets with generator "%s:.'
-                                     'Please check your conan profile to either remove the toolset,'
-                                     ' or change the CMake generator.' % self.generator)
+            args.append('-T "%s"' % self.toolset)
+
         return join_arguments(args)
 
     @property
