@@ -1,7 +1,6 @@
 import copy
 import os
 import re
-import subprocess
 
 from conans.client import tools
 from conans.client.build.visual_environment import (VisualStudioBuildEnvironment,
@@ -15,6 +14,7 @@ from conans.model.version import Version
 from conans.tools import vcvars_command as tools_vcvars_command
 from conans.util.env_reader import get_env
 from conans.util.files import decode_text, save
+from conans.util.runners import version_runner
 
 
 class MSBuild(object):
@@ -244,7 +244,7 @@ class MSBuild(object):
         vcvars = tools_vcvars_command(settings)
         command = "%s && %s" % (vcvars, msbuild_cmd)
         try:
-            out, _ = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True).communicate()
+            out = version_runner(command, shell=True)
             version_line = decode_text(out).split("\n")[-1]
             prog = re.compile("(\d+\.){2,3}\d+")
             result = prog.match(version_line).group()

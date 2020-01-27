@@ -58,7 +58,8 @@ class OSInfoTest(unittest.TestCase):
             self.assertFalse(OSInfo().is_aix)
 
             with environment_append({"CONAN_BASH_PATH": "/fake/bash.exe"}):
-                with mock.patch('conans.client.tools.oss.check_output', new=self.subprocess_check_output_mock):
+                with mock.patch('conans.client.tools.oss.check_output_runner',
+                                new=self.subprocess_check_output_mock):
                     self.assertEqual(OSInfo.uname(), self._uname.lower())
                     self.assertEqual(OSInfo.detect_windows_subsystem(), CYGWIN)
 
@@ -76,7 +77,8 @@ class OSInfoTest(unittest.TestCase):
             self.assertFalse(OSInfo().is_aix)
 
             with environment_append({"CONAN_BASH_PATH": "/fake/bash.exe"}):
-                with mock.patch('conans.client.tools.oss.check_output', new=self.subprocess_check_output_mock):
+                with mock.patch('conans.client.tools.oss.check_output_runner',
+                                new=self.subprocess_check_output_mock):
                     self.assertEqual(OSInfo.uname(), self._uname.lower())
                     self.assertEqual(OSInfo.detect_windows_subsystem(), MSYS)
 
@@ -93,7 +95,8 @@ class OSInfoTest(unittest.TestCase):
             self.assertFalse(OSInfo().is_solaris)
 
             with environment_append({"CONAN_BASH_PATH": "/fake/bash.exe"}):
-                with mock.patch('conans.client.tools.oss.check_output', new=self.subprocess_check_output_mock):
+                with mock.patch('conans.client.tools.oss.check_output_runner',
+                                new=self.subprocess_check_output_mock):
                     self.assertEqual(OSInfo.uname(), self._uname.lower())
                     self.assertEqual(OSInfo.detect_windows_subsystem(), MSYS2)
 
@@ -111,7 +114,8 @@ class OSInfoTest(unittest.TestCase):
             self.assertFalse(OSInfo().is_aix)
 
             with environment_append({"CONAN_BASH_PATH": "/fake/bash.exe"}):
-                with mock.patch('conans.client.tools.oss.check_output', new=self.subprocess_check_output_mock):
+                with mock.patch('conans.client.tools.oss.check_output_runner',
+                                new=self.subprocess_check_output_mock):
                     self.assertEqual(OSInfo.uname(), self._uname.lower())
                     self.assertEqual(OSInfo.detect_windows_subsystem(), MSYS2)
 
@@ -129,7 +133,8 @@ class OSInfoTest(unittest.TestCase):
             self.assertFalse(OSInfo().is_aix)
 
             with environment_append({"CONAN_BASH_PATH": "/fake/bash.exe"}):
-                with mock.patch('conans.client.tools.oss.check_output', new=self.subprocess_check_output_mock):
+                with mock.patch('conans.client.tools.oss.check_output_runner',
+                                new=self.subprocess_check_output_mock):
                     self.assertEqual(OSInfo.uname(), self._uname.lower())
                     self.assertEqual(OSInfo.detect_windows_subsystem(), MSYS2)
 
@@ -218,7 +223,8 @@ class OSInfoTest(unittest.TestCase):
         self._version = '7.1.0.0'
 
         with mock.patch("platform.system", mock.MagicMock(return_value='AIX')), \
-                mock.patch('conans.client.tools.oss.check_output', new=self.subprocess_check_output_mock):
+                mock.patch('conans.client.tools.oss.check_output_runner',
+                           new=self.subprocess_check_output_mock):
             self.assertFalse(OSInfo().is_windows)
             self.assertFalse(OSInfo().is_cygwin)
             self.assertFalse(OSInfo().is_msys)

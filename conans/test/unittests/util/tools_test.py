@@ -23,7 +23,7 @@ from conans.client.conf import default_client_conf, default_settings_yml
 from conans.client.output import ConanOutput
 from conans.client.runner import ConanRunner
 from conans.client.tools.files import replace_in_file, which
-from conans.client.tools.oss import check_output, OSInfo
+from conans.client.tools.oss import OSInfo
 from conans.client.tools.win import vcvars_dict, vswhere
 from conans.errors import ConanException, NotFoundException, AuthenticationException
 from conans.model.build_info import CppInfo
@@ -34,6 +34,7 @@ from conans.test.utils.tools import StoppableThreadBottle, TestBufferConanOutput
 from conans.tools import get_global_instances
 from conans.util.env_reader import get_env
 from conans.util.files import load, md5, mkdir, save
+from conans.util.runners import check_output_runner
 
 
 class ConfigMock:
@@ -654,7 +655,8 @@ ProgramFiles(x86)=C:\Program Files (x86)
             return output_with_newline_and_spaces
 
         with mock.patch('conans.client.tools.win.vcvars_command', new=vcvars_command_mock):
-            with patch('conans.client.tools.win.check_output', new=subprocess_check_output_mock):
+            with patch('conans.client.tools.win.check_output_runner',
+                       new=subprocess_check_output_mock):
                 vcvars = tools.vcvars_dict(None, only_diff=False, output=self.output)
                 self.assertEqual(vcvars["PROCESSOR_ARCHITECTURE"], "AMD64")
                 self.assertEqual(vcvars["PROCESSOR_IDENTIFIER"],
@@ -981,12 +983,12 @@ ProgramFiles(x86)=C:\Program Files (x86)
 
         fp = save_file(b"a line\notherline\n")
         if platform.system() != "Windows":
-            output = check_output(["file", fp], stderr=subprocess.STDOUT)
+            output = check_output_runner(["file", fp], stderr=subprocess.STDOUT)
             self.assertIn("ASCII text", str(output))
             self.assertNotIn("CRLF", str(output))
 
             tools.unix2dos(fp)
-            output = check_output(["file", fp], stderr=subprocess.STDOUT)
+            output = check_output_runner(["file", fp], stderr=subprocess.STDOUT)
             self.assertIn("ASCII text", str(output))
             self.assertIn("CRLF", str(output))
         else:
@@ -1000,12 +1002,12 @@ ProgramFiles(x86)=C:\Program Files (x86)
 
         fp = save_file(b"a line\r\notherline\r\n")
         if platform.system() != "Windows":
-            output = check_output(["file", fp], stderr=subprocess.STDOUT)
+            output = check_output_runner(["file", fp], stderr=subprocess.STDOUT)
             self.assertIn("ASCII text", str(output))
             self.assertIn("CRLF", str(output))
 
             tools.dos2unix(fp)
-            output = check_output(["file", fp], stderr=subprocess.STDOUT)
+            output = check_output_runner(["file", fp], stderr=subprocess.STDOUT)
             self.assertIn("ASCII text", str(output))
             self.assertNotIn("CRLF", str(output))
         else:
