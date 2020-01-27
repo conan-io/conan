@@ -130,25 +130,22 @@ class CMake(object):
                                  ' or change the CMake generator.' % self.generator)
 
         generator = self.generator
-        generator_platform = None
+        generator_platform = self.generator_platform
 
-        if self.generator_platform:
-            if self.generator == "Visual Studio 16 2019":
-                generator_platform = self.generator_platform
-            else:
-                if 'Visual Studio' in generator and self._settings.get_safe("os") != "WindowsCE":
-                    if self.generator_platform == "x64":
-                        generator += " Win64"
-                    elif self.generator_platform == "ARM":
-                        generator += " ARM"
-                    elif self.generator_platform == "ARM64":
-                        generator_platform = self.generator_platform  # Not supported appended to generator
-                    elif self.generator_platform == "Win32":
-                        pass
-                    else:
-                        generator_platform = self.generator_platform
-                else:
-                    generator_platform = self.generator_platform
+        if self.generator_platform and 'Visual Studio' in generator:
+            # FIXME: Conan 2.0 We are adding the platform to the generator instead of using the -A argument
+            #   to keep previous implementation, but any modern CMake will support (and recommend) passing the
+            #   platform in its own argument.
+            compiler_version = self._settings.get_safe("compiler.version")
+            if Version(compiler_version) < "16" and self._settings.get_safe("os") != "WindowsCE":
+                if self.generator_platform == "x64":
+                    generator += " Win64"
+                    generator_platform = None
+                elif self.generator_platform == "ARM":
+                    generator += " ARM"
+                    generator_platform = None
+                elif self.generator_platform == "Win32":
+                    generator_platform = None
 
         args = ['-G "{}"'.format(generator)] if generator else []
         if generator_platform:
