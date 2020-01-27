@@ -52,18 +52,15 @@ def _fill_runtime(settings):
     try:
         runtime = "MDd" if settings.get_safe("build_type") == "Debug" else "MD"
         if settings.compiler == "Visual Studio":
-            runtime_key = "compiler.runtime"
-            if settings.get_safe(runtime_key) is None:
+            if settings.get_safe("compiler.runtime") is None:
                 settings.compiler.runtime = runtime
+                msg = "Setting 'compiler.runtime' not declared, automatically adjusted to '%s'"
+                logger.info(msg % runtime)
         elif settings.compiler == "intel" and settings.get_safe("compiler.base") == "Visual Studio":
-            runtime_key = "compiler.base.runtime"
-            if settings.get_safe(runtime_key) is None:
+            if settings.get_safe("compiler.base.runtime") is None:
                 settings.compiler.base.runtime = runtime
-        else:
-            return
-
-        logger.info("Setting '{}' not declared, automatically adjusted to '{}'".format(
-                runtime_key, runtime))
+                msg = "Setting 'compiler.base.runtime' not declared, automatically adjusted to '%s'"
+                logger.info(msg % runtime)
     except Exception:  # If the settings structure doesn't match these general
         # asumptions, like unexistant runtime
         pass
