@@ -1049,7 +1049,7 @@ build_type: [ Release]
         cmake.configure()
         self.assertIn(self.tempdir, conanfile.path)
 
-        cmake = CMake(conanfile, generator="MinGW Makefiles")
+        cmake.generator = "MinGW Makefiles"
         cmake.configure()
         self.assertNotIn(self.tempdir, conanfile.path)
 

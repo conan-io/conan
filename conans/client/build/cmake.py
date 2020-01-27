@@ -52,9 +52,10 @@ class CMake(object):
         self._build_type = build_type or conanfile.settings.get_safe("build_type")
         self._cmake_program = os.getenv("CONAN_CMAKE_PROGRAM") or cmake_program or "cmake"
 
+        if generator_platform:
+            self.generator_platform = generator_platform
         self.generator = generator or get_generator(conanfile.settings)
-        self.generator_platform = generator_platform or get_generator_platform(conanfile.settings,
-                                                                               self.generator)
+
         if not self.generator:
             self._conanfile.output.warn("CMake generator could not be deduced from settings")
         self.parallel = parallel
@@ -75,6 +76,25 @@ class CMake(object):
         self.toolset = toolset or get_toolset(self._settings)
         self.build_dir = None
         self.msbuild_verbosity = os.getenv("CONAN_MSBUILD_VERBOSITY") or msbuild_verbosity
+
+    @property
+    def generator(self):
+        return self._generator
+
+    @generator.setter
+    def generator(self, value):
+        self._generator = value
+        if not self._generator_platform_is_assigned:
+            self._generator_platform = get_generator_platform(self._settings, self._generator)
+
+    @property
+    def generator_platform(self):
+        return self._generator_platform
+
+    @generator_platform.setter
+    def generator_platform(self, value):
+        self._generator_platform = value
+        self._generator_platform_is_assigned = True
 
     @property
     def build_folder(self):
