@@ -38,6 +38,7 @@ class RestV1Methods(RestCommonMethods):
     def _download_files(self, file_urls, snapshot_md5):
         """
         :param: file_urls is a dict with {filename: url}
+        :param snapshot_md5: dict with {filaname: md5 checksum} of files to be downloaded
 
         Its a generator, so it yields elements for memory performance
         """

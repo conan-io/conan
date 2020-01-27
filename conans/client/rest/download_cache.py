@@ -13,17 +13,19 @@ from conans.util.sha import sha256 as sha256_sum
 
 class CachedFileDownloader(object):
 
-    def __init__(self, cache_folder, file_downloader, validate_checksum=False):
+    def __init__(self, cache_folder, file_downloader, user_download=False):
         self._cache_folder = cache_folder
         self._file_downloader = file_downloader
         self._thread_locks = {}
-        self._validate_checksum = validate_checksum
+        self._user_download = user_download
 
     def download(self, url, file_path=None, auth=None, retry=None, retry_wait=None, overwrite=False,
                  headers=None, md5=None, sha1=None, sha256=None):
         """ compatible interface of FileDownloader + checksum
         """
         checksum = sha256 or sha1 or md5
+        # If it is a user download, it must contain a checksum
+        assert (not self._user_download) or (self._user_download and checksum)
         h = self._get_hash(url, checksum)
         lock = os.path.join(self._cache_folder, "locks", h)
         cached_path = os.path.join(self._cache_folder, h)
@@ -36,7 +38,7 @@ class CachedFileDownloader(object):
                 if not os.path.exists(cached_path):
                     self._file_downloader.download(url, cached_path, auth, retry, retry_wait,
                                                    overwrite, headers)
-                    if self._validate_checksum:
+                    if self._user_download:
                         try:
                             if md5:
                                 check_md5(cached_path, md5)
@@ -59,8 +61,7 @@ class CachedFileDownloader(object):
             finally:
                 thread_lock.release()
 
-    @staticmethod
-    def _get_hash(url, checksum=None):
+    def _get_hash(self, url, checksum=None):
         """ For Api V2, the cached downloads always have recipe and package REVISIONS in the URL,
         making them immutable, and perfect for cached downloads of artifacts. For V2 checksum
         will always be None.
@@ -70,7 +71,8 @@ class CachedFileDownloader(object):
         """
         urltokens = urlsplit(url)
         # append empty query and fragment before unsplit
-        url = urlunsplit(urltokens[0:3]+("", ""))
+        if not self._user_download:  # removes ?signature=xxx
+            url = urlunsplit(urltokens[0:3]+("", ""))
         if checksum is not None:
             url += checksum
         h = sha256_sum(url.encode())

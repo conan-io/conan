@@ -5,7 +5,7 @@ import unittest
 from collections import Counter
 from threading import Thread
 
-from bottle import static_file
+from bottle import static_file, request
 
 from conans.client.rest.download_cache import CachedFileDownloader
 from conans.test.utils.test_files import temp_folder
@@ -70,10 +70,13 @@ class DownloadCacheTest(unittest.TestCase):
 
         file_path = os.path.join(temp_folder(), "myfile.txt")
         save(file_path, "some content")
+        file_path_query = os.path.join(temp_folder(), "myfile2.txt")
+        save(file_path_query, "some query")
 
         @http_server.server.get("/myfile.txt")
         def get_file():
-            return static_file(os.path.basename(file_path), os.path.dirname(file_path))
+            f = file_path_query if request.query else file_path
+            return static_file(os.path.basename(f), os.path.dirname(f))
 
         http_server.run_server()
 
@@ -85,8 +88,7 @@ class DownloadCacheTest(unittest.TestCase):
            from conans import ConanFile, tools
            class Pkg(ConanFile):
                def source(self):
-                   tools.download("http://localhost:%s/myfile.txt", "myfile.txt",
-                                  md5="kk")
+                   tools.download("http://localhost:%s/myfile.txt", "myfile.txt", md5="kk")
            """ % http_server.port)
         client.save({"conanfile.py": conanfile})
         client.run("source .", assert_error=True)
@@ -100,31 +102,40 @@ class DownloadCacheTest(unittest.TestCase):
             from conans import ConanFile, tools
             class Pkg(ConanFile):
                 def source(self):
-                    md5 = "9893532233caff98cd083a116b013c0b"  # py38 count lines differently
-                    tools.download("http://localhost:%s/myfile.txt", "myfile.txt", md5=md5)
-            """ % http_server.port)
+                    md5 = "9893532233caff98cd083a116b013c0b"
+                    md5_2 = "0dc8a17658b1c7cfa23657780742a353"
+                    tools.download("http://localhost:{0}/myfile.txt", "myfile.txt", md5=md5)
+                    tools.download("http://localhost:{0}/myfile.txt?q=2", "myfile2.txt", md5=md5_2)
+            """).format(http_server.port)
         client.save({"conanfile.py": conanfile})
         client.run("source .")
         local_path = os.path.join(client.current_folder, "myfile.txt")
         self.assertTrue(os.path.exists(local_path))
         self.assertEqual("some content", client.load("myfile.txt"))
-        # 1 files cached, plus "locks" folder = 2
-        self.assertEqual(2, len(os.listdir(cache_folder)))
+        local_path2 = os.path.join(client.current_folder, "myfile2.txt")
+        self.assertTrue(os.path.exists(local_path2))
+        self.assertEqual("some query", client.load("myfile2.txt"))
+
+        # 2 files cached, plus "locks" folder = 3
+        self.assertEqual(3, len(os.listdir(cache_folder)))
 
         # remove remote file
         os.remove(file_path)
         os.remove(local_path)
-        self.assertFalse(os.path.exists(local_path))
+        os.remove(local_path2)
         # Will use the cached one
         client.run("source .")
         self.assertTrue(os.path.exists(local_path))
+        self.assertTrue(os.path.exists(local_path2))
         self.assertEqual("some content", client.load("myfile.txt"))
+        self.assertEqual("some query", client.load("myfile2.txt"))
 
         # disabling cache will make it fail
         os.remove(local_path)
+        os.remove(local_path2)
         client.run("config rm storage.download_cache")
         client.run("source .", assert_error=True)
-        self.assertIn("ERROR: conanfile.py: Error in source() method, line 6", client.out)
+        self.assertIn("ERROR: conanfile.py: Error in source() method, line 7", client.out)
         self.assertIn("Not found: http://localhost", client.out)
 
 
