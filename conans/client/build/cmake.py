@@ -1,6 +1,5 @@
 import os
 import platform
-import subprocess
 from itertools import chain
 
 from six import StringIO  # Python 2 and 3 compatible
@@ -20,6 +19,7 @@ from conans.model.conan_file import ConanFile
 from conans.model.version import Version
 from conans.util.config_parser import get_bool_from_text
 from conans.util.files import mkdir, get_abs_path, walk, decode_text
+from conans.util.runners import version_runner
 
 
 class CMake(object):
@@ -408,7 +408,7 @@ class CMake(object):
     @staticmethod
     def get_version():
         try:
-            out, _ = subprocess.Popen(["cmake", "--version"], stdout=subprocess.PIPE).communicate()
+            out = version_runner(["cmake", "--version"])
             version_line = decode_text(out).split('\n', 1)[0]
             version_str = version_line.rsplit(' ', 1)[-1]
             return Version(version_str)

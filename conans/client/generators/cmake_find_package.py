@@ -1,5 +1,5 @@
 from conans.client.generators.cmake import DepsCppCmake
-from conans.client.generators.cmake_find_package_common import target_template
+from conans.client.generators.cmake_find_package_common import target_template, CMakeFindPackageCommonMacros
 from conans.client.generators.cmake_multi import extend
 from conans.model import Generator
 
@@ -18,17 +18,18 @@ mark_as_advanced({name}_FOUND {name}_VERSION)
 
 
 assign_target_properties = """
-    if({name}_INCLUDE_DIRS)
-      set_target_properties({name}::{name} PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${{{name}_INCLUDE_DIRS}}")
-    endif()
-    set_property(TARGET {name}::{name} PROPERTY INTERFACE_LINK_LIBRARIES ${{{name}_LIBRARIES_TARGETS}} ${{{name}_SYSTEM_LIBS}} "${{{name}_LINKER_FLAGS_LIST}}")
-    set_property(TARGET {name}::{name} PROPERTY INTERFACE_COMPILE_DEFINITIONS ${{{name}_COMPILE_DEFINITIONS}})
-    set_property(TARGET {name}::{name} PROPERTY INTERFACE_COMPILE_OPTIONS "${{{name}_COMPILE_OPTIONS_LIST}}")
+        if({name}_INCLUDE_DIRS)
+          set_target_properties({name}::{name} PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${{{name}_INCLUDE_DIRS}}")
+        endif()
+        set_property(TARGET {name}::{name} PROPERTY INTERFACE_LINK_LIBRARIES ${{{name}_LIBRARIES_TARGETS}} ${{{name}_SYSTEM_LIBS}} "${{{name}_LINKER_FLAGS_LIST}}")
+        set_property(TARGET {name}::{name} PROPERTY INTERFACE_COMPILE_DEFINITIONS ${{{name}_COMPILE_DEFINITIONS}})
+        set_property(TARGET {name}::{name} PROPERTY INTERFACE_COMPILE_OPTIONS "${{{name}_COMPILE_OPTIONS_LIST}}")
 """
 
 
 class CMakeFindPackageGenerator(Generator):
     template = """
+{macros_and_functions}
 {find_package_header_block}
 {find_libraries_block}
 if(NOT ${{CMAKE_VERSION}} VERSION_LESS "3.0")
@@ -70,10 +71,15 @@ endif()
         target_props = assign_target_properties.format(name=name, deps=deps)
         tmp = self.template.format(name=name, deps=deps,
                                    version=dep_cpp_info.version,
-                                   find_dependencies_block="\n".join(lines),
+                                   find_dependencies_block="\n        ".join(lines),
                                    find_libraries_block=find_libraries_block,
                                    find_package_header_block=find_package_header_block,
-                                   assign_target_properties_block=target_props)
+                                   assign_target_properties_block=target_props,
+                                   macros_and_functions="\n".join([
+                                       CMakeFindPackageCommonMacros.conan_message,
+                                       CMakeFindPackageCommonMacros.apple_frameworks_macro,
+                                       CMakeFindPackageCommonMacros.conan_package_library_targets,
+                                   ]))
         return tmp
 
 
@@ -89,10 +95,12 @@ def find_dependency_lines(name, public_deps_names, find_modules):
                     'endif()']
 
         if find_modules:
+            lines.append("\n")
             lines.append("find_dependency(%s REQUIRED)" % dep_name)
         else:
             # https://github.com/conan-io/conan/issues/4994
             # https://github.com/conan-io/conan/issues/5040
+            lines.append("\n")
             lines.append('if(${CMAKE_VERSION} VERSION_LESS "3.9.0")')
             lines.append('  find_package(%s REQUIRED NO_MODULE)' % dep_name)
             lines.append("else()")
@@ -102,4 +110,4 @@ def find_dependency_lines(name, public_deps_names, find_modules):
         lines.extend(property_lines("INTERFACE_LINK_LIBRARIES"))
         lines.extend(property_lines("INTERFACE_COMPILE_DEFINITIONS"))
         lines.extend(property_lines("INTERFACE_INCLUDE_DIRECTORIES"))
-    return ["    {}".format(l) for l in lines]
+    return lines
