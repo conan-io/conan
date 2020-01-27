@@ -52,8 +52,7 @@ class CMake(object):
         self._build_type = build_type or conanfile.settings.get_safe("build_type")
         self._cmake_program = os.getenv("CONAN_CMAKE_PROGRAM") or cmake_program or "cmake"
 
-        if generator_platform:
-            self.generator_platform = generator_platform
+        self.generator_platform = generator_platform
         self.generator = generator or get_generator(conanfile.settings)
 
         if not self.generator:
@@ -94,7 +93,7 @@ class CMake(object):
     @generator_platform.setter
     def generator_platform(self, value):
         self._generator_platform = value
-        self._generator_platform_is_assigned = True
+        self._generator_platform_is_assigned = bool(value is not None)
 
     @property
     def build_folder(self):
