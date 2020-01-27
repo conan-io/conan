@@ -63,7 +63,7 @@ def _fill_runtime(settings):
             return
 
         logger.info("Setting '{}' not declared, automatically adjusted to '{}'".format(
-                runtime, deduced_runtime))
+                runtime_key, runtime))
     except Exception:  # If the settings structure doesn't match these general
         # asumptions, like unexistant runtime
         pass
