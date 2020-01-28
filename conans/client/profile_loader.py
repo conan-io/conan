@@ -37,12 +37,33 @@ class ProfileParser(object):
                 if " " in name:
                     raise ConanException("The names of the variables cannot contain spaces")
                 value = unquote(value)
-                self.vars[name] = value
+                if name[-1] == "+" and name in self.vars:
+                    self.vars[name] += " " + value
+                else:
+                    self.vars[name] = value
 
     def apply_vars(self, repl_vars):
+        self.vars = self._concat_vars(repl_vars)
         self.vars = self._apply_in_vars(repl_vars)
         self.includes = self._apply_in_includes(repl_vars)
         self.profile_text = self._apply_in_profile_text(repl_vars)
+
+    def _concat_vars(self, repl_vars):
+        tmp_vars = OrderedDict()
+        for key, value in repl_vars.items():
+            print(key)
+            concat = False
+            nkey = key
+            if key[-1] == "+":
+                nkey = key[:-1]
+                concat = True
+
+            if concat and nkey in tmp_vars:
+                tmp_vars[nkey] += " " + value
+            else:
+                tmp_vars[nkey] = value
+
+        return tmp_vars
 
     def _apply_in_vars(self, repl_vars):
         tmp_vars = OrderedDict()
@@ -126,7 +147,9 @@ def _load_profile(text, profile_path, default_folder):
             # Recursion !!
             profile, declared_vars = read_profile(include, cwd, default_folder)
             inherited_profile.update(profile)
-            inherited_vars.update(declared_vars)
+            tmp_values = declared_vars.copy()
+            tmp_values.update(inherited_vars)
+            inherited_vars = tmp_values
 
         # Apply the automatic PROFILE_DIR variable
         if cwd:
@@ -135,6 +158,16 @@ def _load_profile(text, profile_path, default_folder):
 
         # Replace the variables from parents in the current profile
         profile_parser.apply_vars(inherited_vars)
+        print(profile_parser.profile_text)
+
+
+        to_del = []
+        for key, value in inherited_vars.items():
+            if key[-1] == "+":
+                to_del.append(key)
+        
+        for key in to_del:
+            del inherited_vars[key]
 
         # Current profile before update with parents (but parent variables already applied)
         doc = ConfigParser(profile_parser.profile_text,

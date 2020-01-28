@@ -61,6 +61,32 @@ os=$OTHERVAR
         self.assertEqual(a.profile_text, """[settings]
 os=thing""")
 
+    def test_parser_concat(self):
+        txt = """
+MYVAR=foobar
+MYVAR+=hello
+
+[settings]
+os=$MYVAR
+"""
+        a = ProfileParser(txt)
+        a.apply_vars({"MYVAR": "foobar", "MYVAR+": "hello"})
+        self.assertEqual(a.vars, {"MYVAR": "foobar hello"})
+        self.assertEqual(a.profile_text, """[settings]
+os=foobar hello""")
+
+        txt = """
+MYVAR+=hello
+MYVAR=thing
+
+[settings]
+os=$MYVAR
+"""
+        a = ProfileParser(txt)
+        self.assertEqual(a.vars, {"MYVAR": "thing"})
+        self.assertEqual(a.profile_text, """[settings]
+os=thing""")
+
 
 conanfile_scope_env = """
 import platform
@@ -362,3 +388,32 @@ MYVAR=fromProfile2
 
         self.assertEqual(variables, {"MYVAR": "fromProfile2",
                                      "PROFILE_DIR": tmp.replace('\\', '/')})
+
+
+    def include_dir_concat_test(self):
+        tmp = temp_folder()
+
+        def save_profile(txt, name):
+            abs_profile_path = os.path.join(tmp, name)
+            save(abs_profile_path, txt)
+
+        profile1 = """
+MYVAR=fromProfile1
+        """
+        save_profile(profile1, "profile1.txt")
+
+        profile2 = """
+include(./profile1.txt)
+MYVAR+=fromProfile2
+[env]
+CFLAGS=$MYVAR
+        """
+        save_profile(profile2, "profile2.txt")
+
+        profile, variables = read_profile("./profile2.txt", tmp, None)
+        print("*****")
+        print(variables)
+
+        self.assertEqual(variables, {"MYVAR": "fromProfile1 fromProfile2",
+                                     "PROFILE_DIR": tmp.replace('\\', '/')})
+        self.assertEqual("fromProfile1 fromProfile2", profile.env_values.data[None]["CFLAGS"])
