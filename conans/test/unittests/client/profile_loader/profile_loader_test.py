@@ -1,4 +1,5 @@
 import os
+import textwrap
 import unittest
 
 import six
@@ -55,29 +56,14 @@ OTHERVAR=thing
 os=$OTHERVAR
 """
         a = ProfileParser(txt)
-        a.apply_vars({"REPLACE_VAR": "22", "FILE": "MyFile", "OTHERVAR": "thing"})
-        self.assertEqual(a.vars, {"VAR": "22", "OTHERVAR": "thing"})
-        self.assertEqual(a.includes, ["a/path/to\profile.txt", "other/path/to/MyFile"])
+        a.update_vars({"REPLACE_VAR": "22", "FILE": "MyFile", "OTHERVAR": "thing"})
+        a.apply_vars()
+        self.assertEqual(a.vars, {"VAR": "22", "OTHERVAR": "thing",
+                                  "REPLACE_VAR": "22", "FILE": "MyFile",})
+        self.assertEqual([i for i in a.get_includes()],
+                         ["a/path/to\profile.txt", "other/path/to/MyFile"])
         self.assertEqual(a.profile_text, """[settings]
 os=thing""")
-
-
-conanfile_scope_env = """
-import platform
-from conans import ConanFile
-
-class AConan(ConanFile):
-    name = "Hello0"
-    version = "0.1"
-    settings = "os", "compiler", "arch"
-
-    def build(self):
-        # Print environment vars
-        if self.settings.os == "Windows":
-            self.run("SET")
-        else:
-            self.run("env")
-"""
 
 
 class ProfileTest(unittest.TestCase):
@@ -344,21 +330,17 @@ PYTHONPATH=$PROFILE_DIR/my_python_tools
     def include_order_test(self):
         tmp = temp_folder()
 
-        def save_profile(txt, name):
-            abs_profile_path = os.path.join(tmp, name)
-            save(abs_profile_path, txt)
+        save(os.path.join(tmp, "profile1.txt"), "MYVAR=fromProfile1")
 
-        profile1 = """
-MYVAR=fromProfile1
-        """
-        save_profile(profile1, "profile1.txt")
-
-        profile2 = """
-include(./profile1.txt)
-MYVAR=fromProfile2
-        """
-        save_profile(profile2, "profile2.txt")
+        profile2 = textwrap.dedent("""
+            include(./profile1.txt)
+            MYVAR=fromProfile2
+            [settings]
+            os=$MYVAR
+            """)
+        save(os.path.join(tmp, "profile2.txt"), profile2)
         profile, variables = read_profile("./profile2.txt", tmp, None)
 
         self.assertEqual(variables, {"MYVAR": "fromProfile2",
                                      "PROFILE_DIR": tmp.replace('\\', '/')})
+        self.assertEqual(profile.settings["os"], "fromProfile2")
