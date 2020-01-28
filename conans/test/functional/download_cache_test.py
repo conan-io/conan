@@ -65,6 +65,33 @@ class DownloadCacheTest(unittest.TestCase):
         content = load(log_trace_file)
         self.assertEqual(0, content.count('"_action": "DOWNLOAD"'))
 
+    def corrupted_cache_test(self):
+        client = TestClient(default_server_user=True)
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class Pkg(ConanFile):
+                exports = "*"
+                def package(self):
+                    self.copy("*")
+            """)
+        client.save({"conanfile.py": conanfile,
+                     "header.h": "header"})
+        client.run("create . mypkg/0.1@user/testing")
+        client.run("upload * --all --confirm")
+        cache_folder = temp_folder()
+        client.run('config set storage.download_cache="%s"' % cache_folder)
+        client.run("remove * -f")
+        client.run("install mypkg/0.1@user/testing")
+        for f in os.listdir(cache_folder):
+            f = os.path.join(cache_folder, f)
+            if not os.path.isfile(f):
+                continue
+            save(f, load(f) + "a")
+        client.run("remove * -f")
+        client.run("install mypkg/0.1@user/testing", assert_error=True)
+        self.assertIn("ERROR: md5 signature failed", client.out)
+        self.assertIn("Cached downloaded file corrupted", client.out)
+
     def user_downloads_cached_test(self):
         http_server = StoppableThreadBottle()
 
