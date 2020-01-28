@@ -190,14 +190,14 @@ def generate_targets_section(dependencies, generator_name):
                    '    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${CONAN_CMD_C_FLAGS}")\n'
                    '    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${CONAN_CMD_SHARED_LINKER_FLAGS}")\n')
     dependencies_dict = {name: dep_info for name, dep_info in dependencies}
-    for name, dep_info in dependencies:
-        dep_name = dep_info.get_name(generator_name, name)
-        use_deps = ["CONAN_PKG::%s" % dependencies_dict[d].get_name(generator_name, d) for d in dep_info.public_deps]
+    for _, dep_info in dependencies:
+        dep_name = dep_info.get_name(generator_name)
+        use_deps = ["CONAN_PKG::%s" % dependencies_dict[d].get_name(generator_name) for d in dep_info.public_deps]
         deps = "" if not use_deps else " ".join(use_deps)
         section.append(_target_template.format(name="CONAN_PKG::%s" % dep_name, deps=deps,
                                                uname=dep_name.upper(), pkg_name=dep_name))
 
-    all_targets = " ".join(["CONAN_PKG::%s" % dep_info.get_name(generator_name, name) for name, dep_info in dependencies])
+    all_targets = " ".join(["CONAN_PKG::%s" % dep_info.get_name(generator_name) for _, dep_info in dependencies])
     section.append('    set(CONAN_TARGETS %s)\n' % all_targets)
     section.append('endmacro()\n')
     return section
