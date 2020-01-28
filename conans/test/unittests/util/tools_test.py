@@ -10,7 +10,7 @@ from collections import namedtuple
 import mock
 import requests
 import six
-from bottle import request, static_file
+from bottle import request, static_file, HTTPError
 from mock.mock import mock_open, patch
 from nose.plugins.attrib import attr
 from parameterized import parameterized
@@ -23,9 +23,9 @@ from conans.client.conf import default_client_conf, default_settings_yml
 from conans.client.output import ConanOutput
 from conans.client.runner import ConanRunner
 from conans.client.tools.files import replace_in_file, which
-from conans.client.tools.oss import check_output, OSInfo
+from conans.client.tools.oss import OSInfo
 from conans.client.tools.win import vcvars_dict, vswhere
-from conans.errors import ConanException, NotFoundException
+from conans.errors import ConanException, NotFoundException, AuthenticationException
 from conans.model.build_info import CppInfo
 from conans.model.settings import Settings
 from conans.test.utils.conanfile import ConanFileMock
@@ -34,6 +34,13 @@ from conans.test.utils.tools import StoppableThreadBottle, TestBufferConanOutput
 from conans.tools import get_global_instances
 from conans.util.env_reader import get_env
 from conans.util.files import load, md5, mkdir, save
+from conans.util.runners import check_output_runner
+
+
+class ConfigMock:
+    def __init__(self):
+        self.retry = 0
+        self.retry_wait = 0
 
 
 class RunnerMock(object):
@@ -417,9 +424,8 @@ class HelloConan(ConanFile):
         with tools.environment_append(env):
             self.assertTrue(vswhere())
 
+    @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
     def vcvars_echo_test(self):
-        if platform.system() != "Windows":
-            return
         settings = Settings.loads(default_settings_yml)
         settings.os = "Windows"
         settings.compiler = "Visual Studio"
@@ -438,6 +444,19 @@ class HelloConan(ConanFile):
             self.assertNotIn("vcvarsall.bat", str(output))
             self.assertIn("Conan:vcvars already set", str(output))
             self.assertIn("VS140COMNTOOLS=", str(output))
+
+    @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
+    def vcvars_with_store_echo_test(self):
+        settings = Settings.loads(default_settings_yml)
+        settings.os = "WindowsStore"
+        settings.os.version = "8.1"
+        settings.compiler = "Visual Studio"
+        settings.compiler.version = "14"
+        cmd = tools.vcvars_command(settings, output=self.output)
+        self.assertIn("store 8.1", cmd)
+        with tools.environment_append({"VisualStudioVersion": "14"}):
+            cmd = tools.vcvars_command(settings, output=self.output)
+            self.assertEqual("echo Conan:vcvars already set", cmd)
 
     @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
     def vcvars_env_not_duplicated_path_test(self):
@@ -636,7 +655,8 @@ ProgramFiles(x86)=C:\Program Files (x86)
             return output_with_newline_and_spaces
 
         with mock.patch('conans.client.tools.win.vcvars_command', new=vcvars_command_mock):
-            with patch('conans.client.tools.win.check_output', new=subprocess_check_output_mock):
+            with patch('conans.client.tools.win.check_output_runner',
+                       new=subprocess_check_output_mock):
                 vcvars = tools.vcvars_dict(None, only_diff=False, output=self.output)
                 self.assertEqual(vcvars["PROCESSOR_ARCHITECTURE"], "AMD64")
                 self.assertEqual(vcvars["PROCESSOR_IDENTIFIER"],
@@ -764,6 +784,27 @@ ProgramFiles(x86)=C:\Program Files (x86)
         tools.download("http://localhost:%s/basic-auth/user/passwd" % http_server.port, dest,
                        headers={"Authorization": "Basic dXNlcjpwYXNzd2Q="}, overwrite=True,
                        requester=requests, out=out, retry=0, retry_wait=0)
+        http_server.stop()
+
+    @attr("slow")
+    @patch("conans.tools._global_config")
+    def download_unathorized_test(self, mock_config):
+        http_server = StoppableThreadBottle()
+        mock_config.return_value = ConfigMock()
+
+        @http_server.server.get('/forbidden')
+        def get_forbidden():
+            return HTTPError(403, "Access denied.")
+
+        http_server.run_server()
+
+        out = TestBufferConanOutput()
+        dest = os.path.join(temp_folder(), "manual.html")
+        # Not authorized
+        with six.assertRaisesRegex(self, AuthenticationException, "403"):
+            tools.download("http://localhost:%s/forbidden" % http_server.port, dest,
+                           requester=requests, out=out)
+
         http_server.stop()
 
     @parameterized.expand([
@@ -942,12 +983,12 @@ ProgramFiles(x86)=C:\Program Files (x86)
 
         fp = save_file(b"a line\notherline\n")
         if platform.system() != "Windows":
-            output = check_output(["file", fp], stderr=subprocess.STDOUT)
+            output = check_output_runner(["file", fp], stderr=subprocess.STDOUT)
             self.assertIn("ASCII text", str(output))
             self.assertNotIn("CRLF", str(output))
 
             tools.unix2dos(fp)
-            output = check_output(["file", fp], stderr=subprocess.STDOUT)
+            output = check_output_runner(["file", fp], stderr=subprocess.STDOUT)
             self.assertIn("ASCII text", str(output))
             self.assertIn("CRLF", str(output))
         else:
@@ -961,12 +1002,12 @@ ProgramFiles(x86)=C:\Program Files (x86)
 
         fp = save_file(b"a line\r\notherline\r\n")
         if platform.system() != "Windows":
-            output = check_output(["file", fp], stderr=subprocess.STDOUT)
+            output = check_output_runner(["file", fp], stderr=subprocess.STDOUT)
             self.assertIn("ASCII text", str(output))
             self.assertIn("CRLF", str(output))
 
             tools.dos2unix(fp)
-            output = check_output(["file", fp], stderr=subprocess.STDOUT)
+            output = check_output_runner(["file", fp], stderr=subprocess.STDOUT)
             self.assertIn("ASCII text", str(output))
             self.assertNotIn("CRLF", str(output))
         else:

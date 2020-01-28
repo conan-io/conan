@@ -7,7 +7,8 @@ from conans.client.build.compiler_flags import (architecture_flag, build_type_de
                                                 build_type_flags, format_defines,
                                                 format_include_paths, format_libraries,
                                                 format_library_paths, libcxx_define, libcxx_flag,
-                                                pic_flag, rpath_flags, sysroot_flag)
+                                                pic_flag, rpath_flags, sysroot_flag,
+                                                format_frameworks, format_framework_paths)
 from conans.client.build.cppstd_flags import cppstd_flag, cppstd_from_settings
 from conans.client.tools.env import environment_append
 from conans.client.tools.oss import OSInfo, args_to_string, cpu_count, cross_building, \
@@ -49,6 +50,7 @@ class AutoToolsBuildEnvironment(object):
         # Set the generic objects before mapping to env vars to let the user
         # alter some value
         self.libs = copy.copy(self._deps_cpp_info.libs)
+        self.libs.extend(copy.copy(self._deps_cpp_info.system_libs))
         self.include_paths = copy.copy(self._deps_cpp_info.include_paths)
         self.library_paths = copy.copy(self._deps_cpp_info.lib_paths)
 
@@ -234,6 +236,8 @@ class AutoToolsBuildEnvironment(object):
         """Not the -L"""
         ret = copy.copy(self._deps_cpp_info.sharedlinkflags)
         ret.extend(self._deps_cpp_info.exelinkflags)
+        ret.extend(format_frameworks(self._deps_cpp_info.frameworks, compiler=self._compiler))
+        ret.extend(format_framework_paths(self._deps_cpp_info.framework_paths, compiler=self._compiler))
         arch_flag = architecture_flag(compiler=self._compiler, os=self._os, arch=self._arch)
         if arch_flag:
             ret.append(arch_flag)

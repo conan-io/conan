@@ -1,6 +1,8 @@
 import os
 from contextlib import contextmanager
 
+import six
+
 from conans.client import tools
 from conans.client.output import ScopedOutput
 from conans.client.tools.env import environment_append, no_op, pythonpath
@@ -23,7 +25,7 @@ def create_options(conanfile):
         if default_options:
             if isinstance(default_options, (list, tuple, dict)):
                 default_values = OptionsValues(default_options)
-            elif isinstance(default_options, str):
+            elif isinstance(default_options, six.string_types):
                 default_values = OptionsValues.loads(default_options)
             else:
                 raise ConanException("Please define your default_options as list, "
