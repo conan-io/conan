@@ -1,7 +1,7 @@
 import io
 import os
 import sys
-from contextlib import contextmanager
+
 from subprocess import PIPE, Popen, STDOUT
 
 import six
@@ -9,6 +9,7 @@ import six
 from conans.errors import ConanException
 from conans.unicode import get_cwd
 from conans.util.files import decode_text
+from conans.util.runners import pyinstaller_bundle_env_cleaned
 
 
 class _UnbufferedWrite(object):
@@ -119,28 +120,3 @@ class ConanRunner(object):
             finally:
                 os.chdir(old_dir)
             return result
-
-
-if getattr(sys, 'frozen', False) and 'LD_LIBRARY_PATH' in os.environ:
-
-    # http://pyinstaller.readthedocs.io/en/stable/runtime-information.html#ld-library-path-libpath-considerations
-    pyinstaller_bundle_dir = os.environ['LD_LIBRARY_PATH'].replace(
-        os.environ.get('LD_LIBRARY_PATH_ORIG', ''), ''
-    ).strip(';:')
-
-    @contextmanager
-    def pyinstaller_bundle_env_cleaned():
-        """Removes the pyinstaller bundle directory from LD_LIBRARY_PATH
-
-        :return: None
-        """
-        ld_library_path = os.environ['LD_LIBRARY_PATH']
-        os.environ['LD_LIBRARY_PATH'] = ld_library_path.replace(pyinstaller_bundle_dir,
-                                                                '').strip(';:')
-        yield
-        os.environ['LD_LIBRARY_PATH'] = ld_library_path
-
-else:
-    @contextmanager
-    def pyinstaller_bundle_env_cleaned():
-        yield

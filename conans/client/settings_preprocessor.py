@@ -50,12 +50,20 @@ def _check_cppstd(settings):
 
 def _fill_runtime(settings):
     try:
+        runtime = "MDd" if settings.get_safe("build_type") == "Debug" else "MD"
         if settings.compiler == "Visual Studio":
-            if settings.get_safe("compiler.runtime") is None:
-                settings.compiler.runtime = "MDd" if settings.get_safe("build_type") == "Debug" \
-                                                  else "MD"
-                logger.info("Setting 'compiler.runtime' not declared, automatically "
-                            "adjusted to '%s'" % settings.compiler.runtime)
+            runtime_key = "compiler.runtime"
+            if settings.get_safe(runtime_key) is None:
+                settings.compiler.runtime = runtime
+        elif settings.compiler == "intel" and settings.get_safe("compiler.base") == "Visual Studio":
+            runtime_key = "compiler.base.runtime"
+            if settings.get_safe(runtime_key) is None:
+                settings.compiler.base.runtime = runtime
+        else:
+            return
+
+        logger.info("Setting '{}' not declared, automatically adjusted to '{}'".format(
+                runtime_key, runtime))
     except Exception:  # If the settings structure doesn't match these general
         # asumptions, like unexistant runtime
         pass

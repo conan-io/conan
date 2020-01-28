@@ -1,14 +1,14 @@
 import os
-import traceback
 import time
+import traceback
 from copy import copy
 
 import six
 
-from conans.util import progress_bar
 from conans.client.rest import response_to_str
 from conans.errors import AuthenticationException, ConanConnectionError, ConanException, \
-    NotFoundException, ForbiddenException, RequestErrorException
+    NotFoundException, ForbiddenException, RequestErrorException, InternalErrorException
+from conans.util import progress_bar
 from conans.util.files import mkdir, sha1sum
 from conans.util.log import logger
 from conans.util.tracer import log_download
@@ -38,6 +38,9 @@ class FileUploader(object):
                 dedup_headers.update(headers)
             response = self._requester.put(url, data="", verify=self._verify_ssl,
                                            headers=dedup_headers, auth=auth)
+            if response.status_code == 500:
+                raise InternalErrorException(response_to_str(response))
+
             if response.status_code == 400:
                 raise RequestErrorException(response_to_str(response))
 
@@ -45,7 +48,7 @@ class FileUploader(object):
                 raise AuthenticationException(response_to_str(response))
 
             if response.status_code == 403:
-                if auth.token is None:
+                if auth is None or auth.token is None:
                     raise AuthenticationException(response_to_str(response))
                 raise ForbiddenException(response_to_str(response))
             if response.status_code == 201:  # Artifactory returns 201 if the file is there
@@ -89,7 +92,7 @@ class FileUploader(object):
                     raise AuthenticationException(response_to_str(response))
 
                 if response.status_code == 403:
-                    if auth.token is None:
+                    if auth is None or auth.token is None:
                         raise AuthenticationException(response_to_str(response))
                     raise ForbiddenException(response_to_str(response))
 
@@ -160,7 +163,8 @@ class FileDownloader(object):
             if response.status_code == 404:
                 raise NotFoundException("Not found: %s" % url)
             elif response.status_code == 403:
-                if auth.token is None:
+                if auth is None or (hasattr(auth, "token") and auth.token is None):
+                    # TODO: This is a bit weird, why this conversion? Need to investigate
                     raise AuthenticationException(response_to_str(response))
                 raise ForbiddenException(response_to_str(response))
             elif response.status_code == 401:

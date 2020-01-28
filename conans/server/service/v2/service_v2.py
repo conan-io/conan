@@ -2,7 +2,7 @@ import os
 
 from bottle import FileUpload, static_file
 
-from conans.errors import RecipeNotFoundException, PackageNotFoundException
+from conans.errors import RecipeNotFoundException, PackageNotFoundException, NotFoundException
 from conans.server.service.common.common import CommonService
 from conans.server.service.mime import get_mime_type
 from conans.server.store.server_store import ServerStore
@@ -19,7 +19,10 @@ class ConanServiceV2(CommonService):
     # RECIPE METHODS
     def get_recipe_file_list(self, ref,  auth_user):
         self._authorizer.check_read_conan(auth_user, ref)
-        file_list = self._server_store.get_recipe_file_list(ref)
+        try:
+            file_list = self._server_store.get_recipe_file_list(ref)
+        except NotFoundException:
+            raise RecipeNotFoundException(ref)
         if not file_list:
             raise RecipeNotFoundException(ref, print_rev=True)
 
