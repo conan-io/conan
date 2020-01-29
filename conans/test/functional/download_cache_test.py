@@ -10,6 +10,7 @@ from bottle import static_file, request
 from conans.client.rest.download_cache import CachedFileDownloader
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, StoppableThreadBottle
+from conans.util.env_reader import get_env
 from conans.util.files import load, save
 
 
@@ -65,7 +66,9 @@ class DownloadCacheTest(unittest.TestCase):
         content = load(log_trace_file)
         self.assertEqual(0, content.count('"_action": "DOWNLOAD"'))
 
+    @unittest.skipIf(get_env("TESTING_REVISIONS_ENABLED", False), "No sense with revs")
     def corrupted_cache_test(self):
+        # This test only works without revisions, because v1 has md5 file checksums, but v2 nop
         client = TestClient(default_server_user=True)
         conanfile = textwrap.dedent("""
             from conans import ConanFile
