@@ -14,6 +14,11 @@ from conans.util.log import logger
 class ProfileParser(object):
 
     def __init__(self, text):
+        """ divides the text in 3 items:
+        - self.vars: Dictionary with variable=value declarations
+        - self.includes: List of other profiles to include
+        - self.profile_text: the remaining, containing settings, options, env, etc
+        """
         self.vars = OrderedDict()  # Order matters, if user declares F=1 and then FOO=12,
         # and in profile MYVAR=$FOO, it will
         self.includes = []
@@ -39,33 +44,36 @@ class ProfileParser(object):
                 value = unquote(value)
                 self.vars[name] = value
 
-    def apply_vars(self, repl_vars):
-        self.vars = self._apply_in_vars(repl_vars)
-        self.includes = self._apply_in_includes(repl_vars)
-        self.profile_text = self._apply_in_profile_text(repl_vars)
+    def apply_vars(self):
+        self._apply_in_vars()
+        self._apply_in_profile_text()
 
-    def _apply_in_vars(self, repl_vars):
+    def get_includes(self):
+        # Replace over includes seems insane and it is not documented. I am leaving it now
+        # afraid of breaking, but should be removed Conan 2.0
+        for include in self.includes:
+            for repl_key, repl_value in self.vars.items():
+                include = include.replace("$%s" % repl_key, repl_value)
+            yield include
+
+    def update_vars(self, included_vars):
+        """ update the variables dict with new ones from included profiles,
+        but keeping (higher priority) existing values"""
+        included_vars.update(self.vars)
+        self.vars = included_vars
+
+    def _apply_in_vars(self):
         tmp_vars = OrderedDict()
         for key, value in self.vars.items():
-            for repl_key, repl_value in repl_vars.items():
+            for repl_key, repl_value in self.vars.items():
                 key = key.replace("$%s" % repl_key, repl_value)
                 value = value.replace("$%s" % repl_key, repl_value)
             tmp_vars[key] = value
-        return tmp_vars
+        self.vars = tmp_vars
 
-    def _apply_in_includes(self, repl_vars):
-        tmp_includes = []
-        for include in self.includes:
-            for repl_key, repl_value in repl_vars.items():
-                include = include.replace("$%s" % repl_key, repl_value)
-            tmp_includes.append(include)
-        return tmp_includes
-
-    def _apply_in_profile_text(self, repl_vars):
-        tmp_text = self.profile_text
-        for repl_key, repl_value in repl_vars.items():
-            tmp_text = tmp_text.replace("$%s" % repl_key, repl_value)
-        return tmp_text
+    def _apply_in_profile_text(self):
+        for k, v in self.vars.items():
+            self.profile_text = self.profile_text.replace("$%s" % k, v)
 
 
 def get_profile_path(profile_name, default_folder, cwd, exists=True):
@@ -114,27 +122,25 @@ def _load_profile(text, profile_path, default_folder):
     """ Parse and return a Profile object from a text config like representation.
         cwd is needed to be able to load the includes
     """
-
     try:
         inherited_profile = Profile()
         cwd = os.path.dirname(os.path.abspath(profile_path)) if profile_path else None
         profile_parser = ProfileParser(text)
-        inherited_vars = profile_parser.vars
         # Iterate the includes and call recursive to get the profile and variables
         # from parent profiles
-        for include in profile_parser.includes:
+        for include in profile_parser.get_includes():
             # Recursion !!
-            profile, declared_vars = read_profile(include, cwd, default_folder)
+            profile, included_vars = read_profile(include, cwd, default_folder)
             inherited_profile.update(profile)
-            inherited_vars.update(declared_vars)
+            profile_parser.update_vars(included_vars)
 
         # Apply the automatic PROFILE_DIR variable
         if cwd:
-            inherited_vars["PROFILE_DIR"] = os.path.abspath(cwd).replace('\\', '/')
+            profile_parser.vars["PROFILE_DIR"] = os.path.abspath(cwd).replace('\\', '/')
             # Allows PYTHONPATH=$PROFILE_DIR/pythontools
 
         # Replace the variables from parents in the current profile
-        profile_parser.apply_vars(inherited_vars)
+        profile_parser.apply_vars()
 
         # Current profile before update with parents (but parent variables already applied)
         doc = ConfigParser(profile_parser.profile_text,
@@ -144,10 +150,7 @@ def _load_profile(text, profile_path, default_folder):
         # Merge the inherited profile with the readed from current profile
         _apply_inner_profile(doc, inherited_profile)
 
-        # Return the inherited vars to apply them in the parent profile if exists
-        inherited_vars.update(profile_parser.vars)
-        return inherited_profile, inherited_vars
-
+        return inherited_profile, profile_parser.vars
     except ConanException:
         raise
     except Exception as exc:
