@@ -241,7 +241,7 @@ class CMakeCommonMacros:
                 if(CONAN_FOUND_LIBRARY)
                     conan_message(STATUS "Library ${_LIBRARY_NAME} found ${CONAN_FOUND_LIBRARY}")
                     set(_LIB_NAME CONAN_LIB::${package_name}_${_LIBRARY_NAME}${build_type})
-                    add_library(${_LIB_NAME} UNKNOWN IMPORTED)
+                    add_library(${_LIB_NAME} UNKNOWN IMPORTED GLOBAL)
                     set_target_properties(${_LIB_NAME} PROPERTIES IMPORTED_LOCATION ${CONAN_FOUND_LIBRARY})
                     string(REPLACE " " ";" deps_list "${deps}")
                     set_property(TARGET ${_LIB_NAME} PROPERTY INTERFACE_LINK_LIBRARIES ${deps_list})

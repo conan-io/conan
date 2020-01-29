@@ -98,7 +98,7 @@ class CMakeFindPackageCommonMacros:
                         set(_LIB_NAME CONAN_LIB::${package_name}_${_LIBRARY_NAME}${build_type})
                         if(NOT TARGET ${_LIB_NAME})
                             # Create a micro-target for each lib/a found
-                            add_library(${_LIB_NAME} UNKNOWN IMPORTED)
+                            add_library(${_LIB_NAME} UNKNOWN IMPORTED GLOBAL)
                             set_target_properties(${_LIB_NAME} PROPERTIES IMPORTED_LOCATION ${CONAN_FOUND_LIBRARY})
                         else()
                             conan_message(STATUS "Skipping already existing target: ${_LIB_NAME}")
