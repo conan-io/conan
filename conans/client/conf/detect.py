@@ -1,6 +1,7 @@
 import os
 import platform
 import re
+import sys
 from subprocess import PIPE, Popen, STDOUT
 
 from conans.client.output import Color
@@ -8,9 +9,13 @@ from conans.client.tools import detected_os, OSInfo
 from conans.client.tools.win import latest_visual_studio_version_installed
 from conans.model.version import Version
 
+isPY38 = bool(sys.version_info.major == 3 and sys.version_info.minor == 8)
+
 
 def _execute(command):
-    proc = Popen(command, shell=True, bufsize=1, stdout=PIPE, stderr=STDOUT)
+    # In Python 3.8, open() emits RuntimeWarning if buffering=1 for binary mode.
+    bufsize = -1 if isPY38 else 1
+    proc = Popen(command, shell=True, bufsize=bufsize, stdout=PIPE, stderr=STDOUT)
 
     output_buffer = []
     while True:
