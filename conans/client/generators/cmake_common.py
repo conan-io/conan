@@ -152,7 +152,7 @@ _target_template = """
                                   CONAN_PACKAGE_TARGETS_{uname}_MINSIZEREL "${{CONAN_SYSTEM_LIBS_{uname}_MINSIZEREL}} {deps}"
                                   "minsizerel" {pkg_name})
 
-    add_library({name} INTERFACE IMPORTED)
+    add_library({name} INTERFACE IMPORTED GLOBAL)
 
     # Property INTERFACE_LINK_FLAGS do not work, necessary to add to INTERFACE_LINK_LIBRARIES
     set_property(TARGET {name} PROPERTY INTERFACE_LINK_LIBRARIES ${{CONAN_PACKAGE_TARGETS_{uname}}} ${{CONAN_SHARED_LINKER_FLAGS_{uname}_LIST}} ${{CONAN_EXE_LINKER_FLAGS_{uname}_LIST}}
@@ -241,7 +241,7 @@ class CMakeCommonMacros:
                 if(CONAN_FOUND_LIBRARY)
                     conan_message(STATUS "Library ${_LIBRARY_NAME} found ${CONAN_FOUND_LIBRARY}")
                     set(_LIB_NAME CONAN_LIB::${package_name}_${_LIBRARY_NAME}${build_type})
-                    add_library(${_LIB_NAME} UNKNOWN IMPORTED)
+                    add_library(${_LIB_NAME} UNKNOWN IMPORTED GLOBAL)
                     set_target_properties(${_LIB_NAME} PROPERTIES IMPORTED_LOCATION ${CONAN_FOUND_LIBRARY})
                     string(REPLACE " " ";" deps_list "${deps}")
                     set_property(TARGET ${_LIB_NAME} PROPERTY INTERFACE_LINK_LIBRARIES ${deps_list})
