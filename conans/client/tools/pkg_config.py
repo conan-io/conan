@@ -3,14 +3,14 @@
 
 import subprocess
 
-from conans.client.tools.oss import check_output
 from conans.errors import ConanException
+from conans.util.runners import check_output_runner
 
 
 class PkgConfig(object):
     @staticmethod
     def _cmd_output(command):
-        return check_output(command).strip()
+        return check_output_runner(command).strip()
 
     def __init__(self, library, pkg_config_executable='pkg-config', static=False, msvc_syntax=False, variables=None,
                  print_errors=True):
