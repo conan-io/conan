@@ -3,9 +3,8 @@ import platform
 import textwrap
 import unittest
 
-from conans import load
-from conans.client.tools.oss import check_output
 from conans.test.utils.tools import TestClient
+from conans.util.runners import check_output_runner
 
 
 class VirtualBuildEnvTest(unittest.TestCase):
@@ -65,16 +64,16 @@ class TestConan(ConanFile):
         client = TestClient(path_with_spaces=False)
         client.save({"conanfile.py": conanfile})
         client.run("install .")
-        output = check_output(env_cmd)
+        output = check_output_runner(env_cmd)
         normal_environment = env_output_to_dict(output)
         client.run("install .")
         act_build_file = os.path.join(client.current_folder, "activate_build.%s" % extension)
         deact_build_file = os.path.join(client.current_folder, "deactivate_build.%s" % extension)
         self.assertTrue(os.path.exists(act_build_file))
         self.assertTrue(os.path.exists(deact_build_file))
-        output = check_output(get_cmd(act_build_file))
+        output = check_output_runner(get_cmd(act_build_file))
         activate_environment = env_output_to_dict(output)
         self.assertNotEqual(normal_environment, activate_environment)
-        output = check_output(get_cmd(deact_build_file))
+        output = check_output_runner(get_cmd(deact_build_file))
         deactivate_environment = env_output_to_dict(output)
         self.assertDictEqual(normal_environment, deactivate_environment)
