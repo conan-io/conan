@@ -26,12 +26,12 @@ class Search(object):
                 for remote in self._remotes.values():
                     refs = self._remote_manager.search_recipes(remote, pattern, ignorecase)
                     if refs:
-                        references[remote.name] = refs
+                        references[remote.name] = sorted(refs)
                 return references
         # single remote
         remote = self._remotes[remote_name]
         refs = self._remote_manager.search_recipes(remote, pattern, ignorecase)
-        references[remote.name] = refs
+        references[remote.name] = sorted(refs)
         return references
 
     remote_ref = namedtuple('remote_ref', 'ordered_packages recipe_hash')

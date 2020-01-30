@@ -24,6 +24,7 @@ from .scons import SConsGenerator
 from .text import TXTGenerator
 from .virtualbuildenv import VirtualBuildEnvGenerator
 from .virtualenv import VirtualEnvGenerator
+from .virtualenv_python import VirtualEnvPythonGenerator
 from .virtualrunenv import VirtualRunEnvGenerator
 from .visualstudio import VisualStudioGenerator
 from .visualstudio_multi import VisualStudioMultiGenerator
@@ -70,6 +71,7 @@ registered_generators.add("visual_studio_legacy", VisualStudioLegacyGenerator)
 registered_generators.add("xcode", XCodeGenerator)
 registered_generators.add("ycm", YouCompleteMeGenerator)
 registered_generators.add("virtualenv", VirtualEnvGenerator)
+registered_generators.add("virtualenv_python", VirtualEnvPythonGenerator)
 registered_generators.add("virtualbuildenv", VirtualBuildEnvGenerator)
 registered_generators.add("virtualrunenv", VirtualRunEnvGenerator)
 registered_generators.add("boost-build", BoostBuildGenerator)

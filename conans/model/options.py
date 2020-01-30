@@ -63,6 +63,9 @@ class PackageOptionValues(object):
     def __bool__(self):
         return bool(self._dict)
 
+    def __contains__(self, key):
+        return key in self._dict
+
     def __nonzero__(self):
         return self.__bool__()
 
@@ -308,6 +311,10 @@ class PackageOption(object):
         else:
             self._possible_values = sorted(str(v) for v in possible_values)
 
+    def copy(self):
+        result = PackageOption(self._possible_values, self._name)
+        return result
+
     def __bool__(self):
         if not self._value:
             return False
@@ -371,6 +378,11 @@ class PackageOptions(object):
                       for k, v in definition.items()}
         self._modified = {}
         self._freeze = False
+
+    def copy(self):
+        result = PackageOptions(None)
+        result._data = {k: v.copy() for k, v in self._data.items()}
+        return result
 
     def __contains__(self, option):
         return str(option) in self._data
@@ -503,6 +515,12 @@ class Options(object):
         # are not public, not overridable
         self._deps_package_values = {}  # {name("Boost": PackageOptionValues}
 
+    def copy(self):
+        """ deepcopy, same as Settings"""
+        result = Options(self._package_options.copy())
+        result._deps_package_values = {k: v.copy() for k, v in self._deps_package_values.items()}
+        return result
+
     def freeze(self):
         self._package_options.freeze()
         for v in self._deps_package_values.values():
@@ -610,10 +628,10 @@ class Options(object):
         for k, v in options._reqs_options.items():
             self._deps_package_values[k] = v.copy()
 
-    def clear_unused(self, references):
+    def clear_unused(self, prefs):
         """ remove all options not related to the passed references,
         that should be the upstream requirements
         """
-        existing_names = [r.ref.name for r in references]
+        existing_names = [pref.ref.name for pref in prefs]
         self._deps_package_values = {k: v for k, v in self._deps_package_values.items()
                                      if k in existing_names}

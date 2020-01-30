@@ -117,9 +117,11 @@ class VisualStudioMultiGeneratorTest(unittest.TestCase):
                 self.assertIn('conanbuildinfo_release_x64_v141.props', content.keys())
 
                 content_release = content['conanbuildinfo_release_x64_v141.props']
+                self.assertIn("<ConanLibraries>%s;</ConanLibraries>" % additional_dep,
+                              content_release)
                 self.assertIn("<AdditionalDependencies>"
-                              "{};%(AdditionalDependencies)"
-                              "</AdditionalDependencies>".format(additional_dep), content_release)
+                              "$(ConanLibraries)%(AdditionalDependencies)"
+                              "</AdditionalDependencies>", content_release)
 
         # regular
         validate_additional_dependencies("foobar", "foobar.lib")

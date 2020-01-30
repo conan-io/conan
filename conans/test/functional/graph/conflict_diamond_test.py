@@ -51,7 +51,7 @@ class ConflictDiamondTest(unittest.TestCase):
                      ["Hello1/0.1@lasote/stable", "Hello2/0.1@lasote/stable",
                       "Hello0/0.1@lasote/stable"], export=False)
         self.client.run("install . --build missing", assert_error=False)
-        self.assertIn("Hello2/0.1@lasote/stable requirement Hello0/0.2@lasote/stable overridden"
+        self.assertIn("Hello2/0.1@lasote/stable: requirement Hello0/0.2@lasote/stable overridden"
                       " by Hello3/0.1 to Hello0/0.1@lasote/stable",
                       self.client.out)
 
@@ -81,7 +81,7 @@ class ConflictDiamondTest(unittest.TestCase):
                                           '("Hello0/0.1@lasote/stable", "override"),)')
             self.client.save({CONANFILE: conanfile})
             self.client.run("install . --build missing")
-            self.assertIn("Hello2/0.1@lasote/stable requirement Hello0/0.2@lasote/stable overridden"
+            self.assertIn("Hello2/0.1@lasote/stable: requirement Hello0/0.2@lasote/stable overridden"
                           " by Hello3/0.1 to Hello0/0.1@lasote/stable",
                           self.client.out)
 

@@ -1,11 +1,11 @@
 import copy
 import os
 import re
-import subprocess
 
 from conans.client import tools
 from conans.client.build.visual_environment import (VisualStudioBuildEnvironment,
                                                     vs_build_type_flags, vs_std_cpp)
+from conans.client.tools.env import environment_append
 from conans.client.tools.oss import cpu_count
 from conans.client.tools.win import vcvars_command
 from conans.errors import ConanException
@@ -14,6 +14,7 @@ from conans.model.version import Version
 from conans.tools import vcvars_command as tools_vcvars_command
 from conans.util.env_reader import get_env
 from conans.util.files import decode_text, save
+from conans.util.runners import version_runner
 
 
 class MSBuild(object):
@@ -32,7 +33,8 @@ class MSBuild(object):
     def build(self, project_file, targets=None, upgrade_project=True, build_type=None, arch=None,
               parallel=True, force_vcvars=False, toolset=None, platforms=None, use_env=True,
               vcvars_ver=None, winsdk_version=None, properties=None, output_binary_log=None,
-              property_file_name=None, verbosity=None, definitions=None):
+              property_file_name=None, verbosity=None, definitions=None,
+              user_property_file_name=None):
         """
         :param project_file: Path to the .sln file.
         :param targets: List of targets to build.
@@ -70,13 +72,13 @@ class MSBuild(object):
         :param verbosity: Specifies verbosity level (/verbosity: parameter)
         :param definitions: Dictionary with additional compiler definitions to be applied during
         the build. Use value of None to set compiler definition with no value.
+        :param user_property_file_name: Specify a user provided .props file with custom definitions
         :return: status code of the MSBuild command invocation
         """
-
         property_file_name = property_file_name or "conan_build.props"
         self.build_env.parallel = parallel
 
-        with tools.environment_append(self.build_env.vars):
+        with environment_append(self.build_env.vars):
             # Path for custom properties file
             props_file_contents = self._get_props_file_contents(definitions)
             property_file_name = os.path.abspath(property_file_name)
@@ -90,13 +92,15 @@ class MSBuild(object):
                                        toolset=toolset, platforms=platforms,
                                        use_env=use_env, properties=properties,
                                        output_binary_log=output_binary_log,
-                                       verbosity=verbosity)
+                                       verbosity=verbosity,
+                                       user_property_file_name=user_property_file_name)
             command = "%s && %s" % (vcvars, command)
             return self._conanfile.run(command)
 
     def get_command(self, project_file, props_file_path=None, targets=None, upgrade_project=True,
                     build_type=None, arch=None, parallel=True, toolset=None, platforms=None,
-                    use_env=False, properties=None, output_binary_log=None, verbosity=None):
+                    use_env=False, properties=None, output_binary_log=None, verbosity=None,
+                    user_property_file_name=None):
 
         targets = targets or []
         properties = properties or {}
@@ -172,9 +176,14 @@ class MSBuild(object):
         if verbosity:
             command.append('/verbosity:%s' % verbosity)
 
-        if props_file_path:
-            command.append('/p:ForceImportBeforeCppTargets="%s"'
-                           % os.path.abspath(props_file_path))
+        if props_file_path or user_property_file_name:
+            paths = [os.path.abspath(props_file_path)] if props_file_path else []
+            if isinstance(user_property_file_name, list):
+                paths.extend([os.path.abspath(p) for p in user_property_file_name])
+            elif user_property_file_name:
+                paths.append(os.path.abspath(user_property_file_name))
+            paths = ";".join(paths)
+            command.append('/p:ForceImportBeforeCppTargets="%s"' % paths)
 
         for name, value in properties.items():
             command.append('/p:%s="%s"' % (name, value))
@@ -235,7 +244,7 @@ class MSBuild(object):
         vcvars = tools_vcvars_command(settings)
         command = "%s && %s" % (vcvars, msbuild_cmd)
         try:
-            out, _ = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True).communicate()
+            out = version_runner(command, shell=True)
             version_line = decode_text(out).split("\n")[-1]
             prog = re.compile("(\d+\.){2,3}\d+")
             result = prog.match(version_line).group()
