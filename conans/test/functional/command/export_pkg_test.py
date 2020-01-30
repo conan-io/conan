@@ -583,3 +583,20 @@ class TestConan(ConanFile):
         package_folder = client.cache.package_layout(pref.ref).package(pref)
         header = os.path.join(package_folder, "include/header.h")
         self.assertTrue(os.path.exists(header))
+
+    def test_export_pkg_clean_dirty(self):
+        # https://github.com/conan-io/conan/issues/6449
+        client = TestClient()
+        print(client.cache_folder)
+        client.save({"pkg_b/conanfile.py": GenConanfile(),
+                     "pkg_a/conanfile.py": GenConanfile().with_require_plain("pkg_b/1.0")})
+        #client.run("export pkg_b pkg_b/1.0@")
+        client.run("install pkg_a pkg_a/1.0@", assert_error=True)
+        # ERROR: Failed requirement 'pkg_b/1.0' from 'conanfile.py (pkg_a/1.0)'
+        self.assertIn("ERROR: Missing prebuilt package for 'pkg_b/1.0'", client.out)
+        print (client.cache_folder)
+        client.run("export-pkg pkg_a pkg_a/1.0@ -bf=.")
+        print (client.out)
+        client.run("install pkg_b")
+        print (client.out)
+
