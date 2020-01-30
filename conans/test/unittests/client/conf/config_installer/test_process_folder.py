@@ -14,12 +14,12 @@ from conans.test.utils.tools import TestBufferConanOutput, save_files
 class ProcessFolderTests(unittest.TestCase):
     def test_config_in_empty_folder(self):
         output = TestBufferConanOutput()
-        cache_t = namedtuple("_", ["cache_folder", "registry_path"])
+        cache_t = namedtuple("_", ["cache_folder", "remotes_path"])
         config_t = namedtuple("_", ["source_folder"])
 
         cache_folder = temp_folder()
         remotes_json = os.path.join(cache_folder, "registry.json")
-        cache = cache_t(cache_folder=cache_folder, registry_path=remotes_json)
+        cache = cache_t(cache_folder=cache_folder, remotes_path=remotes_json)
         ori_folder = temp_folder()
         save_files(ori_folder, {'registry.json': 'whatever'})
         with mock.patch("conans.client.conf.config_installer.migrate_registry_file",

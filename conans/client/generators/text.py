@@ -22,6 +22,7 @@ class DepsCppTXT(object):
         self.build_paths = "\n".join(p.replace("\\", "/")
                                      for p in cpp_info.build_paths)
         self.libs = "\n".join(cpp_info.libs)
+        self.system_libs = "\n".join(cpp_info.system_libs)
         self.defines = "\n".join(cpp_info.defines)
         self.cxxflags = "\n".join(cpp_info.cxxflags)
         self.cflags = "\n".join(cpp_info.cflags)
@@ -31,6 +32,9 @@ class DepsCppTXT(object):
                                    for p in cpp_info.bin_paths)
         self.rootpath = "%s" % cpp_info.rootpath.replace("\\", "/")
         self.sysroot = "%s" % cpp_info.sysroot.replace("\\", "/") if cpp_info.sysroot else ""
+        self.frameworks = "\n".join(cpp_info.frameworks)
+        self.framework_paths = "\n".join(p.replace("\\", "/")
+                                         for p in cpp_info.framework_paths)
 
 
 class TXTGenerator(Generator):
@@ -140,13 +144,16 @@ class TXTGenerator(Generator):
                     '[resdirs{dep}{config}]\n{deps.res_paths}\n\n'
                     '[builddirs{dep}{config}]\n{deps.build_paths}\n\n'
                     '[libs{dep}{config}]\n{deps.libs}\n\n'
+                    '[system_libs{dep}{config}]\n{deps.system_libs}\n\n'
                     '[defines{dep}{config}]\n{deps.defines}\n\n'
                     '[cppflags{dep}{config}]\n{deps.cxxflags}\n\n'  # Backwards compatibility
                     '[cxxflags{dep}{config}]\n{deps.cxxflags}\n\n'
                     '[cflags{dep}{config}]\n{deps.cflags}\n\n'
                     '[sharedlinkflags{dep}{config}]\n{deps.sharedlinkflags}\n\n'
                     '[exelinkflags{dep}{config}]\n{deps.exelinkflags}\n\n'
-                    '[sysroot{dep}{config}]\n{deps.sysroot}\n\n')
+                    '[sysroot{dep}{config}]\n{deps.sysroot}\n\n'
+                    '[frameworks{dep}{config}]\n{deps.frameworks}\n\n'
+                    '[framework_paths{dep}{config}]\n{deps.framework_paths}\n\n')
 
         sections = []
         deps = DepsCppTXT(self.deps_build_info)

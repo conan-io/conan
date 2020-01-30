@@ -5,7 +5,7 @@ from conans.model.info import ConanInfo
 from conans.paths import BUILD_INFO, CONANFILE
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, TestServer
-from conans.util.files import load, save
+from conans.util.files import save
 
 conanfile = """from conans import ConanFile
 
@@ -298,7 +298,7 @@ class ToolsTest(ConanFile):
         client.save({CONANFILE: reuse})
         client.run("install . --build -e PYTHONPATH=['%s']" % external_dir)
         client.run("build .")
-        info = ConanInfo.loads(load(os.path.join(client.current_folder, "conaninfo.txt")))
+        info = ConanInfo.loads(client.load("conaninfo.txt"))
         pythonpath = info.env_values.env_dicts(None)[1]["PYTHONPATH"]
         self.assertEqual(os.path.normpath(pythonpath[0]), os.path.normpath(external_dir))
         self.assertTrue(len(pythonpath), 2)

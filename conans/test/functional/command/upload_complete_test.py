@@ -17,7 +17,7 @@ from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.test_files import hello_conan_files, hello_source_files, temp_folder, \
     uncompress_packaged_files
 from conans.test.utils.tools import (NO_SETTINGS_PACKAGE_ID, TestClient, TestRequester, TestServer,
-                                     MockedUserIO, TestBufferConanOutput)
+                                     MockedUserIO, TestBufferConanOutput, GenConanfile)
 from conans.util.files import load, mkdir, save
 
 myconan1 = """
@@ -55,6 +55,19 @@ class FailPairFilesUploader(BadConnectionUploader):
         self.counter_fail += 1
         if self.counter_fail % 2 == 1:
             raise ConnectionError("Pair file, error!")
+        else:
+            return super(BadConnectionUploader, self).put(*args, **kwargs)
+
+
+class FailOnReferencesUploader(BadConnectionUploader):
+    fail_on = ["lib1", "lib3"]
+
+    def __init__(self, *args, **kwargs):
+        super(BadConnectionUploader, self).__init__(*args, **kwargs)
+
+    def put(self, *args, **kwargs):
+        if any(ref in args[0] for ref in self.fail_on):
+            raise ConnectionError("Connection fails with lib2 and lib4 references!")
         else:
             return super(BadConnectionUploader, self).put(*args, **kwargs)
 
@@ -253,6 +266,53 @@ class UploadTest(unittest.TestCase):
         client.run("upload Hello* --confirm --all")
         self.assertEqual(str(client.out).count("ERROR: Pair file, error!"), 6)
 
+    def upload_parallel_error_test(self):
+        """Cause an error in the parallel transfer and see some message"""
+        client = TestClient(requester_class=FailOnReferencesUploader, default_server_user=True)
+        client.save({"conanfile.py": GenConanfile()})
+        client.run('user -p password -r default user')
+        for index in range(4):
+            client.run('create . lib{}/1.0@user/channel'.format(index))
+        client.run('upload lib* --parallel -c --all -r default', assert_error=True)
+        self.assertIn("Connection fails with lib2 and lib4 references!", client.out)
+        self.assertIn("Execute upload again to retry upload the failed files", client.out)
+
+    def upload_parallel_success_test(self):
+        """Upload 2 packages in parallel with success"""
+
+        client = TestClient(default_server_user=True)
+        client.save({"conanfile.py": GenConanfile()})
+        client.run('create . lib0/1.0@user/channel')
+        self.assertIn("lib0/1.0@user/channel: Package '{}' created".format(NO_SETTINGS_PACKAGE_ID),
+                      client.out)
+        client.run('create . lib1/1.0@user/channel')
+        self.assertIn("lib1/1.0@user/channel: Package '{}' created".format(NO_SETTINGS_PACKAGE_ID),
+                      client.out)
+        client.run('user -p password -r default user')
+        client.run('upload lib* --parallel -c --all -r default')
+        self.assertIn("Uploading lib0/1.0@user/channel to remote 'default'", client.out)
+        self.assertIn("Uploading lib1/1.0@user/channel to remote 'default'", client.out)
+        client.run('search lib0/1.0@user/channel -r default')
+        self.assertIn("lib0/1.0@user/channel", client.out)
+        client.run('search lib1/1.0@user/channel -r default')
+        self.assertIn("lib1/1.0@user/channel", client.out)
+
+    def upload_parallel_fail_on_interaction_test(self):
+        """Upload 2 packages in parallel and fail because non_interactive forced"""
+
+        client = TestClient(default_server_user=True)
+        client.save({"conanfile.py": GenConanfile()})
+        num_references = 2
+        for index in range(num_references):
+            client.run('create . lib{}/1.0@user/channel'.format(index))
+            self.assertIn("lib{}/1.0@user/channel: Package '{}' created".format(
+                index,
+                NO_SETTINGS_PACKAGE_ID),
+                client.out)
+        client.run('user -c')
+        client.run('upload lib* --parallel -c --all -r default', assert_error=True)
+        self.assertIn("ERROR: Conan interactive mode disabled. [Remote: default]", client.out)
+
     def upload_with_pattern_and_package_error_test(self):
         files = hello_conan_files("Hello1", "1.2.1")
         self.client.save(files)
@@ -382,18 +442,19 @@ class TestConan(ConanFile):
     def upload_all_test(self):
         """Upload conans and package together"""
         # Try to upload all conans and packages
+        self.client.run('user -p mypass -r default lasote')
         self.client.run('upload %s --all' % str(self.ref))
         lines = [line.strip() for line in str(self.client.out).splitlines()
                  if line.startswith("Uploading")]
         self.assertEqual(lines, ["Uploading to remote 'default':",
                                  "Uploading Hello/1.2.1@frodo/stable to remote 'default'",
-                                 "Uploading conan_export.tgz",
-                                 "Uploading conanfile.py",
-                                 "Uploading conanmanifest.txt",
+                                 "Uploading conan_export.tgz -> Hello/1.2.1@frodo/stable",
+                                 "Uploading conanfile.py -> Hello/1.2.1@frodo/stable",
+                                 "Uploading conanmanifest.txt -> Hello/1.2.1@frodo/stable",
                                  "Uploading package 1/1: myfakeid to 'default'",
-                                 "Uploading conan_package.tgz",
-                                 "Uploading conaninfo.txt",
-                                 "Uploading conanmanifest.txt",
+                                 "Uploading conan_package.tgz -> Hello/1.2.1@frodo/stable:myfa",
+                                 "Uploading conaninfo.txt -> Hello/1.2.1@frodo/stable:myfa",
+                                 "Uploading conanmanifest.txt -> Hello/1.2.1@frodo/stable:myfa",
                                  ])
         if self.client.cache.config.revisions_enabled:
             layout = self.client.cache.package_layout(self.ref)

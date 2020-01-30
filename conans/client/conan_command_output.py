@@ -115,6 +115,7 @@ class CommandOutputer(object):
         for node in sorted(deps_graph.nodes):
             compact_nodes.setdefault((node.ref, node.package_id), []).append(node)
 
+        build_time_nodes = deps_graph.build_time_nodes()
         remotes = self._cache.registry.load_remotes()
         ret = []
         for (ref, package_id), list_nodes in compact_nodes.items():
@@ -192,8 +193,8 @@ class CommandOutputer(object):
                     item_data["required_by"] = [d.display_name for d in required]
 
             depends = node.neighbors()
-            requires = [d for d in depends if not d.build_require]
-            build_requires = [d for d in depends if d.build_require]
+            requires = [d for d in depends if d not in build_time_nodes]
+            build_requires = [d for d in depends if d in build_time_nodes]
 
             if requires:
                 item_data["requires"] = [repr(d.ref.copy_clear_rev()) for d in requires]
@@ -233,18 +234,19 @@ class CommandOutputer(object):
         printer = Printer(self._output)
         printer.print_search_recipes(search_info, pattern, raw, all_remotes_search)
 
-    def print_search_packages(self, search_info, reference, packages_query, table,
+    def print_search_packages(self, search_info, reference, packages_query, table, raw,
                               outdated=False):
         if table:
             html_binary_graph(search_info, reference, table)
         else:
             printer = Printer(self._output)
-            printer.print_search_packages(search_info, reference, packages_query,
+            printer.print_search_packages(search_info, reference, packages_query, raw,
                                           outdated=outdated)
 
-    def print_revisions(self, reference, revisions, remote_name=None):
+    def print_revisions(self, reference, revisions, raw, remote_name=None):
         remote_test = " at remote '%s'" % remote_name if remote_name else ""
-        self._output.info("Revisions for '%s'%s:" % (reference, remote_test))
+        if not raw:
+            self._output.info("Revisions for '%s'%s:" % (reference, remote_test))
         lines = ["%s (%s)" % (r["revision"],
                               iso8601_to_str(r["time"]) if r["time"] else "No time")
                  for r in revisions]

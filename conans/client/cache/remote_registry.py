@@ -61,7 +61,7 @@ def migrate_registry_file(cache, out):
     folder = cache.cache_folder
     reg_json_path = os.path.join(folder, "registry.json")
     reg_txt_path = os.path.join(folder, "registry.txt")
-    remotes_path = cache.registry_path
+    remotes_path = cache.remotes_path
 
     def add_ref_remote(reference, remotes, remote_name):
         ref = ConanFileReference.loads(reference, validate=True)
@@ -107,7 +107,8 @@ class Remotes(object):
     @classmethod
     def defaults(cls):
         result = Remotes()
-        result._remotes["conan-center"] = Remote("conan-center", "https://conan.bintray.com", True, False)
+        result._remotes["conan-center"] = Remote("conan-center", "https://conan.bintray.com", True,
+                                                 False)
         return result
 
     def select(self, remote_name):
@@ -185,12 +186,15 @@ class Remotes(object):
         filtered_remotes = []
         for remote in self._remotes.values():
             if fnmatch.fnmatch(remote.name, remote_name):
-                if remote.disabled != state:
-                    filtered_remotes.append(remote.name)
-        for r in filtered_remotes:
-            remote = self._remotes[r]
-            self._remotes[r] = Remote(remote.name, remote.url,
-                                      remote.verify_ssl, state)
+                filtered_remotes.append(remote)
+
+        if not filtered_remotes and "*" not in remote_name:
+            raise NoRemoteAvailable("Remote '%s' not found in remotes" % remote_name)
+
+        for remote in filtered_remotes:
+            if remote.disabled == state:
+                continue
+            self._remotes[remote.name] = Remote(remote.name, remote.url, remote.verify_ssl, state)
 
     def get_remote(self, remote_name):
         # Returns the remote defined by the name, or the default if is None
@@ -288,7 +292,7 @@ class RemoteRegistry(object):
     def __init__(self, cache, output):
         self._cache = cache
         self._output = output
-        self._filename = cache.registry_path
+        self._filename = cache.remotes_path
 
     def _validate_url(self, url):
         """ Check if URL contains protocol and address

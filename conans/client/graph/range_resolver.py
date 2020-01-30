@@ -91,9 +91,10 @@ class RangeResolver(object):
 
     @property
     def output(self):
-        result = self._result
+        return self._result
+
+    def clear_output(self):
         self._result = []
-        return result
 
     def resolve(self, require, base_conanref, update, remotes):
         version_range = require.version_range
@@ -140,6 +141,9 @@ class RangeResolver(object):
 
     def _resolve_local(self, search_ref, version_range):
         local_found = search_recipes(self._cache, search_ref)
+        local_found = [ref for ref in local_found
+                       if ref.user == search_ref.user and
+                       ref.channel == search_ref.channel]
         if local_found:
             return self._resolve_version(version_range, local_found)
 

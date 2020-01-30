@@ -211,3 +211,23 @@ def format_libraries(libraries, compiler=None):
 
 def parallel_compiler_cl_flag(output=None):
     return "/MP%s" % cpu_count(output=output)
+
+
+def format_frameworks(frameworks, compiler=None):
+    """
+    returns an appropriate compiler flags to link with Apple Frameworks
+    or an empty array, if Apple Frameworks aren't supported by the given compiler
+    """
+    if str(compiler) not in ["clang", "gcc", "apple-clang"]:
+        return []
+    return ["-framework %s" % framework for framework in frameworks]
+
+
+def format_framework_paths(framework_paths, compiler=None):
+    """
+    returns an appropriate compiler flags to specify Apple Frameworks search paths
+    or an empty array, if Apple Frameworks aren't supported by the given compiler
+    """
+    if str(compiler) not in ["clang", "gcc", "apple-clang"]:
+        return []
+    return ["-F %s" % adjust_path(framework_path) for framework_path in framework_paths]

@@ -135,3 +135,24 @@ class PkgConfigConan(ConanFile):
         self.assertTrue(os.path.exists(pc_path))
         pc_content = load(pc_path)
         self.assertIn("-Wl,-rpath=\"${libdir}\"", pc_content)
+
+    def system_libs_test(self):
+        conanfile = """
+from conans import ConanFile
+
+class PkgConfigConan(ConanFile):
+    name = "MyLib"
+    version = "0.1"
+
+    def package_info(self):
+        self.cpp_info.libs = ["mylib1", "mylib2"]
+        self.cpp_info.system_libs = ["system_lib1", "system_lib2"]
+"""
+        client = TestClient()
+        client.save({"conanfile.py": conanfile})
+        client.run("create .")
+        client.run("install MyLib/0.1@ -g pkg_config")
+
+        pc_content = client.load("MyLib.pc")
+        self.assertIn("Libs: -L${libdir} -lmylib1  -lmylib2  -lsystem_lib1  -lsystem_lib2 ",
+                      pc_content)

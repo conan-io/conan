@@ -87,8 +87,7 @@ class ConanController(object):
             return urls_norm
 
         @app.route(r.v1_package_download_urls, method=["GET"])
-        def get_package_download_urls(name, version, username, channel, package_id,
-                                      auth_user):
+        def get_package_download_urls(name, version, username, channel, package_id, auth_user):
             """
             Get a dict with all packages files and the download url for each one
             """
