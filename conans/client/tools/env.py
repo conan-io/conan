@@ -30,7 +30,7 @@ def run_environment(conanfile):
 
 
 @contextmanager
-def environment_append(env_vars):
+def environment_append(env_vars, post=False):
     """
     :param env_vars: List (dict) of simple environment vars. {name: value, name2: value2}
                      => e.g.: MYVAR=1
@@ -52,7 +52,10 @@ def environment_append(env_vars):
             apply_vars[name] = os.pathsep.join(value)
             old = os.environ.get(name)
             if old:
-                apply_vars[name] += os.pathsep + old
+                if post:
+                    apply_vars[name] = old + os.pathsep + apply_vars[name]
+                else:
+                    apply_vars[name] += os.pathsep + old
         else:
             apply_vars[name] = value
 
