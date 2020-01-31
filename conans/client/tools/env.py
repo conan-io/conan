@@ -37,6 +37,7 @@ def environment_append(env_vars, post=False):
                      The values can also be lists of appendable environment vars.
                      {name: [value, value2]} => e.g. PATH=/path/1:/path/2
                      If the value is set to None, then that environment variable is unset.
+    :param post: if True, the environment is appended at the end, not prepended (only LISTS)
     :return: None
     """
     if not env_vars:

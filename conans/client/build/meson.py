@@ -168,8 +168,7 @@ class Meson(object):
         def _build():
             env_build = AutoToolsBuildEnvironment(self._conanfile)
             with environment_append(env_build.vars):
-                with environment_append(self._conanfile.env):
-                    self._conanfile.run(command)
+                self._conanfile.run(command)
 
         if self._vcvars_needed:
             vcvars_dict = tools.vcvars_dict(self._settings, output=self._conanfile.output)
