@@ -3,6 +3,7 @@ import os
 import shutil
 from collections import defaultdict
 
+from conans.errors import ConanException
 from conans.util.files import mkdir, walk
 
 
@@ -175,7 +176,12 @@ class FileCopier(object):
             link = os.readlink(src_link)
             # Absoluted path symlinks are a problem, convert it to relative
             if os.path.isabs(link):
-                link = os.path.relpath(link, os.path.dirname(src_link))
+                try:
+                    link = os.path.relpath(link, os.path.dirname(src_link))
+                except ValueError as e:
+                    # https://github.com/conan-io/conan/issues/6197 fails if Windows and other Drive
+                    raise ConanException("Symlink '%s' pointing to '%s' couldn't be made relative:"
+                                         " %s" % (src_link, link, str(e)))
 
             dst_link = os.path.join(dst, linked_folder)
             try:

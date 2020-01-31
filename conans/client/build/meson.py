@@ -1,6 +1,5 @@
 import os
 import platform
-import subprocess
 
 
 from conans.client import tools
@@ -13,6 +12,7 @@ from conans.errors import ConanException
 from conans.model.build_info import DEFAULT_BIN, DEFAULT_INCLUDE, DEFAULT_LIB
 from conans.model.version import Version
 from conans.util.files import decode_text, get_abs_path, mkdir
+from conans.util.runners import version_runner
 
 
 class Meson(object):
@@ -172,11 +172,7 @@ class Meson(object):
 
         if self._vcvars_needed:
             vcvars_dict = tools.vcvars_dict(self._settings, output=self._conanfile.output)
-            if vcvars_dict:
-                with environment_append(vcvars_dict):
-                    with environment_append(self._conanfile.env):
-                        _build()
-            else:
+            with environment_append(vcvars_dict, post=True):
                 _build()
         else:
             _build()
@@ -216,7 +212,7 @@ class Meson(object):
     @staticmethod
     def get_version():
         try:
-            out, _ = subprocess.Popen(["meson", "--version"], stdout=subprocess.PIPE).communicate()
+            out = version_runner(["meson", "--version"])
             version_line = decode_text(out).split('\n', 1)[0]
             version_str = version_line.rsplit(' ', 1)[-1]
             return Version(version_str)
