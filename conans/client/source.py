@@ -19,7 +19,8 @@ def complete_recipe_sources(remote_manager, cache, conanfile, ref, remotes):
     occassions, conan needs to get them too, like if uploading to a server, to keep the recipes
     complete
     """
-    sources_folder = cache.package_layout(ref, conanfile.short_paths).export_sources()
+    package_layout = cache.package_layout(ref, conanfile.short_paths)
+    sources_folder = package_layout.export_sources()
     if os.path.exists(sources_folder):
         return None
 
@@ -29,15 +30,23 @@ def complete_recipe_sources(remote_manager, cache, conanfile, ref, remotes):
 
     # If not path to sources exists, we have a problem, at least an empty folder
     # should be there
-    current_remote = cache.package_layout(ref).load_metadata().recipe.remote
+    current_remote = package_layout.load_metadata().recipe.remote
     if current_remote:
         current_remote = remotes[current_remote]
     if not current_remote:
-        raise ConanException("Error while trying to get recipe sources for %s. "
-                             "No remote defined" % str(ref))
+        msg = ("The '%s' package has 'exports_sources' but sources not found in local cache.\n"
+               "Probably it was installed from a remote that is no longer available.\n"
+               % str(ref))
+        raise ConanException(msg)
 
-    export_path = cache.package_layout(ref).export()
-    remote_manager.get_recipe_sources(ref, export_path, sources_folder, current_remote)
+    export_path = package_layout.export()
+    try:
+        remote_manager.get_recipe_sources(ref, export_path, sources_folder, current_remote)
+    except Exception as e:
+        msg = ("The '%s' package has 'exports_sources' but sources not found in local cache.\n"
+               "Probably it was installed from a remote that is no longer available.\n"
+               % str(ref))
+        raise ConanException("\n".join([str(e), msg]))
 
 
 def config_source_local(src_folder, conanfile, conanfile_path, hook_manager):

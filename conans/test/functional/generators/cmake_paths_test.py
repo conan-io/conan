@@ -5,7 +5,6 @@ import unittest
 
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID, TurboTestClient, GenConanfile
-from conans.util.files import load
 
 
 class CMakePathsGeneratorTest(unittest.TestCase):
@@ -19,7 +18,7 @@ class CMakePathsGeneratorTest(unittest.TestCase):
         client.run("install {} -g cmake_paths".format(ref2))
         pfolder1 = client.cache.package_layout(pref1.ref).package(pref1).replace("\\", "/")
         pfolder2 = client.cache.package_layout(pref2.ref).package(pref2).replace("\\", "/")
-        contents = load(os.path.join(client.current_folder, "conan_paths.cmake"))
+        contents = client.load("conan_paths.cmake")
         expected = 'set(CONAN_LIB2_ROOT "{pfolder2}")\r\n' \
                    'set(CONAN_LIB1_ROOT "{pfolder1}")\r\n' \
                    'set(CMAKE_MODULE_PATH "{pfolder2}/"\r\n\t\t\t"{pfolder1}/" ' \

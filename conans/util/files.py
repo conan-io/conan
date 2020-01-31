@@ -317,7 +317,9 @@ def gzopen_without_timestamps(name, mode="r", fileobj=None, compresslevel=None, 
         raise
 
     try:
-        t = tarfile.TarFile.taropen(name, mode, fileobj, **kwargs)
+        # Format is forced because in Python3.8, it changed and it generates different tarfiles
+        # with different checksums, which break hashes of tgzs
+        t = tarfile.TarFile.taropen(name, mode, fileobj, format=tarfile.GNU_FORMAT, **kwargs)
     except IOError:
         fileobj.close()
         if mode == 'r':
@@ -342,6 +344,7 @@ def tar_extract(fileobj, destination_dir):
 
         for finfo in members:
             if badpath(finfo.name, base) or finfo.islnk():
+                logger.warning("file:%s is skipped since it's not safe." % str(finfo.name))
                 continue
             else:
                 # Fixes unzip a windows zipped file in linux

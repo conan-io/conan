@@ -6,7 +6,7 @@ from six import StringIO
 
 import conans
 from conans import __version__ as client_version
-from conans.client import packager, tools
+from conans.client import packager
 from conans.client.cache.cache import ClientCache
 from conans.client.cmd.build import cmd_build
 from conans.client.cmd.create import create
@@ -25,7 +25,7 @@ from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
 from conans.client.graph.graph_manager import GraphManager
 from conans.client.graph.printer import print_graph
 from conans.client.graph.proxy import ConanProxy
-from conans.client.graph.python_requires import ConanPythonRequire
+from conans.client.graph.python_requires import ConanPythonRequire, PyRequireLoader
 from conans.client.graph.range_resolver import RangeResolver
 from conans.client.hook_manager import HookManager
 from conans.client.importer import run_imports, undo_imports
@@ -42,14 +42,14 @@ from conans.client.remote_manager import RemoteManager
 from conans.client.remover import ConanRemover
 from conans.client.rest.auth_manager import ConanApiAuthManager
 from conans.client.rest.conan_requester import ConanRequester
-from conans.client.rest.rest_client import RestApiClient
+from conans.client.rest.rest_client import RestApiClientFactory
 from conans.client.runner import ConanRunner
 from conans.client.source import config_source_local
 from conans.client.store.localdb import LocalDB
+from conans.client.tools.env import environment_append
 from conans.client.userio import UserIO
 from conans.errors import (ConanException, RecipeNotFoundException,
                            PackageNotFoundException, NoRestV2Available, NotFoundException)
-from conans.model.conan_file import get_env_context_manager
 from conans.model.editable_layout import get_editable_abs_path
 from conans.model.graph_info import GraphInfo, GRAPH_INFO_FILE
 from conans.model.graph_lock import GraphLockFile, LOCKFILE
@@ -77,7 +77,7 @@ def api_method(f):
         try:
             api.create_app(quiet_output=quiet_output)
             log_command(f.__name__, kwargs)
-            with tools.environment_append(api.app.cache.config.env_vars):
+            with environment_append(api.app.cache.config.env_vars):
                 return f(api, *args, **kwargs)
         except Exception as exc:
             if quiet_output:
@@ -166,19 +166,18 @@ class ConanApp(object):
         # Wraps an http_requester to inject proxies, certs, etc
         self.requester = ConanRequester(self.config, http_requester)
         # To handle remote connections
-        put_headers = self.cache.read_put_headers()
-        rest_api_client = RestApiClient(self.out, self.requester,
-                                        revisions_enabled=self.config.revisions_enabled,
-                                        put_headers=put_headers)
+        artifacts_properties = self.cache.read_artifacts_properties()
+        rest_client_factory = RestApiClientFactory(self.out, self.requester, self.config,
+                                                   artifacts_properties=artifacts_properties)
         # To store user and token
         localdb = LocalDB.create(self.cache.localdb)
         # Wraps RestApiClient to add authentication support (same interface)
-        auth_manager = ConanApiAuthManager(rest_api_client, self.user_io, localdb)
+        auth_manager = ConanApiAuthManager(rest_client_factory, self.user_io, localdb)
         # Handle remote connections
         self.remote_manager = RemoteManager(self.cache, auth_manager, self.out, self.hook_manager)
 
         # Adjust global tool variables
-        set_global_instances(self.out, self.requester)
+        set_global_instances(self.out, self.requester, self.config)
 
         self.runner = runner or ConanRunner(self.config.print_commands_to_output,
                                             self.config.generate_run_log_file,
@@ -188,7 +187,8 @@ class ConanApp(object):
         self.proxy = ConanProxy(self.cache, self.out, self.remote_manager)
         self.range_resolver = RangeResolver(self.cache, self.remote_manager)
         self.python_requires = ConanPythonRequire(self.proxy, self.range_resolver)
-        self.loader = ConanFileLoader(self.runner, self.out, self.python_requires)
+        self.pyreq_loader = PyRequireLoader(self.proxy, self.range_resolver)
+        self.loader = ConanFileLoader(self.runner, self.out, self.python_requires, self.pyreq_loader)
 
         self.binaries_analyzer = GraphBinariesAnalyzer(self.cache, self.out, self.remote_manager)
         self.graph_manager = GraphManager(self.out, self.cache, self.remote_manager, self.loader,
@@ -200,6 +200,7 @@ class ConanApp(object):
             remotes.select(remote_name)
         self.python_requires.enable_remotes(update=update, check_updates=check_updates,
                                             remotes=remotes)
+        self.pyreq_loader.enable_remotes(update=update, check_updates=check_updates, remotes=remotes)
         return remotes
 
 
@@ -261,7 +262,7 @@ class ConanAPIV1(object):
             ref = ConanFileReference.loads(path)
         except ConanException:
             conanfile_path = _get_conanfile_path(path, get_cwd(), py=True)
-            conanfile = self.app.loader.load_basic(conanfile_path)
+            conanfile = self.app.loader.load_named(conanfile_path, None, None, None, None)
         else:
             update = True if remote_name else False
             result = self.app.proxy.get_recipe(ref, update, update, remotes, ActionRecorder())
@@ -340,6 +341,8 @@ class ConanAPIV1(object):
             new_ref = cmd_export(self.app, conanfile_path, name, version, user, channel, keep_source,
                                  not not_export, graph_lock=graph_info.graph_lock,
                                  ignore_dirty=ignore_dirty)
+
+            self.app.range_resolver.clear_output()  # invalidate version range output
 
             # The new_ref contains the revision
             # To not break existing things, that they used this ref without revision
@@ -430,6 +433,9 @@ class ConanAPIV1(object):
         # Install packages without settings (fixed ids or all)
         if check_valid_ref(reference):
             ref = ConanFileReference.loads(reference)
+            if ref.revision and not self.app.config.revisions_enabled:
+                raise ConanException("Revisions not enabled in the client, specify a "
+                                     "reference without revision")
             if packages and ref.revision is None:
                 for package_id in packages:
                     if "#" in package_id:
@@ -689,10 +695,9 @@ class ConanAPIV1(object):
                                  "--build-folder and package folder can't be the same")
         conanfile = self.app.graph_manager.load_consumer_conanfile(conanfile_path, install_folder,
                                                                    deps_info_required=True)
-        with get_env_context_manager(conanfile):
-            packager.run_package_method(conanfile, None, source_folder, build_folder, package_folder,
-                                        install_folder, self.app.hook_manager, conanfile_path, None,
-                                        local=True, copy_info=True)
+        packager.run_package_method(conanfile, None, source_folder, build_folder, package_folder,
+                                    install_folder, self.app.hook_manager, conanfile_path, None,
+                                    local=True, copy_info=True)
 
     @api_method
     def source(self, path, source_folder=None, info_folder=None, cwd=None):
@@ -791,8 +796,7 @@ class ConanAPIV1(object):
         if not password:
             name, password = self.app.user_io.request_login(remote_name=remote_name, username=name)
 
-        _, _, remote_name, prev_user, user = self.app.remote_manager.authenticate(remote, name,
-                                                                                  password)
+        remote_name, prev_user, user = self.app.remote_manager.authenticate(remote, name, password)
         return remote_name, prev_user, user
 
     @api_method
@@ -869,7 +873,8 @@ class ConanAPIV1(object):
 
     @api_method
     def upload(self, pattern, package=None, remote_name=None, all_packages=False, confirm=False,
-               retry=None, retry_wait=None, integrity_check=False, policy=None, query=None):
+               retry=None, retry_wait=None, integrity_check=False, policy=None, query=None,
+               parallel_upload=False):
         """ Uploads a package recipe and the generated binary packages to a specified remote
         """
         upload_recorder = UploadRecorder()
@@ -878,7 +883,8 @@ class ConanAPIV1(object):
         remotes = self.app.load_remotes(remote_name=remote_name)
         try:
             uploader.upload(pattern, remotes, upload_recorder, package, all_packages, confirm,
-                            retry, retry_wait, integrity_check, policy, query=query)
+                            retry, retry_wait, integrity_check, policy, query=query,
+                            parallel_upload=parallel_upload)
             return upload_recorder.get_info()
         except ConanException as exc:
             upload_recorder.error = True

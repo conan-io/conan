@@ -1,9 +1,11 @@
+import os
 import textwrap
 import unittest
 
 from parameterized import parameterized
 
 from conans.test.utils.tools import TestClient
+from conans.util.files import mkdir
 
 
 class GetVersionNameTest(unittest.TestCase):
@@ -105,3 +107,51 @@ class GetVersionNameTest(unittest.TestCase):
         client.run("export .", assert_error=True)
         self.assertIn("ERROR: conanfile.py: Error in set_version() method, line 5", client.out)
         self.assertIn("name 'error' is not defined", client.out)
+
+    def set_version_recipe_folder_test(self):
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            import os
+            from conans import ConanFile, load
+            class Lib(ConanFile):
+                name = "pkg"
+                def set_version(self):
+                    self.version = load(os.path.join(self.recipe_folder, "version.txt"))
+            """)
+        client.save({"conanfile.py": conanfile,
+                     "version.txt": "2.1"})
+        mkdir(os.path.join(client.current_folder, "build"))
+        with client.chdir("build"):
+            client.run("export .. user/testing")
+            self.assertIn("pkg/2.1@user/testing: A new conanfile.py version was exported",
+                          client.out)
+
+        # This is reusable with python_requires too
+        reuse = textwrap.dedent("""
+            from conans import python_requires
+            tool = python_requires("pkg/2.1@user/testing")
+            class Consumer(tool.Lib):
+                name = "consumer"
+            """)
+        client2 = TestClient(cache_folder=client.cache_folder)
+        client2.save({"conanfile.py": reuse,
+                      "version.txt": "8.3"})
+        client2.run("export .")
+        self.assertIn("consumer/8.3: A new conanfile.py version was exported", client2.out)
+
+    def set_version_cwd_test(self):
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            import os
+            from conans import ConanFile, load
+            class Lib(ConanFile):
+                name = "pkg"
+                def set_version(self):
+                    self.version = load("version.txt")
+            """)
+        client.save({"conanfile.py": conanfile})
+        mkdir(os.path.join(client.current_folder, "build"))
+        with client.chdir("build"):
+            client.save({"version.txt": "2.1"}, clean_first=True)
+            client.run("export .. ")
+            self.assertIn("pkg/2.1: A new conanfile.py version was exported", client.out)

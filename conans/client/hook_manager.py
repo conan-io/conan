@@ -3,6 +3,7 @@ import sys
 import traceback
 import uuid
 from collections import defaultdict
+from threading import Lock
 
 from conans.client.output import ScopedOutput
 from conans.client.tools.files import chdir
@@ -40,15 +41,19 @@ class HookManager(object):
         self.hooks = defaultdict(list)
         self.output = output
         self._attribute_checker_path = os.path.join(self._hooks_folder, "attribute_checker.py")
-
-    def create_default_hooks(self):
-        save(self._attribute_checker_path, attribute_checker_hook)
+        self._mutex = Lock()
 
     def execute(self, method_name, **kwargs):
-        if not os.path.exists(self._attribute_checker_path):
-            self.create_default_hooks()
-        if not self.hooks:
-            self.load_hooks()
+        # It is necessary to protect the lazy loading of hooks with a mutex, because it can be
+        # concurrent (e.g. upload --parallel)
+        self._mutex.acquire()
+        try:
+            if not os.path.exists(self._attribute_checker_path):
+                save(self._attribute_checker_path, attribute_checker_hook)
+            if not self.hooks:
+                self.load_hooks()
+        finally:
+            self._mutex.release()
 
         assert method_name in valid_hook_methods, \
             "Method '{}' not in valid hooks methods".format(method_name)
@@ -61,9 +66,9 @@ class HookManager(object):
 
     def load_hooks(self):
         for name in self._hook_names:
-            self.load_hook(name)
+            self._load_hook(name)
 
-    def load_hook(self, hook_name):
+    def _load_hook(self, hook_name):
         if not hook_name.endswith(".py"):
             hook_name = "%s.py" % hook_name
         hook_path = os.path.normpath(os.path.join(self._hooks_folder, hook_name))

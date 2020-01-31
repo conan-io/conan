@@ -1,12 +1,12 @@
+import argparse
 import inspect
 import json
 import os
 import sys
-
-import argparse
-import six
 from argparse import ArgumentError
 from difflib import get_close_matches
+
+from six.moves import input as raw_input
 
 from conans import __version__ as client_version
 from conans.client.cmd.uploader import UPLOAD_POLICY_FORCE, \
@@ -36,7 +36,7 @@ ERROR_INVALID_CONFIGURATION = 6     # 6: Invalid configuration (done)
 
 
 class Extender(argparse.Action):
-    """Allows to use the same flag several times in a command and creates a list with the values.
+    """Allows using the same flag several times in command and creates a list with the values.
     For example:
         conan install MyPackage/1.2@user/channel -o qt:value -o mode:2 -s cucumber:true
       It creates:
@@ -64,7 +64,7 @@ class Extender(argparse.Action):
 
 
 class OnceArgument(argparse.Action):
-    """Allows to declare a parameter that can have only one value, by default argparse takes the
+    """Allows declaring a parameter that can have only one value, by default argparse takes the
     latest declared and it's very confusing.
     """
     def __call__(self, parser, namespace, values, option_string=None):
@@ -82,16 +82,16 @@ class SmartFormatter(argparse.HelpFormatter):
         return ''.join(indent + line for line in text.splitlines(True))
 
 
-_QUERY_EXAMPLE = ("os=Windows AND (arch=x86 OR compiler=gcc)")
-_PATTERN_EXAMPLE = ("boost/*")
-_REFERENCE_EXAMPLE = ("MyPackage/1.2@user/channel")
-_PREF_EXAMPLE = ("MyPackage/1.2@user/channel:af7901d8bdfde621d086181aa1c495c25a17b137")
+_QUERY_EXAMPLE = "os=Windows AND (arch=x86 OR compiler=gcc)"
+_PATTERN_EXAMPLE = "boost/*"
+_REFERENCE_EXAMPLE = "MyPackage/1.2@user/channel"
+_PREF_EXAMPLE = "MyPackage/1.2@user/channel:af7901d8bdfde621d086181aa1c495c25a17b137"
 
 _BUILD_FOLDER_HELP = ("Directory for the build process. Defaulted to the current directory. A "
-                      "relative path to current directory can also be specified")
+                      "relative path to the current directory can also be specified")
 _INSTALL_FOLDER_HELP = ("Directory containing the conaninfo.txt and conanbuildinfo.txt files "
                         "(from previous 'conan install'). Defaulted to --build-folder")
-_KEEP_SOURCE_HELP = ("Do not remove the source folder in local cache, even if the recipe changed. "
+_KEEP_SOURCE_HELP = ("Do not remove the source folder in the local cache, even if the recipe changed. "
                      "Use this for testing purposes only")
 _PATTERN_OR_REFERENCE_HELP = ("Pattern or package recipe reference, e.g., '%s', "
                               "'%s'" % (_PATTERN_EXAMPLE, _REFERENCE_EXAMPLE))
@@ -104,12 +104,12 @@ _PATH_HELP = ("Path to a folder containing a conanfile.py or to a recipe file "
 _QUERY_HELP = ("Packages query: '%s'. The 'pattern_or_reference' parameter has "
                "to be a reference: %s" % (_QUERY_EXAMPLE, _REFERENCE_EXAMPLE))
 _SOURCE_FOLDER_HELP = ("Directory containing the sources. Defaulted to the conanfile's directory. A"
-                       " relative path to current directory can also be specified")
+                       " relative path to the current directory can also be specified")
 
 
 class Command(object):
     """A single command of the conan application, with all the first level commands. Manages the
-    parsing of parameters and delegates functionality in collaborators. It can also show help of the
+    parsing of parameters and delegates functionality in collaborators. It can also show the help of the
     tool.
     """
     def __init__(self, conan_api):
@@ -223,7 +223,7 @@ class Command(object):
 
     def inspect(self, *args):
         """
-        Displays conanfile attributes, like name, version and options. Works locally,
+        Displays conanfile attributes, like name, version, and options. Works locally,
         in local cache and remote.
         """
         parser = argparse.ArgumentParser(description=self.inspect.__doc__,
@@ -270,7 +270,7 @@ class Command(object):
         package), calls a 'conan build' to build test apps and finally executes
         the test() method. The testing recipe does not require name or version,
         neither definition of package() or package_info() methods. The package
-        to be tested must exist in the local cache or in any configured remote.
+        to be tested must exist in the local cache or any configured remote.
         """
         parser = argparse.ArgumentParser(description=self.test.__doc__,
                                          prog="conan test",
@@ -283,7 +283,7 @@ class Command(object):
         parser.add_argument("-tbf", "--test-build-folder", action=OnceArgument,
                             help="Working directory of the build process.")
 
-        _add_common_install_arguments(parser, build_help=_help_build_policies)
+        _add_common_install_arguments(parser, build_help=_help_build_policies.format("never"))
         args = parser.parse_args(*args)
         self._warn_python_version()
         return self._conan.test(args.path, args.reference, args.profile, args.settings,
@@ -296,7 +296,7 @@ class Command(object):
         Builds a binary package for a recipe (conanfile.py).
 
         Uses the specified configuration in a profile or in -s settings, -o
-        options etc. If a 'test_package' folder (the name can be configured
+        options, etc. If a 'test_package' folder (the name can be configured
         with -tf) is found, the command will run the consumer project to ensure
         that the package has been created correctly. Check 'conan test' command
         to know more about 'test_folder' project.
@@ -328,7 +328,7 @@ class Command(object):
                                  ' revision and url even if there are uncommitted changes')
 
         _add_manifests_arguments(parser)
-        _add_common_install_arguments(parser, build_help=_help_build_policies)
+        _add_common_install_arguments(parser, build_help=_help_build_policies.format("package name"))
 
         args = parser.parse_args(*args)
         self._warn_python_version()
@@ -403,7 +403,13 @@ class Command(object):
                                "`conan download [...] {}:{}`".format(reference, packages_list[0]))
         else:
             reference = repr(pref.ref)
-            packages_list = [pref.id]
+            if pref.ref.user is None:
+                if pref.ref.revision:
+                    reference = "%s/%s@#%s" % (pref.ref.name, pref.ref.version, pref.ref.revision)
+                else:
+                    reference += "@"
+            pkgref = "{}#{}".format(pref.id, pref.revision) if pref.revision else pref.id
+            packages_list = [pkgref]
             if args.package:
                 raise ConanException("Use a full package reference (preferred) or the `--package`"
                                      " command argument, but not both.")
@@ -422,7 +428,7 @@ class Command(object):
         configured remotes. When the recipes have been downloaded it will try
         to download a binary package matching the specified settings, only from
         the remote from which the recipe was retrieved. If no binary package is
-        found, it can be build from sources using the '--build' option. When
+        found, it can be built from sources using the '--build' option. When
         the package is installed, Conan will write the files for the specified
         generators.
         """
@@ -449,7 +455,7 @@ class Command(object):
                             help='Path to a json file where the install information will be '
                             'written')
 
-        _add_common_install_arguments(parser, build_help=_help_build_policies)
+        _add_common_install_arguments(parser, build_help=_help_build_policies.format("never"))
 
         args = parser.parse_args(*args)
         cwd = get_cwd()
@@ -514,15 +520,15 @@ class Command(object):
         subparsers.required = True
 
         get_subparser = subparsers.add_parser('get', help='Get the value of configuration item')
-        subparsers.add_parser('home', help='Retrieve the Conan home directory')
+        home_subparser = subparsers.add_parser('home', help='Retrieve the Conan home directory')
         install_subparser = subparsers.add_parser('install', help='Install a full configuration '
                                                                   'from a local or remote zip file')
         rm_subparser = subparsers.add_parser('rm', help='Remove an existing config element')
         set_subparser = subparsers.add_parser('set', help='Set a value for a configuration item')
 
-        rm_subparser.add_argument("item", help="Item to remove")
         get_subparser.add_argument("item", nargs="?", help="Item to print")
-        set_subparser.add_argument("item", help="'item=value' to set")
+        home_subparser.add_argument("-j", "--json", default=None, action=OnceArgument,
+                                    help='json file path where the config home will be written to')
         install_subparser.add_argument("item", nargs="?",
                                        help="git repository, local folder or zip file (local or "
                                        "http) where the configuration is stored")
@@ -538,6 +544,8 @@ class Command(object):
                                        'specified origin')
         install_subparser.add_argument("-tf", "--target-folder",
                                        help='Install to that path in the conan cache')
+        rm_subparser.add_argument("item", help="Item to remove")
+        set_subparser.add_argument("item", help="'item=value' to set")
 
         args = parser.parse_args(*args)
 
@@ -557,6 +565,8 @@ class Command(object):
         elif args.subcommand == "home":
             conan_home = self._conan.config_home()
             self._out.info(conan_home)
+            if args.json:
+                self._outputer.json_output({"home": conan_home}, args.json, os.getcwd())
             return conan_home
         elif args.subcommand == "install":
             verify_ssl = get_bool_from_text(args.verify_ssl)
@@ -736,7 +746,7 @@ class Command(object):
         The recipe will be built in the local directory specified by
         --build-folder, reading the sources from --source-folder. If you are
         using a build helper, like CMake(), the --package-folder will be
-        configured as destination folder for the install step.
+        configured as the destination folder for the install step.
         """
 
         parser = argparse.ArgumentParser(description=self.build.__doc__,
@@ -838,7 +848,7 @@ class Command(object):
 
         It requires to have been previously installed and have a
         conanbuildinfo.txt generated file in the --install-folder (defaulted to
-        current directory).
+        the current directory).
         """
         parser = argparse.ArgumentParser(description=self.imports.__doc__,
                                          prog="conan imports",
@@ -872,7 +882,7 @@ class Command(object):
         """
         Exports a recipe, then creates a package from local source and build folders.
 
-        If '--package-folder' is provided it will copy the files from there, otherwise it
+        If '--package-folder' is provided it will copy the files from there, otherwise, it
         will execute package() method over '--source-folder' and '--build-folder' to create
         the binary package.
         """
@@ -897,7 +907,7 @@ class Command(object):
                             " folder and any of '-e', '-o', '-pr' or '-s' arguments are used, it "
                             "will raise an error.")
         parser.add_argument("-o", "--options", nargs=1, action=Extender,
-                            help='Define options values, e.g., -o pkg:with_qt=true')
+                            help='Define options values, e.g., -o pkg:with_qt=True')
         parser.add_argument("-pr", "--profile", action=Extender,
                             help='Profile for this package')
         parser.add_argument("-pf", "--package-folder", action=OnceArgument,
@@ -992,7 +1002,7 @@ class Command(object):
         """
         Removes packages or binaries matching pattern from local cache or remote.
 
-        It can also be used to remove temporary source or build folders in the
+        It can also be used to remove the temporary source or build folders in the
         local conan cache. If no remote is specified, the removal will be done
         by default in the local conan cache.
         """
@@ -1011,7 +1021,8 @@ class Command(object):
                             help="Remove only outdated from recipe packages. "
                                  "This flag can only be used with a reference")
         parser.add_argument('-p', '--packages', nargs="*", action=Extender,
-                            help="Remove all packages of the specified reference if no specific package ID is provided")
+                            help="Remove all packages of the specified reference if "
+                                 "no specific package ID is provided")
         parser.add_argument('-q', '--query', default=None, action=OnceArgument, help=_QUERY_HELP)
         parser.add_argument('-r', '--remote', action=OnceArgument,
                             help='Will remove from the specified remote')
@@ -1180,15 +1191,16 @@ class Command(object):
 
     def search(self, *args):
         """
-        Searches package recipes and binaries in the local cache or in a remote.
+        Searches package recipes and binaries in the local cache or a remote.
 
         If you provide a pattern, then it will search for existing package
         recipes matching it.  If a full reference is provided
         (pkg/0.1@user/channel) then the existing binary packages for that
-        reference will be displayed.  If no remote is specified, the search
-        will be done in the local cache.  Search is case sensitive, exact case
-        has to be used. For case insensitive file systems, like Windows, case
-        sensitive search can be forced with '--case-sensitive'.
+        reference will be displayed. The default remote is ignored, if no
+        remote is specified, the search will be done in the local cache.
+        Search is case sensitive, the exact case has to be used. For case
+        insensitive file systems, like Windows, case sensitive search
+        can be forced with '--case-sensitive'.
         """
         parser = argparse.ArgumentParser(description=self.search.__doc__,
                                          prog="conan search",
@@ -1238,7 +1250,7 @@ class Command(object):
                 # Show revisions of a ref
                 if ref:
                     info = self._conan.get_recipe_revisions(repr(ref), remote_name=args.remote)
-                    self._outputer.print_revisions(ref, info, remote_name=args.remote)
+                    self._outputer.print_revisions(ref, info, args.raw, remote_name=args.remote)
                     return
 
                 # Show revisions of pref
@@ -1248,7 +1260,7 @@ class Command(object):
                     pass
                 else:
                     info = self._conan.get_package_revisions(repr(pref), remote_name=args.remote)
-                    self._outputer.print_revisions(ref, info, remote_name=args.remote)
+                    self._outputer.print_revisions(ref, info, args.raw, remote_name=args.remote)
                     return
 
                 # A pattern: Listing references by pattern but showing revisions
@@ -1275,7 +1287,7 @@ class Command(object):
                                                    outdated=args.outdated)
                 # search is done for one reference
                 self._outputer.print_search_packages(info["results"], ref, args.query,
-                                                     args.table, outdated=args.outdated)
+                                                     args.table, args.raw, outdated=args.outdated)
             else:
                 if args.table:
                     raise ConanException("'--table' argument can only be used with a reference")
@@ -1337,6 +1349,9 @@ class Command(object):
                             help="Uploads package only if recipe is the same as the remote one")
         parser.add_argument("-j", "--json", default=None, action=OnceArgument,
                             help='json file path where the upload information will be written to')
+        parser.add_argument("--parallel", action='store_true', default=False,
+                            help='Upload files in parallel using multiple threads '
+                                 'The default number of launched threads is 8')
 
         args = parser.parse_args(*args)
 
@@ -1355,7 +1370,7 @@ class Command(object):
                 raise ConanException("'--query' argument cannot be used together with '--package'")
         else:
             reference = repr(pref.ref)
-            package_id = pref.id
+            package_id = "{}#{}".format(pref.id, pref.revision) if pref.revision else pref.id
 
             if args.package:
                 raise ConanException("Use a full package reference (preferred) or the `--package`"
@@ -1391,7 +1406,8 @@ class Command(object):
                                       query=args.query, remote_name=args.remote,
                                       all_packages=args.all, policy=policy,
                                       confirm=args.confirm, retry=args.retry,
-                                      retry_wait=args.retry_wait, integrity_check=args.check)
+                                      retry_wait=args.retry_wait, integrity_check=args.check,
+                                      parallel_upload=args.parallel)
 
         except ConanException as exc:
             info = exc.info
@@ -1402,7 +1418,7 @@ class Command(object):
 
     def remote(self, *args):
         """
-        Manages the remote list and the package recipes associated to a remote.
+        Manages the remote list and the package recipes associated with a remote.
         """
         parser = argparse.ArgumentParser(description=self.remote.__doc__,
                                          prog="conan remote",
@@ -1530,7 +1546,7 @@ class Command(object):
         Lists profiles in the '.conan/profiles' folder, or shows profile details.
 
         The 'list' subcommand will always use the default user 'conan/profiles' folder. But the
-        'show' subcommand is able to resolve absolute and relative paths, as well as to map names to
+        'show' subcommand can resolve absolute and relative paths, as well as to map names to
         '.conan/profiles' folder, in the same way as the '--profile' install argument.
         """
         parser = argparse.ArgumentParser(description=self.profile.__doc__,
@@ -1684,7 +1700,7 @@ class Command(object):
         install_parser.add_argument('path', help='path to workspace definition file (it will look'
                                                  ' for a "conanws.yml" inside if a directory is'
                                                  ' given)')
-        _add_common_install_arguments(install_parser, build_help=_help_build_policies)
+        _add_common_install_arguments(install_parser, build_help=_help_build_policies.format("never"))
         install_parser.add_argument("-if", "--install-folder", action=OnceArgument,
                                     help="Folder where the workspace files will be created"
                                          " (default to current working directory)")
@@ -1699,10 +1715,10 @@ class Command(object):
 
     def editable(self, *args):
         """
-        Manages editable packages (package that resides in the user workspace, but
+        Manages editable packages (packages that reside in the user workspace, but
         are consumed as if they were in the cache).
 
-        Use the subcommands 'add', 'remove' and 'list' to create, remove an list
+        Use the subcommands 'add', 'remove' and 'list' to create, remove or list
         packages currently installed in this mode.
         """
         parser = argparse.ArgumentParser(description=self.editable.__doc__,
@@ -1849,7 +1865,7 @@ class Command(object):
         self._out.writeln('Conan commands. Type "conan <command> -h" for help', Color.BRIGHT_YELLOW)
 
     def _commands(self):
-        """ returns a list of available commands
+        """ Returns a list of available commands.
         """
         result = {}
         for m in inspect.getmembers(self, predicate=inspect.ismethod):
@@ -1863,7 +1879,7 @@ class Command(object):
         return result
 
     def _print_similar(self, command):
-        """ looks for a similar commands and prints them if found
+        """ Looks for similar commands and prints them if found.
         """
         matches = get_close_matches(
             word=command, possibilities=self._commands().keys(), n=5, cutoff=0.75)
@@ -1882,21 +1898,42 @@ class Command(object):
         self._out.writeln("")
 
     def _warn_python_version(self):
+        import textwrap
+
+        width = 70
         version = sys.version_info
         if version.major == 2:
-            self._out.writeln("")
-            self._out.writeln("Python 2 will soon be deprecated. It is strongly "
-                              "recommended to use Python >= 3.5 with Conan:",
-                              front=Color.BRIGHT_YELLOW)
-            self._out.writeln("https://docs.conan.io/en/latest/installation.html"
-                              "#python-2-deprecation-notice", front=Color.BRIGHT_YELLOW)
-            self._out.writeln("")
+            self._out.writeln("*"*width, front=Color.BRIGHT_RED)
+
+            self._out.writeln(textwrap.fill("Python 2 is deprecated as of 01/01/2020 and Conan has"
+                                            " stopped supporting it oficially. We strongly recommend"
+                                            " you to use Python >= 3.5. Conan will completely stop"
+                                            " working with Python 2 in the following releases", width),
+                              front=Color.BRIGHT_RED)
+            self._out.writeln("*"*width, front=Color.BRIGHT_RED)
+            if os.environ.get('USE_UNSUPPORTED_CONAN_WITH_PYTHON_2', 0):
+                # IMPORTANT: This environment variable is not a silver buller. Python 2 is currently deprecated
+                # and some libraries we use as dependencies have stopped supporting it. Conan might fail to run
+                # and we are no longer fixing errors related to Python 2.
+                self._out.writeln(textwrap.fill("Python 2 deprecation notice has been bypassed"
+                                                " by envvar 'USE_UNSUPPORTED_CONAN_WITH_PYTHON_2'", width))
+            else:
+                self._out.writeln(textwrap.fill("If you really need to run Conan with Python 2 in your"
+                                                " CI without this interactive input, please contact us"
+                                                " at info@conan.io", width), front=Color.BRIGHT_RED)
+                self._out.writeln("*" * width, front=Color.BRIGHT_RED)
+                self._out.write(textwrap.fill("Understood the risk, keep going [y/N]: ", width,
+                                              drop_whitespace=False), front=Color.BRIGHT_RED)
+                ret = raw_input().lower()
+                if ret not in ["yes", "ye", "y"]:
+                    self._out.writeln(textwrap.fill("Wise choice. Stopping here!", width))
+                    sys.exit(0)
         elif version.minor == 4:
-            self._out.writeln("")
-            self._out.writeln("Python 3.4 support has been dropped. It is strongly "
-                              "recommended to use Python >= 3.5 with Conan",
-                              front=Color.BRIGHT_YELLOW)
-            self._out.writeln("")
+            self._out.writeln("*"*width, front=Color.BRIGHT_RED)
+            self._out.writeln(textwrap.fill("Python 3.4 support has been dropped. It is strongly "
+                                            "recommended to use Python >= 3.5 with Conan", width),
+                              front=Color.BRIGHT_RED)
+            self._out.writeln("*"*width, front=Color.BRIGHT_RED)
 
     def run(self, *args):
         """HIDDEN: entry point for executing commands, dispatcher to class
@@ -1906,6 +1943,10 @@ class Command(object):
         try:
             try:
                 command = args[0][0]
+            except IndexError:  # No parameters
+                self._show_help()
+                return False
+            try:
                 commands = self._commands()
                 method = commands[command]
             except KeyError as exc:
@@ -1922,13 +1963,9 @@ class Command(object):
                 self._out.writeln(
                     "'%s' is not a Conan command. See 'conan --help'." % command)
                 self._out.writeln("")
-
                 self._print_similar(command)
-
                 raise ConanException("Unknown command %s" % str(exc))
-            except IndexError:  # No parameters
-                self._show_help()
-                return False
+
             method(args[0][1:])
         except KeyboardInterrupt as exc:
             logger.error(exc)
@@ -1978,7 +2015,7 @@ def _add_common_install_arguments(parser, build_help, lockfile=True):
                         help='Environment variables that will be set during the package build, '
                              '-e CXX=/usr/bin/clang++')
     parser.add_argument("-o", "--options", nargs=1, action=Extender,
-                        help='Define options values, e.g., -o Pkg:with_qt=true')
+                        help='Define options values, e.g., -o Pkg:with_qt=True')
     parser.add_argument("-pr", "--profile", default=None, action=Extender,
                         help='Apply the specified profile to the install command')
     parser.add_argument("-r", "--remote", action=OnceArgument,
@@ -2004,12 +2041,12 @@ _help_build_policies = '''Optional, use it to choose if you want to build from s
                        Useful to make sure that any new change introduced in a dependency is
                        incorporated by building again the package.
     --build=outdated   Build from code if the binary is not built with the current recipe or
-                       when missing binary package.
+                       when missing a binary package.
     --build=[pattern]  Build always these packages from source, but never build the others.
                        Allows multiple --build parameters. 'pattern' is a fnmatch file pattern
                        of a package reference.
 
-    Default behavior: If you don't specify anything, it will be similar to '--build=never', but
+    Default behavior: If you don't specify anything, it will be similar to '--build={}', but
     package recipes can override it with their 'build_policy' attribute in the conanfile.py.
 '''
 

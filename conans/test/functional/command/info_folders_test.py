@@ -6,12 +6,11 @@ import unittest
 from textwrap import dedent
 
 from conans.client import tools
-from conans.client.tools.oss import check_output
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, \
-    TestServer
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
+from conans.util.runners import check_output_runner
 
 conanfile_py = """
 from conans import ConanFile
@@ -181,7 +180,8 @@ class InfoFoldersTest(unittest.TestCase):
 
         # Retrieve ACLs from short_folder
         try:
-            short_folder_acls = check_output("cacls %s" % short_folder, stderr=subprocess.STDOUT)
+            short_folder_acls = check_output_runner("cacls %s" % short_folder,
+                                                    stderr=subprocess.STDOUT)
         except subprocess.CalledProcessError as e:
             raise Exception("Error %s getting ACL from short_folder: '%s'." % (e, short_folder))
 

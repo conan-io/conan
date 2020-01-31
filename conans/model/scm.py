@@ -61,7 +61,7 @@ class SCMData(object):
             return self.revision
         raise ConanException("Not implemented recipe revision for %s" % self.type)
 
-    def __repr__(self):
+    def as_dict(self):
         d = {"url": self.url, "revision": self.revision, "username": self.username,
              "password": self.password, "type": self.type,
              "subfolder": self.subfolder, "submodule": self.submodule}
@@ -70,6 +70,10 @@ class SCMData(object):
         if self.verify_ssl != self.VERIFY_SSL_DEFAULT:
             d.update({"verify_ssl": self.verify_ssl})
         d = {k: v for k, v in d.items() if v is not None}
+        return d
+
+    def __repr__(self):
+        d = self.as_dict()
 
         def _kv_to_string(key, value):
             if isinstance(value, bool):

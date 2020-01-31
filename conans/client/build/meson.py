@@ -1,15 +1,16 @@
 import os
-import subprocess
 
 from conans.client import tools
 from conans.client.build import defs_to_string, join_arguments
 from conans.client.build.autotools_environment import AutoToolsBuildEnvironment
 from conans.client.build.cppstd_flags import cppstd_from_settings
+from conans.client.tools.env import environment_append
 from conans.client.tools.oss import args_to_string
 from conans.errors import ConanException
 from conans.model.build_info import DEFAULT_BIN, DEFAULT_INCLUDE, DEFAULT_LIB
 from conans.model.version import Version
 from conans.util.files import decode_text, get_abs_path, mkdir
+from conans.util.runners import version_runner
 
 
 class Meson(object):
@@ -153,7 +154,7 @@ class Meson(object):
             build_type
         ])
         command = 'meson "%s" "%s" %s' % (source_dir, self.build_dir, arg_list)
-        with tools.environment_append({"PKG_CONFIG_PATH": pc_paths}):
+        with environment_append({"PKG_CONFIG_PATH": pc_paths}):
             self._run(command)
 
     @property
@@ -164,8 +165,8 @@ class Meson(object):
         with tools.vcvars(self._settings,
                           output=self._conanfile.output) if self._vcvars_needed else tools.no_op():
             env_build = AutoToolsBuildEnvironment(self._conanfile)
-            with tools.environment_append(env_build.vars):
-                with tools.environment_append(self._conanfile.env):
+            with environment_append(env_build.vars):
+                with environment_append(self._conanfile.env):
                     self._conanfile.run(command)
 
     def build(self, args=None, build_dir=None, targets=None):
@@ -203,7 +204,7 @@ class Meson(object):
     @staticmethod
     def get_version():
         try:
-            out, _ = subprocess.Popen(["meson", "--version"], stdout=subprocess.PIPE).communicate()
+            out = version_runner(["meson", "--version"])
             version_line = decode_text(out).split('\n', 1)[0]
             version_str = version_line.rsplit(' ', 1)[-1]
             return Version(version_str)

@@ -10,7 +10,6 @@ import sys
 import tempfile
 import threading
 import unittest
-import textwrap
 import uuid
 from collections import Counter, OrderedDict
 from contextlib import contextmanager
@@ -35,7 +34,6 @@ from conans.client.rest.uploader_downloader import IterableToFileAdapter
 from conans.client.tools import environment_append
 from conans.client.tools.files import chdir
 from conans.client.tools.files import replace_in_file
-from conans.client.tools.oss import check_output
 from conans.client.tools.scm import Git, SVN
 from conans.client.tools.win import get_cased_path
 from conans.client.userio import UserIO
@@ -52,6 +50,7 @@ from conans.test.utils.test_files import temp_folder
 from conans.util.env_reader import get_env
 from conans.util.files import mkdir, save_files
 from conans.client.runner import ConanRunner
+from conans.util.runners import check_output_runner
 
 NO_SETTINGS_PACKAGE_ID = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
 
@@ -535,10 +534,10 @@ def create_local_svn_checkout(files, repo_url, rel_project_path=None,
             subprocess.check_output("svn add .", shell=True)
             subprocess.check_output('svn commit -m "{}"'.format(commit_msg), shell=True)
             if SVN.get_version() >= SVN.API_CHANGE_VERSION:
-                rev = check_output("svn info --show-item revision").strip()
+                rev = check_output_runner("svn info --show-item revision").strip()
             else:
                 import xml.etree.ElementTree as ET
-                output = check_output("svn info --xml").strip()
+                output = check_output_runner("svn info --xml").strip()
                 root = ET.fromstring(output)
                 rev = root.findall("./entry")[0].get("revision")
         project_url = repo_url + "/" + quote(rel_project_path.replace("\\", "/"))
@@ -594,6 +593,25 @@ class SVNLocalRepoTestCase(unittest.TestCase):
             super(SVNLocalRepoTestCase, self).run(*args, **kwargs)
         finally:
             shutil.rmtree(tmp_folder, ignore_errors=False, onerror=try_remove_readonly)
+
+
+class LocalDBMock(object):
+
+    def __init__(self, user=None, access_token=None, refresh_token=None):
+        self.user = user
+        self.access_token = access_token
+        self.refresh_token = refresh_token
+
+    def get_login(self, _):
+        return self.user, self.access_token, self.refresh_token
+
+    def get_username(self, _):
+        return self.user
+
+    def store(self, user, access_token, refresh_token, _):
+        self.user = user
+        self.access_token = access_token
+        self.refresh_token = refresh_token
 
 
 class MockedUserIO(UserIO):
@@ -773,7 +791,7 @@ servers["r2"] = TestServer()
 
     def update_servers(self):
         cache = self.cache
-        Remotes().save(cache.registry_path)
+        Remotes().save(cache.remotes_path)
         registry = cache.registry
 
         for name, server in self.servers.items():
@@ -1217,12 +1235,12 @@ class TurboTestClient(TestClient):
     def create(self, ref, conanfile=GenConanfile(), args=None, assert_error=False):
         if conanfile:
             self.save({"conanfile.py": conanfile})
-        self.run("create . {} {} --json {}".format(ref.full_str(),
+        full_str = "{}@".format(ref.full_str()) if not ref.user else ref.full_str()
+        self.run("create . {} {} --json {}".format(full_str,
                                                    args or "", self.tmp_json_name),
                  assert_error=assert_error)
         rrev = self.cache.package_layout(ref).recipe_revision()
-        json_path = os.path.join(self.current_folder, self.tmp_json_name)
-        data = json.loads(load(json_path))
+        data = json.loads(self.load(self.tmp_json_name))
         if assert_error:
             return None
         package_id = data["installed"][0]["packages"][0]["id"]
@@ -1249,8 +1267,7 @@ class TurboTestClient(TestClient):
                                                        args or "", self.tmp_json_name),
                  assert_error=assert_error)
         rrev = self.cache.package_layout(ref).recipe_revision()
-        json_path = os.path.join(self.current_folder, self.tmp_json_name)
-        data = json.loads(load(json_path))
+        data = json.loads(self.load(self.tmp_json_name))
         if assert_error:
             return None
         package_id = data["installed"][0]["packages"][0]["id"]
@@ -1275,8 +1292,7 @@ class TurboTestClient(TestClient):
         self.run("search {} --json {} {} {}".format(pattern, self.tmp_json_name, remote,
                                                     args or ""),
                  assert_error=assert_error)
-        json_path = os.path.join(self.current_folder, self.tmp_json_name)
-        data = json.loads(load(json_path))
+        data = json.loads(self.load(self.tmp_json_name))
         return data
 
     def massive_uploader(self, ref, revisions, num_prev, remote=None):

@@ -24,6 +24,8 @@ def transform_conanfile(node):
         "conans.client.file_copier").lookup("FileCopier")
     file_importer_class = MANAGER.ast_from_module_name(
         "conans.client.importer").lookup("_FileImporter")
+    python_requires_class = MANAGER.ast_from_module_name(
+        "conans.client.graph.python_requires").lookup("PyRequires")
 
     dynamic_fields = {
         "source_folder": str_class,
@@ -36,6 +38,7 @@ def transform_conanfile(node):
         "info": info_class,
         "copy": file_copier_class,
         "copy_deps": file_importer_class,
+        "python_requires": [str_class, python_requires_class],
     }
 
     for f, t in dynamic_fields.items():
@@ -45,3 +48,13 @@ def transform_conanfile(node):
 MANAGER.register_transform(
     astroid.ClassDef, transform_conanfile,
     lambda node: node.qname() == "conans.model.conan_file.ConanFile")
+
+
+def _python_requires_member():
+    return astroid.parse("""
+        from conans.client.graph.python_requires import ConanPythonRequire
+        python_requires = ConanPythonRequire()
+        """)
+
+
+astroid.register_module_extender(astroid.MANAGER, "conans", _python_requires_member)

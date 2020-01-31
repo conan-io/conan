@@ -1,10 +1,10 @@
 import os
-import traceback
-
 import time
+import traceback
 
 from conans.client.remote_manager import check_compressed_files
 from conans.client.rest.client_routes import ClientV2Router
+from conans.client.rest.download_cache import CachedFileDownloader
 from conans.client.rest.rest_client_common import RestCommonMethods, get_exception_from_error
 from conans.client.rest.uploader_downloader import FileDownloader, FileUploader
 from conans.errors import ConanException, NotFoundException, PackageNotFoundException, \
@@ -12,24 +12,24 @@ from conans.errors import ConanException, NotFoundException, PackageNotFoundExce
 from conans.model.info import ConanInfo
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference
-from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, \
-    PACKAGE_TGZ_NAME
+from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
 from conans.util.files import decode_text
 from conans.util.log import logger
 
 
 class RestV2Methods(RestCommonMethods):
 
-    def __init__(self, remote_url, token, custom_headers, output, requester, verify_ssl,
-                 put_headers=None, checksum_deploy=False):
+    def __init__(self, remote_url, token, custom_headers, output, requester, config, verify_ssl,
+                 artifacts_properties=None, checksum_deploy=False, matrix_params=False):
 
         super(RestV2Methods, self).__init__(remote_url, token, custom_headers, output, requester,
-                                            verify_ssl, put_headers)
+                                            config, verify_ssl, artifacts_properties, matrix_params)
         self._checksum_deploy = checksum_deploy
 
     @property
     def router(self):
-        return ClientV2Router(self.remote_url.rstrip("/"))
+        return ClientV2Router(self.remote_url.rstrip("/"), self._artifacts_properties,
+                              self._matrix_params)
 
     def _get_file_list_json(self, url):
         data = self.get_json(url)
@@ -39,7 +39,9 @@ class RestV2Methods(RestCommonMethods):
 
     def _get_remote_file_contents(self, url):
         # We don't want traces in output of these downloads, they are ugly in output
-        downloader = FileDownloader(self.requester, None, self.verify_ssl)
+        downloader = FileDownloader(self.requester, None, self.verify_ssl, self._config)
+        if self._config.download_cache:
+            downloader = CachedFileDownloader(self._config.download_cache, downloader)
         contents = downloader.download(url, auth=self.auth)
         return contents
 
@@ -163,29 +165,34 @@ class RestV2Methods(RestCommonMethods):
 
     def _upload_recipe(self, ref, files_to_upload, retry, retry_wait):
         # Direct upload the recipe
-        urls = {fn: self.router.recipe_file(ref, fn) for fn in files_to_upload}
-        self._upload_files(files_to_upload, urls, retry, retry_wait)
+        urls = {fn: self.router.recipe_file(ref, fn, add_matrix_params=True)
+                for fn in files_to_upload}
+        self._upload_files(files_to_upload, urls, retry, retry_wait, display_name=str(ref))
 
     def _upload_package(self, pref, files_to_upload, retry, retry_wait):
-        urls = {fn: self.router.package_file(pref, fn)
+        urls = {fn: self.router.package_file(pref, fn, add_matrix_params=True)
                 for fn in files_to_upload}
-        self._upload_files(files_to_upload, urls, retry, retry_wait)
 
-    def _upload_files(self, files, urls, retry, retry_wait):
+        short_pref_name = "%s:%s" % (pref.ref, pref.id[0:4])
+        self._upload_files(files_to_upload, urls, retry, retry_wait, display_name=short_pref_name)
+
+    def _upload_files(self, files, urls, retry, retry_wait, display_name=None):
         t1 = time.time()
         failed = []
-        uploader = FileUploader(self.requester, self._output, self.verify_ssl)
+        uploader = FileUploader(self.requester, self._output, self.verify_ssl, self._config)
         # conan_package.tgz and conan_export.tgz are uploaded first to avoid uploading conaninfo.txt
         # or conanamanifest.txt with missing files due to a network failure
         for filename in sorted(files):
             if self._output and not self._output.is_terminal:
-                self._output.rewrite_line("Uploading %s" % filename)
+                msg = "Uploading: %s" % filename if not display_name else (
+                            "Uploading %s -> %s" % (filename, display_name))
+                self._output.writeln(msg)
             resource_url = urls[filename]
             try:
+                headers = self._artifacts_properties if not self._matrix_params else {}
                 uploader.upload(resource_url, files[filename], auth=self.auth,
-                                dedup=self._checksum_deploy, retry=retry,
-                                retry_wait=retry_wait,
-                                headers=self._put_headers)
+                                dedup=self._checksum_deploy, retry=retry, retry_wait=retry_wait,
+                                headers=headers, display_name=display_name)
             except (AuthenticationException, ForbiddenException):
                 raise
             except Exception as exc:
@@ -199,7 +206,9 @@ class RestV2Methods(RestCommonMethods):
             logger.debug("\nUPLOAD: All uploaded! Total time: %s\n" % str(time.time() - t1))
 
     def _download_and_save_files(self, urls, dest_folder, files):
-        downloader = FileDownloader(self.requester, self._output, self.verify_ssl)
+        downloader = FileDownloader(self.requester, self._output, self.verify_ssl, self._config)
+        if self._config.download_cache:
+            downloader = CachedFileDownloader(self._config.download_cache, downloader)
         # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz
         # can be < conanfile, conaninfo, and sent always the last, so smaller files go first
         for filename in sorted(files, reverse=True):

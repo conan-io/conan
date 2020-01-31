@@ -1,9 +1,21 @@
-
 class RestRoutes(object):
+    ping = "ping"
+    common_search = "conans/search"
+    common_authenticate = "users/authenticate"
+    oauth_authenticate = "users/token"
+    common_check_credentials = "users/check_credentials"
+
+    def __init__(self, matrix_params=False):
+        if matrix_params:
+            self.base = 'conans{matrix_params}'
+            self.files_base = 'files{matrix_params}'
+        else:
+            self.base = 'conans'
+            self.files_base = 'files'
 
     @property
     def recipe(self):
-        return 'conans/{name}/{version}/{username}/{channel}'
+        return self.base + '/{name}/{version}/{username}/{channel}'
 
     @property
     def recipe_latest(self):
@@ -69,7 +81,7 @@ class RestRoutes(object):
     # ONLY V1
     @property
     def v1_updown_file(self):
-        return "files/{path}"
+        return "%s/{path}" % self.files_base
 
     @property
     def v1_recipe_digest(self):
@@ -103,15 +115,6 @@ class RestRoutes(object):
     def v1_remove_packages(self):
         return "%s/packages/delete" % self.recipe
 
-    # COMMON URLS
-    @property
-    def ping(self):
-        return "ping"
-
-    @property
-    def common_search(self):
-        return "conans/search"
-
     @property
     def common_search_packages(self):
         return "%s/search" % self.recipe
@@ -119,15 +122,3 @@ class RestRoutes(object):
     @property
     def common_search_packages_revision(self):
         return "%s/search" % self.recipe_revision
-
-    @property
-    def common_authenticate(self):
-        return "users/authenticate"
-
-    @property
-    def oauth_authenticate(self):
-        return "users/token"
-
-    @property
-    def common_check_credentials(self):
-        return "users/check_credentials"

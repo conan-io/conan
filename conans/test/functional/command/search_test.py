@@ -8,7 +8,7 @@ from collections import OrderedDict
 
 from mock import patch
 
-from conans import COMPLEX_SEARCH_CAPABILITY, DEFAULT_REVISION_V1
+from conans import DEFAULT_REVISION_V1
 from conans.model.manifest import FileTreeManifest
 from conans.model.package_metadata import PackageMetadata
 from conans.model.ref import ConanFileReference, PackageReference
@@ -132,7 +132,7 @@ class SearchTest(unittest.TestCase):
     def setUp(self):
         self.servers = OrderedDict()
         self.servers["local"] = TestServer(server_capabilities=[])
-        self.servers["search_able"] = TestServer(server_capabilities=[COMPLEX_SEARCH_CAPABILITY])
+        self.servers["search_able"] = TestServer(server_capabilities=[])
 
         self.client = TestClient(servers=self.servers)
 
@@ -379,10 +379,12 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                          "Hello/1.4.12@myuser/testing\n"
                          "Hello/1.5.10@myuser/testing\n"
                          "helloTest/1.4.10@myuser/stable\n", self.client.out)
+        self.client.run("search Hello/1.4.10@myuser/testing --raw")
+        self.assertNotIn("Existing packages for recipe", self.client.out)
 
     def search_html_table_test(self):
         self.client.run("search Hello/1.4.10@myuser/testing --table=table.html")
-        html = load(os.path.join(self.client.current_folder, "table.html"))
+        html = self.client.load("table.html")
         self.assertIn("<h1>Hello/1.4.10@myuser/testing</h1>", html)
         self.assertIn("<td>Linux gcc 4.5 (libstdc++11)</td>", html)
         self.assertIn("<td>Windows Visual Studio 8.1</td>", html)
@@ -394,7 +396,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         self._copy_to_server(self.client.cache, self.servers["search_able"].server_store)
 
         self.client.run("search Hello/1.4.10@myuser/testing -r=all --table=table.html")
-        html = load(os.path.join(self.client.current_folder, "table.html"))
+        html = self.client.load("table.html")
 
         self.assertIn("<h1>Hello/1.4.10@myuser/testing</h1>", html)
         self.assertIn("<h2>'local':</h2>", html)
@@ -736,7 +738,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
     def search_with_no_registry_test(self):
         # https://github.com/conan-io/conan/issues/2589
         client = TestClient()
-        os.remove(client.cache.registry_path)
+        os.remove(client.cache.remotes_path)
         client.run("search nonexist/1.0@lasote/stable -r=myremote", assert_error=True)
         self.assertIn("WARN: Remotes registry file missing, creating default one", client.out)
         self.assertIn("ERROR: No remote 'myremote' defined in remotes", client.out)
@@ -1157,7 +1159,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
 
     def initial_search_without_registry_test(self):
         client = TestClient()
-        os.remove(client.cache.registry_path)
+        os.remove(client.cache.remotes_path)
         client.run("search my_pkg")
         self.assertIn("WARN: Remotes registry file missing, creating default one", client.out)
         self.assertIn("There are no packages matching the 'my_pkg' pattern", client.out)
@@ -1343,6 +1345,10 @@ class Test(ConanFile):
         self.assertEqual(j[0]["revision"], "a94417fca6b55779c3b158f2ff50c40a")
         self.assertIsNotNone(j[0]["time"])
         self.assertEqual(len(j), 1)
+
+        # raw argument
+        client.run("search lib/1.0@user/testing --raw --revisions")
+        self.assertNotIn("Revisions for", client.out)
 
     def search_package_revisions_test(self):
         test_server = TestServer(users={"user": "password"})  # exported users and passwords
