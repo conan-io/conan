@@ -14,8 +14,8 @@ class CMakePathsGenerator(Generator):
         # The CONAN_XXX_ROOT variables are needed because the FindXXX.cmake or XXXConfig.cmake
         # in a package could have been "patched" with the `cmake.patch_config_paths()`
         # replacing absolute paths with CONAN_XXX_ROOT variables.
-        for name, dep_cpp_info in self.deps_build_info.dependencies:
-            var_name = "CONAN_{}_ROOT".format(dep_cpp_info.get_name("cmake_paths", name).upper())
+        for _, dep_cpp_info in self.deps_build_info.dependencies:
+            var_name = "CONAN_{}_ROOT".format(dep_cpp_info.get_name("cmake_paths").upper())
             lines.append('set({} {})'.format(var_name, DepsCppCmake(dep_cpp_info).rootpath))
 
         # We want to prioritize the FindXXX.cmake files:

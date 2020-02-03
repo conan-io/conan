@@ -284,7 +284,7 @@ class GraphLock(object):
                     raise ConanException("Mismatch between lock and graph:\nLock:  %s\nGraph: %s"
                                          % (repr(pref), repr(node.pref)))
 
-        self._remove_orphans(root_node.id)
+        #self._remove_orphans(root_node.id)
 
     def _remove_orphans(self, root_node_id):
         # Remove nodes that no longer connected to the root_node_id, downstream or upstream
@@ -293,7 +293,6 @@ class GraphLock(object):
         while open_ids:
             new_open_ids = set()
             for open_id in open_ids:
-                print "OPEN ID ", open_id, type(open_id)
                 node = self._nodes[open_id]
                 new_open_ids.update(node.requires)
                 new_open_ids.update(node.build_requires)
@@ -307,10 +306,7 @@ class GraphLock(object):
 
         self._nodes = {id_: n for id_, n in self._nodes.items() if id_ in graph_ids}
 
-    def lock_node(self, node, requires, build_requires=False):
-        """ apply options and constraints on requirements of a node, given the information from
-        the lockfile. Requires remove their version ranges.
-        """
+    def pre_lock_node(self, node):
         if node.recipe == RECIPE_VIRTUAL:
             return
         try:
@@ -321,6 +317,16 @@ class GraphLock(object):
             node.conanfile.output.warn("Package can't be locked, not found in the lockfile")
             return
 
+        node.graph_lock_node = locked_node
+        node.conanfile.options.values = locked_node.options
+
+    def lock_node(self, node, requires, build_requires=False):
+        """ apply options and constraints on requirements of a node, given the information from
+        the lockfile. Requires remove their version ranges.
+        """
+        if not node.graph_lock_node:
+            return
+        locked_node = node.graph_lock_node
         if build_requires:
             locked_requires = locked_node.build_requires or []
         else:
@@ -332,8 +338,6 @@ class GraphLock(object):
             prefs = {self._nodes[id_].pref.ref.name: (self._nodes[id_].pref.copy_clear_revs(), id_)
                      for id_ in locked_requires}
 
-        node.graph_lock_node = locked_node
-        node.conanfile.options.values = locked_node.options
         for require in requires:
             try:
                 locked_pref, locked_id = prefs[require.ref.name]

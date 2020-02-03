@@ -152,7 +152,7 @@ _target_template = """
                                   CONAN_PACKAGE_TARGETS_{uname}_MINSIZEREL "${{CONAN_SYSTEM_LIBS_{uname}_MINSIZEREL}} {deps}"
                                   "minsizerel" {pkg_name})
 
-    add_library({name} INTERFACE IMPORTED)
+    add_library({name} INTERFACE IMPORTED GLOBAL)
 
     # Property INTERFACE_LINK_FLAGS do not work, necessary to add to INTERFACE_LINK_LIBRARIES
     set_property(TARGET {name} PROPERTY INTERFACE_LINK_LIBRARIES ${{CONAN_PACKAGE_TARGETS_{uname}}} ${{CONAN_SHARED_LINKER_FLAGS_{uname}_LIST}} ${{CONAN_EXE_LINKER_FLAGS_{uname}_LIST}}
@@ -190,14 +190,14 @@ def generate_targets_section(dependencies, generator_name):
                    '    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${CONAN_CMD_C_FLAGS}")\n'
                    '    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${CONAN_CMD_SHARED_LINKER_FLAGS}")\n')
     dependencies_dict = {name: dep_info for name, dep_info in dependencies}
-    for name, dep_info in dependencies:
-        dep_name = dep_info.get_name(generator_name, name)
-        use_deps = ["CONAN_PKG::%s" % dependencies_dict[d].get_name(generator_name, d) for d in dep_info.public_deps]
+    for _, dep_info in dependencies:
+        dep_name = dep_info.get_name(generator_name)
+        use_deps = ["CONAN_PKG::%s" % dependencies_dict[d].get_name(generator_name) for d in dep_info.public_deps]
         deps = "" if not use_deps else " ".join(use_deps)
         section.append(_target_template.format(name="CONAN_PKG::%s" % dep_name, deps=deps,
                                                uname=dep_name.upper(), pkg_name=dep_name))
 
-    all_targets = " ".join(["CONAN_PKG::%s" % dep_info.get_name(generator_name, name) for name, dep_info in dependencies])
+    all_targets = " ".join(["CONAN_PKG::%s" % dep_info.get_name(generator_name) for _, dep_info in dependencies])
     section.append('    set(CONAN_TARGETS %s)\n' % all_targets)
     section.append('endmacro()\n')
     return section
@@ -241,7 +241,7 @@ class CMakeCommonMacros:
                 if(CONAN_FOUND_LIBRARY)
                     conan_message(STATUS "Library ${_LIBRARY_NAME} found ${CONAN_FOUND_LIBRARY}")
                     set(_LIB_NAME CONAN_LIB::${package_name}_${_LIBRARY_NAME}${build_type})
-                    add_library(${_LIB_NAME} UNKNOWN IMPORTED)
+                    add_library(${_LIB_NAME} UNKNOWN IMPORTED GLOBAL)
                     set_target_properties(${_LIB_NAME} PROPERTIES IMPORTED_LOCATION ${CONAN_FOUND_LIBRARY})
                     string(REPLACE " " ";" deps_list "${deps}")
                     set_property(TARGET ${_LIB_NAME} PROPERTY INTERFACE_LINK_LIBRARIES ${deps_list})
