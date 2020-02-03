@@ -63,7 +63,7 @@ message("Compile options: ${tmp}")
         self.assertIn("Library fake_lib not found in package, might be system one", client.out)
         self.assertIn("Libraries to Link: fake_lib", client.out)
         self.assertIn("Version: 0.1", client.out)
-        self.assertIn("Target libs: fake_lib;;;shared_link_flag", client.out)
+        self.assertIn("Target libs: fake_lib;;shared_link_flag;", client.out)
         self.assertIn("Compile options: a_cxx_flag;a_flag", client.out)
 
     def cmake_lock_target_redefinition_test(self):
@@ -433,9 +433,9 @@ class Conan(ConanFile):
         client.run("build .")
         self.assertIn('Found MYHELLO2: 1.0 (found version "1.0")', client.out)
         self.assertIn('Found MYHELLO: 1.0 (found version "1.0")', client.out)
-        self.assertIn("Target libs (hello2): CONAN_LIB::MYHELLO2_hello;MYHELLO::MYHELLO;MYHELLO::MYHELLO;;",
+        self.assertIn("Target libs (hello2): CONAN_LIB::MYHELLO2_hello;MYHELLO::MYHELLO;;",
                       client.out)
-        self.assertIn("Target libs (hello): CONAN_LIB::MYHELLO_hello;;;;",
+        self.assertIn("Target libs (hello): CONAN_LIB::MYHELLO_hello;;;",
                       client.out)
 
     def cpp_info_config_test(self):
