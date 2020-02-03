@@ -30,7 +30,13 @@ def run_environment(conanfile):
 
 
 @contextmanager
-def environment_append(env_vars, post=False):
+def environment_append(env_vars):
+    with _environment_add(env_vars, post=False):
+        yield
+
+
+@contextmanager
+def _environment_add(env_vars, post=False):
     """
     :param env_vars: List (dict) of simple environment vars. {name: value, name2: value2}
                      => e.g.: MYVAR=1

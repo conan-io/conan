@@ -6,7 +6,7 @@ from conans.client import tools
 from conans.client.build import defs_to_string, join_arguments
 from conans.client.build.autotools_environment import AutoToolsBuildEnvironment
 from conans.client.build.cppstd_flags import cppstd_from_settings
-from conans.client.tools.env import environment_append
+from conans.client.tools.env import environment_append, _environment_add
 from conans.client.tools.oss import args_to_string
 from conans.errors import ConanException
 from conans.model.build_info import DEFAULT_BIN, DEFAULT_INCLUDE, DEFAULT_LIB
@@ -173,7 +173,7 @@ class Meson(object):
 
         if self._vcvars_needed:
             vcvars_dict = tools.vcvars_dict(self._settings, output=self._conanfile.output)
-            with environment_append(vcvars_dict, post=self._append_vcvars):
+            with _environment_add(vcvars_dict, post=self._append_vcvars):
                 _build()
         else:
             _build()

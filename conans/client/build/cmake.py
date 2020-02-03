@@ -12,7 +12,7 @@ from conans.client.build.cmake_flags import CMakeDefinitionsBuilder, \
     cmake_in_local_cache_var_name, runtime_definition_var_name, get_generator_platform, \
     is_generator_platform_supported, is_toolset_supported
 from conans.client.output import ConanOutput
-from conans.client.tools.env import environment_append
+from conans.client.tools.env import environment_append, _environment_add
 from conans.client.tools.oss import cpu_count, args_to_string
 from conans.errors import ConanException
 from conans.model.conan_file import ConanFile
@@ -219,7 +219,7 @@ class CMake(object):
                 self.generator in ["Ninja", "NMake Makefiles", "NMake Makefiles JOM"]):
             vcvars_dict = tools.vcvars_dict(self._settings, force=True, filter_known_paths=False,
                                             output=self._conanfile.output)
-            with environment_append(vcvars_dict, post=self._append_vcvars):
+            with _environment_add(vcvars_dict, post=self._append_vcvars):
                 self._conanfile.run(command)
         else:
             self._conanfile.run(command)
