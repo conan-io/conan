@@ -102,7 +102,7 @@ set(CONAN_RES_DIRS{build_type} {deps.res_paths} ${{CONAN_RES_DIRS{build_type}}})
 set(CONAN_FRAMEWORK_DIRS{build_type} {deps.framework_paths} ${{CONAN_FRAMEWORK_DIRS{build_type}}})
 set(CONAN_LIBS{build_type} {deps.libs} ${{CONAN_LIBS{build_type}}})
 set(CONAN_PKG_LIBS{build_type} {deps.libs} ${{CONAN_PKG_LIBS{build_type}}})
-set(CONAN_SYSTEM_LIBS{build_type} {deps.system_libs})
+set(CONAN_SYSTEM_LIBS{build_type} {deps.system_libs} ${{CONAN_SYSTEM_LIBS{build_type}}})
 set(CONAN_FRAMEWORKS{build_type} {deps.frameworks} ${{CONAN_FRAMEWORKS{build_type}}})
 set(CONAN_FRAMEWORKS_FOUND{build_type} "")  # Will be filled later
 set(CONAN_DEFINES{build_type} {deps.defines} ${{CONAN_DEFINES{build_type}}})
@@ -116,8 +116,8 @@ set(CONAN_C_FLAGS{build_type} "{deps.cflags} ${{CONAN_C_FLAGS{build_type}}}")
 
 # Apple Frameworks
 conan_find_apple_frameworks(CONAN_FRAMEWORKS_FOUND{build_type} "${{CONAN_FRAMEWORKS{build_type}}}")
-# Append to aggregated values variable
-set(CONAN_LIBS{build_type} ${{CONAN_PKG_LIBS{build_type}}} ${{CONAN_SYSTEM_LIBS{build_type}}} ${{CONAN_FRAMEWORKS_FOUND{build_type}}})
+# Append to aggregated values variable: Use CONAN_LIBS instead of CONAN_PKG_LIBS to include user appended vars
+set(CONAN_LIBS{build_type} ${{CONAN_LIBS{build_type}}} ${{CONAN_SYSTEM_LIBS{build_type}}} ${{CONAN_FRAMEWORKS_FOUND{build_type}}})
 """
 
 
@@ -163,7 +163,7 @@ _target_template = """
                                   CONAN_PACKAGE_TARGETS_{uname}_MINSIZEREL "${{_CONAN_PKG_LIBS_{uname}_DEPENDENCIES_MINSIZEREL}}"
                                   "minsizerel" {pkg_name})
 
-    add_library({name} INTERFACE IMPORTED)
+    add_library({name} INTERFACE IMPORTED GLOBAL)
 
     # Property INTERFACE_LINK_FLAGS do not work, necessary to add to INTERFACE_LINK_LIBRARIES
     set_property(TARGET {name} PROPERTY INTERFACE_LINK_LIBRARIES ${{CONAN_PACKAGE_TARGETS_{uname}}} ${{_CONAN_PKG_LIBS_{uname}_DEPENDENCIES}} ${{CONAN_SHARED_LINKER_FLAGS_{uname}_LIST}} ${{CONAN_EXE_LINKER_FLAGS_{uname}_LIST}}
@@ -200,14 +200,14 @@ def generate_targets_section(dependencies, generator_name):
                    '    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${CONAN_CMD_C_FLAGS}")\n'
                    '    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${CONAN_CMD_SHARED_LINKER_FLAGS}")\n')
     dependencies_dict = {name: dep_info for name, dep_info in dependencies}
-    for name, dep_info in dependencies:
-        dep_name = dep_info.get_name(generator_name, name)
-        use_deps = ["CONAN_PKG::%s" % dependencies_dict[d].get_name(generator_name, d) for d in dep_info.public_deps]
+    for _, dep_info in dependencies:
+        dep_name = dep_info.get_name(generator_name)
+        use_deps = ["CONAN_PKG::%s" % dependencies_dict[d].get_name(generator_name) for d in dep_info.public_deps]
         deps = "" if not use_deps else " ".join(use_deps)
         section.append(_target_template.format(name="CONAN_PKG::%s" % dep_name, deps=deps,
                                                uname=dep_name.upper(), pkg_name=dep_name))
 
-    all_targets = " ".join(["CONAN_PKG::%s" % dep_info.get_name(generator_name, name) for name, dep_info in dependencies])
+    all_targets = " ".join(["CONAN_PKG::%s" % dep_info.get_name(generator_name) for _, dep_info in dependencies])
     section.append('    set(CONAN_TARGETS %s)\n' % all_targets)
     section.append('endmacro()\n')
     return section
@@ -252,7 +252,7 @@ class CMakeCommonMacros:
                 if(CONAN_FOUND_LIBRARY)
                     conan_message(STATUS "Library ${_LIBRARY_NAME} found ${CONAN_FOUND_LIBRARY}")
                     set(_LIB_NAME CONAN_LIB::${package_name}_${_LIBRARY_NAME}${build_type})
-                    add_library(${_LIB_NAME} UNKNOWN IMPORTED)
+                    add_library(${_LIB_NAME} UNKNOWN IMPORTED GLOBAL)
                     set_target_properties(${_LIB_NAME} PROPERTIES IMPORTED_LOCATION ${CONAN_FOUND_LIBRARY})
                     set(CONAN_FULLPATH_LIBS ${CONAN_FULLPATH_LIBS} ${_LIB_NAME})
                     set(_CONAN_ACTUAL_TARGETS ${_CONAN_ACTUAL_TARGETS} ${_LIB_NAME})

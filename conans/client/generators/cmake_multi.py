@@ -50,8 +50,8 @@ class CMakeMultiGenerator(Generator):
         sections = []
 
         # Per requirement variables
-        for name, dep_cpp_info in self.deps_build_info.dependencies:
-            dep_name = dep_cpp_info.get_name("cmake_multi", name)
+        for _, dep_cpp_info in self.deps_build_info.dependencies:
+            dep_name = dep_cpp_info.get_name("cmake_multi")
             # Only the specific of the build_type
             dep_cpp_info = extend(dep_cpp_info, build_type)
             deps = DepsCppCmake(dep_cpp_info)

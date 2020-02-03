@@ -109,9 +109,8 @@ class _CppInfo(object):
             self._framework_paths = self._filter_paths(self.frameworkdirs)
         return self._framework_paths
 
-    def get_name(self, generator, pkg_name=None):
-        fallback_name = self.name if generator not in ["cmake", "cmake_multi", "cmake_paths"] else pkg_name  # FIXME: Remove in v1.22 (https://github.com/conan-io/conan/issues/6269#issuecomment-570182130)
-        return self.names.get(generator, fallback_name)
+    def get_name(self, generator):
+        return self.names.get(generator, self.name)
 
     # Compatibility for 'cppflags' (old style property to allow decoration)
     @deprecation.deprecated(deprecated_in="1.13", removed_in="2.0", details="Use 'cxxflags' instead")

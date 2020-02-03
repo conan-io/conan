@@ -739,3 +739,38 @@ class GraphLockModifyConanfileTestCase(unittest.TestCase):
         client2.run("install . --lockfile", assert_error=True)
         self.assertIn("ERROR: 'zlib' cannot be found in lockfile for this package", client2.out)
         self.assertIn("If it is a new requirement, you need to create a new lockile", client2.out)
+
+
+class LockFileOptionsTest(unittest.TestCase):
+    def test_options(self):
+        client = TestClient()
+        ffmpeg = textwrap.dedent("""
+            from conans import ConanFile
+            class FfmpegConan(ConanFile):
+                options = {"variation": ["standard", "nano"]}
+                default_options = {"variation": "standard"}
+
+                def requirements(self):
+                    variation = str(self.options.variation)
+                    self.output.info("Requirements: Variation %s!!" % variation)
+                    if self.options.variation == "standard":
+                        self.requires("missingdep/1.0")
+            """)
+
+        variant = textwrap.dedent("""
+            from conans import ConanFile
+            class Meta(ConanFile):
+                requires = "ffmpeg/1.0"
+                default_options = {"ffmpeg:variation": "nano"}
+            """)
+
+        client.save({"ffmepg/conanfile.py": ffmpeg,
+                     "variant/conanfile.py": variant})
+        client.run("export ffmepg ffmpeg/1.0@")
+        client.run("export variant nano/1.0@")
+
+        client.run("graph lock nano/1.0@ --build")
+        lockfile = client.load("conan.lock")
+        self.assertIn('"options": "variation=nano"', lockfile)
+        client.run("create ffmepg ffmpeg/1.0@ --build --lockfile")
+        self.assertIn("ffmpeg/1.0: Requirements: Variation nano!!", client.out)
