@@ -284,12 +284,20 @@ class GraphLock(object):
                     raise ConanException("Mismatch between lock and graph:\nLock:  %s\nGraph: %s"
                                          % (repr(pref), repr(node.pref)))
 
-        #self._remove_orphans(root_node.id)
+        self._remove_orphans(root_node)
 
-    def _remove_orphans(self, root_node_id):
-        # Remove nodes that no longer connected to the root_node_id, downstream or upstream
-        graph_ids = {root_node_id}
-        open_ids = [root_node_id]
+    def _remove_orphans(self, root_node):
+        if root_node.recipe in (RECIPE_VIRTUAL, RECIPE_CONSUMER):
+            root_nodes = root_node.neighbors()
+            if root_node.id in self._nodes:
+                root_nodes.append(root_node)
+            graph_ids = {n.id for n in root_nodes}
+            open_ids = list(graph_ids)
+        else:
+            root_node_id = root_node.id
+            # Remove nodes that no longer connected to the root_node_id, downstream or upstream
+            graph_ids = {root_node_id}
+            open_ids = [root_node_id]
         while open_ids:
             new_open_ids = set()
             for open_id in open_ids:

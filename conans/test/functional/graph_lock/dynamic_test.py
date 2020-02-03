@@ -22,7 +22,7 @@ class GraphLockDynamicTest(unittest.TestCase):
         client.save({"conanfile.py": GenConanfile().with_require_plain("LibA/0.1")})
         client.run("create . LibC/0.1@ --lockfile")
         lock = GraphLockFile.load(client.current_folder, False)
-        print lock.graph_lock._nodes
+        print (lock.graph_lock._nodes)
         self.assertEqual(3, len(lock.graph_lock._nodes))
 
 
