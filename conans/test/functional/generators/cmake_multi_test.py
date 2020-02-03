@@ -302,7 +302,7 @@ class CMakeMultiSystemLibsTest(unittest.TestCase):
         client.run("create conanfile_mylib.py mylib/1.0@us/ch")
         client.run("install conanfile_consumer.py -s build_type=Release")
         content = client.load("conanbuildinfo_release.cmake")
-        self.assertIn("set(CONAN_LIBS_RELEASE ${CONAN_PKG_LIBS_RELEASE} ${CONAN_SYSTEM_LIBS_RELEASE}"
+        self.assertIn("set(CONAN_LIBS_RELEASE ${CONAN_LIBS_RELEASE} ${CONAN_SYSTEM_LIBS_RELEASE}"
                       " ${CONAN_FRAMEWORKS_FOUND_RELEASE})", content)
         self.assertIn("set(CONAN_PKG_LIBS_RELEASE lib1 lib1release ${CONAN_PKG_LIBS_RELEASE})",
                       content)
@@ -310,19 +310,19 @@ class CMakeMultiSystemLibsTest(unittest.TestCase):
                       "${CONAN_SYSTEM_LIBS_MYLIB_RELEASE} ${CONAN_FRAMEWORKS_FOUND_MYLIB_RELEASE})",
                       content)
         self.assertIn("set(CONAN_PKG_LIBS_MYLIB_RELEASE lib1 lib1release)", content)
-        self.assertIn("set(CONAN_SYSTEM_LIBS_RELEASE sys1)", content)
+        self.assertIn("set(CONAN_SYSTEM_LIBS_RELEASE sys1 ${CONAN_SYSTEM_LIBS_RELEASE})", content)
         self.assertIn("set(CONAN_SYSTEM_LIBS_MYLIB_RELEASE sys1)", content)
 
         client.run("install conanfile_consumer.py -s build_type=Debug")
         content = client.load("conanbuildinfo_debug.cmake")
-        self.assertIn("set(CONAN_LIBS_DEBUG ${CONAN_PKG_LIBS_DEBUG} ${CONAN_SYSTEM_LIBS_DEBUG} "
+        self.assertIn("set(CONAN_LIBS_DEBUG ${CONAN_LIBS_DEBUG} ${CONAN_SYSTEM_LIBS_DEBUG} "
                       "${CONAN_FRAMEWORKS_FOUND_DEBUG})", content)
         self.assertIn("set(CONAN_LIBS_MYLIB_DEBUG ${CONAN_PKG_LIBS_MYLIB_DEBUG} "
                       "${CONAN_SYSTEM_LIBS_MYLIB_DEBUG} ${CONAN_FRAMEWORKS_FOUND_MYLIB_DEBUG})",
                       content)
         self.assertIn("set(CONAN_PKG_LIBS_DEBUG lib1 lib1debug ${CONAN_PKG_LIBS_DEBUG})", content)
         self.assertIn("set(CONAN_PKG_LIBS_MYLIB_DEBUG lib1 lib1debug)", content)
-        self.assertIn("set(CONAN_SYSTEM_LIBS_DEBUG sys1d)", content)
+        self.assertIn("set(CONAN_SYSTEM_LIBS_DEBUG sys1d ${CONAN_SYSTEM_LIBS_DEBUG})", content)
         self.assertIn("set(CONAN_SYSTEM_LIBS_MYLIB_DEBUG sys1d)", content)
 
 
