@@ -235,9 +235,7 @@ class GraphLockVersionRangeTest(unittest.TestCase):
 
     def export_pkg_test(self):
         client = self.client
-        print(client.load("conan.lock"))
         client.run("export-pkg . PkgB/0.1@user/channel --lockfile")
-        print(client.load("conan.lock"))
         self._check_lock("PkgB/0.1@user/channel#%s" % self.pkg_b_revision,
                          self.pkg_b_package_revision)
 

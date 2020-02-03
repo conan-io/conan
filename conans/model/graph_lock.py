@@ -254,7 +254,7 @@ class GraphLock(object):
                 result.append(id_)
         return result
 
-    def update_check_graph(self, deps_graph, output, root_node):
+    def update_check_graph(self, deps_graph, output):
         """ update the lockfile, checking for security that only nodes that are being built
         from sources can change their PREF, or nodes that depend on some other "modified"
         package, because their binary-id can change too
@@ -283,36 +283,6 @@ class GraphLock(object):
                 else:
                     raise ConanException("Mismatch between lock and graph:\nLock:  %s\nGraph: %s"
                                          % (repr(pref), repr(node.pref)))
-
-        self._remove_orphans(root_node)
-
-    def _remove_orphans(self, root_node):
-        if root_node.recipe in (RECIPE_VIRTUAL, RECIPE_CONSUMER):
-            root_nodes = root_node.neighbors()
-            if root_node.id in self._nodes:
-                root_nodes.append(root_node)
-            graph_ids = {n.id for n in root_nodes}
-            open_ids = list(graph_ids)
-        else:
-            root_node_id = root_node.id
-            # Remove nodes that no longer connected to the root_node_id, downstream or upstream
-            graph_ids = {root_node_id}
-            open_ids = [root_node_id]
-        while open_ids:
-            new_open_ids = set()
-            for open_id in open_ids:
-                node = self._nodes[open_id]
-                new_open_ids.update(node.requires)
-                new_open_ids.update(node.build_requires)
-                # all dependants of open_id too
-                new_open_ids.update([i for i, n in self._nodes.items()
-                                     if open_id in n.requires or open_id in n.build_requires])
-
-            new_open_ids.difference_update(graph_ids)
-            graph_ids.update(new_open_ids)
-            open_ids = new_open_ids
-
-        self._nodes = {id_: n for id_, n in self._nodes.items() if id_ in graph_ids}
 
     def pre_lock_node(self, node):
         if node.recipe == RECIPE_VIRTUAL:
