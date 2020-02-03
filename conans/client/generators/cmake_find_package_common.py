@@ -37,8 +37,12 @@ mark_as_advanced({name}_INCLUDE_DIRS{build_type_suffix}
 set({name}_LIBRARY_LIST{build_type_suffix} {deps.libs})
 set({name}_LIB_DIRS{build_type_suffix} {deps.lib_paths})
 
+# Gather all the libraries that should be linked to the targets (do not touch existing variables):
+set(_{name}_DEPENDENCIES{build_type_suffix} "${{{name}_FRAMEWORKS_FOUND{build_type_suffix}}} ${{{name}_SYSTEM_LIBS{build_type_suffix}}} {deps_names}")
+
 conan_package_library_targets("${{{name}_LIBRARY_LIST{build_type_suffix}}}"  # libraries
                               "${{{name}_LIB_DIRS{build_type_suffix}}}"      # package_libdir
+                              "${{_{name}_DEPENDENCIES{build_type_suffix}}}"  # deps
                               {name}_LIBRARIES{build_type_suffix}            # out_libraries
                               {name}_LIBRARIES_TARGETS{build_type_suffix}    # out_libraries_targets
                               "{build_type_suffix}"                          # build_type
@@ -51,10 +55,14 @@ foreach(_FRAMEWORK ${{{name}_FRAMEWORKS_FOUND{build_type_suffix}}})
     list(APPEND {name}_LIBRARIES{build_type_suffix} ${{_FRAMEWORK}})
 endforeach()
 
-foreach(_SYSTEM_LIB ${{{name}_SYSTEM_LIB{build_type_suffix}}})
+foreach(_SYSTEM_LIB ${{{name}_SYSTEM_LIBS{build_type_suffix}}})
     list(APPEND {name}_LIBRARIES_TARGETS{build_type_suffix} ${{_SYSTEM_LIB}})
     list(APPEND {name}_LIBRARIES{build_type_suffix} ${{_SYSTEM_LIB}})
 endforeach()
+
+# We need to add our requirements too
+set({name}_LIBRARIES_TARGETS{build_type_suffix} "${{{name}_LIBRARIES_TARGETS{build_type_suffix}}};{deps_names}")
+set({name}_LIBRARIES{build_type_suffix} "${{{name}_LIBRARIES{build_type_suffix}}};{deps_names}")
 
 set(CMAKE_MODULE_PATH {deps.build_paths} ${{CMAKE_MODULE_PATH}})
 set(CMAKE_PREFIX_PATH {deps.build_paths} ${{CMAKE_PREFIX_PATH}})
@@ -85,7 +93,9 @@ class CMakeFindPackageCommonMacros:
     """)
 
     conan_package_library_targets = textwrap.dedent("""
-        function(conan_package_library_targets libraries package_libdir out_libraries out_libraries_target build_type package_name)
+        function(conan_package_library_targets libraries package_libdir deps out_libraries out_libraries_target build_type package_name)
+            unset(_CONAN_ACTUAL_TARGETS CACHE)
+            unset(_CONAN_FOUND_SYSTEM_LIBS CACHE)
             foreach(_LIBRARY_NAME ${libraries})
                 unset(CONAN_FOUND_LIBRARY CACHE)
                 find_library(CONAN_FOUND_LIBRARY NAME ${_LIBRARY_NAME} PATHS ${package_libdir}
@@ -100,6 +110,7 @@ class CMakeFindPackageCommonMacros:
                             # Create a micro-target for each lib/a found
                             add_library(${_LIB_NAME} UNKNOWN IMPORTED GLOBAL)
                             set_target_properties(${_LIB_NAME} PROPERTIES IMPORTED_LOCATION ${CONAN_FOUND_LIBRARY})
+                            set(_CONAN_ACTUAL_TARGETS ${_CONAN_ACTUAL_TARGETS} ${_LIB_NAME})
                         else()
                             conan_message(STATUS "Skipping already existing target: ${_LIB_NAME}")
                         endif()
@@ -110,9 +121,18 @@ class CMakeFindPackageCommonMacros:
                     conan_message(STATUS "Library ${_LIBRARY_NAME} not found in package, might be system one")
                     list(APPEND _out_libraries_target ${_LIBRARY_NAME})
                     list(APPEND _out_libraries ${_LIBRARY_NAME})
+                    set(_CONAN_FOUND_SYSTEM_LIBS "${_CONAN_FOUND_SYSTEM_LIBS};${_LIBRARY_NAME}")
                 endif()
             endforeach()
-            unset(CONAN_FOUND_LIBRARY CACHE)
+            
+            if(NOT ${CMAKE_VERSION} VERSION_LESS "3.0")
+                # Add all dependencies to all targets
+                string(REPLACE " " ";" deps_list "${deps}")
+                foreach(_CONAN_ACTUAL_TARGET ${_CONAN_ACTUAL_TARGETS})
+                    set_property(TARGET ${_CONAN_ACTUAL_TARGET} PROPERTY INTERFACE_LINK_LIBRARIES "${_CONAN_FOUND_SYSTEM_LIBS};${deps_list}")
+                endforeach()
+            endif()
+                
             set(${out_libraries} ${_out_libraries} PARENT_SCOPE)
             set(${out_libraries_target} ${_out_libraries_target} PARENT_SCOPE)
         endfunction()
