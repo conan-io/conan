@@ -27,7 +27,7 @@ class CMake(object):
     def __init__(self, conanfile, generator=None, cmake_system_name=True,
                  parallel=True, build_type=None, toolset=None, make_program=None,
                  set_cmake_flags=False, msbuild_verbosity="minimal", cmake_program=None,
-                 generator_platform=None):
+                 generator_platform=None, append_vcvars=False):
         """
         :param conanfile: Conanfile instance
         :param generator: Generator name to use or none to autodetect
@@ -47,6 +47,7 @@ class CMake(object):
         if not isinstance(conanfile, ConanFile):
             raise ConanException("First argument of CMake() has to be ConanFile. Use CMake(self)")
 
+        self._append_vcvars = append_vcvars
         self._conanfile = conanfile
         self._settings = conanfile.settings
         self._build_type = build_type or conanfile.settings.get_safe("build_type")
@@ -218,7 +219,7 @@ class CMake(object):
                 self.generator in ["Ninja", "NMake Makefiles", "NMake Makefiles JOM"]):
             vcvars_dict = tools.vcvars_dict(self._settings, force=True, filter_known_paths=False,
                                             output=self._conanfile.output)
-            with environment_append(vcvars_dict, post=True):
+            with environment_append(vcvars_dict, post=self._append_vcvars):
                 self._conanfile.run(command)
         else:
             self._conanfile.run(command)

@@ -17,7 +17,7 @@ from conans.util.runners import version_runner
 
 class Meson(object):
 
-    def __init__(self, conanfile, backend=None, build_type=None):
+    def __init__(self, conanfile, backend=None, build_type=None, append_vcvars=False):
         """
         :param conanfile: Conanfile instance (or settings for retro compatibility)
         :param backend: Generator name to use or none to autodetect.
@@ -26,6 +26,7 @@ class Meson(object):
         """
         self._conanfile = conanfile
         self._settings = conanfile.settings
+        self._append_vcvars = append_vcvars
 
         self._os = self._ss("os")
         self._compiler = self._ss("compiler")
@@ -172,7 +173,7 @@ class Meson(object):
 
         if self._vcvars_needed:
             vcvars_dict = tools.vcvars_dict(self._settings, output=self._conanfile.output)
-            with environment_append(vcvars_dict, post=True):
+            with environment_append(vcvars_dict, post=self._append_vcvars):
                 _build()
         else:
             _build()

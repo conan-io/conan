@@ -83,7 +83,7 @@ class CMakeFlagsTest(unittest.TestCase):
             class HelloConan(ConanFile):
                 settings = "os", "compiler", "arch", "build_type"
                 def build(self):
-                    cmake = CMake(self, generator="Ninja")
+                    cmake = CMake(self, generator="Ninja", append_vcvars=True)
                     cmake.configure()
 
                 # CAPTURING THE RUN METHOD

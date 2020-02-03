@@ -18,7 +18,7 @@ class MesonTest(unittest.TestCase):
             class HelloConan(ConanFile):
                 settings = "os", "compiler", "arch", "build_type"
                 def build(self):
-                    cmake = Meson(self)
+                    cmake = Meson(self, append_vcvars=True)
                     cmake.configure()
 
                 # CAPTURING THE RUN METHOD
