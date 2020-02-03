@@ -1,10 +1,12 @@
 import os
+import platform
+
 
 from conans.client import tools
 from conans.client.build import defs_to_string, join_arguments
 from conans.client.build.autotools_environment import AutoToolsBuildEnvironment
 from conans.client.build.cppstd_flags import cppstd_from_settings
-from conans.client.tools.env import environment_append
+from conans.client.tools.env import environment_append, _environment_add
 from conans.client.tools.oss import args_to_string
 from conans.errors import ConanException
 from conans.model.build_info import DEFAULT_BIN, DEFAULT_INCLUDE, DEFAULT_LIB
@@ -15,7 +17,7 @@ from conans.util.runners import version_runner
 
 class Meson(object):
 
-    def __init__(self, conanfile, backend=None, build_type=None):
+    def __init__(self, conanfile, backend=None, build_type=None, append_vcvars=False):
         """
         :param conanfile: Conanfile instance (or settings for retro compatibility)
         :param backend: Generator name to use or none to autodetect.
@@ -24,6 +26,7 @@ class Meson(object):
         """
         self._conanfile = conanfile
         self._settings = conanfile.settings
+        self._append_vcvars = append_vcvars
 
         self._os = self._ss("os")
         self._compiler = self._ss("compiler")
@@ -159,14 +162,21 @@ class Meson(object):
 
     @property
     def _vcvars_needed(self):
-        return self._compiler == "Visual Studio" and self.backend == "ninja"
+        return (self._compiler == "Visual Studio" and self.backend == "ninja" and
+                platform.system() == "Windows")
 
     def _run(self, command):
-        with tools.vcvars(self._settings,
-                          output=self._conanfile.output) if self._vcvars_needed else tools.no_op():
+        def _build():
             env_build = AutoToolsBuildEnvironment(self._conanfile)
             with environment_append(env_build.vars):
                 self._conanfile.run(command)
+
+        if self._vcvars_needed:
+            vcvars_dict = tools.vcvars_dict(self._settings, output=self._conanfile.output)
+            with _environment_add(vcvars_dict, post=self._append_vcvars):
+                _build()
+        else:
+            _build()
 
     def build(self, args=None, build_dir=None, targets=None):
         if not self._conanfile.should_build:
