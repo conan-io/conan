@@ -100,9 +100,11 @@ class HookManager(object):
             old_modules = list(sys.modules.keys())
             with chdir(current_dir):
                 sys.dont_write_bytecode = True
-                import importlib
-                importlib.invalidate_caches()
-                loaded = importlib.import_module(filename)
+                # FIXME: When we drop the <3.3.0 Python support
+                if sys.version_info >= (3, 3, 0):
+                    import importlib
+                    importlib.invalidate_caches()
+                loaded = __import__(filename)
             # Put all imported files under a new package name
             module_id = uuid.uuid1()
             added_modules = set(sys.modules).difference(old_modules)
