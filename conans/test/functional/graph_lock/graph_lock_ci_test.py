@@ -8,6 +8,7 @@ from conans.model.ref import PackageReference
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.env_reader import get_env
 from conans.util.files import load
+from conans.model.ref import PackageReference
 
 
 class GraphLockCITest(unittest.TestCase):
@@ -108,6 +109,7 @@ class GraphLockCITest(unittest.TestCase):
                 client_aux = TestClient(cache_folder=client.cache_folder,
                                         servers={"default": test_server})
                 client_aux.save({LOCKFILE: lock_fileaux})
+                client_aux.run("graph clean-modified .")
                 client_aux.run("install %s --build=%s --lockfile"
                                % (pkg_ref.ref, pkg_ref.ref.name))
                 lock_fileaux = load(os.path.join(client_aux.current_folder, LOCKFILE))
@@ -235,6 +237,7 @@ class GraphLockCITest(unittest.TestCase):
                 client_aux = TestClient(cache_folder=client.cache_folder,
                                         servers={"default": test_server})
                 client_aux.save({LOCKFILE: lock_fileaux})
+                client_aux.run("graph clean-modified .")
                 client_aux.run("install %s --build=%s --lockfile"
                                % (pkg_ref.ref, pkg_ref.ref.name))
                 lock_fileaux = client_aux.load(LOCKFILE)
@@ -370,6 +373,7 @@ class GraphLockCITest(unittest.TestCase):
                 client_aux = TestClient(cache_folder=client.cache_folder)
                 client_aux.run("config set general.default_package_id_mode=full_package_mode")
                 client_aux.save({LOCKFILE: lock_fileaux})
+                client_aux.run("graph clean-modified .")
                 client_aux.run("install %s --build=%s --lockfile"
                                % (pkg_ref.ref, pkg_ref.ref.name))
                 lock_fileaux = client_aux.load(LOCKFILE)
@@ -473,6 +477,7 @@ class GraphLockCITest(unittest.TestCase):
             client_aux = TestClient(cache_folder=client.cache_folder)
             client_aux.run("config set general.default_package_id_mode=full_package_mode")
             client_aux.save({LOCKFILE: lock_fileaux})
+            client_aux.run("graph clean-modified .")
             client_aux.run("install %s --build=%s --lockfile"
                            % (pkg_ref.ref, pkg_ref.ref.name))
             lock_fileaux = load(os.path.join(client_aux.current_folder, LOCKFILE))
