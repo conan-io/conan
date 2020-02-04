@@ -1229,7 +1229,7 @@ class ConanAPIV1(object):
     def lock_clean_modified(self, lockfile, cwd=None):
         cwd = cwd or os.getcwd()
         lockfile = _make_abs_path(lockfile, cwd)
-        lock = GraphLockFile.load(lockfile)
+        lock = GraphLockFile.load(lockfile, self.app.config.revisions_enabled)
         lock.graph_lock.clean_modified()
         lock.save(lockfile)
 
