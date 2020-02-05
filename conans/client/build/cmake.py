@@ -1,6 +1,5 @@
 import os
 import platform
-import subprocess
 from itertools import chain
 
 from six import StringIO  # Python 2 and 3 compatible
@@ -13,12 +12,14 @@ from conans.client.build.cmake_flags import CMakeDefinitionsBuilder, \
     cmake_in_local_cache_var_name, runtime_definition_var_name, get_generator_platform, \
     is_generator_platform_supported, is_toolset_supported
 from conans.client.output import ConanOutput
+from conans.client.tools.env import environment_append, _environment_add
 from conans.client.tools.oss import cpu_count, args_to_string
 from conans.errors import ConanException
 from conans.model.conan_file import ConanFile
 from conans.model.version import Version
 from conans.util.config_parser import get_bool_from_text
 from conans.util.files import mkdir, get_abs_path, walk, decode_text
+from conans.util.runners import version_runner
 
 
 class CMake(object):
@@ -26,7 +27,7 @@ class CMake(object):
     def __init__(self, conanfile, generator=None, cmake_system_name=True,
                  parallel=True, build_type=None, toolset=None, make_program=None,
                  set_cmake_flags=False, msbuild_verbosity="minimal", cmake_program=None,
-                 generator_platform=None):
+                 generator_platform=None, append_vcvars=False):
         """
         :param conanfile: Conanfile instance
         :param generator: Generator name to use or none to autodetect
@@ -46,14 +47,15 @@ class CMake(object):
         if not isinstance(conanfile, ConanFile):
             raise ConanException("First argument of CMake() has to be ConanFile. Use CMake(self)")
 
+        self._append_vcvars = append_vcvars
         self._conanfile = conanfile
         self._settings = conanfile.settings
         self._build_type = build_type or conanfile.settings.get_safe("build_type")
         self._cmake_program = os.getenv("CONAN_CMAKE_PROGRAM") or cmake_program or "cmake"
 
+        self.generator_platform = generator_platform
         self.generator = generator or get_generator(conanfile.settings)
-        self.generator_platform = generator_platform or get_generator_platform(conanfile.settings,
-                                                                               self.generator)
+
         if not self.generator:
             self._conanfile.output.warn("CMake generator could not be deduced from settings")
         self.parallel = parallel
@@ -74,6 +76,25 @@ class CMake(object):
         self.toolset = toolset or get_toolset(self._settings)
         self.build_dir = None
         self.msbuild_verbosity = os.getenv("CONAN_MSBUILD_VERBOSITY") or msbuild_verbosity
+
+    @property
+    def generator(self):
+        return self._generator
+
+    @generator.setter
+    def generator(self, value):
+        self._generator = value
+        if not self._generator_platform_is_assigned:
+            self._generator_platform = get_generator_platform(self._settings, self._generator)
+
+    @property
+    def generator_platform(self):
+        return self._generator_platform
+
+    @generator_platform.setter
+    def generator_platform(self, value):
+        self._generator_platform = value
+        self._generator_platform_is_assigned = bool(value is not None)
 
     @property
     def build_folder(self):
@@ -117,25 +138,45 @@ class CMake(object):
 
     @property
     def command_line(self):
-        args = ['-G "%s"' % self.generator] if self.generator else []
-        if self.generator_platform:
-            if is_generator_platform_supported(self.generator):
-                args.append('-A "%s"' % self.generator_platform)
-            else:
-                raise ConanException('CMake does not support generator platform with generator '
-                                     '"%s:. Please check your conan profile to either remove the '
-                                     'generator platform, or change the CMake generator.'
-                                     % self.generator)
+        if self.generator_platform and not is_generator_platform_supported(self.generator):
+            raise ConanException('CMake does not support generator platform with generator '
+                                 '"%s:. Please check your conan profile to either remove the '
+                                 'generator platform, or change the CMake generator.'
+                                 % self.generator)
+
+        if self.toolset and not is_toolset_supported(self.generator):
+            raise ConanException('CMake does not support toolsets with generator "%s:.'
+                                 'Please check your conan profile to either remove the toolset,'
+                                 ' or change the CMake generator.' % self.generator)
+
+        generator = self.generator
+        generator_platform = self.generator_platform
+
+        if self.generator_platform and 'Visual Studio' in generator:
+            # FIXME: Conan 2.0 We are adding the platform to the generator instead of using the -A argument
+            #   to keep previous implementation, but any modern CMake will support (and recommend) passing the
+            #   platform in its own argument.
+            compiler_version = self._settings.get_safe("compiler.version")
+            if Version(compiler_version) < "16" and self._settings.get_safe("os") != "WindowsCE":
+                if self.generator_platform == "x64":
+                    generator += " Win64"
+                    generator_platform = None
+                elif self.generator_platform == "ARM":
+                    generator += " ARM"
+                    generator_platform = None
+                elif self.generator_platform == "Win32":
+                    generator_platform = None
+
+        args = ['-G "{}"'.format(generator)] if generator else []
+        if generator_platform:
+            args.append('-A "{}"'.format(generator_platform))
+
         args.append(self.flags)
         args.append('-Wno-dev')
 
         if self.toolset:
-            if is_toolset_supported(self.generator):
-                args.append('-T "%s"' % self.toolset)
-            else:
-                raise ConanException('CMake does not support toolsets with generator "%s:.'
-                                     'Please check your conan profile to either remove the toolset,'
-                                     ' or change the CMake generator.' % self.generator)
+            args.append('-T "%s"' % self.toolset)
+
         return join_arguments(args)
 
     @property
@@ -174,10 +215,11 @@ class CMake(object):
         the_os = self._settings.get_safe("os")
         is_clangcl = the_os == "Windows" and compiler == "clang"
         is_msvc = compiler == "Visual Studio"
-        if (is_msvc or is_clangcl) and self.generator in ["Ninja", "NMake Makefiles",
-                                                          "NMake Makefiles JOM"]:
-            with tools.vcvars(self._settings, force=True, filter_known_paths=False,
-                              output=self._conanfile.output):
+        if ((is_msvc or is_clangcl) and platform.system() == "Windows" and
+                self.generator in ["Ninja", "NMake Makefiles", "NMake Makefiles JOM"]):
+            vcvars_dict = tools.vcvars_dict(self._settings, force=True, filter_known_paths=False,
+                                            output=self._conanfile.output)
+            with _environment_add(vcvars_dict, post=self._append_vcvars):
                 self._conanfile.run(command)
         else:
             self._conanfile.run(command)
@@ -211,9 +253,9 @@ class CMake(object):
             # read wrong files
             set_env = "pkg_config" in self._conanfile.generators \
                       and "PKG_CONFIG_PATH" not in os.environ
-            pkg_env = {"PKG_CONFIG_PATH": self._conanfile.install_folder} if set_env else {}
+            pkg_env = {"PKG_CONFIG_PATH": self._conanfile.install_folder} if set_env else None
 
-        with tools.environment_append(pkg_env):
+        with environment_append(pkg_env):
             command = "cd %s && %s %s" % (args_to_string([self.build_dir]), self._cmake_program,
                                           arg_list)
             if platform.system() == "Windows" and self.generator == "MinGW Makefiles":
@@ -278,10 +320,10 @@ class CMake(object):
         if not target:
             target = "RUN_TESTS" if self.is_multi_configuration else "test"
 
-        env = {'CTEST_OUTPUT_ON_FAILURE': '1' if output_on_failure else '0'}
+        test_env = {'CTEST_OUTPUT_ON_FAILURE': '1' if output_on_failure else '0'}
         if self.parallel:
-            env['CTEST_PARALLEL_LEVEL'] = str(cpu_count(self._conanfile.output))
-        with tools.environment_append(env):
+            test_env['CTEST_PARALLEL_LEVEL'] = str(cpu_count(self._conanfile.output))
+        with environment_append(test_env):
             self._build(args=args, build_dir=build_dir, target=target)
 
     @property
@@ -380,7 +422,7 @@ class CMake(object):
     @staticmethod
     def get_version():
         try:
-            out, _ = subprocess.Popen(["cmake", "--version"], stdout=subprocess.PIPE).communicate()
+            out = version_runner(["cmake", "--version"])
             version_line = decode_text(out).split('\n', 1)[0]
             version_str = version_line.rsplit(' ', 1)[-1]
             return Version(version_str)

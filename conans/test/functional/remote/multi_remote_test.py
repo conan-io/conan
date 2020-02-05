@@ -70,7 +70,7 @@ class MultiRemotesTest(unittest.TestCase):
 
     def conan_install_build_flag_test(self):
         """
-        Checks conan install --update works with different remotes and changes the asociated ones
+        Checks conan install --update works with different remotes and changes the associated ones
         in registry accordingly
         """
         client_a = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")],
@@ -136,6 +136,41 @@ class MultiRemotesTest(unittest.TestCase):
         self.assertIn("Binary: Cache", client_b.out)
         client_b.run("remote list_ref")
         self.assertIn("Hello0/0.0@lasote/stable: default", client_b.out)
+
+    def conan_install_update_test(self):
+        """
+        Checks conan install --update works only with the remote associated
+        """
+        client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")],
+                                                         "local": [("lasote", "mypass")]})
+
+        self._create(client, "Hello0", "0.0")
+        client.run("install Hello0/0.0@lasote/stable --build missing")
+        client.run("upload Hello0/0.0@lasote/stable --all -r default")
+        sleep(1)  # For timestamp and updates checks
+        self._create(client, "Hello0", "0.0", modifier=" ")
+        client.run("install Hello0/0.0@lasote/stable --build missing")
+        client.run("upload Hello0/0.0@lasote/stable --all -r local")
+        client.run("remove '*' -f")
+
+        client.run("install Hello0/0.0@lasote/stable")
+        self.assertIn("Hello0/0.0@lasote/stable from 'default' - Downloaded", client.out)
+        client.run("install Hello0/0.0@lasote/stable --update")
+        self.assertIn("Hello0/0.0@lasote/stable from 'default' - Cache", client.out)
+
+        # Check that it really updates from the indicated remote
+        client.run("install Hello0/0.0@lasote/stable --update -r local")
+        self.assertIn("Hello0/0.0@lasote/stable from 'local' - Updated", client.out)
+
+        sleep(1)  # For timestamp and updates checks
+        # Check that it really updates in case of newer package uploaded to the associated remote
+        client_b = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")],
+                                                           "local": [("lasote", "mypass")]})
+        self._create(client_b, "Hello0", "0.0", modifier="  ")
+        client_b.run("install Hello0/0.0@lasote/stable --build missing")
+        client_b.run("upload Hello0/0.0@lasote/stable --all -r local")
+        client.run("install Hello0/0.0@lasote/stable --update")
+        self.assertIn("Hello0/0.0@lasote/stable from 'local' - Updated", client.out)
 
 
 class MultiRemoteTest(unittest.TestCase):

@@ -155,6 +155,7 @@ default_package_id_mode = semver_direct_mode # environment CONAN_DEFAULT_PACKAGE
 # temp_test_folder = True             # environment CONAN_TEMP_TEST_FOLDER
 
 # cacert_path                         # environment CONAN_CACERT_PATH
+# scm_to_conandata                    # environment CONAN_SCM_TO_CONANDATA
 
 [storage]
 # This is the default path, but you can write your own. It must be an absolute path or a
@@ -164,7 +165,7 @@ path = ./data
 
 [proxies]
 # Empty (or missing) section will try to use system proxies.
-# As documented in https://requests.kennethreitz.org/en/latest/user/advanced/#proxies - but see below
+# As documented in https://requests.readthedocs.io/en/master/user/advanced/#proxies - but see below
 # for proxies to specific hosts
 # http = http://user:pass@10.10.1.10:3128/
 # http = http://10.10.1.10:3128
@@ -389,6 +390,24 @@ class ConanClientConfigParser(ConfigParser, object):
                 except ConanException:
                     return False
             return revisions_enabled.lower() in ("1", "true")
+        except ConanException:
+            return False
+
+    @property
+    def download_cache(self):
+        try:
+            download_cache = self.get_item("storage.download_cache")
+            return download_cache
+        except ConanException:
+            return None
+
+    @property
+    def scm_to_conandata(self):
+        try:
+            scm_to_conandata = get_env("CONAN_SCM_TO_CONANDATA")
+            if scm_to_conandata is None:
+                scm_to_conandata = self.get_item("general.scm_to_conandata")
+            return scm_to_conandata.lower() in ("1", "true")
         except ConanException:
             return False
 

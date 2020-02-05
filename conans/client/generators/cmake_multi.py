@@ -2,7 +2,7 @@ from conans.client.generators.cmake import DepsCppCmake
 from conans.client.generators.cmake_common import (cmake_dependencies, cmake_dependency_vars,
                                                    cmake_global_vars, cmake_macros_multi,
                                                    cmake_package_info, cmake_user_info_vars,
-                                                   generate_targets_section, apple_frameworks_macro)
+                                                   generate_targets_section, CMakeCommonMacros)
 from conans.model import Generator
 from conans.model.build_info import CppInfo
 
@@ -15,6 +15,7 @@ def extend(cpp_info, config):
         def add_lists(seq1, seq2):
             return seq1 + [s for s in seq2 if s not in seq1]
         result = CppInfo(config_info.rootpath)
+        result.filter_empty = cpp_info.filter_empty
         result.includedirs = add_lists(cpp_info.includedirs, config_info.includedirs)
         result.libdirs = add_lists(cpp_info.libdirs, config_info.libdirs)
         result.bindirs = add_lists(cpp_info.bindirs, config_info.bindirs)
@@ -49,8 +50,8 @@ class CMakeMultiGenerator(Generator):
         sections = []
 
         # Per requirement variables
-        for name, dep_cpp_info in self.deps_build_info.dependencies:
-            dep_name = dep_cpp_info.get_name("cmake_multi", name)
+        for _, dep_cpp_info in self.deps_build_info.dependencies:
+            dep_name = dep_cpp_info.get_name("cmake_multi")
             # Only the specific of the build_type
             dep_cpp_info = extend(dep_cpp_info, build_type)
             deps = DepsCppCmake(dep_cpp_info)
@@ -73,7 +74,7 @@ class CMakeMultiGenerator(Generator):
     @property
     def _content_multi(self):
         sections = ["include(CMakeParseArguments)"]
-        sections.append(apple_frameworks_macro)
+        sections.append(CMakeCommonMacros.apple_frameworks_macro)
 
         # USER DECLARED VARS
         sections.append("\n### Definition of user declared vars (user_info) ###\n")

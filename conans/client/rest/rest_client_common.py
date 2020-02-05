@@ -22,24 +22,19 @@ class JWTAuth(AuthBase):
         return request
 
 
-def _base_error(error_code):
-    return int(str(error_code)[0] + "00")
-
-
 def get_exception_from_error(error_code):
-    try:
-        tmp = {}
-        for key, value in EXCEPTION_CODE_MAPPING.items():
-            if key not in (RecipeNotFoundException, PackageNotFoundException):
-                tmp[value] = key
-        if error_code in tmp:
-            logger.debug("REST ERROR: %s" % str(tmp[error_code]))
-            return tmp[error_code]
-        else:
-            logger.debug("REST ERROR: %s" % str(_base_error(error_code)))
-            return tmp[_base_error(error_code)]
-    except KeyError:
-        return None
+    tmp = {v: k for k, v in EXCEPTION_CODE_MAPPING.items()  # All except NotFound
+           if k not in (RecipeNotFoundException, PackageNotFoundException)}
+    if error_code in tmp:
+        logger.debug("REST ERROR: %s" % str(tmp[error_code]))
+        return tmp[error_code]
+    else:
+        base_error = int(str(error_code)[0] + "00")
+        logger.debug("REST ERROR: %s" % str(base_error))
+        try:
+            return tmp[base_error]
+        except KeyError:
+            return None
 
 
 def handle_return_deserializer(deserializer=None):
@@ -61,14 +56,14 @@ def handle_return_deserializer(deserializer=None):
 
 class RestCommonMethods(object):
 
-    def __init__(self, remote_url, token, custom_headers, output, requester, verify_ssl,
+    def __init__(self, remote_url, token, custom_headers, output, requester, config, verify_ssl,
                  artifacts_properties=None, matrix_params=False):
-
         self.token = token
         self.remote_url = remote_url
         self.custom_headers = custom_headers
         self._output = output
         self.requester = requester
+        self._config = config
         self.verify_ssl = verify_ssl
         self._artifacts_properties = artifacts_properties
         self._matrix_params = matrix_params
@@ -155,13 +150,16 @@ class RestCommonMethods(object):
                                  verify=self.verify_ssl)
         return ret
 
-    def server_capabilities(self):
+    def server_capabilities(self, user=None, password=None):
         """Get information about the server: status, version, type and capabilities"""
         url = self.router.ping()
         logger.debug("REST: ping: %s" % url)
-
-        ret = self.requester.get(url, auth=self.auth, headers=self.custom_headers,
-                                 verify=self.verify_ssl)
+        if user and password:
+            # This can happen in "conan user" cmd. Instead of empty token, use HttpBasic
+            auth = HTTPBasicAuth(user, password)
+        else:
+            auth = self.auth
+        ret = self.requester.get(url, auth=auth, headers=self.custom_headers, verify=self.verify_ssl)
 
         server_capabilities = ret.headers.get('X-Conan-Server-Capabilities', "")
         if not server_capabilities and not ret.ok:
@@ -175,7 +173,6 @@ class RestCommonMethods(object):
         headers = self.custom_headers
         if data:  # POST request
             headers.update({'Content-type': 'application/json',
-                            'Accept': 'text/plain',
                             'Accept': 'application/json'})
             logger.debug("REST: post: %s" % url)
             response = self.requester.post(url, auth=self.auth, headers=headers,
@@ -248,11 +245,3 @@ class RestCommonMethods(object):
         package_infos = self.get_json(url)
         return package_infos
 
-    def _post_json(self, url, payload):
-        logger.debug("REST: post: %s" % url)
-        response = self.requester.post(url,
-                                       auth=self.auth,
-                                       headers=self.custom_headers,
-                                       verify=self.verify_ssl,
-                                       json=payload)
-        return response

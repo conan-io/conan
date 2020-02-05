@@ -1,32 +1,12 @@
 import os
 import platform
 import re
-import sys
-from subprocess import PIPE, Popen, STDOUT
 
 from conans.client.output import Color
 from conans.client.tools import detected_os, OSInfo
 from conans.client.tools.win import latest_visual_studio_version_installed
 from conans.model.version import Version
-
-isPY38 = bool(sys.version_info.major == 3 and sys.version_info.minor == 8)
-
-
-def _execute(command):
-    # In Python 3.8, open() emits RuntimeWarning if buffering=1 for binary mode.
-    bufsize = -1 if isPY38 else 1
-    proc = Popen(command, shell=True, bufsize=bufsize, stdout=PIPE, stderr=STDOUT)
-
-    output_buffer = []
-    while True:
-        line = proc.stdout.readline()
-        if not line:
-            break
-        # output.write(line)
-        output_buffer.append(str(line))
-
-    proc.communicate()
-    return proc.returncode, "".join(output_buffer)
+from conans.util.runners import detect_runner
 
 
 def _gcc_compiler(output, compiler_exe="gcc"):
@@ -34,12 +14,12 @@ def _gcc_compiler(output, compiler_exe="gcc"):
     try:
         if platform.system() == "Darwin":
             # In Mac OS X check if gcc is a fronted using apple-clang
-            _, out = _execute("%s --version" % compiler_exe)
+            _, out = detect_runner("%s --version" % compiler_exe)
             out = out.lower()
             if "clang" in out:
                 return None
 
-        ret, out = _execute('%s -dumpversion' % compiler_exe)
+        ret, out = detect_runner('%s -dumpversion' % compiler_exe)
         if ret != 0:
             return None
         compiler = "gcc"
@@ -56,7 +36,7 @@ def _gcc_compiler(output, compiler_exe="gcc"):
 
 def _clang_compiler(output, compiler_exe="clang"):
     try:
-        ret, out = _execute('%s --version' % compiler_exe)
+        ret, out = detect_runner('%s --version' % compiler_exe)
         if ret != 0:
             return None
         if "Apple" in out:
@@ -73,7 +53,7 @@ def _clang_compiler(output, compiler_exe="clang"):
 
 def _sun_cc_compiler(output, compiler_exe="cc"):
     try:
-        _, out = _execute('%s -V' % compiler_exe)
+        _, out = detect_runner('%s -V' % compiler_exe)
         compiler = "sun-cc"
         installed_version = re.search("([0-9]+\.[0-9]+)", out).group()
         if installed_version:

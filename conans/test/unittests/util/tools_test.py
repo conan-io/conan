@@ -23,7 +23,7 @@ from conans.client.conf import default_client_conf, default_settings_yml
 from conans.client.output import ConanOutput
 from conans.client.runner import ConanRunner
 from conans.client.tools.files import replace_in_file, which
-from conans.client.tools.oss import check_output, OSInfo
+from conans.client.tools.oss import OSInfo
 from conans.client.tools.win import vcvars_dict, vswhere
 from conans.errors import ConanException, NotFoundException, AuthenticationException
 from conans.model.build_info import CppInfo
@@ -34,6 +34,13 @@ from conans.test.utils.tools import StoppableThreadBottle, TestBufferConanOutput
 from conans.tools import get_global_instances
 from conans.util.env_reader import get_env
 from conans.util.files import load, md5, mkdir, save
+from conans.util.runners import check_output_runner
+
+
+class ConfigMock:
+    def __init__(self):
+        self.retry = 0
+        self.retry_wait = 0
 
 
 class RunnerMock(object):
@@ -417,9 +424,8 @@ class HelloConan(ConanFile):
         with tools.environment_append(env):
             self.assertTrue(vswhere())
 
+    @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
     def vcvars_echo_test(self):
-        if platform.system() != "Windows":
-            return
         settings = Settings.loads(default_settings_yml)
         settings.os = "Windows"
         settings.compiler = "Visual Studio"
@@ -440,9 +446,22 @@ class HelloConan(ConanFile):
             self.assertIn("VS140COMNTOOLS=", str(output))
 
     @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
+    def vcvars_with_store_echo_test(self):
+        settings = Settings.loads(default_settings_yml)
+        settings.os = "WindowsStore"
+        settings.os.version = "8.1"
+        settings.compiler = "Visual Studio"
+        settings.compiler.version = "14"
+        cmd = tools.vcvars_command(settings, output=self.output)
+        self.assertIn("store 8.1", cmd)
+        with tools.environment_append({"VisualStudioVersion": "14"}):
+            cmd = tools.vcvars_command(settings, output=self.output)
+            self.assertEqual("echo Conan:vcvars already set", cmd)
+
+    @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
     def vcvars_env_not_duplicated_path_test(self):
-        """vcvars is not looking at the current values of the env vars, with PATH it is a problem because you
-        can already have set some of the vars and accumulate unnecessary entries."""
+        """vcvars is not looking at the current values of the env vars, with PATH it is a problem
+        because you can already have set some of the vars and accumulate unnecessary entries."""
         settings = Settings.loads(default_settings_yml)
         settings.os = "Windows"
         settings.compiler = "Visual Studio"
@@ -460,7 +479,7 @@ class HelloConan(ConanFile):
                 path = os.environ["PATH"].split(";")
                 values_count = {value: path.count(value) for value in path}
                 for value, counter in values_count.items():
-                    if value and counter > 1 and previous_path.count(value) != counter:
+                    if value and (counter > 1) and previous_path.count(value) != counter:
                         # If the entry was already repeated before calling "tools.vcvars" we keep it
                         self.fail("The key '%s' has been repeated" % value)
 
@@ -636,7 +655,8 @@ ProgramFiles(x86)=C:\Program Files (x86)
             return output_with_newline_and_spaces
 
         with mock.patch('conans.client.tools.win.vcvars_command', new=vcvars_command_mock):
-            with patch('conans.client.tools.win.check_output', new=subprocess_check_output_mock):
+            with patch('conans.client.tools.win.check_output_runner',
+                       new=subprocess_check_output_mock):
                 vcvars = tools.vcvars_dict(None, only_diff=False, output=self.output)
                 self.assertEqual(vcvars["PROCESSOR_ARCHITECTURE"], "AMD64")
                 self.assertEqual(vcvars["PROCESSOR_IDENTIFIER"],
@@ -684,6 +704,24 @@ ProgramFiles(x86)=C:\Program Files (x86)
             self.assertIn('^&^& PATH=\\^"/cygdrive/other/path:/cygdrive/path/to/somewhere:$PATH\\^" '
                           '^&^& MYVAR=34 ^&^& a_command.bat ^', conanfile._conan_runner.command)
 
+    def download_retries_errors_test(self):
+        out = TestBufferConanOutput()
+
+        # Retry arguments override defaults
+        with six.assertRaisesRegex(self, ConanException, "Error downloading"):
+            tools.download("http://fakeurl3.es/nonexists",
+                           os.path.join(temp_folder(), "file.txt"), out=out,
+                           requester=requests,
+                           retry=2, retry_wait=1)
+        self.assertEqual(str(out).count("Waiting 1 seconds to retry..."), 2)
+
+        # Not found error
+        with six.assertRaisesRegex(self, NotFoundException, "Not found: "):
+            tools.download("http://google.es/FILE_NOT_FOUND",
+                           os.path.join(temp_folder(), "README.txt"), out=out,
+                           requester=requests,
+                           retry=2, retry_wait=0)
+
     @attr("slow")
     def download_retries_test(self):
         http_server = StoppableThreadBottle()
@@ -714,44 +752,6 @@ ProgramFiles(x86)=C:\Program Files (x86)
 
         out = TestBufferConanOutput()
 
-        # Connection error
-        # Default behaviour
-        with six.assertRaisesRegex(self, ConanException, "Error downloading"):
-            tools.download("http://fakeurl3.es/nonexists",
-                           os.path.join(temp_folder(), "file.txt"), out=out,
-                           requester=requests)
-        self.assertEqual(str(out).count("Waiting 5 seconds to retry..."), 1)
-
-        # Retry arguments override defaults
-        with six.assertRaisesRegex(self, ConanException, "Error downloading"):
-            tools.download("http://fakeurl3.es/nonexists",
-                           os.path.join(temp_folder(), "file.txt"), out=out,
-                           requester=requests,
-                           retry=2, retry_wait=1)
-        self.assertEqual(str(out).count("Waiting 1 seconds to retry..."), 2)
-
-        # Retry default values from the config
-        class MockRequester(object):
-            retry = 2
-            retry_wait = 0
-
-            def get(self, *args, **kwargs):
-                return requests.get(*args, **kwargs)
-
-        with six.assertRaisesRegex(self, ConanException, "Error downloading"):
-            tools.download("http://fakeurl3.es/nonexists",
-                           os.path.join(temp_folder(), "file.txt"), out=out,
-                           requester=MockRequester())
-        self.assertEqual(str(out).count("Waiting 0 seconds to retry..."), 2)
-
-        # Not found error
-        with six.assertRaisesRegex(self, NotFoundException, "Not found: "):
-            tools.download("http://google.es/FILE_NOT_FOUND",
-                           os.path.join(temp_folder(), "README.txt"), out=out,
-                           requester=requests,
-                           retry=2, retry_wait=0)
-
-        # And OK
         dest = os.path.join(temp_folder(), "manual.html")
         tools.download("http://localhost:%s/manual.html" % http_server.port, dest, out=out, retry=3,
                        retry_wait=0, requester=requests)
@@ -773,21 +773,24 @@ ProgramFiles(x86)=C:\Program Files (x86)
         # Not authorized
         with self.assertRaises(ConanException):
             tools.download("http://localhost:%s/basic-auth/user/passwd" % http_server.port, dest,
-                           overwrite=True, requester=requests, out=out)
+                           overwrite=True, requester=requests, out=out, retry=0, retry_wait=0)
 
         # Authorized
         tools.download("http://localhost:%s/basic-auth/user/passwd" % http_server.port, dest,
-                       auth=("user", "passwd"), overwrite=True, requester=requests, out=out)
+                       auth=("user", "passwd"), overwrite=True, requester=requests, out=out,
+                       retry=0, retry_wait=0)
 
         # Authorized using headers
         tools.download("http://localhost:%s/basic-auth/user/passwd" % http_server.port, dest,
                        headers={"Authorization": "Basic dXNlcjpwYXNzd2Q="}, overwrite=True,
-                       requester=requests, out=out)
+                       requester=requests, out=out, retry=0, retry_wait=0)
         http_server.stop()
 
     @attr("slow")
-    def download_unathorized_test(self):
+    @patch("conans.tools._global_config")
+    def download_unathorized_test(self, mock_config):
         http_server = StoppableThreadBottle()
+        mock_config.return_value = ConfigMock()
 
         @http_server.server.get('/forbidden')
         def get_forbidden():
@@ -903,13 +906,13 @@ ProgramFiles(x86)=C:\Program Files (x86)
         out = TestBufferConanOutput()
         # Test: File name cannot be deduced from '?file=1'
         with six.assertRaisesRegex(self, ConanException,
-                                   "Cannot deduce file name form url. Use 'filename' parameter."):
+                                   "Cannot deduce file name from url. Use 'filename' parameter."):
             tools.get("http://localhost:%s/?file=1" % thread.port, output=out)
 
         # Test: Works with filename parameter instead of '?file=1'
         with tools.chdir(tools.mkdir_tmp()):
             tools.get("http://localhost:%s/?file=1" % thread.port, filename="sample.tar.gz",
-                      requester=requests, output=out)
+                      requester=requests, output=out, retry=0, retry_wait=0)
             self.assertTrue(os.path.exists("test_folder"))
 
         # Test: Use a different endpoint but still not the filename one
@@ -917,9 +920,10 @@ ProgramFiles(x86)=C:\Program Files (x86)
             from zipfile import BadZipfile
             with self.assertRaises(BadZipfile):
                 tools.get("http://localhost:%s/this_is_not_the_file_name" % thread.port,
-                          requester=requests, output=out)
+                          requester=requests, output=out, retry=0, retry_wait=0)
             tools.get("http://localhost:%s/this_is_not_the_file_name" % thread.port,
-                      filename="sample.tar.gz", requester=requests, output=out)
+                      filename="sample.tar.gz", requester=requests, output=out,
+                      retry=0, retry_wait=0)
             self.assertTrue(os.path.exists("test_folder"))
         thread.stop()
 
@@ -953,17 +957,17 @@ ProgramFiles(x86)=C:\Program Files (x86)
         out = TestBufferConanOutput()
         with tools.chdir(tools.mkdir_tmp()):
             tools.get("http://localhost:%s/test.txt.gz" % thread.port, requester=requests,
-                      output=out)
+                      output=out, retry=0, retry_wait=0)
             self.assertTrue(os.path.exists("test.txt"))
             self.assertEqual(load("test.txt"), "hello world zipped!")
         with tools.chdir(tools.mkdir_tmp()):
             tools.get("http://localhost:%s/test.txt.gz" % thread.port, requester=requests,
-                      output=out, destination="myfile.doc")
+                      output=out, destination="myfile.doc", retry=0, retry_wait=0)
             self.assertTrue(os.path.exists("myfile.doc"))
             self.assertEqual(load("myfile.doc"), "hello world zipped!")
         with tools.chdir(tools.mkdir_tmp()):
             tools.get("http://localhost:%s/test.txt.gz" % thread.port, requester=requests,
-                      output=out, destination="mytemp/myfile.txt")
+                      output=out, destination="mytemp/myfile.txt", retry=0, retry_wait=0)
             self.assertTrue(os.path.exists("mytemp/myfile.txt"))
             self.assertEqual(load("mytemp/myfile.txt"), "hello world zipped!")
 
@@ -979,12 +983,12 @@ ProgramFiles(x86)=C:\Program Files (x86)
 
         fp = save_file(b"a line\notherline\n")
         if platform.system() != "Windows":
-            output = check_output(["file", fp], stderr=subprocess.STDOUT)
+            output = check_output_runner(["file", fp], stderr=subprocess.STDOUT)
             self.assertIn("ASCII text", str(output))
             self.assertNotIn("CRLF", str(output))
 
             tools.unix2dos(fp)
-            output = check_output(["file", fp], stderr=subprocess.STDOUT)
+            output = check_output_runner(["file", fp], stderr=subprocess.STDOUT)
             self.assertIn("ASCII text", str(output))
             self.assertIn("CRLF", str(output))
         else:
@@ -998,12 +1002,12 @@ ProgramFiles(x86)=C:\Program Files (x86)
 
         fp = save_file(b"a line\r\notherline\r\n")
         if platform.system() != "Windows":
-            output = check_output(["file", fp], stderr=subprocess.STDOUT)
+            output = check_output_runner(["file", fp], stderr=subprocess.STDOUT)
             self.assertIn("ASCII text", str(output))
             self.assertIn("CRLF", str(output))
 
             tools.dos2unix(fp)
-            output = check_output(["file", fp], stderr=subprocess.STDOUT)
+            output = check_output_runner(["file", fp], stderr=subprocess.STDOUT)
             self.assertIn("ASCII text", str(output))
             self.assertNotIn("CRLF", str(output))
         else:

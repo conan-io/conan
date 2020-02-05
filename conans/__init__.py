@@ -21,4 +21,5 @@ OAUTH_TOKEN = "oauth_token"
 SERVER_CAPABILITIES = [COMPLEX_SEARCH_CAPABILITY, REVISIONS]  # Server is always with revisions
 DEFAULT_REVISION_V1 = "0"
 
-__version__ = '1.21.2'
+__version__ = '1.22.0'
+

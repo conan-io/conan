@@ -1,4 +1,5 @@
 import unittest
+from collections import namedtuple
 
 from mock import Mock
 
@@ -51,10 +52,6 @@ class ResponseAuthenticationRequired(object):
 
 class RequesterWithTokenMock(object):
 
-    def __init__(self):
-        self.retry = 1
-        self.retry_wait = 1
-
     def get(self, url, **kwargs):
         if not kwargs["auth"].token or kwargs["auth"].token == "expired":
             return ResponseAuthenticationRequired()
@@ -83,8 +80,9 @@ class TestTokenRefresh(unittest.TestCase):
         mocked_user_io.get_password = Mock(return_value="mypassword")
 
         requester = RequesterWithTokenMock()
+        config = namedtuple("ConfigMock", "revisions_enabled download_cache")(False, None)
         self.rest_client_factory = RestApiClientFactory(mocked_user_io.out,
-                                                        requester, revisions_enabled=False,
+                                                        requester, config=config,
                                                         artifacts_properties=None)
         self.localdb = LocalDBMock()
         self.auth_manager = ConanApiAuthManager(self.rest_client_factory, mocked_user_io,

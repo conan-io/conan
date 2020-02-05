@@ -151,8 +151,8 @@ CONAN_BASIC_SETUP()
 
         # Check target has libraries and system deps available
         client.run_command("cmake .")
-        self.assertIn("Target libs: CONAN_LIB::mylib_lib1;", client.out)
-        self.assertIn("CONAN_LIB::mylib_lib1 system libs: sys1", client.out)
+        self.assertIn("Target libs: CONAN_LIB::mylib_lib1;sys1;$", client.out)
+        self.assertIn("CONAN_LIB::mylib_lib1 system libs: ;sys1;;", client.out)
 
     def targets_system_libs_test(self):
         mylib = GenConanfile().with_package_info(cpp_info={"libs": ["lib1", "lib11"],
@@ -211,18 +211,19 @@ CONAN_BASIC_SETUP()
 
         self.assertNotIn("Library sys1 not found in package, might be system one", client.out)
         self.assertIn("CONAN_PKG::mylib libs: "
-                      "CONAN_LIB::mylib_lib1;CONAN_LIB::mylib_lib11;$<$<CONFIG:Release>:;>;"
+                      "CONAN_LIB::mylib_lib1;CONAN_LIB::mylib_lib11;sys1;$<$<CONFIG:Release>:;>;"
                       "$<$<CONFIG:RelWithDebInfo>:;>;$<$<CONFIG:MinSizeRel>:;>;$<$<CONFIG:Debug>:;>",
                       client.out)
-        self.assertIn("CONAN_LIB::mylib_lib1 libs: sys1", client.out)
-        self.assertIn("CONAN_LIB::mylib_lib11 libs: sys1", client.out)
+        self.assertIn("CONAN_LIB::mylib_lib1 libs: ;sys1;;", client.out)
+        self.assertIn("CONAN_LIB::mylib_lib11 libs: ;sys1;;", client.out)
 
         self.assertNotIn("Library sys2 not found in package, might be system one", client.out)
         self.assertIn("CONAN_PKG::myotherlib libs: "
-                      "CONAN_LIB::myotherlib_lib2;$<$<CONFIG:Release>:;>;"
-                      "$<$<CONFIG:RelWithDebInfo>:;>;$<$<CONFIG:MinSizeRel>:;>;$<$<CONFIG:Debug>:;>",
+                      "CONAN_LIB::myotherlib_lib2;sys2;CONAN_PKG::mylib;$<$<CONFIG:Release>:;CONAN_PKG::mylib;>;"
+                      "$<$<CONFIG:RelWithDebInfo>:;CONAN_PKG::mylib;>;$<$<CONFIG:MinSizeRel>:;CONAN_PKG::mylib;>;"
+                      "$<$<CONFIG:Debug>:;CONAN_PKG::mylib;>",
                       client.out)
-        self.assertIn("CONAN_LIB::myotherlib_lib2 libs: sys2;CONAN_PKG::mylib", client.out)
+        self.assertIn("CONAN_LIB::myotherlib_lib2 libs: ;sys2;;CONAN_PKG::mylib", client.out)
 
     def user_appended_libs_test(self):
         conanfile = textwrap.dedent("""

@@ -345,8 +345,7 @@ class CMakeMultiSyntaxTest(unittest.TestCase):
         Check conan_basic_setup() interface is the same one for cmake and cmake_multi generators
         """
         conanbuildinfo = self.client.load("conanbuildinfo.cmake")
-        conanbuildinfo_multi = load(os.path.join(self.client.current_folder,
-                                                 "conanbuildinfo_multi.cmake"))
+        conanbuildinfo_multi = self.client.load("conanbuildinfo_multi.cmake")
         expected = "set(options TARGETS NO_OUTPUT_DIRS SKIP_RPATH KEEP_RPATHS SKIP_STD SKIP_FPIC)"
         self.assertIn(expected, conanbuildinfo)
         self.assertIn(expected, conanbuildinfo_multi)

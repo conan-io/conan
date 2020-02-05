@@ -53,7 +53,7 @@ default_package_id_mode = full_package_mode # environment CONAN_DEFAULT_PACKAGE_
 
 [proxies]
 # Empty (or missing) section will try to use system proxies.
-# As documented in https://requests.kennethreitz.org/en/latest/user/advanced/#proxies
+# As documented in https://requests.readthedocs.io/en/master/user/advanced/#proxies
 http = http://user:pass@10.10.1.10:3128/
 https = None
 # http = http://10.10.1.10:3128
@@ -448,11 +448,11 @@ class Pkg(ConanFile):
         fake_url = "https://fakeurl.com/myconf.zip"
 
         def download_verify_false(obj, url, filename, **kwargs):  # @UnusedVariable
-            self.assertFalse(obj.verify)
+            self.assertFalse(obj._verify_ssl)
             self._create_zip(filename)
 
         def download_verify_true(obj, url, filename, **kwargs):  # @UnusedVariable
-            self.assertTrue(obj.verify)
+            self.assertTrue(obj._verify_ssl)
             self._create_zip(filename)
 
         with patch.object(FileDownloader, 'download', new=download_verify_false):

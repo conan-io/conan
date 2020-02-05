@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 import os
 
-from conans.client.tools.oss import check_output
+from conans.util.runners import check_output_runner
 
 
 def is_apple_os(os_):
@@ -73,7 +73,7 @@ class XCRun(object):
 
     def _invoke(self, args):
         def cmd_output(cmd):
-            return check_output(cmd).strip()
+            return check_output_runner(cmd).strip()
 
         command = ['xcrun', '-find']
         if self.sdk:

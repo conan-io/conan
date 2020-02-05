@@ -1,6 +1,6 @@
 from conans.client.generators.cmake_common import cmake_dependencies, cmake_dependency_vars, \
     cmake_global_vars, cmake_macros, cmake_package_info, cmake_settings_info, cmake_user_info_vars, \
-    generate_targets_section, apple_frameworks_macro
+    generate_targets_section, CMakeCommonMacros
 from conans.model import Generator
 from conans.paths import BUILD_INFO_CMAKE
 
@@ -75,11 +75,11 @@ class CMakeGenerator(Generator):
     @property
     def content(self):
         sections = ["include(CMakeParseArguments)"]
-        sections.append(apple_frameworks_macro)
+        sections.append(CMakeCommonMacros.apple_frameworks_macro)
 
         # Per requirement variables
-        for name, dep_cpp_info in self.deps_build_info.dependencies:
-            dep_name = dep_cpp_info.get_name("cmake", name)
+        for _, dep_cpp_info in self.deps_build_info.dependencies:
+            dep_name = dep_cpp_info.get_name("cmake")
             deps = DepsCppCmake(dep_cpp_info)
             dep_flags = cmake_dependency_vars(dep_name, deps=deps)
             sections.append(dep_flags)

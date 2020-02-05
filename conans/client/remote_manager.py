@@ -176,9 +176,8 @@ class RemoteManager(object):
 
     def search_recipes(self, remote, pattern=None, ignorecase=True):
         """
-        Search exported conans information from remotes
-
-        returns (dict str(ref): {packages_info}"""
+        returns (dict str(ref): {packages_info}
+        """
         return self._call_remote(remote, "search", pattern, ignorecase)
 
     def search_packages(self, remote, ref, query):
@@ -187,15 +186,9 @@ class RemoteManager(object):
         return packages
 
     def remove_recipe(self, ref, remote):
-        """
-        Removed conans or packages from remote
-        """
         return self._call_remote(remote, "remove_recipe", ref)
 
     def remove_packages(self, ref, remove_ids, remote):
-        """
-        Removed conans or packages from remote
-        """
         return self._call_remote(remote, "remove_packages", ref, remove_ids)
 
     def get_recipe_path(self, ref, path, remote):

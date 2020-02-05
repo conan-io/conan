@@ -3,7 +3,7 @@ import os
 import textwrap
 import unittest
 
-from conans.test.utils.tools import TestClient, TestServer
+from conans.test.utils.tools import TestClient, TestServer, GenConanfile
 
 
 class ConanInspectTest(unittest.TestCase):
@@ -55,12 +55,7 @@ class Pkg(base.Pkg):
     def name_version_test(self):
         server = TestServer()
         client = TestClient(servers={"default": server}, users={"default": [("lasote", "mypass")]})
-        conanfile = """from conans import ConanFile
-class Pkg(ConanFile):
-    name = "MyPkg"
-    version = "1.2.3"
-"""
-        client.save({"conanfile.py": conanfile})
+        client.save({"conanfile.py": GenConanfile().with_name("MyPkg").with_version("1.2.3")})
         client.run("inspect . -a=name")
         self.assertIn("name: MyPkg", client.out)
         client.run("inspect . -a=version")
@@ -84,6 +79,31 @@ class Pkg(ConanFile):
         client.run("inspect MyPkg/1.2.3@lasote/testing -a=name -r=default")
         self.assertIn("name: MyPkg", client.out)
         client.run("inspect MyPkg/1.2.3@lasote/testing -a=version -r=default")
+        self.assertIn("version: 1.2.3", client.out)
+
+    def set_name_version_test(self):
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile, load
+            import os
+            class Pkg(ConanFile):
+                def set_name(self):
+                    self.name = "MyPkg"
+                def set_version(self):
+                    self.version = load(os.path.join(self.recipe_folder, "version.txt"))
+            """)
+        client.save({"conanfile.py": conanfile,
+                     "version.txt": "1.2.3"})
+        client.run("inspect . -a=name")
+        self.assertIn("name: MyPkg", client.out)
+        client.run("inspect . -a=version")
+        self.assertIn("version: 1.2.3", client.out)
+
+        client.run("export .")
+        client.save({}, clean_first=True)
+        client.run("inspect MyPkg/1.2.3@ -a=name")
+        self.assertIn("name: MyPkg", client.out)
+        client.run("inspect MyPkg/1.2.3@ -a=version")
         self.assertIn("version: 1.2.3", client.out)
 
     def attributes_display_test(self):
