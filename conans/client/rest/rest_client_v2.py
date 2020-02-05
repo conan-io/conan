@@ -37,7 +37,7 @@ class RestV2Methods(RestCommonMethods):
         data["files"] = list(data["files"].keys())
         return data
 
-    def _get_remote_file_contents(self, url, cache=True):
+    def _get_remote_file_contents(self, url, cache):
         # We don't want traces in output of these downloads, they are ugly in output
         downloader = FileDownloader(self.requester, None, self.verify_ssl, self._config)
         if cache and self._config.download_cache:
@@ -213,7 +213,7 @@ class RestV2Methods(RestCommonMethods):
         else:
             logger.debug("\nUPLOAD: All uploaded! Total time: %s\n" % str(time.time() - t1))
 
-    def _download_and_save_files(self, urls, dest_folder, files, cache=True):
+    def _download_and_save_files(self, urls, dest_folder, files, cache):
         downloader = FileDownloader(self.requester, self._output, self.verify_ssl, self._config)
         if cache and self._config.download_cache:
             downloader = CachedFileDownloader(self._config.download_cache, downloader)
