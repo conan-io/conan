@@ -98,9 +98,9 @@ class GraphBinariesAnalyzer(object):
 
     def _evaluate_remote_pkg(self, node, pref, remote, remotes):
         remote_info = None
-        if remote:
+        if remotes.selected:
             try:
-                remote_info, pref = self._remote_manager.get_package_info(pref, remote)
+                remote_info, pref = self._remote_manager.get_package_info(pref, remotes.selected)
             except NotFoundException:
                 pass
             except Exception:
