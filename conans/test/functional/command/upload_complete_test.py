@@ -2,6 +2,7 @@ import json
 import os
 import platform
 import stat
+import textwrap
 import unittest
 
 import six
@@ -197,7 +198,8 @@ class UploadTest(unittest.TestCase):
         client.run("export . frodo/stable")
         client.run("upload Hello* --confirm --retry 0 --retry-wait=1", assert_error=True)
         self.assertNotIn("Waiting 1 seconds to retry...", client.out)
-        self.assertIn("ERROR: Execute upload again to retry upload the failed files: "
+        self.assertIn("ERROR: Hello0/1.2.1@frodo/stable: Upload recipe to 'default' failed: "
+                      "Execute upload again to retry upload the failed files: "
                       "conan_export.tgz. [Remote: default]", client.out)
 
         # Try with broken connection even with 10 retries
@@ -207,7 +209,8 @@ class UploadTest(unittest.TestCase):
         client.run("export . frodo/stable")
         client.run("upload Hello* --confirm --retry 10 --retry-wait=0", assert_error=True)
         self.assertIn("Waiting 0 seconds to retry...", client.out)
-        self.assertIn("ERROR: Execute upload again to retry upload the failed files", client.out)
+        self.assertIn("ERROR: Hello0/1.2.1@frodo/stable: Upload recipe to 'default' failed: "
+                      "Execute upload again to retry upload the failed files", client.out)
 
         # For each file will fail the first time and will success in the second one
         client = self._get_client(FailPairFilesUploader)
@@ -241,7 +244,8 @@ class UploadTest(unittest.TestCase):
         client.run('config set general.retry_wait=1')
         client.run("upload Hello* --confirm", assert_error=True)
         self.assertNotIn("Waiting 1 seconds to retry...", client.out)
-        self.assertIn("ERROR: Execute upload again to retry upload the failed files: "
+        self.assertIn("ERROR: Hello0/1.2.1@frodo/stable: Upload recipe to 'default' failed: "
+                      "Execute upload again to retry upload the failed files: "
                       "conan_export.tgz. [Remote: default]", client.out)
 
         # Try with broken connection even with 10 retries
@@ -253,7 +257,8 @@ class UploadTest(unittest.TestCase):
         client.run('config set general.retry_wait=0')
         client.run("upload Hello* --confirm", assert_error=True)
         self.assertIn("Waiting 0 seconds to retry...", client.out)
-        self.assertIn("ERROR: Execute upload again to retry upload the failed files", client.out)
+        self.assertIn("ERROR: Hello0/1.2.1@frodo/stable: Upload recipe to 'default' failed: "
+                      "Execute upload again to retry upload the failed files", client.out)
 
         # For each file will fail the first time and will success in the second one
         client = self._get_client(FailPairFilesUploader)
@@ -311,7 +316,49 @@ class UploadTest(unittest.TestCase):
                 client.out)
         client.run('user -c')
         client.run('upload lib* --parallel -c --all -r default', assert_error=True)
-        self.assertIn("ERROR: Conan interactive mode disabled. [Remote: default]", client.out)
+        self.assertIn("ERROR: lib0/1.0@user/channel: Upload recipe to 'default' failed: "
+                      "Conan interactive mode disabled. [Remote: default]", client.out)
+
+    def recipe_upload_fail_on_generic_exception_test(self):
+        # Make the upload fail with a generic Exception
+        client = TestClient(default_server_user=True)
+        conanfile = textwrap.dedent("""
+            import os
+            from conans import ConanFile
+            class Pkg(ConanFile):
+                exports = "*"
+                def package(self):
+                    self.copy("*")
+            """)
+        client.save({"conanfile.py": conanfile,
+                     "myheader.h": "",
+                     "conan_export.tgz/dummy": ""})
+        client.run('create . lib/1.0@user/channel')
+        client.run('upload lib* -c --all -r default', assert_error=True)
+        self.assertIn("ERROR: lib/1.0@user/channel: Upload recipe to 'default' failed: "
+                      "[Errno 13] Permission denied", client.out)
+        self.assertIn("ERROR: Errors uploading some packages", client.out)
+
+    def package_upload_fail_on_generic_exception_test(self):
+        # Make the upload fail with a generic Exception
+        client = TestClient(default_server_user=True)
+        conanfile = textwrap.dedent("""
+            import os
+            from conans import ConanFile
+            class Pkg(ConanFile):
+                exports = "*"
+                def package(self):
+                    os.makedirs(os.path.join(self.package_folder, "conan_package.tgz"))
+                    self.copy("*")
+            """)
+        client.save({"conanfile.py": conanfile,
+                     "myheader.h": ""})
+        client.run('create . lib/1.0@user/channel')
+
+        client.run('upload lib* -c --all -r default', assert_error=True)
+        self.assertIn("ERROR: lib/1.0@user/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9: "
+                      "Upload package failed: [Errno 13] Permission denied", client.out)
+        self.assertIn("ERROR: Errors uploading some packages", client.out)
 
     def upload_with_pattern_and_package_error_test(self):
         files = hello_conan_files("Hello1", "1.2.1")

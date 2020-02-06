@@ -105,10 +105,10 @@ class CmdUpload(object):
                                           refs])
             self._upload_thread_pool.close()
             self._upload_thread_pool.join()
-            for exception in self._exceptions_list:
-                self._output.error(str(exception))
 
             if len(self._exceptions_list) > 0:
+                for exception in self._exceptions_list:
+                    self._output.error(exception)
                 raise ConanException("Errors uploading some packages")
 
         logger.debug("UPLOAD: Time manager upload: %f" % (time.time() - t1))
@@ -144,8 +144,8 @@ class CmdUpload(object):
         for ref in refs:
             metadata = self._cache.package_layout(ref).load_metadata()
             if ref.revision and ref.revision != metadata.recipe.revision:
-                raise ConanException("Recipe revision {} does not match the one stored in the cache {}"
-                                     .format(ref.revision, metadata.recipe.revision))
+                raise ConanException("Recipe revision {} does not match the one stored in the "
+                                     "cache {}".format(ref.revision, metadata.recipe.revision))
             ref = ref.copy_with_rev(metadata.recipe.revision)
             remote = remotes.selected
             if remote:
@@ -223,8 +223,9 @@ class CmdUpload(object):
         try:
             self._upload_recipe(ref, conanfile, retry, retry_wait, policy, recipe_remote, remotes)
             upload_recorder.add_recipe(ref, recipe_remote.name, recipe_remote.url)
-        except ConanException as exc:
-            self._exceptions_list.append(exc)
+        except Exception as exc:
+            msg = "%s: Upload recipe to '%s' failed: %s" % (str(ref), recipe_remote.name, str(exc))
+            self._exceptions_list.append(msg)
             return
 
         # Now the binaries
@@ -233,8 +234,8 @@ class CmdUpload(object):
             p_remote = recipe_remote
 
             def upload_package_index(index_pref):
+                index, pref = index_pref
                 try:
-                    index, pref = index_pref
                     up_msg = "\rUploading package %d/%d: %s to '%s'" % (index + 1, total,
                                                                         str(pref.id),
                                                                         p_remote.name)
@@ -242,19 +243,20 @@ class CmdUpload(object):
                     self._upload_package(pref, retry, retry_wait,
                                          integrity_check, policy, p_remote)
                     upload_recorder.add_package(pref, p_remote.name, p_remote.url)
-                    return conanfile_path, ref, recipe_remote, None
-                except ConanException as exc:
-                    return None, None, None, exc
+                    return pref, None
+                except Exception as pkg_exc:
+                    return pref, pkg_exc
 
             def upload_package_callback(ret):
-                for cf_path, r_ref, r_rem, exc in ret:
-                    if exc is None:
+                for pref, pkg_exc in ret:
+                    if pkg_exc is None:
                         # FIXME: I think it makes no sense to specify a remote to "post_upload"
                         # FIXME: because the recipe can have one and the package a different one
-                        self._hook_manager.execute("post_upload", conanfile_path=cf_path,
-                                                   reference=r_ref, remote=r_rem)
+                        self._hook_manager.execute("post_upload", conanfile_path=conanfile_path,
+                                                   reference=pref.ref, remote=p_remote)
                     else:
-                        self._exceptions_list.append(exc)
+                        msg_pkg = "%s: Upload package failed: %s" % (str(pref),  str(pkg_exc))
+                        self._exceptions_list.append(msg_pkg)
             # This doesn't wait for the packages to end, so the function returns
             # and the "pool entry" for the recipe is released
             self._upload_thread_pool.map_async(upload_package_index,
@@ -488,10 +490,10 @@ class CmdUpload(object):
                                   % (fname, h1, h2))
 
             if PACKAGE_TGZ_NAME in files:
+                tgz_path = os.path.join(package_folder, PACKAGE_TGZ_NAME)
                 try:
-                    tgz_path = os.path.join(package_folder, PACKAGE_TGZ_NAME)
                     os.unlink(tgz_path)
-                except Exception:
+                except OSError:
                     pass
             error_msg = os.linesep.join("Mismatched checksum '%s' (manifest: %s, file: %s)"
                                         % (fname, h1, h2) for fname, (h1, h2) in diff.items())
