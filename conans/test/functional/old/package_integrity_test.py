@@ -40,7 +40,8 @@ class PackageIngrityTest(unittest.TestCase):
         set_dirty(package_folder)
 
         client.run("upload * --all --confirm", assert_error=True)
-        self.assertIn("ERROR: Package %s is corrupted, aborting upload" % str(pref),
+        self.assertIn("ERROR: Hello/0.1@lasote/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9: "
+                      "Upload package failed: Package %s is corrupted, aborting upload" % str(pref),
                       client.out)
         self.assertIn("Remove it with 'conan remove Hello/0.1@lasote/testing -p=%s'"
                       % NO_SETTINGS_PACKAGE_ID, client.out)
