@@ -141,18 +141,18 @@ CONAN_BASIC_SETUP()
         client.run("install conanfile_consumer.py")
 
         content = client.load("conanbuildinfo.cmake")
-        self.assertIn("set(CONAN_LIBS ${CONAN_PKG_LIBS} ${CONAN_SYSTEM_LIBS} ${CONAN_FRAMEWORKS_FOUND})",
+        self.assertIn("set(CONAN_LIBS ${CONAN_LIBS} ${CONAN_SYSTEM_LIBS} ${CONAN_FRAMEWORKS_FOUND})",
                       content)
         self.assertIn("set(CONAN_LIBS_MYLIB ${CONAN_PKG_LIBS_MYLIB} ${CONAN_SYSTEM_LIBS_MYLIB} ${CONAN_FRAMEWORKS_FOUND_MYLIB})",
                       content)
         self.assertIn("set(CONAN_PKG_LIBS_MYLIB lib1)", content)
-        self.assertIn("set(CONAN_SYSTEM_LIBS sys1)", content)
+        self.assertIn("set(CONAN_SYSTEM_LIBS sys1 ${CONAN_SYSTEM_LIBS})", content)
         self.assertIn("set(CONAN_SYSTEM_LIBS_MYLIB sys1)", content)
 
         # Check target has libraries and system deps available
         client.run_command("cmake .")
-        self.assertIn("Target libs: CONAN_LIB::mylib_lib1;", client.out)
-        self.assertIn("CONAN_LIB::mylib_lib1 system libs: sys1", client.out)
+        self.assertIn("Target libs: CONAN_LIB::mylib_lib1;sys1;$", client.out)
+        self.assertIn("CONAN_LIB::mylib_lib1 system libs: ;sys1;;", client.out)
 
     def targets_system_libs_test(self):
         mylib = GenConanfile().with_package_info(cpp_info={"libs": ["lib1", "lib11"],
@@ -211,15 +211,67 @@ CONAN_BASIC_SETUP()
 
         self.assertNotIn("Library sys1 not found in package, might be system one", client.out)
         self.assertIn("CONAN_PKG::mylib libs: "
-                      "CONAN_LIB::mylib_lib1;CONAN_LIB::mylib_lib11;$<$<CONFIG:Release>:;>;"
+                      "CONAN_LIB::mylib_lib1;CONAN_LIB::mylib_lib11;sys1;$<$<CONFIG:Release>:;>;"
                       "$<$<CONFIG:RelWithDebInfo>:;>;$<$<CONFIG:MinSizeRel>:;>;$<$<CONFIG:Debug>:;>",
                       client.out)
-        self.assertIn("CONAN_LIB::mylib_lib1 libs: sys1", client.out)
-        self.assertIn("CONAN_LIB::mylib_lib11 libs: sys1", client.out)
+        self.assertIn("CONAN_LIB::mylib_lib1 libs: ;sys1;;", client.out)
+        self.assertIn("CONAN_LIB::mylib_lib11 libs: ;sys1;;", client.out)
 
         self.assertNotIn("Library sys2 not found in package, might be system one", client.out)
         self.assertIn("CONAN_PKG::myotherlib libs: "
-                      "CONAN_LIB::myotherlib_lib2;$<$<CONFIG:Release>:;>;"
-                      "$<$<CONFIG:RelWithDebInfo>:;>;$<$<CONFIG:MinSizeRel>:;>;$<$<CONFIG:Debug>:;>",
+                      "CONAN_LIB::myotherlib_lib2;sys2;CONAN_PKG::mylib;$<$<CONFIG:Release>:;CONAN_PKG::mylib;>;"
+                      "$<$<CONFIG:RelWithDebInfo>:;CONAN_PKG::mylib;>;$<$<CONFIG:MinSizeRel>:;CONAN_PKG::mylib;>;"
+                      "$<$<CONFIG:Debug>:;CONAN_PKG::mylib;>",
                       client.out)
-        self.assertIn("CONAN_LIB::myotherlib_lib2 libs: sys2;CONAN_PKG::mylib", client.out)
+        self.assertIn("CONAN_LIB::myotherlib_lib2 libs: ;sys2;;CONAN_PKG::mylib", client.out)
+
+    def user_appended_libs_test(self):
+        conanfile = textwrap.dedent("""
+            import os
+            from conans import ConanFile, CMake
+
+            class MyLib(ConanFile):
+                name = "mylib"
+                version = "1.0"
+                settings = "os", "compiler", "arch", "build_type"
+                exports_sources = "lib1.a", "lib1.lib"
+
+                def package(self):
+                    self.copy("*", dst="lib")
+
+                def package_info(self):
+                    self.cpp_info.system_libs = ["sys1"]
+                    self.cpp_info.libs = ["lib1"]
+                """)
+        consumer = textwrap.dedent("""
+            import os
+            from conans import ConanFile, CMake
+
+            class Consumer(ConanFile):
+                name = "consumer"
+                version = "1.0"
+                generators = "cmake"
+                settings = "os", "compiler", "arch", "build_type"
+                exports_sources = "CMakeLists.txt"
+                requires = "mylib/1.0"
+
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+                """)
+        cmakelists = textwrap.dedent("""
+            cmake_minimum_required(VERSION 3.1)
+            project(consumer CXX)
+            set(CONAN_LIBS additional_lib)
+            set(CONAN_SYSTEM_LIBS additional_sys)
+            include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+            message("CONAN_LIBS: ${CONAN_LIBS}")
+            message("CONAN_SYSTEM_LIBS: ${CONAN_SYSTEM_LIBS}")
+            """)
+        client = TestClient()
+        client.save({"conanfile.py": conanfile, "lib1.lib": "", "liblib1.a": "",
+                     "consumer.py": consumer, "CMakeLists.txt": cmakelists})
+        client.run("create .")
+        client.run("create consumer.py")
+        self.assertIn("CONAN_LIBS: lib1;additional_lib;sys1;additional_sys", client.out)
+        self.assertIn("CONAN_SYSTEM_LIBS: sys1;additional_sys", client.out)

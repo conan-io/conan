@@ -1329,13 +1329,13 @@ build_type: [ Release]
 
         cmake = CMake(conanfile, generator=generator)
 
-        with mock.patch("conans.client.tools.vcvars") as vcvars_mock:
+        with mock.patch("conans.client.tools.vcvars_dict") as vcvars_mock:
             vcvars_mock.__enter__ = mock.MagicMock(return_value=(mock.MagicMock(), None))
             vcvars_mock.__exit__ = mock.MagicMock(return_value=None)
             cmake.configure()
             self.assertTrue(vcvars_mock.called, "vcvars weren't called")
 
-        with mock.patch("conans.client.tools.vcvars") as vcvars_mock:
+        with mock.patch("conans.client.tools.vcvars_dict") as vcvars_mock:
             vcvars_mock.__enter__ = mock.MagicMock(return_value=(mock.MagicMock(), None))
             vcvars_mock.__exit__ = mock.MagicMock(return_value=None)
             cmake.build()
