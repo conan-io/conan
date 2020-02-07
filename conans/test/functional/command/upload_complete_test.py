@@ -337,8 +337,7 @@ class UploadTest(unittest.TestCase):
                      "conan_export.tgz/dummy": ""})
         client.run('create . lib/1.0@user/channel')
         client.run('upload lib* -c --all -r default', assert_error=True)
-        self.assertIn("ERROR: lib/1.0@user/channel: Upload recipe to 'default' failed: "
-                      "[Errno 13] Permission denied", client.out)
+        self.assertIn("ERROR: lib/1.0@user/channel: Upload recipe to 'default' failed:", client.out)
         self.assertIn("ERROR: Errors uploading some packages", client.out)
 
     def package_upload_fail_on_generic_exception_test(self):
