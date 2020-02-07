@@ -708,6 +708,7 @@ servers["r2"] = TestServer()
         self.current_folder = current_folder or temp_folder(path_with_spaces)
 
         # Once the client is ready, modify the configuration
+        os.makedirs(self.current_folder, exist_ok=True)
         self.tune_conan_conf(cache_folder, cpu_count, revisions_enabled)
 
     def load(self, filename):
