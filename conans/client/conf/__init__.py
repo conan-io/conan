@@ -8,6 +8,9 @@ from conans.paths import DEFAULT_PROFILE_NAME, conan_expand_user, CACERT_FILE
 from conans.util.env_reader import get_env
 from conans.util.files import load
 import logging
+from jinja2 import Template
+import textwrap
+from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
 
 
 default_settings_yml = """
@@ -102,87 +105,97 @@ build_type: [None, Debug, Release, RelWithDebInfo, MinSizeRel]
 cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]  # Deprecated, use compiler.cppstd
 """
 
-default_client_conf = """
-[log]
-run_to_output = True        # environment CONAN_LOG_RUN_TO_OUTPUT
-run_to_file = False         # environment CONAN_LOG_RUN_TO_FILE
-level = critical            # environment CONAN_LOGGING_LEVEL
-# trace_file =              # environment CONAN_TRACE_FILE
-print_run_commands = False  # environment CONAN_PRINT_RUN_COMMANDS
+_t_default_client_conf = Template(textwrap.dedent("""
+    [log]
+    run_to_output = True        # environment CONAN_LOG_RUN_TO_OUTPUT
+    run_to_file = False         # environment CONAN_LOG_RUN_TO_FILE
+    level = critical            # environment CONAN_LOGGING_LEVEL
+    # trace_file =              # environment CONAN_TRACE_FILE
+    print_run_commands = False  # environment CONAN_PRINT_RUN_COMMANDS
+    
+    [general]
+    default_profile = {{default_profile}}
+    compression_level = 9                 # environment CONAN_COMPRESSION_LEVEL
+    sysrequires_sudo = True               # environment CONAN_SYSREQUIRES_SUDO
+    request_timeout = 60                  # environment CONAN_REQUEST_TIMEOUT (seconds)
+    default_package_id_mode = semver_direct_mode # environment CONAN_DEFAULT_PACKAGE_ID_MODE
+    # retry = 2                             # environment CONAN_RETRY
+    # retry_wait = 5                        # environment CONAN_RETRY_WAIT (seconds)
+    # sysrequires_mode = enabled          # environment CONAN_SYSREQUIRES_MODE (allowed modes enabled/verify/disabled)
+    # vs_installation_preference = Enterprise, Professional, Community, BuildTools # environment CONAN_VS_INSTALLATION_PREFERENCE
+    # verbose_traceback = False           # environment CONAN_VERBOSE_TRACEBACK
+    # error_on_override = False           # environment CONAN_ERROR_ON_OVERRIDE
+    # bash_path = ""                      # environment CONAN_BASH_PATH (only windows)
+    # read_only_cache = True              # environment CONAN_READ_ONLY_CACHE
+    # cache_no_locks = True               # environment CONAN_CACHE_NO_LOCKS
+    # user_home_short = your_path         # environment CONAN_USER_HOME_SHORT
+    # use_always_short_paths = False      # environment CONAN_USE_ALWAYS_SHORT_PATHS
+    # skip_vs_projects_upgrade = False    # environment CONAN_SKIP_VS_PROJECTS_UPGRADE
+    # non_interactive = False             # environment CONAN_NON_INTERACTIVE
+    # skip_broken_symlinks_check = False  # enviornment CONAN_SKIP_BROKEN_SYMLINKS_CHECK
+    
+    # conan_make_program = make           # environment CONAN_MAKE_PROGRAM (overrides the make program used in AutoToolsBuildEnvironment.make)
+    # conan_cmake_program = cmake         # environment CONAN_CMAKE_PROGRAM (overrides the make program used in CMake.cmake_program)
+    
+    # cmake_generator                     # environment CONAN_CMAKE_GENERATOR
+    # cmake generator platform            # environment CONAN_CMAKE_GENERATOR_PLATFORM
+    # http://www.vtk.org/Wiki/CMake_Cross_Compiling
+    # cmake_toolchain_file                # environment CONAN_CMAKE_TOOLCHAIN_FILE
+    # cmake_system_name                   # environment CONAN_CMAKE_SYSTEM_NAME
+    # cmake_system_version                # environment CONAN_CMAKE_SYSTEM_VERSION
+    # cmake_system_processor              # environment CONAN_CMAKE_SYSTEM_PROCESSOR
+    # cmake_find_root_path                # environment CONAN_CMAKE_FIND_ROOT_PATH
+    # cmake_find_root_path_mode_program   # environment CONAN_CMAKE_FIND_ROOT_PATH_MODE_PROGRAM
+    # cmake_find_root_path_mode_library   # environment CONAN_CMAKE_FIND_ROOT_PATH_MODE_LIBRARY
+    # cmake_find_root_path_mode_include   # environment CONAN_CMAKE_FIND_ROOT_PATH_MODE_INCLUDE
+    
+    # msbuild_verbosity = minimal         # environment CONAN_MSBUILD_VERBOSITY
+    
+    # cpu_count = 1             # environment CONAN_CPU_COUNT
+    
+    # Change the default location for building test packages to a temporary folder
+    # which is deleted after the test.
+    # temp_test_folder = True             # environment CONAN_TEMP_TEST_FOLDER
+    
+    # cacert_path                         # environment CONAN_CACERT_PATH
+    # scm_to_conandata                    # environment CONAN_SCM_TO_CONANDATA
+    {% if conan_v2 %}
+    revisions_enabled = 1
+    {% endif %}
+    
+    [storage]
+    # This is the default path, but you can write your own. It must be an absolute path or a
+    # path beginning with "~" (if the environment var CONAN_USER_HOME is specified, this directory, even
+    # with "~/", will be relative to the conan user home, not to the system user home)
+    path = ./data
+    
+    [proxies]
+    # Empty (or missing) section will try to use system proxies.
+    # As documented in https://requests.readthedocs.io/en/master/user/advanced/#proxies - but see below
+    # for proxies to specific hosts
+    # http = http://user:pass@10.10.1.10:3128/
+    # http = http://10.10.1.10:3128
+    # https = http://10.10.1.10:1080
+    # To specify a proxy for a specific host or hosts, use multiple lines each specifying host = proxy-spec
+    # http =
+    #   hostname.to.be.proxied.com = http://user:pass@10.10.1.10:3128
+    # You can skip the proxy for the matching (fnmatch) urls (comma-separated)
+    # no_proxy_match = *bintray.com*, https://myserver.*
+    
+    {% if not conan_v2 %}{# no hooks by default in Conan v2 #}
+    [hooks]    # environment CONAN_HOOKS
+    attribute_checker
+    {% endif %}
+    
+    # Default settings now declared in the default profile
+    
+    
+    """))
 
-[general]
-default_profile = %s
-compression_level = 9                 # environment CONAN_COMPRESSION_LEVEL
-sysrequires_sudo = True               # environment CONAN_SYSREQUIRES_SUDO
-request_timeout = 60                  # environment CONAN_REQUEST_TIMEOUT (seconds)
-default_package_id_mode = semver_direct_mode # environment CONAN_DEFAULT_PACKAGE_ID_MODE
-# retry = 2                             # environment CONAN_RETRY
-# retry_wait = 5                        # environment CONAN_RETRY_WAIT (seconds)
-# sysrequires_mode = enabled          # environment CONAN_SYSREQUIRES_MODE (allowed modes enabled/verify/disabled)
-# vs_installation_preference = Enterprise, Professional, Community, BuildTools # environment CONAN_VS_INSTALLATION_PREFERENCE
-# verbose_traceback = False           # environment CONAN_VERBOSE_TRACEBACK
-# error_on_override = False           # environment CONAN_ERROR_ON_OVERRIDE
-# bash_path = ""                      # environment CONAN_BASH_PATH (only windows)
-# read_only_cache = True              # environment CONAN_READ_ONLY_CACHE
-# cache_no_locks = True               # environment CONAN_CACHE_NO_LOCKS
-# user_home_short = your_path         # environment CONAN_USER_HOME_SHORT
-# use_always_short_paths = False      # environment CONAN_USE_ALWAYS_SHORT_PATHS
-# skip_vs_projects_upgrade = False    # environment CONAN_SKIP_VS_PROJECTS_UPGRADE
-# non_interactive = False             # environment CONAN_NON_INTERACTIVE
-# skip_broken_symlinks_check = False  # enviornment CONAN_SKIP_BROKEN_SYMLINKS_CHECK
 
-# conan_make_program = make           # environment CONAN_MAKE_PROGRAM (overrides the make program used in AutoToolsBuildEnvironment.make)
-# conan_cmake_program = cmake         # environment CONAN_CMAKE_PROGRAM (overrides the make program used in CMake.cmake_program)
-
-# cmake_generator                     # environment CONAN_CMAKE_GENERATOR
-# cmake generator platform            # environment CONAN_CMAKE_GENERATOR_PLATFORM
-# http://www.vtk.org/Wiki/CMake_Cross_Compiling
-# cmake_toolchain_file                # environment CONAN_CMAKE_TOOLCHAIN_FILE
-# cmake_system_name                   # environment CONAN_CMAKE_SYSTEM_NAME
-# cmake_system_version                # environment CONAN_CMAKE_SYSTEM_VERSION
-# cmake_system_processor              # environment CONAN_CMAKE_SYSTEM_PROCESSOR
-# cmake_find_root_path                # environment CONAN_CMAKE_FIND_ROOT_PATH
-# cmake_find_root_path_mode_program   # environment CONAN_CMAKE_FIND_ROOT_PATH_MODE_PROGRAM
-# cmake_find_root_path_mode_library   # environment CONAN_CMAKE_FIND_ROOT_PATH_MODE_LIBRARY
-# cmake_find_root_path_mode_include   # environment CONAN_CMAKE_FIND_ROOT_PATH_MODE_INCLUDE
-
-# msbuild_verbosity = minimal         # environment CONAN_MSBUILD_VERBOSITY
-
-# cpu_count = 1             # environment CONAN_CPU_COUNT
-
-# Change the default location for building test packages to a temporary folder
-# which is deleted after the test.
-# temp_test_folder = True             # environment CONAN_TEMP_TEST_FOLDER
-
-# cacert_path                         # environment CONAN_CACERT_PATH
-# scm_to_conandata                    # environment CONAN_SCM_TO_CONANDATA
-
-[storage]
-# This is the default path, but you can write your own. It must be an absolute path or a
-# path beginning with "~" (if the environment var CONAN_USER_HOME is specified, this directory, even
-# with "~/", will be relative to the conan user home, not to the system user home)
-path = ./data
-
-[proxies]
-# Empty (or missing) section will try to use system proxies.
-# As documented in https://requests.readthedocs.io/en/master/user/advanced/#proxies - but see below
-# for proxies to specific hosts
-# http = http://user:pass@10.10.1.10:3128/
-# http = http://10.10.1.10:3128
-# https = http://10.10.1.10:1080
-# To specify a proxy for a specific host or hosts, use multiple lines each specifying host = proxy-spec
-# http =
-#   hostname.to.be.proxied.com = http://user:pass@10.10.1.10:3128
-# You can skip the proxy for the matching (fnmatch) urls (comma-separated)
-# no_proxy_match = *bintray.com*, https://myserver.*
-
-[hooks]    # environment CONAN_HOOKS
-attribute_checker
-
-# Default settings now declared in the default profile
-
-
-""" % DEFAULT_PROFILE_NAME
+def get_default_client_conf():
+    conan_v2 = os.environ.get(CONAN_V2_MODE_ENVVAR, False)
+    return _t_default_client_conf.render(conan_v2=conan_v2, default_profile=DEFAULT_PROFILE_NAME)
 
 
 class ConanClientConfigParser(ConfigParser, object):

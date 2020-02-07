@@ -6,7 +6,7 @@ from os.path import join
 
 from conans.client.cache.editable import EditablePackages
 from conans.client.cache.remote_registry import RemoteRegistry
-from conans.client.conf import ConanClientConfigParser, default_client_conf, default_settings_yml
+from conans.client.conf import ConanClientConfigParser, get_default_client_conf, default_settings_yml
 from conans.client.conf.detect import detect_defaults_settings
 from conans.client.output import Color
 from conans.client.profile_loader import read_profile
@@ -142,7 +142,7 @@ class ClientCache(object):
     def config(self):
         if not self._config:
             if not os.path.exists(self.conan_conf_path):
-                save(self.conan_conf_path, normalize(default_client_conf))
+                save(self.conan_conf_path, normalize(get_default_client_conf()))
 
             self._config = ConanClientConfigParser(self.conan_conf_path)
         return self._config

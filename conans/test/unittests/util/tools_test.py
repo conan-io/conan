@@ -19,7 +19,7 @@ from six import StringIO
 from conans.client import tools
 from conans.client.cache.cache import CONAN_CONF
 from conans.client.conan_api import ConanAPIV1
-from conans.client.conf import default_client_conf, default_settings_yml
+from conans.client.conf import default_settings_yml, get_default_client_conf
 from conans.client.output import ConanOutput
 from conans.client.runner import ConanRunner
 from conans.client.tools.files import replace_in_file, which
@@ -262,7 +262,7 @@ class HelloConan(ConanFile):
 
         # Not test the real commmand get_command if it's setting the module global vars
         tmp = temp_folder()
-        conf = default_client_conf.replace("\n[proxies]", "\n[proxies]\nhttp = http://myproxy.com")
+        conf = get_default_client_conf().replace("\n[proxies]", "\n[proxies]\nhttp = http://myproxy.com")
         os.mkdir(os.path.join(tmp, ".conan"))
         save(os.path.join(tmp, ".conan", CONAN_CONF), conf)
         with tools.environment_append({"CONAN_USER_HOME": tmp}):
