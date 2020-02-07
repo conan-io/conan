@@ -10,10 +10,7 @@ class ConanV2ModeTestCase(unittest.TestCase):
     @staticmethod
     def get_client(*args, **kwargs):
         # TODO: Initialize with the default behavior for Conan v2
-        revisions_enabled = kwargs.get('revisions_enabled', None)
         t = TestClient(*args, **kwargs)
-        if revisions_enabled is None:
-            t.run("config set general.revisions_enabled=1")
         return t
 
     def run(self, *args, **kwargs):
