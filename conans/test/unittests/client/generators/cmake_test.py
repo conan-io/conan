@@ -380,8 +380,8 @@ class CMakeCppInfoNameTest(unittest.TestCase):
         content = content.replace("set(CONAN_DEPENDENCIES my_pkg my_pkg2)", "")
         self.assertNotIn("my_pkg", content)
         self.assertNotIn("MY_PKG", content)
-        self.assertIn('add_library(CONAN_PKG::MyPkG INTERFACE IMPORTED GLOBAL)', content)
-        self.assertIn('add_library(CONAN_PKG::MyPkG2 INTERFACE IMPORTED GLOBAL)', content)
+        self.assertIn('add_library(CONAN_PKG::MyPkG INTERFACE IMPORTED)', content)
+        self.assertIn('add_library(CONAN_PKG::MyPkG2 INTERFACE IMPORTED)', content)
         self.assertNotIn('CONAN_PKG::my_pkg', content)
         self.assertNotIn('CONAN_PKG::my_pkg2', content)
 
@@ -392,9 +392,9 @@ class CMakeCppInfoNameTest(unittest.TestCase):
                       content["conanbuildinfo_debug.cmake"])
         self.assertNotIn("my_pkg", content["conanbuildinfo_multi.cmake"])
         self.assertNotIn("MY_PKG", content["conanbuildinfo_multi.cmake"])
-        self.assertIn('add_library(CONAN_PKG::MyPkG INTERFACE IMPORTED GLOBAL)',
+        self.assertIn('add_library(CONAN_PKG::MyPkG INTERFACE IMPORTED)',
                       content["conanbuildinfo_multi.cmake"])
-        self.assertIn('add_library(CONAN_PKG::MyPkG2 INTERFACE IMPORTED GLOBAL)',
+        self.assertIn('add_library(CONAN_PKG::MyPkG2 INTERFACE IMPORTED)',
                       content["conanbuildinfo_multi.cmake"])
         self.assertNotIn('CONAN_PKG::my_pkg', content["conanbuildinfo_multi.cmake"])
         self.assertNotIn('CONAN_PKG::my_pkg2', content["conanbuildinfo_multi.cmake"])
@@ -408,8 +408,8 @@ class CMakeCppInfoNameTest(unittest.TestCase):
         self.assertNotIn("MY_PKG", content["FindMyPkG.cmake"])
         self.assertNotIn("my_pkg", content["FindMyPkG2.cmake"])
         self.assertNotIn("MY_PKG", content["FindMyPkG2.cmake"])
-        self.assertIn("add_library(MyPkG::MyPkG INTERFACE IMPORTED GLOBAL)", content["FindMyPkG.cmake"])
-        self.assertIn("add_library(MyPkG2::MyPkG2 INTERFACE IMPORTED GLOBAL)", content["FindMyPkG2.cmake"])
+        self.assertIn("add_library(MyPkG::MyPkG INTERFACE IMPORTED)", content["FindMyPkG.cmake"])
+        self.assertIn("add_library(MyPkG2::MyPkG2 INTERFACE IMPORTED)", content["FindMyPkG2.cmake"])
         self.assertIn("find_dependency(MyPkG REQUIRED)", content["FindMyPkG2.cmake"])
 
     def cmake_find_package_multi_test(self):
@@ -423,9 +423,9 @@ class CMakeCppInfoNameTest(unittest.TestCase):
         self.assertNotIn("MY_PKG", content["MyPkGConfig.cmake"])
         self.assertNotIn("my_pkg", content["MyPkG2Config.cmake"])
         self.assertNotIn("MY_PKG", content["MyPkG2Config.cmake"])
-        self.assertIn("add_library(MyPkG::MyPkG INTERFACE IMPORTED GLOBAL)",
+        self.assertIn("add_library(MyPkG::MyPkG INTERFACE IMPORTED)",
                       content["MyPkGTargets.cmake"])
-        self.assertIn("add_library(MyPkG2::MyPkG2 INTERFACE IMPORTED GLOBAL)",
+        self.assertIn("add_library(MyPkG2::MyPkG2 INTERFACE IMPORTED)",
                       content["MyPkG2Targets.cmake"])
         self.assertIn("find_dependency(MyPkG REQUIRED NO_MODULE)", content["MyPkG2Config.cmake"])
 

@@ -35,7 +35,7 @@ class CMakeFindPackageGenerator(Generator):
 if(NOT ${{CMAKE_VERSION}} VERSION_LESS "3.0")
     # Target approach
     if(NOT TARGET {name}::{name})
-        add_library({name}::{name} INTERFACE IMPORTED GLOBAL)
+        add_library({name}::{name} INTERFACE IMPORTED)
         {assign_target_properties_block}
         {find_dependencies_block}
     endif()
