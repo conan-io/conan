@@ -7,6 +7,9 @@ from conans.test.utils.conan_v2_tests import ConanV2ModeTestCase
 class DefaultConfigTestCase(ConanV2ModeTestCase):
     def test_revisions_enabled(self):
         t = self.get_client()
+        import os
+        c = t.load(os.path.join(t.cache_folder, 'conan.conf'))
+        print(c)
         t.run('config get general.revisions_enabled')
         self.assertEqual(str(t.out).strip(), "1")
 
