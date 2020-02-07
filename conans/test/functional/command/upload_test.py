@@ -242,7 +242,8 @@ class UploadTest(unittest.TestCase):
                         new=gzopen_patched):
             client.run("upload * --confirm --all", assert_error=True)
             self.assertIn("ERROR: Hello0/1.2.1@user/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
-                          ": Upload package failed: Error gzopen conan_package.tgz", client.out)
+                          ": Upload package to 'default' failed: Error gzopen conan_package.tgz",
+                          client.out)
 
             export_folder = client.cache.package_layout(pref.ref).package(pref)
             tgz = os.path.join(export_folder, PACKAGE_TGZ_NAME)
@@ -272,7 +273,8 @@ class UploadTest(unittest.TestCase):
         self.assertIn("WARN: Mismatched checksum 'added.txt'", client.out)
         self.assertIn("WARN: Mismatched checksum 'include/hello.h'", client.out)
         self.assertIn("ERROR: Hello0/1.2.1@frodo/stable:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9: "
-                      "Upload package failed: Cannot upload corrupted package", client.out)
+                      "Upload package to 'default' failed: Cannot upload corrupted package",
+                      client.out)
 
     def upload_modified_recipe_test(self):
         client = self._client()
@@ -453,7 +455,7 @@ class MyPkg(ConanFile):
         if not client.cache.config.revisions_enabled:
             self.assertIn("Recipe is up to date, upload skipped", client.out)
             self.assertIn("ERROR: Hello0/1.2.1@frodo/stable:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
-                          ": Upload package failed: "
+                          ": Upload package to 'default' failed: "
                           "Local package is different from the remote package", client.out)
             self.assertIn("Forbidden overwrite", client.out)
             self.assertNotIn("Uploading conan_package.tgz", client.out)

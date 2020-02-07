@@ -357,7 +357,7 @@ class UploadTest(unittest.TestCase):
 
         client.run('upload lib* -c --all -r default', assert_error=True)
         self.assertIn("ERROR: lib/1.0@user/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9: "
-                      "Upload package failed: [Errno 13] Permission denied", client.out)
+                      "Upload package to 'default' failed:", client.out)
         self.assertIn("ERROR: Errors uploading some packages", client.out)
 
     def upload_with_pattern_and_package_error_test(self):

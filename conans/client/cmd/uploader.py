@@ -97,8 +97,11 @@ class CmdUpload(object):
 
             def upload_ref(ref_conanfile_prefs):
                 _ref, _conanfile, _prefs = ref_conanfile_prefs
-                self._upload_ref(_conanfile, _ref, _prefs, retry, retry_wait,
-                                 integrity_check, policy, remote, upload_recorder, remotes)
+                try:
+                    self._upload_ref(_conanfile, _ref, _prefs, retry, retry_wait,
+                                     integrity_check, policy, remote, upload_recorder, remotes)
+                except BaseException as base_exception:
+                    self._exceptions_list.append((base_exception, _ref))
 
             self._upload_thread_pool.map(upload_ref,
                                          [(ref, conanfile, prefs) for (ref, conanfile, prefs) in
@@ -107,8 +110,10 @@ class CmdUpload(object):
             self._upload_thread_pool.join()
 
             if len(self._exceptions_list) > 0:
-                for exception in self._exceptions_list:
-                    self._output.error(exception)
+                for exc, ref in self._exceptions_list:
+                    t = "recipe" if isinstance(ref, ConanFileReference) else "package"
+                    msg = "%s: Upload %s to '%s' failed: %s" % (str(ref), t, remote.name, str(exc))
+                    self._output.error(msg)
                 raise ConanException("Errors uploading some packages")
 
         logger.debug("UPLOAD: Time manager upload: %f" % (time.time() - t1))
@@ -220,13 +225,8 @@ class CmdUpload(object):
                                    reference=ref, remote=recipe_remote)
         msg = "\rUploading %s to remote '%s'" % (str(ref), recipe_remote.name)
         self._output.info(left_justify_message(msg))
-        try:
-            self._upload_recipe(ref, conanfile, retry, retry_wait, policy, recipe_remote, remotes)
-            upload_recorder.add_recipe(ref, recipe_remote.name, recipe_remote.url)
-        except Exception as exc:
-            msg = "%s: Upload recipe to '%s' failed: %s" % (str(ref), recipe_remote.name, str(exc))
-            self._exceptions_list.append(msg)
-            return
+        self._upload_recipe(ref, conanfile, retry, retry_wait, policy, recipe_remote, remotes)
+        upload_recorder.add_recipe(ref, recipe_remote.name, recipe_remote.url)
 
         # Now the binaries
         if prefs:
@@ -240,23 +240,20 @@ class CmdUpload(object):
                                                                         str(pref.id),
                                                                         p_remote.name)
                     self._output.info(left_justify_message(up_msg))
-                    self._upload_package(pref, retry, retry_wait,
-                                         integrity_check, policy, p_remote)
+                    self._upload_package(pref, retry, retry_wait, integrity_check, policy, p_remote)
                     upload_recorder.add_package(pref, p_remote.name, p_remote.url)
-                    return pref, None
-                except Exception as pkg_exc:
-                    return pref, pkg_exc
+                except BaseException as pkg_exc:
+                    return pkg_exc, pref
 
             def upload_package_callback(ret):
-                for pref, pkg_exc in ret:
-                    if pkg_exc is None:
-                        # FIXME: I think it makes no sense to specify a remote to "post_upload"
-                        # FIXME: because the recipe can have one and the package a different one
-                        self._hook_manager.execute("post_upload", conanfile_path=conanfile_path,
-                                                   reference=pref.ref, remote=p_remote)
-                    else:
-                        msg_pkg = "%s: Upload package failed: %s" % (str(pref),  str(pkg_exc))
-                        self._exceptions_list.append(msg_pkg)
+                package_exceptions = [r for r in ret if r is not None]
+                self._exceptions_list.extend(package_exceptions)
+                if not package_exceptions:
+                    # FIXME: I think it makes no sense to specify a remote to "post_upload"
+                    # FIXME: because the recipe can have one and the package a different one
+                    self._hook_manager.execute("post_upload", conanfile_path=conanfile_path,
+                                               reference=ref, remote=recipe_remote)
+
             # This doesn't wait for the packages to end, so the function returns
             # and the "pool entry" for the recipe is released
             self._upload_thread_pool.map_async(upload_package_index,
