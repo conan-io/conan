@@ -1,0 +1,42 @@
+Uploading to remote 'artifactory':
+Uploading openssl/1.0.2t to remote 'artifactory'                                         
+Uploading zlib/1.2.11 to remote 'artifactory'                                            
+Uploading poco/1.9.4 to remote 'artifactory'                                             
+Uploading conan_export.tgz -> poco/1.9.4
+Uploading conan_export.tgz -> zlib/1.2.11
+Uploading conan_export.tgz -> openssl/1.0.2t
+Uploading conan_sources.tgz -> poco/1.9.4
+Uploading conan_sources.tgz -> zlib/1.2.11
+Uploading conanfile.py -> openssl/1.0.2t
+Uploading conanfile.py -> poco/1.9.4
+Uploading conanfile.py -> zlib/1.2.11
+Uploading conanmanifest.txt -> openssl/1.0.2t
+Uploading conanmanifest.txt -> poco/1.9.4
+Uploading conanmanifest.txt -> zlib/1.2.11
+Uploaded conan recipe 'openssl/1.0.2t' to 'artifactory': http://localhost:8081/artifactory/api/conan/conan-local
+Uploading package 1/2: 606fdb601e335c2001bdf31d478826b644747077 to 'artifactory'         
+Uploading package 2/2: ee5dab950b6ea94ae953b93c55343e98c2ec39df to 'artifactory'         
+Uploaded conan recipe 'poco/1.9.4' to 'artifactory': http://localhost:8081/artifactory/api/conan/conan-local
+Uploading package 1/2: 7a4607a56a85b18ed573b9157518c7e3c7468d99 to 'artifactory'         
+Uploading package 2/2: ff9823c7d70d75a9eb9eb301b422c3b7db1b9706 to 'artifactory'         
+Uploaded conan recipe 'zlib/1.2.11' to 'artifactory': http://localhost:8081/artifactory/api/conan/conan-local
+Uploading package 1/2: 63da998e3642b50bee33f4449826b2d623661505 to 'artifactory'         
+Uploading package 2/2: 6cc50b139b9c3d27b3e9042d5f5372d327b3a9f7 to 'artifactory'         
+Uploading conan_package.tgz -> zlib/1.2.11:63da
+Uploading conan_package.tgz -> zlib/1.2.11:6cc5
+Uploading conan_package.tgz -> openssl/1.0.2t:ee5d
+Uploading conaninfo.txt -> zlib/1.2.11:6cc5
+Uploading conaninfo.txt -> zlib/1.2.11:63da
+Uploading conanmanifest.txt -> zlib/1.2.11:63da
+Uploading conanmanifest.txt -> zlib/1.2.11:6cc5
+Uploading conan_package.tgz -> openssl/1.0.2t:606f
+Uploading conan_package.tgz -> poco/1.9.4:7a46
+Uploading conan_package.tgz -> poco/1.9.4:ff98
+Uploading conaninfo.txt -> openssl/1.0.2t:ee5d
+Uploading conanmanifest.txt -> openssl/1.0.2t:ee5d
+Uploading conaninfo.txt -> openssl/1.0.2t:606f
+Uploading conanmanifest.txt -> openssl/1.0.2t:606f
+Uploading conaninfo.txt -> poco/1.9.4:7a46
+Uploading conanmanifest.txt -> poco/1.9.4:7a46
+Uploading conaninfo.txt -> poco/1.9.4:ff98
+Uploading conanmanifest.txt -> poco/1.9.4:ff98

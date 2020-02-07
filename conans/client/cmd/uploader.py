@@ -2,6 +2,7 @@ import os
 import stat
 import tarfile
 import time
+import traceback
 from collections import defaultdict
 from multiprocessing.pool import ThreadPool
 
@@ -101,7 +102,8 @@ class CmdUpload(object):
                     self._upload_ref(_conanfile, _ref, _prefs, retry, retry_wait,
                                      integrity_check, policy, remote, upload_recorder, remotes)
                 except BaseException as base_exception:
-                    self._exceptions_list.append((base_exception, _ref))
+                    trace = traceback.format_exc()
+                    self._exceptions_list.append((base_exception, _ref, trace))
 
             self._upload_thread_pool.map(upload_ref,
                                          [(ref, conanfile, prefs) for (ref, conanfile, prefs) in
@@ -110,9 +112,10 @@ class CmdUpload(object):
             self._upload_thread_pool.join()
 
             if len(self._exceptions_list) > 0:
-                for exc, ref in self._exceptions_list:
+                for exc, ref, trace in self._exceptions_list:
                     t = "recipe" if isinstance(ref, ConanFileReference) else "package"
-                    msg = "%s: Upload %s to '%s' failed: %s" % (str(ref), t, remote.name, str(exc))
+                    msg = "%s: Upload %s to '%s' failed: %s\n" % (str(ref), t, remote.name, str(exc))
+                    msg += trace
                     self._output.error(msg)
                 raise ConanException("Errors uploading some packages")
 
@@ -243,7 +246,8 @@ class CmdUpload(object):
                     self._upload_package(pref, retry, retry_wait, integrity_check, policy, p_remote)
                     upload_recorder.add_package(pref, p_remote.name, p_remote.url)
                 except BaseException as pkg_exc:
-                    return pkg_exc, pref
+                    trace = traceback.format_exc()
+                    return pkg_exc, pref, trace
 
             def upload_package_callback(ret):
                 package_exceptions = [r for r in ret if r is not None]
