@@ -102,6 +102,10 @@ class ConanException(Exception):
         return exception_message_safe(msg)
 
 
+class ConanV2Exception(ConanException):
+    pass
+
+
 class OnlyV2Available(ConanException):
 
     def __init__(self, remote_url):

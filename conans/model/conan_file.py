@@ -14,7 +14,7 @@ from conans.model.options import Options, OptionsValues, PackageOptions
 from conans.model.requires import Requirements
 from conans.model.user_info import DepsUserInfo
 from conans.paths import RUN_LOG_NAME
-
+from conans.util.conan_v2_mode import conan_v2_behavior
 
 def create_options(conanfile):
     try:
@@ -138,8 +138,8 @@ class ConanFile(object):
         self.settings = create_settings(self, settings)
 
         if 'cppstd' in self.settings.fields:
-            self.output.warn("Setting 'cppstd' is deprecated in favor of 'compiler.cppstd',"
-                             " please update your recipe.")
+            conan_v2_behavior("Setting 'cppstd' is deprecated in favor of 'compiler.cppstd',"
+                              " please update your recipe.", v1_behavior=self.output.warn)
 
         # needed variables to pack the project
         self.cpp_info = None  # Will be initialized at processing time
