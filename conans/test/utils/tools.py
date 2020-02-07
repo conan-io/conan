@@ -9,6 +9,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+import time
 import unittest
 import uuid
 from collections import Counter, OrderedDict
@@ -17,12 +18,11 @@ from contextlib import contextmanager
 import bottle
 import requests
 import six
-import time
 from mock import Mock
+from requests.exceptions import HTTPError
 from six import StringIO
 from six.moves.urllib.parse import quote, urlsplit, urlunsplit
 from webtest.app import TestApp
-from requests.exceptions import HTTPError
 
 from conans import load
 from conans.client.cache.cache import ClientCache
@@ -31,6 +31,7 @@ from conans.client.command import Command
 from conans.client.conan_api import Conan
 from conans.client.output import ConanOutput
 from conans.client.rest.uploader_downloader import IterableToFileAdapter
+from conans.client.runner import ConanRunner
 from conans.client.tools import environment_append
 from conans.client.tools.files import chdir
 from conans.client.tools.files import replace_in_file
@@ -49,7 +50,6 @@ from conans.test.utils.server_launcher import (TESTING_REMOTE_PRIVATE_PASS,
 from conans.test.utils.test_files import temp_folder
 from conans.util.env_reader import get_env
 from conans.util.files import mkdir, save_files
-from conans.client.runner import ConanRunner
 from conans.util.runners import check_output_runner
 
 NO_SETTINGS_PACKAGE_ID = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
@@ -708,7 +708,7 @@ servers["r2"] = TestServer()
         self.current_folder = current_folder or temp_folder(path_with_spaces)
 
         # Once the client is ready, modify the configuration
-        os.makedirs(self.current_folder, exist_ok=True)
+        mkdir(self.current_folder)
         self.tune_conan_conf(cache_folder, cpu_count, revisions_enabled)
 
     def load(self, filename):
