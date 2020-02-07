@@ -129,9 +129,11 @@ def _detect_compiler_version(result, output, profile_path):
         if compiler == "apple-clang":
             result.append(("compiler.libcxx", "libc++"))
         elif compiler == "gcc":
-            libcxx, old_abi = ('libstdc++11', False) if get_env(CONAN_V2_MODE_ENVVAR, False) else ('libstdc++', True)
+            new_abi_available = Version(version) >= Version("5.1")
+            libcxx, old_abi = ('libstdc++11', False) if new_abi_available and get_env(CONAN_V2_MODE_ENVVAR, False)\
+                else ('libstdc++', True)
             result.append(("compiler.libcxx", libcxx))
-            if old_abi and Version(version) >= Version("5.1"):
+            if old_abi and new_abi_available:
                 profile_name = os.path.basename(profile_path)
                 msg = """
 Conan detected a GCC version > 5 but has adjusted the 'compiler.libcxx' setting to
