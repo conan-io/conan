@@ -6,7 +6,7 @@ from collections import OrderedDict
 
 import itertools
 import requests
-from mock import mock, patch
+from mock import patch
 from nose.plugins.attrib import attr
 
 from conans import REVISIONS
@@ -209,8 +209,7 @@ class UploadTest(unittest.TestCase):
 
         def gzopen_patched(name, mode="r", fileobj=None, compresslevel=None, **kwargs):
             raise ConanException("Error gzopen %s" % name)
-        with mock.patch('conans.client.cmd.uploader.gzopen_without_timestamps',
-                        new=gzopen_patched):
+        with patch('conans.client.cmd.uploader.gzopen_without_timestamps', new=gzopen_patched):
             client.run("upload * --confirm", assert_error=True)
             self.assertIn("ERROR: Hello0/1.2.1@user/testing: Upload recipe to 'default' failed: "
                           "Error gzopen conan_sources.tgz", client.out)
@@ -238,8 +237,7 @@ class UploadTest(unittest.TestCase):
             if name == PACKAGE_TGZ_NAME:
                 raise ConanException("Error gzopen %s" % name)
             return gzopen_without_timestamps(name, mode, fileobj, compresslevel, **kwargs)
-        with mock.patch('conans.client.cmd.uploader.gzopen_without_timestamps',
-                        new=gzopen_patched):
+        with patch('conans.client.cmd.uploader.gzopen_without_timestamps', new=gzopen_patched):
             client.run("upload * --confirm --all", assert_error=True)
             self.assertIn("ERROR: Hello0/1.2.1@user/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
                           ": Upload package to 'default' failed: Error gzopen conan_package.tgz",
@@ -565,11 +563,7 @@ class MyPkg(ConanFile):
 
     def upload_without_sources_test(self):
         client = self._client()
-        conanfile = """from conans import ConanFile
-class Pkg(ConanFile):
-    pass
-"""
-        client.save({"conanfile.py": conanfile})
+        client.save({"conanfile.py": GenConanfile()})
         client.run("create . Pkg/0.1@user/testing")
         client.run("upload * --all --confirm")
         client2 = self._client()

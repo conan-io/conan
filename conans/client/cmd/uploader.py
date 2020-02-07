@@ -7,6 +7,7 @@ from collections import defaultdict
 from multiprocessing.pool import ThreadPool
 
 from conans.util import progress_bar
+from conans.util.env_reader import get_env
 from conans.util.progress_bar import left_justify_message
 from conans.client.remote_manager import is_package_snapshot_complete, calc_files_checksum
 from conans.client.source import complete_recipe_sources
@@ -102,8 +103,8 @@ class CmdUpload(object):
                     self._upload_ref(_conanfile, _ref, _prefs, retry, retry_wait,
                                      integrity_check, policy, remote, upload_recorder, remotes)
                 except BaseException as base_exception:
-                    trace = traceback.format_exc()
-                    self._exceptions_list.append((base_exception, _ref, trace))
+                    base_trace = traceback.format_exc()
+                    self._exceptions_list.append((base_exception, _ref, base_trace))
 
             self._upload_thread_pool.map(upload_ref,
                                          [(ref, conanfile, prefs) for (ref, conanfile, prefs) in
@@ -115,7 +116,8 @@ class CmdUpload(object):
                 for exc, ref, trace in self._exceptions_list:
                     t = "recipe" if isinstance(ref, ConanFileReference) else "package"
                     msg = "%s: Upload %s to '%s' failed: %s\n" % (str(ref), t, remote.name, str(exc))
-                    msg += trace
+                    if get_env("CONAN_VERBOSE_TRACEBACK", False):
+                        msg += trace
                     self._output.error(msg)
                 raise ConanException("Errors uploading some packages")
 

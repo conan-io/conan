@@ -6,9 +6,11 @@ import textwrap
 import unittest
 
 import six
+from mock import patch
 from requests.packages.urllib3.exceptions import ConnectionError
 
 from conans import DEFAULT_REVISION_V1
+from conans.client.tools import environment_append
 from conans.client.tools.files import untargz
 from conans.model.manifest import FileTreeManifest
 from conans.model.package_metadata import PackageMetadata
@@ -356,9 +358,41 @@ class UploadTest(unittest.TestCase):
         client.run('create . lib/1.0@user/channel')
 
         client.run('upload lib* -c --all -r default', assert_error=True)
+        self.assertNotIn("os.remove(tgz_path)", client.out)
+        self.assertNotIn("Traceback", client.out)
         self.assertIn("ERROR: lib/1.0@user/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9: "
                       "Upload package to 'default' failed:", client.out)
         self.assertIn("ERROR: Errors uploading some packages", client.out)
+
+        with environment_append({"CONAN_VERBOSE_TRACEBACK": "True"}):
+            client.run('upload lib* -c --all -r default', assert_error=True)
+            self.assertIn("os.remove(tgz_path)", client.out)
+            self.assertIn("Traceback", client.out)
+            self.assertIn("ERROR: lib/1.0@user/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9: "
+                          "Upload package to 'default' failed:", client.out)
+            self.assertIn("ERROR: Errors uploading some packages", client.out)
+
+    def test_beat_character_long_upload(self):
+        client = TestClient(default_server_user=True)
+        slow_conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class MyPkg(ConanFile):
+                exports = "*"
+                def package(self):
+                    self.copy("*")
+            """)
+        client.save({"conanfile.py": slow_conanfile,
+                     "hello.cpp": ""})
+        client.run("create . pkg/0.1@user/stable")
+        client.run("user user --password=password")
+        with patch("conans.util.progress_bar.TIMEOUT_BEAT_SECONDS", -1):
+            with patch("conans.util.progress_bar.TIMEOUT_BEAT_CHARACTER", "%&$"):
+                client.run("upload pkg/0.1@user/stable --all")
+        out = "".join(str(client.out).splitlines())
+        self.assertIn("Compressing package...%&$%&$Uploading conan_package.tgz -> "
+                      "pkg/0.1@user/stable:5ab8", out)
+        self.assertIn("%&$Uploading conan_export.tgz", out)
+        self.assertIn("%&$Uploading conaninfo.txt", out)
 
     def upload_with_pattern_and_package_error_test(self):
         files = hello_conan_files("Hello1", "1.2.1")

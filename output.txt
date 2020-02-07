@@ -1,19 +1,0 @@
-Uploading to remote 'artifactory':
-Uploading openssl/1.0.2t to remote 'artifactory'                                         
-Uploading poco/1.9.4 to remote 'artifactory'                                             
-Uploading zlib/1.2.11 to remote 'artifactory'                                            
-Recipe is up to date, upload skipped
-Recipe is up to date, upload skipped
-Recipe is up to date, upload skipped
-Uploading package 1/2: 606fdb601e335c2001bdf31d478826b644747077 to 'artifactory'         
-Uploading package 2/2: ee5dab950b6ea94ae953b93c55343e98c2ec39df to 'artifactory'         
-Uploading package 1/2: 7a4607a56a85b18ed573b9157518c7e3c7468d99 to 'artifactory'         
-Uploading package 2/2: ff9823c7d70d75a9eb9eb301b422c3b7db1b9706 to 'artifactory'         
-Uploading package 1/2: 63da998e3642b50bee33f4449826b2d623661505 to 'artifactory'         
-Uploading package 2/2: 6cc50b139b9c3d27b3e9042d5f5372d327b3a9f7 to 'artifactory'         
-Package is up to date, upload skipped
-Package is up to date, upload skipped
-Package is up to date, upload skipped
-Package is up to date, upload skipped
-Package is up to date, upload skipped
-Package is up to date, upload skipped
