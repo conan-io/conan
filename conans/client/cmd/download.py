@@ -38,6 +38,7 @@ def download(app, ref, package_ids, remote, recipe, recorder, remotes):
                            remote, output, recorder)
     hook_manager.execute("post_download", conanfile_path=conan_file_path, reference=ref,
                          remote=remote)
+    return getattr(conanfile, "requires", [])
 
 
 def _download_binaries(conanfile, ref, package_ids, cache, remote_manager, remote, output,

@@ -1,5 +1,10 @@
 import os
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
+import datetime
 
+from conans.client.recorder.action_recorder import ActionRecorder
+from conans.client.cmd.download import download
 from conans.client.generators import write_generators
 from conans.client.graph.build_mode import BuildMode
 from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL
@@ -11,7 +16,7 @@ from conans.client.output import Color
 from conans.client.source import complete_recipe_sources
 from conans.client.tools import cross_building, get_cross_building_settings
 from conans.errors import ConanException
-from conans.model.ref import ConanFileReference
+from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANINFO
 from conans.util.files import normalize, save
 
@@ -35,13 +40,35 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
     @param no_imports: Install specified packages but avoid running imports
 
     """
-    out, user_io, graph_manager, cache = app.out, app.user_io, app.graph_manager, app.cache
+    now = datetime.datetime.now()
+    print("total time = ", datetime.datetime.now() - now)
+    out, user_io, graph_manager, cache, loader = app.out, app.user_io, app.graph_manager, app.cache, app.loader
     remote_manager, hook_manager = app.remote_manager, app.hook_manager
     if generators is not False:
         generators = set(generators) if generators else set()
         generators.add("txt")  # Add txt generator by default
 
     out.info("Configuration:")
+    downloaded_refs = set()
+    profile_host = cache.default_profile
+    profile_host.process_settings(cache)
+    conanfile = loader.load_conanfile_txt(ref_or_path, profile_host)
+
+    with ThreadPoolExecutor(max_workers=20) as executor:
+        packages_to_pull = [str(req.ref) for req in conanfile.requires.values()]
+        remote = remotes.get("artifactory")
+        while packages_to_pull:
+            all_args = [(app, ConanFileReference.loads(ref), None, remote, False, ActionRecorder(), remotes) for ref in packages_to_pull]
+            generated_tasks = executor.map(lambda args: download(*args), all_args)
+            for ref in packages_to_pull:
+                downloaded_refs.add(ref)
+            next_batch = []
+            for downloaded_requires in generated_tasks:
+                for ref_name in downloaded_requires:
+                    if ref_name not in next_batch and ref_name not in downloaded_refs:
+                        next_batch.append(ref_name)
+            packages_to_pull = next_batch
+
     out.writeln(graph_info.profile_host.dumps())
     deps_graph = graph_manager.load_graph(ref_or_path, create_reference, graph_info, build_modes,
                                           False, update, remotes, recorder)
@@ -52,6 +79,7 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
     else:
         conanfile.output.highlight("Installing package")
     print_graph(deps_graph, out)
+
 
     try:
         if cross_building(graph_info.profile_host.processed_settings):
@@ -106,3 +134,5 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
             deploy_conanfile = neighbours[0].conanfile
             if hasattr(deploy_conanfile, "deploy") and callable(deploy_conanfile.deploy):
                 run_deploy(deploy_conanfile, install_folder)
+
+    print("total time = ", datetime.datetime.now() - now)
