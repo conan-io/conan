@@ -1906,7 +1906,7 @@ class Command(object):
             self._out.writeln("*"*width, front=Color.BRIGHT_RED)
 
             self._out.writeln(textwrap.fill("Python 2 is deprecated as of 01/01/2020 and Conan has"
-                                            " stopped supporting it oficially. We strongly recommend"
+                                            " stopped supporting it officially. We strongly recommend"
                                             " you to use Python >= 3.5. Conan will completely stop"
                                             " working with Python 2 in the following releases", width),
                               front=Color.BRIGHT_RED)
