@@ -63,7 +63,7 @@ class PremakeGeneratorTest(unittest.TestCase):
         includedirs{{conan_includedirs}}
         libdirs{{conan_libdirs}}
         links{{conan_libs}}
-        links{conan_system_libs}
+        links{{conan_system_libs}}
         defines{{conan_defines}}
         bindirs{{conan_bindirs}}
     end
