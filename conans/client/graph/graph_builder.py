@@ -83,6 +83,7 @@ class DepsGraphBuilder(object):
             r.build_require = True
 
         if graph_lock:
+            graph_lock.pre_lock_node(node)
             graph_lock.lock_node(node, requires, build_requires=True)
 
         self._resolve_ranges(graph, requires, scope, update, remotes)
@@ -137,6 +138,8 @@ class DepsGraphBuilder(object):
          the downstream requirements and overrides and solving version-ranges
         """
         # basic node configuration: calling configure() and requirements()
+        if graph_lock:
+            graph_lock.pre_lock_node(node)
         new_options = self._config_node(node, down_ref, down_options)
         # Alias that are cached should be replaced here, bc next requires.update() will warn if not
         self._resolve_cached_alias(node.conanfile.requires.values(), graph)
@@ -222,8 +225,13 @@ class DepsGraphBuilder(object):
             self._resolve_cached_alias([require], graph)
             # As we are closing a diamond, there can be conflicts. This will raise if conflicts
             conflict = self._conflicting_references(previous.ref, require.ref, node.ref)
-            if conflict:
-                raise ConanException(conflict)
+            if conflict:  # It is possible to get conflict from alias, try to resolve it
+                self._resolve_recipe(node, graph, require, check_updates,
+                                     update, remotes, profile_host, graph_lock)
+                # Maybe it was an ALIAS, so we can check conflict again
+                conflict = self._conflicting_references(previous.ref, require.ref, node.ref)
+                if conflict:
+                    raise ConanException(conflict)
 
             # Add current ancestors to the previous node and upstream deps
             union = node.ancestors.union([node.name])

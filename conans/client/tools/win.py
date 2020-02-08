@@ -9,13 +9,14 @@ import deprecation
 
 from conans.client.tools import which
 from conans.client.tools.env import environment_append
-from conans.client.tools.oss import OSInfo, detected_architecture, check_output
+from conans.client.tools.oss import OSInfo, detected_architecture
 from conans.errors import ConanException
 from conans.model.version import Version
 from conans.unicode import get_cwd
 from conans.util.env_reader import get_env
 from conans.util.fallbacks import default_output
 from conans.util.files import mkdir_tmp, save
+from conans.util.runners import check_output_runner
 
 
 def _visual_compiler_cygwin(output, version):
@@ -298,7 +299,7 @@ def vswhere(all_=False, prerelease=False, products=None, requires=None, version=
         arguments.append("-nologo")
 
     try:
-        output = check_output(arguments).strip()
+        output = check_output_runner(arguments).strip()
         # Ignore the "description" field, that even decoded contains non valid charsets for json
         # (ignored ones)
         output = "\n".join([line for line in output.splitlines()
@@ -421,18 +422,18 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False, vcva
             if vcvars_ver:
                 command.append("-vcvars_ver=%s" % vcvars_ver)
 
-    if os_setting == 'WindowsStore':
-        os_version_setting = settings.get_safe("os.version")
-        if os_version_setting == '8.1':
-            command.append('store 8.1')
-        elif os_version_setting == '10.0':
-            windows_10_sdk = find_windows_10_sdk()
-            if not windows_10_sdk:
-                raise ConanException("cross-compiling for WindowsStore 10 (UWP), "
-                                     "but Windows 10 SDK wasn't found")
-            command.append('store %s' % windows_10_sdk)
-        else:
-            raise ConanException('unsupported Windows Store version %s' % os_version_setting)
+        if os_setting == 'WindowsStore':
+            os_version_setting = settings.get_safe("os.version")
+            if os_version_setting == '8.1':
+                command.append('store 8.1')
+            elif os_version_setting == '10.0':
+                windows_10_sdk = find_windows_10_sdk()
+                if not windows_10_sdk:
+                    raise ConanException("cross-compiling for WindowsStore 10 (UWP), "
+                                         "but Windows 10 SDK wasn't found")
+                command.append('store %s' % windows_10_sdk)
+            else:
+                raise ConanException('unsupported Windows Store version %s' % os_version_setting)
     return " ".join(command)
 
 
@@ -443,7 +444,7 @@ def vcvars_dict(settings, arch=None, compiler_version=None, force=False, filter_
                          compiler_version=compiler_version, force=force,
                          vcvars_ver=vcvars_ver, winsdk_version=winsdk_version, output=output)
     cmd += " && set"
-    ret = check_output(cmd)
+    ret = check_output_runner(cmd)
     new_env = {}
     for line in ret.splitlines():
         line = line.strip()
@@ -589,7 +590,7 @@ def run_in_windows_bash(conanfile, bashcmd, cwd=None, subsystem=None, msys_mingw
                                 "MINGW64"),
                     "MSYS2_PATH_TYPE": "inherit"}
     else:
-        env_vars = {}
+        env_vars = None
 
     with environment_append(env_vars):
 

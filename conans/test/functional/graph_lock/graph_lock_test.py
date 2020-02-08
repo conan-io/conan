@@ -122,7 +122,7 @@ class ReproducibleLockfiles(unittest.TestCase):
         client.save({"conanfile.txt": ""})
         client.run("install .")
         lockfile = client.load("conan.lock")
-        lockfile = lockfile.replace('"0.2"', '"0.1"').replace('"0"', '"UUID"')
+        lockfile = lockfile.replace('"0.3"', '"0.1"').replace('"0"', '"UUID"')
         client.save({"conan.lock": lockfile})
         client.run("install . --lockfile", assert_error=True)
         self.assertIn("This lockfile was created with a previous incompatible version", client.out)
@@ -619,6 +619,40 @@ class GraphLockConsumerBuildOrderTest(unittest.TestCase):
         client.run("graph build-order conan.lock --build=missing")
         self.assertIn("test4/0.1", client.out)
 
+    def package_revision_mode_build_order_test(self):
+        # https://github.com/conan-io/conan/issues/6232
+        client = TestClient()
+        client.run("config set general.default_package_id_mode=package_revision_mode")
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("export . libb/0.1@")
+        client.run("export . libc/0.1@")
+        client.save({"conanfile.py": GenConanfile().with_require_plain("libc/0.1")})
+        client.run("export . liba/0.1@")
+        client.save({"conanfile.py": GenConanfile().with_require_plain("liba/0.1")
+                                                   .with_require_plain("libb/0.1")})
+        client.run("export . app/0.1@")
+
+        client.run("graph lock app/0.1@ --build=missing")
+        client.run("graph build-order . --build=missing --json=bo.json")
+        self.assertIn("app/0.1:Package_ID_unknown - Unknown", client.out)
+        self.assertIn("liba/0.1:Package_ID_unknown - Unknown", client.out)
+        self.assertIn("libb/0.1:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Build", client.out)
+        self.assertIn("libc/0.1:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Build", client.out)
+        bo = client.load("bo.json")
+        build_order = json.loads(bo)
+        expected = [
+            # First level
+            [['3',
+              'libc/0.1#f3367e0e7d170aa12abccb175fee5f97:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9']],
+            # second level
+            [['2', 'liba/0.1#7086607aa6efbad8e2527748e3ee8237:Package_ID_unknown'],
+             ['4',
+              'libb/0.1#f3367e0e7d170aa12abccb175fee5f97:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9']],
+            # last level to build
+            [['1', 'app/0.1#7742ee9e2f19af4f9ed7619f231ca871:Package_ID_unknown']]
+        ]
+        self.assertEqual(build_order, expected)
+
 
 class GraphLockWarningsTestCase(unittest.TestCase):
 
@@ -670,6 +704,19 @@ class GraphLockBuildRequireErrorTestCase(unittest.TestCase):
 
         # Building the graphlock we get the message
         client.run("graph lock variant.py")
+        fmpe = "ffmpeg/1.0#5522e93e2abfbd455e6211fe4d0531a2:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
+        font = "fontconfig/1.0#f3367e0e7d170aa12abccb175fee5f97:"\
+               "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
+        harf = "harfbuzz/1.0#3172f5e84120f235f75f8dd90fdef84f:"\
+               "ea61889683885a5517800e8ebb09547d1d10447a"
+        zlib = "zlib/1.0#f3367e0e7d170aa12abccb175fee5f97:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
+        lock = json.loads(client.load("conan.lock"))
+        nodes = lock["graph_lock"]["nodes"]
+        self.assertEqual(5, len(nodes))
+        self.assertEqual(fmpe, nodes["1"]["pref"])
+        self.assertEqual(font, nodes["2"]["pref"])
+        self.assertEqual(harf, nodes["3"]["pref"])
+        self.assertEqual(zlib, nodes["4"]["pref"])
 
         # Using the graphlock there is no warning message
         client.run("graph build-order . --build cascade --build outdated", assert_error=True)
@@ -683,8 +730,47 @@ class GraphLockModifyConanfileTestCase(unittest.TestCase):
         # https://github.com/conan-io/conan/issues/5807
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
-        client.run("graph lock .")
-        client.save({"conanfile.py": GenConanfile().with_require_plain("zlib/1.0")})
-        client.run("install . --lockfile", assert_error=True)
-        self.assertIn("ERROR: 'zlib' cannot be found in lockfile for this package", client.out)
-        self.assertIn("If it is a new requirement, you need to create a new lockile", client.out)
+        client.run("create . zlib/1.0@")
+
+        client2 = TestClient(cache_folder=client.cache_folder)
+        client2.save({"conanfile.py": GenConanfile()})
+        client2.run("graph lock .")
+        client2.save({"conanfile.py": GenConanfile().with_require_plain("zlib/1.0")})
+        client2.run("install . --lockfile", assert_error=True)
+        self.assertIn("ERROR: 'zlib' cannot be found in lockfile for this package", client2.out)
+        self.assertIn("If it is a new requirement, you need to create a new lockile", client2.out)
+
+
+class LockFileOptionsTest(unittest.TestCase):
+    def test_options(self):
+        client = TestClient()
+        ffmpeg = textwrap.dedent("""
+            from conans import ConanFile
+            class FfmpegConan(ConanFile):
+                options = {"variation": ["standard", "nano"]}
+                default_options = {"variation": "standard"}
+
+                def requirements(self):
+                    variation = str(self.options.variation)
+                    self.output.info("Requirements: Variation %s!!" % variation)
+                    if self.options.variation == "standard":
+                        self.requires("missingdep/1.0")
+            """)
+
+        variant = textwrap.dedent("""
+            from conans import ConanFile
+            class Meta(ConanFile):
+                requires = "ffmpeg/1.0"
+                default_options = {"ffmpeg:variation": "nano"}
+            """)
+
+        client.save({"ffmepg/conanfile.py": ffmpeg,
+                     "variant/conanfile.py": variant})
+        client.run("export ffmepg ffmpeg/1.0@")
+        client.run("export variant nano/1.0@")
+
+        client.run("graph lock nano/1.0@ --build")
+        lockfile = client.load("conan.lock")
+        self.assertIn('"options": "variation=nano"', lockfile)
+        client.run("create ffmepg ffmpeg/1.0@ --build --lockfile")
+        self.assertIn("ffmpeg/1.0: Requirements: Variation nano!!", client.out)

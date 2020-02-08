@@ -230,12 +230,10 @@ class CMakeGeneratorTest(unittest.TestCase):
 
     if(NOT ARGUMENTS_SKIP_RPATH AND NOT ARGUMENTS_KEEP_RPATHS)
         # Parameter has renamed, but we keep the compatibility with old SKIP_RPATH
-        conan_message(STATUS "Conan: Adjusting default RPATHs Conan policies")
         conan_set_rpath()
     endif()
 
     if(NOT ARGUMENTS_SKIP_STD)
-        conan_message(STATUS "Conan: Adjusting language standard")
         conan_set_std()
     endif()
 
@@ -345,14 +343,14 @@ endmacro()""", macro)
                       ' ${CONAN_FRAMEWORK_DIRS})', content)
         self.assertIn('set(CONAN_FRAMEWORK_DIRS "path/to/Frameworks1"\n\t\t\t"path/to/Frameworks2" '
                       '${CONAN_FRAMEWORK_DIRS})', content)
-        self.assertIn('set(CONAN_LIBS ${CONAN_PKG_LIBS} ${CONAN_SYSTEM_LIBS} '
+        self.assertIn('set(CONAN_LIBS ${CONAN_LIBS} ${CONAN_SYSTEM_LIBS} '
                       '${CONAN_FRAMEWORKS_FOUND})', content)
 
         generator = CMakeFindPackageGenerator(conanfile)
         content = generator.content
         content = content['FindMyPkg.cmake']
-        self.assertIn('find_library(CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND NAME ${_FRAMEWORK} PATHS'
-                      ' ${MyPkg_FRAMEWORK_DIRS})', content)
+        self.assertIn('conan_find_apple_frameworks(MyPkg_FRAMEWORKS_FOUND "${MyPkg_FRAMEWORKS}"'
+                      ' "${MyPkg_FRAMEWORK_DIRS}")', content)
 
 
 class CMakeCppInfoNameTest(unittest.TestCase):
@@ -534,7 +532,6 @@ class CMakeBuildModulesTest(unittest.TestCase):
         cpp_info.name = ref.name
         cpp_info.build_modules = ["other-mod.cmake", "not-a-cmake-module.pc"]
         cpp_info.release.build_modules = ["release-mod.cmake"]
-        cpp_info.release.filter_empty = False  # For testing purposes only
         self.conanfile.deps_cpp_info.update(cpp_info, ref.name)
 
     def cmake_test(self):
@@ -587,7 +584,8 @@ class CMakeBuildModulesTest(unittest.TestCase):
                       content["Findmy_pkg2.cmake"])
         self.assertIn('set(my_pkg_BUILD_MODULES_PATHS "dummy_root_folder1/my-module.cmake")',
                       content["Findmy_pkg.cmake"])
-        self.assertIn('set(my_pkg2_BUILD_MODULES_PATHS "dummy_root_folder2/other-mod.cmake")',
+        self.assertIn('set(my_pkg2_BUILD_MODULES_PATHS "dummy_root_folder2/other-mod.cmake"'
+                      '\n\t\t\t"dummy_root_folder2/release-mod.cmake")',
                       content["Findmy_pkg2.cmake"])
 
     def cmake_find_package_multi_test(self):
@@ -596,5 +594,6 @@ class CMakeBuildModulesTest(unittest.TestCase):
         self.assertNotIn("not-a-cmake-module.pc", content["my_pkg2Target-release.cmake"])
         self.assertIn('set(my_pkg_BUILD_MODULES_PATHS_RELEASE "dummy_root_folder1/my-module.cmake")',
                       content["my_pkgTarget-release.cmake"])
-        self.assertIn('set(my_pkg2_BUILD_MODULES_PATHS_RELEASE "dummy_root_folder2/other-mod.cmake")',
+        self.assertIn('set(my_pkg2_BUILD_MODULES_PATHS_RELEASE "dummy_root_folder2/other-mod.cmake"'
+                      '\n\t\t\t"dummy_root_folder2/release-mod.cmake")',
                       content["my_pkg2Target-release.cmake"])

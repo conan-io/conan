@@ -8,17 +8,17 @@ from conans.util.log import logger
 
 class RestApiClientFactory(object):
 
-    def __init__(self, output, requester, revisions_enabled, artifacts_properties=None):
+    def __init__(self, output, requester, config, artifacts_properties=None):
         self._output = output
         self._requester = requester
-        self._revisions_enabled = revisions_enabled
+        self._config = config
         self._artifacts_properties = artifacts_properties
         self._cached_capabilities = {}
 
     def new(self, remote, token, refresh_token, custom_headers):
         tmp = RestApiClient(remote, token, refresh_token, custom_headers,
-                            self._output, self._requester,
-                            self._revisions_enabled, self._cached_capabilities,
+                            self._output, self._requester, self._config,
+                            self._cached_capabilities,
                             self._artifacts_properties)
         return tmp
 
@@ -29,7 +29,7 @@ class RestApiClient(object):
     """
 
     def __init__(self, remote, token, refresh_token, custom_headers, output, requester,
-                 revisions_enabled, cached_capabilities, artifacts_properties=None):
+                 config, cached_capabilities, artifacts_properties=None):
 
         # Set to instance
         self._token = token
@@ -41,17 +41,19 @@ class RestApiClient(object):
 
         self._verify_ssl = remote.verify_ssl
         self._artifacts_properties = artifacts_properties
-        self._revisions_enabled = revisions_enabled
+        self._revisions_enabled = config.revisions_enabled
+        self._config = config
 
         # This dict is shared for all the instances of RestApiClient
         self._cached_capabilities = cached_capabilities
 
-    def _capable(self, capability):
+    def _capable(self, capability, user=None, password=None):
         capabilities = self._cached_capabilities.get(self._remote_url)
         if capabilities is None:
             tmp = RestV1Methods(self._remote_url, self._token, self._custom_headers, self._output,
-                                self._requester, self._verify_ssl, self._artifacts_properties)
-            capabilities = tmp.server_capabilities()
+                                self._requester, self._config, self._verify_ssl,
+                                self._artifacts_properties)
+            capabilities = tmp.server_capabilities(user, password)
             self._cached_capabilities[self._remote_url] = capabilities
             logger.debug("REST: Cached capabilities for the remote: %s" % capabilities)
             if not self._revisions_enabled and ONLY_V2 in capabilities:
@@ -64,12 +66,12 @@ class RestApiClient(object):
         if self._revisions_enabled and revisions:
             checksum_deploy = self._capable(CHECKSUM_DEPLOY)
             return RestV2Methods(self._remote_url, self._token, self._custom_headers, self._output,
-                                 self._requester, self._verify_ssl, self._artifacts_properties,
-                                 checksum_deploy, matrix_params)
+                                 self._requester, self._config, self._verify_ssl,
+                                 self._artifacts_properties, checksum_deploy, matrix_params)
         else:
             return RestV1Methods(self._remote_url, self._token, self._custom_headers, self._output,
-                                 self._requester, self._verify_ssl, self._artifacts_properties,
-                                 matrix_params)
+                                 self._requester, self._config, self._verify_ssl,
+                                 self._artifacts_properties, matrix_params)
 
     def get_recipe_manifest(self, ref):
         return self._get_api().get_recipe_manifest(ref)
@@ -116,7 +118,7 @@ class RestApiClient(object):
         else:
             try:
                 # Check capabilities can raise also 401 until the new Artifactory is released
-                oauth_capable = self._capable(OAUTH_TOKEN)
+                oauth_capable = self._capable(OAUTH_TOKEN, user, password)
             except AuthenticationException:
                 oauth_capable = False
 

@@ -3,17 +3,14 @@ import os
 import platform
 import subprocess
 import sys
-import tempfile
-from subprocess import PIPE
 
 import math
-import six
 
 from conans.client.tools.env import environment_append
 from conans.client.tools.files import load, which
-from conans.errors import ConanException, CalledProcessErrorWithStderr
+from conans.errors import ConanException
 from conans.model.version import Version
-from conans.util.log import logger
+from conans.util.runners import check_output_runner
 
 
 def args_to_string(args):
@@ -197,7 +194,7 @@ class OSInfo(object):
         if self.is_linux:
             return self.linux_distro in ["arch", "manjaro"]
         elif self.is_windows and which('uname.exe'):
-            uname = check_output(['uname.exe', '-s'])
+            uname = check_output_runner(['uname.exe', '-s'])
             return uname.startswith('MSYS_NT') and which('pacman.exe')
         return False
 
@@ -346,7 +343,7 @@ class OSInfo(object):
     @staticmethod
     def get_aix_version():
         try:
-            ret = check_output("oslevel").strip()
+            ret = check_output_runner("oslevel").strip()
             return Version(ret)
         except Exception:
             return Version("%s.%s" % (platform.version(), platform.release()))
@@ -370,7 +367,7 @@ class OSInfo(object):
         try:
             # the uname executable is many times located in the same folder as bash.exe
             with environment_append({"PATH": [os.path.dirname(custom_bash_path)]}):
-                ret = check_output(command).strip().lower()
+                ret = check_output_runner(command).strip().lower()
                 return ret
         except Exception:
             return None
@@ -382,7 +379,7 @@ class OSInfo(object):
             raise ConanException("Command only for AIX operating system")
 
         try:
-            ret = check_output("getconf%s" % options).strip()
+            ret = check_output_runner("getconf%s" % options).strip()
             return ret
         except Exception:
             return None
@@ -538,35 +535,3 @@ def get_gnu_triplet(os_, arch, compiler=None):
             op_system += "_ilp32"  # https://wiki.linaro.org/Platform/arm64-ilp32
 
     return "%s-%s" % (machine, op_system)
-
-
-def check_output(cmd, folder=None, return_code=False, stderr=None):
-    tmp_file = tempfile.mktemp()
-    try:
-        # We don't want stderr to print warnings that will mess the pristine outputs
-        stderr = stderr or PIPE
-        cmd = cmd if isinstance(cmd, six.string_types) else subprocess.list2cmdline(cmd)
-        command = "{} > {}".format(cmd, tmp_file)
-        logger.info("Calling command: {}".format(command))
-        process = subprocess.Popen(command, shell=True, stderr=stderr, cwd=folder)
-        stdout, stderr = process.communicate()
-        logger.info("Return code: {}".format(int(process.returncode)))
-
-        if return_code:
-            return process.returncode
-
-        if process.returncode:
-            # Only in case of error, we print also the stderr to know what happened
-            raise CalledProcessErrorWithStderr(process.returncode, cmd, output=stderr)
-
-        output = load(tmp_file)
-        try:
-            logger.info("Output: in file:{}\nstdout: {}\nstderr:{}".format(output, stdout, stderr))
-        except Exception as exc:
-            logger.error("Error logging command output: {}".format(exc))
-        return output
-    finally:
-        try:
-            os.unlink(tmp_file)
-        except Exception:
-            pass

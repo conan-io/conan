@@ -20,6 +20,7 @@ from conans.model.conan_file import get_env_context_manager
 from conans.model.editable_layout import EditableLayout
 from conans.model.env_info import EnvInfo
 from conans.model.graph_info import GraphInfo
+from conans.model.graph_lock import GraphLockNode
 from conans.model.info import PACKAGE_ID_UNKNOWN
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference
@@ -207,8 +208,8 @@ class _PackageBuilder(object):
                             self._build(conanfile, pref, build_folder)
                         clean_dirty(build_folder)
 
-                    prev = self._package(conanfile, pref, package_layout, conanfile_path, build_folder,
-                                         package_folder)
+                    prev = self._package(conanfile, pref, package_layout, conanfile_path,
+                                         build_folder, package_folder)
                     assert prev
                     node.prev = prev
                     log_file = os.path.join(build_folder, RUN_LOG_NAME)
@@ -440,7 +441,7 @@ class BinaryInstaller(object):
         builder = _PackageBuilder(self._cache, output, self._hook_manager, self._remote_manager)
         pref = builder.build_package(node, keep_build, self._recorder, remotes)
         if node.graph_lock_node:
-            node.graph_lock_node.modified = BINARY_BUILD
+            node.graph_lock_node.modified = GraphLockNode.MODIFIED_BUILT
         return pref
 
     @staticmethod

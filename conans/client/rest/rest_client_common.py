@@ -56,13 +56,14 @@ def handle_return_deserializer(deserializer=None):
 
 class RestCommonMethods(object):
 
-    def __init__(self, remote_url, token, custom_headers, output, requester, verify_ssl,
+    def __init__(self, remote_url, token, custom_headers, output, requester, config, verify_ssl,
                  artifacts_properties=None, matrix_params=False):
         self.token = token
         self.remote_url = remote_url
         self.custom_headers = custom_headers
         self._output = output
         self.requester = requester
+        self._config = config
         self.verify_ssl = verify_ssl
         self._artifacts_properties = artifacts_properties
         self._matrix_params = matrix_params
@@ -149,13 +150,16 @@ class RestCommonMethods(object):
                                  verify=self.verify_ssl)
         return ret
 
-    def server_capabilities(self):
+    def server_capabilities(self, user=None, password=None):
         """Get information about the server: status, version, type and capabilities"""
         url = self.router.ping()
         logger.debug("REST: ping: %s" % url)
-
-        ret = self.requester.get(url, auth=self.auth, headers=self.custom_headers,
-                                 verify=self.verify_ssl)
+        if user and password:
+            # This can happen in "conan user" cmd. Instead of empty token, use HttpBasic
+            auth = HTTPBasicAuth(user, password)
+        else:
+            auth = self.auth
+        ret = self.requester.get(url, auth=auth, headers=self.custom_headers, verify=self.verify_ssl)
 
         server_capabilities = ret.headers.get('X-Conan-Server-Capabilities', "")
         if not server_capabilities and not ret.ok:

@@ -1,4 +1,5 @@
 import os
+import textwrap
 import unittest
 from collections import namedtuple
 
@@ -56,10 +57,13 @@ class GraphManagerTest(unittest.TestCase):
         if requires:
             for r in requires:
                 conanfile.with_require_plain(r)
-        layout = self.cache.package_layout(ref)
-        conanfile = conanfile.with_package_info(
+        conanfile.with_package_info(
             cpp_info={"libs": ["mylib{}{}lib".format(ref.name, ref.version)]},
             env_info={"MYENV": ["myenv{}{}env".format(ref.name, ref.version)]})
+        self._put_in_cache(ref, conanfile)
+
+    def _put_in_cache(self, ref, conanfile):
+        layout = self.cache.package_layout(ref)
         save(layout.conanfile(), str(conanfile))
         # Need to complete de metadata = revision + manifest
         with layout.update_metadata() as metadata:
@@ -67,8 +71,17 @@ class GraphManagerTest(unittest.TestCase):
         manifest = FileTreeManifest.create(layout.export())
         manifest.save(layout.export())
 
+    def alias_cache(self, alias, target):
+        ref = ConanFileReference.loads(alias)
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile   
+            class Alias(ConanFile):
+                alias = "%s"
+            """ % target)
+        self._put_in_cache(ref, conanfile)
+
     @staticmethod
-    def recipe_consumer(reference=None, requires=None):
+    def recipe_consumer(reference=None, requires=None, build_requires=None):
         path = temp_folder()
         path = os.path.join(path, "conanfile.py")
         conanfile = GenConanfile()
@@ -78,6 +91,9 @@ class GraphManagerTest(unittest.TestCase):
         if requires:
             for r in requires:
                 conanfile.with_require_plain(r)
+        if build_requires:
+            for r in build_requires:
+                conanfile.with_build_require_plain(r)
         save(path, str(conanfile))
         return path
 
