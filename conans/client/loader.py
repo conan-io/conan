@@ -331,10 +331,9 @@ def _parse_conanfile(conan_file_path):
     sys.path.insert(0, current_dir)
     try:
         old_modules = list(sys.modules.keys())
-        with chdir(current_dir):
-            sys.dont_write_bytecode = True
-            loaded = imp.load_source(module_id, conan_file_path)
-            sys.dont_write_bytecode = False
+        sys.dont_write_bytecode = True
+        loaded = imp.load_source(module_id, os.path.join(current_dir, conan_file_path))
+        sys.dont_write_bytecode = False
 
         # These lines are necessary, otherwise local conanfile imports with same name
         # collide, but no error, and overwrite other packages imports!!
