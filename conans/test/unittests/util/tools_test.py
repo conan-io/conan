@@ -479,7 +479,7 @@ class HelloConan(ConanFile):
                 path = os.environ["PATH"].split(";")
                 values_count = {value: path.count(value) for value in path}
                 for value, counter in values_count.items():
-                    if value and counter > 1 and previous_path.count(value) != counter:
+                    if value and (counter > 1) and previous_path.count(value) != counter:
                         # If the entry was already repeated before calling "tools.vcvars" we keep it
                         self.fail("The key '%s' has been repeated" % value)
 
