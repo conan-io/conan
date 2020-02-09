@@ -1,3 +1,3 @@
-@Library('conan_ci@staging') _
+@Library('conan_ci@conan_ci_branch') _
 
 conanCI.runBuild(this)
