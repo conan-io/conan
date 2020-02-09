@@ -1,6 +1,7 @@
 import json
 import os
 import platform
+import textwrap
 import unittest
 from textwrap import dedent
 
@@ -10,7 +11,7 @@ from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, GenConanfile
 from conans.util.env_reader import get_env
-from conans.util.files import load, mkdir
+from conans.util.files import load, mkdir, is_dirty
 
 
 class ExportPkgTest(unittest.TestCase):
@@ -587,16 +588,27 @@ class TestConan(ConanFile):
     def test_export_pkg_clean_dirty(self):
         # https://github.com/conan-io/conan/issues/6449
         client = TestClient()
-        print(client.cache_folder)
-        client.save({"pkg_b/conanfile.py": GenConanfile(),
-                     "pkg_a/conanfile.py": GenConanfile().with_require_plain("pkg_b/1.0")})
-        #client.run("export pkg_b pkg_b/1.0@")
-        client.run("install pkg_a pkg_a/1.0@", assert_error=True)
-        # ERROR: Failed requirement 'pkg_b/1.0' from 'conanfile.py (pkg_a/1.0)'
-        self.assertIn("ERROR: Missing prebuilt package for 'pkg_b/1.0'", client.out)
-        print (client.cache_folder)
-        client.run("export-pkg pkg_a pkg_a/1.0@ -bf=.")
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class Pkg(ConanFile):
+                def build(self):
+                    if self.in_local_cache:
+                        raise Exception("Can't build while installing")
+            """)
+        client.save({"conanfile.py": conanfile})
+        client.run("create . pkg/0.1@", assert_error=True)
+        self.assertIn("Can't build while installing", client.out)
+        ref = ConanFileReference.loads("pkg/0.1")
+        layout = client.cache.package_layout(ref)
+        pref = PackageReference(ref, "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+        build_folder = layout.build(pref)
+        self.assertTrue(is_dirty(build_folder))
+        package_folder = layout.package(pref)
+        self.assertTrue(is_dirty(package_folder))
+
+        client.run("export-pkg . pkg/0.1@")
+        self.assertFalse(is_dirty(package_folder))
         print (client.out)
-        client.run("install pkg_b")
+        client.run("install pkg/0.1@")
         print (client.out)
 
