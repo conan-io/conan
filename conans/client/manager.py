@@ -21,23 +21,25 @@ from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANINFO
 from conans.util.files import normalize, save
 
-def cache_artifact(executor, app, remotes, remote, ref, pending_refs, in_flight_refs):
-    cache, loader = app.cache, app.loader
-    def on_done(*_):
-        for requires_ref in future_task.result():
-            pending_refs.add(requires_ref)
-        in_flight_refs.remove(ref)
 
+def cache_artifact(executor, app, remotes, remote, ref):
+    cache, loader = app.cache, app.loader
     conan_file_ref = ConanFileReference.loads(ref)
     conan_file_path = cache.package_layout(conan_file_ref).conanfile()
     if os.path.exists(conan_file_path):
-        conanfile = loader.load_basic(conan_file_path)
-        for require in getattr(conanfile, "requires", []):
-            pending_refs.add(require)
-        in_flight_refs.remove(ref)
+        return loader.load_basic(conan_file_path)
     else:
-        future_task = executor.submit(download, app, conan_file_ref, None, remote, False, ActionRecorder(), remotes)
-        future_task.add_done_callback(on_done)
+        return download(app, conan_file_ref, None, remote, False, ActionRecorder(), remotes)
+
+
+def done_callback_closure(future_task, ref, pending_refs, in_flight_refs):
+    def on_done(*_):
+        conanfile = future_task.result()
+        for requires_ref in getattr(conanfile, "requires", []):
+            pending_refs.add(requires_ref)
+        in_flight_refs.discard(ref)
+    return on_done
+
 
 def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, build_modes=None,
                  update=False, manifest_folder=None, manifest_verify=False,
@@ -79,40 +81,14 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
     with ThreadPoolExecutor(max_workers=5) as executor:
         while pending_refs or in_flight_refs:
             for ref in list(pending_refs):
-                pending_refs.remove(ref)
                 if ref not in tracked_refs:
                     in_flight_refs.add(ref)
                     tracked_refs.add(ref)
-                    cache_artifact(executor, app, remotes, remote, ref, pending_refs, in_flight_refs)
+                    future_task = executor.submit(cache_artifact, executor, app, remotes, remote, ref)
+                    on_done = done_callback_closure(future_task, ref, pending_refs, in_flight_refs)
+                    future_task.add_done_callback(on_done)
+                pending_refs.discard(ref)
             time.sleep(0.05)
-
-    # with ThreadPoolExecutor(max_workers=20) as executor:
-    #     async def download_artifact(ref):
-    #         downloaded_refs.add(ref)
-    #         future_task = executor.submit(download, app, ConanFileReference.loads(ref), None, remote, False, ActionRecorder(), remotes)
-    #         new_requires = await to_aio_future(future_task)
-    #         next_refs = list(set([ref_name for ref_name in new_requires if ref_name not in downloaded_refs]))
-    #         next_batch = [download_artifact(ref_name) for ref_name in next_refs]
-    #         if next_batch:
-    #             await asyncio.wait(next_batch)
-
-    #     loop = asyncio.get_event_loop()
-    #     loop.run_until_complete(asyncio.wait([download_artifact(str(req.ref)) for req in conanfile.requires.values()]))
-
-
-    # with ThreadPoolExecutor(max_workers=30) as executor:
-    #     packages_to_pull = [str(req.ref) for req in conanfile.requires.values()]
-    #     while packages_to_pull:
-    #         all_args = [(app, ConanFileReference.loads(ref), None, remote, False, ActionRecorder(), remotes) for ref in packages_to_pull]
-    #         generated_tasks = executor.map(lambda args: download(*args), all_args)
-    #         for ref in packages_to_pull:
-    #             downloaded_refs.add(ref)
-    #         next_batch = []
-    #         for downloaded_requires in generated_tasks:
-    #             for ref_name in downloaded_requires:
-    #                 if ref_name not in next_batch and ref_name not in downloaded_refs:
-    #                     next_batch.append(ref_name)
-    #         packages_to_pull = next_batch
 
     out.writeln(graph_info.profile_host.dumps())
     deps_graph = graph_manager.load_graph(ref_or_path, create_reference, graph_info, build_modes,
