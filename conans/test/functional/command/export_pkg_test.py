@@ -40,12 +40,8 @@ class ExportPkgTest(unittest.TestCase):
 
     def test_transitive_without_settings(self):
         # https://github.com/conan-io/conan/issues/3367
-        conanfile = """from conans import ConanFile
-class PkgC(ConanFile):
-    pass
-"""
         client = TestClient()
-        client.save({CONANFILE: conanfile})
+        client.save({CONANFILE: GenConanfile()})
         client.run("create . PkgC/0.1@user/testing")
         conanfile = """from conans import ConanFile
 class PkgB(ConanFile):
@@ -70,12 +66,8 @@ class PkgA(ConanFile):
 
     def test_package_folder_errors(self):
         # https://github.com/conan-io/conan/issues/2350
-        conanfile = """from conans import ConanFile
-class HelloPythonConan(ConanFile):
-    pass
-"""
         client = TestClient()
-        client.save({CONANFILE: conanfile})
+        client.save({CONANFILE: GenConanfile()})
         mkdir(os.path.join(client.current_folder, "pkg"))
 
         client.run("export-pkg . Hello/0.1@lasote/stable -pf=pkg -bf=.", assert_error=True)
@@ -228,9 +220,8 @@ class TestConan(ConanFile):
         package_folder = client.cache.package_layout(win_pref.ref,
                                                      short_paths=short_paths).package(win_pref)
         if short_paths and platform.system() == "Windows":
-            self.assertEqual(load(os.path.join(client.cache.package_layout(win_pref.ref, False).package(win_pref),
-                                               ".conan_link")),
-                             package_folder)
+            cache_pkg_folder = client.cache.package_layout(win_pref.ref, False).package(win_pref)
+            self.assertEqual(load(os.path.join(cache_pkg_folder, ".conan_link")), package_folder)
         else:
             self.assertEqual(client.cache.package_layout(win_pref.ref).package(win_pref),
                              package_folder)
@@ -608,7 +599,5 @@ class TestConan(ConanFile):
 
         client.run("export-pkg . pkg/0.1@")
         self.assertFalse(is_dirty(package_folder))
-        print (client.out)
         client.run("install pkg/0.1@")
-        print (client.out)
-
+        self.assertIn("pkg/0.1: Already installed!", client.out)
