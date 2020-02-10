@@ -171,7 +171,9 @@ def _detect_os_arch(result, output):
                      'sun4v': 'sparc'}
     the_os = detected_os()
     result.append(("os", the_os))
-    result.append(("os_build", the_os))
+    conan_v2 = os.environ.get(CONAN_V2_MODE_ENVVAR, False)
+    if not conan_v2:
+        result.append(("os_build", the_os))
 
     platform_machine = platform.machine().lower()
     if platform_machine:
@@ -188,7 +190,8 @@ def _detect_os_arch(result, output):
             arch = OSInfo.get_aix_architecture() or arch
 
         result.append(("arch", arch))
-        result.append(("arch_build", arch))
+        if not conan_v2:
+            result.append(("arch_build", arch))
 
 
 def detect_defaults_settings(output, profile_path):

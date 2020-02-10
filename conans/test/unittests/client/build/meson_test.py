@@ -7,7 +7,7 @@ import six
 
 from conans.client.build import defs_to_string
 from conans.client.build.meson import Meson
-from conans.client.conf import default_settings_yml
+from conans.client.conf import get_default_settings_yml
 from conans.client.tools import args_to_string
 from conans.errors import ConanException
 from conans.model.settings import Settings
@@ -46,7 +46,7 @@ class MesonTest(unittest.TestCase):
         self.assertIsNone(conan_file.command)
 
     def folders_test(self):
-        settings = Settings.loads(default_settings_yml)
+        settings = Settings.loads(get_default_settings_yml())
         settings.os = "Linux"
         settings.compiler = "gcc"
         settings.compiler.version = "6.3"
@@ -181,7 +181,7 @@ class MesonTest(unittest.TestCase):
                            ('Linux', 'gcc', '6.3', 'x86_64', None, '-m64'),
                            ('Windows', 'Visual Studio', '15', 'x86', 'MD', '-MD')])
     def flags_applied_test(self, the_os, compiler, version, arch, runtime, flag):
-        settings = Settings.loads(default_settings_yml)
+        settings = Settings.loads(get_default_settings_yml())
         settings.os = the_os
         settings.compiler = compiler
         settings.compiler.version = version
