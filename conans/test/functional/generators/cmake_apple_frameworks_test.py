@@ -83,7 +83,8 @@ class CMakeAppleOwnFrameworksTestCase(unittest.TestCase):
                 settings = "os", "compiler", "build_type", "arch"
                 generators = "cmake"
                 exports_sources = "src/*"
-            
+                name = "mylibrary"
+                version = "1.0"
                 def build(self):
                     cmake = CMake(self)
                     xcrun = tools.XCRun(self.settings)
@@ -94,8 +95,8 @@ class CMakeAppleOwnFrameworksTestCase(unittest.TestCase):
                     cmake.configure(source_folder="src")
                     cmake.build()
                     cmake.install()
-                    self.run("otool -L %s/lib/hello.framework/hello" % self.build_folder)
-                    self.run("otool -L %s/hello.framework/hello" % self.package_folder)
+                    self.run("otool -L '%s/lib/hello.framework/hello'" % self.build_folder)
+                    self.run("otool -L '%s/hello.framework/hello'" % self.package_folder)
             
                 def package_info(self):
                     self.cpp_info.frameworkdirs.append(self.package_folder)
@@ -212,8 +213,9 @@ class CMakeAppleOwnFrameworksTestCase(unittest.TestCase):
             }
             """)
         test_conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conans import ConanFile, CMake
             class TestPkg(ConanFile):
+                generators = "cmake"
                 def build(self):
                     cmake = CMake(self)
                     cmake.configure()
