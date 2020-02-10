@@ -111,8 +111,8 @@ _t_default_settings_yml = Template(textwrap.dedent("""
     """))
 
 
-def get_default_settings_yml():
-    conan_v2 = os.environ.get(CONAN_V2_MODE_ENVVAR, False)
+def get_default_settings_yml(force_v1=False):
+    conan_v2 = not force_v1 and os.environ.get(CONAN_V2_MODE_ENVVAR, False)
     return _t_default_settings_yml.render(conan_v2=conan_v2)
 
 
@@ -199,13 +199,11 @@ _t_default_client_conf = Template(textwrap.dedent("""
     {% endif %}
     
     # Default settings now declared in the default profile
-    
-    
     """))
 
 
-def get_default_client_conf():
-    conan_v2 = os.environ.get(CONAN_V2_MODE_ENVVAR, False)
+def get_default_client_conf(force_v1=False):
+    conan_v2 = not force_v1 and os.environ.get(CONAN_V2_MODE_ENVVAR, False)
     return _t_default_client_conf.render(conan_v2=conan_v2, default_profile=DEFAULT_PROFILE_NAME)
 
 
