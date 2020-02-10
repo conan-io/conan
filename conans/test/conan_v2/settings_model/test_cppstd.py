@@ -1,13 +1,13 @@
 import textwrap
 
 import six
+from parameterized import parameterized
 
 from conans.client import settings_preprocessor
 from conans.client.conf import get_default_settings_yml
 from conans.errors import ConanV2Exception, ConanException
 from conans.model.settings import Settings
 from conans.test.utils.conan_v2_tests import ConanV2ModeTestCase
-from parameterized import parameterized
 
 
 class SettingsCppstdTestCase(ConanV2ModeTestCase):
