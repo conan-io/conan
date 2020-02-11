@@ -26,6 +26,7 @@ class PremakeGeneratorTest(unittest.TestCase):
     conan_bindirs = {{"{bin1}",
     "{bin2}"}}
     conan_libs = {{"libfoo", "libbar"}}
+    conan_system_libs = {{"syslib1", "syslib2"}}
     conan_defines = {{"MYDEFINE2", "MYDEFINE1"}}
     conan_cxxflags = {{"-march=native", "-fPIE"}}
     conan_cflags = {{"-mtune=native", "-fPIC"}}
@@ -36,6 +37,7 @@ class PremakeGeneratorTest(unittest.TestCase):
     conan_libdirs_MyPkg1 = {{"{lib1}"}}
     conan_bindirs_MyPkg1 = {{"{bin1}"}}
     conan_libs_MyPkg1 = {{"libfoo"}}
+    conan_system_libs_MyPkg1 = {{"syslib1"}}
     conan_defines_MyPkg1 = {{"MYDEFINE1"}}
     conan_cxxflags_MyPkg1 = {{"-fPIE"}}
     conan_cflags_MyPkg1 = {{"-fPIC"}}
@@ -47,6 +49,7 @@ class PremakeGeneratorTest(unittest.TestCase):
     conan_libdirs_MyPkg2 = {{"{lib2}"}}
     conan_bindirs_MyPkg2 = {{"{bin2}"}}
     conan_libs_MyPkg2 = {{"libbar"}}
+    conan_system_libs_MyPkg2 = {{"syslib2"}}
     conan_defines_MyPkg2 = {{"MYDEFINE2"}}
     conan_cxxflags_MyPkg2 = {{"-march=native"}}
     conan_cflags_MyPkg2 = {{"-mtune=native"}}
@@ -60,6 +63,7 @@ class PremakeGeneratorTest(unittest.TestCase):
         includedirs{{conan_includedirs}}
         libdirs{{conan_libdirs}}
         links{{conan_libs}}
+        links{{conan_system_libs}}
         defines{{conan_defines}}
         bindirs{{conan_bindirs}}
     end
@@ -83,6 +87,7 @@ class PremakeGeneratorTest(unittest.TestCase):
         cpp_info.includedirs = ['include1']
         cpp_info.libdirs = ['lib1']
         cpp_info.libs = ['libfoo']
+        cpp_info.system_libs = ['syslib1']
         cpp_info.bindirs = ['bin1']
         cpp_info.version = "0.1"
         cpp_info.cflags = ['-fPIC']
@@ -96,6 +101,7 @@ class PremakeGeneratorTest(unittest.TestCase):
         cpp_info.includedirs = ['include2']
         cpp_info.libdirs = ['lib2']
         cpp_info.libs = ['libbar']
+        cpp_info.system_libs = ['syslib2']
         cpp_info.bindirs = ['bin2']
         cpp_info.version = "3.2.3"
         cpp_info.cflags = ['-mtune=native']
