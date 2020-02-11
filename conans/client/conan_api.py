@@ -80,7 +80,7 @@ def api_method(f):
             with environment_append(api.app.cache.config.env_vars):
                 if (f.__name__ != "get_remote_by_name"):
                     # FIXME 2.0: We need this special case because
-                    # it's used by the "search" command
+                    # the "search" command uses two api functions
                     hook_manager = api.app.hook_manager
                     hook_manager.execute("init")
                 return f(api, *args, **kwargs)
