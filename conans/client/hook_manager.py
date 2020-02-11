@@ -20,7 +20,7 @@ def pre_export(output, conanfile, conanfile_path, reference, **kwargs):
                         % field)
 """
 
-valid_hook_methods = ["pre_command", "post_command",
+valid_hook_methods = ["init",
                       "pre_export", "post_export",
                       "pre_source", "post_source",
                       "pre_build", "post_build",

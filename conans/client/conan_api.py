@@ -68,23 +68,7 @@ from conans.util.tracer import log_command, log_exception
 default_manifest_folder = '.conan_manifests'
 
 
-def api_method_hook(f):
-    def wrapper(api, *args, **kwargs):
-        hook_manager = api.app.hook_manager
-        hook_manager.execute("pre_command", command=f.__name__)
-        results = f(api, *args, **kwargs)
-        hook_manager.execute("post_command", command=f.__name__)
-        return results
-    # FIXME 2.0: We need this special case because it's used by the "search"
-    # command
-    if (f.__name__ == "get_remote_by_name"):
-        return f
-    return wrapper
-
-
 def api_method(f):
-    f = api_method_hook(f)
-
     def wrapper(api, *args, **kwargs):
         quiet = kwargs.pop("quiet", False)
         old_curdir = get_cwd()
@@ -94,6 +78,11 @@ def api_method(f):
             api.create_app(quiet_output=quiet_output)
             log_command(f.__name__, kwargs)
             with environment_append(api.app.cache.config.env_vars):
+                if (f.__name__ != "get_remote_by_name"):
+                    # FIXME 2.0: We need this special case because
+                    # it's used by the "search" command
+                    hook_manager = api.app.hook_manager
+                    hook_manager.execute("init")
                 return f(api, *args, **kwargs)
         except Exception as exc:
             if quiet_output:

@@ -11,11 +11,8 @@ from conans.test.utils.tools import TestBufferConanOutput
 from conans.util.files import save
 
 my_hook = """
-def pre_command(output, **kwargs):
-    output.info("pre_command()")
-
-def post_command(output, **kwargs):
-    output.info("post_command()")
+def init(output, **kwargs):
+    output.info("init()")
 
 def pre_export(output, **kwargs):
     output.info("pre_export()")
@@ -82,7 +79,7 @@ class HookManagerTest(unittest.TestCase):
         self.assertEqual({}, hook_manager.hooks)
         self.assertEqual(["my_hook"], hook_manager._hook_names)
         hook_manager.load_hooks()
-        self.assertEqual(18, len(hook_manager.hooks))  # Checks number of methods loaded
+        self.assertEqual(17, len(hook_manager.hooks))  # Checks number of methods loaded
 
     def check_output_test(self):
         hook_manager, output, _ = self._init()

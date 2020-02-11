@@ -18,9 +18,8 @@ class AConan(ConanFile):
 complete_hook = """
 from conans.model.ref import ConanFileReference
 
-def pre_command(output, command, **kwargs):
-    assert command
-    output.info("command=%s" % command)
+def init(output, **kwargs):
+    output.info("init")
 
 def post_command(output, command, **kwargs):
     assert command
@@ -193,37 +192,37 @@ class HookTest(unittest.TestCase):
         client.run("config set hooks.complete_hook/complete_hook.py")
 
         client.run("source .")
-        self._check_command("source", client.out)
+        self._check_init_hook(client.out)
         self._check_source(conanfile_path, client.out)
 
         client.run("install .")
-        self._check_command("install", client.out)
+        self._check_init_hook(client.out)
         client.run("build .")
-        self._check_command("build", client.out)
+        self._check_init_hook(client.out)
         self._check_build(conanfile_path, client.out)
 
         client.run("package .")
-        self._check_command("package", client.out)
+        self._check_init_hook(client.out)
         self._check_package(conanfile_path, client.out)
 
         client.run("export . danimtb/testing")
-        self._check_command("export", client.out)
+        self._check_init_hook(client.out)
         self._check_export(conanfile_path, conanfile_cache_path, client.out)
 
         client.run("export-pkg . danimtb/testing")
-        self._check_command("export_pkg", client.out)
+        self._check_init_hook(client.out)
         self._check_export(conanfile_path, conanfile_cache_path, client.out)
         self._check_export_pkg(conanfile_cache_path, client.out)
 
         client.run("remove * --force")
-        self._check_command("remove", client.out)
+        self._check_init_hook(client.out)
         client.run('export-pkg . danimtb/testing -pf . ')
         self._check_export(conanfile_path, conanfile_cache_path, client.out)
         self._check_export_pkg(conanfile_cache_path, client.out)
 
         client.run("remove * --force")
         client.run("create . danimtb/testing")
-        self._check_command("create", client.out)
+        self._check_init_hook(client.out)
         self._check_export(conanfile_path, conanfile_cache_path, client.out)  # Export gets
         self._check_source(conanfile_cache_path, client.out, in_cache=True)
         self._check_build(conanfile_cache_path, client.out, in_cache=True)
@@ -231,7 +230,7 @@ class HookTest(unittest.TestCase):
         self._check_package_info(client.out)
 
         client.run("upload basic/0.1@danimtb/testing -r default")
-        self._check_command("upload", client.out)
+        self._check_init_hook(client.out)
         self._check_upload(conanfile_cache_path, client.out)
         self._check_upload_recipe(conanfile_cache_path, client.out)
         client.run("upload basic/0.1@danimtb/testing -r default --all")
@@ -241,7 +240,7 @@ class HookTest(unittest.TestCase):
 
         client.run("remove * --force")
         client.run("download basic/0.1@danimtb/testing --recipe")
-        self._check_command("download", client.out)
+        self._check_init_hook(client.out)
         self._check_download(conanfile_cache_path, client.out)
         self._check_download_recipe(conanfile_cache_path, client.out)
         client.run("remove * --force")
@@ -251,17 +250,14 @@ class HookTest(unittest.TestCase):
         self._check_download_package(conanfile_cache_path, client.out)
 
         client.run("remove * --force")
-        self._check_command("remove", client.out)
+        self._check_init_hook(client.out)
         client.run("install basic/0.1@danimtb/testing")
         self._check_download_recipe(conanfile_cache_path, client.out)
         self._check_download_package(conanfile_cache_path, client.out)
         self._check_package_info(client.out)
 
-    def _check_command(self, command, out):
-        self.assertIn("[HOOK - complete_hook/complete_hook.py] pre_command(): "
-                      "command=%s" % command, out)
-        self.assertIn("[HOOK - complete_hook/complete_hook.py] post_command(): "
-                      "command=%s" % command, out)
+    def _check_init_hook(self, out):
+        self.assertIn("[HOOK - complete_hook/complete_hook.py] init(): init", out)
 
     def _check_source(self, conanfile_path, out, in_cache=False):
         reference = REFERENCE_CACHE if in_cache else REFERENCE_LOCAL
