@@ -42,7 +42,8 @@ class ExportsSourcesMissingTest(unittest.TestCase):
         client2.run("install pkg/0.1@user/testing")
         client2.run("remove * -r=default -f")
         client2.run("upload pkg/0.1@user/testing --all -r=new_server", assert_error=True)
-        self.assertIn("ERROR: Recipe not found: 'pkg/0.1@user/testing'. [Remote: default]",
+        self.assertIn("ERROR: pkg/0.1@user/testing: Upload recipe to 'new_server' failed: "
+                      "Recipe not found: 'pkg/0.1@user/testing'. [Remote: default]",
                       client2.out)
         self.assertIn("The 'pkg/0.1@user/testing' package has 'exports_sources' but sources "
                       "not found in local cache.", client2.out)
