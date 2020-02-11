@@ -110,7 +110,6 @@ class ListWrapper(object):
         self._i_file = 0
         self._output = output
         self._description = desc
-        self._last_time = time.time()
         if self._output and not self._output.is_terminal:
             output.write("[")
         elif self._output:
@@ -128,9 +127,6 @@ class ListWrapper(object):
             self._last_progress = units
         if self._output and self._output.is_terminal:
             self._tqdm_bar.update()
-        elif self._output and time.time() - self._last_time > TIMEOUT_BEAT_SECONDS:
-            self._last_time = time.time()
-            self._output.write(TIMEOUT_BEAT_CHARACTER)
 
     def pb_close(self):
         if self._output and self._output.is_terminal:
