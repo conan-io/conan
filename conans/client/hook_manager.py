@@ -104,7 +104,9 @@ class HookManager(object):
                 if sys.version_info >= (3, 3, 0):
                     import importlib
                     importlib.invalidate_caches()
-                loaded = __import__(filename)
+                    loaded = importlib.import_module(filename)
+                else:
+                    loaded = __import__(filename)
             # Put all imported files under a new package name
             module_id = uuid.uuid1()
             added_modules = set(sys.modules).difference(old_modules)
