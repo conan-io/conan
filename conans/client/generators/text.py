@@ -153,7 +153,7 @@ class TXTGenerator(Generator):
                     '[exelinkflags{dep}{config}]\n{deps.exelinkflags}\n\n'
                     '[sysroot{dep}{config}]\n{deps.sysroot}\n\n'
                     '[frameworks{dep}{config}]\n{deps.frameworks}\n\n'
-                    '[framework_paths{dep}{config}]\n{deps.framework_paths}\n\n')
+                    '[frameworkdirs{dep}{config}]\n{deps.framework_paths}\n\n')
 
         sections = []
         deps = DepsCppTXT(self.deps_build_info)
