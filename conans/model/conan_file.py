@@ -16,6 +16,7 @@ from conans.model.user_info import DepsUserInfo
 from conans.paths import RUN_LOG_NAME
 from conans.util.conan_v2_mode import conan_v2_behavior
 
+
 def create_options(conanfile):
     try:
         package_options = PackageOptions(getattr(conanfile, "options", None))
@@ -23,9 +24,13 @@ def create_options(conanfile):
 
         default_options = getattr(conanfile, "default_options", None)
         if default_options:
-            if isinstance(default_options, (list, tuple, dict)):
+            if isinstance(default_options, dict):
+                default_values = OptionsValues(default_options)
+            elif isinstance(default_options, (list, tuple)):
+                conan_v2_behavior("Declare 'default_options' as a dictionary")
                 default_values = OptionsValues(default_options)
             elif isinstance(default_options, six.string_types):
+                conan_v2_behavior("Declare 'default_options' as a dictionary")
                 default_values = OptionsValues.loads(default_options)
             else:
                 raise ConanException("Please define your default_options as list, "
