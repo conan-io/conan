@@ -329,7 +329,8 @@ class CmdUpload(object):
         assert (pref.revision is not None), "Cannot upload a package without PREV"
         assert (pref.ref.revision is not None), "Cannot upload a package without RREV"
 
-        conanfile_path = self._cache.package_layout(pref.ref).conanfile()
+        pkg_layout = self._cache.package_layout(pref.ref)
+        conanfile_path = pkg_layout.conanfile()
         self._hook_manager.execute("pre_upload_package", conanfile_path=conanfile_path,
                                    reference=pref.ref,
                                    package_id=pref.id,
@@ -337,9 +338,6 @@ class CmdUpload(object):
 
         t1 = time.time()
         the_files = self._compress_package_files(pref, integrity_check)
-
-        with self._cache.package_layout(pref.ref).update_metadata() as metadata:
-            metadata.packages[pref.id].checksums = calc_files_checksum(the_files)
 
         if policy == UPLOAD_POLICY_SKIP:
             return None
@@ -359,11 +357,13 @@ class CmdUpload(object):
 
         logger.debug("UPLOAD: Time uploader upload_package: %f" % (time.time() - t1))
 
-        metadata = self._cache.package_layout(pref.ref).load_metadata()
-        cur_package_remote = metadata.packages[pref.id].remote
-        if not cur_package_remote and policy != UPLOAD_POLICY_SKIP:
-            with self._cache.package_layout(pref.ref).update_metadata() as metadata:
+        # Update the package metadata
+        checksums = calc_files_checksum(the_files)
+        with pkg_layout.update_metadata() as metadata:
+            cur_package_remote = metadata.packages[pref.id].remote
+            if not cur_package_remote:
                 metadata.packages[pref.id].remote = p_remote.name
+            metadata.packages[pref.id].checksums = checksums
 
         return pref
 
