@@ -14,7 +14,6 @@ from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
 
 
 _t_default_settings_yml = Template(textwrap.dedent("""
-    {% if not conan_v2 %}{# no hooks by default in Conan v2 #}
     # Only for cross building, 'os_build/arch_build' is the system that runs Conan
     os_build: [Windows, WindowsStore, Linux, Macos, FreeBSD, SunOS, AIX]
     arch_build: [x86, x86_64, ppc32be, ppc32, ppc64le, ppc64, armv5el, armv5hf, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr, s390, s390x, sh4le]
@@ -23,7 +22,6 @@ _t_default_settings_yml = Template(textwrap.dedent("""
     # which the tools generate code
     os_target: [Windows, Linux, Macos, Android, iOS, watchOS, tvOS, FreeBSD, SunOS, AIX, Arduino, Neutrino]
     arch_target: [x86, x86_64, ppc32be, ppc32, ppc64le, ppc64, armv5el, armv5hf, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr, s390, s390x, asm.js, wasm, sh4le]
-    {% endif %}
     
     # Rest of the settings are "host" settings:
     # - For native building/cross building: Where the library/program will run.
@@ -105,7 +103,7 @@ _t_default_settings_yml = Template(textwrap.dedent("""
     
     build_type: [None, Debug, Release, RelWithDebInfo, MinSizeRel]
     
-    {% if not conan_v2 %}{# no hooks by default in Conan v2 #}
+    {% if not conan_v2 %}
     cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]  # Deprecated, use compiler.cppstd
     {% endif %}
     """))
