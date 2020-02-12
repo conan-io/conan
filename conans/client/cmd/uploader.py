@@ -343,7 +343,6 @@ class CmdUpload(object):
 
         t1 = time.time()
         the_files = self._compress_package_files(pref, integrity_check)
-        checksums = calc_files_checksum(the_files)
 
         if policy == UPLOAD_POLICY_SKIP:
             return None
@@ -363,6 +362,8 @@ class CmdUpload(object):
 
         logger.debug("UPLOAD: Time uploader upload_package: %f" % (time.time() - t1))
 
+        # Update the package metadata
+        checksums = calc_files_checksum(the_files)
         with pkg_layout.update_metadata() as metadata:
             cur_package_remote = metadata.packages[pref.id].remote
             if not cur_package_remote:
