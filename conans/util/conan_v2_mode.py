@@ -13,6 +13,6 @@ def conan_v2_behavior(msg, v1_behavior=None):
         raise ConanV2Exception(msg)
     else:
         if v1_behavior is None:
-            warnings.warn(message=msg, stacklevel=2)
+            warnings.warn(message=msg, stacklevel=2, category=DeprecationWarning)
         else:
             v1_behavior(msg)
