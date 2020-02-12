@@ -202,12 +202,12 @@ class CMakeAppleOwnFrameworksTestCase(unittest.TestCase):
             project(Testing CXX)
             include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
             conan_basic_setup()
-            message(">>> CONAN_FRAMEWORKS_FOUND_LIB: ${CONAN_FRAMEWORKS_FOUND_LIB}")
+            message(">>> CONAN_FRAMEWORKS_FOUND_MYLIBRARY: ${CONAN_FRAMEWORKS_FOUND_MYLIBRARY}")
             add_executable(timer timer.cpp)
             target_link_libraries(timer ${CONAN_LIBS})
         """)
         timer_cpp = textwrap.dedent("""
-            #include <hello.h>
+            #include <hello/hello.h>
             int main(){
                 Hello::hello();
             }
@@ -221,7 +221,7 @@ class CMakeAppleOwnFrameworksTestCase(unittest.TestCase):
                     cmake.configure()
                     cmake.build()
                 def test(self):
-                    self.run("/bin/timer")
+                    self.run("bin/timer", run_environment=True)
             """)
         client.save({'conanfile.py': conanfile,
                      "src/CMakeLists.txt": cmake,
