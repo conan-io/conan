@@ -219,7 +219,7 @@ class GraphManager(object):
             conanfile.requires.add_ref(create_reference)
         ref = ConanFileReference(conanfile.name, conanfile.version,
                                  create_reference.user, create_reference.channel, validate=False)
-        root_node = Node(ref, conanfile, recipe=RECIPE_CONSUMER, path=path)
+        root_node = Node(ref, conanfile, recipe=RECIPE_CONSUMER, context=CONTEXT_HOST, path=path)
         if graph_lock:
             node_id = graph_lock.get_node(create_reference)
             locked_ref = graph_lock.pref(node_id).ref
