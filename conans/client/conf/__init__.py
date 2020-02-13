@@ -405,13 +405,10 @@ class ConanClientConfigParser(ConfigParser, object):
         try:
             revisions_enabled = get_env("CONAN_REVISIONS_ENABLED")
             if revisions_enabled is None:
-                try:
-                    revisions_enabled = self.get_item("general.revisions_enabled")
-                except ConanException:
-                    return False
+                revisions_enabled = self.get_item("general.revisions_enabled")
             return revisions_enabled.lower() in ("1", "true")
         except ConanException:
-            return False
+            return True if os.environ.get(CONAN_V2_MODE_ENVVAR, False) else False
 
     @property
     def download_cache(self):
@@ -429,7 +426,7 @@ class ConanClientConfigParser(ConfigParser, object):
                 scm_to_conandata = self.get_item("general.scm_to_conandata")
             return scm_to_conandata.lower() in ("1", "true")
         except ConanException:
-            return False
+            return True if os.environ.get(CONAN_V2_MODE_ENVVAR, False) else False
 
     @property
     def default_package_id_mode(self):
@@ -437,9 +434,9 @@ class ConanClientConfigParser(ConfigParser, object):
             default_package_id_mode = get_env("CONAN_DEFAULT_PACKAGE_ID_MODE")
             if default_package_id_mode is None:
                 default_package_id_mode = self.get_item("general.default_package_id_mode")
+            return default_package_id_mode
         except ConanException:
             return "semver_direct_mode"
-        return default_package_id_mode
 
     @property
     def default_python_requires_id_mode(self):
