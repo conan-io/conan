@@ -273,7 +273,7 @@ class GraphLock(object):
                 if (pref.id == PACKAGE_ID_UNKNOWN or pref.is_compatible_with(node_pref) or
                         node.binary == BINARY_BUILD or node.id in affected or
                         node.recipe == RECIPE_CONSUMER):
-                    self._upsert_node(node)
+                    lock_node.pref = node.pref
                 else:
                     raise ConanException("Mismatch between lock and graph:\nLock:  %s\nGraph: %s"
                                          % (repr(pref), repr(node.pref)))
