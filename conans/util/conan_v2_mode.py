@@ -27,7 +27,7 @@ def conan_v2_property(inst, name, msg, v1_behavior=None):
     assert issubclass(original_class, ConanFile), "This function is only intended for ConanFile"
 
     try:
-        original_value = getattr(inst, name)
+        original_value = getattr(inst, name, 'None')
 
         def _property_method(_):
             conan_v2_behavior(msg, v1_behavior)
