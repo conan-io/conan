@@ -1417,7 +1417,6 @@ from conans import ConanFile
 
 class LibAConan(ConanFile):
     name = "LibA"
-    version = "0.1"
     options = {"shared": [True, False]}
     default_options = "shared=False"
     def requirements(self):
@@ -1463,10 +1462,13 @@ class ConsumerConan(ConanFile):
         self.builder = DepsGraphBuilder(self.retriever, self.output, self.loader,
                                         Mock(), None)
         liba_ref = ConanFileReference.loads("LibA/0.1@user/testing")
+        liba2_ref = ConanFileReference.loads("LibA/0.2@user/testing")
         libb_ref = ConanFileReference.loads("LibB/0.1@user/testing")
         libc_ref = ConanFileReference.loads("LibC/0.1@user/testing")
         libd_ref = ConanFileReference.loads("LibD/0.1@user/testing")
         self.retriever.save_recipe(liba_ref, self.liba_content)
+        # It is necessary to create libA/0.2 to have a conflict, otherwise it is missing
+        self.retriever.save_recipe(liba2_ref, self.liba_content)
         self.retriever.save_recipe(libb_ref, self.libb_content)
         self.retriever.save_recipe(libc_ref, self.libc_content)
         self.retriever.save_recipe(libd_ref, self.libd_content)

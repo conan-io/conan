@@ -34,12 +34,12 @@ class PkgConfigGenerator(Generator):
     @property
     def content(self):
         ret = {}
-        for _, cpp_info in self.deps_build_info.dependencies:
-            ret["%s.pc" % cpp_info.name] = self.single_pc_file_contents(cpp_info)
+        for depname, cpp_info in self.deps_build_info.dependencies:
+            name = _get_name(depname, cpp_info)
+            ret["%s.pc" % name] = self.single_pc_file_contents(name, cpp_info)
         return ret
 
-    def single_pc_file_contents(self, cpp_info):
-        name = cpp_info.name
+    def single_pc_file_contents(self, name, cpp_info):
         prefix_path = cpp_info.rootpath.replace("\\", "/")
         lines = ['prefix=%s' % prefix_path]
 
@@ -61,7 +61,7 @@ class PkgConfigGenerator(Generator):
         lines.append("Description: %s" % description)
         lines.append("Version: %s" % cpp_info.version)
         libdirs_flags = ["-L${%s}" % name for name in libdir_vars]
-        libnames_flags = ["-l%s " % name for name in cpp_info.libs]
+        libnames_flags = ["-l%s " % name for name in (cpp_info.libs + cpp_info.system_libs)]
         shared_flags = cpp_info.sharedlinkflags + cpp_info.exelinkflags
         the_os = (self.conanfile.settings.get_safe("os_build") or
                   self.conanfile.settings.get_safe("os"))
@@ -83,9 +83,22 @@ class PkgConfigGenerator(Generator):
              ["-D%s" % d for d in cpp_info.defines]]))
 
         if cpp_info.public_deps:
-            public_deps = " ".join(cpp_info.public_deps)
+            pkg_config_names = []
+            for public_dep in cpp_info.public_deps:
+                pkg_config_names.append(_get_name(public_dep, self.deps_build_info[public_dep]))
+            public_deps = " ".join(pkg_config_names)
             lines.append("Requires: %s" % public_deps)
         return "\n".join(lines) + "\n"
+
+
+def _get_name(depname, cpp_info):
+    # the name for the pc will be converted to lowercase when cpp_info.name is specified
+    # but with cpp_info.names["pkg_config"] will be literal
+    if "pkg_config" in cpp_info.names:
+        name = cpp_info.names["pkg_config"]
+    else:
+        name = cpp_info.name.lower() if cpp_info.name != depname else depname
+    return name
 
 
 def _concat_if_not_empty(groups):

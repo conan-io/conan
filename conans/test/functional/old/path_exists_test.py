@@ -26,7 +26,7 @@ class PathExistsTest(unittest.TestCase):
         self.client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
         self.client.save({"conanfile.txt": "[requires]\nHello0/0.1@lasote/stable\n[generators]\ntxt"})
         self.client.run("install . --build missing ")
-        build_info = load(os.path.join(self.client.current_folder, "conanbuildinfo.txt"))
+        build_info = self.client.load("conanbuildinfo.txt")
         self.assertIn("helloHello0", build_info)
 
         self.client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})

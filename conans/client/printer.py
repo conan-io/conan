@@ -155,12 +155,12 @@ class Printer(object):
                     ref = ConanFileReference.loads(reference)
                     self._out.writeln(ref.full_str())
 
-    def print_search_packages(self, search_info, ref, packages_query,
-                              outdated=False):
+    def print_search_packages(self, search_info, ref, packages_query, raw, outdated=False):
         assert(isinstance(ref, ConanFileReference))
-        self._out.info("Existing packages for recipe %s:\n" % str(ref))
+        if not raw:
+            self._out.info("Existing packages for recipe %s:\n" % str(ref))
         for remote_info in search_info:
-            if remote_info["remote"]:
+            if remote_info["remote"] and not raw:
                 self._out.info("Existing recipe in remote '%s':\n" % remote_info["remote"])
 
             if not remote_info["items"][0]["packages"]:
@@ -170,7 +170,8 @@ class Printer(object):
                 elif remote_info["items"][0]["recipe"]:
                     warn_msg = "There are no %spackages for reference '%s', but package recipe " \
                                "found." % ("outdated " if outdated else "", str(ref))
-                self._out.info(warn_msg)
+                if not raw:
+                    self._out.info(warn_msg)
                 continue
 
             ref = remote_info["items"][0]["recipe"]["id"]

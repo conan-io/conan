@@ -6,7 +6,7 @@ from collections import OrderedDict
 
 import itertools
 import requests
-from mock import mock, patch
+from mock import patch
 from nose.plugins.attrib import attr
 
 from conans import REVISIONS
@@ -209,10 +209,10 @@ class UploadTest(unittest.TestCase):
 
         def gzopen_patched(name, mode="r", fileobj=None, compresslevel=None, **kwargs):
             raise ConanException("Error gzopen %s" % name)
-        with mock.patch('conans.client.cmd.uploader.gzopen_without_timestamps',
-                        new=gzopen_patched):
+        with patch('conans.client.cmd.uploader.gzopen_without_timestamps', new=gzopen_patched):
             client.run("upload * --confirm", assert_error=True)
-            self.assertIn("ERROR: Error gzopen conan_sources.tgz", client.out)
+            self.assertIn("ERROR: Hello0/1.2.1@user/testing: Upload recipe to 'default' failed: "
+                          "Error gzopen conan_sources.tgz", client.out)
 
             export_folder = client.cache.package_layout(ref).export()
             tgz = os.path.join(export_folder, EXPORT_SOURCES_TGZ_NAME)
@@ -237,10 +237,11 @@ class UploadTest(unittest.TestCase):
             if name == PACKAGE_TGZ_NAME:
                 raise ConanException("Error gzopen %s" % name)
             return gzopen_without_timestamps(name, mode, fileobj, compresslevel, **kwargs)
-        with mock.patch('conans.client.cmd.uploader.gzopen_without_timestamps',
-                        new=gzopen_patched):
+        with patch('conans.client.cmd.uploader.gzopen_without_timestamps', new=gzopen_patched):
             client.run("upload * --confirm --all", assert_error=True)
-            self.assertIn("ERROR: Error gzopen conan_package.tgz", client.out)
+            self.assertIn("ERROR: Hello0/1.2.1@user/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
+                          ": Upload package to 'default' failed: Error gzopen conan_package.tgz",
+                          client.out)
 
             export_folder = client.cache.package_layout(pref.ref).package(pref)
             tgz = os.path.join(export_folder, PACKAGE_TGZ_NAME)
@@ -269,7 +270,9 @@ class UploadTest(unittest.TestCase):
         client.run("upload Hello0/1.2.1@frodo/stable --all --check", assert_error=True)
         self.assertIn("WARN: Mismatched checksum 'added.txt'", client.out)
         self.assertIn("WARN: Mismatched checksum 'include/hello.h'", client.out)
-        self.assertIn("ERROR: Cannot upload corrupted package", client.out)
+        self.assertIn("ERROR: Hello0/1.2.1@frodo/stable:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9: "
+                      "Upload package to 'default' failed: Cannot upload corrupted package",
+                      client.out)
 
     def upload_modified_recipe_test(self):
         client = self._client()
@@ -449,7 +452,9 @@ class MyPkg(ConanFile):
                    assert_error=not client.cache.config.revisions_enabled)
         if not client.cache.config.revisions_enabled:
             self.assertIn("Recipe is up to date, upload skipped", client.out)
-            self.assertIn("ERROR: Local package is different from the remote package", client.out)
+            self.assertIn("ERROR: Hello0/1.2.1@frodo/stable:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
+                          ": Upload package to 'default' failed: "
+                          "Local package is different from the remote package", client.out)
             self.assertIn("Forbidden overwrite", client.out)
             self.assertNotIn("Uploading conan_package.tgz", client.out)
         else:
@@ -558,11 +563,7 @@ class MyPkg(ConanFile):
 
     def upload_without_sources_test(self):
         client = self._client()
-        conanfile = """from conans import ConanFile
-class Pkg(ConanFile):
-    pass
-"""
-        client.save({"conanfile.py": conanfile})
+        client.save({"conanfile.py": GenConanfile()})
         client.run("create . Pkg/0.1@user/testing")
         client.run("upload * --all --confirm")
         client2 = self._client()
@@ -588,14 +589,14 @@ class Pkg(ConanFile):
         client.run("user -c")
         client.run("upload Hello0/1.2.1@user/testing", assert_error=True)
 
-        self.assertIn('ERROR: Conan interactive mode disabled', client.out)
+        self.assertIn("ERROR: Hello0/1.2.1@user/testing: Upload recipe to 'default' failed: "
+                      "Conan interactive mode disabled", client.out)
         self.assertNotIn("Uploading conanmanifest.txt", client.out)
         self.assertNotIn("Uploading conanfile.py", client.out)
         self.assertNotIn("Uploading conan_export.tgz", client.out)
 
     def upload_login_prompt_disabled_user_not_authenticated_test(self):
-        """ When a user is not authenticated, uploads should fail when login prompt has been disabled.
-        """
+        # When a user is not authenticated, uploads should fail when login prompt has been disabled.
         files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
         client = self._client()
         client.save(files)
@@ -604,15 +605,15 @@ class Pkg(ConanFile):
         client.run("user -c")
         client.run("user lasote")
         client.run("upload Hello0/1.2.1@user/testing", assert_error=True)
-        self.assertIn('ERROR: Conan interactive mode disabled', client.out)
+        self.assertIn("ERROR: Hello0/1.2.1@user/testing: Upload recipe to 'default' failed: "
+                      "Conan interactive mode disabled", client.out)
         self.assertNotIn("Uploading conanmanifest.txt", client.out)
         self.assertNotIn("Uploading conanfile.py", client.out)
         self.assertNotIn("Uploading conan_export.tgz", client.out)
         self.assertNotIn("Please enter a password for \"lasote\" account:", client.out)
 
     def upload_login_prompt_disabled_user_authenticated_test(self):
-        """ When a user is authenticated, uploads should work even when login prompt has been disabled.
-        """
+        #  When user is authenticated, uploads should work even when login prompt has been disabled.
         files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
         client = self._client()
         client.save(files)
@@ -749,6 +750,34 @@ class Pkg(ConanFile):
         self.assertIn("Uploading package 1/1: 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 to 'default'",
                       client.out)
 
+    def checksums_metadata_test(self):
+        client = TestClient(default_server_user=True)
+        client.save({"conanfile.py": GenConanfile()})
+        client.run('create . lib/1.0@user/channel')
+        client.run('upload lib/1.0 -c --all -r default')
+        ref = ConanFileReference("lib", "1.0", "user", "channel")
+        metadata = client.cache.package_layout(ref).load_metadata()
+        package_md5 = metadata.packages[NO_SETTINGS_PACKAGE_ID].checksums["conan_package.tgz"]["md5"]
+        package_sha1 = metadata.packages[NO_SETTINGS_PACKAGE_ID].checksums["conan_package.tgz"][
+            "sha1"]
+        recipe_md5 = metadata.recipe.checksums["conanfile.py"]["md5"]
+        recipe_sha1 = metadata.recipe.checksums["conanfile.py"]["sha1"]
+        self.assertEqual(package_md5, "25f53ac9685e07815b990e7c6f21bfd0")
+        self.assertEqual(package_sha1, "be152c82859285658a06816aaaec529a159c33d3")
+        self.assertEqual(recipe_md5, "8eda41e0997f3eacc436fb6c621d7396")
+        self.assertEqual(recipe_sha1, "b97d6b26be5bd02252a44c265755f873cf5ec70b")
+        client.run('remove * -f')
+        client.run('install lib/1.0@user/channel -r default')
+        metadata = client.cache.package_layout(ref).load_metadata()
+        self.assertEqual(
+            metadata.packages[NO_SETTINGS_PACKAGE_ID].checksums["conan_package.tgz"]["md5"],
+            package_md5)
+        self.assertEqual(
+            metadata.packages[NO_SETTINGS_PACKAGE_ID].checksums["conan_package.tgz"]["sha1"],
+            package_sha1)
+        self.assertEqual(metadata.recipe.checksums["conanfile.py"]["md5"], recipe_md5)
+        self.assertEqual(metadata.recipe.checksums["conanfile.py"]["sha1"], recipe_sha1)
+        
     def upload_without_cleaned_user_test(self):
         """ When a user is not authenticated, uploads failed first time
         https://github.com/conan-io/conan/issues/5878
@@ -798,3 +827,46 @@ class Pkg(ConanFile):
         client.run("user -c")
         client.run("upload Hello0/1.2.1@user/testing --all -r default")
         self.assertIn("Uploaded conan recipe 'Hello0/1.2.1@user/testing' to 'default'", client.out)
+
+    @unittest.skipIf(get_env("TESTING_REVISIONS_ENABLED", False), "No sense with revs")
+    def upload_with_rev_revs_disabled_test(self):
+        client = TestClient(default_server_user=True, revisions_enabled=False)
+        client.run("upload pkg/1.0@user/channel#fakerevision --confirm", assert_error=True)
+        self.assertIn(
+            "ERROR: Revisions not enabled in the client, specify a reference without revision",
+            client.out)
+
+    @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
+    def upload_with_recipe_revision_test(self):
+        ref = ConanFileReference.loads("pkg/1.0@user/channel")
+        client = TurboTestClient(default_server_user=True, revisions_enabled=True)
+        pref = client.create(ref, conanfile=GenConanfile())
+        client.run("upload pkg/1.0@user/channel#fakerevision --confirm", assert_error=True)
+        self.assertIn("ERROR: Recipe revision fakerevision does not match the one stored in "
+                      "the cache {}".format(pref.ref.revision), client.out)
+
+        client.run("upload pkg/1.0@user/channel#{} --confirm".format(pref.ref.revision))
+        search_result = client.search("pkg/1.0@user/channel --revisions -r default")[0]
+        self.assertIn(pref.ref.revision, search_result["revision"])
+
+    @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
+    def upload_with_package_revision_test(self):
+        ref = ConanFileReference.loads("pkg/1.0@user/channel")
+        client = TurboTestClient(default_server_user=True, revisions_enabled=True)
+        pref = client.create(ref, conanfile=GenConanfile())
+        client.run("upload pkg/1.0@user/channel#{}:{}#fakeprev --confirm".format(pref.ref.revision,
+                                                                                 pref.id),
+                   assert_error=True)
+        self.assertIn(
+            "ERROR: Binary package pkg/1.0@user/channel:{}#fakeprev not found".format(pref.id),
+            client.out)
+
+        client.run(
+            "upload pkg/1.0@user/channel#{}:{}#{} --confirm".format(pref.ref.revision, pref.id,
+                                                                    pref.revision))
+        search_result = client.search("pkg/1.0@user/channel --revisions -r default")[0]
+        self.assertIn(pref.ref.revision, search_result["revision"])
+        search_result = client.search(
+            "pkg/1.0@user/channel#{}:{} --revisions  -r default".format(pref.ref.revision, pref.id))[
+            0]
+        self.assertIn(pref.revision, search_result["revision"])

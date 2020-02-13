@@ -19,8 +19,9 @@ class VirtualEnvPythonGeneratorTest(unittest.TestCase):
             '[ENV_A]\nPYTHONPATH=["DepAPath"]\n[ENV_B]\nPYTHONPATH=["DepBPath"]'
         )
         gen = VirtualEnvPythonGenerator(conanfile)
+        gen.output_path = "not-used"
         content = gen.content
 
         self.assertIn('PYTHONPATH="1":"2":"three":"DepAPath":"DepBPath"${PYTHONPATH+:$PYTHONPATH}',
-                      content["activate_run_python.sh"])
+                      content["environment_run_python.sh.env"])
 

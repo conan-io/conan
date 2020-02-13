@@ -4,7 +4,7 @@ import unittest
 
 from nose.plugins.attrib import attr
 
-from conans.client.tools import chdir, replace_in_file
+from conans.client.tools import replace_in_file
 from conans.test.utils.tools import TestClient
 
 

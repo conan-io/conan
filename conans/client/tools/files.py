@@ -171,9 +171,16 @@ def check_sha256(file_path, signature):
     check_with_algorithm_sum("sha256", file_path, signature)
 
 
-def patch(base_path=None, patch_file=None, patch_string=None, strip=0, output=None):
-    """Applies a diff from file (patch_file)  or string (patch_string)
-    in base_path directory or current dir if None"""
+def patch(base_path=None, patch_file=None, patch_string=None, strip=0, output=None, fuzz=False):
+    """ Applies a diff from file (patch_file)  or string (patch_string)
+        in base_path directory or current dir if None
+    :param base_path: Base path where the patch should be applied.
+    :param patch_file: Patch file that should be applied.
+    :param patch_string: Patch string that should be applied.
+    :param strip: Number of folders to be stripped from the path.
+    :param output: Stream object.
+    :param fuzz: Should accept fuzzy patches.
+    """
 
     class PatchLogHandler(logging.Handler):
         def __init__(self):
@@ -203,7 +210,7 @@ def patch(base_path=None, patch_file=None, patch_string=None, strip=0, output=No
     if not patchset:
         raise ConanException("Failed to parse patch: %s" % (patch_file if patch_file else "string"))
 
-    if not patchset.apply(root=base_path, strip=strip):
+    if not patchset.apply(root=base_path, strip=strip, fuzz=fuzz):
         raise ConanException("Failed to apply patch: %s" % patch_file)
 
 

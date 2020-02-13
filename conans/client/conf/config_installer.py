@@ -92,7 +92,7 @@ def _process_folder(config, folder, cache, output):
                 _handle_remotes(cache, os.path.join(root, f))
             elif f in ("registry.txt", "registry.json"):
                 try:
-                    os.remove(cache.registry_path)
+                    os.remove(cache.remotes_path)
                 except OSError:
                     pass
                 finally:

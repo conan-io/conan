@@ -1,6 +1,5 @@
 import os
 import platform
-import textwrap
 import unittest
 
 import six
@@ -38,7 +37,7 @@ class Test(ConanFile):
         client.run('remove "*" -f')
         client.run("remote list_pref Test/0.1@lasote/testing")
         self.assertNotIn("Test/0.1@lasote/testing", client.out)
-        registry_content = load(client.cache.registry_path)
+        registry_content = load(client.cache.remotes_path)
         self.assertNotIn("Test/0.1@lasote/testing", registry_content)
 
 

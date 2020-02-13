@@ -110,9 +110,9 @@ class HelloReuseConan(ConanFile):
 
         expected_libs = ['SDL2_ttf', 'freeType', 'SDL2', 'rt', 'pthread', 'dl',
                          'BZip2', 'LibPNG', 'm', 'ZLib']
-        conanbuildinfo = load(os.path.join(self.client.current_folder, "conanbuildinfo.txt"))
+        conanbuildinfo = self.client.load("conanbuildinfo.txt")
         libs = os.linesep.join(expected_libs)
         self.assertIn(libs, conanbuildinfo)
-        conanbuildinfo = load(os.path.join(self.client.current_folder, "conanbuildinfo.cmake"))
+        conanbuildinfo = self.client.load("conanbuildinfo.cmake")
         libs = " ".join(expected_libs)
         self.assertIn(libs, conanbuildinfo)

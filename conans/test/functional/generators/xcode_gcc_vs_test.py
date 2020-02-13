@@ -26,6 +26,7 @@ class Pkg(ConanFile):
         self.cpp_info.libs = ["hello"]
         self.cpp_info.cxxflags = ["-some_cxx_compiler_flag"]
         self.cpp_info.cflags = ["-some_c_compiler_flag"]
+        self.cpp_info.system_libs = ["system_lib1"]
 """})
         client.run("export . Hello/0.1@lasote/stable")
         conanfile_txt = '''[requires]
@@ -45,8 +46,8 @@ xcode
                                  BUILD_INFO_XCODE, CONANINFO, GRAPH_INFO_FILE, LOCKFILE]),
                          sorted(os.listdir(client.current_folder)))
 
-        cmake = load(os.path.join(client.current_folder, BUILD_INFO_CMAKE))
-        gcc = load(os.path.join(client.current_folder, BUILD_INFO_GCC))
+        cmake = client.load(BUILD_INFO_CMAKE)
+        gcc = client.load(BUILD_INFO_GCC)
 
         self.assertIn("CONAN_INCLUDE_DIRS", cmake)
         self.assertIn("CONAN_LIB_DIRS", cmake)
@@ -77,6 +78,7 @@ xcode
         definitions = element_content(xmldoc.getElementsByTagName("ConanPreprocessorDefinitions")[0])
         lib_dirs = element_content(xmldoc.getElementsByTagName("ConanLibraryDirectories")[0])
         libs = element_content(linker.getElementsByTagName("AdditionalDependencies")[0])
+        system_libs = element_content(linker.getElementsByTagName("AdditionalDependencies")[1])
 
         package_id = os.listdir(client.cache.package_layout(ref).packages())[0]
         pref = PackageReference(ref, package_id)
@@ -89,11 +91,12 @@ xcode
 
         self.assertIn(expected_lib_dirs, lib_dirs)
         self.assertEqual("$(ConanLibraries)%(AdditionalDependencies)", libs)
+        self.assertEqual("$(ConanSystemDeps)%(AdditionalDependencies)", system_libs)
         self.assertEqual("", definitions)
         self.assertIn(expected_include_dirs, include_dirs)
 
         # CHECK XCODE GENERATOR
-        xcode = load(os.path.join(client.current_folder, BUILD_INFO_XCODE))
+        xcode = client.load(BUILD_INFO_XCODE)
 
         expected_c_flags = '-some_c_compiler_flag'
         expected_cpp_flags = '-some_cxx_compiler_flag'
@@ -106,4 +109,6 @@ xcode
         self.assertIn('OTHER_CFLAGS = $(inherited) %s' % expected_c_flags, xcode)
         self.assertIn('OTHER_CPLUSPLUSFLAGS = $(inherited) %s' % expected_cpp_flags, xcode)
         self.assertIn('FRAMEWORK_SEARCH_PATHS = $(inherited) "%s"' % package_path.replace("\\", "/"),
+                      xcode)
+        self.assertIn('OTHER_LDFLAGS = $(inherited)  -lhello -lsystem_lib1',
                       xcode)

@@ -11,7 +11,7 @@ from conans.paths import CONANFILE, CONANFILE_TXT, CONANINFO
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID
 from conans.test.utils.tools import TestClient, TestServer, GenConanfile
-from conans.util.files import load, mkdir, rmdir
+from conans.util.files import mkdir, rmdir
 
 
 class InstallTest(unittest.TestCase):
@@ -463,10 +463,10 @@ class TestConan(ConanFile):
                       client.out)  # Test "from local cache" output message
         client.run("install . --build=missing -s os=Macos -s os_build=Macos "
                    "--install-folder=os_dir")
-        conaninfo = load(os.path.join(client.current_folder, "win_dir/conaninfo.txt"))
+        conaninfo = client.load("win_dir/conaninfo.txt")
         self.assertIn("os=Windows", conaninfo)
         self.assertNotIn("os=Macos", conaninfo)
-        conaninfo = load(os.path.join(client.current_folder, "os_dir/conaninfo.txt"))
+        conaninfo = client.load("os_dir/conaninfo.txt")
         self.assertNotIn("os=Windows", conaninfo)
         self.assertIn("os=Macos", conaninfo)
 

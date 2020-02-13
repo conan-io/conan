@@ -70,7 +70,7 @@ class Pkg(ConanFile):
             self.assertIn("Pkg/0.1@user/testing deploy(): Copied 1 '.exe' file: myapp.exe",
                           client.out)
             deploy_manifest = FileTreeManifest.loads(
-                    load(os.path.join(client.current_folder, folder, "deploy_manifest.txt")))
+                    client.load(os.path.join(folder, "deploy_manifest.txt")))
 
             app = os.path.abspath(os.path.join(client.current_folder, folder, "myapp.exe"))
             if deploy_to_abs:

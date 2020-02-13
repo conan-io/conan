@@ -1,6 +1,7 @@
 import json
 import os
 import platform
+import textwrap
 import unittest
 from textwrap import dedent
 
@@ -10,7 +11,7 @@ from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, GenConanfile
 from conans.util.env_reader import get_env
-from conans.util.files import load, mkdir
+from conans.util.files import load, mkdir, is_dirty
 
 
 class ExportPkgTest(unittest.TestCase):
@@ -39,12 +40,8 @@ class ExportPkgTest(unittest.TestCase):
 
     def test_transitive_without_settings(self):
         # https://github.com/conan-io/conan/issues/3367
-        conanfile = """from conans import ConanFile
-class PkgC(ConanFile):
-    pass
-"""
         client = TestClient()
-        client.save({CONANFILE: conanfile})
+        client.save({CONANFILE: GenConanfile()})
         client.run("create . PkgC/0.1@user/testing")
         conanfile = """from conans import ConanFile
 class PkgB(ConanFile):
@@ -69,12 +66,8 @@ class PkgA(ConanFile):
 
     def test_package_folder_errors(self):
         # https://github.com/conan-io/conan/issues/2350
-        conanfile = """from conans import ConanFile
-class HelloPythonConan(ConanFile):
-    pass
-"""
         client = TestClient()
-        client.save({CONANFILE: conanfile})
+        client.save({CONANFILE: GenConanfile()})
         mkdir(os.path.join(client.current_folder, "pkg"))
 
         client.run("export-pkg . Hello/0.1@lasote/stable -pf=pkg -bf=.", assert_error=True)
@@ -227,9 +220,8 @@ class TestConan(ConanFile):
         package_folder = client.cache.package_layout(win_pref.ref,
                                                      short_paths=short_paths).package(win_pref)
         if short_paths and platform.system() == "Windows":
-            self.assertEqual(load(os.path.join(client.cache.package_layout(win_pref.ref, False).package(win_pref),
-                                               ".conan_link")),
-                             package_folder)
+            cache_pkg_folder = client.cache.package_layout(win_pref.ref, False).package(win_pref)
+            self.assertEqual(load(os.path.join(cache_pkg_folder, ".conan_link")), package_folder)
         else:
             self.assertEqual(client.cache.package_layout(win_pref.ref).package(win_pref),
                              package_folder)
@@ -583,3 +575,29 @@ class TestConan(ConanFile):
         package_folder = client.cache.package_layout(pref.ref).package(pref)
         header = os.path.join(package_folder, "include/header.h")
         self.assertTrue(os.path.exists(header))
+
+    def test_export_pkg_clean_dirty(self):
+        # https://github.com/conan-io/conan/issues/6449
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class Pkg(ConanFile):
+                def build(self):
+                    if self.in_local_cache:
+                        raise Exception("Can't build while installing")
+            """)
+        client.save({"conanfile.py": conanfile})
+        client.run("create . pkg/0.1@", assert_error=True)
+        self.assertIn("Can't build while installing", client.out)
+        ref = ConanFileReference.loads("pkg/0.1")
+        layout = client.cache.package_layout(ref)
+        pref = PackageReference(ref, "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+        build_folder = layout.build(pref)
+        self.assertTrue(is_dirty(build_folder))
+        package_folder = layout.package(pref)
+        self.assertTrue(is_dirty(package_folder))
+
+        client.run("export-pkg . pkg/0.1@")
+        self.assertFalse(is_dirty(package_folder))
+        client.run("install pkg/0.1@")
+        self.assertIn("pkg/0.1: Already installed!", client.out)
