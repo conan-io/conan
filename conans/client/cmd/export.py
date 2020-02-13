@@ -9,7 +9,7 @@ import yaml
 from conans.client.file_copier import FileCopier
 from conans.client.output import Color, ScopedOutput
 from conans.client.remover import DiskRemover
-from conans.errors import ConanException
+from conans.errors import ConanException, ConanV2Exception
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference
 from conans.model.scm import SCM, get_scm_data
@@ -71,16 +71,16 @@ def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
     # Take the default from the env vars if they exist to not break behavior
     try:
         user = conanfile.user
+    except ConanV2Exception:
+        raise
     except ConanException:
-        if conan_v2_mode:
-            raise
         user = None
 
     try:
         channel = conanfile.channel
+    except ConanV2Exception:
+        raise
     except ConanException:
-        if conan_v2_mode:
-            raise
         channel = None
 
     ref = ConanFileReference(conanfile.name, conanfile.version, user, channel)
