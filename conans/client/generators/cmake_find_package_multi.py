@@ -21,7 +21,7 @@ include(${{CMAKE_CURRENT_LIST_DIR}}/{name}Targets.cmake)
 
     targets_file = """
 if(NOT TARGET {name}::{name})
-    add_library({name}::{name} INTERFACE IMPORTED GLOBAL)
+    add_library({name}::{name} INTERFACE IMPORTED)
 endif()
 
 # Load the debug and release library finders

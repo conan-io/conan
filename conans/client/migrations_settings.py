@@ -905,3 +905,5 @@ settings_1_21_1 = settings_1_21_0
 settings_1_21_2 = settings_1_21_1
 
 settings_1_22_0 = settings_1_21_2
+settings_1_22_1 = settings_1_22_0
+settings_1_22_2 = settings_1_22_1

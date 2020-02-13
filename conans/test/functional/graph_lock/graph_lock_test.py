@@ -774,3 +774,23 @@ class LockFileOptionsTest(unittest.TestCase):
         self.assertIn('"options": "variation=nano"', lockfile)
         client.run("create ffmepg ffmpeg/1.0@ --build --lockfile")
         self.assertIn("ffmpeg/1.0: Requirements: Variation nano!!", client.out)
+
+
+class GraphLockBuildRequiresNotNeeded(unittest.TestCase):
+
+    def test_build_requires_not_needed(self):
+        client = TestClient()
+        client.save({'tool/conanfile.py': GenConanfile(),
+                     'libA/conanfile.py': GenConanfile().with_build_require_plain("tool/1.0"),
+                     'App/conanfile.py': GenConanfile().with_require_plain("libA/1.0")})
+        client.run("create tool tool/1.0@")
+        client.run("create libA libA/1.0@")
+        client.run("create App app/1.0@")
+
+        # Create the full graph lock
+        client.run("graph lock app/1.0@ --build")
+        client.run("create libA libA/2.0@ --lockfile")
+        client.run("graph build-order . --json=bo.json --build=missing")
+        bo1 = client.load("bo.json")
+        client.run("graph build-order . --json=bo.json --build=missing")
+        self.assertEqual(bo1, client.load("bo.json"))
