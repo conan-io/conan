@@ -178,7 +178,10 @@ class ConanFile(object):
     @property
     def channel(self):
         if not self._conan_channel:
-            self._conan_channel = os.getenv("CONAN_CHANNEL") or self.default_channel
+            _env_channel = os.getenv("CONAN_CHANNEL")
+            if _env_channel:
+                conan_v2_behavior("Environment variable 'CONAN_CHANNEL' is deprecated")
+            self._conan_channel = _env_channel or self.default_channel
             if not self._conan_channel:
                 raise ConanException("channel not defined, but self.channel is used in conanfile")
         return self._conan_channel
@@ -186,14 +189,17 @@ class ConanFile(object):
     @property
     def user(self):
         if not self._conan_user:
-            self._conan_user = os.getenv("CONAN_USERNAME") or self.default_user
+            _env_username = os.getenv("CONAN_USERNAME")
+            if _env_username:
+                conan_v2_behavior("Environment variable 'CONAN_USERNAME' is deprecated")
+            self._conan_user = _env_username or self.default_user
             if not self._conan_user:
                 raise ConanException("user not defined, but self.user is used in conanfile")
         return self._conan_user
 
     def collect_libs(self, folder=None):
-        self.output.warn("'self.collect_libs' is deprecated, "
-                         "use 'tools.collect_libs(self)' instead")
+        conan_v2_behavior("'self.collect_libs' is deprecated, use 'tools.collect_libs(self)' instead",
+                          v1_behavior=self.output.warn)
         return tools.collect_libs(self, folder=folder)
 
     @property
