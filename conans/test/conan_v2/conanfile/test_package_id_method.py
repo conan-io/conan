@@ -1,3 +1,4 @@
+import platform
 import textwrap
 import unittest
 
@@ -30,7 +31,8 @@ class ConanfileSourceTestCase(ConanV2ModeTestCase):
         t.save({'conanfile.txt': "[requires]\nname/version"})
         t.run('install conanfile.txt')
         content = t.load('conanbuildinfo.txt')
-        self.assertIn("[libs]\nlibA", content)
+        new_line = '\r\n' if platform.system() == "Windows" else '\n'
+        self.assertIn("[libs]{}libA".format(new_line), content)
 
     def test_cppinfo_not_in_package_id(self):
         # self.cpp_info is not available in 'package_id'
