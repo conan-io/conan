@@ -8,7 +8,7 @@ from conans.client.tools.oss import OSInfo
 from conans.model import Generator
 
 
-sh_activate_tpl = Template(textwrap.dedent("""
+sh_activate_tpl = Template(textwrap.dedent("""\
     #!/usr/bin/env sh
 
     {%- for it in modified_vars %}
@@ -20,12 +20,12 @@ sh_activate_tpl = Template(textwrap.dedent("""
         export "$LINE";
     done < "{{ environment_file }}"
 
-    export CONAN_OLD_PS1=$PS1
+    export CONAN_OLD_PS1="$PS1"
     export PS1="({{venv_name}}) $PS1"
 
 """))
 
-sh_deactivate_tpl = Template(textwrap.dedent("""
+sh_deactivate_tpl = Template(textwrap.dedent("""\
     #!/usr/bin/env sh
     export PS1="$CONAN_OLD_PS1"
     unset CONAN_OLD_PS1
@@ -39,7 +39,7 @@ sh_deactivate_tpl = Template(textwrap.dedent("""
     {%- endfor %}
 """))
 
-cmd_activate_tpl = Template(textwrap.dedent("""
+cmd_activate_tpl = Template(textwrap.dedent("""\
     @echo off
     
     {%- for it in modified_vars %}
@@ -54,7 +54,7 @@ cmd_activate_tpl = Template(textwrap.dedent("""
     SET "PROMPT=({{venv_name}}) %PROMPT%"
 """))
 
-cmd_deactivate_tpl = Template(textwrap.dedent("""
+cmd_deactivate_tpl = Template(textwrap.dedent("""\
     @echo off
     
     SET "PROMPT=%CONAN_OLD_PROMPT%"
@@ -69,7 +69,7 @@ cmd_deactivate_tpl = Template(textwrap.dedent("""
     {%- endfor %}
 """))
 
-ps1_activate_tpl = Template(textwrap.dedent("""
+ps1_activate_tpl = Template(textwrap.dedent("""\
     {%- for it in modified_vars %}
     $env:CONAN_OLD_{{it}}=$env:{{it}}
     {%- endfor %}
@@ -85,7 +85,7 @@ ps1_activate_tpl = Template(textwrap.dedent("""
     function global:prompt { write-host "({{venv_name}}) " -nonewline; & $function:_old_conan_prompt }
 """))
 
-ps1_deactivate_tpl = Template(textwrap.dedent("""
+ps1_deactivate_tpl = Template(textwrap.dedent("""\
     $function:prompt = $function:_old_conan_prompt
     remove-item function:_old_conan_prompt
     
