@@ -76,6 +76,24 @@ class ProtobufTest(GraphManagerTest):
                 self.output.info("ZLIB: %s" % self.deps_cpp_info["zlib"].libs)
         """)
 
+    cmake = textwrap.dedent("""
+        from conans import ConanFile
+
+        class CMake(ConanFile):
+            settings = "os"
+            requires = "zlib/3.0@user/channel"
+
+            def build(self):
+                self.output.info(">> settings.os:".format(self.settings.os))
+                self.output.info("ZLIB: %s" % self.deps_cpp_info["zlib"].libs)
+
+            def package_info(self):
+                assert self.settings.os == "Host"
+
+                self.env_info.PATH.append("cmake_host")
+                self.env_info.OTHERVAR = "cmake_host"
+        """)
+
     settings_yml = textwrap.dedent("""
         os:
             Host:
@@ -84,6 +102,8 @@ class ProtobufTest(GraphManagerTest):
 
     zlib1_ref = ConanFileReference.loads("zlib/1.0@user/channel")
     zlib2_ref = ConanFileReference.loads("zlib/2.0@user/channel")
+    zlib3_ref = ConanFileReference.loads("zlib/3.0@user/channel")
+    cmake_ref = ConanFileReference.loads("cmake/3.14@user/channel")
     protobuf_ref = ConanFileReference.loads("protobuf/testing@user/channel")
     app_ref = ConanFileReference.loads("app/testing@user/channel")
 
@@ -91,6 +111,8 @@ class ProtobufTest(GraphManagerTest):
         super(ProtobufTest, self).setUp()
         self._cache_recipe(self.zlib1_ref, self.zlib)
         self._cache_recipe(self.zlib2_ref, self.zlib)
+        self._cache_recipe(self.zlib3_ref, self.zlib)
+        self._cache_recipe(self.cmake_ref, self.cmake)
         self._cache_recipe(self.protobuf_ref, self.protobuf)
         self._cache_recipe(self.app_ref, self.app)
 
@@ -129,6 +151,74 @@ class ProtobufTest(GraphManagerTest):
         profile_build = Profile()
         profile_build.settings["os"] = "Build"
         profile_build.process_settings(self.cache)
+
+        deps_graph = self._build_graph(profile_host=profile_host, profile_build=profile_build)
+
+        # Check HOST packages
+        #   - app
+        app = deps_graph.root.dependencies[0].dst
+        self.assertEqual(len(app.dependencies), 2)
+        self.assertEqual(app.conanfile.name, "app")
+        self.assertEqual(app.context, CONTEXT_HOST)
+        self.assertEqual(app.conanfile.settings.os, profile_host.settings['os'])
+
+        # App deps_cpp_info
+        protobuf_host_cpp_info = app.conanfile.deps_cpp_info["protobuf"]
+        self.assertEqual(protobuf_host_cpp_info.includedirs, ['protobuf-host'])
+        self.assertEqual(protobuf_host_cpp_info.libdirs, ['protobuf-host'])
+        self.assertEqual(protobuf_host_cpp_info.bindirs, ['protobuf-host'])
+        protobuf_host_cpp_info = app.conanfile.deps_cpp_info["zlib"]
+        self.assertEqual(protobuf_host_cpp_info.libs, ['zlib-host1.0'])
+        self.assertEqual(app.conanfile.deps_cpp_info.libs, ['protobuf-host', 'zlib-host1.0'])
+
+        # App deps_env_info
+        protobuf_env_info = app.conanfile.deps_env_info["protobuf"]
+        self.assertEqual(protobuf_env_info.PATH, ['protobuf-build'])
+        self.assertEqual(protobuf_env_info.OTHERVAR, 'protobuf-build')
+        zlib_env_info = app.conanfile.deps_env_info["zlib"]
+        self.assertEqual(zlib_env_info.vars["PATH"], ['zlib-build2.0'])
+        self.assertEqual(app.conanfile.deps_env_info.vars["PATH"],
+                         ['protobuf-build', 'zlib-build2.0'])
+
+        # Protobuf Host
+        protobuf_host = app.dependencies[0].dst
+        self.assertEqual(protobuf_host.conanfile.name, "protobuf")
+        self.assertEqual(protobuf_host.context, CONTEXT_HOST)
+        self.assertEqual(protobuf_host.conanfile.settings.os, "Host")
+
+        # Protobuf Host deps_cpp_info
+        zlib_cpp_info = protobuf_host.conanfile.deps_cpp_info["zlib"]
+        self.assertEqual(zlib_cpp_info.libs, ['zlib-host1.0'])
+
+        # Protobuf Host has NO deps_env_info for zlib
+        zlib_env_info = list(protobuf_host.conanfile.deps_env_info.deps)
+        self.assertEqual(zlib_env_info, [])
+
+        # Protobuf Build
+        protobuf_build = app.dependencies[1].dst
+        self.assertEqual(protobuf_build.conanfile.name, "protobuf")
+        self.assertEqual(protobuf_build.context, CONTEXT_BUILD)
+        self.assertEqual(protobuf_build.conanfile.settings.os, "Build")
+
+        # Protobuf Build deps_cpp_info
+        zlib_cpp_info = protobuf_build.conanfile.deps_cpp_info["zlib"]
+        self.assertEqual(zlib_cpp_info.libs, ['zlib-build2.0'])
+
+        # Protobuf Build has NO deps_env_info from zlib
+        zlib_env_info = list(protobuf_build.conanfile.deps_env_info.deps)
+        self.assertEqual(zlib_env_info, [])
+
+    def test_crossbuilding_with_build_require_cmake(self):
+        profile_host = Profile()
+        profile_host.settings["os"] = "Host"
+        profile_host.process_settings(self.cache)
+        profile_host.build_requires["*"] = [self.cmake_ref]
+
+        profile_build = Profile()
+        profile_build.settings["os"] = "Build"
+        profile_build.process_settings(self.cache)
+        profile_build.build_requires["*"] = [self.cmake_ref]
+        profile_build.build_requires["zlib/3.0"] = []
 
         deps_graph = self._build_graph(profile_host=profile_host, profile_build=profile_build)
 
