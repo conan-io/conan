@@ -49,6 +49,9 @@ def check_min_cppstd(conanfile, cppstd, gnu_extensions=False):
         return cppstd_default(compiler, compiler_version)
 
     current_cppstd = deduced_cppstd()
+    if current_cppstd is None:
+        raise ConanException("Could not detect the current default cppstd because "
+                             "the compiler is unknown.")
     check_required_gnu_extension(current_cppstd)
 
     if less_than(current_cppstd, cppstd):
