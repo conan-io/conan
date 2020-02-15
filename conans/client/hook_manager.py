@@ -66,6 +66,7 @@ class HookManager(object):
                 raise ConanException("[HOOK - %s] %s(): %s" % (name, method_name, str(e)))
 
     def load_hooks(self):
+        HookManager._invalidate_caches()
         for name in self._hook_names:
             self._load_hook(name)
 
@@ -132,14 +133,12 @@ class HookManager(object):
 
     @staticmethod
     def _import(filename):
-        HookManager._invalidate_caches()
-
         # FIXME: When we drop the <3.3.0 Python support
-        if sys.version_info >= (3, 3, 0):
-            import importlib
-            return importlib.import_module(filename)
+        if sys.version_info < (3, 3, 0):
+            return __import__(filename)
 
-        return __import__(filename)
+        import importlib
+        return importlib.import_module(filename)
 
     @staticmethod
     def _invalidate_caches():
@@ -150,15 +149,15 @@ class HookManager(object):
         # does not exist, which can cause failures. Just directly clear
         # the sys.path_importer_cache entry ourselves.
 
+        # FIXME: When we drop the 2.7 Python support
+        if sys.version_info < (3, 0, 0):
+            sys.path_importer_cache.clear()
+            return
+
         # FIXME: When we drop the <3.7.0 Python support
         if sys.version_info >= (3, 7, 0):
             import importlib
             importlib.invalidate_caches()
-            return
-
-        # FIXME: When we drop the 2.7 Python support
-        if sys.version_info < (3, 0, 0):
-            sys.path_importer_cache.clear()
             return
 
         for name, finder in list(sys.path_importer_cache.items()):
