@@ -156,6 +156,11 @@ class HookManager(object):
             importlib.invalidate_caches()
             return
 
+        # FIXME: When we drop the 2.7 Python support
+        if sys.version_info < (3, 0, 0):
+            sys.path_importer_cache.clear()
+            return
+
         for name, finder in list(sys.path_importer_cache.items()):
             if finder is None:
                 del sys.path_importer_cache[name]
