@@ -100,13 +100,7 @@ class HookManager(object):
             old_modules = list(sys.modules.keys())
             with chdir(current_dir):
                 sys.dont_write_bytecode = True
-                # FIXME: When we drop the <3.3.0 Python support
-                if sys.version_info >= (3, 3, 0):
-                    import importlib
-                    importlib.invalidate_caches()
-                    loaded = importlib.import_module(filename)
-                else:
-                    loaded = __import__(filename)
+                loaded = HookManager._import(filename)
             # Put all imported files under a new package name
             module_id = uuid.uuid1()
             added_modules = set(sys.modules).difference(old_modules)
@@ -135,3 +129,35 @@ class HookManager(object):
             sys.dont_write_bytecode = False
             sys.path.pop()
         return loaded
+
+    @staticmethod
+    def _import(filename: str):
+        HookManager._invalidate_caches()
+
+        # FIXME: When we drop the <3.3.0 Python support
+        if sys.version_info >= (3, 3, 0):
+            import importlib
+            return importlib.import_module(filename)
+
+        return __import__(filename)
+
+    @staticmethod
+    def _invalidate_caches():
+        # https://bugs.python.org/issue33169
+        #
+        # importlib.invalidate_caches() is insufficient, since it doesn't
+        # clear cache entries that indicate that a directory on the path
+        # does not exist, which can cause failures. Just directly clear
+        # the sys.path_importer_cache entry ourselves.
+
+        # FIXME: When we drop the <3.7.0 Python support
+        if sys.version_info >= (3, 7, 0):
+            import importlib
+            importlib.invalidate_caches()
+            return
+
+        for name, finder in list(sys.path_importer_cache.items()):
+            if finder is None:
+                del sys.path_importer_cache[name]
+            elif hasattr(finder, 'invalidate_caches'):
+                finder.invalidate_caches()
