@@ -131,7 +131,7 @@ class HookManager(object):
         return loaded
 
     @staticmethod
-    def _import(filename: str):
+    def _import(filename):
         HookManager._invalidate_caches()
 
         # FIXME: When we drop the <3.3.0 Python support
