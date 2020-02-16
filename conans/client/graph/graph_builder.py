@@ -95,7 +95,6 @@ class DepsGraphBuilder(object):
         self._resolve_ranges(graph, build_requires, scope, update, remotes)
 
         for br in build_requires:
-            br.build_require = True
             context = br.build_require_context if node.context == CONTEXT_HOST else CONTEXT_BUILD
             self._expand_require(br, node, graph, check_updates, update,
                                  remotes, profile_host, profile_build, new_reqs, new_options,
@@ -172,9 +171,8 @@ class DepsGraphBuilder(object):
                                      "evaluations of 'requirements'\n"
                                      "    Previous requirements: %s\n"
                                      "    New requirements: %s"
-                                     % (
-                                     scope, list(conanfile._conan_evaluated_requires.values()),
-                                     list(conanfile.requires.values())))
+                                     % (scope, list(conanfile._conan_evaluated_requires.values()),
+                                        list(conanfile.requires.values())))
 
         return new_options, new_reqs
 
