@@ -343,7 +343,7 @@ endmacro()""", macro)
                       ' ${CONAN_FRAMEWORK_DIRS})', content)
         self.assertIn('set(CONAN_FRAMEWORK_DIRS "path/to/Frameworks1"\n\t\t\t"path/to/Frameworks2" '
                       '${CONAN_FRAMEWORK_DIRS})', content)
-        self.assertIn('set(CONAN_LIBS ${CONAN_PKG_LIBS} ${CONAN_SYSTEM_LIBS} '
+        self.assertIn('set(CONAN_LIBS ${CONAN_LIBS} ${CONAN_SYSTEM_LIBS} '
                       '${CONAN_FRAMEWORKS_FOUND})', content)
 
         generator = CMakeFindPackageGenerator(conanfile)
