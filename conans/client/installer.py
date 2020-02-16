@@ -6,7 +6,7 @@ from conans.client import tools
 from conans.client.file_copier import report_copied_files
 from conans.client.generators import TXTGenerator, write_generators
 from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_EDITABLE, \
-    BINARY_MISSING, BINARY_SKIP, BINARY_UPDATE, BINARY_UNKNOWN
+    BINARY_MISSING, BINARY_SKIP, BINARY_UPDATE, BINARY_UNKNOWN, CONTEXT_HOST
 from conans.client.importer import remove_imports, run_imports
 from conans.client.packager import run_package_method, update_package_metadata
 from conans.client.recorder.action_recorder import INSTALL_ERROR_BUILDING, INSTALL_ERROR_MISSING, \
@@ -308,7 +308,7 @@ class BinaryInstaller(object):
         self._build(nodes_by_level, keep_build, root_node, graph_info, remotes, build_mode, update)
 
     def _build(self, nodes_by_level, keep_build, root_node, graph_info, remotes, build_mode, update):
-        xbuilding = bool(graph_info.profile_build)  # If build profile is provided, then it is xbuild
+        using_build_profile = bool(graph_info.profile_build)
         processed_package_refs = set()
         for level in nodes_by_level:
             for node in level:
@@ -320,7 +320,7 @@ class BinaryInstaller(object):
                     raise_package_not_found_error(conan_file, ref, package_id, dependencies,
                                                   out=output, recorder=self._recorder)
 
-                self._propagate_info(node, xbuilding)
+                self._propagate_info(node, using_build_profile)
                 if node.binary == BINARY_EDITABLE:
                     self._handle_node_editable(node, graph_info)
                 else:
@@ -333,7 +333,7 @@ class BinaryInstaller(object):
                     self._handle_node_cache(node, keep_build, processed_package_refs, remotes)
 
         # Finally, propagate information to root node (ref=None)
-        self._propagate_info(root_node, xbuilding)
+        self._propagate_info(root_node, using_build_profile)
 
     @staticmethod
     def _node_concurrently_installed(node, package_folder):
@@ -446,19 +446,20 @@ class BinaryInstaller(object):
         return pref
 
     @staticmethod
-    def _propagate_info(node, xbuilding):
+    def _propagate_info(node, using_build_profile):
         # Get deps_cpp_info from upstream nodes
         node_order = [n for n in node.public_closure if n.binary != BINARY_SKIP]
         # List sort is stable, will keep the original order of the closure, but prioritize levels
         conan_file = node.conanfile
         transitive = [it for it in node.transitive_closure]
-        br_host = [it.dst for it in node.dependencies if it.require.build_require_host]
+        br_host = [it.dst for it in node.dependencies
+                   if it.require.build_require_context == CONTEXT_HOST]
         for n in node_order:
             if n not in transitive:
                 conan_file.output.info("Applying build-requirement: %s" % str(n.ref))
 
             conan_file.deps_user_info[n.ref.name] = n.conanfile.user_info
-            if not xbuilding:  # Do not touch anything
+            if not using_build_profile:  # Do not touch anything
                 conan_file.deps_cpp_info.update(n.conanfile.cpp_info, n.ref.name)
                 conan_file.deps_env_info.update(n.conanfile.env_info, n.ref.name)
             else:

@@ -18,8 +18,7 @@ from conans.util.files import save
 
 
 class ProtobufTest(GraphManagerTest):
-    """
-    """
+
     zlib = textwrap.dedent("""
         from conans import ConanFile
 
@@ -32,6 +31,21 @@ class ProtobufTest(GraphManagerTest):
 
                 self.cpp_info.libs = [zlib_str, ]
                 
+                self.env_info.PATH.append(zlib_str)
+                self.env_info.OTHERVAR = zlib_str
+        """)
+    bzip = textwrap.dedent("""
+        from conans import ConanFile
+
+        class Bzip2(ConanFile):
+            settings = "os"
+
+            def package_info(self):
+                zlib_str = "bzip-host" if self.settings.os == "Host" else "bzip-build"
+                zlib_str += str(self.version)
+
+                self.cpp_info.libs = [zlib_str, ]
+
                 self.env_info.PATH.append(zlib_str)
                 self.env_info.OTHERVAR = zlib_str
         """)
@@ -81,17 +95,17 @@ class ProtobufTest(GraphManagerTest):
 
         class CMake(ConanFile):
             settings = "os"
-            requires = "zlib/3.0@user/channel"
+            requires = "bzip/3.0@user/channel"
 
             def build(self):
                 self.output.info(">> settings.os:".format(self.settings.os))
-                self.output.info("ZLIB: %s" % self.deps_cpp_info["zlib"].libs)
+                self.output.info("BZIP: %s" % self.deps_cpp_info["bzip"].libs)
 
             def package_info(self):
-                assert self.settings.os == "Host"
+                assert self.settings.os == "Build"
 
-                self.env_info.PATH.append("cmake_host")
-                self.env_info.OTHERVAR = "cmake_host"
+                self.env_info.PATH.append("cmake_build")
+                self.env_info.OTHERVAR = "cmake_build"
         """)
 
     settings_yml = textwrap.dedent("""
@@ -102,7 +116,7 @@ class ProtobufTest(GraphManagerTest):
 
     zlib1_ref = ConanFileReference.loads("zlib/1.0@user/channel")
     zlib2_ref = ConanFileReference.loads("zlib/2.0@user/channel")
-    zlib3_ref = ConanFileReference.loads("zlib/3.0@user/channel")
+    bzip_ref = ConanFileReference.loads("bzip/3.0@user/channel")
     cmake_ref = ConanFileReference.loads("cmake/3.14@user/channel")
     protobuf_ref = ConanFileReference.loads("protobuf/testing@user/channel")
     app_ref = ConanFileReference.loads("app/testing@user/channel")
@@ -111,7 +125,7 @@ class ProtobufTest(GraphManagerTest):
         super(ProtobufTest, self).setUp()
         self._cache_recipe(self.zlib1_ref, self.zlib)
         self._cache_recipe(self.zlib2_ref, self.zlib)
-        self._cache_recipe(self.zlib3_ref, self.zlib)
+        self._cache_recipe(self.bzip_ref, self.bzip)
         self._cache_recipe(self.cmake_ref, self.cmake)
         self._cache_recipe(self.protobuf_ref, self.protobuf)
         self._cache_recipe(self.app_ref, self.app)
@@ -218,25 +232,25 @@ class ProtobufTest(GraphManagerTest):
         profile_build.settings["os"] = "Build"
         profile_build.process_settings(self.cache)
         profile_build.build_requires["*"] = [self.cmake_ref]
-        profile_build.build_requires["zlib/3.0"] = []
+        profile_build.build_requires["zlib/3.0*"] = []
 
         deps_graph = self._build_graph(profile_host=profile_host, profile_build=profile_build)
 
         # Check HOST packages
         #   - app
         app = deps_graph.root.dependencies[0].dst
-        self.assertEqual(len(app.dependencies), 2)
+        self.assertEqual(len(app.dependencies), 3)
         self.assertEqual(app.conanfile.name, "app")
         self.assertEqual(app.context, CONTEXT_HOST)
-        self.assertEqual(app.conanfile.settings.os, profile_host.settings['os'])
+        self.assertEqual(app.conanfile.settings.os, "Host")
 
         # App deps_cpp_info
         protobuf_host_cpp_info = app.conanfile.deps_cpp_info["protobuf"]
         self.assertEqual(protobuf_host_cpp_info.includedirs, ['protobuf-host'])
         self.assertEqual(protobuf_host_cpp_info.libdirs, ['protobuf-host'])
         self.assertEqual(protobuf_host_cpp_info.bindirs, ['protobuf-host'])
-        protobuf_host_cpp_info = app.conanfile.deps_cpp_info["zlib"]
-        self.assertEqual(protobuf_host_cpp_info.libs, ['zlib-host1.0'])
+        zlib_host_cpp_info = app.conanfile.deps_cpp_info["zlib"]
+        self.assertEqual(zlib_host_cpp_info.libs, ['zlib-host1.0'])
         self.assertEqual(app.conanfile.deps_cpp_info.libs, ['protobuf-host', 'zlib-host1.0'])
 
         # App deps_env_info
@@ -246,7 +260,7 @@ class ProtobufTest(GraphManagerTest):
         zlib_env_info = app.conanfile.deps_env_info["zlib"]
         self.assertEqual(zlib_env_info.vars["PATH"], ['zlib-build2.0'])
         self.assertEqual(app.conanfile.deps_env_info.vars["PATH"],
-                         ['protobuf-build', 'zlib-build2.0'])
+                         ['cmake_build', 'protobuf-build', 'bzip-build3.0', 'zlib-build2.0'])
 
         # Protobuf Host
         protobuf_host = app.dependencies[0].dst
@@ -257,10 +271,22 @@ class ProtobufTest(GraphManagerTest):
         # Protobuf Host deps_cpp_info
         zlib_cpp_info = protobuf_host.conanfile.deps_cpp_info["zlib"]
         self.assertEqual(zlib_cpp_info.libs, ['zlib-host1.0'])
+        self.assertEqual(protobuf_host.conanfile.deps_cpp_info.libs, ['zlib-host1.0'])
 
         # Protobuf Host has NO deps_env_info for zlib
         zlib_env_info = list(protobuf_host.conanfile.deps_env_info.deps)
-        self.assertEqual(zlib_env_info, [])
+        self.assertEqual(zlib_env_info, ['cmake', 'bzip'])
+        self.assertEqual(protobuf_host.conanfile.deps_env_info.vars["PATH"],
+                         ['cmake_build', 'bzip-build3.0'])
+
+        # zlib host
+        zlib_host = protobuf_host.dependencies[0].dst
+        self.assertEqual(zlib_host.conanfile.name, "zlib")
+        self.assertEqual(zlib_host.context, CONTEXT_HOST)
+        self.assertEqual(zlib_host.conanfile.settings.os, "Host")
+        self.assertEqual(zlib_host.conanfile.deps_cpp_info.libs, [])
+        self.assertEqual(zlib_host.conanfile.deps_env_info.vars["PATH"],
+                         ['cmake_build', 'bzip-build3.0'])
 
         # Protobuf Build
         protobuf_build = app.dependencies[1].dst
@@ -271,7 +297,10 @@ class ProtobufTest(GraphManagerTest):
         # Protobuf Build deps_cpp_info
         zlib_cpp_info = protobuf_build.conanfile.deps_cpp_info["zlib"]
         self.assertEqual(zlib_cpp_info.libs, ['zlib-build2.0'])
+        self.assertEqual(protobuf_build.conanfile.deps_cpp_info.libs, ['zlib-build2.0'])
 
         # Protobuf Build has NO deps_env_info from zlib
         zlib_env_info = list(protobuf_build.conanfile.deps_env_info.deps)
-        self.assertEqual(zlib_env_info, [])
+        self.assertEqual(zlib_env_info, ['cmake', 'bzip'])
+        self.assertEqual(protobuf_build.conanfile.deps_env_info.vars["PATH"],
+                         ['cmake_build', 'bzip-build3.0'])

@@ -81,12 +81,11 @@ class DepsGraphBuilder(object):
         scope = conanfile.display_name
 
         build_requires = []
-        contexts = []  # FIXME: Using two lists is not the best implementation
         for ref, context in build_requires_refs:
             r = Requirement(ref)
             r.build_require = True
+            r.build_require_context = context
             build_requires.append(r)
-            contexts.append(context)
 
         if graph_lock:
             graph_lock.pre_lock_node(node)
@@ -95,11 +94,10 @@ class DepsGraphBuilder(object):
 
         self._resolve_ranges(graph, build_requires, scope, update, remotes)
 
-        for build_require, ctxt in zip(build_requires, contexts):
-            build_require.build_require = True
-            build_require.build_require_host = bool(ctxt == CONTEXT_HOST)
-            context = ctxt if node.context == CONTEXT_HOST else node.context
-            self._expand_require(build_require, node, graph, check_updates, update,
+        for br in build_requires:
+            br.build_require = True
+            context = br.build_require_context if node.context == CONTEXT_HOST else CONTEXT_BUILD
+            self._expand_require(br, node, graph, check_updates, update,
                                  remotes, profile_host, profile_build, new_reqs, new_options,
                                  graph_lock, context=context)
 

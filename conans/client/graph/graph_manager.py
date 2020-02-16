@@ -18,12 +18,12 @@ from conans.util.files import load
 
 
 class _RecipeBuildRequires(OrderedDict):
-    def __init__(self, conanfile, xbuilding):
+    def __init__(self, conanfile, default_context):
         super(_RecipeBuildRequires, self).__init__()
         build_requires = getattr(conanfile, "build_requires", [])
         if not isinstance(build_requires, (list, tuple)):
             build_requires = [build_requires]
-        self._default_context = CONTEXT_BUILD if xbuilding else CONTEXT_HOST
+        self._default_context = default_context
         for build_require in build_requires:
             self.add(build_require, context=self._default_context)
 
@@ -261,8 +261,8 @@ class GraphManager(object):
         return deps_graph
 
     @staticmethod
-    def _get_recipe_build_requires(conanfile, xbuilding):
-        conanfile.build_requires = _RecipeBuildRequires(conanfile, xbuilding)
+    def _get_recipe_build_requires(conanfile, default_context):
+        conanfile.build_requires = _RecipeBuildRequires(conanfile, default_context)
         if hasattr(conanfile, "build_requirements"):
             with get_env_context_manager(conanfile):
                 with conanfile_exception_formatter(str(conanfile), "build_requirements"):
@@ -277,8 +277,7 @@ class GraphManager(object):
         """
         :param graph: This is the full dependency graph with all nodes from all recursions
         """
-
-        xbuilding = bool(profile_build)  # If build profile is provided, then it is xbuild
+        default_context = CONTEXT_BUILD if profile_build else CONTEXT_HOST
         self._binary_analyzer.evaluate_graph(graph, build_mode, update, remotes, nodes_subset, root)
         if not apply_build_requires:
             return
@@ -292,24 +291,23 @@ class GraphManager(object):
             if (node.binary not in (BINARY_BUILD, BINARY_EDITABLE, BINARY_UNKNOWN)
                     and node.recipe != RECIPE_CONSUMER):
                 continue
-            package_build_requires = self._get_recipe_build_requires(node.conanfile, xbuilding)
+            package_build_requires = self._get_recipe_build_requires(node.conanfile, default_context)
             str_ref = str(node.ref)
             new_profile_build_requires = []
             profile_build_requires = profile_build_requires or {}
-            profile_br_context = CONTEXT_BUILD if xbuilding else CONTEXT_HOST
             for pattern, build_requires in profile_build_requires.items():
                 if ((node.recipe == RECIPE_CONSUMER and pattern == "&") or
                         (node.recipe != RECIPE_CONSUMER and pattern == "&!") or
                         fnmatch.fnmatch(str_ref, pattern)):
                     for build_require in build_requires:
-                        br_key = (build_require.name, profile_br_context)
+                        br_key = (build_require.name, default_context)
                         if br_key in package_build_requires:  # Override defined
                             # this is a way to have only one package Name for all versions
                             # (no conflicts)
                             # but the dict key is not used at all
                             package_build_requires[br_key] = build_require
                         elif build_require.name != node.name:  # Profile one
-                            new_profile_build_requires.append((build_require, profile_br_context))
+                            new_profile_build_requires.append((build_require, default_context))
 
             if package_build_requires:
                 br_list = [(it, ctxt) for (_, ctxt), it in package_build_requires.items()]
