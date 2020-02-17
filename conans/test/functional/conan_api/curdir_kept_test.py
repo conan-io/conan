@@ -20,10 +20,7 @@ class Pkg(ConanFile):
             # Needed to not write in the real computer cache
             with tools.environment_append({"CONAN_USER_HOME": tmp_folder}):
                 api, _, _ = ConanAPIV1.factory()
-                empty_profile = ProfileData(None, None, None, None)
-                api.create(".", name="lib", version="1.0", user="user", channel="channel",
-                           profile_host=empty_profile, profile_build=empty_profile)
+                api.create(".", name="lib", version="1.0", user="user", channel="channel")
                 self.assertEqual(tmp_folder, os.getcwd())
-                api.create(".", name="lib", version="1.0", user="user", channel="channel2",
-                           profile_host=empty_profile, profile_build=empty_profile)
+                api.create(".", name="lib", version="1.0", user="user", channel="channel2")
                 self.assertEqual(tmp_folder, os.getcwd())
