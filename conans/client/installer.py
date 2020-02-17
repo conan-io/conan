@@ -1,6 +1,7 @@
 import os
 import shutil
 import time
+from collections import OrderedDict
 
 from conans.client import tools
 from conans.client.file_copier import report_copied_files
@@ -22,7 +23,6 @@ from conans.model.env_info import EnvInfo
 from conans.model.graph_info import GraphInfo
 from conans.model.graph_lock import GraphLockNode
 from conans.model.info import PACKAGE_ID_UNKNOWN
-from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference
 from conans.model.user_info import UserInfo
 from conans.paths import BUILD_INFO, CONANINFO, RUN_LOG_NAME
@@ -305,19 +305,77 @@ class BinaryInstaller(object):
         root_level = nodes_by_level.pop()
         root_node = root_level[0]
         # Get the nodes in order and if we have to build them
+        self._out.info("Installing (downloading, building) binaries...")
         self._build(nodes_by_level, keep_build, root_node, graph_info, remotes, build_mode, update)
 
+    @staticmethod
+    def _classify(nodes_by_level):
+        missing, downloads = [], []
+        for level in nodes_by_level:
+            for node in level:
+                if node.binary == BINARY_MISSING:
+                    missing.append(node)
+                elif node.binary in (BINARY_UPDATE, BINARY_DOWNLOAD):
+                    downloads.append(node)
+        return missing, downloads
+
+    def _raise_missing(self, missing):
+        if not missing:
+            return
+
+        missing_prefs = set(n.pref for n in missing)  # avoid duplicated
+        for pref in sorted(missing_prefs):
+            self._out.error("Missing binary: %s" % str(pref))
+        self._out.writeln("")
+
+        # Raise just the first one
+        node = missing[0]
+        package_id = node.package_id
+        ref, conanfile = node.ref, node.conanfile
+        dependencies = [str(dep.dst) for dep in node.dependencies]
+        raise_package_not_found_error(conanfile, ref, package_id, dependencies,
+                                      out=conanfile.output, recorder=self._recorder)
+
+    def _download(self, downloads):
+        """ executes the download of packages (both download and update), only once for a given
+        PREF, even if node duplicated
+        :param downloads: all nodes to be downloaded or updated, included repetitions
+        """
+        if not downloads:
+            return
+
+        download_prefs = OrderedDict()
+        for node_down in downloads:
+            assert node_down.prev, "PREV for %s is None" % str(node_down.pref)
+            download_prefs[node_down.pref] = node_down  # It doesn't matter which one if multiple
+
+        def _download_pkg(pref, node):
+            conanfile = node.conanfile
+            layout = self._cache.package_layout(pref.ref, conanfile.short_paths)
+            package_folder = layout.package(pref)
+            output = conanfile.output
+            with layout.package_lock(pref):
+                with set_dirty_context_manager(package_folder):
+                    self._remote_manager.get_package(pref, package_folder, node.binary_remote,
+                                                     output, self._recorder)
+                    output.info("Downloaded package revision %s" % pref.revision)
+                    with layout.update_metadata() as metadata:
+                        metadata.packages[pref.id].remote = node.binary_remote.name
+
+        for pref_, node_ in download_prefs.items():
+            # prepared for parallel download
+            _download_pkg(pref_, node_)
+
     def _build(self, nodes_by_level, keep_build, root_node, graph_info, remotes, build_mode, update):
+        missing, downloads = self._classify(nodes_by_level)
+        self._raise_missing(missing)
+        self._download(downloads)
+
         processed_package_refs = set()
         for level in nodes_by_level:
             for node in level:
                 ref, conan_file = node.ref, node.conanfile
                 output = conan_file.output
-                package_id = node.package_id
-                if node.binary == BINARY_MISSING:
-                    dependencies = [str(dep.dst) for dep in node.dependencies]
-                    raise_package_not_found_error(conan_file, ref, package_id, dependencies,
-                                                  out=output, recorder=self._recorder)
 
                 self._propagate_info(node)
                 if node.binary == BINARY_EDITABLE:
@@ -333,15 +391,6 @@ class BinaryInstaller(object):
 
         # Finally, propagate information to root node (ref=None)
         self._propagate_info(root_node)
-
-    @staticmethod
-    def _node_concurrently_installed(node, package_folder):
-        if node.binary == BINARY_DOWNLOAD and os.path.exists(package_folder):
-            return True
-        elif node.binary == BINARY_UPDATE:
-            read_manifest = FileTreeManifest.load(package_folder)
-            if node.update_manifest == read_manifest:
-                return True
 
     def _handle_node_editable(self, node, graph_info):
         # Get source of information
@@ -399,23 +448,6 @@ class BinaryInstaller(object):
                     assert node.prev, "Node PREV shouldn't be empty"
                     assert node.pref.revision, "Node PREF revision shouldn't be empty"
                     assert pref.revision is not None, "PREV for %s to be built is None" % str(pref)
-                elif node.binary in (BINARY_UPDATE, BINARY_DOWNLOAD):
-                    assert node.prev, "PREV for %s is None" % str(pref)
-                    # not really concurrently, but a different node with same pref
-                    if not self._node_concurrently_installed(node, package_folder):
-                        with set_dirty_context_manager(package_folder):
-                            assert pref.revision is not None, \
-                                "Installer should receive #PREV always"
-                            self._remote_manager.get_package(pref, package_folder,
-                                                             node.binary_remote, output,
-                                                             self._recorder)
-                            output.info("Downloaded package revision %s" % pref.revision)
-                            with layout.update_metadata() as metadata:
-                                metadata.packages[pref.id].remote = node.binary_remote.name
-                    else:
-                        output.success('Download skipped. Probable concurrent download')
-                        log_package_got_from_local_cache(pref)
-                        self._recorder.package_fetched_from_cache(pref)
                 elif node.binary == BINARY_CACHE:
                     assert node.prev, "PREV for %s is None" % str(pref)
                     output.success('Already installed!')
