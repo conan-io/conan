@@ -323,9 +323,7 @@ class BinaryInstaller(object):
         if not missing:
             return
 
-        missing_prefs = set()
-        for node in missing:
-            missing_prefs.add(node.pref)
+        missing_prefs = set(n.pref for n in missing)  # avoid duplicated
         for pref in sorted(missing_prefs):
             self._out.error("Missing binary: %s" % str(pref))
         self._out.writeln("")
