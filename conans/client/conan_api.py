@@ -293,8 +293,11 @@ class ConanAPIV1(object):
         return result
 
     @api_method
-    def test(self, path, reference, profile_host, profile_build, remote_name=None, update=False,
-             build_modes=None, cwd=None, test_build_folder=None, lockfile=None):
+    def test(self, path, reference, profile_names=None, settings=None, options=None, env=None,
+             remote_name=None, update=False, build_modes=None, cwd=None, test_build_folder=None,
+             lockfile=None, profile_build=None):
+
+        profile_host = ProfileData(profiles=profile_names, settings=settings, options=options, env=env)
 
         remotes = self.app.load_remotes(remote_name=remote_name, update=update)
         conanfile_path = _get_conanfile_path(path, cwd, py=True)
@@ -309,10 +312,14 @@ class ConanAPIV1(object):
                                test_build_folder=test_build_folder, recorder=recorder)
 
     @api_method
-    def create(self, conanfile_path, name, version, user, channel, profile_host, profile_build,
-               test_folder=None, not_export=False, build_modes=None, keep_source=False,
-               keep_build=False, verify=None, manifests=None, manifests_interactive=None,
-               remote_name=None, update=False, cwd=None, test_build_folder=None, lockfile=None, ignore_dirty=False):
+    def create(self, conanfile_path, name=None, version=None, user=None, channel=None,
+               profile_names=None, settings=None,
+               options=None, env=None, test_folder=None, not_export=False,
+               build_modes=None,
+               keep_source=False, keep_build=False, verify=None,
+               manifests=None, manifests_interactive=None,
+               remote_name=None, update=False, cwd=None, test_build_folder=None,
+               lockfile=None, ignore_dirty=False, profile_build=None):
         """
         API method to create a conan package
 
@@ -320,6 +327,8 @@ class ConanAPIV1(object):
                                     string - test_folder path
                                     False  - disabling tests
         """
+
+        profile_host = ProfileData(profiles=profile_names, settings=settings, options=options, env=env)
         try:
             cwd = cwd or os.getcwd()
             recorder = ActionRecorder()
@@ -366,10 +375,11 @@ class ConanAPIV1(object):
             raise
 
     @api_method
-    def export_pkg(self, conanfile_path, name, channel, profile_host, profile_build,
-                   source_folder=None, build_folder=None, package_folder=None, install_folder=None,
-                   force=False, user=None, version=None, cwd=None, lockfile=None, ignore_dirty=False):
-
+    def export_pkg(self, conanfile_path, name, channel, source_folder=None, build_folder=None,
+                   package_folder=None, install_folder=None, profile_names=None, settings=None,
+                   options=None, env=None, force=False, user=None, version=None, cwd=None,
+                   lockfile=None, ignore_dirty=False, profile_build=None):
+        profile_host = ProfileData(profiles=profile_names, settings=settings, options=options, env=env)
         remotes = self.app.load_remotes()
         cwd = cwd or get_cwd()
 
@@ -439,8 +449,10 @@ class ConanAPIV1(object):
             raise ConanException("Provide a valid full reference without wildcards.")
 
     @api_method
-    def workspace_install(self, path, profile_host, profile_build, remote_name=None, build=None,
-                          update=False, cwd=None, install_folder=None):
+    def workspace_install(self, path, settings=None, options=None, env=None,
+                          remote_name=None, build=None, profile_name=None,
+                          update=False, cwd=None, install_folder=None, profile_build=None):
+        profile_host = ProfileData(profiles=profile_name, settings=settings, options=options, env=env)
         cwd = cwd or get_cwd()
         abs_path = os.path.normpath(os.path.join(cwd, path))
 
@@ -478,11 +490,12 @@ class ConanAPIV1(object):
         workspace.generate(install_folder, deps_graph, self.app.out)
 
     @api_method
-    def install_reference(self, reference, profile_host, profile_build, remote_name=None,
-                          verify=None, manifests=None, manifests_interactive=None, build=None,
+    def install_reference(self, reference, settings=None, options=None, env=None,
+                          remote_name=None, verify=None, manifests=None,
+                          manifests_interactive=None, build=None, profile_names=None,
                           update=False, generators=None, install_folder=None, cwd=None,
-                          lockfile=None):
-
+                          lockfile=None, profile_build=None):
+        profile_host = ProfileData(profiles=profile_names, settings=settings, options=options, env=env)
         try:
             recorder = ActionRecorder()
             cwd = cwd or os.getcwd()
@@ -515,12 +528,12 @@ class ConanAPIV1(object):
 
     @api_method
     def install(self, path="", name=None, version=None, user=None, channel=None,
-                profile_host=None, profile_build=None,
+                settings=None, options=None, env=None,
                 remote_name=None, verify=None, manifests=None,
-                manifests_interactive=None, build=None,
+                manifests_interactive=None, build=None, profile_names=None,
                 update=False, generators=None, no_imports=False, install_folder=None, cwd=None,
-                lockfile=None):
-
+                lockfile=None, profile_build=None):
+        profile_host = ProfileData(profiles=profile_names, settings=settings, options=options, env=env)
         try:
             recorder = ActionRecorder()
             cwd = cwd or os.getcwd()
@@ -606,9 +619,10 @@ class ConanAPIV1(object):
         return ref, graph_info
 
     @api_method
-    def info_build_order(self, reference, profile_host, profile_build, remote_name=None,
-                         build_order=None, check_updates=None,
-                         install_folder=None):
+    def info_build_order(self, reference, settings=None, options=None, env=None,
+                         profile_names=None, remote_name=None, build_order=None, check_updates=None,
+                         install_folder=None, profile_build=None):
+        profile_host = ProfileData(profiles=profile_names, settings=settings, options=options, env=env)
         reference, graph_info = self._info_args(reference, install_folder,
                                                 profile_host, profile_build)
         recorder = ActionRecorder()
@@ -618,8 +632,10 @@ class ConanAPIV1(object):
         return deps_graph.build_order(build_order)
 
     @api_method
-    def info_nodes_to_build(self, reference, build_modes, profile_host, profile_build,
-                            remote_name=None, check_updates=None, install_folder=None):
+    def info_nodes_to_build(self, reference, build_modes, settings=None, options=None, env=None,
+                            profile_names=None, remote_name=None, check_updates=None,
+                            install_folder=None, profile_build=None):
+        profile_host = ProfileData(profiles=profile_names, settings=settings, options=options, env=env)
         reference, graph_info = self._info_args(reference, install_folder,
                                                 profile_host, profile_build)
         recorder = ActionRecorder()
@@ -630,8 +646,9 @@ class ConanAPIV1(object):
         return nodes_to_build, deps_graph.root.conanfile
 
     @api_method
-    def info(self, reference_or_path, profile_host, profile_build, remote_name=None, update=False,
-             install_folder=None, build=None, lockfile=None):
+    def info(self, reference_or_path, remote_name=None, settings=None, options=None, env=None,
+             profile_names=None, update=False, install_folder=None, build=None, lockfile=None, profile_build=None):
+        profile_host = ProfileData(profiles=profile_names, settings=settings, options=options, env=env)
         reference, graph_info = self._info_args(reference_or_path, install_folder,
                                                 profile_host, profile_build, lockfile=lockfile)
         recorder = ActionRecorder()
@@ -1213,8 +1230,9 @@ class ConanAPIV1(object):
         return build_order
 
     @api_method
-    def create_lock(self, reference, profile_host, profile_build, remote_name=None,
-                    update=False, lockfile=None, build=None,):
+    def create_lock(self, reference, remote_name=None, settings=None, options=None, env=None,
+                    profile_names=None, update=False, lockfile=None, build=None, profile_build=None):
+        profile_host = ProfileData(profiles=profile_names, settings=settings, options=options, env=env)
         reference, graph_info = self._info_args(reference, None, profile_host, profile_build)
         recorder = ActionRecorder()
         # FIXME: Using update as check_update?
