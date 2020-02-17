@@ -226,7 +226,6 @@ class CMakeCommonMacros:
     conan_find_libraries_abs_path = textwrap.dedent("""
         function(conan_find_libraries_abs_path libraries package_libdir libraries_abs_path)
             foreach(_LIBRARY_NAME ${libraries})
-                unset(CONAN_FOUND_LIBRARY CACHE)
                 find_library(CONAN_FOUND_LIBRARY NAME ${_LIBRARY_NAME} PATHS ${package_libdir}
                              NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
                 if(CONAN_FOUND_LIBRARY)
@@ -236,6 +235,7 @@ class CMakeCommonMacros:
                     conan_message(STATUS "Library ${_LIBRARY_NAME} not found in package, might be system one")
                     set(CONAN_FULLPATH_LIBS ${CONAN_FULLPATH_LIBS} ${_LIBRARY_NAME})
                 endif()
+                unset(CONAN_FOUND_LIBRARY CACHE)
             endforeach()
             set(${libraries_abs_path} ${CONAN_FULLPATH_LIBS} PARENT_SCOPE)
         endfunction()
@@ -246,7 +246,6 @@ class CMakeCommonMacros:
             unset(_CONAN_ACTUAL_TARGETS CACHE)
             unset(_CONAN_FOUND_SYSTEM_LIBS CACHE)
             foreach(_LIBRARY_NAME ${libraries})
-                unset(CONAN_FOUND_LIBRARY CACHE)
                 find_library(CONAN_FOUND_LIBRARY NAME ${_LIBRARY_NAME} PATHS ${package_libdir}
                              NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
                 if(CONAN_FOUND_LIBRARY)
@@ -261,6 +260,7 @@ class CMakeCommonMacros:
                     set(CONAN_FULLPATH_LIBS ${CONAN_FULLPATH_LIBS} ${_LIBRARY_NAME})
                     set(_CONAN_FOUND_SYSTEM_LIBS "${_CONAN_FOUND_SYSTEM_LIBS};${_LIBRARY_NAME}")
                 endif()
+                unset(CONAN_FOUND_LIBRARY CACHE)
             endforeach()
 
             # Add all dependencies to all targets
