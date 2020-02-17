@@ -339,7 +339,7 @@ class BinaryInstaller(object):
     def _download(self, downloads):
         """ executes the download of packages (both download and update), only once for a given
         PREF, even if node duplicated
-        :param downloads: all nodes t obe downloaded or updated, included repetitions
+        :param downloads: all nodes to be downloaded or updated, included repetitions
         """
         if not downloads:
             return
