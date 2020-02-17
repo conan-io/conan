@@ -11,7 +11,7 @@ from six.moves import input as raw_input
 from conans import __version__ as client_version
 from conans.client.cmd.uploader import UPLOAD_POLICY_FORCE, \
     UPLOAD_POLICY_NO_OVERWRITE, UPLOAD_POLICY_NO_OVERWRITE_RECIPE, UPLOAD_POLICY_SKIP
-from conans.client.conan_api import (Conan, default_manifest_folder, _make_abs_path, ProfileData)
+from conans.client.conan_api import Conan, default_manifest_folder, _make_abs_path, ProfileData
 from conans.client.conan_command_output import CommandOutputer
 from conans.client.output import Color
 from conans.client.printer import Printer
