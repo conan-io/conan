@@ -103,6 +103,8 @@ class MSBuild(object):
                     user_property_file_name=None):
 
         targets = targets or []
+        if not isinstance(targets, (list, tuple)):
+            raise TypeError("targets argument should be a list")
         properties = properties or {}
         command = []
 
