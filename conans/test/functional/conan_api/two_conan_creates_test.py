@@ -36,16 +36,12 @@ class ConanCreateTest(unittest.TestCase):
                     return load(os.path.join(folder, "conaninfo.txt"))
 
                 settings = ["compiler=Visual Studio", "compiler.version=15", "build_type=Release"]
-                debug_profile = ProfileData(settings=settings, profiles=None, options=None, env=None)
                 empty_profile = ProfileData(None, None, None, None)
-                info = api.create(".", name=None, version=None, user="conan", channel="stable",
-                                  profile_host=debug_profile, profile_build=empty_profile)
+                info = api.create(".", name=None, version=None, user="conan", channel="stable", settings=settings)
                 self.assertIn("compiler.runtime=MD", get_conaninfo(info))
 
                 settings = ["compiler=Visual Studio", "compiler.version=15", "build_type=Debug"]
-                rel_profile = ProfileData(settings=settings, profiles=None, options=None, env=None)
-                info = api.create(".", name=None, version=None, user="conan", channel="stable",
-                                  profile_host=rel_profile, profile_build=empty_profile)
+                info = api.create(".", name=None, version=None, user="conan", channel="stable", settings=settings)
                 self.assertIn("compiler.runtime=MDd", get_conaninfo(info))
 
     def test_api_conanfile_loader_shouldnt_cache(self):
@@ -63,8 +59,8 @@ class ConanCreateTest(unittest.TestCase):
                     """)
                 save("conanfile.py", conanfile)
                 empty_profile = ProfileData(None, None, None, None)
-                api.create(".", "pkg", "version", "user", "channel", empty_profile, empty_profile)
+                api.create(".", "pkg", "version", "user", "channel")
                 self.assertIn("pkg/version@user/channel: NUMBER 42!!", output)
                 save("conanfile.py", conanfile.replace("42", "123"))
-                api.create(".", "pkg", "version", "user", "channel", empty_profile, empty_profile)
+                api.create(".", "pkg", "version", "user", "channel")
                 self.assertIn("pkg/version@user/channel: NUMBER 123!!", output)
