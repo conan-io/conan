@@ -1,31 +1,24 @@
 import os
 import platform
 import re
-import subprocess
 import xml.etree.ElementTree as ET
-from subprocess import CalledProcessError, PIPE, STDOUT
+from subprocess import CalledProcessError
 
 from six.moves.urllib.parse import quote_plus, unquote, urlparse
 
-from conans.client.tools import check_output
 from conans.client.tools.env import environment_append, no_op
 from conans.client.tools.files import chdir
 from conans.errors import ConanException
 from conans.model.version import Version
 from conans.util.files import decode_text, to_file_bytes, walk, mkdir
-
-
-def _run_muted(cmd, folder=None):
-    with chdir(folder) if folder else no_op():
-        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        process.communicate()
-        return process.returncode
+from conans.util.runners import check_output_runner, version_runner, muted_runner, input_runner, \
+    pyinstaller_bundle_env_cleaned
 
 
 def _check_repo(cmd, folder, msg=None):
     msg = msg or "Not a valid '{}' repository".format(cmd[0])
     try:
-        ret = _run_muted(cmd, folder=folder)
+        ret = muted_runner(cmd, folder=folder)
     except Exception:
         raise ConanException(msg)
     else:
@@ -39,7 +32,7 @@ class SCMBase(object):
     @classmethod
     def get_version(cls):
         try:
-            out, _ = subprocess.Popen([cls.cmd_command, "--version"], stdout=subprocess.PIPE).communicate()
+            out = version_runner([cls.cmd_command, "--version"])
             version_line = decode_text(out).split('\n', 1)[0]
             version_str = version_line.split(' ', 3)[2]
             return Version(version_str)
@@ -62,10 +55,11 @@ class SCMBase(object):
         command = "%s %s" % (self.cmd_command, command)
         with chdir(self.folder) if self.folder else no_op():
             with environment_append({"LC_ALL": "en_US.UTF-8"}) if self._force_eng else no_op():
-                if not self._runner:
-                    return check_output(command).strip()
-                else:
-                    return self._runner(command)
+                with pyinstaller_bundle_env_cleaned():
+                    if not self._runner:
+                        return check_output_runner(command).strip()
+                    else:
+                        return self._runner(command)
 
     def get_url_with_credentials(self, url):
         if not self._username or not self._password:
@@ -145,22 +139,29 @@ class Git(SCMBase):
         return output
 
     def checkout(self, element, submodule=None):
+        # Element can be a tag, branch or commit
         self.check_repo()
         output = self.run('checkout "%s"' % element)
+        output += self.checkout_submodules(submodule)
 
-        if submodule:
-            if submodule == "shallow":
-                output += self.run("submodule sync")
-                output += self.run("submodule update --init")
-            elif submodule == "recursive":
-                output += self.run("submodule sync --recursive")
-                output += self.run("submodule update --init --recursive")
-            else:
-                raise ConanException("Invalid 'submodule' attribute value in the 'scm'. "
-                                     "Unknown value '%s'. Allowed values: ['shallow', 'recursive']"
-                                     % submodule)
-        # Element can be a tag, branch or commit
         return output
+
+    def checkout_submodules(self, submodule=None):
+        """Do the checkout only for submodules"""
+        if not submodule:
+            return ""
+        if submodule == "shallow":
+            output = self.run("submodule sync")
+            output += self.run("submodule update --init")
+            return output
+        elif submodule == "recursive":
+            output = self.run("submodule sync --recursive")
+            output += self.run("submodule update --init --recursive")
+            return output
+        else:
+            raise ConanException("Invalid 'submodule' attribute value in the 'scm'. "
+                                 "Unknown value '%s'. Allowed values: ['shallow', 'recursive']"
+                                 % submodule)
 
     def excluded_files(self):
         ret = []
@@ -171,11 +172,9 @@ class Git(SCMBase):
                           for folder, dirpaths, fs in walk(self.folder)
                           for el in fs + dirpaths]
             if file_paths:
-                p = subprocess.Popen(['git', 'check-ignore', '--stdin'],
-                                     stdout=PIPE, stdin=PIPE, stderr=STDOUT, cwd=self.folder)
                 paths = to_file_bytes("\n".join(file_paths))
-
-                grep_stdout = decode_text(p.communicate(input=paths)[0])
+                out = input_runner(['git', 'check-ignore', '--stdin'], paths, self.folder)
+                grep_stdout = decode_text(out)
                 ret = grep_stdout.splitlines()
         except (CalledProcessError, IOError, OSError) as e:
             if self._output:
@@ -194,6 +193,8 @@ class Git(SCMBase):
                 url, _ = url.rsplit(None, 1)
                 if remove_credentials and not os.path.exists(url):  # only if not local
                     url = self._remove_credentials_url(url)
+                if os.path.exists(url):  # Windows local directory
+                    url = url.replace("\\", "/")
                 return url
         return None
 
@@ -263,7 +264,7 @@ class SVN(SCMBase):
 
     def __init__(self, folder=None, runner=None, *args, **kwargs):
         def runner_no_strip(command):
-            return check_output(command)
+            return check_output_runner(command)
         runner = runner or runner_no_strip
         super(SVN, self).__init__(folder=folder, runner=runner, *args, **kwargs)
 
@@ -282,6 +283,9 @@ class SVN(SCMBase):
                 extra_options += " --trust-server-cert-failures=unknown-ca"
             else:
                 extra_options += " --trust-server-cert"
+        if self._username and self._password:
+            extra_options += " --username=" + self._username
+            extra_options += " --password=" + self._password
         return super(SVN, self).run(command="{} {}".format(command, extra_options))
 
     def _show_item(self, item, target='.'):
@@ -358,7 +362,7 @@ class SVN(SCMBase):
         if self.version >= SVN.API_CHANGE_VERSION:
             try:
                 output = self.run("status -u -r {} --xml".format(self.get_revision()))
-            except subprocess.CalledProcessError:
+            except CalledProcessError:
                 return False
             else:
                 root = ET.fromstring(output)

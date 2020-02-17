@@ -19,7 +19,7 @@ class NewTest(unittest.TestCase):
         """)
         save(os.path.join(client.cache_folder, "templates/mytemplate.py"), template1)
         client.run("new hello/0.1 --template=mytemplate.py")
-        conanfile = load(os.path.join(client.current_folder, "conanfile.py"))
+        conanfile = client.load("conanfile.py")
         self.assertIn("class HelloConan(ConanFile):", conanfile)
         self.assertIn('name = "hello"', conanfile)
         self.assertIn('version = "0.1"', conanfile)
@@ -33,7 +33,7 @@ class NewTest(unittest.TestCase):
         save(os.path.join(client.cache_folder, "templates", "subfolder", "mytemplate.py"),
              template2)
         client.run("new hello/0.1 -m=subfolder/mytemplate.py")
-        conanfile = load(os.path.join(client.current_folder, "conanfile.py"))
+        conanfile = client.load("conanfile.py")
         self.assertIn("class HelloConan(ConanFile):", conanfile)
         self.assertIn('version = "fixed"', conanfile)
 
@@ -47,7 +47,7 @@ class NewTest(unittest.TestCase):
         full_path = os.path.join(tmp, "templates", "subfolder", "mytemplate.py")
         save(full_path, template2)
         client.run('new hello/0.1 --template="%s"' % full_path)
-        conanfile = load(os.path.join(client.current_folder, "conanfile.py"))
+        conanfile = client.load("conanfile.py")
         self.assertIn("class HelloConan(ConanFile):", conanfile)
         self.assertIn('version = "fixed"', conanfile)
 

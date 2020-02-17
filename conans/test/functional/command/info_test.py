@@ -7,9 +7,8 @@ import unittest
 from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
-from conans.test.utils.tools import TestClient
+from conans.test.utils.tools import TestClient, GenConanfile
 from conans.util.files import load, save
-from conans.test.utils.conanfile import TestConanFile
 
 
 class InfoTest(unittest.TestCase):
@@ -22,7 +21,7 @@ class InfoTest(unittest.TestCase):
         client.run("info nothing/0.1@user/testing", assert_error=True)
         self.assertEqual(os.listdir(client.cache.store), [])
         # This used to fail in Windows, because of the different case
-        client.save({"conanfile.py": TestConanFile("Nothing", "0.1")})
+        client.save({"conanfile.py": GenConanfile().with_name("Nothing").with_version("0.1")})
         client.run("export . user/testing")
 
     def failed_info_test(self):
@@ -205,8 +204,7 @@ class MyTest(ConanFile):
         # arbitrary case - file will be named according to argument
         arg_filename = "test.html"
         self.client.run("info . --graph=%s" % arg_filename)
-        arg_filename = os.path.join(self.client.current_folder, arg_filename)
-        html = load(arg_filename)
+        html = self.client.load(arg_filename)
         self.assertIn("<body>", html)
         self.assertIn("{ from: 0, to: 1 }", html)
         self.assertIn("id: 0, label: 'Hello0/0.1'", html)
@@ -219,7 +217,7 @@ class MyTest(ConanFile):
         save(viscss_path, "")
         client.save({"conanfile.txt": ""})
         client.run("info . --graph=file.html")
-        html = load(os.path.join(client.current_folder, "file.html"))
+        html = client.load("file.html")
         self.assertIn("<body>", html)
         self.assertNotIn("cloudflare", html)
         self.assertIn(visjs_path, html)
@@ -246,8 +244,7 @@ class AConan(ConanFile):
         self.assertEqual(len(pkgs), 1)
 
         client.run("info . -pr=myprofile --dry-build=missing --graph=file.html")
-        html_path = os.path.join(client.current_folder, "file.html")
-        html = load(html_path)
+        html = client.load("file.html")
         self.assertIn("html", html)
         # To check that this node is not duplicated
         self.assertEqual(1, html.count("label: 'dep/0.1'"))
@@ -434,13 +431,12 @@ class MyTest(ConanFile):
                       self.client.out)
 
         self.client.run("info Hello1/0.1@lasote/stable -bo=Hello0/0.1@lasote/stable")
-        self.assertEqual("[Hello0/0.1@lasote/stable], [Hello1/0.1@lasote/stable]\n",
-                         self.client.out)
+        self.assertIn("[Hello0/0.1@lasote/stable], [Hello1/0.1@lasote/stable]\n", self.client.out)
 
         self.client.run("info Hello1/0.1@lasote/stable -bo=Hello0/0.1@lasote/stable "
                         "--json=file.json")
         self.assertEqual('{"groups": [["Hello0/0.1@lasote/stable"], ["Hello1/0.1@lasote/stable"]]}',
-                         load(os.path.join(self.client.current_folder, "file.json")))
+                         self.client.load("file.json"))
 
         self.client.run("info Hello1/0.1@lasote/stable -bo=Hello0/0.1@lasote/stable --json")
         self.assertIn('{"groups": [["Hello0/0.1@lasote/stable"], ["Hello1/0.1@lasote/stable"]]}',
@@ -518,9 +514,11 @@ class AConan(ConanFile):
         self.assertIn("[LibF/0.1@lasote/stable], [LibC/0.1@lasote/stable]",
                       self.client.out)
         self.client.run("info . -bo=Dev1/0.1@lasote/stable")
-        self.assertEqual("\n", self.client.out)
+        self.assertEqual("WARN: Usage of `--build-order` argument is deprecated and can return wrong"
+                         " results. Use `conan graph build-order ...` instead.\n\n", self.client.out)
         self.client.run("info . -bo=LibG/0.1@lasote/stable")
-        self.assertEqual("\n", self.client.out)
+        self.assertEqual("WARN: Usage of `--build-order` argument is deprecated and can return wrong"
+                         " results. Use `conan graph build-order ...` instead.\n\n", self.client.out)
 
         self.client.run("info . --build-order=ALL")
         self.assertIn("[LibA/0.1@lasote/stable, LibE/0.1@lasote/stable, LibF/0.1@lasote/stable], "
@@ -612,8 +610,7 @@ class MyTest(ConanFile):
 
         # Topics as tuple
         client.run("info Pkg/0.2@lasote/testing --graph file.html")
-        html_path = os.path.join(client.current_folder, "file.html")
-        html_content = load(html_path)
+        html_content = client.load("file.html")
         self.assertIn("<h3>Pkg/0.2@lasote/testing</h3>", html_content)
         self.assertIn("<li><b>topics</b>: (\"foo\", \"bar\", \"qux\")</li><ul>", html_content)
 
@@ -622,18 +619,18 @@ class MyTest(ConanFile):
         client.save({"conanfile.py": conanfile}, clean_first=True)
         client.run("export . lasote/testing")
         client.run("info Pkg/0.2@lasote/testing --graph file.html")
-        html_content = load(html_path)
+        html_content = client.load("file.html")
         self.assertIn("<h3>Pkg/0.2@lasote/testing</h3>", html_content)
         self.assertIn("<li><b>topics</b>: foo", html_content)
 
     def wrong_graph_info_test(self):
         # https://github.com/conan-io/conan/issues/4443
-        conanfile = TestConanFile()
+        conanfile = GenConanfile().with_name("Hello").with_version("0.1")
         client = TestClient()
         client.save({"conanfile.py": str(conanfile)})
         client.run("install .")
         path = os.path.join(client.current_folder, "graph_info.json")
-        graph_info = load(path)
+        graph_info = client.load(path)
         graph_info = json.loads(graph_info)
         graph_info.pop("root")
         save(path, json.dumps(graph_info))
@@ -646,11 +643,11 @@ class MyTest(ConanFile):
     def previous_lockfile_error_test(self):
         # https://github.com/conan-io/conan/issues/5479
         client = TestClient()
-        client.save({"conanfile.py": TestConanFile("pkg", "0.1")})
+        client.save({"conanfile.py": GenConanfile().with_name("pkg").with_version("0.1")})
         client.run("create . user/testing")
-        client.save({"conanfile.py": TestConanFile("other", "0.1",
-                                                   options="{'shared': [True, False]}",
-                                                   default_options='shared=False')})
+        client.save({"conanfile.py": GenConanfile().with_name("other").with_version("0.1")
+                                                   .with_option("shared", [True, False])
+                                                   .with_default_option("shared", False)})
         client.run("install . -o shared=True")
         client.run("info pkg/0.1@user/testing")
         self.assertIn("pkg/0.1@user/testing", client.out)

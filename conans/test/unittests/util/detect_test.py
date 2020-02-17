@@ -7,9 +7,9 @@ from parameterized import parameterized
 
 from conans.client import tools
 from conans.client.conf.detect import detect_defaults_settings
-from conans.client.tools.oss import check_output
 from conans.paths import DEFAULT_PROFILE_NAME
 from conans.test.utils.tools import TestBufferConanOutput
+from conans.util.runners import check_output_runner
 
 
 class DetectTest(unittest.TestCase):
@@ -35,7 +35,7 @@ class DetectTest(unittest.TestCase):
         """
         # See: https://github.com/conan-io/conan/issues/2231
         try:
-            output = check_output(["gcc", "--version"], stderr=subprocess.STDOUT)
+            output = check_output_runner(["gcc", "--version"], stderr=subprocess.STDOUT)
         except subprocess.CalledProcessError:
             # gcc is not installed or there is any error (no test scenario)
             return

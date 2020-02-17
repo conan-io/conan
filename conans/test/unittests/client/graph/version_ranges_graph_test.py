@@ -1,4 +1,4 @@
-
+from collections import OrderedDict
 from collections import namedtuple
 
 import six
@@ -8,8 +8,9 @@ from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
 from conans.model.requires import Requirements
 from conans.test.unittests.model.transitive_reqs_test import GraphTest
-from conans.test.utils.conanfile import TestConanFile
-from conans.test.utils.tools import test_processed_profile
+from conans.test.utils.tools import GenConanfile, TurboTestClient, TestServer, \
+    NO_SETTINGS_PACKAGE_ID
+from conans.test.utils.tools import test_profile
 
 
 def _get_nodes(graph, name):
@@ -41,16 +42,16 @@ class VersionRangesTest(GraphTest):
         super(VersionRangesTest, self).setUp()
 
         for v in ["0.1", "0.2", "0.3", "1.1", "1.1.2", "1.2.1", "2.1", "2.2.1"]:
-            say_content = TestConanFile("Say", v)
+            say_content = GenConanfile().with_name("Say").with_version(v)
             say_ref = ConanFileReference.loads("Say/%s@myuser/testing" % v)
             self.retriever.save_recipe(say_ref, say_content)
 
     def build_graph(self, content, update=False):
-        self.loader.cached_conanfiles = {}
-        processed_profile = test_processed_profile()
-        root_conan = self.retriever.root(str(content), processed_profile)
+        self.loader._cached_conanfile_classes = {}
+        profile = test_profile()
+        root_conan = self.retriever.root(str(content), profile)
         deps_graph = self.builder.load_graph(root_conan, update, update, self.remotes,
-                                             processed_profile)
+                                             profile)
         self.output.write("\n".join(self.resolver.output))
         return deps_graph
 
@@ -65,8 +66,9 @@ class VersionRangesTest(GraphTest):
                                ("~=2", "2.2.1"),
                                ("~=2.1", "2.1"),
                                ]:
-            deps_graph = self.build_graph(TestConanFile("Hello", "1.2",
-                                                        requires=["Say/[%s]@myuser/testing" % expr]))
+            req = ConanFileReference.loads("Say/[%s]@myuser/testing" % expr)
+            deps_graph = self.build_graph(GenConanfile().with_name("Hello").with_version("1.2")
+                                                        .with_require(req))
 
             self.assertEqual(2, len(deps_graph.nodes))
             hello = _get_nodes(deps_graph, "Hello")[0]
@@ -98,8 +100,9 @@ class VersionRangesTest(GraphTest):
                                ("~=2", "2.2.1"),
                                ("~=2.1", "2.1"),
                                ]:
-            deps_graph = self.build_graph(TestConanFile("Hello", "1.2",
-                                                        requires=["Say/[%s]@myuser/testing" % expr]),
+            req = ConanFileReference.loads("Say/[%s]@myuser/testing" % expr)
+            deps_graph = self.build_graph(GenConanfile().with_name("Hello").with_version("1.2")
+                                                        .with_require(req),
                                           update=True)
             self.assertEqual(self.remote_manager.count, {'Say': 1})
             self.assertEqual(2, len(deps_graph.nodes))
@@ -149,22 +152,22 @@ class HelloConan(ConanFile):
         # Most important check: counter of calls to remote
         self.assertEqual(self.remote_manager.count, {'Say': 1})
 
-    @parameterized.expand([("", "0.3", None, None),
-                           ('"Say/1.1@myuser/testing"', "1.1", False, False),
-                           ('"Say/0.2@myuser/testing"', "0.2", False, True),
-                           ('("Say/1.1@myuser/testing", "override")', "1.1", True, False),
-                           ('("Say/0.2@myuser/testing", "override")', "0.2", True, True),
+    @parameterized.expand([("", "0.3", None, None, False),
+                           ('"Say/1.1@myuser/testing"', "1.1", False, True, False),
+                           ('"Say/0.2@myuser/testing"', "0.2", False, True, False),
+                           ('("Say/1.1@myuser/testing", "override")', "1.1", True, True, False),
+                           ('("Say/0.2@myuser/testing", "override")', "0.2", True, True, False),
                            # ranges
-                           ('"Say/[<=1.2]@myuser/testing"', "1.2.1", False, False),
-                           ('"Say/[>=0.2,<=1.0]@myuser/testing"', "0.3", False, True),
-                           ('"Say/[>=0.2 <=1.0]@myuser/testing"', "0.3", False, True),
-                           ('("Say/[<=1.2]@myuser/testing", "override")', "1.2.1", True, False),
-                           ('("Say/[>=0.2,<=1.0]@myuser/testing", "override")', "0.3", True, True),
-                           ('("Say/[>=0.2 <=1.0]@myuser/testing", "override")', "0.3", True, True),
+                           ('"Say/[<=1.2]@myuser/testing"', "1.2.1", False, False, True),
+                           ('"Say/[>=0.2,<=1.0]@myuser/testing"', "0.3", False, True, True),
+                           ('"Say/[>=0.2 <=1.0]@myuser/testing"', "0.3", False, True, True),
+                           ('("Say/[<=1.2]@myuser/testing", "override")', "1.2.1", True, False, True),
+                           ('("Say/[>=0.2,<=1.0]@myuser/testing", "override")', "0.3", True, True, True),
+                           ('("Say/[>=0.2 <=1.0]@myuser/testing", "override")', "0.3", True, True, True),
                            ])
-    def transitive_test(self, version_range, solution, override, valid):
-        hello_text = TestConanFile("Hello", "1.2",
-                                   requires=["Say/[>0.1, <1]@myuser/testing"])
+    def transitive_test(self, version_range, solution, override, valid, is_vrange):
+        hello_text = GenConanfile().with_name("Hello").with_version("1.2")\
+                                   .with_require_plain("Say/[>0.1, <1]@myuser/testing")
         hello_ref = ConanFileReference.loads("Hello/1.2@myuser/testing")
         self.retriever.save_recipe(hello_ref, hello_text)
 
@@ -193,11 +196,9 @@ class ChatConan(ConanFile):
         if override is False:
             edges = {Edge(hello, say), Edge(chat, say), Edge(chat, hello)}
 
-        if valid is True:
+        if is_vrange is True:  # If it is not a version range, it is not 'is_resolved'
             self.assertIn(" valid", self.output)
             self.assertNotIn("not valid", self.output)
-        elif valid is False:
-            self.assertIn("not valid", self.output)
         self.assertEqual(3, len(deps_graph.nodes))
 
         self.assertEqual(_get_edges(deps_graph), edges)
@@ -210,7 +211,7 @@ class ChatConan(ConanFile):
         self.assertEqual(_clear_revs(conanfile.requires), Requirements(str(say_ref)))
 
     def duplicated_error_test(self):
-        content = TestConanFile("log4cpp", "1.1.1")
+        content = GenConanfile().with_name("log4cpp").with_version("1.1.1")
         log4cpp_ref = ConanFileReference.loads("log4cpp/1.1.1@myuser/testing")
         self.retriever.save_recipe(log4cpp_ref, content)
 
@@ -266,3 +267,23 @@ class Project(ConanFile):
         conanfile = other.conanfile
         self.assertEqual(conanfile.version, "2.0.11549")
         self.assertEqual(conanfile.name, "other")
+
+    def different_user_channel_resolved_correctly_test(self):
+        server1 = TestServer()
+        server2 = TestServer()
+        servers = OrderedDict([("server1", server1), ("server2", server2)])
+
+        client = TurboTestClient(servers=servers)
+        ref1 = ConanFileReference.loads("lib/1.0@conan/stable")
+        ref2 = ConanFileReference.loads("lib/1.0@conan/testing")
+
+        client.create(ref1, conanfile=GenConanfile())
+        client.upload_all(ref1, remote="server1")
+
+        client.create(ref2, conanfile=GenConanfile())
+        client.upload_all(ref2, remote="server2")
+
+        client2 = TurboTestClient(servers=servers)
+        client2.run("install lib/[>=1.0]@conan/testing")
+        self.assertIn("lib/1.0@conan/testing: Retrieving package {} "
+                      "from remote 'server2' ".format(NO_SETTINGS_PACKAGE_ID), client2.out)

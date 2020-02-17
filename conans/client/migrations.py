@@ -4,6 +4,8 @@ import shutil
 from conans import DEFAULT_REVISION_V1
 from conans.client import migrations_settings
 from conans.client.cache.cache import CONAN_CONF, PROFILES_FOLDER
+from conans.client.cache.cache import ClientCache
+from conans.client.cache.remote_registry import migrate_registry_file
 from conans.client.conf.config_installer import _ConfigOrigin, _save_configs
 from conans.client.tools import replace_in_file
 from conans.errors import ConanException
@@ -16,14 +18,13 @@ from conans.paths import EXPORT_SOURCES_DIR_OLD
 from conans.paths import PACKAGE_METADATA
 from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
 from conans.util.files import list_folder_subdirs, load, save
-from conans.client.cache.remote_registry import migrate_registry_file
 
 
 class ClientMigrator(Migrator):
 
-    def __init__(self, cache, current_version, out):
-        self.cache = cache
-        super(ClientMigrator, self).__init__(cache.cache_folder, cache.store,
+    def __init__(self, cache_folder, current_version, out):
+        self.cache = ClientCache(cache_folder, out)
+        super(ClientMigrator, self).__init__(self.cache.cache_folder, self.cache.store,
                                              current_version, out)
 
     def _update_settings_yml(self, old_version):
@@ -102,6 +103,9 @@ class ClientMigrator(Migrator):
         if old_version < Version("1.15.0"):
             migrate_registry_file(self.cache, self.out)
 
+        if old_version < Version("1.19.0"):
+            migrate_localdb_refresh_token(self.cache, self.out)
+
 
 def _get_refs(cache):
     folders = list_folder_subdirs(cache.store, 4)
@@ -112,6 +116,21 @@ def _get_prefs(layout):
     packages_folder = layout.packages()
     folders = list_folder_subdirs(packages_folder, 1)
     return [PackageReference(layout.ref, s) for s in folders]
+
+
+def migrate_localdb_refresh_token(cache, out):
+    from conans.client.store.localdb import LocalDB
+    from sqlite3 import OperationalError
+
+    localdb = LocalDB.create(cache.localdb)
+    with localdb._connect() as connection:
+        try:
+            statement = connection.cursor()
+            statement.execute("ALTER TABLE users_remotes ADD refresh_token TEXT;")
+        except OperationalError:
+            # This likely means the column is already there (fresh created table)
+            # In the worst scenario the user will be requested to remove the file by hand
+            pass
 
 
 def _migrate_full_metadata(cache, out):

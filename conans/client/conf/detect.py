@@ -1,27 +1,12 @@
 import os
 import platform
 import re
-from subprocess import PIPE, Popen, STDOUT
 
 from conans.client.output import Color
 from conans.client.tools import detected_os, OSInfo
 from conans.client.tools.win import latest_visual_studio_version_installed
 from conans.model.version import Version
-
-
-def _execute(command):
-    proc = Popen(command, shell=True, bufsize=1, stdout=PIPE, stderr=STDOUT)
-
-    output_buffer = []
-    while True:
-        line = proc.stdout.readline()
-        if not line:
-            break
-        # output.write(line)
-        output_buffer.append(str(line))
-
-    proc.communicate()
-    return proc.returncode, "".join(output_buffer)
+from conans.util.runners import detect_runner
 
 
 def _gcc_compiler(output, compiler_exe="gcc"):
@@ -29,16 +14,16 @@ def _gcc_compiler(output, compiler_exe="gcc"):
     try:
         if platform.system() == "Darwin":
             # In Mac OS X check if gcc is a fronted using apple-clang
-            _, out = _execute("%s --version" % compiler_exe)
+            _, out = detect_runner("%s --version" % compiler_exe)
             out = out.lower()
             if "clang" in out:
                 return None
 
-        ret, out = _execute('%s -dumpversion' % compiler_exe)
+        ret, out = detect_runner('%s -dumpversion' % compiler_exe)
         if ret != 0:
             return None
         compiler = "gcc"
-        installed_version = re.search("([0-9](\.[0-9])?)", out).group()
+        installed_version = re.search("([0-9]+(\.[0-9])?)", out).group()
         # Since GCC 7.1, -dumpversion return the major version number
         # only ("7"). We must use -dumpfullversion to get the full version
         # number ("7.1.1").
@@ -51,7 +36,7 @@ def _gcc_compiler(output, compiler_exe="gcc"):
 
 def _clang_compiler(output, compiler_exe="clang"):
     try:
-        ret, out = _execute('%s --version' % compiler_exe)
+        ret, out = detect_runner('%s --version' % compiler_exe)
         if ret != 0:
             return None
         if "Apple" in out:
@@ -68,7 +53,7 @@ def _clang_compiler(output, compiler_exe="clang"):
 
 def _sun_cc_compiler(output, compiler_exe="cc"):
     try:
-        _, out = _execute('%s -V' % compiler_exe)
+        _, out = detect_runner('%s -V' % compiler_exe)
         compiler = "sun-cc"
         installed_version = re.search("([0-9]+\.[0-9]+)", out).group()
         if installed_version:
@@ -194,14 +179,8 @@ def _detect_os_arch(result, output):
             else:
                 output.error("Your ARM '%s' architecture is probably not defined in settings.yml\n"
                              "Please check your conan.conf and settings.yml files" % arch)
-        elif the_os == 'AIX':
-            processor = platform.processor()
-            if "powerpc" in processor:
-                kernel_bitness = OSInfo().get_aix_conf("KERNEL_BITMODE")
-                if kernel_bitness:
-                    arch = "ppc64" if kernel_bitness == "64" else "ppc32"
-            elif "rs6000" in processor:
-                arch = "ppc32"
+        elif OSInfo().is_aix:
+            arch = OSInfo.get_aix_architecture() or arch
 
         result.append(("arch", arch))
         result.append(("arch_build", arch))

@@ -1,10 +1,14 @@
 import os
 import unittest
 
+from requests.models import Response
+
 from conans.client import tools
+from conans.errors import AuthenticationException
 from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE
-from conans.test.utils.tools import TestClient, TestServer
+from conans.test.utils.tools import TestClient
+from conans.test.utils.tools import TestServer
 from conans.util.files import save
 
 conan_content = """
@@ -28,7 +32,7 @@ class AuthorizeTest(unittest.TestCase):
                                       [(str(self.ref), "pepe,nacho@gmail.com")],  # write permissions
                                       users={"lasote": "mypass",
                                              "pepe": "pepepass",
-                                             "nacho@gmail.com": "nachopass",})  # exported users and passwords
+                                             "nacho@gmail.com": "nachopass"})  # exported creds
         self.servers["default"] = self.test_server
 
     def retries_test(self):
@@ -119,3 +123,48 @@ class AuthorizeTest(unittest.TestCase):
 
         # Check that login failed once before ok
         self.assertEqual(self.conan.api.app.user_io.login_index["default"], 2)
+
+
+class AuthenticationTest(unittest.TestCase):
+
+    def unauthorized_during_capabilities_test(self):
+
+        class RequesterMock(object):
+
+            def __init__(self, *args, **kwargs):
+                pass
+
+            @staticmethod
+            def get(url, **kwargs):
+                resp_basic_auth = Response()
+                resp_basic_auth.status_code = 200
+                if "authenticate" in url:
+                    if kwargs["auth"].password != "PASSWORD!":
+                        raise Exception("Bad password")
+                    resp_basic_auth._content = b"TOKEN"
+                    resp_basic_auth.headers = {"Content-Type": "text/plain"}
+                elif "ping" in url:
+                    token = getattr(kwargs["auth"], "token", None)
+                    password = getattr(kwargs["auth"], "password", None)
+                    if token and token != "TOKEN":
+                        raise Exception("Bad JWT Token")
+                    if not token and not password:
+                        raise AuthenticationException(
+                            "I'm an Artifactory without anonymous access that "
+                            "requires authentication for the ping endpoint and "
+                            "I don't return the capabilities")
+                elif "search" in url:
+                    if kwargs["auth"].token != "TOKEN":
+                        raise Exception("Bad JWT Token")
+                    resp_basic_auth._content = b'{"results": []}'
+                    resp_basic_auth.headers = {"Content-Type": "application/json"}
+                else:
+                    raise Exception("Shouldn't be more remote calls")
+                return resp_basic_auth
+
+        client = TestClient(requester_class=RequesterMock, default_server_user=True)
+        client.run("user user -p PASSWORD! -r=default")
+        self.assertIn("Changed user of remote 'default' from 'None' (anonymous) to 'user'",
+                      client.out)
+        client.run("search pkg -r=default")
+        self.assertIn("There are no packages matching the 'pkg' pattern", client.out)

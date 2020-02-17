@@ -47,7 +47,7 @@ class BuildSLNCommandTest(unittest.TestCase):
             self.assertEqual(len(w), 1)
             self.assertTrue(issubclass(w[0].category, DeprecationWarning))
 
-        self.assertIn('/p:Configuration="Debug" /p:Platform="x86"', command)
+        self.assertIn('/p:Configuration="Debug" /p:UseEnv=false /p:Platform="x86"', command)
         self.assertIn("WARN: ***** The configuration Debug|x86 does not exist in this solution *****",
                       new_out.getvalue())
 
@@ -63,7 +63,7 @@ class BuildSLNCommandTest(unittest.TestCase):
             self.assertEqual(len(w), 1)
             self.assertTrue(issubclass(w[0].category, DeprecationWarning))
 
-        self.assertIn('/p:Configuration="Debug" /p:Platform="Win32"', command)
+        self.assertIn('/p:Configuration="Debug" /p:UseEnv=false /p:Platform="Win32"', command)
         self.assertNotIn("WARN", new_out.getvalue())
         self.assertNotIn("ERROR", new_out.getvalue())
 
@@ -215,6 +215,7 @@ class BuildSLNCommandTest(unittest.TestCase):
             self.assertTrue(issubclass(w[0].category, DeprecationWarning))
 
         self.assertTrue(command.startswith('msbuild "dummy.sln" /p:Configuration="Debug" '
+                                           '/p:UseEnv=false '
                                            '/p:Platform="ARM" '
                                            '/p:PlatformToolset="v110" '
                                            '/verbosity:minimal '
@@ -238,6 +239,7 @@ class BuildSLNCommandTest(unittest.TestCase):
             self.assertTrue(issubclass(w[0].category, DeprecationWarning))
 
         self.assertTrue(command.startswith('msbuild "dummy.sln" /p:Configuration="Debug" '
+                                           '/p:UseEnv=false '
                                            '/p:Platform="ARM" '
                                            '/verbosity:minimal '
                                            '/p:ForceImportBeforeCppTargets='), command)
