@@ -7,10 +7,12 @@ from conans.test.functional.cross_building.graph._base_test_case import CrossBui
 
 
 class BuildRequireOfBuildRequire(CrossBuildingBaseTestCase):
-    """ There is an application that build_requires two different tools:
+    """ There is an application that build_requires three different tools:
          * cmake (build)
          * gtest (host), that build_requires 'cmake'
+         * protoc (build), that build_requires 'cmake' too
     """
+
     cmake = textwrap.dedent("""
         from conans import ConanFile
 
