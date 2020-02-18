@@ -438,3 +438,12 @@ class InspectRawTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile})
         client.run("inspect . --raw=default_options")
         self.assertEqual("dict=True\nlist=False", client.out)
+
+    def test_initial_inspect_without_registry_test(self):
+        client = TestClient()
+        client.save({"conanfile.py": self.conanfile})
+        client.run("export . user/channel")
+        os.remove(client.cache.remotes_path)
+        client.run("inspect MyPkg/1.2.3@user/channel --raw=version")
+        self.assertIn("WARN: Remotes registry file missing, creating default one", client.out)
+        self.assertIn("There are no packages matching the 'MyPkg' pattern", client.out)
