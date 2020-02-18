@@ -124,6 +124,12 @@ class MSBuildTest(unittest.TestCase):
             msbuild.get_command("dummy.sln", output_binary_log=True)
         self.assertIn(except_text, str(exc.exception))
 
+    def error_targets_argument_Test(self):
+        conanfile = MockConanfile(MockSettings({}))
+        msbuild = MSBuild(conanfile)
+        with self.assertRaises(TypeError):
+            msbuild.get_command("dummy.sln", targets="sometarget")
+
     @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
     def get_version_test(self):
         settings = MockSettings({"build_type": "Debug",
