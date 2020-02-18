@@ -1226,6 +1226,14 @@ class ConanAPIV1(object):
         return build_order
 
     @api_method
+    def lock_clean_modified(self, lockfile, cwd=None):
+        cwd = cwd or os.getcwd()
+        lockfile = _make_abs_path(lockfile, cwd)
+        lock = GraphLockFile.load(lockfile, self.app.config.revisions_enabled)
+        lock.graph_lock.clean_modified()
+        lock.save(lockfile)
+
+    @api_method
     def create_lock(self, reference, remote_name=None, settings=None, options=None, env=None,
                     profile_names=None, update=False, lockfile=None, build=None,):
         reference, graph_info = self._info_args(reference, None, profile_names,

@@ -219,6 +219,12 @@ class GraphLock(object):
             if node.modified:
                 self._nodes[id_] = node
 
+    def clean_modified(self):
+        """ remove all the "modified" flags from the lockfile
+        """
+        for _, node in self._nodes.items():
+            node.modified = None
+
     def _closure_affected(self):
         """ returns all the IDs of the nodes that depend directly or indirectly of some
         package marked as "modified"
