@@ -49,7 +49,7 @@ class GraphLockFile(object):
                                      "version. Please regenerate the lockfile")
             # Do something with it, migrate, raise...
         profile_host = graph_json.get("profile_host") or graph_json["profile"]
-        profile_build = graph_json.get("profile_build", graph_json.get("profile", None))
+        profile_build = graph_json.get("profile_build", None)
         # FIXME: Reading private very ugly
         profile_host, _ = _load_profile(profile_host, None, None)
         if profile_build:
