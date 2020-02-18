@@ -7,10 +7,10 @@ from parameterized.parameterized import parameterized
 from conans.client.graph.graph import CONTEXT_BUILD, CONTEXT_HOST
 from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
-from conans.test.functional.cross_building.graph import CrossBuildingTest
+from conans.test.functional.cross_building.graph._base_test_case import CrossBuildingBaseTestCase
 
 
-class BuildRequiresInProfileExample(CrossBuildingTest):
+class BuildRequiresInProfileExample(CrossBuildingBaseTestCase):
     """ There is an application with a requirement 'lib', both of them need
         a tool called 'cmake' to build. This tool is defined in profile.
 

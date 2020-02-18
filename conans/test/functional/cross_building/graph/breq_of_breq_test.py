@@ -1,13 +1,12 @@
-# coding=utf-8
 import textwrap
 
 from conans.client.graph.graph import CONTEXT_BUILD, CONTEXT_HOST
 from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
-from conans.test.functional.cross_building.graph import CrossBuildingTest
+from conans.test.functional.cross_building.graph._base_test_case import CrossBuildingBaseTestCase
 
 
-class BuildRequireOfBuildRequire(CrossBuildingTest):
+class BuildRequireOfBuildRequire(CrossBuildingBaseTestCase):
     """ There is an application that build_requires two different tools:
          * cmake (build)
          * gtest (host), that build_requires 'cmake'
@@ -143,10 +142,10 @@ class BuildRequireOfBuildRequire(CrossBuildingTest):
         self.assertEqual(gtest_cpp_info.bindirs, ['gtest-host'])
 
         with self.assertRaises(KeyError):
-            application.conanfile.deps_cpp_info["cmake"]
+            _ = application.conanfile.deps_cpp_info["cmake"]
 
         with self.assertRaises(KeyError):
-            application.conanfile.deps_cpp_info["protoc"]
+            _ = application.conanfile.deps_cpp_info["protoc"]
 
         #   - Application::deps_env_info:
         cmake_env_info = application.conanfile.deps_env_info["cmake"]
@@ -158,7 +157,7 @@ class BuildRequireOfBuildRequire(CrossBuildingTest):
         self.assertEqual(protoc_env_info.OTHERVAR, 'protoc-build')
 
         with self.assertRaises(KeyError):
-            application.conanfile.deps_env_info["gtest"]
+            _ = application.conanfile.deps_env_info["gtest"]
 
         #   - GTest
         gtest_host = application.dependencies[1].dst
@@ -168,7 +167,7 @@ class BuildRequireOfBuildRequire(CrossBuildingTest):
 
         #   - GTest::deps_cpp_info:
         with self.assertRaises(KeyError):
-            gtest_host.conanfile.deps_cpp_info["cmake"]
+            _ = gtest_host.conanfile.deps_cpp_info["cmake"]
 
         #   - GTest::deps_env_info:
         cmake_env_info = gtest_host.conanfile.deps_env_info["cmake"]
@@ -190,7 +189,7 @@ class BuildRequireOfBuildRequire(CrossBuildingTest):
 
         #   - Protoc::deps_cpp_info:
         with self.assertRaises(KeyError):
-            protoc_build.conanfile.deps_cpp_info["cmake"]
+            _ = protoc_build.conanfile.deps_cpp_info["cmake"]
 
         #   - Protoc::deps_env_info:
         cmake_env_info = protoc_build.conanfile.deps_env_info["cmake"]
@@ -210,4 +209,3 @@ class BuildRequireOfBuildRequire(CrossBuildingTest):
         self.assertEqual(cmake_gtest_build.conanfile.name, "cmake")
         self.assertEqual(cmake_gtest_build.context, CONTEXT_BUILD)
         self.assertEqual(str(cmake_gtest_build.conanfile.settings.os), profile_build.settings['os'])
-

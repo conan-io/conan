@@ -4,10 +4,10 @@ import textwrap
 
 from conans.client.graph.graph import CONTEXT_BUILD, CONTEXT_HOST
 from conans.model.profile import Profile
-from conans.test.functional.cross_building.graph import CrossBuildingTest
+from conans.test.functional.cross_building.graph._base_test_case import CrossBuildingBaseTestCase
 
 
-class ProtobufTest(CrossBuildingTest):
+class ProtobufTest(CrossBuildingBaseTestCase):
 
     protobuf = textwrap.dedent("""
         from conans import ConanFile
