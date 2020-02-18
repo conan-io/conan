@@ -4,7 +4,6 @@ from conans.client.graph.graph import CONTEXT_HOST, CONTEXT_BUILD
 from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
 from conans.test.functional.cross_building.graph.protoc_basic_test import ClassicProtocExampleBase
-from conans.util.files import save
 
 
 class ProtocWithGTestExample(ClassicProtocExampleBase):
@@ -59,14 +58,11 @@ class ProtocWithGTestExample(ClassicProtocExampleBase):
     """)
 
     gtest_ref = ConanFileReference.loads("gtest/testing@user/channel")
-    application_ref = ConanFileReference.loads("application/testing@user/channel")
 
     def setUp(self):
         super(ProtocWithGTestExample, self).setUp()
         self._cache_recipe(self.gtest_ref, self.gtest)
-        self._cache_recipe(self.application_ref, self.application)
-
-        save(self.cache.settings_path, self.settings_yml)
+        self._cache_recipe(self.app_ref, self.application)
 
     def test_not_crossbuilding(self):
         """ Build_requires uses 'force_host_context=False', but no profile for build_machine """
@@ -75,7 +71,7 @@ class ProtocWithGTestExample(ClassicProtocExampleBase):
         profile_host.process_settings(self.cache)
 
         try:
-            deps_graph = self._build_graph(profile_host=profile_host, profile_build=None)
+            deps_graph = self._build_graph(profile_host=profile_host, profile_build=None, install=True)
         except Exception as e:
             self.fail("ERROR! Although the recipe specifies 'force_host_context=False', as we"
                       " are not providing a profile for the build_machine, the context will be"
@@ -84,7 +80,7 @@ class ProtocWithGTestExample(ClassicProtocExampleBase):
             # Check packages (all are HOST packages)
             application = deps_graph.root.dependencies[0].dst
             self.assertEqual(len(application.dependencies), 3)
-            self.assertEqual(application.conanfile.name, "application")
+            self.assertEqual(application.conanfile.name, "app")
             self.assertEqual(application.context, CONTEXT_HOST)
             self.assertEqual(application.conanfile.settings.os, profile_host.settings['os'])
 
@@ -115,13 +111,13 @@ class ProtocWithGTestExample(ClassicProtocExampleBase):
         profile_build.settings["os"] = "Build"
         profile_build.process_settings(self.cache)
 
-        deps_graph = self._build_graph(profile_host=profile_host, profile_build=profile_build)
+        deps_graph = self._build_graph(profile_host=profile_host, profile_build=profile_build, install=True)
 
         # Check HOST packages
         #   - Application
         application = deps_graph.root.dependencies[0].dst
         self.assertEqual(len(application.dependencies), 4)
-        self.assertEqual(application.conanfile.name, "application")
+        self.assertEqual(application.conanfile.name, "app")
         self.assertEqual(application.context, CONTEXT_HOST)
         self.assertEqual(application.conanfile.settings.os, profile_host.settings['os'])
 
