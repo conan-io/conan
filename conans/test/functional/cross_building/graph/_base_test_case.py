@@ -16,6 +16,53 @@ from conans.util.files import save
 class CrossBuildingBaseTestCase(GraphManagerTest):
     """ Provides reusable bit for other TestCases """
 
+    protobuf = textwrap.dedent("""
+        from conans import ConanFile
+
+        class Protobuf(ConanFile):
+            name = "protobuf"
+            version = "testing"
+
+            settings = "os"
+
+            def build(self):
+                self.output.info(">> settings.os:".format(self.settings.os))
+
+            def package_info(self):
+                protobuf_str = "protobuf-host" if self.settings.os == "Host" else "protobuf-build"
+
+                self.cpp_info.includedirs = [protobuf_str, ]
+                self.cpp_info.libdirs = [protobuf_str, ]
+                self.cpp_info.bindirs = [protobuf_str, ]
+
+                self.env_info.PATH.append(protobuf_str)
+                self.env_info.OTHERVAR = protobuf_str
+    """)
+
+    protoc = textwrap.dedent("""
+        from conans import ConanFile
+
+        class Protoc(ConanFile):
+            name = "protoc"
+            version = "testing"
+
+            settings = "os"
+            requires = "protobuf/testing@user/channel"
+
+            def build(self):
+                self.output.info(">> settings.os:".format(self.settings.os))
+
+            def package_info(self):
+                protoc_str = "protoc-host" if self.settings.os == "Host" else "protoc-build"
+
+                self.cpp_info.includedirs = [protoc_str, ]
+                self.cpp_info.libdirs = [protoc_str, ]
+                self.cpp_info.bindirs = [protoc_str, ]
+
+                self.env_info.PATH.append(protoc_str)
+                self.env_info.OTHERVAR = protoc_str
+    """)
+
     basic_lib = textwrap.dedent("""
         from conans import ConanFile
 
@@ -43,6 +90,7 @@ class CrossBuildingBaseTestCase(GraphManagerTest):
     bzip_ref = ConanFileReference.loads("bzip/3.0@user/channel")
     cmake_ref = ConanFileReference.loads("cmake/3.14@user/channel")
     protobuf_ref = ConanFileReference.loads("protobuf/testing@user/channel")
+    protoc_ref = ConanFileReference.loads("protoc/testing@user/channel")
     app_ref = ConanFileReference.loads("app/testing@user/channel")
 
     def setUp(self):

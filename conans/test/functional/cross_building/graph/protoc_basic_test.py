@@ -4,7 +4,6 @@ from parameterized import parameterized
 
 from conans.client.graph.graph import CONTEXT_BUILD, CONTEXT_HOST
 from conans.model.profile import Profile
-from conans.model.ref import ConanFileReference
 from conans.test.functional.cross_building.graph._base_test_case import CrossBuildingBaseTestCase
 
 
@@ -17,53 +16,6 @@ class ClassicProtocExampleBase(CrossBuildingBaseTestCase):
             * host_machine: application, protobuf
             * build_machine: protoc, protobuf
     """
-
-    protobuf = textwrap.dedent("""
-        from conans import ConanFile
-        
-        class Protobuf(ConanFile):
-            name = "protobuf"
-            version = "testing"
-            
-            settings = "os"
-            
-            def build(self):
-                self.output.info(">> settings.os:".format(self.settings.os))
-                
-            def package_info(self):
-                protobuf_str = "protobuf-host" if self.settings.os == "Host" else "protobuf-build"
-
-                self.cpp_info.includedirs = [protobuf_str, ]
-                self.cpp_info.libdirs = [protobuf_str, ]
-                self.cpp_info.bindirs = [protobuf_str, ]
-                
-                self.env_info.PATH.append(protobuf_str)
-                self.env_info.OTHERVAR = protobuf_str
-    """)
-
-    protoc = textwrap.dedent("""
-        from conans import ConanFile
-        
-        class Protoc(ConanFile):
-            name = "protoc"
-            version = "testing"
-            
-            settings = "os"
-            requires = "protobuf/testing@user/channel"
-            
-            def build(self):
-                self.output.info(">> settings.os:".format(self.settings.os))
-
-            def package_info(self):
-                protoc_str = "protoc-host" if self.settings.os == "Host" else "protoc-build"
-                
-                self.cpp_info.includedirs = [protoc_str, ]
-                self.cpp_info.libdirs = [protoc_str, ]
-                self.cpp_info.bindirs = [protoc_str, ]
-                
-                self.env_info.PATH.append(protoc_str)
-                self.env_info.OTHERVAR = protoc_str
-    """)
 
     application = textwrap.dedent("""
         from conans import ConanFile
@@ -81,9 +33,6 @@ class ClassicProtocExampleBase(CrossBuildingBaseTestCase):
             def build(self):
                 self.output.info(">> settings.os:".format(self.settings.os))
     """)
-
-    protobuf_ref = ConanFileReference.loads("protobuf/testing@user/channel")
-    protoc_ref = ConanFileReference.loads("protoc/testing@user/channel")
 
     def setUp(self):
         super(ClassicProtocExampleBase, self).setUp()
