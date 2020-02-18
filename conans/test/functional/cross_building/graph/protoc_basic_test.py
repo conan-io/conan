@@ -1,9 +1,7 @@
-# coding=utf-8
-
 import os
 import textwrap
 
-from parameterized.parameterized import parameterized
+from parameterized import parameterized
 
 from conans.client.cache.remote_registry import Remotes
 from conans.client.graph.build_mode import BuildMode
@@ -36,7 +34,7 @@ class ClassicProtocExampleBase(GraphManagerTest):
             name = "protobuf"
             version = "testing"
             
-            settings = "os"  # , "arch", "compiler", "build_type"
+            settings = "os"
             
             def build(self):
                 self.output.info(">> settings.os:".format(self.settings.os))
@@ -168,7 +166,7 @@ class ClassicProtocExample(ClassicProtocExampleBase):
             self.assertEqual(protobuf_host_cpp_info.libdirs, ['protobuf-host'])
             self.assertEqual(protobuf_host_cpp_info.bindirs, ['protobuf-host'])
             with self.assertRaises(KeyError):
-                application.conanfile.deps_cpp_info["protoc"]
+                _ = application.conanfile.deps_cpp_info["protoc"]
 
             #   - application::deps_env_info:
             protoc_env_info = application.conanfile.deps_env_info["protoc"]

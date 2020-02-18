@@ -1,8 +1,6 @@
-# coding=utf-8
-
 import textwrap
 
-from parameterized.parameterized import parameterized
+from parameterized import parameterized
 
 from conans.client.graph.graph import CONTEXT_BUILD, CONTEXT_HOST
 from conans.model.profile import Profile
@@ -37,7 +35,7 @@ class BuildRequiresInProfileExample(CrossBuildingBaseTestCase):
             name = "protobuf"
             version = "testing"
 
-            settings = "os"  # , "arch", "compiler", "build_type"
+            settings = "os"
 
             def build(self):
                 self.output.info(">> settings.os:".format(self.settings.os))
@@ -97,8 +95,7 @@ class BuildRequiresInProfileExample(CrossBuildingBaseTestCase):
         # Check BUILD packages (default behavior changes if we use profile_build)
         cmake_application_build = application.dependencies[1].dst
         self.assertEqual(cmake_application_build.conanfile.name, "cmake")
-        self.assertEqual(cmake_application_build.context,
-                         CONTEXT_BUILD if xbuilding else CONTEXT_HOST)
+        self.assertEqual(cmake_application_build.context, CONTEXT_BUILD if xbuilding else CONTEXT_HOST)
         self.assertEqual(str(cmake_application_build.conanfile.settings.os),
                          (profile_build if xbuilding else profile_host).settings['os'])
 

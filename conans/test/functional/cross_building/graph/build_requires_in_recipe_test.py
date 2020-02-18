@@ -1,5 +1,3 @@
-# coding=utf-8
-
 import os
 import textwrap
 
@@ -19,7 +17,7 @@ class BuildRequiresInRecipeExample(GraphManagerTest):
     """ There is an application with a requirement 'lib', both of them build_requires
         a tool called 'breq' (build_machine) and this tool requires a 'breq_lib'.
 
-        All these requirements are declared in the profiles
+        All these requirements are declared in the recipes
     """
 
     breq_lib = textwrap.dedent("""
@@ -149,8 +147,7 @@ class BuildRequiresInRecipeExample(GraphManagerTest):
         breq_application_build = application.dependencies[1].dst
         self.assertEqual(breq_application_build.conanfile.name, "breq")
         self.assertEqual(breq_application_build.context, CONTEXT_BUILD)
-        self.assertEqual(str(breq_application_build.conanfile.settings.os),
-                         profile_build.settings['os'])
+        self.assertEqual(str(breq_application_build.conanfile.settings.os), profile_build.settings['os'])
 
         breq_lib_build = lib_host.dependencies[0].dst
         self.assertNotEqual(breq_application_build, breq_lib_build)

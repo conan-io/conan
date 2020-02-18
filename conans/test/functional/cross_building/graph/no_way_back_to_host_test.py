@@ -1,5 +1,3 @@
-# coding=utf-8
-
 import os
 import textwrap
 
@@ -21,7 +19,7 @@ class NoWayBackToHost(GraphManagerTest):
     """ There is an application that build_requires (build) a tool and it is trying to
         build_require another tool from the "host" context. As there are
         no more context changes available once we entered the 'build' context, then there is no
-        way back to the original host context because build=host
+        way back to the original host context because build===host
     """
 
     host_tool = textwrap.dedent("""
@@ -154,13 +152,13 @@ class NoWayBackToHost(GraphManagerTest):
 
         #   - Application::deps_cpp_info:
         with self.assertRaises(KeyError):
-            application.conanfile.deps_cpp_info["host_tool"]
+            _ = application.conanfile.deps_cpp_info["host_tool"]
         with self.assertRaises(KeyError):
-            application.conanfile.deps_cpp_info["build_tool"]
+            _ = application.conanfile.deps_cpp_info["build_tool"]
 
         #   - Application::deps_env_info:
         with self.assertRaises(KeyError):
-            application.conanfile.deps_env_info["host_tool"]
+            _ = application.conanfile.deps_env_info["host_tool"]
         build_tool_env_info = application.conanfile.deps_env_info["build_tool"]
         self.assertEqual(build_tool_env_info.PATH, ['build_tool-build'])
         self.assertEqual(build_tool_env_info.OTHERVAR, 'build_tool-build')
@@ -180,10 +178,10 @@ class NoWayBackToHost(GraphManagerTest):
 
         #   - BuildTool::deps_env_info
         with self.assertRaises(KeyError):
-            build_tool.conanfile.deps_env_info["host_tool"]
+            _ = build_tool.conanfile.deps_env_info["host_tool"]
 
         #   - HostTool
-        # There is no way back to host profile from build one (host=build)
+        # There is no way back to host profile from build one (host===build)
         host_tool = build_tool.dependencies[0].dst
         self.assertEqual(host_tool.conanfile.name, "host_tool")
         self.assertEqual(host_tool.context, CONTEXT_BUILD)

@@ -1,5 +1,3 @@
-# coding=utf-8
-
 import textwrap
 
 from conans.client.graph.graph import CONTEXT_HOST, CONTEXT_BUILD
@@ -22,7 +20,7 @@ class ProtocWithGTestExample(ClassicProtocExampleBase):
             name = "gtest"
             version = "testing"
 
-            settings = "os"  # , "arch", "compiler", "build_type"
+            settings = "os"
 
             def build(self):
                 self.output.info(">> settings.os:".format(self.settings.os))
@@ -153,7 +151,7 @@ class ProtocWithGTestExample(ClassicProtocExampleBase):
         self.assertEqual(protobuf_env_info.OTHERVAR, 'protobuf-build')
 
         with self.assertRaises(KeyError):
-            application.conanfile.deps_env_info["gtest"]
+            _ = application.conanfile.deps_env_info["gtest"]
 
         #   - Protobuf
         protobuf_host = application.dependencies[0].dst
