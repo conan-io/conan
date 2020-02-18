@@ -95,7 +95,7 @@ class DepsGraphBuilder(object):
         self._resolve_ranges(graph, build_requires, scope, update, remotes)
 
         for br in build_requires:
-            context = br.build_require_context if node.context == CONTEXT_HOST else CONTEXT_BUILD
+            context = br.build_require_context if node.context == CONTEXT_HOST else node.context
             self._expand_require(br, node, graph, check_updates, update,
                                  remotes, profile_host, profile_build, new_reqs, new_options,
                                  graph_lock, context=context)
