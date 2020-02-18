@@ -195,11 +195,6 @@ class DepsGraphBuilder(object):
         # build_requires and private will create a new node if it is not in the current closure
         if not previous or ((require.build_require or require.private) and not previous_closure):
             # new node, must be added and expanded (node -> new_node)
-            if context == CONTEXT_BUILD and not profile_build:
-                raise ConanException("Package '{}' requires '{}' on context build, but no profile"
-                                     " for build_machine has been provided. See docs about"
-                                     " crossbuilding feature.".format(node, name))
-
             profile = profile_host if context == CONTEXT_HOST else profile_build
             new_node = self._create_new_node(node, graph, require, check_updates, update,
                                              remotes, profile, graph_lock, context=context)
