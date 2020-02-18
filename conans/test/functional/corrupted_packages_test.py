@@ -1,10 +1,9 @@
 import os
-import textwrap
 import unittest
 
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.util.env_reader import get_env
-from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID
+from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID, GenConanfile
 
 
 class CorruptedPackagesTest(unittest.TestCase):
@@ -18,13 +17,7 @@ class CorruptedPackagesTest(unittest.TestCase):
         revisions_enabled = get_env("TESTING_REVISIONS_ENABLED", False)
         self.server = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")])
         self.client = TestClient(servers={"default": self.server})
-        conanfile = textwrap.dedent("""
-        from conans import ConanFile
-
-        class Pkg(ConanFile):
-            pass
-        """)
-        self.client.save({"conanfile.py": conanfile})
+        self.client.save({"conanfile.py": GenConanfile()})
         self.client.run("create . Pkg/0.1@user/testing")
         self.client.run("upload * --all --confirm -r default")
         # Check files are uploded in this order: conan_package.tgz, conaninfo.txt, conanmanifest.txt
