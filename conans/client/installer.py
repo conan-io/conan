@@ -483,7 +483,7 @@ class BinaryInstaller(object):
         node_order = [n for n in node.public_closure if n.binary != BINARY_SKIP]
         # List sort is stable, will keep the original order of the closure, but prioritize levels
         conan_file = node.conanfile
-        transitive = [it for it in node.transitive_closure]
+        transitive = [it for it in node.transitive_closure.values()]
         br_host = [it.dst for it in node.dependencies
                    if it.require.build_require_context == CONTEXT_HOST]
         for n in node_order:

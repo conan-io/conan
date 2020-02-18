@@ -55,7 +55,7 @@ class DepsGraphBuilder(object):
         # compute the conanfile entry point for this dependency graph
         root_node.public_closure.add(root_node)
         root_node.public_deps.add(root_node)
-        root_node.transitive_closure.add(root_node)  # TODO: Do we need itself here?
+        root_node.transitive_closure[root_node.name] = root_node
         root_node.ancestors = set()
         dep_graph.add_node(root_node)
 
@@ -206,7 +206,7 @@ class DepsGraphBuilder(object):
 
             # The closure of a new node starts with just itself
             new_node.public_closure.add(new_node)
-            new_node.transitive_closure.add(new_node)  # TODO: Do we need itself here?
+            new_node.transitive_closure[new_node.name] = new_node
             # The new created node is connected to the parent one
             node.connect_closure(new_node)
 
@@ -218,7 +218,7 @@ class DepsGraphBuilder(object):
                 new_node.public_deps.assign(node.public_closure)
                 new_node.public_deps.add(new_node)
             else:
-                node.transitive_closure.add(new_node)
+                node.transitive_closure[new_node.name] = new_node
                 # Normal requires propagate and can conflict with the parent "node.public_deps" too
                 new_node.public_deps.assign(node.public_deps)
                 new_node.public_deps.add(new_node)
@@ -231,8 +231,8 @@ class DepsGraphBuilder(object):
             self._expand_node(new_node, graph, new_reqs, node.ref, new_options, check_updates,
                               update, remotes, profile_host, profile_build, graph_lock, context)
             if not require.private and not require.build_require:
-                for it in new_node.transitive_closure:
-                    node.transitive_closure.add(it)
+                for name, n in new_node.transitive_closure.items():
+                    node.transitive_closure[name] = n
 
         else:  # a public node already exist with this name
             self._resolve_cached_alias([require], graph)
@@ -254,12 +254,12 @@ class DepsGraphBuilder(object):
             node.connect_closure(previous)
             graph.add_edge(node, previous, require)
             if not require.private and not require.build_require:
-                for it in previous.transitive_closure:
-                    node.transitive_closure.add(it)
+                for name, n in previous.transitive_closure.items():
+                    node.transitive_closure[name] = n
 
                 # All the upstream dependencies (public_closure) of the previously existing node
                 # now will be also connected to the node and to all its dependants
-                for n in previous.transitive_closure:
+                for n in previous.transitive_closure.values():
                     node.connect_closure(n)
                     for dep_node in node.inverse_closure:
                         dep_node.connect_closure(n)
