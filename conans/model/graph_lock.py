@@ -112,7 +112,7 @@ class GraphLockNode(object):
         if self.python_requires:
             result["python_requires"] = [repr(r) for r in self.python_requires]
         if self.modified:
-            result["modified"] = True
+            result["modified"] = self.modified
         if self.requires:
             result["requires"] = self.requires
         if self.build_requires:
@@ -223,7 +223,7 @@ class GraphLock(object):
         """ remove all the "modified" flags from the lockfile
         """
         for _, node in self._nodes.items():
-            node.modified = False
+            node.modified = None
 
     def _closure_affected(self):
         """ returns all the IDs of the nodes that depend directly or indirectly of some
