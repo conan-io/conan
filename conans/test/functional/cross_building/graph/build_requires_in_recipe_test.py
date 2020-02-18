@@ -12,50 +12,6 @@ class BuildRequiresInRecipeExample(CrossBuildingBaseTestCase):
 
         All these requirements are declared in the recipes
     """
-
-    breq_lib = textwrap.dedent("""
-        from conans import ConanFile
-
-        class BuildRequiresLibrary(ConanFile):
-            name = "breq_lib"
-            version = "testing"
-
-            settings = "os"
-
-            def build(self):
-                self.output.info(">> settings.os:".format(self.settings.os))
-    """)
-
-    breq = textwrap.dedent("""
-        from conans import ConanFile
-
-        class BuildRequires(ConanFile):
-            name = "breq"
-            version = "testing"
-
-            settings = "os"
-            requires = "breq_lib/testing@user/channel"
-
-            def build(self):
-                self.output.info(">> settings.os:".format(self.settings.os))
-    """)
-
-    lib = textwrap.dedent("""
-        from conans import ConanFile
-
-        class Library(ConanFile):
-            name = "protobuf"
-            version = "testing"
-
-            settings = "os"  # , "arch", "compiler", "build_type"
-
-            def build_requirements(self):
-                self.build_requires("breq/testing@user/channel")
-
-            def build(self):
-                self.output.info(">> settings.os:".format(self.settings.os))
-    """)
-
     application = textwrap.dedent("""
         from conans import ConanFile
 
@@ -73,11 +29,9 @@ class BuildRequiresInRecipeExample(CrossBuildingBaseTestCase):
                 self.output.info(">> settings.os:".format(self.settings.os))
     """)
 
-    settings_yml = textwrap.dedent("""
-        os:
-            Host:
-            Build:
-    """)
+    breq = CrossBuildingBaseTestCase.library_tpl.render(name="breq", requires=["breq_lib/testing@user/channel", ])
+    breq_lib = CrossBuildingBaseTestCase.library_tpl.render(name="breq_lib")
+    lib = CrossBuildingBaseTestCase.library_tpl.render(name="lib", build_requires=["breq/testing@user/channel", ])
 
     breq_lib_ref = ConanFileReference.loads("breq_lib/testing@user/channel")
     breq_ref = ConanFileReference.loads("breq/testing@user/channel")

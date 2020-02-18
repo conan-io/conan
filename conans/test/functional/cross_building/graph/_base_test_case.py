@@ -1,6 +1,8 @@
 import os
 import textwrap
 
+from jinja2 import Template
+
 from conans.client.cache.remote_registry import Remotes
 from conans.client.graph.build_mode import BuildMode
 from conans.client.installer import BinaryInstaller
@@ -14,9 +16,62 @@ from conans.util.files import save
 
 
 class CrossBuildingBaseTestCase(GraphManagerTest):
-    """ Provides reusable bit for other TestCases """
+    """ Provides reusable bits for other TestCases """
 
-    protobuf = textwrap.dedent("""
+    cmake = textwrap.dedent("""
+        from conans import ConanFile
+
+        class BuildRequiresLibrary(ConanFile):
+            name = "cmake"
+            version = "testing"
+
+            settings = "os"
+
+            def build(self):
+                self.output.info(">> settings.os:".format(self.settings.os))
+
+            def package_info(self):
+                cmake_str = "cmake-host" if self.settings.os == "Host" else "cmake-build"
+
+                self.cpp_info.includedirs = [cmake_str, ]
+                self.cpp_info.libdirs = [cmake_str, ]
+                self.cpp_info.bindirs = [cmake_str, ]
+
+                self.env_info.PATH.append(cmake_str)
+                self.env_info.OTHERVAR = cmake_str
+    """)
+
+    gtest_tpl = Template(textwrap.dedent("""
+        from conans import ConanFile
+
+        class BuildRequires(ConanFile):
+            name = "gtest"
+            version = "testing"
+
+            settings = "os"
+
+            {% if build_requires %}
+            def build_requirements(self):
+            {%- for it in build_requires %}
+                self.build_requires("{{ it }}")
+            {%- endfor %}
+            {%- endif %}
+
+            def build(self):
+                self.output.info(">> settings.os:".format(self.settings.os))
+
+            def package_info(self):
+                gtest_str = "gtest-host" if self.settings.os == "Host" else "gtest-build"
+
+                self.cpp_info.includedirs = [gtest_str, ]
+                self.cpp_info.libdirs = [gtest_str, ]
+                self.cpp_info.bindirs = [gtest_str, ]
+
+                self.env_info.PATH.append(gtest_str)
+                self.env_info.OTHERVAR = gtest_str
+    """))
+
+    protobuf_tpl = Template(textwrap.dedent("""
         from conans import ConanFile
 
         class Protobuf(ConanFile):
@@ -24,6 +79,13 @@ class CrossBuildingBaseTestCase(GraphManagerTest):
             version = "testing"
 
             settings = "os"
+
+            {% if build_requires %}
+            def build_requirements(self):
+            {%- for it in build_requires %}
+                self.build_requires("{{ it }}")
+            {%- endfor %}
+            {%- endif %}
 
             def build(self):
                 self.output.info(">> settings.os:".format(self.settings.os))
@@ -37,9 +99,9 @@ class CrossBuildingBaseTestCase(GraphManagerTest):
 
                 self.env_info.PATH.append(protobuf_str)
                 self.env_info.OTHERVAR = protobuf_str
-    """)
+    """))
 
-    protoc = textwrap.dedent("""
+    protoc_tpl = Template(textwrap.dedent("""
         from conans import ConanFile
 
         class Protoc(ConanFile):
@@ -49,6 +111,13 @@ class CrossBuildingBaseTestCase(GraphManagerTest):
             settings = "os"
             requires = "protobuf/testing@user/channel"
 
+            {% if build_requires %}
+            def build_requirements(self):
+            {%- for it in build_requires %}
+                self.build_requires("{{ it }}")
+            {%- endfor %}
+            {%- endif %}
+            
             def build(self):
                 self.output.info(">> settings.os:".format(self.settings.os))
 
@@ -61,23 +130,43 @@ class CrossBuildingBaseTestCase(GraphManagerTest):
 
                 self.env_info.PATH.append(protoc_str)
                 self.env_info.OTHERVAR = protoc_str
-    """)
+    """))
 
-    basic_lib = textwrap.dedent("""
+    library_tpl = Template(textwrap.dedent("""
         from conans import ConanFile
 
-        class {name}(ConanFile):
+        class {{name}}(ConanFile):
             settings = "os"
 
+            {% if requires %}
+            def requirements(self):
+            {%- for it in requires %}
+                self.requires("{{ it }}")
+            {%- endfor %}
+            {%- endif %}
+            
+            {% if build_requires %}
+            def build_requirements(self):
+            {%- for it in build_requires %}
+                self.build_requires("{{ it }}")
+            {%- endfor %}
+            {%- endif %}
+            
             def package_info(self):
-                lib_str = "{name}-host" if self.settings.os == "Host" else "{name}-build"
-                lib_str += str(self.version)
-                self.cpp_info.libs = [lib_str, ]
+                lib_str = "{{name}}-host" if self.settings.os == "Host" else "{{name}}-build"
+                lib_str += "-" + self.version
+                self.cpp_info.libs = [lib_str, ]                
+                self.cpp_info.includedirs = [lib_str, ]
+                self.cpp_info.libdirs = [lib_str, ]
+                self.cpp_info.bindirs = [lib_str, ]
+                
                 self.env_info.PATH.append(lib_str)
                 self.env_info.OTHERVAR = lib_str
-        """)
-    zlib = basic_lib.format(name="zlib")
-    bzip = basic_lib.format(name="bzip")
+        """))
+
+    gtest = gtest_tpl.render()
+    protobuf = protobuf_tpl.render()
+    protoc = protoc_tpl.render()
 
     settings_yml = textwrap.dedent("""
         os:
@@ -85,13 +174,11 @@ class CrossBuildingBaseTestCase(GraphManagerTest):
             Build:
     """)
 
-    zlib1_ref = ConanFileReference.loads("zlib/1.0@user/channel")
-    zlib2_ref = ConanFileReference.loads("zlib/2.0@user/channel")
-    bzip_ref = ConanFileReference.loads("bzip/3.0@user/channel")
-    cmake_ref = ConanFileReference.loads("cmake/3.14@user/channel")
     protobuf_ref = ConanFileReference.loads("protobuf/testing@user/channel")
     protoc_ref = ConanFileReference.loads("protoc/testing@user/channel")
     app_ref = ConanFileReference.loads("app/testing@user/channel")
+    cmake_ref = ConanFileReference.loads("cmake/testing@user/channel")
+    gtest_ref = ConanFileReference.loads("gtest/testing@user/channel")
 
     def setUp(self):
         super(CrossBuildingBaseTestCase, self).setUp()

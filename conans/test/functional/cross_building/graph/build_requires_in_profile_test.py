@@ -15,32 +15,6 @@ class BuildRequiresInProfileExample(CrossBuildingBaseTestCase):
         All these requirements are declared in the profiles
     """
 
-    cmake = textwrap.dedent("""
-        from conans import ConanFile
-
-        class CMake(ConanFile):
-            name = "cmake"
-            version = "testing"
-
-            settings = "os"
-
-            def build(self):
-                self.output.info(">> settings.os:".format(self.settings.os))
-    """)
-
-    lib = textwrap.dedent("""
-        from conans import ConanFile
-
-        class Library(ConanFile):
-            name = "protobuf"
-            version = "testing"
-
-            settings = "os"
-
-            def build(self):
-                self.output.info(">> settings.os:".format(self.settings.os))
-    """)
-
     application = textwrap.dedent("""
         from conans import ConanFile
 
@@ -55,7 +29,7 @@ class BuildRequiresInProfileExample(CrossBuildingBaseTestCase):
                 self.output.info(">> settings.os:".format(self.settings.os))
     """)
 
-    cmake_ref = ConanFileReference.loads("cmake/testing@user/channel")
+    lib = CrossBuildingBaseTestCase.library_tpl.render(name="lib")
     lib_ref = ConanFileReference.loads("lib/testing@user/channel")
 
     def setUp(self):

@@ -2,7 +2,6 @@ import textwrap
 
 from conans.client.graph.graph import CONTEXT_HOST, CONTEXT_BUILD
 from conans.model.profile import Profile
-from conans.model.ref import ConanFileReference
 from conans.test.functional.cross_building.graph.protoc_basic_test import ClassicProtocExampleBase
 
 
@@ -11,29 +10,6 @@ class ProtocWithGTestExample(ClassicProtocExampleBase):
         to the project: we add gtest as a build_require and also the protoc executable, BUT
         both of them should be compiled for the host platform, we are running tests in the host!
     """
-
-    gtest = textwrap.dedent("""
-        from conans import ConanFile
-
-        class GTest(ConanFile):
-            name = "gtest"
-            version = "testing"
-
-            settings = "os"
-
-            def build(self):
-                self.output.info(">> settings.os:".format(self.settings.os))
-                
-            def package_info(self):
-                gtest_str = "gtest-host" if self.settings.os == "Host" else "gtest-build"
-
-                self.cpp_info.includedirs = [gtest_str, ]
-                self.cpp_info.libdirs = [gtest_str, ]
-                self.cpp_info.bindirs = [gtest_str, ]
-                
-                self.env_info.PATH.append(gtest_str)
-                self.env_info.OTHERVAR = gtest_str
-    """)
 
     application = textwrap.dedent("""
         from conans import ConanFile
@@ -56,8 +32,6 @@ class ProtocWithGTestExample(ClassicProtocExampleBase):
             def build(self):
                 self.output.info(">> settings.os:".format(self.settings.os))
     """)
-
-    gtest_ref = ConanFileReference.loads("gtest/testing@user/channel")
 
     def setUp(self):
         super(ProtocWithGTestExample, self).setUp()
@@ -183,4 +157,3 @@ class ProtocWithGTestExample(ClassicProtocExampleBase):
         self.assertEqual(protobuf_build.conanfile.name, "protobuf")
         self.assertEqual(protoc_build.context, CONTEXT_BUILD)
         self.assertEqual(str(protobuf_build.conanfile.settings.os), profile_build.settings['os'])
-

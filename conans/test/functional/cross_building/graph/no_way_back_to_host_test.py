@@ -13,29 +13,6 @@ class NoWayBackToHost(CrossBuildingBaseTestCase):
         way back to the original host context because build===host
     """
 
-    host_tool = textwrap.dedent("""
-        from conans import ConanFile
-
-        class HostTool(ConanFile):
-            name = "host_tool"
-            version = "testing"
-
-            settings = "os"
-
-            def build(self):
-                self.output.info(">> settings.os:".format(self.settings.os))
-                
-            def package_info(self):
-                host_tool_str = "host_tool-host" if self.settings.os == "Host" else "host_tool-build"
-
-                self.cpp_info.includedirs = [host_tool_str, ]
-                self.cpp_info.libdirs = [host_tool_str, ]
-                self.cpp_info.bindirs = [host_tool_str, ]
-                
-                self.env_info.PATH.append(host_tool_str)
-                self.env_info.OTHERVAR = host_tool_str
-    """)
-
     build_tool = textwrap.dedent("""
         from conans import ConanFile
 
@@ -80,11 +57,7 @@ class NoWayBackToHost(CrossBuildingBaseTestCase):
                 self.output.info(">> settings.os:".format(self.settings.os))
     """)
 
-    settings_yml = textwrap.dedent("""
-        os:
-            Host:
-            Build:
-    """)
+    host_tool = CrossBuildingBaseTestCase.library_tpl.render(name="host_tool")
 
     host_tool_ref = ConanFileReference.loads("host_tool/testing@user/channel")
     build_tool_ref = ConanFileReference.loads("build_tool/testing@user/channel")
@@ -136,9 +109,9 @@ class NoWayBackToHost(CrossBuildingBaseTestCase):
 
         #   - BuildTool::deps_cpp_info:
         host_tool_cpp_info = build_tool.conanfile.deps_cpp_info["host_tool"]
-        self.assertEqual(host_tool_cpp_info.includedirs, ['host_tool-build'])
-        self.assertEqual(host_tool_cpp_info.libdirs, ['host_tool-build'])
-        self.assertEqual(host_tool_cpp_info.bindirs, ['host_tool-build'])
+        self.assertEqual(host_tool_cpp_info.includedirs, ['host_tool-build-testing'])
+        self.assertEqual(host_tool_cpp_info.libdirs, ['host_tool-build-testing'])
+        self.assertEqual(host_tool_cpp_info.bindirs, ['host_tool-build-testing'])
 
         #   - BuildTool::deps_env_info
         with self.assertRaises(KeyError):
