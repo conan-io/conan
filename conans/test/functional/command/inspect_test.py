@@ -445,5 +445,4 @@ class InspectRawTest(unittest.TestCase):
         client.run("export . user/channel")
         os.remove(client.cache.remotes_path)
         client.run("inspect MyPkg/1.2.3@user/channel --raw=version")
-        self.assertIn("WARN: Remotes registry file missing, creating default one", client.out)
-        self.assertIn("There are no packages matching the 'MyPkg' pattern", client.out)
+        self.assertIn("1.2.3", client.out)
