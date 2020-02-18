@@ -73,7 +73,7 @@ def api_method(f):
         quiet = kwargs.pop("quiet", False)
         old_curdir = get_cwd()
         old_output = api.user_io.out
-        quiet_output = ConanOutput(StringIO(), api.color) if quiet else None
+        quiet_output = ConanOutput(StringIO(), color=api.color) if quiet else None
         try:
             api.create_app(quiet_output=quiet_output)
             log_command(f.__name__, kwargs)
