@@ -728,7 +728,7 @@ class CMakeTest(unittest.TestCase):
 
         settings.compiler.version = "15"
         settings.arch = "armv8"
-        check('-G "Visual Studio 15 2017 ARM" -DCONAN_IN_LOCAL_CACHE="OFF" '
+        check('-G "Visual Studio 15 2017" -A "ARM64" -DCONAN_IN_LOCAL_CACHE="OFF" '
               '-DCONAN_COMPILER="Visual Studio" -DCONAN_COMPILER_VERSION="15" '
               '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -DCONAN_EXPORTED="1" -Wno-dev',
               "--config Debug")
@@ -1033,11 +1033,8 @@ build_type: [ Release]
                          '%s' % CMakeTest.scape('. --target test'),
                          conanfile.command)
 
+    @unittest.skipIf(platform.system() != "Windows", "Only for Windows")
     def test_clean_sh_path(self):
-
-        if platform.system() != "Windows":
-            return
-
         os.environ["PATH"] = os.environ.get("PATH", "") + os.pathsep + self.tempdir
         save(os.path.join(self.tempdir, "sh.exe"), "Fake sh")
         conanfile = ConanFileMock()
@@ -1332,13 +1329,13 @@ build_type: [ Release]
 
         cmake = CMake(conanfile, generator=generator)
 
-        with mock.patch("conans.client.tools.vcvars") as vcvars_mock:
+        with mock.patch("conans.client.tools.vcvars_dict") as vcvars_mock:
             vcvars_mock.__enter__ = mock.MagicMock(return_value=(mock.MagicMock(), None))
             vcvars_mock.__exit__ = mock.MagicMock(return_value=None)
             cmake.configure()
             self.assertTrue(vcvars_mock.called, "vcvars weren't called")
 
-        with mock.patch("conans.client.tools.vcvars") as vcvars_mock:
+        with mock.patch("conans.client.tools.vcvars_dict") as vcvars_mock:
             vcvars_mock.__enter__ = mock.MagicMock(return_value=(mock.MagicMock(), None))
             vcvars_mock.__exit__ = mock.MagicMock(return_value=None)
             cmake.build()

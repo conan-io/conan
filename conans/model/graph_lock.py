@@ -219,6 +219,12 @@ class GraphLock(object):
             if node.modified:
                 self._nodes[id_] = node
 
+    def clean_modified(self):
+        """ remove all the "modified" flags from the lockfile
+        """
+        for _, node in self._nodes.items():
+            node.modified = None
+
     def _closure_affected(self):
         """ returns all the IDs of the nodes that depend directly or indirectly of some
         package marked as "modified"
@@ -273,15 +279,12 @@ class GraphLock(object):
                 if (pref.id == PACKAGE_ID_UNKNOWN or pref.is_compatible_with(node_pref) or
                         node.binary == BINARY_BUILD or node.id in affected or
                         node.recipe == RECIPE_CONSUMER):
-                    self._upsert_node(node)
+                    lock_node.pref = node.pref
                 else:
                     raise ConanException("Mismatch between lock and graph:\nLock:  %s\nGraph: %s"
                                          % (repr(pref), repr(node.pref)))
 
-    def lock_node(self, node, requires, build_requires=False):
-        """ apply options and constraints on requirements of a node, given the information from
-        the lockfile. Requires remove their version ranges.
-        """
+    def pre_lock_node(self, node):
         if node.recipe == RECIPE_VIRTUAL:
             return
         try:
@@ -291,6 +294,16 @@ class GraphLock(object):
                 return
             raise ConanException("The node ID %s was not found in the lock" % node.id)
 
+        node.graph_lock_node = locked_node
+        node.conanfile.options.values = locked_node.options
+
+    def lock_node(self, node, requires, build_requires=False):
+        """ apply options and constraints on requirements of a node, given the information from
+        the lockfile. Requires remove their version ranges.
+        """
+        if not node.graph_lock_node:
+            return
+        locked_node = node.graph_lock_node
         if build_requires:
             locked_requires = locked_node.build_requires or []
         else:
@@ -302,8 +315,6 @@ class GraphLock(object):
             prefs = {self._nodes[id_].pref.ref.name: (self._nodes[id_].pref.copy_clear_revs(), id_)
                      for id_ in locked_requires}
 
-        node.graph_lock_node = locked_node
-        node.conanfile.options.values = locked_node.options
         for require in requires:
             try:
                 locked_pref, locked_id = prefs[require.ref.name]

@@ -21,7 +21,7 @@ assign_target_properties = """
         if({name}_INCLUDE_DIRS)
           set_target_properties({name}::{name} PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${{{name}_INCLUDE_DIRS}}")
         endif()
-        set_property(TARGET {name}::{name} PROPERTY INTERFACE_LINK_LIBRARIES ${{{name}_LIBRARIES_TARGETS}} ${{{name}_SYSTEM_LIBS}} "${{{name}_LINKER_FLAGS_LIST}}")
+        set_property(TARGET {name}::{name} PROPERTY INTERFACE_LINK_LIBRARIES "${{{name}_LIBRARIES_TARGETS}};${{{name}_LINKER_FLAGS_LIST}}")
         set_property(TARGET {name}::{name} PROPERTY INTERFACE_COMPILE_DEFINITIONS ${{{name}_COMPILE_DEFINITIONS}})
         set_property(TARGET {name}::{name} PROPERTY INTERFACE_COMPILE_OPTIONS "${{{name}_COMPILE_OPTIONS_LIST}}")
 """
@@ -62,13 +62,15 @@ endif()
 
         deps = DepsCppCmake(dep_cpp_info)
         lines = []
+        public_deps_names = [self.deps_build_info[dep].get_name("cmake_find_package") for dep in
+                             dep_cpp_info.public_deps]
         if dep_cpp_info.public_deps:
             # Here we are generating FindXXX, so find_modules=True
-            public_deps_names = [self.deps_build_info[dep].get_name("cmake_find_package") for dep in dep_cpp_info.public_deps]
-            lines = find_dependency_lines(name, public_deps_names, find_modules=True)
+            lines = find_dependency_lines(public_deps_names, find_modules=True)
         find_package_header_block = find_package_header.format(name=name, version=dep_cpp_info.version)
-        find_libraries_block = target_template.format(name=name, deps=deps, build_type_suffix="")
-        target_props = assign_target_properties.format(name=name, deps=deps)
+        deps_names = ";".join(["{n}::{n}".format(n=n) for n in public_deps_names])
+        find_libraries_block = target_template.format(name=name, deps=deps, build_type_suffix="", deps_names=deps_names)
+        target_props = assign_target_properties.format(name=name, deps=deps, deps_names=deps_names)
         tmp = self.template.format(name=name, deps=deps,
                                    version=dep_cpp_info.version,
                                    find_dependencies_block="\n        ".join(lines),
@@ -83,17 +85,9 @@ endif()
         return tmp
 
 
-def find_dependency_lines(name, public_deps_names, find_modules):
+def find_dependency_lines(public_deps_names, find_modules):
     lines = ["", "# Library dependencies", "include(CMakeFindDependencyMacro)"]
     for dep_name in public_deps_names:
-        def property_lines(prop):
-            lib_t = "%s::%s" % (name, name)
-            dep_t = "%s::%s" % (dep_name, dep_name)
-            return ["get_target_property(tmp %s %s)" % (dep_t, prop),
-                    "if(tmp)",
-                    "  set_property(TARGET %s APPEND PROPERTY %s ${tmp})" % (lib_t, prop),
-                    'endif()']
-
         if find_modules:
             lines.append("\n")
             lines.append("find_dependency(%s REQUIRED)" % dep_name)
@@ -106,8 +100,4 @@ def find_dependency_lines(name, public_deps_names, find_modules):
             lines.append("else()")
             lines.append('  find_dependency(%s REQUIRED NO_MODULE)' % dep_name)
             lines.append("endif()")
-
-        lines.extend(property_lines("INTERFACE_LINK_LIBRARIES"))
-        lines.extend(property_lines("INTERFACE_COMPILE_DEFINITIONS"))
-        lines.extend(property_lines("INTERFACE_INCLUDE_DIRECTORIES"))
     return lines
