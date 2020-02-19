@@ -10,7 +10,6 @@ import sys
 import tempfile
 import threading
 import unittest
-import textwrap
 import uuid
 from collections import Counter, OrderedDict
 from contextlib import contextmanager
@@ -35,7 +34,6 @@ from conans.client.rest.uploader_downloader import IterableToFileAdapter
 from conans.client.tools import environment_append
 from conans.client.tools.files import chdir
 from conans.client.tools.files import replace_in_file
-from conans.client.tools.oss import check_output
 from conans.client.tools.scm import Git, SVN
 from conans.client.tools.win import get_cased_path
 from conans.client.userio import UserIO
@@ -52,6 +50,7 @@ from conans.test.utils.test_files import temp_folder
 from conans.util.env_reader import get_env
 from conans.util.files import mkdir, save_files
 from conans.client.runner import ConanRunner
+from conans.util.runners import check_output_runner
 
 NO_SETTINGS_PACKAGE_ID = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
 
@@ -76,7 +75,7 @@ def inc_package_manifest_timestamp(cache, package_reference, inc_time):
     manifest.save(path)
 
 
-def test_processed_profile(profile=None, settings=None):
+def test_profile(profile=None, settings=None):
     if profile is None:
         profile = Profile()
     if profile.processed_settings is None:
@@ -139,6 +138,12 @@ class TestingResponse(object):
     @property
     def status_code(self):
         return self.test_response.status_code
+
+    def json(self):
+        try:
+            return json.loads(self.test_response.content)
+        except:
+            raise ValueError("The response is not a JSON")
 
 
 class TestRequester(object):
@@ -529,10 +534,10 @@ def create_local_svn_checkout(files, repo_url, rel_project_path=None,
             subprocess.check_output("svn add .", shell=True)
             subprocess.check_output('svn commit -m "{}"'.format(commit_msg), shell=True)
             if SVN.get_version() >= SVN.API_CHANGE_VERSION:
-                rev = check_output("svn info --show-item revision").strip()
+                rev = check_output_runner("svn info --show-item revision").strip()
             else:
                 import xml.etree.ElementTree as ET
-                output = check_output("svn info --xml").strip()
+                output = check_output_runner("svn info --xml").strip()
                 root = ET.fromstring(output)
                 rev = root.findall("./entry")[0].get("revision")
         project_url = repo_url + "/" + quote(rel_project_path.replace("\\", "/"))
@@ -590,6 +595,25 @@ class SVNLocalRepoTestCase(unittest.TestCase):
             shutil.rmtree(tmp_folder, ignore_errors=False, onerror=try_remove_readonly)
 
 
+class LocalDBMock(object):
+
+    def __init__(self, user=None, access_token=None, refresh_token=None):
+        self.user = user
+        self.access_token = access_token
+        self.refresh_token = refresh_token
+
+    def get_login(self, _):
+        return self.user, self.access_token, self.refresh_token
+
+    def get_username(self, _):
+        return self.user
+
+    def store(self, user, access_token, refresh_token, _):
+        self.user = user
+        self.access_token = access_token
+        self.refresh_token = refresh_token
+
+
 class MockedUserIO(UserIO):
 
     """
@@ -642,13 +666,26 @@ class TestClient(object):
 
     def __init__(self, cache_folder=None, current_folder=None, servers=None, users=None,
                  requester_class=None, runner=None, path_with_spaces=True,
-                 revisions_enabled=None, cpu_count=1):
+                 revisions_enabled=None, cpu_count=1, default_server_user=None):
         """
         current_folder: Current execution folder
         servers: dict of {remote_name: TestServer}
         logins is a list of (user, password) for auto input in order
         if required==> [("lasote", "mypass"), ("other", "otherpass")]
         """
+        if default_server_user is not None:
+            if servers is not None:
+                raise Exception("Cannot define both 'servers' and 'default_server_user'")
+            if users is not None:
+                raise Exception("Cannot define both 'users' and 'default_server_user'")
+            if default_server_user is True:
+                server_users = {"user": "password"}
+                users = {"default": [("user", "password")]}
+            else:
+                server_users = default_server_user
+                users = {"default": list(default_server_user.items())}
+            server = TestServer(users=server_users)
+            servers = {"default": server}
 
         self.users = users
         if self.users is None:
@@ -674,6 +711,9 @@ servers["r2"] = TestServer()
         if servers is not False:  # Do not mess with registry remotes
             self.update_servers()
         self.current_folder = current_folder or temp_folder(path_with_spaces)
+
+    def load(self, filename):
+        return load(os.path.join(self.current_folder, filename))
 
     @property
     def cache(self):
@@ -751,7 +791,7 @@ servers["r2"] = TestServer()
 
     def update_servers(self):
         cache = self.cache
-        Remotes().save(cache.registry_path)
+        Remotes().save(cache.remotes_path)
         registry = cache.registry
 
         for name, server in self.servers.items():
@@ -815,7 +855,18 @@ servers["r2"] = TestServer()
             added_modules = set(sys.modules).difference(old_modules)
             for added in added_modules:
                 sys.modules.pop(added, None)
+        self._handle_cli_result(command_line, assert_error=assert_error, error=error)
+        return error
 
+    def run_command(self, command, cwd=None, assert_error=False):
+        output = TestBufferConanOutput()
+        self.out = output
+        runner = ConanRunner(output=output)
+        ret = runner(command, cwd=cwd or self.current_folder)
+        self._handle_cli_result(command, assert_error=assert_error, error=ret)
+        return ret
+
+    def _handle_cli_result(self, command, assert_error, error):
         if (assert_error and not error) or (not assert_error and error):
             if assert_error:
                 msg = " Command succeeded (failure expected): "
@@ -825,18 +876,10 @@ servers["r2"] = TestServer()
                 header='{:-^80}'.format(msg),
                 output_header='{:-^80}'.format(" Output: "),
                 output_footer='-'*80,
-                cmd=command_line,
+                cmd=command,
                 output=self.out
             )
             raise Exception(exc_message)
-
-        return error
-
-    def run_command(self, command, cwd=None):
-        output = TestBufferConanOutput()
-        self.out = output
-        runner = ConanRunner(output=output)
-        return runner(command, cwd=cwd or self.current_folder)
 
     def save(self, files, path=None, clean_first=False):
         """ helper metod, will store files in the current folder
@@ -858,132 +901,6 @@ servers["r2"] = TestServer()
                 shutil.copytree(s, d)
             else:
                 shutil.copy2(s, d)
-
-
-class TurboTestClient(TestClient):
-
-    tmp_json_name = ".tmp_json"
-
-    def __init__(self, *args, **kwargs):
-        if "users" not in kwargs:
-            from collections import defaultdict
-            kwargs["users"] = defaultdict(lambda: [("conan", "password")])
-
-        super(TurboTestClient, self).__init__(*args, **kwargs)
-
-    def export(self, ref, conanfile=None, args=None, assert_error=False):
-        conanfile = str(conanfile) if conanfile else str(GenConanfile())
-        self.save({"conanfile.py": conanfile})
-        self.run("export . {} {}".format(ref.full_str(), args or ""),
-                 assert_error=assert_error)
-        rrev = self.cache.package_layout(ref).recipe_revision()
-        return ref.copy_with_rev(rrev)
-
-    def create(self, ref, conanfile=None, args=None, assert_error=False):
-        conanfile = str(conanfile) if conanfile else str(GenConanfile())
-        self.save({"conanfile.py": conanfile})
-        self.run("create . {} {} --json {}".format(ref.full_str(),
-                                                   args or "", self.tmp_json_name),
-                 assert_error=assert_error)
-        rrev = self.cache.package_layout(ref).recipe_revision()
-        json_path = os.path.join(self.current_folder, self.tmp_json_name)
-        data = json.loads(load(json_path))
-        if assert_error:
-            return None
-        package_id = data["installed"][0]["packages"][0]["id"]
-        package_ref = PackageReference(ref, package_id)
-        prev = self.cache.package_layout(ref.copy_clear_rev()).package_revision(package_ref)
-        return package_ref.copy_with_revs(rrev, prev)
-
-    def upload_all(self, ref, remote=None, args=None, assert_error=False):
-        remote = remote or list(self.servers.keys())[0]
-        self.run("upload {} -c --all -r {} {}".format(ref.full_str(), remote, args or ""),
-                 assert_error=assert_error)
-        if not assert_error:
-            remote_rrev, _ = self.servers[remote].server_store.get_last_revision(ref)
-            return ref.copy_with_rev(remote_rrev)
-        return
-
-    def remove_all(self):
-        self.run("remove '*' -f")
-
-    def export_pkg(self, ref, conanfile=None, args=None, assert_error=False):
-        conanfile = str(conanfile) if conanfile else str(GenConanfile())
-        self.save({"conanfile.py": conanfile})
-        self.run("export-pkg . {} {} --json {}".format(ref.full_str(),
-                                                       args or "", self.tmp_json_name),
-                 assert_error=assert_error)
-        rrev = self.cache.package_layout(ref).recipe_revision()
-        json_path = os.path.join(self.current_folder, self.tmp_json_name)
-        data = json.loads(load(json_path))
-        if assert_error:
-            return None
-        package_id = data["installed"][0]["packages"][0]["id"]
-        package_ref = PackageReference(ref, package_id)
-        prev = self.cache.package_layout(ref.copy_clear_rev()).package_revision(package_ref)
-        return package_ref.copy_with_revs(rrev, prev)
-
-    def recipe_exists(self, ref):
-        return self.cache.package_layout(ref).recipe_exists()
-
-    def package_exists(self, pref):
-        return self.cache.package_layout(pref.ref).package_exists(pref)
-
-    def recipe_revision(self, ref):
-        return self.cache.package_layout(ref).recipe_revision()
-
-    def package_revision(self, pref):
-        return self.cache.package_layout(pref.ref).package_revision(pref)
-
-    def search(self, pattern, remote=None, assert_error=False, args=None):
-        remote = " -r={}".format(remote) if remote else ""
-        self.run("search {} --json {} {} {}".format(pattern, self.tmp_json_name, remote,
-                                                    args or ""),
-                 assert_error=assert_error)
-        json_path = os.path.join(self.current_folder, self.tmp_json_name)
-        data = json.loads(load(json_path))
-        return data
-
-    def massive_uploader(self, ref, revisions, num_prev, remote=None):
-        """Uploads N revisions with M package revisions. The revisions can be specified like:
-            revisions = [{"os": "Windows"}, {"os": "Linux"}], \
-                        [{"os": "Macos"}], \
-                        [{"os": "Solaris"}, {"os": "FreeBSD"}]
-
-            IMPORTANT: Different settings keys will cause different recipe revisions
-        """
-        remote = remote or "default"
-        ret = []
-        for i, settings_groups in enumerate(revisions):
-            tmp = []
-            for settings in settings_groups:
-                conanfile_gen = GenConanfile(). \
-                    with_build_msg("REV{}".format(i)). \
-                    with_package_file("file", env_var="MY_VAR")
-                for s in settings.keys():
-                    conanfile_gen = conanfile_gen.with_setting(s)
-                for k in range(num_prev):
-                    args = " ".join(["-s {}={}".format(key, value)
-                                     for key, value in settings.items()])
-                    with environment_append({"MY_VAR": str(k)}):
-                        pref = self.create(ref, conanfile=conanfile_gen, args=args)
-                        self.upload_all(ref, remote=remote)
-                        tmp.append(pref)
-                ret.append(tmp)
-        return ret
-
-    def init_git_repo(self, files=None, branch=None, submodules=None, origin_url=None):
-        _, commit = create_local_git_repo(files, branch, submodules, self.current_folder)
-        if origin_url:
-            self.run_command('git remote add origin {}'.format(origin_url))
-        return commit
-
-    def init_svn_repo(self, subpath, files=None, repo_url=None):
-        if not repo_url:
-            repo_url = create_remote_svn_repo(temp_folder())
-        _, rev = create_local_svn_checkout(files, repo_url, folder=self.current_folder,
-                                           rel_project_path=subpath, delete_checkout=False)
-        return rev
 
 
 class GenConanfile(object):
@@ -1014,7 +931,7 @@ class GenConanfile(object):
         self._scm = {}
         self._requires = []
         self._requirements = []
-        self._build_requirements = []
+        self._build_requires = []
         self._revision_mode = None
         self._package_info = {}
         self._package_id_lines = []
@@ -1040,7 +957,10 @@ class GenConanfile(object):
         return self
 
     def with_require(self, ref, private=False, override=False):
-        self._requires.append((ref.full_str(), private, override))
+        return self.with_require_plain(ref.full_str(), private, override)
+
+    def with_require_plain(self, ref_str, private=False, override=False):
+        self._requires.append((ref_str, private, override))
         return self
 
     def with_requirement(self, ref, private=False, override=False):
@@ -1050,11 +970,11 @@ class GenConanfile(object):
         self._requirements.append((ref_str, private, override))
         return self
 
-    def with_build_requirement(self, ref):
-        return self.with_build_requirement_plain(ref.full_str())
+    def with_build_require(self, ref):
+        return self.with_build_require_plain(ref.full_str())
 
-    def with_build_requirement_plain(self, ref_str):
-        self._build_requirements.append(ref_str)
+    def with_build_require_plain(self, ref_str):
+        self._build_requires.append(ref_str)
         return self
 
     def with_import(self, i):
@@ -1160,9 +1080,9 @@ class GenConanfile(object):
 
     @property
     def _build_requires_line(self):
-        if not self._build_requirements:
+        if not self._build_requires:
             return ""
-        line = ", ".join(['"{}"'.format(r) for r in self._build_requirements])
+        line = ", ".join(['"{}"'.format(r) for r in self._build_requires])
         tmp = "build_requires = %s" % line
         return tmp
 
@@ -1178,7 +1098,7 @@ class GenConanfile(object):
                 items.append('("{}"{}{})'.format(ref, private_str, override_str))
             else:
                 items.append('"{}"'.format(ref))
-        tmp = "requires = ({})".format(", ".join(items))
+        tmp = "requires = ({}, )".format(", ".join(items))
         return tmp
 
     @property
@@ -1291,6 +1211,130 @@ class GenConanfile(object):
         if len(ret) == 2:
             ret.append("    pass")
         return "\n".join(ret)
+
+
+class TurboTestClient(TestClient):
+
+    tmp_json_name = ".tmp_json"
+
+    def __init__(self, *args, **kwargs):
+        if "users" not in kwargs and "default_server_user" not in kwargs:
+            from collections import defaultdict
+            kwargs["users"] = defaultdict(lambda: [("conan", "password")])
+
+        super(TurboTestClient, self).__init__(*args, **kwargs)
+
+    def export(self, ref, conanfile=GenConanfile(), args=None, assert_error=False):
+        if conanfile:
+            self.save({"conanfile.py": conanfile})
+        self.run("export . {} {}".format(ref.full_str(), args or ""),
+                 assert_error=assert_error)
+        rrev = self.cache.package_layout(ref).recipe_revision()
+        return ref.copy_with_rev(rrev)
+
+    def create(self, ref, conanfile=GenConanfile(), args=None, assert_error=False):
+        if conanfile:
+            self.save({"conanfile.py": conanfile})
+        full_str = "{}@".format(ref.full_str()) if not ref.user else ref.full_str()
+        self.run("create . {} {} --json {}".format(full_str,
+                                                   args or "", self.tmp_json_name),
+                 assert_error=assert_error)
+        rrev = self.cache.package_layout(ref).recipe_revision()
+        data = json.loads(self.load(self.tmp_json_name))
+        if assert_error:
+            return None
+        package_id = data["installed"][0]["packages"][0]["id"]
+        package_ref = PackageReference(ref, package_id)
+        prev = self.cache.package_layout(ref.copy_clear_rev()).package_revision(package_ref)
+        return package_ref.copy_with_revs(rrev, prev)
+
+    def upload_all(self, ref, remote=None, args=None, assert_error=False):
+        remote = remote or list(self.servers.keys())[0]
+        self.run("upload {} -c --all -r {} {}".format(ref.full_str(), remote, args or ""),
+                 assert_error=assert_error)
+        if not assert_error:
+            remote_rrev, _ = self.servers[remote].server_store.get_last_revision(ref)
+            return ref.copy_with_rev(remote_rrev)
+        return
+
+    def remove_all(self):
+        self.run("remove '*' -f")
+
+    def export_pkg(self, ref, conanfile=GenConanfile(), args=None, assert_error=False):
+        if conanfile:
+            self.save({"conanfile.py": conanfile})
+        self.run("export-pkg . {} {} --json {}".format(ref.full_str(),
+                                                       args or "", self.tmp_json_name),
+                 assert_error=assert_error)
+        rrev = self.cache.package_layout(ref).recipe_revision()
+        data = json.loads(self.load(self.tmp_json_name))
+        if assert_error:
+            return None
+        package_id = data["installed"][0]["packages"][0]["id"]
+        package_ref = PackageReference(ref, package_id)
+        prev = self.cache.package_layout(ref.copy_clear_rev()).package_revision(package_ref)
+        return package_ref.copy_with_revs(rrev, prev)
+
+    def recipe_exists(self, ref):
+        return self.cache.package_layout(ref).recipe_exists()
+
+    def package_exists(self, pref):
+        return self.cache.package_layout(pref.ref).package_exists(pref)
+
+    def recipe_revision(self, ref):
+        return self.cache.package_layout(ref).recipe_revision()
+
+    def package_revision(self, pref):
+        return self.cache.package_layout(pref.ref).package_revision(pref)
+
+    def search(self, pattern, remote=None, assert_error=False, args=None):
+        remote = " -r={}".format(remote) if remote else ""
+        self.run("search {} --json {} {} {}".format(pattern, self.tmp_json_name, remote,
+                                                    args or ""),
+                 assert_error=assert_error)
+        data = json.loads(self.load(self.tmp_json_name))
+        return data
+
+    def massive_uploader(self, ref, revisions, num_prev, remote=None):
+        """Uploads N revisions with M package revisions. The revisions can be specified like:
+            revisions = [{"os": "Windows"}, {"os": "Linux"}], \
+                        [{"os": "Macos"}], \
+                        [{"os": "Solaris"}, {"os": "FreeBSD"}]
+
+            IMPORTANT: Different settings keys will cause different recipe revisions
+        """
+        remote = remote or "default"
+        ret = []
+        for i, settings_groups in enumerate(revisions):
+            tmp = []
+            for settings in settings_groups:
+                conanfile_gen = GenConanfile(). \
+                    with_build_msg("REV{}".format(i)). \
+                    with_package_file("file", env_var="MY_VAR")
+                for s in settings.keys():
+                    conanfile_gen = conanfile_gen.with_setting(s)
+                for k in range(num_prev):
+                    args = " ".join(["-s {}={}".format(key, value)
+                                     for key, value in settings.items()])
+                    with environment_append({"MY_VAR": str(k)}):
+                        pref = self.create(ref, conanfile=conanfile_gen, args=args)
+                        self.upload_all(ref, remote=remote)
+                        tmp.append(pref)
+                ret.append(tmp)
+        return ret
+
+    def init_git_repo(self, files=None, branch=None, submodules=None, origin_url=None):
+        _, commit = create_local_git_repo(files, branch, submodules, self.current_folder)
+        if origin_url:
+            self.run_command('git remote add origin {}'.format(origin_url))
+        return commit
+
+    def init_svn_repo(self, subpath, files=None, repo_url=None):
+        if not repo_url:
+            repo_url = create_remote_svn_repo(temp_folder())
+        _, rev = create_local_svn_checkout(files, repo_url, folder=self.current_folder,
+                                           rel_project_path=subpath, delete_checkout=False)
+        return rev
 
 
 class StoppableThreadBottle(threading.Thread):

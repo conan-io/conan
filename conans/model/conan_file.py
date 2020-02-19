@@ -1,8 +1,10 @@
 import os
 from contextlib import contextmanager
 
+import six
+
 from conans.client import tools
-from conans.client.output import Color, ScopedOutput
+from conans.client.output import ScopedOutput
 from conans.client.tools.env import environment_append, no_op, pythonpath
 from conans.client.tools.oss import OSInfo
 from conans.errors import ConanException, ConanInvalidConfiguration
@@ -23,7 +25,7 @@ def create_options(conanfile):
         if default_options:
             if isinstance(default_options, (list, tuple, dict)):
                 default_values = OptionsValues(default_options)
-            elif isinstance(default_options, str):
+            elif isinstance(default_options, six.string_types):
                 default_values = OptionsValues.loads(default_options)
             else:
                 raise ConanException("Please define your default_options as list, "
@@ -125,6 +127,8 @@ class ConanFile(object):
         self._conan_user = user
         self._conan_channel = channel
 
+        self.compatible_packages = []
+
     def initialize(self, settings, env):
         if isinstance(self.generators, str):
             self.generators = [self.generators]
@@ -132,19 +136,6 @@ class ConanFile(object):
         self.options = create_options(self)
         self.requires = create_requirements(self)
         self.settings = create_settings(self, settings)
-
-        try:
-            if self.settings.os_build and self.settings.os:
-                self.output.writeln("*"*60, front=Color.BRIGHT_RED)
-                self.output.writeln("  This package defines both 'os' and 'os_build' ",
-                                    front=Color.BRIGHT_RED)
-                self.output.writeln("  Please use 'os' for libraries and 'os_build'",
-                                    front=Color.BRIGHT_RED)
-                self.output.writeln("  only for build-requires used for cross-building",
-                                    front=Color.BRIGHT_RED)
-                self.output.writeln("*"*60, front=Color.BRIGHT_RED)
-        except ConanException:
-            pass
 
         if 'cppstd' in self.settings.fields:
             self.output.warn("Setting 'cppstd' is deprecated in favor of 'compiler.cppstd',"
@@ -184,8 +175,7 @@ class ConanFile(object):
         if not self._conan_channel:
             self._conan_channel = os.getenv("CONAN_CHANNEL") or self.default_channel
             if not self._conan_channel:
-                raise ConanException("CONAN_CHANNEL environment variable not defined, "
-                                     "but self.channel is used in conanfile")
+                raise ConanException("channel not defined, but self.channel is used in conanfile")
         return self._conan_channel
 
     @property
@@ -193,8 +183,7 @@ class ConanFile(object):
         if not self._conan_user:
             self._conan_user = os.getenv("CONAN_USERNAME") or self.default_user
             if not self._conan_user:
-                raise ConanException("CONAN_USERNAME environment variable not defined, "
-                                     "but self.user is used in conanfile")
+                raise ConanException("user not defined, but self.user is used in conanfile")
         return self._conan_user
 
     def collect_libs(self, folder=None):
@@ -263,8 +252,10 @@ class ConanFile(object):
         if run_environment:
             with tools.run_environment(self):
                 if OSInfo().is_macos:
-                    command = 'DYLD_LIBRARY_PATH="%s" %s' % (os.environ.get('DYLD_LIBRARY_PATH', ''),
-                                                             command)
+                    command = 'DYLD_LIBRARY_PATH="%s" DYLD_FRAMEWORK_PATH="%s" %s' % \
+                              (os.environ.get('DYLD_LIBRARY_PATH', ''),
+                               os.environ.get("DYLD_FRAMEWORK_PATH", ''),
+                               command)
                 retcode = _run()
         else:
             retcode = _run()

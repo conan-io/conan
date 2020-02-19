@@ -1,6 +1,6 @@
 from conans.client.generators.cmake_common import cmake_dependencies, cmake_dependency_vars, \
     cmake_global_vars, cmake_macros, cmake_package_info, cmake_settings_info, cmake_user_info_vars, \
-    generate_targets_section
+    generate_targets_section, CMakeCommonMacros
 from conans.model import Generator
 from conans.paths import BUILD_INFO_CMAKE
 
@@ -8,7 +8,11 @@ from conans.paths import BUILD_INFO_CMAKE
 class DepsCppCmake(object):
     def __init__(self, cpp_info):
         def join_paths(paths):
-            # Paths are doubled quoted, and escaped (but spaces)
+            """
+            Paths are doubled quoted, and escaped (but spaces)
+            e.g: set(LIBFOO_INCLUDE_DIRS "/path/to/included/dir" "/path/to/included/dir2")
+            """
+
             return "\n\t\t\t".join('"%s"'
                                    % p.replace('\\', '/').replace('$', '\\$').replace('"', '\\"')
                                    for p in paths)
@@ -24,14 +28,24 @@ class DepsCppCmake(object):
                                    replace('"', '\\"'))
                                    for v in values)
 
+        def join_paths_single_var(values):
+            """
+            semicolon-separated list of dirs:
+            e.g: set(LIBFOO_INCLUDE_DIR "/path/to/included/dir;/path/to/included/dir2")
+            """
+            return '"%s"' % ";".join(p.replace('\\', '/').replace('$', '\\$') for p in values)
+
         self.include_paths = join_paths(cpp_info.include_paths)
+        self.include_path = join_paths_single_var(cpp_info.include_paths)
         self.lib_paths = join_paths(cpp_info.lib_paths)
         self.res_paths = join_paths(cpp_info.res_paths)
         self.bin_paths = join_paths(cpp_info.bin_paths)
         self.build_paths = join_paths(cpp_info.build_paths)
         self.src_paths = join_paths(cpp_info.src_paths)
-
+        self.framework_paths = join_paths(cpp_info.framework_paths)
         self.libs = join_flags(" ", cpp_info.libs)
+        self.system_libs = join_flags(" ", cpp_info.system_libs)
+        self.frameworks = join_flags(" ", cpp_info.frameworks)
         self.defines = join_defines(cpp_info.defines, "-D")
         self.compile_definitions = join_defines(cpp_info.defines)
 
@@ -49,6 +63,8 @@ class DepsCppCmake(object):
         self.exelinkflags_list = join_flags(";", cpp_info.exelinkflags)
 
         self.rootpath = join_paths([cpp_info.rootpath])
+        self.build_modules_paths = join_paths([path for path in cpp_info.build_modules_paths if
+                                               path.endswith(".cmake")])
 
 
 class CMakeGenerator(Generator):
@@ -59,9 +75,11 @@ class CMakeGenerator(Generator):
     @property
     def content(self):
         sections = ["include(CMakeParseArguments)"]
+        sections.append(CMakeCommonMacros.apple_frameworks_macro)
 
         # Per requirement variables
-        for dep_name, dep_cpp_info in self.deps_build_info.dependencies:
+        for _, dep_cpp_info in self.deps_build_info.dependencies:
+            dep_name = dep_cpp_info.get_name("cmake")
             deps = DepsCppCmake(dep_cpp_info)
             dep_flags = cmake_dependency_vars(dep_name, deps=deps)
             sections.append(dep_flags)
@@ -88,7 +106,7 @@ class CMakeGenerator(Generator):
             sections.append(dep_flags)
 
         # TARGETS
-        sections.extend(generate_targets_section(self.deps_build_info.dependencies))
+        sections.extend(generate_targets_section(self.deps_build_info.dependencies, "cmake"))
 
         # MACROS
         sections.append(cmake_macros)

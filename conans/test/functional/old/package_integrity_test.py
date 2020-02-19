@@ -11,7 +11,7 @@ class PackageIngrityTest(unittest.TestCase):
 
     def remove_locks_test(self):
         client = TestClient()
-        client.save({"conanfile.py": str(GenConanfile().with_name("Hello").with_version("0.1"))})
+        client.save({"conanfile.py": GenConanfile().with_name("Hello").with_version("0.1")})
         client.run("create . lasote/testing")
         self.assertNotIn('does not contain a number!', client.out)
         ref = ConanFileReference.loads("Hello/0.1@lasote/testing")
@@ -32,7 +32,7 @@ class PackageIngrityTest(unittest.TestCase):
         test_server = TestServer([], users={"lasote": "mypass"})
         client = TestClient(servers={"default": test_server},
                             users={"default": [("lasote", "mypass")]})
-        client.save({"conanfile.py": str(GenConanfile().with_name("Hello").with_version("0.1"))})
+        client.save({"conanfile.py": GenConanfile().with_name("Hello").with_version("0.1")})
         client.run("create . lasote/testing")
         ref = ConanFileReference.loads("Hello/0.1@lasote/testing")
         pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
@@ -40,8 +40,9 @@ class PackageIngrityTest(unittest.TestCase):
         set_dirty(package_folder)
 
         client.run("upload * --all --confirm", assert_error=True)
-        self.assertIn("ERROR: Package %s is corrupted, aborting upload" % str(pref),
-                      client.out)
+        self.assertIn("ERROR: Hello/0.1@lasote/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9: "
+                      "Upload package to 'default' failed: Package %s is corrupted, aborting upload"
+                      % str(pref), client.out)
         self.assertIn("Remove it with 'conan remove Hello/0.1@lasote/testing -p=%s'"
                       % NO_SETTINGS_PACKAGE_ID, client.out)
 

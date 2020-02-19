@@ -1,3 +1,4 @@
+import textwrap
 import time
 import unittest
 from collections import OrderedDict
@@ -9,6 +10,47 @@ from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import TestClient, TestServer
 
 
+class ExportsSourcesMissingTest(unittest.TestCase):
+
+    def exports_sources_missing_test(self):
+        client = TestClient(default_server_user=True)
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class Pkg(ConanFile):
+                exports_sources = "*"
+            """)
+        client.save({"conanfile.py": conanfile,
+                     "source.txt": "somesource"})
+        client.run("create . pkg/0.1@user/testing")
+        client.run("upload pkg/0.1@user/testing --all")
+
+        # Failure because remote is removed
+        servers = OrderedDict(client.servers)
+        servers["new_server"] = TestServer(users={"user": "password"})
+        client2 = TestClient(servers=servers, users={"new_server": [("user", "password")]})
+        client2.run("install pkg/0.1@user/testing")
+        client2.run("remote remove default")
+        client2.run("upload pkg/0.1@user/testing --all -r=new_server", assert_error=True)
+        self.assertIn("The 'pkg/0.1@user/testing' package has 'exports_sources' but sources "
+                      "not found in local cache.", client2.out)
+        self.assertIn("Probably it was installed from a remote that is no longer available.",
+                      client2.out)
+
+        # Failure because remote removed the package
+        client2 = TestClient(servers=servers, users={"new_server": [("user", "password")],
+                                                     "default":  [("user", "password")]})
+        client2.run("install pkg/0.1@user/testing")
+        client2.run("remove * -r=default -f")
+        client2.run("upload pkg/0.1@user/testing --all -r=new_server", assert_error=True)
+        self.assertIn("ERROR: pkg/0.1@user/testing: Upload recipe to 'new_server' failed: "
+                      "Recipe not found: 'pkg/0.1@user/testing'. [Remote: default]",
+                      client2.out)
+        self.assertIn("The 'pkg/0.1@user/testing' package has 'exports_sources' but sources "
+                      "not found in local cache.", client2.out)
+        self.assertIn("Probably it was installed from a remote that is no longer available.",
+                      client2.out)
+
+
 class MultiRemotesTest(unittest.TestCase):
 
     def setUp(self):
@@ -18,7 +60,8 @@ class MultiRemotesTest(unittest.TestCase):
         self.servers["default"] = default_server
         self.servers["local"] = local_server
 
-    def _create(self, client, number, version, deps=None, export=True, modifier=""):
+    @staticmethod
+    def _create(client, number, version, deps=None, export=True, modifier=""):
         files = cpp_hello_conan_files(number, version, deps, build=False)
         # To avoid building
         files = {CONANFILE: files[CONANFILE].replace("config(", "config2(") + modifier}
@@ -28,7 +71,7 @@ class MultiRemotesTest(unittest.TestCase):
 
     def conan_install_build_flag_test(self):
         """
-        Checks conan install --update works with different remotes and changes the asociated ones
+        Checks conan install --update works with different remotes and changes the associated ones
         in registry accordingly
         """
         client_a = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")],
@@ -94,6 +137,41 @@ class MultiRemotesTest(unittest.TestCase):
         self.assertIn("Binary: Cache", client_b.out)
         client_b.run("remote list_ref")
         self.assertIn("Hello0/0.0@lasote/stable: default", client_b.out)
+
+    def conan_install_update_test(self):
+        """
+        Checks conan install --update works only with the remote associated
+        """
+        client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")],
+                                                         "local": [("lasote", "mypass")]})
+
+        self._create(client, "Hello0", "0.0")
+        client.run("install Hello0/0.0@lasote/stable --build missing")
+        client.run("upload Hello0/0.0@lasote/stable --all -r default")
+        sleep(1)  # For timestamp and updates checks
+        self._create(client, "Hello0", "0.0", modifier=" ")
+        client.run("install Hello0/0.0@lasote/stable --build missing")
+        client.run("upload Hello0/0.0@lasote/stable --all -r local")
+        client.run("remove '*' -f")
+
+        client.run("install Hello0/0.0@lasote/stable")
+        self.assertIn("Hello0/0.0@lasote/stable from 'default' - Downloaded", client.out)
+        client.run("install Hello0/0.0@lasote/stable --update")
+        self.assertIn("Hello0/0.0@lasote/stable from 'default' - Cache", client.out)
+
+        # Check that it really updates from the indicated remote
+        client.run("install Hello0/0.0@lasote/stable --update -r local")
+        self.assertIn("Hello0/0.0@lasote/stable from 'local' - Updated", client.out)
+
+        sleep(1)  # For timestamp and updates checks
+        # Check that it really updates in case of newer package uploaded to the associated remote
+        client_b = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")],
+                                                           "local": [("lasote", "mypass")]})
+        self._create(client_b, "Hello0", "0.0", modifier="  ")
+        client_b.run("install Hello0/0.0@lasote/stable --build missing")
+        client_b.run("upload Hello0/0.0@lasote/stable --all -r local")
+        client.run("install Hello0/0.0@lasote/stable --update")
+        self.assertIn("Hello0/0.0@lasote/stable from 'local' - Updated", client.out)
 
 
 class MultiRemoteTest(unittest.TestCase):
@@ -169,13 +247,13 @@ class MultiRemoteTest(unittest.TestCase):
         client.run("user lasote -p mypass -r s1")
         client.run("upload MyLib* -r s1 -c")
 
-        servers["s1"].fake_url = "http://asdlhaljksdhlajkshdljakhsd"  # Do not exist
+        servers["s1"].fake_url = "http://asdlhaljksdhlajkshdljakhsd.com"  # Do not exist
         client2 = TestClient(servers=servers, users=self.users)
         err = client2.run("install MyLib/0.1@conan/testing --build=missing", assert_error=True)
         self.assertTrue(err)
         self.assertIn("MyLib/0.1@conan/testing: Trying with 's0'...", client2.out)
         self.assertIn("MyLib/0.1@conan/testing: Trying with 's1'...", client2.out)
-        self.assertIn("Unable to connect to s1=http://asdlhaljksdhlajkshdljakhsd", client2.out)
+        self.assertIn("Unable to connect to s1=http://asdlhaljksdhlajkshdljakhsd.com", client2.out)
         # s2 is not even tried
         self.assertNotIn("MyLib/0.1@conan/testing: Trying with 's2'...", client2.out)
 

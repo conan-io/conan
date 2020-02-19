@@ -1,10 +1,9 @@
 import os
-import textwrap
 import unittest
 
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.util.env_reader import get_env
-from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID
+from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID, GenConanfile
 
 
 class CorruptedPackagesTest(unittest.TestCase):
@@ -18,13 +17,7 @@ class CorruptedPackagesTest(unittest.TestCase):
         revisions_enabled = get_env("TESTING_REVISIONS_ENABLED", False)
         self.server = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")])
         self.client = TestClient(servers={"default": self.server})
-        conanfile = textwrap.dedent("""
-        from conans import ConanFile
-
-        class Pkg(ConanFile):
-            pass
-        """)
-        self.client.save({"conanfile.py": conanfile})
+        self.client.save({"conanfile.py": GenConanfile()})
         self.client.run("create . Pkg/0.1@user/testing")
         self.client.run("upload * --all --confirm -r default")
         # Check files are uploded in this order: conan_package.tgz, conaninfo.txt, conanmanifest.txt
@@ -32,9 +25,9 @@ class CorruptedPackagesTest(unittest.TestCase):
         order2 = str(self.client.out).find("Uploading conaninfo.txt", order1)
         order3 = str(self.client.out).find("Uploading conanmanifest.txt", order2)
         self.assertTrue(order1 < order2 < order3)
-        rrev = "210a4a16419aae28fea1f268a8e4f3d4" if revisions_enabled else "0"
+        rrev = "f3367e0e7d170aa12abccb175fee5f97" if revisions_enabled else "0"
         pref_str = "Pkg/0.1@user/testing#%s" % rrev
-        prev = "11de80325e8db78617b05384825c6409" if revisions_enabled else "0"
+        prev = "83c38d3b4e5f1b8450434436eec31b00" if revisions_enabled else "0"
         self.pref = pref = PackageReference(ConanFileReference.loads(pref_str),
                                             NO_SETTINGS_PACKAGE_ID, prev)
         self.manifest_path = self.server.server_store.get_package_file_path(pref,

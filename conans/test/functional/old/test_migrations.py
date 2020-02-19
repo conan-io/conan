@@ -36,7 +36,7 @@ class TestMigrations(unittest.TestCase):
     def test_migrate_revision_metadata(self):
         # https://github.com/conan-io/conan/issues/4898
         client = TestClient()
-        client.save({"conanfile.py": str(GenConanfile().with_name("Hello").with_version("0.1"))})
+        client.save({"conanfile.py": GenConanfile().with_name("Hello").with_version("0.1")})
         client.run("create . user/testing")
         ref = ConanFileReference.loads("Hello/0.1@user/testing")
         layout1 = client.cache.package_layout(ref)

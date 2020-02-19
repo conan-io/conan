@@ -73,6 +73,16 @@ class ConanOutput(object):
     def writeln(self, data, front=None, back=None, error=False):
         self.write(data, front, back, newline=True, error=error)
 
+    def _write(self, data, newline=False):
+        if newline:
+            data = "%s\n" % data
+        self._stream.write(data)
+
+    def _write_err(self, data, newline=False):
+        if newline:
+            data = "%s\n" % data
+        self._stream_err.write(data)
+
     def write(self, data, front=None, back=None, newline=False, error=False):
         if six.PY2:
             if isinstance(data, str):
@@ -80,17 +90,15 @@ class ConanOutput(object):
 
         if self._color and (front or back):
             data = "%s%s%s%s" % (front or '', back or '', data, Style.RESET_ALL)
-        if newline:
-            data = "%s\n" % data
 
         # https://github.com/conan-io/conan/issues/4277
         # Windows output locks produce IOErrors
         for _ in range(3):
             try:
                 if error:
-                    self._stream_err.write(data)
+                    self._write_err(data, newline)
                 else:
-                    self._stream.write(data)
+                    self._write(data, newline)
                 break
             except IOError:
                 import time

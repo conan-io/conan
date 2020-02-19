@@ -2,12 +2,15 @@ import json
 import os
 import platform
 import stat
+import textwrap
 import unittest
 
 import six
+from mock import patch
 from requests.packages.urllib3.exceptions import ConnectionError
 
 from conans import DEFAULT_REVISION_V1
+from conans.client.tools import environment_append
 from conans.client.tools.files import untargz
 from conans.model.manifest import FileTreeManifest
 from conans.model.package_metadata import PackageMetadata
@@ -17,7 +20,7 @@ from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.test_files import hello_conan_files, hello_source_files, temp_folder, \
     uncompress_packaged_files
 from conans.test.utils.tools import (NO_SETTINGS_PACKAGE_ID, TestClient, TestRequester, TestServer,
-                                     MockedUserIO, TestBufferConanOutput)
+                                     MockedUserIO, TestBufferConanOutput, GenConanfile)
 from conans.util.files import load, mkdir, save
 
 myconan1 = """
@@ -55,6 +58,19 @@ class FailPairFilesUploader(BadConnectionUploader):
         self.counter_fail += 1
         if self.counter_fail % 2 == 1:
             raise ConnectionError("Pair file, error!")
+        else:
+            return super(BadConnectionUploader, self).put(*args, **kwargs)
+
+
+class FailOnReferencesUploader(BadConnectionUploader):
+    fail_on = ["lib1", "lib3"]
+
+    def __init__(self, *args, **kwargs):
+        super(BadConnectionUploader, self).__init__(*args, **kwargs)
+
+    def put(self, *args, **kwargs):
+        if any(ref in args[0] for ref in self.fail_on):
+            raise ConnectionError("Connection fails with lib2 and lib4 references!")
         else:
             return super(BadConnectionUploader, self).put(*args, **kwargs)
 
@@ -184,7 +200,8 @@ class UploadTest(unittest.TestCase):
         client.run("export . frodo/stable")
         client.run("upload Hello* --confirm --retry 0 --retry-wait=1", assert_error=True)
         self.assertNotIn("Waiting 1 seconds to retry...", client.out)
-        self.assertIn("ERROR: Execute upload again to retry upload the failed files: "
+        self.assertIn("ERROR: Hello0/1.2.1@frodo/stable: Upload recipe to 'default' failed: "
+                      "Execute upload again to retry upload the failed files: "
                       "conan_export.tgz. [Remote: default]", client.out)
 
         # Try with broken connection even with 10 retries
@@ -194,7 +211,8 @@ class UploadTest(unittest.TestCase):
         client.run("export . frodo/stable")
         client.run("upload Hello* --confirm --retry 10 --retry-wait=0", assert_error=True)
         self.assertIn("Waiting 0 seconds to retry...", client.out)
-        self.assertIn("ERROR: Execute upload again to retry upload the failed files", client.out)
+        self.assertIn("ERROR: Hello0/1.2.1@frodo/stable: Upload recipe to 'default' failed: "
+                      "Execute upload again to retry upload the failed files", client.out)
 
         # For each file will fail the first time and will success in the second one
         client = self._get_client(FailPairFilesUploader)
@@ -228,7 +246,8 @@ class UploadTest(unittest.TestCase):
         client.run('config set general.retry_wait=1')
         client.run("upload Hello* --confirm", assert_error=True)
         self.assertNotIn("Waiting 1 seconds to retry...", client.out)
-        self.assertIn("ERROR: Execute upload again to retry upload the failed files: "
+        self.assertIn("ERROR: Hello0/1.2.1@frodo/stable: Upload recipe to 'default' failed: "
+                      "Execute upload again to retry upload the failed files: "
                       "conan_export.tgz. [Remote: default]", client.out)
 
         # Try with broken connection even with 10 retries
@@ -240,7 +259,8 @@ class UploadTest(unittest.TestCase):
         client.run('config set general.retry_wait=0')
         client.run("upload Hello* --confirm", assert_error=True)
         self.assertIn("Waiting 0 seconds to retry...", client.out)
-        self.assertIn("ERROR: Execute upload again to retry upload the failed files", client.out)
+        self.assertIn("ERROR: Hello0/1.2.1@frodo/stable: Upload recipe to 'default' failed: "
+                      "Execute upload again to retry upload the failed files", client.out)
 
         # For each file will fail the first time and will success in the second one
         client = self._get_client(FailPairFilesUploader)
@@ -252,6 +272,126 @@ class UploadTest(unittest.TestCase):
         client.run('config set general.retry_wait=0')
         client.run("upload Hello* --confirm --all")
         self.assertEqual(str(client.out).count("ERROR: Pair file, error!"), 6)
+
+    def upload_parallel_error_test(self):
+        """Cause an error in the parallel transfer and see some message"""
+        client = TestClient(requester_class=FailOnReferencesUploader, default_server_user=True)
+        client.save({"conanfile.py": GenConanfile()})
+        client.run('user -p password -r default user')
+        for index in range(4):
+            client.run('create . lib{}/1.0@user/channel'.format(index))
+        client.run('upload lib* --parallel -c --all -r default', assert_error=True)
+        self.assertIn("Connection fails with lib2 and lib4 references!", client.out)
+        self.assertIn("Execute upload again to retry upload the failed files", client.out)
+
+    def upload_parallel_success_test(self):
+        """Upload 2 packages in parallel with success"""
+
+        client = TestClient(default_server_user=True)
+        client.save({"conanfile.py": GenConanfile()})
+        client.run('create . lib0/1.0@user/channel')
+        self.assertIn("lib0/1.0@user/channel: Package '{}' created".format(NO_SETTINGS_PACKAGE_ID),
+                      client.out)
+        client.run('create . lib1/1.0@user/channel')
+        self.assertIn("lib1/1.0@user/channel: Package '{}' created".format(NO_SETTINGS_PACKAGE_ID),
+                      client.out)
+        client.run('user -p password -r default user')
+        client.run('upload lib* --parallel -c --all -r default')
+        self.assertIn("Uploading lib0/1.0@user/channel to remote 'default'", client.out)
+        self.assertIn("Uploading lib1/1.0@user/channel to remote 'default'", client.out)
+        client.run('search lib0/1.0@user/channel -r default')
+        self.assertIn("lib0/1.0@user/channel", client.out)
+        client.run('search lib1/1.0@user/channel -r default')
+        self.assertIn("lib1/1.0@user/channel", client.out)
+
+    def upload_parallel_fail_on_interaction_test(self):
+        """Upload 2 packages in parallel and fail because non_interactive forced"""
+
+        client = TestClient(default_server_user=True)
+        client.save({"conanfile.py": GenConanfile()})
+        num_references = 2
+        for index in range(num_references):
+            client.run('create . lib{}/1.0@user/channel'.format(index))
+            self.assertIn("lib{}/1.0@user/channel: Package '{}' created".format(
+                index,
+                NO_SETTINGS_PACKAGE_ID),
+                client.out)
+        client.run('user -c')
+        client.run('upload lib* --parallel -c --all -r default', assert_error=True)
+        self.assertIn("ERROR: lib0/1.0@user/channel: Upload recipe to 'default' failed: "
+                      "Conan interactive mode disabled. [Remote: default]", client.out)
+
+    def recipe_upload_fail_on_generic_exception_test(self):
+        # Make the upload fail with a generic Exception
+        client = TestClient(default_server_user=True)
+        conanfile = textwrap.dedent("""
+            import os
+            from conans import ConanFile
+            class Pkg(ConanFile):
+                exports = "*"
+                def package(self):
+                    self.copy("*")
+            """)
+        client.save({"conanfile.py": conanfile,
+                     "myheader.h": "",
+                     "conan_export.tgz/dummy": ""})
+        client.run('create . lib/1.0@user/channel')
+        client.run('upload lib* -c --all -r default', assert_error=True)
+        self.assertIn("ERROR: lib/1.0@user/channel: Upload recipe to 'default' failed:", client.out)
+        self.assertIn("ERROR: Errors uploading some packages", client.out)
+
+    def package_upload_fail_on_generic_exception_test(self):
+        # Make the upload fail with a generic Exception
+        client = TestClient(default_server_user=True)
+        conanfile = textwrap.dedent("""
+            import os
+            from conans import ConanFile
+            class Pkg(ConanFile):
+                exports = "*"
+                def package(self):
+                    os.makedirs(os.path.join(self.package_folder, "conan_package.tgz"))
+                    self.copy("*")
+            """)
+        client.save({"conanfile.py": conanfile,
+                     "myheader.h": ""})
+        client.run('create . lib/1.0@user/channel')
+
+        client.run('upload lib* -c --all -r default', assert_error=True)
+        self.assertNotIn("os.remove(tgz_path)", client.out)
+        self.assertNotIn("Traceback", client.out)
+        self.assertIn("ERROR: lib/1.0@user/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9: "
+                      "Upload package to 'default' failed:", client.out)
+        self.assertIn("ERROR: Errors uploading some packages", client.out)
+
+        with environment_append({"CONAN_VERBOSE_TRACEBACK": "True"}):
+            client.run('upload lib* -c --all -r default', assert_error=True)
+            self.assertIn("os.remove(tgz_path)", client.out)
+            self.assertIn("Traceback", client.out)
+            self.assertIn("ERROR: lib/1.0@user/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9: "
+                          "Upload package to 'default' failed:", client.out)
+            self.assertIn("ERROR: Errors uploading some packages", client.out)
+
+    def test_beat_character_long_upload(self):
+        client = TestClient(default_server_user=True)
+        slow_conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class MyPkg(ConanFile):
+                exports = "*"
+                def package(self):
+                    self.copy("*")
+            """)
+        client.save({"conanfile.py": slow_conanfile,
+                     "hello.cpp": ""})
+        client.run("create . pkg/0.1@user/stable")
+        client.run("user user --password=password")
+        with patch("conans.util.progress_bar.TIMEOUT_BEAT_SECONDS", -1):
+            with patch("conans.util.progress_bar.TIMEOUT_BEAT_CHARACTER", "%&$"):
+                client.run("upload pkg/0.1@user/stable --all")
+        out = "".join(str(client.out).splitlines())
+        self.assertIn("Compressing package...%&$%&$Uploading conan_package.tgz -> "
+                      "pkg/0.1@user/stable:5ab8", out)
+        self.assertIn("%&$Uploading conan_export.tgz", out)
+        self.assertIn("%&$Uploading conaninfo.txt", out)
 
     def upload_with_pattern_and_package_error_test(self):
         files = hello_conan_files("Hello1", "1.2.1")
@@ -382,18 +522,19 @@ class TestConan(ConanFile):
     def upload_all_test(self):
         """Upload conans and package together"""
         # Try to upload all conans and packages
+        self.client.run('user -p mypass -r default lasote')
         self.client.run('upload %s --all' % str(self.ref))
         lines = [line.strip() for line in str(self.client.out).splitlines()
                  if line.startswith("Uploading")]
         self.assertEqual(lines, ["Uploading to remote 'default':",
                                  "Uploading Hello/1.2.1@frodo/stable to remote 'default'",
-                                 "Uploading conan_export.tgz",
-                                 "Uploading conanfile.py",
-                                 "Uploading conanmanifest.txt",
+                                 "Uploading conan_export.tgz -> Hello/1.2.1@frodo/stable",
+                                 "Uploading conanfile.py -> Hello/1.2.1@frodo/stable",
+                                 "Uploading conanmanifest.txt -> Hello/1.2.1@frodo/stable",
                                  "Uploading package 1/1: myfakeid to 'default'",
-                                 "Uploading conan_package.tgz",
-                                 "Uploading conaninfo.txt",
-                                 "Uploading conanmanifest.txt",
+                                 "Uploading conan_package.tgz -> Hello/1.2.1@frodo/stable:myfa",
+                                 "Uploading conaninfo.txt -> Hello/1.2.1@frodo/stable:myfa",
+                                 "Uploading conanmanifest.txt -> Hello/1.2.1@frodo/stable:myfa",
                                  ])
         if self.client.cache.config.revisions_enabled:
             layout = self.client.cache.package_layout(self.ref)

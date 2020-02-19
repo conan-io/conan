@@ -1,3 +1,4 @@
+from conans.client.build.compiler_flags import format_frameworks
 from conans.model import Generator
 from conans.paths import BUILD_INFO_XCODE
 
@@ -7,12 +8,12 @@ class XCodeGenerator(Generator):
     template = '''
 HEADER_SEARCH_PATHS = $(inherited) {include_dirs}
 LIBRARY_SEARCH_PATHS = $(inherited) {lib_dirs}
-OTHER_LDFLAGS = $(inherited) {linker_flags} {libs}
+OTHER_LDFLAGS = $(inherited) {linker_flags} {libs} {system_libs} {frameworks}
 
 GCC_PREPROCESSOR_DEFINITIONS = $(inherited) {definitions}
 OTHER_CFLAGS = $(inherited) {c_compiler_flags}
 OTHER_CPLUSPLUSFLAGS = $(inherited) {cxx_compiler_flags}
-FRAMEWORK_SEARCH_PATHS = $(inherited) {rootpaths}
+FRAMEWORK_SEARCH_PATHS = $(inherited) {rootpaths} {framework_paths}
 '''
 
     def __init__(self, conanfile):
@@ -28,6 +29,9 @@ FRAMEWORK_SEARCH_PATHS = $(inherited) {rootpaths}
         self.cxx_compiler_flags = " ".join(deps_cpp_info.cxxflags)
         self.linker_flags = " ".join(deps_cpp_info.sharedlinkflags)
         self.rootpaths = " ".join('"%s"' % d.replace("\\", "/") for d in deps_cpp_info.rootpaths)
+        self.frameworks = " ".join(format_frameworks(deps_cpp_info.frameworks, compiler="apple-clang"))
+        self.framework_paths = " ".join(deps_cpp_info.framework_paths)
+        self.system_libs = " ".join(['-l%s' % lib for lib in deps_cpp_info.system_libs])
 
     @property
     def filename(self):

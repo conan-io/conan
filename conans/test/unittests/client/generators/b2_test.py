@@ -49,8 +49,31 @@ class B2GeneratorTest(unittest.TestCase):
         generator = B2Generator(conanfile)
 
         content = {
-'conanbuildinfo.jam':
-'''#|
+            'conanbuildinfo.jam': _main_buildinfo_full,
+            'conanbuildinfo-316f2f0b155dc874a672d40d98d93f95.jam':
+                _variation_full,
+        }
+
+        for ck, cv in generator.content.items():
+            self.assertEqual(cv, content[ck])
+
+    def b2_empty_settings_test(self):
+        conanfile = ConanFile(TestBufferConanOutput(), None)
+        conanfile.initialize(Settings({}), EnvValues())
+
+        generator = B2Generator(conanfile)
+
+        content = {
+            'conanbuildinfo.jam': _main_buildinfo_empty,
+            'conanbuildinfo-d41d8cd98f00b204e9800998ecf8427e.jam':
+                _variation_empty,
+        }
+
+        for ck, cv in generator.content.items():
+            self.assertEqual(cv, content[ck])
+
+_main_buildinfo_full = '''\
+#|
     B2 definitions for Conan packages. This is a generated file.
     Edit the corresponding conanfile.txt instead.
 |#
@@ -139,11 +162,9 @@ local __conanbuildinfo__ = [ GLOB $(__file__:D) : conanbuildinfo-*.jam : downcas
 
 
 # mypkg
-# mypkg
 project-define mypkg ;
 
 
-# mypkg2
 # mypkg2
 project-define mypkg2 ;
 
@@ -154,9 +175,10 @@ project-define mypkg2 ;
         call-in-project : include-conanbuildinfo $(__cbi__) ;
     }
 }
-''',
-'conanbuildinfo-316f2f0b155dc874a672d40d98d93f95.jam':
-'''#|
+'''
+
+_variation_full = '''\
+#|
     B2 definitions for Conan packages. This is a generated file.
     Edit the corresponding conanfile.txt instead.
 |#
@@ -298,7 +320,7 @@ constant-if usage-requirements(mypkg2,32,x86,17,gnu,linux,gcc-6.3,release) :
 # mypkg
 if $(__define_targets__) {
     call-in-project $(mypkg-mod) : lib MyLib1
-        :
+        : ''' + '''
         : <name>MyLib1 <search>$(libdirs(mypkg,32,x86,17,gnu,linux,gcc-6.3,release)) $(requirements(mypkg,32,x86,17,gnu,linux,gcc-6.3,release))
         :
         : $(usage-requirements(mypkg,32,x86,17,gnu,linux,gcc-6.3,release)) ;
@@ -315,7 +337,7 @@ if $(__define_targets__) {
 # mypkg2
 if $(__define_targets__) {
     call-in-project $(mypkg2-mod) : lib MyLib2
-        :
+        : /MyPkg//libs
         : <name>MyLib2 <search>$(libdirs(mypkg2,32,x86,17,gnu,linux,gcc-6.3,release)) $(requirements(mypkg2,32,x86,17,gnu,linux,gcc-6.3,release))
         :
         : $(usage-requirements(mypkg2,32,x86,17,gnu,linux,gcc-6.3,release)) ;
@@ -323,21 +345,126 @@ if $(__define_targets__) {
 
 if $(__define_targets__) {
     call-in-project $(mypkg2-mod) : alias libs
-        : MyLib2
+        : /MyPkg//libs MyLib2
         : $(requirements(mypkg2,32,x86,17,gnu,linux,gcc-6.3,release))
         :
         : $(usage-requirements(mypkg2,32,x86,17,gnu,linux,gcc-6.3,release)) ;
     call-in-project $(mypkg2-mod) : explicit libs ; }
-''',
-        }
+'''
 
-        for ck, cv in generator.content.items():
-            self.assertEqual(cv, content[ck])
+_main_buildinfo_empty = '''\
+#|
+    B2 definitions for Conan packages. This is a generated file.
+    Edit the corresponding conanfile.txt instead.
+|#
 
-    def b2_empty_settings_test(self):
-        conanfile = ConanFile(TestBufferConanOutput(), None)
-        conanfile.initialize(Settings({}), EnvValues())
+import path ;
+import project ;
+import modules ;
+import feature ;
 
-        generator = B2Generator(conanfile)
-        # fails if generator doesn't support empty settings
-        generator.content
+local base-project = [ project.current ] ;
+local base-project-mod = [ $(base-project).project-module ] ;
+local base-project-location = [ project.attribute $(base-project-mod) location ] ;
+
+rule project-define ( id )
+{
+    id = $(id:L) ;
+    local saved-project = [ modules.peek project : .base-project ] ;
+    local id-location = [ path.join $(base-project-location) $(id) ] ;
+    local id-mod = [ project.load $(id-location) : synthesize ] ;
+    project.initialize $(id-mod) : $(id-location) ;
+    project.inherit-attributes $(id-mod) : $(base-project-mod) ;
+    local attributes = [ project.attributes $(id-mod) ] ;
+    $(attributes).set parent-module : $(base-project-mod) : exact ;
+    modules.poke $(base-project-mod) : $(id)-mod : $(id-mod) ;
+    modules.poke [ CALLER_MODULE ] : $(id)-mod : $(id-mod) ;
+    modules.poke project : .base-project : $(saved-project) ;
+    IMPORT $(__name__)
+        : constant-if call-in-project
+        : $(id-mod)
+        : constant-if call-in-project ;
+    if [ project.is-jamroot-module $(base-project-mod) ]
+    {
+        use-project /$(id) : $(id) ;
+    }
+    return $(id-mod) ;
+}
+
+rule constant-if ( name : value * )
+{
+    if $(__define_constants__) && $(value)
+    {
+        call-in-project : constant $(name) : $(value) ;
+        modules.poke $(__name__) : $(name) : [ modules.peek $(base-project-mod) : $(name) ] ;
+    }
+}
+
+rule call-in-project ( project-mod ? : rule-name args * : * )
+{
+    project-mod ?= $(base-project-mod) ;
+    project.push-current [ project.target $(project-mod) ] ;
+    local result = [ modules.call-in $(project-mod) :
+        $(2) : $(3) : $(4) : $(5) : $(6) : $(7) : $(8) : $(9) : $(10) :
+        $(11) : $(12) : $(13) : $(14) : $(15) : $(16) : $(17) : $(18) :
+        $(19) ] ;
+    project.pop-current ;
+    return $(result) ;
+}
+
+rule include-conanbuildinfo ( cbi )
+{
+    include $(cbi) ;
+}
+
+IMPORT $(__name__)
+    : project-define constant-if call-in-project include-conanbuildinfo
+    : $(base-project-mod)
+    : project-define constant-if call-in-project include-conanbuildinfo ;
+
+if ! ( relwithdebinfo in [ feature.values variant ] )
+{
+    variant relwithdebinfo : : <optimization>speed <debug-symbols>on <inlining>full <runtime-debugging>off ;
+}
+if ! ( minsizerel in [ feature.values variant ] )
+{
+    variant minsizerel : : <optimization>space <debug-symbols>off <inlining>full <runtime-debugging>off ;
+}
+
+local __conanbuildinfo__ = [ GLOB $(__file__:D) : conanbuildinfo-*.jam : downcase ] ;
+{
+    local __define_constants__ = yes ;
+    for local __cbi__ in $(__conanbuildinfo__)
+    {
+        call-in-project : include-conanbuildinfo $(__cbi__) ;
+    }
+}
+
+{
+    local __define_targets__ = yes ;
+    for local __cbi__ in $(__conanbuildinfo__)
+    {
+        call-in-project : include-conanbuildinfo $(__cbi__) ;
+    }
+}
+'''
+
+_variation_empty = '''\
+#|
+    B2 definitions for Conan packages. This is a generated file.
+    Edit the corresponding conanfile.txt instead.
+|#
+
+# global
+constant-if rootpath(conan,) :
+    ""
+    ;
+
+constant-if usage-requirements(conan,) :
+    <include>$(includedirs(conan,))
+    <define>$(defines(conan,))
+    <cflags>$(cflags(conan,))
+    <cxxflags>$(cppflags(conan,))
+    <link>shared:<linkflags>$(sharedlinkflags(conan,))
+    ;
+'''

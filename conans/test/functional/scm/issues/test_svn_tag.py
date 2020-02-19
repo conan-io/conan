@@ -55,8 +55,8 @@ class SVNTaggedComponentTest(SVNLocalRepoTestCase):
         self.assertNotIn("auto", exported_conanfile)
         self.assertIn('"revision": "3",', exported_conanfile)
         self.assertIn('tags/release-1.0/level1@3', exported_conanfile)
-        os.remove(package_layout.scm_folder())  # Just in case, avoid scm_folder optimization
+        t.run("remove {} -f -sf".format(ref))  # Remove sources caching
 
         # Compile (it will clone the repo)
         t.run("install {ref} --build=lib".format(ref=ref))
-        self.assertIn("lib/version@issue/testing: Getting sources from url:", t.out)
+        self.assertIn("lib/version@issue/testing: SCM: Getting sources from url:", t.out)
