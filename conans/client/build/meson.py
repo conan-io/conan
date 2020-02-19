@@ -137,10 +137,15 @@ class Meson(object):
                                                     cache_build_folder)
 
         if pkg_config_paths:
-            pc_paths = os.pathsep.join(get_abs_path(f, self._conanfile.install_folder)
-                                       for f in pkg_config_paths)
+            pkg_env = {"PKG_CONFIG_PATH":
+                       os.pathsep.join(get_abs_path(f, self._conanfile.install_folder)
+                                       for f in pkg_config_paths)}
         else:
-            pc_paths = self._conanfile.install_folder
+            # If we are using pkg_config generator automate the pcs location, otherwise it could
+            # read wrong files
+            set_env = "pkg_config" in self._conanfile.generators \
+                      and "PKG_CONFIG_PATH" not in os.environ
+            pkg_env = {"PKG_CONFIG_PATH": self._conanfile.install_folder} if set_env else None
 
         mkdir(self.build_dir)
 
@@ -157,7 +162,7 @@ class Meson(object):
             build_type
         ])
         command = 'meson "%s" "%s" %s' % (source_dir, self.build_dir, arg_list)
-        with environment_append({"PKG_CONFIG_PATH": pc_paths}):
+        with environment_append(pkg_env):
             self._run(command)
 
     @property
