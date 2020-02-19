@@ -4,17 +4,19 @@
 
 pipeline {
     agent none
-    stage ('Check PR-6490') {
-        steps {
-            script {
-                readPRTags 'PR-6490', '1234'
+    stages {
+        stage ('Check PR-6490') {
+            steps {
+                script {
+                    readPRTags 'PR-6490', '1234'
+                }
             }
         }
-    }
-    stage ('Check branch') {
-        steps {
-            script {
-                readPRTags 'other_branch', '1234'
+        stage ('Check branch') {
+            steps {
+                script {
+                    readPRTags 'other_branch', '1234'
+                }
             }
         }
     }
