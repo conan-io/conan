@@ -187,10 +187,6 @@ class VirtualEnvIntegrationTestCase(unittest.TestCase):
         if platform.system() == "Darwin":
             env_after.pop(six.u("PS1"), None)  # TODO: FIXME: Needed for the test to pass
             env_after.pop("PS1", None)  # TODO: FIXME: Needed for the test to pass
-        if platform.system() == "Linux":
-            ps1 = env_after.pop(six.u("PS1"), None)
-            if ps1:
-                env_after["PS1"] = ps1 + " "  # TODO: FIXME: Needed for the test to pass
         self.assertDictEqual(env_before, env_after)  # Environment restored correctly
 
         return stdout, _load_env_file(os.path.join(self.test_folder, self.env_activated))

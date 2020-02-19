@@ -163,7 +163,7 @@ _target_template = """
                                   CONAN_PACKAGE_TARGETS_{uname}_MINSIZEREL "${{_CONAN_PKG_LIBS_{uname}_DEPENDENCIES_MINSIZEREL}}"
                                   "minsizerel" {pkg_name})
 
-    add_library({name} INTERFACE IMPORTED GLOBAL)
+    add_library({name} INTERFACE IMPORTED)
 
     # Property INTERFACE_LINK_FLAGS do not work, necessary to add to INTERFACE_LINK_LIBRARIES
     set_property(TARGET {name} PROPERTY INTERFACE_LINK_LIBRARIES ${{CONAN_PACKAGE_TARGETS_{uname}}} ${{_CONAN_PKG_LIBS_{uname}_DEPENDENCIES}} ${{CONAN_SHARED_LINKER_FLAGS_{uname}_LIST}} ${{CONAN_EXE_LINKER_FLAGS_{uname}_LIST}}
@@ -226,7 +226,6 @@ class CMakeCommonMacros:
     conan_find_libraries_abs_path = textwrap.dedent("""
         function(conan_find_libraries_abs_path libraries package_libdir libraries_abs_path)
             foreach(_LIBRARY_NAME ${libraries})
-                unset(CONAN_FOUND_LIBRARY CACHE)
                 find_library(CONAN_FOUND_LIBRARY NAME ${_LIBRARY_NAME} PATHS ${package_libdir}
                              NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
                 if(CONAN_FOUND_LIBRARY)
@@ -236,6 +235,7 @@ class CMakeCommonMacros:
                     conan_message(STATUS "Library ${_LIBRARY_NAME} not found in package, might be system one")
                     set(CONAN_FULLPATH_LIBS ${CONAN_FULLPATH_LIBS} ${_LIBRARY_NAME})
                 endif()
+                unset(CONAN_FOUND_LIBRARY CACHE)
             endforeach()
             set(${libraries_abs_path} ${CONAN_FULLPATH_LIBS} PARENT_SCOPE)
         endfunction()
@@ -246,13 +246,12 @@ class CMakeCommonMacros:
             unset(_CONAN_ACTUAL_TARGETS CACHE)
             unset(_CONAN_FOUND_SYSTEM_LIBS CACHE)
             foreach(_LIBRARY_NAME ${libraries})
-                unset(CONAN_FOUND_LIBRARY CACHE)
                 find_library(CONAN_FOUND_LIBRARY NAME ${_LIBRARY_NAME} PATHS ${package_libdir}
                              NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
                 if(CONAN_FOUND_LIBRARY)
                     conan_message(STATUS "Library ${_LIBRARY_NAME} found ${CONAN_FOUND_LIBRARY}")
                     set(_LIB_NAME CONAN_LIB::${package_name}_${_LIBRARY_NAME}${build_type})
-                    add_library(${_LIB_NAME} UNKNOWN IMPORTED GLOBAL)
+                    add_library(${_LIB_NAME} UNKNOWN IMPORTED)
                     set_target_properties(${_LIB_NAME} PROPERTIES IMPORTED_LOCATION ${CONAN_FOUND_LIBRARY})
                     set(CONAN_FULLPATH_LIBS ${CONAN_FULLPATH_LIBS} ${_LIB_NAME})
                     set(_CONAN_ACTUAL_TARGETS ${_CONAN_ACTUAL_TARGETS} ${_LIB_NAME})
@@ -261,6 +260,7 @@ class CMakeCommonMacros:
                     set(CONAN_FULLPATH_LIBS ${CONAN_FULLPATH_LIBS} ${_LIBRARY_NAME})
                     set(_CONAN_FOUND_SYSTEM_LIBS "${_CONAN_FOUND_SYSTEM_LIBS};${_LIBRARY_NAME}")
                 endif()
+                unset(CONAN_FOUND_LIBRARY CACHE)
             endforeach()
 
             # Add all dependencies to all targets

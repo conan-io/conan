@@ -1782,6 +1782,9 @@ class Command(object):
         build_order_cmd.add_argument("--json", action=OnceArgument,
                                      help="generate output file in json format")
 
+        clean_cmd = subparsers.add_parser('clean-modified', help='Clean modified')
+        clean_cmd.add_argument('lockfile', help='lockfile folder')
+
         lock_cmd = subparsers.add_parser('lock', help='create a lockfile')
         lock_cmd.add_argument("path_or_reference", help="Path to a folder containing a recipe"
                               " (conanfile.py or conanfile.txt) or to a recipe file. e.g., "
@@ -1803,6 +1806,8 @@ class Command(object):
             if args.json:
                 json_file = _make_abs_path(args.json)
                 save(json_file, json.dumps(build_order, indent=True))
+        elif args.subcommand == "clean-modified":
+            self._conan.lock_clean_modified(args.lockfile)
         elif args.subcommand == "lock":
             self._conan.create_lock(args.path_or_reference,
                                     remote_name=args.remote,
@@ -1906,7 +1911,7 @@ class Command(object):
             self._out.writeln("*"*width, front=Color.BRIGHT_RED)
 
             self._out.writeln(textwrap.fill("Python 2 is deprecated as of 01/01/2020 and Conan has"
-                                            " stopped supporting it oficially. We strongly recommend"
+                                            " stopped supporting it officially. We strongly recommend"
                                             " you to use Python >= 3.5. Conan will completely stop"
                                             " working with Python 2 in the following releases", width),
                               front=Color.BRIGHT_RED)

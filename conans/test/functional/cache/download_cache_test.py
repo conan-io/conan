@@ -168,6 +168,41 @@ class DownloadCacheTest(unittest.TestCase):
         self.assertIn("ERROR: conanfile.py: Error in source() method, line 7", client.out)
         self.assertIn("Not found: http://localhost", client.out)
 
+    @unittest.skipIf(get_env("TESTING_REVISIONS_ENABLED", False), "Hybrid test with both v1 and v2")
+    def test_revision0_v2_skip(self):
+        client = TestClient(default_server_user=True)
+        client.run("config set general.revisions_enabled=False")
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class Pkg(ConanFile):
+                exports = "*"
+                def package(self):
+                    self.copy("*")
+                def deploy(self):
+                    self.copy("*")
+            """)
+        client.save({"conanfile.py": conanfile,
+                     "header.h": "header"})
+        client.run("create . mypkg/0.1@user/testing")
+        client.run("upload * --all --confirm")
+
+        client2 = TestClient(servers=client.servers)
+        client2.run("config set general.revisions_enabled=True")
+        cache_folder = temp_folder()
+        client2.run('config set storage.download_cache="%s"' % cache_folder)
+        client2.run("install mypkg/0.1@user/testing")
+        self.assertEqual("header", client2.load("header.h"))
+
+        # modify non-revisioned pkg
+        client.save({"conanfile.py": conanfile,
+                     "header.h": "header2"})
+        client.run("create . mypkg/0.1@user/testing")
+        client.run("upload * --all --confirm")
+
+        client2.run("remove * -f")
+        client2.run("install mypkg/0.1@user/testing")
+        self.assertEqual("header2", client2.load("header.h"))
+
 
 class CachedDownloaderUnitTest(unittest.TestCase):
     def setUp(self):
