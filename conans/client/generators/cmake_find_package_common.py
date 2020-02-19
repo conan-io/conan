@@ -97,7 +97,6 @@ class CMakeFindPackageCommonMacros:
             unset(_CONAN_ACTUAL_TARGETS CACHE)
             unset(_CONAN_FOUND_SYSTEM_LIBS CACHE)
             foreach(_LIBRARY_NAME ${libraries})
-                unset(CONAN_FOUND_LIBRARY CACHE)
                 find_library(CONAN_FOUND_LIBRARY NAME ${_LIBRARY_NAME} PATHS ${package_libdir}
                              NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
                 if(CONAN_FOUND_LIBRARY)
@@ -108,7 +107,7 @@ class CMakeFindPackageCommonMacros:
                         set(_LIB_NAME CONAN_LIB::${package_name}_${_LIBRARY_NAME}${build_type})
                         if(NOT TARGET ${_LIB_NAME})
                             # Create a micro-target for each lib/a found
-                            add_library(${_LIB_NAME} UNKNOWN IMPORTED GLOBAL)
+                            add_library(${_LIB_NAME} UNKNOWN IMPORTED)
                             set_target_properties(${_LIB_NAME} PROPERTIES IMPORTED_LOCATION ${CONAN_FOUND_LIBRARY})
                             set(_CONAN_ACTUAL_TARGETS ${_CONAN_ACTUAL_TARGETS} ${_LIB_NAME})
                         else()
@@ -123,6 +122,7 @@ class CMakeFindPackageCommonMacros:
                     list(APPEND _out_libraries ${_LIBRARY_NAME})
                     set(_CONAN_FOUND_SYSTEM_LIBS "${_CONAN_FOUND_SYSTEM_LIBS};${_LIBRARY_NAME}")
                 endif()
+                unset(CONAN_FOUND_LIBRARY CACHE)
             endforeach()
             
             if(NOT ${CMAKE_VERSION} VERSION_LESS "3.0")

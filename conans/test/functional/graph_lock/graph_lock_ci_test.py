@@ -4,10 +4,10 @@ import textwrap
 import unittest
 
 from conans.model.graph_lock import LOCKFILE, GraphLockNode
-from conans.model.ref import PackageReference
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.env_reader import get_env
 from conans.util.files import load
+from conans.model.ref import PackageReference
 
 
 class GraphLockCITest(unittest.TestCase):
@@ -395,6 +395,13 @@ class GraphLockCITest(unittest.TestCase):
         client.run("install PkgD/0.1@user/channel --lockfile")
         self.assertIn("PkgC/0.1@user/channel: DEP FILE PkgB: ByeB World!!", client.out)
         self.assertIn("PkgD/0.1@user/channel: DEP FILE PkgB: ByeB World!!", client.out)
+
+        dirty_lockfile = client.load(LOCKFILE)
+        self.assertIn('"modified": "%s"' % GraphLockNode.MODIFIED_BUILT, dirty_lockfile)
+        client.run("graph clean-modified .")
+        clean_lockfile = client.load(LOCKFILE)
+        self.assertNotIn('modified', clean_lockfile)
+
 
     def test_version_ranges_diamond(self):
         conanfile = textwrap.dedent("""
