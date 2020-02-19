@@ -280,7 +280,7 @@ class GraphBinariesAnalyzer(object):
             node.id_indirect_prefs.update(neighbor.id_direct_prefs)
             node.id_indirect_prefs.update(neighbor.id_indirect_prefs)
 
-        # Make sure not duplicated
+        # Make sure not duplicated, totally necessary
         node.id_indirect_prefs.difference_update(node.id_direct_prefs)
         python_requires = getattr(conanfile, "python_requires", None)
         if python_requires:
