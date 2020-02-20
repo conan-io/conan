@@ -13,20 +13,17 @@ pipeline {
             }
         }
         stage ('Unittests') {
-            steps {
-                parallel {
-                    stage ('py35') {
-                        agent any
-                        script {
-                            echo "Run unittests"
-                        }
-                    }
-                    stage ('py38') {
-                        agent any
-                        script {
-                            echo "Run unittests"
-                        }
-                    }
+            agent any
+            stages {
+                stage ('build') {
+                }
+                stage ('test') {
+                }
+            }
+            stages {
+                stage ('build') {
+                }
+                stage ('test') {
                 }
             }
         }
