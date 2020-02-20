@@ -8,16 +8,24 @@ pipeline {
         stage ('Check PR-6490') {
             steps {
                 script {
-                    readPRTags 'PR-6490', '1234'
+                    readPRTags script.env.BRANCH_NAME
                 }
             }
         }
-        stage ('Check branch') {
-            steps {
-                script {
-                    readPRTags 'other_branch', '1234'
+        stage ('Unittests') {
+            parallel {
+                stage {
+                    agent any
+                    echo "py35"
+                }
+                stage {
+                    agent any
+                    echo "py38"
                 }
             }
+        }
+        stage ('Functional') {
+            echo "Run functional tests"
         }
     }
 }
