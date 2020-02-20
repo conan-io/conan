@@ -17,17 +17,23 @@ pipeline {
                 parallel {
                     stage ('py35') {
                         agent any
-                        echo "Run unittests"
+                        script {
+                            echo "Run unittests"
+                        }
                     }
                     stage ('py38') {
                         agent any
-                        echo "Run unittests"
+                        script {
+                            echo "Run unittests"
+                        }
                     }
                 }
             }
         }
         stage ('Functional') {
-            echo "Run functional tests"
+            script {
+                echo "Run functional tests"
+            }
         }
     }
 }
