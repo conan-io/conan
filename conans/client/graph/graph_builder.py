@@ -260,11 +260,11 @@ class DepsGraphBuilder(object):
     def _conflicting_references(previous, new_ref, consumer_ref=None):
         if previous.ref.copy_clear_rev() != new_ref.copy_clear_rev():
             if consumer_ref:
-                raise ConanException ("Conflict in %s\n"
-                                      "    Requirement %s conflicts with already defined %s in %s\n"
-                                      "    To change it, override it in your base requirements"
-                                      % (consumer_ref, new_ref, previous.ref,
-                                      next(iter(previous.dependants)).src))
+                return ("Conflict in %s\n"
+                       "    Requirement %s conflicts with already defined %s in %s\n"
+                       "    To change it, override it in your base requirements"
+                       % (consumer_ref, new_ref, previous.ref,
+                       next(iter(previous.dependants)).src))
             return True
         # Computed node, if is Editable, has revision=None
         # If new_ref.revision is None we cannot assume any conflict, the user hasn't specified
