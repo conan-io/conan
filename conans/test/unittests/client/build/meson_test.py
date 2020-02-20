@@ -34,6 +34,8 @@ class MesonTest(unittest.TestCase):
         conan_file.settings = Settings()
         conan_file.should_configure = False
         conan_file.should_build = False
+        conan_file.should_test = False
+        conan_file.should_install = False
         conan_file.package_folder = os.path.join(self.tempdir, "my_cache_package_folder")
         meson = Meson(conan_file)
         meson.configure()
@@ -43,6 +45,10 @@ class MesonTest(unittest.TestCase):
         meson.test()
         self.assertIsNone(conan_file.command)
         meson.install()
+        self.assertIsNone(conan_file.command)
+        meson.meson_test()
+        self.assertIsNone(conan_file.command)
+        meson.meson_install()
         self.assertIsNone(conan_file.command)
 
     def folders_test(self):
@@ -148,6 +154,14 @@ class MesonTest(unittest.TestCase):
 
         meson.install()
         self.assertEqual("ninja -C \"%s\" %s" % (build_expected, args_to_string(["install"])),
+                         conan_file.command)
+
+        meson.meson_test()
+        self.assertEqual("meson test -C \"%s\"" % build_expected,
+                         conan_file.command)
+
+        meson.meson_install()
+        self.assertEqual("meson install -C \"%s\"" % build_expected,
                          conan_file.command)
 
     def prefix_test(self):
