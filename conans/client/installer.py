@@ -349,22 +349,22 @@ class BinaryInstaller(object):
             assert node_down.prev, "PREV for %s is None" % str(node_down.pref)
             download_prefs[node_down.pref] = node_down  # It doesn't matter which one if multiple
 
-        def _download_pkg(pref, node):
-            conanfile = node.conanfile
-            layout = self._cache.package_layout(pref.ref, conanfile.short_paths)
-            package_folder = layout.package(pref)
-            output = conanfile.output
-            with layout.package_lock(pref):
-                with set_dirty_context_manager(package_folder):
-                    self._remote_manager.get_package(pref, package_folder, node.binary_remote,
-                                                     output, self._recorder)
-                    output.info("Downloaded package revision %s" % pref.revision)
-                    with layout.update_metadata() as metadata:
-                        metadata.packages[pref.id].remote = node.binary_remote.name
-
         for pref_, node_ in download_prefs.items():
             # prepared for parallel download
-            _download_pkg(pref_, node_)
+            layout = self._cache.package_layout(pref_.ref, node_.conanfile.short_paths)
+            with layout.package_lock(pref_):
+                self._download_pkg(layout, pref_, node_)
+
+    def _download_pkg(self, layout, pref, node):
+        conanfile = node.conanfile
+        package_folder = layout.package(pref)
+        output = conanfile.output
+        with set_dirty_context_manager(package_folder):
+            self._remote_manager.get_package(pref, package_folder, node.binary_remote,
+                                             output, self._recorder)
+            output.info("Downloaded package revision %s" % pref.revision)
+            with layout.update_metadata() as metadata:
+                metadata.packages[pref.id].remote = node.binary_remote.name
 
     def _build(self, nodes_by_level, keep_build, root_node, graph_info, remotes, build_mode, update):
         missing, downloads = self._classify(nodes_by_level)
@@ -384,9 +384,9 @@ class BinaryInstaller(object):
                     if node.binary == BINARY_SKIP:  # Privates not necessary
                         continue
                     assert ref.revision is not None, "Installer should receive RREV always"
-                    _handle_system_requirements(conan_file, node.pref, self._cache, output)
                     if node.binary == BINARY_UNKNOWN:
                         self._binaries_analyzer.reevaluate_node(node, remotes, build_mode, update)
+                    _handle_system_requirements(conan_file, node.pref, self._cache, output)
                     self._handle_node_cache(node, keep_build, processed_package_refs, remotes)
 
         # Finally, propagate information to root node (ref=None)
@@ -448,6 +448,9 @@ class BinaryInstaller(object):
                     assert node.prev, "Node PREV shouldn't be empty"
                     assert node.pref.revision, "Node PREF revision shouldn't be empty"
                     assert pref.revision is not None, "PREV for %s to be built is None" % str(pref)
+                elif node.binary in (BINARY_UPDATE, BINARY_DOWNLOAD):
+                    # this can happen after a re-evaluation of packageID with Package_ID_unknown
+                    self._download_pkg(layout, node.pref, node)
                 elif node.binary == BINARY_CACHE:
                     assert node.prev, "PREV for %s is None" % str(pref)
                     output.success('Already installed!')
