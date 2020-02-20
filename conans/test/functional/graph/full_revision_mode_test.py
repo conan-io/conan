@@ -179,7 +179,7 @@ class FullRevisionModeTest(unittest.TestCase):
             self.assertIn("%s/0.1@user/testing: Binary for updated ID from: Cache" % lib, client.out)
             self.assertIn("%s/0.1@user/testing: Already installed!" % lib, client.out)
 
-    #@unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
+    @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
     def download_artifacts_after_build_test(self):
         # An unknown binary that after build results in the exact same PREF with PREV, doesn't
         # fire build of downstream
