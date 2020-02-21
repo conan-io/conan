@@ -352,7 +352,8 @@ class PythonRequiresInfo(object):
 
     def copy(self):
         # For build_id() implementation
-        return PythonRequiresInfo(self._refs, self._default_package_id_mode)
+        refs = [r._ref for r in self._refs] if self._refs else None
+        return PythonRequiresInfo(refs, self._default_package_id_mode)
 
     def __bool__(self):
         return bool(self._refs)
