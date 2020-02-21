@@ -185,7 +185,6 @@ class FullRevisionModeTest(unittest.TestCase):
         # fire build of downstream
         client = TestClient(default_server_user=True)
         client.run("config set general.default_package_id_mode=package_revision_mode")
-        client.run("config set general.revisions_enabled=1")
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . liba/0.1@user/testing")
         self.assertIn("liba/0.1@user/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Build",
