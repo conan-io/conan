@@ -1,8 +1,9 @@
 import os
 import platform
 import unittest
-from unittest import mock
-from unittest.mock import patch
+
+import mock
+from mock.mock import patch
 
 import six
 from six import StringIO
