@@ -81,6 +81,7 @@ class VCVarsTest(unittest.TestCase):
                         # If the entry was already repeated before calling "tools.vcvars" we keep it
                         self.fail("The key '%s' has been repeated" % value)
 
+    @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
     def vcvars_filter_known_paths_test(self):
         settings = Settings.loads(default_settings_yml)
         settings.os = "Windows"
