@@ -165,7 +165,7 @@ path = ./data
 
 [proxies]
 # Empty (or missing) section will try to use system proxies.
-# As documented in https://requests.kennethreitz.org/en/latest/user/advanced/#proxies - but see below
+# As documented in https://requests.readthedocs.io/en/master/user/advanced/#proxies - but see below
 # for proxies to specific hosts
 # http = http://user:pass@10.10.1.10:3128/
 # http = http://10.10.1.10:3128
@@ -404,6 +404,13 @@ class ConanClientConfigParser(ConfigParser, object):
             return int(parallel) if parallel is not None else None
         except ValueError:
             raise ConanException("Specify a numeric parameter for 'parallel_download'")
+
+    def download_cache(self):
+        try:
+            download_cache = self.get_item("storage.download_cache")
+            return download_cache
+        except ConanException:
+            return None
 
     @property
     def scm_to_conandata(self):

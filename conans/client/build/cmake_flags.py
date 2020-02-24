@@ -5,6 +5,7 @@ from conans.client import tools
 from conans.client.build.compiler_flags import architecture_flag, parallel_compiler_cl_flag
 from conans.client.build.cppstd_flags import cppstd_flag, cppstd_from_settings
 from conans.client.tools import cross_building
+from conans.client.tools.apple import is_apple_os
 from conans.client.tools.oss import get_cross_building_settings
 from conans.errors import ConanException
 from conans.model.build_info import DEFAULT_BIN, DEFAULT_INCLUDE, DEFAULT_LIB, DEFAULT_SHARE
@@ -201,7 +202,7 @@ class CMakeDefinitionsBuilder(object):
                         definitions["CMAKE_SYSTEM_NAME"] = "Generic"
         if os_ver:
             definitions["CMAKE_SYSTEM_VERSION"] = os_ver
-            if str(os_) == "Macos":
+            if is_apple_os(os_):
                 definitions["CMAKE_OSX_DEPLOYMENT_TARGET"] = os_ver
 
         # system processor
