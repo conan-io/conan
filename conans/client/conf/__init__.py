@@ -405,6 +405,7 @@ class ConanClientConfigParser(ConfigParser, object):
         except ValueError:
             raise ConanException("Specify a numeric parameter for 'parallel_download'")
 
+    @property
     def download_cache(self):
         try:
             download_cache = self.get_item("storage.download_cache")
