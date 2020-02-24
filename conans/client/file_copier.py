@@ -86,20 +86,28 @@ class FileCopier(object):
 
     def _copy(self, base_src, pattern, src, dst, symlinks, ignore_case, excludes, keep_path,
               excluded_folders):
-        # Check for ../ patterns and allow them
-        if pattern.startswith(".."):
-            rel_dir = os.path.abspath(os.path.join(base_src, pattern))
-            base_src = os.path.dirname(rel_dir)
-            pattern = os.path.basename(rel_dir)
+        if isinstance(pattern, str):
+            patterns = [pattern]
+        else:
+            patterns = pattern
 
-        src = os.path.join(base_src, src)
-        dst = os.path.join(self._dst_folder, dst)
+        copied_files = []
+        for file_pattern in patterns:
+            # Check for ../ patterns and allow them
+            if file_pattern.startswith(".."):
+                rel_dir = os.path.abspath(os.path.join(base_src, file_pattern))
+                base_src = os.path.dirname(rel_dir)
+                file_pattern = os.path.basename(rel_dir)
 
-        files_to_copy, link_folders = self._filter_files(src, pattern, symlinks, excludes,
-                                                         ignore_case, excluded_folders)
-        copied_files = self._copy_files(files_to_copy, src, dst, keep_path, symlinks)
-        self.link_folders(src, dst, link_folders)
-        self._copied.extend(files_to_copy)
+            src = os.path.join(base_src, src)
+            dst = os.path.join(self._dst_folder, dst)
+
+            files_to_copy, link_folders = self._filter_files(src, file_pattern, symlinks, excludes,
+                                                             ignore_case, excluded_folders)
+            files_to_copy = list(set(files_to_copy) - set(self._copied))  # Don't copy files twice
+            copied_files.extend(self._copy_files(files_to_copy, src, dst, keep_path, symlinks))
+            self.link_folders(src, dst, link_folders)
+            self._copied.extend(files_to_copy)
         return copied_files
 
     @staticmethod

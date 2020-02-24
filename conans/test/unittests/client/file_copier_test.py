@@ -16,10 +16,13 @@ class FileCopierTest(unittest.TestCase):
         sub2 = os.path.join(folder1, "subdir2")
         save(os.path.join(sub1, "file1.txt"), "Hello1")
         save(os.path.join(sub1, "file2.c"), "Hello2")
+        save(os.path.join(sub1, "file3.cpp"), "Hello3")
         save(os.path.join(sub1, "sub1/file1.txt"), "Hello1 sub")
         save(os.path.join(sub1, "sub1/file2.c"), "Hello2 sub")
+        save(os.path.join(sub1, "sub1/file3.cpp"), "Hello3 sub")
         save(os.path.join(sub2, "file1.txt"), "2 Hello1")
         save(os.path.join(sub2, "file2.c"), "2 Hello2")
+        save(os.path.join(sub2, "file3.cpp"), "3 Hello3")
 
         folder2 = temp_folder()
         copier = FileCopier([folder1], folder2)
@@ -35,6 +38,15 @@ class FileCopierTest(unittest.TestCase):
         self.assertEqual("Hello1", load(os.path.join(folder2, "texts/file1.txt")))
         self.assertEqual("Hello1 sub", load(os.path.join(folder2, "texts/sub1/file1.txt")))
         self.assertNotIn("subdir2", os.listdir(os.path.join(folder2, "texts")))
+
+        folder2 = temp_folder()
+        copier = FileCopier([folder1], folder2)
+        copier(["*.c", "*.cpp"], "code", "subdir1")
+        self.assertEqual("Hello2", load(os.path.join(folder2, "code/file2.c")))
+        self.assertEqual("Hello3", load(os.path.join(folder2, "code/file3.cpp")))
+        self.assertEqual("Hello2 sub", load(os.path.join(folder2, "code/sub1/file2.c")))
+        self.assertEqual("Hello3 sub", load(os.path.join(folder2, "code/sub1/file3.cpp")))
+        self.assertNotIn("subdir2", os.listdir(os.path.join(folder2, "code")))
 
     @unittest.skipUnless(platform.system() != "Windows", "Requires Symlinks")
     def basic_with_linked_dir_test(self):
