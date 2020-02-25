@@ -13,7 +13,7 @@ from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 
 
 @attr('slow')
-class CMakeFindPathGeneratorTest(unittest.TestCase):
+class CMakeFindPackageGeneratorTest(unittest.TestCase):
 
     def cmake_find_package_system_libs_test(self):
         conanfile = """from conans import ConanFile, tools
@@ -473,3 +473,79 @@ class Conan(ConanFile):
         content = t.load("Findrequirement.cmake")
         self.assertIn('set(requirement_COMPILE_OPTIONS_LIST "-req_both;-req_debug" "")', content)
         self.assertIn('set(requirement_LIBRARY_LIST lib_both lib_debug)', content)
+
+    def gen_info_test(self):
+        conanfile_requirement = textwrap.dedent("""
+            import os
+            from conans import ConanFile, CMake, tools
+
+            class Conan(ConanFile):
+                name = "requirement"
+                version = "1.0"
+
+                def package(self):
+                    tools.save(os.path.join(self.package_folder, "include", "include.h"), "")
+                    tools.save(os.path.join(self.package_folder, "include2", "include2.h"), "")
+                    tools.save(os.path.join(self.package_folder, "include3", "include3.h"), "")
+                    tools.save(os.path.join(self.package_folder, "lib", "libmainlibraries.a"), "")
+                    tools.save(os.path.join(self.package_folder, "lib", "mainlibraries.lib"), "")
+                    tools.save(os.path.join(self.package_folder, "lib", "libsubtarget.a"), "")
+                    tools.save(os.path.join(self.package_folder, "lib", "subtarget.lib"), "")
+                    tools.save(os.path.join(self.package_folder, "lib", "libsubtarget2.a"), "")
+                    tools.save(os.path.join(self.package_folder, "lib", "subtarget2.lib"), "")
+
+                def package_info(self):
+                    self.cpp_info.libs = ["mainlibraries"]
+                    self.cpp_info.generators["cmake_find_package"].targets["requirement::SubTarget"].includedirs = ["include2"]
+                    self.cpp_info.generators["cmake_find_package"].targets["requirement::SubTarget"].libs = ["subtarget"]
+                    self.cpp_info.generators["cmake_find_package"].targets["requirement::SubTarget2"].includedirs.append("include3")
+                    self.cpp_info.generators["cmake_find_package"].targets["requirement::SubTarget2"].libs = ["subtarget2"]
+                    self.cpp_info.generators["cmake_find_package"].targets["requirement::Dupe"]
+        """)
+        conanfile_consumer = textwrap.dedent("""
+            from conans import ConanFile, CMake
+
+            class Conan(ConanFile):
+                requires = "requirement/1.0"
+                generators = "cmake_find_package"
+
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+        """)
+        cmakelists_consumer = textwrap.dedent("""
+            cmake_minimum_required(VERSION 3.1)
+            project(consumer)
+            find_package(requirement REQUIRED)
+
+            if(NOT TARGET requirement::SubTarget)
+                message(FATAL_ERROR "requirement::SubTarget not defined")
+            endif()
+
+            get_target_property(tmp requirement::SubTarget INTERFACE_LINK_LIBRARIES)
+            message("SubTarget libs (requirement): ${tmp}")
+
+            get_target_property(tmp requirement::SubTarget INTERFACE_INCLUDE_DIRECTORIES)
+            message("SubTarget include directories (requirement): ${tmp}")
+
+            if(NOT TARGET requirement::SubTarget2)
+                message(FATAL_ERROR "requirement::SubTarget2 not defined")
+            endif()
+
+            get_target_property(tmp requirement::SubTarget2 INTERFACE_LINK_LIBRARIES)
+            message("SubTarget2 libs (requirement): ${tmp}")
+
+            get_target_property(tmp requirement::SubTarget2 INTERFACE_INCLUDE_DIRECTORIES)
+            message("SubTarget2 include directories (requirement): ${tmp}")
+        """)
+        client = TestClient()
+        client.save({"conanfile_requirement.py": conanfile_requirement,
+                     "conanfile_consumer.py": conanfile_consumer,
+                     "CMakeLists.txt": cmakelists_consumer})
+        client.run("create conanfile_requirement.py")
+        client.run("install conanfile_consumer.py")
+        client.run("build conanfile_consumer.py")
+
+        content = client.load("Findrequirement.cmake")
+        # self.assertIn('set(requirement_COMPILE_OPTIONS_LIST "-req_both;-req_debug" "")', content)
+        # self.assertIn('set(requirement_LIBRARY_LIST lib_both lib_debug)', content)

@@ -1,3 +1,6 @@
+import textwrap
+
+
 from conans.client.generators.cmake import DepsCppCmake
 from conans.client.generators.cmake_find_package_common import target_template, CMakeFindPackageCommonMacros
 from conans.client.generators.cmake_multi import extend
@@ -26,25 +29,79 @@ assign_target_properties = """
         set_property(TARGET {name}::{name} PROPERTY INTERFACE_COMPILE_OPTIONS "${{{name}_COMPILE_OPTIONS_LIST}}")
 """
 
+# FIXME: copy/paste from cmake_find_package_common. This code can extracted and shared.
+assign_geninfo_target_properties = """
+        set({safe_target_name}_INCLUDE_DIRS {deps.include_paths})
+        set({safe_target_name}_COMPILE_DEFINITIONS {deps.compile_definitions})
+        set({safe_target_name}_COMPILE_OPTIONS_LIST "{deps.cxxflags_list}" "{deps.cflags_list}")
+
+        set({safe_target_name}_LIBRARY_LIST{build_type_suffix} {deps.libs})
+        set({safe_target_name}_LIB_DIRS{build_type_suffix} {deps.lib_paths})
+        
+        set({safe_target_name}_LINKER_FLAGS{build_type_suffix}_LIST "{deps.sharedlinkflags_list}" "{deps.exelinkflags_list}")
+        
+        set({safe_target_name}_SYSTEM_LIBS{build_type_suffix} {deps.system_libs})
+
+        set({safe_target_name}_FRAMEWORK_DIRS{build_type_suffix} {deps.framework_paths})
+        set({safe_target_name}_FRAMEWORKS{build_type_suffix} {deps.frameworks})
+        conan_find_apple_frameworks({safe_target_name}_FRAMEWORKS_FOUND{build_type_suffix} "${{{safe_target_name}_FRAMEWORKS{build_type_suffix}}}" "${{{safe_target_name}_FRAMEWORK_DIRS{build_type_suffix}}}")
+        
+        # Gather all the libraries that should be linked to the targets (do not touch existing variables):
+        set(_{safe_target_name}_DEPENDENCIES{build_type_suffix} "${{{safe_target_name}_FRAMEWORKS_FOUND{build_type_suffix}}} ${{{safe_target_name}_SYSTEM_LIBS{build_type_suffix}}} {deps_names}")
+
+        conan_package_library_targets("${{{safe_target_name}_LIBRARY_LIST{build_type_suffix}}}"  # libraries
+                              "${{{safe_target_name}_LIB_DIRS{build_type_suffix}}}"      # package_libdir
+                              "${{_{safe_target_name}_DEPENDENCIES{build_type_suffix}}}"  # deps
+                              {safe_target_name}_LIBRARIES{build_type_suffix}            # out_libraries
+                              {safe_target_name}_LIBRARIES_TARGETS{build_type_suffix}    # out_libraries_targets
+                              "{build_type_suffix}"                          # build_type
+                              "{safe_target_name}")
+
+        if({safe_target_name}_INCLUDE_DIRS)
+            set_target_properties({target_name} PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${{{safe_target_name}_INCLUDE_DIRS}}")
+        endif()
+        set_property(TARGET {target_name} PROPERTY INTERFACE_LINK_LIBRARIES "${{{safe_target_name}_LIBRARIES_TARGETS}};${{{safe_target_name}_LINKER_FLAGS_LIST}}")
+        set_property(TARGET {target_name} PROPERTY INTERFACE_COMPILE_DEFINITIONS ${{{safe_target_name}_COMPILE_DEFINITIONS}})
+        set_property(TARGET {target_name} PROPERTY INTERFACE_COMPILE_OPTIONS "${{{safe_target_name}_COMPILE_OPTIONS_LIST}}")
+"""
+
 
 class CMakeFindPackageGenerator(Generator):
-    template = """
-{macros_and_functions}
-{find_package_header_block}
-{find_libraries_block}
-if(NOT ${{CMAKE_VERSION}} VERSION_LESS "3.0")
-    # Target approach
-    if(NOT TARGET {name}::{name})
-        add_library({name}::{name} INTERFACE IMPORTED)
-        {assign_target_properties_block}
-        {find_dependencies_block}
-    endif()
-endif()
-"""
+    template = textwrap.dedent("""
+        {macros_and_functions}
+        {find_package_header_block}
+        {find_libraries_block}
+        if(NOT ${{CMAKE_VERSION}} VERSION_LESS "3.0")
+            # Target approach
+            if(NOT TARGET {name}::{name})
+                add_library({name}::{name} INTERFACE IMPORTED)
+                {assign_target_properties_block}
+                {find_dependencies_block}
+            endif()
+        {generator_targets}
+        endif()
+        """)
+
+    target_template = textwrap.dedent("""
+            if(NOT TARGET {target_name})
+                add_library({target_name} INTERFACE IMPORTED)
+                {assign_target_properties_block}
+                {find_dependencies_block}
+            endif()
+        """)
+
+    assign_target_properties = """
+            if({name}_INCLUDE_DIRS)
+                set_target_properties({target_name} PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${{{name}_INCLUDE_DIRS}}")
+            endif()
+            set_property(TARGET {target_name} PROPERTY INTERFACE_LINK_LIBRARIES "${{{name}_LIBRARIES_TARGETS}};${{{name}_LINKER_FLAGS_LIST}}")
+            set_property(TARGET {target_name} PROPERTY INTERFACE_COMPILE_DEFINITIONS ${{{name}_COMPILE_DEFINITIONS}})
+            set_property(TARGET {target_name} PROPERTY INTERFACE_COMPILE_OPTIONS "${{{name}_COMPILE_OPTIONS_LIST}}")
+    """
 
     @property
     def filename(self):
-        pass
+        return None
 
     @property
     def content(self):
@@ -71,12 +128,28 @@ endif()
         deps_names = ";".join(["{n}::{n}".format(n=n) for n in public_deps_names])
         find_libraries_block = target_template.format(name=name, deps=deps, build_type_suffix="", deps_names=deps_names)
         target_props = assign_target_properties.format(name=name, deps=deps, deps_names=deps_names)
+        generator_targets_blocks = []
+
+        for target in cpp_info.generators["cmake_find_package"].targets:
+            gen_info_assign_target_properties = assign_geninfo_target_properties.format(
+                safe_target_name=target.name.replace(":", "_"),
+                target_name=target.name,
+                build_type_suffix="",
+                deps=DepsCppCmake(target),
+                deps_names=deps_names,
+            )
+            gen_block = self.target_template.format(target_name=target.name,
+                                                    assign_target_properties_block=gen_info_assign_target_properties,
+                                                    find_dependencies_block="")
+            generator_targets_blocks.append(gen_block)
+
         tmp = self.template.format(name=name, deps=deps,
                                    version=dep_cpp_info.version,
                                    find_dependencies_block="\n        ".join(lines),
                                    find_libraries_block=find_libraries_block,
                                    find_package_header_block=find_package_header_block,
                                    assign_target_properties_block=target_props,
+                                   generator_targets="\n".join(generator_targets_blocks),
                                    macros_and_functions="\n".join([
                                        CMakeFindPackageCommonMacros.conan_message,
                                        CMakeFindPackageCommonMacros.apple_frameworks_macro,

@@ -1,7 +1,10 @@
 import os
 from collections import OrderedDict
-
 import deprecation
+
+
+from conans.model.gen_info import GenInfo
+
 
 DEFAULT_INCLUDE = "include"
 DEFAULT_LIB = "lib"
@@ -20,6 +23,7 @@ class _CppInfo(object):
     def __init__(self):
         self.name = None
         self.names = {}
+        self.generators = GenInfo(self)
         self.system_libs = []  # Ordered list of system libraries
         self.includedirs = []  # Ordered list of include paths
         self.srcdirs = []  # Ordered list of source paths
