@@ -3,6 +3,7 @@ from textwrap import dedent
 
 from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient, GenConanfile
+from conans.util.env_reader import get_env
 
 
 class FullRevisionModeTest(unittest.TestCase):
@@ -177,6 +178,41 @@ class FullRevisionModeTest(unittest.TestCase):
             self.assertIn("%s/0.1@user/testing: Updated ID" % lib, client.out)
             self.assertIn("%s/0.1@user/testing: Binary for updated ID from: Cache" % lib, client.out)
             self.assertIn("%s/0.1@user/testing: Already installed!" % lib, client.out)
+
+    @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
+    def download_artifacts_after_build_test(self):
+        # An unknown binary that after build results in the exact same PREF with PREV, doesn't
+        # fire build of downstream
+        client = TestClient(default_server_user=True)
+        client.run("config set general.default_package_id_mode=package_revision_mode")
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . liba/0.1@user/testing")
+        self.assertIn("liba/0.1@user/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Build",
+                      client.out)
+        self.assertIn("liba/0.1@user/testing: Created package revision "
+                      "83c38d3b4e5f1b8450434436eec31b00", client.out)
+        client.save({"conanfile.py": GenConanfile().with_require_plain('liba/0.1@user/testing')})
+        client.run("create . libb/0.1@user/testing")
+        self.assertIn("libb/0.1@user/testing:830b7cbbb4fc193a756c82b19904df775dc92204 - Build",
+                      client.out)
+
+        client.save({"conanfile.py": GenConanfile().with_require_plain('libb/0.1@user/testing')})
+        client.run("create . libc/0.1@user/testing")
+        client.run("upload * --all -c")
+        client.run("remove * -f")
+
+        client.save({"conanfile.py": GenConanfile().with_require_plain('libc/0.1@user/testing')})
+        # Telling to build LibA doesn't change the final result of LibA, which has same ID and PREV
+        client.run("install . --build=liba")
+        self.assertIn("liba/0.1@user/testing: Created package revision "
+                      "83c38d3b4e5f1b8450434436eec31b00", client.out)
+        # So it is not necessary to build the downstream consumers of LibA
+        for lib in ("libb", "libc"):
+            self.assertIn("%s/0.1@user/testing: Unknown binary" % lib, client.out)
+            self.assertIn("%s/0.1@user/testing: Updated ID" % lib, client.out)
+            self.assertIn("%s/0.1@user/testing: Binary for updated ID from: Download" % lib,
+                          client.out)
+            self.assertIn("%s/0.1@user/testing: Downloaded package" % lib, client.out)
 
 
 class PackageRevisionModeTest(unittest.TestCase):
