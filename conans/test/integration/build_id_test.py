@@ -1,10 +1,13 @@
 import os
+import shutil
+import textwrap
 import unittest
 
 from parameterized.parameterized import parameterized
 
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.utils.tools import TestClient
+from conans.test.utils.tools import create_local_git_repo
 from conans.util.files import load
 
 conanfile = """from conans import ConanFile
@@ -289,3 +292,66 @@ class MyTest(ConanFile):
         client.run("create . pkg/0.1@user/channel", assert_error=True)
         self.assertIn("ERROR: pkg/0.1@user/channel: Error in build() method, line 5",
                       client.out)
+
+    def test_with_scm_and_no_copy_source(self):
+        # https://github.com/conan-io/conan/issues/6593
+        path, _ = create_local_git_repo(files=None, branch="release")
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile, CMake
+
+            class Recipe(ConanFile):
+                settings = "os", "compiler", "build_type", "arch"
+                options = {"something": [True, False]}
+                default_options = {"something": False}
+                generators = "cmake"
+                scm = {
+                    "type": "git",
+                    "url": "auto",
+                    "revision": "auto"
+                }
+                no_copy_source = True
+
+                def build_id(self):
+                    del self.info_build.options.something
+                    #self.info_build.options.something = "Any"
+
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure(source_folder="src")
+                    cmake.build()
+
+                def package(self):
+                    self.copy("*.h", dst="include", src="src")
+                    self.copy("*.a", dst="lib", keep_path=False)
+
+                def package_info(self):
+                    self.cpp_info.libs = ["hello"]
+        """)
+        client = TestClient()
+        client.run("new -s name/version@user/channel")
+        client.save({"conanfile.py": conanfile})
+        create_local_git_repo(folder=client.current_folder)
+        client.run_command('git remote add origin "%s"' % path.replace("\\", "/"))
+        client.run_command('git push origin master')
+
+        def _check_package_files(output):
+            self.assertIn("name/version package(): Packaged 1 '.a' file: libhello.a", output)
+            self.assertIn("name/version package(): Packaged 1 '.h' file: hello.h", output)
+
+        # Using SCM optimization
+        client.run("create . name/version@ -o something=False")
+        _check_package_files(client.out)
+
+        client.run("create . name/version@ -o something=True")
+        self.assertIn("name/version: Won't be built, using previous build folder as defined in build_id()", client.out)
+        _check_package_files(client.out)
+
+        # Avoid SCM optimization
+        layout = client.cache.package_layout(ConanFileReference.loads("name/version"))
+        shutil.rmtree(layout.scm_sources())
+        client.run("install name/version@ --build -o something=False")
+        _check_package_files(client.out)
+
+        client.run("create . name/version@ -o something=True")
+        self.assertIn("name/version: Won't be built, using previous build folder as defined in build_id()", client.out)
+        _check_package_files(client.out)
