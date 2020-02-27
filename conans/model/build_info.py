@@ -1,5 +1,5 @@
 import os
-from collections import OrderedDict
+from collections import defaultdict, OrderedDict
 
 import deprecation
 
@@ -139,12 +139,13 @@ class CppInfo(_CppInfo):
         self.resdirs.append(DEFAULT_RES)
         self.builddirs.append(DEFAULT_BUILD)
         self.frameworkdirs.append(DEFAULT_FRAMEWORK)
+        self.components = defaultdict(lambda: CppInfo(self.rootpath))
         # public_deps is needed to accumulate list of deps for cmake targets
         self.public_deps = []
         self.configs = {}
+        self._components_include_paths = []
 
     def __getattr__(self, config):
-
         def _get_cpp_info():
             result = _CppInfo()
             result.rootpath = self.rootpath
@@ -158,6 +159,54 @@ class CppInfo(_CppInfo):
             return result
 
         return self.configs.setdefault(config, _get_cpp_info())
+
+    @property
+    def include_paths(self):
+        if self._include_paths is None:
+            self._include_paths = self._filter_paths(self.includedirs)
+            if self.components:
+                for _, component in self.components.items():
+                    self._include_paths.extend(self._filter_paths(component.includedirs))
+        return self._include_paths
+
+    @property
+    def lib_paths(self):
+        if self._lib_paths is None:
+            self._lib_paths = self._filter_paths(self.libdirs)
+            if self.components:
+                for _, component in self.components.items():
+                    self._include_paths.extend(self._filter_paths(component.libdirs))
+        return self._lib_paths
+
+    @property
+    def src_paths(self):
+        if self._src_paths is None:
+            self._src_paths = self._filter_paths(self.srcdirs)
+        return self._src_paths
+
+    @property
+    def bin_paths(self):
+        if self._bin_paths is None:
+            self._bin_paths = self._filter_paths(self.bindirs)
+        return self._bin_paths
+
+    @property
+    def build_paths(self):
+        if self._build_paths is None:
+            self._build_paths = self._filter_paths(self.builddirs)
+        return self._build_paths
+
+    @property
+    def res_paths(self):
+        if self._res_paths is None:
+            self._res_paths = self._filter_paths(self.resdirs)
+        return self._res_paths
+
+    @property
+    def framework_paths(self):
+        if self._framework_paths is None:
+            self._framework_paths = self._filter_paths(self.frameworkdirs)
+        return self._framework_paths
 
 
 class _BaseDepsCppInfo(_CppInfo):
@@ -225,6 +274,67 @@ class _BaseDepsCppInfo(_CppInfo):
         return self.frameworkdirs
 
 
+class DepCppInfo(object):
+
+    def __init__(self, cpp_info):
+        self._cpp_info = cpp_info
+        self._libs = None
+        self._system_libs = None
+        self._frameworks = None
+        self._defines = None
+        self._cxxflags = None
+        self._cflags = None
+        self._sharedlinkflags = None
+        self._exelinkflags = None
+
+    def __getattr__(self, item):
+        try:
+            attr = self._cpp_info.__getattribute__(item)
+        except AttributeError:  # item is not defined, get config (CppInfo)
+            attr = self._cpp_info.__getattr__(item)
+        return attr
+
+    def _aggregated_values(self, item):
+        if getattr(self, "_%s" % item) is None:
+            values = getattr(self._cpp_info, item)
+            for _, component in self._cpp_info.components.items():
+                values.extend(getattr(component, item))
+            setattr(self, "_%s" % item, values)
+        return getattr(self, "_%s" % item)
+
+    @property
+    def libs(self):
+        return self._aggregated_values("libs")
+
+    @property
+    def system_libs(self):
+        return self._aggregated_values("system_libs")
+
+    @property
+    def frameworks(self):
+        return self._aggregated_values("frameworks")
+
+    @property
+    def defines(self):
+        return self._aggregated_values("defines")
+
+    @property
+    def cxxflags(self):
+        return self._aggregated_values("cxxflags")
+
+    @property
+    def cflags(self):
+        return self._aggregated_values("cflags")
+
+    @property
+    def sharedlinkflags(self):
+        return self._aggregated_values("sharedlinkflags")
+
+    @property
+    def exelinkflags(self):
+        return self._aggregated_values("exelinkflags")
+
+
 class DepsCppInfo(_BaseDepsCppInfo):
     """ Build Information necessary to build a given conans. It contains the
     flags, directories and options if its dependencies. The conans CONANFILE
@@ -251,8 +361,9 @@ class DepsCppInfo(_BaseDepsCppInfo):
     def __getitem__(self, item):
         return self._dependencies[item]
 
-    def update(self, dep_cpp_info, pkg_name):
-        assert isinstance(dep_cpp_info, CppInfo)
+    def update(self, cpp_info, pkg_name):
+        assert isinstance(cpp_info, CppInfo)
+        dep_cpp_info = DepCppInfo(cpp_info)
         self._dependencies[pkg_name] = dep_cpp_info
         super(DepsCppInfo, self).update(dep_cpp_info)
         for config, cpp_info in dep_cpp_info.configs.items():
