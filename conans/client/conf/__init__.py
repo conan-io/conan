@@ -432,9 +432,9 @@ class ConanClientConfigParser(ConfigParser, object):
         return default_package_id_mode
 
     @property
-    def fix_transitive_package_id(self):
+    def full_transitive_package_id(self):
         try:
-            fix_id = self.get_item("general.fix_transitive_package_id")
+            fix_id = self.get_item("general.full_transitive_package_id")
             return fix_id.lower() in ("1", "true")
         except ConanException:
             return None

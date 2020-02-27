@@ -20,7 +20,7 @@ class GraphBinariesAnalyzer(object):
         self._remote_manager = remote_manager
         # These are the nodes with pref (not including PREV) that have been evaluated
         self._evaluated = {}  # {pref: [nodes]}
-        self._fixed_package_id = cache.config.fix_transitive_package_id
+        self._fixed_package_id = cache.config.full_transitive_package_id
 
     @staticmethod
     def _check_update(upstream_manifest, package_folder, output, node):
