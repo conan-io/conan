@@ -2,10 +2,12 @@ import os
 import stat
 import tarfile
 import time
+import traceback
 from collections import defaultdict
 from multiprocessing.pool import ThreadPool
 
 from conans.util import progress_bar
+from conans.util.env_reader import get_env
 from conans.util.progress_bar import left_justify_message
 from conans.client.remote_manager import is_package_snapshot_complete, calc_files_checksum
 from conans.client.source import complete_recipe_sources
@@ -97,18 +99,26 @@ class CmdUpload(object):
 
             def upload_ref(ref_conanfile_prefs):
                 _ref, _conanfile, _prefs = ref_conanfile_prefs
-                self._upload_ref(_conanfile, _ref, _prefs, retry, retry_wait,
-                                 integrity_check, policy, remote, upload_recorder, remotes)
+                try:
+                    self._upload_ref(_conanfile, _ref, _prefs, retry, retry_wait,
+                                     integrity_check, policy, remote, upload_recorder, remotes)
+                except BaseException as base_exception:
+                    base_trace = traceback.format_exc()
+                    self._exceptions_list.append((base_exception, _ref, base_trace))
 
             self._upload_thread_pool.map(upload_ref,
                                          [(ref, conanfile, prefs) for (ref, conanfile, prefs) in
                                           refs])
             self._upload_thread_pool.close()
             self._upload_thread_pool.join()
-            for exception in self._exceptions_list:
-                self._output.error(str(exception))
 
             if len(self._exceptions_list) > 0:
+                for exc, ref, trace in self._exceptions_list:
+                    t = "recipe" if isinstance(ref, ConanFileReference) else "package"
+                    msg = "%s: Upload %s to '%s' failed: %s\n" % (str(ref), t, remote.name, str(exc))
+                    if get_env("CONAN_VERBOSE_TRACEBACK", False):
+                        msg += trace
+                    self._output.error(msg)
                 raise ConanException("Errors uploading some packages")
 
         logger.debug("UPLOAD: Time manager upload: %f" % (time.time() - t1))
@@ -144,8 +154,8 @@ class CmdUpload(object):
         for ref in refs:
             metadata = self._cache.package_layout(ref).load_metadata()
             if ref.revision and ref.revision != metadata.recipe.revision:
-                raise ConanException("Recipe revision {} does not match the one stored in the cache {}"
-                                     .format(ref.revision, metadata.recipe.revision))
+                raise ConanException("Recipe revision {} does not match the one stored in the "
+                                     "cache {}".format(ref.revision, metadata.recipe.revision))
             ref = ref.copy_with_rev(metadata.recipe.revision)
             remote = remotes.selected
             if remote:
@@ -220,12 +230,8 @@ class CmdUpload(object):
                                    reference=ref, remote=recipe_remote)
         msg = "\rUploading %s to remote '%s'" % (str(ref), recipe_remote.name)
         self._output.info(left_justify_message(msg))
-        try:
-            self._upload_recipe(ref, conanfile, retry, retry_wait, policy, recipe_remote, remotes)
-            upload_recorder.add_recipe(ref, recipe_remote.name, recipe_remote.url)
-        except ConanException as exc:
-            self._exceptions_list.append(exc)
-            return
+        self._upload_recipe(ref, conanfile, retry, retry_wait, policy, recipe_remote, remotes)
+        upload_recorder.add_recipe(ref, recipe_remote.name, recipe_remote.url)
 
         # Now the binaries
         if prefs:
@@ -233,28 +239,27 @@ class CmdUpload(object):
             p_remote = recipe_remote
 
             def upload_package_index(index_pref):
+                index, pref = index_pref
                 try:
-                    index, pref = index_pref
                     up_msg = "\rUploading package %d/%d: %s to '%s'" % (index + 1, total,
                                                                         str(pref.id),
                                                                         p_remote.name)
                     self._output.info(left_justify_message(up_msg))
-                    self._upload_package(pref, retry, retry_wait,
-                                         integrity_check, policy, p_remote)
+                    self._upload_package(pref, retry, retry_wait, integrity_check, policy, p_remote)
                     upload_recorder.add_package(pref, p_remote.name, p_remote.url)
-                    return conanfile_path, ref, recipe_remote, None
-                except ConanException as exc:
-                    return None, None, None, exc
+                except BaseException as pkg_exc:
+                    trace = traceback.format_exc()
+                    return pkg_exc, pref, trace
 
             def upload_package_callback(ret):
-                for cf_path, r_ref, r_rem, exc in ret:
-                    if exc is None:
-                        # FIXME: I think it makes no sense to specify a remote to "post_upload"
-                        # FIXME: because the recipe can have one and the package a different one
-                        self._hook_manager.execute("post_upload", conanfile_path=cf_path,
-                                                   reference=r_ref, remote=r_rem)
-                    else:
-                        self._exceptions_list.append(exc)
+                package_exceptions = [r for r in ret if r is not None]
+                self._exceptions_list.extend(package_exceptions)
+                if not package_exceptions:
+                    # FIXME: I think it makes no sense to specify a remote to "post_upload"
+                    # FIXME: because the recipe can have one and the package a different one
+                    self._hook_manager.execute("post_upload", conanfile_path=conanfile_path,
+                                               reference=ref, remote=recipe_remote)
+
             # This doesn't wait for the packages to end, so the function returns
             # and the "pool entry" for the recipe is released
             self._upload_thread_pool.map_async(upload_package_index,
@@ -329,7 +334,8 @@ class CmdUpload(object):
         assert (pref.revision is not None), "Cannot upload a package without PREV"
         assert (pref.ref.revision is not None), "Cannot upload a package without RREV"
 
-        conanfile_path = self._cache.package_layout(pref.ref).conanfile()
+        pkg_layout = self._cache.package_layout(pref.ref)
+        conanfile_path = pkg_layout.conanfile()
         self._hook_manager.execute("pre_upload_package", conanfile_path=conanfile_path,
                                    reference=pref.ref,
                                    package_id=pref.id,
@@ -337,9 +343,6 @@ class CmdUpload(object):
 
         t1 = time.time()
         the_files = self._compress_package_files(pref, integrity_check)
-
-        with self._cache.package_layout(pref.ref).update_metadata() as metadata:
-            metadata.packages[pref.id].checksums = calc_files_checksum(the_files)
 
         if policy == UPLOAD_POLICY_SKIP:
             return None
@@ -359,11 +362,13 @@ class CmdUpload(object):
 
         logger.debug("UPLOAD: Time uploader upload_package: %f" % (time.time() - t1))
 
-        metadata = self._cache.package_layout(pref.ref).load_metadata()
-        cur_package_remote = metadata.packages[pref.id].remote
-        if not cur_package_remote and policy != UPLOAD_POLICY_SKIP:
-            with self._cache.package_layout(pref.ref).update_metadata() as metadata:
+        # Update the package metadata
+        checksums = calc_files_checksum(the_files)
+        with pkg_layout.update_metadata() as metadata:
+            cur_package_remote = metadata.packages[pref.id].remote
+            if not cur_package_remote:
                 metadata.packages[pref.id].remote = p_remote.name
+            metadata.packages[pref.id].checksums = checksums
 
         return pref
 
@@ -488,10 +493,10 @@ class CmdUpload(object):
                                   % (fname, h1, h2))
 
             if PACKAGE_TGZ_NAME in files:
+                tgz_path = os.path.join(package_folder, PACKAGE_TGZ_NAME)
                 try:
-                    tgz_path = os.path.join(package_folder, PACKAGE_TGZ_NAME)
                     os.unlink(tgz_path)
-                except Exception:
+                except OSError:
                     pass
             error_msg = os.linesep.join("Mismatched checksum '%s' (manifest: %s, file: %s)"
                                         % (fname, h1, h2) for fname, (h1, h2) in diff.items())

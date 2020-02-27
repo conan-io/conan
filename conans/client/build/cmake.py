@@ -12,7 +12,7 @@ from conans.client.build.cmake_flags import CMakeDefinitionsBuilder, \
     cmake_in_local_cache_var_name, runtime_definition_var_name, get_generator_platform, \
     is_generator_platform_supported, is_toolset_supported
 from conans.client.output import ConanOutput
-from conans.client.tools.env import environment_append
+from conans.client.tools.env import environment_append, _environment_add
 from conans.client.tools.oss import cpu_count, args_to_string
 from conans.errors import ConanException
 from conans.model.conan_file import ConanFile
@@ -27,7 +27,7 @@ class CMake(object):
     def __init__(self, conanfile, generator=None, cmake_system_name=True,
                  parallel=True, build_type=None, toolset=None, make_program=None,
                  set_cmake_flags=False, msbuild_verbosity="minimal", cmake_program=None,
-                 generator_platform=None):
+                 generator_platform=None, append_vcvars=False):
         """
         :param conanfile: Conanfile instance
         :param generator: Generator name to use or none to autodetect
@@ -47,6 +47,7 @@ class CMake(object):
         if not isinstance(conanfile, ConanFile):
             raise ConanException("First argument of CMake() has to be ConanFile. Use CMake(self)")
 
+        self._append_vcvars = append_vcvars
         self._conanfile = conanfile
         self._settings = conanfile.settings
         self._build_type = build_type or conanfile.settings.get_safe("build_type")
@@ -214,10 +215,11 @@ class CMake(object):
         the_os = self._settings.get_safe("os")
         is_clangcl = the_os == "Windows" and compiler == "clang"
         is_msvc = compiler == "Visual Studio"
-        if (is_msvc or is_clangcl) and self.generator in ["Ninja", "NMake Makefiles",
-                                                          "NMake Makefiles JOM"]:
-            with tools.vcvars(self._settings, force=True, filter_known_paths=False,
-                              output=self._conanfile.output):
+        if ((is_msvc or is_clangcl) and platform.system() == "Windows" and
+                self.generator in ["Ninja", "NMake Makefiles", "NMake Makefiles JOM"]):
+            vcvars_dict = tools.vcvars_dict(self._settings, force=True, filter_known_paths=False,
+                                            output=self._conanfile.output)
+            with _environment_add(vcvars_dict, post=self._append_vcvars):
                 self._conanfile.run(command)
         else:
             self._conanfile.run(command)

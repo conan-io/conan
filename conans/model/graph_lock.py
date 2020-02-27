@@ -224,6 +224,12 @@ class GraphLock(object):
             if node.modified:
                 self._nodes[id_] = node
 
+    def clean_modified(self):
+        """ remove all the "modified" flags from the lockfile
+        """
+        for _, node in self._nodes.items():
+            node.modified = None
+
     def _closure_affected(self):
         """ returns all the IDs of the nodes that depend directly or indirectly of some
         package marked as "modified"
@@ -279,7 +285,7 @@ class GraphLock(object):
                 if (pref.id == PACKAGE_ID_UNKNOWN or pref.is_compatible_with(node_pref) or
                         node.binary == BINARY_BUILD or node.id in affected or
                         node.recipe == RECIPE_CONSUMER):
-                    self._upsert_node(node)
+                    lock_node.pref = node.pref
                 else:
                     raise ConanException("Mismatch between lock and graph:\nLock:  %s\nGraph: %s"
                                          % (repr(pref), repr(node.pref)))

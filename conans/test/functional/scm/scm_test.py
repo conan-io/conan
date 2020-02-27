@@ -978,7 +978,8 @@ class ConanLib(ConanFile):
                       "Use --ignore-dirty to force it.", self.client.out)
         # The upload has to fail, no "auto" fields are allowed
         self.client.run("upload lib/0.1@user/channel -r default", assert_error=True)
-        self.assertIn("ERROR: The recipe has 'scm.url' or 'scm.revision' with 'auto' values. "
+        self.assertIn("ERROR: lib/0.1@user/channel: Upload recipe to 'default' failed: "
+                      "The recipe has 'scm.url' or 'scm.revision' with 'auto' values. "
                       "Use '--force' to ignore", self.client.out)
         # The upload with --force should work
         self.client.run("upload lib/0.1@user/channel -r default --force")

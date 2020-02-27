@@ -122,7 +122,7 @@ class ListWrapper(object):
             self._tqdm_bar.update()
         elif self._output and time.time() - self._last_time > TIMEOUT_BEAT_SECONDS:
             self._last_time = time.time()
-            self._output.write(TIMEOUT_BEAT_CHARACTER, file=self._output, end="\n")
+            self._output.write(TIMEOUT_BEAT_CHARACTER)
 
     def pb_close(self):
         if self._output and self._output.is_terminal:
