@@ -1,14 +1,18 @@
-import os
-from conans.errors import ConanException
-import fasteners
-
-from conans.util.files import md5sum, sha1sum
-from conans.util.log import logger
+import copy
 import json
-from conans.model.ref import PackageReference, ConanFileReference
+import os
 import time
 from os.path import isdir
-import copy
+
+import fasteners
+
+from conans.errors import ConanException
+from conans.model.ref import ConanFileReference, PackageReference
+from conans.util.files import md5sum, sha1sum
+from conans.util.log import logger
+
+
+# FIXME: Conan 2.0 the traces should have all the revisions information also.
 
 TRACER_ACTIONS = ["UPLOADED_RECIPE", "UPLOADED_PACKAGE",
                   "DOWNLOADED_RECIPE", "DOWNLOADED_RECIPE_SOURCES", "DOWNLOADED_PACKAGE",
@@ -68,85 +72,89 @@ def _file_document(name, path):
     return {"name": name, "path": path, "md5": md5sum(path), "sha1": sha1sum(path)}
 
 
-def log_recipe_upload(conan_reference, duration, files_uploaded, remote):
-    assert(isinstance(conan_reference, ConanFileReference))
+def log_recipe_upload(ref, duration, files_uploaded, remote_name):
     files_uploaded = files_uploaded or {}
     files_uploaded = [_file_document(name, path) for name, path in files_uploaded.items()]
-    _append_action("UPLOADED_RECIPE", {"_id": str(conan_reference),
+    _append_action("UPLOADED_RECIPE", {"_id": repr(ref.copy_clear_rev()),
                                        "duration": duration,
                                        "files": files_uploaded,
-                                       "remote": remote.name})
+                                       "remote": remote_name})
 
 
-def log_package_upload(package_ref, duration, files_uploaded, remote):
+def log_package_upload(pref, duration, files_uploaded, remote):
     """files_uploaded is a dict with relative path as keys and abs path as values"""
-    assert(isinstance(package_ref, PackageReference))
     files_uploaded = files_uploaded or {}
     files_uploaded = [_file_document(name, path) for name, path in files_uploaded.items()]
-    _append_action("UPLOADED_PACKAGE", {"_id": str(package_ref),
+    _append_action("UPLOADED_PACKAGE", {"_id": repr(pref.copy_clear_revs()),
                                         "duration": duration,
                                         "files": files_uploaded,
                                         "remote": remote.name})
 
 
-def log_recipe_download(conan_reference, duration, remote, files_downloaded):
-    assert(isinstance(conan_reference, ConanFileReference))
+def log_recipe_download(ref, duration, remote_name, files_downloaded):
+    assert(isinstance(ref, ConanFileReference))
     files_downloaded = files_downloaded or {}
     files_downloaded = [_file_document(name, path) for name, path in files_downloaded.items()]
-    _append_action("DOWNLOADED_RECIPE", {"_id": str(conan_reference),
+    _append_action("DOWNLOADED_RECIPE", {"_id": repr(ref.copy_clear_rev()),
                                          "duration": duration,
-                                         "remote": remote.name,
+                                         "remote": remote_name,
                                          "files": files_downloaded})
 
 
-def log_recipe_sources_download(conan_reference, duration, remote, files_downloaded):
-    assert(isinstance(conan_reference, ConanFileReference))
+def log_recipe_sources_download(ref, duration, remote_name, files_downloaded):
+    assert(isinstance(ref, ConanFileReference))
     files_downloaded = files_downloaded or {}
     files_downloaded = [_file_document(name, path) for name, path in files_downloaded.items()]
-    _append_action("DOWNLOADED_RECIPE_SOURCES", {"_id": str(conan_reference),
+    _append_action("DOWNLOADED_RECIPE_SOURCES", {"_id": repr(ref.copy_clear_rev()),
                                                  "duration": duration,
-                                                 "remote": remote.name,
+                                                 "remote": remote_name,
                                                  "files": files_downloaded})
 
 
-def log_package_download(package_ref, duration, remote, files_downloaded):
-    assert(isinstance(package_ref, PackageReference))
+def log_package_download(pref, duration, remote, files_downloaded):
     files_downloaded = files_downloaded or {}
     files_downloaded = [_file_document(name, path) for name, path in files_downloaded.items()]
-    _append_action("DOWNLOADED_PACKAGE", {"_id": str(package_ref),
+    _append_action("DOWNLOADED_PACKAGE", {"_id": repr(pref.copy_clear_revs()),
                                           "duration": duration,
                                           "remote": remote.name,
                                           "files": files_downloaded})
 
 
-def log_recipe_got_from_local_cache(conan_reference):
-    assert(isinstance(conan_reference, ConanFileReference))
-    _append_action("GOT_RECIPE_FROM_LOCAL_CACHE", {"_id": str(conan_reference)})
+def log_recipe_got_from_local_cache(ref):
+    assert(isinstance(ref, ConanFileReference))
+    _append_action("GOT_RECIPE_FROM_LOCAL_CACHE", {"_id": repr(ref.copy_clear_rev())})
 
 
-def log_package_got_from_local_cache(package_ref):
-    assert(isinstance(package_ref, PackageReference))
-    _append_action("GOT_PACKAGE_FROM_LOCAL_CACHE", {"_id": str(package_ref)})
+def log_package_got_from_local_cache(pref):
+    assert(isinstance(pref, PackageReference))
+    _append_action("GOT_PACKAGE_FROM_LOCAL_CACHE", {"_id": repr(pref.copy_clear_revs())})
 
 
-def log_package_built(package_ref, duration, log_run=None):
-    assert(isinstance(package_ref, PackageReference))
-    _append_action("PACKAGE_BUILT_FROM_SOURCES", {"_id": str(package_ref), "duration": duration, "log": log_run})
+def log_package_built(pref, duration, log_run=None):
+    assert(isinstance(pref, PackageReference))
+    _append_action("PACKAGE_BUILT_FROM_SOURCES",
+                   {"_id": repr(pref.copy_clear_revs()), "duration": duration, "log": log_run})
 
 
 def log_client_rest_api_call(url, method, duration, headers):
     headers = copy.copy(headers)
-    headers["Authorization"] = MASKED_FIELD
-    headers["X-Client-Anonymous-Id"] = MASKED_FIELD
+    if "Authorization" in headers:
+        headers["Authorization"] = MASKED_FIELD
+    if "X-Client-Anonymous-Id" in headers:
+        headers["X-Client-Anonymous-Id"] = MASKED_FIELD
+    if "signature=" in url:
+        url = url.split("signature=")[0] + "signature=%s" % MASKED_FIELD
     _append_action("REST_API_CALL", {"method": method, "url": url,
                                      "duration": duration, "headers": headers})
 
 
 def log_command(name, parameters):
-    if name == "user" and "password" in parameters:
+    if name == "authenticate" and "password" in parameters:
         parameters = copy.copy(parameters)  # Ensure we don't alter any app object like args
         parameters["password"] = MASKED_FIELD
     _append_action("COMMAND", {"name": name, "parameters": parameters})
+    logger.debug("CONAN_API: %s(%s)" % (name, ",".join("%s=%s" % (k, v)
+                                                       for k, v in parameters.items())))
 
 
 def log_exception(exc, message):

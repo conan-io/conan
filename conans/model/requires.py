@@ -1,34 +1,43 @@
 from collections import OrderedDict
+
+import six
+
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
-import six
+from conans.util.env_reader import get_env
 
 
 class Requirement(object):
     """ A reference to a package plus some attributes of how to
     depend on that package
     """
-    def __init__(self, conan_reference, private=False, override=False, dev=False):
+    def __init__(self, ref, private=False, override=False):
         """
         param override: True means that this is not an actual requirement, but something to
                         be passed upstream and override possible existing values
-        param private: True means that this requirement will be somewhat embedded (like
-                       a static lib linked into a shared lib), so it is not required to link
-        param dev: True means that this requirement is only needed at dev time, e.g. only
-                    needed for building or testing, but not affects the package hash at all
         """
-        self.conan_reference = conan_reference
-        self.range_reference = conan_reference
-        self.private = private
+        self.ref = ref
+        self.range_ref = ref
         self.override = override
-        self.dev = dev
+        self.private = private
+        self.build_require = False
+        self._locked_id = None
+
+    def lock(self, locked_ref, locked_id):
+        # When a requirment is locked it doesn't has ranges
+        self.ref = self.range_ref = locked_ref
+        self._locked_id = locked_id  # And knows the ID of the locked node that is pointing to
+
+    @property
+    def locked_id(self):
+        return self._locked_id
 
     @property
     def version_range(self):
         """ returns the version range expression, without brackets []
         or None if it is not an expression
         """
-        version = self.range_reference.version
+        version = self.range_ref.version
         if version.startswith("[") and version.endswith("]"):
             return version[1:-1]
 
@@ -37,16 +46,15 @@ class Requirement(object):
         """ returns True if the version_range reference has been already resolved to a
         concrete reference
         """
-        return self.conan_reference != self.range_reference
+        return self.ref != self.range_ref
 
     def __repr__(self):
-        return ("%s" % str(self.conan_reference) + (" P" if self.private else ""))
+        return ("%s" % str(self.ref) + (" P" if self.private else ""))
 
     def __eq__(self, other):
         return (self.override == other.override and
-                self.conan_reference == other.conan_reference and
-                self.private == other.private and
-                self.dev == other.dev)
+                self.ref == other.ref and
+                self.private == other.private)
 
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -58,23 +66,6 @@ class Requirements(OrderedDict):
 
     def __init__(self, *args):
         super(Requirements, self).__init__()
-        self.allow_dev = False
-        for v in args:
-            if isinstance(v, tuple):
-                override = private = dev = False
-                ref = v[0]
-                for elem in v[1:]:
-                    if elem == "override":
-                        override = True
-                    elif elem == "private":
-                        private = True
-                    else:
-                        raise ConanException("Unknown requirement config %s" % elem)
-                self.add(ref, private=private, override=override, dev=dev)
-            else:
-                self.add(v)
-
-    def add_dev(self, *args):
         for v in args:
             if isinstance(v, tuple):
                 override = private = False
@@ -86,14 +77,14 @@ class Requirements(OrderedDict):
                         private = True
                     else:
                         raise ConanException("Unknown requirement config %s" % elem)
-                self.add(ref, private=private, override=override, dev=True)
+                self.add(ref, private=private, override=override)
             else:
-                self.add(v, dev=True)
+                self.add(v)
 
     def copy(self):
         """ We need a custom copy as the normal one requires __init__ to be
         properly defined. This is not a deep-copy, in fact, requirements in the dict
-        are changed by RequireResolver, and are propagated upstream
+        are changed by RangeResolver, and are propagated upstream
         """
         result = Requirements()
         for name, req in self.items():
@@ -103,17 +94,17 @@ class Requirements(OrderedDict):
     def iteritems(self):  # FIXME: Just a trick to not change default testing conanfile for py3
         return self.items()
 
-    def add(self, reference, private=False, override=False, dev=False):
+    def add(self, reference, private=False, override=False):
         """ to define requirements by the user in text, prior to any propagation
         """
         assert isinstance(reference, six.string_types)
-        if dev and not self.allow_dev:
-            return
+        ref = ConanFileReference.loads(reference)
+        self.add_ref(ref, private, override)
 
-        conan_reference = ConanFileReference.loads(reference)
-        name = conan_reference.name
+    def add_ref(self, ref, private=False, override=False):
+        name = ref.name
 
-        new_requirement = Requirement(conan_reference, private, override, dev)
+        new_requirement = Requirement(ref, private, override)
         old_requirement = self.get(name)
         if old_requirement and old_requirement != new_requirement:
             raise ConanException("Duplicated requirement %s != %s"
@@ -134,27 +125,37 @@ class Requirements(OrderedDict):
         assert isinstance(own_ref, ConanFileReference) if own_ref else True
         assert isinstance(down_ref, ConanFileReference) if down_ref else True
 
+        error_on_override = get_env("CONAN_ERROR_ON_OVERRIDE", False)
+
         new_reqs = down_reqs.copy()
         if own_ref:
             new_reqs.pop(own_ref.name, None)
         for name, req in self.items():
-            if req.private or req.dev:
+            if req.private:
                 continue
-            if name in down_reqs:
+            if name in down_reqs and not req.locked_id:
                 other_req = down_reqs[name]
                 # update dependency
-                other_ref = other_req.conan_reference
-                if other_ref and other_ref != req.conan_reference:
-                    output.info("%s requirement %s overriden by %s to %s "
-                                % (own_ref, req.conan_reference, down_ref or "your conanfile",
-                                   other_ref))
-                    req.conan_reference = other_ref
+                other_ref = other_req.ref
+                if other_ref and other_ref != req.ref:
+                    down_reference_str = str(down_ref) if down_ref else ""
+                    msg = "%s: requirement %s overridden by %s to %s " \
+                          % (own_ref, req.ref, down_reference_str or "your conanfile", other_ref)
+
+                    if error_on_override and not other_req.override:
+                        raise ConanException(msg)
+
+                    output.warn(msg)
+                    req.ref = other_ref
+                    # FIXME: We should compute the intersection of version_ranges
+                    if req.version_range and not other_req.version_range:
+                        req.range_ref = other_req.range_ref  # Override
 
             new_reqs[name] = req
         return new_reqs
 
-    def __call__(self, conan_reference, private=False, override=False, dev=False):
-        self.add(conan_reference, private, override, dev)
+    def __call__(self, reference, private=False, override=False):
+        self.add(reference, private, override)
 
     def __repr__(self):
         result = []

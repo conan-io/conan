@@ -2,8 +2,9 @@ import re
 
 
 class Version(str):
-    """ This is NOT an implementation of semver, as users may use any pattern in their versions.
-    It is just a helper to parse .-, and compare taking into account integers when possible
+    """
+    This is NOT an implementation of semver, as users may use any pattern in their versions.
+    It is just a helper to parse "." or "-" and compare taking into account integers when possible
     """
     version_pattern = re.compile('[.-]')
 
@@ -12,6 +13,10 @@ class Version(str):
 
     @property
     def as_list(self):
+        """
+        Return version as a list of items
+        :return: list with version items
+        """
         if not hasattr(self, "_cached_list"):
             tokens = self.rsplit('+', 1)
             self._base = tokens[0]
@@ -24,6 +29,11 @@ class Version(str):
         return self._cached_list
 
     def major(self, fill=True):
+        """
+        Get the major item from the version string
+        :param fill: Fill full version format with major.Y.Z
+        :return: version class
+        """
         self_list = self.as_list
         if not isinstance(self_list[0], int):
             return self._base
@@ -33,14 +43,21 @@ class Version(str):
         return Version(v)
 
     def stable(self):
-        """ same as major, but as semver, 0.Y.Z is not considered
-        stable, so return it as is
+        """
+        Get the stable version in a <major>.Y.Z format, otherwise return the version (semver 0.Y.Z
+        is not considered stable)
+        :return: version class with .Y.Z as ending
         """
         if self.as_list[0] == 0:
             return self
         return self.major()
 
     def minor(self, fill=True):
+        """
+        Get the minor item from the version string
+        :param fill: Fill full version format with major.minor.Z
+        :return: version class
+        """
         self_list = self.as_list
         if not isinstance(self_list[0], int):
             return self._base
@@ -51,6 +68,10 @@ class Version(str):
         return Version(".".join([v0, v1]))
 
     def patch(self):
+        """
+        Get the patch item from the version string
+        :return: version class
+        """
         self_list = self.as_list
         if not isinstance(self_list[0], int):
             return self._base
@@ -73,16 +94,31 @@ class Version(str):
 
     @property
     def build(self):
+        """
+        Return the build item from version string if any
+        :return: build item string if present, otherwise return an empty string
+        """
+        self.as_list
         if hasattr(self, "_build"):
             return self._build
         return ""
 
     @property
     def base(self):
+        """
+        Return the base item from the version string
+        :return: version class
+        """
         self.as_list
         return Version(self._base)
 
     def compatible(self, other):
+        """
+        Determine if one version is compatible to other regarding to semver.
+        Useful to check compatibility with major/minor versions with `<major>.Y.Z` format.
+        :param other: version to compare to (string or version class)
+        :return: compatible true or false
+        """
         if not isinstance(other, Version):
             other = Version(other)
         for v1, v2 in zip(self.as_list, other.as_list):
@@ -98,6 +134,23 @@ class Version(str):
         if not isinstance(other, Version):
             other = Version(other)
 
+        # Check equals
+        def get_el(a_list, index):
+            if len(a_list) - 1 < index:
+                return 0  # out of range, 4 == 4.0 == 4.0.0
+            return a_list[index]
+
+        equals = all(get_el(other.as_list, ind) == get_el(self.as_list, ind)
+                     for ind in range(0, max(len(other.as_list), len(self.as_list))))
+        if equals:
+            if self.build == other.build:
+                return 0
+            if self.build > other.build:
+                return -1
+            else:
+                return 1
+
+        # Check greater than or less than
         other_list = other.as_list
         for ind, el in enumerate(self.as_list):
             if ind + 1 > len(other_list):
@@ -117,8 +170,6 @@ class Version(str):
                 return -1
         if len(other_list) > len(self.as_list):
             return -1
-        else:
-            return 0
 
     def __gt__(self, other):
         return self.__cmp__(other) == 1
@@ -131,3 +182,12 @@ class Version(str):
 
     def __ge__(self, other):
         return self.__cmp__(other) in [0, 1]
+
+    def __eq__(self, other):
+        return self.__cmp__(other) == 0
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __hash__(self):
+        return str.__hash__(self)

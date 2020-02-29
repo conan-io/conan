@@ -1,65 +1,26 @@
-from conans.errors import EXCEPTION_CODE_MAPPING, NotFoundException, ConanException
-from requests.auth import AuthBase, HTTPBasicAuth
-from conans.util.log import logger
-import json
-from conans.paths import CONAN_MANIFEST, CONANINFO
-import time
-from conans.client.rest.differ import diff_snapshots
-from conans.util.files import decode_text, md5sum
-import os
-from conans.model.manifest import FileTreeManifest
-from conans.client.rest.uploader_downloader import Uploader, Downloader
-from conans.model.ref import ConanFileReference
-from six.moves.urllib.parse import urlsplit, parse_qs, urlencode
-from conans import COMPLEX_SEARCH_CAPABILITY
+from conans import CHECKSUM_DEPLOY, REVISIONS, ONLY_V2, OAUTH_TOKEN, MATRIX_PARAMS
+from conans.client.rest.rest_client_v1 import RestV1Methods
+from conans.client.rest.rest_client_v2 import RestV2Methods
+from conans.errors import OnlyV2Available, AuthenticationException
 from conans.search.search import filter_packages
-from conans.model.info import ConanInfo
-from conans.util.tracer import log_client_rest_api_call
+from conans.util.log import logger
 
 
-def handle_return_deserializer(deserializer=None):
-    """Decorator for rest api methods.
-    Map exceptions and http return codes and deserialize if needed.
+class RestApiClientFactory(object):
 
-    deserializer: Function for deserialize values"""
-    def handle_return(method):
-        def inner(*argc, **argv):
-            ret = method(*argc, **argv)
-            if ret.status_code != 200:
-                ret.charset = "utf-8"  # To be able to access ret.text (ret.content are bytes)
-                text = ret.text if ret.status_code != 404 else "404 Not found"
-                raise get_exception_from_error(ret.status_code)(text)
-            return deserializer(ret.content) if deserializer else decode_text(ret.content)
-        return inner
-    return handle_return
+    def __init__(self, output, requester, config, artifacts_properties=None):
+        self._output = output
+        self._requester = requester
+        self._config = config
+        self._artifacts_properties = artifacts_properties
+        self._cached_capabilities = {}
 
-
-def get_exception_from_error(error_code):
-    try:
-        tmp = {value: key for key, value in EXCEPTION_CODE_MAPPING.items()}
-        if error_code in tmp:
-            logger.debug("From server: %s" % str(tmp[error_code]))
-            return tmp[error_code]
-        else:
-            logger.debug("From server: %s" % str(_base_error(error_code)))
-            return tmp[_base_error(error_code)]
-    except KeyError:
-        return None
-
-
-def _base_error(error_code):
-    return int(str(error_code)[0] + "00")
-
-
-class JWTAuth(AuthBase):
-    """Attaches JWT Authentication to the given Request object."""
-    def __init__(self, token):
-        self.token = token
-
-    def __call__(self, request):
-        if self.token:
-            request.headers['Authorization'] = "Bearer %s" % str(self.token)
-        return request
+    def new(self, remote, token, refresh_token, custom_headers):
+        tmp = RestApiClient(remote, token, refresh_token, custom_headers,
+                            self._output, self._requester, self._config,
+                            self._cached_capabilities,
+                            self._artifacts_properties)
+        return tmp
 
 
 class RestApiClient(object):
@@ -67,422 +28,138 @@ class RestApiClient(object):
         Rest Api Client for handle remote.
     """
 
-    def __init__(self, output, requester, put_headers=None):
+    def __init__(self, remote, token, refresh_token, custom_headers, output, requester,
+                 config, cached_capabilities, artifacts_properties=None):
 
         # Set to instance
-        self.token = None
-        self.remote_url = None
-        self.custom_headers = {}  # Can set custom headers to each request
+        self._token = token
+        self._refresh_token = refresh_token
+        self._remote_url = remote.url
+        self._custom_headers = custom_headers
         self._output = output
-        self.requester = requester
-        self._verify_ssl = True
-        self._put_headers = put_headers
+        self._requester = requester
 
-    @property
-    def verify_ssl(self):
-        from conans.client.rest import cacert
-        if self._verify_ssl:
-            # Necessary for pyinstaller, because it doesn't copy the cacert.
-            # It should not be necessary anymore the own conan.io certificate (fixed in server)
-            return cacert.file_path
+        self._verify_ssl = remote.verify_ssl
+        self._artifacts_properties = artifacts_properties
+        self._revisions_enabled = config.revisions_enabled
+        self._config = config
+
+        # This dict is shared for all the instances of RestApiClient
+        self._cached_capabilities = cached_capabilities
+
+    def _capable(self, capability, user=None, password=None):
+        capabilities = self._cached_capabilities.get(self._remote_url)
+        if capabilities is None:
+            tmp = RestV1Methods(self._remote_url, self._token, self._custom_headers, self._output,
+                                self._requester, self._config, self._verify_ssl,
+                                self._artifacts_properties)
+            capabilities = tmp.server_capabilities(user, password)
+            self._cached_capabilities[self._remote_url] = capabilities
+            logger.debug("REST: Cached capabilities for the remote: %s" % capabilities)
+            if not self._revisions_enabled and ONLY_V2 in capabilities:
+                raise OnlyV2Available(self._remote_url)
+        return capability in capabilities
+
+    def _get_api(self):
+        revisions = self._capable(REVISIONS)
+        matrix_params = self._capable(MATRIX_PARAMS)
+        if self._revisions_enabled and revisions:
+            checksum_deploy = self._capable(CHECKSUM_DEPLOY)
+            return RestV2Methods(self._remote_url, self._token, self._custom_headers, self._output,
+                                 self._requester, self._config, self._verify_ssl,
+                                 self._artifacts_properties, checksum_deploy, matrix_params)
         else:
-            return False
+            return RestV1Methods(self._remote_url, self._token, self._custom_headers, self._output,
+                                 self._requester, self._config, self._verify_ssl,
+                                 self._artifacts_properties, matrix_params)
 
-    @verify_ssl.setter
-    def verify_ssl(self, check):
-        assert(isinstance(check, bool))
-        self._verify_ssl = check
+    def get_recipe_manifest(self, ref):
+        return self._get_api().get_recipe_manifest(ref)
 
-    @property
-    def auth(self):
-        return JWTAuth(self.token)
+    def get_package_manifest(self, pref):
+        return self._get_api().get_package_manifest(pref)
 
-    def get_conan_digest(self, conan_reference):
-        """Gets a FileTreeManifest from conans"""
+    def get_package_info(self, pref):
+        return self._get_api().get_package_info(pref)
 
-        # Obtain the URLs
-        url = "%s/conans/%s/digest" % (self._remote_api_url, "/".join(conan_reference))
-        urls = self._get_json(url)
+    def get_recipe(self, ref, dest_folder):
+        return self._get_api().get_recipe(ref, dest_folder)
 
-        # Get the digest
-        contents = self.download_files(urls)
-        # Unroll generator and decode shas (plain text)
-        contents = {key: decode_text(value) for key, value in dict(contents).items()}
-        return FileTreeManifest.loads(contents[CONAN_MANIFEST])
+    def get_recipe_snapshot(self, ref):
+        return self._get_api().get_recipe_snapshot(ref)
 
-    def get_package_digest(self, package_reference):
-        """Gets a FileTreeManifest from a package"""
+    def get_recipe_sources(self, ref, dest_folder):
+        return self._get_api().get_recipe_sources(ref, dest_folder)
 
-        # Obtain the URLs
-        url = "%s/conans/%s/packages/%s/digest" % (self._remote_api_url,
-                                                   "/".join(package_reference.conan),
-                                                   package_reference.package_id)
-        urls = self._get_json(url)
+    def get_package(self, pref, dest_folder):
+        return self._get_api().get_package(pref, dest_folder)
 
-        # Get the digest
-        contents = self.download_files(urls)
-        # Unroll generator and decode shas (plain text)
-        contents = {key: decode_text(value) for key, value in dict(contents).items()}
-        return FileTreeManifest.loads(contents[CONAN_MANIFEST])
+    def get_package_snapshot(self, ref):
+        return self._get_api().get_package_snapshot(ref)
 
-    def get_package_info(self, package_reference):
-        """Gets a ConanInfo file from a package"""
+    def get_recipe_path(self, ref, path):
+        return self._get_api().get_recipe_path(ref, path)
 
-        url = "%s/conans/%s/packages/%s/download_urls" % (self._remote_api_url,
-                                                          "/".join(package_reference.conan),
-                                                          package_reference.package_id)
-        urls = self._get_json(url)
-        if not urls:
-            raise NotFoundException("Package not found!")
+    def get_package_path(self, pref, path):
+        return self._get_api().get_package_path(pref, path)
 
-        if CONANINFO not in urls:
-            raise NotFoundException("Package %s doesn't have the %s file!" % (package_reference,
-                                                                              CONANINFO))
-        # Get the info (in memory)
-        contents = self.download_files({CONANINFO: urls[CONANINFO]})
-        # Unroll generator and decode shas (plain text)
-        contents = {key: decode_text(value) for key, value in dict(contents).items()}
-        return ConanInfo.loads(contents[CONANINFO])
+    def upload_recipe(self, ref, files_to_upload, deleted, retry, retry_wait):
+        return self._get_api().upload_recipe(ref, files_to_upload, deleted, retry, retry_wait)
 
-    def get_recipe(self, conan_reference, dest_folder, filter_files_function):
-        """Gets a dict of filename:contents from conans"""
-        # Get the conanfile snapshot first
-        url = "%s/conans/%s/download_urls" % (self._remote_api_url, "/".join(conan_reference))
-        urls = self._get_json(url)
+    def upload_package(self, pref, files_to_upload, deleted, retry, retry_wait):
+        return self._get_api().upload_package(pref, files_to_upload, deleted, retry, retry_wait)
 
-        urls = filter_files_function(urls)
-        if not urls:
-            return None
-
-        # TODO: Get fist an snapshot and compare files and download only required?
-        file_paths = self.download_files_to_folder(urls, dest_folder, self._output)
-        return file_paths
-
-    def get_package(self, package_reference, dest_folder):
-        """Gets a dict of filename:contents from package"""
-        url = "%s/conans/%s/packages/%s/download_urls" % (self._remote_api_url,
-                                                          "/".join(package_reference.conan),
-                                                          package_reference.package_id)
-        urls = self._get_json(url)
-        if not urls:
-            raise NotFoundException("Package not found!")
-        # TODO: Get fist an snapshot and compare files and download only required?
-
-        # Download the resources
-        file_paths = self.download_files_to_folder(urls, dest_folder, self._output)
-        return file_paths
-
-    def upload_recipe(self, conan_reference, the_files, retry, retry_wait, ignore_deleted_file):
-        """
-        the_files: dict with relative_path: content
-        """
-        self.check_credentials()
-
-        # Get the remote snapshot
-        remote_snapshot = self._get_conan_snapshot(conan_reference)
-        local_snapshot = {filename: md5sum(abs_path) for filename, abs_path in the_files.items()}
-
-        # Get the diff
-        new, modified, deleted = diff_snapshots(local_snapshot, remote_snapshot)
-        if ignore_deleted_file and ignore_deleted_file in deleted:
-            deleted.remove(ignore_deleted_file)
-
-        files_to_upload = {filename.replace("\\", "/"): the_files[filename]
-                           for filename in new + modified}
-        if files_to_upload:
-            # Get the upload urls
-            url = "%s/conans/%s/upload_urls" % (self._remote_api_url, "/".join(conan_reference))
-            filesizes = {filename.replace("\\", "/"): os.stat(abs_path).st_size
-                         for filename, abs_path in files_to_upload.items()}
-            urls = self._get_json(url, data=filesizes)
-            self.upload_files(urls, files_to_upload, self._output, retry, retry_wait)
-        if deleted:
-            self._remove_conanfile_files(conan_reference, deleted)
-
-    def upload_package(self, package_reference, the_files, retry, retry_wait):
-        """
-        basedir: Base directory with the files to upload (for read the files in disk)
-        relative_files: relative paths to upload
-        """
-        self.check_credentials()
-
-        t1 = time.time()
-        # Get the remote snapshot
-        remote_snapshot = self._get_package_snapshot(package_reference)
-        local_snapshot = {filename: md5sum(abs_path) for filename, abs_path in the_files.items()}
-
-        # Get the diff
-        new, modified, deleted = diff_snapshots(local_snapshot, remote_snapshot)
-
-        files_to_upload = {filename: the_files[filename] for filename in new + modified}
-        if files_to_upload:        # Obtain upload urls
-            url = "%s/conans/%s/packages/%s/upload_urls" % (self._remote_api_url,
-                                                            "/".join(package_reference.conan),
-                                                            package_reference.package_id)
-            filesizes = {filename: os.stat(abs_path).st_size for filename,
-                         abs_path in files_to_upload.items()}
-            self._output.rewrite_line("Requesting upload permissions...")
-            urls = self._get_json(url, data=filesizes)
-            self._output.rewrite_line("Requesting upload permissions...Done!")
-            self._output.writeln("")
-            self.upload_files(urls, files_to_upload, self._output, retry, retry_wait)
-        else:
-            self._output.rewrite_line("Package is up to date.")
-            self._output.writeln("")
-        if deleted:
-            self._remove_package_files(package_reference, deleted)
-
-        logger.debug("====> Time rest client upload_package: %f" % (time.time() - t1))
-
-    @handle_return_deserializer()
     def authenticate(self, user, password):
-        '''Sends user + password to get a token'''
-        auth = HTTPBasicAuth(user, password)
-        url = "%s/users/authenticate" % self._remote_api_url
-        t1 = time.time()
-        ret = self.requester.get(url, auth=auth, headers=self.custom_headers,
-                                 verify=self.verify_ssl)
-        duration = time.time() - t1
-        log_client_rest_api_call(url, "GET", duration, self.custom_headers)
-        return ret
+        api_v1 = RestV1Methods(self._remote_url, self._token, self._custom_headers, self._output,
+                               self._requester, self._verify_ssl, self._artifacts_properties)
 
-    @handle_return_deserializer()
+        if self._refresh_token and self._token:
+            token, refresh_token = api_v1.refresh_token(self._token, self._refresh_token)
+        else:
+            try:
+                # Check capabilities can raise also 401 until the new Artifactory is released
+                oauth_capable = self._capable(OAUTH_TOKEN, user, password)
+            except AuthenticationException:
+                oauth_capable = False
+
+            if oauth_capable:
+                # Artifactory >= 6.13.X
+                token, refresh_token = api_v1.authenticate_oauth(user, password)
+            else:
+                token = api_v1.authenticate(user, password)
+                refresh_token = None
+
+        return token, refresh_token
+
     def check_credentials(self):
-        """If token is not valid will raise AuthenticationException.
-        User will be asked for new user/pass"""
-        url = "%s/users/check_credentials" % self._remote_api_url
-        t1 = time.time()
-        ret = self.requester.get(url, auth=self.auth, headers=self.custom_headers,
-                                 verify=self.verify_ssl)
-        duration = time.time() - t1
-        log_client_rest_api_call(url, "GET", duration, self.custom_headers)
-        return ret
+        return self._get_api().check_credentials()
 
     def search(self, pattern=None, ignorecase=True):
-        """
-        the_files: dict with relative_path: content
-        """
-        query = ''
-        if pattern:
-            params = {"q": pattern}
-            if not ignorecase:
-                params["ignorecase"] = "False"
-            query = "?%s" % urlencode(params)
-
-        url = "%s/conans/search%s" % (self._remote_api_url, query)
-        response = self._get_json(url)["results"]
-        return [ConanFileReference.loads(ref) for ref in response]
+        return self._get_api().search(pattern, ignorecase)
 
     def search_packages(self, reference, query):
+        # Do not send the query to the server, as it will fail
+        # https://github.com/conan-io/conan/issues/4951
+        package_infos = self._get_api().search_packages(reference, query=None)
+        return filter_packages(query, package_infos)
 
-        url = "%s/conans/%s/search?" % (self._remote_api_url, "/".join(reference))
-        if not query:
-            package_infos = self._get_json(url)
-            return package_infos
+    def remove_recipe(self, ref):
+        return self._get_api().remove_conanfile(ref)
 
-        # Read capabilities
-        try:
-            _, _, capabilities = self.server_info()
-        except NotFoundException:
-            capabilities = []
+    def remove_packages(self, ref, package_ids=None):
+        return self._get_api().remove_packages(ref, package_ids)
 
-        if COMPLEX_SEARCH_CAPABILITY in capabilities:
-            url += urlencode({"q": query})
-            package_infos = self._get_json(url)
-            return package_infos
-        else:
-            package_infos = self._get_json(url)
-            return filter_packages(query, package_infos)
+    def server_capabilities(self):
+        return self._get_api().server_capabilities()
 
-    @handle_return_deserializer()
-    def remove_conanfile(self, conan_reference):
-        """ Remove a recipe and packages """
-        self.check_credentials()
-        url = "%s/conans/%s" % (self._remote_api_url, '/'.join(conan_reference))
-        response = self.requester.delete(url,
-                                         auth=self.auth,
-                                         headers=self.custom_headers,
-                                         verify=self.verify_ssl)
-        return response
+    def get_recipe_revisions(self, ref):
+        return self._get_api().get_recipe_revisions(ref)
 
-    @handle_return_deserializer()
-    def remove_packages(self, conan_reference, package_ids=None):
-        """ Remove any packages specified by package_ids"""
-        self.check_credentials()
-        payload = {"package_ids": package_ids}
-        url = "%s/conans/%s/packages/delete" % (self._remote_api_url, '/'.join(conan_reference))
-        return self._post_json(url, payload)
+    def get_package_revisions(self, pref):
+        return self._get_api().get_package_revisions(pref)
 
-    @handle_return_deserializer()
-    def _remove_conanfile_files(self, conan_reference, files):
-        """ Remove recipe files """
-        self.check_credentials()
-        payload = {"files": [filename.replace("\\", "/") for filename in files]}
-        url = "%s/conans/%s/remove_files" % (self._remote_api_url, '/'.join(conan_reference))
-        return self._post_json(url, payload)
+    def get_latest_recipe_revision(self, ref):
+        return self._get_api().get_latest_recipe_revision(ref)
 
-    @handle_return_deserializer()
-    def _remove_package_files(self, package_reference, files):
-        """ Remove package files """
-        self.check_credentials()
-        payload = {"files": [filename.replace("\\", "/") for filename in files]}
-        url = "%s/conans/%s/packages/%s/remove_files" % (self._remote_api_url,
-                                                         "/".join(package_reference.conan),
-                                                         package_reference.package_id)
-        return self._post_json(url, payload)
-
-    def server_info(self):
-        """Get information about the server: status, version, type and capabilities"""
-        url = "%s/ping" % self._remote_api_url
-        ret = self.requester.get(url, auth=self.auth, headers=self.custom_headers,
-                                 verify=self.verify_ssl)
-        if ret.status_code == 404:
-            raise NotFoundException("Not implemented endpoint")
-
-        version_check = ret.headers.get('X-Conan-Client-Version-Check', None)
-        server_version = ret.headers.get('X-Conan-Server-Version', None)
-        server_capabilities = ret.headers.get('X-Conan-Server-Capabilities', "")
-        server_capabilities = [cap.strip() for cap in server_capabilities.split(",") if cap]
-
-        return version_check, server_version, server_capabilities
-
-    def _get_conan_snapshot(self, reference):
-        url = "%s/conans/%s" % (self._remote_api_url, '/'.join(reference))
-        try:
-            snapshot = self._get_json(url)
-        except NotFoundException:
-            snapshot = {}
-        norm_snapshot = {os.path.normpath(filename): the_md5
-                         for filename, the_md5 in snapshot.items()}
-        return norm_snapshot
-
-    def _get_package_snapshot(self, package_reference):
-        url = "%s/conans/%s/packages/%s" % (self._remote_api_url,
-                                            "/".join(package_reference.conan),
-                                            package_reference.package_id)
-        try:
-            snapshot = self._get_json(url)
-        except NotFoundException:
-            snapshot = {}
-        norm_snapshot = {os.path.normpath(filename): the_md5
-                         for filename, the_md5 in snapshot.items()}
-        return norm_snapshot
-
-    def _post_json(self, url, payload):
-        response = self.requester.post(url,
-                                       auth=self.auth,
-                                       headers=self.custom_headers,
-                                       verify=self.verify_ssl,
-                                       json=payload)
-        return response
-
-    def _get_json(self, url, data=None):
-        t1 = time.time()
-        headers = self.custom_headers
-        if data:  # POST request
-            headers.update({'Content-type': 'application/json',
-                            'Accept': 'text/plain',
-                            'Accept': 'application/json'})
-            response = self.requester.post(url, auth=self.auth, headers=headers,
-                                           verify=self.verify_ssl,
-                                           stream=True,
-                                           data=json.dumps(data))
-        else:
-            response = self.requester.get(url, auth=self.auth, headers=headers,
-                                          verify=self.verify_ssl,
-                                          stream=True)
-
-        duration = time.time() - t1
-        method = "POST" if data else "GET"
-        log_client_rest_api_call(url, method, duration, headers)
-        if response.status_code != 200:  # Error message is text
-            response.charset = "utf-8"  # To be able to access ret.text (ret.content are bytes)
-            raise get_exception_from_error(response.status_code)(response.text)
-
-        result = json.loads(decode_text(response.content))
-        if not isinstance(result, dict):
-            raise ConanException("Unexpected server response %s" % result)
-        return result
-
-    @property
-    def _remote_api_url(self):
-        return "%s/v1" % self.remote_url.rstrip("/")
-
-    def _file_server_capabilities(self, resource_url):
-        auth = None
-        dedup = False
-        urltokens = urlsplit(resource_url)
-        query_string = urltokens[3]
-        parsed_string_dict = parse_qs(query_string)
-        if "signature" not in parsed_string_dict and "Signature" not in parsed_string_dict:
-            # If monolithic server, we can use same auth, and server understand dedup
-            auth = self.auth
-            dedup = True
-        return auth, dedup
-
-    def download_files(self, file_urls, output=None):
-        """
-        :param: file_urls is a dict with {filename: url}
-
-        Its a generator, so it yields elements for memory performance
-        """
-        downloader = Downloader(self.requester, output, self.verify_ssl)
-        # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz
-        # can be < conanfile, conaninfo, and sent always the last, so smaller files go first
-        for filename, resource_url in sorted(file_urls.items(), reverse=True):
-            if output:
-                output.writeln("Downloading %s" % filename)
-            auth, _ = self._file_server_capabilities(resource_url)
-            contents = downloader.download(resource_url, auth=auth)
-            if output:
-                output.writeln("")
-            yield os.path.normpath(filename), contents
-
-    def download_files_to_folder(self, file_urls, to_folder, output=None):
-        """
-        :param: file_urls is a dict with {filename: abs_path}
-
-        It writes downloaded files to disk (appending to file, only keeps chunks in memory)
-        """
-        downloader = Downloader(self.requester, output, self.verify_ssl)
-        ret = {}
-        # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz
-        # can be < conanfile, conaninfo, and sent always the last, so smaller files go first
-        for filename, resource_url in sorted(file_urls.items(), reverse=True):
-            if output:
-                output.writeln("Downloading %s" % filename)
-            auth, _ = self._file_server_capabilities(resource_url)
-            abs_path = os.path.join(to_folder, filename)
-            downloader.download(resource_url, abs_path, auth=auth)
-            if output:
-                output.writeln("")
-            ret[filename] = abs_path
-        return ret
-
-    def upload_files(self, file_urls, files, output, retry, retry_wait):
-        t1 = time.time()
-        failed = []
-        uploader = Uploader(self.requester, output, self.verify_ssl)
-        # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz
-        # can be < conanfile, conaninfo, and sent always the last, so smaller files go first
-        for filename, resource_url in sorted(file_urls.items(), reverse=True):
-            output.rewrite_line("Uploading %s" % filename)
-            auth, dedup = self._file_server_capabilities(resource_url)
-            try:
-                response = uploader.upload(resource_url, files[filename], auth=auth, dedup=dedup,
-                                           retry=retry, retry_wait=retry_wait, headers=self._put_headers)
-                output.writeln("")
-                if not response.ok:
-                    output.error("\nError uploading file: %s, '%s'" % (filename, response.content))
-                    failed.append(filename)
-                else:
-                    pass
-            except Exception as exc:
-                output.error("\nError uploading file: %s, '%s'" % (filename, exc))
-                failed.append(filename)
-
-        if failed:
-            raise ConanException("Execute upload again to retry upload the failed files: %s"
-                                 % ", ".join(failed))
-        else:
-            logger.debug("\nAll uploaded! Total time: %s\n" % str(time.time() - t1))
+    def get_latest_package_revision(self, pref):
+        return self._get_api().get_latest_package_revision(pref)

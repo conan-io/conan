@@ -1,20 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import os
-from conans.util.files import save
-import logging
-from conans.paths import conan_expand_user
-
-# Capture SSL warnings as pointed out here:
-# https://urllib3.readthedocs.org/en/latest/security.html#insecureplatformwarning
-# TODO: Fix this security warning
-logging.captureWarnings(True)
-
-# LAST LINES OF THIS CERTIFICATE BUNDLE INCLUDES OUT CHEAP COMODO AUTHORITY
-# VERIFICATOR. IF ITS NOT INCLUDED, SSL REQUESTS WILL FAIL OR CANT BE VERIFIED
-# (WITH THE WARNING OF URLLIB)
-
-cacert = '''
+cacert = """
 # Issuer: O=Equifax OU=Equifax Secure Certificate Authority
 # Subject: O=Equifax OU=Equifax Secure Certificate Authority
 # Label: "Equifax Secure CA"
@@ -5715,12 +5701,4 @@ j4rBYKEMrltDR5FL1ZoXX/nUh8HCjLfn4g8wGTeGrODcQgPmlKidrv0PJFGUzpII
 lBlGGSW4gNfL1IYoakRwJiNiqZ+Gb7+6kHDSVneFeO/qJakXzlByjAA6quPbYzSf
 +AZxAeKCINT+b72x
 -----END CERTIFICATE-----
-'''
-
-# Workaround to avoid pyinstaller statics hell.
-# request (at the end because openssl) needs a file with
-# certs, it can't be injected. Damned coupled code.
-dir_path = conan_expand_user("~/.conan")
-file_path = os.path.join(dir_path, "cacert.pem")
-if not os.path.exists(file_path):
-    save(file_path, cacert)
+"""

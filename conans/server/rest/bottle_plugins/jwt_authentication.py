@@ -1,15 +1,16 @@
 from bottle import HTTPResponse
+
 from conans.server.rest.bottle_plugins.authorization_header import AuthorizationHeader
 
 
 class JWTAuthentication(AuthorizationHeader):
-    ''' The HttpBasicAuthenticationBottlePlugin plugin requires Http Basic Authentication'''
+    """ The HttpBasicAuthenticationBottlePlugin plugin requires Http Basic Authentication """
 
     name = 'jwtauthenticationbottleplugin'
     api = 2
 
     def __init__(self, manager, keyword='auth_user'):
-        '''Manager should be a JWTCredentialsManager'''
+        """ Manager should be a JWTCredentialsManager """
         self.manager = manager
         self.keyword = keyword
         super(JWTAuthentication, self).__init__(keyword)

@@ -2,21 +2,25 @@
 Server's configuration variables
 """
 
-from conans.util.env_reader import get_env
-from datetime import timedelta
 import os
 import random
 import string
-from conans.errors import ConanException
-from conans.util.files import save, mkdir
-from six.moves.configparser import ConfigParser, NoSectionError
-from conans.paths import SimplePaths, conan_expand_user
-from conans.server.store.disk_adapter import ServerDiskAdapter
-from conans.server.store.file_manager import FileManager
-from conans.util.log import logger
-from conans.server.conf.default_server_conf import default_server_conf
+from datetime import timedelta
 
-MIN_CLIENT_COMPATIBLE_VERSION = '0.19.3'
+import six
+from six.moves.configparser import ConfigParser, NoSectionError
+
+from conans.client import tools
+from conans.errors import ConanException
+from conans.paths import conan_expand_user
+from conans.server.conf.default_server_conf import default_server_conf
+from conans.server.store.disk_adapter import ServerDiskAdapter
+from conans.server.store.server_store import ServerStore
+from conans.util.env_reader import get_env
+from conans.util.files import mkdir, save
+from conans.util.log import logger
+
+MIN_CLIENT_COMPATIBLE_VERSION = '0.25.0'
 
 
 class ConanServerConfigParser(ConfigParser):
@@ -24,16 +28,18 @@ class ConanServerConfigParser(ConfigParser):
     values from environment variables or from file.
     Environment variables have PRECEDENCE over file values
     """
-    def __init__(self, base_folder, storage_folder=None, environment=os.environ):
+    def __init__(self, base_folder, environment=None):
+        environment = environment or os.environ
+
         ConfigParser.__init__(self)
+        environment = environment or os.environ
         self.optionxform = str  # This line keeps the case of the key, important for users case
         self.conan_folder = os.path.join(base_folder, '.conan_server')
         self.config_filename = os.path.join(self.conan_folder, 'server.conf')
         self._loaded = False
         self.env_config = {"updown_secret": get_env("CONAN_UPDOWN_SECRET", None, environment),
-                           "store_adapter": get_env("CONAN_STORE_ADAPTER", None, environment),
                            "authorize_timeout": get_env("CONAN_AUTHORIZE_TIMEOUT", None, environment),
-                           "disk_storage_path": get_env("CONAN_STORAGE_PATH", storage_folder, environment),
+                           "disk_storage_path": get_env("CONAN_STORAGE_PATH", None, environment),
                            "jwt_secret": get_env("CONAN_JWT_SECRET", None, environment),
                            "jwt_expire_minutes": get_env("CONAN_JWT_EXPIRE_MINUTES", None, environment),
                            "write_permissions": [],
@@ -47,7 +53,9 @@ class ConanServerConfigParser(ConfigParser):
                            "users": get_env("CONAN_SERVER_USERS", None, environment)}
 
     def _get_file_conf(self, section, varname=None):
-        """Gets the section from config file or raises an exception"""
+        """ Gets the section or variable from config file.
+        If the queried element is not found an exception is raised.
+        """
         try:
             if not os.path.exists(self.config_filename):
                 jwt_random_secret = ''.join(random.choice(string.ascii_letters) for _ in range(24))
@@ -58,14 +66,18 @@ class ConanServerConfigParser(ConfigParser):
 
             if not self._loaded:
                 self._loaded = True
-                self.read(self.config_filename)
+                # To avoid encoding problems we use our tools.load
+                if six.PY3:
+                    self.read_string(tools.load(self.config_filename))
+                else:
+                    self.read(self.config_filename)
 
             if varname:
                 section = dict(self.items(section))
                 return section[varname]
             else:
                 return self.items(section)
-        except NoSectionError as exc:
+        except NoSectionError:
             raise ConanException("No section '%s' found" % section)
         except Exception as exc:
             logger.debug(exc)
@@ -74,51 +86,59 @@ class ConanServerConfigParser(ConfigParser):
 
     @property
     def ssl_enabled(self):
-        if self.env_config["ssl_enabled"]:
-            return self.env_config["ssl_enabled"] == "true" or \
-                   self.env_config["ssl_enabled"] == "1"
-        else:
-            return self._get_file_conf("server", "ssl_enabled").lower() == "true" or \
-                   self._get_file_conf("server", "ssl_enabled").lower() == "1"
+        try:
+            ssl_enabled = self._get_conf_server_string("ssl_enabled").lower()
+            return ssl_enabled == "true" or ssl_enabled == "1"
+        except ConanException:
+            return None
 
     @property
     def port(self):
-        if self.env_config["port"]:
-            return int(self.env_config["port"])
-        else:
-            return int(self._get_file_conf("server", "port"))
+        return int(self._get_conf_server_string("port"))
 
     @property
     def public_port(self):
-        if self.env_config["public_port"]:
-            return int(self.env_config["public_port"])
-        elif self._get_file_conf("server", "public_port"):
-            return int(self._get_file_conf("server", "public_port"))
-        else:
+        try:
+            return int(self._get_conf_server_string("public_port"))
+        except ConanException:
             return self.port
 
     @property
     def host_name(self):
-        return self._get_conf_server_string("host_name")
+        try:
+            return self._get_conf_server_string("host_name")
+        except ConanException:
+            return None
 
     @property
     def public_url(self):
-        protocol = "https" if self.ssl_enabled else "http"
-        port = ":%s" % self.public_port if self.public_port != 80 else ""
-        return "%s://%s%s/v1" % (protocol, self.host_name, port)
+        host_name = self.host_name
+        ssl_enabled = self.ssl_enabled
+        protocol_version = "v1"
+        if host_name is None and ssl_enabled is None:
+            # No hostname and ssl config means that the transfer and the
+            # logical endpoint are the same and a relative URL is sufficient
+            return protocol_version
+        elif host_name is None or ssl_enabled is None:
+            raise ConanException("'host_name' and 'ssl_enable' have to be defined together.")
+        else:
+            protocol = "https" if ssl_enabled else "http"
+            port = ":%s" % self.public_port if self.public_port != 80 else ""
+            return "%s://%s%s/%s" % (protocol, host_name, port, protocol_version)
 
     @property
     def disk_storage_path(self):
         """If adapter is disk, means the directory for storage"""
-        if self.env_config["disk_storage_path"]:
-            ret = self.env_config["disk_storage_path"]
-        else:
-            try:
-                ret = conan_expand_user(self._get_file_conf("server", "disk_storage_path"))
-            except ConanException:
-                # If storage_path is not defined in file, use the current dir
-                # So tests use test folder instead of user/.conan_server
-                ret = os.path.dirname(self.config_filename)
+        try:
+            disk_path = self._get_conf_server_string("disk_storage_path")
+            if disk_path.startswith("."):
+                disk_path = os.path.join(os.path.dirname(self.config_filename), disk_path)
+                disk_path = os.path.abspath(disk_path)
+            ret = conan_expand_user(disk_path)
+        except ConanException:
+            # If storage_path is not defined, use the current dir
+            # So tests use test folder instead of user/.conan_server
+            ret = os.path.dirname(self.config_filename)
         ret = os.path.normpath(ret)  # Convert to O.S paths
         mkdir(ret)
         return ret
@@ -150,7 +170,8 @@ class ConanServerConfigParser(ConfigParser):
             try:
                 password.encode('ascii')
             except (UnicodeDecodeError, UnicodeEncodeError):
-                raise ConanException("Password contains invalid characters. Only ASCII encoding is supported")
+                raise ConanException("Password contains invalid characters. "
+                                     "Only ASCII encoding is supported")
             return password
 
         if self.env_config["users"]:
@@ -163,59 +184,45 @@ class ConanServerConfigParser(ConfigParser):
 
     @property
     def jwt_secret(self):
-        tmp = self._get_conf_server_string("jwt_secret")
-        if not tmp:
+        try:
+            return self._get_conf_server_string("jwt_secret")
+        except ConanException:
             raise ConanException("'jwt_secret' setting is needed. Please, write a value "
                                  "in server.conf or set CONAN_JWT_SECRET env value.")
-        return tmp
 
     @property
     def updown_secret(self):
-        tmp = self._get_conf_server_string("updown_secret")
-        if not tmp:
+        try:
+            return self._get_conf_server_string("updown_secret")
+        except ConanException:
             raise ConanException("'updown_secret' setting is needed. Please, write a value "
                                  "in server.conf or set CONAN_UPDOWN_SECRET env value.")
-        return self._get_conf_server_string("updown_secret")
-
-    @property
-    def store_adapter(self):
-        return self._get_conf_server_string("store_adapter")
 
     def _get_conf_server_string(self, keyname):
+        """ Gets the value of a server config value either from the environment
+        or the config file. Values from the environment have priority. If the
+        value is not defined or empty an exception is raised.
+        """
         if self.env_config[keyname]:
             return self.env_config[keyname]
-        else:
-            return self._get_file_conf("server", keyname)
+
+        value = self._get_file_conf("server", keyname)
+        if value == "":
+            raise ConanException("no value for 'server.%s' is defined in the config file" % keyname)
+        return value
 
     @property
     def authorize_timeout(self):
-        if self.env_config["authorize_timeout"]:
-            return timedelta(seconds=int(self.env_config["authorize_timeout"]))
-        else:
-            tmp = self._get_file_conf("server", "authorize_timeout")
-            return timedelta(seconds=int(tmp))
+        return timedelta(seconds=int(self._get_conf_server_string("authorize_timeout")))
 
     @property
     def jwt_expire_time(self):
-        if self.env_config["jwt_expire_minutes"]:
-            return timedelta(minutes=int(self.env_config["jwt_expire_minutes"]))
-        else:
-            tmp = float(self._get_file_conf("server", "jwt_expire_minutes"))
-            return timedelta(minutes=tmp)
+        return timedelta(minutes=float(self._get_conf_server_string("jwt_expire_minutes")))
 
 
-def get_file_manager(config, public_url=None, updown_auth_manager=None):
-    store_adapter = config.store_adapter
-    if store_adapter == "disk":
-        public_url = public_url or config.public_url
-        disk_controller_url = "%s/%s" % (public_url, "files")
-        if not updown_auth_manager:
-            raise Exception("Updown auth manager needed for disk controller (not s3)")
-        adapter = ServerDiskAdapter(disk_controller_url, config.disk_storage_path, updown_auth_manager)
-        paths = SimplePaths(config.disk_storage_path)
-    else:
-        # Want to develop new adapter? create a subclass of
-        # conans.server.store.file_manager.ServerStorageAdapter and implement the abstract methods
-        raise Exception("Store adapter not implemented! Change 'store_adapter' "
-                        "variable in server.conf file to one of the available options: 'disk' ")
-    return FileManager(paths, adapter)
+def get_server_store(disk_storage_path, public_url, updown_auth_manager):
+    disk_controller_url = "%s/%s" % (public_url, "files")
+    if not updown_auth_manager:
+        raise Exception("Updown auth manager needed for disk controller (not s3)")
+    adapter = ServerDiskAdapter(disk_controller_url, disk_storage_path, updown_auth_manager)
+    return ServerStore(adapter)

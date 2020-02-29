@@ -1,30 +1,25 @@
-import platform
-
+from conans.client.build.autotools_environment import AutoToolsBuildEnvironment
+from conans.client.build.visual_environment import VisualStudioBuildEnvironment
 from conans.client.generators.virtualenv import VirtualEnvGenerator
-from conans.client.configure_build_environment import (AutoToolsBuildEnvironment, VisualStudioBuildEnvironment)
+from conans.client.tools.win import vcvars_dict
 
 
 class VirtualBuildEnvGenerator(VirtualEnvGenerator):
 
+    suffix = "_build"
+    venv_name = "conanbuildenv"
+
     def __init__(self, conanfile):
         super(VirtualBuildEnvGenerator, self).__init__(conanfile)
-
         compiler = conanfile.settings.get_safe("compiler")
-        self.env = {}
-        if compiler != "Visual Studio":
-            auto_tools_b = AutoToolsBuildEnvironment(conanfile)
-            tmp = {var: '%s' % value for var, value in auto_tools_b.vars.items()}
-            self.env = tmp
+        if compiler == "Visual Studio":
+            self.env = VisualStudioBuildEnvironment(conanfile).vars_dict
+            settings_vars = vcvars_dict(conanfile.settings, output=conanfile.output)
+            # self.env has higher priority, so only extend (append) to it.
+            for name, value in self.env.items():
+                if isinstance(value, list):
+                    value.extend(settings_vars.pop(name, []))
+
+            self.env.update(settings_vars)
         else:
-            visual_b = VisualStudioBuildEnvironment(conanfile, quote_paths=False)
-            self.env = visual_b.vars
-
-    @property
-    def content(self):
-        tmp = super(VirtualBuildEnvGenerator, self).content
-        ret = {}
-        for name, value in tmp.items():
-            tmp = name.split(".")
-            ret["%s_build.%s" % (tmp[0], tmp[1])] = value
-
-        return ret
+            self.env = AutoToolsBuildEnvironment(conanfile).vars_dict

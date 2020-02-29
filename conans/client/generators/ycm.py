@@ -1,5 +1,6 @@
+import json
+
 from conans.model import Generator
-from conans.paths import BUILD_INFO_YCM
 
 
 class YouCompleteMeGenerator(Generator):
@@ -35,6 +36,7 @@ class YouCompleteMeGenerator(Generator):
 # For more information, please refer to <http://unlicense.org/>
 
 import os
+import json
 import ycm_core
 import logging
 
@@ -50,8 +52,14 @@ def DirectoryOfThisScript():
 # compilation database set (by default, one is not set).
 # CHANGE THIS LIST OF FLAGS. YES, THIS IS THE DROID YOU HAVE BEEN LOOKING FOR.
 flags = [
-{default_flags}
+ '-x', 'c++'
 ]
+
+conan_flags = json.loads(open("conan_ycm_flags.json", "r").read())
+
+flags.extend(conan_flags["flags"])
+flags.extend(conan_flags["defines"])
+flags.extend(conan_flags["includes"])
 
 
 # Set this to the absolute path to the folder (NOT the file!) containing the
@@ -112,7 +120,7 @@ def MakeRelativePathsInFlagsAbsolute( flags, working_directory ):
 
 def IsHeaderFile( filename ):
   extension = os.path.splitext( filename )[ 1 ]
-  return extension in [ '.h', '.hxx', '.hpp', '.hh' ]
+  return extension.lower() in [ '.h', '.hxx', '.hpp', '.hh' ]
 
 
 def GetCompilationInfoForFile( filename ):
@@ -158,26 +166,32 @@ def FlagsForFile( filename, **kwargs ):
   _logger.info("Final flags for %s are %s" % (filename, ' '.join(final_flags)))
 
   return {{
-    'flags': final_flags + ["-I/usr/include", "-I/usr/include/c++/5"],
+    'flags': final_flags + ["-I/usr/include", "-I/usr/include/c++/{cxx_version}"],
     'do_cache': True
   }}
 '''
 
     @property
     def filename(self):
-        return BUILD_INFO_YCM
+        pass
 
     @property
     def content(self):
         def prefixed(prefix, values):
             return [prefix + x for x in values]
 
-        flags = ['-x', 'c++']
-        flags.extend(self.deps_build_info.cppflags)
-        flags.extend(self.build_info.cppflags)
-        flags.extend(prefixed("-D", self.deps_build_info.defines))
-        flags.extend(prefixed("-D", self.build_info.defines))
-        flags.extend(prefixed("-I", self.build_info.include_paths))
-        flags.extend(prefixed("-I", self.deps_build_info.include_paths))
+        conan_flags = {
+            "includes": prefixed("-isystem", self.deps_build_info.include_paths),
+            "defines": prefixed("-D", self.deps_build_info.defines),
+            "flags": self.deps_build_info.cxxflags
+        }
 
-        return self.template.format(default_flags="'" + "', '".join(flags) + "'")
+        cxx_version = ''
+        try:
+            cxx_version = str(self.settings.compiler.version).split('.')[0]
+        except Exception:
+            pass
+
+        ycm_data = self.template.format(cxx_version=cxx_version)
+        return {"conan_ycm_extra_conf.py": ycm_data,
+                "conan_ycm_flags.json": json.dumps(conan_flags, indent=2)}

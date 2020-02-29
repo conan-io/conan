@@ -1,12 +1,14 @@
-from conans.errors import ConanException
 import yaml
+
+from conans.errors import ConanException
 from conans.model.values import Values
 
 
 def bad_value_msg(name, value, value_range):
     tip = ""
     if "settings" in name:
-        tip = '\nRead "http://docs.conan.io/en/latest/faq/troubleshooting.html#error-invalid-setting"'
+        tip = '\nRead "http://docs.conan.io/en/latest/faq/troubleshooting.html' \
+              '#error-invalid-setting"'
 
     return ("Invalid setting '%s' is not a valid '%s' value.\nPossible values are %s%s"
             % (value, name, value_range, tip))
@@ -14,21 +16,27 @@ def bad_value_msg(name, value, value_range):
 
 def undefined_field(name, field, fields=None, value=None):
     value_str = " for '%s'" % value if value else ""
-    result = ["'%s.%s' doesn't exist%s" % (name, field, value_str)]
-    result.append("'%s' possible configurations are %s" % (name, fields or "none"))
-    return "\n".join(result)
+    result = ["'%s.%s' doesn't exist%s" % (name, field, value_str),
+              "'%s' possible configurations are %s" % (name, fields or "none")]
+    return ConanException("\n".join(result))
 
 
 def undefined_value(name):
-    return "'%s' value not defined" % name
+    return ConanException("'%s' value not defined" % name)
 
 
 class SettingsItem(object):
+    """ represents a setting value and its child info, which could be:
+    - A range of valid values: [Debug, Release] (for settings.compiler.runtime of VS)
+    - "ANY", as string to accept any value
+    - List ["None", "ANY"] to accept None or any value
+    - A dict {subsetting: definition}, e.g. {version: [], runtime: []} for VS
+    """
     def __init__(self, definition, name):
-        self._name = name
-        self._value = None
-        self._definition = {}
+        self._name = name  # settings.compiler
+        self._value = None  # gcc
         if isinstance(definition, dict):
+            self._definition = {}
             # recursive
             for k, v in definition.items():
                 k = str(k)
@@ -39,6 +47,9 @@ class SettingsItem(object):
             # list or tuple of possible values
             self._definition = sorted(str(v) for v in definition)
 
+    def __contains__(self, value):
+        return value in (self._value or "")
+
     def copy(self):
         """ deepcopy, recursive
         """
@@ -48,6 +59,18 @@ class SettingsItem(object):
             result._definition = self._definition[:]
         else:
             result._definition = {k: v.copy() for k, v in self._definition.items()}
+        return result
+
+    def copy_values(self):
+        if self._value is None and "None" not in self._definition:
+            return None
+
+        result = SettingsItem({}, name=self._name)
+        result._value = self._value
+        if self.is_final:
+            result._definition = self._definition[:]
+        else:
+            result._definition = {k: v.copy_values() for k, v in self._definition.items()}
         return result
 
     @property
@@ -63,13 +86,16 @@ class SettingsItem(object):
         return self.__bool__()
 
     def __str__(self):
-        return self._value
+        return str(self._value)
+
+    def _not_any(self):
+        return self._definition != "ANY" and "ANY" not in self._definition
 
     def __eq__(self, other):
         if other is None:
             return self._value is None
         other = str(other)
-        if self._definition != "ANY" and other not in self.values_range:
+        if self._not_any() and other not in self.values_range:
             raise ConanException(bad_value_msg(self._name, other, self.values_range))
         return other == self.__str__()
 
@@ -82,7 +108,7 @@ class SettingsItem(object):
         """
         try:
             self._get_child(self._value).remove(item)
-        except:
+        except Exception:
             pass
 
     def remove(self, values):
@@ -92,17 +118,20 @@ class SettingsItem(object):
             v = str(v)
             if isinstance(self._definition, dict):
                 self._definition.pop(v, None)
-            elif self._definition != "ANY":
-                if v in self._definition:
-                    self._definition.remove(v)
-        if self._value is not None and self._value not in self._definition:
+            elif self._definition == "ANY":
+                if v == "ANY":
+                    self._definition = []
+            elif v in self._definition:
+                self._definition.remove(v)
+
+        if self._value is not None and self._value not in self._definition and self._not_any():
             raise ConanException(bad_value_msg(self._name, self._value, self.values_range))
 
     def _get_child(self, item):
         if not isinstance(self._definition, dict):
-            raise ConanException(undefined_field(self._name, item, None, self._value))
+            raise undefined_field(self._name, item, None, self._value)
         if self._value is None:
-            raise ConanException(undefined_value(self._name))
+            raise undefined_value(self._name)
         return self._definition[self._value]
 
     def __getattr__(self, item):
@@ -122,7 +151,7 @@ class SettingsItem(object):
         value = str(value)
         try:
             return self._definition[value]
-        except:
+        except Exception:
             raise ConanException(bad_value_msg(self._name, value, self.values_range))
 
     @property
@@ -132,7 +161,7 @@ class SettingsItem(object):
     @value.setter
     def value(self, v):
         v = str(v)
-        if self._definition != "ANY" and v not in self._definition:
+        if self._not_any() and v not in self.values_range:
             raise ConanException(bad_value_msg(self._name, v, self.values_range))
         self._value = v
 
@@ -140,7 +169,7 @@ class SettingsItem(object):
     def values_range(self):
         try:
             return sorted(list(self._definition.keys()))
-        except:
+        except Exception:
             return self._definition
 
     @property
@@ -157,14 +186,16 @@ class SettingsItem(object):
 
     def validate(self):
         if self._value is None and "None" not in self._definition:
-            raise ConanException(undefined_value(self._name))
-
+            raise undefined_value(self._name)
         if isinstance(self._definition, dict):
-            self._definition[self._value].validate()
+            key = "None" if self._value is None else self._value
+            self._definition[key].validate()
 
 
 class Settings(object):
     def __init__(self, definition=None, name="settings", parent_value=None):
+        if parent_value == "None" and definition:
+            raise ConanException("settings.yml: None setting can't have subsettings")
         definition = definition or {}
         self._name = name  # settings, settings.compiler
         self._parent_value = parent_value  # gcc, x86
@@ -190,9 +221,22 @@ class Settings(object):
             result._data[k] = v.copy()
         return result
 
+    def copy_values(self):
+        """ deepcopy, recursive
+        """
+        result = Settings({}, name=self._name, parent_value=self._parent_value)
+        for k, v in self._data.items():
+            value = v.copy_values()
+            if value is not None:
+                result._data[k] = value
+        return result
+
     @staticmethod
     def loads(text):
-        return Settings(yaml.load(text) or {})
+        try:
+            return Settings(yaml.safe_load(text) or {})
+        except (yaml.YAMLError, AttributeError) as ye:
+            raise ConanException("Invalid settings.yml format: {}".format(ye))
 
     def validate(self):
         for field in self.fields:
@@ -215,8 +259,7 @@ class Settings(object):
 
     def _check_field(self, field):
         if field not in self._data:
-            raise ConanException(undefined_field(self._name, field, self.fields,
-                                                 self._parent_value))
+            raise undefined_field(self._name, field, self.fields, self._parent_value)
 
     def __getattr__(self, field):
         assert field[0] != "_", "ERROR %s" % field
@@ -290,6 +333,8 @@ class Settings(object):
             other_field_def = constraint_def[field]
             if other_field_def is None:  # Means leave it as is
                 continue
+            if isinstance(other_field_def, str):
+                other_field_def = [other_field_def]
 
             values_to_remove = []
             for value in config_item.values_range:  # value = "Visual Studio"
@@ -310,7 +355,7 @@ class Settings(object):
         # Sanity check for input constraint wrong fields
         for field in constraint_def:
             if field not in self._data:
-                raise ConanException(undefined_field(self._name, field, self.fields))
+                raise undefined_field(self._name, field, self.fields)
 
         # remove settings not defined in the constraint
         self.remove(fields_to_remove)

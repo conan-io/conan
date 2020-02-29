@@ -1,7 +1,8 @@
-from conans.util.files import load, save
-from conans.model.version import Version
-from conans.errors import ConanException
 import os
+
+from conans.errors import ConanException, ConanMigrationError
+from conans.model.version import Version
+from conans.util.files import load, save
 
 CONAN_VERSION = "version.txt"
 
@@ -17,10 +18,14 @@ class Migrator(object):
         self.out = out
 
     def migrate(self):
-        old_version = self._load_old_version()
-        if old_version != self.current_version:
-            self._make_migrations(old_version)
-            self._update_version_file()
+        try:
+            old_version = self._load_old_version()
+            if old_version != self.current_version:
+                self._make_migrations(old_version)
+                self._update_version_file()
+        except Exception as e:
+            self.out.error(str(e))
+            raise ConanMigrationError(e)
 
     def _make_migrations(self, old_version):
         raise NotImplementedError("Implement in subclass")
@@ -35,6 +40,6 @@ class Migrator(object):
         try:
             tmp = load(self.file_version_path)
             old_version = Version(tmp)
-        except:
+        except Exception:
             old_version = None
         return old_version

@@ -1,10 +1,11 @@
 import re
+
 from conans.errors import ConanException
 
 
 def get_bool_from_text_value(value):
     """ to be deprecated
-    It has issues, as accepting into the registry whatever=value, as False, withoug
+    It has issues, as accepting into the registry whatever=value, as False, without
     complaining
     """
     return (value == "1" or value.lower() == "yes" or value.lower() == "y" or
@@ -43,7 +44,8 @@ class ConfigParser(object):
                 else:
                     raise ConanException("ConfigParser: Bad syntax '%s'" % line)
             if field:
-                if self._allowed_fields and field not in self._allowed_fields and raise_unexpected_field:
+                if (self._allowed_fields and field not in self._allowed_fields and
+                        raise_unexpected_field):
                     raise ConanException("ConfigParser: Unrecognized field '%s'" % field)
                 else:
                     current_lines = []
@@ -52,7 +54,8 @@ class ConfigParser(object):
                 if current_lines is None:
                     raise ConanException("ConfigParser: Unexpected line '%s'" % line)
                 if parse_lines:
-                    line = line.split('#')[0]
+                    line = line.split(' #', 1)[0]
+                    line = line.split('    #', 1)[0]
                     line = line.strip()
                 current_lines.append(line)
 

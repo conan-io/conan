@@ -1,11 +1,13 @@
+import traceback
+
 from bottle import HTTPResponse
+
 from conans.errors import ConanException
 from conans.util.log import logger
-import traceback
 
 
 class ReturnHandlerPlugin(object):
-    ''' The ReturnHandlerPlugin plugin unify REST return and exception management'''
+    """ The ReturnHandlerPlugin plugin unify REST return and exception management """
 
     name = 'ReturnHandlerPlugin'
     api = 2
@@ -14,16 +16,16 @@ class ReturnHandlerPlugin(object):
         self.exception_mapping = exception_mapping
 
     def setup(self, app):
-        ''' Make sure that other installed plugins don't affect the same
-            keyword argument.'''
+        """ Make sure that other installed plugins don't affect the same
+            keyword argument. """
         for other in app.plugins:
             if not isinstance(other, ReturnHandlerPlugin):
                 continue
 
     def apply(self, callback, _):
-        '''Apply plugin'''
+        """ Apply plugin """
         def wrapper(*args, **kwargs):
-            '''Capture possible exceptions to manage the return'''
+            """ Capture possible exceptions to manage the return """
             try:
                 # The encoding from browsers is utf-8, so we assume it
                 for key, value in kwargs.items():

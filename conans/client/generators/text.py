@@ -1,32 +1,140 @@
+import re
+import traceback
+from collections import defaultdict
+
+from conans.errors import ConanException
 from conans.model import Generator
+from conans.model.build_info import CppInfo, DepsCppInfo
+from conans.model.env_info import DepsEnvInfo
+from conans.model.user_info import DepsUserInfo
 from conans.paths import BUILD_INFO
+from conans.util.log import logger
 
 
 class DepsCppTXT(object):
-    def __init__(self, deps_cpp_info):
+    def __init__(self, cpp_info):
         self.include_paths = "\n".join(p.replace("\\", "/")
-                                       for p in deps_cpp_info.include_paths)
+                                       for p in cpp_info.include_paths)
         self.lib_paths = "\n".join(p.replace("\\", "/")
-                                   for p in deps_cpp_info.lib_paths)
+                                   for p in cpp_info.lib_paths)
         self.res_paths = "\n".join(p.replace("\\", "/")
-                                   for p in deps_cpp_info.res_paths)
+                                   for p in cpp_info.res_paths)
         self.build_paths = "\n".join(p.replace("\\", "/")
-                                     for p in deps_cpp_info.build_paths)
-        self.libs = "\n".join(deps_cpp_info.libs)
-        self.defines = "\n".join(deps_cpp_info.defines)
-        self.cppflags = "\n".join(deps_cpp_info.cppflags)
-        self.cflags = "\n".join(deps_cpp_info.cflags)
-        self.sharedlinkflags = "\n".join(deps_cpp_info.sharedlinkflags)
-        self.exelinkflags = "\n".join(deps_cpp_info.exelinkflags)
+                                     for p in cpp_info.build_paths)
+        self.libs = "\n".join(cpp_info.libs)
+        self.system_libs = "\n".join(cpp_info.system_libs)
+        self.defines = "\n".join(cpp_info.defines)
+        self.cxxflags = "\n".join(cpp_info.cxxflags)
+        self.cflags = "\n".join(cpp_info.cflags)
+        self.sharedlinkflags = "\n".join(cpp_info.sharedlinkflags)
+        self.exelinkflags = "\n".join(cpp_info.exelinkflags)
         self.bin_paths = "\n".join(p.replace("\\", "/")
-                                   for p in deps_cpp_info.bin_paths)
-        self.rootpath = "%s" % deps_cpp_info.rootpath.replace("\\", "/")
+                                   for p in cpp_info.bin_paths)
+        self.rootpath = "%s" % cpp_info.rootpath.replace("\\", "/")
+        self.sysroot = "%s" % cpp_info.sysroot.replace("\\", "/") if cpp_info.sysroot else ""
+        self.frameworks = "\n".join(cpp_info.frameworks)
+        self.framework_paths = "\n".join(p.replace("\\", "/")
+                                         for p in cpp_info.framework_paths)
 
 
 class TXTGenerator(Generator):
     @property
     def filename(self):
         return BUILD_INFO
+
+    @staticmethod
+    def loads(text):
+        user_defines_index = text.find("[USER_")
+        env_defines_index = text.find("[ENV_")
+        if user_defines_index != -1:
+            deps_cpp_info_txt = text[:user_defines_index]
+            if env_defines_index != -1:
+                user_info_txt = text[user_defines_index:env_defines_index]
+                deps_env_info_txt = text[env_defines_index:]
+            else:
+                user_info_txt = text[user_defines_index:]
+                deps_env_info_txt = ""
+        else:
+            if env_defines_index != -1:
+                deps_cpp_info_txt = text[:env_defines_index]
+                deps_env_info_txt = text[env_defines_index:]
+            else:
+                deps_cpp_info_txt = text
+                deps_env_info_txt = ""
+
+            user_info_txt = ""
+
+        deps_cpp_info = TXTGenerator._loads_cpp_info(deps_cpp_info_txt)
+        deps_user_info = TXTGenerator._loads_deps_user_info(user_info_txt)
+        deps_env_info = DepsEnvInfo.loads(deps_env_info_txt)
+        return deps_cpp_info, deps_user_info, deps_env_info
+
+    @staticmethod
+    def _loads_deps_user_info(text):
+        ret = DepsUserInfo()
+        lib_name = None
+        for line in text.splitlines():
+            if not line:
+                continue
+            if not lib_name and not line.startswith("[USER_"):
+                raise ConanException("Error, invalid file format reading user info variables")
+            elif line.startswith("[USER_"):
+                lib_name = line[6:-1]
+            else:
+                var_name, value = line.split("=", 1)
+                setattr(ret[lib_name], var_name, value)
+        return ret
+
+    @staticmethod
+    def _loads_cpp_info(text):
+        pattern = re.compile(r"^\[([a-zA-Z0-9._:-]+)\]([^\[]+)", re.MULTILINE)
+
+        try:
+            # Parse the text
+            data = defaultdict(lambda: defaultdict(dict))
+            for m in pattern.finditer(text):
+                var_name = m.group(1)
+                lines = []
+                for line in m.group(2).splitlines():
+                    line = line.strip()
+                    if not line or line[0] == "#":
+                        continue
+                    lines.append(line)
+                if not lines:
+                    continue
+
+                tokens = var_name.split(":")
+                if len(tokens) == 2:  # has config
+                    var_name, config = tokens
+                else:
+                    config = None
+                tokens = var_name.split("_", 1)
+                field = tokens[0]
+                dep = tokens[1] if len(tokens) == 2 else None
+                if field == "cppflags":
+                    field = "cxxflags"
+                data[dep][config][field] = lines
+
+            # Build the data structures
+            deps_cpp_info = DepsCppInfo()
+            for dep, configs_cpp_info in data.items():
+                if dep is None:
+                    cpp_info = deps_cpp_info
+                else:
+                    cpp_info = deps_cpp_info._dependencies.setdefault(dep, CppInfo(root_folder=""))
+
+                for config, fields in configs_cpp_info.items():
+                    item_to_apply = cpp_info if not config else getattr(cpp_info, config)
+
+                    for key, value in fields.items():
+                        if key in ['rootpath', 'sysroot']:
+                            value = value[0]
+                        setattr(item_to_apply, key, value)
+            return deps_cpp_info
+
+        except Exception as e:
+            logger.error(traceback.format_exc())
+            raise ConanException("There was an error parsing conanbuildinfo.txt: %s" % str(e))
 
     @property
     def content(self):
@@ -36,11 +144,16 @@ class TXTGenerator(Generator):
                     '[resdirs{dep}{config}]\n{deps.res_paths}\n\n'
                     '[builddirs{dep}{config}]\n{deps.build_paths}\n\n'
                     '[libs{dep}{config}]\n{deps.libs}\n\n'
+                    '[system_libs{dep}{config}]\n{deps.system_libs}\n\n'
                     '[defines{dep}{config}]\n{deps.defines}\n\n'
-                    '[cppflags{dep}{config}]\n{deps.cppflags}\n\n'
+                    '[cppflags{dep}{config}]\n{deps.cxxflags}\n\n'  # Backwards compatibility
+                    '[cxxflags{dep}{config}]\n{deps.cxxflags}\n\n'
                     '[cflags{dep}{config}]\n{deps.cflags}\n\n'
                     '[sharedlinkflags{dep}{config}]\n{deps.sharedlinkflags}\n\n'
-                    '[exelinkflags{dep}{config}]\n{deps.exelinkflags}\n\n')
+                    '[exelinkflags{dep}{config}]\n{deps.exelinkflags}\n\n'
+                    '[sysroot{dep}{config}]\n{deps.sysroot}\n\n'
+                    '[frameworks{dep}{config}]\n{deps.frameworks}\n\n'
+                    '[frameworkdirs{dep}{config}]\n{deps.framework_paths}\n\n')
 
         sections = []
         deps = DepsCppTXT(self.deps_build_info)
@@ -52,6 +165,7 @@ class TXTGenerator(Generator):
             all_flags = template.format(dep="", deps=deps, config=":" + config)
             sections.append(all_flags)
 
+        # Makes no sense to have an accumulated rootpath
         template_deps = template + '[rootpath{dep}]\n{deps.rootpath}\n\n'
 
         for dep_name, dep_cpp_info in self.deps_build_info.dependencies:
@@ -64,5 +178,14 @@ class TXTGenerator(Generator):
                 deps = DepsCppTXT(cpp_info)
                 all_flags = template.format(dep=dep, deps=deps, config=":" + config)
                 sections.append(all_flags)
+
+        # Generate the user info variables as [USER_{DEP_NAME}] and then the values with key=value
+        for dep, the_vars in self._deps_user_info.items():
+            sections.append("[USER_%s]" % dep)
+            for name, value in sorted(the_vars.vars.items()):
+                sections.append("%s=%s" % (name, value))
+
+        # Generate the env info variables as [ENV_{DEP_NAME}] and then the values with key=value
+        sections.append(self._deps_env_info.dumps())
 
         return "\n".join(sections)

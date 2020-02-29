@@ -1,8 +1,28 @@
-from colorama import Fore, Style
+import os
 import six
-from conans.util.files import decode_text
+import sys
+from colorama import Fore, Style
+
 from conans.util.env_reader import get_env
-from conans.errors import ConanException
+from conans.util.files import decode_text
+
+
+def colorama_initialize():
+    # Respect color env setting or check tty if unset
+    color_set = "CONAN_COLOR_DISPLAY" in os.environ
+    if ((color_set and get_env("CONAN_COLOR_DISPLAY", 1))
+            or (not color_set
+                and hasattr(sys.stdout, "isatty")
+                and sys.stdout.isatty())):
+        import colorama
+        if get_env("PYCHARM_HOSTED"):  # in PyCharm disable convert/strip
+            colorama.init(convert=False, strip=False)
+        else:
+            colorama.init()
+        color = True
+    else:
+        color = False
+    return color
 
 
 class Color(object):
@@ -41,54 +61,67 @@ class ConanOutput(object):
     and auxiliary info, success, warn methods for convenience.
     """
 
-    def __init__(self, stream, color=False):
+    def __init__(self, stream, stream_err=None, color=False):
         self._stream = stream
+        self._stream_err = stream_err or stream
         self._color = color
-        self.werror_active = False
 
+    @property
     def is_terminal(self):
         return hasattr(self._stream, "isatty") and self._stream.isatty()
 
-    def writeln(self, data, front=None, back=None):
-        self.write(data, front, back, True)
+    def writeln(self, data, front=None, back=None, error=False):
+        self.write(data, front, back, newline=True, error=error)
 
-    def write(self, data, front=None, back=None, newline=False):
+    def _write(self, data, newline=False):
+        if newline:
+            data = "%s\n" % data
+        self._stream.write(data)
+
+    def _write_err(self, data, newline=False):
+        if newline:
+            data = "%s\n" % data
+        self._stream_err.write(data)
+
+    def write(self, data, front=None, back=None, newline=False, error=False):
         if six.PY2:
             if isinstance(data, str):
                 data = decode_text(data)  # Keep python 2 compatibility
 
         if self._color and (front or back):
-            color = "%s%s" % (front or '', back or '')
-            end = (Style.RESET_ALL + "\n") if newline else Style.RESET_ALL  # @UndefinedVariable
-            data = "%s%s%s" % (color, data, end)
-        else:
-            if newline:
-                data = "%s\n" % data
+            data = "%s%s%s%s" % (front or '', back or '', data, Style.RESET_ALL)
 
-        try:
-            self._stream.write(data)
-        except UnicodeError:
-            data = data.encode("utf8").decode("ascii", "ignore")
-            self._stream.write(data)
+        # https://github.com/conan-io/conan/issues/4277
+        # Windows output locks produce IOErrors
+        for _ in range(3):
+            try:
+                if error:
+                    self._write_err(data, newline)
+                else:
+                    self._write(data, newline)
+                break
+            except IOError:
+                import time
+                time.sleep(0.02)
+            except UnicodeError:
+                data = data.encode("utf8").decode("ascii", "ignore")
+
         self._stream.flush()
 
     def info(self, data):
         self.writeln(data, Color.BRIGHT_CYAN)
 
+    def highlight(self, data):
+        self.writeln(data, Color.BRIGHT_MAGENTA)
+
     def success(self, data):
         self.writeln(data, Color.BRIGHT_GREEN)
 
     def warn(self, data):
-        self.writeln("WARN: " + data, Color.BRIGHT_YELLOW)
-
-    def werror(self, data):
-        if self.werror_active:
-            raise ConanException(data)
-        else:
-            self.warn(data)
+        self.writeln("WARN: {}".format(data), Color.BRIGHT_YELLOW, error=True)
 
     def error(self, data):
-        self.writeln("ERROR: " + data, Color.BRIGHT_RED)
+        self.writeln("ERROR: {}".format(data), Color.BRIGHT_RED, error=True)
 
     def input_text(self, data):
         self.write(data, Color.GREEN)
@@ -104,14 +137,20 @@ class ConanOutput(object):
         self._stream.flush()
         self._color = tmp_color
 
+    def flush(self):
+        self._stream.flush()
+
 
 class ScopedOutput(ConanOutput):
     def __init__(self, scope, output):
         self.scope = scope
         self._stream = output._stream
+        self._stream_err = output._stream_err
         self._color = output._color
-        self.werror_active = output.werror_active
 
-    def write(self, data, front=None, back=None, newline=False):
-        super(ScopedOutput, self).write("%s: " % self.scope, front, back, False)
-        super(ScopedOutput, self).write("%s" % data, Color.BRIGHT_WHITE, back, newline)
+    def write(self, data, front=None, back=None, newline=False, error=False):
+        assert self.scope != "virtual", "printing with scope==virtual"
+        super(ScopedOutput, self).write("%s: " % self.scope, front=front, back=back,
+                                        newline=False, error=error)
+        super(ScopedOutput, self).write("%s" % data, front=Color.BRIGHT_WHITE, back=back,
+                                        newline=newline, error=error)

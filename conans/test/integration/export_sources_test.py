@@ -1,14 +1,16 @@
-import unittest
-from conans.test.utils.tools import TestClient, TestServer
-from conans.model.ref import ConanFileReference, PackageReference
 import os
-from conans.paths import EXPORT_SOURCES_DIR, EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME
-from nose_parameterized.parameterized import parameterized
-from conans.util.files import load, save, md5sum
-from conans.model.manifest import FileTreeManifest
+import unittest
 from collections import OrderedDict
-from conans.test.utils.test_files import scan_folder
 
+from parameterized.parameterized import parameterized
+
+from conans.client import tools
+from conans.model.manifest import FileTreeManifest
+from conans.model.ref import ConanFileReference, PackageReference
+from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_SRC_FOLDER, EXPORT_TGZ_NAME
+from conans.test.utils.test_files import scan_folder
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
+from conans.util.files import load, md5sum, save
 
 conanfile_py = """
 from conans import ConanFile
@@ -74,21 +76,21 @@ class ExportsSourcesTest(unittest.TestCase):
         client = TestClient(servers=servers, users={"default": [("lasote", "mypass")],
                                                     "other": [("lasote", "mypass")]})
         self.client = client
-        self.reference = ConanFileReference.loads("Hello/0.1@lasote/testing")
-        self.package_reference = PackageReference(self.reference,
-                                                  "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
-        self.source_folder = self.client.client_cache.source(self.reference)
-        self.package_folder = self.client.client_cache.package(self.package_reference)
-        self.export_folder = self.client.client_cache.export(self.reference)
+        self.ref = ConanFileReference.loads("Hello/0.1@lasote/testing")
+        self.pref = PackageReference(self.ref, NO_SETTINGS_PACKAGE_ID)
+        self.source_folder = self.client.cache.package_layout(self.ref).source()
+        self.package_folder = self.client.cache.package_layout(self.ref).package(self.pref)
+        self.export_folder = self.client.cache.package_layout(self.ref).export()
+        self.export_sources_folder = self.client.cache.package_layout(self.ref).export_sources()
 
     def _check_source_folder(self, mode):
         """ Source folder MUST be always the same
         """
-        expected_sources = ['conanfile.py', 'conanmanifest.txt', "hello.h"]
+        expected_sources = ["hello.h"]
         if mode == "both":
             expected_sources.append("data.txt")
         if mode == "nested" or mode == "overlap":
-            expected_sources = ['conanfile.py', 'conanmanifest.txt', "src/hello.h", "src/data.txt"]
+            expected_sources = ["src/hello.h", "src/data.txt"]
         expected_sources = sorted(expected_sources)
         self.assertEqual(scan_folder(self.source_folder), expected_sources)
 
@@ -116,28 +118,31 @@ class ExportsSourcesTest(unittest.TestCase):
                                'conanmanifest.txt']
 
         server = server or self.server
-        self.assertEqual(scan_folder(server.paths.export(self.reference)), expected_server)
+        rev, _ = server.server_store.get_last_revision(self.ref)
+        ref = self.ref.copy_with_rev(rev)
+        self.assertEqual(scan_folder(server.server_store.export(ref)), expected_server)
 
-    def _check_export_folder(self, mode, export_folder=None):
+    def _check_export_folder(self, mode, export_folder=None, export_src_folder=None):
         if mode == "exports_sources":
-            expected_exports = ["%s/%s" % (EXPORT_SOURCES_DIR, "hello.h"),
-                                'conanfile.py', 'conanmanifest.txt']
+            expected_src_exports = ["hello.h"]
+            expected_exports = ['conanfile.py', 'conanmanifest.txt']
         if mode == "exports":
+            expected_src_exports = []
             expected_exports = ["hello.h", 'conanfile.py', 'conanmanifest.txt']
         if mode == "both":
-            expected_exports = ["%s/%s" % (EXPORT_SOURCES_DIR, "hello.h"),
-                                'conanfile.py', 'conanmanifest.txt', "data.txt"]
+            expected_src_exports = ["hello.h"]
+            expected_exports = ['conanfile.py', 'conanmanifest.txt', "data.txt"]
         if mode == "nested":
-            expected_exports = ["%s/%s" % (EXPORT_SOURCES_DIR, "src/hello.h"),
-                                "src/data.txt", 'conanfile.py', 'conanmanifest.txt']
+            expected_src_exports = ["src/hello.h"]
+            expected_exports = ["src/data.txt", 'conanfile.py', 'conanmanifest.txt']
         if mode == "overlap":
-            expected_exports = ["%s/%s" % (EXPORT_SOURCES_DIR, "src/hello.h"),
-                                "%s/%s" % (EXPORT_SOURCES_DIR, "src/data.txt"),
-                                "src/data.txt", "src/hello.h", 'conanfile.py', 'conanmanifest.txt']
+            expected_src_exports = ["src/hello.h", "src/data.txt"]
+            expected_exports = ["src/data.txt", "src/hello.h", 'conanfile.py', 'conanmanifest.txt']
 
-        export_folder = export_folder or self.export_folder
-        self.assertTrue(os.path.exists(os.path.join(export_folder, EXPORT_SOURCES_DIR)))
-        self.assertEqual(scan_folder(export_folder), sorted(expected_exports))
+        self.assertEqual(scan_folder(export_folder or self.export_folder),
+                         sorted(expected_exports))
+        self.assertEqual(scan_folder(export_src_folder or self.export_sources_folder),
+                         sorted(expected_src_exports))
 
     def _check_export_installed_folder(self, mode, reuploaded=False, updated=False):
         """ Just installed, no EXPORT_SOURCES_DIR is present
@@ -164,51 +169,53 @@ class ExportsSourcesTest(unittest.TestCase):
             expected_exports.append("license.txt")
 
         self.assertEqual(scan_folder(self.export_folder), sorted(expected_exports))
-        self.assertFalse(os.path.exists(os.path.join(self.export_folder, EXPORT_SOURCES_DIR)))
+        self.assertFalse(os.path.exists(self.export_sources_folder))
 
-    def _check_export_uploaded_folder(self, mode, export_folder=None):
+    def _check_export_uploaded_folder(self, mode, export_folder=None, export_src_folder=None):
         if mode == "exports_sources":
-            expected_exports = ["%s/%s" % (EXPORT_SOURCES_DIR, "hello.h"),
-                                'conanfile.py', 'conanmanifest.txt', EXPORT_SOURCES_TGZ_NAME]
+            expected_src_exports = ["hello.h"]
+            expected_exports = ['conanfile.py', 'conanmanifest.txt', EXPORT_SOURCES_TGZ_NAME]
         if mode == "exports":
+            expected_src_exports = []
             expected_exports = ["hello.h", 'conanfile.py', 'conanmanifest.txt', EXPORT_TGZ_NAME]
         if mode == "both":
-            expected_exports = ["%s/%s" % (EXPORT_SOURCES_DIR, "hello.h"),
-                                'conanfile.py', 'conanmanifest.txt', "data.txt",
+            expected_src_exports = ["hello.h"]
+            expected_exports = ['conanfile.py', 'conanmanifest.txt', "data.txt",
                                 EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME]
         if mode == "nested":
-            expected_exports = ["%s/%s" % (EXPORT_SOURCES_DIR, "src/hello.h"),
-                                "src/data.txt", 'conanfile.py', 'conanmanifest.txt',
+            expected_src_exports = ["src/hello.h"]
+            expected_exports = ["src/data.txt", 'conanfile.py', 'conanmanifest.txt',
                                 EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME]
 
         if mode == "overlap":
-            expected_exports = ["%s/%s" % (EXPORT_SOURCES_DIR, "src/hello.h"),
-                                "%s/%s" % (EXPORT_SOURCES_DIR, "src/data.txt"),
-                                "src/data.txt", "src/hello.h", 'conanfile.py', 'conanmanifest.txt',
+            expected_src_exports = ["src/hello.h", "src/data.txt"]
+            expected_exports = ["src/data.txt", "src/hello.h", 'conanfile.py', 'conanmanifest.txt',
                                 EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME]
 
         export_folder = export_folder or self.export_folder
-        self.assertTrue(os.path.exists(os.path.join(export_folder, EXPORT_SOURCES_DIR)))
         self.assertEqual(scan_folder(export_folder), sorted(expected_exports))
+        self.assertEqual(scan_folder(export_src_folder or self.export_sources_folder),
+                         sorted(expected_src_exports))
 
     def _check_manifest(self, mode):
         manifest = load(os.path.join(self.client.current_folder,
                                      ".conan_manifests/Hello/0.1/lasote/testing/export/"
                                      "conanmanifest.txt"))
+
         if mode == "exports_sources":
-            self.assertIn("%s/hello.h: 5d41402abc4b2a76b9719d911017c592" % EXPORT_SOURCES_DIR,
+            self.assertIn("%s/hello.h: 5d41402abc4b2a76b9719d911017c592" % EXPORT_SRC_FOLDER,
                           manifest.splitlines())
         elif mode == "exports":
             self.assertIn("hello.h: 5d41402abc4b2a76b9719d911017c592",
                           manifest.splitlines())
         elif mode == "both":
             self.assertIn("data.txt: 8d777f385d3dfec8815d20f7496026dc", manifest.splitlines())
-            self.assertIn("%s/hello.h: 5d41402abc4b2a76b9719d911017c592" % EXPORT_SOURCES_DIR,
+            self.assertIn("%s/hello.h: 5d41402abc4b2a76b9719d911017c592" % EXPORT_SRC_FOLDER,
                           manifest.splitlines())
         elif mode == "nested":
             self.assertIn("src/data.txt: 8d777f385d3dfec8815d20f7496026dc",
                           manifest.splitlines())
-            self.assertIn("%s/src/hello.h: 5d41402abc4b2a76b9719d911017c592" % EXPORT_SOURCES_DIR,
+            self.assertIn("%s/src/hello.h: 5d41402abc4b2a76b9719d911017c592" % EXPORT_SRC_FOLDER,
                           manifest.splitlines())
         else:
             assert mode == "overlap"
@@ -216,9 +223,9 @@ class ExportsSourcesTest(unittest.TestCase):
                           manifest.splitlines())
             self.assertIn("src/hello.h: 5d41402abc4b2a76b9719d911017c592",
                           manifest.splitlines())
-            self.assertIn("%s/src/hello.h: 5d41402abc4b2a76b9719d911017c592" % EXPORT_SOURCES_DIR,
+            self.assertIn("%s/src/hello.h: 5d41402abc4b2a76b9719d911017c592" % EXPORT_SRC_FOLDER,
                           manifest.splitlines())
-            self.assertIn("%s/src/data.txt: 8d777f385d3dfec8815d20f7496026dc" % EXPORT_SOURCES_DIR,
+            self.assertIn("%s/src/data.txt: 8d777f385d3dfec8815d20f7496026dc" % EXPORT_SRC_FOLDER,
                           manifest.splitlines())
 
     def _create_code(self, mode):
@@ -248,16 +255,16 @@ class ExportsSourcesTest(unittest.TestCase):
         # https://github.com/conan-io/conan/issues/943
         self._create_code(mode)
 
-        self.client.run("export lasote/testing")
+        self.client.run("export . lasote/testing")
         self.client.run("install Hello/0.1@lasote/testing --build=missing")
         self.client.run("upload Hello/0.1@lasote/testing --all")
         self.client.run('remove Hello/0.1@lasote/testing -f')
         self.client.run("install Hello/0.1@lasote/testing")
 
         # new copied package data
-        reference = ConanFileReference.loads("Hello/0.1@lasote/stable")
-        source_folder = self.client.client_cache.source(reference)
-        export_folder = self.client.client_cache.export(reference)
+        ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
+        source_folder = self.client.cache.package_layout(ref).source()
+        export_folder = self.client.cache.package_layout(ref).export()
 
         self.client.run("copy Hello/0.1@lasote/testing lasote/stable")
         self._check_export_folder(mode, export_folder)
@@ -272,7 +279,7 @@ class ExportsSourcesTest(unittest.TestCase):
     def export_test(self, mode):
         self._create_code(mode)
 
-        self.client.run("export lasote/testing")
+        self.client.run("export . lasote/testing")
         self._check_export_folder(mode)
 
         # now build package
@@ -320,7 +327,7 @@ class ExportsSourcesTest(unittest.TestCase):
     def export_upload_test(self, mode):
         self._create_code(mode)
 
-        self.client.run("export lasote/testing")
+        self.client.run("export . lasote/testing")
 
         self.client.run("upload Hello/0.1@lasote/testing")
         self.assertFalse(os.path.exists(self.source_folder))
@@ -351,7 +358,7 @@ class ExportsSourcesTest(unittest.TestCase):
         """
         self._create_code(mode)
 
-        self.client.run("export lasote/testing")
+        self.client.run("export . lasote/testing")
         self.client.run("install Hello/0.1@lasote/testing --build=missing")
         self.client.run("upload Hello/0.1@lasote/testing --all")
         self.client.run('remove Hello/0.1@lasote/testing -f')
@@ -371,7 +378,7 @@ class ExportsSourcesTest(unittest.TestCase):
     def update_test(self, mode):
         self._create_code(mode)
 
-        self.client.run("export lasote/testing")
+        self.client.run("export . lasote/testing")
         self.client.run("install Hello/0.1@lasote/testing --build=missing")
         self.client.run("upload Hello/0.1@lasote/testing --all")
         self.client.run('remove Hello/0.1@lasote/testing -f')
@@ -379,16 +386,43 @@ class ExportsSourcesTest(unittest.TestCase):
 
         # upload to remote again, the folder remains as installed
         self.client.run("install Hello/0.1@lasote/testing --update")
-        self.assertIn("Hello/0.1@lasote/testing: Already installed!", self.client.user_io.out)
+        self.assertIn("Hello/0.1@lasote/testing: Already installed!", self.client.out)
         self._check_export_installed_folder(mode)
 
-        server_path = self.server.paths.export(self.reference)
+        rev = self.server.server_store.get_last_revision(self.ref)
+        ref = self.ref.copy_with_rev(rev.revision)
+        server_path = self.server.server_store.export(ref)
         save(os.path.join(server_path, "license.txt"), "mylicense")
-        manifest_path = os.path.join(server_path, "conanmanifest.txt")
-        manifest = FileTreeManifest.loads(load(manifest_path))
+        manifest = FileTreeManifest.load(server_path)
         manifest.time += 1
         manifest.file_sums["license.txt"] = md5sum(os.path.join(server_path, "license.txt"))
-        save(manifest_path, str(manifest))
+        manifest.save(server_path)
 
         self.client.run("install Hello/0.1@lasote/testing --update")
         self._check_export_installed_folder(mode, updated=True)
+
+    def exports_sources_old_c_src_test(self):
+        conanfile = """
+import os
+from conans import ConanFile
+
+class HelloConan(ConanFile):
+    exports_sources = "*"
+
+    def build(self):
+        # won't be run in create but in the install from remote, we are emulating old .c_src
+        # in the package
+        if not os.environ.get("SKIP_THIS"):
+            # This dir has to exists after the install
+            assert(os.path.exists("modules/Hello/projects/Hello/myfile.txt"))
+
+"""
+        # Fake old package layout with .c_src
+        self.client.save({"conanfile.py": conanfile,
+                          ".c_src/modules/Hello/projects/Hello/myfile.txt": "contents"})
+        with tools.environment_append({"SKIP_THIS": "1"}):
+            self.client.run("create . Hello/0.1@lasote/channel")
+        self.client.run("upload Hello/0.1@lasote/channel --all")
+
+        self.client.run('remove "*" -f')
+        self.client.run("install Hello/0.1@lasote/channel --build")

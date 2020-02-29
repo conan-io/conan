@@ -245,9 +245,45 @@ int main()
 }
 '''
 
+main_file_17_2015 = '''
+//available in 2015 with c++17
+#include <iostream>
 
-def get_vs_project_files():
+namespace test::mytest {
+struct mystruct {};
+};
+int main(){
+test::mytest::mystruct t;
+}
+'''
+
+
+main_file_17_2017 = '''
+//only available in visual 2017 with c++17
+#include <iostream>
+
+auto hello(){
+    return 2;
+}
+
+int main()
+{
+    if constexpr(true)
+        std::cout << "Hello World!" << std::endl;
+    return 0;
+}
+'''
+
+
+def get_vs_project_files(std=False):
+    if not std:
+        main = main_file
+    elif std == "cpp17_2015":
+        main = main_file_17_2015
+    elif std == "cpp17_2017":
+        main = main_file_17_2017
+
     return {"MyProject.sln": sln_file,
             "MyProject/MyProject.vcxproj": vcxproj_file,
             "MyProject/MyProject.vcxproj.filters": filters_file,
-            "MyProject/main.cpp": main_file}
+            "MyProject/main.cpp": main}
