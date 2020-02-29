@@ -1,6 +1,7 @@
 from conans.client.build.compiler_flags import format_frameworks
 from conans.model import Generator
 from conans.paths import BUILD_INFO_XCODE
+from conans.tools import shell_quote
 
 
 class XCodeGenerator(Generator):
@@ -23,7 +24,7 @@ FRAMEWORK_SEARCH_PATHS = $(inherited) {rootpaths} {framework_paths}
                                      for p in deps_cpp_info.include_paths)
         self.lib_dirs = " ".join('"%s"' % p.replace("\\", "/")
                                  for p in deps_cpp_info.lib_paths)
-        self.libs = " ".join(['-l%s' % lib for lib in deps_cpp_info.libs])
+        self.libs = " ".join([(shell_quote(lib[2:]) if lib.startswith("::") else "-l%s" % lib) for lib in deps_cpp_info.libs])
         self.definitions = " ".join('"%s"' % d for d in deps_cpp_info.defines)
         self.c_compiler_flags = " ".join(deps_cpp_info.cflags)
         self.cxx_compiler_flags = " ".join(deps_cpp_info.cxxflags)
