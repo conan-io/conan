@@ -74,7 +74,6 @@ class GraphLockNode(object):
     # if recipe is exported, it will modify lockfile. No packageID or prev
     MODIFIED_EXPORTED = "exported"
     MODIFIED_BUILT = "built"
-    MODIFIED_ADDED = "added"
 
     def __init__(self, pref, python_requires, options, requires, build_requires, path,
                  modified=None):
@@ -135,7 +134,7 @@ class GraphLock(object):
                     continue
                 self._upsert_node(node)
 
-    def _upsert_node(self, node, added=False):
+    def _upsert_node(self, node):
         requires = []
         build_requires = []
         for edge in node.dependencies:
@@ -162,10 +161,6 @@ class GraphLock(object):
 
         previous = node.graph_lock_node
         modified = previous.modified if previous else None
-        if added:
-            if modified:
-                raise ConanException("Error in added, previous status %s" % modified)
-            modified = GraphLockNode.MODIFIED_ADDED
         graph_node = GraphLockNode(node.pref if node.ref else None, python_reqs,
                                    node.conanfile.options.values, requires, build_requires,
                                    node.path, modified)
@@ -275,7 +270,6 @@ class GraphLock(object):
             except KeyError:
                 if node.recipe == RECIPE_CONSUMER:
                     continue  # If the consumer node is not found, could be a test_package
-                self._upsert_node(node, added=True)
                 continue
             if lock_node.pref:
                 pref = lock_node.pref if self.revisions_enabled else lock_node.pref.copy_clear_revs()
