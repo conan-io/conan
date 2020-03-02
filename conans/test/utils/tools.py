@@ -9,6 +9,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+import time
 import unittest
 import uuid
 from collections import Counter, OrderedDict
@@ -17,12 +18,11 @@ from contextlib import contextmanager
 import bottle
 import requests
 import six
-import time
 from mock import Mock
+from requests.exceptions import HTTPError
 from six import StringIO
 from six.moves.urllib.parse import quote, urlsplit, urlunsplit
 from webtest.app import TestApp
-from requests.exceptions import HTTPError
 
 from conans import load
 from conans.client.cache.cache import ClientCache
@@ -31,6 +31,7 @@ from conans.client.command import Command
 from conans.client.conan_api import Conan
 from conans.client.output import ConanOutput
 from conans.client.rest.uploader_downloader import IterableToFileAdapter
+from conans.client.runner import ConanRunner
 from conans.client.tools import environment_append
 from conans.client.tools.files import chdir
 from conans.client.tools.files import replace_in_file
@@ -49,7 +50,6 @@ from conans.test.utils.server_launcher import (TESTING_REMOTE_PRIVATE_PASS,
 from conans.test.utils.test_files import temp_folder
 from conans.util.env_reader import get_env
 from conans.util.files import mkdir, save_files
-from conans.client.runner import ConanRunner
 from conans.util.runners import check_output_runner
 
 NO_SETTINGS_PACKAGE_ID = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
@@ -695,11 +695,6 @@ class TestClient(object):
         self.requester_class = requester_class
         self.runner = runner
 
-        if revisions_enabled is None:
-            revisions_enabled = get_env("TESTING_REVISIONS_ENABLED", False)
-
-        self.tune_conan_conf(cache_folder, cpu_count, revisions_enabled)
-
         if servers and len(servers) > 1 and not isinstance(servers, OrderedDict):
             raise Exception("""Testing framework error: Servers should be an OrderedDict. e.g:
 servers = OrderedDict()
@@ -711,6 +706,10 @@ servers["r2"] = TestServer()
         if servers is not False:  # Do not mess with registry remotes
             self.update_servers()
         self.current_folder = current_folder or temp_folder(path_with_spaces)
+
+        # Once the client is ready, modify the configuration
+        mkdir(self.current_folder)
+        self.tune_conan_conf(cache_folder, cpu_count, revisions_enabled)
 
     def load(self, filename):
         return load(os.path.join(self.current_folder, filename))
@@ -753,21 +752,15 @@ servers["r2"] = TestServer()
                 return TestRequester(self.servers)
 
     def _set_revisions(self, value):
-        current_conf = load(self.cache.conan_conf_path)
-        if "revisions_enabled" in current_conf:  # Invalidate any previous value to be sure
-            replace_in_file(self.cache.conan_conf_path, "revisions_enabled", "#revisions_enabled",
-                            output=TestBufferConanOutput())
-
-        replace_in_file(self.cache.conan_conf_path,
-                        "[general]", "[general]\nrevisions_enabled = %s" % value,
-                        output=TestBufferConanOutput())
+        value = "1" if value else "0"
+        self.run("config set general.revisions_enabled={}".format(value))
 
     def enable_revisions(self):
-        self._set_revisions("1")
+        self._set_revisions(True)
         assert self.cache.config.revisions_enabled
 
     def disable_revisions(self):
-        self._set_revisions("0")
+        self._set_revisions(False)
         assert not self.cache.config.revisions_enabled
 
     def tune_conan_conf(self, cache_folder, cpu_count, revisions_enabled):
@@ -780,14 +773,11 @@ servers["r2"] = TestServer()
                             "# cpu_count = 1", "cpu_count = %s" % cpu_count,
                             output=TestBufferConanOutput(), strict=not bool(cache_folder))
 
-        current_conf = load(cache.conan_conf_path)
-        if "revisions_enabled" in current_conf:  # Invalidate any previous value to be sure
-            replace_in_file(cache.conan_conf_path, "revisions_enabled", "#revisions_enabled",
-                            output=TestBufferConanOutput())
-        if revisions_enabled:
-            replace_in_file(cache.conan_conf_path,
-                            "[general]", "[general]\nrevisions_enabled = 1",
-                            output=TestBufferConanOutput())
+        if revisions_enabled is not None:
+            self._set_revisions(revisions_enabled)
+        elif "TESTING_REVISIONS_ENABLED" in os.environ:
+            value = get_env("TESTING_REVISIONS_ENABLED", True)
+            self._set_revisions(value)
 
     def update_servers(self):
         cache = self.cache

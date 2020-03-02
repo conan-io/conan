@@ -243,47 +243,49 @@ default_options:
 
     def test_default_options_list(self):
         client = TestClient()
-        conanfile = r"""from conans import ConanFile
-class OpenSSLConan(ConanFile):
-    name = "OpenSSL"
-    version = "1.0.2o"
-    settings = "os", "compiler", "arch", "build_type"
-    url = "http://github.com/lasote/conan-openssl"
-    license = "The current OpenSSL licence is an 'Apache style' license: https://www.openssl.org/source/license.html"
-    description = "OpenSSL is an open source project that provides a robust, commercial-grade, and full-featured " \
-                  "toolkit for the Transport Layer Security (TLS) and Secure Sockets Layer (SSL) protocols"
-    options = {"shared": [True, False],
-               "no_asm": [True, False],
-               "386": [True, False]}
-    default_options = "=False\n".join(options.keys()) + '=False'
-"""
+        conanfile = textwrap.dedent(r"""
+            from conans import ConanFile
+            class OpenSSLConan(ConanFile):
+                name = "OpenSSL"
+                version = "1.0.2o"
+                settings = "os", "compiler", "arch", "build_type"
+                url = "http://github.com/lasote/conan-openssl"
+                license = "The current OpenSSL licence is an 'Apache style' license"
+                description = "OpenSSL is an open source project that provides a robust, "\
+                              "commercial-grade"
+                options = {"shared": [True, False],
+                           "no_asm": [True, False],
+                           "386": [True, False]}
+                default_options = "=False\n".join(options.keys()) + '=False'
+            """)
         client.save({"conanfile.py": conanfile})
         client.run("inspect .")
-        self.assertEqual("""name: OpenSSL
-version: 1.0.2o
-url: http://github.com/lasote/conan-openssl
-homepage: None
-license: The current OpenSSL licence is an 'Apache style' license: https://www.openssl.org/source/license.html
-author: None
-description: OpenSSL is an open source project that provides a robust, commercial-grade, and full-featured toolkit for the Transport Layer Security (TLS) and Secure Sockets Layer (SSL) protocols
-topics: None
-generators: ['txt']
-exports: None
-exports_sources: None
-short_paths: False
-apply_env: True
-build_policy: None
-revision_mode: hash
-settings: ('os', 'compiler', 'arch', 'build_type')
-options:
-    386: [True, False]
-    no_asm: [True, False]
-    shared: [True, False]
-default_options:
-    386: False
-    no_asm: False
-    shared: False
-""", client.out)
+        self.assertEqual(textwrap.dedent("""\
+            name: OpenSSL
+            version: 1.0.2o
+            url: http://github.com/lasote/conan-openssl
+            homepage: None
+            license: The current OpenSSL licence is an 'Apache style' license
+            author: None
+            description: OpenSSL is an open source project that provides a robust, commercial-grade
+            topics: None
+            generators: ['txt']
+            exports: None
+            exports_sources: None
+            short_paths: False
+            apply_env: True
+            build_policy: None
+            revision_mode: hash
+            settings: ('os', 'compiler', 'arch', 'build_type')
+            options:
+                386: [True, False]
+                no_asm: [True, False]
+                shared: [True, False]
+            default_options:
+                386: False
+                no_asm: False
+                shared: False
+            """), client.out)
 
     def test_mixed_options_instances(self):
         client = TestClient()
@@ -438,3 +440,11 @@ class InspectRawTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile})
         client.run("inspect . --raw=default_options")
         self.assertEqual("dict=True\nlist=False", client.out)
+
+    def test_initial_inspect_without_registry_test(self):
+        client = TestClient()
+        client.save({"conanfile.py": self.conanfile})
+        client.run("export . user/channel")
+        os.remove(client.cache.remotes_path)
+        client.run("inspect MyPkg/1.2.3@user/channel --raw=version")
+        self.assertEqual("1.2.3", client.out)

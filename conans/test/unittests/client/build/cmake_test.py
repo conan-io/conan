@@ -1269,17 +1269,24 @@ build_type: [ Release]
         for key, value in install_defintions.items():
             self.assertEqual(cmake.definitions[key], value)
 
+    @parameterized.expand([("Macos", "10.9",),
+                           ("iOS", "7.0",),
+                           ("watchOS", "4.0",),
+                           ("tvOS", "11.0",)])
     @mock.patch('platform.system', return_value="Macos")
-    def test_cmake_system_version_osx(self, _):
+    def test_cmake_system_version_osx(self, the_os, os_version, _):
         settings = Settings.loads(default_settings_yml)
-        settings.os = "Macos"
+        settings.os = the_os
 
         # No version defined
         conanfile = ConanFileMock()
         conanfile.settings = settings
         cmake = CMake(conanfile)
         self.assertFalse("CMAKE_OSX_DEPLOYMENT_TARGET" in cmake.definitions)
-        self.assertFalse("CMAKE_SYSTEM_NAME" in cmake.definitions)
+        if the_os == "Macos":
+            self.assertFalse("CMAKE_SYSTEM_NAME" in cmake.definitions)
+        else:
+            self.assertTrue("CMAKE_SYSTEM_NAME" in cmake.definitions)
         self.assertFalse("CMAKE_SYSTEM_VERSION" in cmake.definitions)
 
         # Version defined using Conan env variable
@@ -1291,12 +1298,12 @@ build_type: [ Release]
             self.assertEqual(cmake.definitions["CMAKE_OSX_DEPLOYMENT_TARGET"], "23")
 
         # Version defined in settings
-        settings.os.version = "10.9"
+        settings.os.version = os_version
         conanfile = ConanFileMock()
         conanfile.settings = settings
         cmake = CMake(conanfile)
-        self.assertEqual(cmake.definitions["CMAKE_SYSTEM_VERSION"], "10.9")
-        self.assertEqual(cmake.definitions["CMAKE_OSX_DEPLOYMENT_TARGET"], "10.9")
+        self.assertEqual(cmake.definitions["CMAKE_SYSTEM_VERSION"], os_version)
+        self.assertEqual(cmake.definitions["CMAKE_OSX_DEPLOYMENT_TARGET"], os_version)
 
         # Version defined in settings AND using Conan env variable
         with tools.environment_append({"CONAN_CMAKE_SYSTEM_VERSION": "23"}):
