@@ -43,6 +43,11 @@ def export_pkg(app, recorder, full_ref, source_folder, build_folder, package_fol
 
     recipe_hash = layout.recipe_manifest().summary_hash
     conanfile.info.recipe_hash = recipe_hash
+
+    for package_name, env_vars in conanfile._conan_env_values.data.items():
+        for name, value in env_vars.items():
+                conanfile.info.env_values.add(name, value, package_name)
+
     conanfile.develop = True
     with set_dirty_context_manager(dest_package_folder):
         if package_folder:
