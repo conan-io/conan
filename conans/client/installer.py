@@ -115,7 +115,7 @@ class _PackageBuilder(object):
 
         try:
             logger.debug("Call conanfile.build() with files in build folder: %s", os.listdir(build_folder))
-            build_conanfile(conanfile, self._hook_manager, conanfile=conanfile, reference=pref.ref, package_id=pref.id)
+            build_conanfile(conanfile, self._hook_manager, reference=pref.ref, package_id=pref.id)
             self._output.success("Package '%s' built" % pref.id)
             self._output.info("Build folder %s" % build_folder)
         except Exception as exc:
