@@ -253,7 +253,7 @@ class ToolsFilesPatchTest(unittest.TestCase):
         foo_content = client.load("foo.txt")
         self.assertIn(dedent("""For us, there is no spring.
 Just the wind that smells fresh before the storm."""), foo_content)
-        self.assertIn("Running build()", client.out)
+        self.assertIn("Calling build()", client.out)
         self.assertNotIn("Warning", client.out)
 
     def _save_files(self, file_content):
