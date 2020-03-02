@@ -3,7 +3,7 @@ import shutil
 import time
 
 from conans.client import tools
-from conans.client.build.build import build_conanfile
+from conans.client.build.build import run_build_method
 from conans.client.file_copier import report_copied_files
 from conans.client.generators import TXTGenerator, write_generators
 from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_EDITABLE, \
@@ -115,7 +115,7 @@ class _PackageBuilder(object):
 
         try:
             logger.debug("Call conanfile.build() with files in build folder: %s", os.listdir(build_folder))
-            build_conanfile(conanfile, self._hook_manager, reference=pref.ref, package_id=pref.id)
+            run_build_method(conanfile, self._hook_manager, reference=pref.ref, package_id=pref.id)
             self._output.success("Package '%s' built" % pref.id)
             self._output.info("Build folder %s" % build_folder)
         except Exception as exc:
