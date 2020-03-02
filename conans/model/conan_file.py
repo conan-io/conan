@@ -128,6 +128,7 @@ class ConanFile(object):
         self._conan_channel = channel
 
         self.compatible_packages = []
+        self._conan_using_build_profile = False
 
     def initialize(self, settings, env):
         if isinstance(self.generators, str):
@@ -250,7 +251,9 @@ class ConanFile(object):
             return tools.run_in_windows_bash(self, bashcmd=command, cwd=cwd, subsystem=subsystem,
                                              msys_mingw=msys_mingw, with_login=with_login)
         if run_environment:
-            with tools.run_environment(self):
+            # When using_build_profile I'd like to use 'tools.run_build_environment', but it is already applied
+            #   through 'conanfile.env' in the contextmanager 'get_env_context_manager'
+            with tools.run_environment(self) if not self._conan_using_build_profile else no_op():
                 if OSInfo().is_macos:
                     command = 'DYLD_LIBRARY_PATH="%s" DYLD_FRAMEWORK_PATH="%s" %s' % \
                               (os.environ.get('DYLD_LIBRARY_PATH', ''),

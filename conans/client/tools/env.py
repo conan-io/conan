@@ -2,7 +2,7 @@ import os
 import sys
 from contextlib import contextmanager
 
-from conans.client.run_environment import RunEnvironment
+from conans.client.run_environment import RunEnvironment, RunBuildEnvironment
 from conans.client.tools.files import _path_equals, which
 from conans.errors import ConanException
 
@@ -26,6 +26,12 @@ def pythonpath(conanfile):
 @contextmanager
 def run_environment(conanfile):
     with environment_append(RunEnvironment(conanfile).vars):
+        yield
+
+
+@contextmanager
+def run_build_environment(conanfile):
+    with environment_append(RunBuildEnvironment(conanfile).vars):
         yield
 
 

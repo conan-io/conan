@@ -473,6 +473,7 @@ class BinaryInstaller(object):
         node_order = [n for n in node.public_closure if n.binary != BINARY_SKIP]
         # List sort is stable, will keep the original order of the closure, but prioritize levels
         conan_file = node.conanfile
+        conan_file._conan_using_build_profile = using_build_profile  # FIXME: Not the best place to assign it
         transitive = [it for it in node.transitive_closure.values()]
 
         br_host = []
