@@ -3,6 +3,7 @@ import shutil
 import time
 
 from conans.client import tools
+from conans.client.build.build import build_conanfile
 from conans.client.file_copier import report_copied_files
 from conans.client.generators import TXTGenerator, write_generators
 from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_EDITABLE, \
@@ -16,7 +17,6 @@ from conans.client.tools.env import pythonpath
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
                            conanfile_exception_formatter)
 from conans.model.build_info import CppInfo
-from conans.model.conan_file import get_env_context_manager
 from conans.model.editable_layout import EditableLayout
 from conans.model.env_info import EnvInfo
 from conans.model.graph_info import GraphInfo
@@ -114,18 +114,10 @@ class _PackageBuilder(object):
         copied_files = run_imports(conanfile, build_folder)
 
         try:
-            self._hook_manager.execute("pre_build", conanfile=conanfile,
-                                       reference=pref.ref, package_id=pref.id)
-            logger.debug("Call conanfile.build() with files in build folder: %s",
-                         os.listdir(build_folder))
-            self._output.highlight("Calling build()")
-            with conanfile_exception_formatter(str(conanfile), "build"):
-                conanfile.build()
-
+            logger.debug("Call conanfile.build() with files in build folder: %s", os.listdir(build_folder))
+            build_conanfile(conanfile, self._hook_manager, conanfile=conanfile, reference=pref.ref, package_id=pref.id)
             self._output.success("Package '%s' built" % pref.id)
             self._output.info("Build folder %s" % build_folder)
-            self._hook_manager.execute("post_build", conanfile=conanfile,
-                                       reference=pref.ref, package_id=pref.id)
         except Exception as exc:
             self._output.writeln("")
             self._output.error("Package '%s' build failed" % pref.id)
@@ -199,16 +191,14 @@ class _PackageBuilder(object):
                         conanfile.source_folder = build_folder
 
                     if not skip_build:
-                        with get_env_context_manager(conanfile):
-                            conanfile.build_folder = build_folder
-                            conanfile.package_folder = package_folder
-                            # In local cache, install folder always is build_folder
-                            conanfile.install_folder = build_folder
-                            self._build(conanfile, pref, build_folder)
+                        conanfile.build_folder = build_folder
+                        conanfile.package_folder = package_folder
+                        # In local cache, install folder always is build_folder
+                        conanfile.install_folder = build_folder
+                        self._build(conanfile, pref, build_folder)
                         clean_dirty(build_folder)
 
-                    prev = self._package(conanfile, pref, package_layout, conanfile_path,
-                                         build_folder, package_folder)
+                    prev = self._package(conanfile, pref, package_layout, conanfile_path, build_folder, package_folder)
                     assert prev
                     node.prev = prev
                     log_file = os.path.join(build_folder, RUN_LOG_NAME)
@@ -216,8 +206,7 @@ class _PackageBuilder(object):
                     log_package_built(pref, time.time() - t1, log_file)
                     recorder.package_built(pref)
                 except ConanException as exc:
-                    recorder.package_install_error(pref, INSTALL_ERROR_BUILDING,
-                                                   str(exc), remote_name=None)
+                    recorder.package_install_error(pref, INSTALL_ERROR_BUILDING, str(exc), remote_name=None)
                     raise exc
 
             return node.pref
