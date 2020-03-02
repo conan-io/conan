@@ -484,8 +484,8 @@ class BinaryInstaller(object):
             if n not in transitive:
                 conan_file.output.info("Applying build-requirement: %s" % str(n.ref))
 
-            conan_file.deps_user_info[n.ref.name] = n.conanfile.user_info
             if not using_build_profile:  # Do not touch anything
+                conan_file.deps_user_info[n.ref.name] = n.conanfile.user_info
                 conan_file.deps_cpp_info.update(n.conanfile.cpp_info, n.ref.name)
                 conan_file.deps_env_info.update(n.conanfile.env_info, n.ref.name)
             else:
