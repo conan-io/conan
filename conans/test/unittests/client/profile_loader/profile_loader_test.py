@@ -66,32 +66,29 @@ os=$OTHERVAR
 os=thing""")
 
     def test_parser_concat(self):
-        txt = """
-MYVAR=foobar
-MYVAR+=hello
-
-[settings]
-os=$MYVAR
-"""
+        txt = textwrap.dedent("""
+            MYVAR=foobar
+            MYVAR+=hello
+            
+            [settings]
+            os=$MYVAR
+            """)
         a = ProfileParser(txt)
-        a.update_vars({"MYVAR": "foobar", "MYVAR+": "hello"})
         a.apply_vars()
         self.assertEqual(a.vars, {"MYVAR": "foobar hello"})
-        self.assertEqual(a.profile_text, """[settings]
-os=foobar hello""")
+        self.assertEqual(a.profile_text, "[settings]\nos=foobar hello")
 
-        txt = """
-MYVAR+=hello
-MYVAR=thing
-
-[settings]
-os=$MYVAR
-"""
+        txt = textwrap.dedent("""
+            MYVAR+=hello
+            MYVAR=thing
+            
+            [settings]
+            os=$MYVAR
+            """)
         a = ProfileParser(txt)
         a.apply_vars()
         self.assertEqual(a.vars, {"MYVAR": "thing"})
-        self.assertEqual(a.profile_text, """[settings]
-os=thing""")
+        self.assertEqual(a.profile_text, "[settings]\nos=thing")
 
 
 class ProfileTest(unittest.TestCase):
