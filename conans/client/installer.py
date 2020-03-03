@@ -1,9 +1,9 @@
 import os
 import shutil
 import time
-from collections import OrderedDict
 
 from conans.client import tools
+from conans.client.build.build import run_build_method
 from conans.client.file_copier import report_copied_files
 from conans.client.generators import TXTGenerator, write_generators
 from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_EDITABLE, \
@@ -17,7 +17,6 @@ from conans.client.tools.env import pythonpath
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
                            conanfile_exception_formatter)
 from conans.model.build_info import CppInfo
-from conans.model.conan_file import get_env_context_manager
 from conans.model.editable_layout import EditableLayout
 from conans.model.env_info import EnvInfo
 from conans.model.graph_info import GraphInfo
@@ -105,32 +104,23 @@ class _PackageBuilder(object):
             logger.debug("BUILD: Copied to %s", build_folder)
             logger.debug("BUILD: Files copied %s", ",".join(os.listdir(build_folder)))
 
-    def _build(self, conanfile, pref, build_folder):
+    def _build(self, conanfile, pref):
         # Read generators from conanfile and generate the needed files
         logger.info("GENERATORS: Writing generators")
-        write_generators(conanfile, build_folder, self._output)
+        write_generators(conanfile, conanfile.build_folder, self._output)
 
         # Build step might need DLLs, binaries as protoc to generate source files
         # So execute imports() before build, storing the list of copied_files
-        copied_files = run_imports(conanfile, build_folder)
+        copied_files = run_imports(conanfile, conanfile.build_folder)
 
         try:
-            self._hook_manager.execute("pre_build", conanfile=conanfile,
-                                       reference=pref.ref, package_id=pref.id)
-            logger.debug("Call conanfile.build() with files in build folder: %s",
-                         os.listdir(build_folder))
-            self._output.highlight("Calling build()")
-            with conanfile_exception_formatter(str(conanfile), "build"):
-                conanfile.build()
-
+            run_build_method(conanfile, self._hook_manager, reference=pref.ref, package_id=pref.id)
             self._output.success("Package '%s' built" % pref.id)
-            self._output.info("Build folder %s" % build_folder)
-            self._hook_manager.execute("post_build", conanfile=conanfile,
-                                       reference=pref.ref, package_id=pref.id)
+            self._output.info("Build folder %s" % conanfile.build_folder)
         except Exception as exc:
             self._output.writeln("")
             self._output.error("Package '%s' build failed" % pref.id)
-            self._output.warn("Build folder %s" % build_folder)
+            self._output.warn("Build folder %s" % conanfile.build_folder)
             if isinstance(exc, ConanExceptionInUserConanfileMethod):
                 raise exc
             raise ConanException(exc)
@@ -200,16 +190,14 @@ class _PackageBuilder(object):
                         conanfile.source_folder = build_folder
 
                     if not skip_build:
-                        with get_env_context_manager(conanfile):
-                            conanfile.build_folder = build_folder
-                            conanfile.package_folder = package_folder
-                            # In local cache, install folder always is build_folder
-                            conanfile.install_folder = build_folder
-                            self._build(conanfile, pref, build_folder)
+                        conanfile.build_folder = build_folder
+                        conanfile.package_folder = package_folder
+                        # In local cache, install folder always is build_folder
+                        conanfile.install_folder = build_folder
+                        self._build(conanfile, pref)
                         clean_dirty(build_folder)
 
-                    prev = self._package(conanfile, pref, package_layout, conanfile_path,
-                                         build_folder, package_folder)
+                    prev = self._package(conanfile, pref, package_layout, conanfile_path, build_folder, package_folder)
                     assert prev
                     node.prev = prev
                     log_file = os.path.join(build_folder, RUN_LOG_NAME)
@@ -217,8 +205,7 @@ class _PackageBuilder(object):
                     log_package_built(pref, time.time() - t1, log_file)
                     recorder.package_built(pref)
                 except ConanException as exc:
-                    recorder.package_install_error(pref, INSTALL_ERROR_BUILDING,
-                                                   str(exc), remote_name=None)
+                    recorder.package_install_error(pref, INSTALL_ERROR_BUILDING, str(exc), remote_name=None)
                     raise exc
 
             return node.pref
@@ -336,7 +323,7 @@ class BinaryInstaller(object):
         raise_package_not_found_error(conanfile, ref, package_id, dependencies,
                                       out=conanfile.output, recorder=self._recorder)
 
-    def _download(self, downloads):
+    def _download(self, downloads, processed_package_refs):
         """ executes the download of packages (both download and update), only once for a given
         PREF, even if node duplicated
         :param downloads: all nodes to be downloaded or updated, included repetitions
@@ -344,34 +331,34 @@ class BinaryInstaller(object):
         if not downloads:
             return
 
-        download_prefs = OrderedDict()
-        for node_down in downloads:
-            assert node_down.prev, "PREV for %s is None" % str(node_down.pref)
-            download_prefs[node_down.pref] = node_down  # It doesn't matter which one if multiple
-
-        def _download_pkg(pref, node):
-            conanfile = node.conanfile
-            layout = self._cache.package_layout(pref.ref, conanfile.short_paths)
-            package_folder = layout.package(pref)
-            output = conanfile.output
-            with layout.package_lock(pref):
-                with set_dirty_context_manager(package_folder):
-                    self._remote_manager.get_package(pref, package_folder, node.binary_remote,
-                                                     output, self._recorder)
-                    output.info("Downloaded package revision %s" % pref.revision)
-                    with layout.update_metadata() as metadata:
-                        metadata.packages[pref.id].remote = node.binary_remote.name
-
-        for pref_, node_ in download_prefs.items():
+        for node in downloads:
+            pref = node.pref
+            if pref in processed_package_refs:
+                continue
+            processed_package_refs.add(pref)
+            assert node.prev, "PREV for %s is None" % str(node.pref)
             # prepared for parallel download
-            _download_pkg(pref_, node_)
+            layout = self._cache.package_layout(pref.ref, node.conanfile.short_paths)
+            with layout.package_lock(pref):
+                self._download_pkg(layout, pref, node)
+
+    def _download_pkg(self, layout, pref, node):
+        conanfile = node.conanfile
+        package_folder = layout.package(pref)
+        output = conanfile.output
+        with set_dirty_context_manager(package_folder):
+            self._remote_manager.get_package(pref, package_folder, node.binary_remote,
+                                             output, self._recorder)
+            output.info("Downloaded package revision %s" % pref.revision)
+            with layout.update_metadata() as metadata:
+                metadata.packages[pref.id].remote = node.binary_remote.name
 
     def _build(self, nodes_by_level, keep_build, root_node, graph_info, remotes, build_mode, update):
         missing, downloads = self._classify(nodes_by_level)
         self._raise_missing(missing)
-        self._download(downloads)
-
         processed_package_refs = set()
+        self._download(downloads, processed_package_refs)
+
         for level in nodes_by_level:
             for node in level:
                 ref, conan_file = node.ref, node.conanfile
@@ -384,9 +371,9 @@ class BinaryInstaller(object):
                     if node.binary == BINARY_SKIP:  # Privates not necessary
                         continue
                     assert ref.revision is not None, "Installer should receive RREV always"
-                    _handle_system_requirements(conan_file, node.pref, self._cache, output)
                     if node.binary == BINARY_UNKNOWN:
                         self._binaries_analyzer.reevaluate_node(node, remotes, build_mode, update)
+                    _handle_system_requirements(conan_file, node.pref, self._cache, output)
                     self._handle_node_cache(node, keep_build, processed_package_refs, remotes)
 
         # Finally, propagate information to root node (ref=None)
@@ -448,6 +435,9 @@ class BinaryInstaller(object):
                     assert node.prev, "Node PREV shouldn't be empty"
                     assert node.pref.revision, "Node PREF revision shouldn't be empty"
                     assert pref.revision is not None, "PREV for %s to be built is None" % str(pref)
+                elif node.binary in (BINARY_UPDATE, BINARY_DOWNLOAD):
+                    # this can happen after a re-evaluation of packageID with Package_ID_unknown
+                    self._download_pkg(layout, node.pref, node)
                 elif node.binary == BINARY_CACHE:
                     assert node.prev, "PREV for %s is None" % str(pref)
                     output.success('Already installed!')
