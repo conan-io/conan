@@ -38,7 +38,6 @@ def export_pkg(app, recorder, full_ref, source_folder, build_folder, package_fol
     from conans.client.conan_api import existing_info_files
     if install_folder and existing_info_files(install_folder):
         load_deps_info(install_folder, conanfile, required=True)
-
     package_id = pkg_node.package_id
     output.info("Packaging to %s" % package_id)
     pref = PackageReference(ref, package_id)
@@ -54,7 +53,6 @@ def export_pkg(app, recorder, full_ref, source_folder, build_folder, package_fol
 
     recipe_hash = layout.recipe_manifest().summary_hash
     conanfile.info.recipe_hash = recipe_hash
-
     conanfile.develop = True
     with set_dirty_context_manager(dest_package_folder):
         if package_folder:
