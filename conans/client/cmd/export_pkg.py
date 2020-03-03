@@ -31,7 +31,7 @@ def export_pkg(app, recorder, full_ref, source_folder, build_folder, package_fol
 
     def _init_conanfile_infos():
         node_order = [n for n in pkg_node.public_closure if n.binary != BINARY_SKIP]
-        subtree_libnames = [pkg_node.ref.name for node in node_order]
+        subtree_libnames = [node.ref.name for node in node_order]
         add_env_conaninfo(conanfile, subtree_libnames)
 
     _init_conanfile_infos()
