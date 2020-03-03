@@ -339,6 +339,43 @@ class PyRequiresExtendTest(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(client.cache.package_layout(ref).export(),
                                                     "other.txt")))
 
+    def overwrite_class_members_test(self):
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class MyConanfileBase(ConanFile):
+                license = "MyLicense"
+                author = "author@company.com"
+                settings = "os", # tuple!
+            """)
+        client.save({"conanfile.py": conanfile})
+        client.run("export . base/1.1@user/testing")
+
+        reuse = textwrap.dedent("""
+            from conans import ConanFile
+            class PkgTest(ConanFile):
+                license = "MIT"
+                author = "frodo"
+                settings = "arch", # tuple!
+                python_requires = "base/1.1@user/testing"
+                python_requires_extend = "base.MyConanfileBase"
+                
+                @classmethod
+                def python_require_extend_class(cls, c):
+                    cls.settings = c.settings + cls.settings
+
+                def build(self):
+                    self.output.info("License! %s" % self.license)
+                    self.output.info("Author! %s" % self.author)
+                    self.output.info("os: %s arch: %s"
+                                     % (self.settings.get_safe("os"), self.settings.arch))
+            """)
+        client.save({"conanfile.py": reuse})
+        client.run("create . Pkg/0.1@user/testing -s os=Windows -s arch=armv7")
+        self.assertIn("Pkg/0.1@user/testing: License! MIT", client.out)
+        self.assertIn("Pkg/0.1@user/testing: Author! frodo", client.out)
+        self.assertIn("Pkg/0.1@user/testing: os: Windows arch: armv7", client.out)
+
     def transitive_imports_conflicts_test(self):
         # https://github.com/conan-io/conan/issues/3874
         client = TestClient()
