@@ -260,11 +260,11 @@ class DepsGraphBuilder(object):
     def _conflicting_references(previous, new_ref, consumer_ref=None):
         if previous.ref.copy_clear_rev() != new_ref.copy_clear_rev():
             if consumer_ref:
-                return ("Conflict in %s\n"
-                       "    Requirement %s conflicts with already defined %s in %s\n"
-                       "    To change it, override it in your base requirements"
-                       % (consumer_ref, new_ref, previous.ref,
-                       next(iter(previous.dependants)).src))
+                return ("Conflict in %s:\n"
+                       "    '%s' requires '%s' while '%s' requires '%s'.\n"
+                       "    To fix this conflict you need to override the package '%s' in your root package."
+                       % (consumer_ref, consumer_ref, new_ref, next(iter(previous.dependants)).src,
+                          previous.ref, new_ref.name))
             return True
         # Computed node, if is Editable, has revision=None
         # If new_ref.revision is None we cannot assume any conflict, the user hasn't specified

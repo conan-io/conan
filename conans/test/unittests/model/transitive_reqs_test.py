@@ -400,10 +400,11 @@ class ChatConan(ConanFile):
         self.retriever.save_recipe(say_ref2, say_content2)
         self.retriever.save_recipe(hello_ref, hello_content)
         self.retriever.save_recipe(bye_ref, bye_content2)
-        with six.assertRaisesRegex(self, ConanException, "Conflict in Bye/0.2@user/testing\n"
-                                   "    Requirement Say/0.2@user/testing conflicts with already "
-                                   "defined Say/0.1@user/testing in Hello/1.2@user/testing\n"
-                                   "    To change it, override it in your base requirements"):
+        with six.assertRaisesRegex(self, ConanException, "Conflict in Bye/0.2@user/testing:\n"
+                                   "    'Bye/0.2@user/testing' requires 'Say/0.2@user/testing' "
+                                   "while 'Hello/1.2@user/testing' requires 'Say/0.1@user/testing'.\n"
+                                   "    To fix this conflict you need to override the package 'Say'"
+                                   " in your root package."):
             self.build_graph(chat_content)
 
     def test_diamond_conflict(self):
@@ -420,10 +421,11 @@ class ChatConan(ConanFile):
         self.retriever.save_recipe(hello_ref, hello_content)
         self.retriever.save_recipe(bye_ref, bye_content2)
 
-        with six.assertRaisesRegex(self, ConanException, "Conflict in Bye/0.2@user/testing\n"
-                                   "    Requirement Say/0.2@user/testing conflicts with already "
-                                   "defined Say/0.1@user/testing in Hello/1.2@user/testing\n"
-                                   "    To change it, override it in your base requirements"):
+        with six.assertRaisesRegex(self, ConanException, "Conflict in Bye/0.2@user/testing:\n"
+                                   "    'Bye/0.2@user/testing' requires 'Say/0.2@user/testing'"
+                                   " while 'Hello/1.2@user/testing' requires 'Say/0.1@user/testing'.\n"
+                                   "    To fix this conflict you need to override the package 'Say'"
+                                   " in your root package."):
             self.build_graph(chat_content)
 
     def test_diamond_conflict_solved(self):
@@ -1502,10 +1504,11 @@ class LibDConan(ConanFile):
         libd_ref = ConanFileReference.loads("LibD/0.1@user/testing")
         self.retriever.save_recipe(libd_ref, libd_content)
 
-        with six.assertRaisesRegex(self, ConanException, "Conflict in LibB/0.1@user/testing\n"
-                                   "    Requirement LibA/0.2@user/testing conflicts with already "
-                                   "defined LibA/0.1@user/testing in LibB/0.1@user/testing\n"
-                                   "    To change it, override it in your base requirements"):
+        with six.assertRaisesRegex(self, ConanException, "Conflict in LibB/0.1@user/testing:\n"
+                                   "    'LibB/0.1@user/testing' requires 'LibA/0.2@user/testing' "
+                                   "while 'LibB/0.1@user/testing' requires 'LibA/0.1@user/testing'.\n"
+                                   "    To fix this conflict you need to override the package 'LibA' "
+                                   "in your root package."):
             self.build_graph(self.consumer_content)
         self.assertIn("LibB/0.1@user/testing: requirement LibA/0.1@user/testing overridden by "
                       "LibD/0.1@user/testing to LibA/0.2@user/testing", str(self.output))
@@ -1524,10 +1527,11 @@ class LibDConan(ConanFile):
         libd_ref = ConanFileReference.loads("LibD/0.1@user/testing")
         self.retriever.save_recipe(libd_ref, libd_content)
 
-        with six.assertRaisesRegex(self, ConanException, "Conflict in LibB/0.1@user/testing\n"
-                                   "    Requirement LibA/0.2@user/testing conflicts with already "
-                                   "defined LibA/0.1@user/testing in LibB/0.1@user/testing\n"
-                                   "    To change it, override it in your base requirements"):
+        with six.assertRaisesRegex(self, ConanException, "Conflict in LibB/0.1@user/testing:\n"
+                                   "    'LibB/0.1@user/testing' requires 'LibA/0.2@user/testing' "
+                                   "while 'LibB/0.1@user/testing' requires 'LibA/0.1@user/testing'.\n"
+                                   "    To fix this conflict you need to override the package 'LibA' in "
+                                   "your root package."):
             self.build_graph(self.consumer_content)
         self.assertEqual(1, str(self.output).count("LibA requirements()"))
         self.assertEqual(1, str(self.output).count("LibA configure()"))
