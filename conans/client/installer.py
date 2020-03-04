@@ -45,6 +45,14 @@ def build_id(conan_file):
     return None
 
 
+def add_env_conaninfo(conan_file, subtree_libnames):
+    for package_name, env_vars in conan_file._conan_env_values.data.items():
+        for name, value in env_vars.items():
+            if not package_name or package_name in subtree_libnames or \
+                    package_name == conan_file.name:
+                conan_file.info.env_values.add(name, value, package_name)
+
+
 class _PackageBuilder(object):
     def __init__(self, cache, output, hook_manager, remote_manager):
         self._cache = cache
@@ -483,11 +491,7 @@ class BinaryInstaller(object):
         # Update the info but filtering the package values that not apply to the subtree
         # of this current node and its dependencies.
         subtree_libnames = [node.ref.name for node in node_order]
-        for package_name, env_vars in conan_file._conan_env_values.data.items():
-            for name, value in env_vars.items():
-                if not package_name or package_name in subtree_libnames or \
-                   package_name == conan_file.name:
-                    conan_file.info.env_values.add(name, value, package_name)
+        add_env_conaninfo(conan_file, subtree_libnames)
 
     def _call_package_info(self, conanfile, package_folder, ref):
         conanfile.cpp_info = CppInfo(package_folder)
