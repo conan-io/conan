@@ -314,7 +314,7 @@ class DepsGraphBuilder(object):
                 conanfile.options.propagate_upstream(down_options, down_ref, ref)
                 if hasattr(conanfile, "config"):
                     with conanfile_exception_formatter(str(conanfile), "config"):
-                        conanfile.config()  # FIXME Need to call twice?
+                        conanfile.config()
 
                 with conanfile_exception_formatter(str(conanfile), "configure"):
                     conanfile.configure()

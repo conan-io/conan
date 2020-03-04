@@ -19,7 +19,6 @@ from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
 from conans.model.values import Values
 from conans.paths import DATA_YML
-from conans.util.conan_v2_mode import conan_v2_behavior
 from conans.util.files import load
 
 
@@ -29,12 +28,7 @@ class ConanFileLoader(object):
         self._output = output
         self._pyreq_loader = pyreq_loader
         self._python_requires = python_requires
-
-        def _call_python_requires(reference):
-            conan_v2_behavior("Old syntax for python_requires is deprecated")
-            return python_requires(reference)
-
-        sys.modules["conans"].python_requires = _call_python_requires
+        sys.modules["conans"].python_requires = python_requires
         self._cached_conanfile_classes = {}
 
     def load_basic(self, conanfile_path, lock_python_requires=None, user=None, channel=None,

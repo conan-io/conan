@@ -9,31 +9,6 @@ from conans.test.utils.tools import TestClient
 class ConanfileSourceTestCase(ConanV2ModeTestCase):
     """ Conan v2: 'self.cpp_info' is not available in 'package_id()' """
 
-    def test_proper_usage(self):
-        t = self.get_client()
-        conanfile = textwrap.dedent("""
-            import os
-            from conans import ConanFile, tools
-
-            class Recipe(ConanFile):
-                def build(self):
-                    pass
-
-                def package(self):
-                    tools.save(os.path.join(self.package_folder, 'file'), "AAA")  # Avoid package() WARN
-
-                def package_info(self):
-                    self.cpp_info.libs = ["libA"]
-        """)
-        t.save({'conanfile.py': conanfile})
-        t.run('create . name/version@')
-
-        t.save({'conanfile.txt': "[requires]\nname/version"})
-        t.run('install conanfile.txt')
-        content = t.load('conanbuildinfo.txt')
-        new_line = '\r\n' if platform.system() == "Windows" else '\n'
-        self.assertIn("[libs]{}libA".format(new_line), content)
-
     def test_cppinfo_not_in_package_id(self):
         # self.cpp_info is not available in 'package_id'
         t = self.get_client()
