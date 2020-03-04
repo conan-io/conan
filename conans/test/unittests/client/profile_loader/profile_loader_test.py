@@ -75,13 +75,64 @@ os=thing""")
             """)
         a = ProfileParser(txt)
         a.apply_vars()
-        self.assertEqual(a.vars, {"MYVAR": "foobar hello"})
-        self.assertEqual(a.profile_text, "[settings]\nos=foobar hello")
+        self.assertEqual(a.vars, {"MYVAR": "foobarhello"})
+        self.assertEqual(a.profile_text, "[settings]\nos=foobarhello")
 
         txt = textwrap.dedent("""
             MYVAR+=hello
             MYVAR=thing
             
+            [settings]
+            os=$MYVAR
+            """)
+        a = ProfileParser(txt)
+        a.apply_vars()
+        self.assertEqual(a.vars, {"MYVAR": "thing"})
+        self.assertEqual(a.profile_text, "[settings]\nos=thing")
+
+    def test_parser_space(self):
+        txt = textwrap.dedent("""
+            MYVAR=foobar
+            MYVAR+= hello
+
+            [settings]
+            os=$MYVAR
+            """)
+        a = ProfileParser(txt)
+        a.apply_vars()
+        self.assertEqual(a.vars, {"MYVAR": "foobar hello"})
+        self.assertEqual(a.profile_text, "[settings]\nos=foobar hello")
+
+        txt = textwrap.dedent("""
+            MYVAR+=hello
+            MYVAR= thing
+
+            [settings]
+            os=$MYVAR
+            """)
+        a = ProfileParser(txt)
+        a.apply_vars()
+        self.assertEqual(a.vars, {"MYVAR": "thing"})
+        self.assertEqual(a.profile_text, "[settings]\nos=thing")
+
+    def test_parser_concat_double(self):
+        txt = textwrap.dedent("""
+            MYVAR=foobar
+            MYVAR+=hello
+            MYVAR+= world
+
+            [settings]
+            os=$MYVAR
+            """)
+        a = ProfileParser(txt)
+        a.apply_vars()
+        self.assertEqual(a.vars, {"MYVAR": "foobarhello world"})
+        self.assertEqual(a.profile_text, "[settings]\nos=foobarhello world")
+
+        txt = textwrap.dedent("""
+            MYVAR+=hello
+            MYVAR=thing
+
             [settings]
             os=$MYVAR
             """)

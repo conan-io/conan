@@ -69,7 +69,7 @@ class ProfileParser(object):
             if key[-1] == "+":  # Append syntax
                 key = key[:-1]
                 if key in tmp_vars:
-                    tmp_vars[key] += " " + value
+                    tmp_vars[key] += value
                 else:
                     tmp_vars[key] = value
             else:
