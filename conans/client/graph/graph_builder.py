@@ -7,6 +7,7 @@ from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
 from conans.model.conan_file import get_env_context_manager
 from conans.model.ref import ConanFileReference
 from conans.model.requires import Requirements, Requirement
+from conans.util.conan_v2_mode import conan_v2_behavior
 from conans.util.log import logger
 
 
@@ -304,9 +305,8 @@ class DepsGraphBuilder(object):
             # Avoid extra time manipulating the sys.path for python
             with get_env_context_manager(conanfile, without_python=True):
                 if hasattr(conanfile, "config"):
-                    if not ref:
-                        conanfile.output.warn("config() has been deprecated."
-                                              " Use config_options and configure")
+                    conan_v2_behavior("config() has been deprecated. Use config_options() and configure()",
+                                      v1_behavior=conanfile.output.warn)
                     with conanfile_exception_formatter(str(conanfile), "config"):
                         conanfile.config()
                 with conanfile_exception_formatter(str(conanfile), "config_options"):

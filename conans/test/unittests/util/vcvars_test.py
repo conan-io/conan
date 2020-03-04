@@ -3,14 +3,13 @@ import platform
 import unittest
 
 import mock
-from mock.mock import patch
-
 import six
+from mock.mock import patch
 from six import StringIO
 
 from conans import Settings
 from conans.client import tools
-from conans.client.conf import default_settings_yml
+from conans.client.conf import get_default_settings_yml
 from conans.client.output import ConanOutput
 from conans.client.runner import ConanRunner
 from conans.client.tools.win import vcvars_dict
@@ -24,7 +23,7 @@ class VCVarsTest(unittest.TestCase):
 
     @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
     def vcvars_echo_test(self):
-        settings = Settings.loads(default_settings_yml)
+        settings = Settings.loads(get_default_settings_yml())
         settings.os = "Windows"
         settings.compiler = "Visual Studio"
         settings.compiler.version = "14"
@@ -45,7 +44,7 @@ class VCVarsTest(unittest.TestCase):
 
     @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
     def vcvars_with_store_echo_test(self):
-        settings = Settings.loads(default_settings_yml)
+        settings = Settings.loads(get_default_settings_yml())
         settings.os = "WindowsStore"
         settings.os.version = "8.1"
         settings.compiler = "Visual Studio"
@@ -60,7 +59,7 @@ class VCVarsTest(unittest.TestCase):
     def vcvars_env_not_duplicated_path_test(self):
         """vcvars is not looking at the current values of the env vars, with PATH it is a problem
         because you can already have set some of the vars and accumulate unnecessary entries."""
-        settings = Settings.loads(default_settings_yml)
+        settings = Settings.loads(get_default_settings_yml())
         settings.os = "Windows"
         settings.compiler = "Visual Studio"
         settings.compiler.version = "15"
@@ -83,7 +82,7 @@ class VCVarsTest(unittest.TestCase):
 
     @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
     def vcvars_filter_known_paths_test(self):
-        settings = Settings.loads(default_settings_yml)
+        settings = Settings.loads(get_default_settings_yml())
         settings.os = "Windows"
         settings.compiler = "Visual Studio"
         settings.compiler.version = "15"
@@ -104,7 +103,7 @@ class VCVarsTest(unittest.TestCase):
     @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
     def vcvars_amd64_32_cross_building_support_test(self):
         # amd64_x86 crossbuilder
-        settings = Settings.loads(default_settings_yml)
+        settings = Settings.loads(get_default_settings_yml())
         settings.os = "Windows"
         settings.compiler = "Visual Studio"
         settings.compiler.version = "15"
