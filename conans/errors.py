@@ -103,7 +103,10 @@ class ConanException(Exception):
 
 
 class ConanV2Exception(ConanException):
-    pass
+    def __str__(self):
+        msg = super(ConanV2Exception, self).__str__()
+        # TODO: Add a link to a public webpage with Conan roadmap to v2
+        return "Conan v2 incompatible: {}".format(msg)
 
 
 class OnlyV2Available(ConanException):

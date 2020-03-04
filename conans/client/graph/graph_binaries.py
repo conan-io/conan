@@ -300,8 +300,7 @@ class GraphBinariesAnalyzer(object):
         # Once we are done, call package_id() to narrow and change possible values
         with conanfile_exception_formatter(str(conanfile), "package_id"):
             with conan_v2_property(conanfile, 'cpp_info',
-                                   "'self.cpp_info' access in package_id() method is deprecated",
-                                   v1_behavior=conanfile.output.warn):
+                                   "'self.cpp_info' access in package_id() method is deprecated"):
                 conanfile.package_id()
 
         info = conanfile.info

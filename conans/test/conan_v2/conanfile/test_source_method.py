@@ -1,8 +1,6 @@
 import textwrap
-import unittest
 
 from conans.test.utils.conan_v2_tests import ConanV2ModeTestCase
-from conans.test.utils.tools import TestClient
 
 
 class ConanfileSourceTestCase(ConanV2ModeTestCase):
@@ -39,27 +37,3 @@ class ConanfileSourceTestCase(ConanV2ModeTestCase):
         t.save({'conanfile.py': conanfile})
         t.run('create . name/version@ -o shared=False', assert_error=True)
         self.assertIn("Conan v2 incompatible: 'self.options' access in source() method is deprecated", t.out)
-
-
-class ConanfileSourceV1TestCase(unittest.TestCase):
-    """ Conan v1 will show a warning """
-
-    def test_v1_warning(self):
-        t = TestClient()
-        conanfile = textwrap.dedent("""
-            from conans import ConanFile
-
-            class Recipe(ConanFile):
-                settings = "os",
-                options = {'shared': [True, False]}
-
-                def source(self):
-                    self.output.info("conanfile::source(): settings.os={}".format(self.settings.os))
-                    self.output.info("conanfile::source(): options.shared={}".format(self.options.shared))
-        """)
-        t.save({'conanfile.py': conanfile})
-        t.run('create . name/version@ -o shared=False -s os=Linux')
-        self.assertIn("name/version: WARN: 'self.settings' access in source() method is deprecated", t.out)
-        self.assertIn("name/version: WARN: 'self.options' access in source() method is deprecated", t.out)
-        self.assertIn("name/version: conanfile::source(): settings.os=Linux", t.out)
-        self.assertIn("name/version: conanfile::source(): options.shared=False", t.out)

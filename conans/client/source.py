@@ -137,11 +137,9 @@ def _run_source(conanfile, conanfile_path, src_folder, hook_manager, reference, 
                 with conanfile_exception_formatter(conanfile.display_name, "source"):
 
                     with conan_v2_property(conanfile, 'settings',
-                                           "'self.settings' access in source() method is deprecated",
-                                           v1_behavior=conanfile.output.warn):
+                                           "'self.settings' access in source() method is deprecated"):
                         with conan_v2_property(conanfile, 'options',
-                                               "'self.options' access in source() method is deprecated",
-                                               v1_behavior=conanfile.output.warn):
+                                               "'self.options' access in source() method is deprecated"):
                             conanfile.source()
 
                 hook_manager.execute("post_source", conanfile=conanfile,

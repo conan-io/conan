@@ -80,8 +80,7 @@ def _call_package(conanfile, package_id, source_folder, build_folder, package_fo
         with conanfile_exception_formatter(str(conanfile), "package"):
             with chdir(build_folder):
                 with conan_v2_property(conanfile, 'info',
-                                       "'self.info' access in package() method is deprecated",
-                                       v1_behavior=conanfile.output.warn):
+                                       "'self.info' access in package() method is deprecated"):
                     conanfile.package()
     except Exception as e:
         if not local:
