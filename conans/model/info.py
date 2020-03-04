@@ -30,9 +30,11 @@ class RequirementInfo(object):
         self._indirect = indirect
 
         try:
-            getattr(self, default_package_id_mode)()
+            func_package_id_mode = getattr(self, default_package_id_mode)
         except AttributeError:
             raise ConanException("'%s' is not a known package_id_mode" % default_package_id_mode)
+        else:
+            func_package_id_mode()
 
     def copy(self):
         # Useful for build_id()
@@ -285,9 +287,11 @@ class PythonRequireInfo(object):
         self._revision = None
 
         try:
-            getattr(self, default_package_id_mode)()
+            func_package_id_mode = getattr(self, default_package_id_mode)
         except AttributeError:
             raise ConanException("'%s' is not a known package_id_mode" % default_package_id_mode)
+        else:
+            func_package_id_mode()
 
     @property
     def sha(self):
