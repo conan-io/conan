@@ -360,20 +360,21 @@ class PyRequiresExtendTest(unittest.TestCase):
                 python_requires = "base/1.1@user/testing"
                 python_requires_extend = "base.MyConanfileBase"
                 
-                @classmethod
-                def python_require_extend_class(cls, c):
-                    cls.settings = c.settings + cls.settings
+                def __init__(self, *args, **kwargs):
+                    self.settings = super(PkgTest, self).settings + self.settings
+                    self.license = super(PkgTest, self).license
+                    self.author = super(PkgTest, self).author
+                    super(PkgTest, self).__init__(*args, **kwargs)
 
                 def build(self):
                     self.output.info("License! %s" % self.license)
                     self.output.info("Author! %s" % self.author)
-                    self.output.info("os: %s arch: %s"
-                                     % (self.settings.get_safe("os"), self.settings.arch))
+                    self.output.info("os: %s arch: %s" % (self.settings.get_safe("os"), self.settings.arch))
             """)
         client.save({"conanfile.py": reuse})
         client.run("create . Pkg/0.1@user/testing -s os=Windows -s arch=armv7")
-        self.assertIn("Pkg/0.1@user/testing: License! MIT", client.out)
-        self.assertIn("Pkg/0.1@user/testing: Author! frodo", client.out)
+        self.assertIn("Pkg/0.1@user/testing: License! MyLicense", client.out)
+        self.assertIn("Pkg/0.1@user/testing: Author! author@company.com", client.out)
         self.assertIn("Pkg/0.1@user/testing: os: Windows arch: armv7", client.out)
 
     def transitive_imports_conflicts_test(self):
