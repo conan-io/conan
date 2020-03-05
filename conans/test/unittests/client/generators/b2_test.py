@@ -1,6 +1,6 @@
 import unittest
 
-from conans.client.conf import default_settings_yml
+from conans.client.conf import get_default_settings_yml
 from conans.client.generators.b2 import B2Generator
 from conans.model.build_info import CppInfo
 from conans.model.conan_file import ConanFile
@@ -13,7 +13,7 @@ from conans.test.utils.tools import TestBufferConanOutput
 class B2GeneratorTest(unittest.TestCase):
 
     def b2_test(self):
-        settings = Settings.loads(default_settings_yml)
+        settings = Settings.loads(get_default_settings_yml())
         settings.os = "Linux"
         settings.compiler = "gcc"
         settings.compiler.version = "6.3"

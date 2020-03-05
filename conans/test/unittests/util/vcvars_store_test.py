@@ -7,7 +7,7 @@ import unittest
 from nose.plugins.attrib import attr
 
 from conans.client import tools
-from conans.client.conf import default_settings_yml
+from conans.client.conf import get_default_settings_yml
 from conans.errors import ConanException
 from conans.model.settings import Settings
 from conans.test.utils.tools import TestBufferConanOutput
@@ -21,7 +21,7 @@ class VCVarsStoreTest(unittest.TestCase):
         if platform.system() != "Windows":
             return
 
-        settings = Settings.loads(default_settings_yml)
+        settings = Settings.loads(get_default_settings_yml())
         settings.compiler = 'Visual Studio'
         settings.compiler.version = '14'
         settings.arch = 'x86'
@@ -41,7 +41,7 @@ class VCVarsStoreTest(unittest.TestCase):
         if not sdk_version:
             return
 
-        settings = Settings.loads(default_settings_yml)
+        settings = Settings.loads(get_default_settings_yml())
         settings.compiler = 'Visual Studio'
         settings.compiler.version = '14'
         settings.arch = 'x86'
