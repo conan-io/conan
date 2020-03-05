@@ -4,11 +4,11 @@ from conans.client.graph.build_mode import BuildMode
 from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_MISSING,
                                        BINARY_UPDATE, RECIPE_EDITABLE, BINARY_EDITABLE,
                                        RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP, BINARY_UNKNOWN)
-
 from conans.errors import NoRemoteAvailable, NotFoundException, conanfile_exception_formatter
 from conans.model.info import ConanInfo, PACKAGE_ID_UNKNOWN
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference
+from conans.util.conan_v2_mode import conan_v2_property
 from conans.util.files import is_dirty, rmdir
 
 
@@ -299,7 +299,9 @@ class GraphBinariesAnalyzer(object):
 
         # Once we are done, call package_id() to narrow and change possible values
         with conanfile_exception_formatter(str(conanfile), "package_id"):
-            conanfile.package_id()
+            with conan_v2_property(conanfile, 'cpp_info',
+                                   "'self.cpp_info' access in package_id() method is deprecated"):
+                conanfile.package_id()
 
         info = conanfile.info
         node.package_id = info.package_id()

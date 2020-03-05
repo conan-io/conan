@@ -2,18 +2,15 @@
 
 import unittest
 
-from mock import mock
-
 from conans import Settings
-from conans.client.conf import default_settings_yml
+from conans.client.conf import get_default_settings_yml
 from conans.client.settings_preprocessor import preprocess
-from conans.test.utils.conanfile import MockSettings
 
 
 class SettingsCompilerIntelVisualPreprocessorTest(unittest.TestCase):
 
     def setUp(self):
-        self.settings = Settings.loads(default_settings_yml)
+        self.settings = Settings.loads(get_default_settings_yml())
         self.settings.compiler = "intel"
         self.settings.compiler.base = "Visual Studio"
 
@@ -39,10 +36,11 @@ class SettingsCompilerIntelVisualPreprocessorTest(unittest.TestCase):
         preprocess(self.settings)
         self.assertEqual(self.settings.compiler.base.runtime, "MT")
 
+
 class SettingsCompilerVisualPreprocessorTest(unittest.TestCase):
 
     def setUp(self):
-        self.settings = Settings.loads(default_settings_yml)
+        self.settings = Settings.loads(get_default_settings_yml())
         self.settings.compiler = "Visual Studio"
 
     def release_build_type_runtime_test(self):

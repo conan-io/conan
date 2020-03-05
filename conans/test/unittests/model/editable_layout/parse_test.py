@@ -5,7 +5,7 @@ import shutil
 import textwrap
 import unittest
 
-from conans.client.conf import default_settings_yml
+from conans.client.conf import get_default_settings_yml
 from conans.model.editable_layout import EditableLayout
 from conans.model.options import Options, PackageOptions
 from conans.model.settings import Settings
@@ -19,7 +19,7 @@ class ParseTest(unittest.TestCase):
         self.layout_filepath = os.path.join(self.test_folder, "layout")
         self.editable_cpp_info = EditableLayout(self.layout_filepath)
 
-        self.settings = Settings.loads(default_settings_yml)
+        self.settings = Settings.loads(get_default_settings_yml())
         self.options = Options(PackageOptions({"shared": [True, False]}))
 
     def tearDown(self):
