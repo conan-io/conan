@@ -199,6 +199,29 @@ class Pkg(ConanFile):
         self.client.run("create . Pkg/0.1@user/testing")
         self.assertIn("A is 3", self.client.out)
 
+    def dynamic_imports_test(self):
+        conanfile = """from conans import ConanFile
+class Pkg(ConanFile):
+    def build(self):
+        self.output.info("Hipony was right")
+"""
+        self.client.save({"conanfile.py": conanfile})
+        self.client.run("create . Pkg/0.1@user/testing")
+
+        zippath = self._create_zip()
+        self.client.run('config install "%s"' % zippath)
+        conanfile = """from conans import ConanFile
+from myfuncs import mycooladd
+a = mycooladd(1, 2)
+assert a == 3
+class Pkg(ConanFile):
+    def build(self):
+        self.output.info("A is %s" % a)
+"""
+        self.client.save({"conanfile.py": conanfile})
+        self.client.run("create . Pkg/0.1@user/testing")
+        self.assertIn("A is 3", self.client.out)
+
     def install_file_test(self):
         """ should install from a file in current dir
         """
