@@ -1,11 +1,12 @@
 import os
 from collections import OrderedDict, defaultdict
 
-from conans.errors import ConanException
+from conans.errors import ConanException, ConanV2Exception
 from conans.model.env_info import EnvValues, unquote
 from conans.model.options import OptionsValues
 from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
+from conans.util.conan_v2_mode import conan_v2_behavior
 from conans.util.config_parser import ConfigParser
 from conans.util.files import load, mkdir
 from conans.util.log import logger
@@ -114,6 +115,8 @@ def read_profile(profile_name, cwd, default_folder):
 
     try:
         return _load_profile(text, profile_path, default_folder)
+    except ConanV2Exception:
+        raise
     except ConanException as exc:
         raise ConanException("Error reading '%s' profile: %s" % (profile_name, exc))
 
@@ -144,8 +147,9 @@ def _load_profile(text, profile_path, default_folder):
 
         # Current profile before update with parents (but parent variables already applied)
         doc = ConfigParser(profile_parser.profile_text,
-                           allowed_fields=["build_requires", "settings", "env",
-                                           "scopes", "options"])
+                           allowed_fields=["build_requires", "settings", "env", "scopes", "options"])
+        if 'scopes' in doc._sections:
+            conan_v2_behavior("Field 'scopes' in profile is deprecated")
 
         # Merge the inherited profile with the readed from current profile
         _apply_inner_profile(doc, inherited_profile)

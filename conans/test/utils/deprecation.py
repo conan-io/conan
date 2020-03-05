@@ -11,4 +11,4 @@ def catch_deprecation_warning(test_suite, n=1):
         yield
         if n:
             test_suite.assertEqual(len(w), n)
-            test_suite.assertTrue(issubclass(w[0].category, UserWarning))
+            test_suite.assertTrue(issubclass(w[0].category, DeprecationWarning))

@@ -128,7 +128,7 @@ class GraphManagerTest(unittest.TestCase):
         build_mode = []  # Means build all
         ref = ref or ConanFileReference(None, None, None, None, validate=False)
         options = OptionsValues()
-        graph_info = GraphInfo(profile, options, root_ref=ref)
+        graph_info = GraphInfo(profile, options=options, root_ref=ref)
         app = self._get_app()
         deps_graph = app.graph_manager.load_graph(path, create_ref, graph_info, build_mode,
                                                   check_updates, update, remotes, recorder)
@@ -160,7 +160,7 @@ class GraphManagerTest(unittest.TestCase):
         for dep in deps:
             self.assertEqual(conanfile.requires[dep.name].ref, dep.ref)
 
-        self.assertEqual(closure, node.public_closure)
+        self.assertEqual(closure, list(node.public_closure))
         libs = []
         envs = []
         for n in closure:
