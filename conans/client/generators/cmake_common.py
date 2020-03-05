@@ -688,33 +688,33 @@ class CMakeCommonMacros:
             # debug, forcing MXd for debug builds. It will generate MSVCRT warnings if the dependencies
             # are installed with "conan install" and the wrong build type.
             cmake_policy(GET CMP0091 policy_0091)
-            if(policy_0091 STREQUAL "NEW" AND CONAN_LINK_RUNTIME MATCHES "MT")
-                if(CMAKE_BUILD_TYPE)
-                    if(${CMAKE_BUILD_TYPE} STREQUAL "Release" OR
-                       ${CMAKE_BUILD_TYPE} STREQUAL "RelWithDebInfo" OR
-                       ${CMAKE_BUILD_TYPE} STREQUAL "MinSizeRel")
+            if(CONAN_LINK_RUNTIME MATCHES "MT")
+                if(policy_0091 STREQUAL "NEW")
+                    if(CMAKE_BUILD_TYPE STREQUAL "Release" OR
+                       CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo" OR
+                       CMAKE_BUILD_TYPE STREQUAL "MinSizeRel")
                         if (CMAKE_MSVC_RUNTIME_LIBRARY STREQUAL "MultiThreadedDLL")
                             set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded")
                         endif()
-                    elseif(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
+                    elseif(CMAKE_BUILD_TYPE STREQUAL "Debug")
                         if (CMAKE_MSVC_RUNTIME_LIBRARY STREQUAL "MultiThreadedDebugDLL")
                             set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDebug")
                         endif()
                     endif()
+                else()
+                    foreach(flag CMAKE_C_FLAGS_RELEASE CMAKE_CXX_FLAGS_RELEASE
+                                    CMAKE_C_FLAGS_RELWITHDEBINFO CMAKE_CXX_FLAGS_RELWITHDEBINFO
+                                    CMAKE_C_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_MINSIZEREL)
+                        if(DEFINED ${flag})
+                            string(REPLACE "/MD" "/MT" ${flag} "${${flag}}")
+                        endif()
+                    endforeach()
+                    foreach(flag CMAKE_C_FLAGS_DEBUG CMAKE_CXX_FLAGS_DEBUG)
+                        if(DEFINED ${flag})
+                            string(REPLACE "/MDd" "/MTd" ${flag} "${${flag}}")
+                        endif()
+                    endforeach()
                 endif()
-            elseif(CONAN_LINK_RUNTIME MATCHES "MT")
-                foreach(flag CMAKE_C_FLAGS_RELEASE CMAKE_CXX_FLAGS_RELEASE
-                                 CMAKE_C_FLAGS_RELWITHDEBINFO CMAKE_CXX_FLAGS_RELWITHDEBINFO
-                                 CMAKE_C_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_MINSIZEREL)
-                    if(DEFINED ${flag})
-                        string(REPLACE "/MD" "/MT" ${flag} "${${flag}}")
-                    endif()
-                endforeach()
-                foreach(flag CMAKE_C_FLAGS_DEBUG CMAKE_CXX_FLAGS_DEBUG)
-                    if(DEFINED ${flag})
-                        string(REPLACE "/MDd" "/MTd" ${flag} "${${flag}}")
-                    endif()
-                endforeach()
             endif()
         endmacro()
     """)
