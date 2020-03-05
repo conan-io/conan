@@ -44,7 +44,6 @@ class TestPackageTest(unittest.TestCase):
         client.save({CONANFILE: GenConanfile().with_name("Hello").with_version("0.1"),
                      "test_package/conanfile.py": test_conanfile})
         client.run("create . user/channel")
-        print(client.out)
         self.assertNotIn("Hello/0.2", client.out)
 
     def other_requirements_test(self):
