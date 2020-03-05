@@ -8,7 +8,7 @@ import unittest
 from mock import mock
 from nose.plugins.attrib import attr
 
-from conans.client.conf import default_settings_yml
+from conans.client.conf import get_default_settings_yml
 from conans.client.tools.win import vcvars_command
 from conans.errors import ConanException
 from conans.model.settings import Settings
@@ -21,7 +21,7 @@ class VCVarsClangClTest(unittest.TestCase):
     output = TestBufferConanOutput()
 
     def test_simple(self):
-        settings = Settings.loads(default_settings_yml)
+        settings = Settings.loads(get_default_settings_yml())
         settings.compiler = 'clang'
         settings.compiler.version = '5.0'
         settings.arch = 'x86'
@@ -32,7 +32,7 @@ class VCVarsClangClTest(unittest.TestCase):
         self.assertIn('x86', command)
 
     def test_no_version(self):
-        settings = Settings.loads(default_settings_yml)
+        settings = Settings.loads(get_default_settings_yml())
         settings.compiler = 'clang'
         settings.arch = 'x86_64'
         settings.os = 'Windows'
@@ -42,7 +42,7 @@ class VCVarsClangClTest(unittest.TestCase):
         self.assertIn('amd64', command)
 
     def test_no_msvc(self):
-        settings = Settings.loads(default_settings_yml)
+        settings = Settings.loads(get_default_settings_yml())
         settings.compiler = 'clang'
         settings.arch = 'x86_64'
         settings.os = 'Windows'

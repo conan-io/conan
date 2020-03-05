@@ -44,3 +44,21 @@ class TextGeneratorTest(unittest.TestCase):
 
             [cxxflags_MyPkg]
             -cxxflag_parent"""), txt_out)
+
+    def test_load_sytem_libs(self):
+        content = textwrap.dedent("""
+            [system_libs]
+            main
+            
+            [system_libs_requirement]
+            requirement
+
+            [system_libs_requirement_other]
+            requirement_other
+        """)
+
+        deps_cpp_info, _, _ = TXTGenerator.loads(content)
+        self.assertEqual(deps_cpp_info.system_libs, ["main", ])
+        a = deps_cpp_info["requirement"]
+        self.assertEqual(deps_cpp_info["requirement"].system_libs, ["requirement", ])
+        self.assertEqual(deps_cpp_info["requirement_other"].system_libs, ["requirement_other", ])

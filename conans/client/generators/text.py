@@ -108,8 +108,12 @@ class TXTGenerator(Generator):
                     var_name, config = tokens
                 else:
                     config = None
-                tokens = var_name.split("_", 1)
-                field = tokens[0]
+                if 'system_libs' in var_name:
+                    tokens = var_name.split("system_libs_", 1)
+                    field = 'system_libs'
+                else:
+                    tokens = var_name.split("_", 1)
+                    field = tokens[0]
                 dep = tokens[1] if len(tokens) == 2 else None
                 if field == "cppflags":
                     field = "cxxflags"
@@ -153,7 +157,7 @@ class TXTGenerator(Generator):
                     '[exelinkflags{dep}{config}]\n{deps.exelinkflags}\n\n'
                     '[sysroot{dep}{config}]\n{deps.sysroot}\n\n'
                     '[frameworks{dep}{config}]\n{deps.frameworks}\n\n'
-                    '[framework_paths{dep}{config}]\n{deps.framework_paths}\n\n')
+                    '[frameworkdirs{dep}{config}]\n{deps.framework_paths}\n\n')
 
         sections = []
         deps = DepsCppTXT(self.deps_build_info)

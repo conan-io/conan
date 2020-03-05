@@ -43,8 +43,7 @@ class BasePackage(ConanFile):
         conan_file = loader.load_basic(conanfile_path)
         self.assertEqual(conan_file.short_paths, True)
 
-        result = loader.load_consumer(conanfile_path,
-                                      profile_host=test_profile())
+        result = loader.load_consumer(conanfile_path, profile_host=test_profile())
         self.assertEqual(result.short_paths, True)
 
     def requires_init_test(self):
@@ -59,8 +58,7 @@ class MyTest(ConanFile):
 """
         for requires in ("''", "[]", "()", "None"):
             save(conanfile_path, conanfile.format(requires))
-            result = loader.load_consumer(conanfile_path,
-                                          profile_host=test_profile())
+            result = loader.load_consumer(conanfile_path, profile_host=test_profile())
             result.requirements()
             self.assertEqual("MyPkg/0.1@user/channel", str(result.requires))
 

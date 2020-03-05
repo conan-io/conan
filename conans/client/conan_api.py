@@ -80,7 +80,7 @@ def api_method(f):
         quiet = kwargs.pop("quiet", False)
         old_curdir = get_cwd()
         old_output = api.user_io.out
-        quiet_output = ConanOutput(StringIO(), api.color) if quiet else None
+        quiet_output = ConanOutput(StringIO(), color=api.color) if quiet else None
         try:
             api.create_app(quiet_output=quiet_output)
             log_command(f.__name__, kwargs)
@@ -1225,6 +1225,14 @@ class ConanAPIV1(object):
         for level in build_order:
             level[:] = [(id_, repr(pref)) for id_, pref in level]
         return build_order
+
+    @api_method
+    def lock_clean_modified(self, lockfile, cwd=None):
+        cwd = cwd or os.getcwd()
+        lockfile = _make_abs_path(lockfile, cwd)
+        lock = GraphLockFile.load(lockfile, self.app.config.revisions_enabled)
+        lock.graph_lock.clean_modified()
+        lock.save(lockfile)
 
     @api_method
     def create_lock(self, reference, remote_name=None, settings=None, options=None, env=None,

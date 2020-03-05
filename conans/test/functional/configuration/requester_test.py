@@ -7,7 +7,7 @@ import six
 from mock import Mock
 
 from conans.client.cache.cache import ClientCache
-from conans.client.conf import default_client_conf, ConanClientConfigParser
+from conans.client.conf import get_default_client_conf, ConanClientConfigParser
 from conans.client.rest.conan_requester import ConanRequester
 from conans.client.tools import environment_append
 from conans.client.tools.files import replace_in_file, save
@@ -55,7 +55,7 @@ class ConanRequesterCacertPathTests(unittest.TestCase):
         file_path = os.path.join(temp_folder(), "whatever_cacert")
         save(file_path, "")
         conan_conf = os.path.join(temp_folder(), "conan.conf")
-        save(conan_conf, normalize(default_client_conf))
+        save(conan_conf, normalize(get_default_client_conf()))
         replace_in_file(conan_conf, "# cacert_path",
                         "cacert_path={}".format(file_path),
                         output=TestBufferConanOutput())
