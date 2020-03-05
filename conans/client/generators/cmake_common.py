@@ -226,9 +226,9 @@ class CMakeCommonMacros:
     # this function gets the policy without raising an error for earlier versions than the policy
     conan_get_policy = textwrap.dedent("""
         function(conan_get_policy policy_id policy)
-            if(POLICY ${policy_id})
+            if(POLICY "${policy_id}")
                 cmake_policy(GET "${policy_id}" _policy)
-                set(policy ${_policy} PARENT_SCOPE)
+                set(policy "${_policy}" PARENT_SCOPE)
             else()
                 set(policy "" PARENT_SCOPE) 
             endif()
