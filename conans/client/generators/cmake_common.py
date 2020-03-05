@@ -223,6 +223,18 @@ class CMakeCommonMacros:
         endfunction()
     """)
 
+    # this function gets the policy without raising an error for earlier versions than the policy
+    conan_get_policy = textwrap.dedent("""
+        function(conan_get_policy policy_id policy)
+            if(POLICY ${policy_id})
+                cmake_policy(GET "${policy_id}" _policy)
+                set(policy ${_policy} PARENT_SCOPE)
+            else()
+                set(policy "" PARENT_SCOPE) 
+            endif()
+        endfunction()
+    """)
+
     conan_find_libraries_abs_path = textwrap.dedent("""
         function(conan_find_libraries_abs_path libraries package_libdir libraries_abs_path)
             foreach(_LIBRARY_NAME ${libraries})
@@ -652,7 +664,7 @@ class CMakeCommonMacros:
     conan_set_vs_runtime = textwrap.dedent("""
         macro(conan_set_vs_runtime)
             if(CONAN_LINK_RUNTIME)
-                cmake_policy(GET CMP0091 policy_0091)
+                conan_get_policy(CMP0091 policy_0091)
                 if(policy_0091 STREQUAL "NEW")
                     if(CONAN_LINK_RUNTIME MATCHES "MTd")
                         set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDebug")
@@ -687,7 +699,7 @@ class CMakeCommonMacros:
             # Leave the defaults MD (MDd) or replace them with MT (MTd) but taking into account the
             # debug, forcing MXd for debug builds. It will generate MSVCRT warnings if the dependencies
             # are installed with "conan install" and the wrong build type.
-            cmake_policy(GET CMP0091 policy_0091)
+            conan_get_policy(CMP0091 policy_0091)
             if(CONAN_LINK_RUNTIME MATCHES "MT")
                 if(policy_0091 STREQUAL "NEW")
                     if(CMAKE_BUILD_TYPE STREQUAL "Release" OR
@@ -808,6 +820,7 @@ class CMakeCommonMacros:
 
 _cmake_common_macros = "\n".join([
     CMakeCommonMacros.conan_message,
+    CMakeCommonMacros.conan_get_policy,
     CMakeCommonMacros.conan_find_libraries_abs_path,
     CMakeCommonMacros.conan_package_library_targets,
     CMakeCommonMacros.conan_set_libcxx,
