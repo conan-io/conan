@@ -652,18 +652,31 @@ class CMakeCommonMacros:
     conan_set_vs_runtime = textwrap.dedent("""
         macro(conan_set_vs_runtime)
             if(CONAN_LINK_RUNTIME)
-                foreach(flag CMAKE_C_FLAGS_RELEASE CMAKE_CXX_FLAGS_RELEASE
-                             CMAKE_C_FLAGS_RELWITHDEBINFO CMAKE_CXX_FLAGS_RELWITHDEBINFO
-                             CMAKE_C_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_MINSIZEREL)
-                    if(DEFINED ${flag})
-                        string(REPLACE "/MD" ${CONAN_LINK_RUNTIME} ${flag} "${${flag}}")
+                cmake_policy(GET CMP0091 policy_0091)
+                if(policy_0091 STREQUAL "NEW")
+                    if(CONAN_LINK_RUNTIME STREQUAL "MT")
+                        set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded")
+                    elseif(CONAN_LINK_RUNTIME STREQUAL "MD")
+                        set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")
+                    elseif(CONAN_LINK_RUNTIME STREQUAL "MTd")
+                        set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDebug")
+                    elseif(CONAN_LINK_RUNTIME STREQUAL "MDd")
+                        set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDebugDLL")
                     endif()
-                endforeach()
-                foreach(flag CMAKE_C_FLAGS_DEBUG CMAKE_CXX_FLAGS_DEBUG)
-                    if(DEFINED ${flag})
-                        string(REPLACE "/MDd" ${CONAN_LINK_RUNTIME} ${flag} "${${flag}}")
-                    endif()
-                endforeach()
+                else()
+                    foreach(flag CMAKE_C_FLAGS_RELEASE CMAKE_CXX_FLAGS_RELEASE
+                                 CMAKE_C_FLAGS_RELWITHDEBINFO CMAKE_CXX_FLAGS_RELWITHDEBINFO
+                                 CMAKE_C_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_MINSIZEREL)
+                        if(DEFINED ${flag})
+                            string(REPLACE "/MD" ${CONAN_LINK_RUNTIME} ${flag} "${${flag}}")
+                        endif()
+                    endforeach()
+                    foreach(flag CMAKE_C_FLAGS_DEBUG CMAKE_CXX_FLAGS_DEBUG)
+                        if(DEFINED ${flag})
+                            string(REPLACE "/MDd" ${CONAN_LINK_RUNTIME} ${flag} "${${flag}}")
+                        endif()
+                    endforeach()
+                endif()
             endif()
         endmacro()
     """)
@@ -674,7 +687,22 @@ class CMakeCommonMacros:
             # Leave the defaults MD (MDd) or replace them with MT (MTd) but taking into account the
             # debug, forcing MXd for debug builds. It will generate MSVCRT warnings if the dependencies
             # are installed with "conan install" and the wrong build type.
-            if(CONAN_LINK_RUNTIME MATCHES "MT")
+            cmake_policy(GET CMP0091 policy_0091)
+            if(policy_0091 STREQUAL "NEW" AND CONAN_LINK_RUNTIME MATCHES "MT")
+                if(CMAKE_BUILD_TYPE)
+                    if(${CMAKE_BUILD_TYPE} STREQUAL "Release" OR
+                       ${CMAKE_BUILD_TYPE} STREQUAL "RelWithDebInfo" OR
+                       ${CMAKE_BUILD_TYPE} STREQUAL "MinSizeRel")
+                        if (CMAKE_MSVC_RUNTIME_LIBRARY STREQUAL "MultiThreadedDLL")
+                            set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded")
+                        endif()
+                    elseif(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
+                        if (CMAKE_MSVC_RUNTIME_LIBRARY STREQUAL "MultiThreadedDebugDLL")
+                            set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDebug")
+                        endif()
+                    endif()
+                endif()
+            elseif(CONAN_LINK_RUNTIME MATCHES "MT")
                 foreach(flag CMAKE_C_FLAGS_RELEASE CMAKE_CXX_FLAGS_RELEASE
                                  CMAKE_C_FLAGS_RELWITHDEBINFO CMAKE_CXX_FLAGS_RELWITHDEBINFO
                                  CMAKE_C_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_MINSIZEREL)
