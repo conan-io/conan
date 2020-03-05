@@ -103,16 +103,9 @@ class HelloTestConan(ConanFile):
                     self.copy("*.h")
             """)
         if with_test:
-            test_conanfile = textwrap.dedent("""
-            from conans import ConanFile
-
-            class MyPkg(ConanFile):
-                def test(self):
-                    pass
-            """)
             client.save({"conanfile.py": conanfile,
                          "header.h": "",
-                         "test_package/conanfile.py": test_conanfile})
+                         "test_package/conanfile.py": GenConanfile().with_test("pass")})
         else:
             client.save({"conanfile.py": conanfile,
                          "header.h": ""})
@@ -316,11 +309,7 @@ class Pkg(ConanFile):
 
     def create_in_subfolder_test(self):
         client = TestClient()
-        client.save({"subfolder/conanfile.py": """from conans import ConanFile
-class MyPkg(ConanFile):
-    name = "Pkg"
-    version = "0.1"
-"""})
+        client.save({"subfolder/conanfile.py": GenConanfile().with_name("Pkg").with_version("0.1")})
         client.run("create subfolder lasote/channel")
         self.assertIn("Pkg/0.1@lasote/channel: Generating the package", client.out)
         client.run("search")
@@ -329,49 +318,31 @@ class MyPkg(ConanFile):
     def create_in_subfolder_with_different_name_test(self):
         # Now with a different name
         client = TestClient()
-        client.save({"subfolder/CustomConanFile.py": """from conans import ConanFile
-class MyPkg(ConanFile):
-    name = "Pkg"
-    version = "0.1"
-"""})
-        client.run("create subfolder/CustomConanFile.py lasote/channel")
+        client.save({"subfolder/Custom.py": GenConanfile().with_name("Pkg").with_version("0.1")})
+        client.run("create subfolder/Custom.py lasote/channel")
         self.assertIn("Pkg/0.1@lasote/channel: Generating the package", client.out)
         client.run("search")
         self.assertIn("Pkg/0.1@lasote/channel", client.out)
 
     def create_test_package_test(self):
         client = TestClient()
-        client.save({"conanfile.py": """from conans import ConanFile
-class MyPkg(ConanFile):
-    name = "Pkg"
-    version = "0.1"
-""", "test_package/conanfile.py": """from conans import ConanFile
-class MyTest(ConanFile):
-    def test(self):
-        self.output.info("TESTING!!!")
-"""})
+        client.save({"conanfile.py": GenConanfile().with_name("Pkg").with_version("0.1"),
+                     "test_package/conanfile.py":
+                         GenConanfile().with_test('self.output.info("TESTING!!!")')})
         client.run("create . lasote/testing")
         self.assertIn("Pkg/0.1@lasote/testing: Generating the package", client.out)
         self.assertIn("Pkg/0.1@lasote/testing (test package): TESTING!!!", client.out)
 
     def create_skip_test_package_test(self):
-        """
-        Skip the test package stage if explicitly disabled with --test-folder=None
-        """
+        # Skip the test package stage if explicitly disabled with --test-folder=None
         # https://github.com/conan-io/conan/issues/2355
         client = TestClient()
-        client.save({"conanfile.py": """from conans import ConanFile
-class MyPkg(ConanFile):
-    name = "Pkg"
-    version = "0.1"
-""", "test_package/conanfile.py": """from conans import ConanFile
-class MyTest(ConanFile):
-    def test(self):
-        self.output.info("TESTING!!!")
-"""})
+        client.save({"conanfile.py": GenConanfile().with_name("Pkg").with_version("0.1"),
+                     "test_package/conanfile.py":
+                         GenConanfile().with_test('self.output.info("TESTING!!!")')})
         client.run("create . lasote/testing --test-folder=None")
         self.assertIn("Pkg/0.1@lasote/testing: Generating the package", client.out)
-        self.assertNotIn("Pkg/0.1@lasote/testing (test package): TESTING!!!", client.out)
+        self.assertNotIn("TESTING!!!", client.out)
 
     def create_test_package_requires(self):
         client = TestClient()
@@ -417,42 +388,20 @@ class MyPkg(ConanFile):
     def build_policy_test(self):
         # https://github.com/conan-io/conan/issues/1956
         client = TestClient()
-        conanfile = '''
-from conans import ConanFile
-
-class HelloConan(ConanFile):
-    name = "HelloBar"
-    version = "0.1"
-    build_policy = "always"
-'''
-        test_package = '''
-from conans import ConanFile
-
-class HelloTestConan(ConanFile):
-    requires = "HelloBar/0.1@lasote/testing"
-    def test(self):
-        pass
-'''
+        conanfile = str(GenConanfile()) + '\n    build_policy = "always"'
+        test_package = GenConanfile().with_test("pass")
         client.save({"conanfile.py": conanfile, "test_package/conanfile.py": test_package})
-        client.run("create . lasote/testing")
-        self.assertIn("HelloBar/0.1@lasote/testing: Forced build from source",
-                      client.out)
-        client.save({"conanfile.py": conanfile.replace("HelloBar", "Hello") +
-                     "    requires='HelloBar/0.1@lasote/testing'",
-                     "test_package/conanfile.py": test_package.replace("HelloBar", "Hello")})
-        client.run("create . lasote/stable")
-        self.assertIn("HelloBar/0.1@lasote/testing: Forced build from source",
-                      client.out)
+        client.run("create . Bar/0.1@user/stable")
+        self.assertIn("Bar/0.1@user/stable: Forced build from source", client.out)
+
+        # Transitive too
+        client.save({"conanfile.py": GenConanfile().with_require_plain("Bar/0.1@user/stable")})
+        client.run("create . pkg/0.1@user/stable")
+        self.assertIn("Bar/0.1@user/stable: Forced build from source", client.out)
 
     def test_build_folder_handling_test(self):
         conanfile = GenConanfile().with_name("Hello").with_version("0.1")
-        test_conanfile = '''
-from conans import ConanFile
-
-class TestConanLib(ConanFile):
-    def test(self):
-        pass
-'''
+        test_conanfile = GenConanfile().with_test("pass")
         client = TestClient()
         default_build_dir = os.path.join(client.current_folder, "test_package", "build")
 

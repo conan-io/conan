@@ -2,28 +2,24 @@ import unittest
 
 from parameterized import parameterized
 
-from conans.test.utils.tools import TestClient
+from conans.test.utils.tools import TestClient, GenConanfile
 
 conanfile = """from conans import ConanFile
 class Pkg(ConanFile):
+    def configure(self):
+        self.output.info("Develop %s configure!" % self.develop)
     def requirements(self):
-        if self.develop:
-            self.output.info("Develop requirements!")
+        self.output.info("Develop %s requirements!" % self.develop)
     def source(self):
-        if self.develop:
-            self.output.info("Develop source!")
+        self.output.info("Develop %s source!" % self.develop)
     def build(self):
-        if self.develop:
-            self.output.info("Develop build!")
+        self.output.info("Develop %s build!" % self.develop)
     def package(self):
-        if self.develop:
-            self.output.info("Develop package!")
+        self.output.info("Develop %s package!" % self.develop)
     def package_info(self):
-        if self.develop:
-            self.output.info("Develop package_info!")
+        self.output.info("Develop %s package_info!" % self.develop)
     def package_id(self):
-        if self.develop:
-            self.output.info("Develop package_id!")
+        self.output.info("Develop %s package_id!" % self.develop)
 """
 
 
@@ -35,63 +31,59 @@ class DevelopTest(unittest.TestCase):
         if with_test:
             client.save({"conanfile.py": conanfile})
         else:
-            test_conanfile = """from conans import ConanFile
-class MyPkg(ConanFile):
-    def test(self):
-        pass
-"""
             client.save({"conanfile.py": conanfile,
-                         "test_package/conanfile.py": test_conanfile})
+                         "test_package/conanfile.py": GenConanfile().with_test("pass")})
         client.run("create . Pkg/0.1@user/testing")
-        self.assertIn("Develop requirements!", client.out)
-        self.assertIn("Develop source!", client.out)
-        self.assertIn("Develop build!", client.out)
-        self.assertIn("Develop package!", client.out)
-        self.assertIn("Develop package_info!", client.out)
-        self.assertIn("Develop package_id!", client.out)
+        self.assertIn("Develop True configure!", client.out)
+        self.assertIn("Develop True requirements!", client.out)
+        self.assertIn("Develop True source!", client.out)
+        self.assertIn("Develop True build!", client.out)
+        self.assertIn("Develop True package!", client.out)
+        self.assertIn("Develop True package_info!", client.out)
+        self.assertIn("Develop True package_id!", client.out)
 
         client.run("install Pkg/0.1@user/testing --build")
-        self.assertNotIn("Develop", client.out)
+        self.assertNotIn("Develop True", client.out)
 
-        consumer = """from conans import ConanFile
-class Pkg(ConanFile):
-    requires = "Pkg/0.1@user/testing"
-"""
-        client.save({"conanfile.py": consumer})
+        client.save({"conanfile.py": GenConanfile().with_require_plain("Pkg/0.1@user/testing")})
         client.run("create . Other/1.0@user/testing")
-        self.assertNotIn("Develop", client.out)
+        self.assertNotIn("Develop True", client.out)
 
     def local_commands_test(self):
         client = TestClient()
         client.save({"conanfile.py": conanfile})
         client.run("install .")
-        self.assertIn("Develop requirements!", client.out)
-        self.assertNotIn("Develop source!", client.out)
-        self.assertNotIn("Develop build!", client.out)
-        self.assertNotIn("Develop package!", client.out)
-        self.assertNotIn("Develop package_info!", client.out)
-        self.assertIn("Develop package_id!", client.out)
+        self.assertIn("Develop True configure!", client.out)
+        self.assertIn("Develop True requirements!", client.out)
+        self.assertNotIn("source!", client.out)
+        self.assertNotIn("build!", client.out)
+        self.assertNotIn("package!", client.out)
+        self.assertNotIn("package_info!", client.out)
+        self.assertIn("Develop True package_id!", client.out)
 
         client.run("source .")
-        self.assertNotIn("Develop requirements!", client.out)
-        self.assertIn("Develop source!", client.out)
-        self.assertNotIn("Develop build!", client.out)
-        self.assertNotIn("Develop package!", client.out)
-        self.assertNotIn("Develop package_info!", client.out)
-        self.assertNotIn("Develop package_id!", client.out)
+        self.assertIn("Develop True configure!", client.out)
+        self.assertNotIn("requirements!", client.out)
+        self.assertIn("Develop True source!", client.out)
+        self.assertNotIn("build!", client.out)
+        self.assertNotIn("package!", client.out)
+        self.assertNotIn("package_info!", client.out)
+        self.assertNotIn("package_id!", client.out)
 
         client.run("build .")
-        self.assertNotIn("Develop requirements!", client.out)
-        self.assertNotIn("Develop source!", client.out)
-        self.assertIn("Develop build!", client.out)
-        self.assertNotIn("Develop package!", client.out)
-        self.assertNotIn("Develop package_info!", client.out)
-        self.assertNotIn("Develop package_id!", client.out)
+        self.assertIn("Develop True configure!", client.out)
+        self.assertNotIn("requirements!", client.out)
+        self.assertNotIn("source!", client.out)
+        self.assertIn("Develop True build!", client.out)
+        self.assertNotIn("package!", client.out)
+        self.assertNotIn("package_info!", client.out)
+        self.assertNotIn("package_id!", client.out)
 
         client.run("package .")
-        self.assertNotIn("Develop requirements!", client.out)
-        self.assertNotIn("Develop source!", client.out)
-        self.assertNotIn("Develop build!", client.out)
-        self.assertIn("Develop package!", client.out)
-        self.assertNotIn("Develop package_info!", client.out)
-        self.assertNotIn("Develop package_id!", client.out)
+        self.assertIn("Develop True configure!", client.out)
+        self.assertNotIn("requirements!", client.out)
+        self.assertNotIn("source!", client.out)
+        self.assertNotIn("build!", client.out)
+        self.assertIn("Develop True package!", client.out)
+        self.assertNotIn("package_info!", client.out)
+        self.assertNotIn("package_id!", client.out)
