@@ -293,7 +293,7 @@ class DepsGraphBuilder(object):
         is incompatible with the current closure, then it is necessary to recurse
         then, incompatibilities will be raised as usually"""
         for req in new_reqs.values():
-            n = closure.get(req.ref.name)
+            n = closure.get(req.ref.name, context=context)
             if n and self._conflicting_references(n, req.ref):
                 return True
         for pkg_name, options_values in new_options.items():
