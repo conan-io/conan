@@ -6,6 +6,8 @@ from conans.client.output import Color
 from conans.client.tools import detected_os, OSInfo
 from conans.client.tools.win import latest_visual_studio_version_installed
 from conans.model.version import Version
+from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
+from conans.util.env_reader import get_env
 from conans.util.runners import detect_runner
 
 
@@ -127,8 +129,11 @@ def _detect_compiler_version(result, output, profile_path):
         if compiler == "apple-clang":
             result.append(("compiler.libcxx", "libc++"))
         elif compiler == "gcc":
-            result.append(("compiler.libcxx", "libstdc++"))
-            if Version(version) >= Version("5.1"):
+            new_abi_available = Version(version) >= Version("5.1")
+            libcxx, old_abi = ('libstdc++11', False) if new_abi_available and get_env(CONAN_V2_MODE_ENVVAR, False)\
+                else ('libstdc++', True)
+            result.append(("compiler.libcxx", libcxx))
+            if old_abi and new_abi_available:
                 profile_name = os.path.basename(profile_path)
                 msg = """
 Conan detected a GCC version > 5 but has adjusted the 'compiler.libcxx' setting to

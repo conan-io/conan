@@ -5,14 +5,13 @@ import re
 import subprocess
 from contextlib import contextmanager
 
-import deprecation
-
 from conans.client.tools import which
 from conans.client.tools.env import environment_append
 from conans.client.tools.oss import OSInfo, detected_architecture
 from conans.errors import ConanException
 from conans.model.version import Version
 from conans.unicode import get_cwd
+from conans.util.conan_v2_mode import conan_v2_behavior
 from conans.util.env_reader import get_env
 from conans.util.fallbacks import default_output
 from conans.util.files import mkdir_tmp, save
@@ -132,13 +131,12 @@ def latest_visual_studio_version_installed(output):
     return None
 
 
-@deprecation.deprecated(deprecated_in="1.2", removed_in="2.0",
-                        details="Use the MSBuild() build helper instead")
 def msvc_build_command(settings, sln_path, targets=None, upgrade_project=True, build_type=None,
                        arch=None, parallel=True, force_vcvars=False, toolset=None, platforms=None,
                        output=None):
     """ Do both: set the environment variables and call the .sln build
     """
+    conan_v2_behavior("'tools.msvc_build_command' is deprecated, use 'MSBuild()' helper instead")
     vcvars_cmd = vcvars_command(settings, force=force_vcvars, output=output)
     build = build_sln_command(settings, sln_path, targets, upgrade_project, build_type, arch,
                               parallel, toolset=toolset, platforms=platforms, output=output)
@@ -146,8 +144,6 @@ def msvc_build_command(settings, sln_path, targets=None, upgrade_project=True, b
     return command
 
 
-@deprecation.deprecated(deprecated_in="1.2", removed_in="2.0",
-                        details="Use the MSBuild() build helper instead")
 def build_sln_command(settings, sln_path, targets=None, upgrade_project=True, build_type=None,
                       arch=None, parallel=True, toolset=None, platforms=None, output=None,
                       verbosity=None, definitions=None):
@@ -157,6 +153,7 @@ def build_sln_command(settings, sln_path, targets=None, upgrade_project=True, bu
         command = "%s && %s" % (tools.vcvars_command(self.settings), build_command)
         self.run(command)
     """
+    conan_v2_behavior("'tools.build_sln_command' is deprecated, use 'MSBuild()' helper instead")
     from conans.client.build.msbuild import MSBuild
     tmp = MSBuild(settings)
     output = default_output(output, fn_name='conans.client.tools.win.build_sln_command')

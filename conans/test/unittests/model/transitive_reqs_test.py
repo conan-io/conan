@@ -7,7 +7,7 @@ from mock import Mock
 from conans import DEFAULT_REVISION_V1
 from conans.client.cache.cache import ClientCache
 from conans.client.cache.remote_registry import Remotes
-from conans.client.conf import default_settings_yml
+from conans.client.conf import get_default_settings_yml
 from conans.client.graph.build_mode import BuildMode
 from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
 from conans.client.graph.graph_builder import DepsGraphBuilder
@@ -91,7 +91,7 @@ class GraphTest(unittest.TestCase):
 
     def build_graph(self, content, options="", settings=""):
         self.loader._cached_conanfile_classes = {}
-        full_settings = Settings.loads(default_settings_yml)
+        full_settings = Settings.loads(get_default_settings_yml())
         full_settings.values = Values.loads(settings)
         profile = Profile()
         profile.processed_settings = full_settings
@@ -99,7 +99,7 @@ class GraphTest(unittest.TestCase):
         profile = test_profile(profile=profile)
         root_conan = self.retriever.root(str(content), profile)
         deps_graph = self.builder.load_graph(root_conan, False, False, self.remotes,
-                                             profile_host=profile)
+                                             profile_host=profile, profile_build=None)
 
         build_mode = BuildMode([], self.output)
         self.binaries_analyzer.evaluate_graph(deps_graph, build_mode=build_mode,
@@ -1484,7 +1484,8 @@ class ConsumerConan(ConanFile):
     def build_graph(self, content):
         profile = test_profile()
         root_conan = self.retriever.root(content, profile)
-        deps_graph = self.builder.load_graph(root_conan, False, False, None, profile_host=profile)
+        deps_graph = self.builder.load_graph(root_conan, False, False, None,
+                                             profile_host=profile, profile_build=None)
         return deps_graph
 
     def test_avoid_duplicate_expansion(self):
@@ -1752,7 +1753,7 @@ class SayConan(ConanFile):
 """
         deps_graph = self.build_graph(content, settings="os=Windows\n compiler=gcc\narch=x86\n"
                                       "compiler.libcxx=libstdc++")
-        self.assertIn("WARN: config() has been deprecated. Use config_options and configure",
+        self.assertIn("WARN: config() has been deprecated. Use config_options() and configure()",
                       self.output)
         self.assertEqual(_get_edges(deps_graph), set())
         self.assertEqual(1, len(deps_graph.nodes))
@@ -1870,7 +1871,7 @@ class ChatConan(ConanFile):
         profile = test_profile(profile=profile)
         root_conan = self.retriever.root(chat_content, profile)
         deps_graph = self.builder.load_graph(root_conan, False, False, None,
-                                             profile_host=profile)
+                                             profile_host=profile, profile_build=None)
 
         build_mode = BuildMode([], self.output)
         self.binaries_analyzer.evaluate_graph(deps_graph, build_mode=build_mode,
