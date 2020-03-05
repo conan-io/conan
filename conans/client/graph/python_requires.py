@@ -96,8 +96,6 @@ class PyRequireLoader(object):
                 pkg_name, base_class_name = p.split(".")
                 base_class = getattr(py_requires[pkg_name].module, base_class_name)
                 conanfile.__bases__ = (base_class,) + conanfile.__bases__
-                if hasattr(conanfile, "python_require_extend_class"):
-                    conanfile.python_require_extend_class(base_class)
         conanfile.python_requires = py_requires
 
     def _resolve_py_requires(self, py_requires_refs, lock_python_requires, loader):
