@@ -4,7 +4,7 @@ import unittest
 from nose.plugins.attrib import attr
 from parameterized import parameterized
 
-from conans.client.conf import default_settings_yml
+from conans.client.conf import get_default_settings_yml
 from conans.client.generators import VisualStudioMultiGenerator
 from conans.client.tools.files import chdir
 from conans.model.build_info import CppInfo
@@ -23,7 +23,7 @@ class VisualStudioMultiGeneratorTest(unittest.TestCase):
     def valid_xml_test(self, use_toolset):
         tempdir = temp_folder()
         with chdir(tempdir):
-            settings = Settings.loads(default_settings_yml)
+            settings = Settings.loads(get_default_settings_yml())
             settings.os = "Windows"
             settings.compiler = "Visual Studio"
             settings.compiler.version = "11"
@@ -100,7 +100,7 @@ class VisualStudioMultiGeneratorTest(unittest.TestCase):
                 cpp_info.libs = [libname]
                 conanfile.deps_cpp_info.update(cpp_info, ref.name)
 
-                settings = Settings.loads(default_settings_yml)
+                settings = Settings.loads(get_default_settings_yml())
                 settings.os = "Windows"
                 settings.arch = "x86_64"
                 settings.build_type = "Release"

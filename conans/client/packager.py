@@ -9,6 +9,7 @@ from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
 from conans.model.conan_file import get_env_context_manager
 from conans.model.manifest import FileTreeManifest
 from conans.paths import CONANINFO
+from conans.util.conan_v2_mode import conan_v2_property
 from conans.util.files import mkdir, rmdir, save
 from conans.util.log import logger
 
@@ -78,7 +79,9 @@ def _call_package(conanfile, package_id, source_folder, build_folder, package_fo
         conanfile.copy = FileCopier(folders, package_folder)
         with conanfile_exception_formatter(str(conanfile), "package"):
             with chdir(build_folder):
-                conanfile.package()
+                with conan_v2_property(conanfile, 'info',
+                                       "'self.info' access in package() method is deprecated"):
+                    conanfile.package()
     except Exception as e:
         if not local:
             os.chdir(build_folder)
