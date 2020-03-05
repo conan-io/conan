@@ -361,10 +361,10 @@ class PyRequiresExtendTest(unittest.TestCase):
                 python_requires_extend = "base.MyConanfileBase"
                 
                 def __init__(self, *args, **kwargs):
+                    super(PkgTest, self).__init__(*args, **kwargs)
                     self.settings = super(PkgTest, self).settings + self.settings
                     self.license = super(PkgTest, self).license
                     self.author = super(PkgTest, self).author
-                    super(PkgTest, self).__init__(*args, **kwargs)
 
                 def build(self):
                     self.output.info("License! %s" % self.license)
