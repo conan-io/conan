@@ -233,12 +233,12 @@ class DepsGraphBuilder(object):
         else:  # a public node already exist with this name
             self._resolve_cached_alias([require], graph)
             # As we are closing a diamond, there can be conflicts. This will raise if conflicts
-            conflict = self._conflicting_references(previous.ref, require.ref, node.ref)
+            conflict = self._conflicting_references(previous, require.ref, node.ref)
             if conflict:  # It is possible to get conflict from alias, try to resolve it
                 self._resolve_recipe(node, graph, require, check_updates,
                                      update, remotes, profile_host, graph_lock)
                 # Maybe it was an ALIAS, so we can check conflict again
-                conflict = self._conflicting_references(previous.ref, require.ref, node.ref)
+                conflict = self._conflicting_references(previous, require.ref, node.ref)
                 if conflict:
                     raise ConanException(conflict)
 
@@ -268,18 +268,19 @@ class DepsGraphBuilder(object):
                                   update, remotes, profile_host, profile_build, graph_lock, context)
 
     @staticmethod
-    def _conflicting_references(previous_ref, new_ref, consumer_ref=None):
-        if previous_ref.copy_clear_rev() != new_ref.copy_clear_rev():
+    def _conflicting_references(previous, new_ref, consumer_ref=None):
+        if previous.ref.copy_clear_rev() != new_ref.copy_clear_rev():
             if consumer_ref:
-                return ("Conflict in %s\n"
-                        "    Requirement %s conflicts with already defined %s\n"
-                        "    To change it, override it in your base requirements"
-                        % (consumer_ref, new_ref, previous_ref))
+                return ("Conflict in %s:\n"
+                       "    '%s' requires '%s' while '%s' requires '%s'.\n"
+                       "    To fix this conflict you need to override the package '%s' in your root package."
+                       % (consumer_ref, consumer_ref, new_ref, next(iter(previous.dependants)).src,
+                          previous.ref, new_ref.name))
             return True
         # Computed node, if is Editable, has revision=None
         # If new_ref.revision is None we cannot assume any conflict, the user hasn't specified
         # a revision, so it's ok any previous_ref
-        if previous_ref.revision and new_ref.revision and previous_ref.revision != new_ref.revision:
+        if previous.ref.revision and new_ref.revision and previous.ref.revision != new_ref.revision:
             if consumer_ref:
                 raise ConanException("Conflict in %s\n"
                                      "    Different revisions of %s has been requested"
@@ -293,7 +294,7 @@ class DepsGraphBuilder(object):
         then, incompatibilities will be raised as usually"""
         for req in new_reqs.values():
             n = closure.get(req.ref.name, context=context)
-            if n and self._conflicting_references(n.ref, req.ref):
+            if n and self._conflicting_references(n, req.ref):
                 return True
         for pkg_name, options_values in new_options.items():
             n = closure.get(pkg_name, context=context)
