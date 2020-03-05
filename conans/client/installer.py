@@ -7,7 +7,7 @@ from conans.client.build.build import run_build_method
 from conans.client.file_copier import report_copied_files
 from conans.client.generators import TXTGenerator, write_generators
 from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_EDITABLE, \
-    BINARY_MISSING, BINARY_SKIP, BINARY_UPDATE, BINARY_UNKNOWN
+    BINARY_MISSING, BINARY_SKIP, BINARY_UPDATE, BINARY_UNKNOWN, CONTEXT_HOST
 from conans.client.importer import remove_imports, run_imports
 from conans.client.packager import run_package_method, update_package_metadata
 from conans.client.recorder.action_recorder import INSTALL_ERROR_BUILDING, INSTALL_ERROR_MISSING, \
@@ -362,6 +362,7 @@ class BinaryInstaller(object):
                 metadata.packages[pref.id].remote = node.binary_remote.name
 
     def _build(self, nodes_by_level, keep_build, root_node, graph_info, remotes, build_mode, update):
+        using_build_profile = bool(graph_info.profile_build)
         missing, downloads = self._classify(nodes_by_level)
         self._raise_missing(missing)
         processed_package_refs = set()
@@ -372,7 +373,7 @@ class BinaryInstaller(object):
                 ref, conan_file = node.ref, node.conanfile
                 output = conan_file.output
 
-                self._propagate_info(node)
+                self._propagate_info(node, using_build_profile)
                 if node.binary == BINARY_EDITABLE:
                     self._handle_node_editable(node, graph_info)
                 else:
@@ -385,7 +386,7 @@ class BinaryInstaller(object):
                     self._handle_node_cache(node, keep_build, processed_package_refs, remotes)
 
         # Finally, propagate information to root node (ref=None)
-        self._propagate_info(root_node)
+        self._propagate_info(root_node, using_build_profile)
 
     def _handle_node_editable(self, node, graph_info):
         # Get source of information
@@ -475,18 +476,39 @@ class BinaryInstaller(object):
         return pref
 
     @staticmethod
-    def _propagate_info(node):
+    def _propagate_info(node, using_build_profile):
         # Get deps_cpp_info from upstream nodes
         node_order = [n for n in node.public_closure if n.binary != BINARY_SKIP]
         # List sort is stable, will keep the original order of the closure, but prioritize levels
         conan_file = node.conanfile
-        transitive = node.transitive_closure.values()
+        conan_file._conan_using_build_profile = using_build_profile  # FIXME: Not the best place to assign it
+        transitive = [it for it in node.transitive_closure.values()]
+
+        br_host = []
+        for it in node.dependencies:
+            if it.require.build_require_context == CONTEXT_HOST:
+                br_host.extend(it.dst.transitive_closure.values())
+
         for n in node_order:
             if n not in transitive:
                 conan_file.output.info("Applying build-requirement: %s" % str(n.ref))
-            conan_file.deps_cpp_info.update(n.conanfile.cpp_info, n.ref.name)
-            conan_file.deps_env_info.update(n.conanfile.env_info, n.ref.name)
-            conan_file.deps_user_info[n.ref.name] = n.conanfile.user_info
+
+            if not using_build_profile:  # Do not touch anything
+                conan_file.deps_user_info[n.ref.name] = n.conanfile.user_info
+                conan_file.deps_cpp_info.update(n.conanfile.cpp_info, n.ref.name)
+                conan_file.deps_env_info.update(n.conanfile.env_info, n.ref.name)
+            else:
+                if n in transitive or n in br_host:
+                    conan_file.deps_cpp_info.update(n.conanfile.cpp_info, n.ref.name)
+                else:
+                    env_info = EnvInfo()
+                    env_info._values_ = n.conanfile.env_info._values_.copy()
+                    # Add cpp_info.bin_paths/lib_paths to env_info (it is needed for runtime)
+                    env_info.DYLD_LIBRARY_PATH.extend(n.conanfile.cpp_info.lib_paths)
+                    env_info.DYLD_LIBRARY_PATH.extend(n.conanfile.cpp_info.framework_paths)
+                    env_info.LD_LIBRARY_PATH.extend(n.conanfile.cpp_info.lib_paths)
+                    env_info.PATH.extend(n.conanfile.cpp_info.bin_paths)
+                    conan_file.deps_env_info.update(env_info, n.ref.name)
 
         # Update the info but filtering the package values that not apply to the subtree
         # of this current node and its dependencies.
