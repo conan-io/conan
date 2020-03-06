@@ -752,3 +752,21 @@ class PyRequiresExtendTest(unittest.TestCase):
         client2.run("build .")
         self.assertIn("conanfile.py: Build: tool header: myheader", client2.out)
         self.assertIn("conanfile.py: Build: tool other: otherheader", client2.out)
+
+    def test_build_id(self):
+        client = TestClient(default_server_user=True)
+        self._define_base(client)
+        reuse = textwrap.dedent("""
+            from conans import ConanFile
+            class PkgTest(ConanFile):
+                python_requires = "base/1.1@user/testing"
+                python_requires_extend = "base.MyConanfileBase"
+                def build_id(self):
+                    pass
+            """)
+        client.save({"conanfile.py": reuse}, clean_first=True)
+        client.run("create . Pkg/0.1@user/testing")
+        self.assertIn("Pkg/0.1@user/testing: My cool source!", client.out)
+        self.assertIn("Pkg/0.1@user/testing: My cool build!", client.out)
+        self.assertIn("Pkg/0.1@user/testing: My cool package!", client.out)
+        self.assertIn("Pkg/0.1@user/testing: My cool package_info!", client.out)
