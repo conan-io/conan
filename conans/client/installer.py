@@ -1,7 +1,6 @@
 import os
 import shutil
 import time
-from collections import OrderedDict
 from multiprocessing.pool import ThreadPool
 
 from conans.client import tools
