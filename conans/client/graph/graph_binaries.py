@@ -20,6 +20,7 @@ class GraphBinariesAnalyzer(object):
         self._remote_manager = remote_manager
         # These are the nodes with pref (not including PREV) that have been evaluated
         self._evaluated = {}  # {pref: [nodes]}
+        self._fixed_package_id = cache.config.full_transitive_package_id
 
     @staticmethod
     def _check_update(upstream_manifest, package_folder, output, node):
@@ -262,8 +263,7 @@ class GraphBinariesAnalyzer(object):
         conanfile.options.clear_unused(transitive_reqs)
         conanfile.options.freeze()
 
-    @staticmethod
-    def _compute_package_id(node, default_package_id_mode, default_python_requires_id_mode):
+    def _compute_package_id(self, node, default_package_id_mode, default_python_requires_id_mode):
         """
         Compute the binary package ID of this node
         :param node: the node to compute the package-ID
@@ -273,15 +273,27 @@ class GraphBinariesAnalyzer(object):
         # A bit risky to be done now
         conanfile = node.conanfile
         neighbors = node.neighbors()
-        direct_reqs = []  # of PackageReference
-        indirect_reqs = set()  # of PackageReference, avoid duplicates
-        for neighbor in neighbors:
-            ref, nconan = neighbor.ref, neighbor.conanfile
-            direct_reqs.append(neighbor.pref)
-            indirect_reqs.update(nconan.info.requires.refs())
+        if not self._fixed_package_id:
+            direct_reqs = []  # of PackageReference
+            indirect_reqs = set()  # of PackageReference, avoid duplicates
+            for neighbor in neighbors:
+                ref, nconan = neighbor.ref, neighbor.conanfile
+                direct_reqs.append(neighbor.pref)
+                indirect_reqs.update(nconan.info.requires.refs())
+            # Make sure not duplicated
+            indirect_reqs.difference_update(direct_reqs)
+        else:
+            node.id_direct_prefs = set()  # of PackageReference
+            node.id_indirect_prefs = set()  # of PackageReference, avoid duplicates
+            for neighbor in neighbors:
+                node.id_direct_prefs.add(neighbor.pref)
+                node.id_indirect_prefs.update(neighbor.id_direct_prefs)
+                node.id_indirect_prefs.update(neighbor.id_indirect_prefs)
+            # Make sure not duplicated, totally necessary
+            node.id_indirect_prefs.difference_update(node.id_direct_prefs)
+            direct_reqs = node.id_direct_prefs
+            indirect_reqs = node.id_indirect_prefs
 
-        # Make sure not duplicated
-        indirect_reqs.difference_update(direct_reqs)
         python_requires = getattr(conanfile, "python_requires", None)
         if python_requires:
             if isinstance(python_requires, dict):

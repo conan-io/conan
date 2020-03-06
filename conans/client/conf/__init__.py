@@ -449,6 +449,14 @@ class ConanClientConfigParser(ConfigParser, object):
         return default_package_id_mode
 
     @property
+    def full_transitive_package_id(self):
+        try:
+            fix_id = self.get_item("general.full_transitive_package_id")
+            return fix_id.lower() in ("1", "true")
+        except ConanException:
+            return None
+
+    @property
     def short_paths_home(self):
         short_paths_home = get_env("CONAN_USER_HOME_SHORT")
         if short_paths_home:
