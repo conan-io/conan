@@ -142,8 +142,37 @@ def _get_conanfile_path(path, cwd, py):
     return path
 
 
+def _invalidate_caches():
+    # https://bugs.python.org/issue33169
+    #
+    # importlib.invalidate_caches() is insufficient, since it doesn't
+    # clear cache entries that indicate that a directory on the path
+    # does not exist, which can cause failures. Just directly clear
+    # the sys.path_importer_cache entry ourselves.
+
+    # FIXME: When we drop the 2.7 Python support
+    if sys.version_info < (3, 0, 0):
+        sys.path_importer_cache.clear()
+        return
+
+    if sys.version_info >= (3, 7, 0):
+        import importlib
+        importlib.invalidate_caches()
+        return
+
+    # FIXME: When we drop the <3.7.0 Python support
+    for name, finder in list(sys.path_importer_cache.items()):
+        if finder is None:
+            del sys.path_importer_cache[name]
+        elif hasattr(finder, 'invalidate_caches'):
+            finder.invalidate_caches()
+
+
 class ConanApp(object):
     def __init__(self, cache_folder, user_io, http_requester=None, runner=None, quiet_output=None):
+        # Invalidate import caches
+        _invalidate_caches();
+
         # User IO, interaction and logging
         self.user_io = user_io
         self.out = self.user_io.out
