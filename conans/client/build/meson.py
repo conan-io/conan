@@ -178,9 +178,7 @@ class Meson(object):
         else:
             _build()
 
-    def build(self, args=None, build_dir=None, targets=None):
-        if not self._conanfile.should_build:
-            return
+    def _run_ninja_targets(self, args=None, build_dir=None, targets=None):
         if self.backend != "ninja":
             raise ConanException("Build only supported with 'ninja' backend")
 
@@ -194,6 +192,22 @@ class Meson(object):
         ])
         self._run("ninja %s" % arg_list)
 
+    def _run_meson_command(self, subcommand=None, args=None, build_dir=None):
+        args = args or []
+        build_dir = build_dir or self.build_dir or self._conanfile.build_folder
+
+        arg_list = join_arguments([
+            subcommand,
+            '-C "%s"' % build_dir,
+            args_to_string(args)
+        ])
+        self._run("meson %s" % arg_list)
+
+    def build(self, args=None, build_dir=None, targets=None):
+        if not self._conanfile.should_build:
+            return
+        self._run_ninja_targets(args=args, build_dir=build_dir, targets=targets)
+
     def install(self, args=None, build_dir=None):
         if not self._conanfile.should_install:
             return
@@ -201,14 +215,24 @@ class Meson(object):
         if not self.options.get('prefix'):
             raise ConanException("'prefix' not defined for 'meson.install()'\n"
                                  "Make sure 'package_folder' is defined")
-        self.build(args=args, build_dir=build_dir, targets=["install"])
+        self._run_ninja_targets(args=args, build_dir=build_dir, targets=["install"])
 
     def test(self, args=None, build_dir=None, targets=None):
         if not self._conanfile.should_test:
             return
         if not targets:
             targets = ["test"]
-        self.build(args=args, build_dir=build_dir, targets=targets)
+        self._run_ninja_targets(args=args, build_dir=build_dir, targets=targets)
+
+    def meson_install(self, args=None, build_dir=None):
+        if not self._conanfile.should_install:
+            return
+        self._run_meson_command(subcommand='install', args=args, build_dir=build_dir)
+
+    def meson_test(self, args=None, build_dir=None):
+        if not self._conanfile.should_test:
+            return
+        self._run_meson_command(subcommand='test', args=args, build_dir=build_dir)
 
     @staticmethod
     def get_version():

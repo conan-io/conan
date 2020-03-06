@@ -925,6 +925,7 @@ class GenConanfile(object):
         self._revision_mode = None
         self._package_info = {}
         self._package_id_lines = []
+        self._test_lines = []
 
     def with_name(self, name):
         self._name = name
@@ -1010,6 +1011,10 @@ class GenConanfile(object):
 
     def with_package_id(self, line):
         self._package_id_lines.append(line)
+        return self
+
+    def with_test(self, line):
+        self._test_lines.append(line)
         return self
 
     @property
@@ -1164,6 +1169,13 @@ class GenConanfile(object):
 {}
         """.format("\n".join(lines))
 
+    @property
+    def _test_method(self):
+        if not self._test_lines:
+            return ""
+        lines = ['', '    def test(self):'] + ['        %s' % m for m in self._test_lines]
+        return "\n".join(lines)
+
     def __repr__(self):
         ret = []
         ret.extend(self._imports)
@@ -1198,6 +1210,8 @@ class GenConanfile(object):
             ret.append("    {}".format(self._package_info_method))
         if self._package_id_lines:
             ret.append("    {}".format(self._package_id_method))
+        if self._test_method:
+            ret.append("    {}".format(self._test_method))
         if len(ret) == 2:
             ret.append("    pass")
         return "\n".join(ret)
