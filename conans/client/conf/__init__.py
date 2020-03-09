@@ -411,6 +411,18 @@ class ConanClientConfigParser(ConfigParser, object):
             return True if os.environ.get(CONAN_V2_MODE_ENVVAR, False) else False
 
     @property
+    def parallel_download(self):
+        try:
+            parallel = self.get_item("general.parallel_download")
+        except ConanException:
+            return None
+
+        try:
+            return int(parallel) if parallel is not None else None
+        except ValueError:
+            raise ConanException("Specify a numeric parameter for 'parallel_download'")
+
+    @property
     def download_cache(self):
         try:
             download_cache = self.get_item("storage.download_cache")
