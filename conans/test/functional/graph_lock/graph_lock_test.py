@@ -719,6 +719,7 @@ class GraphLockBuildRequireErrorTestCase(unittest.TestCase):
         self.assertEqual(harf, nodes["3"]["pref"])
         self.assertEqual(zlib, nodes["4"]["pref"])
 
+        client.run("config set general.relax_lockfile=1")
         client.run("graph build-order . --build cascade --build outdated --json=bo.json")
         self.assertIn("ffmpeg/1.0: WARN: Build-require 'fontconfig' cannot be found in lockfile",
                       client.out)
@@ -810,6 +811,7 @@ class GraphLockModifyConanfileTestCase(unittest.TestCase):
         client2.run("graph lock .")
         client2.save({"conanfile.py": GenConanfile().with_require_plain("zlib/1.0")})
 
+        client2.run("config set general.relax_lockfile=1")
         client2.run("install . --lockfile")
         self.assertIn("conanfile.py: WARN: Require 'zlib' cannot be found in lockfile", client2.out)
         self.assertIn("zlib/1.0: WARN: Package can't be locked", client2.out)

@@ -1,7 +1,6 @@
 import time
 
-from conans.client.graph.graph import DepsGraph, Node, RECIPE_EDITABLE, CONTEXT_HOST, \
-    CONTEXT_BUILD
+from conans.client.graph.graph import DepsGraph, Node, RECIPE_EDITABLE, CONTEXT_HOST
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
                            conanfile_exception_formatter)
 from conans.model.conan_file import get_env_context_manager
@@ -273,10 +272,11 @@ class DepsGraphBuilder(object):
         if previous.ref.copy_clear_rev() != new_ref.copy_clear_rev():
             if consumer_ref:
                 return ("Conflict in %s:\n"
-                       "    '%s' requires '%s' while '%s' requires '%s'.\n"
-                       "    To fix this conflict you need to override the package '%s' in your root package."
-                       % (consumer_ref, consumer_ref, new_ref, next(iter(previous.dependants)).src,
-                          previous.ref, new_ref.name))
+                        "    '%s' requires '%s' while '%s' requires '%s'.\n"
+                        "    To fix this conflict you need to override the package '%s' "
+                        "in your root package."
+                        % (consumer_ref, consumer_ref, new_ref, next(iter(previous.dependants)).src,
+                           previous.ref, new_ref.name))
             return True
         # Computed node, if is Editable, has revision=None
         # If new_ref.revision is None we cannot assume any conflict, the user hasn't specified
@@ -317,7 +317,8 @@ class DepsGraphBuilder(object):
             # Avoid extra time manipulating the sys.path for python
             with get_env_context_manager(conanfile, without_python=True):
                 if hasattr(conanfile, "config"):
-                    conan_v2_behavior("config() has been deprecated. Use config_options() and configure()",
+                    conan_v2_behavior("config() has been deprecated. "
+                                      "Use config_options() and configure()",
                                       v1_behavior=conanfile.output.warn)
                     with conanfile_exception_formatter(str(conanfile), "config"):
                         conanfile.config()
