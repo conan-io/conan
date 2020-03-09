@@ -131,6 +131,7 @@ class GraphLock(object):
     def __init__(self, graph=None):
         self._nodes = {}  # {numeric id: PREF or None}
         self.revisions_enabled = None
+        self.relax = False
 
         if graph is not None:
             for node in graph.nodes:
@@ -164,7 +165,7 @@ class GraphLock(object):
             python_reqs = node.conanfile.python_requires.all_refs()
 
         previous = node.graph_lock_node
-        modified = node.graph_lock_node.modified if node.graph_lock_node else None
+        modified = previous.modified if previous else None
         graph_node = GraphLockNode(node.pref if node.ref else None, python_reqs,
                                    node.conanfile.options.values, requires, build_requires,
                                    node.path, modified)
@@ -274,7 +275,12 @@ class GraphLock(object):
             except KeyError:
                 if node.recipe == RECIPE_CONSUMER:
                     continue  # If the consumer node is not found, could be a test_package
-                raise
+                if self.relax:
+                    continue
+                else:
+                    raise ConanException("The node %s ID %s was not found in the lock"
+                                         % (node.ref, node.id))
+
             if lock_node.pref:
                 pref = lock_node.pref if self.revisions_enabled else lock_node.pref.copy_clear_revs()
                 node_pref = node.pref if self.revisions_enabled else node.pref.copy_clear_revs()
@@ -296,7 +302,12 @@ class GraphLock(object):
         except KeyError:  # If the consumer node is not found, could be a test_package
             if node.recipe == RECIPE_CONSUMER:
                 return
-            raise ConanException("The node ID %s was not found in the lock" % node.id)
+            if self.relax:
+                node.conanfile.output.warn("Package can't be locked, not found in the lockfile")
+                return
+            else:
+                raise ConanException("The node %s ID %s was not found in the lock"
+                                     % (node.ref, node.id))
 
         node.graph_lock_node = locked_node
         node.conanfile.options.values = locked_node.options
@@ -324,12 +335,12 @@ class GraphLock(object):
                 locked_pref, locked_id = prefs[require.ref.name]
                 require.lock(locked_pref.ref, locked_id)
             except KeyError:
-                msg = "'%s' cannot be found in lockfile for this package\n" % require.ref.name
-                if build_requires:
-                    msg += "Make sure it was locked with --build arguments while creating lockfile"
+                t = "Build-require" if build_requires else "Require"
+                msg = "%s '%s' cannot be found in lockfile" % (t, require.ref.name)
+                if self.relax:
+                    node.conanfile.output.warn(msg)
                 else:
-                    msg += "If it is a new requirement, you need to create a new lockile"
-                raise ConanException(msg)
+                    raise ConanException(msg)
 
     def python_requires(self, node_id):
         if self.revisions_enabled:
