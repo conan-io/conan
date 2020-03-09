@@ -1448,7 +1448,7 @@ build_type: [ Release]
         self.assertEqual(cmake.definitions["CMAKE_SYSTEM_VERSION"], "8.0")
 
     def test_cmake_vs_arch(self):
-        settings = Settings.loads(default_settings_yml)
+        settings = Settings.loads(get_default_settings_yml())
         settings.os = "Windows"
         settings.arch = "x86_64"
         settings.compiler = "Visual Studio"
