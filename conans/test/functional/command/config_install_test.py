@@ -14,7 +14,7 @@ from conans.client.conf.config_installer import _hide_password, _ConfigOrigin
 from conans.client.rest.uploader_downloader import FileDownloader
 from conans.errors import ConanException
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient, StoppableThreadBottle
+from conans.test.utils.tools import TestClient, StoppableThreadBottle, GenConanfile
 from conans.util.files import load, mkdir, save, save_files
 
 
@@ -200,24 +200,22 @@ class Pkg(ConanFile):
         self.assertIn("A is 3", self.client.out)
 
     def dynamic_imports_test(self):
-        conanfile = """from conans import ConanFile
-class Pkg(ConanFile):
-    def build(self):
-        self.output.info("Hipony was right")
-"""
-        self.client.save({"conanfile.py": conanfile})
-        self.client.run("create . Pkg/0.1@user/testing")
+        # Doing something that does import from the cache, makes new modules not found
+        self.client.save({"conanfile.py": GenConanfile()})
+        self.client.run("export . Pkg/0.1@user/testing")
 
         zippath = self._create_zip()
+        # This installs new python modules in the Conan cache, which was previously cached by python
         self.client.run('config install "%s"' % zippath)
-        conanfile = """from conans import ConanFile
-from myfuncs import mycooladd
-a = mycooladd(1, 2)
-assert a == 3
-class Pkg(ConanFile):
-    def build(self):
-        self.output.info("A is %s" % a)
-"""
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            from myfuncs import mycooladd
+            a = mycooladd(1, 2)
+            assert a == 3
+            class Pkg(ConanFile):
+                def build(self):
+                    self.output.info("A is %s" % a)
+            """)
         self.client.save({"conanfile.py": conanfile})
         self.client.run("create . Pkg/0.1@user/testing")
         self.assertIn("A is 3", self.client.out)
