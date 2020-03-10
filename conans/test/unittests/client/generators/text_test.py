@@ -49,7 +49,7 @@ class TextGeneratorTest(unittest.TestCase):
         content = textwrap.dedent("""
             [system_libs]
             main
-            
+
             [system_libs_requirement]
             requirement
 

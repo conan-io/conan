@@ -159,10 +159,10 @@ class CMake(object):
             compiler_version = self._settings.get_safe("compiler.version")
             if Version(compiler_version) < "16" and self._settings.get_safe("os") != "WindowsCE":
                 if self.generator_platform == "x64":
-                    generator += " Win64"
+                    generator += " Win64" if not generator.endswith(" Win64") else ""
                     generator_platform = None
                 elif self.generator_platform == "ARM":
-                    generator += " ARM"
+                    generator += " ARM" if not generator.endswith(" ARM") else ""
                     generator_platform = None
                 elif self.generator_platform == "Win32":
                     generator_platform = None

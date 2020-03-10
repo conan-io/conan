@@ -1266,6 +1266,7 @@ def get_graph_info(profile_host, profile_build, cwd, install_folder, cache, outp
             graph_info.root = root_ref
         lockfile = lockfile if os.path.isfile(lockfile) else os.path.join(lockfile, LOCKFILE)
         graph_lock_file = GraphLockFile.load(lockfile, cache.config.revisions_enabled)
+        graph_lock_file.graph_lock.relax = cache.config.relax_lockfile
         graph_info.profile_host = graph_lock_file.profile_host
         graph_info.profile_host.process_settings(cache, preprocess=False)
         graph_info.graph_lock = graph_lock_file.graph_lock

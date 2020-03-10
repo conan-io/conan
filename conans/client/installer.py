@@ -1,6 +1,7 @@
 import os
 import shutil
 import time
+from multiprocessing.pool import ThreadPool
 
 from conans.client import tools
 from conans.client.build.build import run_build_method
@@ -339,16 +340,31 @@ class BinaryInstaller(object):
         if not downloads:
             return
 
+        download_nodes = []
         for node in downloads:
             pref = node.pref
             if pref in processed_package_refs:
                 continue
             processed_package_refs.add(pref)
             assert node.prev, "PREV for %s is None" % str(node.pref)
-            # prepared for parallel download
-            layout = self._cache.package_layout(pref.ref, node.conanfile.short_paths)
-            with layout.package_lock(pref):
-                self._download_pkg(layout, pref, node)
+            download_nodes.append(node)
+
+        def _download(n):
+            npref = n.pref
+            layout = self._cache.package_layout(npref.ref, n.conanfile.short_paths)
+            with layout.package_lock(npref):
+                self._download_pkg(layout, npref, n)
+
+        parallel = self._cache.config.parallel_download
+        if parallel is not None:
+            self._out.info("Downloading binary packages in %s parallel threads" % parallel)
+            thread_pool = ThreadPool(parallel)
+            thread_pool.map(_download, [n for n in download_nodes])
+            thread_pool.close()
+            thread_pool.join()
+        else:
+            for node in download_nodes:
+                _download(node)
 
     def _download_pkg(self, layout, pref, node):
         conanfile = node.conanfile

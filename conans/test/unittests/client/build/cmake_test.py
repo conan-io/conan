@@ -1446,3 +1446,21 @@ build_type: [ Release]
         conanfile.settings = settings
         cmake = CMake(conanfile)
         self.assertEqual(cmake.definitions["CMAKE_SYSTEM_VERSION"], "8.0")
+
+    def test_cmake_vs_arch(self):
+        settings = Settings.loads(get_default_settings_yml())
+        settings.os = "Windows"
+        settings.arch = "x86_64"
+        settings.compiler = "Visual Studio"
+        settings.compiler.version = "15"
+
+        conanfile = ConanFileMock()
+        conanfile.settings = settings
+
+        cmake = CMake(conanfile, generator="Visual Studio 15 2017 Win64", toolset="v141,host=x64")
+        self.assertIn('-G "Visual Studio 15 2017 Win64"', cmake.command_line)
+        self.assertIn('-T "v141,host=x64"', cmake.command_line)
+
+        cmake = CMake(conanfile, generator="Visual Studio 15 2017", generator_platform="x64", toolset="v141,host=x64")
+        self.assertIn('-G "Visual Studio 15 2017 Win64"', cmake.command_line)
+        self.assertIn('-T "v141,host=x64"', cmake.command_line)
