@@ -92,7 +92,7 @@ class CheckMinCppStdTests(unittest.TestCase):
 
     def test_unknown_compiler_declared(self):
         conanfile = self._create_conanfile("sun-cc", "5.13", "Linux", None, "libstdc++")
-        with self.assertRaises(ConanException) as raises:
+        with self.assertRaises(ConanInvalidConfiguration) as raises:
             check_min_cppstd(conanfile, "14", False)
         self.assertEqual("Could not detect the current default cppstd for "
                          "the compiler sun-cc-5.13.", str(raises.exception))
