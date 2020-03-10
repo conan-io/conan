@@ -29,7 +29,7 @@ class ClientMigrator(Migrator):
 
     def _update_settings_yml(self, old_version):
 
-        from conans.client.conf import default_settings_yml
+        from conans.client.conf import get_default_settings_yml
         settings_path = self.cache.settings_path
         if not os.path.exists(settings_path):
             self.out.warn("Migration: This conan installation doesn't have settings yet")
@@ -40,7 +40,7 @@ class ClientMigrator(Migrator):
 
         def save_new():
             new_path = self.cache.settings_path + ".new"
-            save(new_path, default_settings_yml)
+            save(new_path, get_default_settings_yml())
             self.out.warn("*" * 40)
             self.out.warn("settings.yml is locally modified, can't be updated")
             self.out.warn("The new settings.yml has been stored in: %s" % new_path)
@@ -49,12 +49,12 @@ class ClientMigrator(Migrator):
         self.out.warn("Migration: Updating settings.yml")
         if hasattr(migrations_settings, var_name):
             version_default_contents = getattr(migrations_settings, var_name)
-            if version_default_contents != default_settings_yml:
+            if version_default_contents != get_default_settings_yml():
                 current_settings = load(self.cache.settings_path)
                 if current_settings != version_default_contents:
                     save_new()
                 else:
-                    save(self.cache.settings_path, default_settings_yml)
+                    save(self.cache.settings_path, get_default_settings_yml())
             else:
                 self.out.info("Migration: Settings already up to date")
         else:

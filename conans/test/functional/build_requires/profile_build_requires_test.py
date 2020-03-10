@@ -3,7 +3,7 @@ import platform
 import unittest
 
 from conans.paths import CONANFILE
-from conans.test.utils.tools import TestClient
+from conans.test.utils.tools import TestClient, GenConanfile
 
 tool_conanfile = """
 import os
@@ -90,11 +90,8 @@ build_require/0.1@user/testing
 class Pkg(ConanFile):
     requires = "MyLib/0.1@user/testing"
 """
-        test_conanfile = """from conans import ConanFile
-class Pkg(ConanFile):
-    def test(self):
-        pass
-"""
+        test_conanfile = GenConanfile().with_test("pass")
+
         client.save({"conanfile.py": conanfile,
                      "test_package/conanfile.py": test_conanfile,
                      "myprofile": profile})
@@ -111,15 +108,11 @@ class Pkg(ConanFile):
 
     def recursive_build_requires_test(self):
         client = TestClient()
-        conanfile = """from conans import ConanFile
-class Pkg(ConanFile):
-    pass
-"""
         profile = """[build_requires]
 build1/0.1@user/testing
 build2/0.1@user/testing
 """
-        client.save({"conanfile.py": conanfile,
+        client.save({"conanfile.py": GenConanfile(),
                      "myprofile": profile})
         client.run("create . build1/0.1@user/testing")
         client.run("create . build2/0.1@user/testing")
