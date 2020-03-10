@@ -51,7 +51,8 @@ class VersionRangesTest(GraphTest):
         profile = test_profile()
         root_conan = self.retriever.root(str(content), profile)
         deps_graph = self.builder.load_graph(root_conan, update, update, self.remotes,
-                                             profile)
+                                             profile_host=profile,
+                                             profile_build=None)
         self.output.write("\n".join(self.resolver.output))
         return deps_graph
 

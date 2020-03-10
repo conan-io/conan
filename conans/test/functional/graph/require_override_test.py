@@ -32,8 +32,11 @@ class RequireOverrideTest(unittest.TestCase):
             self.client.run("export . libC/1.0@user/channel")
             self._save(req_method, ["libB/1.0@user/channel", "libC/1.0@user/channel"])
             self.client.run("info .", assert_error=True)
-            self.assertIn("Requirement libA/2.0@user/channel conflicts with "
-                          "already defined libA/1.0@user/channel", self.client.out)
+            self.assertIn("Conflict in libC/1.0@user/channel:\n"
+                "    'libC/1.0@user/channel' requires 'libA/2.0@user/channel' while "
+                "'libB/1.0@user/channel' requires 'libA/1.0@user/channel'.\n"
+                "    To fix this conflict you need to override the package 'libA' in your root"
+                " package.", self.client.out)
 
             self._save(req_method, ["libB/1.0@user/channel", "libC/1.0@user/channel",
                                     ("libA/1.0@user/channel", "override")])
@@ -42,7 +45,7 @@ class RequireOverrideTest(unittest.TestCase):
 
     def test_public_deps(self):
         client = TestClient()
-        pkg2 = textwrap.dedent(""" 
+        pkg2 = textwrap.dedent("""
             from conans import ConanFile
             class Pkg(ConanFile):
                 requires = ("pkg/0.1@user/stable", "override"),
@@ -52,7 +55,7 @@ class RequireOverrideTest(unittest.TestCase):
         client.save({"conanfile.py": pkg2})
         client.run("create . pkg2/0.1@user/stable")
         self.assertIn("pkg2/0.1@user/stable: PUBLIC PKG2:[]", client.out)
-        pkg3 = textwrap.dedent(""" 
+        pkg3 = textwrap.dedent("""
             from conans import ConanFile
             class Pkg(ConanFile):
                 requires = "pkg2/0.1@user/stable", ("pkg/0.1@user/stable", "override")

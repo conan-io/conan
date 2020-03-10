@@ -7,7 +7,7 @@ import unittest
 from nose.plugins.attrib import attr
 
 from conans.client import tools
-from conans.client.conf import default_settings_yml
+from conans.client.conf import get_default_settings_yml
 from conans.client.tools.env import environment_append
 from conans.errors import ConanException
 from conans.model.settings import Settings
@@ -26,7 +26,7 @@ class VCVarsArchTest(unittest.TestCase):
         self.assertTrue(command.endswith('vcvarsall.bat %s' % expected))
 
     def test_arch(self):
-        settings = Settings.loads(default_settings_yml)
+        settings = Settings.loads(get_default_settings_yml())
         settings.compiler = 'Visual Studio'
         settings.compiler.version = '14'
 
@@ -53,7 +53,7 @@ class VCVarsArchTest(unittest.TestCase):
         self.assert_vcvars_command(settings, "amd64_x86")
 
     def test_arch_override(self):
-        settings = Settings.loads(default_settings_yml)
+        settings = Settings.loads(get_default_settings_yml())
         settings.compiler = 'Visual Studio'
         settings.compiler.version = '14'
         settings.arch = 'mips64'
@@ -67,7 +67,7 @@ class VCVarsArchTest(unittest.TestCase):
             tools.vcvars_command(settings, arch='mips', output=self.output)
 
     def test_vcvars_ver_override(self):
-        settings = Settings.loads(default_settings_yml)
+        settings = Settings.loads(get_default_settings_yml())
         settings.compiler = 'Visual Studio'
         settings.compiler.version = '15'
         settings.arch = 'x86_64'
@@ -83,7 +83,7 @@ class VCVarsArchTest(unittest.TestCase):
         self.assertIn('-vcvars_ver=14.14', command)
 
     def test_winsdk_version_override(self):
-        settings = Settings.loads(default_settings_yml)
+        settings = Settings.loads(get_default_settings_yml())
         settings.compiler = 'Visual Studio'
         settings.compiler.version = '15'
         settings.arch = 'x86_64'
@@ -99,7 +99,7 @@ class VCVarsArchTest(unittest.TestCase):
         self.assertIn('8.1', command)
 
     def test_windows_ce(self):
-        settings = Settings.loads(default_settings_yml)
+        settings = Settings.loads(get_default_settings_yml())
         settings.os = 'WindowsCE'
         settings.compiler = 'Visual Studio'
         settings.compiler.version = '15'

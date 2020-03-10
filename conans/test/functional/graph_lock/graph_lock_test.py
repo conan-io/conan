@@ -684,8 +684,9 @@ class GraphLockWarningsTestCase(unittest.TestCase):
 
 class GraphLockBuildRequireErrorTestCase(unittest.TestCase):
 
-    def test(self):
+    def test_not_locked_build_requires(self):
         # https://github.com/conan-io/conan/issues/5807
+        # even if the build requires are not locked, the graph can be augmented to add them
         client = TestClient()
         client.save({"zlib.py": GenConanfile(),
                      "harfbuzz.py": GenConanfile().with_require_plain("fontconfig/1.0"),
@@ -718,16 +719,89 @@ class GraphLockBuildRequireErrorTestCase(unittest.TestCase):
         self.assertEqual(harf, nodes["3"]["pref"])
         self.assertEqual(zlib, nodes["4"]["pref"])
 
-        # Using the graphlock there is no warning message
-        client.run("graph build-order . --build cascade --build outdated", assert_error=True)
-        self.assertIn("ERROR: 'fontconfig' cannot be found in lockfile for this package", client.out)
-        self.assertIn("Make sure it was locked ", client.out)
+        client.run("config set general.relax_lockfile=1")
+        client.run("graph build-order . --build cascade --build outdated --json=bo.json")
+        self.assertIn("ffmpeg/1.0: WARN: Build-require 'fontconfig' cannot be found in lockfile",
+                      client.out)
+        self.assertIn("ffmpeg/1.0: WARN: Build-require 'harfbuzz' cannot be found in lockfile",
+                      client.out)
+        lock = json.loads(client.load("conan.lock"))
+        nodes = lock["graph_lock"]["nodes"]
+        self.assertEqual(5, len(nodes))
+        self.assertEqual(fmpe, nodes["1"]["pref"])
+        # The lockfile doesn't add build_requires
+        self.assertEqual(None, nodes["1"].get("build_requires"))
+        self.assertEqual(font, nodes["2"]["pref"])
+        self.assertEqual(harf, nodes["3"]["pref"])
+        self.assertEqual(zlib, nodes["4"]["pref"])
+
+        build_order = json.loads(client.load("bo.json"))
+        self.assertEqual([["5", font]], build_order[0])
+        self.assertEqual([["6", harf]], build_order[1])
+        self.assertEqual([["1", fmpe], ["4", zlib]], build_order[2])
+
+    def test_build_requires_should_be_locked(self):
+        # https://github.com/conan-io/conan/issues/5807
+        # this is the recommended approach, build_requires should be locked from the beginning
+        client = TestClient()
+        client.save({"zlib.py": GenConanfile(),
+                     "harfbuzz.py": GenConanfile().with_require_plain("fontconfig/1.0"),
+                     "fontconfig.py": GenConanfile(),
+                     "ffmpeg.py": GenConanfile().with_build_require_plain("fontconfig/1.0")
+                                                .with_build_require_plain("harfbuzz/1.0"),
+                     "variant.py": GenConanfile().with_require_plain("ffmpeg/1.0")
+                                                 .with_require_plain("fontconfig/1.0")
+                                                 .with_require_plain("harfbuzz/1.0")
+                                                 .with_require_plain("zlib/1.0")
+                     })
+        client.run("export zlib.py zlib/1.0@")
+        client.run("export fontconfig.py fontconfig/1.0@")
+        client.run("export harfbuzz.py harfbuzz/1.0@")
+        client.run("export ffmpeg.py ffmpeg/1.0@")
+
+        # Building the graphlock we get the message
+        client.run("graph lock variant.py --build")
+        fmpe = "ffmpeg/1.0#5522e93e2abfbd455e6211fe4d0531a2:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
+        font = "fontconfig/1.0#f3367e0e7d170aa12abccb175fee5f97:"\
+               "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
+        harf = "harfbuzz/1.0#3172f5e84120f235f75f8dd90fdef84f:"\
+               "ea61889683885a5517800e8ebb09547d1d10447a"
+        zlib = "zlib/1.0#f3367e0e7d170aa12abccb175fee5f97:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
+        lock = json.loads(client.load("conan.lock"))
+        nodes = lock["graph_lock"]["nodes"]
+        self.assertEqual(7, len(nodes))
+        self.assertEqual(fmpe, nodes["1"]["pref"])
+        self.assertEqual(["5", "6"], nodes["1"]["build_requires"])
+        self.assertEqual(font, nodes["2"]["pref"])
+        self.assertEqual(harf, nodes["3"]["pref"])
+        self.assertEqual(zlib, nodes["4"]["pref"])
+        self.assertEqual(font, nodes["5"]["pref"])
+        self.assertEqual(harf, nodes["6"]["pref"])
+
+        client.run("graph build-order . --build cascade --build outdated --json=bo.json")
+        self.assertNotIn("cannot be found in lockfile", client.out)
+        lock = json.loads(client.load("conan.lock"))
+        nodes = lock["graph_lock"]["nodes"]
+        self.assertEqual(7, len(nodes))
+        self.assertEqual(fmpe, nodes["1"]["pref"])
+        self.assertEqual(["5", "6"], nodes["1"]["build_requires"])
+        self.assertEqual(font, nodes["2"]["pref"])
+        self.assertEqual(harf, nodes["3"]["pref"])
+        self.assertEqual(zlib, nodes["4"]["pref"])
+        self.assertEqual(font, nodes["5"]["pref"])
+        self.assertEqual(harf, nodes["6"]["pref"])
+
+        build_order = json.loads(client.load("bo.json"))
+        self.assertEqual([["5", font]], build_order[0])
+        self.assertEqual([["6", harf]], build_order[1])
+        self.assertEqual([["1", fmpe], ["4", zlib]], build_order[2])
 
 
 class GraphLockModifyConanfileTestCase(unittest.TestCase):
 
     def test(self):
         # https://github.com/conan-io/conan/issues/5807
+        # Modifying dependencies do NOT modify the lockfile
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . zlib/1.0@")
@@ -736,9 +810,15 @@ class GraphLockModifyConanfileTestCase(unittest.TestCase):
         client2.save({"conanfile.py": GenConanfile()})
         client2.run("graph lock .")
         client2.save({"conanfile.py": GenConanfile().with_require_plain("zlib/1.0")})
-        client2.run("install . --lockfile", assert_error=True)
-        self.assertIn("ERROR: 'zlib' cannot be found in lockfile for this package", client2.out)
-        self.assertIn("If it is a new requirement, you need to create a new lockile", client2.out)
+
+        client2.run("config set general.relax_lockfile=1")
+        client2.run("install . --lockfile")
+        self.assertIn("conanfile.py: WARN: Require 'zlib' cannot be found in lockfile", client2.out)
+        self.assertIn("zlib/1.0: WARN: Package can't be locked", client2.out)
+        self.assertIn("zlib/1.0:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache", client2.out)
+        lock_file_json = json.loads(client2.load("conan.lock"))
+        self.assertNotIn("zlib", lock_file_json)
+        self.assertEqual(1, len(lock_file_json["graph_lock"]["nodes"]))
 
 
 class LockFileOptionsTest(unittest.TestCase):
