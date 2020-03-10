@@ -150,15 +150,19 @@ class CppInfoComponentsTest(unittest.TestCase):
 
         dep1 = CppInfo("root")
         dep1.components["liba"].libs.append("liba")
-        dep1.components["libb"].release.libs.append("libb")  # FIXME: This should not be allowed
-        dep1.components["libb"].debug.libs.append("libb_d")  # FIXME: This should not be allowed
+        with self.assertRaises(AttributeError):
+            dep1.release.components["libb"].libs.append("libb")
+        with self.assertRaises(AttributeError):
+            dep1.debug.components["libb"].libs.append("libb_d")
         deps_cpp_info.update(dep1, "dep1")
 
         dep2 = CppInfo("root")
         dep2.release.libs.append("libdep2")
         dep2.debug.libs.append("libdep2_d")
-        dep2.components["libc"].release.libs.append("libc")  # FIXME: This should not be allowed
-        dep2.components["libc"].debug.libs.append("libc_d")  # FIXME: This should not be allowed
+        with self.assertRaises(AttributeError):
+            dep2.components["libc"].release.libs.append("libc")
+        with self.assertRaises(AttributeError):
+            dep2.components["libc"].debug.libs.append("libc_d")
         deps_cpp_info.update(dep2, "dep2")
 
         self.assertListEqual(["liba"], deps_cpp_info["dep1"].libs)

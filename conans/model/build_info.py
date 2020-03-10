@@ -124,6 +124,71 @@ class _CppInfo(object):
     cppflags = property(get_cppflags, set_cppflags)
 
 
+class Component(_CppInfo):
+    """ Build Information declared to be used by the CONSUMERS of a
+    conans. That means that consumers must use this flags and configs i order
+    to build properly.
+    Defined in user CONANFILE, directories are relative at user definition time
+    """
+    def __init__(self, root_folder):
+        super(Component, self).__init__()
+        self.rootpath = root_folder  # the full path of the package in which the conans is found
+        self.includedirs.append(DEFAULT_INCLUDE)
+        self.libdirs.append(DEFAULT_LIB)
+        self.bindirs.append(DEFAULT_BIN)
+        self.resdirs.append(DEFAULT_RES)
+        self.builddirs.append(DEFAULT_BUILD)
+        self.frameworkdirs.append(DEFAULT_FRAMEWORK)
+
+    @property
+    def include_paths(self):
+        if self._include_paths is None:
+            self._include_paths = self._filter_paths(self.includedirs)
+            if self.components:
+                for _, component in self.components.items():
+                    self._include_paths.extend(self._filter_paths(component.includedirs))
+        return self._include_paths
+
+    @property
+    def lib_paths(self):
+        if self._lib_paths is None:
+            self._lib_paths = self._filter_paths(self.libdirs)
+            if self.components:
+                for _, component in self.components.items():
+                    self._include_paths.extend(self._filter_paths(component.libdirs))
+        return self._lib_paths
+
+    @property
+    def src_paths(self):
+        if self._src_paths is None:
+            self._src_paths = self._filter_paths(self.srcdirs)
+        return self._src_paths
+
+    @property
+    def bin_paths(self):
+        if self._bin_paths is None:
+            self._bin_paths = self._filter_paths(self.bindirs)
+        return self._bin_paths
+
+    @property
+    def build_paths(self):
+        if self._build_paths is None:
+            self._build_paths = self._filter_paths(self.builddirs)
+        return self._build_paths
+
+    @property
+    def res_paths(self):
+        if self._res_paths is None:
+            self._res_paths = self._filter_paths(self.resdirs)
+        return self._res_paths
+
+    @property
+    def framework_paths(self):
+        if self._framework_paths is None:
+            self._framework_paths = self._filter_paths(self.frameworkdirs)
+        return self._framework_paths
+
+
 class CppInfo(_CppInfo):
     """ Build Information declared to be used by the CONSUMERS of a
     conans. That means that consumers must use this flags and configs i order
@@ -139,7 +204,7 @@ class CppInfo(_CppInfo):
         self.resdirs.append(DEFAULT_RES)
         self.builddirs.append(DEFAULT_BUILD)
         self.frameworkdirs.append(DEFAULT_FRAMEWORK)
-        self.components = defaultdict(lambda: CppInfo(self.rootpath))
+        self.components = defaultdict(lambda: Component(self.rootpath))
         # public_deps is needed to accumulate list of deps for cmake targets
         self.public_deps = []
         self.configs = {}
