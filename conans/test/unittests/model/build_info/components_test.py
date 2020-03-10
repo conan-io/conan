@@ -20,11 +20,11 @@ class CppInfoComponentsTest(unittest.TestCase):
         self.assertListEqual(cpp_info.components["libb"].includedirs, ["include", "includewhat"])
         self.assertListEqual(cpp_info.components["libc"].libs, ["thelibc"])
 
-    # def test_no_components_inside_components(self):
-    #     cpp_info = CppInfo("root_folder")
-    #     cpp_info.components["liba"].name = "LIBA"
-    #     with self.assertRaises(AttributeError):
-    #         cpp_info.components["libb"].components["libb"].name = "LIBB"
+    def test_no_components_inside_components(self):
+        cpp_info = CppInfo("root_folder")
+        cpp_info.components["liba"].name = "LIBA"
+        with self.assertRaises(AttributeError):
+            cpp_info.components["libb"].components["libb"].name = "LIBB"
 
     def test_deps_cpp_info_libs(self):
         deps_cpp_info = DepsCppInfo()
@@ -150,17 +150,25 @@ class CppInfoComponentsTest(unittest.TestCase):
 
         dep1 = CppInfo("root")
         dep1.components["liba"].libs.append("liba")
-        dep1.components["libb"].release.libs.append("libb")
-        dep1.components["libb"].debug.libs.append("libb_d")
+        dep1.components["libb"].release.libs.append("libb")  # FIXME: This should not be allowed
+        dep1.components["libb"].debug.libs.append("libb_d")  # FIXME: This should not be allowed
         deps_cpp_info.update(dep1, "dep1")
 
         dep2 = CppInfo("root")
         dep2.release.libs.append("libdep2")
         dep2.debug.libs.append("libdep2_d")
-        dep2.components["libc"].release.libs.append("libc")
-        dep2.components["libc"].debug.libs.append("libc_d")
+        dep2.components["libc"].release.libs.append("libc")  # FIXME: This should not be allowed
+        dep2.components["libc"].debug.libs.append("libc_d")  # FIXME: This should not be allowed
         deps_cpp_info.update(dep2, "dep2")
 
-        self.assertListEqual(["liba", "libb"], deps_cpp_info["dep1"].libs)
-        self.assertListEqual(["libc", "libd"], deps_cpp_info["dep2"].libs)
-        self.assertListEqual(["liba", "libb", "libc", "libd"], deps_cpp_info.libs)
+        self.assertListEqual(["liba"], deps_cpp_info["dep1"].libs)
+        self.assertListEqual([], deps_cpp_info["dep2"].libs)
+        self.assertListEqual(["liba"], deps_cpp_info.libs)
+
+        self.assertListEqual([], deps_cpp_info["dep1"].release.libs)
+        self.assertListEqual(["libdep2"], deps_cpp_info["dep2"].release.libs)
+        self.assertListEqual(["libdep2"], deps_cpp_info.release.libs)
+
+        self.assertListEqual([], deps_cpp_info["dep1"].debug.libs)
+        self.assertListEqual(["libdep2_d"], deps_cpp_info["dep2"].debug.libs)
+        self.assertListEqual(["libdep2_d"], deps_cpp_info.debug.libs)
