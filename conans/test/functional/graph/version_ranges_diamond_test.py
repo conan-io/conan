@@ -31,7 +31,7 @@ class VersionRangesUpdatingTest(unittest.TestCase):
             boost/[>=1.68.0]@lasote/stable
             """)
         client.save({"conanfile.txt": conanfile}, clean_first=True)
-        client.run("install .")   
+        client.run("install .")
         self.assertIn("boost/*@lasote/stable versions found in 'default' remote", client.out)
         self.assertIn("resolved to 'boost/1.70.0@lasote/stable' in remote 'default'", client.out)
         self.assertNotIn("boost/1.69.0", client.out)
@@ -298,8 +298,12 @@ class HelloReuseConan(ConanFile):
         self.client.run("remove '*' -f")
         self.client.run("install Project/1.0.0@lasote/stable --build missing", assert_error=True)
 
-        self.assertIn("Requirement ProblemRequirement/1.0.0@lasote/stable conflicts with "
-                      "already defined ProblemRequirement/1.1.0@lasote/stable", self.client.out)
+        self.assertIn("Conflict in RequirementOne/1.2.3@lasote/stable:\n"
+            "    'RequirementOne/1.2.3@lasote/stable' requires "
+            "'ProblemRequirement/1.0.0@lasote/stable' while 'RequirementTwo/4.5.6@lasote/stable'"
+            " requires 'ProblemRequirement/1.1.0@lasote/stable'.\n"
+            "    To fix this conflict you need to override the package 'ProblemRequirement' in "
+            "your root package.", self.client.out)
 
         # Change the order, now it resolves correctly
         self._export("Project", "1.0.0",

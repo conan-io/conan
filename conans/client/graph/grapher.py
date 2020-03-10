@@ -73,7 +73,7 @@ class ConanHTMLGrapher(object):
             fulllabel.append("<ul>")
             fulllabel = "".join(fulllabel)
 
-            if node in build_time_nodes:
+            if node in build_time_nodes:   # TODO: May use build_require_context information
                 shape = "ellipse"
             else:
                 shape = "box"

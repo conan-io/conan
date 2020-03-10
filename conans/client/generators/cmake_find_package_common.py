@@ -97,7 +97,6 @@ class CMakeFindPackageCommonMacros:
             unset(_CONAN_ACTUAL_TARGETS CACHE)
             unset(_CONAN_FOUND_SYSTEM_LIBS CACHE)
             foreach(_LIBRARY_NAME ${libraries})
-                unset(CONAN_FOUND_LIBRARY CACHE)
                 find_library(CONAN_FOUND_LIBRARY NAME ${_LIBRARY_NAME} PATHS ${package_libdir}
                              NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
                 if(CONAN_FOUND_LIBRARY)
@@ -123,6 +122,7 @@ class CMakeFindPackageCommonMacros:
                     list(APPEND _out_libraries ${_LIBRARY_NAME})
                     set(_CONAN_FOUND_SYSTEM_LIBS "${_CONAN_FOUND_SYSTEM_LIBS};${_LIBRARY_NAME}")
                 endif()
+                unset(CONAN_FOUND_LIBRARY CACHE)
             endforeach()
             
             if(NOT ${CMAKE_VERSION} VERSION_LESS "3.0")
