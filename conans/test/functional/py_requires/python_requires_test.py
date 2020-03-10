@@ -269,7 +269,7 @@ class PyRequiresExtendTest(unittest.TestCase):
                 scm = {"type" : "git",
                        "url" : "somerepo",
                        "revision" : "auto"}
-            
+
             class MyConanfileBase(SomeBase, ConanFile):
                 pass
             """)
@@ -359,22 +359,22 @@ class PyRequiresExtendTest(unittest.TestCase):
                 settings = "arch", # tuple!
                 python_requires = "base/1.1@user/testing"
                 python_requires_extend = "base.MyConanfileBase"
-                
-                def __init__(self, *args, **kwargs):
-                    super(PkgTest, self).__init__(*args, **kwargs)
-                    self.settings = super(PkgTest, self).settings + self.settings
-                    self.license = super(PkgTest, self).license
-                    self.author = super(PkgTest, self).author
+
+                def extend(self):
+                    base = self.python_requires["base"].module.MyConanfileBase
+                    self.settings = base.settings + self.settings
+                    self.license = base.license
 
                 def build(self):
                     self.output.info("License! %s" % self.license)
                     self.output.info("Author! %s" % self.author)
-                    self.output.info("os: %s arch: %s" % (self.settings.get_safe("os"), self.settings.arch))
+                    self.output.info("os: %s arch: %s" % (self.settings.get_safe("os"),
+                                                          self.settings.arch))
             """)
         client.save({"conanfile.py": reuse})
         client.run("create . Pkg/0.1@user/testing -s os=Windows -s arch=armv7")
         self.assertIn("Pkg/0.1@user/testing: License! MyLicense", client.out)
-        self.assertIn("Pkg/0.1@user/testing: Author! author@company.com", client.out)
+        self.assertIn("Pkg/0.1@user/testing: Author! frodo", client.out)
         self.assertIn("Pkg/0.1@user/testing: os: Windows arch: armv7", client.out)
 
     def transitive_imports_conflicts_test(self):
@@ -398,7 +398,7 @@ class PyRequiresExtendTest(unittest.TestCase):
 
         conanfile = textwrap.dedent("""
             from conans import ConanFile
-            
+
             class MyConanfileBase(ConanFile):
                 python_requires = "base2/1.0@user/channel", "base1/1.0@user/channel"
                 def build(self):
@@ -542,11 +542,11 @@ class PyRequiresExtendTest(unittest.TestCase):
             from conans import ConanFile
             from conans.tools import load
             import os
-            
+
             class Source(object):
                 def set_name(self):
                     self.name = load("name.txt")
- 
+
                 def set_version(self):
                     self.version = load("version.txt")
 
@@ -585,7 +585,7 @@ class PyRequiresExtendTest(unittest.TestCase):
 
         # Create python_requires
         client.save({CONANFILE: textwrap.dedent("""
-            from conans import ConanFile  
+            from conans import ConanFile
             class PythonRequires0(ConanFile):
                 def build(self):
                     super(PythonRequires0, self).build()
@@ -611,7 +611,7 @@ class PyRequiresExtendTest(unittest.TestCase):
 
         # Create python requires
         client.save({CONANFILE: textwrap.dedent("""
-            from conans import ConanFile    
+            from conans import ConanFile
             class PythonRequires11(ConanFile):
                 def build(self):
                     super(PythonRequires11, self).build()
@@ -716,7 +716,7 @@ class PyRequiresExtendTest(unittest.TestCase):
                     file_h = os.path.join(sources, "file.h")
                     other_h = os.path.join(sources, "folder/other.h")
                     self.output.info("Build: tool header: %s" % load(file_h))
-                    self.output.info("Build: tool other: %s" % load(other_h))           
+                    self.output.info("Build: tool other: %s" % load(other_h))
                 def package(self):
                     sources = self.python_requires["tool"].path
                     file_h = os.path.join(sources, "file.h")
