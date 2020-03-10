@@ -138,17 +138,18 @@ class HelloConan(ConanFile):
             import os
             from conans import ConanFile
 
-
             class Dep(ConanFile):
 
                 def package_info(self):
                     self.cpp_info.components["dep1"].libs.append("libdep1")
+                    self.cpp_info.components["dep1"].defines.append("definedep1")
                     self.cpp_info.components["dep2"].libs.append("libdep2")
+                    os.mkdir(os.path.join(self.package_folder, "includedep2"))
+                    self.cpp_info.components["dep2"].includedirs.append("includedep2")
                 """)
         intermediate = textwrap.dedent("""
             import os
             from conans import ConanFile
-
 
             class Intermediate(ConanFile):
                 requires = "dep/1.0@us/ch"
@@ -156,35 +157,63 @@ class HelloConan(ConanFile):
                 def package_info(self):
                     self.cpp_info.libs.append("libint")
                     self.cpp_info.defines.append("defint")
+                    os.mkdir(os.path.join(self.package_folder, "includeint"))
+                    self.cpp_info.includedirs.append("includeint")
                     self.cpp_info.libs.append("libint_bis")
                     self.cpp_info.defines.append("defint_bis")
+                    os.mkdir(os.path.join(self.package_folder, "includeint_bis"))
+                    self.cpp_info.includedirs.append("includeint_bis")
                     self.cpp_info.components["int1"].libs.append("libint1")
                     self.cpp_info.components["int1"].defines.append("defint1")
+                    os.mkdir(os.path.join(self.package_folder, "includeint1"))
+                    self.cpp_info.components["int1"].includedirs.append("includeint1")
                     self.cpp_info.components["int2"].libs.append("libint2")
                     self.cpp_info.components["int2"].defines.append("defint2")
+                    os.mkdir(os.path.join(self.package_folder, "includeint2"))
+                    self.cpp_info.components["int2"].includedirs.append("includeint2")
                 """)
         consumer = textwrap.dedent("""
+            import os
             from conans import ConanFile
-
 
             class Consumer(ConanFile):
                 requires = "intermediate/1.0@us/ch"
 
                 def build(self):
                     self.output.info("deps_cpp_info.libs: %s" % self.deps_cpp_info.libs)
+                    self.output.info("deps_cpp_info.defines: %s" % self.deps_cpp_info.defines)
+                    self.output.info("deps_cpp_info.include_paths: %s" %
+                        [os.path.basename(value) for value in self.deps_cpp_info.include_paths])
                     for dep_key, dep_value in self.deps_cpp_info.dependencies:
                         self.output.info("%s.libs: %s" % (dep_key, dep_value.libs))
+                        self.output.info("%s.defines: %s" % (dep_key, dep_value.defines))
+                        self.output.info("%s.include_paths: %s" % (dep_key,
+                                         [os.path.basename(value) for value in
+                                         dep_value.include_paths]))
                 """)
 
         client = TestClient()
         client.save({"conanfile_dep.py": dep,
                      "conanfile_intermediate.py": intermediate,
                      "conanfile_consumer.py": consumer})
-        client.run("create conanfile_dep.py dep/1.0@us/ch")
-        client.run("create conanfile_intermediate.py intermediate/1.0@us/ch")
-        client.run("create conanfile_consumer.py consumer/1.0@us/ch")
+        client.run("export conanfile_dep.py dep/1.0@us/ch")
+        client.run("export conanfile_intermediate.py intermediate/1.0@us/ch")
+        client.run("create conanfile_consumer.py consumer/1.0@us/ch --build missing")
+
         self.assertIn("deps_cpp_info.libs: ['libint', 'libint_bis', 'libint1', 'libint2', "
-                      "'libdep1', 'libdep2', 'libdep1', 'libdep2']", client.out)
+                      "'libdep1', 'libdep2']", client.out)
+        self.assertIn("deps_cpp_info.defines: ['definedep1', 'defint', 'defint_bis', 'defint1', "
+                      "'defint2']", client.out)
+        self.assertIn("deps_cpp_info.include_paths: ['includeint', 'includeint_bis', 'includeint1', "
+                      "'includeint2', 'includedep2']", client.out)
+
         self.assertIn("intermediate.libs: ['libint', 'libint_bis', 'libint1', 'libint2']",
                       client.out)
-        self.assertIn("dep.libs: ['libdep1', 'libdep2', 'libdep1', 'libdep2']", client.out)
+        self.assertIn("intermediate.defines: ['defint', 'defint_bis', 'defint1', 'defint2']",
+                      client.out)
+        self.assertIn("intermediate.include_paths: ['includeint', 'includeint_bis', 'includeint1', "
+                      "'includeint2']", client.out)
+
+        self.assertIn("dep.libs: ['libdep1', 'libdep2']", client.out)
+        self.assertIn("dep.defines: ['definedep1']", client.out)
+        self.assertIn("dep.include_paths: ['includedep2']", client.out)
