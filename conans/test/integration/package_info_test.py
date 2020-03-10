@@ -157,7 +157,7 @@ class HelloConan(ConanFile):
                     self.cpp_info.libs.append("libint")
                     self.cpp_info.defines.append("defint")
                     self.cpp_info.libs.append("libint_bis")
-                    self.cpp_info.libs.append("defint_bis")
+                    self.cpp_info.defines.append("defint_bis")
                     self.cpp_info.components["int1"].libs.append("libint1")
                     self.cpp_info.components["int1"].defines.append("defint1")
                     self.cpp_info.components["int2"].libs.append("libint2")
