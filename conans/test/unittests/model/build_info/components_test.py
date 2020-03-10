@@ -17,7 +17,7 @@ class CppInfoComponentsTest(unittest.TestCase):
         cpp_info.components["libc"].libs.append("thelibc")
         self.assertEqual(list(cpp_info.components.keys()), ["liba", "libb", "libc"])
         self.assertEqual(cpp_info.components["liba"].name, "LIBA")
-        self.assertListEqual(cpp_info.components["libb"].includedirs, ["include", "includewhat"])
+        self.assertListEqual(cpp_info.components["libb"].includedirs, ["includewhat"])
         self.assertListEqual(cpp_info.components["libc"].libs, ["thelibc"])
 
     def test_no_components_inside_components(self):
@@ -163,11 +163,13 @@ class CppInfoComponentsTest(unittest.TestCase):
             dep2.components["libc"].release.libs.append("libc")
         with self.assertRaises(AttributeError):
             dep2.components["libc"].debug.libs.append("libc_d")
+        dep2.components["libc"].libs.append("libc")
+        dep2.components["libc"].libs.append("libc2")
         deps_cpp_info.update(dep2, "dep2")
 
         self.assertListEqual(["liba"], deps_cpp_info["dep1"].libs)
-        self.assertListEqual([], deps_cpp_info["dep2"].libs)
-        self.assertListEqual(["liba"], deps_cpp_info.libs)
+        self.assertListEqual(["libc", "libc2"], deps_cpp_info["dep2"].libs)
+        self.assertListEqual(["liba", "libc", "libc2"], deps_cpp_info.libs)
 
         self.assertListEqual([], deps_cpp_info["dep1"].release.libs)
         self.assertListEqual(["libdep2"], deps_cpp_info["dep2"].release.libs)

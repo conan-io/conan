@@ -124,71 +124,6 @@ class _CppInfo(object):
     cppflags = property(get_cppflags, set_cppflags)
 
 
-class Component(_CppInfo):
-    """ Build Information declared to be used by the CONSUMERS of a
-    conans. That means that consumers must use this flags and configs i order
-    to build properly.
-    Defined in user CONANFILE, directories are relative at user definition time
-    """
-    def __init__(self, root_folder):
-        super(Component, self).__init__()
-        self.rootpath = root_folder  # the full path of the package in which the conans is found
-        self.includedirs.append(DEFAULT_INCLUDE)
-        self.libdirs.append(DEFAULT_LIB)
-        self.bindirs.append(DEFAULT_BIN)
-        self.resdirs.append(DEFAULT_RES)
-        self.builddirs.append(DEFAULT_BUILD)
-        self.frameworkdirs.append(DEFAULT_FRAMEWORK)
-
-    @property
-    def include_paths(self):
-        if self._include_paths is None:
-            self._include_paths = self._filter_paths(self.includedirs)
-            if self.components:
-                for _, component in self.components.items():
-                    self._include_paths.extend(self._filter_paths(component.includedirs))
-        return self._include_paths
-
-    @property
-    def lib_paths(self):
-        if self._lib_paths is None:
-            self._lib_paths = self._filter_paths(self.libdirs)
-            if self.components:
-                for _, component in self.components.items():
-                    self._include_paths.extend(self._filter_paths(component.libdirs))
-        return self._lib_paths
-
-    @property
-    def src_paths(self):
-        if self._src_paths is None:
-            self._src_paths = self._filter_paths(self.srcdirs)
-        return self._src_paths
-
-    @property
-    def bin_paths(self):
-        if self._bin_paths is None:
-            self._bin_paths = self._filter_paths(self.bindirs)
-        return self._bin_paths
-
-    @property
-    def build_paths(self):
-        if self._build_paths is None:
-            self._build_paths = self._filter_paths(self.builddirs)
-        return self._build_paths
-
-    @property
-    def res_paths(self):
-        if self._res_paths is None:
-            self._res_paths = self._filter_paths(self.resdirs)
-        return self._res_paths
-
-    @property
-    def framework_paths(self):
-        if self._framework_paths is None:
-            self._framework_paths = self._filter_paths(self.frameworkdirs)
-        return self._framework_paths
-
-
 class CppInfo(_CppInfo):
     """ Build Information declared to be used by the CONSUMERS of a
     conans. That means that consumers must use this flags and configs i order
@@ -204,7 +139,7 @@ class CppInfo(_CppInfo):
         self.resdirs.append(DEFAULT_RES)
         self.builddirs.append(DEFAULT_BUILD)
         self.frameworkdirs.append(DEFAULT_FRAMEWORK)
-        self.components = defaultdict(lambda: Component(self.rootpath))
+        self.components = defaultdict(_CppInfo)
         # public_deps is needed to accumulate list of deps for cmake targets
         self.public_deps = []
         self.configs = {}
@@ -229,18 +164,12 @@ class CppInfo(_CppInfo):
     def include_paths(self):
         if self._include_paths is None:
             self._include_paths = self._filter_paths(self.includedirs)
-            if self.components:
-                for _, component in self.components.items():
-                    self._include_paths.extend(self._filter_paths(component.includedirs))
         return self._include_paths
 
     @property
     def lib_paths(self):
         if self._lib_paths is None:
             self._lib_paths = self._filter_paths(self.libdirs)
-            if self.components:
-                for _, component in self.components.items():
-                    self._include_paths.extend(self._filter_paths(component.libdirs))
         return self._lib_paths
 
     @property
@@ -352,12 +281,23 @@ class DepCppInfo(object):
         self._sharedlinkflags = None
         self._exelinkflags = None
 
+        self._include_paths = None
+        self._lib_paths = None
+
     def __getattr__(self, item):
         try:
             attr = self._cpp_info.__getattribute__(item)
         except AttributeError:  # item is not defined, get config (CppInfo)
             attr = self._cpp_info.__getattr__(item)
         return attr
+
+    def _filter_paths(self, paths):
+        abs_paths = [os.path.join(self._cpp_info.rootpath, p)
+                     if not os.path.isabs(p) else p for p in paths]
+        if self._cpp_info.filter_empty:
+            return [p for p in abs_paths if os.path.isdir(p)]
+        else:
+            return abs_paths
 
     def _aggregated_values(self, item):
         if getattr(self, "_%s" % item) is None:
@@ -366,6 +306,46 @@ class DepCppInfo(object):
                 values.extend(getattr(component, item))
             setattr(self, "_%s" % item, values)
         return getattr(self, "_%s" % item)
+
+    def _aggregated_paths(self, item):
+        if getattr(self, "_%s_paths" % item) is None:
+            values = self._filter_paths(getattr(self._cpp_info, "%sdirs" % item))
+            for _, component in self._cpp_info.components.items():
+                values.extend(self._filter_paths(getattr(component, "%sdirs" % item)))
+            setattr(self, "_%s_paths" % item, values)
+        return getattr(self, "_%s_paths" % item)
+
+    @property
+    def build_modules_paths(self):
+        return self.build_modules
+
+    @property
+    def include_paths(self):
+        return self._aggregated_paths("include")
+
+    @property
+    def lib_paths(self):
+        return self._aggregated_paths("lib")
+
+    @property
+    def src_paths(self):
+        return self._aggregated_paths("src")
+
+    @property
+    def bin_paths(self):
+        return self._aggregated_paths("bin")
+
+    @property
+    def build_paths(self):
+        return self._aggregated_paths("build")
+
+    @property
+    def res_paths(self):
+        return self._aggregated_paths("res")
+
+    @property
+    def framework_paths(self):
+        return self._aggregated_paths("framework")
 
     @property
     def libs(self):

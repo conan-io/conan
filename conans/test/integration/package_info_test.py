@@ -132,3 +132,59 @@ class HelloConan(ConanFile):
         self.assertIn("System deps: %s" % merged_system_libs, client.out)
         self.assertIn("intermediate system deps: %s" % intermediate_system_libs, client.out)
         self.assertIn("dep system deps: %s" % dep_system_libs, client.out)
+
+    def package_info_components_test(self):
+        dep = textwrap.dedent("""
+            import os
+            from conans import ConanFile
+
+
+            class Dep(ConanFile):
+
+                def package_info(self):
+                    self.cpp_info.components["dep1"].libs.append("libdep1")
+                    self.cpp_info.components["dep2"].libs.append("libdep2")
+                """)
+        intermediate = textwrap.dedent("""
+            import os
+            from conans import ConanFile
+
+
+            class Intermediate(ConanFile):
+                requires = "dep/1.0@us/ch"
+
+                def package_info(self):
+                    self.cpp_info.libs.append("libint")
+                    self.cpp_info.defines.append("defint")
+                    self.cpp_info.libs.append("libint_bis")
+                    self.cpp_info.libs.append("defint_bis")
+                    self.cpp_info.components["int1"].libs.append("libint1")
+                    self.cpp_info.components["int1"].defines.append("defint1")
+                    self.cpp_info.components["int2"].libs.append("libint2")
+                    self.cpp_info.components["int2"].defines.append("defint2")
+                """)
+        consumer = textwrap.dedent("""
+            from conans import ConanFile
+
+
+            class Consumer(ConanFile):
+                requires = "intermediate/1.0@us/ch"
+
+                def build(self):
+                    self.output.info("deps_cpp_info.libs: %s" % self.deps_cpp_info.libs)
+                    for dep_key, dep_value in self.deps_cpp_info.dependencies:
+                        self.output.info("%s.libs: %s" % (dep_key, dep_value.libs))
+                """)
+
+        client = TestClient()
+        client.save({"conanfile_dep.py": dep,
+                     "conanfile_intermediate.py": intermediate,
+                     "conanfile_consumer.py": consumer})
+        client.run("create conanfile_dep.py dep/1.0@us/ch")
+        client.run("create conanfile_intermediate.py intermediate/1.0@us/ch")
+        client.run("create conanfile_consumer.py consumer/1.0@us/ch")
+        self.assertIn("deps_cpp_info.libs: ['libint', 'libint_bis', 'libint1', 'libint2', "
+                      "'libdep1', 'libdep2', 'libdep1', 'libdep2']", client.out)
+        self.assertIn("intermediate.libs: ['libint', 'libint_bis', 'libint1', 'libint2']",
+                      client.out)
+        self.assertIn("dep.libs: ['libdep1', 'libdep2', 'libdep1', 'libdep2']", client.out)
