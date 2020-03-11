@@ -306,14 +306,16 @@ class DepCppInfo(object):
             attr = self._cpp_info.__getattr__(item)
         return attr
 
+    @staticmethod
+    def _merge_lists(seq1, seq2):
+        return [s for s in seq1 if s not in seq2] + seq2
+
     def _aggregated_values(self, item):
-        def merge_lists(seq1, seq2):
-            return [s for s in seq1 if s not in seq2] + seq2
 
         if getattr(self, "_%s" % item) is None:
             values = getattr(self._cpp_info, item)
             for _, component in self._cpp_info.components.items():
-                values = merge_lists(values, getattr(component, item))
+                values = self._merge_lists(values, getattr(component, item))
             setattr(self, "_%s" % item, values)
         return getattr(self, "_%s" % item)
 
@@ -321,22 +323,13 @@ class DepCppInfo(object):
         if getattr(self, "_%s_paths" % item) is None:
             values = getattr(self._cpp_info, "%s_paths" % item)
             for _, component in self._cpp_info.components.items():
-                values.extend(getattr(component, "%s_paths" % item))
+                values = self._merge_lists(values, getattr(component, "%s_paths" % item))
             setattr(self, "_%s_paths" % item, values)
         return getattr(self, "_%s_paths" % item)
 
     @property
     def build_modules_paths(self):
-        if self._build_modules_paths is None:
-            self._build_modules_paths = [os.path.join(self.rootpath, p) if not os.path.isabs(p)
-                                         else p for p in self.build_modules]
-            for _, component in self._cpp_info.components.items():
-                for build_module in component.build_modules:
-                    if os.path.isabs(build_module):
-                        self._build_modules_paths.append(build_module)
-                    else:
-                        self._build_modules_paths.append(self._build_modules_paths.append(build_module))
-        return self._build_modules_paths
+        return self._aggregated_paths("build_modules")
 
     @property
     def include_paths(self):
