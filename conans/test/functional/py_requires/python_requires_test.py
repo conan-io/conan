@@ -360,7 +360,7 @@ class PyRequiresExtendTest(unittest.TestCase):
                 python_requires = "base/1.1@user/testing"
                 python_requires_extend = "base.MyConanfileBase"
 
-                def extend(self):
+                def init(self):
                     base = self.python_requires["base"].module.MyConanfileBase
                     self.settings = base.settings + self.settings
                     self.license = base.license
