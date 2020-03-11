@@ -169,6 +169,13 @@ class _CppInfo(object):
     cppflags = property(get_cppflags, set_cppflags)
 
 
+class Component(_CppInfo):
+
+    def __init__(self, root_folder):
+        super(Component, self).__init__()
+        self.rootpath = root_folder
+
+
 class CppInfo(_CppInfo):
     """ Build Information declared to be used by the CONSUMERS of a
     conans. That means that consumers must use this flags and configs i order
@@ -184,7 +191,7 @@ class CppInfo(_CppInfo):
         self.resdirs.append(DEFAULT_RES)
         self.builddirs.append(DEFAULT_BUILD)
         self.frameworkdirs.append(DEFAULT_FRAMEWORK)
-        self.components = DefaultOrderedDict(_CppInfo)
+        self.components = DefaultOrderedDict(lambda: Component(self.rootpath))
         # public_deps is needed to accumulate list of deps for cmake targets
         self.public_deps = []
         self.configs = {}
@@ -299,14 +306,6 @@ class DepCppInfo(object):
             attr = self._cpp_info.__getattr__(item)
         return attr
 
-    def _filter_paths(self, paths):
-        abs_paths = [os.path.join(self._cpp_info.rootpath, p)
-                     if not os.path.isabs(p) else p for p in paths]
-        if self._cpp_info.filter_empty:
-            return [p for p in abs_paths if os.path.isdir(p)]
-        else:
-            return abs_paths
-
     def _aggregated_values(self, item):
         def merge_lists(seq1, seq2):
             return [s for s in seq1 if s not in seq2] + seq2
@@ -320,9 +319,9 @@ class DepCppInfo(object):
 
     def _aggregated_paths(self, item):
         if getattr(self, "_%s_paths" % item) is None:
-            values = self._filter_paths(getattr(self._cpp_info, "%sdirs" % item))
+            values = getattr(self._cpp_info, "%s_paths" % item)
             for _, component in self._cpp_info.components.items():
-                values.extend(self._filter_paths(getattr(component, "%sdirs" % item)))
+                values.extend(getattr(component, "%s_paths" % item))
             setattr(self, "_%s_paths" % item, values)
         return getattr(self, "_%s_paths" % item)
 
