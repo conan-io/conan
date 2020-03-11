@@ -204,55 +204,6 @@ class CppInfo(_CppInfo):
 
         return self.configs.setdefault(config, _get_cpp_info())
 
-    @property
-    def build_modules_paths(self):
-        if self._build_modules_paths is None:
-            self._build_modules_paths = [os.path.join(self.rootpath, p) if not os.path.isabs(p)
-                                         else p for p in self.build_modules]
-        return self._build_modules_paths
-
-    @property
-    def include_paths(self):
-        if self._include_paths is None:
-            self._include_paths = self._filter_paths(self.includedirs)
-        return self._include_paths
-
-    @property
-    def lib_paths(self):
-        if self._lib_paths is None:
-            self._lib_paths = self._filter_paths(self.libdirs)
-        return self._lib_paths
-
-    @property
-    def src_paths(self):
-        if self._src_paths is None:
-            self._src_paths = self._filter_paths(self.srcdirs)
-        return self._src_paths
-
-    @property
-    def bin_paths(self):
-        if self._bin_paths is None:
-            self._bin_paths = self._filter_paths(self.bindirs)
-        return self._bin_paths
-
-    @property
-    def build_paths(self):
-        if self._build_paths is None:
-            self._build_paths = self._filter_paths(self.builddirs)
-        return self._build_paths
-
-    @property
-    def res_paths(self):
-        if self._res_paths is None:
-            self._res_paths = self._filter_paths(self.resdirs)
-        return self._res_paths
-
-    @property
-    def framework_paths(self):
-        if self._framework_paths is None:
-            self._framework_paths = self._filter_paths(self.frameworkdirs)
-        return self._framework_paths
-
 
 class _BaseDepsCppInfo(_CppInfo):
     def __init__(self):
