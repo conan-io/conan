@@ -12,19 +12,16 @@ DEFAULT_BUILD = ""
 DEFAULT_FRAMEWORK = "Frameworks"
 
 
-class DefaultOrderedDict(object):
+class DefaultOrderedDict(OrderedDict):
 
     def __init__(self, factory):
         self.factory = factory
-        self.ordered_dict = OrderedDict()
+        super(DefaultOrderedDict, self).__init__()
 
     def __getitem__(self, key):
-        if key not in self.ordered_dict.keys():
-            self.ordered_dict[key] = self.factory()
-        return self.ordered_dict[key]
-
-    def __getattr__(self, item):
-        return getattr(self.ordered_dict, item)
+        if key not in self.keys():
+            super(DefaultOrderedDict, self).__setitem__(key, self.factory())
+        return super(DefaultOrderedDict, self).__getitem__(key)
 
 
 class _CppInfo(object):
