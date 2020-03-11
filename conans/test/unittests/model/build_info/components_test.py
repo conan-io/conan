@@ -15,7 +15,7 @@ class CppInfoComponentsTest(unittest.TestCase):
         cpp_info.components["liba"].name = "LIBA"
         cpp_info.components["libb"].includedirs.append("includewhat")
         cpp_info.components["libc"].libs.append("thelibc")
-        self.assertEqual(list(cpp_info.components.keys()), ["liba", "libb", "libc"])
+        self.assertListEqual(list(cpp_info.components.keys()), ["liba", "libb", "libc"])
         self.assertEqual(cpp_info.components["liba"].name, "LIBA")
         self.assertListEqual(cpp_info.components["libb"].includedirs, ["includewhat"])
         self.assertListEqual(cpp_info.components["libc"].libs, ["thelibc"])
