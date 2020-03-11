@@ -424,14 +424,14 @@ class CMakeCommonMacros:
             file (READ "${_CONAN_CURRENT_DIR}/conaninfo.txt" CONANINFO)
 
             # MATCHALL will match all, including the last one, which is the full_settings one
-            string(REGEX MATCHALL "compiler=([-A-Za-z0-9_ ]+)" _MATCHED ${CONANINFO})
+            string(REGEX MATCH "full_settings.*" _FULL_SETTINGS_MATCHED ${CONANINFO})
+            string(REGEX MATCH "compiler=([-A-Za-z0-9_ ]+)" _MATCHED ${_FULL_SETTINGS_MATCHED})
             if(DEFINED CMAKE_MATCH_1)
                 string(STRIP "${CMAKE_MATCH_1}" _CONAN_INFO_COMPILER)
                 set(${CONAN_INFO_COMPILER} ${_CONAN_INFO_COMPILER} PARENT_SCOPE)
             endif()
 
-            # MATCHALL will match all, including the last one, which is the full_settings one
-            string(REGEX MATCHALL "compiler.version=([-A-Za-z0-9_.]+)" _MATCHED ${CONANINFO})
+            string(REGEX MATCH "compiler.version=([-A-Za-z0-9_.]+)" _MATCHED ${_FULL_SETTINGS_MATCHED})
             if(DEFINED CMAKE_MATCH_1)
                 string(STRIP "${CMAKE_MATCH_1}" _CONAN_INFO_COMPILER_VERSION)
                 set(${CONAN_INFO_COMPILER_VERSION} ${_CONAN_INFO_COMPILER_VERSION} PARENT_SCOPE)
