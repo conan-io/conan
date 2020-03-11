@@ -38,6 +38,36 @@ CONAN_BASIC_SETUP()
         client.run('install .')
         client.run('build .')
 
+    @unittest.skipIf(platform.system() != "Linux", "Only linux")
+    def test_check_compiler_package_id(self):
+        # https://github.com/conan-io/conan/issues/6658
+        file_content = textwrap.dedent("""
+            from conans import ConanFile, CMake
+
+            class ConanFileToolsTest(ConanFile):
+                settings = "os", "compiler", "arch", "build_type"
+                generators = "cmake"
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+                def package_id(self):
+                    self.info.settings.compiler.version = "SomeVersion"
+                """)
+
+        cmakelists = textwrap.dedent("""
+            cmake_minimum_required(VERSION 2.8)
+            project(conanzlib)
+            include(conanbuildinfo.cmake)
+            conan_basic_setup()
+            """)
+        client = TestClient()
+        client.save({"conanfile.py": file_content,
+                     "CMakeLists.txt": cmakelists})
+
+        client.run('install .')
+        client.run_command('cmake .')
+        print(client.out)
+
     @attr("slow")
     @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
     def skip_check_if_toolset_test(self):
