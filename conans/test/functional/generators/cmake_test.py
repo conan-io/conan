@@ -66,7 +66,7 @@ CONAN_BASIC_SETUP()
 
         client.run('install .')
         client.run_command('cmake .')
-        print(client.out)
+        self.assertIn("Conan: Checking correct version:", client.out)
 
     @attr("slow")
     @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
