@@ -431,7 +431,7 @@ class CMakeCommonMacros:
             endif()
 
             # MATCHALL will match all, including the last one, which is the full_settings one
-            string(REGEX MATCH "compiler.version=([-A-Za-z0-9_.]+)" _MATCHED ${CONANINFO})
+            string(REGEX MATCHALL "compiler.version=([-A-Za-z0-9_.]+)" _MATCHED ${CONANINFO})
             if(DEFINED CMAKE_MATCH_1)
                 string(STRIP "${CMAKE_MATCH_1}" _CONAN_INFO_COMPILER_VERSION)
                 set(${CONAN_INFO_COMPILER_VERSION} ${_CONAN_INFO_COMPILER_VERSION} PARENT_SCOPE)
