@@ -6,7 +6,7 @@ from jinja2 import Template
 
 from conans.client.tools.oss import OSInfo
 from conans.model import Generator
-
+from conans.util.files import normalize
 
 sh_activate_tpl = Template(textwrap.dedent("""\
     #!/usr/bin/env sh
@@ -41,25 +41,25 @@ sh_deactivate_tpl = Template(textwrap.dedent("""\
 
 cmd_activate_tpl = Template(textwrap.dedent("""\
     @echo off
-    
+
     {%- for it in modified_vars %}
     SET "CONAN_OLD_{{it}}=%{{it}}%"
     {%- endfor %}
-    
+
     FOR /F "usebackq tokens=1,* delims==" %%i IN ("{{ environment_file }}") DO (
         CALL SET "%%i=%%j"
     )
-    
+
     SET "CONAN_OLD_PROMPT=%PROMPT%"
     SET "PROMPT=({{venv_name}}) %PROMPT%"
 """))
 
 cmd_deactivate_tpl = Template(textwrap.dedent("""\
     @echo off
-    
+
     SET "PROMPT=%CONAN_OLD_PROMPT%"
     SET "CONAN_OLD_PROMPT="
-    
+
     {% for it in modified_vars %}
     SET "{{it}}=%CONAN_OLD_{{it}}%"
     SET "CONAN_OLD_{{it}}="
@@ -73,13 +73,13 @@ ps1_activate_tpl = Template(textwrap.dedent("""\
     {%- for it in modified_vars %}
     $env:CONAN_OLD_{{it}}=$env:{{it}}
     {%- endfor %}
-    
+
     foreach ($line in Get-Content "{{ environment_file }}") {
         $var,$value = $line -split '=',2
         $value_expanded = $ExecutionContext.InvokeCommand.ExpandString($value)
         Set-Item env:\\$var -Value "$value_expanded"
     }
-    
+
     function global:_old_conan_prompt {""}
     $function:_old_conan_prompt = $function:prompt
     function global:prompt { write-host "({{venv_name}}) " -nonewline; & $function:_old_conan_prompt }
@@ -88,7 +88,7 @@ ps1_activate_tpl = Template(textwrap.dedent("""\
 ps1_deactivate_tpl = Template(textwrap.dedent("""\
     $function:prompt = $function:_old_conan_prompt
     remove-item function:_old_conan_prompt
-    
+
     {% for it in modified_vars %}
     $env:{{it}}=$env:CONAN_OLD_{{it}}
     Remove-Item env:CONAN_OLD_{{it}}
@@ -109,6 +109,7 @@ class VirtualEnvGenerator(Generator):
         super(VirtualEnvGenerator, self).__init__(conanfile)
         self.conanfile = conanfile
         self.env = conanfile.env
+        self.normalize = False
 
     @property
     def filename(self):
@@ -182,9 +183,22 @@ class VirtualEnvGenerator(Generator):
         deactivate_content = deactivate_tpl.render(modified_vars=modified_vars, new_vars=new_vars)
 
         environment_lines = ["{}={}".format(name, value) for name, value, _ in ret]
+        # This blank line is important, otherwise the script doens't process last line
         environment_lines.append('')
 
-        return activate_content, deactivate_content, os.linesep.join(environment_lines)
+        if platform.system() == "Windows":
+            if flavor == "sh":
+                activate_content = activate_content.replace("\\", "/")
+                deactivate_content = deactivate_content.replace("\\", "/")
+                environment = "\n".join(v.replace("\\", "/") for v in environment_lines)
+            else:
+                activate_content = normalize(activate_content)
+                deactivate_content = normalize(deactivate_content)
+                environment = os.linesep.join(environment_lines)
+        else:
+            environment = os.linesep.join(environment_lines)
+
+        return activate_content, deactivate_content, environment
 
     @property
     def content(self):
