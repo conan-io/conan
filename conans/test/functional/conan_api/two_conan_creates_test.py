@@ -4,7 +4,7 @@ import unittest
 from textwrap import dedent
 
 from conans.client.cache.cache import ClientCache
-from conans.client.conan_api import ConanAPIV1, ProfileData
+from conans.client.conan_api import ConanAPIV1
 from conans.client.tools.env import environment_append
 from conans.client.tools.files import chdir
 from conans.model.ref import PackageReference
@@ -36,12 +36,13 @@ class ConanCreateTest(unittest.TestCase):
                     return load(os.path.join(folder, "conaninfo.txt"))
 
                 settings = ["compiler=Visual Studio", "compiler.version=15", "build_type=Release"]
-                empty_profile = ProfileData(None, None, None, None)
-                info = api.create(".", name=None, version=None, user="conan", channel="stable", settings=settings)
+                info = api.create(".", name=None, version=None, user="conan", channel="stable",
+                                  settings=settings)
                 self.assertIn("compiler.runtime=MD", get_conaninfo(info))
 
                 settings = ["compiler=Visual Studio", "compiler.version=15", "build_type=Debug"]
-                info = api.create(".", name=None, version=None, user="conan", channel="stable", settings=settings)
+                info = api.create(".", name=None, version=None, user="conan", channel="stable",
+                                  settings=settings)
                 self.assertIn("compiler.runtime=MDd", get_conaninfo(info))
 
     def test_api_conanfile_loader_shouldnt_cache(self):
@@ -58,7 +59,6 @@ class ConanCreateTest(unittest.TestCase):
                             self.output.info("NUMBER 42!!")
                     """)
                 save("conanfile.py", conanfile)
-                empty_profile = ProfileData(None, None, None, None)
                 api.create(".", "pkg", "version", "user", "channel")
                 self.assertIn("pkg/version@user/channel: NUMBER 42!!", output)
                 save("conanfile.py", conanfile.replace("42", "123"))
