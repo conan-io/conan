@@ -3,7 +3,7 @@ import os
 from conans.client.rest.download_cache import CachedFileDownloader
 from conans.client.rest.uploader_downloader import FileDownloader
 from conans.client.tools.files import check_md5, check_sha1, check_sha256, unzip
-from conans.errors import ConanException, NotFoundException
+from conans.errors import ConanException, NotFoundException, ConanConnectionError
 from conans.util.fallbacks import default_output, default_requester
 
 
@@ -112,7 +112,7 @@ def download(url, filename, verify=True, out=None, retry=None, retry_wait=None, 
 
             out.writeln("")
             break
-        except (FileNotFoundError, ConnectionError, NotFoundException):
+        except (ConanConnectionError, NotFoundException):
             if (index + 1) == len(url):
                 raise
             out.warn("Could not download from the url {}. Using the next available url."
