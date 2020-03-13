@@ -149,7 +149,7 @@ class ConanFile(object):
 
         # needed variables to pack the project
         self.cpp_info = None  # Will be initialized at processing time
-        self._dep_cpp_info = None  # Will be initialized at processing time
+        self._conan_dep_cpp_info = None  # Will be initialized at processing time
         self.deps_cpp_info = DepsCppInfo()
 
         # environment variables declared in the package_info

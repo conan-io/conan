@@ -511,7 +511,7 @@ class BinaryInstaller(object):
 
             if not using_build_profile:  # Do not touch anything
                 conan_file.deps_user_info[n.ref.name] = n.conanfile.user_info
-                conan_file.deps_cpp_info.update(n.conanfile._dep_cpp_info, n.ref.name)
+                conan_file.deps_cpp_info.update(n.conanfile._conan_dep_cpp_info, n.ref.name)
                 conan_file.deps_env_info.update(n.conanfile.env_info, n.ref.name)
             else:
                 if n in transitive or n in br_host:
@@ -520,10 +520,10 @@ class BinaryInstaller(object):
                     env_info = EnvInfo()
                     env_info._values_ = n.conanfile.env_info._values_.copy()
                     # Add cpp_info.bin_paths/lib_paths to env_info (it is needed for runtime)
-                    env_info.DYLD_LIBRARY_PATH.extend(n.conanfile._dep_cpp_info.lib_paths)
-                    env_info.DYLD_LIBRARY_PATH.extend(n.conanfile._dep_cpp_info.framework_paths)
-                    env_info.LD_LIBRARY_PATH.extend(n.conanfile._dep_cpp_info.lib_paths)
-                    env_info.PATH.extend(n.conanfile._dep_cpp_info.bin_paths)
+                    env_info.DYLD_LIBRARY_PATH.extend(n.conanfile._conan_dep_cpp_info.lib_paths)
+                    env_info.DYLD_LIBRARY_PATH.extend(n.conanfile._conan_dep_cpp_info.framework_paths)
+                    env_info.LD_LIBRARY_PATH.extend(n.conanfile._conan_dep_cpp_info.lib_paths)
+                    env_info.PATH.extend(n.conanfile._conan_dep_cpp_info.bin_paths)
                     conan_file.deps_env_info.update(env_info, n.ref.name)
 
         # Update the info but filtering the package values that not apply to the subtree
@@ -557,5 +557,5 @@ class BinaryInstaller(object):
                     conanfile.package_info()
                     self._hook_manager.execute("post_package_info", conanfile=conanfile,
                                                reference=ref)
-        if conanfile._dep_cpp_info is None:
-            conanfile._dep_cpp_info = DepCppInfo(conanfile.cpp_info)
+        if conanfile._conan_dep_cpp_info is None:
+            conanfile._conan_dep_cpp_info = DepCppInfo(conanfile.cpp_info)
