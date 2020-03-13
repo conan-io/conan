@@ -515,7 +515,7 @@ class BinaryInstaller(object):
                 conan_file.deps_env_info.update(n.conanfile.env_info, n.ref.name)
             else:
                 if n in transitive or n in br_host:
-                    conan_file.deps_cpp_info.update(n.conanfile._dep_cpp_info, n.ref.name)
+                    conan_file.deps_cpp_info.update(n.conanfile._conan_dep_cpp_info, n.ref.name)
                 else:
                     env_info = EnvInfo()
                     env_info._values_ = n.conanfile.env_info._values_.copy()
