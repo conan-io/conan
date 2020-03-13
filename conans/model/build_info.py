@@ -278,20 +278,26 @@ class DepCppInfo(object):
         return [s for s in seq1 if s not in seq2] + seq2
 
     def _aggregated_values(self, item):
-        if getattr(self, "_%s" % item) is None:
-            values = getattr(self._cpp_info, item)
+        values = getattr(self, "_%s" % item)
+        if values is not None:
+            return values
+        values = getattr(self._cpp_info, item)
+        if self._cpp_info.components:
             for _, component in self._cpp_info.components.items():
                 values = self._merge_lists(values, getattr(component, item))
-            setattr(self, "_%s" % item, values)
-        return getattr(self, "_%s" % item)
+        setattr(self, "_%s" % item, values)
+        return values
 
     def _aggregated_paths(self, item):
-        if getattr(self, "_%s_paths" % item) is None:
-            values = getattr(self._cpp_info, "%s_paths" % item)
+        paths = getattr(self, "_%s_paths" % item)
+        if paths is not None:
+            return paths
+        paths = getattr(self._cpp_info, "%s_paths" % item)
+        if self._cpp_info.components:
             for _, component in self._cpp_info.components.items():
-                values = self._merge_lists(values, getattr(component, "%s_paths" % item))
-            setattr(self, "_%s_paths" % item, values)
-        return getattr(self, "_%s_paths" % item)
+                paths = self._merge_lists(paths, getattr(component, "%s_paths" % item))
+        setattr(self, "_%s_paths" % item, paths)
+        return paths
 
     @property
     def build_modules_paths(self):
