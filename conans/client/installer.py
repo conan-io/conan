@@ -15,7 +15,7 @@ from conans.client.source import complete_recipe_sources, config_source
 from conans.client.tools.env import pythonpath
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
                            conanfile_exception_formatter)
-from conans.model.build_info import CppInfo
+from conans.model.build_info import CppInfo, DepCppInfo
 from conans.model.conan_file import get_env_context_manager
 from conans.model.editable_layout import EditableLayout
 from conans.model.env_info import EnvInfo
@@ -488,7 +488,7 @@ class BinaryInstaller(object):
         for n in node_order:
             if n not in transitive:
                 conan_file.output.info("Applying build-requirement: %s" % str(n.ref))
-            conan_file.deps_cpp_info.update(n.conanfile.cpp_info, n.ref.name)
+            conan_file.deps_cpp_info.update(n.conanfile._dep_cpp_info, n.ref.name)
             conan_file.deps_env_info.update(n.conanfile.env_info, n.ref.name)
             conan_file.deps_user_info[n.ref.name] = n.conanfile.user_info
 
@@ -527,3 +527,5 @@ class BinaryInstaller(object):
                     conanfile.package_info()
                     self._hook_manager.execute("post_package_info", conanfile=conanfile,
                                                reference=ref)
+        if conanfile._dep_cpp_info is None:
+            conanfile._dep_cpp_info = DepCppInfo(conanfile.cpp_info)

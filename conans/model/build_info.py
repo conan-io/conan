@@ -391,9 +391,8 @@ class DepsCppInfo(_BaseDepsCppInfo):
         return self._dependencies[item]
 
     def update(self, cpp_info, pkg_name):
-        assert isinstance(cpp_info, CppInfo)
-        dep_cpp_info = DepCppInfo(cpp_info)
-        self._dependencies[pkg_name] = dep_cpp_info
-        super(DepsCppInfo, self).update(dep_cpp_info)
-        for config, cpp_info in dep_cpp_info.configs.items():
+        assert isinstance(cpp_info, (CppInfo, DepCppInfo))
+        self._dependencies[pkg_name] = cpp_info
+        super(DepsCppInfo, self).update(cpp_info)
+        for config, cpp_info in cpp_info.configs.items():
             self.configs.setdefault(config, _BaseDepsCppInfo()).update(cpp_info)

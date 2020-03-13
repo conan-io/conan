@@ -3,7 +3,7 @@ import os
 import unittest
 import warnings
 
-from conans.model.build_info import CppInfo, DepsCppInfo
+from conans.model.build_info import CppInfo, DepsCppInfo, DepCppInfo
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import mkdir
 
@@ -33,16 +33,16 @@ class CppInfoComponentsTest(unittest.TestCase):
         dep1.libs.append("libdep1")
         dep1.components["liba"].libs.append("liba")
         dep1.components["libb"].libs.append("libb")
-        deps_cpp_info.update(dep1, "dep1")
+        deps_cpp_info.update(DepCppInfo(dep1), "dep1")
 
         dep2 = CppInfo("root")
         dep2.components["libc"].libs.append("libc")
         dep2.components["libd"].libs.append("libd")
-        deps_cpp_info.update(dep2, "dep2")
+        deps_cpp_info.update(DepCppInfo(dep2), "dep2")
 
         dep3 = CppInfo("root")
         dep3.libs.append("libdep3")
-        deps_cpp_info.update(dep3, "dep3")
+        deps_cpp_info.update(DepCppInfo(dep3), "dep3")
 
         self.assertListEqual(["libdep1", "liba", "libb"], deps_cpp_info["dep1"].libs)
         self.assertListEqual(["libc", "libd"], deps_cpp_info["dep2"].libs)
@@ -59,7 +59,7 @@ class CppInfoComponentsTest(unittest.TestCase):
         dep1 = CppInfo(folder1)
         dep1.components["liba"].includedirs.append("includea")
         dep1.components["libb"].includedirs.append("includeb")
-        deps_cpp_info.update(dep1, "dep1")
+        deps_cpp_info.update(DepCppInfo(dep1), "dep1")
 
         folder2 = temp_folder()
         mkdir(os.path.join(folder2, "includec"))
@@ -67,7 +67,7 @@ class CppInfoComponentsTest(unittest.TestCase):
         dep2 = CppInfo(folder2)
         dep2.components["libc"].includedirs.append("includec")
         dep2.components["libd"].includedirs.append("included")
-        deps_cpp_info.update(dep2, "dep2")
+        deps_cpp_info.update(DepCppInfo(dep2), "dep2")
 
         self.assertListEqual([os.path.join(folder1, "includea"), os.path.join(folder1, "includeb")],
                              deps_cpp_info["dep1"].include_paths)
@@ -97,7 +97,7 @@ class CppInfoComponentsTest(unittest.TestCase):
         dep1.components["libb"].sharedlinkflags.append("slinkb")
         dep1.components["libb"].frameworks.append("frameworkb")
         dep1.components["libb"].exelinkflags.append("elinkb")
-        deps_cpp_info.update(dep1, "dep1")
+        deps_cpp_info.update(DepCppInfo(dep1), "dep1")
 
         dep2 = CppInfo("root")
         dep2.components["libc"].libs.append("libc")
@@ -109,7 +109,7 @@ class CppInfoComponentsTest(unittest.TestCase):
         dep2.components["libc"].sharedlinkflags = ["slinkc"]
         dep2.components["libd"].sharedlinkflags = ["slinkd"]
         dep2.frameworks = ["frameworkdep2"]
-        deps_cpp_info.update(dep2, "dep2")
+        deps_cpp_info.update(DepCppInfo(dep2), "dep2")
 
         self.assertListEqual(["liba", "libb"], deps_cpp_info["dep1"].libs)
         self.assertListEqual(["libc", "libd"], deps_cpp_info["dep2"].libs)
@@ -154,7 +154,7 @@ class CppInfoComponentsTest(unittest.TestCase):
             dep1.release.components["libb"].libs.append("libb")
         with self.assertRaises(AttributeError):
             dep1.debug.components["libb"].libs.append("libb_d")
-        deps_cpp_info.update(dep1, "dep1")
+        deps_cpp_info.update(DepCppInfo(dep1), "dep1")
 
         dep2 = CppInfo("root")
         dep2.release.libs.append("libdep2")
@@ -165,7 +165,7 @@ class CppInfoComponentsTest(unittest.TestCase):
             dep2.components["libc"].debug.libs.append("libc_d")
         dep2.components["libc"].libs.append("libc")
         dep2.components["libc"].libs.append("libc2")
-        deps_cpp_info.update(dep2, "dep2")
+        deps_cpp_info.update(DepCppInfo(dep2), "dep2")
 
         self.assertListEqual(["liba"], deps_cpp_info["dep1"].libs)
         self.assertListEqual(["libc", "libc2"], deps_cpp_info["dep2"].libs)
