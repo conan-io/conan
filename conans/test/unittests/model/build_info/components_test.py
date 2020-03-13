@@ -5,7 +5,6 @@ import warnings
 
 from conans.model.build_info import CppInfo, DepsCppInfo, DepCppInfo
 from conans.test.utils.test_files import temp_folder
-from conans.util.files import mkdir
 
 
 class CppInfoComponentsTest(unittest.TestCase):
@@ -54,16 +53,12 @@ class CppInfoComponentsTest(unittest.TestCase):
         deps_cpp_info = DepsCppInfo()
 
         folder1 = temp_folder()
-        mkdir(os.path.join(folder1, "includea"))
-        mkdir(os.path.join(folder1, "includeb"))
         dep1 = CppInfo(folder1)
         dep1.components["liba"].includedirs.append("includea")
         dep1.components["libb"].includedirs.append("includeb")
         deps_cpp_info.update(DepCppInfo(dep1), "dep1")
 
         folder2 = temp_folder()
-        mkdir(os.path.join(folder2, "includec"))
-        mkdir(os.path.join(folder2, "included"))
         dep2 = CppInfo(folder2)
         dep2.components["libc"].includedirs.append("includec")
         dep2.components["libd"].includedirs.append("included")

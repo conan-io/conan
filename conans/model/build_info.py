@@ -141,6 +141,7 @@ class Component(_CppInfo):
     def __init__(self, root_folder):
         super(Component, self).__init__()
         self.rootpath = root_folder
+        self.filter_empty = False
 
 
 class CppInfo(_CppInfo):
