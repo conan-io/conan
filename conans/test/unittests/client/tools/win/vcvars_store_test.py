@@ -14,13 +14,11 @@ from conans.test.utils.tools import TestBufferConanOutput
 
 
 @attr('visual_studio')
+@unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
 class VCVarsStoreTest(unittest.TestCase):
     output = TestBufferConanOutput()
 
     def test_81(self):
-        if platform.system() != "Windows":
-            return
-
         settings = Settings.loads(get_default_settings_yml())
         settings.compiler = 'Visual Studio'
         settings.compiler.version = '14'
@@ -35,8 +33,6 @@ class VCVarsStoreTest(unittest.TestCase):
         self.assertIn('8.1', command)
 
     def test_10(self):
-        if platform.system() != "Windows":
-            return
         sdk_version = tools.find_windows_10_sdk()
         if not sdk_version:
             return
@@ -55,9 +51,6 @@ class VCVarsStoreTest(unittest.TestCase):
         self.assertIn(sdk_version, command)
 
     def test_invalid(self):
-        if platform.system() != "Windows":
-            return
-
         fake_settings_yml = """
         os:
             WindowsStore:
