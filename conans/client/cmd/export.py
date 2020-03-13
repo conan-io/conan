@@ -9,7 +9,7 @@ import yaml
 from conans.client.file_copier import FileCopier
 from conans.client.output import Color, ScopedOutput
 from conans.client.remover import DiskRemover
-from conans.errors import ConanException
+from conans.errors import ConanException, ConanV2Exception
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference
 from conans.model.scm import SCM, get_scm_data
@@ -20,6 +20,7 @@ from conans.util.files import is_dirty, load, rmdir, save, set_dirty, remove, mk
 from conans.util.log import logger
 
 isPY38 = bool(sys.version_info.major == 3 and sys.version_info.minor == 8)
+
 
 def export_alias(package_layout, target_ref, output, revisions_enabled):
     revision_mode = "hash"
@@ -69,11 +70,15 @@ def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
     # Take the default from the env vars if they exist to not break behavior
     try:
         user = conanfile.user
+    except ConanV2Exception:
+        raise
     except ConanException:
         user = None
 
     try:
         channel = conanfile.channel
+    except ConanV2Exception:
+        raise
     except ConanException:
         channel = None
 

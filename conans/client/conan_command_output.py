@@ -194,7 +194,7 @@ class CommandOutputer(object):
 
             depends = node.neighbors()
             requires = [d for d in depends if d not in build_time_nodes]
-            build_requires = [d for d in depends if d in build_time_nodes]
+            build_requires = [d for d in depends if d in build_time_nodes]  # TODO: May use build_require_context information
 
             if requires:
                 item_data["requires"] = [repr(d.ref.copy_clear_rev()) for d in requires]

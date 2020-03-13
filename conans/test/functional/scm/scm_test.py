@@ -307,7 +307,8 @@ other_folder/excluded_subfolder
         # myfile2 is no in the specified commit
         self.assertFalse(os.path.exists(os.path.join(curdir, "source2", "myfile2.txt")))
         self.assertTrue(os.path.exists(os.path.join(curdir, "source2", "myfile.txt")))
-        self.assertIn("SCM: Getting sources from url: '%s'" % curdir.replace("\\", "/"), self.client.out)
+        self.assertIn("SCM: Getting sources from url: '%s'" % curdir.replace("\\", "/"),
+                      self.client.out)
         self.assertIn("SOURCE METHOD CALLED", self.client.out)
 
     def test_local_source_subfolder(self):
@@ -964,27 +965,6 @@ class ConanLib(ConanFile):
             self.assertNotIn('"revision": "auto"', conanfile_contents)
             self.assertNotIn('"url": "auto"', conanfile_contents)
 
-    def test_upload_blocking_auto(self):
-        self.client = TestClient(default_server_user=True)
-        conanfile = base_git.format(revision="auto", url='"auto"')
-        self.client.save({"conanfile.py": conanfile, "myfile.txt": "My file is copied"})
-        create_local_git_repo(folder=self.client.current_folder)
-        self.client.run_command('git remote add origin https://myrepo.com.git')
-        # Dirty file
-        self.client.save({"dirty": "you dirty contents"})
-        self.client.run("create . user/channel")
-        self.assertIn("WARN: There are uncommitted changes, skipping the replacement "
-                      "of 'scm.url' and 'scm.revision' auto fields. "
-                      "Use --ignore-dirty to force it.", self.client.out)
-        # The upload has to fail, no "auto" fields are allowed
-        self.client.run("upload lib/0.1@user/channel -r default", assert_error=True)
-        self.assertIn("ERROR: lib/0.1@user/channel: Upload recipe to 'default' failed: "
-                      "The recipe has 'scm.url' or 'scm.revision' with 'auto' values. "
-                      "Use '--force' to ignore", self.client.out)
-        # The upload with --force should work
-        self.client.run("upload lib/0.1@user/channel -r default --force")
-        self.assertIn("Uploaded conan recipe", self.client.out)
-
     def test_double_create(self):
         # https://github.com/conan-io/conan/issues/5195#issuecomment-551848955
         self.client = TestClient(default_server_user=True)
@@ -1033,3 +1013,27 @@ class SCMSVNWithLockedFilesTest(SVNLocalRepoTestCase):
         client.run_command('svn commit -m "lock some files"')
 
         client.run("export . user/channel")
+
+
+class SCMBlockUploadTest(unittest.TestCase):
+
+    def test_upload_blocking_auto(self):
+        client = TestClient(default_server_user=True)
+        conanfile = base_git.format(revision="auto", url='"auto"')
+        client.save({"conanfile.py": conanfile, "myfile.txt": "My file is copied"})
+        create_local_git_repo(folder=client.current_folder)
+        client.run_command('git remote add origin https://myrepo.com.git')
+        # Dirty file
+        client.save({"dirty": "you dirty contents"})
+        client.run("create . user/channel")
+        self.assertIn("WARN: There are uncommitted changes, skipping the replacement "
+                      "of 'scm.url' and 'scm.revision' auto fields. "
+                      "Use --ignore-dirty to force it.", client.out)
+        # The upload has to fail, no "auto" fields are allowed
+        client.run("upload lib/0.1@user/channel -r default", assert_error=True)
+        self.assertIn("ERROR: lib/0.1@user/channel: Upload recipe to 'default' failed: "
+                      "The recipe has 'scm.url' or 'scm.revision' with 'auto' values. "
+                      "Use '--force' to ignore", client.out)
+        # The upload with --force should work
+        client.run("upload lib/0.1@user/channel -r default --force")
+        self.assertIn("Uploaded conan recipe", client.out)

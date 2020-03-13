@@ -1778,7 +1778,7 @@ class Command(object):
         build_order_cmd = subparsers.add_parser('build-order', help='Returns build-order')
         build_order_cmd.add_argument('lockfile', help='lockfile folder')
         build_order_cmd.add_argument("-b", "--build", action=Extender, nargs="?",
-                                     help="nodes to build")
+                                     help=_help_build_policies.format("never"))
         build_order_cmd.add_argument("--json", action=OnceArgument,
                                      help="generate output file in json format")
 
