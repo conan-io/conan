@@ -20,7 +20,7 @@ from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServ
     TurboTestClient, GenConanfile, TestRequester, TestingResponse
 from conans.util.env_reader import get_env
 
-from conans.util.files import gzopen_without_timestamps, is_dirty, save
+from conans.util.files import gzopen_without_timestamps, is_dirty, save, set_dirty
 
 conanfile = """from conans import ConanFile
 class MyPkg(ConanFile):
@@ -45,6 +45,27 @@ class MyPkg(ConanFile):
 
 
 class UploadTest(unittest.TestCase):
+
+    def upload_dirty_test(self):
+        test_server = TestServer([], users={"lasote": "mypass"})
+        client = TestClient(servers={"default": test_server},
+                            users={"default": [("lasote", "mypass")]})
+        client.save({"conanfile.py": GenConanfile().with_name("Hello").with_version("0.1")})
+        client.run("create . lasote/testing")
+        ref = ConanFileReference.loads("Hello/0.1@lasote/testing")
+        pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
+        package_folder = client.cache.package_layout(pref.ref).package(pref)
+        set_dirty(package_folder)
+
+        client.run("upload * --all --confirm", assert_error=True)
+        self.assertIn("ERROR: Hello/0.1@lasote/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9: "
+                      "Upload package to 'default' failed: Package %s is corrupted, aborting upload"
+                      % str(pref), client.out)
+        self.assertIn("Remove it with 'conan remove Hello/0.1@lasote/testing -p=%s'"
+                      % NO_SETTINGS_PACKAGE_ID, client.out)
+
+        client.run("remove Hello/0.1@lasote/testing -p=%s -f" % NO_SETTINGS_PACKAGE_ID)
+        client.run("upload * --all --confirm")
 
     @attr("artifactory_ready")
     def test_upload_force(self):
@@ -777,7 +798,7 @@ class MyPkg(ConanFile):
             package_sha1)
         self.assertEqual(metadata.recipe.checksums["conanfile.py"]["md5"], recipe_md5)
         self.assertEqual(metadata.recipe.checksums["conanfile.py"]["sha1"], recipe_sha1)
-        
+
     def upload_without_cleaned_user_test(self):
         """ When a user is not authenticated, uploads failed first time
         https://github.com/conan-io/conan/issues/5878
