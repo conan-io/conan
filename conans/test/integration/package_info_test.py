@@ -20,12 +20,12 @@ class HelloConan(ConanFile):
     options = {"switch": ["1",  "0"]}
     default_options = "switch=0"
     %s
-    
+
     def build(self):
         self.output.warn("Env var MYVAR={0}.".format(os.getenv("MYVAR", "")))
 
     def package_info(self):
-        if self.options.switch == "0": 
+        if self.options.switch == "0":
             self.env_info.MYVAR = "foo"
         else:
             self.env_info.MYVAR = "bar"
@@ -50,9 +50,7 @@ class HelloConan(ConanFile):
 
     def package_info_name_test(self):
         dep = textwrap.dedent("""
-            import os
             from conans import ConanFile
-
 
             class Dep(ConanFile):
 
@@ -60,16 +58,13 @@ class HelloConan(ConanFile):
                     self.cpp_info.name = "MyCustomGreatName"
                 """)
         intermediate = textwrap.dedent("""
-            import os
             from conans import ConanFile
-
 
             class Intermediate(ConanFile):
                 requires = "dep/1.0@us/ch"
                 """)
         consumer = textwrap.dedent("""
             from conans import ConanFile
-
 
             class Consumer(ConanFile):
                 requires = "intermediate/1.0@us/ch"

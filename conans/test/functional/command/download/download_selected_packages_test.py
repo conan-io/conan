@@ -8,7 +8,7 @@ from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import load
 
 
-class InstallSelectedPackagesTest(unittest.TestCase):
+class DownloadSelectedPackagesTest(unittest.TestCase):
 
     def setUp(self):
         test_server = TestServer()
