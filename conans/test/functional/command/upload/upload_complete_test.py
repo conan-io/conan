@@ -16,20 +16,12 @@ from conans.model.manifest import FileTreeManifest
 from conans.model.package_metadata import PackageMetadata
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE, CONANINFO, CONAN_MANIFEST, EXPORT_TGZ_NAME
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files
-from conans.test.utils.test_files import hello_conan_files, hello_source_files, temp_folder, \
+from conans.test.utils.cpp_test_files import cpp_hello_conan_files, cpp_hello_source_files
+from conans.test.utils.test_files import hello_conan_files, temp_folder, \
     uncompress_packaged_files
 from conans.test.utils.tools import (NO_SETTINGS_PACKAGE_ID, TestClient, TestRequester, TestServer,
                                      MockedUserIO, TestBufferConanOutput, GenConanfile)
 from conans.util.files import load, mkdir, save
-
-myconan1 = """
-from conans import ConanFile
-
-class HelloConan(ConanFile):
-    name = "Hello"
-    version = "1.2.1"
-"""
 
 
 class BadConnectionUploader(TestRequester):
@@ -99,7 +91,7 @@ class UploadTest(unittest.TestCase):
         self.client.run('upload %s' % str(self.ref), assert_error=True)
         self.assertIn("ERROR: Recipe not found: '%s'" % str(self.ref), self.client.out)
 
-        files = hello_source_files()
+        files = cpp_hello_source_files()
 
         fake_metadata = PackageMetadata()
         fake_metadata.recipe.revision = DEFAULT_REVISION_V1
@@ -107,7 +99,7 @@ class UploadTest(unittest.TestCase):
         self.client.save({"metadata.json": fake_metadata.dumps()},
                          path=self.client.cache.package_layout(self.ref).base_folder())
         self.client.save(files, path=reg_folder)
-        self.client.save({CONANFILE: myconan1,
+        self.client.save({CONANFILE: GenConanfile().with_name("Hello").with_version("1.2.1"),
                           "include/math/lib1.h": "//copy",
                           "my_lib/debug/libd.a": "//copy",
                           "my_data/readme.txt": "//copy",

@@ -15,7 +15,8 @@ from conans.server.service.v1.service import ConanService
 from conans.server.service.v1.upload_download_service import FileUploadDownloadService
 from conans.server.store.disk_adapter import ServerDiskAdapter
 from conans.server.store.server_store import ServerStore
-from conans.test.utils.test_files import hello_source_files, temp_folder
+from conans.test.utils.cpp_test_files import cpp_hello_source_files
+from conans.test.utils.test_files import temp_folder
 from conans.util.files import load, md5sum, mkdir, save, save_files
 
 
@@ -93,14 +94,14 @@ class ConanServiceTest(unittest.TestCase):
         self.service = ConanService(authorizer, self.server_store, "lasote")
         self.search_service = SearchService(authorizer, self.server_store, "lasote")
 
-        files = hello_source_files("test")
+        files = cpp_hello_source_files("test")
         save_files(self.server_store.export(self.ref), files)
         self.server_store.update_last_revision(self.ref)
         self.conan_digest = FileTreeManifest.create(self.server_store.export(self.ref))
         conan_digest_path = os.path.join(self.server_store.export(self.ref), CONAN_MANIFEST)
         save(conan_digest_path, str(self.conan_digest))
 
-        files = hello_source_files("package")
+        files = cpp_hello_source_files("package")
         save_files(self.server_store.package(self.pref), files)
 
     def test_get_recipe_snapshot(self):

@@ -892,6 +892,9 @@ servers["r2"] = TestServer()
             else:
                 shutil.copy2(s, d)
 
+    def remove_all(self):
+        self.run("remove '*' -f")
+
 
 class GenConanfile(object):
     """
@@ -1260,9 +1263,6 @@ class TurboTestClient(TestClient):
             remote_rrev, _ = self.servers[remote].server_store.get_last_revision(ref)
             return ref.copy_with_rev(remote_rrev)
         return
-
-    def remove_all(self):
-        self.run("remove '*' -f")
 
     def export_pkg(self, ref, conanfile=GenConanfile(), args=None, assert_error=False):
         if conanfile:
