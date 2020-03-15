@@ -48,14 +48,9 @@ class TestPackageTest(unittest.TestCase):
         self.assertNotIn("Hello/0.2", client.out)
 
     def other_requirements_test(self):
-        test_conanfile = '''
-from conans import ConanFile
-
-class TestConanLib(ConanFile):
-    requires = "other/0.2@user2/channel2", "Hello/0.1@user/channel"
-    def test(self):
-        pass
-'''
+        test_conanfile = (GenConanfile().with_require_plain("other/0.2@user2/channel2")
+                                        .with_require_plain("Hello/0.1@user/channel")
+                                        .with_test("pass"))
         client = TestClient()
         other_conanfile = GenConanfile().with_name("other").with_version("0.2")
         client.save({CONANFILE: other_conanfile})
