@@ -3,7 +3,6 @@ import unittest
 
 from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient
-from conans.util.files import load
 
 
 class OrderLibsTest(unittest.TestCase):
