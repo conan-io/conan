@@ -30,7 +30,7 @@ from conans.client.cache.remote_registry import Remotes
 from conans.client.command import Command
 from conans.client.conan_api import Conan
 from conans.client.output import ConanOutput
-from conans.client.rest.uploader_downloader import IterableToFileAdapter
+from conans.client.rest.file_uploader import IterableToFileAdapter
 from conans.client.runner import ConanRunner
 from conans.client.tools import environment_append
 from conans.client.tools.files import chdir

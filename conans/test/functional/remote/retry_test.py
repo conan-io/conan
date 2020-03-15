@@ -7,7 +7,7 @@ from collections import namedtuple, Counter
 import six
 from requests.exceptions import HTTPError
 
-from conans.client.rest.uploader_downloader import FileUploader
+from conans.client.rest.file_uploader import FileUploader
 from conans.errors import AuthenticationException, ForbiddenException
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestBufferConanOutput
