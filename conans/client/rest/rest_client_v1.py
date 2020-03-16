@@ -9,7 +9,7 @@ from conans.client.rest.client_routes import ClientV1Router
 from conans.client.rest.download_cache import CachedFileDownloader
 from conans.client.rest.file_uploader import FileUploader
 from conans.client.rest.rest_client_common import RestCommonMethods, handle_return_deserializer
-from conans.client.rest.uploader_downloader import FileDownloader
+from conans.client.rest.file_downloader import FileDownloader
 from conans.errors import ConanException, NotFoundException, NoRestV2Available, \
     PackageNotFoundException
 from conans.model.info import ConanInfo
