@@ -22,10 +22,6 @@ from conans.model.ref import ConanFileReference
 def init(output, **kwargs):
     output.info("init")
 
-def post_command(output, command, **kwargs):
-    assert command
-    output.info("command=%s" % command)
-
 def pre_export(output, conanfile, conanfile_path, reference, **kwargs):
     assert conanfile
     output.info("conanfile_path=%s" % conanfile_path)
