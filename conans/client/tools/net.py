@@ -14,7 +14,7 @@ def get(url, md5='', sha1='', sha256='', destination=".", filename="", keep_perm
     """
 
     url = [url] if isinstance(url, str) else url
-    if not filename and "?" in url[0] or "=" in url[0]:
+    if not filename and ("?" in url[0] or "=" in url[0]):
             raise ConanException("Cannot deduce file name from the url: '{}'. Use 'filename' "
                                  "parameter.".format(url[0]))
     filename = filename or os.path.basename(url[0])
@@ -99,8 +99,10 @@ def download(url, filename, verify=True, out=None, retry=None, retry_wait=None, 
         try:
             # The download cache is only used if a checksum is provided, otherwise, a normal download
             if config and config.download_cache and checksum:
+
                 def _checksum(checksums):
                     return checksums[index] if index < len(checksums) else checksums[0]
+
                 downloader = CachedFileDownloader(config.download_cache, downloader, user_download=True)
                 downloader.download(url_it, filename, retry=retry, retry_wait=retry_wait,
                                     overwrite=overwrite, auth=auth, headers=headers, md5=_checksum(md5),

@@ -745,9 +745,10 @@ class HelloConan(ConanFile):
 
         out = TestBufferConanOutput()
         # Test: File name cannot be deduced from '?file=1'
-        with six.assertRaisesRegex(self, ConanException,
-                                   "Cannot deduce file name from url. Use 'filename' parameter."):
+        with self.assertRaises(ConanException) as error:
             tools.get("http://localhost:%s/?file=1" % thread.port, output=out)
+        self.assertIn("Cannot deduce file name from the url: 'http://localhost:{}/?file=1'."
+                      " Use 'filename' parameter.".format(thread.port), str(error.exception))
 
         # Test: Works with filename parameter instead of '?file=1'
         with tools.chdir(tools.mkdir_tmp()):
