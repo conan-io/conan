@@ -99,10 +99,12 @@ def download(url, filename, verify=True, out=None, retry=None, retry_wait=None, 
         try:
             # The download cache is only used if a checksum is provided, otherwise, a normal download
             if config and config.download_cache and checksum:
+                def _checksum(checksums):
+                    return checksums[index] if index < len(checksums) else checksums[0]
                 downloader = CachedFileDownloader(config.download_cache, downloader, user_download=True)
                 downloader.download(url_it, filename, retry=retry, retry_wait=retry_wait,
-                                    overwrite=overwrite, auth=auth, headers=headers, md5=md5[index],
-                                    sha1=sha1[index], sha256=sha256[index])
+                                    overwrite=overwrite, auth=auth, headers=headers, md5=_checksum(md5),
+                                    sha1=_checksum(sha1), sha256=_checksum(sha256))
             else:
                 downloader.download(url_it, filename, retry=retry, retry_wait=retry_wait,
                                     overwrite=overwrite, auth=auth, headers=headers)
