@@ -485,7 +485,7 @@ def init(output, **kwargs):
         if timestamp_seconds < seconds:
             return False
 
-        os.utime(file_timestamp_path)
+        os.utime(file_timestamp_path, None)
         return True
 
     if not timeout(1):
