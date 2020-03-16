@@ -441,3 +441,34 @@ class HookTest(unittest.TestCase):
         client.run("export . danimtb/testing")
         self.assertIn("[HOOK - my_hook/my_hook.py] pre_export(): my_printer(): CUSTOM MODULE",
                       client.out)
+
+    def recursive_hook_test(self):
+        client = TestClient()
+        recursive_hook = """
+from conans.client.conan_api import Conan
+import os
+
+counter = 0
+
+def init(output, **kwargs):
+    global counter
+    counter = counter + 1
+    output.info("%x counter: %s" % (id(counter), counter))
+    if counter > 10:
+        return
+
+    conan_api = Conan(cache_folder="%CACHE_FOLDER%")
+    conan_api.create_app()
+    conan_api.config_home()
+""".replace("%CACHE_FOLDER%", client.cache_folder.replace("\\", "/"))
+        hook_path = os.path.join(client.cache.hooks_path, "recursive_hook",
+                                 "recursive_hook.py")
+        client.save({hook_path: recursive_hook, "conanfile.py": conanfile_basic})
+        client.run("config set hooks.recursive_hook/recursive_hook.py")
+        client.run("config home")
+        self.assertIn("[HOOK - recursive_hook/recursive_hook.py] init(): counter: 1",
+                      client.out)
+        self.assertNotIn("[HOOK - recursive_hook/recursive_hook.py] init(): counter: 2",
+                         client.out)
+        self.assertNotIn("""[HOOK - recursive_hook/recursive_hook.py] init(): counter: 1
+[HOOK - recursive_hook/recursive_hook.py] init(): counter: 1""", client.out)
