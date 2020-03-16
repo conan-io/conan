@@ -5,20 +5,15 @@ import platform
 import shutil
 import tempfile
 import unittest
-import copy
 
 import six
 
 from conans.client.tools import chdir
 from conans.client.tools import net
 from conans.errors import ConanException
-from conans.test.utils.tools import TestBufferConanOutput
 
 
 class ToolsNetTest(unittest.TestCase):
-
-    def setUp(self):
-        self.output = TestBufferConanOutput()
 
     def run(self, *args, **kwargs):
         self.tmp_folder = tempfile.mkdtemp()
@@ -50,47 +45,3 @@ class ToolsNetTest(unittest.TestCase):
         with six.assertRaisesRegex(self, ConanException, "530 User cannot log in."):
             net.ftp_download("test.rebex.net", "readme.txt", "demo", "invalid")
         self.assertFalse(os.path.exists("readme.txt"))
-
-    def test_ftp_download_list(self):
-        """ Must download only the first URL and ignore all mirrors """
-        logins = ["demo"] * 3
-        passwords = ["password"] * 3
-        urls = ["test.rebex.net"] * 3
-        filenames = ["/pub/example/" + it for it in ("readme.txt", "winceclient.png", "winceclientSmall.png")]
-        net.ftp_download(urls, filenames, logins, passwords, self.output)
-        self.assertTrue(os.path.exists(os.path.basename(filenames[0])))
-        self.assertFalse(os.path.exists(os.path.basename(filenames[1])))
-        self.assertFalse(os.path.exists(os.path.basename(filenames[2])))
-        self.assertNotIn("Could not download", str(self.output))
-
-    def test_ftp_download_from_mirror(self):
-        """ Must download only the third URL and ignore the last one """
-        logins = ["demo"] * 4
-        passwords = ["password"] * 4
-        urls = ["test.rebex.net"] * 4
-        filenames = ["/pub/example/" + it for it in ("foobar.txt", "couse.png", "winceclientSmall.png", "mail-editor.png")]
-        net.ftp_download(urls, copy.copy(filenames), logins, passwords, self.output)
-        self.assertFalse(os.path.exists(os.path.basename(filenames[0])))
-        self.assertFalse(os.path.exists(os.path.basename(filenames[1])))
-        self.assertTrue(os.path.exists(os.path.basename(filenames[2])))
-        self.assertFalse(os.path.exists(os.path.basename(filenames[3])))
-        self.assertIn("WARN: Could not download the file foobar.txt from "
-                      "test.rebex.net. Trying a new mirror.", str(self.output))
-        self.assertIn("WARN: Could not download the file couse.png from "
-                      "test.rebex.net. Trying a new mirror.", str(self.output))
-        self.assertNotIn("winceclientSmall.png", str(self.output))
-        self.assertNotIn("mail-editor.png", str(self.output))
-
-    def test_ftp_download_error_mirror(self):
-        """ Must fail to download all files """
-        logins = ["demo"] * 4
-        passwords = ["password"] * 4
-        urls = ["test.rebex.net"] * 4
-        filenames = ["/pub/example/" + it for it in ("foobar.txt", "couse.png", "qux.png", "blah.png")]
-        with self.assertRaises(ConanException) as error:
-            net.ftp_download(urls, copy.copy(filenames), logins, passwords, self.output)
-        for filename in filenames:
-            self.assertFalse(os.path.exists(os.path.basename(filename)))
-            self.assertIn("WARN: Could not download the file", str(self.output))
-            self.assertIn("Error in FTP download from test.rebex.net\n"
-                          "550 The system cannot find the file specified.", str(error.exception))

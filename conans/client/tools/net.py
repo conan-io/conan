@@ -1,5 +1,4 @@
 import os
-import copy
 
 from conans.client.rest.download_cache import CachedFileDownloader
 from conans.client.rest.uploader_downloader import FileDownloader
@@ -25,53 +24,27 @@ def get(url, md5='', sha1='', sha256='', destination=".", filename="", keep_perm
     os.unlink(filename)
 
 
-def ftp_download(ip, filename, login='', password='', output=None):
-    """ Retrieves a file from an FTP server
-
-    :param ip: The IP or address of the ftp server. It can be a list, which only the first one will
-               be downloaded, and the follow URLs will be used as mirror in case of download error.
-    :param filename: The filename, including the path/folder where it is located. It can be a list,
-                     which only the first one will be downloaded, and the follow URLs will be used
-                     as mirror in case of download error.
-    :param login: Login credentials for the ftp server. It can be a list, which only the first one
-                  will be downloaded, and the follow URLs will be used as mirror in case of download
-                  error.
-    :param password: Password credentials for the ftp server. It can be a list,
-                     which only the first one will be downloaded, and the follow URLs will be used
-                     as mirror in case of download error.
-    :param output: An object with a write() method can be passed to get the output
-    :return: None
-    """
-    output = default_output(output, 'conans.client.tools.net.ftp_download')
-    ips = [ip] if isinstance(ip, str) else ip
-    filenames = copy.copy([filename]) if isinstance(filename, str) else copy.copy(filename)
-    logins = [login] if isinstance(login, str) else login
-    passwords = [password] if isinstance(password, str) else password
+def ftp_download(ip, filename, login='', password=''):
     import ftplib
-    for index, ip_it in enumerate(ips):
+    try:
+        ftp = ftplib.FTP(ip)
+        ftp.login(login, password)
+        filepath, filename = os.path.split(filename)
+        if filepath:
+            ftp.cwd(filepath)
+        with open(filename, 'wb') as f:
+            ftp.retrbinary('RETR ' + filename, f.write)
+    except Exception as e:
         try:
-            ftp = ftplib.FTP(ip_it)
-            ftp.login(logins[index], passwords[index])
-            filepath, filename = os.path.split(filenames[index])
-            if filepath:
-                ftp.cwd(filepath)
-            with open(filename, 'wb') as f:
-                ftp.retrbinary('RETR ' + filename, f.write)
-            break
-        except Exception as e:
-            try:
-                os.unlink(filename)
-            except OSError:
-                pass
-            if (index + 1) == len(ips):
-                raise ConanException("Error in FTP download from {}\n{}".format(ip_it, str(e)))
-            output.warn("Could not download the file {} from {}. Trying a new mirror."
-                        .format(filename, ip_it))
-        finally:
-            try:
-                ftp.quit()
-            except Exception:
-                pass
+            os.unlink(filename)
+        except OSError:
+            pass
+        raise ConanException("Error in FTP download from %s\n%s" % (ip, str(e)))
+    finally:
+        try:
+            ftp.quit()
+        except Exception:
+            pass
 
 
 def download(url, filename, verify=True, out=None, retry=None, retry_wait=None, overwrite=False,
@@ -80,8 +53,8 @@ def download(url, filename, verify=True, out=None, retry=None, retry_wait=None, 
        It uses certificates from a list of known verifiers for https downloads,
        but this can be optionally disabled.
 
-    :param url: URL to download. It can be a list, which only the first one will be downloaded, and
-                the follow URLs will be used as mirror in case of download error.
+    :param url: URL to download. It can be a list, which only the first one will downloaded, and the
+                follow URLs will be used as mirror in case of download error.
     :param filename: Name of the file to be created in the local storage
     :param verify: When False, disables https certificate validation
     :param out: An object with a write() method can be passed to get the output. stdout will use if
