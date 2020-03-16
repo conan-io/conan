@@ -5,10 +5,13 @@ import uuid
 from collections import defaultdict
 from threading import Lock
 
+import fasteners
+
 from conans.client.output import ScopedOutput
 from conans.client.tools.files import chdir
 from conans.errors import ConanException, NotFoundException
 from conans.util.files import save
+from conans.util.log import logger
 
 attribute_checker_hook = """
 def pre_export(output, conanfile, conanfile_path, reference, **kwargs):
@@ -59,11 +62,20 @@ class HookManager(object):
         assert method_name in valid_hook_methods, \
             "Method '{}' not in valid hooks methods".format(method_name)
         for name, method in self.hooks[method_name]:
+            # Protect from recursive interprocess calls
+            lockfile = os.path.join(self._hooks_folder, name + ".lock")
+            lock = fasteners.InterProcessLock(lockfile, logger=logger)
+            gotten = lock.acquire(blocking=False)
+            if not gotten:
+                continue
             try:
                 output = ScopedOutput("[HOOK - %s] %s()" % (name, method_name), self.output)
                 method(output=output, **kwargs)
             except Exception as e:
                 raise ConanException("[HOOK - %s] %s(): %s" % (name, method_name, str(e)))
+            finally:
+                lock.release()
+                os.remove(lockfile)
 
     def load_hooks(self):
         for name in self._hook_names:
