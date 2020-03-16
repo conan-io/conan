@@ -75,7 +75,6 @@ class HookManager(object):
                 raise ConanException("[HOOK - %s] %s(): %s" % (name, method_name, str(e)))
             finally:
                 lock.release()
-                os.remove(lockfile)
 
     def load_hooks(self):
         for name in self._hook_names:
