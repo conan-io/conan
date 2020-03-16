@@ -813,6 +813,85 @@ class HelloConan(ConanFile):
 
         thread.stop()
 
+    @attr('slow')
+    @attr('local_bottle')
+    def test_get_mirror(self):
+        """ tools.get must supports a list of URLs. However, only one must be downloaded.
+        """
+
+        import gzip
+        # Create a tar file to be downloaded from server
+        tmp = temp_folder()
+        files = ["test.txt.gz", "foo.txt.gz", "bar.txt.gz"]
+        checksums = {"md5":[], "sha1": [], "sha256": []}
+        for file in files:
+            filepath = os.path.join(tmp, file)
+            with gzip.open(filepath, "wb") as f:
+                f.write(file.encode())
+            checksums["md5"].append(md5sum(filepath))
+            checksums["sha1"].append(sha1sum(filepath))
+            checksums["sha256"].append(sha256sum(filepath))
+
+        thread = StoppableThreadBottle()
+
+        @thread.server.get("/<file>")
+        def get_file(file):
+            #if file not in files:
+            #    raise FileNotFoundError("Could not find {}".format(file))
+            return static_file(file, root=tmp, mimetype="application/octet-stream")
+
+        thread.run_server()
+        out = TestBufferConanOutput()
+        urls = ["http://localhost:{}/{}".format(thread.port, i) for i in files]
+
+        # Only the first file must be downloaded
+        with tools.chdir(tools.mkdir_tmp()):
+            tools.get(urls, requester=requests, output=out, retry=0, retry_wait=0)
+            self.assertTrue(os.path.exists(files[0][:-3]))
+            self.assertEqual(load(files[0][:-3]), files[0])
+            self.assertFalse(os.path.exists(files[0]))
+            self.assertFalse(os.path.exists(files[1][:-3]))
+            self.assertFalse(os.path.exists(files[2][:-3]))
+
+        # Only the first file must be downloaded, renaming the output file
+        with tools.chdir(tools.mkdir_tmp()):
+            tools.get(urls, requester=requests,
+                      output=out, destination="myfile.doc", retry=0, retry_wait=0)
+            self.assertTrue(os.path.exists("myfile.doc"))
+            self.assertEqual(load("myfile.doc"), files[0])
+
+        # Only the first file must be downloaded, using checksum
+        with tools.chdir(tools.mkdir_tmp()):
+            tools.get(urls, requester=requests,
+                      output=out, retry=0, retry_wait=0, md5=checksums["md5"],
+                      sha1=checksums["sha1"], sha256=checksums["sha256"])
+            self.assertTrue(os.path.exists(files[0][:-3]))
+            self.assertEqual(load(files[0][:-3]), files[0])
+            self.assertFalse(os.path.exists(files[0]))
+            self.assertFalse(os.path.exists(files[1][:-3]))
+            self.assertFalse(os.path.exists(files[2][:-3]))
+
+        # Fail the first, download only the second
+        urls[0] = "http://localhost:{}/blah.txt.gz".format(thread.port + 100)
+        with tools.chdir(tools.mkdir_tmp()):
+            tools.get(urls, requester=requests, output=out, retry=0, retry_wait=0)
+            self.assertFalse(os.path.exists(files[0][:-3]))
+            self.assertTrue(os.path.exists("blah.txt"))
+            self.assertEqual(load("blah.txt"), files[1])
+            self.assertFalse(os.path.exists(files[0]))
+            self.assertFalse(os.path.exists(files[1]))
+            self.assertFalse(os.path.exists(files[2]))
+
+        # Fail all downloads
+        urls[0] = "http://localhost:{}/blah.txt.gz".format(thread.port + 100)
+        urls = [url.replace(str(thread.port), str(thread.port + 100)) for url in urls]
+        with tools.chdir(tools.mkdir_tmp()):
+            with self.assertRaises(ConanException) as error:
+                tools.get(urls, requester=requests, output=out, retry=0, retry_wait=0)
+            self.assertIn("Error downloading file", str(error.exception))
+
+        thread.stop()
+
     def unix_to_dos_unit_test(self):
 
         def save_file(contents):

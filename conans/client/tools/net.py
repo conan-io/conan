@@ -12,10 +12,13 @@ def get(url, md5='', sha1='', sha256='', destination=".", filename="", keep_perm
         overwrite=False, auth=None, headers=None):
     """ high level downloader + unzipper + (optional hash checker) + delete temporary zip
     """
-    if not filename and ("?" in url or "=" in url):
-        raise ConanException("Cannot deduce file name from url. Use 'filename' parameter.")
 
-    filename = filename or os.path.basename(url)
+    url = [url] if isinstance(url, str) else url
+    if not filename and "?" in url[0] or "=" in url[0]:
+            raise ConanException("Cannot deduce file name from the url: '{}'. Use 'filename' "
+                                 "parameter.".format(url[0]))
+    filename = filename or os.path.basename(url[0])
+
     download(url, filename, out=output, requester=requester, verify=verify, retry=retry,
              retry_wait=retry_wait, overwrite=overwrite, auth=auth, headers=headers,
              md5=md5, sha1=sha1, sha256=sha256)
@@ -53,8 +56,8 @@ def download(url, filename, verify=True, out=None, retry=None, retry_wait=None, 
        It uses certificates from a list of known verifiers for https downloads,
        but this can be optionally disabled.
 
-    :param url: URL to download. It can be a list, which only the first one will downloaded, and the
-                follow URLs will be used as mirror in case of download error.
+    :param url: URL to download. It can be a list, which only the first one will be downloaded, and
+                the follow URLs will be used as mirror in case of download error.
     :param filename: Name of the file to be created in the local storage
     :param verify: When False, disables https certificate validation
     :param out: An object with a write() method can be passed to get the output. stdout will use if
@@ -103,16 +106,16 @@ def download(url, filename, verify=True, out=None, retry=None, retry_wait=None, 
             else:
                 downloader.download(url_it, filename, retry=retry, retry_wait=retry_wait,
                                     overwrite=overwrite, auth=auth, headers=headers)
-                if md5[index]:
+                if index < len(md5) and md5[index]:
                     check_md5(filename, md5[index])
-                if sha1[index]:
+                if index < len(sha1) and sha1[index]:
                     check_sha1(filename, sha1[index])
-                if sha256[index]:
+                if index < len(sha256) and sha256[index]:
                     check_sha256(filename, sha256[index])
 
             out.writeln("")
             break
-        except (ConanConnectionError, NotFoundException):
+        except (ConanConnectionError, NotFoundException, ConanException):
             if (index + 1) == len(url):
                 raise
             out.warn("Could not download from the url {}. Using the next available url."
