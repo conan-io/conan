@@ -4,7 +4,7 @@ from collections import namedtuple
 
 import six
 
-from conans.client.rest.uploader_downloader import FileUploader
+from conans.client.rest.file_uploader import FileUploader
 from conans.errors import AuthenticationException, ForbiddenException, InternalErrorException
 from conans.test.utils.tools import TestBufferConanOutput
 from conans.util.files import save
