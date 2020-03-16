@@ -1,4 +1,5 @@
 import os
+import time
 import unittest
 
 from conans.model.ref import ConanFileReference
@@ -466,3 +467,44 @@ def init(output, **kwargs):
 
         client.run("config home")
         self.assertIn("[HOOK - recursive_hook/recursive_hook.py] init(): hit", client.out)
+
+    def hook_frequency_test(self):
+        client = TestClient()
+        frequency_hook = """
+import os
+import time
+import calendar
+
+def init(output, **kwargs):
+    def timeout(seconds):
+        file_path = os.path.realpath(__file__)
+        file_timestamp_path = file_path + ".timestamp"
+        if not os.path.exists(file_timestamp_path):
+            with open(file_timestamp_path, "a+"):
+                return True
+
+        file_timestamp = os.path.getmtime(file_timestamp_path)
+        current_time = calendar.timegm(time.gmtime())
+        timestamp_seconds = current_time - file_timestamp
+        if timestamp_seconds < seconds:
+            return False
+
+        os.utime(file_timestamp_path)
+        return True
+
+    if not timeout(1):
+        return
+    output.info("hit")
+"""
+        hook_path = os.path.join(client.cache.hooks_path, "frequency_hook",
+                                 "frequency_hook.py")
+        client.save({hook_path: frequency_hook, "conanfile.py": conanfile_basic})
+        client.run("config set hooks.frequency_hook/frequency_hook.py")
+
+        client.run("config home")
+        self.assertIn("[HOOK - frequency_hook/frequency_hook.py] init(): hit", client.out)
+        client.run("config home")
+        self.assertNotIn("[HOOK - frequency_hook/frequency_hook.py] init(): hit", client.out)
+        time.sleep(2)
+        client.run("config home")
+        self.assertIn("[HOOK - frequency_hook/frequency_hook.py] init(): hit", client.out)
