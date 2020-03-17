@@ -13,7 +13,7 @@ def get(url, md5='', sha1='', sha256='', destination=".", filename="", keep_perm
     """ high level downloader + unzipper + (optional hash checker) + delete temporary zip
     """
 
-    url = [url] if isinstance(url, str) else url
+    url = [url] if not isinstance(url, list) else url
     if not filename and ("?" in url[0] or "=" in url[0]):
             raise ConanException("Cannot deduce file name from the url: '{}'. Use 'filename' "
                                  "parameter.".format(url[0]))
@@ -89,35 +89,39 @@ def download(url, filename, verify=True, out=None, retry=None, retry_wait=None, 
     retry_wait = retry_wait if retry_wait is not None else config.retry_wait
     retry_wait = retry_wait if retry_wait is not None else 5
 
-    downloader = FileDownloader(requester=requester, output=out, verify=verify, config=config)
-    url = [url] if isinstance(url, str) else url
+    url = [url] if not isinstance(url, list) else url
     checksum = sha256 or sha1 or md5
-    md5 = [md5] if isinstance(md5, str) else md5
-    sha1 = [sha1] if isinstance(sha1, str) else sha1
-    sha256 = [sha256] if isinstance(sha256, str) else sha256
+    md5 = [md5] if not isinstance(md5, list) else md5
+    sha1 = [sha1] if not isinstance(sha1, list) else sha1
+    sha256 = [sha256] if not isinstance(sha256, list) else sha256
+
+    downloader = FileDownloader(requester=requester, output=out, verify=verify, config=config)
+    if config and config.download_cache and checksum:
+        downloader = CachedFileDownloader(config.download_cache, downloader, user_download=True)
+
+    def _checksum(checksums, index):
+        return checksums[index] if index < len(checksums) else checksums[0]
+
+    def _download_file(downloader, url, index):
+        # The download cache is only used if a checksum is provided, otherwise, a normal download
+        if isinstance(downloader, CachedFileDownloader):
+            downloader.download(url, filename, retry=retry, retry_wait=retry_wait,
+                                overwrite=overwrite, auth=auth, headers=headers, md5=_checksum(md5, index),
+                                sha1=_checksum(sha1, index), sha256=_checksum(sha256, index))
+        else:
+            downloader.download(url, filename, retry=retry, retry_wait=retry_wait,
+                                overwrite=overwrite, auth=auth, headers=headers)
+            if index < len(md5) and md5[index]:
+                check_md5(filename, md5[index])
+            if index < len(sha1) and sha1[index]:
+                check_sha1(filename, sha1[index])
+            if index < len(sha256) and sha256[index]:
+                check_sha256(filename, sha256[index])
+        out.writeln("")
+
     for index, url_it in enumerate(url):
         try:
-            # The download cache is only used if a checksum is provided, otherwise, a normal download
-            if config and config.download_cache and checksum:
-
-                def _checksum(checksums):
-                    return checksums[index] if index < len(checksums) else checksums[0]
-
-                downloader = CachedFileDownloader(config.download_cache, downloader, user_download=True)
-                downloader.download(url_it, filename, retry=retry, retry_wait=retry_wait,
-                                    overwrite=overwrite, auth=auth, headers=headers, md5=_checksum(md5),
-                                    sha1=_checksum(sha1), sha256=_checksum(sha256))
-            else:
-                downloader.download(url_it, filename, retry=retry, retry_wait=retry_wait,
-                                    overwrite=overwrite, auth=auth, headers=headers)
-                if index < len(md5) and md5[index]:
-                    check_md5(filename, md5[index])
-                if index < len(sha1) and sha1[index]:
-                    check_sha1(filename, sha1[index])
-                if index < len(sha256) and sha256[index]:
-                    check_sha256(filename, sha256[index])
-
-            out.writeln("")
+            _download_file(downloader, url_it, index)
             break
         except (ConanConnectionError, NotFoundException, ConanException):
             if (index + 1) == len(url):

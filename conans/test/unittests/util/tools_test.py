@@ -481,88 +481,6 @@ class HelloConan(ConanFile):
                            retry=2, retry_wait=0)
 
     @attr("slow")
-    def test_download_list(self):
-        http_server = StoppableThreadBottle()
-        checksums = {}
-
-        with tools.chdir(tools.mkdir_tmp()):
-            for _ in range(3):
-                uuid4 = str(uuid.uuid4())
-                filename = "{}.txt".format(uuid4)
-                with open(filename, "w") as fd:
-                    fd.write(uuid4)
-                checksums[os.path.abspath(filename)] = {
-                    "md5": md5sum(filename),
-                    "sha1": sha1sum(filename),
-                    "sha256": sha256sum(filename),
-                }
-
-        from bottle import auth_basic
-
-        @http_server.server.get("/<file>")
-        def get_file(file):
-            return static_file(file, os.path.dirname(list(checksums)[0]))
-
-        def check_auth(user, password):
-            # Check user/password here
-            return user == "user" and password == "passwd"
-
-        @http_server.server.get('/basic-auth/<user>/<password>')
-        @auth_basic(check_auth)
-        def get_manual_auth(user, password):
-            return static_file(os.path.basename(list(checksums)[0]),
-                               os.path.dirname(list(checksums)[0]))
-
-        http_server.run_server()
-
-        out = TestBufferConanOutput()
-        dest = os.path.join(temp_folder(), list(checksums)[0])
-        urls = ["http://localhost:{}/{}".format(http_server.port, os.path.basename(it)) for it in list(checksums)]
-        md5s = [it.get("md5") for it in checksums.values()]
-        sha1s = [it.get("sha1") for it in checksums.values()]
-        sha256s = [it.get("sha256") for it in checksums.values()]
-
-        def _validate_result(dest, index, warning=False):
-            self.assertTrue(os.path.exists(dest))
-            content = load(dest)
-            expected_content = os.path.basename(list(checksums)[index])[:-4]
-            self.assertEqual(expected_content, content)
-            if not warning:
-                self.assertNotIn("WARN: Could not download from the url", out)
-
-        # Regular download, only one url, no checksum
-        tools.download(urls, dest, out=out, retry=0, retry_wait=0, requester=requests, overwrite=True)
-        _validate_result(dest, 0)
-
-        # Regular download, only one url, with checksum
-        tools.download(urls, dest, out=out, retry=0, retry_wait=0, requester=requests,
-                       overwrite=True, md5=md5s, sha1=sha1s, sha256=sha256s)
-        _validate_result(dest, 0)
-
-        # Regular download, with mirror list
-        tools.download(urls, dest, out=out, retry=0, retry_wait=0, requester=requests,
-                       overwrite=True, md5=md5s, sha1=sha1s, sha256=sha256s)
-        _validate_result(dest, 0)
-
-        # Mirror download, first file not found
-        urls[0] = urls[0] + ".foobar"
-        dest = os.path.join(temp_folder(), list(checksums)[1])
-        tools.download(urls, dest, out=out, retry=0, retry_wait=0, requester=requests,
-                       overwrite=True, md5=md5s, sha1=sha1s, sha256=sha256s)
-        _validate_result(dest, 1, True)
-        self.assertIn("WARN: Could not download from the url {}."
-                      " Using the next available url.".format(urls[0]), str(out))
-
-        # Mirror download, fail all urls
-        urls = [url + ".foobar" for url in urls]
-        with self.assertRaises(NotFoundException) as error:
-            tools.download(urls, dest, out=out, retry=0, retry_wait=0, requester=requests,
-                           overwrite=True, md5=md5s, sha1=sha1s, sha256=sha256s)
-        self.assertEqual("Not found: {}".format(urls[-1]), str(error.exception))
-
-        http_server.stop()
-
-    @attr("slow")
     def download_retries_test(self):
         http_server = StoppableThreadBottle()
 
@@ -882,6 +800,8 @@ class HelloConan(ConanFile):
             self.assertFalse(os.path.exists(files[0]))
             self.assertFalse(os.path.exists(files[1]))
             self.assertFalse(os.path.exists(files[2]))
+            self.assertIn("WARN: Could not download from the url {}."
+                          " Using the next available url.".format(urls[0]), str(out))
 
         # Fail all downloads
         urls[0] = "http://localhost:{}/blah.txt.gz".format(thread.port + 100)
