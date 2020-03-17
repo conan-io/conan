@@ -16,7 +16,7 @@ class CppInfoComponentsTest(unittest.TestCase):
         cpp_info.components["libc"].libs.append("thelibc")
         self.assertListEqual(list(cpp_info.components.keys()), ["liba", "libb", "libc"])
         self.assertEqual(cpp_info.components["liba"].name, "LIBA")
-        self.assertListEqual(cpp_info.components["libb"].includedirs, ["includewhat"])
+        self.assertListEqual(cpp_info.components["libb"].includedirs, ["include", "includewhat"])
         self.assertListEqual(cpp_info.components["libc"].libs, ["thelibc"])
 
     def test_no_components_inside_components(self):
@@ -29,7 +29,6 @@ class CppInfoComponentsTest(unittest.TestCase):
         deps_cpp_info = DepsCppInfo()
 
         dep1 = CppInfo("root")
-        dep1.libs.append("libdep1")
         dep1.components["liba"].libs.append("liba")
         dep1.components["libb"].libs.append("libb")
         deps_cpp_info.update(DepCppInfo(dep1), "dep1")
@@ -43,10 +42,10 @@ class CppInfoComponentsTest(unittest.TestCase):
         dep3.libs.append("libdep3")
         deps_cpp_info.update(DepCppInfo(dep3), "dep3")
 
-        self.assertListEqual(["libdep1", "liba", "libb"], deps_cpp_info["dep1"].libs)
+        self.assertListEqual(["liba", "libb"], deps_cpp_info["dep1"].libs)
         self.assertListEqual(["libc", "libd"], deps_cpp_info["dep2"].libs)
         self.assertListEqual(["libdep3"], deps_cpp_info["dep3"].libs)
-        self.assertListEqual(["libdep1", "liba", "libb", "libc", "libd", "libdep3"],
+        self.assertListEqual(["liba", "libb", "libc", "libd", "libdep3"],
                              deps_cpp_info.libs)
 
     def test_deps_cpp_info_paths(self):
@@ -64,11 +63,14 @@ class CppInfoComponentsTest(unittest.TestCase):
         dep2.components["libd"].includedirs.append("included")
         deps_cpp_info.update(DepCppInfo(dep2), "dep2")
 
-        self.assertListEqual([os.path.join(folder1, "includea"), os.path.join(folder1, "includeb")],
+        self.assertListEqual([os.path.join(folder1, "include"), os.path.join(folder1, "includea"),
+                              os.path.join(folder1, "includeb")],
                              deps_cpp_info["dep1"].include_paths)
-        self.assertListEqual([os.path.join(folder2, "includec"), os.path.join(folder2, "included")],
+        self.assertListEqual([os.path.join(folder2, "include"), os.path.join(folder2, "includec"),
+                              os.path.join(folder2, "included")],
                              deps_cpp_info["dep2"].include_paths)
-        self.assertListEqual([os.path.join(folder1, "includea"), os.path.join(folder1, "includeb"),
+        self.assertListEqual([os.path.join(folder1, "include"), os.path.join(folder1, "includea"),
+                              os.path.join(folder1, "includeb"), os.path.join(folder2, "include"),
                               os.path.join(folder2, "includec"), os.path.join(folder2, "included")],
                              deps_cpp_info.include_paths)
 
@@ -97,13 +99,11 @@ class CppInfoComponentsTest(unittest.TestCase):
         dep2 = CppInfo("root")
         dep2.components["libc"].libs.append("libc")
         dep2.components["libd"].libs.append("libd")
-        dep2.defines.append("DEFINEDEP2")
         dep2.components["systemlib"].system_libs = ["systemlib"]
         dep2.components["libc"].cxxflags = ["cxxflagc"]
         dep2.components["libd"].cflags = ["cflagd"]
         dep2.components["libc"].sharedlinkflags = ["slinkc"]
         dep2.components["libd"].sharedlinkflags = ["slinkd"]
-        dep2.frameworks = ["frameworkdep2"]
         deps_cpp_info.update(DepCppInfo(dep2), "dep2")
 
         self.assertListEqual(["liba", "libb"], deps_cpp_info["dep1"].libs)
@@ -111,8 +111,7 @@ class CppInfoComponentsTest(unittest.TestCase):
         self.assertListEqual(["liba", "libb", "libc", "libd"], deps_cpp_info.libs)
 
         self.assertListEqual(["DEFINEA", "DEFINEB"], deps_cpp_info["dep1"].defines)
-        self.assertListEqual(["DEFINEDEP2"], deps_cpp_info["dep2"].defines)
-        self.assertListEqual(["DEFINEDEP2", "DEFINEA", "DEFINEB"], deps_cpp_info.defines)
+        self.assertListEqual(["DEFINEA", "DEFINEB"], deps_cpp_info.defines)
 
         self.assertListEqual(["sysa", "sysb"], deps_cpp_info["dep1"].system_libs)
         self.assertListEqual(["systemlib"], deps_cpp_info["dep2"].system_libs)
@@ -132,9 +131,7 @@ class CppInfoComponentsTest(unittest.TestCase):
                              deps_cpp_info.sharedlinkflags)
 
         self.assertListEqual(["frameworka", "frameworkb"], deps_cpp_info["dep1"].frameworks)
-        self.assertListEqual(["frameworkdep2"], deps_cpp_info["dep2"].frameworks)
-        self.assertListEqual(["frameworka", "frameworkb", "frameworkdep2"],
-                             deps_cpp_info.frameworks)
+        self.assertListEqual(["frameworka", "frameworkb"], deps_cpp_info.frameworks)
 
         self.assertListEqual(["elinka", "elinkb"], deps_cpp_info["dep1"].exelinkflags)
         self.assertListEqual([], deps_cpp_info["dep2"].exelinkflags)

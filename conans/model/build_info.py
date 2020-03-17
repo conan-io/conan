@@ -1,6 +1,7 @@
 import os
 from collections import OrderedDict
 
+from conans.errors import ConanException
 from conans.util.conan_v2_mode import conan_v2_behavior
 
 DEFAULT_INCLUDE = "include"
@@ -138,10 +139,16 @@ class _CppInfo(object):
 
 class Component(_CppInfo):
 
-    def __init__(self, root_folder):
+    def __init__(self, rootpath):
         super(Component, self).__init__()
-        self.rootpath = root_folder
+        self.rootpath = rootpath
         self.filter_empty = False
+        self.includedirs.append(DEFAULT_INCLUDE)
+        self.libdirs.append(DEFAULT_LIB)
+        self.bindirs.append(DEFAULT_BIN)
+        self.resdirs.append(DEFAULT_RES)
+        self.builddirs.append(DEFAULT_BUILD)
+        self.frameworkdirs.append(DEFAULT_FRAMEWORK)
 
 
 class CppInfo(_CppInfo):
@@ -178,6 +185,24 @@ class CppInfo(_CppInfo):
             return result
 
         return self.configs.setdefault(config, _get_cpp_info())
+
+    def raise_if_components_and_non_default_values(self):
+        if (self.includedirs != [DEFAULT_INCLUDE] or
+                self.libdirs != [DEFAULT_LIB] or
+                self.bindirs != [DEFAULT_BIN] or
+                self.resdirs != [DEFAULT_RES] or
+                self.frameworkdirs != [DEFAULT_FRAMEWORK] or
+                self.libs or
+                self.system_libs or
+                self.frameworks or
+                self.defines or
+                self.cflags or
+                self.cxxflags or
+                self.sharedlinkflags or
+                self.exelinkflags or
+                self.build_modules) and self.components:
+            raise ConanException("self.cpp_info.components cannot be used with self.cpp_info global "
+                                 "values at the same time")
 
 
 class _BaseDepsCppInfo(_CppInfo):
@@ -248,6 +273,7 @@ class _BaseDepsCppInfo(_CppInfo):
 class DepCppInfo(object):
 
     def __init__(self, cpp_info):
+        cpp_info.raise_if_components_and_non_default_values()
         self._cpp_info = cpp_info
         self._libs = None
         self._system_libs = None
@@ -276,7 +302,7 @@ class DepCppInfo(object):
 
     @staticmethod
     def _merge_lists(seq1, seq2):
-        return [s for s in seq1 if s not in seq2] + seq2
+        return seq1 + [s for s in seq2 if s not in seq1]
 
     def _aggregated_values(self, item):
         values = getattr(self, "_%s" % item)
