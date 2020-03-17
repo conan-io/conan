@@ -142,7 +142,6 @@ class Component(_CppInfo):
     def __init__(self, rootpath):
         super(Component, self).__init__()
         self.rootpath = rootpath
-        self.filter_empty = False
         self.includedirs.append(DEFAULT_INCLUDE)
         self.libdirs.append(DEFAULT_LIB)
         self.bindirs.append(DEFAULT_BIN)

@@ -53,12 +53,18 @@ class CppInfoComponentsTest(unittest.TestCase):
 
         folder1 = temp_folder()
         dep1 = CppInfo(folder1)
+        os.mkdir(os.path.join(folder1, "include"))
+        os.mkdir(os.path.join(folder1, "includea"))
+        os.mkdir(os.path.join(folder1, "includeb"))
         dep1.components["liba"].includedirs.append("includea")
         dep1.components["libb"].includedirs.append("includeb")
         deps_cpp_info.update(DepCppInfo(dep1), "dep1")
 
         folder2 = temp_folder()
         dep2 = CppInfo(folder2)
+        os.mkdir(os.path.join(folder2, "include"))
+        os.mkdir(os.path.join(folder2, "includec"))
+        os.mkdir(os.path.join(folder2, "included"))
         dep2.components["libc"].includedirs.append("includec")
         dep2.components["libd"].includedirs.append("included")
         deps_cpp_info.update(DepCppInfo(dep2), "dep2")
