@@ -729,6 +729,17 @@ class HelloConan(ConanFile):
 
         thread.stop()
 
+    def check_output_runner_test(self):
+        import tempfile
+        original_temp = tempfile.gettempdir()
+        patched_temp = os.path.join(original_temp, "dir with spaces")
+        payload = "hello world"
+        with patch("tempfile.mktemp") as mktemp:
+            mktemp.return_value = patched_temp
+            output = check_output_runner(["echo", payload], stderr=subprocess.STDOUT)
+            self.assertIn(payload, str(output))
+
+
     def unix_to_dos_unit_test(self):
 
         def save_file(contents):
