@@ -466,17 +466,24 @@ class Pkg(ConanFile):
         self.assertIn("libc/0.1.0@user/testing: A new conanfile.py version was exported", self.client.out)
         self.client.run("create . libc/0.1.0@user/testing", assert_error=True)
 
-        self.assertIn("libc/0.1.0@user/testing: Forced build from source\n"
-                      "Installing package: libc/0.1.0@user/testing\n"
-                      "Requirements\n"
-                      "    liba/0.1.0@user/testing from local cache - Cache\n"
-                      "    libb/0.1.0@user/testing from local cache - Cache\n"
-                      "    libc/0.1.0@user/testing from local cache - Cache\n"
-                      "Packages", self.client.out)
-        self.assertIn("libb/0.1.0@user/testing: WARN: Can't find a 'libb/0.1.0@user/testing' package"
-                      " for the specified settings, options and dependencies:\n"
-                      "- Settings: \n"
-                      "- Options: an_option=off, liba:an_option=off\n"
-                      "- Dependencies: liba/0.1.0@user/testing\n"
-                      "- Package ID:", self.client.out)
-        self.assertIn("ERROR: Missing prebuilt package for 'libb/0.1.0@user/testing'", self.client.out)
+        self.assertIn("""libc/0.1.0@user/testing: Forced build from source
+Installing package: libc/0.1.0@user/testing
+Requirements
+    liba/0.1.0@user/testing from local cache - Cache
+    libb/0.1.0@user/testing from local cache - Cache
+    libc/0.1.0@user/testing from local cache - Cache
+Packages
+    liba/0.1.0@user/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache
+    libb/0.1.0@user/testing:072b0436dd87762380c57324afddfb7e7aa3e872 - Missing
+    libc/0.1.0@user/testing:20f4b9ad6adeec63c71573d5a6db78b03dbdf919 - Build
+
+Installing (downloading, building) binaries...
+ERROR: Missing binary: libb/0.1.0@user/testing:072b0436dd87762380c57324afddfb7e7aa3e872
+
+libb/0.1.0@user/testing: WARN: Can't find a 'libb/0.1.0@user/testing' package for the specified settings, options and dependencies:
+- Settings: 
+- Options: an_option=off, liba:an_option=off
+- Dependencies: liba/0.1.0@user/testing
+- Package ID: 072b0436dd87762380c57324afddfb7e7aa3e872
+
+ERROR: Missing prebuilt package for 'libb/0.1.0@user/testing'""", self.client.out)
