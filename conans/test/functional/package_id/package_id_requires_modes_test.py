@@ -484,6 +484,7 @@ libb/0.1.0@user/testing: WARN: Can't find a 'libb/0.1.0@user/testing' package fo
 - Settings: 
 - Options: an_option=off, liba:an_option=off
 - Dependencies: liba/0.1.0@user/testing
+- Requirements: liba/0.1.0
 - Package ID: 072b0436dd87762380c57324afddfb7e7aa3e872
 
 ERROR: Missing prebuilt package for 'libb/0.1.0@user/testing'""", self.client.out)
