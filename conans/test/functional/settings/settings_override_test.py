@@ -63,6 +63,7 @@ class SettingsOverrideTest(unittest.TestCase):
         self.client.save(files)
         self.client.run("export . lasote/testing")
         self.client.run("install VisualBuild/0.1@lasote/testing --build missing "
+                        "-s compiler='Visual Studio' -s compiler.version=14 -s compiler.runtime=MD "
                         "-s compiler.cppstd=17 -s MinGWBuild:compiler.cppstd=14")
 
         packs_dir = self.client.cache.package_layout(
