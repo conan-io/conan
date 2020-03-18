@@ -10,6 +10,7 @@ from conans.client.generators import TXTGenerator, write_generators
 from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_EDITABLE, \
     BINARY_MISSING, BINARY_SKIP, BINARY_UPDATE, BINARY_UNKNOWN, CONTEXT_HOST
 from conans.client.importer import remove_imports, run_imports
+from conans.client.output import ScopedOutput
 from conans.client.packager import run_package_method, update_package_metadata
 from conans.client.recorder.action_recorder import INSTALL_ERROR_BUILDING, INSTALL_ERROR_MISSING, \
     INSTALL_ERROR_MISSING_BUILD_FOLDER
@@ -555,7 +556,13 @@ class BinaryInstaller(object):
                     self._hook_manager.execute("pre_package_info", conanfile=conanfile,
                                                reference=ref)
                     conanfile.package_info()
+                    if conanfile._conan_dep_cpp_info is None:
+                        if conanfile.cpp_info._components_and_non_default_values():
+                            package_info_output = ScopedOutput("%s package_info()" %
+                                                               conanfile.output.scope,
+                                                               conanfile.output)
+                            package_info_output.error("self.cpp_info.components cannot be used with "
+                                                      "self.cpp_info global values at the same time")
+                        conanfile._conan_dep_cpp_info = DepCppInfo(conanfile.cpp_info)
                     self._hook_manager.execute("post_package_info", conanfile=conanfile,
                                                reference=ref)
-        if conanfile._conan_dep_cpp_info is None:
-            conanfile._conan_dep_cpp_info = DepCppInfo(conanfile.cpp_info)
