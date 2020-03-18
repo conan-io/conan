@@ -5,6 +5,7 @@ import os
 import sys
 import uuid
 
+from collections import OrderedDict
 import yaml
 
 from conans.client.generators import registered_generators
@@ -149,7 +150,9 @@ class ConanFileLoader(object):
                         pkg_settings = settings
                         break
             if pkg_settings:
-                tmp_settings.values = Values.from_list(pkg_settings)
+                tmp_settings_dict = OrderedDict(tmp_settings.values.as_list())
+                tmp_settings_dict.update(pkg_settings)
+                tmp_settings.values = Values.from_list(list(tmp_settings_dict.items()))
 
         conanfile.initialize(tmp_settings, profile.env_values)
 
