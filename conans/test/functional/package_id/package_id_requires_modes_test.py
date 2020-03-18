@@ -455,3 +455,28 @@ class Pkg(ConanFile):
                         ' -s compiler="gcc" -s compiler.libcxx=libstdc++11'
                         ' -s compiler.version=7.2 -s compiler.cppstd=gnu14')
         self.assertIn("Hello/1.2.0@user/testing: Already installed!", self.client.out)
+
+    def test_package_id_requires_patch_mode(self):
+        channel = "user/testing"
+        self.client.run("config set general.default_python_requires_id_mode=patch_mode")
+        self._export("liba", "0.1.0", channel=channel, package_id_text=None, requires=None)
+        self.client.run("create . liba/0.1.0@user/testing")
+        self._export("libb", "0.1.0", channel=channel, package_id_text=None, requires=["liba/0.1.0@user/testing"])
+        self._export("libc", "0.1.0", channel=channel, package_id_text=None, requires=["liba/0.1.0@user/testing", "libb/0.1.0@user/testing"])
+        self.assertIn("libc/0.1.0@user/testing: A new conanfile.py version was exported", self.client.out)
+        self.client.run("create . libc/0.1.0@user/testing", assert_error=True)
+
+        self.assertIn("libc/0.1.0@user/testing: Forced build from source\n"
+                      "Installing package: libc/0.1.0@user/testing\n"
+                      "Requirements\n"
+                      "    liba/0.1.0@user/testing from local cache - Cache\n"
+                      "    libb/0.1.0@user/testing from local cache - Cache\n"
+                      "    libc/0.1.0@user/testing from local cache - Cache\n"
+                      "Packages", self.client.out)
+        self.assertIn("libb/0.1.0@user/testing: WARN: Can't find a 'libb/0.1.0@user/testing' package"
+                      " for the specified settings, options and dependencies:\n"
+                      "- Settings: \n"
+                      "- Options: an_option=off, liba:an_option=off\n"
+                      "- Dependencies: liba/0.1.0@user/testing\n"
+                      "- Package ID:", self.client.out)
+        self.assertIn("ERROR: Missing prebuilt package for 'libb/0.1.0@user/testing'", self.client.out)
