@@ -150,9 +150,17 @@ class ConanFileLoader(object):
                         pkg_settings = settings
                         break
             if pkg_settings:
+                # FIXME: Reuse Profile.update_settings
                 tmp_settings_dict = OrderedDict(tmp_settings.values.as_list())
-                tmp_settings_dict.update(pkg_settings)
-                tmp_settings.values = Values.from_list(list(tmp_settings_dict.items()))
+                res = OrderedDict(tmp_settings.values.as_list())
+                for name, value in pkg_settings:
+                    if "." not in name:
+                        if name in tmp_settings_dict and tmp_settings_dict[name] != value:
+                            for cur_name, _ in tmp_settings_dict.items():
+                                if cur_name.startswith("%s." % name):
+                                    del res[cur_name]
+                res.update(pkg_settings)
+                tmp_settings.values = Values.from_list(list(res.items()))
 
         conanfile.initialize(tmp_settings, profile.env_values)
 
