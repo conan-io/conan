@@ -61,8 +61,6 @@ class SettingsOverrideTest(unittest.TestCase):
         files = cpp_hello_conan_files(name="VisualBuild",
                                       version="0.1", build=False, deps=["MinGWBuild/0.1@lasote/testing"])
         self.client.save(files)
-        self.client.run("profile new default --detect")
-        self.client.run("profile update settings.compiler='Visual Studio' default")
         self.client.run("export . lasote/testing")
         self.client.run("install VisualBuild/0.1@lasote/testing --build missing "
                         "-s compiler.cppstd=17 -s MinGWBuild:compiler.cppstd=14")
@@ -71,14 +69,12 @@ class SettingsOverrideTest(unittest.TestCase):
             ConanFileReference.loads("MinGWBuild/0.1@lasote/testing")).packages()
         pack_dir = os.path.join(packs_dir, os.listdir(packs_dir)[0])
         conaninfo = load(os.path.join(pack_dir, CONANINFO))
-        self.assertIn("compiler=Visual Studio", conaninfo)
         self.assertIn("compiler.cppstd=14", conaninfo)
 
         packs_dir = self.client.cache.package_layout(
             ConanFileReference.loads("VisualBuild/0.1@lasote/testing")).packages()
         pack_dir = os.path.join(packs_dir, os.listdir(packs_dir)[0])
         conaninfo = load(os.path.join(pack_dir, CONANINFO))
-        self.assertIn("compiler=Visual Studio", conaninfo)
         self.assertIn("compiler.cppstd=17", conaninfo)
 
     def test_override_in_non_existing_recipe(self):
