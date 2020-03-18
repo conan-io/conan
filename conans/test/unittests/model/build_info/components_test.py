@@ -23,7 +23,7 @@ class CppInfoComponentsTest(unittest.TestCase):
         cpp_info = CppInfo("root_folder")
         cpp_info.components["liba"].name = "LIBA"
         with self.assertRaises(AttributeError):
-            cpp_info.components["libb"].components["libb"].name = "LIBB"
+            cpp_info.components["libb"].components
 
     def test_deps_cpp_info_libs(self):
         deps_cpp_info = DepsCppInfo()

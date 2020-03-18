@@ -309,7 +309,7 @@ class DepCppInfo(object):
             return values
         values = getattr(self._cpp_info, item)
         if self._cpp_info.components:
-            for _, component in self._cpp_info.components.items():
+            for component in self._cpp_info.components.values():
                 values = self._merge_lists(values, getattr(component, item))
         setattr(self, "_%s" % item, values)
         return values
@@ -320,7 +320,7 @@ class DepCppInfo(object):
             return paths
         paths = getattr(self._cpp_info, "%s_paths" % item)
         if self._cpp_info.components:
-            for _, component in self._cpp_info.components.items():
+            for component in self._cpp_info.components.values():
                 paths = self._merge_lists(paths, getattr(component, "%s_paths" % item))
         setattr(self, "_%s_paths" % item, paths)
         return paths
