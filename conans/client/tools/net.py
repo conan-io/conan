@@ -71,12 +71,9 @@ def download(url, filename, verify=True, out=None, retry=None, retry_wait=None, 
     :param auth: A tuple of user and password to use HTTPBasic authentication
     :param headers: A dictionary with additional headers
     :param requester: HTTP requests instance
-    :param md5: MD5 hash code to check the downloaded file. It can be a list, where each index
-                corresponds to the same index in the URL list.
-    :param sha1: SHA-1 hash code to check the downloaded file It can be a list, where each index
-                 corresponds to the same index in the URL list.
-    :param sha256: SHA-256 hash code to check the downloaded file It can be a list, where each index
-                   corresponds to the same index in the URL list.
+    :param md5: MD5 hash code to check the downloaded file
+    :param sha1: SHA-1 hash code to check the downloaded file
+    :param sha256: SHA-256 hash code to check the downloaded file
     :return: None
     """
     out = default_output(out, 'conans.client.tools.net.download')
@@ -91,40 +88,34 @@ def download(url, filename, verify=True, out=None, retry=None, retry_wait=None, 
 
     url = [url] if not isinstance(url, list) else url
     checksum = sha256 or sha1 or md5
-    md5 = [md5] if not isinstance(md5, list) else md5
-    sha1 = [sha1] if not isinstance(sha1, list) else sha1
-    sha256 = [sha256] if not isinstance(sha256, list) else sha256
 
     downloader = FileDownloader(requester=requester, output=out, verify=verify, config=config)
     if config and config.download_cache and checksum:
         downloader = CachedFileDownloader(config.download_cache, downloader, user_download=True)
 
-    def _checksum(checksums, index):
-        return checksums[index] if index < len(checksums) else checksums[0]
-
-    def _download_file(downloader, url, index):
+    def _download_file(downloader, url):
         # The download cache is only used if a checksum is provided, otherwise, a normal download
         if isinstance(downloader, CachedFileDownloader):
             downloader.download(url, filename, retry=retry, retry_wait=retry_wait,
-                                overwrite=overwrite, auth=auth, headers=headers, md5=_checksum(md5, index),
-                                sha1=_checksum(sha1, index), sha256=_checksum(sha256, index))
+                                overwrite=overwrite, auth=auth, headers=headers, md5=md5,
+                                sha1=sha1, sha256=sha256)
         else:
             downloader.download(url, filename, retry=retry, retry_wait=retry_wait,
                                 overwrite=overwrite, auth=auth, headers=headers)
-            if index < len(md5) and md5[index]:
-                check_md5(filename, md5[index])
-            if index < len(sha1) and sha1[index]:
-                check_sha1(filename, sha1[index])
-            if index < len(sha256) and sha256[index]:
-                check_sha256(filename, sha256[index])
+            if md5:
+                check_md5(filename, md5)
+            if sha1:
+                check_sha1(filename, sha1)
+            if sha256:
+                check_sha256(filename, sha256)
         out.writeln("")
 
     for index, url_it in enumerate(url):
         try:
-            _download_file(downloader, url_it, index)
+            _download_file(downloader, url_it)
             break
         except (ConanConnectionError, NotFoundException, ConanException):
             if (index + 1) == len(url):
                 raise
-            out.warn("Could not download from the url {}. Using the next available url."
+            out.warn("Could not download from the url {}. Using the next available mirror."
                      .format(url_it))
