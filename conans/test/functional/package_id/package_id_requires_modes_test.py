@@ -457,34 +457,70 @@ class Pkg(ConanFile):
         self.assertIn("Hello/1.2.0@user/testing: Already installed!", self.client.out)
 
     def test_package_id_requires_patch_mode(self):
+        """ Requirements shown in build missing error, must contains transitive packages
+            For this test the follow graph has been used:
+            libb <- liba
+            libfoo <- libbar
+            libc <- libb, libfoo
+            libd <- libc
+        """
+
         channel = "user/testing"
-        self.client.run("config set general.default_python_requires_id_mode=patch_mode")
+        self.client.run("config set general.default_package_id_mode=patch_mode")
         self._export("liba", "0.1.0", channel=channel, package_id_text=None, requires=None)
         self.client.run("create . liba/0.1.0@user/testing")
         self._export("libb", "0.1.0", channel=channel, package_id_text=None, requires=["liba/0.1.0@user/testing"])
-        self._export("libc", "0.1.0", channel=channel, package_id_text=None, requires=["liba/0.1.0@user/testing", "libb/0.1.0@user/testing"])
-        self.assertIn("libc/0.1.0@user/testing: A new conanfile.py version was exported", self.client.out)
-        self.client.run("create . libc/0.1.0@user/testing", assert_error=True)
+        self.client.run("create . libb/0.1.0@user/testing")
+        self._export("libbar", "0.1.0", channel=channel, package_id_text=None, requires=None)
+        self.client.run("create . libbar/0.1.0@user/testing")
+        self._export("libfoo", "0.1.0", channel=channel, package_id_text=None, requires=["libbar/0.1.0@user/testing"])
+        self.client.run("create . libfoo/0.1.0@user/testing")
+        self._export("libc", "0.1.0", channel=channel, package_id_text=None,
+                     requires=["libb/0.1.0@user/testing", "libfoo/0.1.0@user/testing"])
+        self._export("libd", "0.1.0", channel=channel, package_id_text=None, requires=["libc/0.1.0@user/testing"])
+        self.client.run("create . libd/0.1.0@user/testing", assert_error=True)
+        self.assertIn("""Exporting package recipe
+libd/0.1.0@user/testing: The stored package has not changed
+libd/0.1.0@user/testing: Exported revision: 6e5cd2e716262be8a98137e29ca1165a
+Configuration:
+[settings]
+arch=x86_64
+arch_build=x86_64
+build_type=Release
+compiler=Visual Studio
+compiler.runtime=MD
+compiler.version=16
+os=Windows
+os_build=Windows
+[options]
+[build_requires]
+[env]
 
-        self.assertIn("""libc/0.1.0@user/testing: Forced build from source
-Installing package: libc/0.1.0@user/testing
+libd/0.1.0@user/testing: Forced build from source
+Installing package: libd/0.1.0@user/testing
 Requirements
     liba/0.1.0@user/testing from local cache - Cache
     libb/0.1.0@user/testing from local cache - Cache
+    libbar/0.1.0@user/testing from local cache - Cache
     libc/0.1.0@user/testing from local cache - Cache
+    libd/0.1.0@user/testing from local cache - Cache
+    libfoo/0.1.0@user/testing from local cache - Cache
 Packages
     liba/0.1.0@user/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache
-    libb/0.1.0@user/testing:072b0436dd87762380c57324afddfb7e7aa3e872 - Missing
-    libc/0.1.0@user/testing:20f4b9ad6adeec63c71573d5a6db78b03dbdf919 - Build
+    libb/0.1.0@user/testing:072b0436dd87762380c57324afddfb7e7aa3e872 - Cache
+    libbar/0.1.0@user/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache
+    libc/0.1.0@user/testing:e12c9d31fa508340bb8d0c4f9dd4c98a5d0ac082 - Missing
+    libd/0.1.0@user/testing:741c5a72864e829e62b463443b0b1db8e8a247f8 - Build
+    libfoo/0.1.0@user/testing:73d476de6199867723b7b499c3bdff860f46fbae - Cache
 
 Installing (downloading, building) binaries...
-ERROR: Missing binary: libb/0.1.0@user/testing:072b0436dd87762380c57324afddfb7e7aa3e872
+ERROR: Missing binary: libc/0.1.0@user/testing:e12c9d31fa508340bb8d0c4f9dd4c98a5d0ac082
 
-libb/0.1.0@user/testing: WARN: Can't find a 'libb/0.1.0@user/testing' package for the specified settings, options and dependencies:
+libc/0.1.0@user/testing: WARN: Can't find a 'libc/0.1.0@user/testing' package for the specified settings, options and dependencies:
 - Settings: 
-- Options: an_option=off, liba:an_option=off
-- Dependencies: liba/0.1.0@user/testing
-- Requirements: liba/0.1.0
-- Package ID: 072b0436dd87762380c57324afddfb7e7aa3e872
+- Options: an_option=off, liba:an_option=off, libb:an_option=off, libbar:an_option=off, libfoo:an_option=off
+- Dependencies: libb/0.1.0@user/testing, libfoo/0.1.0@user/testing
+- Requirements: liba/0.1.0, libb/0.1.0, libbar/0.1.0, libfoo/0.1.0
+- Package ID: e12c9d31fa508340bb8d0c4f9dd4c98a5d0ac082
 
-ERROR: Missing prebuilt package for 'libb/0.1.0@user/testing'""", self.client.out)
+ERROR: Missing prebuilt package for 'libc/0.1.0@user/testing'""", self.client.out)
