@@ -15,8 +15,8 @@ def get(url, md5='', sha1='', sha256='', destination=".", filename="", keep_perm
 
     url = [url] if not isinstance(url, list) else url
     if not filename and ("?" in url[0] or "=" in url[0]):
-            raise ConanException("Cannot deduce file name from the url: '{}'. Use 'filename' "
-                                 "parameter.".format(url[0]))
+        raise ConanException("Cannot deduce file name from the url: '{}'. Use 'filename' "
+                             "parameter.".format(url[0]))
     filename = filename or os.path.basename(url[0])
 
     download(url, filename, out=output, requester=requester, verify=verify, retry=retry,
