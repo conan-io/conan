@@ -185,7 +185,7 @@ class CppInfo(_CppInfo):
 
         return self.configs.setdefault(config, _get_cpp_info())
 
-    def _components_and_non_default_values(self):
+    def _has_components_and_non_default_values(self):
         return (self.includedirs != [DEFAULT_INCLUDE] or
                 self.libdirs != [DEFAULT_LIB] or
                 self.bindirs != [DEFAULT_BIN] or
@@ -200,6 +200,9 @@ class CppInfo(_CppInfo):
                 self.sharedlinkflags or
                 self.exelinkflags or
                 self.build_modules) and self.components
+
+    def _has_components_and_configs(self):
+        return self.configs and self.components
 
 
 class _BaseDepsCppInfo(_CppInfo):

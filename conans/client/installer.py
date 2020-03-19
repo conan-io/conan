@@ -557,12 +557,15 @@ class BinaryInstaller(object):
                                                reference=ref)
                     conanfile.package_info()
                     if conanfile._conan_dep_cpp_info is None:
-                        if conanfile.cpp_info._components_and_non_default_values():
-                            package_info_output = ScopedOutput("%s package_info()" %
-                                                               conanfile.output.scope,
-                                                               conanfile.output)
-                            package_info_output.error("self.cpp_info.components cannot be used with "
-                                                      "self.cpp_info global values at the same time")
+                        if conanfile.cpp_info._has_components_and_configs():
+                            raise ConanException("%s package_info(): self.cpp_info.components cannot"
+                                                 " be used with self.cpp_info configs "
+                                                 "(release/debug/...) at the same time" %
+                                                 str(conanfile))
+                        if conanfile.cpp_info._has_components_and_non_default_values():
+                            raise ConanException("%s package_info(): self.cpp_info.components cannot"
+                                                 " be used with self.cpp_info global values at the "
+                                                 "same time" % str(conanfile))
                         conanfile._conan_dep_cpp_info = DepCppInfo(conanfile.cpp_info)
                     self._hook_manager.execute("post_package_info", conanfile=conanfile,
                                                reference=ref)

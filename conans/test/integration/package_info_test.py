@@ -223,7 +223,20 @@ class HelloConan(ConanFile):
         """)
         client = TestClient()
         client.save({"conanfile.py": conanfile})
-        client.run("export conanfile.py dep/1.0@us/ch")
         client.run("create conanfile.py dep/1.0@us/ch", assert_error=True)
-        self.assertIn("ERROR: self.cpp_info.components cannot be used with self.cpp_info global "
-                      "values at the same time", client.out)
+        self.assertIn("dep/1.0@us/ch package_info(): self.cpp_info.components cannot be used "
+                      "with self.cpp_info global values at the same time", client.out)
+
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+
+            class Intermediate(ConanFile):
+
+                def package_info(self):
+                    self.cpp_info.release.defines.append("defint")
+                    self.cpp_info.components["int1"].libs.append("libint1")
+        """)
+        client.save({"conanfile.py": conanfile})
+        client.run("create conanfile.py dep/1.0@us/ch", assert_error=True)
+        self.assertIn("dep/1.0@us/ch package_info(): self.cpp_info.components cannot be used "
+                      "with self.cpp_info configs (release/debug/...) at the same time", client.out)
