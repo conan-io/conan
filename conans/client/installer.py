@@ -10,7 +10,6 @@ from conans.client.generators import TXTGenerator, write_generators
 from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_EDITABLE, \
     BINARY_MISSING, BINARY_SKIP, BINARY_UPDATE, BINARY_UNKNOWN, CONTEXT_HOST
 from conans.client.importer import remove_imports, run_imports
-from conans.client.output import ScopedOutput
 from conans.client.packager import run_package_method, update_package_metadata
 from conans.client.recorder.action_recorder import INSTALL_ERROR_BUILDING, INSTALL_ERROR_MISSING, \
     INSTALL_ERROR_MISSING_BUILD_FOLDER
@@ -557,15 +556,10 @@ class BinaryInstaller(object):
                                                reference=ref)
                     conanfile.package_info()
                     if conanfile._conan_dep_cpp_info is None:
-                        if conanfile.cpp_info._has_components_and_configs():
-                            raise ConanException("%s package_info(): self.cpp_info.components cannot"
-                                                 " be used with self.cpp_info configs "
-                                                 "(release/debug/...) at the same time" %
-                                                 str(conanfile))
-                        if conanfile.cpp_info._has_components_and_non_default_values():
-                            raise ConanException("%s package_info(): self.cpp_info.components cannot"
-                                                 " be used with self.cpp_info global values at the "
-                                                 "same time" % str(conanfile))
+                        try:
+                            conanfile.cpp_info._raise_if_mixing_components()
+                        except ConanException as e:
+                            raise ConanException("%s package_info(): %s" % (str(conanfile), e))
                         conanfile._conan_dep_cpp_info = DepCppInfo(conanfile.cpp_info)
                     self._hook_manager.execute("post_package_info", conanfile=conanfile,
                                                reference=ref)

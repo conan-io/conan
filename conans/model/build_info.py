@@ -185,8 +185,8 @@ class CppInfo(_CppInfo):
 
         return self.configs.setdefault(config, _get_cpp_info())
 
-    def _has_components_and_non_default_values(self):
-        return (self.includedirs != [DEFAULT_INCLUDE] or
+    def _raise_if_mixing_components(self):
+        if (self.includedirs != [DEFAULT_INCLUDE] or
                 self.libdirs != [DEFAULT_LIB] or
                 self.bindirs != [DEFAULT_BIN] or
                 self.resdirs != [DEFAULT_RES] or
@@ -199,10 +199,12 @@ class CppInfo(_CppInfo):
                 self.cxxflags or
                 self.sharedlinkflags or
                 self.exelinkflags or
-                self.build_modules) and self.components
-
-    def _has_components_and_configs(self):
-        return self.configs and self.components
+                self.build_modules) and self.components:
+            raise ConanException("self.cpp_info.components cannot be used with self.cpp_info "
+                                 "global values at the same time")
+        if self.configs and self.components:
+            raise ConanException("self.cpp_info.components cannot be used with self.cpp_info configs"
+                                 " (release/debug/...) at the same time")
 
 
 class _BaseDepsCppInfo(_CppInfo):
