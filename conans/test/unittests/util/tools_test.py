@@ -768,8 +768,7 @@ class HelloConan(ConanFile):
             requester.fail_first = True
             tools.get(urls, requester=requester, output=out, retry=0, retry_wait=0)
             self.assertEqual(2, requester.count)
-            self.assertIn("WARN: Could not download from the url {}."
-                          " Using the next available mirror.".format(urls[0]), out)
+            self.assertIn("WARN: Could not download from the url {}.".format(urls[0]), out)
 
         # Fail all downloads
         with tools.chdir(tools.mkdir_tmp()):
@@ -778,7 +777,7 @@ class HelloConan(ConanFile):
             with self.assertRaises(ConanException) as error:
                 tools.get(urls, requester=requester, output=out, retry=0, retry_wait=0)
             self.assertEqual(3, requester.count)
-            self.assertIn("Error 408 downloading file http://localhost:/8002/test.txt.gz",
+            self.assertIn("All 3 URLs have failed: Error 408 downloading file",
                           str(error.exception))
 
     def unix_to_dos_unit_test(self):

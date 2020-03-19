@@ -114,8 +114,8 @@ def download(url, filename, verify=True, out=None, retry=None, retry_wait=None, 
         try:
             _download_file(downloader, url_it)
             break
-        except (ConanConnectionError, NotFoundException, ConanException):
+        except (ConanConnectionError, NotFoundException, ConanException) as error:
+            out.warn("Could not download from the url {}.".format(url_it))
             if (index + 1) == len(url):
-                raise
-            out.warn("Could not download from the url {}. Using the next available mirror."
-                     .format(url_it))
+                raise ConanException("All {} URLs have failed: {}.".format(len(url),
+                                                                          str(error)))
