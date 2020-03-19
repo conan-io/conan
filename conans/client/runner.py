@@ -64,7 +64,7 @@ class ConanRunner(object):
                     stream_output.write("Logging command output to file '%s'\n" % log_filepath)
                 with io.open(log_filepath, "a+", encoding="utf-8") as log_handler:
                     if self._print_commands_to_output:
-                        log_handler.write(call_message)
+                        log_handler.write(call_message.decode('utf-8'))
                     return self._pipe_os_call(command, stream_output, log_handler, cwd)
             else:
                 return self._pipe_os_call(command, stream_output, None, cwd)
