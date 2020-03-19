@@ -46,16 +46,6 @@ class SystemPackageTool(object):
         return get_env("CONAN_SYSREQUIRES_SUDO", True)
 
     @staticmethod
-    def _get_sysrequire_mode(default_mode):
-        allowed_modes = ("enabled", "verify", "disabled")
-        mode = get_env("CONAN_SYSREQUIRES_MODE", default_mode)
-        mode_lower = mode.lower()
-        if mode_lower not in allowed_modes:
-            raise ConanException("CONAN_SYSREQUIRES_MODE=%s is not allowed, allowed modes=%r"
-                                 % (mode, allowed_modes))
-        return mode_lower
-
-    @staticmethod
     def _create_tool(os_info, output):
         if os_info.with_apt:
             return AptTool(output=output)
@@ -75,6 +65,15 @@ class SystemPackageTool(object):
             return ZypperTool(output=output)
         else:
             return NullTool(output=output)
+
+    def _get_sysrequire_mode(self):
+        allowed_modes = ("enabled", "verify", "disabled")
+        mode = get_env("CONAN_SYSREQUIRES_MODE", self._default_mode)
+        mode_lower = mode.lower()
+        if mode_lower not in allowed_modes:
+            raise ConanException("CONAN_SYSREQUIRES_MODE=%s is not allowed, allowed modes=%r"
+                                 % (mode, allowed_modes))
+        return mode_lower
 
     def add_repository(self, repository, repo_key=None, update=True):
         self._tool.add_repository(repository, repo_key=repo_key)
