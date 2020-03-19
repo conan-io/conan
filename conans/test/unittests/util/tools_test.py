@@ -731,8 +731,6 @@ class HelloConan(ConanFile):
 
         thread.stop()
 
-    @attr('slow')
-    @attr('local_bottle')
     @patch("conans.client.tools.net.unzip")
     def test_get_mirror(self, unzip_mock):
         """ tools.get must supports a list of URLs. However, only one must be downloaded.
