@@ -84,7 +84,7 @@ class SystemPackageTool(object):
         """
             Get the system package tool update command
         """
-        mode = self._get_sysrequire_mode(self._default_mode)
+        mode = self._get_sysrequire_mode()
         if mode in ("disabled", "verify"):
             self._output.info("Not updating system_requirements. CONAN_SYSREQUIRES_MODE=%s" % mode)
             return
@@ -103,7 +103,7 @@ class SystemPackageTool(object):
         packages = [packages] if isinstance(packages, str) else list(packages)
         packages = self._get_package_names(packages, arch_names)
 
-        mode = self._get_sysrequire_mode(self._default_mode)
+        mode = self._get_sysrequire_mode()
 
         if mode in ("verify", "disabled"):
             # Report to output packages need to be installed
