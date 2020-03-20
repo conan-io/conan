@@ -457,9 +457,8 @@ class _SafeOutput(object):
         self._stream.flush()
 
 
-@contextmanager
 def safe_stream(stream, flush=False):
-    yield _SafeOutput(stream, flush=flush)
+    return _SafeOutput(stream, flush=flush)
 
 
 @contextmanager
