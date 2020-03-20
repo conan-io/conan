@@ -435,22 +435,28 @@ def merge_directories(src, dst, excluded=None):
 
 class SafeOutput(object):
 
-    def __init__(self, stream):
+    def __init__(self, stream, flush):
         self._stream = stream
+        self._flush = flush
 
     def write(self, text):
         self._stream.write(text.decode('utf-8') if six.PY2 else text)
+        if self._flush:
+            self.flush()
+
+    def flush(self):
+        self._stream.flush()
 
     @staticmethod
     @contextmanager
-    def file(filename, mode, encoding):
+    def file(filename, mode, encoding, flush=False):
         handler = io.open(filename, mode=mode, encoding=encoding)
         try:
-            yield SafeOutput.stream(handler)
+            yield SafeOutput.stream(handler, flush=flush)
         finally:
             handler.close()
 
     @staticmethod
     @contextmanager
-    def stream(stream):
-        yield SafeOutput(stream)
+    def stream(stream, flush=False):
+        yield SafeOutput(stream, flush=flush)

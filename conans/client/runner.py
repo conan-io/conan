@@ -7,17 +7,8 @@ import six
 
 from conans.errors import ConanException
 from conans.unicode import get_cwd
-from conans.util.files import decode_text, SafeOutput
+from conans.util.files import SafeOutput
 from conans.util.runners import pyinstaller_bundle_env_cleaned
-
-
-class _UnbufferedWrite(object):
-    def __init__(self, stream):
-        self._stream = stream
-
-    def write(self, *args, **kwargs):
-        self._stream.write(*args, **kwargs)
-        self._stream.flush()
 
 
 class ConanRunner(object):
@@ -42,16 +33,14 @@ class ConanRunner(object):
                   "use six.StringIO() instead ***")
 
         stream_output = output if output and hasattr(output, "write") else self._output or sys.stdout
-        if hasattr(output, "flush"):
-            # We do not want output from different streams to get mixed (sys.stdout, os.system)
-            stream_output = _UnbufferedWrite(stream_output)
+        stream_output = SafeOutput.stream(stream_output, flush=hasattr(output, "flush"))
 
         if not self._generate_run_log_file:
             log_filepath = None
 
         # Log the command call in output and logger
         call_message = "\n----Running------\n> %s\n-----------------\n" % command
-        if self._print_commands_to_output and stream_output and self._log_run_to_output:
+        if self._print_commands_to_output and self._log_run_to_output:
             stream_output.write(call_message)
 
         with pyinstaller_bundle_env_cleaned():
@@ -60,8 +49,7 @@ class ConanRunner(object):
                     and not subprocess):
                 return self._simple_os_call(command, cwd)
             elif log_filepath:
-                if stream_output:
-                    stream_output.write("Logging command output to file '%s'\n" % log_filepath)
+                stream_output.write("Logging command output to file '%s'\n" % log_filepath)
                 with SafeOutput.file(log_filepath, "a+", encoding="utf-8") as log_handler:
                     if self._print_commands_to_output:
                         log_handler.write(call_message)
@@ -84,14 +72,9 @@ class ConanRunner(object):
                 line = the_stream.readline()
                 if not line:
                     break
-                decoded_line = decode_text(line)
-                if stream_output and self._log_run_to_output:
-                    try:
-                        stream_output.write(decoded_line)
-                    except UnicodeEncodeError:  # be aggressive on text encoding
-                        decoded_line = decoded_line.encode("latin-1", "ignore").decode("latin-1",
-                                                                                       "ignore")
-                        stream_output.write(decoded_line)
+
+                if self._log_run_to_output:
+                    stream_output.write(line)
 
                 if log_handler:
                     # Write decoded in PY2 causes some ASCII encoding problems
@@ -105,17 +88,17 @@ class ConanRunner(object):
         ret = proc.returncode
         return ret
 
-    def _simple_os_call(self, command, cwd):
+    @staticmethod
+    def _simple_os_call(command, cwd):
         if not cwd:
             return os.system(command)
         else:
+            old_dir = get_cwd()
             try:
-                old_dir = get_cwd()
                 os.chdir(cwd)
                 result = os.system(command)
             except Exception as e:
-                raise ConanException("Error while executing"
-                                     " '%s'\n\t%s" % (command, str(e)))
+                raise ConanException("Error while executing '%s'\n\t%s" % (command, str(e)))
             finally:
                 os.chdir(old_dir)
             return result
