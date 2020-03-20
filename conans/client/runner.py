@@ -50,7 +50,7 @@ class ConanRunner(object):
                 return self._simple_os_call(command, cwd)
             elif log_filepath:
                 stream_output.write("Logging command output to file '%s'\n" % log_filepath)
-                with safe_file(log_filepath, "a+", encoding="utf-8") as log_handler:
+                with safe_file(log_filepath, "a+") as log_handler:
                     if self._print_commands_to_output:
                         log_handler.write(call_message)
                     return self._pipe_os_call(command, stream_output, log_handler, cwd)
