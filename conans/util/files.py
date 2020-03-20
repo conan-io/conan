@@ -1,5 +1,6 @@
 import errno
 import hashlib
+import io
 import os
 import platform
 import re
@@ -8,10 +9,8 @@ import stat
 import sys
 import tarfile
 import tempfile
-
-
-from os.path import abspath, join as joinpath, realpath
 from contextlib import contextmanager
+from os.path import abspath, join as joinpath, realpath
 
 import six
 
@@ -433,3 +432,23 @@ def merge_directories(src, dst, excluded=None):
             else:
                 shutil.copy2(src_file, dst_file)
 
+
+class SafeOutput(object):
+
+    def __init__(self, filename, mode='w', encoding='utf-8'):
+        self._handler = io.open(filename, mode=mode, encoding=encoding)
+
+    def write(self, text):
+        self._handler.write(text.decode('utf-8') if six.PY2 else text)
+
+    def close(self):
+        self._handler.close()
+
+    @staticmethod
+    @contextmanager
+    def file(filename, mode, encoding):
+        f = SafeOutput(filename, mode=mode, encoding=encoding)
+        try:
+            yield f
+        finally:
+            f.close()

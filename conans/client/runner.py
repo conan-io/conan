@@ -7,7 +7,7 @@ import six
 
 from conans.errors import ConanException
 from conans.unicode import get_cwd
-from conans.util.files import decode_text
+from conans.util.files import decode_text, SafeOutput
 from conans.util.runners import pyinstaller_bundle_env_cleaned
 
 
@@ -62,9 +62,9 @@ class ConanRunner(object):
             elif log_filepath:
                 if stream_output:
                     stream_output.write("Logging command output to file '%s'\n" % log_filepath)
-                with io.open(log_filepath, "a+", encoding="utf-8") as log_handler:
+                with SafeOutput.file(log_filepath, "a+", encoding="utf-8") as log_handler:
                     if self._print_commands_to_output:
-                        log_handler.write(call_message.decode('utf-8') if six.PY2 else call_message)
+                        log_handler.write(call_message)
                     return self._pipe_os_call(command, stream_output, log_handler, cwd)
             else:
                 return self._pipe_os_call(command, stream_output, None, cwd)
@@ -96,7 +96,7 @@ class ConanRunner(object):
                 if log_handler:
                     # Write decoded in PY2 causes some ASCII encoding problems
                     # tried to open the log_handler binary but same result.
-                    log_handler.write(line.decode('utf-8') if six.PY2 else decoded_line)
+                    log_handler.write(line)
 
         get_stream_lines(proc.stdout)
         # get_stream_lines(proc.stderr)
