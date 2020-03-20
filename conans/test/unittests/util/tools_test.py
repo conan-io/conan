@@ -473,7 +473,7 @@ class HelloConan(ConanFile):
         self.assertEqual(str(out).count("Waiting 1 seconds to retry..."), 2)
 
         # Not found error
-        with six.assertRaisesRegex(self, NotFoundException, "Not found: "):
+        with six.assertRaisesRegex(self, ConanException, "All 1 URLs have failed: Not found:"):
             tools.download("http://google.es/FILE_NOT_FOUND",
                            os.path.join(temp_folder(), "README.txt"), out=out,
                            requester=requests,
