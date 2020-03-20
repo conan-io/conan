@@ -227,7 +227,7 @@ class ConanClientConfigParser(ConfigParser, object):
                "CONAN_SKIP_BROKEN_SYMLINKS_CHECK": self._env_c("general.skip_broken_symlinks_check", "CONAN_SKIP_BROKEN_SYMLINKS_CHECK", "False"),
                "CONAN_CACHE_NO_LOCKS": self._env_c("general.cache_no_locks", "CONAN_CACHE_NO_LOCKS", "False"),
                "CONAN_SYSREQUIRES_SUDO": self._env_c("general.sysrequires_sudo", "CONAN_SYSREQUIRES_SUDO", "False"),
-               "CONAN_SYSREQUIRES_MODE": self._env_c("general.sysrequires_mode", "CONAN_SYSREQUIRES_MODE", "enabled"),
+               "CONAN_SYSREQUIRES_MODE": self._env_c("general.sysrequires_mode", "CONAN_SYSREQUIRES_MODE", None),
                "CONAN_REQUEST_TIMEOUT": self._env_c("general.request_timeout", "CONAN_REQUEST_TIMEOUT", None),
                "CONAN_RETRY": self._env_c("general.retry", "CONAN_RETRY", None),
                "CONAN_RETRY_WAIT": self._env_c("general.retry_wait", "CONAN_RETRY_WAIT", None),
