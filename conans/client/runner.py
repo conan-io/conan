@@ -7,7 +7,7 @@ import six
 
 from conans.errors import ConanException
 from conans.unicode import get_cwd
-from conans.util.files import SafeOutput
+from conans.util.files import safe_stream, safe_file
 from conans.util.runners import pyinstaller_bundle_env_cleaned
 
 
@@ -33,7 +33,7 @@ class ConanRunner(object):
                   "use six.StringIO() instead ***")
 
         stream_output = output if output and hasattr(output, "write") else self._output or sys.stdout
-        stream_output = SafeOutput.stream(stream_output, flush=hasattr(output, "flush"))
+        stream_output = safe_stream(stream_output, flush=hasattr(output, "flush"))
 
         if not self._generate_run_log_file:
             log_filepath = None
@@ -50,7 +50,7 @@ class ConanRunner(object):
                 return self._simple_os_call(command, cwd)
             elif log_filepath:
                 stream_output.write("Logging command output to file '%s'\n" % log_filepath)
-                with SafeOutput.file(log_filepath, "a+", encoding="utf-8") as log_handler:
+                with safe_file(log_filepath, "a+", encoding="utf-8") as log_handler:
                     if self._print_commands_to_output:
                         log_handler.write(call_message)
                     return self._pipe_os_call(command, stream_output, log_handler, cwd)

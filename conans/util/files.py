@@ -433,30 +433,39 @@ def merge_directories(src, dst, excluded=None):
                 shutil.copy2(src_file, dst_file)
 
 
-class SafeOutput(object):
+class _SafeOutput(object):
 
     def __init__(self, stream, flush):
         self._stream = stream
         self._flush = flush
 
+    def _write(self, text):
+        if six.PY2:
+            self._stream.write(text.decode('utf-8', 'ignore'))
+        else:
+            if isinstance(text, bytes):
+                self._stream.write(text.decode('utf-8', 'ignore'))
+            else:
+                self._stream.write(text)
+
     def write(self, text):
-        self._stream.write(text.decode('utf-8') if six.PY2 else text)
+        self._write(text)
         if self._flush:
             self.flush()
 
     def flush(self):
         self._stream.flush()
 
-    @staticmethod
-    @contextmanager
-    def file(filename, mode, encoding, flush=False):
-        handler = io.open(filename, mode=mode, encoding=encoding)
-        try:
-            yield SafeOutput.stream(handler, flush=flush)
-        finally:
-            handler.close()
 
-    @staticmethod
-    @contextmanager
-    def stream(stream, flush=False):
-        yield SafeOutput(stream, flush=flush)
+@contextmanager
+def safe_stream(stream, flush=False):
+    yield _SafeOutput(stream, flush=flush)
+
+
+@contextmanager
+def safe_file(filename, mode, flush=False):
+    handler = io.open(filename, mode=mode, encoding='utf-8')
+    try:
+        yield safe_stream(handler, flush=flush)
+    finally:
+        handler.close()
