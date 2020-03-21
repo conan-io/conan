@@ -353,7 +353,7 @@ class ConanClientConfigParser(ConfigParser, object):
         with open(self.filename, "w") as f:
             self.write(f)
 
-    def get_conf(self, varname):
+    def _get_conf(self, varname):
         """Gets the section from config file or raises an exception"""
         try:
             return self.items(varname)
@@ -502,7 +502,7 @@ class ConanClientConfigParser(ConfigParser, object):
                 current_dir = os.path.dirname(self.filename)
                 # if env var is declared, any specified path will be relative to CONAN_USER_HOME
                 # even with the ~/
-                result = dict(self.get_conf("storage"))["path"]
+                result = dict(self._get_conf("storage"))["path"]
                 if result.startswith("."):
                     result = os.path.abspath(os.path.join(current_dir, result))
                 elif result[:2] == "~/":
@@ -520,7 +520,7 @@ class ConanClientConfigParser(ConfigParser, object):
     @property
     def proxies(self):
         try:  # optional field, might not exist
-            proxies = self.get_conf("proxies")
+            proxies = self._get_conf("proxies")
         except Exception:
             return None
         result = {}
@@ -573,7 +573,7 @@ class ConanClientConfigParser(ConfigParser, object):
         hooks = get_env("CONAN_HOOKS", list())
         if not hooks:
             try:
-                hooks = self.get_conf("hooks")
+                hooks = self._get_conf("hooks")
                 hooks = [k for k, _ in hooks]
             except Exception:
                 hooks = []
