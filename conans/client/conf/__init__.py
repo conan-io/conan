@@ -204,7 +204,7 @@ def get_default_client_conf(force_v1=False):
     return _t_default_client_conf.render(conan_v2=conan_v2, default_profile=DEFAULT_PROFILE_NAME)
 
 
-class ConanClientConfigParser(ConfigParser):
+class ConanClientConfigParser(ConfigParser, object):
 
     # So keys are not converted to lowercase, we override the default optionxform
     optionxform = str
