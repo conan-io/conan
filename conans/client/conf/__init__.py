@@ -17,12 +17,12 @@ _t_default_settings_yml = Template(textwrap.dedent("""
     # Only for cross building, 'os_build/arch_build' is the system that runs Conan
     os_build: [Windows, WindowsStore, Linux, Macos, FreeBSD, SunOS, AIX]
     arch_build: [x86, x86_64, ppc32be, ppc32, ppc64le, ppc64, armv5el, armv5hf, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr, s390, s390x, sh4le]
-    
+
     # Only for building cross compilation tools, 'os_target/arch_target' is the system for
     # which the tools generate code
     os_target: [Windows, Linux, Macos, Android, iOS, watchOS, tvOS, FreeBSD, SunOS, AIX, Arduino, Neutrino]
     arch_target: [x86, x86_64, ppc32be, ppc32, ppc64le, ppc64, armv5el, armv5hf, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr, s390, s390x, asm.js, wasm, sh4le]
-    
+
     # Rest of the settings are "host" settings:
     # - For native building/cross building: Where the library/program will run.
     # - For building cross compilation tools: Where the cross compiler will run.
@@ -100,9 +100,9 @@ _t_default_settings_yml = Template(textwrap.dedent("""
         qcc:
             version: ["4.4", "5.4"]
             libcxx: [cxx, gpp, cpp, cpp-ne, accp, acpp-ne, ecpp, ecpp-ne]
-    
+
     build_type: [None, Debug, Release, RelWithDebInfo, MinSizeRel]
-    
+
     {% if not conan_v2 %}
     cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]  # Deprecated, use compiler.cppstd
     {% endif %}
@@ -121,7 +121,7 @@ _t_default_client_conf = Template(textwrap.dedent("""
     level = critical            # environment CONAN_LOGGING_LEVEL
     # trace_file =              # environment CONAN_TRACE_FILE
     print_run_commands = False  # environment CONAN_PRINT_RUN_COMMANDS
-    
+
     [general]
     default_profile = {{default_profile}}
     compression_level = 9                 # environment CONAN_COMPRESSION_LEVEL
@@ -142,10 +142,10 @@ _t_default_client_conf = Template(textwrap.dedent("""
     # skip_vs_projects_upgrade = False    # environment CONAN_SKIP_VS_PROJECTS_UPGRADE
     # non_interactive = False             # environment CONAN_NON_INTERACTIVE
     # skip_broken_symlinks_check = False  # environment CONAN_SKIP_BROKEN_SYMLINKS_CHECK
-    
+
     # conan_make_program = make           # environment CONAN_MAKE_PROGRAM (overrides the make program used in AutoToolsBuildEnvironment.make)
     # conan_cmake_program = cmake         # environment CONAN_CMAKE_PROGRAM (overrides the make program used in CMake.cmake_program)
-    
+
     # cmake_generator                     # environment CONAN_CMAKE_GENERATOR
     # cmake generator platform            # environment CONAN_CMAKE_GENERATOR_PLATFORM
     # http://www.vtk.org/Wiki/CMake_Cross_Compiling
@@ -157,27 +157,27 @@ _t_default_client_conf = Template(textwrap.dedent("""
     # cmake_find_root_path_mode_program   # environment CONAN_CMAKE_FIND_ROOT_PATH_MODE_PROGRAM
     # cmake_find_root_path_mode_library   # environment CONAN_CMAKE_FIND_ROOT_PATH_MODE_LIBRARY
     # cmake_find_root_path_mode_include   # environment CONAN_CMAKE_FIND_ROOT_PATH_MODE_INCLUDE
-    
+
     # msbuild_verbosity = minimal         # environment CONAN_MSBUILD_VERBOSITY
-    
+
     # cpu_count = 1             # environment CONAN_CPU_COUNT
-    
+
     # Change the default location for building test packages to a temporary folder
     # which is deleted after the test.
     # temp_test_folder = True             # environment CONAN_TEMP_TEST_FOLDER
-    
+
     # cacert_path                         # environment CONAN_CACERT_PATH
     # scm_to_conandata                    # environment CONAN_SCM_TO_CONANDATA
     {% if conan_v2 %}
     revisions_enabled = 1
     {% endif %}
-    
+
     [storage]
     # This is the default path, but you can write your own. It must be an absolute path or a
     # path beginning with "~" (if the environment var CONAN_USER_HOME is specified, this directory, even
     # with "~/", will be relative to the conan user home, not to the system user home)
     path = ./data
-    
+
     [proxies]
     # Empty (or missing) section will try to use system proxies.
     # As documented in https://requests.readthedocs.io/en/master/user/advanced/#proxies - but see below
@@ -190,12 +190,12 @@ _t_default_client_conf = Template(textwrap.dedent("""
     #   hostname.to.be.proxied.com = http://user:pass@10.10.1.10:3128
     # You can skip the proxy for the matching (fnmatch) urls (comma-separated)
     # no_proxy_match = *bintray.com*, https://myserver.*
-    
+
     {% if not conan_v2 %}{# no hooks by default in Conan v2 #}
     [hooks]    # environment CONAN_HOOKS
     attribute_checker
     {% endif %}
-    
+
     # Default settings now declared in the default profile
     """))
 
@@ -318,12 +318,12 @@ class ConanClientConfigParser(ConfigParser, object):
 
     def set_item(self, key, value):
         tokens = key.split(".", 1)
+        if len(tokens) == 1:  # defining full section
+            raise ConanException("You can't set a full section, please specify a section.key=value")
+
         section_name = tokens[0]
         if not self.has_section(section_name):
             self.add_section(section_name)
-
-        if len(tokens) == 1:  # defining full section
-            raise ConanException("You can't set a full section, please specify a key=value")
 
         key = tokens[1]
         try:
