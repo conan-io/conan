@@ -277,6 +277,7 @@ class ConanClientConfigParser(ConfigParser):
         return ret
 
     def _env_c(self, var_name, env_var_name, default_value):
+        """ Returns the value Conan will use: first tries with environment, then 'conan.conf' """
         env = os.environ.get(env_var_name, None)
         if env is not None:
             return env
@@ -286,6 +287,7 @@ class ConanClientConfigParser(ConfigParser):
             return default_value
 
     def get_item(self, item):
+        """ Return the value stored in 'conan.conf' """
         if not item:
             return load(self.filename)
 
