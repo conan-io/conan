@@ -214,67 +214,67 @@ class ConanClientConfigParser(ConfigParser, object):
     # So keys are not converted to lowercase, we override the default optionxform
     optionxform = str
 
+    _table_vars = {
+        # Environment variable | conan.conf variable | Default value
+        "log": [
+            ("CONAN_LOG_RUN_TO_OUTPUT", "run_to_output", "True"),
+            ("CONAN_LOG_RUN_TO_FILE", "run_to_file", "False"),
+            ("CONAN_LOGGING_LEVEL", "level", "50"),
+            ("CONAN_TRACE_FILE", "trace_file", None),
+            ("CONAN_PRINT_RUN_COMMANDS", "print_run_commands", "False"),
+        ],
+        "general": [
+            ("CONAN_COMPRESSION_LEVEL", "compression_level", "9"),
+            ("CONAN_NON_INTERACTIVE", "non_interactive", "False"),
+            ("CONAN_SKIP_BROKEN_SYMLINKS_CHECK", "skip_broken_symlinks_check", "False"),
+            ("CONAN_CACHE_NO_LOCKS", "cache_no_locks", "False"),
+            ("CONAN_SYSREQUIRES_SUDO", "sysrequires_sudo", "False"),
+            ("CONAN_SYSREQUIRES_MODE", "sysrequires_mode", None),
+            ("CONAN_REQUEST_TIMEOUT", "request_timeout", None),
+            ("CONAN_RETRY", "retry", None),
+            ("CONAN_RETRY_WAIT", "retry_wait", None),
+            ("CONAN_VS_INSTALLATION_PREFERENCE", "vs_installation_preference", None),
+            ("CONAN_CPU_COUNT", "cpu_count", None),
+            ("CONAN_READ_ONLY_CACHE", "read_only_cache", None),
+            ("CONAN_USER_HOME_SHORT", "user_home_short", None),
+            ("CONAN_USE_ALWAYS_SHORT_PATHS", "use_always_short_paths", None),
+            ("CONAN_VERBOSE_TRACEBACK", "verbose_traceback", None),
+            ("CONAN_ERROR_ON_OVERRIDE", "error_on_override", "False"),
+            # http://www.vtk.org/Wiki/CMake_Cross_Compiling
+            ("CONAN_CMAKE_GENERATOR", "cmake_generator", None),
+            ("CONAN_CMAKE_GENERATOR_PLATFORM", "cmake_generator_platform", None),
+            ("CONAN_CMAKE_TOOLCHAIN_FILE", "cmake_toolchain_file", None),
+            ("CONAN_CMAKE_SYSTEM_NAME", "cmake_system_name", None),
+            ("CONAN_CMAKE_SYSTEM_VERSION", "cmake_system_version", None),
+            ("CONAN_CMAKE_SYSTEM_PROCESSOR", "cmake_system_processor", None),
+            ("CONAN_CMAKE_FIND_ROOT_PATH", "cmake_find_root_path", None),
+            ("CONAN_CMAKE_FIND_ROOT_PATH_MODE_PROGRAM", "cmake_find_root_path_mode_program", None),
+            ("CONAN_CMAKE_FIND_ROOT_PATH_MODE_LIBRARY", "cmake_find_root_path_mode_library", None),
+            ("CONAN_CMAKE_FIND_ROOT_PATH_MODE_INCLUDE", "cmake_find_root_path_mode_include", None),
+            ("CONAN_BASH_PATH", "bash_path", None),
+            ("CONAN_MAKE_PROGRAM", "conan_make_program", None),
+            ("CONAN_CMAKE_PROGRAM", "conan_cmake_program", None),
+            ("CONAN_TEMP_TEST_FOLDER", "temp_test_folder", "False"),
+            ("CONAN_SKIP_VS_PROJECTS_UPGRADE", "skip_vs_projects_upgrade", "False"),
+            ("CONAN_MSBUILD_VERBOSITY", "msbuild_verbosity", None),
+            ("CONAN_CACERT_PATH", "cacert_path", None),
+            ("CONAN_DEFAULT_PACKAGE_ID_MODE", "default_package_id_mode", None),
+        ],
+        "hooks": [
+            ("CONAN_HOOKS", "", None),
+        ]
+    }
+
     @property
     def env_vars(self):
-        ret = {"CONAN_LOG_RUN_TO_OUTPUT": self._env_c("log.run_to_output", "CONAN_LOG_RUN_TO_OUTPUT", "True"),
-               "CONAN_LOG_RUN_TO_FILE": self._env_c("log.run_to_file", "CONAN_LOG_RUN_TO_FILE", "False"),
-               "CONAN_LOGGING_LEVEL": self._env_c("log.level", "CONAN_LOGGING_LEVEL", "50"),
-               "CONAN_TRACE_FILE": self._env_c("log.trace_file", "CONAN_TRACE_FILE", None),
-               "CONAN_PRINT_RUN_COMMANDS": self._env_c("log.print_run_commands", "CONAN_PRINT_RUN_COMMANDS", "False"),
-               "CONAN_COMPRESSION_LEVEL": self._env_c("general.compression_level", "CONAN_COMPRESSION_LEVEL", "9"),
-               "CONAN_NON_INTERACTIVE": self._env_c("general.non_interactive", "CONAN_NON_INTERACTIVE", "False"),
-               "CONAN_SKIP_BROKEN_SYMLINKS_CHECK": self._env_c("general.skip_broken_symlinks_check", "CONAN_SKIP_BROKEN_SYMLINKS_CHECK", "False"),
-               "CONAN_CACHE_NO_LOCKS": self._env_c("general.cache_no_locks", "CONAN_CACHE_NO_LOCKS", "False"),
-               "CONAN_SYSREQUIRES_SUDO": self._env_c("general.sysrequires_sudo", "CONAN_SYSREQUIRES_SUDO", "False"),
-               "CONAN_SYSREQUIRES_MODE": self._env_c("general.sysrequires_mode", "CONAN_SYSREQUIRES_MODE", None),
-               "CONAN_REQUEST_TIMEOUT": self._env_c("general.request_timeout", "CONAN_REQUEST_TIMEOUT", None),
-               "CONAN_RETRY": self._env_c("general.retry", "CONAN_RETRY", None),
-               "CONAN_RETRY_WAIT": self._env_c("general.retry_wait", "CONAN_RETRY_WAIT", None),
-               "CONAN_VS_INSTALLATION_PREFERENCE": self._env_c("general.vs_installation_preference", "CONAN_VS_INSTALLATION_PREFERENCE", None),
-               "CONAN_CPU_COUNT": self._env_c("general.cpu_count", "CONAN_CPU_COUNT", None),
-               "CONAN_READ_ONLY_CACHE": self._env_c("general.read_only_cache", "CONAN_READ_ONLY_CACHE", None),
-               "CONAN_USER_HOME_SHORT": self._env_c("general.user_home_short", "CONAN_USER_HOME_SHORT", None),
-               "CONAN_USE_ALWAYS_SHORT_PATHS": self._env_c("general.use_always_short_paths", "CONAN_USE_ALWAYS_SHORT_PATHS", None),
-               "CONAN_VERBOSE_TRACEBACK": self._env_c("general.verbose_traceback", "CONAN_VERBOSE_TRACEBACK", None),
-               "CONAN_ERROR_ON_OVERRIDE": self._env_c("general.error_on_override", "CONAN_ERROR_ON_OVERRIDE", "False"),
-               # http://www.vtk.org/Wiki/CMake_Cross_Compiling
-               "CONAN_CMAKE_GENERATOR": self._env_c("general.cmake_generator", "CONAN_CMAKE_GENERATOR", None),
-               "CONAN_CMAKE_GENERATOR_PLATFORM": self._env_c("general.cmake_generator_platform", "CONAN_CMAKE_GENERATOR_PLATFORM", None),
-               "CONAN_CMAKE_TOOLCHAIN_FILE": self._env_c("general.cmake_toolchain_file", "CONAN_CMAKE_TOOLCHAIN_FILE", None),
-               "CONAN_CMAKE_SYSTEM_NAME": self._env_c("general.cmake_system_name", "CONAN_CMAKE_SYSTEM_NAME", None),
-               "CONAN_CMAKE_SYSTEM_VERSION": self._env_c("general.cmake_system_version", "CONAN_CMAKE_SYSTEM_VERSION", None),
-               "CONAN_CMAKE_SYSTEM_PROCESSOR": self._env_c("general.cmake_system_processor",
-                                                           "CONAN_CMAKE_SYSTEM_PROCESSOR",
-                                                           None),
-               "CONAN_CMAKE_FIND_ROOT_PATH": self._env_c("general.cmake_find_root_path",
-                                                         "CONAN_CMAKE_FIND_ROOT_PATH",
-                                                         None),
-               "CONAN_CMAKE_FIND_ROOT_PATH_MODE_PROGRAM": self._env_c("general.cmake_find_root_path_mode_program",
-                                                                      "CONAN_CMAKE_FIND_ROOT_PATH_MODE_PROGRAM",
-                                                                      None),
-               "CONAN_CMAKE_FIND_ROOT_PATH_MODE_LIBRARY": self._env_c("general.cmake_find_root_path_mode_library",
-                                                                      "CONAN_CMAKE_FIND_ROOT_PATH_MODE_LIBRARY",
-                                                                      None),
-               "CONAN_CMAKE_FIND_ROOT_PATH_MODE_INCLUDE": self._env_c("general.cmake_find_root_path_mode_include",
-                                                                      "CONAN_CMAKE_FIND_ROOT_PATH_MODE_INCLUDE",
-                                                                      None),
-
-               "CONAN_BASH_PATH": self._env_c("general.bash_path", "CONAN_BASH_PATH", None),
-               "CONAN_MAKE_PROGRAM": self._env_c("general.conan_make_program", "CONAN_MAKE_PROGRAM", None),
-               "CONAN_CMAKE_PROGRAM": self._env_c("general.conan_cmake_program", "CONAN_CMAKE_PROGRAM", None),
-               "CONAN_TEMP_TEST_FOLDER": self._env_c("general.temp_test_folder", "CONAN_TEMP_TEST_FOLDER", "False"),
-               "CONAN_SKIP_VS_PROJECTS_UPGRADE": self._env_c("general.skip_vs_projects_upgrade", "CONAN_SKIP_VS_PROJECTS_UPGRADE", "False"),
-               "CONAN_HOOKS": self._env_c("hooks", "CONAN_HOOKS", None),
-               "CONAN_MSBUILD_VERBOSITY": self._env_c("general.msbuild_verbosity",
-                                                      "CONAN_MSBUILD_VERBOSITY",
-                                                      None),
-               "CONAN_CACERT_PATH": self._env_c("general.cacert_path", "CONAN_CACERT_PATH", None),
-               "CONAN_DEFAULT_PACKAGE_ID_MODE": self._env_c("general.default_package_id_mode",
-                                                            "CONAN_DEFAULT_PACKAGE_ID_MODE", None),
-               }
-
-        # Filter None values
-        return {name: value for name, value in ret.items() if value is not None}
+        ret = {}
+        for section, values in self._table_vars.items():
+            for env_var, var_name, default_value in values:
+                var_name = ".".join([section, var_name]) if var_name else section
+                value = self._env_c(var_name, env_var, default_value)
+                if value is not None:
+                    ret[env_var] = value
+        return ret
 
     def _env_c(self, var_name, env_var_name, default_value):
         env = os.environ.get(env_var_name, None)
