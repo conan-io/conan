@@ -212,18 +212,18 @@ class ConanClientConfigParser(ConfigParser):
     _table_vars = {
         # Environment variable | conan.conf variable | Default value
         "log": [
-            ("CONAN_LOG_RUN_TO_OUTPUT", "run_to_output", "True"),
-            ("CONAN_LOG_RUN_TO_FILE", "run_to_file", "False"),
-            ("CONAN_LOGGING_LEVEL", "level", "50"),
+            ("CONAN_LOG_RUN_TO_OUTPUT", "run_to_output", True),
+            ("CONAN_LOG_RUN_TO_FILE", "run_to_file", False),
+            ("CONAN_LOGGING_LEVEL", "level", logging.CRITICAL),
             ("CONAN_TRACE_FILE", "trace_file", None),
-            ("CONAN_PRINT_RUN_COMMANDS", "print_run_commands", "False"),
+            ("CONAN_PRINT_RUN_COMMANDS", "print_run_commands", False),
         ],
         "general": [
-            ("CONAN_COMPRESSION_LEVEL", "compression_level", "9"),
-            ("CONAN_NON_INTERACTIVE", "non_interactive", "False"),
-            ("CONAN_SKIP_BROKEN_SYMLINKS_CHECK", "skip_broken_symlinks_check", "False"),
-            ("CONAN_CACHE_NO_LOCKS", "cache_no_locks", "False"),
-            ("CONAN_SYSREQUIRES_SUDO", "sysrequires_sudo", "False"),
+            ("CONAN_COMPRESSION_LEVEL", "compression_level", 9),
+            ("CONAN_NON_INTERACTIVE", "non_interactive", False),
+            ("CONAN_SKIP_BROKEN_SYMLINKS_CHECK", "skip_broken_symlinks_check", False),
+            ("CONAN_CACHE_NO_LOCKS", "cache_no_locks", False),
+            ("CONAN_SYSREQUIRES_SUDO", "sysrequires_sudo", False),
             ("CONAN_SYSREQUIRES_MODE", "sysrequires_mode", None),
             ("CONAN_REQUEST_TIMEOUT", "request_timeout", None),
             ("CONAN_RETRY", "retry", None),
@@ -234,7 +234,7 @@ class ConanClientConfigParser(ConfigParser):
             ("CONAN_USER_HOME_SHORT", "user_home_short", None),
             ("CONAN_USE_ALWAYS_SHORT_PATHS", "use_always_short_paths", None),
             ("CONAN_VERBOSE_TRACEBACK", "verbose_traceback", None),
-            ("CONAN_ERROR_ON_OVERRIDE", "error_on_override", "False"),
+            ("CONAN_ERROR_ON_OVERRIDE", "error_on_override", False),
             # http://www.vtk.org/Wiki/CMake_Cross_Compiling
             ("CONAN_CMAKE_GENERATOR", "cmake_generator", None),
             ("CONAN_CMAKE_GENERATOR_PLATFORM", "cmake_generator_platform", None),
@@ -249,11 +249,12 @@ class ConanClientConfigParser(ConfigParser):
             ("CONAN_BASH_PATH", "bash_path", None),
             ("CONAN_MAKE_PROGRAM", "conan_make_program", None),
             ("CONAN_CMAKE_PROGRAM", "conan_cmake_program", None),
-            ("CONAN_TEMP_TEST_FOLDER", "temp_test_folder", "False"),
-            ("CONAN_SKIP_VS_PROJECTS_UPGRADE", "skip_vs_projects_upgrade", "False"),
+            ("CONAN_TEMP_TEST_FOLDER", "temp_test_folder", False),
+            ("CONAN_SKIP_VS_PROJECTS_UPGRADE", "skip_vs_projects_upgrade", False),
             ("CONAN_MSBUILD_VERBOSITY", "msbuild_verbosity", None),
             ("CONAN_CACERT_PATH", "cacert_path", None),
             ("CONAN_DEFAULT_PACKAGE_ID_MODE", "default_package_id_mode", None),
+            # ("CONAN_DEFAULT_PROFILE_PATH", "default_profile", DEFAULT_PROFILE_NAME),
         ],
         "hooks": [
             ("CONAN_HOOKS", "", None),
@@ -273,11 +274,13 @@ class ConanClientConfigParser(ConfigParser):
                 var_name = ".".join([section, var_name]) if var_name else section
                 value = self._env_c(var_name, env_var, default_value)
                 if value is not None:
-                    ret[env_var] = value
+                    ret[env_var] = str(value)
         return ret
 
     def _env_c(self, var_name, env_var_name, default_value):
-        """ Returns the value Conan will use: first tries with environment, then 'conan.conf' """
+        """ Returns the value Conan will use: first tries with environment variable,
+            then value written in 'conan.conf' and fallback to 'default_value'
+        """
         env = os.environ.get(env_var_name, None)
         if env is not None:
             return env
