@@ -1,17 +1,16 @@
+import logging
 import os
+import textwrap
 
+from jinja2 import Template
 from six.moves.configparser import ConfigParser, NoSectionError
 
 from conans.errors import ConanException
 from conans.model.env_info import unquote
 from conans.paths import DEFAULT_PROFILE_NAME, conan_expand_user, CACERT_FILE
+from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
 from conans.util.env_reader import get_env
 from conans.util.files import load
-import logging
-from jinja2 import Template
-import textwrap
-from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
-
 
 _t_default_settings_yml = Template(textwrap.dedent("""
     # Only for cross building, 'os_build/arch_build' is the system that runs Conan
