@@ -204,12 +204,7 @@ def get_default_client_conf(force_v1=False):
     return _t_default_client_conf.render(conan_v2=conan_v2, default_profile=DEFAULT_PROFILE_NAME)
 
 
-class ConanClientConfigParser(ConfigParser, object):
-
-    def __init__(self, filename):
-        ConfigParser.__init__(self, allow_no_value=True)
-        self.read(filename)
-        self.filename = filename
+class ConanClientConfigParser(ConfigParser):
 
     # So keys are not converted to lowercase, we override the default optionxform
     optionxform = str
@@ -264,6 +259,11 @@ class ConanClientConfigParser(ConfigParser, object):
             ("CONAN_HOOKS", "", None),
         ]
     }
+
+    def __init__(self, filename):
+        super(ConanClientConfigParser, self).__init__(allow_no_value=True)
+        self.read(filename)
+        self.filename = filename
 
     @property
     def env_vars(self):
