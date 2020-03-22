@@ -15,11 +15,6 @@ class CheckCppstdTests(unittest.TestCase):
         conanfile = MockConanfile(MockSettings({}))
 
         with self.assertRaises(ConanException) as raises:
-            check_cppstd("conanfile")
-        self.assertEqual("conanfile parameter must be an instance of ConanFile",
-                         str(raises.exception))
-
-        with self.assertRaises(ConanException) as raises:
             check_cppstd(conanfile, minimum="abcdefg")
         self.assertEqual("minimum parameter must be a number", str(raises.exception))
 

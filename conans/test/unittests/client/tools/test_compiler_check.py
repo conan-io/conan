@@ -15,11 +15,6 @@ class CheckCompilerTests(unittest.TestCase):
         conanfile = MockConanfile(MockSettings({}))
 
         with self.assertRaises(ConanException) as raises:
-            check_compiler("conanfile")
-        self.assertEqual("conanfile parameter must be an instance of ConanFile",
-                         str(raises.exception))
-
-        with self.assertRaises(ConanException) as raises:
             check_compiler(conanfile, required=[])
         self.assertEqual("required parameter must be a dict", str(raises.exception))
 

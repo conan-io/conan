@@ -9,14 +9,6 @@ from conans.tools import deduced_cppstd, normalized_cppstd, check_gnu_extension
 
 class DeducedCppstdTests(unittest.TestCase):
 
-    def test_user_inputs(self):
-        """ Inputs with incorrect types should throw ConanException
-        """
-        with self.assertRaises(ConanException) as raises:
-            deduced_cppstd("conanfile")
-        self.assertEqual("conanfile parameter must be an instance of ConanFile",
-                         str(raises.exception))
-
     def _create_conanfile(self, compiler, version, os, cppstd, libcxx=None):
         settings = MockSettings({"arch": "x86_64",
                                  "build_type": "Debug",

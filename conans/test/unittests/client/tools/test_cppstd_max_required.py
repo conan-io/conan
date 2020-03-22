@@ -17,11 +17,6 @@ class CheckMaxCppStdTests(unittest.TestCase):
         conanfile = MockConanfile(MockSettings({}))
 
         with self.assertRaises(ConanException) as raises:
-            check_max_cppstd("conanfile", "17", False)
-        self.assertEqual("conanfile parameter must be an instance of ConanFile",
-                         str(raises.exception))
-
-        with self.assertRaises(ConanException) as raises:
             check_max_cppstd(conanfile, "gnu17", False)
         self.assertEqual("cppstd parameter must be a number", str(raises.exception))
 
@@ -117,11 +112,6 @@ class ValidMaxCppstdTests(unittest.TestCase):
         """ Inputs with incorrect types should throw ConanException
         """
         conanfile = MockConanfile(MockSettings({}))
-
-        with self.assertRaises(ConanException) as raises:
-            valid_max_cppstd("conanfile", "17", False)
-        self.assertEqual("conanfile parameter must be an instance of ConanFile",
-                         str(raises.exception))
 
         with self.assertRaises(ConanException) as raises:
             valid_max_cppstd(conanfile, "gnu17", False)

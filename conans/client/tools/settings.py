@@ -1,7 +1,6 @@
 from conans.client.build.cppstd_flags import cppstd_from_settings, cppstd_default
 from conans.errors import ConanInvalidConfiguration, ConanException
 from conans.model.version import Version
-from conans.model.conan_file import ConanFile
 
 
 def deduced_cppstd(conanfile):
@@ -15,9 +14,6 @@ def deduced_cppstd(conanfile):
 
     :param conanfile: ConanFile instance with compiler and cppstd information
     """
-    if not isinstance(conanfile, ConanFile):
-        raise ConanException("conanfile parameter must be an instance of ConanFile")
-
     cppstd = cppstd_from_settings(conanfile.settings)
     if cppstd:
         return cppstd
@@ -75,8 +71,6 @@ def check_min_cppstd(conanfile, cppstd, gnu_extensions=False):
     :param cppstd: Minimal cppstd version required
     :param gnu_extensions: GNU extension is required (e.g gnu17)
     """
-    if not isinstance(conanfile, ConanFile):
-        raise ConanException("conanfile parameter must be an instance of ConanFile")
     if not str(cppstd).isdigit():
         raise ConanException("cppstd parameter must be a number")
     if not isinstance(gnu_extensions, bool):
@@ -102,8 +96,6 @@ def valid_min_cppstd(conanfile, cppstd, gnu_extensions=False):
     :param gnu_extensions: GNU extension is required (e.g gnu17)
     :return: True, if current cppstd matches the required cppstd version. Otherwise, False.
     """
-    if not isinstance(conanfile, ConanFile):
-        raise ConanException("conanfile parameter must be an instance of ConanFile")
     if not str(cppstd).isdigit():
         raise ConanException("cppstd parameter must be a number")
     if not isinstance(gnu_extensions, bool):
@@ -126,8 +118,6 @@ def check_max_cppstd(conanfile, cppstd, gnu_extensions=False):
     :param cppstd: Minimal cppstd version required
     :param gnu_extensions: GNU extension is required (e.g gnu17)
     """
-    if not isinstance(conanfile, ConanFile):
-        raise ConanException("conanfile parameter must be an instance of ConanFile")
     if not str(cppstd).isdigit():
         raise ConanException("cppstd parameter must be a number")
     if not isinstance(gnu_extensions, bool):
@@ -153,8 +143,6 @@ def valid_max_cppstd(conanfile, cppstd, gnu_extensions=False):
     :param gnu_extensions: GNU extension is required (e.g gnu17)
     :return: True, if current cppstd matches the required cppstd version. Otherwise, False.
     """
-    if not isinstance(conanfile, ConanFile):
-        raise ConanException("conanfile parameter must be an instance of ConanFile")
     if not str(cppstd).isdigit():
         raise ConanException("cppstd parameter must be a number")
     if not isinstance(gnu_extensions, bool):
@@ -183,8 +171,6 @@ def check_cppstd(conanfile, minimum=None, maximum=None, excludes=[], gnu_extensi
     :param gnu_extensions: GNU extension is required (e.g gnu17)
     :param strict: Unkown configurations are invalid
     """
-    if not isinstance(conanfile, ConanFile):
-        raise ConanException("conanfile parameter must be an instance of ConanFile")
     if minimum and not str(minimum).isdigit():
         raise ConanException("minimum parameter must be a number")
     if maximum and not str(maximum).isdigit():
@@ -238,8 +224,6 @@ def check_compiler(conanfile, required, strict=False):
     :param required: A dict of required compiler versions required
     :param strict: Unkown configurations are invalid
     """
-    if not isinstance(conanfile, ConanFile):
-        raise ConanException("conanfile parameter must be an instance of ConanFile")
     if not isinstance(required, dict):
         raise ConanException("required parameter must be a dict")
     if not isinstance(strict, bool):
