@@ -1,5 +1,6 @@
 import os
 
+from conans.client.build.build import run_build_method
 from conans.errors import (ConanException, NotFoundException, conanfile_exception_formatter)
 from conans.model.conan_file import get_env_context_manager
 from conans.paths import CONANFILE, CONANFILE_TXT
@@ -44,15 +45,9 @@ def cmd_build(app, conanfile_path, source_folder, build_folder, package_folder, 
         conan_file.source_folder = source_folder
         conan_file.package_folder = package_folder
         conan_file.install_folder = install_folder
-        app.hook_manager.execute("pre_build", conanfile=conan_file,
-                                 conanfile_path=conanfile_path)
-        with get_env_context_manager(conan_file):
-            conan_file.output.highlight("Running build()")
-            with conanfile_exception_formatter(str(conan_file), "build"):
-                conan_file.build()
-            app.hook_manager.execute("post_build", conanfile=conan_file,
-                                     conanfile_path=conanfile_path)
-            if test:
+        run_build_method(conan_file, app.hook_manager, conanfile_path=conanfile_path)
+        if test:
+            with get_env_context_manager(conan_file):
                 conan_file.output.highlight("Running test()")
                 with conanfile_exception_formatter(str(conan_file), "test"):
                     conan_file.test()

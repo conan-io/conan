@@ -223,6 +223,18 @@ class CMakeCommonMacros:
         endfunction()
     """)
 
+    # this function gets the policy without raising an error for earlier versions than the policy
+    conan_get_policy = textwrap.dedent("""
+        function(conan_get_policy policy_id policy)
+            if(POLICY "${policy_id}")
+                cmake_policy(GET "${policy_id}" _policy)
+                set(policy "${_policy}" PARENT_SCOPE)
+            else()
+                set(policy "" PARENT_SCOPE)
+            endif()
+        endfunction()
+    """)
+
     conan_find_libraries_abs_path = textwrap.dedent("""
         function(conan_find_libraries_abs_path libraries package_libdir libraries_abs_path)
             foreach(_LIBRARY_NAME ${libraries})
@@ -362,13 +374,13 @@ class CMakeCommonMacros:
             set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
             set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
             set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-        
+
             set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lib)
             set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY})
             set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELWITHDEBINFO ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY})
             set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_MINSIZEREL ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY})
             set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY})
-        
+
             set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lib)
             set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
             set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELWITHDEBINFO ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
@@ -381,7 +393,7 @@ class CMakeCommonMacros:
         macro(conan_split_version VERSION_STRING MAJOR MINOR)
             #make a list from the version string
             string(REPLACE "." ";" VERSION_LIST "${VERSION_STRING}")
-        
+
             #write output values
             list(LENGTH VERSION_LIST _version_len)
             list(GET VERSION_LIST 0 ${MAJOR})
@@ -408,16 +420,18 @@ class CMakeCommonMacros:
                 conan_message(STATUS "WARN: conaninfo.txt not found")
                 return()
             endif()
-        
+
             file (READ "${_CONAN_CURRENT_DIR}/conaninfo.txt" CONANINFO)
-        
-            string(REGEX MATCH "compiler=([-A-Za-z0-9_ ]+)" _MATCHED ${CONANINFO})
+
+            # MATCHALL will match all, including the last one, which is the full_settings one
+            string(REGEX MATCH "full_settings.*" _FULL_SETTINGS_MATCHED ${CONANINFO})
+            string(REGEX MATCH "compiler=([-A-Za-z0-9_ ]+)" _MATCHED ${_FULL_SETTINGS_MATCHED})
             if(DEFINED CMAKE_MATCH_1)
                 string(STRIP "${CMAKE_MATCH_1}" _CONAN_INFO_COMPILER)
                 set(${CONAN_INFO_COMPILER} ${_CONAN_INFO_COMPILER} PARENT_SCOPE)
             endif()
-        
-            string(REGEX MATCH "compiler.version=([-A-Za-z0-9_.]+)" _MATCHED ${CONANINFO})
+
+            string(REGEX MATCH "compiler.version=([-A-Za-z0-9_.]+)" _MATCHED ${_FULL_SETTINGS_MATCHED})
             if(DEFINED CMAKE_MATCH_1)
                 string(STRIP "${CMAKE_MATCH_1}" _CONAN_INFO_COMPILER_VERSION)
                 set(${CONAN_INFO_COMPILER_VERSION} ${_CONAN_INFO_COMPILER_VERSION} PARENT_SCOPE)
@@ -524,11 +538,11 @@ class CMakeCommonMacros:
                     return()
                 endif()
             endif()
-        
+
             if(NOT CMAKE_HOST_SYSTEM_NAME STREQUAL ${CMAKE_SYSTEM_NAME})
                 set(CROSS_BUILDING 1)
             endif()
-        
+
             # If using VS, verify toolset
             if (CONAN_COMPILER STREQUAL "Visual Studio")
                 if (CONAN_SETTINGS_COMPILER_TOOLSET MATCHES "LLVM" OR
@@ -539,12 +553,12 @@ class CMakeCommonMacros:
                 else()
                     set(EXPECTED_CMAKE_CXX_COMPILER_ID "MSVC")
                 endif()
-        
+
                 if (NOT CMAKE_CXX_COMPILER_ID MATCHES ${EXPECTED_CMAKE_CXX_COMPILER_ID})
                     message(FATAL_ERROR "Incorrect '${CONAN_COMPILER}'. Toolset specifies compiler as '${EXPECTED_CMAKE_CXX_COMPILER_ID}' "
                                         "but CMake detected '${CMAKE_CXX_COMPILER_ID}'")
                 endif()
-        
+
             # Avoid checks when cross compiling, apple-clang crashes because its APPLE but not apple-clang
             # Actually CMake is detecting "clang" when you are using apple-clang, only if CMP0025 is set to NEW will detect apple-clang
             elseif((CONAN_COMPILER STREQUAL "gcc" AND NOT CMAKE_CXX_COMPILER_ID MATCHES "GNU") OR
@@ -553,8 +567,8 @@ class CMakeCommonMacros:
                 (CONAN_COMPILER STREQUAL "sun-cc" AND NOT CMAKE_CXX_COMPILER_ID MATCHES "SunPro") )
                 message(FATAL_ERROR "Incorrect '${CONAN_COMPILER}', is not the one detected by CMake: '${CMAKE_CXX_COMPILER_ID}'")
             endif()
-        
-        
+
+
             if(NOT DEFINED CONAN_COMPILER_VERSION)
                 conan_message(STATUS "WARN: CONAN_COMPILER_VERSION variable not set, please make sure yourself "
                                      "that your compiler version matches your declared settings")
@@ -588,9 +602,9 @@ class CMakeCommonMacros:
                                     "$<$<CONFIG:MinSizeRel>:${CONAN_INCLUDE_DIRS_MINSIZEREL}>"
                                     "$<$<CONFIG:Debug>:${CONAN_INCLUDE_DIRS_DEBUG}>")
             endif()
-        
+
             link_directories(${CONAN_LIB_DIRS})
-        
+
             conan_find_libraries_abs_path("${CONAN_LIBS_DEBUG}" "${CONAN_LIB_DIRS_DEBUG}"
                                           CONAN_LIBS_DEBUG)
             conan_find_libraries_abs_path("${CONAN_LIBS_RELEASE}" "${CONAN_LIB_DIRS_RELEASE}"
@@ -599,17 +613,17 @@ class CMakeCommonMacros:
                                           CONAN_LIBS_RELWITHDEBINFO)
             conan_find_libraries_abs_path("${CONAN_LIBS_MINSIZEREL}" "${CONAN_LIB_DIRS_MINSIZEREL}"
                                           CONAN_LIBS_MINSIZEREL)
-        
+
             add_compile_options(${CONAN_DEFINES}
                                 "$<$<CONFIG:Debug>:${CONAN_DEFINES_DEBUG}>"
                                 "$<$<CONFIG:Release>:${CONAN_DEFINES_RELEASE}>"
                                 "$<$<CONFIG:RelWithDebInfo>:${CONAN_DEFINES_RELWITHDEBINFO}>"
                                 "$<$<CONFIG:MinSizeRel>:${CONAN_DEFINES_MINSIZEREL}>")
-        
+
             conan_set_flags("")
             conan_set_flags("_RELEASE")
             conan_set_flags("_DEBUG")
-        
+
         endmacro()
     """)
 
@@ -642,7 +656,7 @@ class CMakeCommonMacros:
                     set(CONAN_BUILD_MODULES_PATHS ${CONAN_BUILD_MODULES_PATHS_MINSIZEREL} ${CONAN_BUILD_MODULES_PATHS})
                 endif()
             endif()
-        
+
             foreach(_BUILD_MODULE_PATH ${CONAN_BUILD_MODULES_PATHS})
                 include(${_BUILD_MODULE_PATH})
             endforeach()
@@ -652,18 +666,31 @@ class CMakeCommonMacros:
     conan_set_vs_runtime = textwrap.dedent("""
         macro(conan_set_vs_runtime)
             if(CONAN_LINK_RUNTIME)
-                foreach(flag CMAKE_C_FLAGS_RELEASE CMAKE_CXX_FLAGS_RELEASE
-                             CMAKE_C_FLAGS_RELWITHDEBINFO CMAKE_CXX_FLAGS_RELWITHDEBINFO
-                             CMAKE_C_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_MINSIZEREL)
-                    if(DEFINED ${flag})
-                        string(REPLACE "/MD" ${CONAN_LINK_RUNTIME} ${flag} "${${flag}}")
+                conan_get_policy(CMP0091 policy_0091)
+                if(policy_0091 STREQUAL "NEW")
+                    if(CONAN_LINK_RUNTIME MATCHES "MTd")
+                        set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDebug")
+                    elseif(CONAN_LINK_RUNTIME MATCHES "MDd")
+                        set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDebugDLL")
+                    elseif(CONAN_LINK_RUNTIME MATCHES "MT")
+                        set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded")
+                    elseif(CONAN_LINK_RUNTIME MATCHES "MD")
+                        set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")
                     endif()
-                endforeach()
-                foreach(flag CMAKE_C_FLAGS_DEBUG CMAKE_CXX_FLAGS_DEBUG)
-                    if(DEFINED ${flag})
-                        string(REPLACE "/MDd" ${CONAN_LINK_RUNTIME} ${flag} "${${flag}}")
-                    endif()
-                endforeach()
+                else()
+                    foreach(flag CMAKE_C_FLAGS_RELEASE CMAKE_CXX_FLAGS_RELEASE
+                                 CMAKE_C_FLAGS_RELWITHDEBINFO CMAKE_CXX_FLAGS_RELWITHDEBINFO
+                                 CMAKE_C_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_MINSIZEREL)
+                        if(DEFINED ${flag})
+                            string(REPLACE "/MD" ${CONAN_LINK_RUNTIME} ${flag} "${${flag}}")
+                        endif()
+                    endforeach()
+                    foreach(flag CMAKE_C_FLAGS_DEBUG CMAKE_CXX_FLAGS_DEBUG)
+                        if(DEFINED ${flag})
+                            string(REPLACE "/MDd" ${CONAN_LINK_RUNTIME} ${flag} "${${flag}}")
+                        endif()
+                    endforeach()
+                endif()
             endif()
         endmacro()
     """)
@@ -674,19 +701,34 @@ class CMakeCommonMacros:
             # Leave the defaults MD (MDd) or replace them with MT (MTd) but taking into account the
             # debug, forcing MXd for debug builds. It will generate MSVCRT warnings if the dependencies
             # are installed with "conan install" and the wrong build type.
+            conan_get_policy(CMP0091 policy_0091)
             if(CONAN_LINK_RUNTIME MATCHES "MT")
-                foreach(flag CMAKE_C_FLAGS_RELEASE CMAKE_CXX_FLAGS_RELEASE
-                                 CMAKE_C_FLAGS_RELWITHDEBINFO CMAKE_CXX_FLAGS_RELWITHDEBINFO
-                                 CMAKE_C_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_MINSIZEREL)
-                    if(DEFINED ${flag})
-                        string(REPLACE "/MD" "/MT" ${flag} "${${flag}}")
+                if(policy_0091 STREQUAL "NEW")
+                    if(CMAKE_BUILD_TYPE STREQUAL "Release" OR
+                       CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo" OR
+                       CMAKE_BUILD_TYPE STREQUAL "MinSizeRel")
+                        if (CMAKE_MSVC_RUNTIME_LIBRARY STREQUAL "MultiThreadedDLL")
+                            set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded")
+                        endif()
+                    elseif(CMAKE_BUILD_TYPE STREQUAL "Debug")
+                        if (CMAKE_MSVC_RUNTIME_LIBRARY STREQUAL "MultiThreadedDebugDLL")
+                            set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDebug")
+                        endif()
                     endif()
-                endforeach()
-                foreach(flag CMAKE_C_FLAGS_DEBUG CMAKE_CXX_FLAGS_DEBUG)
-                    if(DEFINED ${flag})
-                        string(REPLACE "/MDd" "/MTd" ${flag} "${${flag}}")
-                    endif()
-                endforeach()
+                else()
+                    foreach(flag CMAKE_C_FLAGS_RELEASE CMAKE_CXX_FLAGS_RELEASE
+                                    CMAKE_C_FLAGS_RELWITHDEBINFO CMAKE_CXX_FLAGS_RELWITHDEBINFO
+                                    CMAKE_C_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_MINSIZEREL)
+                        if(DEFINED ${flag})
+                            string(REPLACE "/MD" "/MT" ${flag} "${${flag}}")
+                        endif()
+                    endforeach()
+                    foreach(flag CMAKE_C_FLAGS_DEBUG CMAKE_CXX_FLAGS_DEBUG)
+                        if(DEFINED ${flag})
+                            string(REPLACE "/MDd" "/MTd" ${flag} "${${flag}}")
+                        endif()
+                    endforeach()
+                endif()
             endif()
         endmacro()
     """)
@@ -697,10 +739,10 @@ class CMakeCommonMacros:
             # CONAN_CMAKE_MODULE_PATH_DEBUG to be used by the consumer
             # CMake can find findXXX.cmake files in the root of packages
             set(CMAKE_MODULE_PATH ${CONAN_CMAKE_MODULE_PATH} ${CMAKE_MODULE_PATH})
-        
+
             # Make find_package() to work
             set(CMAKE_PREFIX_PATH ${CONAN_CMAKE_MODULE_PATH} ${CMAKE_PREFIX_PATH})
-        
+
             # Set the find root path (cross build)
             set(CMAKE_FIND_ROOT_PATH ${CONAN_CMAKE_FIND_ROOT_PATH} ${CMAKE_FIND_ROOT_PATH})
             if(CONAN_CMAKE_FIND_ROOT_PATH_MODE_PROGRAM)
@@ -780,6 +822,7 @@ class CMakeCommonMacros:
 
 _cmake_common_macros = "\n".join([
     CMakeCommonMacros.conan_message,
+    CMakeCommonMacros.conan_get_policy,
     CMakeCommonMacros.conan_find_libraries_abs_path,
     CMakeCommonMacros.conan_package_library_targets,
     CMakeCommonMacros.conan_set_libcxx,
@@ -891,17 +934,17 @@ cmake_macros_multi = "\n".join([
         else()
             message(FATAL_ERROR "No conanbuildinfo_release.cmake, please install the Release conf first")
         endif()
-        
+
         if(EXISTS ${CMAKE_CURRENT_LIST_DIR}/conanbuildinfo_debug.cmake)
             include(${CMAKE_CURRENT_LIST_DIR}/conanbuildinfo_debug.cmake)
         else()
             message(FATAL_ERROR "No conanbuildinfo_debug.cmake, please install the Debug conf first")
         endif()
-        
+
         if(EXISTS ${CMAKE_CURRENT_LIST_DIR}/conanbuildinfo_minsizerel.cmake)
             include(${CMAKE_CURRENT_LIST_DIR}/conanbuildinfo_minsizerel.cmake)
         endif()
-        
+
         if(EXISTS ${CMAKE_CURRENT_LIST_DIR}/conanbuildinfo_relwithdebinfo.cmake)
             include(${CMAKE_CURRENT_LIST_DIR}/conanbuildinfo_relwithdebinfo.cmake)
         endif()

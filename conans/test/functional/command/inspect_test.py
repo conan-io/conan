@@ -8,6 +8,22 @@ from conans.test.utils.tools import TestClient, TestServer, GenConanfile
 
 class ConanInspectTest(unittest.TestCase):
 
+    def test_inspect_quiet(self):
+        client = TestClient(default_server_user=True)
+        client.save({"conanfile.py": GenConanfile().with_name("name")})
+        client.run("export . name/version@user/channel")
+        client.run("upload name/version@user/channel --all")
+        client.run("remove * -f")
+
+        # If the recipe exists, it doesn't show extra output
+        client.run("inspect name/version@user/channel --raw name")
+        self.assertEqual(client.out, "name")
+
+        # If the recipe doesn't exist, the output is shown
+        client.run("inspect non-existing/version@user/channel --raw name", assert_error=True)
+        self.assertIn("ERROR: Unable to find 'non-existing/version@user/channel' in remotes",
+                      client.out)
+
     def python_requires_test(self):
         server = TestServer()
         client = TestClient(servers={"default": server}, users={"default": [("lasote", "mypass")]})
@@ -364,7 +380,7 @@ default_options:
 class InspectRawTest(unittest.TestCase):
     conanfile = textwrap.dedent("""
         from conans import ConanFile
-        
+
         class Pkg(ConanFile):
             name = "MyPkg"
             version = "1.2.3"
@@ -373,7 +389,7 @@ class InspectRawTest(unittest.TestCase):
             settings = "os", "arch", "build_type", "compiler"
             options = {"foo": [True, False], "bar": [True, False]}
             default_options = "foo=True", "bar=True"
-            
+
             _private = "Nothing"
 
             def build(self):
@@ -433,7 +449,7 @@ class InspectRawTest(unittest.TestCase):
         client = TestClient()
         conanfile = textwrap.dedent("""
             from conans import ConanFile
-            
+
             class Lib(ConanFile):
                 default_options = {"dict": True, "list": False}
             """)

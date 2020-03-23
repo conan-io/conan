@@ -4,11 +4,11 @@ from conans.client.graph.build_mode import BuildMode
 from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_MISSING,
                                        BINARY_UPDATE, RECIPE_EDITABLE, BINARY_EDITABLE,
                                        RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP, BINARY_UNKNOWN)
-
 from conans.errors import NoRemoteAvailable, NotFoundException, conanfile_exception_formatter
 from conans.model.info import ConanInfo, PACKAGE_ID_UNKNOWN
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference
+from conans.util.conan_v2_mode import conan_v2_property
 from conans.util.files import is_dirty, rmdir
 
 
@@ -20,9 +20,10 @@ class GraphBinariesAnalyzer(object):
         self._remote_manager = remote_manager
         # These are the nodes with pref (not including PREV) that have been evaluated
         self._evaluated = {}  # {pref: [nodes]}
+        self._fixed_package_id = cache.config.full_transitive_package_id
 
     @staticmethod
-    def _check_update(upstream_manifest, package_folder, output, node):
+    def _check_update(upstream_manifest, package_folder, output):
         read_manifest = FileTreeManifest.load(package_folder)
         if upstream_manifest != read_manifest:
             if upstream_manifest.time > read_manifest.time:
@@ -82,7 +83,7 @@ class GraphBinariesAnalyzer(object):
                 except NoRemoteAvailable:
                     output.warn("Can't update, no remote defined")
                 else:
-                    if self._check_update(upstream_manifest, package_folder, output, node):
+                    if self._check_update(upstream_manifest, package_folder, output):
                         node.binary = BINARY_UPDATE
                         node.prev = pref.revision  # With revision
             elif remotes:
@@ -262,8 +263,7 @@ class GraphBinariesAnalyzer(object):
         conanfile.options.clear_unused(transitive_reqs)
         conanfile.options.freeze()
 
-    @staticmethod
-    def _compute_package_id(node, default_package_id_mode, default_python_requires_id_mode):
+    def _compute_package_id(self, node, default_package_id_mode, default_python_requires_id_mode):
         """
         Compute the binary package ID of this node
         :param node: the node to compute the package-ID
@@ -273,15 +273,27 @@ class GraphBinariesAnalyzer(object):
         # A bit risky to be done now
         conanfile = node.conanfile
         neighbors = node.neighbors()
-        direct_reqs = []  # of PackageReference
-        indirect_reqs = set()  # of PackageReference, avoid duplicates
-        for neighbor in neighbors:
-            ref, nconan = neighbor.ref, neighbor.conanfile
-            direct_reqs.append(neighbor.pref)
-            indirect_reqs.update(nconan.info.requires.refs())
+        if not self._fixed_package_id:
+            direct_reqs = []  # of PackageReference
+            indirect_reqs = set()  # of PackageReference, avoid duplicates
+            for neighbor in neighbors:
+                ref, nconan = neighbor.ref, neighbor.conanfile
+                direct_reqs.append(neighbor.pref)
+                indirect_reqs.update(nconan.info.requires.refs())
+            # Make sure not duplicated
+            indirect_reqs.difference_update(direct_reqs)
+        else:
+            node.id_direct_prefs = set()  # of PackageReference
+            node.id_indirect_prefs = set()  # of PackageReference, avoid duplicates
+            for neighbor in neighbors:
+                node.id_direct_prefs.add(neighbor.pref)
+                node.id_indirect_prefs.update(neighbor.id_direct_prefs)
+                node.id_indirect_prefs.update(neighbor.id_indirect_prefs)
+            # Make sure not duplicated, totally necessary
+            node.id_indirect_prefs.difference_update(node.id_direct_prefs)
+            direct_reqs = node.id_direct_prefs
+            indirect_reqs = node.id_indirect_prefs
 
-        # Make sure not duplicated
-        indirect_reqs.difference_update(direct_reqs)
         python_requires = getattr(conanfile, "python_requires", None)
         if python_requires:
             if isinstance(python_requires, dict):
@@ -299,7 +311,9 @@ class GraphBinariesAnalyzer(object):
 
         # Once we are done, call package_id() to narrow and change possible values
         with conanfile_exception_formatter(str(conanfile), "package_id"):
-            conanfile.package_id()
+            with conan_v2_property(conanfile, 'cpp_info',
+                                   "'self.cpp_info' access in package_id() method is deprecated"):
+                conanfile.package_id()
 
         info = conanfile.info
         node.package_id = info.package_id()
@@ -321,6 +335,9 @@ class GraphBinariesAnalyzer(object):
         deps_graph.mark_private_skippable(nodes_subset=nodes_subset, root=root)
 
     def reevaluate_node(self, node, remotes, build_mode, update):
+        """ reevaluate the node is necessary when there is some PACKAGE_ID_UNKNOWN due to
+        package_revision_mode
+        """
         assert node.binary == BINARY_UNKNOWN
         output = node.conanfile.output
         node._package_id = None  # Invalidate it, so it can be re-computed

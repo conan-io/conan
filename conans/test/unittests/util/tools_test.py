@@ -7,7 +7,6 @@ import unittest
 import warnings
 from collections import namedtuple
 
-
 import requests
 import six
 from bottle import request, static_file, HTTPError
@@ -18,7 +17,7 @@ from parameterized import parameterized
 from conans.client import tools
 from conans.client.cache.cache import CONAN_CONF
 from conans.client.conan_api import ConanAPIV1
-from conans.client.conf import default_client_conf, default_settings_yml
+from conans.client.conf import get_default_settings_yml, get_default_client_conf
 from conans.client.output import ConanOutput
 from conans.client.tools.files import replace_in_file, which
 from conans.client.tools.oss import OSInfo
@@ -260,7 +259,7 @@ class HelloConan(ConanFile):
 
         # Not test the real commmand get_command if it's setting the module global vars
         tmp = temp_folder()
-        conf = default_client_conf.replace("\n[proxies]", "\n[proxies]\nhttp = http://myproxy.com")
+        conf = get_default_client_conf().replace("\n[proxies]", "\n[proxies]\nhttp = http://myproxy.com")
         os.mkdir(os.path.join(tmp, ".conan"))
         save(os.path.join(tmp, ".conan", CONAN_CONF), conf)
         with tools.environment_append({"CONAN_USER_HOME": tmp}):
@@ -288,7 +287,7 @@ class HelloConan(ConanFile):
 
     @unittest.skipUnless(platform.system() == "Windows", "Requires vswhere")
     def msvc_build_command_test(self):
-        settings = Settings.loads(default_settings_yml)
+        settings = Settings.loads(get_default_settings_yml())
         settings.os = "Windows"
         settings.compiler = "Visual Studio"
         settings.compiler.version = "14"
@@ -729,6 +728,17 @@ class HelloConan(ConanFile):
             self.assertEqual(load("mytemp/myfile.txt"), "hello world zipped!")
 
         thread.stop()
+
+    def check_output_runner_test(self):
+        import tempfile
+        original_temp = tempfile.gettempdir()
+        patched_temp = os.path.join(original_temp, "dir with spaces")
+        payload = "hello world"
+        with patch("tempfile.mktemp") as mktemp:
+            mktemp.return_value = patched_temp
+            output = check_output_runner(["echo", payload], stderr=subprocess.STDOUT)
+            self.assertIn(payload, str(output))
+
 
     def unix_to_dos_unit_test(self):
 

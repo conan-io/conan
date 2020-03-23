@@ -30,7 +30,7 @@ def print_graph(deps_graph, out):
         if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
             continue
         pref = PackageReference(node.ref, node.package_id)
-        if node in build_time_nodes:
+        if node in build_time_nodes:  # TODO: May use build_require_context information
             build_requires.setdefault(pref, []).append(node)
         else:
             requires.setdefault(pref, []).append(node)

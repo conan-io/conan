@@ -1,7 +1,7 @@
 import os
 
 from conans.client.rest.download_cache import CachedFileDownloader
-from conans.client.rest.uploader_downloader import FileDownloader
+from conans.client.rest.file_downloader import FileDownloader
 from conans.client.tools.files import check_md5, check_sha1, check_sha256, unzip
 from conans.errors import ConanException
 from conans.util.fallbacks import default_output, default_requester

@@ -25,15 +25,15 @@ Conan is a package manager for C and C++ developers:
 - Extensible: Its python based recipes, together with extensions points allows for great power and flexibility.
 - Large and active community, especially in Github (https://github.com/conan-io/conan) and Slack (https://cpplang.now.sh/ #conan channel).
   This community also creates and maintains packages in Conan-center and Bincrafters repositories in Bintray.
-- Stable. Used in production by many companies, since 1.0 there is a commitment not to break package recipes and documented behavior. 
+- Stable. Used in production by many companies, since 1.0 there is a commitment not to break package recipes and documented behavior.
 
 
 
-+------------------------+-------------------------+-------------------------+-------------------------+
-| **master**             | **develop**             |  **Coverage**           |    **Code Climate**     |
-+========================+=========================+=========================+=========================+
-| |Build Status Master|  | |Build Status Develop|  |  |Develop coverage|     |   |Develop climate|     |
-+------------------------+-------------------------+-------------------------+-------------------------+
++------------------------+-------------------------+-------------------------+
+| **master**             | **develop**             |    **Code Climate**     |
++========================+=========================+=========================+
+| |Build Status Master|  | |Build Status Develop|  |   |Develop climate|     |
++------------------------+-------------------------+-------------------------+
 
 
 Setup
@@ -257,20 +257,9 @@ License
 .. |Build Status Develop| image:: https://conan-ci.jfrog.info/buildStatus/icon?job=ConanTestSuite/develop
    :target: https://conan-ci.jfrog.info/job/ConanTestSuite/job/develop
 
-.. |Master coverage| image:: https://codecov.io/gh/conan-io/conan/branch/master/graph/badge.svg
-   :target: https://codecov.io/gh/conan-io/conan/branch/master
-
-.. |Develop coverage| image:: https://codecov.io/gh/conan-io/conan/branch/develop/graph/badge.svg
-   :target: https://codecov.io/gh/conan-io/conan/branch/develop
-
-.. |Coverage graph| image:: https://codecov.io/gh/conan-io/conan/branch/develop/graphs/tree.svg
-   :height: 50px
-   :width: 50 px
-   :alt: Conan develop coverage
-
 .. |Develop climate| image:: https://api.codeclimate.com/v1/badges/081b53e570d5220b34e4/maintainability.svg
    :target: https://codeclimate.com/github/conan-io/conan/maintainability
-   
+
 .. |Logo| image:: https://conan.io/img/jfrog_conan_logo.png
 
 
