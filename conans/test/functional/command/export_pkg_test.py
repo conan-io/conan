@@ -12,6 +12,7 @@ from conans.paths import CONANFILE
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, GenConanfile
 from conans.util.env_reader import get_env
 from conans.util.files import load, mkdir, is_dirty
+from conans.errors import ConanException
 
 
 class ExportPkgTest(unittest.TestCase):
@@ -480,7 +481,7 @@ class TestConan(ConanFile):
         self.assertIn("set(CONAN_LIBS_HELLO1 mycoollib)", cmakeinfo)
         self.assertIn("set(CONAN_LIBS mycoollib ${CONAN_LIBS})", cmakeinfo)
 
-    def export_pkg_json_test(self):
+    def test_export_pkg_json(self):
 
         def _check_json_output(with_error=False):
             json_path = os.path.join(self.client.current_folder, "output.json")
@@ -530,7 +531,7 @@ class MyConan(ConanFile):
         self.client.run("export-pkg . danimtb/testing -pf package --json output.json --force")
         _check_json_output()
 
-    def json_with_dependencies_test(self):
+    def test_json_with_dependencies(self):
 
         def _check_json_output(with_error=False):
             json_path = os.path.join(self.client.current_folder, "output.json")
@@ -618,3 +619,13 @@ class TestConan(ConanFile):
         self.assertFalse(is_dirty(package_folder))
         client.run("install pkg/0.1@")
         self.assertIn("pkg/0.1: Already installed!", client.out)
+
+    def test_invalid_package_folder(self):
+        """ package folder must exists, otherwise, raise ConanException
+        """
+        client = TestClient()
+        client.save({CONANFILE: GenConanfile().with_name("foo").with_version("0.1.0")})
+
+        with self.assertRaisesRegex(ConanException,
+                                    "ERROR: The package folder 'pkg' does not exist."):
+            client.run("export-pkg . foo/0.1.0@user/testing -pf=pkg")
