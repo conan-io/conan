@@ -26,11 +26,7 @@ class InfoTest(unittest.TestCase):
 
     def failed_info_test(self):
         client = TestClient()
-        conanfile = """from conans import ConanFile
-class Pkg(ConanFile):
-    requires = "Pkg/1.0.x@user/testing"
-"""
-        client.save({"conanfile.py": conanfile})
+        client.save({"conanfile.py": GenConanfile().with_require_plain("Pkg/1.0.x@user/testing")})
         client.run("info .", assert_error=True)
         self.assertIn("Pkg/1.0.x@user/testing: Not found in local cache", client.out)
         client.run("search")
@@ -73,16 +69,7 @@ class Pkg(ConanFile):
             self.assertNotIn("WARN: Conanfile doesn't have 'url'", self.client.out)
 
     def install_folder_test(self):
-
-        conanfile = """from conans import ConanFile
-from conans.util.files import save
-
-class MyTest(ConanFile):
-    name = "Pkg"
-    version = "0.1"
-    settings = "build_type"
-
-"""
+        conanfile = GenConanfile("Pkg", "0.1").with_setting("build_type")
         client = TestClient()
         client.save({"conanfile.py": conanfile})
         client.run("info . -s build_type=Debug")
@@ -160,8 +147,8 @@ class MyTest(ConanFile):
                 check_ref(dep)
                 self.assertIn(dep.name, test_deps[parent_ref.name])
 
-        def check_file(dot_file):
-            with open(dot_file) as dot_file_contents:
+        def check_file(filename):
+            with open(filename) as dot_file_contents:
                 lines = dot_file_contents.readlines()
                 self.assertEqual(lines[0], "digraph {\n")
                 for line in lines[1:-1]:
