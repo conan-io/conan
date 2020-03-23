@@ -2036,23 +2036,24 @@ def _add_common_install_arguments(parser, build_help, lockfile=True):
                             "Lockfile can be updated if packages change")
 
 
-_help_build_policies = '''Optional, use it to choose if you want to build from sources:
+_help_build_policies = '''Optional, specify which packages to build from source. Combining multiple
+    '--build' options on one command line is allowed. For dependencies, the optional 'build_policy'
+    attribute in their conanfile.py takes precedence over the command line parameter.
+    Possible parameters:
 
-    --build            Build all from sources, do not use binary packages.
-    --build=never      Never build, use binary packages or fail if a binary package is not found.
-    --build=missing    Build from code if a binary package is not found.
-    --build=cascade    Will build from code all the nodes with some dependency being built
-                       (for any reason). Can be used together with any other build policy.
-                       Useful to make sure that any new change introduced in a dependency is
-                       incorporated by building again the package.
-    --build=outdated   Build from code if the binary is not built with the current recipe or
-                       when missing a binary package.
-    --build=[pattern]  Build always these packages from source, but never build the others.
-                       Allows multiple --build parameters. 'pattern' is a fnmatch file pattern
-                       of a package reference.
+    --build            Force build for all packages, do not use binary packages.
+    --build=never      Disallow build for all packages, use binary packages or fail if a binary
+                       package is not found. Cannot be combined with other '--build' options.
+    --build=missing    Build packages from source whose binary package is not found.
+    --build=outdated   Build packages from source whose binary package was not generated from the
+                       latest recipe or is not found.
+    --build=cascade    Build packages from source that have at least one dependency being built from
+                       source.
+    --build=[pattern]  Build packages from source whose package reference matches the pattern. The
+                       pattern uses 'fnmatch' style wildcards.
 
-    Default behavior: If you don't specify anything, it will be similar to '--build={}', but
-    package recipes can override it with their 'build_policy' attribute in the conanfile.py.
+    Default behavior: If you omit the '--build' option, the 'build_policy' attribute in conanfile.py
+    will be used if it exists, otherwise the behavior is like '--build={}'.
 '''
 
 

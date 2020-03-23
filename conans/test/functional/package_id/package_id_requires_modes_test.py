@@ -455,3 +455,37 @@ class Pkg(ConanFile):
                         ' -s compiler="gcc" -s compiler.libcxx=libstdc++11'
                         ' -s compiler.version=7.2 -s compiler.cppstd=gnu14')
         self.assertIn("Hello/1.2.0@user/testing: Already installed!", self.client.out)
+
+    def test_package_id_requires_patch_mode(self):
+        """ Requirements shown in build missing error, must contains transitive packages
+            For this test the follow graph has been used:
+            libb <- liba
+            libfoo <- libbar
+            libc <- libb, libfoo
+            libd <- libc
+        """
+
+        channel = "user/testing"
+        self.client.run("config set general.default_package_id_mode=patch_mode")
+        self._export("liba", "0.1.0", channel=channel, package_id_text=None, requires=None)
+        self.client.run("create . liba/0.1.0@user/testing")
+        self._export("libb", "0.1.0", channel=channel, package_id_text=None, requires=["liba/0.1.0@user/testing"])
+        self.client.run("create . libb/0.1.0@user/testing")
+        self._export("libbar", "0.1.0", channel=channel, package_id_text=None, requires=None)
+        self.client.run("create . libbar/0.1.0@user/testing")
+        self._export("libfoo", "0.1.0", channel=channel, package_id_text=None, requires=["libbar/0.1.0@user/testing"])
+        self.client.run("create . libfoo/0.1.0@user/testing")
+        self._export("libc", "0.1.0", channel=channel, package_id_text=None,
+                     requires=["libb/0.1.0@user/testing", "libfoo/0.1.0@user/testing"])
+        self._export("libd", "0.1.0", channel=channel, package_id_text=None, requires=["libc/0.1.0@user/testing"])
+        self.client.run("create . libd/0.1.0@user/testing", assert_error=True)
+        self.assertIn("""ERROR: Missing binary: libc/0.1.0@user/testing:e12c9d31fa508340bb8d0c4f9dd4c98a5d0ac082
+
+libc/0.1.0@user/testing: WARN: Can't find a 'libc/0.1.0@user/testing' package for the specified settings, options and dependencies:
+- Settings: 
+- Options: an_option=off, liba:an_option=off, libb:an_option=off, libbar:an_option=off, libfoo:an_option=off
+- Dependencies: libb/0.1.0@user/testing, libfoo/0.1.0@user/testing
+- Requirements: liba/0.1.0, libb/0.1.0, libbar/0.1.0, libfoo/0.1.0
+- Package ID: e12c9d31fa508340bb8d0c4f9dd4c98a5d0ac082
+
+ERROR: Missing prebuilt package for 'libc/0.1.0@user/testing'""", self.client.out)

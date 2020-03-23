@@ -62,7 +62,6 @@ class ConanRequester(object):
                 self._client_certificates = self._client_cert_path
 
     def _should_skip_proxy(self, url):
-
         for entry in self._no_proxy_match:
             if fnmatch.fnmatch(url, entry):
                 return True

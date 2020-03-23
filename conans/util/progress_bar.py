@@ -49,22 +49,22 @@ class Progress(object):
                                   file=self._output, unit="B", leave=False, dynamic_ncols=False,
                                   ascii=True, unit_scale=True, unit_divisor=1024)
 
-    def pb_update(self, chunk_size):
+    def _pb_update(self, chunk_size):
         if self._tqdm_bar is not None:
             self._tqdm_bar.update(chunk_size)
         elif self._output and time.time() - self._last_time > TIMEOUT_BEAT_SECONDS:
             self._last_time = time.time()
             self._output.write(TIMEOUT_BEAT_CHARACTER)
 
-    def update(self, chunks, chunk_size=1024):
+    def update(self, chunks):
         for chunk in chunks:
             yield chunk
             data_size = len(chunk)
             self._processed_size += data_size
-            self.pb_update(data_size)
+            self._pb_update(data_size)
 
         if self._total_length > self._processed_size:
-            self.pb_update(self._total_length - self._processed_size)
+            self._pb_update(self._total_length - self._processed_size)
 
         self.pb_close()
 
@@ -94,7 +94,7 @@ class FileWrapper(Progress):
     def read(self, size):
         prev = self.tell()
         ret = self._fileobj.read(size)
-        self.pb_update(self.tell() - prev)
+        self._pb_update(self.tell() - prev)
         return ret
 
 

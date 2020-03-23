@@ -15,7 +15,8 @@ class ConanV2ModeTestCase(unittest.TestCase):
         # TODO: Initialize with the default behavior for Conan v2
         t = TestClient(*args, **kwargs)
         if use_settings_v1:
-            t.save({os.path.join(t.cache_folder, CONAN_SETTINGS): get_default_settings_yml(force_v1=True)})
+            t.save({os.path.join(t.cache_folder, CONAN_SETTINGS):
+                        get_default_settings_yml(force_v1=True)})
         return t
 
     def run(self, *args, **kwargs):
