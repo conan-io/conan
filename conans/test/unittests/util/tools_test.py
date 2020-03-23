@@ -473,7 +473,9 @@ class HelloConan(ConanFile):
         self.assertEqual(str(out).count("Waiting 1 seconds to retry..."), 2)
 
         # Not found error
-        with six.assertRaisesRegex(self, ConanException, "All 1 URLs have failed: Not found:"):
+        with six.assertRaisesRegex(self, ConanException,
+                                   "Could not download from the URL http://google.es/FILE_NOT_FOUND:"
+                                   " Not Found."):
             tools.download("http://google.es/FILE_NOT_FOUND",
                            os.path.join(temp_folder(), "README.txt"), out=out,
                            requester=requests,
@@ -732,7 +734,7 @@ class HelloConan(ConanFile):
         thread.stop()
 
     @patch("conans.client.tools.net.unzip")
-    def test_get_mirror(self, unzip_mock):
+    def test_get_mirror(self, _):
         """ tools.get must supports a list of URLs. However, only one must be downloaded.
         """
 
@@ -768,7 +770,8 @@ class HelloConan(ConanFile):
             requester.fail_first = True
             tools.get(urls, requester=requester, output=out, retry=0, retry_wait=0)
             self.assertEqual(2, requester.count)
-            self.assertIn("WARN: Could not download from the url {}.".format(urls[0]), out)
+            self.assertIn("ERROR: Could not download from the URL {}: Error 408 downloading file"
+                          .format(urls[0]), out)
 
         # Fail all downloads
         with tools.chdir(tools.mkdir_tmp()):
@@ -777,8 +780,7 @@ class HelloConan(ConanFile):
             with self.assertRaises(ConanException) as error:
                 tools.get(urls, requester=requester, output=out, retry=0, retry_wait=0)
             self.assertEqual(3, requester.count)
-            self.assertIn("All 3 URLs have failed: Error 408 downloading file",
-                          str(error.exception))
+            self.assertIn("All downloads from (3) URLs have failed.", str(error.exception))
 
     def unix_to_dos_unit_test(self):
 

@@ -13,7 +13,7 @@ def get(url, md5='', sha1='', sha256='', destination=".", filename="", keep_perm
     """ high level downloader + unzipper + (optional hash checker) + delete temporary zip
     """
 
-    url = [url] if not isinstance(url, list) else url
+    url = [url] if not isinstance(url, (list, tuple)) else url
     if not filename and ("?" in url[0] or "=" in url[0]):
         raise ConanException("Cannot deduce file name from the url: '{}'. Use 'filename' "
                              "parameter.".format(url[0]))
@@ -115,7 +115,9 @@ def download(url, filename, verify=True, out=None, retry=None, retry_wait=None, 
             _download_file(downloader, url_it)
             break
         except ConanException as error:
-            out.warn("Could not download from the url {}.".format(url_it))
+            message = "Could not download from the URL {}: {}.".format(url_it, str(error))
+            if len(url) == 1:
+                raise ConanException(message)
+            out.error(message)
             if (index + 1) == len(url):
-                raise ConanException("All {} URLs have failed: {}.".format(len(url),
-                                                                          str(error)))
+                raise ConanException("All downloads from ({}) URLs have failed.".format(len(url)))
