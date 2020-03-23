@@ -108,25 +108,25 @@ message("Target libs: ${tmp}")
 
     def cmake_find_dependency_redefinition_test(self):
         conanfile = textwrap.dedent("""
-        from conans import ConanFile, CMake
-        class Consumer(ConanFile):
-            name = "App"
-            version = "1.0"
-            requires = "PkgC/1.0@user/testing"
-            generators = "cmake_find_package"
-            exports_sources = "CMakeLists.txt"
-            settings = "os", "arch", "compiler"
-
-            def build(self):
-                cmake = CMake(self)
-                cmake.configure()
+            from conans import ConanFile, CMake
+            class Consumer(ConanFile):
+                name = "App"
+                version = "1.0"
+                requires = "PkgC/1.0@user/testing"
+                generators = "cmake_find_package"
+                exports_sources = "CMakeLists.txt"
+                settings = "os", "arch", "compiler"
+    
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
 
         """)
 
         cmakelists = textwrap.dedent("""
-        cmake_minimum_required(VERSION 3.0)
-        project(app)
-        find_package(PkgC)
+            cmake_minimum_required(VERSION 3.0)
+            project(app)
+            find_package(PkgC)
         """)
 
         client = TestClient()
