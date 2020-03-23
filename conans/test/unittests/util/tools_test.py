@@ -475,7 +475,7 @@ class HelloConan(ConanFile):
         # Not found error
         with six.assertRaisesRegex(self, ConanException,
                                    "Could not download from the URL http://google.es/FILE_NOT_FOUND:"
-                                   " Not Found."):
+                                   " Not found: http://google.es/FILE_NOT_FOUND."):
             tools.download("http://google.es/FILE_NOT_FOUND",
                            os.path.join(temp_folder(), "README.txt"), out=out,
                            requester=requests,
