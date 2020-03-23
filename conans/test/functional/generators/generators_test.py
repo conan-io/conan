@@ -84,10 +84,10 @@ class TestConan(ConanFile):
     version = "0.1"
 
     def package_info(self):
-        self.cpp_info.libs = ["hello", ":hello2", "::/opt/hello3"]
+        self.cpp_info.libs = ["hello", "/hello2", "/opt/hello3"]
         self.cpp_info.debug.includedirs = []
-        self.cpp_info.debug.libs = ["hellod", ":hello2d", "::/opt/hello3d"]
-        self.cpp_info.release.libs = ["hellor", ":hello2r", "::/opt/hello3r"]
+        self.cpp_info.debug.libs = ["hellod", "/hello2d", "/opt/hello3d"]
+        self.cpp_info.release.libs = ["hellor", "/hello2r", "/opt/hello3r"]
 
 """
         base = '''
@@ -104,12 +104,12 @@ qmake
         qmake = client.load("conanbuildinfo.pri")
         self.assertIn("CONAN_RESDIRS += ", qmake)
         self.assertEqual(qmake.count("CONAN_LIBS += "), 1)
-        self.assertIn("CONAN_LIBS_PKG_RELEASE += -lhellor -l:hello2r /opt/hello3r", qmake)
-        self.assertIn("CONAN_LIBS_PKG_DEBUG += -lhellod -l:hello2d /opt/hello3d", qmake)
-        self.assertIn("CONAN_LIBS_PKG += -lhello -l:hello2 /opt/hello3", qmake)
-        self.assertIn("CONAN_LIBS_RELEASE += -lhellor -l:hello2r /opt/hello3r", qmake)
-        self.assertIn("CONAN_LIBS_DEBUG += -lhellod -l:hello2d /opt/hello3d", qmake)
-        self.assertIn("CONAN_LIBS += -lhello -l:hello2 /opt/hello3", qmake)
+        self.assertIn('CONAN_LIBS_PKG_RELEASE += -lhellor "/hello2r" "/opt/hello3r"', qmake)
+        self.assertIn('CONAN_LIBS_PKG_DEBUG += -lhellod "/hello2d" "/opt/hello3d"', qmake)
+        self.assertIn('CONAN_LIBS_PKG += -lhello "/hello2" "/opt/hello3"', qmake)
+        self.assertIn('CONAN_LIBS_RELEASE += -lhellor "/hello2r" "/opt/hello3r"', qmake)
+        self.assertIn('CONAN_LIBS_DEBUG += -lhellod "/hello2d" "/opt/hello3d"', qmake)
+        self.assertIn('CONAN_LIBS += -lhello "/hello2" "/opt/hello3"', qmake)
 
     def test_qmake_hyphen_dot(self):
         client = TestClient()

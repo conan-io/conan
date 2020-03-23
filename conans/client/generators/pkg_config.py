@@ -2,7 +2,6 @@ import os
 
 from conans.client.build.compiler_flags import rpath_flags, format_frameworks, format_framework_paths
 from conans.model import Generator
-from conans.tools import shell_quote
 
 """
 PC FILE EXAMPLE:
@@ -62,7 +61,7 @@ class PkgConfigGenerator(Generator):
         lines.append("Description: %s" % description)
         lines.append("Version: %s" % cpp_info.version)
         libdirs_flags = ["-L${%s}" % name for name in libdir_vars]
-        libnames_flags = [(shell_quote(name[2:]) if name.startswith("::") else "-l%s" % name) for name in (cpp_info.libs + cpp_info.system_libs)]
+        libnames_flags = [('"%s"' if os.path.isabs(name) else '-l%s') % name for name in (cpp_info.libs + cpp_info.system_libs)]
         shared_flags = cpp_info.sharedlinkflags + cpp_info.exelinkflags
         the_os = (self.conanfile.settings.get_safe("os_build") or
                   self.conanfile.settings.get_safe("os"))

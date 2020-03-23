@@ -1,6 +1,6 @@
+import os
 from conans.model import Generator
 from conans.paths import BUILD_INFO_QMAKE
-from conans.tools import shell_quote
 
 
 class DepsCppQmake(object):
@@ -16,7 +16,7 @@ class DepsCppQmake(object):
         self.res_paths = multiline(cpp_info.res_paths)
         self.build_paths = multiline(cpp_info.build_paths)
 
-        self.libs = " ".join((shell_quote(l[2:]) if l.startswith("::") else "-l%s" % l) for l in cpp_info.libs)
+        self.libs = " ".join(('"%s"' if os.path.isabs(l) else '-l%s') % l for l in cpp_info.libs)
         self.defines = " \\\n    ".join('"%s"' % d for d in cpp_info.defines)
         self.cxxflags = " ".join(cpp_info.cxxflags)
         self.cflags = " ".join(cpp_info.cflags)

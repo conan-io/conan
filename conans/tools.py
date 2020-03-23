@@ -11,7 +11,6 @@
 """
 
 import requests
-from shlex import quote as sh_quote
 
 from conans.client.output import ConanOutput
 # Tools from conans.client.tools
@@ -220,18 +219,6 @@ def vcvars_dict(*args, **kwargs):
 
 def latest_vs_version_installed(*args, **kwargs):
     return tools_win.latest_vs_version_installed(output=_global_output, *args, **kwargs)
-
-
-def shell_quote(*args):
-    if getattr(shell_quote, "is_win", None) is None:
-        from sys import platform
-        setattr(shell_quote, "is_win", "win32" in platform.lower())
-        if shell_quote.is_win:
-            from re import compile
-            setattr(shell_quote, "win_esc_chars", compile(r'[ |<>&^"]'))
-    if shell_quote.is_win:
-        return ' '.join(['""' if len(a) < 1 else ('"%s"' % a if shell_quote.win_esc_chars.search(a) else a) for a in args])
-    return ' '.join([sh_quote(a) for a in args])
 
 
 # Ready to use objects.
