@@ -391,6 +391,9 @@ class ConanAPIV1(object):
                     raise ConanException("package folder definition incompatible with build "
                                          "and source folders")
                 package_folder = _make_abs_path(package_folder, cwd)
+                if not os.path.exists(package_folder):
+                    raise ConanException("The package folder '{}' does not exist."
+                                         .format(package_folder))
 
             build_folder = _make_abs_path(build_folder, cwd)
             if install_folder:

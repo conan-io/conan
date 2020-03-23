@@ -12,7 +12,6 @@ from conans.paths import CONANFILE
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, GenConanfile
 from conans.util.env_reader import get_env
 from conans.util.files import load, mkdir, is_dirty
-from conans.errors import ConanException
 
 
 class ExportPkgTest(unittest.TestCase):
@@ -626,6 +625,6 @@ class TestConan(ConanFile):
         client = TestClient()
         client.save({CONANFILE: GenConanfile().with_name("foo").with_version("0.1.0")})
 
-        with self.assertRaisesRegex(ConanException,
-                                    "ERROR: The package folder 'pkg' does not exist."):
-            client.run("export-pkg . foo/0.1.0@user/testing -pf=pkg")
+        client.run("export-pkg . foo/0.1.0@user/testing -pf=pkg", assert_error=True)
+        self.assertIn("ERROR: The package folder '{}' does not exist."
+                      .format(os.path.join(client.current_folder, "pkg")), client.out)
