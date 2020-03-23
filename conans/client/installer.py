@@ -268,13 +268,15 @@ def raise_package_not_found_error(conan_file, ref, package_id, dependencies, out
     settings_text = ", ".join(conan_file.info.full_settings.dumps().splitlines())
     options_text = ", ".join(conan_file.info.full_options.dumps().splitlines())
     dependencies_text = ', '.join(dependencies)
+    requires_text = ", ".join(conan_file.info.requires.dumps().splitlines())
 
     msg = '''Can't find a '%s' package for the specified settings, options and dependencies:
 - Settings: %s
 - Options: %s
 - Dependencies: %s
+- Requirements: %s
 - Package ID: %s
-''' % (ref, settings_text, options_text, dependencies_text, package_id)
+''' % (ref, settings_text, options_text, dependencies_text, requires_text, package_id)
     out.warn(msg)
     recorder.package_install_error(PackageReference(ref, package_id), INSTALL_ERROR_MISSING, msg)
     raise ConanException('''Missing prebuilt package for '%s'
