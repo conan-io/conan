@@ -86,7 +86,7 @@ def download(url, filename, verify=True, out=None, retry=None, retry_wait=None, 
     retry_wait = retry_wait if retry_wait is not None else config.retry_wait
     retry_wait = retry_wait if retry_wait is not None else 5
 
-    url = [url] if not isinstance(url, list) else url
+    url = [url] if not isinstance(url, (list, tuple)) else url
     checksum = sha256 or sha1 or md5
 
     downloader = FileDownloader(requester=requester, output=out, verify=verify, config=config)
