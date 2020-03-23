@@ -12,6 +12,7 @@ class PremakeDeps(object):
         self.bin_paths = ",\n".join('"%s"' % p.replace("\\", "/")
                                     for p in deps_cpp_info.bin_paths)
         self.libs = ", ".join('"%s"' % p.replace('"', '\\"') for p in deps_cpp_info.libs)
+        self.system_libs = ", ".join('"%s"' % p.replace('"', '\\"') for p in deps_cpp_info.system_libs)
         self.defines = ", ".join('"%s"' % p for p in deps_cpp_info.defines)
         self.cxxflags = ", ".join('"%s"' % p for p in deps_cpp_info.cxxflags)
         self.cflags = ", ".join('"%s"' % p for p in deps_cpp_info.cflags)
@@ -34,6 +35,7 @@ class PremakeGenerator(Generator):
                     'conan_libdirs{dep} = {{{deps.lib_paths}}}\n'
                     'conan_bindirs{dep} = {{{deps.bin_paths}}}\n'
                     'conan_libs{dep} = {{{deps.libs}}}\n'
+                    'conan_system_libs{dep} = {{{deps.system_libs}}}\n'
                     'conan_defines{dep} = {{{deps.defines}}}\n'
                     'conan_cxxflags{dep} = {{{deps.cxxflags}}}\n'
                     'conan_cflags{dep} = {{{deps.cflags}}}\n'
@@ -65,6 +67,7 @@ class PremakeGenerator(Generator):
             "    includedirs{conan_includedirs}\n"
             "    libdirs{conan_libdirs}\n"
             "    links{conan_libs}\n"
+            "    links{conan_system_libs}\n"
             "    defines{conan_defines}\n"
             "    bindirs{conan_bindirs}\n"
             "end\n")

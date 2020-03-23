@@ -5,17 +5,17 @@ import re
 import subprocess
 from contextlib import contextmanager
 
-import deprecation
-
 from conans.client.tools import which
 from conans.client.tools.env import environment_append
-from conans.client.tools.oss import OSInfo, detected_architecture, check_output
+from conans.client.tools.oss import OSInfo, detected_architecture
 from conans.errors import ConanException
 from conans.model.version import Version
 from conans.unicode import get_cwd
+from conans.util.conan_v2_mode import conan_v2_behavior
 from conans.util.env_reader import get_env
 from conans.util.fallbacks import default_output
 from conans.util.files import mkdir_tmp, save
+from conans.util.runners import check_output_runner
 
 
 def _visual_compiler_cygwin(output, version):
@@ -131,13 +131,12 @@ def latest_visual_studio_version_installed(output):
     return None
 
 
-@deprecation.deprecated(deprecated_in="1.2", removed_in="2.0",
-                        details="Use the MSBuild() build helper instead")
 def msvc_build_command(settings, sln_path, targets=None, upgrade_project=True, build_type=None,
                        arch=None, parallel=True, force_vcvars=False, toolset=None, platforms=None,
                        output=None):
     """ Do both: set the environment variables and call the .sln build
     """
+    conan_v2_behavior("'tools.msvc_build_command' is deprecated, use 'MSBuild()' helper instead")
     vcvars_cmd = vcvars_command(settings, force=force_vcvars, output=output)
     build = build_sln_command(settings, sln_path, targets, upgrade_project, build_type, arch,
                               parallel, toolset=toolset, platforms=platforms, output=output)
@@ -145,8 +144,6 @@ def msvc_build_command(settings, sln_path, targets=None, upgrade_project=True, b
     return command
 
 
-@deprecation.deprecated(deprecated_in="1.2", removed_in="2.0",
-                        details="Use the MSBuild() build helper instead")
 def build_sln_command(settings, sln_path, targets=None, upgrade_project=True, build_type=None,
                       arch=None, parallel=True, toolset=None, platforms=None, output=None,
                       verbosity=None, definitions=None):
@@ -156,6 +153,7 @@ def build_sln_command(settings, sln_path, targets=None, upgrade_project=True, bu
         command = "%s && %s" % (tools.vcvars_command(self.settings), build_command)
         self.run(command)
     """
+    conan_v2_behavior("'tools.build_sln_command' is deprecated, use 'MSBuild()' helper instead")
     from conans.client.build.msbuild import MSBuild
     tmp = MSBuild(settings)
     output = default_output(output, fn_name='conans.client.tools.win.build_sln_command')
@@ -298,7 +296,7 @@ def vswhere(all_=False, prerelease=False, products=None, requires=None, version=
         arguments.append("-nologo")
 
     try:
-        output = check_output(arguments).strip()
+        output = check_output_runner(arguments).strip()
         # Ignore the "description" field, that even decoded contains non valid charsets for json
         # (ignored ones)
         output = "\n".join([line for line in output.splitlines()
@@ -362,6 +360,7 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False, vcva
         raise ConanException("compiler.version setting required for vcvars not defined")
 
     # https://msdn.microsoft.com/en-us/library/f2ccy3wt.aspx
+    vcvars_arch = None
     arch_setting = arch_setting or 'x86_64'
     arch_build = settings.get_safe("arch_build") or detected_architecture()
     if os_setting == 'WindowsCE':
@@ -443,7 +442,7 @@ def vcvars_dict(settings, arch=None, compiler_version=None, force=False, filter_
                          compiler_version=compiler_version, force=force,
                          vcvars_ver=vcvars_ver, winsdk_version=winsdk_version, output=output)
     cmd += " && set"
-    ret = check_output(cmd)
+    ret = check_output_runner(cmd)
     new_env = {}
     for line in ret.splitlines():
         line = line.strip()

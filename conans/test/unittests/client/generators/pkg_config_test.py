@@ -1,6 +1,6 @@
 import unittest
 
-from conans.client.conf import default_settings_yml
+from conans.client.conf import get_default_settings_yml
 from conans.client.generators.pkg_config import PkgConfigGenerator
 from conans.model.build_info import CppInfo
 from conans.model.conan_file import ConanFile
@@ -183,7 +183,7 @@ Requires: my_pkg_custom_name my_pkg1_custom_name zlib
 """)
 
     def apple_frameworks_test(self):
-        settings = Settings.loads(default_settings_yml)
+        settings = Settings.loads(get_default_settings_yml())
         settings.compiler = "apple-clang"
         settings.os = "Macos"
         conanfile = ConanFile(TestBufferConanOutput(), None)

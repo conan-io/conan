@@ -18,8 +18,9 @@ from conans.model.info import ConanInfo
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE, CONANINFO, CONAN_MANIFEST
+from conans.test.utils.cpp_test_files import cpp_hello_source_files
 from conans.test.utils.server_launcher import TestServerLauncher
-from conans.test.utils.test_files import hello_source_files, temp_folder
+from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestBufferConanOutput, LocalDBMock
 from conans.util.env_reader import get_env
 from conans.util.files import md5, save
@@ -258,7 +259,7 @@ class RestApiTest(unittest.TestCase):
 
     def _upload_package(self, package_reference, base_files=None):
 
-        files = hello_source_files(3, [1, 12])
+        files = cpp_hello_source_files(3, [1, 12])
         if base_files:
             files.update(base_files)
 
@@ -273,7 +274,7 @@ class RestApiTest(unittest.TestCase):
 
     def _upload_recipe(self, ref, base_files=None, retry=1, retry_wait=0):
 
-        files = hello_source_files(3, [1, 12])
+        files = cpp_hello_source_files(3, [1, 12])
         if base_files:
             files.update(base_files)
         content = """

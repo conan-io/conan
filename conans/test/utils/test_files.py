@@ -12,7 +12,6 @@ from conans.client.tools.win import get_cased_path
 from conans.errors import ConanException
 from conans.paths import PACKAGE_TGZ_NAME
 from conans.test import CONAN_TEST_FOLDER
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files, cpp_hello_source_files
 from conans.util.files import gzopen_without_timestamps
 
 
@@ -71,33 +70,6 @@ def scan_folder(folder):
             scanned_files.append(relative_name)
 
     return sorted(scanned_files)
-
-
-def hello_source_files(number=0, deps=None, lang='cpp'):
-    """
-    param number: integer, defining name of the conans Hello0, Hello1, HelloX
-    param deps: [] list of integers, defining which dependencies this conans
-                depends on
-    e.g. (3, [4, 7]) means that a Hello3 conans will be created, with message
-         "Hello 3", that depends both in Hello4 and Hello7.
-         The output of such a conans exe could be like: Hello 3, Hello 4, Hello7
-    """
-    if lang == 'cpp':
-        return cpp_hello_source_files(number, deps)
-
-
-def hello_conan_files(ref, number=0, deps=None, language=0, lang='cpp'):
-    """Generate hello_files, as described above, plus the necessary
-    CONANFILE to manage it
-    param number: integer, defining name of the conans Hello0, Hello1, HelloX
-    param deps: [] list of integers, defining which dependencies this conans
-                depends on
-    param language: 0 = English, 1 = Spanish
-    e.g. (3, [4, 7]) means that a Hello3 conans will be created, with message
-         "Hello 3", that depends both in Hello4 and Hello7.
-         The output of such a conans exe could be like: Hello 3, Hello 4, Hello7"""
-    if lang == 'cpp':
-        return cpp_hello_conan_files(ref, number, deps, language)
 
 
 def tgz_with_contents(files):

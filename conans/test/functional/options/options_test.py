@@ -49,7 +49,7 @@ class Pkg(ConanFile):
                      "test_package/conanfile.py": test})
         client.run("create . Pkg/0.1@user/testing -o *:shared=True")
         self.assertIn("Pkg/0.1@user/testing: Calling build()", client.out)
-        self.assertIn("Pkg/0.1@user/testing (test package): Running build()", client.out)
+        self.assertIn("Pkg/0.1@user/testing (test package): Calling build()", client.out)
 
     def general_scope_priorities_test(self):
         client = TestClient()

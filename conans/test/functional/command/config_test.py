@@ -39,7 +39,7 @@ class ConfigTest(unittest.TestCase):
         self.client.run("config get storage.what", assert_error=True)
         self.assertIn("'what' doesn't exist in [storage]", self.client.out)
         self.client.run('config set proxies=https:', assert_error=True)
-        self.assertIn("You can't set a full section, please specify a key=value",
+        self.assertIn("You can't set a full section, please specify a section.key=value",
                       self.client.out)
 
         self.client.run('config set proxies.http:Value', assert_error=True)

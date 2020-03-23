@@ -19,7 +19,6 @@ from conans.client.cmd.search import Search
 from conans.client.cmd.test import install_build_and_test
 from conans.client.cmd.uploader import CmdUpload
 from conans.client.cmd.user import user_set, users_clean, users_list, token_present
-from conans.client.conf import ConanClientConfigParser
 from conans.client.graph.graph import RECIPE_EDITABLE
 from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
 from conans.client.graph.graph_manager import GraphManager
@@ -73,7 +72,7 @@ def api_method(f):
         quiet = kwargs.pop("quiet", False)
         old_curdir = get_cwd()
         old_output = api.user_io.out
-        quiet_output = ConanOutput(StringIO(), api.color) if quiet else None
+        quiet_output = ConanOutput(StringIO(), color=api.color) if quiet else None
         try:
             api.create_app(quiet_output=quiet_output)
             log_command(f.__name__, kwargs)
@@ -570,11 +569,10 @@ class ConanAPIV1(object):
 
     @api_method
     def config_get(self, item):
-        config_parser = ConanClientConfigParser(self.app.cache.conan_conf_path)
         if item == "storage.path":
-            result = config_parser.storage_path
+            result = self.app.config.storage_path
         else:
-            result = config_parser.get_item(item)
+            result = self.app.config.get_item(item)
         self.app.out.info(result)
         return result
 
@@ -1226,6 +1224,14 @@ class ConanAPIV1(object):
         return build_order
 
     @api_method
+    def lock_clean_modified(self, lockfile, cwd=None):
+        cwd = cwd or os.getcwd()
+        lockfile = _make_abs_path(lockfile, cwd)
+        lock = GraphLockFile.load(lockfile, self.app.config.revisions_enabled)
+        lock.graph_lock.clean_modified()
+        lock.save(lockfile)
+
+    @api_method
     def create_lock(self, reference, remote_name=None, settings=None, options=None, env=None,
                     profile_names=None, update=False, lockfile=None, build=None,):
         reference, graph_info = self._info_args(reference, None, profile_names,
@@ -1257,6 +1263,7 @@ def get_graph_info(profile_names, settings, options, env, cwd, install_folder, c
             graph_info.root = root_ref
         lockfile = lockfile if os.path.isfile(lockfile) else os.path.join(lockfile, LOCKFILE)
         graph_lock_file = GraphLockFile.load(lockfile, cache.config.revisions_enabled)
+        graph_lock_file.graph_lock.relax = cache.config.relax_lockfile
         graph_info.profile_host = graph_lock_file.profile_host
         graph_info.profile_host.process_settings(cache, preprocess=False)
         graph_info.graph_lock = graph_lock_file.graph_lock

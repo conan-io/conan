@@ -5,10 +5,10 @@ from conans.client import tools
 from conans.client.build.compiler_flags import architecture_flag, parallel_compiler_cl_flag
 from conans.client.build.cppstd_flags import cppstd_flag, cppstd_from_settings
 from conans.client.tools import cross_building
+from conans.client.tools.apple import is_apple_os
 from conans.client.tools.oss import get_cross_building_settings
 from conans.errors import ConanException
 from conans.model.build_info import DEFAULT_BIN, DEFAULT_INCLUDE, DEFAULT_LIB, DEFAULT_SHARE
-from conans.model.version import Version
 from conans.util.env_reader import get_env
 from conans.util.log import logger
 
@@ -27,6 +27,7 @@ def get_toolset(settings):
 
 
 def get_generator(settings):
+    # Returns the name of the generator to be used by CMake
     if "CONAN_CMAKE_GENERATOR" in os.environ:
         return os.environ["CONAN_CMAKE_GENERATOR"]
 
@@ -34,7 +35,6 @@ def get_generator(settings):
     arch = settings.get_safe("arch")
     compiler_version = settings.get_safe("compiler.version")
     os_build, _, _, _ = get_cross_building_settings(settings)
-    os_host = settings.get_safe("os")
 
     if not compiler or not compiler_version or not arch:
         if os_build == "Windows":
@@ -51,13 +51,7 @@ def get_generator(settings):
                     '14': '14 2015',
                     '15': '15 2017',
                     '16': '16 2019'}
-        base = "Visual Studio %s" % _visuals.get(compiler_version,
-                                                 "UnknownVersion %s" % compiler_version)
-        if os_host != "WindowsCE" and Version(compiler_version) < "16":
-            if arch == "x86_64":
-                base += " Win64"
-            elif "arm" in arch:
-                base += " ARM"
+        base = "Visual Studio %s" % _visuals.get(compiler_version, "UnknownVersion %s" % compiler_version)
         return base
 
     # The generator depends on the build machine, not the target
@@ -68,18 +62,17 @@ def get_generator(settings):
 
 
 def get_generator_platform(settings, generator):
+    # Returns the generator platform to be used by CMake
     if "CONAN_CMAKE_GENERATOR_PLATFORM" in os.environ:
         return os.environ["CONAN_CMAKE_GENERATOR_PLATFORM"]
 
     compiler = settings.get_safe("compiler")
     arch = settings.get_safe("arch")
-    compiler_version = settings.get_safe("compiler.version")
 
     if settings.get_safe("os") == "WindowsCE":
         return settings.get_safe("os.platform")
 
-    if compiler == "Visual Studio" and Version(compiler_version) >= "16" \
-            and "Visual" in generator:
+    if compiler == "Visual Studio" and generator and "Visual" in generator:
         return {"x86": "Win32",
                 "x86_64": "x64",
                 "armv7": "ARM",
@@ -209,7 +202,7 @@ class CMakeDefinitionsBuilder(object):
                         definitions["CMAKE_SYSTEM_NAME"] = "Generic"
         if os_ver:
             definitions["CMAKE_SYSTEM_VERSION"] = os_ver
-            if str(os_) == "Macos":
+            if is_apple_os(os_):
                 definitions["CMAKE_OSX_DEPLOYMENT_TARGET"] = os_ver
 
         # system processor

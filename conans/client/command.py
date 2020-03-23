@@ -150,8 +150,8 @@ class Command(object):
         parser = argparse.ArgumentParser(description=self.new.__doc__,
                                          prog="conan new",
                                          formatter_class=SmartFormatter)
-        parser.add_argument("name", help='Package name, e.g.: "Poco/1.7.3" or complete reference'
-                                         ' for CI scripts: "Poco/1.7.3@conan/stable"')
+        parser.add_argument("name", help='Package name, e.g.: "poco/1.9.4" or complete reference'
+                                         ' for CI scripts: "poco/1.9.4@user/channel"')
         parser.add_argument("-t", "--test", action='store_true', default=False,
                             help='Create test_package skeleton to test package')
         parser.add_argument("-i", "--header", action='store_true', default=False,
@@ -1778,9 +1778,12 @@ class Command(object):
         build_order_cmd = subparsers.add_parser('build-order', help='Returns build-order')
         build_order_cmd.add_argument('lockfile', help='lockfile folder')
         build_order_cmd.add_argument("-b", "--build", action=Extender, nargs="?",
-                                     help="nodes to build")
+                                     help=_help_build_policies.format("never"))
         build_order_cmd.add_argument("--json", action=OnceArgument,
                                      help="generate output file in json format")
+
+        clean_cmd = subparsers.add_parser('clean-modified', help='Clean modified')
+        clean_cmd.add_argument('lockfile', help='lockfile folder')
 
         lock_cmd = subparsers.add_parser('lock', help='create a lockfile')
         lock_cmd.add_argument("path_or_reference", help="Path to a folder containing a recipe"
@@ -1803,6 +1806,8 @@ class Command(object):
             if args.json:
                 json_file = _make_abs_path(args.json)
                 save(json_file, json.dumps(build_order, indent=True))
+        elif args.subcommand == "clean-modified":
+            self._conan.lock_clean_modified(args.lockfile)
         elif args.subcommand == "lock":
             self._conan.create_lock(args.path_or_reference,
                                     remote_name=args.remote,
@@ -1906,7 +1911,7 @@ class Command(object):
             self._out.writeln("*"*width, front=Color.BRIGHT_RED)
 
             self._out.writeln(textwrap.fill("Python 2 is deprecated as of 01/01/2020 and Conan has"
-                                            " stopped supporting it oficially. We strongly recommend"
+                                            " stopped supporting it officially. We strongly recommend"
                                             " you to use Python >= 3.5. Conan will completely stop"
                                             " working with Python 2 in the following releases", width),
                               front=Color.BRIGHT_RED)
@@ -2031,23 +2036,24 @@ def _add_common_install_arguments(parser, build_help, lockfile=True):
                             "Lockfile can be updated if packages change")
 
 
-_help_build_policies = '''Optional, use it to choose if you want to build from sources:
+_help_build_policies = '''Optional, specify which packages to build from source. Combining multiple
+    '--build' options on one command line is allowed. For dependencies, the optional 'build_policy'
+    attribute in their conanfile.py takes precedence over the command line parameter.
+    Possible parameters:
 
-    --build            Build all from sources, do not use binary packages.
-    --build=never      Never build, use binary packages or fail if a binary package is not found.
-    --build=missing    Build from code if a binary package is not found.
-    --build=cascade    Will build from code all the nodes with some dependency being built
-                       (for any reason). Can be used together with any other build policy.
-                       Useful to make sure that any new change introduced in a dependency is
-                       incorporated by building again the package.
-    --build=outdated   Build from code if the binary is not built with the current recipe or
-                       when missing a binary package.
-    --build=[pattern]  Build always these packages from source, but never build the others.
-                       Allows multiple --build parameters. 'pattern' is a fnmatch file pattern
-                       of a package reference.
+    --build            Force build for all packages, do not use binary packages.
+    --build=never      Disallow build for all packages, use binary packages or fail if a binary
+                       package is not found. Cannot be combined with other '--build' options.
+    --build=missing    Build packages from source whose binary package is not found.
+    --build=outdated   Build packages from source whose binary package was not generated from the
+                       latest recipe or is not found.
+    --build=cascade    Build packages from source that have at least one dependency being built from
+                       source.
+    --build=[pattern]  Build packages from source whose package reference matches the pattern. The
+                       pattern uses 'fnmatch' style wildcards.
 
-    Default behavior: If you don't specify anything, it will be similar to '--build={}', but
-    package recipes can override it with their 'build_policy' attribute in the conanfile.py.
+    Default behavior: If you omit the '--build' option, the 'build_policy' attribute in conanfile.py
+    will be used if it exists, otherwise the behavior is like '--build={}'.
 '''
 
 

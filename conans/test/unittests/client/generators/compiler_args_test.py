@@ -1,6 +1,6 @@
 import unittest
 
-from conans.client.conf import default_settings_yml
+from conans.client.conf import get_default_settings_yml
 from conans.client.generators.compiler_args import CompilerArgsGenerator
 from conans.client.generators.gcc import GCCGenerator
 from conans.model.build_info import CppInfo, DepsCppInfo
@@ -13,7 +13,7 @@ from conans.test.utils.conanfile import ConanFileMock
 class CompilerArgsTest(unittest.TestCase):
 
     def visual_studio_extensions_test(self):
-        settings = Settings.loads(default_settings_yml)
+        settings = Settings.loads(get_default_settings_yml())
         settings.os = "Windows"
         settings.compiler = "Visual Studio"
         settings.compiler.version = "15"
@@ -62,7 +62,7 @@ class CompilerArgsTest(unittest.TestCase):
         return conan_file
 
     def gcc_test(self):
-        settings = Settings.loads(default_settings_yml)
+        settings = Settings.loads(get_default_settings_yml())
         settings.os = "Linux"
         settings.compiler = "gcc"
         settings.compiler.version = "6.3"
@@ -105,7 +105,7 @@ class CompilerArgsTest(unittest.TestCase):
                           gcc.content)
 
     def compiler_args_test(self):
-        settings = Settings.loads(default_settings_yml)
+        settings = Settings.loads(get_default_settings_yml())
         settings.os = "Windows"
         settings.compiler = "Visual Studio"
         settings.compiler.version = "15"
@@ -117,7 +117,7 @@ class CompilerArgsTest(unittest.TestCase):
         self.assertEqual('-Dmydefine1 -Ipath\\to\\include1 cxx_flag1 c_flag1 -O2 -Ob2 -DNDEBUG '
                          '-link -LIBPATH:path\\to\\lib1 mylib.lib', gen.content)
 
-        settings = Settings.loads(default_settings_yml)
+        settings = Settings.loads(get_default_settings_yml())
         settings.os = "Macos"
         settings.compiler = "apple-clang"
         settings.compiler.version = "9.0"
@@ -128,7 +128,7 @@ class CompilerArgsTest(unittest.TestCase):
         self.assertEqual('-Dmydefine1 -Ipath/to/include1 cxx_flag1 c_flag1 -m32 -O3 -DNDEBUG '
                          '-Wl,-rpath,"path/to/lib1" -Lpath/to/lib1 -lmylib', gen.content)
 
-        settings = Settings.loads(default_settings_yml)
+        settings = Settings.loads(get_default_settings_yml())
         settings.os = "Linux"
         settings.os_build = "Macos"
         settings.compiler = "apple-clang"
@@ -143,7 +143,7 @@ class CompilerArgsTest(unittest.TestCase):
                          '-Lpath/to/lib1 -lmylib', args.content)
 
     def apple_frameworks_test(self):
-        settings = Settings.loads(default_settings_yml)
+        settings = Settings.loads(get_default_settings_yml())
         settings.os = "Macos"
         settings.compiler = "apple-clang"
         settings.compiler.version = "9.1"
@@ -158,7 +158,7 @@ class CompilerArgsTest(unittest.TestCase):
                          '-F path/to/Frameworks1 -F path/to/Frameworks2', args.content)
 
     def system_libs_test(self):
-        settings = Settings.loads(default_settings_yml)
+        settings = Settings.loads(get_default_settings_yml())
         settings.os = "Linux"
         settings.compiler = "gcc"
         settings.compiler.version = "8"

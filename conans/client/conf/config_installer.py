@@ -72,6 +72,15 @@ def _handle_conan_conf(current_conan_conf, new_conan_conf_path):
         current_conan_conf.write(f)
 
 
+def _filecopy(src, filename, dst):
+    # https://github.com/conan-io/conan/issues/6556
+    src = os.path.join(src, filename)
+    dst = os.path.join(dst, filename)
+    if os.path.exists(dst):
+        os.remove(dst)
+    shutil.copy(src, dst)
+
+
 def _process_folder(config, folder, cache, output):
     if config.source_folder:
         folder = os.path.join(folder, config.source_folder)
@@ -82,8 +91,7 @@ def _process_folder(config, folder, cache, output):
         for f in files:
             if f == "settings.yml":
                 output.info("Installing settings.yml")
-                settings_path = cache.settings_path
-                shutil.copy(os.path.join(root, f), settings_path)
+                _filecopy(root, f, cache.cache_folder)
             elif f == "conan.conf":
                 output.info("Processing conan.conf")
                 _handle_conan_conf(cache.config, os.path.join(root, f))
@@ -96,7 +104,7 @@ def _process_folder(config, folder, cache, output):
                 except OSError:
                     pass
                 finally:
-                    shutil.copy(os.path.join(root, f), cache.cache_folder)
+                    _filecopy(root, f, cache.cache_folder)
                     migrate_registry_file(cache, output)
             elif f == "remotes.json":
                 # Fix for Conan 2.0
@@ -114,7 +122,7 @@ def _process_folder(config, folder, cache, output):
                     target_folder = os.path.join(cache.cache_folder, relpath)
                 mkdir(target_folder)
                 output.info("Copying file %s to %s" % (f, target_folder))
-                shutil.copy(os.path.join(root, f), target_folder)
+                _filecopy(root, f, target_folder)
 
 
 def _process_download(config, cache, output, requester):

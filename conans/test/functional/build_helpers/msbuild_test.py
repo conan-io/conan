@@ -1,5 +1,6 @@
 import os
 import platform
+import textwrap
 import unittest
 
 from nose.plugins.attrib import attr
@@ -11,6 +12,7 @@ from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient
 from conans.test.utils.visual_project_files import get_vs_project_files
 from conans.test.utils.deprecation import catch_deprecation_warning
+from conans.util.files import load
 
 
 class MSBuildTest(unittest.TestCase):
@@ -96,6 +98,125 @@ class HelloConan(ConanFile):
         pref = PackageReference.loads(full_ref)
         build_folder = client.cache.package_layout(pref.ref).build(pref)
         self.assertTrue(os.path.exists(os.path.join(build_folder, "mp.props")))
+
+    @attr('slow')
+    @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
+    def user_properties_file_test(self):
+        conan_build_vs = textwrap.dedent("""
+            from conans import ConanFile, MSBuild
+        
+            class HelloConan(ConanFile):
+                exports = "*"
+                settings = "os", "build_type", "arch", "compiler"
+        
+                def build(self):
+                    msbuild = MSBuild(self)
+                    msbuild.build("MyProject.sln", verbosity="normal",
+                                  definitions={"MyCustomDef": "MyCustomValue"},
+                                  user_property_file_name="myuser.props")
+        
+                def package(self):
+                    self.copy(pattern="*.exe")
+            """)
+        client = TestClient()
+
+        files = get_vs_project_files()
+        files[CONANFILE] = conan_build_vs
+        props = textwrap.dedent("""<?xml version="1.0" encoding="utf-8"?>
+            <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+              <ImportGroup Label="PropertySheets" />
+              <PropertyGroup Label="UserMacros" />
+              <ItemDefinitionGroup>
+                <ClCompile>
+                  <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+                </ClCompile>
+              </ItemDefinitionGroup>
+              <ItemGroup />
+            </Project>
+            """)
+        files["myuser.props"] = props
+
+        client.save(files)
+        client.run('create . Hello/1.2.1@lasote/stable')
+        self.assertNotIn("/EHsc /MD", client.out)
+        self.assertIn("/EHsc /MT", client.out)
+        self.assertIn("/D MyCustomDef=MyCustomValue", client.out)
+        self.assertIn("Packaged 1 '.exe' file: MyProject.exe", client.out)
+
+        full_ref = "Hello/1.2.1@lasote/stable:6cc50b139b9c3d27b3e9042d5f5372d327b3a9f7"
+        pref = PackageReference.loads(full_ref)
+        build_folder = client.cache.package_layout(pref.ref).build(pref)
+        self.assertTrue(os.path.exists(os.path.join(build_folder, "myuser.props")))
+        conan_props = os.path.join(build_folder, "conan_build.props")
+        content = load(conan_props)
+        self.assertIn("<RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>", content)
+
+    @attr('slow')
+    @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
+    def user_properties_multifile_test(self):
+        conan_build_vs = textwrap.dedent("""
+            from conans import ConanFile, MSBuild
+
+            class HelloConan(ConanFile):
+                exports = "*"
+                settings = "os", "build_type", "arch", "compiler"
+
+                def build(self):
+                    msbuild = MSBuild(self)
+                    msbuild.build("MyProject.sln", verbosity="normal",
+                                  definitions={"MyCustomDef": "MyCustomValue"},
+                                  user_property_file_name=["myuser.props", "myuser2.props"])
+
+                def package(self):
+                    self.copy(pattern="*.exe")
+            """)
+        client = TestClient()
+
+        files = get_vs_project_files()
+        files[CONANFILE] = conan_build_vs
+        props = textwrap.dedent("""<?xml version="1.0" encoding="utf-8"?>
+            <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+              <ImportGroup Label="PropertySheets" />
+              <PropertyGroup Label="UserMacros" />
+              <ItemDefinitionGroup>
+                <ClCompile>
+                    <PreprocessorDefinitions>MyCustomDef2=MyValue2;%(PreprocessorDefinitions)
+                    </PreprocessorDefinitions>
+                </ClCompile>
+              </ItemDefinitionGroup>
+              <ItemGroup />
+            </Project>
+            """)
+        props2 = textwrap.dedent("""<?xml version="1.0" encoding="utf-8"?>
+            <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+              <ImportGroup Label="PropertySheets" />
+              <PropertyGroup Label="UserMacros" />
+              <ItemDefinitionGroup>
+                <ClCompile>
+                  <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+                </ClCompile>
+              </ItemDefinitionGroup>
+              <ItemGroup />
+            </Project>
+            """)
+        files["myuser.props"] = props
+        files["myuser2.props"] = props2
+
+        client.save(files)
+        client.run('create . Hello/1.2.1@lasote/stable')
+        self.assertNotIn("/EHsc /MD", client.out)
+        self.assertIn("/EHsc /MT", client.out)
+        self.assertIn("/D MyCustomDef=MyCustomValue", client.out)
+        self.assertIn("/D MyCustomDef2=MyValue2", client.out)
+        self.assertIn("Packaged 1 '.exe' file: MyProject.exe", client.out)
+
+        full_ref = "Hello/1.2.1@lasote/stable:6cc50b139b9c3d27b3e9042d5f5372d327b3a9f7"
+        pref = PackageReference.loads(full_ref)
+        build_folder = client.cache.package_layout(pref.ref).build(pref)
+        self.assertTrue(os.path.exists(os.path.join(build_folder, "myuser.props")))
+        conan_props = os.path.join(build_folder, "conan_build.props")
+        content = load(conan_props)
+        self.assertIn("<RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>", content)
 
     @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
     def reuse_msbuild_object_test(self):
