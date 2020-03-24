@@ -63,7 +63,9 @@ class InfoTest(unittest.TestCase):
                                                         'version = "0.1"\n'
                                                         '    url= "myurl"\n'
                                                         '    license = "MIT", "GPL"\n'
-                                                        '    description = "foobar"')
+                                                        '    description = """Yo no creo en brujas,\n'
+                                                        '                 pero que las hay,\n'
+                                                        '                 las hay"""')
 
         self.client.save(files)
         if export:
@@ -334,7 +336,9 @@ class MyTest(ConanFile):
             conanfile.py (Hello2/0.1)
                 URL: myurl
                 Licenses: MIT, GPL
-                Description: foobar
+                Description: Yo no creo en brujas,
+                             pero que las hay,
+                             las hay
                 Requires:
                     Hello1/0.1@lasote/stable""")
 
@@ -396,7 +400,9 @@ class MyTest(ConanFile):
             conanfile.py (Hello2/0.1)
                 URL: myurl
                 Licenses: MIT, GPL
-                Description: foobar""")
+                Description: Yo no creo en brujas,
+                             pero que las hay,
+                             las hay""")
         self.assertIn(expected_output, clean_output(self.client.out))
 
     def test_json_info_outputs(self):
