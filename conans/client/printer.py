@@ -98,6 +98,7 @@ class Printer(object):
                 self._out.writeln("    %s: %s" % (lead_str, licenses_str), Color.BRIGHT_GREEN)
 
             _print("author", name="Author")
+            _print("description", name="Description")
 
             if show("topics") and "topics" in it:
                 self._out.writeln("    Topics: %s" % ", ".join(it["topics"]), Color.BRIGHT_GREEN)

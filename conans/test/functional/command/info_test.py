@@ -313,6 +313,7 @@ class MyTest(ConanFile):
                 Remote: None
                 URL: myurl
                 License: MIT
+                Description: blah
                 Recipe: No remote%s
                 Binary: Missing
                 Binary remote: None
@@ -322,6 +323,7 @@ class MyTest(ConanFile):
                 Remote: None
                 URL: myurl
                 License: MIT
+                Description: blah
                 Recipe: No remote%s
                 Binary: Missing
                 Binary remote: None
@@ -332,6 +334,7 @@ class MyTest(ConanFile):
             conanfile.py (Hello2/0.1)
                 URL: myurl
                 Licenses: MIT, GPL
+                Description: foobar
                 Requires:
                     Hello1/0.1@lasote/stable""")
 
@@ -385,12 +388,15 @@ class MyTest(ConanFile):
             Hello0/0.1@lasote/stable
                 URL: myurl
                 License: MIT
+                Description: blah
             Hello1/0.1@lasote/stable
                 URL: myurl
                 License: MIT
+                Description: blah
             conanfile.py (Hello2/0.1)
                 URL: myurl
-                Licenses: MIT, GPL""")
+                Licenses: MIT, GPL
+                Description: foobar""")
         self.assertIn(expected_output, clean_output(self.client.out))
 
     def test_json_info_outputs(self):
