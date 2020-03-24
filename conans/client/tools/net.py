@@ -12,10 +12,13 @@ def get(url, md5='', sha1='', sha256='', destination=".", filename="", keep_perm
         overwrite=False, auth=None, headers=None):
     """ high level downloader + unzipper + (optional hash checker) + delete temporary zip
     """
-    if not filename and ("?" in url or "=" in url):
-        raise ConanException("Cannot deduce file name from url. Use 'filename' parameter.")
 
-    filename = filename or os.path.basename(url)
+    url = [url] if not isinstance(url, (list, tuple)) else url
+    if not filename and ("?" in url[0] or "=" in url[0]):
+        raise ConanException("Cannot deduce file name from the url: '{}'. Use 'filename' "
+                             "parameter.".format(url[0]))
+    filename = filename or os.path.basename(url[0])
+
     download(url, filename, out=output, requester=requester, verify=verify, retry=retry,
              retry_wait=retry_wait, overwrite=overwrite, auth=auth, headers=headers,
              md5=md5, sha1=sha1, sha256=sha256)
@@ -49,7 +52,30 @@ def ftp_download(ip, filename, login='', password=''):
 
 def download(url, filename, verify=True, out=None, retry=None, retry_wait=None, overwrite=False,
              auth=None, headers=None, requester=None, md5='', sha1='', sha256=''):
+    """Retrieves a file from a given URL into a file with a given filename.
+       It uses certificates from a list of known verifiers for https downloads,
+       but this can be optionally disabled.
 
+    :param url: URL to download. It can be a list, which only the first one will be downloaded, and
+                the follow URLs will be used as mirror in case of download error.
+    :param filename: Name of the file to be created in the local storage
+    :param verify: When False, disables https certificate validation
+    :param out: An object with a write() method can be passed to get the output. stdout will use if
+                not specified
+    :param retry: Number of retries in case of failure. Default is overriden by general.retry in the
+                  conan.conf file or an env variable CONAN_RETRY
+    :param retry_wait: Seconds to wait between download attempts. Default is overriden by
+                       general.retry_wait in the conan.conf file or an env variable CONAN_RETRY_WAIT
+    :param overwrite: When True, Conan will overwrite the destination file if exists. Otherwise it
+                      will raise an exception
+    :param auth: A tuple of user and password to use HTTPBasic authentication
+    :param headers: A dictionary with additional headers
+    :param requester: HTTP requests instance
+    :param md5: MD5 hash code to check the downloaded file
+    :param sha1: SHA-1 hash code to check the downloaded file
+    :param sha256: SHA-256 hash code to check the downloaded file
+    :return: None
+    """
     out = default_output(out, 'conans.client.tools.net.download')
     requester = default_requester(requester, 'conans.client.tools.net.download')
     from conans.tools import _global_config as config
@@ -60,21 +86,38 @@ def download(url, filename, verify=True, out=None, retry=None, retry_wait=None, 
     retry_wait = retry_wait if retry_wait is not None else config.retry_wait
     retry_wait = retry_wait if retry_wait is not None else 5
 
-    downloader = FileDownloader(requester=requester, output=out, verify=verify, config=config)
+    url = [url] if not isinstance(url, (list, tuple)) else url
     checksum = sha256 or sha1 or md5
-    # The download cache is only used if a checksum is provided, otherwise, a normal download
+
+    downloader = FileDownloader(requester=requester, output=out, verify=verify, config=config)
     if config and config.download_cache and checksum:
         downloader = CachedFileDownloader(config.download_cache, downloader, user_download=True)
-        downloader.download(url, filename, retry=retry, retry_wait=retry_wait, overwrite=overwrite,
-                            auth=auth, headers=headers, md5=md5, sha1=sha1, sha256=sha256)
-    else:
-        downloader.download(url, filename, retry=retry, retry_wait=retry_wait, overwrite=overwrite,
-                            auth=auth, headers=headers)
-        if md5:
-            check_md5(filename, md5)
-        if sha1:
-            check_sha1(filename, sha1)
-        if sha256:
-            check_sha256(filename, sha256)
 
-    out.writeln("")
+    def _download_file(downloader, url):
+        # The download cache is only used if a checksum is provided, otherwise, a normal download
+        if isinstance(downloader, CachedFileDownloader):
+            downloader.download(url, filename, retry=retry, retry_wait=retry_wait,
+                                overwrite=overwrite, auth=auth, headers=headers, md5=md5,
+                                sha1=sha1, sha256=sha256)
+        else:
+            downloader.download(url, filename, retry=retry, retry_wait=retry_wait,
+                                overwrite=overwrite, auth=auth, headers=headers)
+            if md5:
+                check_md5(filename, md5)
+            if sha1:
+                check_sha1(filename, sha1)
+            if sha256:
+                check_sha256(filename, sha256)
+        out.writeln("")
+
+    for index, url_it in enumerate(url):
+        try:
+            _download_file(downloader, url_it)
+            break
+        except ConanException as error:
+            message = "Could not download from the URL {}: {}.".format(url_it, str(error))
+            if len(url) == 1:
+                raise ConanException(message)
+            out.warn(message + " Trying another mirror.")
+            if (index + 1) == len(url):
+                raise ConanException("All downloads from ({}) URLs have failed.".format(len(url)))
