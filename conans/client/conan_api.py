@@ -391,9 +391,6 @@ class ConanAPIV1(object):
                     raise ConanException("package folder definition incompatible with build "
                                          "and source folders")
                 package_folder = _make_abs_path(package_folder, cwd)
-                if not os.path.exists(package_folder):
-                    raise ConanException("The package folder '{}' does not exist."
-                                         .format(package_folder))
 
             build_folder = _make_abs_path(build_folder, cwd)
             if install_folder:
@@ -422,6 +419,13 @@ class ConanAPIV1(object):
                        remotes=remotes)
             if lockfile:
                 graph_info.save_lock(lockfile)
+
+            for folder, path in {"source": source_folder, "build": build_folder,
+                                 "package": package_folder}.items():
+                if path and not os.path.exists(path):
+                    raise ConanException("The {} folder '{}' does not exist."
+                                         .format(folder, path))
+
             return recorder.get_info(self.app.config.revisions_enabled)
         except ConanException as exc:
             recorder.error = True
