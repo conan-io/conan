@@ -482,6 +482,15 @@ class TestConan(ConanFile):
 
     def test_export_pkg_json(self):
 
+        def _check_json_output_no_folder():
+            json_path = os.path.join(self.client.current_folder, "output.json")
+            self.assertTrue(os.path.exists(json_path))
+            json_content = load(json_path)
+            output = json.loads(json_content)
+            self.assertEqual(True, output["error"])
+            self.assertEqual([], output["installed"])
+            self.assertEqual(2, len(output))
+
         def _check_json_output(with_error=False):
             json_path = os.path.join(self.client.current_folder, "output.json")
             self.assertTrue(os.path.exists(json_path))
@@ -513,7 +522,7 @@ class MyConan(ConanFile):
         self.client.run("export-pkg . danimtb/testing -bf build -sf sources "
                         "--json output.json", assert_error=True)
 
-        _check_json_output(with_error=True)
+        _check_json_output_no_folder()
 
         # Deafult folders
         self.client.run("export-pkg . danimtb/testing --json output.json --force")
@@ -622,7 +631,7 @@ class TestConan(ConanFile):
     def test_invalid_folder(self):
         """ source, build and package path must exists, otherwise, raise ConanException
         """
-        for folder in ["source", "install", "build", "package"]:
+        for folder in ["source", "build", "package"]:
             client = TestClient()
             client.save({CONANFILE: GenConanfile().with_name("foo").with_version("0.1.0")})
 
