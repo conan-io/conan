@@ -170,6 +170,7 @@ class CommandOutputer(object):
             _add_if_exists("homepage")
             _add_if_exists("license", as_list=True)
             _add_if_exists("author")
+            _add_if_exists("description")
             _add_if_exists("topics", as_list=True)
 
             if isinstance(ref, ConanFileReference):
