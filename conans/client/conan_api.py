@@ -402,6 +402,12 @@ class ConanAPIV1(object):
             source_folder = _make_abs_path(source_folder, cwd,
                                            default=os.path.dirname(conanfile_path))
 
+            for folder, path in {"source": source_folder, "build": build_folder,
+                                 "install": install_folder, "package": package_folder}.items():
+                if path and not os.path.exists(path):
+                    raise ConanException("The {} folder '{}' does not exist."
+                                         .format(folder, path))
+
             lockfile = _make_abs_path(lockfile, cwd) if lockfile else None
             # Checks that no both settings and info files are specified
             graph_info = get_graph_info(profile_names, settings, options, env, cwd, install_folder,
@@ -419,13 +425,6 @@ class ConanAPIV1(object):
                        remotes=remotes)
             if lockfile:
                 graph_info.save_lock(lockfile)
-
-            for folder, path in {"source": source_folder, "build": build_folder,
-                                 "package": package_folder}.items():
-                if path and not os.path.exists(path):
-                    raise ConanException("The {} folder '{}' does not exist."
-                                         .format(folder, path))
-
             return recorder.get_info(self.app.config.revisions_enabled)
         except ConanException as exc:
             recorder.error = True

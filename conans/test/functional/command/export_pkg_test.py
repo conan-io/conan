@@ -619,12 +619,14 @@ class TestConan(ConanFile):
         client.run("install pkg/0.1@")
         self.assertIn("pkg/0.1: Already installed!", client.out)
 
-    def test_invalid_package_folder(self):
-        """ package folder must exists, otherwise, raise ConanException
+    def test_invalid_folder(self):
+        """ source, build and package path must exists, otherwise, raise ConanException
         """
-        client = TestClient()
-        client.save({CONANFILE: GenConanfile().with_name("foo").with_version("0.1.0")})
+        for folder in ["source", "install", "build", "package"]:
+            client = TestClient()
+            client.save({CONANFILE: GenConanfile().with_name("foo").with_version("0.1.0")})
 
-        client.run("export-pkg . foo/0.1.0@user/testing -pf=pkg", assert_error=True)
-        self.assertIn("ERROR: The package folder '{}' does not exist."
-                      .format(os.path.join(client.current_folder, "pkg")), client.out)
+            client.run("export-pkg . foo/0.1.0@user/testing -{}f={}".format(folder[0], folder),
+                       assert_error=True)
+            self.assertIn("ERROR: The {} folder '{}' does not exist."
+                          .format(folder, os.path.join(client.current_folder, folder)), client.out)
