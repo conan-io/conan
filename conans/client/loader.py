@@ -68,7 +68,10 @@ class ConanFileLoader(object):
                     conanfile.scm.update(scm_data)
 
             self._cached_conanfile_classes[conanfile_path] = (conanfile, lock_python_requires, module)
-            return conanfile(self._output, self._runner, display, user, channel), module
+            result = conanfile(self._output, self._runner, display, user, channel)
+            if hasattr(result, "init") and callable(result.init):
+                result.init()
+            return result, module
         except ConanException as e:
             raise ConanException("Error loading conanfile at '{}': {}".format(conanfile_path, e))
 

@@ -35,8 +35,10 @@ class FileUploader(object):
         """ send the headers to see if it is possible to skip uploading the file, because it
         is already in the server. Artifactory support file deduplication
         """
-        headers["X-Checksum-Deploy"] = "true"
-        response = self._requester.put(url, data="", verify=self._verify_ssl, headers=headers,
+        dedup_headers = {"X-Checksum-Deploy": "true"}
+        if headers:
+            dedup_headers.update(headers)
+        response = self._requester.put(url, data="", verify=self._verify_ssl, headers=dedup_headers,
                                        auth=auth)
         if response.status_code == 500:
             raise InternalErrorException(response_to_str(response))
