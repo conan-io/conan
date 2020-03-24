@@ -118,6 +118,6 @@ def download(url, filename, verify=True, out=None, retry=None, retry_wait=None, 
             message = "Could not download from the URL {}: {}.".format(url_it, str(error))
             if len(url) == 1:
                 raise ConanException(message)
-            out.error(message)
+            out.warn(message + " Trying another mirror.")
             if (index + 1) == len(url):
                 raise ConanException("All downloads from ({}) URLs have failed.".format(len(url)))

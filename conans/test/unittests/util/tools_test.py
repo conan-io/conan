@@ -756,7 +756,7 @@ class HelloConan(ConanFile):
 
         file = "test.txt.gz"
         out = TestBufferConanOutput()
-        urls = ["http://localhost:/{}/{}".format(8000 + i, file) for i in range(3)]
+        urls = ["http://localhost:{}/{}".format(8000 + i, file) for i in range(3)]
 
         # Only the first file must be downloaded
         with tools.chdir(tools.mkdir_tmp()):
@@ -770,8 +770,9 @@ class HelloConan(ConanFile):
             requester.fail_first = True
             tools.get(urls, requester=requester, output=out, retry=0, retry_wait=0)
             self.assertEqual(2, requester.count)
-            self.assertIn("ERROR: Could not download from the URL {}: Error 408 downloading file"
-                          .format(urls[0]), out)
+            self.assertIn("WARN: Could not download from the URL {}: Error 408 downloading file {}."
+                          " Trying another mirror."
+                          .format(urls[0], urls[0]), out)
 
         # Fail all downloads
         with tools.chdir(tools.mkdir_tmp()):
