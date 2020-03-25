@@ -13,11 +13,12 @@ def get(url, md5='', sha1='', sha256='', destination=".", filename="", keep_perm
     """ high level downloader + unzipper + (optional hash checker) + delete temporary zip
     """
 
-    url = [url] if not isinstance(url, (list, tuple)) else url
-    if not filename and ("?" in url[0] or "=" in url[0]):
-        raise ConanException("Cannot deduce file name from the url: '{}'. Use 'filename' "
-                             "parameter.".format(url[0]))
-    filename = filename or os.path.basename(url[0])
+    if not filename:  # deduce filename from the URL
+        url_base = url[0] if isinstance(url, (list, tuple)) else url
+        if "?" in url_base or "=" in url_base:
+            raise ConanException("Cannot deduce file name from the url: '{}'. Use 'filename' "
+                                 "parameter.".format(url_base))
+        filename = os.path.basename(url_base)
 
     download(url, filename, out=output, requester=requester, verify=verify, retry=retry,
              retry_wait=retry_wait, overwrite=overwrite, auth=auth, headers=headers,
