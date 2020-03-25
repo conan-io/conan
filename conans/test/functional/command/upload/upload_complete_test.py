@@ -16,20 +16,11 @@ from conans.model.manifest import FileTreeManifest
 from conans.model.package_metadata import PackageMetadata
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE, CONANINFO, CONAN_MANIFEST, EXPORT_TGZ_NAME
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files
-from conans.test.utils.test_files import hello_conan_files, hello_source_files, temp_folder, \
-    uncompress_packaged_files
+from conans.test.utils.cpp_test_files import cpp_hello_conan_files, cpp_hello_source_files
+from conans.test.utils.test_files import temp_folder, uncompress_packaged_files
 from conans.test.utils.tools import (NO_SETTINGS_PACKAGE_ID, TestClient, TestRequester, TestServer,
                                      MockedUserIO, TestBufferConanOutput, GenConanfile)
 from conans.util.files import load, mkdir, save
-
-myconan1 = """
-from conans import ConanFile
-
-class HelloConan(ConanFile):
-    name = "Hello"
-    version = "1.2.1"
-"""
 
 
 class BadConnectionUploader(TestRequester):
@@ -91,15 +82,14 @@ class UploadTest(unittest.TestCase):
 
     def setUp(self):
         self.client = self._get_client()
-        self.ref = ConanFileReference.loads("Hello/1.2.1@frodo/stable#%s" %
-                                            DEFAULT_REVISION_V1)
+        self.ref = ConanFileReference.loads("Hello/1.2.1@frodo/stable#%s" % DEFAULT_REVISION_V1)
         self.pref = PackageReference(self.ref, "myfakeid", DEFAULT_REVISION_V1)
         reg_folder = self.client.cache.package_layout(self.ref).export()
 
         self.client.run('upload %s' % str(self.ref), assert_error=True)
         self.assertIn("ERROR: Recipe not found: '%s'" % str(self.ref), self.client.out)
 
-        files = hello_source_files()
+        files = cpp_hello_source_files(0)
 
         fake_metadata = PackageMetadata()
         fake_metadata.recipe.revision = DEFAULT_REVISION_V1
@@ -107,7 +97,7 @@ class UploadTest(unittest.TestCase):
         self.client.save({"metadata.json": fake_metadata.dumps()},
                          path=self.client.cache.package_layout(self.ref).base_folder())
         self.client.save(files, path=reg_folder)
-        self.client.save({CONANFILE: myconan1,
+        self.client.save({CONANFILE: GenConanfile().with_name("Hello").with_version("1.2.1"),
                           "include/math/lib1.h": "//copy",
                           "my_lib/debug/libd.a": "//copy",
                           "my_data/readme.txt": "//copy",
@@ -143,7 +133,7 @@ class UploadTest(unittest.TestCase):
         self.assertFalse(os.path.exists(self.server_pack_folder))
 
     def try_upload_bad_recipe_test(self):
-        files = hello_conan_files("Hello0", "1.2.1")
+        files = cpp_hello_conan_files("Hello0", "1.2.1")
         self.client.save(files)
         self.client.run("export . frodo/stable")
         ref = ConanFileReference.loads("Hello0/1.2.1@frodo/stable")
@@ -155,7 +145,7 @@ class UploadTest(unittest.TestCase):
 
     def upload_with_pattern_test(self):
         for num in range(5):
-            files = hello_conan_files("Hello%s" % num, "1.2.1")
+            files = cpp_hello_conan_files("Hello%s" % num, "1.2.1")
             self.client.save(files)
             self.client.run("export . frodo/stable")
 
@@ -394,7 +384,7 @@ class UploadTest(unittest.TestCase):
         self.assertIn("%&$Uploading conaninfo.txt", out)
 
     def upload_with_pattern_and_package_error_test(self):
-        files = hello_conan_files("Hello1", "1.2.1")
+        files = cpp_hello_conan_files("Hello1", "1.2.1")
         self.client.save(files)
         self.client.run("export . frodo/stable")
 
@@ -404,7 +394,7 @@ class UploadTest(unittest.TestCase):
 
     def check_upload_confirm_question_test(self):
         user_io = MockedUserIO({"default": [("lasote", "mypass")]}, out=TestBufferConanOutput())
-        files = hello_conan_files("Hello1", "1.2.1")
+        files = cpp_hello_conan_files("Hello1", "1.2.1")
         self.client.save(files)
         self.client.run("export . frodo/stable")
 
@@ -412,7 +402,7 @@ class UploadTest(unittest.TestCase):
         self.client.run("upload Hello*", user_io=user_io)
         self.assertIn("Uploading Hello1/1.2.1@frodo/stable", self.client.out)
 
-        files = hello_conan_files("Hello2", "1.2.1")
+        files = cpp_hello_conan_files("Hello2", "1.2.1")
         self.client.save(files)
         self.client.run("export . frodo/stable")
 
@@ -461,9 +451,7 @@ class TestConan(ConanFile):
         self.assertIn("Uploaded conan recipe '%s'" % str(self.ref), self.client.out)
 
     def simple_test(self):
-        """ basic installation of a new conans
-        """
-        # Upload conans
+        # Upload package
         self.client.run('upload %s' % str(self.ref))
         self.server_reg_folder = self.test_server.server_store.export(self.ref)
 

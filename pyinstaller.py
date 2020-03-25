@@ -4,6 +4,7 @@ import os
 import platform
 import shutil
 import subprocess
+import sys
 from distutils import dir_util
 
 from conans import __version__
@@ -127,6 +128,10 @@ def pyinstall(source_folder):
 
 
 if __name__ == "__main__":
+    if sys.version_info.major == 3 and sys.version_info.minor >= 8:
+        print("pyinstaller does not yet support python 3.8, "
+              "see: https://github.com/pyinstaller/pyinstaller/issues/4311", file=sys.stderr)
+        exit(1)
     source_folder = os.path.abspath(os.path.dirname(os.path.abspath(__file__)))
     output_folder = pyinstall(source_folder)
     print("\n**************Conan binaries created!******************\n"

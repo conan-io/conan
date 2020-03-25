@@ -2,9 +2,8 @@ from conans.paths import CONANFILE
 
 
 conanfile_template = r"""
-from conans import ConanFile, tools
-import sys
-import os
+from conans import ConanFile
+
 
 class {name}Conan(ConanFile):
     name = "{name}"
@@ -48,7 +47,7 @@ if __name__ == "__main__":
 '''
 
 
-def py_hello_source_files(number=0, deps=None):
+def _py_hello_source_files(number=0, deps=None):
     assert deps is None or isinstance(deps, list)
     deps = deps or []
     ret = {}
@@ -69,7 +68,7 @@ def py_hello_source_files(number=0, deps=None):
 
 def py_hello_conan_files(name, version, deps=None):
     assert deps is None or isinstance(deps, list)
-    base_files = py_hello_source_files(name, deps)
+    base_files = _py_hello_source_files(name, deps)
     requires = []
     for d in deps or []:
         requires.append(d)

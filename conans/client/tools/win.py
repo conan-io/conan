@@ -360,6 +360,7 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False, vcva
         raise ConanException("compiler.version setting required for vcvars not defined")
 
     # https://msdn.microsoft.com/en-us/library/f2ccy3wt.aspx
+    vcvars_arch = None
     arch_setting = arch_setting or 'x86_64'
     arch_build = settings.get_safe("arch_build") or detected_architecture()
     if os_setting == 'WindowsCE':
