@@ -191,8 +191,8 @@ class VirtualEnvGenerator(Generator):
         if platform.system() == "Windows":
             if flavor == self.SH_FLAVOR:
                 # splitlines & join to guarantee it is always LF, irrespective of current file
-                activate_content = "\n".join(activate_content.splitlines())
-                deactivate_content = "\n".join(deactivate_content.splitlines())
+                activate_content = activate_content.replace("\r\n", "\n")
+                deactivate_content = deactivate_content.replace("\r\n", "\n")
                 environment = "\n".join(environment_lines)
             else:
                 activate_content = normalize(activate_content)
