@@ -427,7 +427,6 @@ class MyTest(ConanFile):
         self.assertEqual(content[0]["description"], "blah")
         self.assertEqual(content[1]["url"], "myurl")
         self.assertEqual(content[1]["required_by"][0], "conanfile.py (LibD/0.1)")
-        self.assertEqual(content[1]["required_by"][0], "conanfile.py (LibD/0.1)")
 
     def build_order_test(self):
         self.client = TestClient()
