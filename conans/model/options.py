@@ -391,8 +391,9 @@ class PackageOptions(object):
     def loads(text):
         return PackageOptions(yaml.safe_load(text) or {})
 
-    def get_safe(self, field):
-        return self._data.get(field)
+    def get_safe(self, field, default=None):
+        result = self._data.get(field)
+        return default if result is None else result
 
     def validate(self):
         for child in self._data.values():
