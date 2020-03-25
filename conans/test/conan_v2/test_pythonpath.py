@@ -35,7 +35,9 @@ class PythonBuildTest(ConanV2ModeTestCase):
             requires = "conantool/1.0@conan/stable"
 
             def build(self):
-                self.output.info("PYTHONPATH: {}".format(self.deps_env_info["conantool"].PYTHONPATH))
+                pythonpath = self.deps_env_info["conantool"].PYTHONPATH
+                ppath = [it.replace("\\\\", "/") for it in pythonpath]
+                self.output.info("PYTHONPATH: {}".format(ppath))
 
             def package_info(self):
                 import tooling
@@ -53,7 +55,7 @@ class PythonBuildTest(ConanV2ModeTestCase):
         # Try to reuse it
         t.save({'conanfile.py': self.reuse}, clean_first=True)
         t.run("create .", assert_error=True)
-        packages_path = t.cache.package_layout(conantool_ref).packages()
+        packages_path = t.cache.package_layout(conantool_ref).packages().replace('\\', '/')
         self.assertIn("consumer/0.1: PYTHONPATH: ['{}".format(packages_path), t.out)
         if six.PY2:
             self.assertIn("ImportError: No module named tooling", t.out)
