@@ -122,8 +122,7 @@ class DownloadCacheTest(unittest.TestCase):
            """ % http_server.port)
         client.save({"conanfile.py": conanfile})
         client.run("source .", assert_error=True)
-        self.assertIn("ConanException: Could not download from the URL http://localhost:{}/myfile."
-                      "txt: md5 signature failed for".format(http_server.port), client.out)
+        self.assertIn("ConanException: md5 signature failed for", client.out)
         self.assertIn("Provided signature: kk", client.out)
         self.assertIn("Computed signature: 9893532233caff98cd083a116b013c0b", client.out)
         self.assertEqual(1, len(os.listdir(cache_folder)))  # Nothing was cached
