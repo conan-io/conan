@@ -7,8 +7,9 @@ class DownloadParallelTest(unittest.TestCase):
 
     def basic_parallel_download_test(self):
         client = TestClient(default_server_user=True)
+        threads = 1  # At the moment, not really parallel until output implements mutex
         counter = 4
-        client.run("config set general.parallel_download=%s" % counter)
+        client.run("config set general.parallel_download=%s" % threads)
         client.save({"conanfile.py": GenConanfile().with_option("myoption", '"ANY"')})
 
         for i in range(counter):
@@ -18,7 +19,7 @@ class DownloadParallelTest(unittest.TestCase):
 
         # Lets download the packages
         client.run("download pkg/0.1@user/testing")
-        self.assertIn("Downloading binary packages in %s parallel threads" % counter, client.out)
+        self.assertIn("Downloading binary packages in %s parallel threads" % threads, client.out)
         self.assertIn("pkg/0.1@user/testing: Package installed "
                       "74ca4e392408c388db596b086fca5ebf64d825c0", client.out)
         self.assertIn("pkg/0.1@user/testing: Package installed "
