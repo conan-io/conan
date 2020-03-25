@@ -56,12 +56,16 @@ class InfoTest(unittest.TestCase):
             files[CONANFILE] = files[CONANFILE].replace('version = "0.1"',
                                                         'version = "0.1"\n'
                                                         '    url= "myurl"\n'
-                                                        '    license = "MIT"')
+                                                        '    license = "MIT"\n'
+                                                        '    description = "blah"')
         else:
             files[CONANFILE] = files[CONANFILE].replace('version = "0.1"',
                                                         'version = "0.1"\n'
                                                         '    url= "myurl"\n'
-                                                        '    license = "MIT", "GPL"')
+                                                        '    license = "MIT", "GPL"\n'
+                                                        '    description = """Yo no creo en brujas,\n'
+                                                        '                 pero que las hay,\n'
+                                                        '                 las hay"""')
 
         self.client.save(files)
         if export:
@@ -293,7 +297,7 @@ class MyTest(ConanFile):
         self.assertNotIn("virtual", self.client.out)
         self.assertNotIn("Required", self.client.out)
 
-    def reuse_test(self):
+    def test_reuse(self):
         self.client = TestClient()
         self._create("Hello0", "0.1")
         self._create("Hello1", "0.1", ["Hello0/0.1@lasote/stable"])
@@ -311,6 +315,7 @@ class MyTest(ConanFile):
                 Remote: None
                 URL: myurl
                 License: MIT
+                Description: blah
                 Recipe: No remote%s
                 Binary: Missing
                 Binary remote: None
@@ -320,6 +325,7 @@ class MyTest(ConanFile):
                 Remote: None
                 URL: myurl
                 License: MIT
+                Description: blah
                 Recipe: No remote%s
                 Binary: Missing
                 Binary remote: None
@@ -330,6 +336,9 @@ class MyTest(ConanFile):
             conanfile.py (Hello2/0.1)
                 URL: myurl
                 Licenses: MIT, GPL
+                Description: Yo no creo en brujas,
+                             pero que las hay,
+                             las hay
                 Requires:
                     Hello1/0.1@lasote/stable""")
 
@@ -377,6 +386,25 @@ class MyTest(ConanFile):
 
         self.assertIn(expected_output, clean_output(self.client.out))
 
+        self.client.run("info . -u --only=url --only=license --only=description")
+        expected_output = textwrap.dedent(
+            """\
+            Hello0/0.1@lasote/stable
+                URL: myurl
+                License: MIT
+                Description: blah
+            Hello1/0.1@lasote/stable
+                URL: myurl
+                License: MIT
+                Description: blah
+            conanfile.py (Hello2/0.1)
+                URL: myurl
+                Licenses: MIT, GPL
+                Description: Yo no creo en brujas,
+                             pero que las hay,
+                             las hay""")
+        self.assertIn(expected_output, clean_output(self.client.out))
+
     def test_json_info_outputs(self):
         self.client = TestClient()
         self._create("LibA", "0.1")
@@ -396,6 +424,7 @@ class MyTest(ConanFile):
         content = json.loads(load(json_file))
         self.assertEqual(content[0]["reference"], "LibA/0.1@lasote/stable")
         self.assertEqual(content[0]["license"][0], "MIT")
+        self.assertEqual(content[0]["description"], "blah")
         self.assertEqual(content[1]["url"], "myurl")
         self.assertEqual(content[1]["required_by"][0], "conanfile.py (LibD/0.1)")
 
