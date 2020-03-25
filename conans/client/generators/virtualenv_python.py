@@ -1,4 +1,5 @@
 from conans.client.generators.virtualrunenv import VirtualRunEnvGenerator
+from conans.util.conan_v2_mode import conan_v2_behavior
 
 
 class VirtualEnvPythonGenerator(VirtualRunEnvGenerator):
@@ -7,6 +8,7 @@ class VirtualEnvPythonGenerator(VirtualRunEnvGenerator):
     venv_name = "conanenvpython"
 
     def __init__(self, conanfile):
+        conan_v2_behavior("'virtualenv_python' generator is deprecated")
         super(VirtualEnvPythonGenerator, self).__init__(conanfile)
         ppath = conanfile.env.get("PYTHONPATH")
         if ppath:
