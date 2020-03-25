@@ -104,6 +104,9 @@ class VirtualEnvGenerator(Generator):
     append_with_spaces = ["CPPFLAGS", "CFLAGS", "CXXFLAGS", "LIBS", "LDFLAGS", "CL", "_LINK_"]
     suffix = ""
     venv_name = "conanenv"
+    CMD_FLAVOR = "cmd"
+    PS1_FLAVOR = "ps1"
+    SH_FLAVOR = "sh"
 
     def __init__(self, conanfile):
         super(VirtualEnvGenerator, self).__init__(conanfile)
@@ -123,9 +126,9 @@ class VirtualEnvGenerator(Generator):
         :return: placeholder for the variable name formatted for a certain execution environment.
         (e.g., cmd, ps1, sh).
         """
-        if flavor == "cmd":
+        if flavor == VirtualEnvGenerator.CMD_FLAVOR:
             return "%{}%".format(name)
-        if flavor == "ps1":
+        if flavor == VirtualEnvGenerator.PS1_FLAVOR:
             return "$env:%s" % name
         # flavor == sh
         return "${%s+ $%s}" % (name, name) if append_with_spaces else "${%s+:$%s}" % (name,  name)
@@ -138,10 +141,9 @@ class VirtualEnvGenerator(Generator):
         :param variables: variables to be formatted
         :return:
         """
-        if flavor in ["cmd", "ps1"]:
+        path_sep, quote_elements = ":", True
+        if flavor in [VirtualEnvGenerator.CMD_FLAVOR, VirtualEnvGenerator.PS1_FLAVOR]:
             path_sep, quote_elements = ";", False
-        elif flavor == "sh":
-            path_sep, quote_elements = ":", True
 
         for name, value in variables:
             # activate values
@@ -157,7 +159,7 @@ class VirtualEnvGenerator(Generator):
                     # PATH="one path":"two paths"
                     # Unquoted variables joined with pathset may look like: PATH=one path;two paths
                     value = ["\"%s\"" % v for v in value] if quote_elements else value
-                    if flavor == "sh":
+                    if flavor == VirtualEnvGenerator.SH_FLAVOR:
                         value = path_sep.join(value) + placeholder
                     else:
                         value = path_sep.join(value + [placeholder])
@@ -187,10 +189,11 @@ class VirtualEnvGenerator(Generator):
         environment_lines.append('')
 
         if platform.system() == "Windows":
-            if flavor == "sh":
-                activate_content = activate_content.replace("\\", "/")
-                deactivate_content = deactivate_content.replace("\\", "/")
-                environment = "\n".join(v.replace("\\", "/") for v in environment_lines)
+            if flavor == self.SH_FLAVOR:
+                # splitlines & join to guarantee it is always LF, irrespective of current file
+                activate_content = "\n".join(activate_content.splitlines())
+                deactivate_content = "\n".join(deactivate_content.splitlines())
+                environment = "\n".join(environment_lines)
             else:
                 activate_content = normalize(activate_content)
                 deactivate_content = normalize(deactivate_content)
@@ -216,8 +219,8 @@ class VirtualEnvGenerator(Generator):
 
         os_info = OSInfo()
         if os_info.is_windows and not os_info.is_posix:
-            _call_files('cmd', cmd_activate_tpl, cmd_deactivate_tpl, 'bat')
-            _call_files('ps1', ps1_activate_tpl, ps1_deactivate_tpl)
-        _call_files("sh", sh_activate_tpl, sh_deactivate_tpl)
+            _call_files(self.CMD_FLAVOR, cmd_activate_tpl, cmd_deactivate_tpl, 'bat')
+            _call_files(self.PS1_FLAVOR, ps1_activate_tpl, ps1_deactivate_tpl)
+        _call_files(self.SH_FLAVOR, sh_activate_tpl, sh_deactivate_tpl)
 
         return result
