@@ -14,6 +14,7 @@ from conans.client.packager import run_package_method, update_package_metadata
 from conans.client.recorder.action_recorder import INSTALL_ERROR_BUILDING, INSTALL_ERROR_MISSING, \
     INSTALL_ERROR_MISSING_BUILD_FOLDER
 from conans.client.source import complete_recipe_sources, config_source
+from conans.client.tools.env import no_op
 from conans.client.tools.env import pythonpath
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
                            conanfile_exception_formatter)
@@ -26,6 +27,7 @@ from conans.model.info import PACKAGE_ID_UNKNOWN
 from conans.model.ref import PackageReference
 from conans.model.user_info import UserInfo
 from conans.paths import BUILD_INFO, CONANINFO, RUN_LOG_NAME
+from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
 from conans.util.env_reader import get_env
 from conans.util.files import (clean_dirty, is_dirty, make_read_only, mkdir, rmdir, save, set_dirty,
                                set_dirty_context_manager)
@@ -547,7 +549,8 @@ class BinaryInstaller(object):
         conanfile.cpp_info.public_deps = public_deps
         # Once the node is build, execute package info, so it has access to the
         # package folder and artifacts
-        with pythonpath(conanfile):  # Minimal pythonpath, not the whole context, make it 50% slower
+        conan_v2 = get_env(CONAN_V2_MODE_ENVVAR, False)
+        with pythonpath(conanfile) if not conan_v2 else no_op():  # Minimal pythonpath, not the whole context, make it 50% slower
             with tools.chdir(package_folder):
                 with conanfile_exception_formatter(str(conanfile), "package_info"):
                     conanfile.package_folder = package_folder
