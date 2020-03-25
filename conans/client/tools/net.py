@@ -86,21 +86,20 @@ def download(url, filename, verify=True, out=None, retry=None, retry_wait=None, 
     retry_wait = retry_wait if retry_wait is not None else config.retry_wait
     retry_wait = retry_wait if retry_wait is not None else 5
 
-    url = [url] if not isinstance(url, (list, tuple)) else url
     checksum = sha256 or sha1 or md5
 
     downloader = FileDownloader(requester=requester, output=out, verify=verify, config=config)
     if config and config.download_cache and checksum:
         downloader = CachedFileDownloader(config.download_cache, downloader, user_download=True)
 
-    def _download_file(downloader, url):
+    def _download_file(file_url):
         # The download cache is only used if a checksum is provided, otherwise, a normal download
         if isinstance(downloader, CachedFileDownloader):
-            downloader.download(url, filename, retry=retry, retry_wait=retry_wait,
+            downloader.download(file_url, filename, retry=retry, retry_wait=retry_wait,
                                 overwrite=overwrite, auth=auth, headers=headers, md5=md5,
                                 sha1=sha1, sha256=sha256)
         else:
-            downloader.download(url, filename, retry=retry, retry_wait=retry_wait,
+            downloader.download(file_url, filename, retry=retry, retry_wait=retry_wait,
                                 overwrite=overwrite, auth=auth, headers=headers)
             if md5:
                 check_md5(filename, md5)
@@ -110,14 +109,15 @@ def download(url, filename, verify=True, out=None, retry=None, retry_wait=None, 
                 check_sha256(filename, sha256)
         out.writeln("")
 
-    for index, url_it in enumerate(url):
-        try:
-            _download_file(downloader, url_it)
-            break
-        except ConanException as error:
-            message = "Could not download from the URL {}: {}.".format(url_it, str(error))
-            if len(url) == 1:
-                raise ConanException(message)
-            out.warn(message + " Trying another mirror.")
-            if (index + 1) == len(url):
-                raise ConanException("All downloads from ({}) URLs have failed.".format(len(url)))
+    if not isinstance(url, (list, tuple)):
+        _download_file(url)
+    else:  # We were provided several URLs to try
+        for url_it in url:
+            try:
+                _download_file(url_it)
+                break
+            except Exception as error:
+                message = "Could not download from the URL {}: {}.".format(url_it, str(error))
+                out.warn(message + " Trying another mirror.")
+        else:
+            raise ConanException("All downloads from ({}) URLs have failed.".format(len(url)))
