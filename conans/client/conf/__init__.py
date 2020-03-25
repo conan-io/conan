@@ -88,7 +88,7 @@ _t_default_settings_yml = Template(textwrap.dedent("""
             libcxx: [libstdc++, libc++]
             cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
         intel:
-            version: ["11", "12", "13", "14", "15", "16", "17", "18", "19"]
+            version: ["11", "12", "13", "14", "15", "16", "17", "18", "19", "19.1"]
             base:
                 gcc:
                     <<: *gcc
