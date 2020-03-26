@@ -189,8 +189,8 @@ class VirtualEnvGenerator(Generator):
         environment_lines.append('')
 
         if platform.system() == "Windows":
-            if flavor == self.SH_FLAVOR:
-                # splitlines & join to guarantee it is always LF, irrespective of current file
+            if flavor == VirtualEnvGenerator.SH_FLAVOR:
+                # replace CRLF->LF guarantee it is always LF, irrespective of current .py file
                 activate_content = activate_content.replace("\r\n", "\n")
                 deactivate_content = deactivate_content.replace("\r\n", "\n")
                 environment = "\n".join(environment_lines)
@@ -219,8 +219,8 @@ class VirtualEnvGenerator(Generator):
 
         os_info = OSInfo()
         if os_info.is_windows and not os_info.is_posix:
-            _call_files(self.CMD_FLAVOR, cmd_activate_tpl, cmd_deactivate_tpl, 'bat')
-            _call_files(self.PS1_FLAVOR, ps1_activate_tpl, ps1_deactivate_tpl)
-        _call_files(self.SH_FLAVOR, sh_activate_tpl, sh_deactivate_tpl)
+            _call_files(VirtualEnvGenerator.CMD_FLAVOR, cmd_activate_tpl, cmd_deactivate_tpl, 'bat')
+            _call_files(VirtualEnvGenerator.PS1_FLAVOR, ps1_activate_tpl, ps1_deactivate_tpl)
+        _call_files(VirtualEnvGenerator.SH_FLAVOR, sh_activate_tpl, sh_deactivate_tpl)
 
         return result
