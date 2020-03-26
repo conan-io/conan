@@ -343,8 +343,8 @@ class MyTest(ConanFile):
                     Hello1/0.1@lasote/stable""")
 
         expected_output = expected_output % (
-                "\n    Revision: cba5c22478b987899b8ca26b2c359bde",
-                "\n    Revision: c0683fc1338c11821957d21265927a7b") \
+                "\n    Revision: 4dfe7e755ac2ce2b39f1da54151c7636",
+                "\n    Revision: e003760cfa649c4ac4680fec3271b17a") \
             if self.client.cache.config.revisions_enabled else expected_output % ("", "")
 
         def clean_output(output):
