@@ -163,8 +163,8 @@ class RangeResolver(object):
 
     def _resolve_remote(self, search_ref, version_range, remotes):
         # We should use ignorecase=False, we want the exact case!
-        found_refs_remote_dict = self._cached_remote_found.get(search_ref, (None))
-        if found_refs_remote_dict is None:
+        search_result = self._cached_remote_found.get(search_ref, (None))
+        if search_result is None:
             # Searching for just the name is much faster in remotes like Artifactory
             search_result = search_result_tmp = self._search_remotes(search_ref, remotes)
             for remote_name,found_refs in search_result_tmp.items():
@@ -175,10 +175,10 @@ class RangeResolver(object):
                 # We don't want here to resolve the revision that should be done in the proxy
                 # as any other regular flow
                 found_refs = [ref.copy_clear_rev() for ref in found_refs or []]
-                search_result[remote_name]=found_refs
+                search_result[remote_name] = found_refs
                 # Empty list, just in case it returns None
             self._cached_remote_found[search_ref] = search_result
-        if found_refs:
+        if search_result:
             for remote_name,found_refs in search_result.items():
                 result = self._resolve_version(version_range, found_refs), remote_name
                 if result[0] != None:
