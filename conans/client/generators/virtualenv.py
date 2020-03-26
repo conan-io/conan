@@ -188,17 +188,14 @@ class VirtualEnvGenerator(Generator):
         # This blank line is important, otherwise the script doens't process last line
         environment_lines.append('')
 
-        if platform.system() == "Windows":
-            if flavor == VirtualEnvGenerator.SH_FLAVOR:
-                # replace CRLF->LF guarantee it is always LF, irrespective of current .py file
-                activate_content = activate_content.replace("\r\n", "\n")
-                deactivate_content = deactivate_content.replace("\r\n", "\n")
-                environment = "\n".join(environment_lines)
-            else:
-                activate_content = normalize(activate_content)
-                deactivate_content = normalize(deactivate_content)
-                environment = os.linesep.join(environment_lines)
+        if flavor == VirtualEnvGenerator.SH_FLAVOR:
+            # replace CRLF->LF guarantee it is always LF, irrespective of current .py file
+            activate_content = activate_content.replace("\r\n", "\n")
+            deactivate_content = deactivate_content.replace("\r\n", "\n")
+            environment = "\n".join(environment_lines)
         else:
+            activate_content = normalize(activate_content)
+            deactivate_content = normalize(deactivate_content)
             environment = os.linesep.join(environment_lines)
 
         return activate_content, deactivate_content, environment
