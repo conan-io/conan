@@ -28,6 +28,7 @@ from conans.util.files import _generic_algorithm_sum, load, md5, md5sum, mkdir, 
     rmdir, save as files_save, save_append, sha1sum, sha256sum, to_file_bytes, touch
 from conans.util.log import logger
 from conans.client.tools.version import Version
+from conans.client.build.cppstd_flags import cppstd_flag_new as cppstd_flag  # pylint: disable=unused-import
 
 
 # This global variables are intended to store the configuration of the running Conan application
@@ -219,6 +220,7 @@ def vcvars_dict(*args, **kwargs):
 
 def latest_vs_version_installed(*args, **kwargs):
     return tools_win.latest_vs_version_installed(output=_global_output, *args, **kwargs)
+
 
 
 # Ready to use objects.

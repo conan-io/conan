@@ -3,12 +3,14 @@ from collections import OrderedDict
 
 from conans.client import tools
 from conans.client.build.compiler_flags import architecture_flag, parallel_compiler_cl_flag
-from conans.client.build.cppstd_flags import cppstd_flag, cppstd_from_settings
+from conans.client.build.cppstd_flags import cppstd_from_settings, \
+    cppstd_flag_new as cppstd_flag
 from conans.client.tools import cross_building
 from conans.client.tools.apple import is_apple_os
 from conans.client.tools.oss import get_cross_building_settings
 from conans.errors import ConanException
 from conans.model.build_info import DEFAULT_BIN, DEFAULT_INCLUDE, DEFAULT_LIB, DEFAULT_SHARE
+from conans.tools import cross_building
 from conans.util.env_reader import get_env
 from conans.util.log import logger
 
@@ -143,8 +145,6 @@ class CMakeDefinitionsBuilder(object):
 
     def _get_cpp_standard_vars(self):
         cppstd = cppstd_from_settings(self._conanfile.settings)
-        compiler = self._ss("compiler")
-        compiler_version = self._ss("compiler.version")
 
         if not cppstd:
             return {}
@@ -157,7 +157,7 @@ class CMakeDefinitionsBuilder(object):
             definitions["CONAN_CMAKE_CXX_STANDARD"] = cppstd
             definitions["CONAN_CMAKE_CXX_EXTENSIONS"] = "OFF"
 
-        definitions["CONAN_STD_CXX_FLAG"] = cppstd_flag(compiler, compiler_version, cppstd)
+        definitions["CONAN_STD_CXX_FLAG"] = cppstd_flag(self._conanfile.settings)
         return definitions
 
     def _cmake_cross_build_defines(self):
