@@ -167,17 +167,18 @@ class RangeResolver(object):
         if search_result is None:
             # Searching for just the name is much faster in remotes like Artifactory
             search_result = search_result_tmp = self._search_remotes(search_ref, remotes)
-            for remote_name,found_refs in search_result_tmp.items():
-                if found_refs:
-                    self._result.append("%s versions found in '%s' remote" % (search_ref, remote_name))
-                else:
-                    self._result.append("%s versions not found in remotes")
-                # We don't want here to resolve the revision that should be done in the proxy
-                # as any other regular flow
-                found_refs = [ref.copy_clear_rev() for ref in found_refs or []]
-                search_result[remote_name] = found_refs
-                # Empty list, just in case it returns None
-            self._cached_remote_found[search_ref] = search_result
+            if search_result_tmp:
+                for remote_name,found_refs in search_result_tmp.items():
+                    if found_refs:
+                        self._result.append("%s versions found in '%s' remote" % (search_ref, remote_name))
+                    else:
+                        self._result.append("%s versions not found in remotes")
+                    # We don't want here to resolve the revision that should be done in the proxy
+                    # as any other regular flow
+                    found_refs = [ref.copy_clear_rev() for ref in found_refs or []]
+                    search_result[remote_name] = found_refs
+                    # Empty list, just in case it returns None
+                self._cached_remote_found[search_ref] = search_result
         if search_result:
             for remote_name,found_refs in search_result.items():
                 result = self._resolve_version(version_range, found_refs), remote_name
