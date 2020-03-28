@@ -6,7 +6,7 @@ from jinja2 import Template
 
 from conans.client.tools.oss import OSInfo
 from conans.model import Generator
-
+from conans.util.files import normalize
 
 sh_activate_tpl = Template(textwrap.dedent("""\
     #!/usr/bin/env sh
@@ -41,25 +41,25 @@ sh_deactivate_tpl = Template(textwrap.dedent("""\
 
 cmd_activate_tpl = Template(textwrap.dedent("""\
     @echo off
-    
+
     {%- for it in modified_vars %}
     SET "CONAN_OLD_{{it}}=%{{it}}%"
     {%- endfor %}
-    
+
     FOR /F "usebackq tokens=1,* delims==" %%i IN ("{{ environment_file }}") DO (
         CALL SET "%%i=%%j"
     )
-    
+
     SET "CONAN_OLD_PROMPT=%PROMPT%"
     SET "PROMPT=({{venv_name}}) %PROMPT%"
 """))
 
 cmd_deactivate_tpl = Template(textwrap.dedent("""\
     @echo off
-    
+
     SET "PROMPT=%CONAN_OLD_PROMPT%"
     SET "CONAN_OLD_PROMPT="
-    
+
     {% for it in modified_vars %}
     SET "{{it}}=%CONAN_OLD_{{it}}%"
     SET "CONAN_OLD_{{it}}="
@@ -73,13 +73,13 @@ ps1_activate_tpl = Template(textwrap.dedent("""\
     {%- for it in modified_vars %}
     $env:CONAN_OLD_{{it}}=$env:{{it}}
     {%- endfor %}
-    
+
     foreach ($line in Get-Content "{{ environment_file }}") {
         $var,$value = $line -split '=',2
         $value_expanded = $ExecutionContext.InvokeCommand.ExpandString($value)
         Set-Item env:\\$var -Value "$value_expanded"
     }
-    
+
     function global:_old_conan_prompt {""}
     $function:_old_conan_prompt = $function:prompt
     function global:prompt { write-host "({{venv_name}}) " -nonewline; & $function:_old_conan_prompt }
@@ -88,7 +88,7 @@ ps1_activate_tpl = Template(textwrap.dedent("""\
 ps1_deactivate_tpl = Template(textwrap.dedent("""\
     $function:prompt = $function:_old_conan_prompt
     remove-item function:_old_conan_prompt
-    
+
     {% for it in modified_vars %}
     $env:{{it}}=$env:CONAN_OLD_{{it}}
     Remove-Item env:CONAN_OLD_{{it}}
@@ -104,11 +104,15 @@ class VirtualEnvGenerator(Generator):
     append_with_spaces = ["CPPFLAGS", "CFLAGS", "CXXFLAGS", "LIBS", "LDFLAGS", "CL", "_LINK_"]
     suffix = ""
     venv_name = "conanenv"
+    CMD_FLAVOR = "cmd"
+    PS1_FLAVOR = "ps1"
+    SH_FLAVOR = "sh"
 
     def __init__(self, conanfile):
         super(VirtualEnvGenerator, self).__init__(conanfile)
         self.conanfile = conanfile
         self.env = conanfile.env
+        self.normalize = False
 
     @property
     def filename(self):
@@ -122,9 +126,9 @@ class VirtualEnvGenerator(Generator):
         :return: placeholder for the variable name formatted for a certain execution environment.
         (e.g., cmd, ps1, sh).
         """
-        if flavor == "cmd":
+        if flavor == VirtualEnvGenerator.CMD_FLAVOR:
             return "%{}%".format(name)
-        if flavor == "ps1":
+        if flavor == VirtualEnvGenerator.PS1_FLAVOR:
             return "$env:%s" % name
         # flavor == sh
         return "${%s+ $%s}" % (name, name) if append_with_spaces else "${%s+:$%s}" % (name,  name)
@@ -137,10 +141,9 @@ class VirtualEnvGenerator(Generator):
         :param variables: variables to be formatted
         :return:
         """
-        if flavor in ["cmd", "ps1"]:
+        path_sep, quote_elements = ":", True
+        if flavor in [VirtualEnvGenerator.CMD_FLAVOR, VirtualEnvGenerator.PS1_FLAVOR]:
             path_sep, quote_elements = ";", False
-        elif flavor == "sh":
-            path_sep, quote_elements = ":", True
 
         for name, value in variables:
             # activate values
@@ -156,7 +159,7 @@ class VirtualEnvGenerator(Generator):
                     # PATH="one path":"two paths"
                     # Unquoted variables joined with pathset may look like: PATH=one path;two paths
                     value = ["\"%s\"" % v for v in value] if quote_elements else value
-                    if flavor == "sh":
+                    if flavor == VirtualEnvGenerator.SH_FLAVOR:
                         value = path_sep.join(value) + placeholder
                     else:
                         value = path_sep.join(value + [placeholder])
@@ -182,9 +185,20 @@ class VirtualEnvGenerator(Generator):
         deactivate_content = deactivate_tpl.render(modified_vars=modified_vars, new_vars=new_vars)
 
         environment_lines = ["{}={}".format(name, value) for name, value, _ in ret]
+        # This blank line is important, otherwise the script doens't process last line
         environment_lines.append('')
 
-        return activate_content, deactivate_content, os.linesep.join(environment_lines)
+        if flavor == VirtualEnvGenerator.SH_FLAVOR:
+            # replace CRLF->LF guarantee it is always LF, irrespective of current .py file
+            activate_content = activate_content.replace("\r\n", "\n")
+            deactivate_content = deactivate_content.replace("\r\n", "\n")
+            environment = "\n".join(environment_lines)
+        else:
+            activate_content = normalize(activate_content)
+            deactivate_content = normalize(deactivate_content)
+            environment = os.linesep.join(environment_lines)
+
+        return activate_content, deactivate_content, environment
 
     @property
     def content(self):
@@ -202,8 +216,8 @@ class VirtualEnvGenerator(Generator):
 
         os_info = OSInfo()
         if os_info.is_windows and not os_info.is_posix:
-            _call_files('cmd', cmd_activate_tpl, cmd_deactivate_tpl, 'bat')
-            _call_files('ps1', ps1_activate_tpl, ps1_deactivate_tpl)
-        _call_files("sh", sh_activate_tpl, sh_deactivate_tpl)
+            _call_files(VirtualEnvGenerator.CMD_FLAVOR, cmd_activate_tpl, cmd_deactivate_tpl, 'bat')
+            _call_files(VirtualEnvGenerator.PS1_FLAVOR, ps1_activate_tpl, ps1_deactivate_tpl)
+        _call_files(VirtualEnvGenerator.SH_FLAVOR, sh_activate_tpl, sh_deactivate_tpl)
 
         return result
