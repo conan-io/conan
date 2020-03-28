@@ -107,7 +107,8 @@ def write_generators(conanfile, path, output):
                     output.warn("Generator %s is multifile. Property 'filename' not used"
                                 % (generator_name,))
                 for k, v in content.items():
-                    v = normalize(v)
+                    if generator.normalize:  # To not break existing behavior, to be removed 2.0
+                        v = normalize(v)
                     output.info("Generator %s created %s" % (generator_name, k))
                     save(join(path, k), v, only_if_modified=True)
             else:
