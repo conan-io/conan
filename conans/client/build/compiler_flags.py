@@ -9,6 +9,7 @@
     #   -LIBPATH, -D, -I, -ZI and so on.
 
 """
+import os
 from conans.client.tools.oss import cpu_count
 from conans.client.tools.win import unix_path
 
@@ -205,7 +206,7 @@ def format_libraries(libraries, compiler=None):
                 library += ".lib"
             result.append(library)
         else:
-            result.append("-l%s" % library)
+            result.append(('"%s"' if os.path.isabs(library) else '-l%s') % library)
     return result
 
 

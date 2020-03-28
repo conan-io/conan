@@ -164,6 +164,6 @@ class CompilerFlagsTest(unittest.TestCase):
                           format_library_paths(['path1', 'with spaces'], compiler='Visual Studio'))
 
     def test_format_libraries(self):
-        self.assertEqual(['-llib1', '-llib2'], format_libraries(['lib1', 'lib2']))
+        self.assertEqual(['-llib1', '-llib2', '/lib3', '/opt/lib4'], format_libraries(['lib1', 'lib2', '/lib3', '/opt/lib4']))
         self.assertEqual(['lib1.lib', 'lib2.lib'], format_libraries(['lib1', 'lib2'],
                                                                      compiler='Visual Studio'))
