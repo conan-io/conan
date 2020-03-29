@@ -57,7 +57,11 @@ def _sun_cc_compiler(output, compiler_exe="cc"):
     try:
         _, out = detect_runner('%s -V' % compiler_exe)
         compiler = "sun-cc"
-        installed_version = re.search("([0-9]+\.[0-9]+)", out).group()
+        installed_version = re.search("Sun C.*([0-9]+\.[0-9]+)", out)
+        if installed_version:
+            installed_version = installed_version.group(1)
+        else:
+            installed_version = re.search("([0-9]+\.[0-9]+)", out).group()
         if installed_version:
             output.success("Found %s %s" % (compiler, installed_version))
             return compiler, installed_version
