@@ -13,7 +13,23 @@ requirement_tpl = Template(textwrap.dedent("""
 
     ---
 
-    Information for consumers:
+    {% if requires or required_by %}
+    Graph of dependencies:
+    {% if requires %}
+    * ``{{ name }}`` requires:
+    {%- for dep_name, dep_cpp_info in requires %}
+        [{{ dep_name }}/{{ dep_cpp_info.version }}]({{ dep_name }}.md){% if not loop.last %}, {% endif %}
+    {%- endfor %}
+    {%- endif %}
+    {%- if required_by %}
+    * ``{{ name }}`` is required by:
+    {%- for dep_name, dep_cpp_info in required_by %}
+    [{{ dep_name }}/{{ dep_cpp_info.version }}]({{ dep_name }}.md)
+    {%- endfor %}
+    {%- endif %}
+    {% endif %}
+
+    Information published by ``{{ name }}`` to consumers:
 
     {%- if cpp_info.includedirs %}
     * Headers (see [below](#header-files))
@@ -35,13 +51,13 @@ requirement_tpl = Template(textwrap.dedent("""
     {%- endif %}
 
 
+    ## Generators
 
     Read below how to use this package using different
     [generators](https://docs.conan.io/en/latest/reference/generators.html). In order to use
     these generators they have to be listed in the _conanfile.py_ file or using the command
     line argument ``--generator/-g`` in the ``conan install`` command.
 
-    ## Generators
 
     ### ``cmake`` generator
 
@@ -104,6 +120,14 @@ class MarkdownGenerator(Generator):
                 for f in files:
                     yield os.path.relpath(os.path.join(root, f), os.path.join(rootpath, include_dir))
 
+    def _list_requires(self, cpp_info):
+        return [(it, self.conanfile.deps_cpp_info[it]) for it in cpp_info.public_deps]
+
+    def _list_required_by(self, name):
+        for other_name, cpp_info in self.conanfile.deps_cpp_info.dependencies:
+            if name in cpp_info.public_deps:
+                yield other_name, cpp_info
+
     @property
     def filename(self):
         pass
@@ -115,6 +139,8 @@ class MarkdownGenerator(Generator):
             ret["{}.md".format(name)] = requirement_tpl.render(
                 name=name,
                 cpp_info=cpp_info,
-                headers=self._list_headers(cpp_info)
+                headers=self._list_headers(cpp_info),
+                requires=list(self._list_requires(cpp_info)),
+                required_by=list(self._list_required_by(name))
             )
         return ret
