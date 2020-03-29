@@ -1,5 +1,6 @@
 from jinja2 import Template
 import textwrap
+import os
 from conans.model import Generator
 from conans.client.graph.graph import RECIPE_VIRTUAL
 
@@ -14,6 +15,9 @@ requirement_tpl = Template(textwrap.dedent("""
 
     Information for consumers:
 
+    {%- if cpp_info.includedirs %}
+    * Headers (see [below](#header-files))
+    {%- endif%}
     {%- if cpp_info.libs %}
     * Libraries: ``{{ "``, ``".join(cpp_info.libs) }}``
     {%- endif %}
@@ -30,13 +34,16 @@ requirement_tpl = Template(textwrap.dedent("""
     * CXX_FLAGS: ``{{ "``, ``".join(cpp_info.cxxflags) }}``
     {%- endif %}
 
+
+
     Read below how to use this package using different
     [generators](https://docs.conan.io/en/latest/reference/generators.html). In order to use
     these generators they have to be listed in the _conanfile.py_ file or using the command
-    line ``--generator/-g`` in the ``conan install`` command.
+    line argument ``--generator/-g`` in the ``conan install`` command.
 
+    ## Generators
 
-    ## ``cmake`` generator
+    ### ``cmake`` generator
 
     Add these lines to your *CMakeLists.txt*
 
@@ -48,7 +55,7 @@ requirement_tpl = Template(textwrap.dedent("""
     ```
 
 
-    ## ``cmake_find_package`` generator
+    ### ``cmake_find_package`` generator
     {% set cmake_find_package_name = cpp_info.get_name("cmake_find_package") %}
 
     Add these lines to your *CMakeLists.txt*
@@ -73,11 +80,29 @@ requirement_tpl = Template(textwrap.dedent("""
     target_link_libraries(<library_name> {{ cmake_find_package_name }}::{{ cmake_find_package_name }})
     ```
 
+    ---
+
+    ## Header files
+
+    List of header files exposed by this package. Use them in your ``#include`` directives:
+
+    ```cpp
+    {%- for header in headers %}
+    {{ header }}
+    {%- endfor %}
+    ```
 
 """))
 
 
 class MarkdownGenerator(Generator):
+
+    def _list_headers(self, cpp_info):
+        rootpath = cpp_info.rootpath
+        for include_dir in cpp_info.includedirs:
+            for root, _, files in os.walk(os.path.join(cpp_info.rootpath, include_dir)):
+                for f in files:
+                    yield os.path.relpath(os.path.join(root, f), os.path.join(rootpath, include_dir))
 
     @property
     def filename(self):
@@ -89,6 +114,7 @@ class MarkdownGenerator(Generator):
         for name, cpp_info in self.conanfile.deps_cpp_info.dependencies:
             ret["{}.md".format(name)] = requirement_tpl.render(
                 name=name,
-                cpp_info=cpp_info
+                cpp_info=cpp_info,
+                headers=self._list_headers(cpp_info)
             )
         return ret
