@@ -41,8 +41,15 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
         generators = set(generators) if generators else set()
         generators.add("txt")  # Add txt generator by default
 
-    out.info("Configuration:")
-    out.writeln(graph_info.profile_host.dumps())
+    if graph_info.profile_build:
+        out.info("Configuration (profile_host):")
+        out.writeln(graph_info.profile_host.dumps())
+        out.info("Configuration (profile_build):")
+        out.writeln(graph_info.profile_build.dumps())
+    else:
+        out.info("Configuration:")
+        out.writeln(graph_info.profile_host.dumps())
+
     deps_graph = graph_manager.load_graph(ref_or_path, create_reference, graph_info, build_modes,
                                           False, update, remotes, recorder)
     root_node = deps_graph.root

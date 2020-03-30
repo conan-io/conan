@@ -101,7 +101,8 @@ class InfoTest(unittest.TestCase):
         client.run("info . --install-folder=MyInstall -s build_type=Release",
                    assert_error=True)  # Re-uses debug from MyInstall folder
 
-        self.assertIn("--install-folder cannot be used together with -s, -o, -e or -pr", client.out)
+        self.assertIn("--install-folder cannot be used together with a"
+                      " host profile (-s, -o, -e or -pr)", client.out)
 
     def graph_test(self):
         self.client = TestClient()
