@@ -24,7 +24,7 @@ requirement_tpl = Template(textwrap.dedent("""
     {%- if required_by %}
     * ``{{ name }}`` is required by:
     {%- for dep_name, dep_cpp_info in required_by %}
-    [{{ dep_name }}/{{ dep_cpp_info.version }}]({{ dep_name }}.md)
+    [{{ dep_name }}/{{ dep_cpp_info.version }}]({{ dep_name }}.md){% if not loop.last %}, {% endif %}
     {%- endfor %}
     {%- endif %}
     {% endif %}
