@@ -85,7 +85,7 @@ class SynchronizeTest(unittest.TestCase):
         package_ids = client.cache.package_layout(ref).conan_packages()
         client.run("upload %s -p %s" % (str(ref), str(package_ids[0])))
 
-        # Check that conans exists on server
+        # Check that package exists on server
         pref = PackageReference(ref, str(package_ids[0]))
         prev = remote_paths.get_last_package_revision(pref)
         pref = pref.copy_with_revs(pref.ref.revision, prev.revision)
@@ -127,8 +127,9 @@ class SynchronizeTest(unittest.TestCase):
             self.assertFalse(os.path.exists(remote_file_path))
             self.assertNotEqual(remote_file_path, new_file_source_path)
 
-    def _create_manifest(self, client, package_reference):
+    @staticmethod
+    def _create_manifest(client, pref):
         # Create the manifest to be able to upload the package
-        pack_path = client.cache.package_layout(package_reference.ref).package(package_reference)
+        pack_path = client.cache.package_layout(pref.ref).package(pref)
         expected_manifest = FileTreeManifest.create(pack_path)
         expected_manifest.save(pack_path)

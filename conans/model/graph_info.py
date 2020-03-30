@@ -5,8 +5,7 @@ from conans.errors import ConanException
 from conans.model.graph_lock import GraphLockFile, LOCKFILE
 from conans.model.options import OptionsValues
 from conans.model.ref import ConanFileReference
-from conans.tools import save
-from conans.util.files import load
+from conans.util.files import load, save
 
 GRAPH_INFO_FILE = "graph_info.json"
 

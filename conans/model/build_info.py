@@ -1,6 +1,7 @@
 import os
 from collections import OrderedDict
 
+from conans.errors import ConanException
 from conans.util.conan_v2_mode import conan_v2_behavior
 
 DEFAULT_INCLUDE = "include"
@@ -10,6 +11,18 @@ DEFAULT_RES = "res"
 DEFAULT_SHARE = "share"
 DEFAULT_BUILD = ""
 DEFAULT_FRAMEWORK = "Frameworks"
+
+
+class DefaultOrderedDict(OrderedDict):
+
+    def __init__(self, factory):
+        self.factory = factory
+        super(DefaultOrderedDict, self).__init__()
+
+    def __getitem__(self, key):
+        if key not in self.keys():
+            super(DefaultOrderedDict, self).__setitem__(key, self.factory())
+        return super(DefaultOrderedDict, self).__getitem__(key)
 
 
 class _CppInfo(object):
@@ -124,6 +137,19 @@ class _CppInfo(object):
     cppflags = property(get_cppflags, set_cppflags)
 
 
+class Component(_CppInfo):
+
+    def __init__(self, rootpath):
+        super(Component, self).__init__()
+        self.rootpath = rootpath
+        self.includedirs.append(DEFAULT_INCLUDE)
+        self.libdirs.append(DEFAULT_LIB)
+        self.bindirs.append(DEFAULT_BIN)
+        self.resdirs.append(DEFAULT_RES)
+        self.builddirs.append(DEFAULT_BUILD)
+        self.frameworkdirs.append(DEFAULT_FRAMEWORK)
+
+
 class CppInfo(_CppInfo):
     """ Build Information declared to be used by the CONSUMERS of a
     conans. That means that consumers must use this flags and configs i order
@@ -139,12 +165,12 @@ class CppInfo(_CppInfo):
         self.resdirs.append(DEFAULT_RES)
         self.builddirs.append(DEFAULT_BUILD)
         self.frameworkdirs.append(DEFAULT_FRAMEWORK)
+        self.components = DefaultOrderedDict(lambda: Component(self.rootpath))
         # public_deps is needed to accumulate list of deps for cmake targets
         self.public_deps = []
         self.configs = {}
 
     def __getattr__(self, config):
-
         def _get_cpp_info():
             result = _CppInfo()
             result.rootpath = self.rootpath
@@ -158,6 +184,27 @@ class CppInfo(_CppInfo):
             return result
 
         return self.configs.setdefault(config, _get_cpp_info())
+
+    def _raise_if_mixing_components(self):
+        if (self.includedirs != [DEFAULT_INCLUDE] or
+                self.libdirs != [DEFAULT_LIB] or
+                self.bindirs != [DEFAULT_BIN] or
+                self.resdirs != [DEFAULT_RES] or
+                self.frameworkdirs != [DEFAULT_FRAMEWORK] or
+                self.libs or
+                self.system_libs or
+                self.frameworks or
+                self.defines or
+                self.cflags or
+                self.cxxflags or
+                self.sharedlinkflags or
+                self.exelinkflags or
+                self.build_modules) and self.components:
+            raise ConanException("self.cpp_info.components cannot be used with self.cpp_info "
+                                 "global values at the same time")
+        if self.configs and self.components:
+            raise ConanException("self.cpp_info.components cannot be used with self.cpp_info configs"
+                                 " (release/debug/...) at the same time")
 
 
 class _BaseDepsCppInfo(_CppInfo):
@@ -179,6 +226,7 @@ class _BaseDepsCppInfo(_CppInfo):
         self.frameworkdirs = merge_lists(self.frameworkdirs, dep_cpp_info.framework_paths)
         self.libs = merge_lists(self.libs, dep_cpp_info.libs)
         self.frameworks = merge_lists(self.frameworks, dep_cpp_info.frameworks)
+        self.build_modules = merge_lists(self.build_modules, dep_cpp_info.build_modules_paths)
         self.rootpaths.append(dep_cpp_info.rootpath)
 
         # Note these are in reverse order
@@ -187,7 +235,6 @@ class _BaseDepsCppInfo(_CppInfo):
         self.cflags = merge_lists(dep_cpp_info.cflags, self.cflags)
         self.sharedlinkflags = merge_lists(dep_cpp_info.sharedlinkflags, self.sharedlinkflags)
         self.exelinkflags = merge_lists(dep_cpp_info.exelinkflags, self.exelinkflags)
-        self.build_modules = merge_lists(self.build_modules, dep_cpp_info.build_modules_paths)
 
         if not self.sysroot:
             self.sysroot = dep_cpp_info.sysroot
@@ -225,6 +272,126 @@ class _BaseDepsCppInfo(_CppInfo):
         return self.frameworkdirs
 
 
+class DepCppInfo(object):
+
+    def __init__(self, cpp_info):
+        self._cpp_info = cpp_info
+        self._libs = None
+        self._system_libs = None
+        self._frameworks = None
+        self._defines = None
+        self._cxxflags = None
+        self._cflags = None
+        self._sharedlinkflags = None
+        self._exelinkflags = None
+
+        self._include_paths = None
+        self._lib_paths = None
+        self._bin_paths = None
+        self._build_paths = None
+        self._res_paths = None
+        self._src_paths = None
+        self._framework_paths = None
+        self._build_module_paths = None
+
+    def __getattr__(self, item):
+        try:
+            attr = self._cpp_info.__getattribute__(item)
+        except AttributeError:  # item is not defined, get config (CppInfo)
+            attr = self._cpp_info.__getattr__(item)
+        return attr
+
+    @staticmethod
+    def _merge_lists(seq1, seq2):
+        return seq1 + [s for s in seq2 if s not in seq1]
+
+    def _aggregated_values(self, item):
+        values = getattr(self, "_%s" % item)
+        if values is not None:
+            return values
+        values = getattr(self._cpp_info, item)
+        if self._cpp_info.components:
+            for component in self._cpp_info.components.values():
+                values = self._merge_lists(values, getattr(component, item))
+        setattr(self, "_%s" % item, values)
+        return values
+
+    def _aggregated_paths(self, item):
+        paths = getattr(self, "_%s_paths" % item)
+        if paths is not None:
+            return paths
+        paths = getattr(self._cpp_info, "%s_paths" % item)
+        if self._cpp_info.components:
+            for component in self._cpp_info.components.values():
+                paths = self._merge_lists(paths, getattr(component, "%s_paths" % item))
+        setattr(self, "_%s_paths" % item, paths)
+        return paths
+
+    @property
+    def build_modules_paths(self):
+        return self._aggregated_paths("build_modules")
+
+    @property
+    def include_paths(self):
+        return self._aggregated_paths("include")
+
+    @property
+    def lib_paths(self):
+        return self._aggregated_paths("lib")
+
+    @property
+    def src_paths(self):
+        return self._aggregated_paths("src")
+
+    @property
+    def bin_paths(self):
+        return self._aggregated_paths("bin")
+
+    @property
+    def build_paths(self):
+        return self._aggregated_paths("build")
+
+    @property
+    def res_paths(self):
+        return self._aggregated_paths("res")
+
+    @property
+    def framework_paths(self):
+        return self._aggregated_paths("framework")
+
+    @property
+    def libs(self):
+        return self._aggregated_values("libs")
+
+    @property
+    def system_libs(self):
+        return self._aggregated_values("system_libs")
+
+    @property
+    def frameworks(self):
+        return self._aggregated_values("frameworks")
+
+    @property
+    def defines(self):
+        return self._aggregated_values("defines")
+
+    @property
+    def cxxflags(self):
+        return self._aggregated_values("cxxflags")
+
+    @property
+    def cflags(self):
+        return self._aggregated_values("cflags")
+
+    @property
+    def sharedlinkflags(self):
+        return self._aggregated_values("sharedlinkflags")
+
+    @property
+    def exelinkflags(self):
+        return self._aggregated_values("exelinkflags")
+
+
 class DepsCppInfo(_BaseDepsCppInfo):
     """ Build Information necessary to build a given conans. It contains the
     flags, directories and options if its dependencies. The conans CONANFILE
@@ -251,9 +418,9 @@ class DepsCppInfo(_BaseDepsCppInfo):
     def __getitem__(self, item):
         return self._dependencies[item]
 
-    def update(self, dep_cpp_info, pkg_name):
-        assert isinstance(dep_cpp_info, CppInfo)
-        self._dependencies[pkg_name] = dep_cpp_info
-        super(DepsCppInfo, self).update(dep_cpp_info)
-        for config, cpp_info in dep_cpp_info.configs.items():
+    def update(self, cpp_info, pkg_name):
+        assert isinstance(cpp_info, (CppInfo, DepCppInfo))
+        self._dependencies[pkg_name] = cpp_info
+        super(DepsCppInfo, self).update(cpp_info)
+        for config, cpp_info in cpp_info.configs.items():
             self.configs.setdefault(config, _BaseDepsCppInfo()).update(cpp_info)

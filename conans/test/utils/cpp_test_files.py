@@ -29,7 +29,8 @@ conanfile_build_new_env = """
                     self.run('{} && lib hello.obj -OUT:hello{}.lib'.format(vcvars, self.name))
                 else:
                     self.run('{} && cl /EHsc /LD hello.cpp {} {} /link /IMPLIB:hello{}.lib '
-                             '/link /OUT:hello{}.dll'.format(vcvars, lang, flags, self.name, self.name))
+                             '/link /OUT:hello{}.dll'.format(vcvars, lang, flags,
+                                                             self.name, self.name))
 
                 command = ('{} && cl /EHsc main.cpp hello{}.lib {}'.format(vcvars, self.name, flags))
                 self.run(command)
@@ -53,12 +54,12 @@ AC_OUTPUT
 '''
             save("Makefile.am", makefile_am)
             save("configure.ac", configure_ac)
-            
+
             iswin = self.settings.os == "Windows"
             self.run("aclocal", win_bash=iswin)
             self.run("autoconf", win_bash=iswin)
             self.run("automake --add-missing --foreign", win_bash=iswin)
-           
+
             autotools = AutoToolsBuildEnvironment(self, win_bash=iswin)
             autotools.defines.append('CONAN_LANGUAGE=%s' % self.options.language)
             autotools.configure()
@@ -317,7 +318,7 @@ def cpp_hello_source_files(name="Hello", deps=None, private_includes=False, msg=
 
 def cpp_hello_conan_files(name="Hello", version="0.1", deps=None, language=0, static=True,
                           private_includes=False, msg=None, dll_export=False, need_patch=False,
-                          pure_c=False, config=True, build=True, collect_libs=False,
+                          pure_c=False, config=True, build=True,
                           use_cmake=True, cmake_targets=False, no_copy_source=False,
                           use_additional_infos=0, settings=None, with_exe=True):
     """Generate hello_files, as described above, plus the necessary
@@ -386,8 +387,6 @@ def cpp_hello_conan_files(name="Hello", version="0.1", deps=None, language=0, st
         conanfile = conanfile.replace("build(", "build2(")
     if not config:
         conanfile = conanfile.replace("config(", "config2(")
-    if collect_libs:
-        conanfile = "from conans import tools\n" + conanfile.replace('["hello%s"]' % name,
-                                                                     "tools.collect_libs(self)")
+
     base_files[CONANFILE] = conanfile
     return base_files

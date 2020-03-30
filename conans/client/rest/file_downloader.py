@@ -1,124 +1,16 @@
 import os
 import time
 import traceback
-from copy import copy
 
 import six
 
 from conans.client.rest import response_to_str
 from conans.errors import AuthenticationException, ConanConnectionError, ConanException, \
-    NotFoundException, ForbiddenException, RequestErrorException, InternalErrorException
+    NotFoundException, ForbiddenException, RequestErrorException
 from conans.util import progress_bar
-from conans.util.files import mkdir, sha1sum
+from conans.util.files import mkdir
 from conans.util.log import logger
 from conans.util.tracer import log_download
-
-
-class FileUploader(object):
-
-    def __init__(self, requester, output, verify, config):
-        self._output = output
-        self._requester = requester
-        self._config = config
-        self._verify_ssl = verify
-
-    def upload(self, url, abs_path, auth=None, dedup=False, retry=None, retry_wait=None,
-               headers=None, display_name=None):
-        retry = retry if retry is not None else self._config.retry
-        retry = retry if retry is not None else 1
-        retry_wait = retry_wait if retry_wait is not None else self._config.retry_wait
-        retry_wait = retry_wait if retry_wait is not None else 5
-
-        # Send always the header with the Sha1
-        headers = copy(headers) or {}
-        headers["X-Checksum-Sha1"] = sha1sum(abs_path)
-        if dedup:
-            dedup_headers = {"X-Checksum-Deploy": "true"}
-            if headers:
-                dedup_headers.update(headers)
-            response = self._requester.put(url, data="", verify=self._verify_ssl,
-                                           headers=dedup_headers, auth=auth)
-            if response.status_code == 500:
-                raise InternalErrorException(response_to_str(response))
-
-            if response.status_code == 400:
-                raise RequestErrorException(response_to_str(response))
-
-            if response.status_code == 401:
-                raise AuthenticationException(response_to_str(response))
-
-            if response.status_code == 403:
-                if auth is None or auth.token is None:
-                    raise AuthenticationException(response_to_str(response))
-                raise ForbiddenException(response_to_str(response))
-            if response.status_code == 201:  # Artifactory returns 201 if the file is there
-                return response
-
-        ret = _call_with_retry(self._output, retry, retry_wait, self._upload_file, url,
-                               abs_path=abs_path, headers=headers, auth=auth,
-                               display_name=display_name)
-        return ret
-
-    def _upload_file(self, url, abs_path,  headers, auth, display_name=None):
-
-        file_size = os.stat(abs_path).st_size
-        file_name = os.path.basename(abs_path)
-        description = "Uploading {}".format(file_name)
-        post_description = "Uploaded {}".format(
-            file_name) if not display_name else "Uploaded {} -> {}".format(file_name, display_name)
-
-        def load_in_chunks(_file, size):
-            """Lazy function (generator) to read a file piece by piece.
-            Default chunk size: 1k."""
-            while True:
-                chunk = _file.read(size)
-                if not chunk:
-                    break
-                yield chunk
-
-        with open(abs_path, mode='rb') as file_handler:
-            progress = progress_bar.Progress(file_size, self._output, description, post_description)
-            chunk_size = 1024
-            data = progress.update(load_in_chunks(file_handler, chunk_size), chunk_size)
-            iterable_to_file = IterableToFileAdapter(data, file_size)
-            try:
-                response = self._requester.put(url, data=iterable_to_file, verify=self._verify_ssl,
-                                               headers=headers, auth=auth)
-
-                if response.status_code == 400:
-                    raise RequestErrorException(response_to_str(response))
-
-                if response.status_code == 401:
-                    raise AuthenticationException(response_to_str(response))
-
-                if response.status_code == 403:
-                    if auth is None or auth.token is None:
-                        raise AuthenticationException(response_to_str(response))
-                    raise ForbiddenException(response_to_str(response))
-
-                response.raise_for_status()  # Raise HTTPError for bad http response status
-
-            except ConanException:
-                raise
-            except Exception as exc:
-                raise ConanException(exc)
-
-        return response
-
-
-class IterableToFileAdapter(object):
-    def __init__(self, iterable, total_size):
-        self.iterator = iter(iterable)
-        self.total_size = total_size
-
-    def read(self, size=-1):  # @UnusedVariable
-        return next(self.iterator, b'')
-
-    def __len__(self):
-        return self.total_size
-
-    def __iter__(self):
-        return self.iterator.__iter__()
 
 
 class FileDownloader(object):
@@ -206,7 +98,7 @@ class FileDownloader(object):
             gzip = (encoding == "gzip")
 
             written_chunks, total_downloaded_size = write_chunks(
-                progress.update(read_response(chunk_size), chunk_size),
+                progress.update(read_response(chunk_size)),
                 file_path
             )
 

@@ -14,59 +14,92 @@ class CMakeGeneratorTest(unittest.TestCase):
 
     def test_no_check_compiler(self):
         # https://github.com/conan-io/conan/issues/4268
-        file_content = '''from conans import ConanFile, CMake
+        file_content = textwrap.dedent("""
+            from conans import ConanFile, CMake
 
-class ConanFileToolsTest(ConanFile):
-    generators = "cmake"
+            class ConanFileToolsTest(ConanFile):
+                generators = "cmake"
 
-    def build(self):
-        cmake = CMake(self)
-        cmake.configure()
-    '''
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+                """)
 
-        cmakelists = '''cmake_minimum_required(VERSION 2.8)
-PROJECT(conanzlib LANGUAGES NONE)
-set(CONAN_DISABLE_CHECK_COMPILER TRUE)
+        cmakelists = textwrap.dedent("""
+            cmake_minimum_required(VERSION 2.8)
+            PROJECT(conanzlib LANGUAGES NONE)
+            set(CONAN_DISABLE_CHECK_COMPILER TRUE)
 
-include(conanbuildinfo.cmake)
-CONAN_BASIC_SETUP()
-'''
+            include(conanbuildinfo.cmake)
+            CONAN_BASIC_SETUP()
+            """)
         client = TestClient()
         client.save({"conanfile.py": file_content,
                      "CMakeLists.txt": cmakelists})
 
         client.run('install .')
         client.run('build .')
+        self.assertIn("WARN: Disabled conan compiler checks", client.out)
+
+    @unittest.skipIf(platform.system() != "Linux", "Only linux")
+    def test_check_compiler_package_id(self):
+        # https://github.com/conan-io/conan/issues/6658
+        file_content = textwrap.dedent("""
+            from conans import ConanFile, CMake
+
+            class ConanFileToolsTest(ConanFile):
+                settings = "os", "compiler", "arch", "build_type"
+                generators = "cmake"
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+                def package_id(self):
+                    self.info.settings.compiler.version = "SomeVersion"
+                """)
+
+        cmakelists = textwrap.dedent("""
+            cmake_minimum_required(VERSION 2.8)
+            project(conanzlib)
+            include(conanbuildinfo.cmake)
+            conan_basic_setup()
+            """)
+        client = TestClient()
+        client.save({"conanfile.py": file_content,
+                     "CMakeLists.txt": cmakelists})
+
+        client.run('install .')
+        client.run_command('cmake .')
+        self.assertIn("Conan: Checking correct version:", client.out)
 
     @attr("slow")
     @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
     def skip_check_if_toolset_test(self):
-        file_content = '''from conans import ConanFile, CMake
+        file_content = textwrap.dedent("""
+            from conans import ConanFile, CMake
 
-class ConanFileToolsTest(ConanFile):
-    generators = "cmake"
-    exports_sources = "CMakeLists.txt"
-    settings = "os", "arch", "compiler"
+            class ConanFileToolsTest(ConanFile):
+                generators = "cmake"
+                exports_sources = "CMakeLists.txt"
+                settings = "os", "arch", "compiler"
 
-    def build(self):
-        cmake = CMake(self)
-        cmake.configure()
-        cmake.build()
-    '''
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+                    cmake.build()
+                """)
         client = TestClient()
-        cmakelists = '''
-set(CMAKE_CXX_COMPILER_WORKS 1)
-set(CMAKE_CXX_ABI_COMPILED 1)
-PROJECT(Hello)
-cmake_minimum_required(VERSION 2.8)
-include("${CMAKE_BINARY_DIR}/conanbuildinfo.cmake")
-CONAN_BASIC_SETUP()
-'''
+        cmakelists = textwrap.dedent("""
+            set(CMAKE_CXX_COMPILER_WORKS 1)
+            set(CMAKE_CXX_ABI_COMPILED 1)
+            PROJECT(Hello)
+            cmake_minimum_required(VERSION 2.8)
+            include("${CMAKE_BINARY_DIR}/conanbuildinfo.cmake")
+            CONAN_BASIC_SETUP()
+            """)
         client.save({"conanfile.py": file_content,
                      "CMakeLists.txt": cmakelists})
-        client.run("create . lib/1.0@user/channel -s compiler='Visual Studio' -s compiler.toolset=v140")
+        client.run("create . lib/1.0@ -s compiler='Visual Studio' -s compiler.toolset=v140")
         self.assertIn("Conan: Skipping compiler check: Declared 'compiler.toolset'", client.out)
-
 
     @attr('slow')
     def no_output_test(self):
@@ -143,7 +176,8 @@ CONAN_BASIC_SETUP()
         content = client.load("conanbuildinfo.cmake")
         self.assertIn("set(CONAN_LIBS ${CONAN_LIBS} ${CONAN_SYSTEM_LIBS} ${CONAN_FRAMEWORKS_FOUND})",
                       content)
-        self.assertIn("set(CONAN_LIBS_MYLIB ${CONAN_PKG_LIBS_MYLIB} ${CONAN_SYSTEM_LIBS_MYLIB} ${CONAN_FRAMEWORKS_FOUND_MYLIB})",
+        self.assertIn("set(CONAN_LIBS_MYLIB ${CONAN_PKG_LIBS_MYLIB} "
+                      "${CONAN_SYSTEM_LIBS_MYLIB} ${CONAN_FRAMEWORKS_FOUND_MYLIB})",
                       content)
         self.assertIn("set(CONAN_PKG_LIBS_MYLIB lib1)", content)
         self.assertIn("set(CONAN_SYSTEM_LIBS sys1 ${CONAN_SYSTEM_LIBS})", content)
@@ -173,38 +207,38 @@ CONAN_BASIC_SETUP()
         client.create(myotherlib_ref, myotherlib)
 
         consumer = textwrap.dedent("""
-                    import os
-                    from conans import ConanFile, CMake
+            import os
+            from conans import ConanFile, CMake
 
-                    class Consumer(ConanFile):
-                        requires = "myotherlib/1.0@us/ch"
-                        generators = "cmake"
-                        settings = "os", "compiler", "arch", "build_type"
-                        exports_sources = ["CMakeLists.txt"]
+            class Consumer(ConanFile):
+                requires = "myotherlib/1.0@us/ch"
+                generators = "cmake"
+                settings = "os", "compiler", "arch", "build_type"
+                exports_sources = ["CMakeLists.txt"]
 
-                        def build(self):
-                            cmake = CMake(self)
-                            cmake.configure()
-                            cmake.build()
-                        """)
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+                    cmake.build()
+                """)
         cmakelists = textwrap.dedent("""
-                    cmake_minimum_required(VERSION 3.1)
-                    project(consumer CXX)
-                    include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-                    conan_basic_setup("TARGETS")
+            cmake_minimum_required(VERSION 3.1)
+            project(consumer CXX)
+            include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+            conan_basic_setup("TARGETS")
 
-                    get_target_property(ml_pkg_libs CONAN_PKG::mylib INTERFACE_LINK_LIBRARIES)
-                    message("CONAN_PKG::mylib libs: ${ml_pkg_libs}")
-                    get_target_property(ml_lib1_libs CONAN_LIB::mylib_lib1 INTERFACE_LINK_LIBRARIES)
-                    message("CONAN_LIB::mylib_lib1 libs: ${ml_lib1_libs}")
-                    get_target_property(ml_lib11_libs CONAN_LIB::mylib_lib11 INTERFACE_LINK_LIBRARIES)
-                    message("CONAN_LIB::mylib_lib11 libs: ${ml_lib11_libs}")
+            get_target_property(ml_pkg_libs CONAN_PKG::mylib INTERFACE_LINK_LIBRARIES)
+            message("CONAN_PKG::mylib libs: ${ml_pkg_libs}")
+            get_target_property(ml_lib1_libs CONAN_LIB::mylib_lib1 INTERFACE_LINK_LIBRARIES)
+            message("CONAN_LIB::mylib_lib1 libs: ${ml_lib1_libs}")
+            get_target_property(ml_lib11_libs CONAN_LIB::mylib_lib11 INTERFACE_LINK_LIBRARIES)
+            message("CONAN_LIB::mylib_lib11 libs: ${ml_lib11_libs}")
 
-                    get_target_property(mol_pkg_libs CONAN_PKG::myotherlib INTERFACE_LINK_LIBRARIES)
-                    message("CONAN_PKG::myotherlib libs: ${mol_pkg_libs}")
-                    get_target_property(ml_lib2_libs CONAN_LIB::myotherlib_lib2 INTERFACE_LINK_LIBRARIES)
-                    message("CONAN_LIB::myotherlib_lib2 libs: ${ml_lib2_libs}")
-                    """)
+            get_target_property(mol_pkg_libs CONAN_PKG::myotherlib INTERFACE_LINK_LIBRARIES)
+            message("CONAN_PKG::myotherlib libs: ${mol_pkg_libs}")
+            get_target_property(ml_lib2_libs CONAN_LIB::myotherlib_lib2 INTERFACE_LINK_LIBRARIES)
+            message("CONAN_LIB::myotherlib_lib2 libs: ${ml_lib2_libs}")
+            """)
 
         client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists})
         client.run("create conanfile.py consumer/1.0@us/ch")
@@ -219,8 +253,10 @@ CONAN_BASIC_SETUP()
 
         self.assertNotIn("Library sys2 not found in package, might be system one", client.out)
         self.assertIn("CONAN_PKG::myotherlib libs: "
-                      "CONAN_LIB::myotherlib_lib2;sys2;CONAN_PKG::mylib;$<$<CONFIG:Release>:;CONAN_PKG::mylib;>;"
-                      "$<$<CONFIG:RelWithDebInfo>:;CONAN_PKG::mylib;>;$<$<CONFIG:MinSizeRel>:;CONAN_PKG::mylib;>;"
+                      "CONAN_LIB::myotherlib_lib2;sys2;CONAN_PKG::mylib;"
+                      "$<$<CONFIG:Release>:;CONAN_PKG::mylib;>;"
+                      "$<$<CONFIG:RelWithDebInfo>:;CONAN_PKG::mylib;>;"
+                      "$<$<CONFIG:MinSizeRel>:;CONAN_PKG::mylib;>;"
                       "$<$<CONFIG:Debug>:;CONAN_PKG::mylib;>",
                       client.out)
         self.assertIn("CONAN_LIB::myotherlib_lib2 libs: ;sys2;;CONAN_PKG::mylib", client.out)

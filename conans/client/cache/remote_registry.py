@@ -63,19 +63,19 @@ def migrate_registry_file(cache, out):
     reg_txt_path = os.path.join(folder, "registry.txt")
     remotes_path = cache.remotes_path
 
-    def add_ref_remote(reference, remotes, remote_name):
-        ref = ConanFileReference.loads(reference, validate=True)
-        remote = remotes.get(remote_name)
+    def add_ref_remote(reference, remotes_, remote_name_):
+        ref_ = ConanFileReference.loads(reference, validate=True)
+        remote = remotes_.get(remote_name_)
         if remote:
-            with cache.package_layout(ref).update_metadata() as metadata:
+            with cache.package_layout(ref_).update_metadata() as metadata:
                 metadata.recipe.remote = remote.name
 
-    def add_pref_remote(pkg_ref, remotes, remote_name):
-        pref = PackageReference.loads(pkg_ref, validate=True)
-        remote = remotes.get(remote_name)
+    def add_pref_remote(pkg_ref, remotes_, remote_name_):
+        pref_ = PackageReference.loads(pkg_ref, validate=True)
+        remote = remotes_.get(remote_name_)
         if remote:
-            with cache.package_layout(pref.ref).update_metadata() as metadata:
-                metadata.packages[pref.id].remote = remote.name
+            with cache.package_layout(pref_.ref).update_metadata() as metadata:
+                metadata.packages[pref_.id].remote = remote.name
 
     try:
         if os.path.exists(reg_json_path):
@@ -218,17 +218,17 @@ class Remotes(object):
         try:
             remote = self._remotes[remote_name]
             if remote.disabled:
-                raise ConanException("Remote '%s' is disabled" % (remote_name))
+                raise ConanException("Remote '%s' is disabled" % remote_name)
             else:
                 return remote
         except KeyError:
-            raise NoRemoteAvailable("No remote '%s' defined in remotes" % (remote_name))
+            raise NoRemoteAvailable("No remote '%s' defined in remotes" % remote_name)
 
     def __delitem__(self, remote_name):
         try:
             del self._remotes[remote_name]
         except KeyError:
-            raise NoRemoteAvailable("No remote '%s' defined in remotes" % (remote_name))
+            raise NoRemoteAvailable("No remote '%s' defined in remotes" % remote_name)
 
     def _upsert(self, remote_name, url, verify_ssl, insert):
         # Remove duplicates

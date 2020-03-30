@@ -8,7 +8,7 @@ from conans.client.loader import ConanFileLoader
 from conans.client.packager import run_package_method
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE, CONANINFO
-from conans.test.utils.test_files import hello_source_files
+from conans.test.utils.cpp_test_files import cpp_hello_source_files
 from conans.test.utils.tools import TestBufferConanOutput, TestClient, test_profile
 
 
@@ -42,7 +42,7 @@ class ExporterTest(unittest.TestCase):
         """ basic installation of a new conans
         """
         client = TestClient()
-        files = hello_source_files()
+        files = cpp_hello_source_files()
 
         ref = ConanFileReference.loads("Hello/1.2.1@frodo/stable")
         reg_folder = client.cache.package_layout(ref).export()
