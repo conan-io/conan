@@ -82,7 +82,6 @@ registered_generators.add("b2", B2Generator)
 registered_generators.add("premake", PremakeGenerator)
 registered_generators.add("make", MakeGenerator)
 registered_generators.add("deploy", DeployGenerator)
-registered_generators.add("md", MarkdownGenerator)
 registered_generators.add("markdown", MarkdownGenerator)
 
 
