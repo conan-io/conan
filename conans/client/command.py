@@ -1835,14 +1835,12 @@ class Command(object):
                 ("Package development commands", ("source", "build", "package", "editable",
                                                   "workspace")),
                 ("Misc commands", ("profile", "remote", "user", "imports", "copy", "remove",
-                                   "alias", "download", "inspect", "help", "graph"))]
-        hidden = ("frogarian",)
+                                   "alias", "download", "inspect", "help", "graph", "frogarian"))]
 
         def check_all_commands_listed():
             """Keep updated the main directory, raise if don't"""
             all_commands = self._commands()
             all_in_grps = [command for _, command_list in grps for command in command_list]
-            all_in_grps.extend(hidden)
             if set(all_in_grps) != set(all_commands):
                 diff = set(all_commands) - set(all_in_grps)
                 raise Exception("Some command is missing in the main help: %s" % ",".join(diff))
