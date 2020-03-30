@@ -60,6 +60,8 @@ from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
 from conans.search.search import search_recipes
 from conans.tools import set_global_instances
 from conans.unicode import get_cwd
+from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
+from conans.util.env_reader import get_env
 from conans.util.files import exception_message_safe, mkdir, save_files
 from conans.util.log import configure_logger
 from conans.util.tracer import log_command, log_exception
@@ -220,8 +222,9 @@ class ConanAPIV1(object):
         # Migration system
         migrator = ClientMigrator(self.cache_folder, Version(client_version), self.out)
         migrator.migrate()
-        # FIXME Remove in Conan 2.0
-        sys.path.append(os.path.join(self.cache_folder, "python"))
+        if not get_env(CONAN_V2_MODE_ENVVAR, False):
+            # FIXME Remove in Conan 2.0
+            sys.path.append(os.path.join(self.cache_folder, "python"))
 
     def create_app(self, quiet_output=None):
         self.app = ConanApp(self.cache_folder, self.user_io, self.http_requester,
