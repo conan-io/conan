@@ -17,6 +17,7 @@ from .deploy import DeployGenerator
 from .gcc import GCCGenerator
 from .json_generator import JsonGenerator
 from .make import MakeGenerator
+from .markdown import MarkdownGenerator
 from .premake import PremakeGenerator
 from .qbs import QbsGenerator
 from .qmake import QmakeGenerator
@@ -81,6 +82,7 @@ registered_generators.add("b2", B2Generator)
 registered_generators.add("premake", PremakeGenerator)
 registered_generators.add("make", MakeGenerator)
 registered_generators.add("deploy", DeployGenerator)
+registered_generators.add("markdown", MarkdownGenerator)
 
 
 def write_generators(conanfile, path, output):
