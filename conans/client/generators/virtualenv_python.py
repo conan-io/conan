@@ -1,5 +1,4 @@
 from conans.client.generators.virtualrunenv import VirtualRunEnvGenerator
-from conans.util.conan_v2_mode import conan_v2_behavior
 
 
 class VirtualEnvPythonGenerator(VirtualRunEnvGenerator):
