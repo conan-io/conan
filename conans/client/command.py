@@ -9,6 +9,7 @@ from difflib import get_close_matches
 from six.moves import input as raw_input
 
 from conans import __version__ as client_version
+from conans.client.cmd.frogarian import cmd_frogarian
 from conans.client.cmd.uploader import UPLOAD_POLICY_FORCE, \
     UPLOAD_POLICY_NO_OVERWRITE, UPLOAD_POLICY_NO_OVERWRITE_RECIPE, UPLOAD_POLICY_SKIP
 from conans.client.conan_api import (Conan, default_manifest_folder, _make_abs_path)
@@ -1760,6 +1761,12 @@ class Command(object):
                 self._out.writeln("    Path: %s" % v["path"])
                 self._out.writeln("    Layout: %s" % v["layout"])
 
+    def frogarian(self, *args):
+        """
+        Conan The Frogarian
+        """
+        cmd_frogarian(self._out)
+
     def graph(self, *args):
         """
         Generates and manipulates lock files.
@@ -1828,7 +1835,7 @@ class Command(object):
                 ("Package development commands", ("source", "build", "package", "editable",
                                                   "workspace")),
                 ("Misc commands", ("profile", "remote", "user", "imports", "copy", "remove",
-                                   "alias", "download", "inspect", "help", "graph"))]
+                                   "alias", "download", "inspect", "help", "graph", "frogarian"))]
 
         def check_all_commands_listed():
             """Keep updated the main directory, raise if don't"""
