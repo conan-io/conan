@@ -177,13 +177,14 @@ class OSInfo(object):
 
     @property
     def with_apt(self):
-        return self.is_linux and self.linux_distro in \
-                                 ("debian", "ubuntu", "knoppix", "linuxmint", "raspbian", "neon")
+        apt_distros = ("debian", "ubuntu", "knoppix", "linuxmint", "raspbian", "neon")
+        return self.is_linux and self.linux_distro in apt_distros
 
     @property
     def with_yum(self):
-        return self.is_linux and self.linux_distro in ("pidora", "fedora", "scientific", "centos", "redhat",
-                                                       "rhel", "xenserver", "amazon", "oracle")
+        return self.is_linux and self.linux_distro in ("pidora", "fedora", "scientific", "centos",
+                                                       "redhat", "rhel", "xenserver", "amazon",
+                                                       "oracle")
 
     @property
     def with_dnf(self):
