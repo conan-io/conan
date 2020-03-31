@@ -383,3 +383,16 @@ def unix2dos(filepath):
 
 def dos2unix(filepath):
     _replace_with_separator(filepath, "\n")
+
+def rename(src, dst):
+    """
+    rename a file or folder to avoid "Access is denied" error on Windows
+    :param src: Path to the file or folder
+    :param dst: Destination file or folder
+    """
+    if platform.system() == "Windows":
+        retcode = os.system("".format(src, dst))
+        if retcode != 1:
+            raise ConanException("renam failed for {} to {}".format(src, dst))
+    else:
+        os.rename(src, dst)
