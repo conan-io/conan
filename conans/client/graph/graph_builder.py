@@ -399,7 +399,7 @@ class DepsGraphBuilder(object):
 
     def _create_new_node(self, current_node, dep_graph, requirement, check_updates,
                          update, remotes, profile_host, profile_build, graph_lock, context_switch):
-        # If there is a context_switch, it is because it is a PR
+        # If there is a context_switch, it is because it is a BR-build
         if context_switch:
             profile = profile_build
             context = CONTEXT_BUILD
@@ -412,15 +412,15 @@ class DepsGraphBuilder(object):
         new_ref, dep_conanfile, recipe_status, remote, locked_id = result
 
         # Assign the profiles depending on the context
-        settings_build = profile_build.processed_settings.copy() if profile_build else None
-        dep_conanfile.settings_build = settings_build
-        if not context_switch:
-            dep_conanfile.settings_target = current_node.conanfile.settings_target
-        else:
-            if current_node.context == CONTEXT_HOST:
-                dep_conanfile.settings_target = profile_host.processed_settings.copy()
+        if profile_build:  # Keep existing behavior (and conanfile members) if no profile_build
+            dep_conanfile.settings_build = profile_build.processed_settings.copy()
+            if not context_switch:
+                dep_conanfile.settings_target = current_node.conanfile.settings_target
             else:
-                dep_conanfile.settings_target = settings_build
+                if current_node.context == CONTEXT_HOST:
+                    dep_conanfile.settings_target = profile_host.processed_settings.copy()
+                else:
+                    dep_conanfile.settings_target = profile_build.processed_settings.copy()
 
         logger.debug("GRAPH: new_node: %s" % str(new_ref))
         new_node = Node(new_ref, dep_conanfile, context=context)
