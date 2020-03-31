@@ -518,7 +518,7 @@ class ProfileAggregationTest(unittest.TestCase):
     def test_create(self):
 
         # The latest declared profile has priority
-        self.client.run("create . lib/1.0@user/channel --profile profile1 -p profile2")
+        self.client.run("create . lib/1.0@user/channel --profile profile1 -pr profile2")
         self.assertIn(dedent("""
         [env]
         ENV1=foo2
@@ -531,7 +531,7 @@ class ProfileAggregationTest(unittest.TestCase):
     def test_info(self):
 
         # The latest declared profile has priority
-        self.client.run("create . lib/1.0@user/channel --profile profile1 -p profile2")
+        self.client.run("create . lib/1.0@user/channel --profile profile1 -pr profile2")
 
         self.client.save({CONANFILE: self.consumer})
         self.client.run("info . --profile profile1 --profile profile2")
@@ -545,7 +545,7 @@ class ProfileAggregationTest(unittest.TestCase):
     def test_install(self):
         self.client.run("export . lib/1.0@user/channel")
         # Install ref
-        self.client.run("install lib/1.0@user/channel -p profile1 -p profile2 --build missing")
+        self.client.run("install lib/1.0@user/channel -pr profile1 -pr profile2 --build missing")
         self.assertIn(dedent("""
                [env]
                ENV1=foo2
@@ -557,7 +557,7 @@ class ProfileAggregationTest(unittest.TestCase):
 
         # Install project
         self.client.save({CONANFILE: self.consumer})
-        self.client.run("install . -p profile1 -p profile2 --build")
+        self.client.run("install . -pr profile1 -pr profile2 --build")
         self.assertIn("arch=x86", self.client.out)
         self.assertIn(dedent("""
                        [env]
@@ -587,7 +587,7 @@ class ProfileAggregationTest(unittest.TestCase):
             """)
 
         self.client.save({"profile1": profile1, "profile2": profile2})
-        self.client.run("create . lib/1.0@user/channel --profile profile2 -p profile1")
+        self.client.run("create . lib/1.0@user/channel --profile profile2 -pr profile1")
         self.assertIn(dedent("""
                              Configuration:
                              [settings]

@@ -13,6 +13,7 @@ from bottle import request, static_file, HTTPError
 from mock.mock import mock_open, patch
 from nose.plugins.attrib import attr
 from parameterized import parameterized
+from requests.models import Response
 
 from conans.client import tools
 from conans.client.cache.cache import CONAN_CONF
@@ -472,7 +473,8 @@ class HelloConan(ConanFile):
         self.assertEqual(str(out).count("Waiting 1 seconds to retry..."), 2)
 
         # Not found error
-        with six.assertRaisesRegex(self, NotFoundException, "Not found: "):
+        with six.assertRaisesRegex(self, ConanException,
+                                   "Not found: http://google.es/FILE_NOT_FOUND"):
             tools.download("http://google.es/FILE_NOT_FOUND",
                            os.path.join(temp_folder(), "README.txt"), out=out,
                            requester=requests,
@@ -661,9 +663,10 @@ class HelloConan(ConanFile):
 
         out = TestBufferConanOutput()
         # Test: File name cannot be deduced from '?file=1'
-        with six.assertRaisesRegex(self, ConanException,
-                                   "Cannot deduce file name from url. Use 'filename' parameter."):
+        with self.assertRaises(ConanException) as error:
             tools.get("http://localhost:%s/?file=1" % thread.port, output=out)
+        self.assertIn("Cannot deduce file name from the url: 'http://localhost:{}/?file=1'."
+                      " Use 'filename' parameter.".format(thread.port), str(error.exception))
 
         # Test: Works with filename parameter instead of '?file=1'
         with tools.chdir(tools.mkdir_tmp()):
@@ -728,6 +731,67 @@ class HelloConan(ConanFile):
             self.assertEqual(load("mytemp/myfile.txt"), "hello world zipped!")
 
         thread.stop()
+
+    @patch("conans.client.tools.net.unzip")
+    def test_get_mirror(self, _):
+        """ tools.get must supports a list of URLs. However, only one must be downloaded.
+        """
+
+        class MockRequester(object):
+            def __init__(self):
+                self.count = 0
+                self.fail_first = False
+                self.fail_all = False
+
+            def get(self, *args, **kwargs):
+                self.count += 1
+                resp = Response()
+                resp._content = b'{"results": []}'
+                resp.headers = {"Content-Type": "application/json"}
+                resp.status_code = 200
+                if (self.fail_first and self.count == 1) or self.fail_all:
+                    resp.status_code = 408
+                return resp
+
+        file = "test.txt.gz"
+        out = TestBufferConanOutput()
+        urls = ["http://localhost:{}/{}".format(8000 + i, file) for i in range(3)]
+
+        # Only the first file must be downloaded
+        with tools.chdir(tools.mkdir_tmp()):
+            requester = MockRequester()
+            tools.get(urls, requester=requester, output=out, retry=0, retry_wait=0)
+            self.assertEqual(1, requester.count)
+
+        # Fail the first, download only the second
+        with tools.chdir(tools.mkdir_tmp()):
+            requester = MockRequester()
+            requester.fail_first = True
+            tools.get(urls, requester=requester, output=out, retry=0, retry_wait=0)
+            self.assertEqual(2, requester.count)
+            self.assertIn("WARN: Could not download from the URL {}: Error 408 downloading file {}."
+                          " Trying another mirror."
+                          .format(urls[0], urls[0]), out)
+
+        # Fail all downloads
+        with tools.chdir(tools.mkdir_tmp()):
+            requester = MockRequester()
+            requester.fail_all = True
+            with self.assertRaises(ConanException) as error:
+                tools.get(urls, requester=requester, output=out, retry=0, retry_wait=0)
+            self.assertEqual(3, requester.count)
+            self.assertIn("All downloads from (3) URLs have failed.", str(error.exception))
+
+    def check_output_runner_test(self):
+        import tempfile
+        original_temp = tempfile.gettempdir()
+        patched_temp = os.path.join(original_temp, "dir with spaces")
+        payload = "hello world"
+        with patch("tempfile.mktemp") as mktemp:
+            mktemp.return_value = patched_temp
+            output = check_output_runner(["echo", payload], stderr=subprocess.STDOUT)
+            self.assertIn(payload, str(output))
+
 
     def unix_to_dos_unit_test(self):
 

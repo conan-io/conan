@@ -38,6 +38,18 @@ class MSBuildTest(unittest.TestCase):
         self.assertIn("-Zi", template)
         self.assertIn("<RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>", template)
 
+    def test_skip_only_none_definitions(self):
+        # https://github.com/conan-io/conan/issues/6728
+        settings = MockSettings({"build_type": "Debug",
+                                 "compiler": "Visual Studio",
+                                 "arch": "x86_64",
+                                 "compiler.runtime": "MDd"})
+        conanfile = MockConanfile(settings)
+        msbuild = MSBuild(conanfile)
+        template = msbuild._get_props_file_contents(definitions={"foo": 0, "bar": False})
+        self.assertIn("<PreprocessorDefinitions>foo=0;bar=False;%(PreprocessorDefinitions)",
+                      template)
+
     def without_runtime_test(self):
         settings = MockSettings({"build_type": "Debug",
                                  "compiler": "Visual Studio",
@@ -138,7 +150,7 @@ class MSBuildTest(unittest.TestCase):
                                  "arch": "x86_64",
                                  "compiler.runtime": "MDd"})
         version = MSBuild.get_version(settings)
-        six.assertRegex(self, version, "(\d+\.){2,3}\d+")
+        six.assertRegex(self, version, r"(\d+\.){2,3}\d+")
         self.assertGreater(version, "15.1")
 
     @parameterized.expand([("16", "v142"),

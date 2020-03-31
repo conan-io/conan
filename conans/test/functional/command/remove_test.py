@@ -21,17 +21,34 @@ from conans.util.env_reader import get_env
 from conans.util.files import load
 
 
+class RemoveLocksTest(unittest.TestCase):
+    def remove_locks_test(self):
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile().with_name("Hello").with_version("0.1")})
+        client.run("create . lasote/testing")
+        self.assertNotIn('does not contain a number!', client.out)
+        ref = ConanFileReference.loads("Hello/0.1@lasote/testing")
+        conan_folder = client.cache.package_layout(ref).base_folder()
+        self.assertIn("locks", os.listdir(conan_folder))
+        self.assertTrue(os.path.exists(conan_folder + ".count"))
+        self.assertTrue(os.path.exists(conan_folder + ".count.lock"))
+        client.run("remove * --locks", assert_error=True)
+        self.assertIn("ERROR: Specifying a pattern is not supported", client.out)
+        client.run("remove", assert_error=True)
+        self.assertIn('ERROR: Please specify a pattern to be removed ("*" for all)', client.out)
+        client.run("remove --locks")
+        self.assertNotIn("locks", os.listdir(conan_folder))
+        self.assertFalse(os.path.exists(conan_folder + ".count"))
+        self.assertFalse(os.path.exists(conan_folder + ".count.lock"))
+
+
 class RemoveRegistryTest(unittest.TestCase):
 
     def remove_registry_test(self):
         test_server = TestServer(users={"lasote": "password"})  # exported users and passwords
         servers = {"default": test_server}
         client = TestClient(servers=servers, users={"default": [("lasote", "password")]})
-        conanfile = """from conans import ConanFile
-class Test(ConanFile):
-    pass
-    """
-        client.save({"conanfile.py": conanfile})
+        client.save({"conanfile.py": GenConanfile()})
         client.run("create . Test/0.1@lasote/testing")
         client.run("upload * --all --confirm")
         client.run('remove "*" -f')
@@ -71,12 +88,11 @@ class Test(ConanFile):
             self.assertNotIn("Package_ID: %s" % NO_SETTINGS_PACKAGE_ID, client.out)
             self.assertIn("There are no packages", client.out)
 
+    @unittest.skipIf(get_env("TESTING_REVISIONS_ENABLED", False), "No sense with revs")
     def remove_outdated_test(self):
         test_server = TestServer(users={"lasote": "password"})  # exported users and passwords
         servers = {"default": test_server}
         client = TestClient(servers=servers, users={"default": [("lasote", "password")]})
-        if client.cache.config.revisions_enabled:
-            self.skipTest("Makes no sense with revisions")
         conanfile = """from conans import ConanFile
 class Test(ConanFile):
     name = "Test"

@@ -6,8 +6,9 @@ from conans import DEFAULT_REVISION_V1
 from conans.client.remote_manager import check_compressed_files
 from conans.client.rest.client_routes import ClientV2Router
 from conans.client.rest.download_cache import CachedFileDownloader
+from conans.client.rest.file_uploader import FileUploader
 from conans.client.rest.rest_client_common import RestCommonMethods, get_exception_from_error
-from conans.client.rest.uploader_downloader import FileDownloader, FileUploader
+from conans.client.rest.file_downloader import FileDownloader
 from conans.errors import ConanException, NotFoundException, PackageNotFoundException, \
     RecipeNotFoundException, AuthenticationException, ForbiddenException
 from conans.model.info import ConanInfo

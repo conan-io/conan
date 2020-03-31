@@ -9,7 +9,8 @@ from conans.client.build.compiler_flags import (architecture_flag, build_type_de
                                                 format_library_paths, libcxx_define, libcxx_flag,
                                                 pic_flag, rpath_flags, sysroot_flag,
                                                 format_frameworks, format_framework_paths)
-from conans.client.build.cppstd_flags import cppstd_flag, cppstd_from_settings
+from conans.client.build.cppstd_flags import cppstd_from_settings, \
+    cppstd_flag_new as cppstd_flag
 from conans.client.tools.env import environment_append
 from conans.client.tools.oss import OSInfo, args_to_string, cpu_count, cross_building, \
     detected_architecture, detected_os, get_gnu_triplet
@@ -60,7 +61,7 @@ class AutoToolsBuildEnvironment(object):
         # Only c++ flags [-stdlib, -library], will go to CXXFLAGS
         self.cxx_flags = self._configure_cxx_flags()
         # cpp standard
-        self.cppstd_flag = cppstd_flag(self._compiler, self._compiler_version, self._cppstd)
+        self.cppstd_flag = cppstd_flag(conanfile.settings)
         # Not -L flags, ["-m64" "-m32"]
         self.link_flags = self._configure_link_flags()  # TEST!
         # Precalculate -fPIC

@@ -1,4 +1,4 @@
-
+import textwrap
 import unittest
 
 from conans.client.command import ERROR_INVALID_CONFIGURATION
@@ -39,7 +39,8 @@ class MyPkg(ConanFile):
         error = self.client.run("info . %s" % self.settings_msvc12,
                                 assert_error=True)
         self.assertEqual(error, ERROR_INVALID_CONFIGURATION)
-        self.assertIn("ERROR: conanfile.py: Invalid configuration: user says that compiler.version=12 is invalid", self.client.out)
+        self.assertIn("ERROR: conanfile.py: Invalid configuration: "
+                      "user says that compiler.version=12 is invalid", self.client.out)
 
     def test_create_method(self):
         self.client.run("create . name/ver@jgsogo/test %s" % self.settings_msvc15)
@@ -69,29 +70,21 @@ class MyPkg(ConanFile):
                       "compiler.version=12 is invalid", self.client.out)
 
     def test_restricted_settings_raise_invalid_code_too_test_info(self):
-        self.client.save({"conanfile.py": """
-from conans import ConanFile
-from conans.errors import ConanInvalidConfiguration
-
-class MyPkg(ConanFile):
-    requires = "name/ver@jgsogo/test"
-    settings = {"arch": ["x86_64"]}
-"""})
-
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class MyPkg(ConanFile):
+                settings = {"arch": ["x86_64"]}
+            """)
+        self.client.save({"conanfile.py": conanfile})
         error = self.client.run("info . -s arch=x86", assert_error=True)
         self.assertEqual(error, ERROR_INVALID_CONFIGURATION)
 
-
-
     def test_restricted_settings_raise_invalid_code_too_test_create(self):
-        self.client.save({"conanfile.py": """
-from conans import ConanFile
-from conans.errors import ConanInvalidConfiguration
-
-class MyPkg(ConanFile):
-    requires = "name/ver@jgsogo/test"
-    settings = {"arch": ["x86_64"]}
-"""})
-
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class MyPkg(ConanFile):
+                settings = {"arch": ["x86_64"]}
+            """)
+        self.client.save({"conanfile.py": conanfile})
         error = self.client.run("create . lib/1.0@user/channel -s arch=x86", assert_error=True)
         self.assertEqual(error, ERROR_INVALID_CONFIGURATION)

@@ -14,7 +14,9 @@ from conans.model.options import Options, OptionsValues, PackageOptions
 from conans.model.requires import Requirements
 from conans.model.user_info import DepsUserInfo
 from conans.paths import RUN_LOG_NAME
+from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
 from conans.util.conan_v2_mode import conan_v2_behavior
+from conans.util.env_reader import get_env
 
 
 def create_options(conanfile):
@@ -72,8 +74,11 @@ def create_settings(conanfile, settings):
 @contextmanager
 def _env_and_python(conanfile):
     with environment_append(conanfile.env):
-        with pythonpath(conanfile):
+        if get_env(CONAN_V2_MODE_ENVVAR, False):
             yield
+        else:
+            with pythonpath(conanfile):
+                yield
 
 
 def get_env_context_manager(conanfile, without_python=False):
@@ -149,6 +154,7 @@ class ConanFile(object):
 
         # needed variables to pack the project
         self.cpp_info = None  # Will be initialized at processing time
+        self._conan_dep_cpp_info = None  # Will be initialized at processing time
         self.deps_cpp_info = DepsCppInfo()
 
         # environment variables declared in the package_info

@@ -5,7 +5,7 @@ from conans.client.build.compiler_flags import (architecture_flag, build_type_de
                                                 rpath_flags, sysroot_flag,
                                                 visual_linker_option_separator, visual_runtime,
                                                 format_frameworks, format_framework_paths)
-from conans.client.build.cppstd_flags import cppstd_flag, cppstd_from_settings
+from conans.client.build.cppstd_flags import cppstd_flag_new as cppstd_flag
 from conans.model import Generator
 from conans.paths import BUILD_INFO_COMPILER_ARGS
 
@@ -69,10 +69,7 @@ class CompilerArgsGenerator(Generator):
         flags.extend(format_frameworks(self._deps_build_info.frameworks, compiler=self.compiler))
         flags.extend(format_framework_paths(self._deps_build_info.framework_paths,
                                             compiler=self.compiler))
-        cppstd = cppstd_from_settings(self.conanfile.settings)
-        flags.append(cppstd_flag(self.conanfile.settings.get_safe("compiler"),
-                                 self.conanfile.settings.get_safe("compiler.version"),
-                                 cppstd))
+        flags.append(cppstd_flag(self.conanfile.settings))
         sysrf = sysroot_flag(self._deps_build_info.sysroot, compiler=self.compiler)
         if sysrf:
             flags.append(sysrf)

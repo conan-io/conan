@@ -1,4 +1,5 @@
 import os
+import textwrap
 import unittest
 
 from conans.client import tools
@@ -48,14 +49,9 @@ class TestPackageTest(unittest.TestCase):
         self.assertNotIn("Hello/0.2", client.out)
 
     def other_requirements_test(self):
-        test_conanfile = '''
-from conans import ConanFile
-
-class TestConanLib(ConanFile):
-    requires = "other/0.2@user2/channel2", "Hello/0.1@user/channel"
-    def test(self):
-        pass
-'''
+        test_conanfile = (GenConanfile().with_require_plain("other/0.2@user2/channel2")
+                                        .with_require_plain("Hello/0.1@user/channel")
+                                        .with_test("pass"))
         client = TestClient()
         other_conanfile = GenConanfile().with_name("other").with_version("0.2")
         client.save({CONANFILE: other_conanfile})
@@ -126,3 +122,40 @@ class TestConanLib(ConanFile):
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "test_package",
                                                     "build_folder")))
         self.assertFalse(os.path.exists(default_build_dir))
+
+    def check_version_test(self):
+        client = TestClient()
+        dep = textwrap.dedent("""
+            from conans import ConanFile
+            class Dep(ConanFile):
+                def package_info(self):
+                    self.cpp_info.name = "MyDep"
+            """)
+        client.save({CONANFILE: dep})
+        client.run("create . dep/1.1@")
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class Pkg(ConanFile):
+                requires = "dep/1.1"
+                def build(self):
+                    info = self.deps_cpp_info["dep"]
+                    self.output.info("BUILD Dep %s VERSION %s" % (info.name, info.version))
+                def package_info(self):
+                    self.cpp_info.name = "MyHello"
+            """)
+        test_conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class Pkg(ConanFile):
+                def build(self):
+                    info = self.deps_cpp_info["hello"]
+                    self.output.info("BUILD HELLO %s VERSION %s" % (info.name, info.version))
+                def test(self):
+                    info = self.deps_cpp_info["hello"]
+                    self.output.info("TEST HELLO %s VERSION %s" % (info.name, info.version))
+            """)
+        client.save({"conanfile.py": conanfile,
+                     "test_package/conanfile.py": test_conanfile})
+        client.run("create . hello/0.1@")
+        self.assertIn("hello/0.1: BUILD Dep MyDep VERSION 1.1", client.out)
+        self.assertIn("hello/0.1 (test package): BUILD HELLO MyHello VERSION 0.1", client.out)
+        self.assertIn("hello/0.1 (test package): TEST HELLO MyHello VERSION 0.1", client.out)

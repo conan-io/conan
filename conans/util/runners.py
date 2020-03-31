@@ -81,7 +81,7 @@ def check_output_runner(cmd, stderr=None):
         # We don't want stderr to print warnings that will mess the pristine outputs
         stderr = stderr or subprocess.PIPE
         cmd = cmd if isinstance(cmd, six.string_types) else subprocess.list2cmdline(cmd)
-        command = "{} > {}".format(cmd, tmp_file)
+        command = '{} > "{}"'.format(cmd, tmp_file)
         logger.info("Calling command: {}".format(command))
         process = subprocess.Popen(command, shell=True, stderr=stderr)
         stdout, stderr = process.communicate()

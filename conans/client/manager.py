@@ -21,7 +21,7 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
                  manifest_interactive=False, generators=None, no_imports=False,
                  create_reference=None, keep_build=False, use_lock=False, recorder=None):
     """ Fetch and build all dependencies for the given reference
-    :param app: The ConanApp instance with all collaborators
+    @param app: The ConanApp instance with all collaborators
     @param ref_or_path: ConanFileReference or path to user space conanfile
     @param install_folder: where the output files will be saved
     @param build_modes: List of build_modes specified
@@ -41,8 +41,15 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
         generators = set(generators) if generators else set()
         generators.add("txt")  # Add txt generator by default
 
-    out.info("Configuration:")
-    out.writeln(graph_info.profile_host.dumps())
+    if graph_info.profile_build:
+        out.info("Configuration (profile_host):")
+        out.writeln(graph_info.profile_host.dumps())
+        out.info("Configuration (profile_build):")
+        out.writeln(graph_info.profile_build.dumps())
+    else:
+        out.info("Configuration:")
+        out.writeln(graph_info.profile_host.dumps())
+
     deps_graph = graph_manager.load_graph(ref_or_path, create_reference, graph_info, build_modes,
                                           False, update, remotes, recorder)
     root_node = deps_graph.root

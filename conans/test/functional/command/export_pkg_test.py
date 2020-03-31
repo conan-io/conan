@@ -480,7 +480,16 @@ class TestConan(ConanFile):
         self.assertIn("set(CONAN_LIBS_HELLO1 mycoollib)", cmakeinfo)
         self.assertIn("set(CONAN_LIBS mycoollib ${CONAN_LIBS})", cmakeinfo)
 
-    def export_pkg_json_test(self):
+    def test_export_pkg_json(self):
+
+        def _check_json_output_no_folder():
+            json_path = os.path.join(self.client.current_folder, "output.json")
+            self.assertTrue(os.path.exists(json_path))
+            json_content = load(json_path)
+            output = json.loads(json_content)
+            self.assertEqual(True, output["error"])
+            self.assertEqual([], output["installed"])
+            self.assertEqual(2, len(output))
 
         def _check_json_output(with_error=False):
             json_path = os.path.join(self.client.current_folder, "output.json")
@@ -513,7 +522,7 @@ class MyConan(ConanFile):
         self.client.run("export-pkg . danimtb/testing -bf build -sf sources "
                         "--json output.json", assert_error=True)
 
-        _check_json_output(with_error=True)
+        _check_json_output_no_folder()
 
         # Deafult folders
         self.client.run("export-pkg . danimtb/testing --json output.json --force")
@@ -530,7 +539,7 @@ class MyConan(ConanFile):
         self.client.run("export-pkg . danimtb/testing -pf package --json output.json --force")
         _check_json_output()
 
-    def json_with_dependencies_test(self):
+    def test_json_with_dependencies(self):
 
         def _check_json_output(with_error=False):
             json_path = os.path.join(self.client.current_folder, "output.json")
@@ -618,3 +627,15 @@ class TestConan(ConanFile):
         self.assertFalse(is_dirty(package_folder))
         client.run("install pkg/0.1@")
         self.assertIn("pkg/0.1: Already installed!", client.out)
+
+    def test_invalid_folder(self):
+        """ source, build and package path must exists, otherwise, raise ConanException
+        """
+        for folder in ["source", "build", "package"]:
+            client = TestClient()
+            client.save({CONANFILE: GenConanfile().with_name("foo").with_version("0.1.0")})
+
+            client.run("export-pkg . foo/0.1.0@user/testing -{}f={}".format(folder[0], folder),
+                       assert_error=True)
+            self.assertIn("ERROR: The {} folder '{}' does not exist."
+                          .format(folder, os.path.join(client.current_folder, folder)), client.out)
