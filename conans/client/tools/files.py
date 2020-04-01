@@ -367,12 +367,14 @@ def dos2unix(filepath):
 def rename(src, dst):
     """
     rename a file or folder to avoid "Access is denied" error on Windows
-    :param src: Path to the file or folder
+    :param src: Source file or folder
     :param dst: Destination file or folder
     """
-    if platform.system() == "Windows" and which("robocopy"):
+    if platform.system() == "Windows" and which("robocopy") and os.path.isdir(src):
+        if os.path.exists(dst):
+            raise ConanException("rename {} to {} failed, dst exists.".format(src, dst))
         retcode = os.system("robocopy /move /e /ndl /nfl {} {}".format(src, dst))
         if retcode != 1:
-            raise ConanException("rename {} to {} failed, possibly dst exists".format(src, dst))
+            raise ConanException("rename {} to {} failed".format(src, dst))
     else:
         os.rename(src, dst)
