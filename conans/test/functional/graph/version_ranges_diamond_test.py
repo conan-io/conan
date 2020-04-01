@@ -1,4 +1,3 @@
-import os
 import textwrap
 import unittest
 from collections import OrderedDict
@@ -8,7 +7,6 @@ from parameterized import parameterized
 from conans.paths import CONANFILE
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, \
     inc_package_manifest_timestamp, inc_recipe_manifest_timestamp
-from conans.util.files import load
 
 
 class VersionRangesUpdatingTest(unittest.TestCase):
@@ -33,7 +31,7 @@ class VersionRangesUpdatingTest(unittest.TestCase):
             boost/[>=1.68.0]@lasote/stable
             """)
         client.save({"conanfile.txt": conanfile}, clean_first=True)
-        client.run("install .")   
+        client.run("install .")
         self.assertIn("boost/*@lasote/stable versions found in 'default' remote", client.out)
         self.assertIn("resolved to 'boost/1.70.0@lasote/stable' in remote 'default'", client.out)
         self.assertNotIn("boost/1.69.0", client.out)
@@ -179,7 +177,7 @@ class HelloReuseConan(ConanFile):
                           self.client.out)
             self.assertIn("conanfile.py (Hello1/0.1): Generated conaninfo.txt",
                           self.client.out)
-            content = load(os.path.join(self.client.current_folder, "conaninfo.txt"))
+            content = self.client.load("conaninfo.txt")
             self.assertIn("Hello0/%s@lasote/stable" % solution, content)
 
 
@@ -223,7 +221,7 @@ class HelloReuseConan(ConanFile):
         self.assertIn("conanfile.py (Hello1/0.1): Generated conaninfo.txt",
                       self.client.out)
 
-        content = load(os.path.join(self.client.current_folder, "conaninfo.txt"))
+        content = self.client.load("conaninfo.txt")
         self.assertIn("Hello0/0.2@lasote/stable", content)
 
     @parameterized.expand([(False, ), (True,)])
@@ -252,7 +250,7 @@ class HelloReuseConan(ConanFile):
             self.assertIn("conanfile.py (Hello3/0.1): Generated conaninfo.txt",
                           self.client.out)
 
-            content = load(os.path.join(self.client.current_folder, "conaninfo.txt"))
+            content = self.client.load("conaninfo.txt")
             self.assertIn("Hello0/0.2@lasote/stable", content)
             self.assertIn("Hello1/0.1@lasote/stable", content)
             self.assertIn("Hello2/0.1@lasote/stable", content)
@@ -279,7 +277,7 @@ class HelloReuseConan(ConanFile):
             self.assertIn("conanfile.py (Hello3/0.1): Generated conaninfo.txt",
                           self.client.out)
 
-            content = load(os.path.join(self.client.current_folder, "conaninfo.txt"))
+            content = self.client.load("conaninfo.txt")
             self.assertIn("Hello0/0.2.1@lasote/stable", content)
             self.assertIn("Hello1/0.1@lasote/stable", content)
             self.assertIn("Hello2/0.1@lasote/stable", content)
@@ -300,8 +298,12 @@ class HelloReuseConan(ConanFile):
         self.client.run("remove '*' -f")
         self.client.run("install Project/1.0.0@lasote/stable --build missing", assert_error=True)
 
-        self.assertIn("Requirement ProblemRequirement/1.0.0@lasote/stable conflicts with "
-                      "already defined ProblemRequirement/1.1.0@lasote/stable", self.client.out)
+        self.assertIn("Conflict in RequirementOne/1.2.3@lasote/stable:\n"
+            "    'RequirementOne/1.2.3@lasote/stable' requires "
+            "'ProblemRequirement/1.0.0@lasote/stable' while 'RequirementTwo/4.5.6@lasote/stable'"
+            " requires 'ProblemRequirement/1.1.0@lasote/stable'.\n"
+            "    To fix this conflict you need to override the package 'ProblemRequirement' in "
+            "your root package.", self.client.out)
 
         # Change the order, now it resolves correctly
         self._export("Project", "1.0.0",

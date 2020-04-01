@@ -5,17 +5,17 @@ import re
 import subprocess
 from contextlib import contextmanager
 
-import deprecation
-
 from conans.client.tools import which
 from conans.client.tools.env import environment_append
-from conans.client.tools.oss import OSInfo, detected_architecture, check_output
+from conans.client.tools.oss import OSInfo, detected_architecture
 from conans.errors import ConanException
 from conans.model.version import Version
 from conans.unicode import get_cwd
+from conans.util.conan_v2_mode import conan_v2_behavior
 from conans.util.env_reader import get_env
 from conans.util.fallbacks import default_output
 from conans.util.files import mkdir_tmp, save
+from conans.util.runners import check_output_runner
 
 
 def _visual_compiler_cygwin(output, version):
@@ -131,22 +131,19 @@ def latest_visual_studio_version_installed(output):
     return None
 
 
-@deprecation.deprecated(deprecated_in="1.2", removed_in="2.0",
-                        details="Use the MSBuild() build helper instead")
 def msvc_build_command(settings, sln_path, targets=None, upgrade_project=True, build_type=None,
                        arch=None, parallel=True, force_vcvars=False, toolset=None, platforms=None,
                        output=None):
     """ Do both: set the environment variables and call the .sln build
     """
-    vcvars = vcvars_command(settings, force=force_vcvars, output=output)
+    conan_v2_behavior("'tools.msvc_build_command' is deprecated, use 'MSBuild()' helper instead")
+    vcvars_cmd = vcvars_command(settings, force=force_vcvars, output=output)
     build = build_sln_command(settings, sln_path, targets, upgrade_project, build_type, arch,
                               parallel, toolset=toolset, platforms=platforms, output=output)
-    command = "%s && %s" % (vcvars, build)
+    command = "%s && %s" % (vcvars_cmd, build)
     return command
 
 
-@deprecation.deprecated(deprecated_in="1.2", removed_in="2.0",
-                        details="Use the MSBuild() build helper instead")
 def build_sln_command(settings, sln_path, targets=None, upgrade_project=True, build_type=None,
                       arch=None, parallel=True, toolset=None, platforms=None, output=None,
                       verbosity=None, definitions=None):
@@ -156,6 +153,7 @@ def build_sln_command(settings, sln_path, targets=None, upgrade_project=True, bu
         command = "%s && %s" % (tools.vcvars_command(self.settings), build_command)
         self.run(command)
     """
+    conan_v2_behavior("'tools.build_sln_command' is deprecated, use 'MSBuild()' helper instead")
     from conans.client.build.msbuild import MSBuild
     tmp = MSBuild(settings)
     output = default_output(output, fn_name='conans.client.tools.win.build_sln_command')
@@ -178,14 +176,9 @@ def build_sln_command(settings, sln_path, targets=None, upgrade_project=True, bu
 
 def vs_installation_path(version, preference=None):
 
-    vs_installation_path = None
-
     if not preference:
-        env_prefs = get_env("CONAN_VS_INSTALLATION_PREFERENCE", list())
-
-        if env_prefs:
-            preference = env_prefs
-        else:  # default values
+        preference = get_env("CONAN_VS_INSTALLATION_PREFERENCE", list())
+        if not preference:  # default values
             preference = ["Enterprise", "Professional", "Community", "BuildTools"]
 
     # Try with vswhere()
@@ -231,11 +224,11 @@ def vs_installation_path(version, preference=None):
             if vs_path.endswith(sub_path_to_remove):
                 vs_path = vs_path[:-(len(sub_path_to_remove)+1)]
 
-        vs_installation_path = vs_path
+        result_vs_installation_path = vs_path
     else:
-        vs_installation_path = vs_paths[0]
+        result_vs_installation_path = vs_paths[0]
 
-    return vs_installation_path
+    return result_vs_installation_path
 
 
 def vswhere(all_=False, prerelease=False, products=None, requires=None, version="", latest=False,
@@ -285,7 +278,7 @@ def vswhere(all_=False, prerelease=False, products=None, requires=None, version=
         arguments.append("-requires")
         arguments.extend(requires)
 
-    if len(version) is not 0:
+    if len(version) != 0:
         arguments.append("-version")
         arguments.append(version)
 
@@ -295,7 +288,7 @@ def vswhere(all_=False, prerelease=False, products=None, requires=None, version=
     if legacy:
         arguments.append("-legacy")
 
-    if len(property_) is not 0:
+    if len(property_) != 0:
         arguments.append("-property")
         arguments.append(property_)
 
@@ -303,7 +296,7 @@ def vswhere(all_=False, prerelease=False, products=None, requires=None, version=
         arguments.append("-nologo")
 
     try:
-        output = check_output(arguments).strip()
+        output = check_output_runner(arguments).strip()
         # Ignore the "description" field, that even decoded contains non valid charsets for json
         # (ignored ones)
         output = "\n".join([line for line in output.splitlines()
@@ -334,15 +327,14 @@ def find_windows_10_sdk():
     for key, subkey in hives:
         subkey = r'%s\Microsoft\Microsoft SDKs\Windows\v10.0' % subkey
         installation_folder = _system_registry_key(key, subkey, 'InstallationFolder')
-        if installation_folder:
-            if os.path.isdir(installation_folder):
-                include_dir = os.path.join(installation_folder, 'include')
-                for sdk_version in os.listdir(include_dir):
-                    if (os.path.isdir(os.path.join(include_dir, sdk_version))
-                            and sdk_version.startswith('10.')):
-                        windows_h = os.path.join(include_dir, sdk_version, 'um', 'Windows.h')
-                        if os.path.isfile(windows_h):
-                            return sdk_version
+        if installation_folder and os.path.isdir(installation_folder):
+            include_dir = os.path.join(installation_folder, 'include')
+            for sdk_version in os.listdir(include_dir):
+                if (os.path.isdir(os.path.join(include_dir, sdk_version))
+                        and sdk_version.startswith('10.')):
+                    windows_h = os.path.join(include_dir, sdk_version, 'um', 'Windows.h')
+                    if os.path.isfile(windows_h):
+                        return sdk_version
     return None
 
 
@@ -368,6 +360,7 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False, vcva
         raise ConanException("compiler.version setting required for vcvars not defined")
 
     # https://msdn.microsoft.com/en-us/library/f2ccy3wt.aspx
+    vcvars_arch = None
     arch_setting = arch_setting or 'x86_64'
     arch_build = settings.get_safe("arch_build") or detected_architecture()
     if os_setting == 'WindowsCE':
@@ -427,18 +420,18 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False, vcva
             if vcvars_ver:
                 command.append("-vcvars_ver=%s" % vcvars_ver)
 
-    if os_setting == 'WindowsStore':
-        os_version_setting = settings.get_safe("os.version")
-        if os_version_setting == '8.1':
-            command.append('store 8.1')
-        elif os_version_setting == '10.0':
-            windows_10_sdk = find_windows_10_sdk()
-            if not windows_10_sdk:
-                raise ConanException("cross-compiling for WindowsStore 10 (UWP), "
-                                     "but Windows 10 SDK wasn't found")
-            command.append('store %s' % windows_10_sdk)
-        else:
-            raise ConanException('unsupported Windows Store version %s' % os_version_setting)
+        if os_setting == 'WindowsStore':
+            os_version_setting = settings.get_safe("os.version")
+            if os_version_setting == '8.1':
+                command.append('store 8.1')
+            elif os_version_setting == '10.0':
+                windows_10_sdk = find_windows_10_sdk()
+                if not windows_10_sdk:
+                    raise ConanException("cross-compiling for WindowsStore 10 (UWP), "
+                                         "but Windows 10 SDK wasn't found")
+                command.append('store %s' % windows_10_sdk)
+            else:
+                raise ConanException('unsupported Windows Store version %s' % os_version_setting)
     return " ".join(command)
 
 
@@ -449,7 +442,7 @@ def vcvars_dict(settings, arch=None, compiler_version=None, force=False, filter_
                          compiler_version=compiler_version, force=force,
                          vcvars_ver=vcvars_ver, winsdk_version=winsdk_version, output=output)
     cmd += " && set"
-    ret = check_output(cmd)
+    ret = check_output_runner(cmd)
     new_env = {}
     for line in ret.splitlines():
         line = line.strip()
@@ -482,10 +475,10 @@ def vcvars_dict(settings, arch=None, compiler_version=None, force=False, filter_
             pass
 
     if filter_known_paths:
-        def relevant_path(path):
-            path = path.replace("\\", "/").lower()
+        def relevant_path(_path):
+            _path = _path.replace("\\", "/").lower()
             keywords = "msbuild", "visual", "microsoft", "/msvc/", "/vc/", "system32", "windows"
-            return any(word in path for word in keywords)
+            return any(word in _path for word in keywords)
 
         path_key = next((name for name in new_env.keys() if "path" == name.lower()), None)
         if path_key:
@@ -595,7 +588,7 @@ def run_in_windows_bash(conanfile, bashcmd, cwd=None, subsystem=None, msys_mingw
                                 "MINGW64"),
                     "MSYS2_PATH_TYPE": "inherit"}
     else:
-        env_vars = {}
+        env_vars = None
 
     with environment_append(env_vars):
 

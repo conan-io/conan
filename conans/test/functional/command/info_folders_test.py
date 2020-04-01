@@ -6,12 +6,11 @@ import unittest
 from textwrap import dedent
 
 from conans.client import tools
-from conans.client.tools.oss import check_output
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, \
-    TestServer
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
+from conans.util.runners import check_output_runner
 
 conanfile_py = """
 from conans import ConanFile
@@ -114,13 +113,13 @@ class InfoFoldersTest(unittest.TestCase):
     @unittest.skipIf(platform.system() != "Windows", "Needs windows for short_paths")
     def test_short_paths(self):
         cache_folder = temp_folder(False)
-        short_folder = os.path.join(cache_folder, ".cn")
+        short_folder = os.path.join(temp_folder(False), ".cn")
 
         with tools.environment_append({"CONAN_USER_HOME_SHORT": short_folder}):
             client = TestClient(cache_folder=cache_folder)
             client.save({CONANFILE: conanfile_py.replace("False", "True")})
             client.run("export . %s" % self.user_channel)
-            client.run("info %s --paths" % (self.reference1))
+            client.run("info %s --paths" % self.reference1)
             base_path = os.path.join("MyPackage", "0.1.0", "myUser", "testing")
             output = client.out
             self.assertIn(os.path.join(base_path, "export"), output)
@@ -135,7 +134,7 @@ class InfoFoldersTest(unittest.TestCase):
             # Ensure that the inner folders are not created (that could affect
             # pkg creation flow
             ref = ConanFileReference.loads(self.reference1)
-            id_ = re.search('ID:\s*([a-z0-9]*)', str(client.out)).group(1)
+            id_ = re.search(r'ID:\s*([a-z0-9]*)', str(client.out)).group(1)
             pref = PackageReference(ref, id_)
             for path in (client.cache.package_layout(ref, True).source(),
                          client.cache.package_layout(ref, True).build(pref),
@@ -156,7 +155,7 @@ class InfoFoldersTest(unittest.TestCase):
                                       % os.path.splitdrive(cache_folder)[0])
         if "NTFS" not in str(out):
             return
-        short_folder = os.path.join(cache_folder, ".cnacls")
+        short_folder = os.path.join(temp_folder(False), ".cnacls")
 
         self.assertFalse(os.path.exists(short_folder), "short_folder: %s shouldn't exists"
                          % short_folder)
@@ -181,7 +180,8 @@ class InfoFoldersTest(unittest.TestCase):
 
         # Retrieve ACLs from short_folder
         try:
-            short_folder_acls = check_output("cacls %s" % short_folder, stderr=subprocess.STDOUT)
+            short_folder_acls = check_output_runner("cacls %s" % short_folder,
+                                                    stderr=subprocess.STDOUT)
         except subprocess.CalledProcessError as e:
             raise Exception("Error %s getting ACL from short_folder: '%s'." % (e, short_folder))
 
@@ -203,7 +203,7 @@ class InfoFoldersTest(unittest.TestCase):
     def test_short_paths_folders(self):
         # https://github.com/conan-io/conan/issues/4612
         cache_folder = temp_folder(False)
-        short_folder = os.path.join(cache_folder, ".cn")
+        short_folder = os.path.join(temp_folder(False), ".cn")
 
         conanfile = dedent("""
             from conans import ConanFile

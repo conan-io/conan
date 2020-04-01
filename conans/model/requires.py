@@ -21,10 +21,11 @@ class Requirement(object):
         self.override = override
         self.private = private
         self.build_require = False
+        self.build_require_context = None
         self._locked_id = None
 
     def lock(self, locked_ref, locked_id):
-        # When a requirment is locked it doesn't has ranges
+        # When a requirement is locked it doesn't has ranges
         self.ref = self.range_ref = locked_ref
         self._locked_id = locked_id  # And knows the ID of the locked node that is pointing to
 
@@ -133,20 +134,23 @@ class Requirements(OrderedDict):
         for name, req in self.items():
             if req.private:
                 continue
-            if name in down_reqs:
+            if name in down_reqs and not req.locked_id:
                 other_req = down_reqs[name]
                 # update dependency
                 other_ref = other_req.ref
                 if other_ref and other_ref != req.ref:
-                    msg = "requirement %s overridden by %s to %s " \
-                          % (req.ref, down_ref or "your conanfile", other_ref)
+                    down_reference_str = str(down_ref) if down_ref else ""
+                    msg = "%s: requirement %s overridden by %s to %s " \
+                          % (own_ref, req.ref, down_reference_str or "your conanfile", other_ref)
 
                     if error_on_override and not other_req.override:
                         raise ConanException(msg)
 
-                    msg = "%s %s" % (own_ref, msg)
                     output.warn(msg)
                     req.ref = other_ref
+                    # FIXME: We should compute the intersection of version_ranges
+                    if req.version_range and not other_req.version_range:
+                        req.range_ref = other_req.range_ref  # Override
 
             new_reqs[name] = req
         return new_reqs

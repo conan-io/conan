@@ -1,17 +1,17 @@
 import json
 import os
 import platform
+import textwrap
 import unittest
+from textwrap import dedent
 
 from parameterized import parameterized
 
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE
-from conans.test.utils.conanfile import TestConanFile
-from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, GenConanfile
 from conans.util.env_reader import get_env
-from conans.util.files import load, mkdir
-from textwrap import dedent
+from conans.util.files import load, mkdir, is_dirty
 
 
 class ExportPkgTest(unittest.TestCase):
@@ -22,7 +22,7 @@ class ExportPkgTest(unittest.TestCase):
                             requester_class=None,
                             users={"default": [("lasote", "mypass")]})
 
-        client.save({"conanfile.py": str(TestConanFile("Pkg", "0.1"))})
+        client.save({"conanfile.py": GenConanfile().with_name("Pkg").with_version("0.1")})
         client.run("install .")
         client.run("export-pkg . Pkg/0.1@user/testing")
 
@@ -34,18 +34,14 @@ class ExportPkgTest(unittest.TestCase):
             [build_requires]
             some/other@pkg/notexists
             """)
-        client.save({"conanfile.py": str(TestConanFile("Pkg", "0.1")),
+        client.save({"conanfile.py": GenConanfile(),
                      "myprofile": profile})
         client.run("export-pkg . Pkg/0.1@user/testing -pr=myprofile")
 
     def test_transitive_without_settings(self):
         # https://github.com/conan-io/conan/issues/3367
-        conanfile = """from conans import ConanFile
-class PkgC(ConanFile):
-    pass
-"""
         client = TestClient()
-        client.save({CONANFILE: conanfile})
+        client.save({CONANFILE: GenConanfile()})
         client.run("create . PkgC/0.1@user/testing")
         conanfile = """from conans import ConanFile
 class PkgB(ConanFile):
@@ -70,12 +66,8 @@ class PkgA(ConanFile):
 
     def test_package_folder_errors(self):
         # https://github.com/conan-io/conan/issues/2350
-        conanfile = """from conans import ConanFile
-class HelloPythonConan(ConanFile):
-    pass
-"""
         client = TestClient()
-        client.save({CONANFILE: conanfile})
+        client.save({CONANFILE: GenConanfile()})
         mkdir(os.path.join(client.current_folder, "pkg"))
 
         client.run("export-pkg . Hello/0.1@lasote/stable -pf=pkg -bf=.", assert_error=True)
@@ -175,6 +167,23 @@ class HelloPythonConan(ConanFile):
         client.run("export-pkg . Hello/0.1@lasote/stable -pr=myprofile")
         self.assertIn("Hello/0.1@lasote/stable: ENV-VALUE: MYCUSTOMVALUE!!!", client.out)
 
+    def test_profile_environment_conaninfo(self):
+        # https://github.com/conan-io/conan/issues/6603
+        profile = dedent("""
+            [env]
+            MYCUSTOMVAR=MYCUSTOMVALUE
+            """)
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile().with_name("Hello").with_version("0.1"),
+                     "myprofile": profile})
+        client.run("export-pkg . Hello/0.1@lasote/stable -pr=myprofile")
+        ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
+        pkg_folder = client.cache.package_layout(ref).packages()
+        folders = os.listdir(pkg_folder)
+        pkg_folder = os.path.join(pkg_folder, folders[0])
+        conaninfo = load(os.path.join(pkg_folder, "conaninfo.txt"))
+        self.assertIn("MYCUSTOMVAR=MYCUSTOMVALUE", conaninfo)
+
     def test_options_install(self):
         # https://github.com/conan-io/conan/issues/2242
         conanfile = """from conans import ConanFile
@@ -228,9 +237,8 @@ class TestConan(ConanFile):
         package_folder = client.cache.package_layout(win_pref.ref,
                                                      short_paths=short_paths).package(win_pref)
         if short_paths and platform.system() == "Windows":
-            self.assertEqual(load(os.path.join(client.cache.package_layout(win_pref.ref, False).package(win_pref),
-                                               ".conan_link")),
-                             package_folder)
+            cache_pkg_folder = client.cache.package_layout(win_pref.ref, False).package(win_pref)
+            self.assertEqual(load(os.path.join(cache_pkg_folder, ".conan_link")), package_folder)
         else:
             self.assertEqual(client.cache.package_layout(win_pref.ref).package(win_pref),
                              package_folder)
@@ -308,7 +316,7 @@ class TestConan(ConanFile):
         self.assertIn("Packaged 1 '.a' file: libmycoollib.a", client.out)
         self._consume(client, settings + " . -g cmake")
 
-        cmakeinfo = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
+        cmakeinfo = client.load("conanbuildinfo.cmake")
         self.assertIn("set(CONAN_LIBS_HELLO mycoollib)", cmakeinfo)
         self.assertIn("set(CONAN_LIBS mycoollib ${CONAN_LIBS})", cmakeinfo)
 
@@ -416,10 +424,10 @@ class TestConan(ConanFile):
 
         # Specify different name or version is not working
         client.run("export-pkg . lib/1.0@conan/stable -f", assert_error=True)
-        self.assertIn("ERROR: Package recipe exported with name lib!=Hello", client.out)
+        self.assertIn("ERROR: Package recipe with name lib!=Hello", client.out)
 
         client.run("export-pkg . Hello/1.1@conan/stable -f", assert_error=True)
-        self.assertIn("ERROR: Package recipe exported with version 1.1!=0.1", client.out)
+        self.assertIn("ERROR: Package recipe with version 1.1!=0.1", client.out)
 
         conanfile = """
 from conans import ConanFile
@@ -436,13 +444,16 @@ class TestConan(ConanFile):
                       client.out)
 
     def test_with_deps(self):
+        hello_ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
         client = TestClient()
-        conanfile = TestConanFile()
+        conanfile = GenConanfile().with_name("Hello").with_version("0.1")
         client.save({"conanfile.py": str(conanfile)})
         client.run("export . lasote/stable")
         client.run("install Hello/0.1@lasote/stable --build")
-        conanfile = TestConanFile(name="Hello1", requires=["Hello/0.1@lasote/stable"])
-        conanfile = str(conanfile) + """    def package_info(self):
+        conanfile = GenConanfile().with_name("Hello1").with_version("0.1")\
+                                  .with_require(hello_ref)
+
+        conanfile = str(conanfile) + """\n    def package_info(self):
         self.cpp_info.libs = self.collect_libs()
     def package(self):
         self.copy("*")
@@ -465,11 +476,20 @@ class TestConan(ConanFile):
         self.assertIn("Hello/0.1@lasote/stable: Already installed!", client.out)
         self.assertIn("Hello1/0.1@lasote/stable: Already installed!", client.out)
 
-        cmakeinfo = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
+        cmakeinfo = client.load("conanbuildinfo.cmake")
         self.assertIn("set(CONAN_LIBS_HELLO1 mycoollib)", cmakeinfo)
         self.assertIn("set(CONAN_LIBS mycoollib ${CONAN_LIBS})", cmakeinfo)
 
-    def export_pkg_json_test(self):
+    def test_export_pkg_json(self):
+
+        def _check_json_output_no_folder():
+            json_path = os.path.join(self.client.current_folder, "output.json")
+            self.assertTrue(os.path.exists(json_path))
+            json_content = load(json_path)
+            output = json.loads(json_content)
+            self.assertEqual(True, output["error"])
+            self.assertEqual([], output["installed"])
+            self.assertEqual(2, len(output))
 
         def _check_json_output(with_error=False):
             json_path = os.path.join(self.client.current_folder, "output.json")
@@ -502,7 +522,7 @@ class MyConan(ConanFile):
         self.client.run("export-pkg . danimtb/testing -bf build -sf sources "
                         "--json output.json", assert_error=True)
 
-        _check_json_output(with_error=True)
+        _check_json_output_no_folder()
 
         # Deafult folders
         self.client.run("export-pkg . danimtb/testing --json output.json --force")
@@ -519,7 +539,7 @@ class MyConan(ConanFile):
         self.client.run("export-pkg . danimtb/testing -pf package --json output.json --force")
         _check_json_output()
 
-    def json_with_dependencies_test(self):
+    def test_json_with_dependencies(self):
 
         def _check_json_output(with_error=False):
             json_path = os.path.join(self.client.current_folder, "output.json")
@@ -581,3 +601,41 @@ class TestConan(ConanFile):
         package_folder = client.cache.package_layout(pref.ref).package(pref)
         header = os.path.join(package_folder, "include/header.h")
         self.assertTrue(os.path.exists(header))
+
+    def test_export_pkg_clean_dirty(self):
+        # https://github.com/conan-io/conan/issues/6449
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class Pkg(ConanFile):
+                def build(self):
+                    if self.in_local_cache:
+                        raise Exception("Can't build while installing")
+            """)
+        client.save({"conanfile.py": conanfile})
+        client.run("create . pkg/0.1@", assert_error=True)
+        self.assertIn("Can't build while installing", client.out)
+        ref = ConanFileReference.loads("pkg/0.1")
+        layout = client.cache.package_layout(ref)
+        pref = PackageReference(ref, "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+        build_folder = layout.build(pref)
+        self.assertTrue(is_dirty(build_folder))
+        package_folder = layout.package(pref)
+        self.assertTrue(is_dirty(package_folder))
+
+        client.run("export-pkg . pkg/0.1@")
+        self.assertFalse(is_dirty(package_folder))
+        client.run("install pkg/0.1@")
+        self.assertIn("pkg/0.1: Already installed!", client.out)
+
+    def test_invalid_folder(self):
+        """ source, build and package path must exists, otherwise, raise ConanException
+        """
+        for folder in ["source", "build", "package"]:
+            client = TestClient()
+            client.save({CONANFILE: GenConanfile().with_name("foo").with_version("0.1.0")})
+
+            client.run("export-pkg . foo/0.1.0@user/testing -{}f={}".format(folder[0], folder),
+                       assert_error=True)
+            self.assertIn("ERROR: The {} folder '{}' does not exist."
+                          .format(folder, os.path.join(client.current_folder, folder)), client.out)

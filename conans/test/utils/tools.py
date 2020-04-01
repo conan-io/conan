@@ -9,6 +9,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+import time
 import unittest
 import uuid
 from collections import Counter, OrderedDict
@@ -17,12 +18,11 @@ from contextlib import contextmanager
 import bottle
 import requests
 import six
-import time
 from mock import Mock
+from requests.exceptions import HTTPError
 from six import StringIO
 from six.moves.urllib.parse import quote, urlsplit, urlunsplit
 from webtest.app import TestApp
-from requests.exceptions import HTTPError
 
 from conans import load
 from conans.client.cache.cache import ClientCache
@@ -30,11 +30,11 @@ from conans.client.cache.remote_registry import Remotes
 from conans.client.command import Command
 from conans.client.conan_api import Conan
 from conans.client.output import ConanOutput
-from conans.client.rest.uploader_downloader import IterableToFileAdapter
+from conans.client.rest.file_uploader import IterableToFileAdapter
+from conans.client.runner import ConanRunner
 from conans.client.tools import environment_append
 from conans.client.tools.files import chdir
 from conans.client.tools.files import replace_in_file
-from conans.client.tools.oss import check_output
 from conans.client.tools.scm import Git, SVN
 from conans.client.tools.win import get_cased_path
 from conans.client.userio import UserIO
@@ -44,13 +44,14 @@ from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.settings import Settings
 from conans.server.revision_list import _RevisionEntry
+from conans.test.utils.genconanfile import GenConanfile
 from conans.test.utils.server_launcher import (TESTING_REMOTE_PRIVATE_PASS,
                                                TESTING_REMOTE_PRIVATE_USER,
                                                TestServerLauncher)
 from conans.test.utils.test_files import temp_folder
 from conans.util.env_reader import get_env
 from conans.util.files import mkdir, save_files
-from conans.client.runner import ConanRunner
+from conans.util.runners import check_output_runner
 
 NO_SETTINGS_PACKAGE_ID = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
 
@@ -75,7 +76,7 @@ def inc_package_manifest_timestamp(cache, package_reference, inc_time):
     manifest.save(path)
 
 
-def test_processed_profile(profile=None, settings=None):
+def test_profile(profile=None, settings=None):
     if profile is None:
         profile = Profile()
     if profile.processed_settings is None:
@@ -138,6 +139,12 @@ class TestingResponse(object):
     @property
     def status_code(self):
         return self.test_response.status_code
+
+    def json(self):
+        try:
+            return json.loads(self.test_response.content)
+        except:
+            raise ValueError("The response is not a JSON")
 
 
 class TestRequester(object):
@@ -528,10 +535,10 @@ def create_local_svn_checkout(files, repo_url, rel_project_path=None,
             subprocess.check_output("svn add .", shell=True)
             subprocess.check_output('svn commit -m "{}"'.format(commit_msg), shell=True)
             if SVN.get_version() >= SVN.API_CHANGE_VERSION:
-                rev = check_output("svn info --show-item revision").strip()
+                rev = check_output_runner("svn info --show-item revision").strip()
             else:
                 import xml.etree.ElementTree as ET
-                output = check_output("svn info --xml").strip()
+                output = check_output_runner("svn info --xml").strip()
                 root = ET.fromstring(output)
                 rev = root.findall("./entry")[0].get("revision")
         project_url = repo_url + "/" + quote(rel_project_path.replace("\\", "/"))
@@ -589,6 +596,25 @@ class SVNLocalRepoTestCase(unittest.TestCase):
             shutil.rmtree(tmp_folder, ignore_errors=False, onerror=try_remove_readonly)
 
 
+class LocalDBMock(object):
+
+    def __init__(self, user=None, access_token=None, refresh_token=None):
+        self.user = user
+        self.access_token = access_token
+        self.refresh_token = refresh_token
+
+    def get_login(self, _):
+        return self.user, self.access_token, self.refresh_token
+
+    def get_username(self, _):
+        return self.user
+
+    def store(self, user, access_token, refresh_token, _):
+        self.user = user
+        self.access_token = access_token
+        self.refresh_token = refresh_token
+
+
 class MockedUserIO(UserIO):
 
     """
@@ -634,20 +660,32 @@ class MockedUserIO(UserIO):
 
 
 class TestClient(object):
-
     """ Test wrap of the conans application to launch tests in the same way as
     in command line
     """
 
     def __init__(self, cache_folder=None, current_folder=None, servers=None, users=None,
                  requester_class=None, runner=None, path_with_spaces=True,
-                 revisions_enabled=None, cpu_count=1):
+                 revisions_enabled=None, cpu_count=1, default_server_user=None):
         """
         current_folder: Current execution folder
         servers: dict of {remote_name: TestServer}
         logins is a list of (user, password) for auto input in order
         if required==> [("lasote", "mypass"), ("other", "otherpass")]
         """
+        if default_server_user is not None:
+            if servers is not None:
+                raise Exception("Cannot define both 'servers' and 'default_server_user'")
+            if users is not None:
+                raise Exception("Cannot define both 'users' and 'default_server_user'")
+            if default_server_user is True:
+                server_users = {"user": "password"}
+                users = {"default": [("user", "password")]}
+            else:
+                server_users = default_server_user
+                users = {"default": list(default_server_user.items())}
+            server = TestServer(users=server_users)
+            servers = {"default": server}
 
         self.users = users
         if self.users is None:
@@ -656,11 +694,6 @@ class TestClient(object):
         self.cache_folder = cache_folder or temp_folder(path_with_spaces)
         self.requester_class = requester_class
         self.runner = runner
-
-        if revisions_enabled is None:
-            revisions_enabled = get_env("TESTING_REVISIONS_ENABLED", False)
-
-        self.tune_conan_conf(cache_folder, cpu_count, revisions_enabled)
 
         if servers and len(servers) > 1 and not isinstance(servers, OrderedDict):
             raise Exception("""Testing framework error: Servers should be an OrderedDict. e.g:
@@ -673,6 +706,13 @@ servers["r2"] = TestServer()
         if servers is not False:  # Do not mess with registry remotes
             self.update_servers()
         self.current_folder = current_folder or temp_folder(path_with_spaces)
+
+        # Once the client is ready, modify the configuration
+        mkdir(self.current_folder)
+        self.tune_conan_conf(cache_folder, cpu_count, revisions_enabled)
+
+    def load(self, filename):
+        return load(os.path.join(self.current_folder, filename))
 
     @property
     def cache(self):
@@ -712,21 +752,15 @@ servers["r2"] = TestServer()
                 return TestRequester(self.servers)
 
     def _set_revisions(self, value):
-        current_conf = load(self.cache.conan_conf_path)
-        if "revisions_enabled" in current_conf:  # Invalidate any previous value to be sure
-            replace_in_file(self.cache.conan_conf_path, "revisions_enabled", "#revisions_enabled",
-                            output=TestBufferConanOutput())
-
-        replace_in_file(self.cache.conan_conf_path,
-                        "[general]", "[general]\nrevisions_enabled = %s" % value,
-                        output=TestBufferConanOutput())
+        value = "1" if value else "0"
+        self.run("config set general.revisions_enabled={}".format(value))
 
     def enable_revisions(self):
-        self._set_revisions("1")
+        self._set_revisions(True)
         assert self.cache.config.revisions_enabled
 
     def disable_revisions(self):
-        self._set_revisions("0")
+        self._set_revisions(False)
         assert not self.cache.config.revisions_enabled
 
     def tune_conan_conf(self, cache_folder, cpu_count, revisions_enabled):
@@ -739,18 +773,15 @@ servers["r2"] = TestServer()
                             "# cpu_count = 1", "cpu_count = %s" % cpu_count,
                             output=TestBufferConanOutput(), strict=not bool(cache_folder))
 
-        current_conf = load(cache.conan_conf_path)
-        if "revisions_enabled" in current_conf:  # Invalidate any previous value to be sure
-            replace_in_file(cache.conan_conf_path, "revisions_enabled", "#revisions_enabled",
-                            output=TestBufferConanOutput())
-        if revisions_enabled:
-            replace_in_file(cache.conan_conf_path,
-                            "[general]", "[general]\nrevisions_enabled = 1",
-                            output=TestBufferConanOutput())
+        if revisions_enabled is not None:
+            self._set_revisions(revisions_enabled)
+        elif "TESTING_REVISIONS_ENABLED" in os.environ:
+            value = get_env("TESTING_REVISIONS_ENABLED", True)
+            self._set_revisions(value)
 
     def update_servers(self):
         cache = self.cache
-        Remotes().save(cache.registry_path)
+        Remotes().save(cache.remotes_path)
         registry = cache.registry
 
         for name, server in self.servers.items():
@@ -814,7 +845,18 @@ servers["r2"] = TestServer()
             added_modules = set(sys.modules).difference(old_modules)
             for added in added_modules:
                 sys.modules.pop(added, None)
+        self._handle_cli_result(command_line, assert_error=assert_error, error=error)
+        return error
 
+    def run_command(self, command, cwd=None, assert_error=False):
+        output = TestBufferConanOutput()
+        self.out = output
+        runner = ConanRunner(output=output)
+        ret = runner(command, cwd=cwd or self.current_folder)
+        self._handle_cli_result(command, assert_error=assert_error, error=ret)
+        return ret
+
+    def _handle_cli_result(self, command, assert_error, error):
         if (assert_error and not error) or (not assert_error and error):
             if assert_error:
                 msg = " Command succeeded (failure expected): "
@@ -824,18 +866,10 @@ servers["r2"] = TestServer()
                 header='{:-^80}'.format(msg),
                 output_header='{:-^80}'.format(" Output: "),
                 output_footer='-'*80,
-                cmd=command_line,
+                cmd=command,
                 output=self.out
             )
             raise Exception(exc_message)
-
-        return error
-
-    def run_command(self, command, cwd=None):
-        output = TestBufferConanOutput()
-        self.out = output
-        runner = ConanRunner(output=output)
-        return runner(command, cwd=cwd or self.current_folder)
 
     def save(self, files, path=None, clean_first=False):
         """ helper metod, will store files in the current folder
@@ -858,35 +892,40 @@ servers["r2"] = TestServer()
             else:
                 shutil.copy2(s, d)
 
+    # Higher level operations
+    def remove_all(self):
+        self.run("remove '*' -f")
+
+    def export(self, ref, conanfile=GenConanfile(), args=None):
+        """ export a ConanFile with as "ref" and return the reference with recipe revision
+        """
+        if conanfile:
+            self.save({"conanfile.py": conanfile})
+        self.run("export . {} {}".format(ref.full_str(), args or ""))
+        rrev = self.cache.package_layout(ref).recipe_revision()
+        return ref.copy_with_rev(rrev)
+
 
 class TurboTestClient(TestClient):
 
     tmp_json_name = ".tmp_json"
 
     def __init__(self, *args, **kwargs):
-        if "users" not in kwargs:
+        if "users" not in kwargs and "default_server_user" not in kwargs:
             from collections import defaultdict
             kwargs["users"] = defaultdict(lambda: [("conan", "password")])
 
         super(TurboTestClient, self).__init__(*args, **kwargs)
 
-    def export(self, ref, conanfile=None, args=None, assert_error=False):
-        conanfile = str(conanfile) if conanfile else str(GenConanfile())
-        self.save({"conanfile.py": conanfile})
-        self.run("export . {} {}".format(ref.full_str(), args or ""),
-                 assert_error=assert_error)
-        rrev = self.cache.package_layout(ref).recipe_revision()
-        return ref.copy_with_rev(rrev)
-
-    def create(self, ref, conanfile=None, args=None, assert_error=False):
-        conanfile = str(conanfile) if conanfile else str(GenConanfile())
-        self.save({"conanfile.py": conanfile})
-        self.run("create . {} {} --json {}".format(ref.full_str(),
+    def create(self, ref, conanfile=GenConanfile(), args=None, assert_error=False):
+        if conanfile:
+            self.save({"conanfile.py": conanfile})
+        full_str = "{}@".format(ref.full_str()) if not ref.user else ref.full_str()
+        self.run("create . {} {} --json {}".format(full_str,
                                                    args or "", self.tmp_json_name),
                  assert_error=assert_error)
         rrev = self.cache.package_layout(ref).recipe_revision()
-        json_path = os.path.join(self.current_folder, self.tmp_json_name)
-        data = json.loads(load(json_path))
+        data = json.loads(self.load(self.tmp_json_name))
         if assert_error:
             return None
         package_id = data["installed"][0]["packages"][0]["id"]
@@ -903,8 +942,20 @@ class TurboTestClient(TestClient):
             return ref.copy_with_rev(remote_rrev)
         return
 
-    def remove_all(self):
-        self.run("remove '*' -f")
+    def export_pkg(self, ref, conanfile=GenConanfile(), args=None, assert_error=False):
+        if conanfile:
+            self.save({"conanfile.py": conanfile})
+        self.run("export-pkg . {} {} --json {}".format(ref.full_str(),
+                                                       args or "", self.tmp_json_name),
+                 assert_error=assert_error)
+        rrev = self.cache.package_layout(ref).recipe_revision()
+        data = json.loads(self.load(self.tmp_json_name))
+        if assert_error:
+            return None
+        package_id = data["installed"][0]["packages"][0]["id"]
+        package_ref = PackageReference(ref, package_id)
+        prev = self.cache.package_layout(ref.copy_clear_rev()).package_revision(package_ref)
+        return package_ref.copy_with_revs(rrev, prev)
 
     def recipe_exists(self, ref):
         return self.cache.package_layout(ref).recipe_exists()
@@ -923,8 +974,7 @@ class TurboTestClient(TestClient):
         self.run("search {} --json {} {} {}".format(pattern, self.tmp_json_name, remote,
                                                     args or ""),
                  assert_error=assert_error)
-        json_path = os.path.join(self.current_folder, self.tmp_json_name)
-        data = json.loads(load(json_path))
+        data = json.loads(self.load(self.tmp_json_name))
         return data
 
     def massive_uploader(self, ref, revisions, num_prev, remote=None):
@@ -967,169 +1017,6 @@ class TurboTestClient(TestClient):
         _, rev = create_local_svn_checkout(files, repo_url, folder=self.current_folder,
                                            rel_project_path=subpath, delete_checkout=False)
         return rev
-
-
-class GenConanfile(object):
-    """
-    USAGE:
-
-    x = GenConanfile().with_import("import os").\
-        with_setting("os").\
-        with_option("shared", [True, False]).\
-        with_default_option("shared", True).\
-        with_build_msg("holaaa").\
-        with_build_msg("adiooos").\
-        with_package_file("file.txt", "hola").\
-        with_package_file("file2.txt", "hola")
-    """
-
-    def __init__(self):
-        self._imports = ["from conans import ConanFile"]
-        self._settings = []
-        self._options = {}
-        self._default_options = {}
-        self._package_files = {}
-        self._package_files_env = {}
-        self._build_messages = []
-        self._scm = {}
-        self._requirements = []
-        self._revision_mode = None
-
-    def with_revision_mode(self, revision_mode):
-        self._revision_mode = revision_mode
-        return self
-
-    def with_scm(self, scm):
-        self._scm = scm
-        return self
-
-    def with_requirement(self, ref):
-        self._requirements.append(ref)
-        return self
-
-    def with_import(self, i):
-        if i not in self._imports:
-            self._imports.append(i)
-        return self
-
-    def with_setting(self, setting):
-        self._settings.append(setting)
-        return self
-
-    def with_option(self, option_name, values):
-        self._options[option_name] = values
-        return self
-
-    def with_default_option(self, option_name, value):
-        self._default_options[option_name] = value
-        return self
-
-    def with_package_file(self, file_name, contents=None, env_var=None):
-        if not contents and not env_var:
-            raise Exception("Specify contents or env_var")
-        self.with_import("import os")
-        self.with_import("from conans import tools")
-        if contents:
-            self._package_files[file_name] = contents
-        if env_var:
-            self._package_files_env[file_name] = env_var
-        return self
-
-    def with_build_msg(self, msg):
-        self._build_messages.append(msg)
-        return self
-
-    @property
-    def _scm_line(self):
-        if not self._scm:
-            return ""
-        line = ", ".join('"%s": "%s"' % (k, v) for k, v in self._scm.items())
-        return "scm = {%s}" % line
-
-    @property
-    def _revision_mode_line(self):
-        if not self._revision_mode:
-            return ""
-        line = "revision_mode=\"{}\"".format(self._revision_mode)
-        return line
-
-    @property
-    def _settings_line(self):
-        if not self._settings:
-            return ""
-        line = ", ".join('"%s"' % s for s in self._settings)
-        return "settings = {}".format(line)
-
-    @property
-    def _options_line(self):
-        if not self._options:
-            return ""
-        line = ", ".join('"%s": %s' % (k, v) for k, v in self._options.items())
-        tmp = "options = {%s}" % line
-        if self._default_options:
-            line = ", ".join('"%s": %s' % (k, v) for k, v in self._default_options.items())
-            tmp += "\n    default_options = {%s}" % line
-        return tmp
-
-    @property
-    def _requirements_line(self):
-        if not self._requirements:
-            return ""
-        line = ", ".join(['"{}"'.format(r.full_str()) for r in self._requirements])
-        tmp = "requires = %s" % line
-        return tmp
-
-    @property
-    def _package_method(self):
-        lines = []
-        if self._package_files:
-            lines = ['        tools.save(os.path.join(self.package_folder, "{}"), "{}")'
-                     ''.format(key, value)
-                     for key, value in self._package_files.items()]
-
-        if self._package_files_env:
-            lines.extend(['        tools.save(os.path.join(self.package_folder, "{}"), '
-                          'os.getenv("{}"))'.format(key, value)
-                          for key, value in self._package_files_env.items()])
-
-        if not lines:
-            return ""
-        return """
-    def package(self):
-{}
-    """.format("\n".join(lines))
-
-    @property
-    def _build_method(self):
-        if not self._build_messages:
-            return ""
-        lines = ['        self.output.warn("{}")'.format(m) for m in self._build_messages]
-        return """
-    def build(self):
-{}
-    """.format("\n".join(lines))
-
-    def __repr__(self):
-        ret = []
-        ret.extend(self._imports)
-        ret.append("class HelloConan(ConanFile):")
-        if self._requirements_line:
-            ret.append("    {}".format(self._requirements_line))
-        if self._scm:
-            ret.append("    {}".format(self._scm_line))
-        if self._revision_mode_line:
-            ret.append("    {}".format(self._revision_mode_line))
-        if self._settings_line:
-            ret.append("    {}".format(self._settings_line))
-        if self._options_line:
-            ret.append("    {}".format(self._options_line))
-        if self._build_method:
-            ret.append("    {}".format(self._build_method))
-        if self._package_method:
-            ret.append("    {}".format(self._package_method))
-        if len(ret) == 2:
-            ret.append("    pass")
-        return "\n".join(ret)
 
 
 class StoppableThreadBottle(threading.Thread):

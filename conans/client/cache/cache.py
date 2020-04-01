@@ -6,7 +6,7 @@ from os.path import join
 
 from conans.client.cache.editable import EditablePackages
 from conans.client.cache.remote_registry import RemoteRegistry
-from conans.client.conf import ConanClientConfigParser, default_client_conf, default_settings_yml
+from conans.client.conf import ConanClientConfigParser, get_default_client_conf, get_default_settings_yml
 from conans.client.conf.detect import detect_defaults_settings
 from conans.client.output import Color
 from conans.client.profile_loader import read_profile
@@ -14,13 +14,12 @@ from conans.errors import ConanException
 from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
-from conans.paths import PUT_HEADERS
+from conans.paths import ARTIFACTS_PROPERTIES_FILE
 from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
 from conans.paths.package_layouts.package_editable_layout import PackageEditableLayout
 from conans.unicode import get_cwd
 from conans.util.files import list_folder_subdirs, load, normalize, save
 from conans.util.locks import Lock
-
 
 CONAN_CONF = 'conan.conf'
 CONAN_SETTINGS = "settings.yml"
@@ -72,18 +71,16 @@ class ClientCache(object):
         self.editable_packages = EditablePackages(self.cache_folder)
         # paths
         self._store_folder = self.config.storage_path or self.cache_folder
+        # Just call it to make it raise in case of short_paths misconfiguration
+        self.config.short_paths_home
 
     def all_refs(self):
         subdirs = list_folder_subdirs(basedir=self._store_folder, level=4)
-        return [ConanFileReference(*folder.split("/")) for folder in subdirs]
+        return [ConanFileReference.load_dir_repr(folder) for folder in subdirs]
 
     @property
     def store(self):
         return self._store_folder
-
-    def package(self, pref, short_paths=False):
-        # TODO: This is deprecated, only used in testing
-        return self.package_layout(pref.ref, short_paths).package(pref)
 
     def installed_as_editable(self, ref):
         return isinstance(self.package_layout(ref), PackageEditableLayout)
@@ -92,7 +89,7 @@ class ClientCache(object):
     def config_install_file(self):
         return os.path.join(self.cache_folder, "config_install.json")
 
-    def package_layout(self, ref, short_paths=None, *args, **kwargs):
+    def package_layout(self, ref, short_paths=None):
         assert isinstance(ref, ConanFileReference), "It is a {}".format(type(ref))
         edited_ref = self.editable_packages.get(ref.copy_clear_rev())
         if edited_ref:
@@ -106,7 +103,7 @@ class ClientCache(object):
                                       short_paths=short_paths, no_lock=self._no_locks())
 
     @property
-    def registry_path(self):
+    def remotes_path(self):
         return join(self.cache_folder, REMOTES)
 
     @property
@@ -119,16 +116,16 @@ class ClientCache(object):
         return self._no_lock
 
     @property
-    def put_headers_path(self):
-        return join(self.cache_folder, PUT_HEADERS)
+    def artifacts_properties_path(self):
+        return join(self.cache_folder, ARTIFACTS_PROPERTIES_FILE)
 
-    def read_put_headers(self):
+    def read_artifacts_properties(self):
         ret = {}
-        if not os.path.exists(self.put_headers_path):
-            save(self.put_headers_path, "")
+        if not os.path.exists(self.artifacts_properties_path):
+            save(self.artifacts_properties_path, "")
             return ret
         try:
-            contents = load(self.put_headers_path)
+            contents = load(self.artifacts_properties_path)
             for line in contents.splitlines():
                 if line and not line.strip().startswith("#"):
                     tmp = line.split("=", 1)
@@ -139,13 +136,13 @@ class ClientCache(object):
                     ret[str(name)] = str(value)
             return ret
         except Exception:
-            raise ConanException("Invalid %s file!" % self.put_headers_path)
+            raise ConanException("Invalid %s file!" % self.artifacts_properties_path)
 
     @property
     def config(self):
         if not self._config:
             if not os.path.exists(self.conan_conf_path):
-                save(self.conan_conf_path, normalize(default_client_conf))
+                save(self.conan_conf_path, normalize(get_default_client_conf()))
 
             self._config = ConanClientConfigParser(self.conan_conf_path)
         return self._config
@@ -171,8 +168,7 @@ class ClientCache(object):
         if os.path.isabs(self.config.default_profile):
             return self.config.default_profile
         else:
-            return join(self.cache_folder, PROFILES_FOLDER,
-                        self.config.default_profile)
+            return join(self.cache_folder, PROFILES_FOLDER, self.config.default_profile)
 
     @property
     def hooks_path(self):
@@ -217,8 +213,8 @@ class ClientCache(object):
            settings without values"""
 
         if not os.path.exists(self.settings_path):
-            save(self.settings_path, normalize(default_settings_yml))
-            settings = Settings.loads(default_settings_yml)
+            save(self.settings_path, normalize(get_default_settings_yml()))
+            settings = Settings.loads(get_default_settings_yml())
         else:
             content = load(self.settings_path)
             settings = Settings.loads(content)
@@ -260,8 +256,8 @@ def _mix_settings_with_env(settings):
     need to specify all the subsettings, the file defaulted will be
     ignored"""
 
-    def get_env_value(name):
-        env_name = "CONAN_ENV_%s" % name.upper().replace(".", "_")
+    def get_env_value(name_):
+        env_name = "CONAN_ENV_%s" % name_.upper().replace(".", "_")
         return os.getenv(env_name, None)
 
     def get_setting_name(env_name):

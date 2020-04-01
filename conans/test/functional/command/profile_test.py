@@ -5,6 +5,7 @@ from conans.test.utils.profiles import create_profile
 from conans.test.utils.tools import TestClient
 from conans.util.files import load
 import platform
+import json
 
 
 class ProfileTest(unittest.TestCase):
@@ -50,6 +51,15 @@ class ProfileTest(unittest.TestCase):
         client.run("profile list")
         profiles.sort()
         self.assertEqual(profiles, list(str(client.out).splitlines()))
+
+        # Test profile list json file
+        client.run("profile list --json profile_list.json")
+        json_path = os.path.join(client.current_folder, "profile_list.json")
+        self.assertTrue(os.path.exists(json_path))
+        json_content = load(json_path)
+        json_obj = json.loads(json_content)
+        self.assertEqual(list, type(json_obj))
+        self.assertEqual(profiles, json_obj)
 
     def show_test(self):
         client = TestClient()

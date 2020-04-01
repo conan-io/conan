@@ -2,7 +2,6 @@ import os
 import unittest
 
 from conans.test.utils.tools import TestClient
-from conans.util.files import load
 
 
 class SysrootTest(unittest.TestCase):
@@ -40,6 +39,6 @@ class Pkg(ConanFile):
 
         # Install conanfile and check conaninfo.txt
         client.run("install .")
-        bili = load(os.path.join(client.current_folder, "conanbuildinfo.txt"))
+        bili = client.load("conanbuildinfo.txt")
         self.assertIn(os.linesep.join(["[sysroot_sysroot]", "HelloSysRoot"]), bili)
         self.assertIn(os.linesep.join(["[sysroot]", "HelloSysRoot"]), bili)

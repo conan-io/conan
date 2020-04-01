@@ -1,11 +1,12 @@
 import os
+import textwrap
 import unittest
 
 from conans.client.importer import IMPORTS_MANIFESTS
 from conans.model.manifest import FileTreeManifest
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
-from conans.util.files import load, mkdir
+from conans.util.files import mkdir
 
 conanfile = """
 from conans import ConanFile
@@ -102,7 +103,7 @@ class ConanLib(ConanFile):
             self.client.save({"conanfile.py": conanfile2}, clean_first=True)
             self.client.run("install conanfile.py -e MY_IMPORT_PATH=%s" % folder)
             self.assertEqual("Hello",
-                             load(os.path.join(self.client.current_folder, folder, "file1.txt")))
+                             self.client.load(os.path.join(folder, "file1.txt")))
 
     def imports_error_test(self):
         self.client.save({"conanfile.txt": test1}, clean_first=True)
@@ -172,7 +173,7 @@ class ConanLib(ConanFile):
         self.assertIn("Removed imports manifest file", self.client.out)
 
     def _check_manifest(self):
-        manifest_content = load(os.path.join(self.client.current_folder, IMPORTS_MANIFESTS))
+        manifest_content = self.client.load(IMPORTS_MANIFESTS)
         manifest = FileTreeManifest.loads(manifest_content)
         self.assertEqual(manifest.file_sums,
                          {os.path.join(self.client.current_folder, "file1.txt"):
@@ -212,3 +213,73 @@ class ConanLib(ConanFile):
         self.client.run("imports ./conanfile.txt")
         self.assertIn("file1.txt", os.listdir(self.client.current_folder))
         self.assertIn("file2.txt", os.listdir(self.client.current_folder))
+
+
+class SymbolicImportsTest(unittest.TestCase):
+    """ Tests to cover the functionality of importing from @bindirs, @libdirs, etc
+    """
+    def setUp(self):
+        pkg = textwrap.dedent("""
+            from conans import ConanFile
+            class Pkg(ConanFile):
+                exports = "*"
+                def package(self):
+                    self.copy("*.bin", "mybin")  # USE DIFFERENT FOLDERS
+                    self.copy("*.lib", "mylib")
+                    self.copy("*.a", "myotherlib")
+                def package_info(self):
+                    self.cpp_info.bindirs = ["mybin"]
+                    self.cpp_info.libdirs = ["mylib", "myotherlib"]
+            """)
+        self.client = TestClient()
+        self.client.save({"conanfile.py": pkg,
+                          "myfile.bin": "hello world",
+                          "myfile.lib": "bye world",
+                          "myfile.a": "bye moon"})
+        consumer = textwrap.dedent("""
+            from conans import ConanFile, load
+            class Pkg(ConanFile):
+                requires = "pkg/0.1"
+                def build(self):
+                    self.output.info("MSG: %s" % load("myfile.txt"))
+                def imports(self):
+                    self.copy("*", src="@bindirs", dst="bin")
+                    self.copy("*", src="@libdirs", dst="lib")
+            """)
+        self.consumer = TestClient(cache_folder=self.client.cache_folder)
+        self.consumer.save({"conanfile.py": consumer}, clean_first=True)
+
+    def imports_symbolic_names_test(self):
+        self.client.run("create . pkg/0.1@")
+        self.consumer.run("install .")
+        self.assertEqual("hello world", self.consumer.load("bin/myfile.bin"))
+        self.assertEqual("bye world", self.consumer.load("lib/myfile.lib"))
+        self.assertEqual("bye moon", self.consumer.load("lib/myfile.a"))
+
+    def error_unknown_test(self):
+        self.client.run("create . pkg/0.1@")
+        consumer = textwrap.dedent("""
+            from conans import ConanFile
+            class Pkg(ConanFile):
+                requires = "pkg/0.1"
+                def imports(self):
+                    self.copy("*", src="@unknown_unexisting_dir", dst="bin")
+            """)
+        self.consumer.save({"conanfile.py": consumer}, clean_first=True)
+        self.consumer.run("install .", assert_error=True)
+        self.assertIn("Import from unknown package folder '@unknown_unexisting_dir'",
+                      self.consumer.out)
+
+    def imports_symbolic_from_editable_test(self):
+        layout = textwrap.dedent("""
+            [libdirs]
+            .
+            [bindirs]
+            .
+            """)
+        self.client.save({"layout": layout})
+        self.client.run("editable add . pkg/0.1@ --layout=layout")
+        self.consumer.run("install .")
+        self.assertEqual("hello world", self.consumer.load("bin/myfile.bin"))
+        self.assertEqual("bye world", self.consumer.load("lib/myfile.lib"))
+        self.assertEqual("bye moon", self.consumer.load("lib/myfile.a"))

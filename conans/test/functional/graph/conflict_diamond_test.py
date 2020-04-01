@@ -40,7 +40,11 @@ class ConflictDiamondTest(unittest.TestCase):
         self._export("Hello3", "0.1", ["Hello1/0.1@lasote/stable", "Hello2/0.1@lasote/stable"],
                      export=False)
         self.client.run("install . --build missing", assert_error=True)
-        self.assertIn("Conflict in Hello2/0.1@lasote/stable", self.client.out)
+        self.assertIn("Conflict in Hello2/0.1@lasote/stable:\n"
+                      "    'Hello2/0.1@lasote/stable' requires 'Hello0/0.2@lasote/stable' "
+                      "while 'Hello1/0.1@lasote/stable' requires 'Hello0/0.1@lasote/stable'.\n"
+                      "    To fix this conflict you need to override the package 'Hello0' in "
+                      "your root package.", self.client.out)
         self.assertNotIn("Generated conaninfo.txt", self.client.out)
 
     def test_override_silent(self):
@@ -51,7 +55,7 @@ class ConflictDiamondTest(unittest.TestCase):
                      ["Hello1/0.1@lasote/stable", "Hello2/0.1@lasote/stable",
                       "Hello0/0.1@lasote/stable"], export=False)
         self.client.run("install . --build missing", assert_error=False)
-        self.assertIn("Hello2/0.1@lasote/stable requirement Hello0/0.2@lasote/stable overridden"
+        self.assertIn("Hello2/0.1@lasote/stable: requirement Hello0/0.2@lasote/stable overridden"
                       " by Hello3/0.1 to Hello0/0.1@lasote/stable",
                       self.client.out)
 
@@ -81,7 +85,7 @@ class ConflictDiamondTest(unittest.TestCase):
                                           '("Hello0/0.1@lasote/stable", "override"),)')
             self.client.save({CONANFILE: conanfile})
             self.client.run("install . --build missing")
-            self.assertIn("Hello2/0.1@lasote/stable requirement Hello0/0.2@lasote/stable overridden"
+            self.assertIn("Hello2/0.1@lasote/stable: requirement Hello0/0.2@lasote/stable overridden"
                           " by Hello3/0.1 to Hello0/0.1@lasote/stable",
                           self.client.out)
 
@@ -93,6 +97,3 @@ class ConflictDiamondTest(unittest.TestCase):
             self.assertEqual(hello0["reference"], "Hello0/0.1@lasote/stable")
             self.assertListEqual(sorted(hello0["required_by"]),
                                  sorted(["Hello2/0.1@lasote/stable", "Hello1/0.1@lasote/stable"]))
-
-
-

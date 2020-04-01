@@ -100,6 +100,9 @@ class SettingsLoadsTest(unittest.TestCase):
         self.assertEqual(settings.os, "Windows")
         self.assertEqual(settings.get_safe("compiler.version"), None)
         self.assertEqual(settings.get_safe("build_type"), None)
+        self.assertEqual("Release", settings.get_safe("build_type", "Release"))
+        self.assertEqual(False, settings.get_safe("build_type", False))
+        self.assertEqual("Windows", settings.get_safe("os", "Linux"))
 
     def test_none_subsetting(self):
         yml = """os:

@@ -9,9 +9,14 @@ from conans.model.ref import PackageReference
 
 def _get_python_requires(conanfile):
     result = set()
-    for _, py_require in getattr(conanfile, "python_requires", {}).items():
-        result.add(py_require.ref)
-        result.update(_get_python_requires(py_require.conanfile))
+    python_requires = getattr(conanfile, "python_requires", None)
+    if isinstance(python_requires, dict):  # Old python requires
+        for _, py_require in python_requires.items():
+            result.add(py_require.ref)
+            result.update(_get_python_requires(py_require.conanfile))
+    elif python_requires:
+        result.update(conanfile.python_requires.all_refs())
+
     return result
 
 
@@ -19,12 +24,13 @@ def print_graph(deps_graph, out):
     requires = OrderedDict()
     build_requires = OrderedDict()
     python_requires = set()
+    build_time_nodes = deps_graph.build_time_nodes()
     for node in sorted(deps_graph.nodes):
         python_requires.update(_get_python_requires(node.conanfile))
         if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
             continue
         pref = PackageReference(node.ref, node.package_id)
-        if node.build_require:
+        if node in build_time_nodes:  # TODO: May use build_require_context information
             build_requires.setdefault(pref, []).append(node)
         else:
             requires.setdefault(pref, []).append(node)

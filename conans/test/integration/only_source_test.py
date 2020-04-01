@@ -5,7 +5,6 @@ from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import TestClient, TestServer
-from conans.util.files import load
 
 
 class OnlySourceTest(unittest.TestCase):
@@ -30,7 +29,7 @@ class OnlySourceTest(unittest.TestCase):
 
         # Now test out Hello2
         self._create(client, "Hello2", "2.2", ["Hello1/1.1@lasote/stable"], export=True)
-        hello2conanfile = load(os.path.join(client.current_folder, CONANFILE))
+        hello2conanfile = client.load(CONANFILE)
         client.save({CONANFILE: hello2conanfile})
 
         test_conanfile = '''

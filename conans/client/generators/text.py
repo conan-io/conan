@@ -13,6 +13,8 @@ from conans.util.log import logger
 
 class DepsCppTXT(object):
     def __init__(self, cpp_info):
+        self.version = cpp_info.version
+        self.name = cpp_info.name
         self.include_paths = "\n".join(p.replace("\\", "/")
                                        for p in cpp_info.include_paths)
         self.lib_paths = "\n".join(p.replace("\\", "/")
@@ -22,6 +24,7 @@ class DepsCppTXT(object):
         self.build_paths = "\n".join(p.replace("\\", "/")
                                      for p in cpp_info.build_paths)
         self.libs = "\n".join(cpp_info.libs)
+        self.system_libs = "\n".join(cpp_info.system_libs)
         self.defines = "\n".join(cpp_info.defines)
         self.cxxflags = "\n".join(cpp_info.cxxflags)
         self.cflags = "\n".join(cpp_info.cflags)
@@ -31,6 +34,9 @@ class DepsCppTXT(object):
                                    for p in cpp_info.bin_paths)
         self.rootpath = "%s" % cpp_info.rootpath.replace("\\", "/")
         self.sysroot = "%s" % cpp_info.sysroot.replace("\\", "/") if cpp_info.sysroot else ""
+        self.frameworks = "\n".join(cpp_info.frameworks)
+        self.framework_paths = "\n".join(p.replace("\\", "/")
+                                         for p in cpp_info.framework_paths)
 
 
 class TXTGenerator(Generator):
@@ -104,8 +110,12 @@ class TXTGenerator(Generator):
                     var_name, config = tokens
                 else:
                     config = None
-                tokens = var_name.split("_", 1)
-                field = tokens[0]
+                if 'system_libs' in var_name:
+                    tokens = var_name.split("system_libs_", 1)
+                    field = 'system_libs'
+                else:
+                    tokens = var_name.split("_", 1)
+                    field = tokens[0]
                 dep = tokens[1] if len(tokens) == 2 else None
                 if field == "cppflags":
                     field = "cxxflags"
@@ -123,7 +133,7 @@ class TXTGenerator(Generator):
                     item_to_apply = cpp_info if not config else getattr(cpp_info, config)
 
                     for key, value in fields.items():
-                        if key in ['rootpath', 'sysroot']:
+                        if key in ['rootpath', 'sysroot', 'version', 'name']:
                             value = value[0]
                         setattr(item_to_apply, key, value)
             return deps_cpp_info
@@ -140,13 +150,16 @@ class TXTGenerator(Generator):
                     '[resdirs{dep}{config}]\n{deps.res_paths}\n\n'
                     '[builddirs{dep}{config}]\n{deps.build_paths}\n\n'
                     '[libs{dep}{config}]\n{deps.libs}\n\n'
+                    '[system_libs{dep}{config}]\n{deps.system_libs}\n\n'
                     '[defines{dep}{config}]\n{deps.defines}\n\n'
                     '[cppflags{dep}{config}]\n{deps.cxxflags}\n\n'  # Backwards compatibility
                     '[cxxflags{dep}{config}]\n{deps.cxxflags}\n\n'
                     '[cflags{dep}{config}]\n{deps.cflags}\n\n'
                     '[sharedlinkflags{dep}{config}]\n{deps.sharedlinkflags}\n\n'
                     '[exelinkflags{dep}{config}]\n{deps.exelinkflags}\n\n'
-                    '[sysroot{dep}{config}]\n{deps.sysroot}\n\n')
+                    '[sysroot{dep}{config}]\n{deps.sysroot}\n\n'
+                    '[frameworks{dep}{config}]\n{deps.frameworks}\n\n'
+                    '[frameworkdirs{dep}{config}]\n{deps.framework_paths}\n\n')
 
         sections = []
         deps = DepsCppTXT(self.deps_build_info)
@@ -159,7 +172,9 @@ class TXTGenerator(Generator):
             sections.append(all_flags)
 
         # Makes no sense to have an accumulated rootpath
-        template_deps = template + '[rootpath{dep}]\n{deps.rootpath}\n\n'
+        template_deps = (template + '[rootpath{dep}]\n{deps.rootpath}\n\n' +
+                         '[name{dep}]\n{deps.name}\n\n' +
+                         '[version{dep}]\n{deps.version}\n\n')
 
         for dep_name, dep_cpp_info in self.deps_build_info.dependencies:
             dep = "_" + dep_name

@@ -2,7 +2,10 @@ import os
 import subprocess
 import tempfile
 
+from conans.client.tools.oss import OSInfo
+from conans.errors import ConanException
 from conans.util.env_reader import get_env
+from conans.util.files import decode_text
 from conans.util.files import load, mkdir, rmdir, save
 from conans.util.log import logger
 from conans.util.sha import sha256
@@ -58,8 +61,24 @@ def path_shortener(path, short_paths):
 
     short_home = os.getenv("CONAN_USER_HOME_SHORT")
     if not short_home:
-        drive = os.path.splitdrive(path)[0]
-        short_home = os.path.join(drive, os.sep, ".conan")
+        if OSInfo().is_cygwin:
+            try:
+                cmd = ['cygpath', path, '--unix']
+                out, _ = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=False).communicate()
+                out = decode_text(out)
+                if out.startswith('/cygdrive/'):  # It was a Windows 'path'
+                    _, _, drive, _ = out.split('/', 3)
+                    short_home = os.path.join('/cygdrive', drive, '.conan')
+                else:  # It was a cygwin path, use a path inside the user home
+                    short_home = os.path.join(os.path.expanduser("~"), '.conan_short')
+            except Exception:
+                raise ConanException("Conan failed to create the short_paths home for path '{}'"
+                                     " in Cygwin. Please report this issue. You can use environment"
+                                     " variable 'CONAN_USER_HOME_SHORT' to set the short_paths"
+                                     " home.".format(path))
+        else:
+            drive = os.path.splitdrive(path)[0]
+            short_home = os.path.join(drive, os.sep, ".conan")
     mkdir(short_home)
 
     # Workaround for short_home living in NTFS file systems. Give full control permission
@@ -70,7 +89,7 @@ def path_shortener(path, short_paths):
         domainname = "%s\%s" % (userdomain, username) if userdomain else username
         cmd = r'cacls %s /E /G "%s":F' % (short_home, domainname)
         subprocess.check_output(cmd, stderr=subprocess.STDOUT)  # Ignoring any returned output, quiet
-    except subprocess.CalledProcessError:
+    except (subprocess.CalledProcessError, FileNotFoundError):
         # cmd can fail if trying to set ACL in non NTFS drives, ignoring it.
         pass
 

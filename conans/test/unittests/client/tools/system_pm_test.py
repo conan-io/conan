@@ -2,19 +2,17 @@ import mock
 import platform
 import six
 import unittest
-
 from six import StringIO
 
 from conans import tools
 from conans.client.output import ConanOutput
 from conans.client.tools.files import which
 from conans.client.tools.oss import OSInfo
-from conans.client.tools.system_pm import ChocolateyTool, SystemPackageTool,\
-    AptTool
+from conans.client.tools.system_pm import ChocolateyTool, SystemPackageTool, AptTool
 from conans.errors import ConanException
 from conans.test.unittests.util.tools_test import RunnerMock
-from conans.test.utils.tools import TestBufferConanOutput
 from conans.test.utils.conanfile import MockSettings, MockConanfile
+from conans.test.utils.tools import TestBufferConanOutput
 
 
 class SystemPackageToolTest(unittest.TestCase):
@@ -63,7 +61,7 @@ class SystemPackageToolTest(unittest.TestCase):
         os_info.is_macos = False
         os_info.is_linux = True
         os_info.is_windows = False
-        os_info.linux_distro = "fedora"  # Will instantiate YumTool
+        os_info.linux_distro = "fedora"  # Will instantiate DnfTool
 
         with six.assertRaisesRegex(self, ConanException, "add_repository not implemented"):
             new_out = StringIO()
@@ -150,6 +148,13 @@ class SystemPackageToolTest(unittest.TestCase):
             spt.update()
             self.assertEqual(runner.command_called, "sudo -A apt-get update")
 
+            with mock.patch("conans.client.tools.oss.which", return_value=True):
+                os_info.linux_distro = "fedora"
+                spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
+                spt.update()
+                self.assertEqual(runner.command_called, "sudo -A dnf check-update -y")
+
+            # Without DNF in the path,
             os_info.linux_distro = "fedora"
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             spt.update()
@@ -424,6 +429,22 @@ class SystemPackageToolTest(unittest.TestCase):
             self.assertNotIn("CONAN_SYSREQUIRES_MODE", str(exc.exception))
             self.assertEqual(7, runner.calls)
 
+        # Check default_mode. The environment variable is not set and should behave like
+        # the default_mode
+        with tools.environment_append({
+            "CONAN_SYSREQUIRES_MODE": None,
+            "CONAN_SYSREQUIRES_SUDO": "True"
+        }):
+            packages = ["verify_package", "verify_another_package", "verify_yet_another_package"]
+            runner = RunnerMultipleMock(["sudo -A apt-get update"])
+            spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out), output=self.out, 
+                                    default_mode="verify")
+            with self.assertRaises(ConanException) as exc:
+                spt.install(packages)
+            self.assertIn("Aborted due to CONAN_SYSREQUIRES_MODE=", str(exc.exception))
+            self.assertIn('\n'.join(packages), self.out)
+            self.assertEqual(3, runner.calls)
+
     def system_package_tool_installed_test(self):
         if (platform.system() != "Linux" and platform.system() != "Macos" and
                 platform.system() != "Windows"):
@@ -438,8 +459,10 @@ class SystemPackageToolTest(unittest.TestCase):
             expected_package = "chocolatey"
         # The expected should be installed on development/testing machines
         self.assertTrue(spt._tool.installed(expected_package))
+        self.assertTrue(spt.installed(expected_package))
         # This package hopefully doesn't exist
         self.assertFalse(spt._tool.installed("oidfjgesiouhrgioeurhgielurhgaeiorhgioearhgoaeirhg"))
+        self.assertFalse(spt.installed("oidfjgesiouhrgioeurhgielurhgaeiorhgioearhgoaeirhg"))
 
     def system_package_tool_fail_when_not_0_returned_test(self):
         def get_linux_error_message():
@@ -452,6 +475,8 @@ class SystemPackageToolTest(unittest.TestCase):
                 update_command = "sudo -A apt-get update"
             elif os_info.with_yum:
                 update_command = "sudo -A yum check-update -y"
+            elif os_info.with_dnf:
+                update_command = "sudo -A dnf check-update -y"
             elif os_info.with_zypper:
                 update_command = "sudo -A zypper --non-interactive ref"
             elif os_info.with_pacman:

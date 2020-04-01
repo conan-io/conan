@@ -19,6 +19,7 @@ from conans.client.tools import files as tools_files, net as tools_net, oss as t
 from conans.client.tools.env import *  # pylint: disable=unused-import
 from conans.client.tools.pkg_config import *  # pylint: disable=unused-import
 from conans.client.tools.scm import *  # pylint: disable=unused-import
+from conans.client.tools.settings import *  # pylint: disable=unused-import
 from conans.client.tools.apple import *
 from conans.client.tools.android import *
 # Tools form conans.util
@@ -27,24 +28,24 @@ from conans.util.files import _generic_algorithm_sum, load, md5, md5sum, mkdir, 
     rmdir, save as files_save, save_append, sha1sum, sha256sum, to_file_bytes, touch
 from conans.util.log import logger
 from conans.client.tools.version import Version
+from conans.client.build.cppstd_flags import cppstd_flag_new as cppstd_flag  # pylint: disable=unused-import
 
 
 # This global variables are intended to store the configuration of the running Conan application
 _global_output = None
 _global_requester = None
+_global_config = None
 
 
-def set_global_instances(the_output, the_requester):
+def set_global_instances(the_output, the_requester, config):
     global _global_output
     global _global_requester
-
-    old_output, old_requester = _global_output, _global_requester
+    global _global_config
 
     # TODO: pass here the configuration file, and make the work here (explicit!)
     _global_output = the_output
     _global_requester = the_requester
-
-    return old_output, old_requester
+    _global_config = config
 
 
 def get_global_instances():
@@ -52,7 +53,8 @@ def get_global_instances():
 
 
 # Assign a default, will be overwritten in the factory of the ConanAPI
-set_global_instances(the_output=ConanOutput(sys.stdout, sys.stderr, True), the_requester=requests)
+set_global_instances(the_output=ConanOutput(sys.stdout, sys.stderr, True), the_requester=requests,
+                     config=None)
 
 
 """
@@ -138,6 +140,11 @@ class AptTool(tools_system_pm.AptTool):
         super(AptTool, self).__init__(output=_global_output, *args, **kwargs)
 
 
+class DnfTool(tools_system_pm.DnfTool):
+    def __init__(self, *args, **kwargs):
+        super(DnfTool, self).__init__(output=_global_output, *args, **kwargs)
+
+
 class YumTool(tools_system_pm.YumTool):
     def __init__(self, *args, **kwargs):
         super(YumTool, self).__init__(output=_global_output, *args, **kwargs)
@@ -213,6 +220,7 @@ def vcvars_dict(*args, **kwargs):
 
 def latest_vs_version_installed(*args, **kwargs):
     return tools_win.latest_vs_version_installed(output=_global_output, *args, **kwargs)
+
 
 
 # Ready to use objects.

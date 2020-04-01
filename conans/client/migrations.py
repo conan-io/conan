@@ -4,6 +4,8 @@ import shutil
 from conans import DEFAULT_REVISION_V1
 from conans.client import migrations_settings
 from conans.client.cache.cache import CONAN_CONF, PROFILES_FOLDER
+from conans.client.cache.cache import ClientCache
+from conans.client.cache.remote_registry import migrate_registry_file
 from conans.client.conf.config_installer import _ConfigOrigin, _save_configs
 from conans.client.tools import replace_in_file
 from conans.errors import ConanException
@@ -16,19 +18,18 @@ from conans.paths import EXPORT_SOURCES_DIR_OLD
 from conans.paths import PACKAGE_METADATA
 from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
 from conans.util.files import list_folder_subdirs, load, save
-from conans.client.cache.remote_registry import migrate_registry_file
 
 
 class ClientMigrator(Migrator):
 
-    def __init__(self, cache, current_version, out):
-        self.cache = cache
-        super(ClientMigrator, self).__init__(cache.cache_folder, cache.store,
+    def __init__(self, cache_folder, current_version, out):
+        self.cache = ClientCache(cache_folder, out)
+        super(ClientMigrator, self).__init__(self.cache.cache_folder, self.cache.store,
                                              current_version, out)
 
     def _update_settings_yml(self, old_version):
 
-        from conans.client.conf import default_settings_yml
+        from conans.client.conf import get_default_settings_yml
         settings_path = self.cache.settings_path
         if not os.path.exists(settings_path):
             self.out.warn("Migration: This conan installation doesn't have settings yet")
@@ -39,7 +40,7 @@ class ClientMigrator(Migrator):
 
         def save_new():
             new_path = self.cache.settings_path + ".new"
-            save(new_path, default_settings_yml)
+            save(new_path, get_default_settings_yml())
             self.out.warn("*" * 40)
             self.out.warn("settings.yml is locally modified, can't be updated")
             self.out.warn("The new settings.yml has been stored in: %s" % new_path)
@@ -48,12 +49,12 @@ class ClientMigrator(Migrator):
         self.out.warn("Migration: Updating settings.yml")
         if hasattr(migrations_settings, var_name):
             version_default_contents = getattr(migrations_settings, var_name)
-            if version_default_contents != default_settings_yml:
+            if version_default_contents != get_default_settings_yml():
                 current_settings = load(self.cache.settings_path)
                 if current_settings != version_default_contents:
                     save_new()
                 else:
-                    save(self.cache.settings_path, default_settings_yml)
+                    save(self.cache.settings_path, get_default_settings_yml())
             else:
                 self.out.info("Migration: Settings already up to date")
         else:
@@ -102,6 +103,9 @@ class ClientMigrator(Migrator):
         if old_version < Version("1.15.0"):
             migrate_registry_file(self.cache, self.out)
 
+        if old_version < Version("1.19.0"):
+            migrate_localdb_refresh_token(self.cache, self.out)
+
 
 def _get_refs(cache):
     folders = list_folder_subdirs(cache.store, 4)
@@ -112,6 +116,21 @@ def _get_prefs(layout):
     packages_folder = layout.packages()
     folders = list_folder_subdirs(packages_folder, 1)
     return [PackageReference(layout.ref, s) for s in folders]
+
+
+def migrate_localdb_refresh_token(cache, out):
+    from conans.client.store.localdb import LocalDB
+    from sqlite3 import OperationalError
+
+    localdb = LocalDB.create(cache.localdb)
+    with localdb._connect() as connection:
+        try:
+            statement = connection.cursor()
+            statement.execute("ALTER TABLE users_remotes ADD refresh_token TEXT;")
+        except OperationalError:
+            # This likely means the column is already there (fresh created table)
+            # In the worst scenario the user will be requested to remove the file by hand
+            pass
 
 
 def _migrate_full_metadata(cache, out):

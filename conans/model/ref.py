@@ -21,7 +21,7 @@ def _split_pair(pair, split_char):
 
 
 def _noneize(text):
-    if not text or text == "None":
+    if not text or text == "_":
         return None
     return text
 
@@ -69,15 +69,21 @@ def get_reference_fields(arg_reference, user_channel_input=False):
 
 def check_valid_ref(reference, strict_mode=True):
     """
+    :param reference: string to be analyzed if it is a reference or not
     :param strict_mode: Only if the reference contains the "@" is valid, used to disambiguate"""
     try:
-
         if not reference:
             return False
-        if strict_mode and "@" not in reference:
-            return False
-        if strict_mode and "*" in reference:
-            return False
+        if strict_mode:
+            if "@" not in reference:
+                return False
+            if "*" in reference:
+                ref = ConanFileReference.loads(reference, validate=True)
+                if "*" in ref.name or "*" in ref.user or "*" in ref.channel:
+                    return False
+                if str(ref.version).startswith("["):  # It is a version range
+                    return True
+                return False
         ConanFileReference.loads(reference, validate=True)
         return True
     except ConanException:
@@ -158,6 +164,9 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
             raise InvalidNameException("Specify the 'user' and the 'channel' or neither of them")
 
         version = Version(version) if version is not None else None
+        user = _noneize(user)
+        channel = _noneize(channel)
+
         obj = super(cls, ConanFileReference).__new__(cls, name, version, user, channel, revision)
         if validate:
             obj._validate()
@@ -207,7 +216,8 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
 
     def __repr__(self):
         str_rev = "#%s" % self.revision if self.revision else ""
-        return "%s/%s@%s/%s%s" % (self.name, self.version, self.user, self.channel, str_rev)
+        user_channel = "@%s/%s" % (self.user, self.channel) if self.user or self.channel else ""
+        return "%s/%s%s%s" % (self.name, self.version, user_channel, str_rev)
 
     def full_str(self):
         str_rev = "#%s" % self.revision if self.revision else ""
@@ -285,9 +295,8 @@ class PackageReference(namedtuple("PackageReference", "ref id revision")):
     def copy_with_revs(self, revision, p_revision):
         return PackageReference(self.ref.copy_with_rev(revision), self.id, p_revision)
 
-    def copy_clear_rev(self):
-        ref = self.ref.copy_clear_rev()
-        return PackageReference(ref, self.id, revision=None)
+    def copy_clear_prev(self):
+        return self.copy_with_revs(self.ref.revision, None)
 
     def copy_clear_revs(self):
         return self.copy_with_revs(None, None)

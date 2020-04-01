@@ -34,8 +34,6 @@ class ConanRequester(object):
         self._cacert_path = config.cacert_path
         self._client_cert_path = config.client_cert_path
         self._client_cert_key_path = config.client_cert_key_path
-        self._retry = config.retry
-        self._retry_wait = config.retry_wait
 
         self._no_proxy_match = [el.strip() for el in
                                 self.proxies.pop("no_proxy_match", "").split(",") if el]
@@ -63,16 +61,7 @@ class ConanRequester(object):
             else:
                 self._client_certificates = self._client_cert_path
 
-    @property
-    def retry(self):
-        return self._retry
-
-    @property
-    def retry_wait(self):
-        return self._retry_wait
-
     def _should_skip_proxy(self, url):
-
         for entry in self._no_proxy_match:
             if fnmatch.fnmatch(url, entry):
                 return True
@@ -115,7 +104,7 @@ class ConanRequester(object):
         if self.proxies or self._no_proxy_match:
             old_env = dict(os.environ)
             # Clean the proxies from the environ and use the conan specified proxies
-            for var_name in ("http_proxy", "https_proxy", "no_proxy"):
+            for var_name in ("http_proxy", "https_proxy", "ftp_proxy", "all_proxy", "no_proxy"):
                 popped = True if os.environ.pop(var_name, None) else popped
                 popped = True if os.environ.pop(var_name.upper(), None) else popped
         try:

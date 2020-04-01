@@ -8,7 +8,9 @@ def response_to_str(response):
         if isinstance(content, bytes):
             content = content.decode()
 
-        if response.headers.get("content-type") == "application/json":
+        content_type = response.headers.get("content-type")
+
+        if content_type == "application/json":
             # Errors from Artifactory looks like:
             #  {"errors" : [ {"status" : 400, "message" : "Bla bla bla"}]}
             try:
@@ -16,6 +18,9 @@ def response_to_str(response):
                 content = "{}: {}".format(data["status"], data["message"])
             except Exception:
                 pass
+        elif "text/html" in content_type:
+            content = "{}: {}".format(response.status_code, response.reason)
+
         return content
 
     except Exception:

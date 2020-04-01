@@ -3,7 +3,6 @@ import unittest
 
 from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient
-from conans.util.files import load
 
 
 class OrderLibsTest(unittest.TestCase):
@@ -37,7 +36,7 @@ class LibCConan(ConanFile):
 """
         client.save({"conanfile.py": conanfile})
         client.run("install . -g cmake")
-        conanbuildinfo = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
+        conanbuildinfo = client.load("conanbuildinfo.cmake")
         self.assertIn("set(CONAN_LIBS LibB LibC ${CONAN_LIBS})", conanbuildinfo)
         # Change private
         conanfile = """from conans import ConanFile
@@ -46,7 +45,7 @@ class LibCConan(ConanFile):
 """
         client.save({"conanfile.py": conanfile})
         client.run("install . -g cmake")
-        conanbuildinfo = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
+        conanbuildinfo = client.load("conanbuildinfo.cmake")
         self.assertIn("set(CONAN_LIBS LibB LibC ${CONAN_LIBS})", conanbuildinfo)
         # Change order
         conanfile = """from conans import ConanFile
@@ -55,7 +54,7 @@ class LibCConan(ConanFile):
 """
         client.save({"conanfile.py": conanfile})
         client.run("install . -g cmake")
-        conanbuildinfo = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
+        conanbuildinfo = client.load("conanbuildinfo.cmake")
         self.assertIn("set(CONAN_LIBS LibB LibC ${CONAN_LIBS})", conanbuildinfo)
         # Change order
         conanfile = """from conans import ConanFile
@@ -64,7 +63,7 @@ class LibCConan(ConanFile):
 """
         client.save({"conanfile.py": conanfile})
         client.run("install . -g cmake")
-        conanbuildinfo = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
+        conanbuildinfo = client.load("conanbuildinfo.cmake")
         self.assertIn("set(CONAN_LIBS LibB LibC ${CONAN_LIBS})", conanbuildinfo)
 
     def _export(self, name, deps=None, export=True):
@@ -110,9 +109,9 @@ class HelloReuseConan(ConanFile):
 
         expected_libs = ['SDL2_ttf', 'freeType', 'SDL2', 'rt', 'pthread', 'dl',
                          'BZip2', 'LibPNG', 'm', 'ZLib']
-        conanbuildinfo = load(os.path.join(self.client.current_folder, "conanbuildinfo.txt"))
+        conanbuildinfo = self.client.load("conanbuildinfo.txt")
         libs = os.linesep.join(expected_libs)
         self.assertIn(libs, conanbuildinfo)
-        conanbuildinfo = load(os.path.join(self.client.current_folder, "conanbuildinfo.cmake"))
+        conanbuildinfo = self.client.load("conanbuildinfo.cmake")
         libs = " ".join(expected_libs)
         self.assertIn(libs, conanbuildinfo)

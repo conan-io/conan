@@ -1,6 +1,7 @@
 import os
 import unittest
 
+from conans.test.utils.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
 
@@ -64,16 +65,8 @@ class HelloConan(ConanFile):
         self.output.info("Building %s/%s" % (self.user, self.channel) )
 """
 
-        self.test_conanfile = """
-from conans import ConanFile, CMake
-import os
-
-class HelloReuseConan(ConanFile):
-    requires = "Hello/0.1@lasote/stable"
-
-    def test(self):
-        pass
-"""
+        self.test_conanfile = str(GenConanfile().with_require_plain("Hello/0.1@lasote/stable")
+                                                .with_test("pass"))
         self.client.save({"conanfile.py": self.conanfile,
                           "test/conanfile.py": self.test_conanfile})
 
@@ -95,15 +88,15 @@ class HelloReuseConan(ConanFile):
         self.client.run("install .", assert_error=True)
         self.assertIn("ERROR: conanfile.py (Hello/0.1): "
                       "Error in requirements() method, line 10", self.client.out)
-        self.assertIn("ConanException: CONAN_USERNAME environment "
-                      "variable not defined, but self.user is used", self.client.out)
+        self.assertIn("ConanException: user not defined, but self.user is used in"
+                      " conanfile", self.client.out)
 
         os.environ["CONAN_USERNAME"] = "lasote"
         self.client.run("install .", assert_error=True)
         self.assertIn("ERROR: conanfile.py (Hello/0.1): "
                       "Error in requirements() method, line 10", self.client.out)
-        self.assertIn("ConanException: CONAN_CHANNEL environment "
-                      "variable not defined, but self.channel is used", self.client.out)
+        self.assertIn("ConanException: channel not defined, but self.channel is used in"
+                      " conanfile", self.client.out)
 
         os.environ["CONAN_CHANNEL"] = "stable"
         self.client.run("install .")
@@ -129,7 +122,7 @@ class SayConan(ConanFile):
     version = "0.1"
     build_policy = "missing"
     default_user = "userfoo"
-    
+
     def build(self):
         self.output.info("Building %s/%s" % (self.user, self.channel) )
 

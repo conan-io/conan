@@ -46,6 +46,7 @@ class DiskRemover(object):
 
     def remove_src(self, package_layout):
         self._remove(package_layout.source(), package_layout.ref, "src folder")
+        self._remove(package_layout.scm_sources(), package_layout.ref, "scm src folder")
 
     def remove_builds(self, package_layout, ids=None):
         if not ids:
@@ -93,7 +94,7 @@ class ConanRemover(object):
     def _remote_remove(self, ref, package_ids, remote):
         assert(isinstance(remote, Remote))
         if package_ids is None:
-            result = self._remote_manager.remove(ref, remote)
+            result = self._remote_manager.remove_recipe(ref, remote)
             return result
         else:
             tmp = self._remote_manager.remove_packages(ref, package_ids, remote)
@@ -143,7 +144,7 @@ class ConanRemover(object):
         if remote_name and (build_ids is not None or src):
             raise ConanException("Remotes don't have 'build' or 'src' folder, just packages")
 
-        is_reference = check_valid_ref(pattern, strict_mode=True)
+        is_reference = check_valid_ref(pattern)
         input_ref = ConanFileReference.loads(pattern) if is_reference else None
 
         if not input_ref and packages_query is not None:
