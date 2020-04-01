@@ -3,6 +3,7 @@ import os
 import platform
 import re
 import subprocess
+import warnings
 from contextlib import contextmanager
 
 from conans.client.tools import which
@@ -338,15 +339,39 @@ def find_windows_10_sdk():
     return None
 
 
-def vcvars_command(settings, arch=None, compiler_version=None, force=False, vcvars_ver=None,
-                   winsdk_version=None, output=None):
+def vcvars_command(conanfile, arch=None, compiler_version=None, force=False, vcvars_ver=None,
+                   winsdk_version=None, output=None, settings=None):
+    # Handle input arguments (backwards compatibility with 'settings' as first argument)
+    # TODO: This can be promoted to a decorator pattern for any function
+    if conanfile and settings:
+        raise ConanException("Do not set both arguments, 'conanfile' and 'settings',"
+                             " to call cross_building function")
+
+    from conans.model.conan_file import ConanFile
+    if conanfile and not isinstance(conanfile, ConanFile):
+        return vcvars_command(settings=conanfile, arch=arch, compiler_version=compiler_version,
+                              force=force, vcvars_ver=vcvars_ver, winsdk_version=winsdk_version,
+                              output=output)
+
+    if settings:
+        warnings.warn("argument 'settings' has been deprecated, use 'conanfile' instead")
+
+    if conanfile:
+        settings_host = conanfile.settings
+        settings_build = getattr(conanfile, 'settings_build', None)
+    else:
+        settings_host = settings
+        settings_build = None
+    del settings
+
+    # Do actual work
     output = default_output(output, 'conans.client.tools.win.vcvars_command')
 
-    arch_setting = arch or settings.get_safe("arch")
+    arch_setting = arch or settings_host.get_safe("arch")
 
-    compiler = settings.get_safe("compiler")
+    compiler = settings_host.get_safe("compiler")
     if compiler == 'Visual Studio':
-        compiler_version = compiler_version or settings.get_safe("compiler.version")
+        compiler_version = compiler_version or settings_host.get_safe("compiler.version")
     else:
         # vcvars might be still needed for other compilers, e.g. clang-cl or Intel C++,
         # as they might be using Microsoft STL and other tools
@@ -355,22 +380,23 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False, vcva
         last_version = latest_vs_version_installed(output=output)
 
         compiler_version = compiler_version or last_version
-    os_setting = settings.get_safe("os")
+    os_setting = settings_host.get_safe("os")
     if not compiler_version:
         raise ConanException("compiler.version setting required for vcvars not defined")
 
     # https://msdn.microsoft.com/en-us/library/f2ccy3wt.aspx
     vcvars_arch = None
     arch_setting = arch_setting or 'x86_64'
-    arch_build = settings.get_safe("arch_build") or detected_architecture()
+    settings_build_arch = settings_build.get_safe("arch") if settings_build \
+        else settings_host.get_safe("arch_build")
+    arch_build = settings_build_arch or detected_architecture()
     if os_setting == 'WindowsCE':
         vcvars_arch = "x86"
     elif arch_build == 'x86_64':
         # Only uses x64 tooling if arch_build explicitly defines it, otherwise
         # Keep the VS default, which is x86 toolset
         # This will probably be changed in conan 2.0
-        if ((settings.get_safe("arch_build") or
-                os.getenv("PreferredToolArchitecture") == "x64")
+        if ((settings_build_arch or os.getenv("PreferredToolArchitecture") == "x64")
                 and int(compiler_version) >= 12):
             x86_cross = "amd64_x86"
         else:
@@ -421,7 +447,7 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False, vcva
                 command.append("-vcvars_ver=%s" % vcvars_ver)
 
         if os_setting == 'WindowsStore':
-            os_version_setting = settings.get_safe("os.version")
+            os_version_setting = settings_host.get_safe("os.version")
             if os_version_setting == '8.1':
                 command.append('store 8.1')
             elif os_version_setting == '10.0':
