@@ -370,9 +370,9 @@ def rename(src, dst):
     :param src: Path to the file or folder
     :param dst: Destination file or folder
     """
-    if platform.system() == "Windows":
-        retcode = os.system("robocopy /move /e /ndl /nfl".format(src, dst))
+    if platform.system() == "Windows" and which("robocopy"):
+        retcode = os.system("robocopy /move /e /ndl /nfl {} {}".format(src, dst))
         if retcode != 1:
-            raise ConanException("renam failed for {} to {}".format(src, dst))
+            raise ConanException("rename {} to {} failed, possibly dst exists".format(src, dst))
     else:
         os.rename(src, dst)
