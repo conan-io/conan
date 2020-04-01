@@ -8,6 +8,9 @@ from conans.client.tools.oss import cross_building
 from conans.model.settings import Settings
 
 
+# TODO: Add tests using a conanfile with 'settings' and 'settings_build'
+
+
 class CrossBuildingTest(unittest.TestCase):
     def test_same(self):
         settings = Settings.loads(get_default_settings_yml())

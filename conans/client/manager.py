@@ -61,9 +61,12 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
     print_graph(deps_graph, out)
 
     try:
-        if cross_building(graph_info.profile_host.processed_settings):
-            settings = get_cross_building_settings(graph_info.profile_host.processed_settings)
-            message = "Cross-build from '%s:%s' to '%s:%s'" % settings
+        if cross_building(conanfile=conanfile):
+            settings_build = graph_info.profile_build.processed_settings if graph_info.profile_build\
+                else None
+            ret = get_cross_building_settings(graph_info.profile_host.processed_settings,
+                                              settings_build)
+            message = "Cross-build from '%s:%s' to '%s:%s'" % ret
             out.writeln(message, Color.BRIGHT_MAGENTA)
     except ConanException:  # Setting os doesn't exist
         pass

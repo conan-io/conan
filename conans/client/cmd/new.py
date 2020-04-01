@@ -169,7 +169,7 @@ class {package_name}TestConan(ConanFile):
         self.copy('*.so*', dst='bin', src='lib')
 
     def test(self):
-        if not tools.cross_building(self.settings):
+        if not tools.cross_building(self):
             os.chdir("bin")
             self.run(".%sexample" % os.sep)
 """

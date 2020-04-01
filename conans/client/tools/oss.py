@@ -1,10 +1,10 @@
+import math
 import multiprocessing
 import os
 import platform
 import subprocess
 import sys
-
-import math
+import warnings
 
 from conans.client.tools.env import environment_append
 from conans.client.tools.files import load, which
@@ -418,8 +418,30 @@ class OSInfo(object):
             return None
 
 
-def cross_building(settings, self_os=None, self_arch=None, skip_x64_x86=False):
-    ret = get_cross_building_settings(settings, self_os, self_arch)
+def cross_building(conanfile=None, self_os=None, self_arch=None, skip_x64_x86=False, settings=None):
+    # Handle input arguments (backwards compatibility with 'settings' as first argument)
+    # TODO: This can be promoted to a decorator pattern for any function
+    if conanfile and settings:
+        raise ConanException("Do not set both arguments, 'conanfile' and 'settings',"
+                             " to call cross_building function")
+
+    from conans.model.conan_file import ConanFile
+    if conanfile and not isinstance(conanfile, ConanFile):
+        return cross_building(settings=conanfile, self_os=self_os, self_arch=self_arch,
+                              skip_x64_x86=skip_x64_x86)
+
+    if settings:
+        warnings.warn("argument 'settings' has been deprecated, use 'conanfile' instead")
+
+    if conanfile:
+        settings_host = conanfile.settings
+        settings_build = getattr(conanfile, 'settings_build', None)
+    else:
+        settings_host = settings
+        settings_build = None
+
+    # Do actual work
+    ret = get_cross_building_settings(settings_host, settings_build, self_os, self_arch)
     build_os, build_arch, host_os, host_arch = ret
 
     if skip_x64_x86 and host_os is not None and (build_os == host_os) and \
@@ -434,11 +456,15 @@ def cross_building(settings, self_os=None, self_arch=None, skip_x64_x86=False):
     return False
 
 
-def get_cross_building_settings(settings, self_os=None, self_arch=None):
-    build_os = self_os or settings.get_safe("os_build") or detected_os()
-    build_arch = self_arch or settings.get_safe("arch_build") or detected_architecture()
-    host_os = settings.get_safe("os")
-    host_arch = settings.get_safe("arch")
+def get_cross_building_settings(settings_host, settings_build=None, self_os=None, self_arch=None):
+    settings_build_os = settings_build.get_safe("os") if settings_build else None
+    settings_build_arch = settings_build.get_safe("arch") if settings_build else None
+
+    build_os = self_os or settings_build_os or settings_host.get_safe("os_build") or detected_os()
+    build_arch = self_arch or settings_build_arch or settings_host.get_safe("arch_build") \
+                 or detected_architecture()
+    host_os = settings_host.get_safe("os")
+    host_arch = settings_host.get_safe("arch")
 
     return build_os, build_arch, host_os, host_arch
 
