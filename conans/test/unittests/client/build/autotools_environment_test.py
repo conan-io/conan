@@ -65,7 +65,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
     def target_triple_test(self):
         conan_file = ConanFileMock()
         conan_file.deps_cpp_info = self._creat_deps_cpp_info()
-        conan_file.settings = MockSettings({"os_target":"Linux", "arch_target":"x86_64"})
+        conan_file.settings = MockSettings({"os_target": "Linux", "arch_target": "x86_64"})
         be = AutoToolsBuildEnvironment(conan_file)
         expected = "x86_64-linux-gnu"
         self.assertEqual(be.target, expected)
