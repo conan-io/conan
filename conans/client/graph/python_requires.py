@@ -133,8 +133,8 @@ class PyRequireLoader(object):
         path, _, _, new_ref = recipe
         conanfile, module = loader.load_basic_module(path, lock_python_requires, user=new_ref.user,
                                                      channel=new_ref.channel)
-        conanfile.name = new_ref.name
-        conanfile.version = new_ref.version
+        conanfile.name = str(new_ref.name)
+        conanfile.version = str(new_ref.version)
 
         if getattr(conanfile, "alias", None):
             ref = ConanFileReference.loads(conanfile.alias)
