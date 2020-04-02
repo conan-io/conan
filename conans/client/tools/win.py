@@ -339,7 +339,7 @@ def find_windows_10_sdk():
     return None
 
 
-def vcvars_command(conanfile, arch=None, compiler_version=None, force=False, vcvars_ver=None,
+def vcvars_command(conanfile=None, arch=None, compiler_version=None, force=False, vcvars_ver=None,
                    winsdk_version=None, output=None, settings=None):
     # Handle input arguments (backwards compatibility with 'settings' as first argument)
     # TODO: This can be promoted to a decorator pattern for any function
