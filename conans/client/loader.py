@@ -18,7 +18,6 @@ from conans.model.options import OptionsValues
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
 from conans.model.values import Values
-from conans.model.version import Version
 from conans.paths import DATA_YML
 from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
 from conans.util.files import load
@@ -132,7 +131,6 @@ class ConanFileLoader(object):
         if not conanfile.version:
             raise ConanException("conanfile didn't specify version")
 
-        conanfile.name = conanfile.name
         if os.environ.get(CONAN_V2_MODE_ENVVAR, False):
             conanfile.version = str(conanfile.version)
 
