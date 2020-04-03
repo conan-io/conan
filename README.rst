@@ -44,27 +44,28 @@ Please read https://docs.conan.io/en/latest/installation.html
 From binaries
 -------------
 
-We have installers for `most platforms here <http://conan.io>`__ but you
+We have installers for `most platforms here <http://conan.io>`_ but you
 can run **conan** from sources if you want.
 
 From pip
 --------
 
-Conan is compatible with Python 2 and Python 3.
+Conan is compatible with Python >= 3.5 (older versions can work, but they are
+`not supported <https://docs.conan.io/en/latest/installation.html#python-2-deprecation-notice>`_)
 
 - Install pip following `pip docs`_.
 - Install conan:
 
-    .. code-block:: bash
+  .. code-block:: bash
 
-        $ pip install conan
+      $ pip install conan
 
-You can also use `test.pypi.org <https://test.pypi.org/project/conan/#history>`_ repository to install development (non-stable) Conan versions:
+  You can also use `test.pypi.org <https://test.pypi.org/project/conan/#history>`_ repository to install development (non-stable) Conan versions:
 
 
-    .. code-block:: bash
+  .. code-block:: bash
 
-        $ pip install --index-url https://test.pypi.org/simple/ conan
+      $ pip install --index-url https://test.pypi.org/simple/ conan
 
 
 From Homebrew (OSx)
@@ -92,9 +93,9 @@ You can run **conan** client and server in Windows, MacOS, and Linux.
 
 - **Install in editable mode**
 
-    .. code-block:: bash
+  .. code-block:: bash
 
-        $ cd conan && sudo pip install -e .
+      $ cd conan && sudo pip install -e .
 
   If you are in Windows, using ``sudo`` is not required.
 
