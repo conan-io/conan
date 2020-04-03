@@ -132,7 +132,7 @@ class ConanFileLoader(object):
         if not conanfile.version:
             raise ConanException("conanfile didn't specify version")
 
-        conanfile.name = str(conanfile.name)
+        conanfile.name = conanfile.name
         if os.environ.get(CONAN_V2_MODE_ENVVAR, False):
             conanfile.version = str(conanfile.version)
 
@@ -198,7 +198,7 @@ class ConanFileLoader(object):
         """
         conanfile, _ = self.load_basic_module(conanfile_path, lock_python_requires,
                                               ref.user, ref.channel, str(ref))
-        conanfile.name = str(ref.name)
+        conanfile.name = ref.name
         conanfile.version = str(ref.version) \
             if os.environ.get(CONAN_V2_MODE_ENVVAR, False) else ref.version
 
