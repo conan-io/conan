@@ -7,9 +7,12 @@ from conans.test.utils.tools import TestClient
 
 
 class VersionTypeTestCase(unittest.TestCase):
+    """
+    For Conan v2.0 we want exactly the opposite: see test in
+     ~/conans/test/conan_v2/conanfile/test_version_type.py
+    """
 
     conanfile_tpl = Template(textwrap.dedent("""
-        import six
         from conans import ConanFile
         from conans.errors import ConanException
         from conans.model.version import Version
@@ -24,15 +27,11 @@ class VersionTypeTestCase(unittest.TestCase):
             {% endif %}
 
             def _checks(self, function_name):
-                version_is_str = isinstance(self.version, six.string_types)
-                if version_is_str:
+                if isinstance(self.version, Version):
                     self.output.info("> {}: version ok".format(function_name))
                 else:
                     v_type = type(self.version)
                     raise ConanException("> {}: version is type '{}'".format(function_name, v_type))
-
-                if isinstance(self.version, Version):
-                    raise ConanException("> {}: version is type 'Version'".format(function_name))
 
             # Functions ordered according to documentation
 

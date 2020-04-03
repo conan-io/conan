@@ -7,6 +7,7 @@ from conans.client.recorder.action_recorder import ActionRecorder
 from conans.errors import ConanException, NotFoundException
 from conans.model.ref import ConanFileReference
 from conans.model.requires import Requirement
+from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
 from conans.util.conan_v2_mode import conan_v2_behavior
 
 PythonRequire = namedtuple("PythonRequire", ["ref", "module", "conanfile",
@@ -134,7 +135,10 @@ class PyRequireLoader(object):
         conanfile, module = loader.load_basic_module(path, lock_python_requires, user=new_ref.user,
                                                      channel=new_ref.channel)
         conanfile.name = str(new_ref.name)
-        conanfile.version = str(new_ref.version)
+        if os.environ.get(CONAN_V2_MODE_ENVVAR, False):
+            conanfile.version = str(new_ref.version)
+        else:
+            conanfile.version = new_ref.version
 
         if getattr(conanfile, "alias", None):
             ref = ConanFileReference.loads(conanfile.alias)
