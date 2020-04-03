@@ -24,7 +24,7 @@ Conan is a package manager for C and C++ developers:
   (CMake, MSBuild, Makefiles, Meson, etc).
 - Extensible: Its python based recipes, together with extensions points allows for great power and flexibility.
 - Large and active community, especially in Github (https://github.com/conan-io/conan) and Slack (https://cpplang.now.sh/ #conan channel).
-  This community also creates and maintains packages in Conan-center and Bincrafters repositories in Bintray.
+  This community also creates and maintains packages in ConanCenter and Bincrafters repositories in Bintray.
 - Stable. Used in production by many companies, since 1.0 there is a commitment not to break package recipes and documented behavior.
 
 
@@ -39,53 +39,22 @@ Conan is a package manager for C and C++ developers:
 Setup
 =====
 
-Please read https://docs.conan.io/en/latest/installation.html
+Please read https://docs.conan.io/en/latest/installation.html to know how to
+install and start using Conan. TL;DR: 
 
-From binaries
--------------
+.. code-block::
 
-We have installers for `most platforms here <http://conan.io>`_ but you
-can run **conan** from sources if you want.
-
-From pip
---------
-
-Conan is compatible with Python >= 3.5 (older versions can work, but they are
-`not supported <https://docs.conan.io/en/latest/installation.html#python-2-deprecation-notice>`_)
-
-- Install pip following `pip docs`_.
-- Install conan:
-
-  .. code-block:: bash
-
-      $ pip install conan
-
-  You can also use `test.pypi.org <https://test.pypi.org/project/conan/#history>`_ repository to install development (non-stable) Conan versions:
+   $ pip install conan
 
 
-  .. code-block:: bash
+Install a development version
+-----------------------------
 
-      $ pip install --index-url https://test.pypi.org/simple/ conan
-
-
-From Homebrew (OSx)
--------------------
-
-- Install Homebrew following `brew homepage`_.
-
-  .. code-block:: bash
-
-      $ brew update
-      $ brew install conan
-
-From source
------------
-
-You can run **conan** client and server in Windows, MacOS, and Linux.
+You can run **Conan** client and server in Windows, MacOS, and Linux.
 
 - **Install pip following** `pip docs`_.
 
-- **Clone conan repository:**
+- **Clone Conan repository:**
 
   .. code-block:: bash
 
@@ -99,7 +68,7 @@ You can run **conan** client and server in Windows, MacOS, and Linux.
 
   If you are in Windows, using ``sudo`` is not required.
 
-- **You are ready, try to run conan:**
+- **You are ready, try to run Conan:**
 
   .. code-block::
 
@@ -185,7 +154,7 @@ Before you can run the tests, you need to set a few environment variables first.
 
     $ export PYTHONPATH=$PYTHONPATH:$(pwd)
 
-On Windows it would be (while being in the conan root directory):
+On Windows it would be (while being in the Conan root directory):
 
 .. code-block:: bash
 
@@ -266,4 +235,3 @@ License
 
 .. _`pip docs`: https://pip.pypa.io/en/stable/installing/
 
-.. _`brew homepage`: http://brew.sh/
