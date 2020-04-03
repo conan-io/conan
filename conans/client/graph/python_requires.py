@@ -135,10 +135,8 @@ class PyRequireLoader(object):
         conanfile, module = loader.load_basic_module(path, lock_python_requires, user=new_ref.user,
                                                      channel=new_ref.channel)
         conanfile.name = str(new_ref.name)
-        if os.environ.get(CONAN_V2_MODE_ENVVAR, False):
-            conanfile.version = str(new_ref.version)
-        else:
-            conanfile.version = new_ref.version
+        conanfile.version = str(new_ref.version) \
+            if os.environ.get(CONAN_V2_MODE_ENVVAR, False) else new_ref.version
 
         if getattr(conanfile, "alias", None):
             ref = ConanFileReference.loads(conanfile.alias)

@@ -278,10 +278,8 @@ class ConanAPIV1(object):
             conanfile_path, _, _, ref = result
             conanfile = self.app.loader.load_basic(conanfile_path)
             conanfile.name = str(ref.name)
-            if os.environ.get(CONAN_V2_MODE_ENVVAR, False):
-                conanfile.version = str(ref.version)
-            else:
-                conanfile.version = ref.version
+            conanfile.version = str(ref.version) \
+                if os.environ.get(CONAN_V2_MODE_ENVVAR, False) else ref.version
 
         result = OrderedDict()
         if not attributes:
