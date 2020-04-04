@@ -238,7 +238,10 @@ class ConanFileLoader(object):
 
         conanfile.generators = parser.generators
 
-        options = OptionsValues.loads(parser.options)
+        try:
+            options = OptionsValues.loads(parser.options)
+        except Exception:
+            raise ConanException("Error while parsing [options] in conanfile")
         conanfile.options.values = options
         conanfile.options.initialize_upstream(profile.user_options)
 
