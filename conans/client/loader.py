@@ -241,7 +241,8 @@ class ConanFileLoader(object):
         try:
             options = OptionsValues.loads(parser.options)
         except Exception:
-            raise ConanException("Error while parsing [options] in conanfile")
+            raise ConanException("Error while parsing [options] in conanfile\n"
+                                 "Options should be specified as 'pkg:option=value'")
         conanfile.options.values = options
         conanfile.options.initialize_upstream(profile.user_options)
 
