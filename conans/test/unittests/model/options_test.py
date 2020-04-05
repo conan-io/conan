@@ -227,6 +227,19 @@ Poco:deps_bundled=True""")
                                                      ("OpenSSL.*:fake_option", "FuzzBuzz"),
                                                      ])
 
+    def test_get_safe_options(self):
+        self.assertEqual(True, self.sut.get_safe("static"))
+        self.assertEqual(3, self.sut.get_safe("optimized"))
+        self.assertEqual("NOTDEF", self.sut.get_safe("path"))
+        self.assertEqual(None, self.sut.get_safe("unknown"))
+        self.sut.path = "None"
+        self.sut.static = False
+        self.assertEqual(False, self.sut.get_safe("static"))
+        self.assertEqual("None", self.sut.get_safe("path"))
+        self.assertEqual(False, self.sut.get_safe("static", True))
+        self.assertEqual("None", self.sut.get_safe("path", True))
+        self.assertEqual(True, self.sut.get_safe("unknown", True))
+
 
 class OptionsValuesPropagationUpstreamNone(unittest.TestCase):
 

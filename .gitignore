@@ -85,6 +85,9 @@ conan.conf
 #Eclipse folder
 .settings
 
+#VScode folder
+.vscode
+
 #Generated certificate file
 cacert.pem
 

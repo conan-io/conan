@@ -140,7 +140,6 @@ def _load_profile(text, profile_path, default_folder):
         # Apply the automatic PROFILE_DIR variable
         if cwd:
             profile_parser.vars["PROFILE_DIR"] = os.path.abspath(cwd).replace('\\', '/')
-            # Allows PYTHONPATH=$PROFILE_DIR/pythontools
 
         # Replace the variables from parents in the current profile
         profile_parser.apply_vars()

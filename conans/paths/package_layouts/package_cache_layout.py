@@ -5,9 +5,9 @@ import platform
 import threading
 from contextlib import contextmanager
 
-
 import fasteners
 
+from conans.client.tools.oss import OSInfo
 from conans.errors import NotFoundException, ConanException
 from conans.errors import RecipeNotFoundException, PackageNotFoundException
 from conans.model.manifest import FileTreeManifest
@@ -23,7 +23,7 @@ from conans.util.log import logger
 
 
 def short_path(func):
-    if platform.system() == "Windows":
+    if platform.system() == "Windows" or OSInfo().is_cygwin:  # Not for other subsystems
         from conans.util.windows import path_shortener
 
         def wrap(self, *args, **kwargs):

@@ -23,7 +23,7 @@ class GraphBinariesAnalyzer(object):
         self._fixed_package_id = cache.config.full_transitive_package_id
 
     @staticmethod
-    def _check_update(upstream_manifest, package_folder, output, node):
+    def _check_update(upstream_manifest, package_folder, output):
         read_manifest = FileTreeManifest.load(package_folder)
         if upstream_manifest != read_manifest:
             if upstream_manifest.time > read_manifest.time:
@@ -83,7 +83,7 @@ class GraphBinariesAnalyzer(object):
                 except NoRemoteAvailable:
                     output.warn("Can't update, no remote defined")
                 else:
-                    if self._check_update(upstream_manifest, package_folder, output, node):
+                    if self._check_update(upstream_manifest, package_folder, output):
                         node.binary = BINARY_UPDATE
                         node.prev = pref.revision  # With revision
             elif remotes:
@@ -335,6 +335,9 @@ class GraphBinariesAnalyzer(object):
         deps_graph.mark_private_skippable(nodes_subset=nodes_subset, root=root)
 
     def reevaluate_node(self, node, remotes, build_mode, update):
+        """ reevaluate the node is necessary when there is some PACKAGE_ID_UNKNOWN due to
+        package_revision_mode
+        """
         assert node.binary == BINARY_UNKNOWN
         output = node.conanfile.output
         node._package_id = None  # Invalidate it, so it can be re-computed

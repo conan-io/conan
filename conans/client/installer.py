@@ -14,10 +14,11 @@ from conans.client.packager import run_package_method, update_package_metadata
 from conans.client.recorder.action_recorder import INSTALL_ERROR_BUILDING, INSTALL_ERROR_MISSING, \
     INSTALL_ERROR_MISSING_BUILD_FOLDER
 from conans.client.source import complete_recipe_sources, config_source
+from conans.client.tools.env import no_op
 from conans.client.tools.env import pythonpath
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
                            conanfile_exception_formatter)
-from conans.model.build_info import CppInfo
+from conans.model.build_info import CppInfo, DepCppInfo
 from conans.model.editable_layout import EditableLayout
 from conans.model.env_info import EnvInfo
 from conans.model.graph_info import GraphInfo
@@ -26,6 +27,7 @@ from conans.model.info import PACKAGE_ID_UNKNOWN
 from conans.model.ref import PackageReference
 from conans.model.user_info import UserInfo
 from conans.paths import BUILD_INFO, CONANINFO, RUN_LOG_NAME
+from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
 from conans.util.env_reader import get_env
 from conans.util.files import (clean_dirty, is_dirty, make_read_only, mkdir, rmdir, save, set_dirty,
                                set_dirty_context_manager)
@@ -268,13 +270,15 @@ def raise_package_not_found_error(conan_file, ref, package_id, dependencies, out
     settings_text = ", ".join(conan_file.info.full_settings.dumps().splitlines())
     options_text = ", ".join(conan_file.info.full_options.dumps().splitlines())
     dependencies_text = ', '.join(dependencies)
+    requires_text = ", ".join(conan_file.info.requires.dumps().splitlines())
 
     msg = '''Can't find a '%s' package for the specified settings, options and dependencies:
 - Settings: %s
 - Options: %s
 - Dependencies: %s
+- Requirements: %s
 - Package ID: %s
-''' % (ref, settings_text, options_text, dependencies_text, package_id)
+''' % (ref, settings_text, options_text, dependencies_text, requires_text, package_id)
     out.warn(msg)
     recorder.package_install_error(PackageReference(ref, package_id), INSTALL_ERROR_MISSING, msg)
     raise ConanException('''Missing prebuilt package for '%s'
@@ -511,19 +515,19 @@ class BinaryInstaller(object):
 
             if not using_build_profile:  # Do not touch anything
                 conan_file.deps_user_info[n.ref.name] = n.conanfile.user_info
-                conan_file.deps_cpp_info.update(n.conanfile.cpp_info, n.ref.name)
+                conan_file.deps_cpp_info.update(n.conanfile._conan_dep_cpp_info, n.ref.name)
                 conan_file.deps_env_info.update(n.conanfile.env_info, n.ref.name)
             else:
                 if n in transitive or n in br_host:
-                    conan_file.deps_cpp_info.update(n.conanfile.cpp_info, n.ref.name)
+                    conan_file.deps_cpp_info.update(n.conanfile._conan_dep_cpp_info, n.ref.name)
                 else:
                     env_info = EnvInfo()
                     env_info._values_ = n.conanfile.env_info._values_.copy()
                     # Add cpp_info.bin_paths/lib_paths to env_info (it is needed for runtime)
-                    env_info.DYLD_LIBRARY_PATH.extend(n.conanfile.cpp_info.lib_paths)
-                    env_info.DYLD_LIBRARY_PATH.extend(n.conanfile.cpp_info.framework_paths)
-                    env_info.LD_LIBRARY_PATH.extend(n.conanfile.cpp_info.lib_paths)
-                    env_info.PATH.extend(n.conanfile.cpp_info.bin_paths)
+                    env_info.DYLD_LIBRARY_PATH.extend(n.conanfile._conan_dep_cpp_info.lib_paths)
+                    env_info.DYLD_LIBRARY_PATH.extend(n.conanfile._conan_dep_cpp_info.framework_paths)
+                    env_info.LD_LIBRARY_PATH.extend(n.conanfile._conan_dep_cpp_info.lib_paths)
+                    env_info.PATH.extend(n.conanfile._conan_dep_cpp_info.bin_paths)
                     conan_file.deps_env_info.update(env_info, n.ref.name)
 
         # Update the info but filtering the package values that not apply to the subtree
@@ -545,7 +549,8 @@ class BinaryInstaller(object):
         conanfile.cpp_info.public_deps = public_deps
         # Once the node is build, execute package info, so it has access to the
         # package folder and artifacts
-        with pythonpath(conanfile):  # Minimal pythonpath, not the whole context, make it 50% slower
+        conan_v2 = get_env(CONAN_V2_MODE_ENVVAR, False)
+        with pythonpath(conanfile) if not conan_v2 else no_op():  # Minimal pythonpath, not the whole context, make it 50% slower
             with tools.chdir(package_folder):
                 with conanfile_exception_formatter(str(conanfile), "package_info"):
                     conanfile.package_folder = package_folder
@@ -555,5 +560,11 @@ class BinaryInstaller(object):
                     self._hook_manager.execute("pre_package_info", conanfile=conanfile,
                                                reference=ref)
                     conanfile.package_info()
+                    if conanfile._conan_dep_cpp_info is None:
+                        try:
+                            conanfile.cpp_info._raise_if_mixing_components()
+                        except ConanException as e:
+                            raise ConanException("%s package_info(): %s" % (str(conanfile), e))
+                        conanfile._conan_dep_cpp_info = DepCppInfo(conanfile.cpp_info)
                     self._hook_manager.execute("post_package_info", conanfile=conanfile,
                                                reference=ref)

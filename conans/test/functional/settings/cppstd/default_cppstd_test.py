@@ -6,7 +6,9 @@ import textwrap
 import unittest
 
 from conans.client.build.cppstd_flags import cppstd_default
+from conans.client.conf import get_default_settings_yml
 from conans.client.tools import environment_append, save, load
+from conans.model.settings import Settings
 from conans.test.utils.deprecation import catch_deprecation_warning
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
@@ -80,6 +82,13 @@ class DefaultCppTestCase(unittest.TestCase):
         return data[0]["id"], info_output
 
 
+def _make_cppstd_default(compiler, compiler_version):
+    settings = Settings.loads(get_default_settings_yml())
+    settings.compiler = compiler
+    settings.compiler.version = compiler_version
+    return cppstd_default(settings)
+
+
 class SettingsCppStdTests(DefaultCppTestCase):
     """
     Validate package ID computed taking into account different scenarios for 'cppstd'. The ID
@@ -104,7 +113,7 @@ class SettingsCppStdTests(DefaultCppTestCase):
 
     def test_value_default(self):
         # Explicit value (equals to default) passed to setting 'cppstd'
-        cppstd = cppstd_default(self.compiler, self.compiler_version)
+        cppstd = _make_cppstd_default(self.compiler, self.compiler_version)
         with catch_deprecation_warning(self):
             id_with, output = self._get_id(with_cppstd=True, settings_values={"cppstd": cppstd})
         self.assertIn(">>>> settings: ['compiler', 'cppstd', 'os']", output)
@@ -144,7 +153,7 @@ class SettingsCompilerCppStdTests(DefaultCppTestCase):
 
     def test_value_default(self):
         # Explicit value (equals to default) passed to setting 'compiler.cppstd'
-        cppstd = cppstd_default(self.compiler, self.compiler_version)
+        cppstd = _make_cppstd_default(self.compiler, self.compiler_version)
         id_with, output = self._get_id(settings_values={"compiler.cppstd": cppstd})
         self.assertIn(">>>> settings: ['compiler', 'os']", output)
         self.assertIn(">>>> cppstd: None", output)

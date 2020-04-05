@@ -600,8 +600,7 @@ class ConanInfo(object):
 
         if (self.full_settings.compiler and
                 self.full_settings.compiler.version):
-            default = cppstd_default(str(self.full_settings.compiler),
-                                     str(self.full_settings.compiler.version))
+            default = cppstd_default(self.full_settings)
 
             if str(self.full_settings.cppstd) == default:
                 self.settings.cppstd = None

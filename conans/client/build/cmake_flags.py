@@ -3,7 +3,7 @@ from collections import OrderedDict
 
 from conans.client import tools
 from conans.client.build.compiler_flags import architecture_flag, parallel_compiler_cl_flag
-from conans.client.build.cppstd_flags import cppstd_flag, cppstd_from_settings
+from conans.client.build.cppstd_flags import cppstd_from_settings, cppstd_flag_new as cppstd_flag
 from conans.client.tools import cross_building
 from conans.client.tools.apple import is_apple_os
 from conans.client.tools.oss import get_cross_building_settings
@@ -50,8 +50,8 @@ def get_generator(settings):
                     '12': '12 2013',
                     '14': '14 2015',
                     '15': '15 2017',
-                    '16': '16 2019'}
-        base = "Visual Studio %s" % _visuals.get(compiler_version, "UnknownVersion %s" % compiler_version)
+                    '16': '16 2019'}.get(compiler_version, "UnknownVersion %s" % compiler_version)
+        base = "Visual Studio %s" % _visuals
         return base
 
     # The generator depends on the build machine, not the target
@@ -114,8 +114,8 @@ def runtime_definition(runtime):
 
 def build_type_definition(new_build_type, old_build_type, generator, output):
     if new_build_type and new_build_type != old_build_type:
-        output.warn("Forced CMake build type ('%s') different from the settings build "
-                          "type ('%s')" % (new_build_type, old_build_type))
+        output.warn("Forced CMake build type ('%s') different from the settings build type ('%s')"
+                    % (new_build_type, old_build_type))
 
     build_type = new_build_type or old_build_type
     if build_type and not is_multi_configuration(generator):
@@ -143,8 +143,6 @@ class CMakeDefinitionsBuilder(object):
 
     def _get_cpp_standard_vars(self):
         cppstd = cppstd_from_settings(self._conanfile.settings)
-        compiler = self._ss("compiler")
-        compiler_version = self._ss("compiler.version")
 
         if not cppstd:
             return {}
@@ -157,7 +155,7 @@ class CMakeDefinitionsBuilder(object):
             definitions["CONAN_CMAKE_CXX_STANDARD"] = cppstd
             definitions["CONAN_CMAKE_CXX_EXTENSIONS"] = "OFF"
 
-        definitions["CONAN_STD_CXX_FLAG"] = cppstd_flag(compiler, compiler_version, cppstd)
+        definitions["CONAN_STD_CXX_FLAG"] = cppstd_flag(self._conanfile.settings)
         return definitions
 
     def _cmake_cross_build_defines(self):
@@ -341,7 +339,8 @@ class CMakeDefinitionsBuilder(object):
             fpic = self._conanfile.options.get_safe("fPIC")
             if fpic is not None:
                 shared = self._conanfile.options.get_safe("shared")
-                definitions["CONAN_CMAKE_POSITION_INDEPENDENT_CODE"] = "ON" if (fpic or shared) else "OFF"
+                fpic_value = "ON" if (fpic or shared) else "OFF"
+                definitions["CONAN_CMAKE_POSITION_INDEPENDENT_CODE"] = fpic_value
 
         # Adjust automatically the module path in case the conanfile is using the
         # cmake_find_package or cmake_find_package_multi

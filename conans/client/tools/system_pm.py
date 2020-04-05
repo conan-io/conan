@@ -11,7 +11,8 @@ from conans.util.fallbacks import default_output
 
 class SystemPackageTool(object):
 
-    def __init__(self, runner=None, os_info=None, tool=None, recommends=False, output=None, conanfile=None):
+    def __init__(self, runner=None, os_info=None, tool=None, recommends=False, output=None,
+                 conanfile=None, default_mode="enabled"):
         output = output if output else conanfile.output if conanfile else None
         self._output = default_output(output, 'conans.client.tools.system_pm.SystemPackageTool')
         os_info = os_info or OSInfo()
@@ -21,6 +22,7 @@ class SystemPackageTool(object):
         self._tool._runner = runner or ConanRunner(output=self._output)
         self._tool._recommends = recommends
         self._conanfile = conanfile
+        self._default_mode = default_mode
 
     @staticmethod
     def _get_sudo_str():
@@ -44,16 +46,6 @@ class SystemPackageTool(object):
         return get_env("CONAN_SYSREQUIRES_SUDO", True)
 
     @staticmethod
-    def _get_sysrequire_mode():
-        allowed_modes = ("enabled", "verify", "disabled")
-        mode = get_env("CONAN_SYSREQUIRES_MODE", "enabled")
-        mode_lower = mode.lower()
-        if mode_lower not in allowed_modes:
-            raise ConanException("CONAN_SYSREQUIRES_MODE=%s is not allowed, allowed modes=%r"
-                                 % (mode, allowed_modes))
-        return mode_lower
-
-    @staticmethod
     def _create_tool(os_info, output):
         if os_info.with_apt:
             return AptTool(output=output)
@@ -73,6 +65,15 @@ class SystemPackageTool(object):
             return ZypperTool(output=output)
         else:
             return NullTool(output=output)
+
+    def _get_sysrequire_mode(self):
+        allowed_modes = ("enabled", "verify", "disabled")
+        mode = get_env("CONAN_SYSREQUIRES_MODE", self._default_mode)
+        mode_lower = mode.lower()
+        if mode_lower not in allowed_modes:
+            raise ConanException("CONAN_SYSREQUIRES_MODE=%s is not allowed, allowed modes=%r"
+                                 % (mode, allowed_modes))
+        return mode_lower
 
     def add_repository(self, repository, repo_key=None, update=True):
         self._tool.add_repository(repository, repo_key=repo_key)
