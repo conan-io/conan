@@ -1,4 +1,5 @@
 import os
+import re
 import time
 import traceback
 
@@ -47,12 +48,10 @@ class FileDownloader(object):
         t1 = time.time()
         if try_resume and file_path and os.path.exists(file_path):
             range_start = os.path.getsize(file_path)
-        else:
-            range_start = 0
-
-        if range_start:
             headers = headers.copy() if headers else {}
             headers["range"] = "bytes={}-".format(range_start)
+        else:
+            range_start = 0
 
         try:
             response = self._requester.get(url, stream=True, verify=self._verify_ssl, auth=auth,
@@ -96,21 +95,28 @@ class FileDownloader(object):
                 ret = bytes(ret_data)
             return ret, downloaded_size
 
+        def get_total_length():
+            content_range = response.headers.get("Content-Range", "")
+            match = re.match(r"^bytes (\d+)-(\d+)/(\d+)", content_range)
+            if match:
+                assert range_start == int(match.group(1))
+                return int(match.group(3))
+            else:
+                assert range_start == 0
+                total_size = response.headers.get('Content-Length') or len(response.content)
+                return int(total_size)
+
         try:
             logger.debug("DOWNLOAD: %s" % url)
-            total_length = response.headers.get('content-length') or len(response.content)
-            total_length = range_start + int(total_length)
-            description = "Downloading {}".format(os.path.basename(file_path)) if file_path else None
+            total_length = get_total_length()
+            action = "Downloading" if range_start == 0 else "Continuing download of"
+            description = "{} {}".format(action, os.path.basename(file_path)) if file_path else None
             progress = progress_bar.Progress(total_length, self._output, description)
-
-            chunk_size = 1024 if not file_path else 1024 * 100
-            encoding = response.headers.get('content-encoding')
-            gzip = (encoding == "gzip")
-
             # TODO: refactor Progress to allow setting an initial progress
             progress._processed_size = range_start
             progress._pb_update(range_start)
 
+            chunk_size = 1024 if not file_path else 1024 * 100
             written_chunks, total_downloaded_size = write_chunks(
                 progress.update(read_response(chunk_size)),
                 file_path
@@ -122,7 +128,10 @@ class FileDownloader(object):
                 and response.headers.get("accept-ranges") == "bytes"
             ):
                 written_chunks = self._download_file(url, auth, headers, file_path, try_resume=True)
-            elif total_downloaded_size != total_length and not gzip:
+            elif (
+                total_downloaded_size != total_length
+                and response.headers.get("Content-Encoding") != "gzip"
+            ):
                 raise ConanException("Transfer interrupted before "
                                      "complete: %s < %s" % (total_downloaded_size, total_length))
 
