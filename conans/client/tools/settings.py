@@ -28,7 +28,7 @@ def deduced_cppstd(conanfile):
         raise ConanInvalidConfiguration("Could not obtain cppstd because compiler.version "
                                         "is not specified in the profile")
 
-    return cppstd_default(compiler, compiler_version)
+    return cppstd_default(conanfile.settings)
 
 
 def normalized_cppstd(cppstd):
