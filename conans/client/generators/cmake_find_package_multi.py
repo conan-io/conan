@@ -1,6 +1,6 @@
 from conans.client.generators.cmake import DepsCppCmake
 from conans.client.generators.cmake_find_package import find_dependency_lines
-from conans.client.generators.cmake_find_package_common import target_template
+from conans.client.generators.cmake_find_package_common import target_template, CMakeFindPackageCommonMacros
 from conans.client.generators.cmake_multi import extend
 from conans.model import Generator
 
@@ -10,7 +10,7 @@ class CMakeFindPackageMultiGenerator(Generator):
 
 # Requires CMake > 3.0
 if(${{CMAKE_VERSION}} VERSION_LESS "3.0")
-   message(FATAL_ERROR "The 'cmake_find_package_multi' only works with CMake > 3.0" )
+   message(FATAL_ERROR "The 'cmake_find_package_multi' generator only works with CMake > 3.0" )
 endif()
 
 include(${{CMAKE_CURRENT_LIST_DIR}}/{name}Targets.cmake)
@@ -38,10 +38,10 @@ endforeach()
 # Assign target properties
 set_property(TARGET {name}::{name}
              PROPERTY INTERFACE_LINK_LIBRARIES 
-                 $<$<CONFIG:Release>:${{{name}_LIBRARIES_TARGETS_RELEASE}} ${{{name}_SYSTEM_LIBS_RELEASE}} ${{{name}_LINKER_FLAGS_RELEASE_LIST}}>
-                 $<$<CONFIG:RelWithDebInfo>:${{{name}_LIBRARIES_TARGETS_RELWITHDEBINFO}} ${{{name}_SYSTEM_LIBS_RELWITHDEBINFO}} ${{{name}_LINKER_FLAGS_RELWITHDEBINFO_LIST}}>
-                 $<$<CONFIG:MinSizeRel>:${{{name}_LIBRARIES_TARGETS_MINSIZEREL}} ${{{name}_SYSTEM_LIBS_MINSIZEREL}} ${{{name}_LINKER_FLAGS_MINSIZEREL_LIST}}>
-                 $<$<CONFIG:Debug>:${{{name}_LIBRARIES_TARGETS_DEBUG}} ${{{name}_SYSTEM_LIBS_DEBUG}} ${{{name}_LINKER_FLAGS_DEBUG_LIST}}>)
+                 $<$<CONFIG:Release>:${{{name}_LIBRARIES_TARGETS_RELEASE}} ${{{name}_LINKER_FLAGS_RELEASE_LIST}}>
+                 $<$<CONFIG:RelWithDebInfo>:${{{name}_LIBRARIES_TARGETS_RELWITHDEBINFO}} ${{{name}_LINKER_FLAGS_RELWITHDEBINFO_LIST}}>
+                 $<$<CONFIG:MinSizeRel>:${{{name}_LIBRARIES_TARGETS_MINSIZEREL}} ${{{name}_LINKER_FLAGS_MINSIZEREL_LIST}}>
+                 $<$<CONFIG:Debug>:${{{name}_LIBRARIES_TARGETS_DEBUG}} ${{{name}_LINKER_FLAGS_DEBUG_LIST}}>)
 set_property(TARGET {name}::{name}
              PROPERTY INTERFACE_INCLUDE_DIRECTORIES 
                  $<$<CONFIG:Release>:${{{name}_INCLUDE_DIRS_RELEASE}}>
@@ -107,8 +107,10 @@ endif()
             ret["{}Targets.cmake".format(depname)] = self.targets_file.format(name=depname)
 
             deps = DepsCppCmake(dep_cpp_info)
-            find_lib = target_template.format(name=depname, deps=deps,
-                                              build_type_suffix=build_type_suffix)
+            public_deps_names = [self.deps_build_info[dep].get_name("cmake_find_package_multi") for dep in
+                                 cpp_info.public_deps]
+            find_lib = target_template.format(name=depname, deps=deps, build_type_suffix=build_type_suffix,
+                                              deps_names=";".join(["{n}::{n}".format(n=n) for n in public_deps_names]))
             ret["{}Target-{}.cmake".format(depname, build_type.lower())] = find_lib
             ret["{}ConfigVersion.cmake".format(depname)] = self.version_template.\
                 format(version=dep_cpp_info.version)
@@ -119,7 +121,7 @@ endif()
         if cpp_info.public_deps:
             # Here we are generating only Config files, so do not search for FindXXX modules
             public_deps_names = [self.deps_build_info[dep].get_name("cmake_find_package_multi") for dep in cpp_info.public_deps]
-            lines = find_dependency_lines(name, public_deps_names, find_modules=False)
+            lines = find_dependency_lines(public_deps_names, find_modules=False)
 
         targets_props = self.target_properties.format(name=name)
 
@@ -127,4 +129,8 @@ endif()
                                               version=cpp_info.version,
                                               find_dependencies_block="\n".join(lines),
                                               target_props_block=targets_props)
-        return tmp
+
+        return "\n".join([CMakeFindPackageCommonMacros.conan_message,
+                          CMakeFindPackageCommonMacros.apple_frameworks_macro,
+                          CMakeFindPackageCommonMacros.conan_package_library_targets,
+                          tmp])

@@ -1,13 +1,15 @@
 import ast
 import os
 import shutil
+import sys
 
 import six
+import yaml
 
 from conans.client.file_copier import FileCopier
 from conans.client.output import Color, ScopedOutput
 from conans.client.remover import DiskRemover
-from conans.errors import ConanException
+from conans.errors import ConanException, ConanV2Exception
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference
 from conans.model.scm import SCM, get_scm_data
@@ -16,6 +18,8 @@ from conans.search.search import search_recipes, search_packages
 from conans.util.files import is_dirty, load, rmdir, save, set_dirty, remove, mkdir, \
     merge_directories
 from conans.util.log import logger
+
+isPY38 = bool(sys.version_info.major == 3 and sys.version_info.minor == 8)
 
 
 def export_alias(package_layout, target_ref, output, revisions_enabled):
@@ -59,17 +63,22 @@ def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
     """
     loader, cache, hook_manager, output = app.loader, app.cache, app.hook_manager, app.out
     revisions_enabled = app.config.revisions_enabled
+    scm_to_conandata = app.config.scm_to_conandata
     conanfile = loader.load_export(conanfile_path, name, version, user, channel)
 
     # FIXME: Conan 2.0, deprecate CONAN_USER AND CONAN_CHANNEL and remove this try excepts
     # Take the default from the env vars if they exist to not break behavior
     try:
         user = conanfile.user
+    except ConanV2Exception:
+        raise
     except ConanException:
         user = None
 
     try:
         channel = conanfile.channel
+    except ConanV2Exception:
+        raise
     except ConanException:
         channel = None
 
@@ -123,8 +132,8 @@ def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
         # Calculate the "auto" values and replace in conanfile.py
         scm_data, local_src_folder = _capture_scm_auto_fields(conanfile,
                                                               os.path.dirname(conanfile_path),
-                                                              package_layout.export(), output,
-                                                              ignore_dirty)
+                                                              package_layout, output,
+                                                              ignore_dirty, scm_to_conandata)
         # Clear previous scm_folder
         modified_recipe = False
         scm_sources_folder = package_layout.scm_sources()
@@ -201,9 +210,9 @@ def _check_settings_for_warnings(conanfile, output):
     if not conanfile.settings:
         return
     try:
-        if not 'os_build' in conanfile.settings:
+        if 'os_build' not in conanfile.settings:
             return
-        if not 'os' in conanfile.settings:
+        if 'os' not in conanfile.settings:
             return
 
         output.writeln("*"*60, front=Color.BRIGHT_RED)
@@ -218,7 +227,7 @@ def _check_settings_for_warnings(conanfile, output):
         pass
 
 
-def _capture_scm_auto_fields(conanfile, conanfile_dir, destination_folder, output, ignore_dirty):
+def _capture_scm_auto_fields(conanfile, conanfile_dir, package_layout, output, ignore_dirty, scm_to_conandata):
     """Deduce the values for the scm auto fields or functions assigned to 'url' or 'revision'
        and replace the conanfile.py contents.
        Returns a tuple with (scm_data, path_to_scm_local_directory)"""
@@ -232,7 +241,7 @@ def _capture_scm_auto_fields(conanfile, conanfile_dir, destination_folder, outpu
 
     if not captured:
         # We replace not only "auto" values, also evaluated functions (e.g from a python_require)
-        _replace_scm_data_in_conanfile(os.path.join(destination_folder, "conanfile.py"), scm_data)
+        _replace_scm_data_in_recipe(package_layout, scm_data, scm_to_conandata)
         return scm_data, None
 
     if not scm.is_pristine() and not ignore_dirty:
@@ -260,9 +269,27 @@ def _capture_scm_auto_fields(conanfile, conanfile_dir, destination_folder, outpu
         output.success("Revision deduced by 'auto': %s" % scm_data.revision)
 
     local_src_path = scm.get_local_path_to_url(scm_data.url)
-    _replace_scm_data_in_conanfile(os.path.join(destination_folder, "conanfile.py"), scm_data)
+    _replace_scm_data_in_recipe(package_layout, scm_data, scm_to_conandata)
 
     return scm_data, local_src_path
+
+
+def _replace_scm_data_in_recipe(package_layout, scm_data, scm_to_conandata):
+    if scm_to_conandata:
+        conandata_path = os.path.join(package_layout.export(), DATA_YML)
+        conandata_yml = {}
+        if os.path.exists(conandata_path):
+            conandata_yml = yaml.safe_load(load(conandata_path))
+            if '.conan' in conandata_yml:
+                raise ConanException("Field '.conan' inside '{}' file is reserved to Conan usage.".format(DATA_YML))
+        scm_data_copied = scm_data.as_dict()
+        scm_data_copied.pop('username', None)
+        scm_data_copied.pop('password', None)
+        conandata_yml['.conan'] = {'scm': scm_data_copied}
+
+        save(conandata_path, yaml.safe_dump(conandata_yml, default_flow_style=False))
+    else:
+        _replace_scm_data_in_conanfile(package_layout.conanfile(), scm_data)
 
 
 def _replace_scm_data_in_conanfile(conanfile_path, scm_data):
@@ -303,7 +330,14 @@ def _replace_scm_data_in_conanfile(conanfile_path, scm_data):
                                 else:
                                     next_line = tree.body[i_body+1].lineno - 1
                             else:
-                                next_line = statements[i+1].lineno - 1
+                                # Next statement can be a comment or anything else
+                                next_statement = statements[i+1]
+                                if isPY38 and isinstance(next_statement, ast.Expr):
+                                    # Python 3.8 properly parses multiline comments with start and end lines,
+                                    #  here we preserve the same (wrong) implementation of previous releases
+                                    next_line = next_statement.end_lineno - 1
+                                else:
+                                    next_line = next_statement.lineno - 1
                                 next_line_content = lines[next_line].strip()
                                 if (next_line_content.endswith('"""') or
                                         next_line_content.endswith("'''")):

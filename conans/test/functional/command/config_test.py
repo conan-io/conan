@@ -39,7 +39,7 @@ class ConfigTest(unittest.TestCase):
         self.client.run("config get storage.what", assert_error=True)
         self.assertIn("'what' doesn't exist in [storage]", self.client.out)
         self.client.run('config set proxies=https:', assert_error=True)
-        self.assertIn("You can't set a full section, please specify a key=value",
+        self.assertIn("You can't set a full section, please specify a section.key=value",
                       self.client.out)
 
         self.client.run('config set proxies.http:Value', assert_error=True)
@@ -117,6 +117,14 @@ class ConfigTest(unittest.TestCase):
         with environment_append({"CONAN_USER_HOME_SHORT": cache_folder}):
             with six.assertRaisesRegex(self, ConanException, "cannot be a subdirectory of the conan cache"):
                 TestClient(cache_folder=cache_folder)
+
+    def test_config_home_short_home_dir_contains_cache_dir(self):
+        # https://github.com/conan-io/conan/issues/6273
+        cache_folder = os.path.join(temp_folder(), "custom")
+        short_path_home_folder = cache_folder + '_short'
+        with environment_append({"CONAN_USER_HOME_SHORT": short_path_home_folder}):
+            client = TestClient(cache_folder=cache_folder)
+            self.assertEqual(client.cache.config.short_paths_home, short_path_home_folder)
 
     def _assert_dict_subset(self, expected, actual):
         actual = {k: v for k, v in actual.items() if k in expected}

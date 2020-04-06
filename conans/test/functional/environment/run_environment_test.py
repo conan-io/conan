@@ -5,10 +5,10 @@ import textwrap
 import unittest
 
 from conans.client import tools
-from conans.client.tools.oss import check_output
 from conans.paths import CONANFILE
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import TestClient, TestServer
+from conans.util.runners import check_output_runner
 
 
 class RunEnvironmentTest(unittest.TestCase):
@@ -134,7 +134,8 @@ class RunEnvironmentSharedTest(unittest.TestCase):
         # This test is excluded from OSX, because of the SIP protection. CMake helper will
         # launch a subprocess with shell=True, which CLEANS the DYLD_LIBRARY_PATH. Injecting its
         # value via run_environment=True doesn't work, because it prepends its value to:
-        # command = "cd [folder] && cmake [cmd]" => "DYLD_LIBRARY_PATH=[path] cd [folder] && cmake [cmd]"
+        # command = "cd [folder] && cmake [cmd]" =>
+        #                 "DYLD_LIBRARY_PATH=[path] cd [folder] && cmake [cmd]"
         # and then only applies to the change directory "cd"
         # If CMake binary is in user folder, it is not under SIP, and it can work. For cmake
         # installed in system folders, then no possible form of "DYLD_LIBRARY_PATH=[folders] cmake"
@@ -177,10 +178,10 @@ class RunEnvironmentSharedTest(unittest.TestCase):
                 command = "activate_run.bat && say_hello"
             else:
                 # It is not necessary to use the DYLD_LIBRARY_PATH in OSX because the activate_run.sh
-                # will work perfectly. It is inside the bash, so the loader will use DYLD_LIBRARY_PATH
+                # will work perfectly. It is inside bash, so the loader will use DYLD_LIBRARY_PATH
                 # values. It also works in command line with export DYLD_LIBRARY_PATH=[path] and then
                 # running, or in the same line "$ DYLD_LIBRARY_PATH=[path] say_hello"
                 command = "bash -c 'source activate_run.sh && say_hello'"
 
-            output = check_output(command)
+            output = check_output_runner(command)
             self.assertIn("Hello Tool!", output)

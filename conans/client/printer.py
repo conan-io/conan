@@ -4,6 +4,7 @@ from collections import OrderedDict
 from conans.client.output import Color
 from conans.model.options import OptionsValues
 from conans.model.ref import ConanFileReference
+from conans.util.conan_v2_mode import conan_v2_behavior
 
 
 class Printer(object):
@@ -23,6 +24,9 @@ class Printer(object):
     def print_inspect(self, inspect, raw=False):
         for k, v in inspect.items():
             if k == "default_options":
+                if not isinstance(v, dict):
+                    conan_v2_behavior("Declare 'default_options' as a dictionary")
+
                 if isinstance(v, str):
                     v = OptionsValues.loads(v)
                 elif isinstance(v, tuple):
@@ -94,6 +98,7 @@ class Printer(object):
                 self._out.writeln("    %s: %s" % (lead_str, licenses_str), Color.BRIGHT_GREEN)
 
             _print("author", name="Author")
+            _print("description", name="Description")
 
             if show("topics") and "topics" in it:
                 self._out.writeln("    Topics: %s" % ", ".join(it["topics"]), Color.BRIGHT_GREEN)

@@ -30,9 +30,11 @@ class RequirementInfo(object):
         self._indirect = indirect
 
         try:
-            getattr(self, default_package_id_mode)()
+            func_package_id_mode = getattr(self, default_package_id_mode)
         except AttributeError:
             raise ConanException("'%s' is not a known package_id_mode" % default_package_id_mode)
+        else:
+            func_package_id_mode()
 
     def copy(self):
         # Useful for build_id()
@@ -285,9 +287,11 @@ class PythonRequireInfo(object):
         self._revision = None
 
         try:
-            getattr(self, default_package_id_mode)()
+            func_package_id_mode = getattr(self, default_package_id_mode)
         except AttributeError:
             raise ConanException("'%s' is not a known package_id_mode" % default_package_id_mode)
+        else:
+            func_package_id_mode()
 
     @property
     def sha(self):
@@ -352,7 +356,8 @@ class PythonRequiresInfo(object):
 
     def copy(self):
         # For build_id() implementation
-        return PythonRequiresInfo(self._refs, self._default_package_id_mode)
+        refs = [r._ref for r in self._refs] if self._refs else None
+        return PythonRequiresInfo(refs, self._default_package_id_mode)
 
     def __bool__(self):
         return bool(self._refs)
@@ -595,8 +600,7 @@ class ConanInfo(object):
 
         if (self.full_settings.compiler and
                 self.full_settings.compiler.version):
-            default = cppstd_default(str(self.full_settings.compiler),
-                                     str(self.full_settings.compiler.version))
+            default = cppstd_default(self.full_settings)
 
             if str(self.full_settings.cppstd) == default:
                 self.settings.cppstd = None

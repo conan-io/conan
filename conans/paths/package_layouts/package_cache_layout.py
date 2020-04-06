@@ -2,11 +2,12 @@
 
 import os
 import platform
+import threading
 from contextlib import contextmanager
-
 
 import fasteners
 
+from conans.client.tools.oss import OSInfo
 from conans.errors import NotFoundException, ConanException
 from conans.errors import RecipeNotFoundException, PackageNotFoundException
 from conans.model.manifest import FileTreeManifest
@@ -22,7 +23,7 @@ from conans.util.log import logger
 
 
 def short_path(func):
-    if platform.system() == "Windows":
+    if platform.system() == "Windows" or OSInfo().is_cygwin:  # Not for other subsystems
         from conans.util.windows import path_shortener
 
         def wrap(self, *args, **kwargs):
@@ -170,16 +171,25 @@ class PackageCacheLayout(object):
             raise RecipeNotFoundException(self._ref)
         return PackageMetadata.loads(text)
 
+    _metadata_locks = {}  # Needs to be shared among all instances
+
     @contextmanager
     def update_metadata(self):
-        lockfile = self.package_metadata() + ".lock"
+        metadata_path = self.package_metadata()
+        lockfile = metadata_path + ".lock"
         with fasteners.InterProcessLock(lockfile, logger=logger):
+            lock_name = self.package_metadata()  # The path is the thing that defines mutex
+            thread_lock = PackageCacheLayout._metadata_locks.setdefault(lock_name, threading.Lock())
+            thread_lock.acquire()
             try:
-                metadata = self.load_metadata()
-            except RecipeNotFoundException:
-                metadata = PackageMetadata()
-            yield metadata
-            save(self.package_metadata(), metadata.dumps())
+                try:
+                    metadata = self.load_metadata()
+                except RecipeNotFoundException:
+                    metadata = PackageMetadata()
+                yield metadata
+                save(metadata_path, metadata.dumps())
+            finally:
+                thread_lock.release()
 
     # Locks
     def conanfile_read_lock(self, output):

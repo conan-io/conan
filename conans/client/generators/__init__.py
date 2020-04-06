@@ -17,6 +17,7 @@ from .deploy import DeployGenerator
 from .gcc import GCCGenerator
 from .json_generator import JsonGenerator
 from .make import MakeGenerator
+from .markdown import MarkdownGenerator
 from .premake import PremakeGenerator
 from .qbs import QbsGenerator
 from .qmake import QmakeGenerator
@@ -81,6 +82,7 @@ registered_generators.add("b2", B2Generator)
 registered_generators.add("premake", PremakeGenerator)
 registered_generators.add("make", MakeGenerator)
 registered_generators.add("deploy", DeployGenerator)
+registered_generators.add("markdown", MarkdownGenerator)
 
 
 def write_generators(conanfile, path, output):
@@ -107,7 +109,8 @@ def write_generators(conanfile, path, output):
                     output.warn("Generator %s is multifile. Property 'filename' not used"
                                 % (generator_name,))
                 for k, v in content.items():
-                    v = normalize(v)
+                    if generator.normalize:  # To not break existing behavior, to be removed 2.0
+                        v = normalize(v)
                     output.info("Generator %s created %s" % (generator_name, k))
                     save(join(path, k), v, only_if_modified=True)
             else:

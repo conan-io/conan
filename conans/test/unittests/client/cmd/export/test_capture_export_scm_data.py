@@ -12,9 +12,10 @@ from conans.model.ref import ConanFileReference
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import create_local_git_repo, TestBufferConanOutput
 from conans.util.files import save
+from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
 
 
-@mock.patch("conans.client.cmd.export._replace_scm_data_in_conanfile", return_value=None)
+@mock.patch("conans.client.cmd.export._replace_scm_data_in_recipe", return_value=None)
 class CaptureExportSCMDataTest(unittest.TestCase):
 
     def setUp(self):
@@ -45,9 +46,10 @@ class CaptureExportSCMDataTest(unittest.TestCase):
         scm_data, _ = _capture_scm_auto_fields(
             conanfile=conanfile,
             conanfile_dir=self.conanfile_dir,
-            destination_folder="",
+            package_layout=None,
             output=output,
-            ignore_dirty=True)
+            ignore_dirty=True,
+            scm_to_conandata=False)
 
         self.assertEqual(scm_data.url, url)
         self.assertEqual(scm_data.revision, self.rev)
@@ -71,9 +73,10 @@ class CaptureExportSCMDataTest(unittest.TestCase):
         scm_data, _ = _capture_scm_auto_fields(
             conanfile=conanfile,
             conanfile_dir=self.conanfile_dir,
-            destination_folder="",
+            package_layout=None,
             output=output,
-            ignore_dirty=False)
+            ignore_dirty=False,
+            scm_to_conandata=False)
 
         self.assertEqual(scm_data.url, url)
         if is_pristine:
@@ -100,9 +103,10 @@ class CaptureExportSCMDataTest(unittest.TestCase):
         scm_data, _ = _capture_scm_auto_fields(
                     conanfile=conanfile,
                     conanfile_dir=self.conanfile_dir,
-                    destination_folder="",
+                    package_layout=None,
                     output=output,
-                    ignore_dirty=True)
+                    ignore_dirty=True,
+                    scm_to_conandata=False)
 
         self.assertEqual(scm_data.url, url)
         self.assertEqual(scm_data.revision, self.rev)
