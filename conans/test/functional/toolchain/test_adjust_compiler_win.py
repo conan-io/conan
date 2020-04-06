@@ -12,7 +12,6 @@ from nose.plugins.attrib import attr
 from parameterized.parameterized import parameterized
 from parameterized.parameterized import parameterized_class
 
-from conans.client.conf.detect import _execute
 from conans.client.toolchain.cmake import CMakeToolchain
 from conans.client.tools import environment_append
 from conans.model.ref import ConanFileReference

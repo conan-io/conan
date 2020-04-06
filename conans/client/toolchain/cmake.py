@@ -95,7 +95,7 @@ class CMakeToolchain(object):
     _template_toolchain = textwrap.dedent("""
         # Conan generated toolchain file
         cmake_minimum_required(VERSION 3.0)  # Needed for targets
-                
+
         # Avoid including toolchain file several times (bad if appending to variables like
         #   CMAKE_CXX_FLAGS. See https://github.com/android/ndk/issues/323
         if(CONAN_TOOLCHAIN_INCLUDED)
@@ -104,30 +104,30 @@ class CMakeToolchain(object):
         set(CONAN_TOOLCHAIN_INCLUDED true)
 
         message("Using Conan toolchain through ${CMAKE_TOOLCHAIN_FILE}.")
-        
+
         ########### Utility macros and functions ###########
         {{ cmake_macros_and_functions }}
         ########### End of Utility macros and functions ###########
-        
+
         # Configure
         # -- CMake::command_line
         {% if generator_platform %}set(CMAKE_GENERATOR_PLATFORM "{{ generator_platform }}" CACHE STRING "" FORCE){% endif %}
         {% if toolset %}set(CMAKE_GENERATOR_TOOLSET "{{ toolset }}" CACHE STRING "" FORCE){% endif%}
-        
+
         # --  - CMake.flags --> CMakeDefinitionsBuilder::get_definitions
         {%- for it, value in definitions.items() %}
         set({{ it }} "{{ value }}" CACHE STRING "Do we want to set all these vars in the cache?" FORCE)
         {%- endfor %}
-        
+
         # Set some environment variables
         {%- for it, value in environment.items() %}
         set(ENV{{ '{' }}{{ it }}{{ '}' }} "{{ value }}")
         {%- endfor %}
-        
+
         get_property( _CMAKE_IN_TRY_COMPILE GLOBAL PROPERTY IN_TRY_COMPILE )
         if(NOT _CMAKE_IN_TRY_COMPILE)
             if(CMAKE_VERSION VERSION_LESS "3.15")
-                message(WARNING 
+                message(WARNING
                     " CMake version less than 3.15 doesn't support CMAKE_PROJECT_INCLUDE variable\\n"
                     " used by Conan toolchain to work. In order to get the same behavior you will\\n"
                     " need to manually include the generated file after your 'project()' call in the\\n"
@@ -141,23 +141,23 @@ class CMakeToolchain(object):
             else()
                 set(CMAKE_PROJECT_INCLUDE "{{ conan_project_include_cmake }}")  # Will be executed after the 'project()' command
             endif()
-            
+
             # We are going to adjust automagically many things as requested by Conan
-            #   these are the things done by 'conan_basic_setup()'            
+            #   these are the things done by 'conan_basic_setup()'
             {% if options.set_rpath %}conan_set_rpath(){% endif %}
             {% if options.set_std %}conan_set_std(){% endif %}
             {% if options.set_fpic %}conan_set_fpic(){% endif %}
-            
+
             {% if options.set_libcxx %}conan_set_libcxx(){% endif %}
             {% if options.set_find_paths %}conan_set_find_paths(){% endif %}
             {% if options.set_find_library_paths %}conan_set_find_library_paths(){% endif %}
-            
+
             set(CMAKE_CXX_FLAGS_INIT "${CONAN_CXX_FLAGS}" CACHE STRING "" FORCE)
             set(CMAKE_C_FLAGS_INIT "${CONAN_C_FLAGS}" CACHE STRING "" FORCE)
             set(CMAKE_SHARED_LINKER_FLAGS_INIT "${CONAN_SHARED_LINKER_FLAGS}" CACHE STRING "" FORCE)
             set(CMAKE_EXE_LINKER_FLAGS_INIT "${CONAN_EXE_LINKER_FLAGS}" CACHE STRING "" FORCE)
         endif()
-        
+
         {% if options.set_compiler %}conan_set_compiler(){% endif %}
     """)
 
@@ -180,7 +180,7 @@ class CMakeToolchain(object):
             set(CMAKE_BUILD_TYPE "{{ CMAKE_BUILD_TYPE }}" CACHE STRING "Choose the type of build." FORCE)
         endif()
         unset(_GENERATOR_IS_MULTI_CONFIG)
-        
+
         # Variables scoped to a configuration
         {%- for it, values in configuration_types_definitions.items() -%}
             {%- set generator_expression = namespace(str='') %}
@@ -219,10 +219,9 @@ class CMakeToolchain(object):
         self.set_compiler = True
         self.set_vs_runtime = True
 
-        generator = generator or get_generator(self._conanfile.settings, add_platform=False)
+        generator = generator or get_generator(self._conanfile.settings)
         self._generator_platform = generator_platform or \
-                                   get_generator_platform(self._conanfile.settings, generator,
-                                                          force_vs_return=True)
+                                   get_generator_platform(self._conanfile.settings, generator)
         self._toolset = toolset or get_toolset(self._conanfile.settings)
         self._build_type = build_type or self._conanfile.settings.get_safe("build_type")
 
@@ -280,6 +279,7 @@ class CMakeToolchain(object):
         content = t.render(conan_project_include_cmake=conan_project_include_cmake.replace("\\", "/"),
                            cmake_macros_and_functions="\n".join([
                                CMakeCommonMacros.conan_message,
+                               CMakeCommonMacros.conan_get_policy,
                                CMakeCommonMacros.conan_set_rpath,
                                CMakeCommonMacros.conan_set_std,
                                CMakeCommonMacros.conan_set_fpic,

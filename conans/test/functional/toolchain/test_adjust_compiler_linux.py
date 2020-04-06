@@ -12,9 +12,8 @@ from nose.plugins.attrib import attr
 from parameterized.parameterized import parameterized
 from parameterized.parameterized import parameterized_class
 
-from conans.client.conf.detect import _execute
+from conans.util.runners import detect_runner
 from conans.client.toolchain.cmake import CMakeToolchain
-from conans.client.tools import environment_append
 from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TurboTestClient
 from conans.util.files import load, rmdir
@@ -116,7 +115,7 @@ class AdjustAutoTestCase(unittest.TestCase):
         if(CONAN_TOOLCHAIN_INCLUDED AND CMAKE_VERSION VERSION_LESS "3.15")
             include("${CMAKE_BINARY_DIR}/conan_project_include.cmake")
         endif()
-        
+
         if(NOT CMAKE_TOOLCHAIN_FILE)
             message(">> Not using toolchain")
             include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
@@ -188,7 +187,7 @@ class AdjustAutoTestCase(unittest.TestCase):
         # TODO: Remove the app.cpp and the add_executable, probably it is not need to run cmake configure.
 
     def _gcc_version_full(self, compiler_version):
-        _, output = _execute("gcc-{} --version".format(compiler_version))
+        _, output = detect_runner("gcc-{} --version".format(compiler_version))
         output = str(output) if six.PY2 else output
         line = output.splitlines()[0] if six.PY2 else output.split('\\n')[0]
         m = re.match(r".*(?P<version>\d\.\d\.\d)(\s\d+)?$", line)
