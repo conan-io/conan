@@ -49,6 +49,9 @@ requirement_tpl = Template(textwrap.dedent("""
     {%- if cpp_info.cxxflags %}
     * CXX_FLAGS: ``{{ "``, ``".join(cpp_info.cxxflags) }}``
     {%- endif %}
+    {%- if cpp_info.build_modules %}
+    * Build modules (see [below](#build-modules)): ``{{ "``, ``".join(cpp_info.build_modules) }}``
+    {%- endif %}
 
 
     ## Generators
@@ -59,7 +62,7 @@ requirement_tpl = Template(textwrap.dedent("""
     line argument ``--generator/-g`` in the ``conan install`` command.
 
 
-    ### ``cmake`` generator
+    ### Generator ``cmake``
 
     Add these lines to your *CMakeLists.txt*
 
@@ -71,7 +74,7 @@ requirement_tpl = Template(textwrap.dedent("""
     ```
 
 
-    ### ``cmake_find_package`` generator
+    ### Generator ``cmake_find_package``
     {% set cmake_find_package_name = cpp_info.get_name("cmake_find_package") %}
 
     Add these lines to your *CMakeLists.txt*
@@ -97,7 +100,6 @@ requirement_tpl = Template(textwrap.dedent("""
     ```
 
     ---
-
     ## Header files
 
     List of header files exposed by this package. Use them in your ``#include`` directives:
@@ -107,6 +109,20 @@ requirement_tpl = Template(textwrap.dedent("""
     {{ header }}
     {%- endfor %}
     ```
+
+    {%- if cpp_info.build_modules %}
+    ---
+    ## Build modules
+
+    Modules exported by this recipe. They are automatically included when using Conan generators:
+
+    {% for name, build_module in build_modules %}
+    **{{ name }}**
+    ```
+    {{ build_module }}
+    ```
+    {% endfor %}
+    {% endif %}
 
 """))
 
@@ -128,6 +144,11 @@ class MarkdownGenerator(Generator):
             if name in cpp_info.public_deps:
                 yield other_name, cpp_info
 
+    def _read_build_modules(self, cpp_info):
+        for build_module in cpp_info.build_modules:
+            filename = os.path.join(cpp_info.rootpath, build_module)
+            yield build_module, open(filename, 'r').read()
+
     @property
     def filename(self):
         pass
@@ -141,6 +162,7 @@ class MarkdownGenerator(Generator):
                 cpp_info=cpp_info,
                 headers=self._list_headers(cpp_info),
                 requires=list(self._list_requires(cpp_info)),
-                required_by=list(self._list_required_by(name))
+                required_by=list(self._list_required_by(name)),
+                build_modules=self._read_build_modules(cpp_info)
             )
         return ret
