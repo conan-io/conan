@@ -49,7 +49,7 @@ def normalized_cppstd(cppstd):
     return add_millennium(remove_extension(cppstd))
 
 
-def contains_gnu_extension(cppstd):
+def _contains_gnu_extension(cppstd):
     """ Returns if cppstd contains gnu extension
 
     :param cppstd: cppstd version
@@ -66,7 +66,7 @@ def check_gnu_extension(cppstd):
     if not isinstance(cppstd, str) and not str(cppstd).isdigit():
         raise ConanException("cppstd parameter must either be a string or a digit")
 
-    if not contains_gnu_extension(cppstd):
+    if not _contains_gnu_extension(cppstd):
         raise ConanInvalidConfiguration("The cppstd GNU extension is required")
 
 
