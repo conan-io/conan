@@ -31,6 +31,24 @@ def deduced_cppstd(conanfile):
     return cppstd_default(conanfile.settings)
 
 
+def _remove_extension(_cppstd):
+    """ Removes gnu prefix from cppstd
+
+    :param cppstd: cppstd version
+    :return: Cppstd without extension
+    """
+    return str(_cppstd).replace("gnu", "")
+
+
+def _contains_extension(cppstd):
+    """ Returns if cppstd contains gnu extension
+
+    :param cppstd: cppstd version
+    :return: True, if current cppstd contains the gnu extension. Otherwise, False.
+    """
+    return str(cppstd).startswith("gnu") and _remove_extension(cppstd).isdigit()
+
+
 def normalized_cppstd(cppstd):
     """ Return a normalized cppstd value by removing extensions and
         adding a millennium to allow ordering on it
@@ -40,22 +58,10 @@ def normalized_cppstd(cppstd):
     if not isinstance(cppstd, str) and not str(cppstd).isdigit():
         raise ConanException("cppstd parameter must either be a string or a digit")
 
-    def remove_extension(_cppstd):
-        return str(_cppstd).replace("gnu", "")
-
     def add_millennium(_cppstd):
         return "19%s" % _cppstd if _cppstd == "98" else "20%s" % _cppstd
 
-    return add_millennium(remove_extension(cppstd))
-
-
-def _contains_gnu_extension(cppstd):
-    """ Returns if cppstd contains gnu extension
-
-    :param cppstd: cppstd version
-    :return: True, if current cppstd contains the gnu extension. Otherwise, False.
-    """
-    return str(cppstd).startswith("gnu")
+    return add_millennium(_remove_extension(cppstd))
 
 
 def check_gnu_extension(cppstd):
@@ -66,7 +72,7 @@ def check_gnu_extension(cppstd):
     if not isinstance(cppstd, str) and not str(cppstd).isdigit():
         raise ConanException("cppstd parameter must either be a string or a digit")
 
-    if not _contains_gnu_extension(cppstd):
+    if not _contains_extension(cppstd):
         raise ConanInvalidConfiguration("The cppstd GNU extension is required")
 
 
