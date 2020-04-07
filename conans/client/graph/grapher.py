@@ -1,31 +1,108 @@
 import os
+import re
 
 from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_MISSING, \
     BINARY_UPDATE
 from conans.client.installer import build_id
 from conans.util.files import save
-
+from conans.errors import ConanException
 
 class ConanGrapher(object):
     def __init__(self, deps_graph):
         self._deps_graph = deps_graph
 
     def graph(self):
-        graph_lines = ['digraph {\n']
+        graph_lines = ['strict digraph {\n']
+        graph_lines.append(self._dot_configuration)
+        graph_lines.append('\n')
+        # First, create the nodes
+        for node in self._deps_graph.nodes:
+            node_id = self._create_dot_node_name_from_display_name(node.conanfile.display_name)
+            node_name = node.conanfile.name if node.conanfile.name else node.conanfile.display_name
+            node_version = node.conanfile.version if node.conanfile.version else ""
+            try:
+                node_user = node.conanfile.user
+            except ConanException:
+                node_user = None
 
+            try:
+                node_channel = node.conanfile.channel
+            except ConanException:
+                node_channel = None
+
+            if node_user and node_channel and node_version:
+                dot_node = self._dot_node_template_with_user_channel\
+                                                  .replace("%NODE_NAME%", node_name) \
+                                                  .replace("%NODE_VERSION%", node_version) \
+                                                  .replace("%NODE_USER%", node_user) \
+                                                  .replace("%NODE_CHANNEL%", node_channel)
+            elif node_version:
+                dot_node = self._dot_node_template.replace("%NODE_NAME%", node_name) \
+                                                  .replace("%NODE_VERSION%", node_version)
+            else:
+                dot_node = self._dot_node_main_node_template
+
+            graph_lines.append('%s %s\n' % (node_id, dot_node))
+
+        # Then, the adjacency matrix
         for node in self._deps_graph.nodes:
             depends = node.neighbors()
+            dot_node = self._create_dot_node_name_from_display_name(node.conanfile.display_name)
             if depends:
-                depends = " ".join('"%s"' % str(d.ref) for d in depends)
-                graph_lines.append('    "%s" -> {%s}\n' % (node.conanfile.display_name, depends))
+                depends = " ".join('"%s"' % self._create_dot_node_name_from_display_name(str(d.ref))
+                                                for d in depends)
+                graph_lines.append('    "%s" -> {%s}\n' % (dot_node, depends))
 
         graph_lines.append('}\n')
         return ''.join(graph_lines)
 
+    def _create_dot_node_name_from_display_name(self, display_name):
+        """
+        Convert the display_name into a dot-label-like format (i.e. letters, numbers and '_')
+        :rtype: String containing the info to be used as a dot node label.
+        """
+        return re.sub(r"[^A-Za-z0-9]", "_", display_name)
+
     def graph_file(self, output_filename):
         save(output_filename, self.graph())
 
+    _dot_configuration = """
+    graph [
+      bgcolor = white,
+      style = "filled",
+      rankdir = TD,
+      splines = ortho,
+      ranksep = 1,
+      nodesep = 1
+    ];
 
+    node [
+      style = "filled",
+      fontname = "Migu 1M",
+      fontsize = "18",
+      shape=rect,
+      fillcolor=goldenrod1,
+      color=goldenrod4
+    ];
+
+    edge [
+      style = solid,
+    ];
+    """
+    _dot_node_main_node_template = """ [ fillcolor=gray95, color=gray20cona]; """
+    _dot_node_template_with_user_channel = """ [ label=<
+     <table border="0" cellborder="0" cellspacing="0">
+       <tr><td align="center"><b>%NODE_NAME%</b></td></tr>
+       <tr><td align="center"><font point-size="12">%NODE_VERSION%</font></td></tr>
+       <tr><td align="center"><i><font point-size="12">%NODE_USER%/%NODE_CHANNEL%</font></i></td></tr>
+     </table>>];
+    """
+    _dot_node_template = """ [ label=<
+     <table border="0" cellborder="0" cellspacing="0">
+       <tr><td align="left"><b>%NODE_NAME%</b></td></tr>
+       <tr><td align="center"><font point-size="12">%NODE_VERSION%</font></td></tr>
+     </table>>];
+    """
 class ConanHTMLGrapher(object):
     def __init__(self, deps_graph, cache_folder):
         self._deps_graph = deps_graph
