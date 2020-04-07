@@ -266,3 +266,110 @@ def check_compiler(conanfile, required, strict=False):
     if version < required[compiler]:
         raise ConanInvalidConfiguration(
             "At least {} {} is required".format(compiler, required[compiler]))
+
+
+def compatible_cppstd(conanfile, current_cppstd=None, min=None, max=None,
+                      backward=False, forward=True, gnu_extensions_compatible=True):
+    """ Fill the conanfile compatible_packages field with compatible cppstd
+
+    :param conanfile: ConanFile instance
+    :param current_cppstd: Current cppstd to override deduction
+    :param min: Inclusive cppstd lower bound
+    :param max: Inclusive cppstd upper bound
+    :param backward: Current cppstd is compatible with lower ones
+    :param forward: Current cppstd is compatible with higher ones
+    :param gnu_extensions_compatible: GNU extensions are not compatible
+    """
+    if current_cppstd is not None:
+        if not isinstance(current_cppstd, str) and not str(current_cppstd).isdigit():
+            raise ConanException("current_cppstd parameter must either be a string or a digit")
+    if min is not None and not str(min).isdigit():
+        raise ConanException("min parameter must be a number")
+    if max is not None and not str(max).isdigit():
+        raise ConanException("max parameter must be a number")
+    if not isinstance(backward, bool):
+        raise ConanException("backward parameter must be a bool")
+    if not isinstance(forward, bool):
+        raise ConanException("forward parameter must be a bool")
+    if not isinstance(gnu_extensions_compatible, bool):
+        raise ConanException("gnu_extensions_compatible parameter must be a bool")
+
+    # We allow overriding cppstd deduction to leave a place for
+    # custom user settings
+    if not current_cppstd:
+        current_cppstd = deduced_cppstd(conanfile)
+        if not current_cppstd:
+            raise ConanInvalidConfiguration(
+                "Could not detect default cppstd for the current compiler.")
+    else:
+        current_cppstd = str(current_cppstd)
+
+    # We have a list of original cppstd setting values because we'll
+    # need it to pass to compatible packages
+    # FIXME: Conanfile should carry range information of a setting with it
+    cppstd_range = ["98", "11", "14", "17", "20"]
+
+    if _remove_extension(current_cppstd) not in cppstd_range:
+        raise ConanInvalidConfiguration(
+            "current_cppstd not found in the list of known cppstd values (without extensions): {}".format(cppstd_range))
+    if min and str(min) not in cppstd_range:
+        raise ConanInvalidConfiguration(
+            "min not found in the list of known cppstd values: {}".format(cppstd_range))
+    if max and str(max) not in cppstd_range:
+        raise ConanInvalidConfiguration(
+            "max not found in the list of known cppstd values: {}".format(cppstd_range))
+
+    gnu_cppstd_range = []
+    for cppstd in cppstd_range:
+        gnu_cppstd_range.append("gnu{}".format(cppstd))
+    if gnu_extensions_compatible:
+        cppstd_range.extend(gnu_cppstd_range)
+    else:
+        if _contains_extension(current_cppstd):
+            cppstd_range = gnu_cppstd_range
+    # None replaces cppstd if it's a default cppstd on a given compiler
+    cppstd_range.append(None)
+
+    current_normalized = normalized_cppstd(current_cppstd)
+    lower, same, higher = [], [], []
+    for cppstd in cppstd_range:
+        if cppstd is None:
+            default = cppstd_default(conanfile.settings)
+            actual_cppstd = default
+            normalized = normalized_cppstd(default)
+        else:
+            actual_cppstd = cppstd
+            normalized = normalized_cppstd(cppstd)
+
+        if normalized > current_normalized:
+            if max and normalized > normalized_cppstd(max):
+                continue
+            higher.append(cppstd)
+            continue
+
+        if normalized < current_normalized:
+            if min and normalized < normalized_cppstd(min):
+                continue
+            lower.append(cppstd)
+            continue
+
+        if _contains_extension(current_cppstd) == _contains_extension(actual_cppstd):
+            continue
+        same.append(cppstd)
+
+    if forward:
+        for cppstd in lower:
+            compatible_pkg = conanfile.info.clone()
+            compatible_pkg.settings.compiler.cppstd = cppstd
+            conanfile.compatible_packages.append(compatible_pkg)
+
+    for cppstd in same:
+        compatible_pkg = conanfile.info.clone()
+        compatible_pkg.settings.compiler.cppstd = cppstd
+        conanfile.compatible_packages.append(compatible_pkg)
+
+    if backward:
+        for cppstd in higher:
+            compatible_pkg = conanfile.info.clone()
+            compatible_pkg.settings.compiler.cppstd = cppstd
+            conanfile.compatible_packages.append(compatible_pkg)
