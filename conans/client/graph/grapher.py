@@ -73,7 +73,7 @@ class ConanGrapher(object):
       rankdir = TD,
       splines = ortho,
       ranksep = 1,
-      nodesep = 1
+      nodesep = 0.7
     ];
 
     node [
