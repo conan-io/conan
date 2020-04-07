@@ -307,40 +307,51 @@ def compatible_cppstd(conanfile, current_cppstd=None, min=None, max=None,
     # We have a list of original cppstd setting values because we'll
     # need it to pass to compatible packages
     # FIXME: Conanfile should carry range information of a setting with it
-    cppstd_range = ["98", "11", "14", "17", "20"]
+    base_cppstd_range = ["98", "11", "14", "17", "20"]
+    gnu_cppstd_range = []
+    for cppstd in base_cppstd_range:
+        gnu_cppstd_range.append("gnu{}".format(cppstd))
+    cppstd_range = base_cppstd_range + gnu_cppstd_range
 
-    if _remove_extension(current_cppstd) not in cppstd_range:
+    # Check that the current cppstd is an actual settings value
+    if current_cppstd not in cppstd_range:
         raise ConanInvalidConfiguration(
-            "current_cppstd not found in the list of known cppstd values (without extensions): {}".format(cppstd_range))
+            "current_cppstd not found in the list of known cppstd values: {}".format(cppstd_range))
+    # Min and Max should be just digits without extensions
     if min and str(min) not in cppstd_range:
         raise ConanInvalidConfiguration(
-            "min not found in the list of known cppstd values: {}".format(cppstd_range))
+            "min not found in the list of known cppstd values: {}".format(base_cppstd_range))
     if max and str(max) not in cppstd_range:
         raise ConanInvalidConfiguration(
-            "max not found in the list of known cppstd values: {}".format(cppstd_range))
+            "max not found in the list of known cppstd values: {}".format(base_cppstd_range))
 
-    gnu_cppstd_range = []
-    for cppstd in cppstd_range:
-        gnu_cppstd_range.append("gnu{}".format(cppstd))
-    if gnu_extensions_compatible:
-        cppstd_range.extend(gnu_cppstd_range)
-    else:
+    if not gnu_extensions_compatible:
         if _contains_extension(current_cppstd):
             cppstd_range = gnu_cppstd_range
+        else:
+            cppstd_range = base_cppstd_range
+
     # None replaces cppstd if it's a default cppstd on a given compiler
     cppstd_range.append(None)
 
+    def _actual_cppstd(cppstd):
+        if cppstd is None:
+            return cppstd_default(conanfile.settings)
+        return cppstd
+
+    def _normalize(cppstd_range):
+        cppstd_dict = {}
+        for cppstd in cppstd_range:
+            actual_cppstd = _actual_cppstd(cppstd)
+            if actual_cppstd == current_cppstd:
+                continue
+            cppstd_dict[cppstd] = normalized_cppstd(actual_cppstd)
+        return cppstd_dict
+    cppstd_dict = _normalize(cppstd_range)
+
     current_normalized = normalized_cppstd(current_cppstd)
     lower, same, higher = [], [], []
-    for cppstd in cppstd_range:
-        if cppstd is None:
-            default = cppstd_default(conanfile.settings)
-            actual_cppstd = default
-            normalized = normalized_cppstd(default)
-        else:
-            actual_cppstd = cppstd
-            normalized = normalized_cppstd(cppstd)
-
+    for cppstd, normalized in cppstd_dict.items():
         if max and normalized > normalized_cppstd(max):
             continue
         if min and normalized < normalized_cppstd(min):
@@ -349,28 +360,23 @@ def compatible_cppstd(conanfile, current_cppstd=None, min=None, max=None,
         if normalized > current_normalized:
             higher.append(cppstd)
             continue
-
         if normalized < current_normalized:
             lower.append(cppstd)
             continue
-
-        if _contains_extension(current_cppstd) == _contains_extension(actual_cppstd):
-            continue
         same.append(cppstd)
 
-    if forward:
-        for cppstd in lower:
-            compatible_pkg = conanfile.info.clone()
-            compatible_pkg.settings.compiler.cppstd = cppstd
-            conanfile.compatible_packages.append(compatible_pkg)
-
-    for cppstd in same:
+    def _add_compatible(cppstd):
         compatible_pkg = conanfile.info.clone()
         compatible_pkg.settings.compiler.cppstd = cppstd
         conanfile.compatible_packages.append(compatible_pkg)
 
+    if forward:
+        for cppstd in lower:
+            _add_compatible(cppstd)
+
+    for cppstd in same:
+        _add_compatible(cppstd)
+
     if backward:
         for cppstd in higher:
-            compatible_pkg = conanfile.info.clone()
-            compatible_pkg.settings.compiler.cppstd = cppstd
-            conanfile.compatible_packages.append(compatible_pkg)
+            _add_compatible(cppstd)

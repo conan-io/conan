@@ -42,7 +42,7 @@ class CompatibleCppstdTest(unittest.TestCase):
 
         with self.assertRaises(ConanInvalidConfiguration) as raises:
             compatible_cppstd(conanfile, current_cppstd=10)
-        self.assertIn("current_cppstd not found in the list of known cppstd values (without extensions): ",
+        self.assertIn("current_cppstd not found in the list of known cppstd values: ",
                       str(raises.exception))
 
         with self.assertRaises(ConanInvalidConfiguration) as raises:
