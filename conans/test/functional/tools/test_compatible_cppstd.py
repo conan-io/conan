@@ -4,6 +4,8 @@ from parameterized import parameterized
 
 from conans.test.utils.tools import TestClient, GenConanfile
 
+from conans.tools import normalized_cppstd
+
 
 class CompatibleCppstdIDsTest(unittest.TestCase):
 
@@ -409,8 +411,8 @@ class CompatibleCppstdIDsTest(unittest.TestCase):
         self.assertNotIn("equal to the default package ID", client.out)
 
     @parameterized.expand(["11", "gnu11", "14", "gnu14", "17", "gnu17"])
-    def test_split_compatible_versions(self, cppstd):
-        """ Split ranges should behave correctly
+    def test_concatenate_compatible_versions(self, cppstd):
+        """ Concatenated ranges should behave correctly
         """
         client = TestClient()
         conanfile = textwrap.dedent("""
@@ -526,3 +528,64 @@ class CompatibleCppstdIDsTest(unittest.TestCase):
         client.save({"conanfile.py": GenConanfile().with_require_plain("pkg/0.1@user/stable")})
         client.run("install . -pr=myprofile -s=compiler.cppstd={}".format(cppstd), assert_error=True)
         self.assertIn("Missing prebuilt package for 'pkg/0.1@user/stable'", client.out)
+
+    @parameterized.expand(["98", "gnu98", "gnu11", "14", "gnu14", "17", "gnu17", "20", "gnu20"])
+    def test_split_compatible_versions(self, cppstd):
+        """ Splitted ranges should behave correctly
+        """
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            from conans.tools import compatible_cppstd, deduced_cppstd, normalized_cppstd
+
+            class Pkg(ConanFile):
+                settings = "os", "compiler"
+                def package_id(self):
+                    if normalized_cppstd(deduced_cppstd(self)) < "2017":
+                        compatible_cppstd(self, max=14)
+                    else:
+                        compatible_cppstd(self, min=17)
+                def package_info(self):
+                    self.output.info("PackageInfo!: Cppstd version: {}!"
+                                     .format(self.settings.compiler.cppstd))
+            """)
+        old_profile = textwrap.dedent("""
+            [settings]
+            os = Linux
+            compiler=gcc
+            compiler.version=8
+            compiler.cppstd=98
+            compiler.libcxx=libstdc++
+            """)
+        old_hash = "e272878107501abbf089754432ee1a7f97046e9f"
+        new_profile = textwrap.dedent("""
+            [settings]
+            os = Linux
+            compiler=gcc
+            compiler.version=8
+            compiler.cppstd=17
+            compiler.libcxx=libstdc++
+            """)
+        new_hash = "09747d520eddddbd02bdacc43dc5e2f210cc0568"
+        client.save({"conanfile.py": conanfile,
+                     "old_profile": old_profile,
+                     "new_profile": new_profile})
+        client.run("create . pkg/0.1@user/stable -pr=old_profile")
+        self.assertIn("pkg/0.1@user/stable: Package '{}' created".format(old_hash), client.out)
+        client.run("create . pkg/0.1@user/stable -pr=new_profile")
+        self.assertIn("pkg/0.1@user/stable: Package '{}' created".format(new_hash), client.out)
+
+        client.save({"conanfile.py": GenConanfile().with_require_plain("pkg/0.1@user/stable")})
+        client.run("install . -pr=old_profile -s=compiler.cppstd={}".format(cppstd))
+
+        if normalized_cppstd(cppstd) < "2017":
+            version = "98"
+            current_hash = old_hash
+        else:
+            version = "17"
+            current_hash = new_hash
+
+        self.assertIn(
+            "pkg/0.1@user/stable: PackageInfo!: Cppstd version: {}!".format(version), client.out)
+        self.assertIn("pkg/0.1@user/stable:{}".format(current_hash), client.out)
+        self.assertIn("pkg/0.1@user/stable: Already installed!", client.out)
