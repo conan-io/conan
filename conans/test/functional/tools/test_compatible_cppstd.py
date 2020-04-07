@@ -407,3 +407,122 @@ class CompatibleCppstdIDsTest(unittest.TestCase):
 
         # Don't add the same configuration into compatible packages
         self.assertNotIn("equal to the default package ID", client.out)
+
+    @parameterized.expand(["11", "gnu11", "14", "gnu14", "17", "gnu17"])
+    def test_split_compatible_versions(self, cppstd):
+        """ Split ranges should behave correctly
+        """
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            from conans.tools import compatible_cppstd
+
+            class Pkg(ConanFile):
+                settings = "os", "compiler"
+                def package_id(self):
+                    compatible_cppstd(self, min=11, max=14)
+                    compatible_cppstd(self, min=14, max=17)
+                def package_info(self):
+                    self.output.info("PackageInfo!: Cppstd version: {}!"
+                                     .format(self.settings.compiler.cppstd))
+            """)
+        profile = textwrap.dedent("""
+            [settings]
+            os = Linux
+            compiler=gcc
+            compiler.version=8
+            compiler.cppstd=11
+            compiler.libcxx=libstdc++
+            """)
+        client.save({"conanfile.py": conanfile,
+                     "myprofile": profile})
+        client.run("create . pkg/0.1@user/stable -pr=myprofile")
+        self.assertIn("pkg/0.1@user/stable: Package 'feeffcef577f146f356dfbe26df0e582f154e094'"
+                      " created", client.out)
+
+        # Forward compatible
+        client.save({"conanfile.py": GenConanfile().with_require_plain("pkg/0.1@user/stable")})
+        client.run("install . -pr=myprofile -s=compiler.cppstd={}".format(cppstd))
+        self.assertIn("pkg/0.1@user/stable: PackageInfo!: Cppstd version: 11!", client.out)
+        self.assertIn("pkg/0.1@user/stable:feeffcef577f146f356dfbe26df0e582f154e094", client.out)
+        self.assertIn("pkg/0.1@user/stable: Already installed!", client.out)
+
+        # Don't add the same configuration into compatible packages
+        self.assertNotIn("equal to the default package ID", client.out)
+
+    @parameterized.expand(["11", "gnu11", "14", "gnu14", "17", "gnu17"])
+    def test_overlap_compatible_versions(self, cppstd):
+        """ Overlapped ranges should behave correctly
+        """
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            from conans.tools import compatible_cppstd
+
+            class Pkg(ConanFile):
+                settings = "os", "compiler"
+                def package_id(self):
+                    compatible_cppstd(self, min=98, max=17)
+                    compatible_cppstd(self, min=11, max=20)
+                def package_info(self):
+                    self.output.info("PackageInfo!: Cppstd version: {}!"
+                                     .format(self.settings.compiler.cppstd))
+            """)
+        profile = textwrap.dedent("""
+            [settings]
+            os = Linux
+            compiler=gcc
+            compiler.version=8
+            compiler.cppstd=11
+            compiler.libcxx=libstdc++
+            """)
+        client.save({"conanfile.py": conanfile,
+                     "myprofile": profile})
+        client.run("create . pkg/0.1@user/stable -pr=myprofile")
+        self.assertIn("pkg/0.1@user/stable: Package 'feeffcef577f146f356dfbe26df0e582f154e094'"
+                      " created", client.out)
+
+        client.save({"conanfile.py": GenConanfile().with_require_plain("pkg/0.1@user/stable")})
+        client.run("install . -pr=myprofile -s=compiler.cppstd={}".format(cppstd))
+        self.assertIn("pkg/0.1@user/stable: PackageInfo!: Cppstd version: 11!", client.out)
+        self.assertIn("pkg/0.1@user/stable:feeffcef577f146f356dfbe26df0e582f154e094", client.out)
+        self.assertIn("pkg/0.1@user/stable: Already installed!", client.out)
+
+        # Don't add the same configuration into compatible packages
+        self.assertNotIn("equal to the default package ID", client.out)
+
+    @parameterized.expand(["gnu11", "14", "gnu14", "17", "gnu17"])
+    def test_no_overlap_compatible_versions(self, cppstd):
+        """ Ranges without overlap should behave correctly
+        """
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            from conans.tools import compatible_cppstd
+
+            class Pkg(ConanFile):
+                settings = "os", "compiler"
+                def package_id(self):
+                    compatible_cppstd(self, min=98, max=98)
+                    compatible_cppstd(self, min=20, max=20)
+                def package_info(self):
+                    self.output.info("PackageInfo!: Cppstd version: {}!"
+                                     .format(self.settings.compiler.cppstd))
+            """)
+        profile = textwrap.dedent("""
+            [settings]
+            os = Linux
+            compiler=gcc
+            compiler.version=8
+            compiler.cppstd=11
+            compiler.libcxx=libstdc++
+            """)
+        client.save({"conanfile.py": conanfile,
+                     "myprofile": profile})
+        client.run("create . pkg/0.1@user/stable -pr=myprofile")
+        self.assertIn("pkg/0.1@user/stable: Package 'feeffcef577f146f356dfbe26df0e582f154e094'"
+                      " created", client.out)
+
+        client.save({"conanfile.py": GenConanfile().with_require_plain("pkg/0.1@user/stable")})
+        client.run("install . -pr=myprofile -s=compiler.cppstd={}".format(cppstd), assert_error=True)
+        self.assertIn("Missing prebuilt package for 'pkg/0.1@user/stable'", client.out)

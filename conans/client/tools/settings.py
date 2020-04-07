@@ -341,15 +341,16 @@ def compatible_cppstd(conanfile, current_cppstd=None, min=None, max=None,
             actual_cppstd = cppstd
             normalized = normalized_cppstd(cppstd)
 
+        if max and normalized > normalized_cppstd(max):
+            continue
+        if min and normalized < normalized_cppstd(min):
+            continue
+
         if normalized > current_normalized:
-            if max and normalized > normalized_cppstd(max):
-                continue
             higher.append(cppstd)
             continue
 
         if normalized < current_normalized:
-            if min and normalized < normalized_cppstd(min):
-                continue
             lower.append(cppstd)
             continue
 
