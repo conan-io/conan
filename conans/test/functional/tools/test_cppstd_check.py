@@ -18,7 +18,7 @@ class CppStdCheckTests(unittest.TestCase):
             settings = "compiler"
 
             def configure(self):
-                check_cppstd(self, minimum="11", maximum="14")
+                check_cppstd(self, min="11", max="14")
                 self.output.info("valid standard")
         """)
 

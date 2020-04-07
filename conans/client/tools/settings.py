@@ -170,7 +170,7 @@ def valid_max_cppstd(conanfile, cppstd, gnu_extensions=False):
     return True
 
 
-def check_cppstd(conanfile, minimum=None, maximum=None, excludes=[], gnu_extensions=False, strict=False):
+def check_cppstd(conanfile, min=None, max=None, excludes=[], gnu_extensions=False, strict=False):
     """ Check if the current cppstd fits specified requirements
 
         In case the current cppstd doesn't fit specified requirements
@@ -180,25 +180,25 @@ def check_cppstd(conanfile, minimum=None, maximum=None, excludes=[], gnu_extensi
         a ConanUnknownConfiguration exception will be raised.
 
     :param conanfile: ConanFile instance
-    :param minimum: Minimal cppstd version required
-    :param maximum: Maximal cppstd version required
+    :param min: Minimal cppstd version required
+    :param max: Maximal cppstd version required
     :param excludes: A list of cppstd version excluded
     :param gnu_extensions: GNU extension is required (e.g gnu17)
     :param strict: Unkown configurations are invalid
     """
-    if minimum and not str(minimum).isdigit():
-        raise ConanException("minimum parameter must be a number")
-    if maximum and not str(maximum).isdigit():
-        raise ConanException("maximum parameter must be a number")
+    if min and not str(min).isdigit():
+        raise ConanException("min parameter must be a number")
+    if max and not str(max).isdigit():
+        raise ConanException("max parameter must be a number")
     if not isinstance(excludes, list):
         raise ConanException("excludes parameter must be a list")
     if not isinstance(gnu_extensions, bool):
         raise ConanException("gnu_extensions parameter must be a bool")
     if not isinstance(strict, bool):
         raise ConanException("strict parameter must be a bool")
-    if minimum and maximum:
-        if normalized_cppstd(minimum) > normalized_cppstd(maximum):
-            raise ConanException("minimum parameter is bigger than the maximum parameter")
+    if min and max:
+        if normalized_cppstd(min) > normalized_cppstd(max):
+            raise ConanException("min parameter is bigger than the max parameter")
 
     current_cppstd = deduced_cppstd(conanfile)
     if not current_cppstd:
@@ -211,15 +211,15 @@ def check_cppstd(conanfile, minimum=None, maximum=None, excludes=[], gnu_extensi
     if gnu_extensions:
         check_gnu_extension(current_cppstd)
 
-    if minimum:
-        if normalized_cppstd(current_cppstd) < normalized_cppstd(minimum):
+    if min:
+        if normalized_cppstd(current_cppstd) < normalized_cppstd(min):
             raise ConanInvalidConfiguration("Current cppstd ({}) is less than the minimum required C++ "
-                                            "standard ({})".format(current_cppstd, minimum))
+                                            "standard ({})".format(current_cppstd, min))
 
-    if maximum:
-        if normalized_cppstd(current_cppstd) > normalized_cppstd(maximum):
+    if max:
+        if normalized_cppstd(current_cppstd) > normalized_cppstd(max):
             raise ConanInvalidConfiguration("Current cppstd ({}) is higher than the maximum required C++ "
-                                            "standard ({})".format(current_cppstd, maximum))
+                                            "standard ({})".format(current_cppstd, max))
 
     if current_cppstd in excludes:
         raise ConanInvalidConfiguration(
