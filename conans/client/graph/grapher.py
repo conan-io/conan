@@ -81,15 +81,15 @@ class ConanGrapher(object):
       fontname = "Migu 1M",
       fontsize = "18",
       shape=rect,
-      fillcolor=goldenrod1,
-      color=goldenrod4
+      fillcolor=azure2,
+      color=dodgerblue4
     ];
 
     edge [
       style = solid,
     ];
     """
-    _dot_node_main_node_template = """ [ fillcolor=gray95, color=gray20cona]; """
+    _dot_node_main_node_template = """ [ fillcolor=goldenrod1, color=goldenrod4]; """
     _dot_node_template_with_user_channel = """ [ label=<
      <table border="0" cellborder="0" cellspacing="0">
        <tr><td align="center"><b>%NODE_NAME%</b></td></tr>
