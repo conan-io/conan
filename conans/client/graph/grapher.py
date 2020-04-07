@@ -78,7 +78,7 @@ class ConanGrapher(object):
 
     node [
       style = "filled",
-      fontname = "Migu 1M",
+      fontname = "Helvetica",
       fontsize = "18",
       shape=rect,
       fillcolor=azure2,
