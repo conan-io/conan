@@ -155,7 +155,7 @@ class InfoTest(unittest.TestCase):
         def check_file(filename):
             with open(filename) as dot_file_contents:
                 lines = dot_file_contents.readlines()
-                self.assertEqual(lines[0], "digraph {\n")
+                self.assertEqual(lines[0], "strict digraph {\n")
                 for line in lines[1:-1]:
                     check_digraph_line(line)
                 self.assertEqual(lines[-1], "}\n")
