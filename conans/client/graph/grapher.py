@@ -12,7 +12,7 @@ class ConanGrapher(object):
         self._deps_graph = deps_graph
 
     def graph(self):
-        graph_lines = ['strict digraph {\n']
+        graph_lines = ['strict digraph {']
         graph_lines.append(self._dot_configuration)
         graph_lines.append('\n')
         # First, create the nodes
@@ -67,7 +67,6 @@ class ConanGrapher(object):
       ranksep = 1,
       nodesep = 0.7
     ];
-
     node [
       style = "filled",
       fontname = "Helvetica",
@@ -76,25 +75,22 @@ class ConanGrapher(object):
       fillcolor=azure2,
       color=dodgerblue4
     ];
-
     edge [
       style = solid,
-    ];
-    """
-    _dot_node_main_node_template = """ [ fillcolor=goldenrod1, color=goldenrod4]; """
+    ];"""
+    _dot_node_main_node_template = """ [ fillcolor=goldenrod1, color=goldenrod4];"""
     _dot_node_template_with_user_channel = """ [ label=<
      <table border="0" cellborder="0" cellspacing="0">
        <tr><td align="center"><b>%NODE_NAME%</b></td></tr>
        <tr><td align="center"><font point-size="12">%NODE_VERSION%</font></td></tr>
        <tr><td align="center"><i><font point-size="12">%NODE_USER%/%NODE_CHANNEL%</font></i></td></tr>
-     </table>>];
-    """
+     </table>>];"""
     _dot_node_template = """ [ label=<
      <table border="0" cellborder="0" cellspacing="0">
        <tr><td align="left"><b>%NODE_NAME%</b></td></tr>
        <tr><td align="center"><font point-size="12">%NODE_VERSION%</font></td></tr>
-     </table>>];
-    """
+     </table>>];"""
+
 class ConanHTMLGrapher(object):
     def __init__(self, deps_graph, cache_folder):
         self._deps_graph = deps_graph

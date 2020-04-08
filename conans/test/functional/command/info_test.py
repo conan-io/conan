@@ -136,7 +136,16 @@ class InfoTest(unittest.TestCase):
             self.assertEqual(ref.channel, "stable")
 
         def check_digraph_line(line):
-            self.assertTrue(dot_regex.match(line))
+
+            self.assertTrue(dot_regex.match(line) or
+                            dot_format_section_regex.match(line) or
+                            dot_format_value_regex.match(line) or
+                            dot_node_format_regex.match(line) or
+                            dot_node_format_body_regex.match(line)
+                            )
+
+            if (not dot_regex.match(line)):
+                return
 
             node_matches = node_regex.findall(line)
 
@@ -164,6 +173,10 @@ class InfoTest(unittest.TestCase):
 
         node_regex = re.compile(r'"([^"]+)"')
         dot_regex = re.compile(r'^\s+"[^"]+" -> {"[^"]+"( "[^"]+")*}$')
+        dot_format_section_regex = re.compile(r'^\s+(graph|edge|node)+\s+\[')
+        dot_format_value_regex = re.compile(r'^\s+[a-zA-Z]+\s+=\s[a-zA-Z]+\,+|^\s+];$')
+        dot_node_format_regex = re.compile(r'\s+"([^"]+)"\s+\[\s+label=\<')
+        dot_node_format_body_regex = re.compile(r'\s+(<[a-zA-Z0-9=\=\s\\ / \-"]+>|[a-zA-Z0-9\s\.])+')
 
         self.client.run("info . --graph", assert_error=True)
 
