@@ -17,7 +17,7 @@ class ConanGrapher(object):
         graph_lines.append('\n')
         # First, create the nodes
         for node in self._deps_graph.nodes:
-            node_id = self._create_dot_node_name_from_display_name(node.conanfile.display_name)
+            node_id = node.conanfile.display_name
             node_name = node.conanfile.name if node.conanfile.name else node.conanfile.display_name
             node_version = node.conanfile.version if node.conanfile.version else ""
             try:
@@ -42,26 +42,18 @@ class ConanGrapher(object):
             else:
                 dot_node = self._dot_node_main_node_template
 
-            graph_lines.append('%s %s\n' % (node_id, dot_node))
+            graph_lines.append('    "%s" %s\n' % (node_id, dot_node))
 
         # Then, the adjacency matrix
         for node in self._deps_graph.nodes:
             depends = node.neighbors()
-            dot_node = self._create_dot_node_name_from_display_name(node.conanfile.display_name)
+            dot_node = node.conanfile.display_name
             if depends:
-                depends = " ".join('"%s"' % self._create_dot_node_name_from_display_name(str(d.ref))
-                                                for d in depends)
+                depends = " ".join('"%s"' % str(d.ref) for d in depends)
                 graph_lines.append('    "%s" -> {%s}\n' % (dot_node, depends))
 
         graph_lines.append('}\n')
         return ''.join(graph_lines)
-
-    def _create_dot_node_name_from_display_name(self, display_name):
-        """
-        Convert the display_name into a dot-label-like format (i.e. letters, numbers and '_')
-        :rtype: String containing the info to be used as a dot node label.
-        """
-        return re.sub(r"[^A-Za-z0-9]", "_", display_name)
 
     def graph_file(self, output_filename):
         save(output_filename, self.graph())
