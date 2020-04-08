@@ -525,6 +525,8 @@ class Pkg(ConanFile):
         http_server.stop()
 
     def test_config_install_sched_file(self):
+        """ Conan must execute config once when config_install_interval is configured
+        """
         folder = temp_folder(path_with_spaces=False)
         conan_conf = textwrap.dedent("""
                     [general]
@@ -532,10 +534,50 @@ class Pkg(ConanFile):
                     """)
         save_files(folder, {"conan.conf": conan_conf})
         client = TestClient()
+
         client.run('config install "%s"' % folder)
         self.assertIn("Processing conan.conf", client.out)
         content = load(client.cache.conan_conf_path)
-        self.assertEqual(1, content.count("config_install_interval"))
         sched_file = os.path.join(client.cache.cache_folder, SCHED_FILE)
+
+        # 1 - Must be executed at first time
+        self.assertEqual(1, content.count("config_install_interval"))
         self.assertTrue(os.path.exists(sched_file))
+        self.assertIn(datetime.datetime.today().strftime("%Y-%m-%d"), load(sched_file))
+
+        # 2 - Must not execute again: Current time interval 5 minutes
+        client.run('config install "%s"' % folder)
+        self.assertNotIn("Processing conan.conf", client.out)
+
+        # 3 - Must not execute: seconds are not allowed
+        client.run('config set general.config_install_interval=1s')
+        client.run('config install "%s"' % folder)
+        self.assertNotIn("Processing conan.conf", client.out)
+
+        # 4 - Must execute: forced timeout
+        with patch("conans.client.conf.config_installer._next_scheduled_config_install",
+                   return_value=datetime.datetime.utcnow() - datetime.timedelta(minutes=2)):
+            client.run('config set general.config_install_interval=1m')
+            client.run('config install "%s"' % folder)
+            self.assertIn("Processing conan.conf", client.out)
+
+        # 5 - Must execute: sched file has been removed after first interaction
+        os.remove(sched_file)
+        client.run('config install "%s"' % folder)
+        self.assertIn("Processing conan.conf", client.out)
+        self.assertIn(datetime.datetime.today().strftime("%Y-%m-%d"), load(sched_file))
+
+        # 6 - Must execute: sched file is empty
+        with open(sched_file, 'w') as fd:
+            fd.write("")
+        client.run('config install "%s"' % folder)
+        self.assertIn("Processing conan.conf", client.out)
+        self.assertIn(datetime.datetime.today().strftime("%Y-%m-%d"), load(sched_file))
+
+        # 7 - Must execute: sched file is invalid
+        with open(sched_file, 'w') as fd:
+            fd.write("foobar")
+        client.run('config install "%s"' % folder)
+        self.assertIn("Processing conan.conf", client.out)
+        self.assertIn("WARN: The sched file is corrupted and will be removed.", client.out)
         self.assertIn(datetime.datetime.today().strftime("%Y-%m-%d"), load(sched_file))

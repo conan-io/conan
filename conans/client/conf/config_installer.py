@@ -1,7 +1,8 @@
 import json
 import os
 import shutil
-from datetime import datetime
+import re
+from datetime import datetime, timedelta
 
 from contextlib import contextmanager
 from six.moves.urllib.parse import urlparse
@@ -211,10 +212,37 @@ def _save_configs(configs_file, configs):
 
 
 def _generate_sched_file(cache):
-    now = str(datetime.now())
+    now = str(datetime.utcnow())
     with open(os.path.join(cache.cache_folder, SCHED_FILE), 'w') as fd:
         fd.write(now)
     logger.debug("Update sched file (%s)" % now)
+
+
+def _next_scheduled_config_install(sched_path, sched_content, value, interval, output):
+    """ Return when the next config install should occur.
+        In case of error, the next config install should occur immediately
+
+    :param sched_path: sched file path in conan cache
+    :param sched_content: sched file content
+    :param value: time interval value e.g 5 from 5m
+    :param interval: time interval unit e.g m from 5m
+    :param output: Conan output stream
+    :return: datetime instance + time interval
+    """
+    if not sched_content or len(str(sched_content).strip()) == 0:
+        return None
+    try:
+        sched = datetime.strptime(sched_content, '%Y-%m-%d %H:%M:%S.%f')
+        if interval == 'm':
+            sched += timedelta(minutes=float(value))
+        elif interval == 'h':
+            sched += timedelta(hours=float(value))
+        else:
+            sched += timedelta(days=float(value))
+        return sched
+    except ValueError:
+        output.warn("The sched file is corrupted and will be removed.")
+        os.remove(sched_path)
 
 
 def configuration_install(app, uri, verify_ssl, config_type=None,
@@ -262,3 +290,33 @@ def configuration_install(app, uri, verify_ssl, config_type=None,
             _generate_sched_file(cache)
     except ConanException:
         pass
+
+
+def is_config_install_scheduled(api):
+    """ Validate if the next config install is scheduled to occur now
+
+        When config_install_interval is not configured, conan config install should without intervals
+        When config_install_interval is configured, config install will respect the delta from:
+            last conan install execution (sched file) + config_install_interval value < now
+
+    :param api: Conan API instance
+    :return: True, if it should occur now. Otherwise, False.
+    """
+    try:
+        api.create_app()
+        interval = api.app.config.get_item("general.config_install_interval")
+    except ConanException:
+        return True
+    else:
+        match = re.search(r"(\d+)([mhd])", interval)
+        if match:
+            sched_path = os.path.join(api.app.cache.cache_folder, SCHED_FILE)
+            if not os.path.exists(sched_path):
+                return True
+            content = load(sched_path)
+            sched = _next_scheduled_config_install(sched_path, content, match.group(1),
+                                                   match.group(2), api.app.out)
+            if not sched:
+                return True
+            now = datetime.utcnow()
+            return now > sched
