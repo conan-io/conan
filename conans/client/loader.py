@@ -19,6 +19,7 @@ from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
 from conans.model.values import Values
 from conans.paths import DATA_YML
+from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
 from conans.util.files import load
 
 
@@ -130,6 +131,9 @@ class ConanFileLoader(object):
         if not conanfile.version:
             raise ConanException("conanfile didn't specify version")
 
+        if os.environ.get(CONAN_V2_MODE_ENVVAR, False):
+            conanfile.version = str(conanfile.version)
+
         ref = ConanFileReference(conanfile.name, conanfile.version, user, channel)
         conanfile.display_name = str(ref)
         conanfile.output.scope = conanfile.display_name
@@ -193,7 +197,8 @@ class ConanFileLoader(object):
         conanfile, _ = self.load_basic_module(conanfile_path, lock_python_requires,
                                               ref.user, ref.channel, str(ref))
         conanfile.name = ref.name
-        conanfile.version = ref.version
+        conanfile.version = str(ref.version) \
+            if os.environ.get(CONAN_V2_MODE_ENVVAR, False) else ref.version
 
         if profile.dev_reference and profile.dev_reference == ref:
             conanfile.develop = True
