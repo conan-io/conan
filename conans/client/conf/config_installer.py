@@ -245,6 +245,10 @@ def _next_scheduled_config_install(sched_path, sched_content, value, interval, o
         os.remove(sched_path)
 
 
+def _get_config_install_interval(app):
+    return app.config.get_item("general.config_install_interval")
+
+
 def configuration_install(app, uri, verify_ssl, config_type=None,
                           args=None, source_folder=None, target_folder=None):
     cache, output, requester = app.cache, app.out, app.requester
@@ -286,7 +290,7 @@ def configuration_install(app, uri, verify_ssl, config_type=None,
             configs = [(c if c != config else config) for c in configs]
         _save_configs(configs_file, configs)
     try:
-        if app.config.get_item("general.config_install_interval"):
+        if _get_config_install_interval(app):
             _generate_sched_file(cache)
     except ConanException:
         pass
@@ -304,7 +308,7 @@ def is_config_install_scheduled(api):
     """
     try:
         api.create_app()
-        interval = api.app.config.get_item("general.config_install_interval")
+        interval = _get_config_install_interval(api.app)
     except ConanException:
         return True
     else:

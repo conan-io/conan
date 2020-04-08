@@ -173,7 +173,7 @@ _t_default_client_conf = Template(textwrap.dedent("""
     revisions_enabled = 1
     {% endif %}
 
-    # config_install_interval = 1h        # environment CONAN_CONFIG_INSTALL_INTERVAL
+    # config_install_interval = 1h
 
     [storage]
     # This is the default path, but you can write your own. It must be an absolute path or a
