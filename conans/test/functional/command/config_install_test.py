@@ -521,3 +521,17 @@ class Pkg(ConanFile):
         self.client.run("config install http://localhost:%s/myconfig.zip" % http_server.port)
         self.assertIn("Unzipping", self.client.out)
         http_server.stop()
+
+    def test_config_install_sched_file(self):
+        folder = temp_folder(path_with_spaces=False)
+        conan_conf = textwrap.dedent("""
+                    [general]
+                    config_install_interval = 5m
+                    """)
+        save_files(folder, {"config/conan.conf": conan_conf})
+        client = TestClient()
+        client.run('config install "%s"' % folder)
+        self.assertIn("Processing conan.conf", client.out)
+        content = load(client.cache.conan_conf_path)
+        self.assertEqual(1, content.count("config_install_interval"))
+        self.assertTrue(os.path.exists(os.path.join(self.client.cache.cache_folder, "sched.txt")))
