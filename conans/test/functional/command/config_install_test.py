@@ -11,7 +11,7 @@ from mock import patch
 from conans.client.cache.remote_registry import Remote
 from conans.client.conf import ConanClientConfigParser
 from conans.client.conf.config_installer import _hide_password, _ConfigOrigin
-from conans.client.rest.uploader_downloader import FileDownloader
+from conans.client.rest.file_downloader import FileDownloader
 from conans.errors import ConanException
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, StoppableThreadBottle
@@ -53,7 +53,7 @@ default_package_id_mode = full_package_mode # environment CONAN_DEFAULT_PACKAGE_
 
 [proxies]
 # Empty (or missing) section will try to use system proxies.
-# As documented in https://requests.kennethreitz.org/en/latest/user/advanced/#proxies
+# As documented in https://requests.readthedocs.io/en/master/user/advanced/#proxies
 http = http://user:pass@10.10.1.10:3128/
 https = None
 # http = http://10.10.1.10:3128

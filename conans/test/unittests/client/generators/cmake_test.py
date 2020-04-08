@@ -5,7 +5,7 @@ import unittest
 import six
 
 from conans.client.build.cmake_flags import CMakeDefinitionsBuilder
-from conans.client.conf import default_settings_yml
+from conans.client.conf import get_default_settings_yml
 from conans.client.generators import CMakeFindPackageGenerator, CMakeFindPackageMultiGenerator
 from conans.client.generators.cmake import CMakeGenerator
 from conans.client.generators.cmake_multi import CMakeMultiGenerator
@@ -285,7 +285,7 @@ endmacro()""", macro)
         self.assertIn('set(CONAN_PACKAGE_VERSION 1.1.0)', cmake_lines)
 
     def settings_are_generated_tests(self):
-        settings = Settings.loads(default_settings_yml)
+        settings = Settings.loads(get_default_settings_yml())
         settings.os = "Windows"
         settings.compiler = "Visual Studio"
         settings.compiler.version = "12"
@@ -320,7 +320,7 @@ endmacro()""", macro)
         self.assertEqual(install_folder, definitions["CMAKE_MODULE_PATH"])
 
     def apple_frameworks_test(self):
-        settings = Settings.loads(default_settings_yml)
+        settings = Settings.loads(get_default_settings_yml())
         settings.os = "Macos"
         settings.compiler = "apple-clang"
         settings.compiler.version = "9.1"
@@ -340,10 +340,10 @@ endmacro()""", macro)
         generator = CMakeGenerator(conanfile)
         content = generator.content
         self.assertIn('find_library(CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND NAME ${_FRAMEWORK} PATHS'
-                      ' ${CONAN_FRAMEWORK_DIRS})', content)
+                      ' ${CONAN_FRAMEWORK_DIRS${SUFFIX}})', content)
         self.assertIn('set(CONAN_FRAMEWORK_DIRS "path/to/Frameworks1"\n\t\t\t"path/to/Frameworks2" '
                       '${CONAN_FRAMEWORK_DIRS})', content)
-        self.assertIn('set(CONAN_LIBS ${CONAN_PKG_LIBS} ${CONAN_SYSTEM_LIBS} '
+        self.assertIn('set(CONAN_LIBS ${CONAN_LIBS} ${CONAN_SYSTEM_LIBS} '
                       '${CONAN_FRAMEWORKS_FOUND})', content)
 
         generator = CMakeFindPackageGenerator(conanfile)

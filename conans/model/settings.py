@@ -202,16 +202,16 @@ class Settings(object):
         self._data = {str(k): SettingsItem(v, "%s.%s" % (name, k))
                       for k, v in definition.items()}
 
-    def get_safe(self, name):
+    def get_safe(self, name, default=None):
         try:
             tmp = self
             for prop in name.split("."):
                 tmp = getattr(tmp, prop, None)
         except ConanException:
-            return None
+            return default
         if tmp is not None and tmp.value and tmp.value != "None":  # In case of subsettings is None
             return str(tmp)
-        return None
+        return default
 
     def copy(self):
         """ deepcopy, recursive

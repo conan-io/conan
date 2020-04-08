@@ -35,11 +35,10 @@ class CaseSensitiveTest(unittest.TestCase):
         files = cpp_hello_conan_files("Hello1", "0.1", deps=["hello0/0.1@lasote/stable"],
                                       build=False)
         client.save(files)
-        error = client.run("install .", assert_error=True)
-        self._check(error, client)
+        client.run("install .", assert_error=True)
+        self._check(client)
 
-    def _check(self, error, client):
-        self.assertTrue(error)
+    def _check(self, client):
         if is_case_insensitive_os():
             self.assertIn("case incompatible 'Hello0'", client.out)
         else:
@@ -50,15 +49,14 @@ class CaseSensitiveTest(unittest.TestCase):
         client.save({CONANFILE: conanfile})
         client.run("export . lasote/stable")
         error = client.run("install hello0/0.1@lasote/stable --build=missing", assert_error=True)
-        self._check(error, client)
+        self._check(client)
 
     def imports_test(self):
         client = TestClient()
         client.save({CONANFILE: conanfile})
         client.run("export . lasote/stable")
         client.run("install Hello0/0.1@lasote/stable --build=missing")
-        error = client.run("imports hello0/0.1@lasote/stable", assert_error=True)
-        self.assertTrue(error)
+        client.run("imports hello0/0.1@lasote/stable", assert_error=True)
         # Reference interpreted as a path, so no valid path
         self.assertIn("Parameter 'path' cannot be a reference", client.out)
 
@@ -67,8 +65,7 @@ class CaseSensitiveTest(unittest.TestCase):
         client.save({CONANFILE: conanfile})
         client.run("export . lasote/stable")
         client.run("install Hello0/0.1@lasote/stable --build=missing")
-        error = client.run("export-pkg . hello0/0.1@lasote/stable", assert_error=True)
-        self.assertTrue(error)
+        client.run("export-pkg . hello0/0.1@lasote/stable", assert_error=True)
         self.assertIn("ERROR: Package recipe with name hello0!=Hello0", client.out)
 
     def copy_test(self):
@@ -76,5 +73,5 @@ class CaseSensitiveTest(unittest.TestCase):
         client.save({CONANFILE: conanfile})
         client.run("export . lasote/stable")
         client.run("install Hello0/0.1@lasote/stable --build=missing")
-        error = client.run("copy hello0/0.1@lasote/stable otheruser/testing", assert_error=True)
-        self._check(error, client)
+        client.run("copy hello0/0.1@lasote/stable otheruser/testing", assert_error=True)
+        self._check(client)

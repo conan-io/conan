@@ -103,6 +103,8 @@ class MSBuild(object):
                     user_property_file_name=None):
 
         targets = targets or []
+        if not isinstance(targets, (list, tuple)):
+            raise TypeError("targets argument should be a list")
         properties = properties or {}
         command = []
 
@@ -191,10 +193,8 @@ class MSBuild(object):
         return " ".join(command)
 
     def _get_props_file_contents(self, definitions=None):
-
         def format_macro(name, value):
-            return "%s=%s" % (name, value) if value else name
-
+            return "%s=%s" % (name, value) if value is not None else name
         # how to specify runtime in command line:
         # https://stackoverflow.com/questions/38840332/msbuild-overrides-properties-while-building-vc-project
         runtime_library = {"MT": "MultiThreaded",

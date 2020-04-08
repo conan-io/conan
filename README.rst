@@ -24,67 +24,37 @@ Conan is a package manager for C and C++ developers:
   (CMake, MSBuild, Makefiles, Meson, etc).
 - Extensible: Its python based recipes, together with extensions points allows for great power and flexibility.
 - Large and active community, especially in Github (https://github.com/conan-io/conan) and Slack (https://cpplang.now.sh/ #conan channel).
-  This community also creates and maintains packages in Conan-center and Bincrafters repositories in Bintray.
-- Stable. Used in production by many companies, since 1.0 there is a commitment not to break package recipes and documented behavior. 
+  This community also creates and maintains packages in ConanCenter and Bincrafters repositories in Bintray.
+- Stable. Used in production by many companies, since 1.0 there is a commitment not to break package recipes and documented behavior.
 
 
 
-+------------------------+-------------------------+-------------------------+-------------------------+
-| **master**             | **develop**             |  **Coverage**           |    **Code Climate**     |
-+========================+=========================+=========================+=========================+
-| |Build Status Master|  | |Build Status Develop|  |  |Develop coverage|     |   |Develop climate|     |
-+------------------------+-------------------------+-------------------------+-------------------------+
++------------------------+-------------------------+-------------------------+
+| **master**             | **develop**             |    **Code Climate**     |
++========================+=========================+=========================+
+| |Build Status Master|  | |Build Status Develop|  |   |Develop climate|     |
++------------------------+-------------------------+-------------------------+
 
 
 Setup
 =====
 
-Please read https://docs.conan.io/en/latest/installation.html
+Please read https://docs.conan.io/en/latest/installation.html to know how to
+install and start using Conan. TL;DR: 
 
-From binaries
--------------
+.. code-block::
 
-We have installers for `most platforms here <http://conan.io>`__ but you
-can run **conan** from sources if you want.
-
-From pip
---------
-
-Conan is compatible with Python 2 and Python 3.
-
-- Install pip following `pip docs`_.
-- Install conan:
-
-    .. code-block:: bash
-
-        $ pip install conan
-
-You can also use `test.pypi.org <https://test.pypi.org/project/conan/#history>`_ repository to install development (non-stable) Conan versions:
+   $ pip install conan
 
 
-    .. code-block:: bash
+Install a development version
+-----------------------------
 
-        $ pip install --index-url https://test.pypi.org/simple/ conan
-
-
-From Homebrew (OSx)
--------------------
-
-- Install Homebrew following `brew homepage`_.
-
-  .. code-block:: bash
-
-      $ brew update
-      $ brew install conan
-
-From source
------------
-
-You can run **conan** client and server in Windows, MacOS, and Linux.
+You can run **Conan** client and server in Windows, MacOS, and Linux.
 
 - **Install pip following** `pip docs`_.
 
-- **Clone conan repository:**
+- **Clone Conan repository:**
 
   .. code-block:: bash
 
@@ -92,13 +62,13 @@ You can run **conan** client and server in Windows, MacOS, and Linux.
 
 - **Install in editable mode**
 
-    .. code-block:: bash
+  .. code-block:: bash
 
-        $ cd conan && sudo pip install -e .
+      $ cd conan && sudo pip install -e .
 
   If you are in Windows, using ``sudo`` is not required.
 
-- **You are ready, try to run conan:**
+- **You are ready, try to run Conan:**
 
   .. code-block::
 
@@ -184,7 +154,7 @@ Before you can run the tests, you need to set a few environment variables first.
 
     $ export PYTHONPATH=$PYTHONPATH:$(pwd)
 
-On Windows it would be (while being in the conan root directory):
+On Windows it would be (while being in the Conan root directory):
 
 .. code-block:: bash
 
@@ -257,23 +227,11 @@ License
 .. |Build Status Develop| image:: https://conan-ci.jfrog.info/buildStatus/icon?job=ConanTestSuite/develop
    :target: https://conan-ci.jfrog.info/job/ConanTestSuite/job/develop
 
-.. |Master coverage| image:: https://codecov.io/gh/conan-io/conan/branch/master/graph/badge.svg
-   :target: https://codecov.io/gh/conan-io/conan/branch/master
-
-.. |Develop coverage| image:: https://codecov.io/gh/conan-io/conan/branch/develop/graph/badge.svg
-   :target: https://codecov.io/gh/conan-io/conan/branch/develop
-
-.. |Coverage graph| image:: https://codecov.io/gh/conan-io/conan/branch/develop/graphs/tree.svg
-   :height: 50px
-   :width: 50 px
-   :alt: Conan develop coverage
-
 .. |Develop climate| image:: https://api.codeclimate.com/v1/badges/081b53e570d5220b34e4/maintainability.svg
    :target: https://codeclimate.com/github/conan-io/conan/maintainability
-   
+
 .. |Logo| image:: https://conan.io/img/jfrog_conan_logo.png
 
 
 .. _`pip docs`: https://pip.pypa.io/en/stable/installing/
 
-.. _`brew homepage`: http://brew.sh/

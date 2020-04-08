@@ -1,6 +1,9 @@
 import textwrap
 
 _cmake_single_dep_vars = """
+#################
+###  {dep}
+#################
 set(CONAN_{dep}_ROOT{build_type} {deps.rootpath})
 set(CONAN_INCLUDE_DIRS_{dep}{build_type} {deps.include_paths})
 set(CONAN_LIB_DIRS_{dep}{build_type} {deps.lib_paths})
@@ -31,11 +34,9 @@ set(CONAN_SHARED_LINKER_FLAGS_{dep}{build_type}_LIST "{deps.sharedlinkflags_list
 set(CONAN_EXE_LINKER_FLAGS_{dep}{build_type}_LIST "{deps.exelinkflags_list}")
 
 # Apple Frameworks
-conan_find_apple_frameworks(CONAN_FRAMEWORKS_FOUND_{dep}{build_type} "${{CONAN_FRAMEWORKS_{dep}{build_type}}}")
+conan_find_apple_frameworks(CONAN_FRAMEWORKS_FOUND_{dep}{build_type} "${{CONAN_FRAMEWORKS_{dep}{build_type}}}" "_{dep}")
 # Append to aggregated values variable
 set(CONAN_LIBS_{dep}{build_type} ${{CONAN_PKG_LIBS_{dep}{build_type}}} ${{CONAN_SYSTEM_LIBS_{dep}{build_type}}} ${{CONAN_FRAMEWORKS_FOUND_{dep}{build_type}}})
-# Aggregate package libs and frameworks for conan_package_library_targets()
-set(CONAN_LIBS_FRAMEWORKS_{dep}{build_type} ${{CONAN_PKG_LIBS_{dep}{build_type}}} ${{CONAN_FRAMEWORKS_FOUND_{dep}{build_type}}})
 """
 
 
@@ -101,7 +102,7 @@ set(CONAN_RES_DIRS{build_type} {deps.res_paths} ${{CONAN_RES_DIRS{build_type}}})
 set(CONAN_FRAMEWORK_DIRS{build_type} {deps.framework_paths} ${{CONAN_FRAMEWORK_DIRS{build_type}}})
 set(CONAN_LIBS{build_type} {deps.libs} ${{CONAN_LIBS{build_type}}})
 set(CONAN_PKG_LIBS{build_type} {deps.libs} ${{CONAN_PKG_LIBS{build_type}}})
-set(CONAN_SYSTEM_LIBS{build_type} {deps.system_libs})
+set(CONAN_SYSTEM_LIBS{build_type} {deps.system_libs} ${{CONAN_SYSTEM_LIBS{build_type}}})
 set(CONAN_FRAMEWORKS{build_type} {deps.frameworks} ${{CONAN_FRAMEWORKS{build_type}}})
 set(CONAN_FRAMEWORKS_FOUND{build_type} "")  # Will be filled later
 set(CONAN_DEFINES{build_type} {deps.defines} ${{CONAN_DEFINES{build_type}}})
@@ -114,9 +115,9 @@ set(CONAN_EXE_LINKER_FLAGS{build_type} "{deps.exelinkflags} ${{CONAN_EXE_LINKER_
 set(CONAN_C_FLAGS{build_type} "{deps.cflags} ${{CONAN_C_FLAGS{build_type}}}")
 
 # Apple Frameworks
-conan_find_apple_frameworks(CONAN_FRAMEWORKS_FOUND{build_type} "${{CONAN_FRAMEWORKS{build_type}}}")
-# Append to aggregated values variable
-set(CONAN_LIBS{build_type} ${{CONAN_PKG_LIBS{build_type}}} ${{CONAN_SYSTEM_LIBS{build_type}}} ${{CONAN_FRAMEWORKS_FOUND{build_type}}})
+conan_find_apple_frameworks(CONAN_FRAMEWORKS_FOUND{build_type} "${{CONAN_FRAMEWORKS{build_type}}}" "")
+# Append to aggregated values variable: Use CONAN_LIBS instead of CONAN_PKG_LIBS to include user appended vars
+set(CONAN_LIBS{build_type} ${{CONAN_LIBS{build_type}}} ${{CONAN_SYSTEM_LIBS{build_type}}} ${{CONAN_FRAMEWORKS_FOUND{build_type}}})
 """
 
 
@@ -136,31 +137,40 @@ set(CONAN_CMD_C_FLAGS ${CONAN_C_FLAGS})
 
 
 _target_template = """
-    conan_package_library_targets("${{CONAN_LIBS_FRAMEWORKS_{uname}}}" "${{CONAN_LIB_DIRS_{uname}}}"
-                                  CONAN_PACKAGE_TARGETS_{uname} "${{CONAN_SYSTEM_LIBS_{uname}}} {deps}"
+    set(_CONAN_PKG_LIBS_{uname}_DEPENDENCIES "${{CONAN_SYSTEM_LIBS_{uname}}} ${{CONAN_FRAMEWORKS_FOUND_{uname}}} {deps}")
+    string(REPLACE " " ";" _CONAN_PKG_LIBS_{uname}_DEPENDENCIES "${{_CONAN_PKG_LIBS_{uname}_DEPENDENCIES}}")
+    conan_package_library_targets("${{CONAN_PKG_LIBS_{uname}}}" "${{CONAN_LIB_DIRS_{uname}}}"
+                                  CONAN_PACKAGE_TARGETS_{uname} "${{_CONAN_PKG_LIBS_{uname}_DEPENDENCIES}}"
                                   "" {pkg_name})
-    conan_package_library_targets("${{CONAN_LIBS_FRAMEWORKS_{uname}_DEBUG}}" "${{CONAN_LIB_DIRS_{uname}_DEBUG}}"
-                                  CONAN_PACKAGE_TARGETS_{uname}_DEBUG "${{CONAN_SYSTEM_LIBS_{uname}_DEBUG}} {deps}"
+    set(_CONAN_PKG_LIBS_{uname}_DEPENDENCIES_DEBUG "${{CONAN_SYSTEM_LIBS_{uname}_DEBUG}} ${{CONAN_FRAMEWORKS_FOUND_{uname}_DEBUG}} {deps}")
+    string(REPLACE " " ";" _CONAN_PKG_LIBS_{uname}_DEPENDENCIES_DEBUG "${{_CONAN_PKG_LIBS_{uname}_DEPENDENCIES_DEBUG}}")
+    conan_package_library_targets("${{CONAN_PKG_LIBS_{uname}_DEBUG}}" "${{CONAN_LIB_DIRS_{uname}_DEBUG}}"
+                                  CONAN_PACKAGE_TARGETS_{uname}_DEBUG "${{_CONAN_PKG_LIBS_{uname}_DEPENDENCIES_DEBUG}}"
                                   "debug" {pkg_name})
-    conan_package_library_targets("${{CONAN_LIBS_FRAMEWORKS_{uname}_RELEASE}}" "${{CONAN_LIB_DIRS_{uname}_RELEASE}}"
-                                  CONAN_PACKAGE_TARGETS_{uname}_RELEASE "${{CONAN_SYSTEM_LIBS_{uname}_RELEASE}} {deps}"
+    set(_CONAN_PKG_LIBS_{uname}_DEPENDENCIES_RELEASE "${{CONAN_SYSTEM_LIBS_{uname}_RELEASE}} ${{CONAN_FRAMEWORKS_FOUND_{uname}_RELEASE}} {deps}")
+    string(REPLACE " " ";" _CONAN_PKG_LIBS_{uname}_DEPENDENCIES_RELEASE "${{_CONAN_PKG_LIBS_{uname}_DEPENDENCIES_RELEASE}}")
+    conan_package_library_targets("${{CONAN_PKG_LIBS_{uname}_RELEASE}}" "${{CONAN_LIB_DIRS_{uname}_RELEASE}}"
+                                  CONAN_PACKAGE_TARGETS_{uname}_RELEASE "${{_CONAN_PKG_LIBS_{uname}_DEPENDENCIES_RELEASE}}"
                                   "release" {pkg_name})
-    conan_package_library_targets("${{CONAN_LIBS_FRAMEWORKS_{uname}_RELWITHDEBINFO}}" "${{CONAN_LIB_DIRS_{uname}_RELWITHDEBINFO}}"
-                                  CONAN_PACKAGE_TARGETS_{uname}_RELWITHDEBINFO "${{CONAN_SYSTEM_LIBS_{uname}_RELWITHDEBINFO}} {deps}"
+    set(_CONAN_PKG_LIBS_{uname}_DEPENDENCIES_RELWITHDEBINFO "${{CONAN_SYSTEM_LIBS_{uname}_RELWITHDEBINFO}} ${{CONAN_FRAMEWORKS_FOUND_{uname}_RELWITHDEBINFO}} {deps}")
+    string(REPLACE " " ";" _CONAN_PKG_LIBS_{uname}_DEPENDENCIES_RELWITHDEBINFO "${{_CONAN_PKG_LIBS_{uname}_DEPENDENCIES_RELWITHDEBINFO}}")
+    conan_package_library_targets("${{CONAN_PKG_LIBS_{uname}_RELWITHDEBINFO}}" "${{CONAN_LIB_DIRS_{uname}_RELWITHDEBINFO}}"
+                                  CONAN_PACKAGE_TARGETS_{uname}_RELWITHDEBINFO "${{_CONAN_PKG_LIBS_{uname}_DEPENDENCIES_RELWITHDEBINFO}}"
                                   "relwithdebinfo" {pkg_name})
-    conan_package_library_targets("${{CONAN_LIBS_FRAMEWORKS_{uname}_MINSIZEREL}}" "${{CONAN_LIB_DIRS_{uname}_MINSIZEREL}}"
-                                  CONAN_PACKAGE_TARGETS_{uname}_MINSIZEREL "${{CONAN_SYSTEM_LIBS_{uname}_MINSIZEREL}} {deps}"
+    set(_CONAN_PKG_LIBS_{uname}_DEPENDENCIES_MINSIZEREL "${{CONAN_SYSTEM_LIBS_{uname}_MINSIZEREL}} ${{CONAN_FRAMEWORKS_FOUND_{uname}_MINSIZEREL}} {deps}")
+    string(REPLACE " " ";" _CONAN_PKG_LIBS_{uname}_DEPENDENCIES_MINSIZEREL "${{_CONAN_PKG_LIBS_{uname}_DEPENDENCIES_MINSIZEREL}}")
+    conan_package_library_targets("${{CONAN_PKG_LIBS_{uname}_MINSIZEREL}}" "${{CONAN_LIB_DIRS_{uname}_MINSIZEREL}}"
+                                  CONAN_PACKAGE_TARGETS_{uname}_MINSIZEREL "${{_CONAN_PKG_LIBS_{uname}_DEPENDENCIES_MINSIZEREL}}"
                                   "minsizerel" {pkg_name})
 
     add_library({name} INTERFACE IMPORTED)
 
     # Property INTERFACE_LINK_FLAGS do not work, necessary to add to INTERFACE_LINK_LIBRARIES
-    set_property(TARGET {name} PROPERTY INTERFACE_LINK_LIBRARIES ${{CONAN_PACKAGE_TARGETS_{uname}}} ${{CONAN_SHARED_LINKER_FLAGS_{uname}_LIST}} ${{CONAN_EXE_LINKER_FLAGS_{uname}_LIST}}
-                                                                 $<$<CONFIG:Release>:${{CONAN_PACKAGE_TARGETS_{uname}_RELEASE}} ${{CONAN_SHARED_LINKER_FLAGS_{uname}_RELEASE_LIST}} ${{CONAN_EXE_LINKER_FLAGS_{uname}_RELEASE_LIST}}>
-                                                                 $<$<CONFIG:RelWithDebInfo>:${{CONAN_PACKAGE_TARGETS_{uname}_RELWITHDEBINFO}} ${{CONAN_SHARED_LINKER_FLAGS_{uname}_RELWITHDEBINFO_LIST}} ${{CONAN_EXE_LINKER_FLAGS_{uname}_RELWITHDEBINFO_LIST}}>
-                                                                 $<$<CONFIG:MinSizeRel>:${{CONAN_PACKAGE_TARGETS_{uname}_MINSIZEREL}} ${{CONAN_SHARED_LINKER_FLAGS_{uname}_MINSIZEREL_LIST}} ${{CONAN_EXE_LINKER_FLAGS_{uname}_MINSIZEREL_LIST}}>
-                                                                 $<$<CONFIG:Debug>:${{CONAN_PACKAGE_TARGETS_{uname}_DEBUG}} ${{CONAN_SHARED_LINKER_FLAGS_{uname}_DEBUG_LIST}} ${{CONAN_EXE_LINKER_FLAGS_{uname}_DEBUG_LIST}}>
-                                                                 {deps})
+    set_property(TARGET {name} PROPERTY INTERFACE_LINK_LIBRARIES ${{CONAN_PACKAGE_TARGETS_{uname}}} ${{_CONAN_PKG_LIBS_{uname}_DEPENDENCIES}} ${{CONAN_SHARED_LINKER_FLAGS_{uname}_LIST}} ${{CONAN_EXE_LINKER_FLAGS_{uname}_LIST}}
+                                                                 $<$<CONFIG:Release>:${{CONAN_PACKAGE_TARGETS_{uname}_RELEASE}} ${{_CONAN_PKG_LIBS_{uname}_DEPENDENCIES_RELEASE}} ${{CONAN_SHARED_LINKER_FLAGS_{uname}_RELEASE_LIST}} ${{CONAN_EXE_LINKER_FLAGS_{uname}_RELEASE_LIST}}>
+                                                                 $<$<CONFIG:RelWithDebInfo>:${{CONAN_PACKAGE_TARGETS_{uname}_RELWITHDEBINFO}} ${{_CONAN_PKG_LIBS_{uname}_DEPENDENCIES_RELWITHDEBINFO}} ${{CONAN_SHARED_LINKER_FLAGS_{uname}_RELWITHDEBINFO_LIST}} ${{CONAN_EXE_LINKER_FLAGS_{uname}_RELWITHDEBINFO_LIST}}>
+                                                                 $<$<CONFIG:MinSizeRel>:${{CONAN_PACKAGE_TARGETS_{uname}_MINSIZEREL}} ${{_CONAN_PKG_LIBS_{uname}_DEPENDENCIES_MINSIZEREL}} ${{CONAN_SHARED_LINKER_FLAGS_{uname}_MINSIZEREL_LIST}} ${{CONAN_EXE_LINKER_FLAGS_{uname}_MINSIZEREL_LIST}}>
+                                                                 $<$<CONFIG:Debug>:${{CONAN_PACKAGE_TARGETS_{uname}_DEBUG}} ${{_CONAN_PKG_LIBS_{uname}_DEPENDENCIES_DEBUG}} ${{CONAN_SHARED_LINKER_FLAGS_{uname}_DEBUG_LIST}} ${{CONAN_EXE_LINKER_FLAGS_{uname}_DEBUG_LIST}}>)
     set_property(TARGET {name} PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${{CONAN_INCLUDE_DIRS_{uname}}}
                                                                       $<$<CONFIG:Release>:${{CONAN_INCLUDE_DIRS_{uname}_RELEASE}}>
                                                                       $<$<CONFIG:RelWithDebInfo>:${{CONAN_INCLUDE_DIRS_{uname}_RELWITHDEBINFO}}>
@@ -213,10 +223,21 @@ class CMakeCommonMacros:
         endfunction()
     """)
 
+    # this function gets the policy without raising an error for earlier versions than the policy
+    conan_get_policy = textwrap.dedent("""
+        function(conan_get_policy policy_id policy)
+            if(POLICY "${policy_id}")
+                cmake_policy(GET "${policy_id}" _policy)
+                set(policy "${_policy}" PARENT_SCOPE)
+            else()
+                set(policy "" PARENT_SCOPE)
+            endif()
+        endfunction()
+    """)
+
     conan_find_libraries_abs_path = textwrap.dedent("""
         function(conan_find_libraries_abs_path libraries package_libdir libraries_abs_path)
             foreach(_LIBRARY_NAME ${libraries})
-                unset(CONAN_FOUND_LIBRARY CACHE)
                 find_library(CONAN_FOUND_LIBRARY NAME ${_LIBRARY_NAME} PATHS ${package_libdir}
                              NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
                 if(CONAN_FOUND_LIBRARY)
@@ -226,16 +247,17 @@ class CMakeCommonMacros:
                     conan_message(STATUS "Library ${_LIBRARY_NAME} not found in package, might be system one")
                     set(CONAN_FULLPATH_LIBS ${CONAN_FULLPATH_LIBS} ${_LIBRARY_NAME})
                 endif()
+                unset(CONAN_FOUND_LIBRARY CACHE)
             endforeach()
-            unset(CONAN_FOUND_LIBRARY CACHE)
             set(${libraries_abs_path} ${CONAN_FULLPATH_LIBS} PARENT_SCOPE)
         endfunction()
     """)
 
     conan_package_library_targets = textwrap.dedent("""
         function(conan_package_library_targets libraries package_libdir libraries_abs_path deps build_type package_name)
+            unset(_CONAN_ACTUAL_TARGETS CACHE)
+            unset(_CONAN_FOUND_SYSTEM_LIBS CACHE)
             foreach(_LIBRARY_NAME ${libraries})
-                unset(CONAN_FOUND_LIBRARY CACHE)
                 find_library(CONAN_FOUND_LIBRARY NAME ${_LIBRARY_NAME} PATHS ${package_libdir}
                              NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
                 if(CONAN_FOUND_LIBRARY)
@@ -243,15 +265,22 @@ class CMakeCommonMacros:
                     set(_LIB_NAME CONAN_LIB::${package_name}_${_LIBRARY_NAME}${build_type})
                     add_library(${_LIB_NAME} UNKNOWN IMPORTED)
                     set_target_properties(${_LIB_NAME} PROPERTIES IMPORTED_LOCATION ${CONAN_FOUND_LIBRARY})
-                    string(REPLACE " " ";" deps_list "${deps}")
-                    set_property(TARGET ${_LIB_NAME} PROPERTY INTERFACE_LINK_LIBRARIES ${deps_list})
                     set(CONAN_FULLPATH_LIBS ${CONAN_FULLPATH_LIBS} ${_LIB_NAME})
+                    set(_CONAN_ACTUAL_TARGETS ${_CONAN_ACTUAL_TARGETS} ${_LIB_NAME})
                 else()
                     conan_message(STATUS "Library ${_LIBRARY_NAME} not found in package, might be system one")
                     set(CONAN_FULLPATH_LIBS ${CONAN_FULLPATH_LIBS} ${_LIBRARY_NAME})
+                    set(_CONAN_FOUND_SYSTEM_LIBS "${_CONAN_FOUND_SYSTEM_LIBS};${_LIBRARY_NAME}")
                 endif()
+                unset(CONAN_FOUND_LIBRARY CACHE)
             endforeach()
-            unset(CONAN_FOUND_LIBRARY CACHE)
+
+            # Add all dependencies to all targets
+            string(REPLACE " " ";" deps_list "${deps}")
+            foreach(_CONAN_ACTUAL_TARGET ${_CONAN_ACTUAL_TARGETS})
+                set_property(TARGET ${_CONAN_ACTUAL_TARGET} PROPERTY INTERFACE_LINK_LIBRARIES "${_CONAN_FOUND_SYSTEM_LIBS};${deps_list}")
+            endforeach()
+
             set(${libraries_abs_path} ${CONAN_FULLPATH_LIBS} PARENT_SCOPE)
         endfunction()
     """)
@@ -345,13 +374,13 @@ class CMakeCommonMacros:
             set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
             set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
             set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-        
+
             set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lib)
             set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY})
             set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELWITHDEBINFO ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY})
             set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_MINSIZEREL ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY})
             set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY})
-        
+
             set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lib)
             set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
             set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELWITHDEBINFO ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
@@ -364,7 +393,7 @@ class CMakeCommonMacros:
         macro(conan_split_version VERSION_STRING MAJOR MINOR)
             #make a list from the version string
             string(REPLACE "." ";" VERSION_LIST "${VERSION_STRING}")
-        
+
             #write output values
             list(LENGTH VERSION_LIST _version_len)
             list(GET VERSION_LIST 0 ${MAJOR})
@@ -391,16 +420,18 @@ class CMakeCommonMacros:
                 conan_message(STATUS "WARN: conaninfo.txt not found")
                 return()
             endif()
-        
+
             file (READ "${_CONAN_CURRENT_DIR}/conaninfo.txt" CONANINFO)
-        
-            string(REGEX MATCH "compiler=([-A-Za-z0-9_ ]+)" _MATCHED ${CONANINFO})
+
+            # MATCHALL will match all, including the last one, which is the full_settings one
+            string(REGEX MATCH "full_settings.*" _FULL_SETTINGS_MATCHED ${CONANINFO})
+            string(REGEX MATCH "compiler=([-A-Za-z0-9_ ]+)" _MATCHED ${_FULL_SETTINGS_MATCHED})
             if(DEFINED CMAKE_MATCH_1)
                 string(STRIP "${CMAKE_MATCH_1}" _CONAN_INFO_COMPILER)
                 set(${CONAN_INFO_COMPILER} ${_CONAN_INFO_COMPILER} PARENT_SCOPE)
             endif()
-        
-            string(REGEX MATCH "compiler.version=([-A-Za-z0-9_.]+)" _MATCHED ${CONANINFO})
+
+            string(REGEX MATCH "compiler.version=([-A-Za-z0-9_.]+)" _MATCHED ${_FULL_SETTINGS_MATCHED})
             if(DEFINED CMAKE_MATCH_1)
                 string(STRIP "${CMAKE_MATCH_1}" _CONAN_INFO_COMPILER_VERSION)
                 set(${CONAN_INFO_COMPILER_VERSION} ${_CONAN_INFO_COMPILER_VERSION} PARENT_SCOPE)
@@ -507,11 +538,11 @@ class CMakeCommonMacros:
                     return()
                 endif()
             endif()
-        
+
             if(NOT CMAKE_HOST_SYSTEM_NAME STREQUAL ${CMAKE_SYSTEM_NAME})
                 set(CROSS_BUILDING 1)
             endif()
-        
+
             # If using VS, verify toolset
             if (CONAN_COMPILER STREQUAL "Visual Studio")
                 if (CONAN_SETTINGS_COMPILER_TOOLSET MATCHES "LLVM" OR
@@ -522,12 +553,12 @@ class CMakeCommonMacros:
                 else()
                     set(EXPECTED_CMAKE_CXX_COMPILER_ID "MSVC")
                 endif()
-        
+
                 if (NOT CMAKE_CXX_COMPILER_ID MATCHES ${EXPECTED_CMAKE_CXX_COMPILER_ID})
                     message(FATAL_ERROR "Incorrect '${CONAN_COMPILER}'. Toolset specifies compiler as '${EXPECTED_CMAKE_CXX_COMPILER_ID}' "
                                         "but CMake detected '${CMAKE_CXX_COMPILER_ID}'")
                 endif()
-        
+
             # Avoid checks when cross compiling, apple-clang crashes because its APPLE but not apple-clang
             # Actually CMake is detecting "clang" when you are using apple-clang, only if CMP0025 is set to NEW will detect apple-clang
             elseif((CONAN_COMPILER STREQUAL "gcc" AND NOT CMAKE_CXX_COMPILER_ID MATCHES "GNU") OR
@@ -536,8 +567,8 @@ class CMakeCommonMacros:
                 (CONAN_COMPILER STREQUAL "sun-cc" AND NOT CMAKE_CXX_COMPILER_ID MATCHES "SunPro") )
                 message(FATAL_ERROR "Incorrect '${CONAN_COMPILER}', is not the one detected by CMake: '${CMAKE_CXX_COMPILER_ID}'")
             endif()
-        
-        
+
+
             if(NOT DEFINED CONAN_COMPILER_VERSION)
                 conan_message(STATUS "WARN: CONAN_COMPILER_VERSION variable not set, please make sure yourself "
                                      "that your compiler version matches your declared settings")
@@ -571,9 +602,9 @@ class CMakeCommonMacros:
                                     "$<$<CONFIG:MinSizeRel>:${CONAN_INCLUDE_DIRS_MINSIZEREL}>"
                                     "$<$<CONFIG:Debug>:${CONAN_INCLUDE_DIRS_DEBUG}>")
             endif()
-        
+
             link_directories(${CONAN_LIB_DIRS})
-        
+
             conan_find_libraries_abs_path("${CONAN_LIBS_DEBUG}" "${CONAN_LIB_DIRS_DEBUG}"
                                           CONAN_LIBS_DEBUG)
             conan_find_libraries_abs_path("${CONAN_LIBS_RELEASE}" "${CONAN_LIB_DIRS_RELEASE}"
@@ -582,17 +613,17 @@ class CMakeCommonMacros:
                                           CONAN_LIBS_RELWITHDEBINFO)
             conan_find_libraries_abs_path("${CONAN_LIBS_MINSIZEREL}" "${CONAN_LIB_DIRS_MINSIZEREL}"
                                           CONAN_LIBS_MINSIZEREL)
-        
+
             add_compile_options(${CONAN_DEFINES}
                                 "$<$<CONFIG:Debug>:${CONAN_DEFINES_DEBUG}>"
                                 "$<$<CONFIG:Release>:${CONAN_DEFINES_RELEASE}>"
                                 "$<$<CONFIG:RelWithDebInfo>:${CONAN_DEFINES_RELWITHDEBINFO}>"
                                 "$<$<CONFIG:MinSizeRel>:${CONAN_DEFINES_MINSIZEREL}>")
-        
+
             conan_set_flags("")
             conan_set_flags("_RELEASE")
             conan_set_flags("_DEBUG")
-        
+
         endmacro()
     """)
 
@@ -625,7 +656,7 @@ class CMakeCommonMacros:
                     set(CONAN_BUILD_MODULES_PATHS ${CONAN_BUILD_MODULES_PATHS_MINSIZEREL} ${CONAN_BUILD_MODULES_PATHS})
                 endif()
             endif()
-        
+
             foreach(_BUILD_MODULE_PATH ${CONAN_BUILD_MODULES_PATHS})
                 include(${_BUILD_MODULE_PATH})
             endforeach()
@@ -635,18 +666,31 @@ class CMakeCommonMacros:
     conan_set_vs_runtime = textwrap.dedent("""
         macro(conan_set_vs_runtime)
             if(CONAN_LINK_RUNTIME)
-                foreach(flag CMAKE_C_FLAGS_RELEASE CMAKE_CXX_FLAGS_RELEASE
-                             CMAKE_C_FLAGS_RELWITHDEBINFO CMAKE_CXX_FLAGS_RELWITHDEBINFO
-                             CMAKE_C_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_MINSIZEREL)
-                    if(DEFINED ${flag})
-                        string(REPLACE "/MD" ${CONAN_LINK_RUNTIME} ${flag} "${${flag}}")
+                conan_get_policy(CMP0091 policy_0091)
+                if(policy_0091 STREQUAL "NEW")
+                    if(CONAN_LINK_RUNTIME MATCHES "MTd")
+                        set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDebug")
+                    elseif(CONAN_LINK_RUNTIME MATCHES "MDd")
+                        set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDebugDLL")
+                    elseif(CONAN_LINK_RUNTIME MATCHES "MT")
+                        set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded")
+                    elseif(CONAN_LINK_RUNTIME MATCHES "MD")
+                        set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")
                     endif()
-                endforeach()
-                foreach(flag CMAKE_C_FLAGS_DEBUG CMAKE_CXX_FLAGS_DEBUG)
-                    if(DEFINED ${flag})
-                        string(REPLACE "/MDd" ${CONAN_LINK_RUNTIME} ${flag} "${${flag}}")
-                    endif()
-                endforeach()
+                else()
+                    foreach(flag CMAKE_C_FLAGS_RELEASE CMAKE_CXX_FLAGS_RELEASE
+                                 CMAKE_C_FLAGS_RELWITHDEBINFO CMAKE_CXX_FLAGS_RELWITHDEBINFO
+                                 CMAKE_C_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_MINSIZEREL)
+                        if(DEFINED ${flag})
+                            string(REPLACE "/MD" ${CONAN_LINK_RUNTIME} ${flag} "${${flag}}")
+                        endif()
+                    endforeach()
+                    foreach(flag CMAKE_C_FLAGS_DEBUG CMAKE_CXX_FLAGS_DEBUG)
+                        if(DEFINED ${flag})
+                            string(REPLACE "/MDd" ${CONAN_LINK_RUNTIME} ${flag} "${${flag}}")
+                        endif()
+                    endforeach()
+                endif()
             endif()
         endmacro()
     """)
@@ -657,19 +701,34 @@ class CMakeCommonMacros:
             # Leave the defaults MD (MDd) or replace them with MT (MTd) but taking into account the
             # debug, forcing MXd for debug builds. It will generate MSVCRT warnings if the dependencies
             # are installed with "conan install" and the wrong build type.
+            conan_get_policy(CMP0091 policy_0091)
             if(CONAN_LINK_RUNTIME MATCHES "MT")
-                foreach(flag CMAKE_C_FLAGS_RELEASE CMAKE_CXX_FLAGS_RELEASE
-                                 CMAKE_C_FLAGS_RELWITHDEBINFO CMAKE_CXX_FLAGS_RELWITHDEBINFO
-                                 CMAKE_C_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_MINSIZEREL)
-                    if(DEFINED ${flag})
-                        string(REPLACE "/MD" "/MT" ${flag} "${${flag}}")
+                if(policy_0091 STREQUAL "NEW")
+                    if(CMAKE_BUILD_TYPE STREQUAL "Release" OR
+                       CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo" OR
+                       CMAKE_BUILD_TYPE STREQUAL "MinSizeRel")
+                        if (CMAKE_MSVC_RUNTIME_LIBRARY STREQUAL "MultiThreadedDLL")
+                            set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded")
+                        endif()
+                    elseif(CMAKE_BUILD_TYPE STREQUAL "Debug")
+                        if (CMAKE_MSVC_RUNTIME_LIBRARY STREQUAL "MultiThreadedDebugDLL")
+                            set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDebug")
+                        endif()
                     endif()
-                endforeach()
-                foreach(flag CMAKE_C_FLAGS_DEBUG CMAKE_CXX_FLAGS_DEBUG)
-                    if(DEFINED ${flag})
-                        string(REPLACE "/MDd" "/MTd" ${flag} "${${flag}}")
-                    endif()
-                endforeach()
+                else()
+                    foreach(flag CMAKE_C_FLAGS_RELEASE CMAKE_CXX_FLAGS_RELEASE
+                                    CMAKE_C_FLAGS_RELWITHDEBINFO CMAKE_CXX_FLAGS_RELWITHDEBINFO
+                                    CMAKE_C_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_MINSIZEREL)
+                        if(DEFINED ${flag})
+                            string(REPLACE "/MD" "/MT" ${flag} "${${flag}}")
+                        endif()
+                    endforeach()
+                    foreach(flag CMAKE_C_FLAGS_DEBUG CMAKE_CXX_FLAGS_DEBUG)
+                        if(DEFINED ${flag})
+                            string(REPLACE "/MDd" "/MTd" ${flag} "${${flag}}")
+                        endif()
+                    endforeach()
+                endif()
             endif()
         endmacro()
     """)
@@ -680,10 +739,10 @@ class CMakeCommonMacros:
             # CONAN_CMAKE_MODULE_PATH_DEBUG to be used by the consumer
             # CMake can find findXXX.cmake files in the root of packages
             set(CMAKE_MODULE_PATH ${CONAN_CMAKE_MODULE_PATH} ${CMAKE_MODULE_PATH})
-        
+
             # Make find_package() to work
             set(CMAKE_PREFIX_PATH ${CONAN_CMAKE_MODULE_PATH} ${CMAKE_PREFIX_PATH})
-        
+
             # Set the find root path (cross build)
             set(CMAKE_FIND_ROOT_PATH ${CONAN_CMAKE_FIND_ROOT_PATH} ${CMAKE_FIND_ROOT_PATH})
             if(CONAN_CMAKE_FIND_ROOT_PATH_MODE_PROGRAM)
@@ -730,30 +789,30 @@ class CMakeCommonMacros:
     """)
 
     apple_frameworks_macro = textwrap.dedent("""
-        macro(conan_find_apple_frameworks FRAMEWORKS_FOUND FRAMEWORKS)
+        macro(conan_find_apple_frameworks FRAMEWORKS_FOUND FRAMEWORKS SUFFIX)
             if(APPLE)
                 if(CMAKE_BUILD_TYPE)
                     if(${CMAKE_BUILD_TYPE} MATCHES "Debug")
-                        set(CONAN_FRAMEWORKS ${CONAN_FRAMEWORKS_DEBUG} ${CONAN_FRAMEWORKS})
-                        set(CONAN_FRAMEWORK_DIRS ${CONAN_FRAMEWORK_DIRS_DEBUG} ${CONAN_FRAMEWORK_DIRS})
+                        set(CONAN_FRAMEWORKS${SUFFIX} ${CONAN_FRAMEWORKS${SUFFIX}_DEBUG} ${CONAN_FRAMEWORKS${SUFFIX}})
+                        set(CONAN_FRAMEWORK_DIRS${SUFFIX} ${CONAN_FRAMEWORK_DIRS${SUFFIX}_DEBUG} ${CONAN_FRAMEWORK_DIRS${SUFFIX}})
                     elseif(${CMAKE_BUILD_TYPE} MATCHES "Release")
-                        set(CONAN_FRAMEWORKS ${CONAN_FRAMEWORKS_RELEASE} ${CONAN_FRAMEWORKS})
-                        set(CONAN_FRAMEWORK_DIRS ${CONAN_FRAMEWORK_DIRS_RELEASE} ${CONAN_FRAMEWORK_DIRS})
+                        set(CONAN_FRAMEWORKS${SUFFIX} ${CONAN_FRAMEWORKS${SUFFIX}_RELEASE} ${CONAN_FRAMEWORKS${SUFFIX}})
+                        set(CONAN_FRAMEWORK_DIRS${SUFFIX} ${CONAN_FRAMEWORK_DIRS${SUFFIX}_RELEASE} ${CONAN_FRAMEWORK_DIRS${SUFFIX}})
                     elseif(${CMAKE_BUILD_TYPE} MATCHES "RelWithDebInfo")
-                        set(CONAN_FRAMEWORKS ${CONAN_FRAMEWORKS_RELWITHDEBINFO} ${CONAN_FRAMEWORKS})
-                        set(CONAN_FRAMEWORK_DIRS ${CONAN_FRAMEWORK_DIRS_RELWITHDEBINFO} ${CONAN_FRAMEWORK_DIRS})
+                        set(CONAN_FRAMEWORKS${SUFFIX} ${CONAN_FRAMEWORKS${SUFFIX}_RELWITHDEBINFO} ${CONAN_FRAMEWORKS${SUFFIX}})
+                        set(CONAN_FRAMEWORK_DIRS${SUFFIX} ${CONAN_FRAMEWORK_DIRS_RELWITHDEBINFO} ${CONAN_FRAMEWORK_DIRS})
                     elseif(${CMAKE_BUILD_TYPE} MATCHES "MinSizeRel")
-                        set(CONAN_FRAMEWORKS ${CONAN_FRAMEWORKS_MINSIZEREL} ${CONAN_FRAMEWORKS})
-                        set(CONAN_FRAMEWORK_DIRS ${CONAN_FRAMEWORK_DIRS_MINSIZEREL} ${CONAN_FRAMEWORK_DIRS})
+                        set(CONAN_FRAMEWORKS${SUFFIX} ${CONAN_FRAMEWORKS${SUFFIX}_MINSIZEREL} ${CONAN_FRAMEWORKS${SUFFIX}})
+                        set(CONAN_FRAMEWORK_DIRS${SUFFIX} ${CONAN_FRAMEWORK_DIRS${SUFFIX}_MINSIZEREL} ${CONAN_FRAMEWORK_DIRS${SUFFIX}})
                     endif()
                 endif()
                 foreach(_FRAMEWORK ${FRAMEWORKS})
                     # https://cmake.org/pipermail/cmake-developers/2017-August/030199.html
-                    find_library(CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND NAME ${_FRAMEWORK} PATHS ${CONAN_FRAMEWORK_DIRS})
+                    find_library(CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND NAME ${_FRAMEWORK} PATHS ${CONAN_FRAMEWORK_DIRS${SUFFIX}})
                     if(CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND)
                         list(APPEND ${FRAMEWORKS_FOUND} ${CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND})
                     else()
-                        message(FATAL_ERROR "Framework library ${_FRAMEWORK} not found in paths: ${CONAN_FRAMEWORK_DIRS}")
+                        message(FATAL_ERROR "Framework library ${_FRAMEWORK} not found in paths: ${CONAN_FRAMEWORK_DIRS${SUFFIX}}")
                     endif()
                 endforeach()
             endif()
@@ -763,6 +822,7 @@ class CMakeCommonMacros:
 
 _cmake_common_macros = "\n".join([
     CMakeCommonMacros.conan_message,
+    CMakeCommonMacros.conan_get_policy,
     CMakeCommonMacros.conan_find_libraries_abs_path,
     CMakeCommonMacros.conan_package_library_targets,
     CMakeCommonMacros.conan_set_libcxx,
@@ -874,17 +934,17 @@ cmake_macros_multi = "\n".join([
         else()
             message(FATAL_ERROR "No conanbuildinfo_release.cmake, please install the Release conf first")
         endif()
-        
+
         if(EXISTS ${CMAKE_CURRENT_LIST_DIR}/conanbuildinfo_debug.cmake)
             include(${CMAKE_CURRENT_LIST_DIR}/conanbuildinfo_debug.cmake)
         else()
             message(FATAL_ERROR "No conanbuildinfo_debug.cmake, please install the Debug conf first")
         endif()
-        
+
         if(EXISTS ${CMAKE_CURRENT_LIST_DIR}/conanbuildinfo_minsizerel.cmake)
             include(${CMAKE_CURRENT_LIST_DIR}/conanbuildinfo_minsizerel.cmake)
         endif()
-        
+
         if(EXISTS ${CMAKE_CURRENT_LIST_DIR}/conanbuildinfo_relwithdebinfo.cmake)
             include(${CMAKE_CURRENT_LIST_DIR}/conanbuildinfo_relwithdebinfo.cmake)
         endif()

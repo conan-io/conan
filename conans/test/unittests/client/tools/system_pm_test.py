@@ -429,6 +429,22 @@ class SystemPackageToolTest(unittest.TestCase):
             self.assertNotIn("CONAN_SYSREQUIRES_MODE", str(exc.exception))
             self.assertEqual(7, runner.calls)
 
+        # Check default_mode. The environment variable is not set and should behave like
+        # the default_mode
+        with tools.environment_append({
+            "CONAN_SYSREQUIRES_MODE": None,
+            "CONAN_SYSREQUIRES_SUDO": "True"
+        }):
+            packages = ["verify_package", "verify_another_package", "verify_yet_another_package"]
+            runner = RunnerMultipleMock(["sudo -A apt-get update"])
+            spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out), output=self.out, 
+                                    default_mode="verify")
+            with self.assertRaises(ConanException) as exc:
+                spt.install(packages)
+            self.assertIn("Aborted due to CONAN_SYSREQUIRES_MODE=", str(exc.exception))
+            self.assertIn('\n'.join(packages), self.out)
+            self.assertEqual(3, runner.calls)
+
     def system_package_tool_installed_test(self):
         if (platform.system() != "Linux" and platform.system() != "Macos" and
                 platform.system() != "Windows"):

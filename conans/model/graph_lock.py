@@ -2,17 +2,15 @@ import json
 import os
 from collections import OrderedDict
 
-from conans.client.graph.graph import RECIPE_VIRTUAL, RECIPE_CONSUMER,\
-    BINARY_BUILD
+from conans.client.graph.graph import RECIPE_VIRTUAL, RECIPE_CONSUMER, BINARY_BUILD
 from conans.client.graph.python_requires import PyRequires
 from conans.client.profile_loader import _load_profile
 from conans.errors import ConanException
 from conans.model.info import PACKAGE_ID_UNKNOWN
 from conans.model.options import OptionsValues
 from conans.model.ref import PackageReference, ConanFileReference
-from conans.util.files import load, save
 from conans.model.version import Version
-
+from conans.util.files import load, save
 
 LOCKFILE = "conan.lock"
 LOCKFILE_VERSION = "0.3"
@@ -20,8 +18,9 @@ LOCKFILE_VERSION = "0.3"
 
 class GraphLockFile(object):
 
-    def __init__(self, profile_host, graph_lock):
+    def __init__(self, profile_host, profile_build, graph_lock):
         self.profile_host = profile_host
+        self.profile_build = profile_build
         self.graph_lock = graph_lock
 
     @staticmethod
@@ -50,11 +49,14 @@ class GraphLockFile(object):
                                      "version. Please regenerate the lockfile")
             # Do something with it, migrate, raise...
         profile_host = graph_json.get("profile_host") or graph_json["profile"]
+        profile_build = graph_json.get("profile_build", None)
         # FIXME: Reading private very ugly
         profile_host, _ = _load_profile(profile_host, None, None)
+        if profile_build:
+            profile_build, _ = _load_profile(profile_build, None, None)
         graph_lock = GraphLock.from_dict(graph_json["graph_lock"])
         graph_lock.revisions_enabled = revisions_enabled
-        graph_lock_file = GraphLockFile(profile_host, graph_lock)
+        graph_lock_file = GraphLockFile(profile_host, profile_build, graph_lock)
         return graph_lock_file
 
     def save(self, path):
@@ -67,6 +69,8 @@ class GraphLockFile(object):
         result = {"profile_host": self.profile_host.dumps(),
                   "graph_lock": self.graph_lock.as_dict(),
                   "version": LOCKFILE_VERSION}
+        if self.profile_build:
+            result["profile_build"] = self.profile_build.dumps()
         return json.dumps(result, indent=True)
 
 
@@ -127,6 +131,7 @@ class GraphLock(object):
     def __init__(self, graph=None):
         self._nodes = {}  # {numeric id: PREF or None}
         self.revisions_enabled = None
+        self.relax = False
 
         if graph is not None:
             for node in graph.nodes:
@@ -160,7 +165,7 @@ class GraphLock(object):
             python_reqs = node.conanfile.python_requires.all_refs()
 
         previous = node.graph_lock_node
-        modified = node.graph_lock_node.modified if node.graph_lock_node else None
+        modified = previous.modified if previous else None
         graph_node = GraphLockNode(node.pref if node.ref else None, python_reqs,
                                    node.conanfile.options.values, requires, build_requires,
                                    node.path, modified)
@@ -219,6 +224,12 @@ class GraphLock(object):
             if node.modified:
                 self._nodes[id_] = node
 
+    def clean_modified(self):
+        """ remove all the "modified" flags from the lockfile
+        """
+        for _, node in self._nodes.items():
+            node.modified = None
+
     def _closure_affected(self):
         """ returns all the IDs of the nodes that depend directly or indirectly of some
         package marked as "modified"
@@ -264,7 +275,12 @@ class GraphLock(object):
             except KeyError:
                 if node.recipe == RECIPE_CONSUMER:
                     continue  # If the consumer node is not found, could be a test_package
-                raise
+                if self.relax:
+                    continue
+                else:
+                    raise ConanException("The node %s ID %s was not found in the lock"
+                                         % (node.ref, node.id))
+
             if lock_node.pref:
                 pref = lock_node.pref if self.revisions_enabled else lock_node.pref.copy_clear_revs()
                 node_pref = node.pref if self.revisions_enabled else node.pref.copy_clear_revs()
@@ -273,7 +289,7 @@ class GraphLock(object):
                 if (pref.id == PACKAGE_ID_UNKNOWN or pref.is_compatible_with(node_pref) or
                         node.binary == BINARY_BUILD or node.id in affected or
                         node.recipe == RECIPE_CONSUMER):
-                    self._upsert_node(node)
+                    lock_node.pref = node.pref
                 else:
                     raise ConanException("Mismatch between lock and graph:\nLock:  %s\nGraph: %s"
                                          % (repr(pref), repr(node.pref)))
@@ -286,7 +302,12 @@ class GraphLock(object):
         except KeyError:  # If the consumer node is not found, could be a test_package
             if node.recipe == RECIPE_CONSUMER:
                 return
-            raise ConanException("The node ID %s was not found in the lock" % node.id)
+            if self.relax:
+                node.conanfile.output.warn("Package can't be locked, not found in the lockfile")
+                return
+            else:
+                raise ConanException("The node %s ID %s was not found in the lock"
+                                     % (node.ref, node.id))
 
         node.graph_lock_node = locked_node
         node.conanfile.options.values = locked_node.options
@@ -314,12 +335,12 @@ class GraphLock(object):
                 locked_pref, locked_id = prefs[require.ref.name]
                 require.lock(locked_pref.ref, locked_id)
             except KeyError:
-                msg = "'%s' cannot be found in lockfile for this package\n" % require.ref.name
-                if build_requires:
-                    msg += "Make sure it was locked with --build arguments while creating lockfile"
+                t = "Build-require" if build_requires else "Require"
+                msg = "%s '%s' cannot be found in lockfile" % (t, require.ref.name)
+                if self.relax:
+                    node.conanfile.output.warn(msg)
                 else:
-                    msg += "If it is a new requirement, you need to create a new lockile"
-                raise ConanException(msg)
+                    raise ConanException(msg)
 
     def python_requires(self, node_id):
         if self.revisions_enabled:

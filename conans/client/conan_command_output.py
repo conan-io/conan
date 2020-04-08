@@ -170,6 +170,7 @@ class CommandOutputer(object):
             _add_if_exists("homepage")
             _add_if_exists("license", as_list=True)
             _add_if_exists("author")
+            _add_if_exists("description")
             _add_if_exists("topics", as_list=True)
 
             if isinstance(ref, ConanFileReference):
@@ -194,7 +195,7 @@ class CommandOutputer(object):
 
             depends = node.neighbors()
             requires = [d for d in depends if d not in build_time_nodes]
-            build_requires = [d for d in depends if d in build_time_nodes]
+            build_requires = [d for d in depends if d in build_time_nodes]  # TODO: May use build_require_context information
 
             if requires:
                 item_data["requires"] = [repr(d.ref.copy_clear_rev()) for d in requires]

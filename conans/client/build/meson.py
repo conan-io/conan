@@ -1,10 +1,12 @@
 import os
+import platform
+
 
 from conans.client import tools
 from conans.client.build import defs_to_string, join_arguments
 from conans.client.build.autotools_environment import AutoToolsBuildEnvironment
 from conans.client.build.cppstd_flags import cppstd_from_settings
-from conans.client.tools.env import environment_append
+from conans.client.tools.env import environment_append, _environment_add
 from conans.client.tools.oss import args_to_string
 from conans.errors import ConanException
 from conans.model.build_info import DEFAULT_BIN, DEFAULT_INCLUDE, DEFAULT_LIB
@@ -15,7 +17,7 @@ from conans.util.runners import version_runner
 
 class Meson(object):
 
-    def __init__(self, conanfile, backend=None, build_type=None):
+    def __init__(self, conanfile, backend=None, build_type=None, append_vcvars=False):
         """
         :param conanfile: Conanfile instance (or settings for retro compatibility)
         :param backend: Generator name to use or none to autodetect.
@@ -24,6 +26,7 @@ class Meson(object):
         """
         self._conanfile = conanfile
         self._settings = conanfile.settings
+        self._append_vcvars = append_vcvars
 
         self._os = self._ss("os")
         self._compiler = self._ss("compiler")
@@ -159,18 +162,23 @@ class Meson(object):
 
     @property
     def _vcvars_needed(self):
-        return self._compiler == "Visual Studio" and self.backend == "ninja"
+        return (self._compiler == "Visual Studio" and self.backend == "ninja" and
+                platform.system() == "Windows")
 
     def _run(self, command):
-        with tools.vcvars(self._settings,
-                          output=self._conanfile.output) if self._vcvars_needed else tools.no_op():
+        def _build():
             env_build = AutoToolsBuildEnvironment(self._conanfile)
             with environment_append(env_build.vars):
                 self._conanfile.run(command)
 
-    def build(self, args=None, build_dir=None, targets=None):
-        if not self._conanfile.should_build:
-            return
+        if self._vcvars_needed:
+            vcvars_dict = tools.vcvars_dict(self._settings, output=self._conanfile.output)
+            with _environment_add(vcvars_dict, post=self._append_vcvars):
+                _build()
+        else:
+            _build()
+
+    def _run_ninja_targets(self, args=None, build_dir=None, targets=None):
         if self.backend != "ninja":
             raise ConanException("Build only supported with 'ninja' backend")
 
@@ -184,6 +192,22 @@ class Meson(object):
         ])
         self._run("ninja %s" % arg_list)
 
+    def _run_meson_command(self, subcommand=None, args=None, build_dir=None):
+        args = args or []
+        build_dir = build_dir or self.build_dir or self._conanfile.build_folder
+
+        arg_list = join_arguments([
+            subcommand,
+            '-C "%s"' % build_dir,
+            args_to_string(args)
+        ])
+        self._run("meson %s" % arg_list)
+
+    def build(self, args=None, build_dir=None, targets=None):
+        if not self._conanfile.should_build:
+            return
+        self._run_ninja_targets(args=args, build_dir=build_dir, targets=targets)
+
     def install(self, args=None, build_dir=None):
         if not self._conanfile.should_install:
             return
@@ -191,14 +215,24 @@ class Meson(object):
         if not self.options.get('prefix'):
             raise ConanException("'prefix' not defined for 'meson.install()'\n"
                                  "Make sure 'package_folder' is defined")
-        self.build(args=args, build_dir=build_dir, targets=["install"])
+        self._run_ninja_targets(args=args, build_dir=build_dir, targets=["install"])
 
     def test(self, args=None, build_dir=None, targets=None):
         if not self._conanfile.should_test:
             return
         if not targets:
             targets = ["test"]
-        self.build(args=args, build_dir=build_dir, targets=targets)
+        self._run_ninja_targets(args=args, build_dir=build_dir, targets=targets)
+
+    def meson_install(self, args=None, build_dir=None):
+        if not self._conanfile.should_install:
+            return
+        self._run_meson_command(subcommand='install', args=args, build_dir=build_dir)
+
+    def meson_test(self, args=None, build_dir=None):
+        if not self._conanfile.should_test:
+            return
+        self._run_meson_command(subcommand='test', args=args, build_dir=build_dir)
 
     @staticmethod
     def get_version():

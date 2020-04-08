@@ -37,7 +37,9 @@ class AliasTest(GraphManagerTest):
         consumer = self.recipe_consumer("app/0.1", ["libb/0.1"], build_requires=["liba/latest"])
 
         with six.assertRaisesRegex(self, ConanException,
-                                   "Requirement liba/0.2 conflicts with already defined liba/0.1"):
+                                   "Conflict in app/0.1:\n"
+                                   "    'app/0.1' requires 'liba/0.2' while 'libb/0.1' requires 'liba/0.1'.\n"
+                                   "    To fix this conflict you need to override the package 'liba' in your root package."):
             self.build_consumer(consumer)
 
     def test_conflicting_not_alias(self):
@@ -50,5 +52,7 @@ class AliasTest(GraphManagerTest):
         consumer = self.recipe_consumer("app/0.1", ["libb/0.1"], build_requires=["liba/0.2"])
 
         with six.assertRaisesRegex(self, ConanException,
-                                   "Requirement liba/0.2 conflicts with already defined liba/0.1"):
+                                   "Conflict in app/0.1:\n"
+                                   "    'app/0.1' requires 'liba/0.2' while 'libb/0.1' requires 'liba/0.1'.\n"
+                                   "    To fix this conflict you need to override the package 'liba' in your root package."):
             self.build_consumer(consumer)
