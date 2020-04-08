@@ -27,6 +27,7 @@ LOCALDB = ".conan.db"
 REMOTES = "remotes.json"
 PROFILES_FOLDER = "profiles"
 HOOKS_FOLDER = "hooks"
+SCHED_FILE = 'sched'
 
 
 def is_case_insensitive_os():

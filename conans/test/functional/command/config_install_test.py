@@ -4,11 +4,13 @@ import shutil
 import textwrap
 import unittest
 import zipfile
+import datetime
 
 import six
 from mock import patch
 
 from conans.client.cache.remote_registry import Remote
+from conans.client.cache.cache import SCHED_FILE
 from conans.client.conf import ConanClientConfigParser
 from conans.client.conf.config_installer import _hide_password, _ConfigOrigin
 from conans.client.rest.file_downloader import FileDownloader
@@ -528,10 +530,12 @@ class Pkg(ConanFile):
                     [general]
                     config_install_interval = 5m
                     """)
-        save_files(folder, {"config/conan.conf": conan_conf})
+        save_files(folder, {"conan.conf": conan_conf})
         client = TestClient()
         client.run('config install "%s"' % folder)
         self.assertIn("Processing conan.conf", client.out)
         content = load(client.cache.conan_conf_path)
         self.assertEqual(1, content.count("config_install_interval"))
-        self.assertTrue(os.path.exists(os.path.join(self.client.cache.cache_folder, "sched.txt")))
+        sched_file = os.path.join(client.cache.cache_folder, SCHED_FILE)
+        self.assertTrue(os.path.exists(sched_file))
+        self.assertIn(datetime.datetime.today().strftime("%Y-%m-%d"), load(sched_file))

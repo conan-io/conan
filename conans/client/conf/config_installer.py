@@ -1,6 +1,7 @@
 import json
 import os
 import shutil
+from datetime import datetime
 
 from contextlib import contextmanager
 from six.moves.urllib.parse import urlparse
@@ -9,10 +10,12 @@ from conans import load
 from conans.client import tools
 from conans.client.cache.remote_registry import load_registry_txt,\
     migrate_registry_file
+from conans.client.cache.cache import SCHED_FILE
 from conans.client.tools import Git
 from conans.client.tools.files import unzip
 from conans.errors import ConanException
 from conans.util.files import mkdir, rmdir, walk, save
+from conans.util.log import logger
 
 
 def _hide_password(resource):
@@ -207,6 +210,13 @@ def _save_configs(configs_file, configs):
                                   indent=True))
 
 
+def _generate_sched_file(cache):
+    now = str(datetime.now())
+    with open(os.path.join(cache.cache_folder, SCHED_FILE), 'w') as fd:
+        fd.write(now)
+    logger.debug("Update sched file (%s)" % now)
+
+
 def configuration_install(app, uri, verify_ssl, config_type=None,
                           args=None, source_folder=None, target_folder=None):
     cache, output, requester = app.cache, app.out, app.requester
@@ -247,3 +257,8 @@ def configuration_install(app, uri, verify_ssl, config_type=None,
         else:
             configs = [(c if c != config else config) for c in configs]
         _save_configs(configs_file, configs)
+    try:
+        if app.config.get_item("general.config_install_interval"):
+            _generate_sched_file(cache)
+    except ConanException:
+        pass
