@@ -15,13 +15,20 @@ class ConanGrapher(object):
         graph_lines = ['strict digraph {']
         graph_lines.append(self._dot_configuration)
         graph_lines.append('\n')
-        # First, create the nodes
-        graph_nodes = self._deps_graph.by_levels()
+
+        # Store list of build_requires nodes
         build_time_nodes = self._deps_graph.build_time_nodes()
+
+        # Store the root node
+        root_id = self._deps_graph.root.conanfile.display_name
+
+        # First, create the nodes
         for node in self._deps_graph.nodes:
+            # Node id is name/version, unless there's no name & version
             node_id = node.conanfile.display_name
             node_name = node.conanfile.name if node.conanfile.name else node.conanfile.display_name
             node_version = node.conanfile.version if node.conanfile.version else ""
+
             try:
                 node_user = node.conanfile.user
             except ConanException:
@@ -47,11 +54,16 @@ class ConanGrapher(object):
             else:
                 dot_node = self._dot_node_template_without_name_version_user_channel
 
-            if node in build_time_nodes:   # TODO: May use build_require_context information
-                dot_node = self._dot_node_template_build_requires + dot_node
-            else:
-                dot_node = self._dot_node_template_requires + dot_node
+            # Color the nodes
+            if node_id == root_id:  # root node
+                dot_node = self._dot_node_colors_template_root_node + dot_node
+            elif node in build_time_nodes:  # build_requires
+                # TODO: May use build_require_context information
+                dot_node = self._dot_node_colors_template_build_requires + dot_node
+            else:  # requires
+                dot_node = self._dot_node_colors_template_requires + dot_node
 
+            # Add single node to graph
             graph_lines.append('    "%s" %s\n' % (node_id, dot_node))
 
         # Then, the adjacency matrix
@@ -88,8 +100,9 @@ class ConanGrapher(object):
     edge [
       style = solid,
     ];"""
-    _dot_node_template_build_requires = """[ fillcolor=lightyellow, color=gold """
-    _dot_node_template_requires = """[ fillcolor=azure, color=dodgerblue """
+    _dot_node_colors_template_root_node = """[ fillcolor=mintcream, color=limegreen """
+    _dot_node_colors_template_build_requires = """[ fillcolor=lightyellow, color=gold """
+    _dot_node_colors_template_requires = """[ fillcolor=azure, color=dodgerblue """
     _dot_node_template_without_name_version_user_channel = """ """
     _dot_node_template_without_version_user_channel = """ label=<
      <table border="0" cellborder="0" cellspacing="0">
