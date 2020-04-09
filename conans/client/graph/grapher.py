@@ -8,19 +8,20 @@ from conans.util.files import save
 from conans.errors import ConanException
 
 class ConanGrapher(object):
+
     def __init__(self, deps_graph):
         self._deps_graph = deps_graph
-    
+
     def graph(self):
         dot_graph = ['strict digraph {']
         dot_graph.append(self._dot_configuration)
         dot_graph.append('\n')
 
         # First, create the nodes
-        self._add_single_nodes_to_graph(dot_graph)
+        nodes = self._add_single_nodes_to_graph(dot_graph)
 
         # Then, the adjacency matrix
-        self._add_adjacency_matrix(dot_graph)
+        self._add_adjacency_matrix(nodes, dot_graph)
 
         dot_graph.append('}\n')
 
@@ -42,7 +43,7 @@ class ConanGrapher(object):
         else:
             root_id = root_node.conanfile.display_name
 
-        # Store nodes in ordered dict, for ordered 
+        # Store nodes in ordered dict, for deterministic output to dot file
         nodes = {}
 
         # First, gather the nodes info
@@ -71,6 +72,7 @@ class ConanGrapher(object):
                 node_channel = ""
 
             nodes[node_id] = {
+              "node": node,
               "name": node_name,
               "version": node_version,
               "user": node_user,
@@ -78,6 +80,7 @@ class ConanGrapher(object):
               "is_root": node_id == root_id,
               "build_requires": node in build_time_nodes
             }
+
 
         # Then iterate over the ordered set of nodes & write to dot graph
         for id in sorted(nodes.keys()):
@@ -108,23 +111,18 @@ class ConanGrapher(object):
                 dot_node
             ))
 
+        return nodes
 
-    def _add_adjacency_matrix(self, dot_graph):
-        for node in self._deps_graph.nodes:
-            depends = node.neighbors()
+    def _add_adjacency_matrix(self, nodes, dot_graph):
+        for id in sorted(nodes.keys()):
+            depends = nodes[id]['node'].neighbors()
             if depends:
-                if node.conanfile.name and node.conanfile.version:
-                    node_id = "{}/{}".format(node.conanfile.name, node.conanfile.version)
-                elif node.conanfile.name:
-                    node_id = node.conanfile.name
-                else:
-                    node_id = node.conanfile.display_name
                 deps_links = ""
                 for dep_node in depends:
                     if dep_node.conanfile.name and dep_node.conanfile.version:
                         dep_node_id = "{}/{}".format(dep_node.conanfile.name, dep_node.conanfile.version)
-                    elif node.conanfile.name:
-                        dep_node_id = node.conanfile.name
+                    elif dep_node.conanfile.name:
+                        dep_node_id = dep_node.conanfile.name
                     else:
                         dep_node_id = dep_node.conanfile.display_name
 
@@ -132,7 +130,7 @@ class ConanGrapher(object):
 
                 # Add nodes to matrix
                 dot_graph.append('    "{}" -> {{{}}}\n'.format(
-                    node_id,
+                    id,
                     deps_links
                 ))
 
