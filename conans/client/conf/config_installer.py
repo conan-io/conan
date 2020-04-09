@@ -3,6 +3,8 @@ import os
 import shutil
 import re
 from datetime import datetime, timedelta
+from dateutil.tz import gettz
+from dateutil.parser import parse
 
 from contextlib import contextmanager
 from six.moves.urllib.parse import urlparse
@@ -11,7 +13,6 @@ from conans import load
 from conans.client import tools
 from conans.client.cache.remote_registry import load_registry_txt,\
     migrate_registry_file
-from conans.client.cache.cache import SCHED_FILE
 from conans.client.tools import Git
 from conans.client.tools.files import unzip
 from conans.errors import ConanException
@@ -211,10 +212,13 @@ def _save_configs(configs_file, configs):
                                   indent=True))
 
 
+def _get_current_time_now():
+    return datetime.now(gettz())
+
+
 def _generate_sched_file(cache):
-    now = str(datetime.utcnow())
-    with open(os.path.join(cache.cache_folder, SCHED_FILE), 'w') as fd:
-        fd.write(now)
+    now = str(_get_current_time_now())
+    save(cache.sched_path, now)
     logger.debug("Update sched file (%s)" % now)
 
 
@@ -232,7 +236,7 @@ def _next_scheduled_config_install(sched_path, sched_content, value, interval, o
     if not sched_content or len(str(sched_content).strip()) == 0:
         return None
     try:
-        sched = datetime.strptime(sched_content, '%Y-%m-%d %H:%M:%S.%f')
+        sched = parse(sched_content)
         if interval == 'm':
             sched += timedelta(minutes=float(value))
         elif interval == 'h':
@@ -314,13 +318,12 @@ def is_config_install_scheduled(api):
     else:
         match = re.search(r"(\d+)([mhd])", interval)
         if match:
-            sched_path = os.path.join(api.app.cache.cache_folder, SCHED_FILE)
-            if not os.path.exists(sched_path):
+            if not os.path.exists(api.app.cache.sched_path):
                 return True
-            content = load(sched_path)
-            sched = _next_scheduled_config_install(sched_path, content, match.group(1),
+            content = load(api.app.cache.sched_path)
+            sched = _next_scheduled_config_install(api.app.cache.sched_path, content, match.group(1),
                                                    match.group(2), api.app.out)
             if not sched:
                 return True
-            now = datetime.utcnow()
+            now = _get_current_time_now()
             return now > sched

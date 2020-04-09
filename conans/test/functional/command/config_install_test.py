@@ -1,6 +1,5 @@
 import json
 import os
-import re
 import shutil
 import textwrap
 import unittest
@@ -11,9 +10,8 @@ import six
 from mock import patch
 
 from conans.client.cache.remote_registry import Remote
-from conans.client.cache.cache import SCHED_FILE
 from conans.client.conf import ConanClientConfigParser
-from conans.client.conf.config_installer import _hide_password, _ConfigOrigin
+from conans.client.conf.config_installer import _hide_password, _ConfigOrigin, _get_current_time_now
 from conans.client.rest.file_downloader import FileDownloader
 from conans.errors import ConanException
 from conans.test.utils.test_files import temp_folder
@@ -535,22 +533,20 @@ class Pkg(ConanFile):
                     """)
         save_files(folder, {"conan.conf": conan_conf})
         client = TestClient()
-        regex = re.compile(r"\d+-\d+-\d+ \d+:\d+:\d+.\d+")
 
         # 1 - config install must be executed without restriction
         client.run('config install "%s"' % folder)
         self.assertIn("Processing conan.conf", client.out)
         content = load(client.cache.conan_conf_path)
-        sched_file = os.path.join(client.cache.cache_folder, SCHED_FILE)
 
         self.assertEqual(1, content.count("config_install_interval"))
-        self.assertTrue(os.path.exists(sched_file))
-        self.assertTrue(re.match(regex, load(sched_file)))
+        self.assertTrue(os.path.exists(client.cache.sched_path))
+        self.assertTrue(datetime.datetime.fromisoformat(load(client.cache.sched_path)))
 
         # 2 - Must execute again
         client.run('config install "%s"' % folder)
         self.assertIn("Processing conan.conf", client.out)
-        self.assertTrue(re.match(regex, load(sched_file)))
+        self.assertTrue(datetime.datetime.fromisoformat(load(client.cache.sched_path)))
 
         # 3 - Must not execute: seconds are not allowed
         client.run('config set general.config_install_interval=1s')
@@ -563,27 +559,27 @@ class Pkg(ConanFile):
         client.run('config set general.config_install_interval=1m')
         self.assertNotIn("Processing conan.conf", client.out)
         with patch("conans.client.conf.config_installer._next_scheduled_config_install",
-                   return_value=datetime.datetime.utcnow() - datetime.timedelta(minutes=2)):
+                   return_value=_get_current_time_now() - datetime.timedelta(minutes=2)):
             client.run('config get general.config_install_interval')
             self.assertIn("Processing conan.conf", client.out)
 
         # 5 - Must execute: sched file has been removed after first interaction
-        os.remove(sched_file)
+        os.remove(client.cache.sched_path)
         client.run('config get general.config_install_interval')
         self.assertIn("Processing conan.conf", client.out)
-        self.assertTrue(re.match(regex, load(sched_file)))
+        self.assertTrue(datetime.datetime.fromisoformat(load(client.cache.sched_path)))
 
         # 6 - Must execute: sched file is empty
-        with open(sched_file, 'w') as fd:
+        with open(client.cache.sched_path, 'w') as fd:
             fd.write("")
         client.run('config install "%s"' % folder)
         self.assertIn("Processing conan.conf", client.out)
-        self.assertTrue(re.match(regex, load(sched_file)))
+        self.assertTrue(datetime.datetime.fromisoformat(load(client.cache.sched_path)))
 
         # 7 - Must execute: sched file is invalid
-        with open(sched_file, 'w') as fd:
+        with open(client.cache.sched_path, 'w') as fd:
             fd.write("foobar")
         client.run('config install "%s"' % folder)
         self.assertIn("Processing conan.conf", client.out)
         self.assertIn("WARN: The sched file is corrupted and will be removed.", client.out)
-        self.assertTrue(re.match(regex, load(sched_file)))
+        self.assertTrue(datetime.datetime.fromisoformat(load(client.cache.sched_path)))
