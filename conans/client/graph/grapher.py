@@ -16,6 +16,8 @@ class ConanGrapher(object):
         graph_lines.append(self._dot_configuration)
         graph_lines.append('\n')
         # First, create the nodes
+        graph_nodes = self._deps_graph.by_levels()
+        build_time_nodes = self._deps_graph.build_time_nodes()
         for node in self._deps_graph.nodes:
             node_id = node.conanfile.display_name
             node_name = node.conanfile.name if node.conanfile.name else node.conanfile.display_name
@@ -36,11 +38,19 @@ class ConanGrapher(object):
                                                   .replace("%NODE_VERSION%", node_version) \
                                                   .replace("%NODE_USER%", node_user) \
                                                   .replace("%NODE_CHANNEL%", node_channel)
-            elif node_version:
+            elif node_name and node_version:
                 dot_node = self._dot_node_template.replace("%NODE_NAME%", node_name) \
                                                   .replace("%NODE_VERSION%", node_version)
+            elif node_name:
+                dot_node = self._dot_node_template_without_version_user_channel \
+                                                  .replace("%NODE_NAME%", node_name)
             else:
-                dot_node = self._dot_node_main_node_template
+                dot_node = self._dot_node_template_without_name_version_user_channel
+
+            if node in build_time_nodes:   # TODO: May use build_require_context information
+                dot_node = self._dot_node_template_build_requires + dot_node
+            else:
+                dot_node = self._dot_node_template_requires + dot_node
 
             graph_lines.append('    "%s" %s\n' % (node_id, dot_node))
 
@@ -78,14 +88,20 @@ class ConanGrapher(object):
     edge [
       style = solid,
     ];"""
-    _dot_node_main_node_template = """ [ fillcolor=goldenrod1, color=goldenrod4];"""
-    _dot_node_template_with_user_channel = """ [ label=<
+    _dot_node_template_build_requires = """[ fillcolor=lightyellow, color=gold """
+    _dot_node_template_requires = """[ fillcolor=azure, color=dodgerblue """
+    _dot_node_template_without_name_version_user_channel = """ """
+    _dot_node_template_without_version_user_channel = """ label=<
+     <table border="0" cellborder="0" cellspacing="0">
+       <tr><td align="center"><b>%NODE_NAME%</b></td></tr></i></td></tr>
+     </table>>];"""
+    _dot_node_template_with_user_channel = """ label=<
      <table border="0" cellborder="0" cellspacing="0">
        <tr><td align="center"><b>%NODE_NAME%</b></td></tr>
        <tr><td align="center"><font point-size="12">%NODE_VERSION%</font></td></tr>
        <tr><td align="center"><i><font point-size="12">%NODE_USER%/%NODE_CHANNEL%</font></i></td></tr>
      </table>>];"""
-    _dot_node_template = """ [ label=<
+    _dot_node_template = """ label=<
      <table border="0" cellborder="0" cellspacing="0">
        <tr><td align="left"><b>%NODE_NAME%</b></td></tr>
        <tr><td align="center"><font point-size="12">%NODE_VERSION%</font></td></tr>
