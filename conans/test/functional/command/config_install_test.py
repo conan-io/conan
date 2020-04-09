@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import shutil
 import textwrap
 import unittest
@@ -534,6 +535,7 @@ class Pkg(ConanFile):
                     """)
         save_files(folder, {"conan.conf": conan_conf})
         client = TestClient()
+        regex = re.compile(r"\d+-\d+-\d+ \d+:\d+:\d+.\d+")
 
         client.run('config install "%s"' % folder)
         self.assertIn("Processing conan.conf", client.out)
@@ -543,7 +545,7 @@ class Pkg(ConanFile):
         # 1 - Must be executed at first time
         self.assertEqual(1, content.count("config_install_interval"))
         self.assertTrue(os.path.exists(sched_file))
-        self.assertIn(datetime.datetime.today().strftime("%Y-%m-%d"), load(sched_file))
+        self.assertTrue(re.match(regex, load(sched_file)))
 
         # 2 - Must not execute again: Current time interval 5 minutes
         client.run('config install "%s"' % folder)
@@ -565,14 +567,14 @@ class Pkg(ConanFile):
         os.remove(sched_file)
         client.run('config install "%s"' % folder)
         self.assertIn("Processing conan.conf", client.out)
-        self.assertIn(datetime.datetime.today().strftime("%Y-%m-%d"), load(sched_file))
+        self.assertTrue(re.match(regex, load(sched_file)))
 
         # 6 - Must execute: sched file is empty
         with open(sched_file, 'w') as fd:
             fd.write("")
         client.run('config install "%s"' % folder)
         self.assertIn("Processing conan.conf", client.out)
-        self.assertIn(datetime.datetime.today().strftime("%Y-%m-%d"), load(sched_file))
+        self.assertTrue(re.match(regex, load(sched_file)))
 
         # 7 - Must execute: sched file is invalid
         with open(sched_file, 'w') as fd:
@@ -580,4 +582,4 @@ class Pkg(ConanFile):
         client.run('config install "%s"' % folder)
         self.assertIn("Processing conan.conf", client.out)
         self.assertIn("WARN: The sched file is corrupted and will be removed.", client.out)
-        self.assertIn(datetime.datetime.today().strftime("%Y-%m-%d"), load(sched_file))
+        self.assertTrue(re.match(regex, load(sched_file)))
