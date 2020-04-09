@@ -1,6 +1,6 @@
 import os
 import re
-
+from collections import OrderedDict
 from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_MISSING, \
     BINARY_UPDATE
 from conans.client.installer import build_id
@@ -10,75 +10,131 @@ from conans.errors import ConanException
 class ConanGrapher(object):
     def __init__(self, deps_graph):
         self._deps_graph = deps_graph
-
+    
     def graph(self):
-        graph_lines = ['strict digraph {']
-        graph_lines.append(self._dot_configuration)
-        graph_lines.append('\n')
+        dot_graph = ['strict digraph {']
+        dot_graph.append(self._dot_configuration)
+        dot_graph.append('\n')
 
+        # First, create the nodes
+        self._add_single_nodes_to_graph(dot_graph)
+
+        # Then, the adjacency matrix
+        self._add_adjacency_matrix(dot_graph)
+
+        dot_graph.append('}\n')
+
+        return ''.join(dot_graph)
+
+    def graph_file(self, output_filename):
+        save(output_filename, self.graph())
+
+    def _add_single_nodes_to_graph(self, dot_graph):
         # Store list of build_requires nodes
         build_time_nodes = self._deps_graph.build_time_nodes()
 
         # Store the root node
-        root_id = self._deps_graph.root.conanfile.display_name
+        root_node = self._deps_graph.root
+        if root_node.conanfile.name and root_node.conanfile.version:
+            root_id = "{}/{}".format(root_node.conanfile.name, root_node.conanfile.version)
+        elif root_node.conanfile.name:
+            root_id = root_node.conanfile.name
+        else:
+            root_id = root_node.conanfile.display_name
 
-        # First, create the nodes
+        # Store nodes in ordered dict, for ordered 
+        nodes = {}
+
+        # First, gather the nodes info
         for node in self._deps_graph.nodes:
-            # Node id is name/version, unless there's no name & version
-            node_id = node.conanfile.display_name
-            node_name = node.conanfile.name if node.conanfile.name else node.conanfile.display_name
-            node_version = node.conanfile.version if node.conanfile.version else ""
+            if node.conanfile.name and node.conanfile.version:
+                node_name = node.conanfile.name
+                node_version = node.conanfile.version
+                node_id = "{}/{}".format(node.conanfile.name, node.conanfile.version)
+            elif node.conanfile.name:
+                node_name = node.conanfile.name
+                node_version = ""
+                node_id = node_name
+            else:
+                node_name = node.conanfile.display_name
+                node_version = ""
+                node_id = node_name
 
             try:
                 node_user = node.conanfile.user
             except ConanException:
-                node_user = None
+                node_user = ""
 
             try:
                 node_channel = node.conanfile.channel
             except ConanException:
-                node_channel = None
+                node_channel = ""
 
-            if node_user and node_channel and node_version:
+            nodes[node_id] = {
+              "name": node_name,
+              "version": node_version,
+              "user": node_user,
+              "channel": node_channel,
+              "is_root": node_id == root_id,
+              "build_requires": node in build_time_nodes
+            }
+
+        # Then iterate over the ordered set of nodes & write to dot graph
+        for id in sorted(nodes.keys()):
+            if nodes[id]['version'] and nodes[id]['user'] and nodes[id]['channel']:
                 dot_node = self._dot_node_template_with_user_channel\
-                                                  .replace("%NODE_NAME%", node_name) \
-                                                  .replace("%NODE_VERSION%", node_version) \
-                                                  .replace("%NODE_USER%", node_user) \
-                                                  .replace("%NODE_CHANNEL%", node_channel)
-            elif node_name and node_version:
-                dot_node = self._dot_node_template.replace("%NODE_NAME%", node_name) \
-                                                  .replace("%NODE_VERSION%", node_version)
-            elif node_name:
-                dot_node = self._dot_node_template_without_version_user_channel \
-                                                  .replace("%NODE_NAME%", node_name)
+                                                  .replace("%NODE_NAME%", nodes[id]['name']) \
+                                                  .replace("%NODE_VERSION%", nodes[id]['version']) \
+                                                  .replace("%NODE_USER%", nodes[id]['user']) \
+                                                  .replace("%NODE_CHANNEL%", nodes[id]['channel'])
+            elif nodes[id]['version']:
+                dot_node = self._dot_node_template.replace("%NODE_NAME%", nodes[id]['name']) \
+                                                  .replace("%NODE_VERSION%", nodes[id]['version'])
             else:
-                dot_node = self._dot_node_template_without_name_version_user_channel
-
+                dot_node = self._dot_node_template_without_version_user_channel \
+                                                  .replace("%NODE_NAME%", nodes[id]['name'])
             # Color the nodes
-            if node_id == root_id:  # root node
+            if nodes[id]['is_root']:
                 dot_node = self._dot_node_colors_template_root_node + dot_node
-            elif node in build_time_nodes:  # build_requires
+            elif nodes[id]['build_requires']:
                 # TODO: May use build_require_context information
                 dot_node = self._dot_node_colors_template_build_requires + dot_node
             else:  # requires
                 dot_node = self._dot_node_colors_template_requires + dot_node
 
             # Add single node to graph
-            graph_lines.append('    "%s" %s\n' % (node_id, dot_node))
+            dot_graph.append('    "{}" {}\n'.format(
+                id,
+                dot_node
+            ))
 
-        # Then, the adjacency matrix
+
+    def _add_adjacency_matrix(self, dot_graph):
         for node in self._deps_graph.nodes:
             depends = node.neighbors()
-            dot_node = node.conanfile.display_name
             if depends:
-                depends = " ".join('"%s"' % str(d.ref) for d in depends)
-                graph_lines.append('    "%s" -> {%s}\n' % (dot_node, depends))
+                if node.conanfile.name and node.conanfile.version:
+                    node_id = "{}/{}".format(node.conanfile.name, node.conanfile.version)
+                elif node.conanfile.name:
+                    node_id = node.conanfile.name
+                else:
+                    node_id = node.conanfile.display_name
+                deps_links = ""
+                for dep_node in depends:
+                    if dep_node.conanfile.name and dep_node.conanfile.version:
+                        dep_node_id = "{}/{}".format(dep_node.conanfile.name, dep_node.conanfile.version)
+                    elif node.conanfile.name:
+                        dep_node_id = node.conanfile.name
+                    else:
+                        dep_node_id = dep_node.conanfile.display_name
 
-        graph_lines.append('}\n')
-        return ''.join(graph_lines)
+                    deps_links += ' "%s"' % dep_node_id
 
-    def graph_file(self, output_filename):
-        save(output_filename, self.graph())
+                # Add nodes to matrix
+                dot_graph.append('    "{}" -> {{{}}}\n'.format(
+                    node_id,
+                    deps_links
+                ))
 
     _dot_configuration = """
     graph [
@@ -103,7 +159,6 @@ class ConanGrapher(object):
     _dot_node_colors_template_root_node = """[ fillcolor=mintcream, color=limegreen """
     _dot_node_colors_template_build_requires = """[ fillcolor=lightyellow, color=gold """
     _dot_node_colors_template_requires = """[ fillcolor=azure, color=dodgerblue """
-    _dot_node_template_without_name_version_user_channel = """ """
     _dot_node_template_without_version_user_channel = """ label=<
      <table border="0" cellborder="0" cellspacing="0">
        <tr><td align="center"><b>%NODE_NAME%</b></td></tr></i></td></tr>
