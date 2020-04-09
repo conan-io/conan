@@ -584,11 +584,10 @@ class Command(object):
                 self._outputer.json_output({"home": conan_home}, args.json, os.getcwd())
             return conan_home
         elif args.subcommand == "install":
-            if is_config_install_scheduled(self._conan):
-                verify_ssl = get_bool_from_text(args.verify_ssl)
-                return self._conan.config_install(args.item, verify_ssl, args.type, args.args,
-                                                  source_folder=args.source_folder,
-                                                  target_folder=args.target_folder)
+            verify_ssl = get_bool_from_text(args.verify_ssl)
+            return self._conan.config_install(args.item, verify_ssl, args.type, args.args,
+                                              source_folder=args.source_folder,
+                                              target_folder=args.target_folder)
 
     def info(self, *args):
         """
@@ -2000,6 +1999,10 @@ class Command(object):
                 self._out.writeln("")
                 self._print_similar(command)
                 raise ConanException("Unknown command %s" % str(exc))
+
+            if is_config_install_scheduled(self._conan) and \
+               ((command == "config" and "install" not in args[0]) or command != "config"):
+                self._conan.config_install(None, None)
 
             method(args[0][1:])
         except KeyboardInterrupt as exc:

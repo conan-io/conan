@@ -299,7 +299,7 @@ def configuration_install(app, uri, verify_ssl, config_type=None,
 def is_config_install_scheduled(api):
     """ Validate if the next config install is scheduled to occur now
 
-        When config_install_interval is not configured, conan config install should without intervals
+        When config_install_interval is not configured, config install should not run
         When config_install_interval is configured, config install will respect the delta from:
             last conan install execution (sched file) + config_install_interval value < now
 
@@ -310,7 +310,7 @@ def is_config_install_scheduled(api):
         api.create_app()
         interval = _get_config_install_interval(api.app)
     except ConanException:
-        return True
+        return False
     else:
         match = re.search(r"(\d+)([mhd])", interval)
         if match:

@@ -537,35 +537,39 @@ class Pkg(ConanFile):
         client = TestClient()
         regex = re.compile(r"\d+-\d+-\d+ \d+:\d+:\d+.\d+")
 
+        # 1 - config install must be executed without restriction
         client.run('config install "%s"' % folder)
         self.assertIn("Processing conan.conf", client.out)
         content = load(client.cache.conan_conf_path)
         sched_file = os.path.join(client.cache.cache_folder, SCHED_FILE)
 
-        # 1 - Must be executed at first time
         self.assertEqual(1, content.count("config_install_interval"))
         self.assertTrue(os.path.exists(sched_file))
         self.assertTrue(re.match(regex, load(sched_file)))
 
-        # 2 - Must not execute again: Current time interval 5 minutes
+        # 2 - Must execute again
         client.run('config install "%s"' % folder)
-        self.assertNotIn("Processing conan.conf", client.out)
+        self.assertIn("Processing conan.conf", client.out)
+        self.assertTrue(re.match(regex, load(sched_file)))
 
         # 3 - Must not execute: seconds are not allowed
         client.run('config set general.config_install_interval=1s')
-        client.run('config install "%s"' % folder)
         self.assertNotIn("Processing conan.conf", client.out)
 
+        client.run('config install "%s"' % folder)
+        self.assertIn("Processing conan.conf", client.out)
+
         # 4 - Must execute: forced timeout
+        client.run('config set general.config_install_interval=1m')
+        self.assertNotIn("Processing conan.conf", client.out)
         with patch("conans.client.conf.config_installer._next_scheduled_config_install",
                    return_value=datetime.datetime.utcnow() - datetime.timedelta(minutes=2)):
-            client.run('config set general.config_install_interval=1m')
-            client.run('config install "%s"' % folder)
+            client.run('config get general.config_install_interval')
             self.assertIn("Processing conan.conf", client.out)
 
         # 5 - Must execute: sched file has been removed after first interaction
         os.remove(sched_file)
-        client.run('config install "%s"' % folder)
+        client.run('config get general.config_install_interval')
         self.assertIn("Processing conan.conf", client.out)
         self.assertTrue(re.match(regex, load(sched_file)))
 
