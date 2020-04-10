@@ -11,9 +11,20 @@ from conans.errors import ConanException
 class ConanGrapher(object):
 
     def __init__(self, deps_graph):
+        """
+        Object to write the Conan dependency graph into a Graphviz Dot file
+        (https://www.graphviz.org/doc/info/lang.html)
+
+        :param deps_graph: Conan built-in Dependency Graph
+        """
         self._deps_graph = deps_graph
 
     def graph(self):
+        """
+        Creates the Dot file content.
+
+        :return: String with a content of the Dot file for the defined deps_graph.
+        """
         dot_graph = ['strict digraph {']
         dot_graph.append(self._dot_configuration)
         dot_graph.append('\n')
@@ -29,9 +40,21 @@ class ConanGrapher(object):
         return ''.join(dot_graph)
 
     def graph_file(self, output_filename):
+        """
+        Writes the defined deps_graph tree into a Dot file.
+
+        :param output_filename: filename of the output Dot file.
+        """
         save(output_filename, self.graph())
 
     def _add_single_nodes_to_graph(self, dot_graph):
+        """
+        Creates a nodes representation with all the fields to be displayed in the Dot file and
+        fills-in the nodes of the Dot graph (dot_graph) with this information.
+
+        :param dot_graph: String containing the DOT file structure (the Dot configuration)
+        :return: A Map of nodes identified by its display_name with all the useful fields.
+        """
         # Store list of build_requires nodes
         build_time_nodes = self._deps_graph.build_time_nodes()
 
@@ -113,6 +136,13 @@ class ConanGrapher(object):
         return nodes
 
     def _add_adjacency_matrix(self, nodes, dot_graph):
+        """
+        Fills in the adjancency matrix into the dot_graph string in the following form
+            "node_id" -> {"dep_1_id" "dep_2_id" ... "dep_n_id"}
+
+        :param nodes: A Map of nodes identified by its display_name with all the useful fields.
+        :param dot_graph: String containing the DOT file structure (the DOT configuration and nodes)
+        """
         for id in sorted(nodes.keys()):
             depends = nodes[id]['node'].neighbors()
             if depends:
