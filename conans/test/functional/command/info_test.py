@@ -136,10 +136,9 @@ class InfoTest(unittest.TestCase):
             self.assertEqual(ref.channel, "stable")
 
         def check_digraph_line(line):
-
             self.assertTrue(dot_regex.match(line) or
                             dot_format_section_regex.match(line) or
-                            dot_format_value_regex.match(line) or
+                            dot_format_section_value_regex.match(line) or
                             dot_node_format_regex.match(line) or
                             dot_node_format_body_regex.match(line)
                             )
@@ -172,11 +171,13 @@ class InfoTest(unittest.TestCase):
         create_export(test_deps, "Hello0")
 
         node_regex = re.compile(r'"([^"]+)"')
-        dot_regex = re.compile(r'^\s+"[^"]+" -> {"[^"]+"( "[^"]+")*}$')
-        dot_format_section_regex = re.compile(r'^\s+(graph|edge|node)+\s+\[')
-        dot_format_value_regex = re.compile(r'^\s+[a-zA-Z]+\s+=\s[a-zA-Z]+\,+|^\s+];$')
-        dot_node_format_regex = re.compile(r'\s+"([^"]+)"\s+\[\s+label=\<')
-        dot_node_format_body_regex = re.compile(r'\s+(<[a-zA-Z0-9=\=\s\\ / \-"]+>|[a-zA-Z0-9\s\.])+')
+        dot_regex = re.compile(r'\s+"[^"]+" -> {(\s*"[^"]+")*}$')
+        dot_format_section_regex = re.compile(r'\s+(graph|edge|node)+\s+\[$')
+        dot_format_section_value_regex = re.compile(r'\s+[a-zA-Z]+\s*=\s*[a-zA-Z"0-9.]+\,*|^\s+];$')
+        dot_node_format_regex = \
+            re.compile(r'\s+"([^"]+)"\s+\[\s*(\s*[a-zA-Z]+\s*=\s*[a-zA-Z"0-9.]+\,*)*\s*label=<$')
+        dot_node_format_body_regex =\
+            re.compile(r'\s+(<[a-zA-Z0-9=\s\\\/\-"]+>|[a-zA-Z0-9\s\./]|>];)+$')
 
         self.client.run("info . --graph", assert_error=True)
 
