@@ -52,15 +52,14 @@ class ConanGrapher(object):
             if node.conanfile.name and node.conanfile.version:
                 node_name = node.conanfile.name
                 node_version = node.conanfile.version
-                node_id = "{}/{}".format(node.conanfile.name, node.conanfile.version)
             elif node.conanfile.name:
                 node_name = node.conanfile.name
                 node_version = ""
-                node_id = node_name
             else:
                 node_name = node.conanfile.display_name
                 node_version = ""
-                node_id = node_name
+
+            node_id = node.conanfile.display_name
 
             try:
                 node_user = node.conanfile.user
@@ -119,14 +118,7 @@ class ConanGrapher(object):
             if depends:
                 deps_links = ""
                 for dep_node in depends:
-                    if dep_node.conanfile.name and dep_node.conanfile.version:
-                        dep_node_id = "{}/{}".format(dep_node.conanfile.name,
-                                                     dep_node.conanfile.version)
-                    elif dep_node.conanfile.name:
-                        dep_node_id = dep_node.conanfile.name
-                    else:
-                        dep_node_id = dep_node.conanfile.display_name
-
+                    dep_node_id = dep_node.conanfile.display_name
                     deps_links += ' "%s"' % dep_node_id
 
                 # Add nodes to matrix
@@ -148,19 +140,17 @@ class ConanGrapher(object):
       style = "filled",
       fontname = "Helvetica",
       fontsize = "18",
-      shape=rect,
-      fillcolor=azure2,
-      color=dodgerblue4
+      shape=rect
     ];
     edge [
-      style = solid,
+      style = solid
     ];"""
     _dot_node_colors_template_root_node = """[ fillcolor=mintcream, color=limegreen """
     _dot_node_colors_template_build_requires = """[ fillcolor=lightyellow, color=gold """
     _dot_node_colors_template_requires = """[ fillcolor=azure, color=dodgerblue """
     _dot_node_template_without_version_user_channel = """ label=<
      <table border="0" cellborder="0" cellspacing="0">
-       <tr><td align="center"><b>%NODE_NAME%</b></td></tr></i></td></tr>
+       <tr><td align="center"><b>%NODE_NAME%</b></td></tr>
      </table>>];"""
     _dot_node_template_with_user_channel = """ label=<
      <table border="0" cellborder="0" cellspacing="0">

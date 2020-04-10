@@ -151,7 +151,7 @@ class InfoTest(unittest.TestCase):
             parent_reference = node_matches[0]
             deps_ref = [ConanFileReference.loads(references) for references in node_matches[1:]]
 
-            if parent_reference == "Hello0/0.1":
+            if parent_reference == "conanfile.py (Hello0/0.1)":
                 parent_ref = ConanFileReference("Hello0", None, None, None, validate=False)
             else:
                 parent_ref = ConanFileReference.loads(parent_reference)
