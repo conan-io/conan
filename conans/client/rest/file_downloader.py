@@ -96,13 +96,14 @@ class FileDownloader(object):
             return ret, downloaded_size
 
         def get_total_length():
-            content_range = response.headers.get("Content-Range", "")
-            match = re.match(r"^bytes (\d+)-(\d+)/(\d+)", content_range)
-            if match:
-                assert range_start == int(match.group(1))
+            if range_start:
+                content_range = response.headers.get("Content-Range", "")
+                match = re.match(r"^bytes (\d+)-(\d+)/(\d+)", content_range)
+                if not match or range_start != int(match.group(1)):
+                    raise ConanException("Error in resumed download from %s\n"
+                                         "Incorrect Content-Range header %s" % (url, content_range))
                 return int(match.group(3))
             else:
-                assert range_start == 0
                 total_size = response.headers.get('Content-Length') or len(response.content)
                 return int(total_size)
 
@@ -112,9 +113,7 @@ class FileDownloader(object):
             action = "Downloading" if range_start == 0 else "Continuing download of"
             description = "{} {}".format(action, os.path.basename(file_path)) if file_path else None
             progress = progress_bar.Progress(total_length, self._output, description)
-            # TODO: refactor Progress to allow setting an initial progress
-            progress._processed_size = range_start
-            progress._pb_update(range_start)
+            progress.initial_value(range_start)
 
             chunk_size = 1024 if not file_path else 1024 * 100
             written_chunks, total_downloaded_size = write_chunks(
