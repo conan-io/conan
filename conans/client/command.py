@@ -2,6 +2,7 @@ import argparse
 import inspect
 import json
 import os
+import signal
 import sys
 from argparse import ArgumentError
 from difflib import get_close_matches
@@ -2144,33 +2145,24 @@ def main(args):
         sys.stderr.write("Error in Conan initialization: {}".format(e))
         sys.exit(ERROR_GENERAL)
 
+    def ctrl_c_handler(_, __):
+        print('You pressed Ctrl+C!')
+        sys.exit(USER_CTRL_C)
+
+    def sigterm_handler(_, __):
+        print('Received SIGTERM!')
+        sys.exit(ERROR_SIGTERM)
+
+    def ctrl_break_handler(_, __):
+        print('You pressed Ctrl+Break!')
+        sys.exit(USER_CTRL_BREAK)
+
+    signal.signal(signal.SIGINT, ctrl_c_handler)
+    signal.signal(signal.SIGTERM, sigterm_handler)
+
+    if sys.platform == 'win32':
+        signal.signal(signal.SIGBREAK, ctrl_break_handler)
+
     command = Command(conan_api)
-    try:  # getcwd can fail if Conan runs on an unexisting folder
-        current_dir = os.getcwd()
-    except EnvironmentError:
-        current_dir = None
-    try:
-        import signal
-
-        def ctrl_c_handler(_, __):
-            print('You pressed Ctrl+C!')
-            sys.exit(USER_CTRL_C)
-
-        def sigterm_handler(_, __):
-            print('Received SIGTERM!')
-            sys.exit(ERROR_SIGTERM)
-
-        def ctrl_break_handler(_, __):
-            print('You pressed Ctrl+Break!')
-            sys.exit(USER_CTRL_BREAK)
-
-        signal.signal(signal.SIGINT, ctrl_c_handler)
-        signal.signal(signal.SIGTERM, sigterm_handler)
-
-        if sys.platform == 'win32':
-            signal.signal(signal.SIGBREAK, ctrl_break_handler)
-        error = command.run(args)
-    finally:
-        if current_dir:
-            os.chdir(current_dir)
+    error = command.run(args)
     sys.exit(error)

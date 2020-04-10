@@ -79,7 +79,10 @@ class ProfileData(namedtuple("ProfileData", ["profiles", "settings", "options", 
 def api_method(f):
     def wrapper(api, *args, **kwargs):
         quiet = kwargs.pop("quiet", False)
-        old_curdir = get_cwd()
+        try:  # getcwd can fail if Conan runs on an unexisting folder
+            old_curdir = os.getcwd()
+        except EnvironmentError:
+            old_curdir = None
         old_output = api.user_io.out
         quiet_output = ConanOutput(StringIO(), color=api.color) if quiet else None
         try:
@@ -98,7 +101,8 @@ def api_method(f):
                 pass
             raise
         finally:
-            os.chdir(old_curdir)
+            if old_curdir:
+                os.chdir(old_curdir)
     return wrapper
 
 
