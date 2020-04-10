@@ -50,7 +50,7 @@ class MockRequester(object):
             status = 206
             headers.update({"Content-Length": len(self._data) - start,
                             "Content-Range": "bytes {}-{}/{}".format(start, len(self._data) - 1,
-                                                               len(self._data))})
+                                                                     len(self._data))})
             assert start <= len(self._data)
 
         response = MockResponse(self._data[start:start + self._chunk_size], status_code=status,
@@ -63,7 +63,7 @@ class DownloaderUnitTest(unittest.TestCase):
         self.target = tempfile.mktemp()
         self.out = TestBufferConanOutput()
 
-    def test_download_file_ok(self):
+    def test_succeed_download_to_file_if_not_interrupted(self):
         expected_content = b"some data"
         requester = MockRequester(expected_content)
         downloader = FileDownloader(requester=requester, output=self.out, verify=None,
@@ -72,7 +72,15 @@ class DownloaderUnitTest(unittest.TestCase):
         actual_content = load(self.target, binary=True)
         self.assertEqual(expected_content, actual_content)
 
-    def test_download_file_interrupted(self):
+    def test_succeed_download_to_memory_if_not_interrupted(self):
+        expected_content = b"some data"
+        requester = MockRequester(expected_content)
+        downloader = FileDownloader(requester=requester, output=self.out, verify=None,
+                                    config=_ConfigMock())
+        actual_content = downloader.download("fake_url", file_path=None)
+        self.assertEqual(expected_content, actual_content)
+
+    def test_resume_download_to_file_if_interrupted(self):
         expected_content = b"some data"
         requester = MockRequester(expected_content, chunk_size=4)
         downloader = FileDownloader(requester=requester, output=self.out, verify=None,
@@ -81,7 +89,15 @@ class DownloaderUnitTest(unittest.TestCase):
         actual_content = load(self.target, binary=True)
         self.assertEqual(expected_content, actual_content)
 
-    def test_fail_download_file_no_progress(self):
+    def test_fail_download_to_memory_if_interrupted(self):
+        expected_content = b"some data"
+        requester = MockRequester(expected_content, chunk_size=4)
+        downloader = FileDownloader(requester=requester, output=self.out, verify=None,
+                                    config=_ConfigMock())
+        with self.assertRaisesRegexp(ConanException, r"Transfer interrupted before complete"):
+            downloader.download("fake_url", file_path=None)
+
+    def test_fail_interrupted_download_to_file_if_no_progress(self):
         expected_content = b"some data"
         requester = MockRequester(expected_content, chunk_size=0)
         downloader = FileDownloader(requester=requester, output=self.out, verify=None,
