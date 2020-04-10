@@ -124,8 +124,8 @@ class FileDownloader(object):
 
             response.close()
             if (
-                total_length > total_downloaded_size > range_start
-                and response.headers.get("accept-ranges") == "bytes"
+                file_path and total_length > total_downloaded_size > range_start
+                and response.headers.get("Accept-Ranges") == "bytes"
             ):
                 written_chunks = self._download_file(url, auth, headers, file_path, try_resume=True)
             elif (
