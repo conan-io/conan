@@ -146,15 +146,12 @@ class ConanGrapher(object):
         for id in sorted(nodes.keys()):
             depends = nodes[id]['node'].neighbors()
             if depends:
-                deps_links = ""
-                for dep_node in depends:
-                    dep_node_id = dep_node.conanfile.display_name
-                    deps_links += ' "%s"' % dep_node_id
+                dep_links = " ".join('"%s"' % str(d.ref) for d in depends)
 
                 # Add nodes to matrix
                 dot_graph.append('    "{}" -> {{{}}}\n'.format(
                     id,
-                    deps_links
+                    dep_links
                 ))
 
     _dot_configuration = """
