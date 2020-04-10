@@ -60,12 +60,7 @@ class ConanGrapher(object):
 
         # Store the root node
         root_node = self._deps_graph.root
-        if root_node.conanfile.name and root_node.conanfile.version:
-            root_id = "{}/{}".format(root_node.conanfile.name, root_node.conanfile.version)
-        elif root_node.conanfile.name:
-            root_id = root_node.conanfile.name
-        else:
-            root_id = root_node.conanfile.display_name
+        root_id = root_node.conanfile.display_name
 
         # Store nodes in ordered dict, for deterministic output to dot file
         nodes = {}
