@@ -34,9 +34,10 @@ class MockRequester(object):
     retry = 0
     retry_wait = 0
 
-    def __init__(self, data, chunk_size=None):
+    def __init__(self, data, chunk_size=None, accept_ranges=True):
         self._data = data
         self._chunk_size = chunk_size if chunk_size is not None else len(data)
+        self._accept_ranges = accept_ranges
 
     def get(self, *_args, **kwargs):
         start = 0
@@ -45,7 +46,7 @@ class MockRequester(object):
         match = re.match(r"bytes=([0-9]+)-", transfer_range)
         status = 200
         headers = {"Content-Length": len(self._data), "Accept-Ranges": "bytes"}
-        if match:
+        if match and self._accept_ranges:
             start = int(match.groups()[0])
             status = 206
             headers.update({"Content-Length": len(self._data) - start,
@@ -103,4 +104,12 @@ class DownloaderUnitTest(unittest.TestCase):
         downloader = FileDownloader(requester=requester, output=self.out, verify=None,
                                     config=_ConfigMock())
         with self.assertRaisesRegexp(ConanException, r"Download failed"):
+            downloader.download("fake_url", file_path=self.target)
+
+    def test_fail_interrupted_download_if_server_not_accepting_ranges(self):
+        expected_content = b"some data"
+        requester = MockRequester(expected_content, chunk_size=4, accept_ranges=False)
+        downloader = FileDownloader(requester=requester, output=self.out, verify=None,
+                                    config=_ConfigMock())
+        with self.assertRaisesRegexp(ConanException, r"Incorrect Content-Range header"):
             downloader.download("fake_url", file_path=self.target)
