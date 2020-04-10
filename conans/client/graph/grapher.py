@@ -7,6 +7,7 @@ from conans.client.installer import build_id
 from conans.util.files import save
 from conans.errors import ConanException
 
+
 class ConanGrapher(object):
 
     def __init__(self, deps_graph):
@@ -72,30 +73,29 @@ class ConanGrapher(object):
                 node_channel = ""
 
             nodes[node_id] = {
-              "node": node,
-              "name": node_name,
-              "version": node_version,
-              "user": node_user,
-              "channel": node_channel,
-              "is_root": node_id == root_id,
-              "build_requires": node in build_time_nodes
+                "node": node,
+                "name": node_name,
+                "version": node_version,
+                "user": node_user,
+                "channel": node_channel,
+                "is_root": node_id == root_id,
+                "build_requires": node in build_time_nodes
             }
-
 
         # Then iterate over the ordered set of nodes & write to dot graph
         for id in sorted(nodes.keys()):
             if nodes[id]['version'] and nodes[id]['user'] and nodes[id]['channel']:
-                dot_node = self._dot_node_template_with_user_channel\
-                                                  .replace("%NODE_NAME%", nodes[id]['name']) \
-                                                  .replace("%NODE_VERSION%", nodes[id]['version']) \
-                                                  .replace("%NODE_USER%", nodes[id]['user']) \
-                                                  .replace("%NODE_CHANNEL%", nodes[id]['channel'])
+                dot_node = self._dot_node_template_with_user_channel \
+                    .replace("%NODE_NAME%", nodes[id]['name']) \
+                    .replace("%NODE_VERSION%", nodes[id]['version']) \
+                    .replace("%NODE_USER%", nodes[id]['user']) \
+                    .replace("%NODE_CHANNEL%", nodes[id]['channel'])
             elif nodes[id]['version']:
                 dot_node = self._dot_node_template.replace("%NODE_NAME%", nodes[id]['name']) \
-                                                  .replace("%NODE_VERSION%", nodes[id]['version'])
+                    .replace("%NODE_VERSION%", nodes[id]['version'])
             else:
                 dot_node = self._dot_node_template_without_version_user_channel \
-                                                  .replace("%NODE_NAME%", nodes[id]['name'])
+                    .replace("%NODE_NAME%", nodes[id]['name'])
             # Color the nodes
             if nodes[id]['is_root']:
                 dot_node = self._dot_node_colors_template_root_node + dot_node
@@ -120,7 +120,8 @@ class ConanGrapher(object):
                 deps_links = ""
                 for dep_node in depends:
                     if dep_node.conanfile.name and dep_node.conanfile.version:
-                        dep_node_id = "{}/{}".format(dep_node.conanfile.name, dep_node.conanfile.version)
+                        dep_node_id = "{}/{}".format(dep_node.conanfile.name,
+                                                     dep_node.conanfile.version)
                     elif dep_node.conanfile.name:
                         dep_node_id = dep_node.conanfile.name
                     else:
@@ -173,6 +174,7 @@ class ConanGrapher(object):
        <tr><td align="center"><font point-size="12">%NODE_VERSION%</font></td></tr>
      </table>>];"""
 
+
 class ConanHTMLGrapher(object):
     def __init__(self, deps_graph, cache_folder):
         self._deps_graph = deps_graph
@@ -220,7 +222,7 @@ class ConanHTMLGrapher(object):
             fulllabel.append("<ul>")
             fulllabel = "".join(fulllabel)
 
-            if node in build_time_nodes:   # TODO: May use build_require_context information
+            if node in build_time_nodes:  # TODO: May use build_require_context information
                 shape = "ellipse"
             else:
                 shape = "box"
