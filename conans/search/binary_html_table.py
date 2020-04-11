@@ -46,13 +46,9 @@ class RowResult(object):
 class Headers(object):
     _preferred_ordering = ['os', 'arch', 'compiler', 'build_type']
 
-    def __init__(self, settings, options, requires, add_reference=False, add_outdated=False):
-        # Process results
-        self.keys = ['remote', 'reference', 'package_id'] \
-            if add_reference else ['remote', 'package_id']
-        if add_outdated:
-            self.keys.append('outdated')
-
+    def __init__(self, settings, options, requires, keys):
+        # Keys: columns to classify
+        self.keys = keys
         self.options = options
         self.requires = requires
 
@@ -74,7 +70,7 @@ class Headers(object):
             1-row: ['os', 'arch', 'compiler', 'compiler.version', 'compiler.libcxx', 'build_type']
             2-row: [('os', ['']), ('arch', ['']), ('compiler', ['', 'version', 'libcxx']),]
         """
-        headers = self.keys.copy()
+        headers = list(self.keys)
         if n_rows == 1:
             headers.extend(self.settings + self.options)
             if self.requires:
@@ -129,9 +125,8 @@ class Results(object):
         self.options = list(_options)
         self.remotes = list(_remotes)
 
-    def get_headers(self, add_reference=False, add_outdated=False):
-        return Headers(self.settings, self.options, self.requires,
-                       add_reference=add_reference, add_outdated=add_outdated)
+    def get_headers(self, keys=('remote', 'reference', 'outdated', 'package_id')):
+        return Headers(self.settings, self.options, self.requires, keys=keys)
 
     def packages(self):
         for it in self._results:
