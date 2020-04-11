@@ -23,6 +23,10 @@ class RowResult(object):
     def package_id(self):
         return self._data['id']
 
+    @property
+    def outdated(self):
+        return self._data['outdated']
+
     def row(self):
         """ Returns package data according to headers """
         headers, settings, options, requires = self._headers
@@ -44,11 +48,14 @@ class Results(object):
     def __init__(self, results):
         self._results = results
         self._add_reference = False
+        self._add_outdated = True
 
     def _collect_package_headers(self):
         if not hasattr(self, '__headers'):
             headers = ['remote', 'reference', 'package_id'] \
                 if self._add_reference else ['remote', 'package_id']
+            if self._add_outdated:
+                headers.append('outdated')
             _settings = set()
             options = set()
             requires = False
@@ -118,7 +125,7 @@ class Results(object):
                 ret.setdefault(setting, []).append('')
             else:
                 ret.setdefault(category, []).append(value)
-        return [(key, sorted(values)) for key, values in ret.items()]
+        return [(key, values) for key, values in ret.items()]
 
     def packages(self):
         headers = self._collect_package_headers()

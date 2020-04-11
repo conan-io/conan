@@ -19,7 +19,7 @@ content = """
         <h1>{{ search.reference }}</h1>
         <p>
             Depending on your package_id_mode, any combination of settings, options and requirements
-            can give you a different packageID. Take into account that yuor configuration might be
+            can give you a different packageID. Take into account that your configuration might be
             different from the one used to generate the packages.
         </p>
 
