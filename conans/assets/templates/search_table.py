@@ -25,16 +25,17 @@ content = """
 
         <table id="example" class="display" style="width:100%">
             <thead>
-                {%- set headers = results.headers(n_rows=2) %}
+                {%- set headers = results.get_headers(add_reference=False, add_outdated=False) %}
+                {%- set headers2rows = headers.row(n_rows=2) %}
                 <tr>
-                    {%- for category, subheaders in headers %}
+                    {%- for category, subheaders in headers2rows %}
                         <th rowspan="{% if subheaders|length == 1 and not subheaders[0] %}2{% else %}1{% endif %}" colspan="{{ subheaders|length }}">
                             {{ category }}
                         </th>
                     {%- endfor %}
                 </tr>
                 <tr>
-                    {%- for category, subheaders in headers %}
+                    {%- for category, subheaders in headers2rows %}
                         {%- if subheaders|length != 1 or subheaders[0] != '' %}
                             {%- for subheader in subheaders %}
                                 <th>{{ subheader|default(category, true) }}</th>
@@ -44,7 +45,7 @@ content = """
                 </tr>
             </thead>
             <tbody>
-                {%- for package in results.packages() %}
+                {%- for package in results.packages(headers) %}
                     <tr>
                         {%- for item in package.row() %}
                             <td>{{ item if item != None else ''}}</td>
@@ -54,7 +55,7 @@ content = """
             </tbody>
             <tfoot>
                 <tr>
-                    {%- for header in results.headers(n_rows=1) %}
+                    {%- for header in headers.row(n_rows=1) %}
                     <th>{{ header }}</th>
                     {%- endfor %}
                 </tr>
@@ -74,7 +75,7 @@ content = """
                 var table = $('#example').DataTable( {
                     "dom": "lrtip",
                     "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]],
-                    {# "columnDefs": [{ className: "cell_border_right", "targets": [ 2, {{ 2 + settings_len }}, {{ 2 + settings_len + options|length }} ] }]  #}
+                    "columnDefs": [{ className: "cell_border_right", "targets": [ {{ headers.keys|length -1 }}, {{ headers.keys|length + headers.settings|length -1 }}, {{ headers.keys|length + headers.settings|length + headers.options|length -1 }}  ] }]
                 });
 
                 // Apply the search

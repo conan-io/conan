@@ -1,11 +1,10 @@
 from collections import OrderedDict
 
-import six
 from jinja2 import Template
 
 from conans.assets.templates import search_table
+from conans.model.ref import PackageReference
 from conans.util.files import save
-from conans.model.ref import PackageReference, ConanFileReference
 
 
 class RowResult(object):
@@ -29,59 +28,52 @@ class RowResult(object):
 
     def row(self):
         """ Returns package data according to headers """
-        headers, settings, options, requires = self._headers
-        for it in headers:
+        for it in self._headers.keys:
             try:
                 yield getattr(self, it)
             except AttributeError:
                 yield self._data[it]
-        for it in settings:
+        for it in self._headers.settings:
             yield self._data['settings'].get(it, None)
-        for it in options:
+        for it in self._headers.options:
             yield self._data['options'].get(it, None)
-        if requires:
+        if self._headers.requires:
             prefs = [PackageReference.loads(it) for it in self._data['requires']]
             yield ', '.join(map(str, [it.ref for it in prefs]))
 
 
-class Results(object):
-    def __init__(self, results):
-        self._results = results
-        self._add_reference = False
-        self._add_outdated = True
+class Headers(object):
+    _preferred_ordering = ['os', 'arch', 'compiler', 'build_type']
 
-    def _collect_package_headers(self):
-        if not hasattr(self, '__headers'):
-            headers = ['remote', 'reference', 'package_id'] \
-                if self._add_reference else ['remote', 'package_id']
-            if self._add_outdated:
-                headers.append('outdated')
-            _settings = set()
-            options = set()
-            requires = False
+    def __init__(self, results, add_reference=False, add_outdated=False):
+        # Process results
+        self.keys = ['remote', 'reference', 'package_id'] \
+            if add_reference else ['remote', 'package_id']
+        if add_outdated:
+            self.keys.append('outdated')
+        _settings = set()
+        self.options = set()
+        self.requires = False
 
-            # Collect data from the packages
-            for it in self._results:
-                for p in it['items'][0]['packages']:
-                    _settings = _settings.union(list(p['settings'].keys()))
-                    options = options.union(list(p['options'].keys()))
-                    if len(p['requires']):
-                        requires = True
+        # - Collect data from the packages
+        for it in results:
+            for p in it['items'][0]['packages']:
+                _settings = _settings.union(list(p['settings'].keys()))
+                self.options = self.options.union(list(p['options'].keys()))
+                if len(p['requires']):
+                    self.requires = True
+        self.options = list(self.options)
 
-            # Order settings
-            settings = []
-            preferred_ordering = ['os', 'arch', 'compiler', 'build_type']
-            for it in preferred_ordering:
-                if it in _settings:
-                    settings.append(it)
-            for it in _settings:
-                if it not in settings:
-                    settings.append(it)
+        # - Order settings
+        self.settings = []
+        for it in self._preferred_ordering:
+            if it in _settings:
+                self.settings.append(it)
+        for it in _settings:
+            if it not in self.settings:
+                self.settings.append(it)
 
-            setattr(self, '__headers', (headers, settings, list(options), requires))
-        return getattr(self, '__headers')
-
-    def headers(self, n_rows=2):
+    def row(self, n_rows=2):
         """
         Retrieve list of headers as a single list (1-row) or as a list of tuples with
         settings organized by categories (2-row).
@@ -90,18 +82,18 @@ class Results(object):
             1-row: ['os', 'arch', 'compiler', 'compiler.version', 'compiler.libcxx', 'build_type']
             2-row: [('os', ['']), ('arch', ['']), ('compiler', ['', 'version', 'libcxx']),]
         """
-        headers, settings, options, requires = self._collect_package_headers()
+        headers = self.keys.copy()
         if n_rows == 1:
-            headers.extend(settings + options)
-            if requires:
+            headers.extend(self.settings + self.options)
+            if self.requires:
                 headers.append('requires')
             return headers
         elif n_rows == 2:
             headers = [(it, ['']) for it in headers]
-            settings = self._group_settings(settings)
+            settings = self._group_settings(self.settings)
             headers.extend(settings)
-            headers.append(('options', options))
-            if requires:
+            headers.append(('options', self.options))
+            if self.requires:
                 headers.append(('requires', ['']))
             return headers
         else:
@@ -127,9 +119,16 @@ class Results(object):
                 ret.setdefault(category, []).append(value)
         return [(key, values) for key, values in ret.items()]
 
-    def packages(self):
-        headers = self._collect_package_headers()
 
+class Results(object):
+    def __init__(self, results):
+        self._results = results
+
+    def get_headers(self, add_reference=False, add_outdated=False):
+        return Headers(self._results, add_reference=add_reference, add_outdated=add_outdated)
+
+    def packages(self, headers):
+        assert isinstance(headers, Headers), "Wrong type: {}".format(type(headers))
         for it in self._results:
             remote = it['remote']
             reference = it['items'][0]['recipe']['id']
