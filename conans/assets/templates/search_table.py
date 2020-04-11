@@ -45,9 +45,9 @@ content = """
                 </tr>
             </thead>
             <tbody>
-                {%- for package in results.packages(headers) %}
+                {%- for package in results.packages() %}
                     <tr>
-                        {%- for item in package.row() %}
+                        {%- for item in package.row(headers) %}
                             <td>{{ item if item != None else ''}}</td>
                         {%- endfor %}
                     </tr>

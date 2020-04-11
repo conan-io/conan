@@ -8,11 +8,10 @@ from conans.util.files import save
 
 
 class RowResult(object):
-    def __init__(self, remote, reference, data, headers):
+    def __init__(self, remote, reference, data):
         self.remote = remote
         self.reference = reference
         self._data = data
-        self._headers = headers
 
     @property
     def recipe(self):
@@ -26,18 +25,20 @@ class RowResult(object):
     def outdated(self):
         return self._data['outdated']
 
-    def row(self):
+    def row(self, headers):
         """ Returns package data according to headers """
-        for it in self._headers.keys:
+        assert isinstance(headers, Headers), "Wrong type: {}".format(type(headers))
+
+        for it in headers.keys:
             try:
                 yield getattr(self, it)
             except AttributeError:
                 yield self._data[it]
-        for it in self._headers.settings:
+        for it in headers.settings:
             yield self._data['settings'].get(it, None)
-        for it in self._headers.options:
+        for it in headers.options:
             yield self._data['options'].get(it, None)
-        if self._headers.requires:
+        if headers.requires:
             prefs = [PackageReference.loads(it) for it in self._data['requires']]
             yield ', '.join(map(str, [it.ref for it in prefs]))
 
@@ -45,31 +46,22 @@ class RowResult(object):
 class Headers(object):
     _preferred_ordering = ['os', 'arch', 'compiler', 'build_type']
 
-    def __init__(self, results, add_reference=False, add_outdated=False):
+    def __init__(self, settings, options, requires, add_reference=False, add_outdated=False):
         # Process results
         self.keys = ['remote', 'reference', 'package_id'] \
             if add_reference else ['remote', 'package_id']
         if add_outdated:
             self.keys.append('outdated')
-        _settings = set()
-        self.options = set()
-        self.requires = False
 
-        # - Collect data from the packages
-        for it in results:
-            for p in it['items'][0]['packages']:
-                _settings = _settings.union(list(p['settings'].keys()))
-                self.options = self.options.union(list(p['options'].keys()))
-                if len(p['requires']):
-                    self.requires = True
-        self.options = list(self.options)
+        self.options = options
+        self.requires = requires
 
         # - Order settings
         self.settings = []
         for it in self._preferred_ordering:
-            if it in _settings:
+            if it in settings:
                 self.settings.append(it)
-        for it in _settings:
+        for it in settings:
             if it not in self.settings:
                 self.settings.append(it)
 
@@ -119,16 +111,34 @@ class Results(object):
     def __init__(self, results):
         self._results = results
 
-    def get_headers(self, add_reference=False, add_outdated=False):
-        return Headers(self._results, add_reference=add_reference, add_outdated=add_outdated)
+        # Collect data inspecting the packages
+        _settings = set()
+        _options = set()
+        _remotes = set()
+        self.requires = False
 
-    def packages(self, headers):
-        assert isinstance(headers, Headers), "Wrong type: {}".format(type(headers))
+        for it in results:
+            _remotes.add(it['remote'])
+            for p in it['items'][0]['packages']:
+                _settings = _settings.union(list(p['settings'].keys()))
+                _options = _options.union(list(p['options'].keys()))
+                if len(p['requires']):
+                    self.requires = True
+
+        self.settings = list(_settings)
+        self.options = list(_options)
+        self.remotes = list(_remotes)
+
+    def get_headers(self, add_reference=False, add_outdated=False):
+        return Headers(self.settings, self.options, self.requires,
+                       add_reference=add_reference, add_outdated=add_outdated)
+
+    def packages(self):
         for it in self._results:
             remote = it['remote']
             reference = it['items'][0]['recipe']['id']
             for p in it['items'][0]['packages']:
-                r = RowResult(remote, reference, p, headers)
+                r = RowResult(remote, reference, p)
                 yield r
 
 
