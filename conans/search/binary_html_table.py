@@ -102,12 +102,7 @@ class Headers(object):
     @staticmethod
     def _group_settings(settings):
         """
-        Returns a list of tuples with the settings organized by categories (and ordered
-        according to the conventional 'os', 'arch', 'compiler', 'build_type'), useful for
-        tables with two rows for headers.
-
-        Output looks like:
-        [('os', ['']), ('arch', ['']), ('compiler', ['', 'version', 'libcxx']), ('build_type', [''])]
+        From one row to two-rows using '.' as separator
         """
         ret = OrderedDict()
         for setting in settings:
