@@ -26,13 +26,18 @@ class Node(object):
         def format_url(url):
             return Markup('<a href="{url}">{url}</a>'.format(url=url))
 
+        def join_if_iterable(value):
+            if isinstance(value, (list, tuple)):
+                return ", ".join(value)
+            return value
+
         return {
             'build_id': build_id(self._conanfile),
             'url': format_url(self._conanfile.url),
             'homepage': format_url(self._conanfile.homepage),
             'license': self._conanfile.license,
             'author': self._conanfile.author,
-            'topics': self._conanfile.topics
+            'topics': join_if_iterable(self._conanfile.topics)
         }
 
 
