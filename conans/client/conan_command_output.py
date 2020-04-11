@@ -236,9 +236,9 @@ class CommandOutputer(object):
         printer.print_search_recipes(search_info, pattern, raw, all_remotes_search)
 
     def print_search_packages(self, search_info, reference, packages_query, table, raw,
-                              outdated=False):
+                              template, outdated=False):
         if table:
-            html_binary_graph(search_info, reference, table)
+            html_binary_graph(search_info, reference, table, template)
         else:
             printer = Printer(self._output)
             printer.print_search_packages(search_info, reference, packages_query, raw,

@@ -6,7 +6,8 @@ from os.path import join
 
 from conans.client.cache.editable import EditablePackages
 from conans.client.cache.remote_registry import RemoteRegistry
-from conans.client.conf import ConanClientConfigParser, get_default_client_conf, get_default_settings_yml
+from conans.client.conf import ConanClientConfigParser, get_default_client_conf, \
+    get_default_settings_yml
 from conans.client.conf.detect import detect_defaults_settings
 from conans.client.output import Color
 from conans.client.profile_loader import read_profile
@@ -18,6 +19,7 @@ from conans.paths import ARTIFACTS_PROPERTIES_FILE
 from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
 from conans.paths.package_layouts.package_editable_layout import PackageEditableLayout
 from conans.unicode import get_cwd
+from conans.util import templates
 from conans.util.files import list_folder_subdirs, load, normalize, save
 from conans.util.locks import Lock
 
@@ -27,6 +29,7 @@ LOCALDB = ".conan.db"
 REMOTES = "remotes.json"
 PROFILES_FOLDER = "profiles"
 HOOKS_FOLDER = "hooks"
+TEMPLATES_FOLDER = "templates"
 
 
 def is_case_insensitive_os():
@@ -247,6 +250,12 @@ class ClientCache(object):
             conan_folder = os.path.join(self._store_folder, folder)
             Lock.clean(conan_folder)
             shutil.rmtree(os.path.join(conan_folder, "locks"), ignore_errors=True)
+
+    def get_template(self, template_name):
+        # TODO: Move here the template loader object, it can be initialized only once together with
+        #  the Conan app so it gets the actual 'cwd' where Conan is being run
+        templates_folder = os.path.join(self.cache_folder, TEMPLATES_FOLDER)
+        return templates.get_template(template_name, templates_folder)
 
 
 def _mix_settings_with_env(settings):

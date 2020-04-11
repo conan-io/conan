@@ -2,7 +2,7 @@ from collections import OrderedDict, defaultdict
 
 from jinja2 import Template
 
-from conans.assets.templates import search_table
+from conans.assets.templates import search_table_html
 from conans.model.ref import PackageReference
 from conans.util.files import save
 
@@ -146,11 +146,11 @@ class Results(object):
                 yield r
 
 
-def html_binary_graph(search_info, reference, table_filename):
+def html_binary_graph(search_info, reference, table_filename, template):
     # Adapt data to the template (think twice about the format before documenting)
     search = {'reference': str(reference)}
     results = Results(search_info)
 
     # Render and save
-    content = Template(search_table.content).render(search=search, results=results)
+    content = template.render(search=search, results=results)
     save(table_filename, content)
