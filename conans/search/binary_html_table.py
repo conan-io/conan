@@ -1,4 +1,4 @@
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 
 from jinja2 import Template
 
@@ -53,13 +53,22 @@ class Headers(object):
         self.requires = requires
 
         # - Order settings
+        _settings = defaultdict(list)
+        for it in settings:
+            try:
+                category, _ = it.split('.', 1)
+            except ValueError:
+                _settings[it].append(it)
+            else:
+                _settings[category].append(it)
+
         self.settings = []
         for it in self._preferred_ordering:
-            if it in settings:
-                self.settings.append(it)
-        for it in settings:
-            if it not in self.settings:
-                self.settings.append(it)
+            if it in _settings:
+                self.settings.extend(sorted(_settings[it]))
+        for it, values in _settings.items():
+            if it not in self._preferred_ordering:
+                self.settings.extend(sorted(values))
 
     def row(self, n_rows=2):
         """
