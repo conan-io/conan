@@ -110,10 +110,12 @@ content = """
                 var ids = properties.nodes;
                 var clickedNodes = nodes.get(ids);
                 var control = document.getElementById("details");
-                if(clickedNodes[0])
+                if(clickedNodes[0]) {
                     control.innerHTML = clickedNodes[0].fulllabel;
-                else
+                }
+                else {
                     control.innerHTML = "<b>Package info</b>: No package selected";
+                }
             });
         </script>
     </body>
