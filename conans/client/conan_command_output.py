@@ -219,7 +219,18 @@ class CommandOutputer(object):
         graph = Grapher(deps_graph)
         if not os.path.isabs(graph_filename):
             graph_filename = os.path.join(cwd, graph_filename)
-        save(graph_filename, template.render(graph=graph))
+
+        # FIXME: For backwards compatibility we should prefer here local files (and we are coupling
+        #   logic here with the templates).
+        assets = {}
+        vis_js = os.path.join(self._cache.cache_folder, "vis.min.js")
+        if os.path.exists(vis_js):
+            assets['vis_js'] = vis_js
+        vis_css = os.path.join(self._cache.cache_folder, "vis.min.css")
+        if os.path.exists(vis_css):
+            assets['vis_css'] = vis_css
+
+        save(graph_filename, template.render(graph=graph, assets=assets))
 
     def json_info(self, deps_graph, json_output, cwd, show_paths):
         data = self._grab_info_data(deps_graph, grab_paths=show_paths)
