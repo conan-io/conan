@@ -4,6 +4,7 @@ from collections import OrderedDict
 
 from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL
 from conans.client.graph.graph import RECIPE_EDITABLE
+from conans.client.graph.grapher import Grapher
 from conans.client.installer import build_id
 from conans.client.printer import Printer
 from conans.model.ref import ConanFileReference, PackageReference
@@ -214,18 +215,11 @@ class CommandOutputer(object):
                                          show_paths=show_paths,
                                          show_revisions=self._cache.config.revisions_enabled)
 
-    def info_graph(self, graph_filename, deps_graph, cwd):
-        if graph_filename.endswith(".html"):
-            from conans.client.graph.grapher import ConanHTMLGrapher
-            grapher = ConanHTMLGrapher(deps_graph, self._cache.cache_folder)
-        else:
-            from conans.client.graph.grapher import ConanGrapher
-            grapher = ConanGrapher(deps_graph)
-
-        cwd = os.path.abspath(cwd or get_cwd())
+    def info_graph(self, graph_filename, deps_graph, cwd, template):
+        graph = Grapher(deps_graph)
         if not os.path.isabs(graph_filename):
             graph_filename = os.path.join(cwd, graph_filename)
-        grapher.graph_file(graph_filename)
+        save(graph_filename, template.render(graph=graph))
 
     def json_info(self, deps_graph, json_output, cwd, show_paths):
         data = self._grab_info_data(deps_graph, grab_paths=show_paths)
