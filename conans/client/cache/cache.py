@@ -4,6 +4,9 @@ import shutil
 from collections import OrderedDict
 from os.path import join
 
+from jinja2 import Environment, select_autoescape
+
+from conans.assets.templates import dict_loader
 from conans.client.cache.editable import EditablePackages
 from conans.client.cache.remote_registry import RemoteRegistry
 from conans.client.conf import ConanClientConfigParser, get_default_client_conf, \
@@ -19,7 +22,6 @@ from conans.paths import ARTIFACTS_PROPERTIES_FILE
 from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
 from conans.paths.package_layouts.package_editable_layout import PackageEditableLayout
 from conans.unicode import get_cwd
-from conans.util import templates
 from conans.util.files import list_folder_subdirs, load, normalize, save
 from conans.util.locks import Lock
 
@@ -251,11 +253,11 @@ class ClientCache(object):
             Lock.clean(conan_folder)
             shutil.rmtree(os.path.join(conan_folder, "locks"), ignore_errors=True)
 
-    def get_template(self, template_name):
-        # TODO: Move here the template loader object, it can be initialized only once together with
-        #  the Conan app so it gets the actual 'cwd' where Conan is being run
-        templates_folder = os.path.join(self.cache_folder, TEMPLATES_FOLDER)
-        return templates.get_template(template_name, templates_folder)
+    @classmethod
+    def get_template(cls, template_name):
+        # TODO: It can be initialized only once together with the Conan app
+        env = Environment(loader=dict_loader, autoescape=select_autoescape(['html', 'xml']))
+        return env.get_template(template_name)
 
 
 def _mix_settings_with_env(settings):
