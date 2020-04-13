@@ -5,6 +5,7 @@ import textwrap
 import unittest
 import zipfile
 import datetime
+import time
 
 import six
 from mock import patch
@@ -541,12 +542,12 @@ class Pkg(ConanFile):
 
         self.assertEqual(1, content.count("config_install_interval"))
         self.assertTrue(os.path.exists(client.cache.sched_path))
-        self.assertTrue(datetime.datetime.fromisoformat(load(client.cache.sched_path)))
+        self.assertLess(os.path.getmtime(client.cache.sched_path), time.time())
 
         # 2 - Must execute again
         client.run('config install "%s"' % folder)
         self.assertIn("Processing conan.conf", client.out)
-        self.assertTrue(datetime.datetime.fromisoformat(load(client.cache.sched_path)))
+        self.assertLess(os.path.getmtime(client.cache.sched_path), time.time())
 
         # 3 - Must not execute: seconds are not allowed
         client.run('config set general.config_install_interval=1s')
@@ -567,19 +568,4 @@ class Pkg(ConanFile):
         os.remove(client.cache.sched_path)
         client.run('config get general.config_install_interval')
         self.assertIn("Processing conan.conf", client.out)
-        self.assertTrue(datetime.datetime.fromisoformat(load(client.cache.sched_path)))
-
-        # 6 - Must execute: sched file is empty
-        with open(client.cache.sched_path, 'w') as fd:
-            fd.write("")
-        client.run('config install "%s"' % folder)
-        self.assertIn("Processing conan.conf", client.out)
-        self.assertTrue(datetime.datetime.fromisoformat(load(client.cache.sched_path)))
-
-        # 7 - Must execute: sched file is invalid
-        with open(client.cache.sched_path, 'w') as fd:
-            fd.write("foobar")
-        client.run('config install "%s"' % folder)
-        self.assertIn("Processing conan.conf", client.out)
-        self.assertIn("WARN: The sched file is corrupted and will be removed.", client.out)
-        self.assertTrue(datetime.datetime.fromisoformat(load(client.cache.sched_path)))
+        self.assertLess(os.path.getmtime(client.cache.sched_path), time.time())

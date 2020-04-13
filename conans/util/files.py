@@ -103,7 +103,8 @@ def decode_text(text, encoding="auto"):
 
 
 def touch(fname, times=None):
-    os.utime(fname, times)
+    with open(fname, 'a'):
+        os.utime(fname, times)
 
 
 def touch_folder(folder):

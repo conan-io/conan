@@ -4,7 +4,6 @@ import shutil
 import re
 from datetime import datetime, timedelta
 from dateutil.tz import gettz
-from dateutil.parser import parse
 
 from contextlib import contextmanager
 from six.moves.urllib.parse import urlparse
@@ -16,8 +15,8 @@ from conans.client.cache.remote_registry import load_registry_txt,\
 from conans.client.tools import Git
 from conans.client.tools.files import unzip
 from conans.errors import ConanException
-from conans.util.files import mkdir, rmdir, walk, save
-from conans.util.log import logger
+from conans.util.files import mkdir, rmdir, walk, save, touch
+from conans.client.cache.cache import ClientCache
 
 
 def _hide_password(resource):
@@ -216,41 +215,28 @@ def _get_current_time_now():
     return datetime.now(gettz())
 
 
-def _generate_sched_file(cache):
-    now = str(_get_current_time_now())
-    save(cache.sched_path, now)
-    logger.debug("Update sched file (%s)" % now)
-
-
-def _next_scheduled_config_install(sched_path, sched_content, value, interval, output):
+def _next_scheduled_config_install(sched_path, value, interval):
     """ Return when the next config install should occur.
         In case of error, the next config install should occur immediately
 
     :param sched_path: sched file path in conan cache
-    :param sched_content: sched file content
     :param value: time interval value e.g 5 from 5m
     :param interval: time interval unit e.g m from 5m
-    :param output: Conan output stream
     :return: datetime instance + time interval
     """
-    if not sched_content or len(str(sched_content).strip()) == 0:
-        return None
-    try:
-        sched = parse(sched_content)
-        if interval == 'm':
-            sched += timedelta(minutes=float(value))
-        elif interval == 'h':
-            sched += timedelta(hours=float(value))
-        else:
-            sched += timedelta(days=float(value))
-        return sched
-    except ValueError:
-        output.warn("The sched file is corrupted and will be removed.")
-        os.remove(sched_path)
+    timestamp = os.path.getmtime(sched_path)
+    sched = datetime.fromtimestamp(timestamp, tz=gettz())
+    if interval == 'm':
+        sched += timedelta(minutes=float(value))
+    elif interval == 'h':
+        sched += timedelta(hours=float(value))
+    else:
+        sched += timedelta(days=float(value))
+    return sched
 
 
-def _get_config_install_interval(app):
-    return app.config.get_item("general.config_install_interval")
+def _get_config_install_interval(config):
+    return config.get_item("general.config_install_interval")
 
 
 def configuration_install(app, uri, verify_ssl, config_type=None,
@@ -294,8 +280,8 @@ def configuration_install(app, uri, verify_ssl, config_type=None,
             configs = [(c if c != config else config) for c in configs]
         _save_configs(configs_file, configs)
     try:
-        if _get_config_install_interval(app):
-            _generate_sched_file(cache)
+        if _get_config_install_interval(cache.config):
+            touch(cache.sched_path)
     except ConanException:
         pass
 
@@ -311,18 +297,16 @@ def is_config_install_scheduled(api):
     :return: True, if it should occur now. Otherwise, False.
     """
     try:
-        api.create_app()
-        interval = _get_config_install_interval(api.app)
+        cache = ClientCache(api.cache_folder, api.out)
+        interval = _get_config_install_interval(cache.config)
     except ConanException:
         return False
     else:
         match = re.search(r"(\d+)([mhd])", interval)
         if match:
-            if not os.path.exists(api.app.cache.sched_path):
+            if not os.path.exists(cache.sched_path):
                 return True
-            content = load(api.app.cache.sched_path)
-            sched = _next_scheduled_config_install(api.app.cache.sched_path, content, match.group(1),
-                                                   match.group(2), api.app.out)
+            sched = _next_scheduled_config_install(cache.sched_path, match.group(1), match.group(2))
             if not sched:
                 return True
             now = _get_current_time_now()
