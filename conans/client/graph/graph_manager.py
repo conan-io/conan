@@ -306,8 +306,11 @@ class GraphManager(object):
                             # (no conflicts)
                             # but the dict key is not used at all
                             package_build_requires[br_key] = build_require
-                        elif build_require.name != node.name:  # Profile one
-                            new_profile_build_requires.append((build_require, default_context))
+                        else:
+                            if build_require.name != node.name:  # Profile one
+                                new_profile_build_requires.append((build_require, default_context))
+                            elif default_context != node.context:
+                                new_profile_build_requires.append((build_require, default_context))
 
             if package_build_requires:
                 br_list = [(it, ctxt) for (_, ctxt), it in package_build_requires.items()]

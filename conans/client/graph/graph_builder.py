@@ -56,7 +56,6 @@ class DepsGraphBuilder(object):
         root_node.public_closure.add(root_node)
         root_node.public_deps.add(root_node)
         root_node.transitive_closure[root_node.name] = root_node
-        root_node.ancestors = set()
         root_node.conanfile.settings_build = profile_build.processed_settings.copy() \
             if profile_build else None
         root_node.conanfile.settings_target = None
@@ -187,14 +186,14 @@ class DepsGraphBuilder(object):
         #    node -(require)-> previous (creates a diamond with a previously existing node)
 
         # If the required is found in the node ancestors a loop is being closed
-        # TODO: allow bootstrapping, use references instead of names
-        name = require.ref.name
-        if name in node.ancestors or name == node.name:
-            raise ConanException("Loop detected: '%s' requires '%s' which is an ancestor too"
-                                 % (node.ref, require.ref))
+        context = CONTEXT_BUILD if context_switch else node.context
+        name = require.ref.name  # TODO: allow bootstrapping, use references instead of names
+        if node.ancestors.get(name, context) or (name == node.name and context == node.context):
+            raise ConanException("Loop detected: '%s' ('%s' context) requires '%s' ('%s' context)"
+                                 " which is an ancestor too"
+                                 % (node.ref, node.context, require.ref, context))
 
         # If the requirement is found in the node public dependencies, it is a diamond
-        context = CONTEXT_BUILD if context_switch else node.context
         previous = node.public_deps.get(name, context=context)
         previous_closure = node.public_closure.get(name, context=context)
         # build_requires and private will create a new node if it is not in the current closure
@@ -247,9 +246,10 @@ class DepsGraphBuilder(object):
                     raise ConanException(conflict)
 
             # Add current ancestors to the previous node and upstream deps
-            union = node.ancestors.union([node.name])
             for n in previous.public_closure:
-                n.ancestors.update(union)
+                n.ancestors.add(node)
+                for item in node.ancestors:
+                    n.ancestors.add(item)
 
             node.connect_closure(previous)
             graph.add_edge(node, previous, require)
@@ -429,8 +429,8 @@ class DepsGraphBuilder(object):
         new_node.recipe = recipe_status
         new_node.remote = remote
         # Ancestors are a copy of the parent, plus the parent itself
-        new_node.ancestors = current_node.ancestors.copy()
-        new_node.ancestors.add(current_node.name)
+        new_node.ancestors.assign(current_node.ancestors)
+        new_node.ancestors.add(current_node)
 
         if locked_id is not None:
             new_node.id = locked_id
