@@ -3,6 +3,9 @@ import os
 import unittest
 import warnings
 
+import six
+
+from conans.errors import ConanException
 from conans.model.build_info import CppInfo, DepsCppInfo, DepCppInfo
 from conans.test.utils.test_files import temp_folder
 
@@ -176,3 +179,86 @@ class CppInfoComponentsTest(unittest.TestCase):
         self.assertListEqual([], deps_cpp_info["dep1"].debug.libs)
         self.assertListEqual(["libdep2_d"], deps_cpp_info["dep2"].debug.libs)
         self.assertListEqual(["libdep2_d"], deps_cpp_info.debug.libs)
+
+    def cpp_info_link_order_test(self):
+
+        def _assert_link_order(sorted_libs):
+            """
+            Assert that dependent libs of a component are always found later in the list
+            """
+            assert sorted_libs, "'sorted_libs' is empty"
+            for num, lib in enumerate(sorted_libs):
+                component_name = lib[-1]
+                for dep in info.components[component_name].requires:
+                    for lib in info.components[dep].libs:
+                        self.assertIn(lib, sorted_libs[num:])
+
+        info = CppInfo("")
+        info.components["F"].libs = ["libF"]
+        info.components["F"].requires = ["D", "E"]
+        info.components["E"].libs = ["libE"]
+        info.components["E"].requires = ["B"]
+        info.components["D"].libs = ["libD"]
+        info.components["D"].requires = ["A"]
+        info.components["C"].libs = ["libC"]
+        info.components["C"].requires = ["A"]
+        info.components["A"].libs = ["libA"]
+        info.components["A"].requires = ["B"]
+        info.components["B"].libs = ["libB"]
+        info.components["B"].requires = []
+        self.assertEqual(["libC", "libF", "libD", "libA", "libE", "libB"], DepCppInfo(info).libs)
+        _assert_link_order(DepCppInfo(info).libs)
+
+        info = CppInfo("")
+        info.components["K"].libs = ["libK"]
+        info.components["K"].requires = ["G", "H"]
+        info.components["J"].libs = ["libJ"]
+        info.components["J"].requires = ["F"]
+        info.components["G"].libs = ["libG"]
+        info.components["G"].requires = ["F"]
+        info.components["H"].libs = ["libH"]
+        info.components["H"].requires = ["F", "E"]
+        info.components["L"].libs = ["libL"]
+        info.components["L"].requires = ["I"]
+        info.components["F"].libs = ["libF"]
+        info.components["F"].requires = ["C", "D"]
+        info.components["I"].libs = ["libI"]
+        info.components["I"].requires = ["E"]
+        info.components["C"].libs = ["libC"]
+        info.components["C"].requires = ["A"]
+        info.components["D"].libs = ["libD"]
+        info.components["D"].requires = ["A"]
+        info.components["E"].libs = ["libE"]
+        info.components["E"].requires = ["A", "B"]
+        info.components["A"].libs = ["libA"]
+        info.components["A"].requires = []
+        info.components["B"].libs = ["libB"]
+        info.components["B"].requires = []
+        self.assertEqual(["libL", "libI", "libK", "libH", "libE", "libB", "libG", "libJ", "libF",
+                          "libD", "libC", "libA"], DepCppInfo(info).libs)
+        _assert_link_order(DepCppInfo(info).libs)
+
+    def cppinfo_inexistent_component_dep_test(self):
+        info = CppInfo(None)
+        info.components["LIB1"].requires = ["LIB2"]
+        with six.assertRaisesRegex(self, ConanException, "Component 'LIB1' "
+                                                         "declares a missing dependency"):
+            DepCppInfo(info).libs
+
+    def cpp_info_components_dep_loop_test(self):
+        info = CppInfo("")
+        info.components["LIB1"].requires = ["LIB1"]
+        msg = "There is a dependency loop in the components declared in 'self.cpp_info.components'"
+        with six.assertRaisesRegex(self, ConanException, msg):
+            DepCppInfo(info).libs
+        info = CppInfo("")
+        info.components["LIB1"].requires = ["LIB2"]
+        info.components["LIB2"].requires = ["LIB1", "LIB2"]
+        with six.assertRaisesRegex(self, ConanException, msg):
+            DepCppInfo(info).build_paths
+        info = CppInfo("")
+        info.components["LIB1"].requires = ["LIB2"]
+        info.components["LIB2"].requires = ["LIB3"]
+        info.components["LIB3"].requires = ["LIB1"]
+        with six.assertRaisesRegex(self, ConanException, msg):
+            DepCppInfo(info).defines

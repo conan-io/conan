@@ -1,5 +1,6 @@
 import os
 from collections import OrderedDict
+from copy import deepcopy, copy
 
 from conans.errors import ConanException
 from conans.util.conan_v2_mode import conan_v2_behavior
@@ -23,6 +24,12 @@ class DefaultOrderedDict(OrderedDict):
         if key not in self.keys():
             super(DefaultOrderedDict, self).__setitem__(key, self.factory())
         return super(DefaultOrderedDict, self).__getitem__(key)
+
+    def __copy__(self):
+        copy = DefaultOrderedDict(self.factory)
+        for key, value in super(DefaultOrderedDict, self).items():
+            copy[key] = value
+        return copy
 
 
 class _CppInfo(object):
@@ -148,6 +155,7 @@ class Component(_CppInfo):
         self.resdirs.append(DEFAULT_RES)
         self.builddirs.append(DEFAULT_BUILD)
         self.frameworkdirs.append(DEFAULT_FRAMEWORK)
+        self.requires = []
 
 
 class CppInfo(_CppInfo):
@@ -293,6 +301,8 @@ class DepCppInfo(object):
         self._src_paths = None
         self._framework_paths = None
         self._build_module_paths = None
+        self._sorted_components = None
+        self._sorted_components_reversed = None
 
     def __getattr__(self, item):
         try:
@@ -305,71 +315,107 @@ class DepCppInfo(object):
     def _merge_lists(seq1, seq2):
         return seq1 + [s for s in seq2 if s not in seq1]
 
-    def _aggregated_values(self, item):
+    def _aggregated_values(self, item, reverse=False):
         values = getattr(self, "_%s" % item)
         if values is not None:
             return values
         values = getattr(self._cpp_info, item)
         if self._cpp_info.components:
-            for component in self._cpp_info.components.values():
+            for component in self._get_sorted_components(reverse).values():
                 values = self._merge_lists(values, getattr(component, item))
         setattr(self, "_%s" % item, values)
         return values
 
-    def _aggregated_paths(self, item):
+    def _aggregated_paths(self, item, reverse=False):
         paths = getattr(self, "_%s_paths" % item)
         if paths is not None:
             return paths
         paths = getattr(self._cpp_info, "%s_paths" % item)
         if self._cpp_info.components:
-            for component in self._cpp_info.components.values():
+            for component in self._get_sorted_components(reverse).values():
                 paths = self._merge_lists(paths, getattr(component, "%s_paths" % item))
         setattr(self, "_%s_paths" % item, paths)
         return paths
 
+    def _get_sorted_components(self, reverse=False):
+        """
+        Sort Components from less dependent one first to the most dependent one last
+        :return: List of sorted components
+        """
+        if not self._sorted_components:
+            ordered = OrderedDict()
+            components = copy(self._cpp_info.components)
+            while len(ordered) != len(self._cpp_info.components):
+                # Search for next element to be processed
+                for comp_name, comp in components.items():
+                    if comp_name in ordered:
+                        continue
+                    # check if all the deps are declared
+                    if not all([dep in self._cpp_info.components for dep in comp.requires]):
+                        raise ConanException("Component '%s' declares a missing dependency" % comp_name)
+                    # check if all the deps are already added to ordered
+                    if all([dep in ordered for dep in comp.requires]):
+                        ordered[comp_name] = comp
+                        del components[comp_name]
+                        break
+                else:
+                    raise ConanException("There is a dependency loop in the components declared in "
+                                         "'self.cpp_info.components'")
+            self._sorted_components = ordered
+        if reverse:
+            if not self._sorted_components_reversed:
+                reverse_keys = reversed(self._sorted_components.keys())
+                reverse = OrderedDict()
+                for k in reverse_keys:
+                    reverse[k] = self._sorted_components[k]
+                self._sorted_components_reversed = reverse
+            return self._sorted_components_reversed
+        else:
+            return self._sorted_components
+
     @property
     def build_modules_paths(self):
-        return self._aggregated_paths("build_modules")
+        return self._aggregated_paths("build_modules", reverse=True)
 
     @property
     def include_paths(self):
-        return self._aggregated_paths("include")
+        return self._aggregated_paths("include", reverse=True)
 
     @property
     def lib_paths(self):
-        return self._aggregated_paths("lib")
+        return self._aggregated_paths("lib", reverse=True)
 
     @property
     def src_paths(self):
-        return self._aggregated_paths("src")
+        return self._aggregated_paths("src", reverse=True)
 
     @property
     def bin_paths(self):
-        return self._aggregated_paths("bin")
+        return self._aggregated_paths("bin", reverse=True)
 
     @property
     def build_paths(self):
-        return self._aggregated_paths("build")
+        return self._aggregated_paths("build", reverse=True)
 
     @property
     def res_paths(self):
-        return self._aggregated_paths("res")
+        return self._aggregated_paths("res", reverse=True)
 
     @property
     def framework_paths(self):
-        return self._aggregated_paths("framework")
+        return self._aggregated_paths("framework", reverse=True)
 
     @property
     def libs(self):
-        return self._aggregated_values("libs")
+        return self._aggregated_values("libs", reverse=True)
 
     @property
     def system_libs(self):
-        return self._aggregated_values("system_libs")
+        return self._aggregated_values("system_libs", reverse=True)
 
     @property
     def frameworks(self):
-        return self._aggregated_values("frameworks")
+        return self._aggregated_values("frameworks", reverse=True)
 
     @property
     def defines(self):
