@@ -189,9 +189,8 @@ class DepsGraphBuilder(object):
         context = CONTEXT_BUILD if context_switch else node.context
         name = require.ref.name  # TODO: allow bootstrapping, use references instead of names
         if node.ancestors.get(name, context) or (name == node.name and context == node.context):
-            raise ConanException("Loop detected: '%s' ('%s' context) requires '%s' ('%s' context)"
-                                 " which is an ancestor too"
-                                 % (node.ref, node.context, require.ref, context))
+            raise ConanException("Loop detected in context %s: '%s' requires '%s'"
+                                 " which is an ancestor too" % (context, node.ref, require.ref))
 
         # If the requirement is found in the node public dependencies, it is a diamond
         previous = node.public_deps.get(name, context=context)
