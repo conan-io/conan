@@ -102,4 +102,4 @@ class ResultsTestCase(unittest.TestCase):
         self.assertListEqual(sorted(results.settings), sorted(['os.api', 'os', 'compiler']))
         self.assertListEqual(results.options, ['opt.key1'])
         self.assertEqual(results.requires, True)
-        self.assertListEqual(results.remotes, ['remote1', 'remote2'])
+        self.assertListEqual(sorted(results.remotes), sorted(['remote1', 'remote2']))
