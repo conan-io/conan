@@ -73,6 +73,35 @@ endforeach()
 """
 
 
+def find_transitive_dependencies(public_deps_names, find_modules):
+    if find_modules:  # for cmake_find_package generator
+        find = textwrap.dedent("""
+            if(NOT {dep_name}_FOUND)
+                find_dependency({dep_name} REQUIRED)
+            else()
+                message(STATUS "Dependency {dep_name} already found")
+            endif()
+            """)
+    else:  # for cmake_find_package_multi generator
+        # https://github.com/conan-io/conan/issues/4994
+        # https://github.com/conan-io/conan/issues/5040
+        find = textwrap.dedent("""
+            if(NOT {dep_name}_FOUND)
+                if(${{CMAKE_VERSION}} VERSION_LESS "3.9.0")
+                    find_package({dep_name} REQUIRED NO_MODULE)
+                else()
+                    find_dependency({dep_name} REQUIRED NO_MODULE)
+                endif()
+            else()
+                message(STATUS "Dependency {dep_name} already found")
+            endif()
+            """)
+    lines = ["", "# Library dependencies", "include(CMakeFindDependencyMacro)"]
+    for dep_name in public_deps_names:
+        lines.append(find.format(dep_name=dep_name))
+    return "\n".join(lines)
+
+
 class CMakeFindPackageCommonMacros:
     conan_message = CMakeCommonMacros.conan_message
 
@@ -124,7 +153,7 @@ class CMakeFindPackageCommonMacros:
                 endif()
                 unset(CONAN_FOUND_LIBRARY CACHE)
             endforeach()
-            
+
             if(NOT ${CMAKE_VERSION} VERSION_LESS "3.0")
                 # Add all dependencies to all targets
                 string(REPLACE " " ";" deps_list "${deps}")
@@ -132,7 +161,7 @@ class CMakeFindPackageCommonMacros:
                     set_property(TARGET ${_CONAN_ACTUAL_TARGET} PROPERTY INTERFACE_LINK_LIBRARIES "${_CONAN_FOUND_SYSTEM_LIBS};${deps_list}")
                 endforeach()
             endif()
-                
+
             set(${out_libraries} ${_out_libraries} PARENT_SCOPE)
             set(${out_libraries_target} ${_out_libraries_target} PARENT_SCOPE)
         endfunction()
