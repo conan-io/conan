@@ -2,13 +2,15 @@ import os
 import textwrap
 import unittest
 
+from parameterized import parameterized
+
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
 from conans.tools import save
 from conans.util.files import load
 
 
-class NewTest(unittest.TestCase):
+class NewCommandTest(unittest.TestCase):
 
     def template_test(self):
         client = TestClient()
@@ -87,15 +89,21 @@ class NewTest(unittest.TestCase):
         self.assertIn("ERROR: Value provided for channel, 'u' (type str), is too short. Valid "
                       "names must contain at least 2 characters.", client.out)
 
-    def new_dash_test(self):
+    @parameterized.expand([("My-Package", "MyPackage"),
+                           ("my-package", "MyPackage"),
+                           ("my_package", "MyPackage"),
+                           ("my.Package", "MyPackage"),
+                           ("my+package", "MyPackage")])
+    def naming_test(self, package_name, python_class_name):
         """ packages with dash
         """
         client = TestClient()
-        client.run('new My-Package/1.3@myuser/testing -t')
+        client.run('new {}/1.3@myuser/testing -t'.format(package_name))
         root = client.current_folder
         self.assertTrue(os.path.exists(os.path.join(root, "conanfile.py")))
         content = load(os.path.join(root, "conanfile.py"))
-        self.assertIn('name = "My-Package"', content)
+        self.assertIn('class {}Conan(ConanFile):'.format(python_class_name), content)
+        self.assertIn('name = "{}"'.format(package_name), content)
         self.assertIn('version = "1.3"', content)
         self.assertTrue(os.path.exists(os.path.join(root, "test_package/conanfile.py")))
         self.assertTrue(os.path.exists(os.path.join(root, "test_package/CMakeLists.txt")))
@@ -103,7 +111,7 @@ class NewTest(unittest.TestCase):
         # assert they are correct at least
         client.run("export . myuser/testing")
         client.run("search")
-        self.assertIn("My-Package/1.3@myuser/testing", client.out)
+        self.assertIn("{}/1.3@myuser/testing".format(package_name), client.out)
 
     def new_header_test(self):
         client = TestClient()
