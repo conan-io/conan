@@ -877,10 +877,12 @@ class ConanAPIV1(object):
             if remote_ref.ordered_packages:
                 for package_id, properties in remote_ref.ordered_packages.items():
                     package_recipe_hash = properties.get("recipe_hash", None)
+                    # Artifactory uses field 'requires', conan_center 'full_requires'
+                    requires = properties.get("requires", []) or properties.get("full_requires", [])
                     search_recorder.add_package(remote_name, ref,
                                                 package_id, properties.get("options", []),
                                                 properties.get("settings", []),
-                                                properties.get("full_requires", []),
+                                                requires,
                                                 remote_ref.recipe_hash != package_recipe_hash)
         return search_recorder.get_info()
 
