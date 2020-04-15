@@ -130,7 +130,7 @@ def check_max_cppstd(conanfile, cppstd, gnu_extensions=False):
         by cppstd, a ConanInvalidConfiguration exception will be raised.
 
     :param conanfile: ConanFile instance with cppstd information
-    :param cppstd: Minimal cppstd version required
+    :param cppstd: Maximum cppstd version required
     :param gnu_extensions: GNU extension is required (e.g gnu17)
     """
     if not str(cppstd).isdigit():
