@@ -206,7 +206,11 @@ class CppInfoComponentsTest(unittest.TestCase):
         info.components["A"].requires = ["B"]
         info.components["B"].libs = ["libB"]
         info.components["B"].requires = []
-        self.assertEqual(["libC", "libF", "libD", "libA", "libE", "libB"], DepCppInfo(info).libs)
+        deps_cpp_info = DepsCppInfo()
+        deps_cpp_info.update(DepCppInfo(info), "dep1")
+        self.assertEqual(["libF", "libE", "libD", "libC", "libA", "libB"],
+                         deps_cpp_info["dep1"].libs)
+        self.assertEqual(["libF", "libE", "libD", "libC", "libA", "libB"], DepCppInfo(info).libs)
         _assert_link_order(DepCppInfo(info).libs)
 
         info = CppInfo("")
@@ -234,8 +238,8 @@ class CppInfoComponentsTest(unittest.TestCase):
         info.components["A"].requires = []
         info.components["B"].libs = ["libB"]
         info.components["B"].requires = []
-        self.assertEqual(["libL", "libI", "libK", "libH", "libE", "libB", "libG", "libJ", "libF",
-                          "libD", "libC", "libA"], DepCppInfo(info).libs)
+        self.assertEqual(["libK", "libJ", "libG", "libH", "libL", "libF", "libI", "libC", "libD",
+                          "libE", "libA", "libB"], DepCppInfo(info).libs)
         _assert_link_order(DepCppInfo(info).libs)
 
     def cppinfo_inexistent_component_dep_test(self):
@@ -262,3 +266,56 @@ class CppInfoComponentsTest(unittest.TestCase):
         info.components["LIB3"].requires = ["LIB1"]
         with six.assertRaisesRegex(self, ConanException, msg):
             DepCppInfo(info).defines
+
+    def components_basic_order_test(self):
+        info = CppInfo("")
+        info.components["liba"].libs = ["liba"]
+        info.components["libb"].libs = ["libb"]
+        dep_cpp_info = DepCppInfo(info)
+        self.assertListEqual(["liba", "libb"], dep_cpp_info.libs)
+        deps_cpp_info = DepsCppInfo()
+        deps_cpp_info.update(dep_cpp_info, "dep1")
+        self.assertListEqual(["liba", "libb"], deps_cpp_info["dep1"].libs)
+        self.assertListEqual(["liba", "libb"], deps_cpp_info.libs)
+
+        info = CppInfo("")
+        info.components["liba"].libs = ["liba"]
+        info.components["libb"].libs = ["libb"]
+        dep_cpp_info = DepCppInfo(info)
+        info2 = CppInfo("")
+        info2.components["libc"].libs = ["libc"]
+        dep_cpp_info2 = DepCppInfo(info2)
+        deps_cpp_info = DepsCppInfo()
+        # Update in reverse order
+        deps_cpp_info.update(dep_cpp_info2, "dep2")
+        deps_cpp_info.update(dep_cpp_info, "dep1")
+        self.assertListEqual(["liba", "libb"], deps_cpp_info["dep1"].libs)
+        self.assertListEqual(["libc"], deps_cpp_info["dep2"].libs)
+        self.assertListEqual(["libc", "liba", "libb"], deps_cpp_info.libs)
+
+        info = CppInfo("")
+        info.components["liba"].libs = ["liba"]
+        info.components["libb"].libs = ["libb"]
+        info.components["libb"].requires = ["liba"]
+        dep_cpp_info = DepCppInfo(info)
+        self.assertListEqual(["libb", "liba"], dep_cpp_info.libs)
+        deps_cpp_info = DepsCppInfo()
+        deps_cpp_info.update(dep_cpp_info, "dep1")
+        self.assertListEqual(["libb", "liba"], deps_cpp_info["dep1"].libs)
+        self.assertListEqual(["libb", "liba"], deps_cpp_info.libs)
+
+        info = CppInfo("")
+        info.components["liba"].libs = ["liba"]
+        info.components["libb"].libs = ["libb"]
+        info.components["libb"].requires = ["liba"]
+        dep_cpp_info = DepCppInfo(info)
+        info2 = CppInfo("")
+        info2.components["libc"].libs = ["libc"]
+        dep_cpp_info2 = DepCppInfo(info2)
+        deps_cpp_info = DepsCppInfo()
+        # Update in reverse order
+        deps_cpp_info.update(dep_cpp_info2, "dep2")
+        deps_cpp_info.update(dep_cpp_info, "dep1")
+        self.assertListEqual(["libb", "liba"], deps_cpp_info["dep1"].libs)
+        self.assertListEqual(["libc"], deps_cpp_info["dep2"].libs)
+        self.assertListEqual(["libc", "libb", "liba"], deps_cpp_info.libs)

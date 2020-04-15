@@ -26,10 +26,10 @@ class DefaultOrderedDict(OrderedDict):
         return super(DefaultOrderedDict, self).__getitem__(key)
 
     def __copy__(self):
-        copy = DefaultOrderedDict(self.factory)
+        the_copy = DefaultOrderedDict(self.factory)
         for key, value in super(DefaultOrderedDict, self).items():
-            copy[key] = value
-        return copy
+            the_copy[key] = value
+        return the_copy
 
 
 class _CppInfo(object):
@@ -312,8 +312,11 @@ class DepCppInfo(object):
         return attr
 
     @staticmethod
-    def _merge_lists(seq1, seq2):
-        return seq1 + [s for s in seq2 if s not in seq1]
+    def _merge_lists(seq1, seq2, reverse=False):
+        if reverse:
+            return seq2 + [s for s in seq1 if s not in seq2]
+        else:
+            return seq1 + [s for s in seq2 if s not in seq1]
 
     def _aggregated_values(self, item, reverse=False):
         values = getattr(self, "_%s" % item)
@@ -321,8 +324,8 @@ class DepCppInfo(object):
             return values
         values = getattr(self._cpp_info, item)
         if self._cpp_info.components:
-            for component in self._get_sorted_components(reverse).values():
-                values = self._merge_lists(values, getattr(component, item))
+            for component in self._get_sorted_components().values():
+                values = self._merge_lists(values, getattr(component, item), reverse)
         setattr(self, "_%s" % item, values)
         return values
 
@@ -332,90 +335,87 @@ class DepCppInfo(object):
             return paths
         paths = getattr(self._cpp_info, "%s_paths" % item)
         if self._cpp_info.components:
-            for component in self._get_sorted_components(reverse).values():
-                paths = self._merge_lists(paths, getattr(component, "%s_paths" % item))
+            for component in self._get_sorted_components().values():
+                paths = self._merge_lists(paths, getattr(component, "%s_paths" % item), reverse)
         setattr(self, "_%s_paths" % item, paths)
         return paths
 
-    def _get_sorted_components(self, reverse=False):
+    def _get_sorted_components(self):
         """
-        Sort Components from less dependent one first to the most dependent one last
+        Sort Components from most dependent one first to the less dependent one last
         :return: List of sorted components
         """
         if not self._sorted_components:
-            ordered = OrderedDict()
-            components = copy(self._cpp_info.components)
-            while len(ordered) != len(self._cpp_info.components):
-                # Search for next element to be processed
-                for comp_name, comp in components.items():
-                    if comp_name in ordered:
-                        continue
-                    # check if all the deps are declared
-                    if not all([dep in self._cpp_info.components for dep in comp.requires]):
-                        raise ConanException("Component '%s' declares a missing dependency" % comp_name)
-                    # check if all the deps are already added to ordered
-                    if all([dep in ordered for dep in comp.requires]):
-                        ordered[comp_name] = comp
-                        del components[comp_name]
-                        break
-                else:
-                    raise ConanException("There is a dependency loop in the components declared in "
-                                         "'self.cpp_info.components'")
-            self._sorted_components = ordered
-        if reverse:
-            if not self._sorted_components_reversed:
-                reverse_keys = reversed(self._sorted_components.keys())
-                reverse = OrderedDict()
-                for k in reverse_keys:
-                    reverse[k] = self._sorted_components[k]
-                self._sorted_components_reversed = reverse
-            return self._sorted_components_reversed
-        else:
-            return self._sorted_components
+            kk = [[require for require in comp.requires] for comp in
+                  self._cpp_info.components.values()]
+            if any(kk):
+                ordered = OrderedDict()
+                components = copy(self._cpp_info.components)
+                while len(ordered) != len(self._cpp_info.components):
+                    # Search for next element to be processed
+                    for comp_name, comp in components.items():
+                        if comp_name in ordered:
+                            continue
+                        # check if all the deps are declared
+                        if not all([dep in components for dep in comp.requires]):
+                            raise ConanException("Component '%s' declares a missing dependency" % comp_name)
+                        # check if all the deps are already added to ordered
+                        if comp_name not in [require for dep in components.values() for require in
+                                             dep.requires]:
+                            ordered[comp_name] = comp
+                            del components[comp_name]
+                            break
+                    else:
+                        raise ConanException("There is a dependency loop in the components declared in "
+                                             "'self.cpp_info.components'")
+                self._sorted_components = ordered
+            else:
+                self._sorted_components = self._cpp_info.components
+        return self._sorted_components
 
     @property
     def build_modules_paths(self):
-        return self._aggregated_paths("build_modules", reverse=True)
+        return self._aggregated_paths("build_modules")
 
     @property
     def include_paths(self):
-        return self._aggregated_paths("include", reverse=True)
+        return self._aggregated_paths("include")
 
     @property
     def lib_paths(self):
-        return self._aggregated_paths("lib", reverse=True)
+        return self._aggregated_paths("lib")
 
     @property
     def src_paths(self):
-        return self._aggregated_paths("src", reverse=True)
+        return self._aggregated_paths("src")
 
     @property
     def bin_paths(self):
-        return self._aggregated_paths("bin", reverse=True)
+        return self._aggregated_paths("bin")
 
     @property
     def build_paths(self):
-        return self._aggregated_paths("build", reverse=True)
+        return self._aggregated_paths("build")
 
     @property
     def res_paths(self):
-        return self._aggregated_paths("res", reverse=True)
+        return self._aggregated_paths("res")
 
     @property
     def framework_paths(self):
-        return self._aggregated_paths("framework", reverse=True)
+        return self._aggregated_paths("framework")
 
     @property
     def libs(self):
-        return self._aggregated_values("libs", reverse=True)
+        return self._aggregated_values("libs")
 
     @property
     def system_libs(self):
-        return self._aggregated_values("system_libs", reverse=True)
+        return self._aggregated_values("system_libs")
 
     @property
     def frameworks(self):
-        return self._aggregated_values("frameworks", reverse=True)
+        return self._aggregated_values("frameworks")
 
     @property
     def defines(self):
