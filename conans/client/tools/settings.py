@@ -236,7 +236,7 @@ def check_compiler(conanfile, required, strict=False):
         a ConanUnknownConfiguration exception will be raised.
 
     :param conanfile: ConanFile instance
-    :param required: A dict of required compiler versions required
+    :param required: A dict of required compiler versions required e.g. {"gcc": "9"}
     :param strict: Unkown configurations are invalid
     """
     if not isinstance(required, dict):
