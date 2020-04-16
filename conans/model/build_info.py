@@ -198,6 +198,7 @@ class CppInfo(_CppInfo):
                 self.libdirs != [DEFAULT_LIB] or
                 self.bindirs != [DEFAULT_BIN] or
                 self.resdirs != [DEFAULT_RES] or
+                self.builddirs != [DEFAULT_BUILD] or
                 self.frameworkdirs != [DEFAULT_FRAMEWORK] or
                 self.libs or
                 self.system_libs or
