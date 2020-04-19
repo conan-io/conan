@@ -157,6 +157,10 @@ class CMake(object):
             #   to keep previous implementation, but any modern CMake will support (and recommend) passing the
             #   platform in its own argument.
             compiler_version = self._settings.get_safe("compiler.version")
+            # If compiler.version is not part of the settings, compiler_version will be None,
+            # resulting in "AttributeError: 'NoneType' object has no attribute 'strip'"
+            if compiler_version == None:
+                compiler_version = "16" # acceptable workaround value
             if Version(compiler_version) < "16" and self._settings.get_safe("os") != "WindowsCE":
                 if self.generator_platform == "x64":
                     generator += " Win64" if not generator.endswith(" Win64") else ""
