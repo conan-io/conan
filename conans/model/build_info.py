@@ -1,6 +1,6 @@
 import os
 from collections import OrderedDict
-from copy import deepcopy, copy
+from copy import copy
 
 from conans.errors import ConanException
 from conans.util.conan_v2_mode import conan_v2_behavior
@@ -303,7 +303,6 @@ class DepCppInfo(object):
         self._framework_paths = None
         self._build_module_paths = None
         self._sorted_components = None
-        self._sorted_components_reversed = None
 
     def __getattr__(self, item):
         try:
@@ -313,31 +312,28 @@ class DepCppInfo(object):
         return attr
 
     @staticmethod
-    def _merge_lists(seq1, seq2, reverse=False):
-        if reverse:
-            return seq2 + [s for s in seq1 if s not in seq2]
-        else:
-            return seq1 + [s for s in seq2 if s not in seq1]
+    def _merge_lists(seq1, seq2):
+        return seq1 + [s for s in seq2 if s not in seq1]
 
-    def _aggregated_values(self, item, reverse=False):
+    def _aggregated_values(self, item):
         values = getattr(self, "_%s" % item)
         if values is not None:
             return values
         values = getattr(self._cpp_info, item)
         if self._cpp_info.components:
             for component in self._get_sorted_components().values():
-                values = self._merge_lists(values, getattr(component, item), reverse)
+                values = self._merge_lists(values, getattr(component, item))
         setattr(self, "_%s" % item, values)
         return values
 
-    def _aggregated_paths(self, item, reverse=False):
+    def _aggregated_paths(self, item):
         paths = getattr(self, "_%s_paths" % item)
         if paths is not None:
             return paths
         paths = getattr(self._cpp_info, "%s_paths" % item)
         if self._cpp_info.components:
             for component in self._get_sorted_components().values():
-                paths = self._merge_lists(paths, getattr(component, "%s_paths" % item), reverse)
+                paths = self._merge_lists(paths, getattr(component, "%s_paths" % item))
         setattr(self, "_%s_paths" % item, paths)
         return paths
 
@@ -347,9 +343,8 @@ class DepCppInfo(object):
         :return: List of sorted components
         """
         if not self._sorted_components:
-            kk = [[require for require in comp.requires] for comp in
-                  self._cpp_info.components.values()]
-            if any(kk):
+            if any([[require for require in comp.requires] for comp in
+                    self._cpp_info.components.values()]):
                 ordered = OrderedDict()
                 components = copy(self._cpp_info.components)
                 while len(ordered) != len(self._cpp_info.components):
@@ -360,17 +355,17 @@ class DepCppInfo(object):
                         # check if all the deps are declared
                         if not all([dep in components for dep in comp.requires]):
                             raise ConanException("Component '%s' declares a missing dependency" % comp_name)
-                        # check if all the deps are already added to ordered
+                        # check if component is not required and can be added to ordered
                         if comp_name not in [require for dep in components.values() for require in
                                              dep.requires]:
                             ordered[comp_name] = comp
                             del components[comp_name]
                             break
                     else:
-                        raise ConanException("There is a dependency loop in the components declared in "
-                                             "'self.cpp_info.components'")
+                        raise ConanException("There is a dependency loop in the components declared "
+                                             "in 'self.cpp_info.components'")
                 self._sorted_components = ordered
-            else:
+            else:  # If components do not have requirements, keep them in the same order
                 self._sorted_components = self._cpp_info.components
         return self._sorted_components
 
