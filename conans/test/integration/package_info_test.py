@@ -238,25 +238,6 @@ class HelloConan(ConanFile):
         self.assertIn("dep/1.0@us/ch package_info(): self.cpp_info.components cannot be used "
                       "with self.cpp_info configs (release/debug/...) at the same time", client.out)
 
-    def package_info_wrong_cpp_info_test(self):
-        conanfile = textwrap.dedent("""
-            import os
-            from conans import ConanFile
-            class Dep(ConanFile):
-                def package_info(self):
-                    self.cpp_info.name = "Boost"
-                    self.cpp_info.components["Accumulators"].includedirs = [os.path.join("boost", 
-                    "accumulators")]
-                    self.cpp_info.libs = ["hello"]
-        """)
-
-        client = TestClient()
-        client.save({"conanfile.py": conanfile})
-        client.run("export . name/1.0@us/ch")  # Does NOT fail on export
-        client.run("create . name/1.0@us/ch", assert_error=True)
-        self.assertIn("name/1.0@us/ch package_info(): self.cpp_info.components cannot be used with "
-                      "self.cpp_info global values at the same time", client.out)
-
     def package_info_components_complete_test(self):
         dep = textwrap.dedent("""
             import os
