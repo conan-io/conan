@@ -195,24 +195,25 @@ class CppInfoComponentsTest(unittest.TestCase):
                         self.assertIn(lib, sorted_libs[num:])
 
         info = CppInfo("")
-        info.components["F"].libs = ["libF"]
-        info.components["F"].requires = ["D", "E"]
-        info.components["E"].libs = ["libE"]
-        info.components["E"].requires = ["B"]
-        info.components["D"].libs = ["libD"]
-        info.components["D"].requires = ["A"]
-        info.components["C"].libs = ["libC"]
-        info.components["C"].requires = ["A"]
-        info.components["A"].libs = ["libA"]
-        info.components["A"].requires = ["B"]
-        info.components["B"].libs = ["libB"]
-        info.components["B"].requires = []
+        info.components["6"].libs = ["lib6"]
+        info.components["6"].requires = ["4", "5"]
+        info.components["5"].libs = ["lib5"]
+        info.components["5"].requires = ["2"]
+        info.components["4"].libs = ["lib4"]
+        info.components["4"].requires = ["1"]
+        info.components["3"].libs = ["lib3"]
+        info.components["3"].requires = ["1"]
+        info.components["1"].libs = ["lib1"]
+        info.components["1"].requires = ["2"]
+        info.components["2"].libs = ["lib2"]
+        info.components["2"].requires = []
+        dep_cpp_info = DepCppInfo(info)
+        _assert_link_order(dep_cpp_info.libs)
+        self.assertEqual(["lib6", "lib5", "lib4", "lib3", "lib1", "lib2"], dep_cpp_info.libs)
         deps_cpp_info = DepsCppInfo()
-        deps_cpp_info.update(DepCppInfo(info), "dep1")
-        self.assertEqual(["libF", "libE", "libD", "libC", "libA", "libB"],
-                         deps_cpp_info["dep1"].libs)
-        self.assertEqual(["libF", "libE", "libD", "libC", "libA", "libB"], DepCppInfo(info).libs)
-        _assert_link_order(DepCppInfo(info).libs)
+        deps_cpp_info.update(dep_cpp_info, "dep1")
+        self.assertEqual(["lib6", "lib5", "lib4", "lib3", "lib1", "lib2"],
+                         deps_cpp_info.libs)
 
         info = CppInfo("")
         info.components["K"].libs = ["libK"]
@@ -239,9 +240,14 @@ class CppInfoComponentsTest(unittest.TestCase):
         info.components["A"].requires = []
         info.components["B"].libs = ["libB"]
         info.components["B"].requires = []
+        dep_cpp_info = DepCppInfo(info)
+        _assert_link_order(dep_cpp_info.libs)
         self.assertEqual(["libK", "libJ", "libG", "libH", "libL", "libF", "libI", "libC", "libD",
-                          "libE", "libA", "libB"], DepCppInfo(info).libs)
-        _assert_link_order(DepCppInfo(info).libs)
+                          "libE", "libA", "libB"], dep_cpp_info.libs)
+        deps_cpp_info.update(dep_cpp_info, "dep2")
+        self.assertEqual(["lib6", "lib5", "lib4", "lib3", "lib1", "lib2","libK", "libJ", "libG",
+                          "libH", "libL", "libF", "libI", "libC", "libD", "libE", "libA", "libB"],
+                         deps_cpp_info.libs)
 
     def cppinfo_inexistent_component_dep_test(self):
         info = CppInfo(None)
@@ -250,10 +256,10 @@ class CppInfoComponentsTest(unittest.TestCase):
                                                          "declares a missing dependency"):
             DepCppInfo(info).libs
 
-    def cpp_info_components_dep_loop_test(self):
+    def cpp_info_components_requires_loop_test(self):
         info = CppInfo("")
         info.components["LIB1"].requires = ["LIB1"]
-        msg = "There is a dependency loop in the components declared in 'self.cpp_info.components'"
+        msg = "There is a dependency loop in 'self.cpp_info.components'"
         with six.assertRaisesRegex(self, ConanException, msg):
             DepCppInfo(info).libs
         info = CppInfo("")
@@ -268,7 +274,7 @@ class CppInfoComponentsTest(unittest.TestCase):
         with six.assertRaisesRegex(self, ConanException, msg):
             DepCppInfo(info).defines
 
-    def components_basic_order_test(self):
+    def components_libs_order_test(self):
         info = CppInfo("")
         info.components["liba"].libs = ["liba"]
         info.components["libb"].libs = ["libb"]
@@ -321,7 +327,7 @@ class CppInfoComponentsTest(unittest.TestCase):
         self.assertListEqual(["libc"], deps_cpp_info["dep2"].libs)
         self.assertListEqual(["libc", "libb", "liba"], deps_cpp_info.libs)
 
-    def cppinfo_dirs_test(self):
+    def cppinfo_components_dirs_test(self):
         folder = temp_folder()
         info = CppInfo(folder)
         info.name = "OpenSSL"
@@ -378,29 +384,7 @@ class CppInfoComponentsTest(unittest.TestCase):
         self.assertEqual(["different_res", "another_res", "another_other_res"],
                          info.components["Crypto"].resdirs)
 
-    def cppinfo_public_interface_test(self):
-        folder = temp_folder()
-        info = CppInfo(folder)
-        self.assertEqual([], info.libs)
-        self.assertEqual([], info.system_libs)
-        self.assertEqual(["include"], info.includedirs)
-        self.assertEqual([], info.srcdirs)
-        self.assertEqual(["res"], info.resdirs)
-        self.assertEqual([""], info.builddirs)
-        self.assertEqual(["bin"], info.bindirs)
-        self.assertEqual(["lib"], info.libdirs)
-        self.assertEqual(folder, info.rootpath)
-        self.assertEqual([], info.defines)
-        self.assertIsNone(info.name)
-        self.assertEqual("", info.sysroot)
-        self.assertEqual([], info.cflags)
-        self.assertEqual({}, info.configs)
-        self.assertEqual([], info.cxxflags)
-        self.assertEqual([], info.exelinkflags)
-        self.assertEqual([], info.public_deps)
-        self.assertEqual([], info.sharedlinkflags)
-
-    def component_default_dirs_test(self):
+    def component_default_dirs_deps_cpp_info_test(self):
         folder = temp_folder()
         info = CppInfo(folder)
         info.components["Component"]
@@ -415,38 +399,6 @@ class CppInfoComponentsTest(unittest.TestCase):
         self.assertListEqual([os.path.join(folder, "")], deps_cpp_info.builddirs)
         self.assertListEqual([os.path.join(folder, "res")], deps_cpp_info.resdirs)
         self.assertListEqual([os.path.join(folder, "Frameworks")], deps_cpp_info.frameworkdirs)
-
-    def deps_cpp_info_sysroot_test(self):
-        """
-        Sysroot should have the value set by the most direct dependency
-        """
-        folder = temp_folder()
-        info = CppInfo(folder)
-        info.sysroot = "hola"
-        deps_cpp_info = DepsCppInfo()
-        deps_cpp_info.update(info, "my_lib")
-        self.assertEqual("hola", deps_cpp_info.sysroot)
-        other_info = CppInfo(folder)
-        other_info.sysroot = "kk"
-        deps_cpp_info.update(other_info, "my_other_lib")
-        self.assertEqual("hola", deps_cpp_info.sysroot)
-
-    def deps_cpp_info_cflags_test(self):
-        """
-        Order of nodes in the graph is computed from bottom (node with more dependencies) to top
-        (node with no dependencies). Order of flags should be from less dependent to the most
-        dependent one.
-        """
-        folder = temp_folder()
-        info = CppInfo(folder)
-        info.cflags = ["my_lib_flag"]
-        deps_cpp_info = DepsCppInfo()
-        deps_cpp_info.update(info, "my_lib")
-        self.assertEqual(["my_lib_flag"], deps_cpp_info.cflags)
-        other_info = CppInfo(folder)
-        other_info.cflags = ["my_other_lib_flag"]
-        deps_cpp_info.update(other_info, "my_other_lib")
-        self.assertEqual(["my_other_lib_flag", "my_lib_flag"], deps_cpp_info.cflags)
 
     def deps_cpp_info_components_test(self):
         folder = temp_folder()

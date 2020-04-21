@@ -348,7 +348,7 @@ class DepCppInfo(object):
                 ordered = OrderedDict()
                 components = copy(self._cpp_info.components)
                 while len(ordered) != len(self._cpp_info.components):
-                    # Search for next element to be processed
+                    # Search next element to be processed
                     for comp_name, comp in components.items():
                         if comp_name in ordered:
                             continue
@@ -362,8 +362,8 @@ class DepCppInfo(object):
                             del components[comp_name]
                             break
                     else:
-                        raise ConanException("There is a dependency loop in the components declared "
-                                             "in 'self.cpp_info.components'")
+                        raise ConanException("There is a dependency loop in "
+                                             "'self.cpp_info.components'")
                 self._sorted_components = ordered
             else:  # If components do not have requirements, keep them in the same order
                 self._sorted_components = self._cpp_info.components
