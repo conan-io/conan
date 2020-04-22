@@ -250,9 +250,7 @@ def cmd_new(ref, header=False, pure_c=False, test=False, exports_sources=False, 
             user, channel = tokens[1].split("/")
         else:
             user, channel = "user", "channel"
-
-        pattern = re.compile('[\W_]+')
-        package_name = pattern.sub('', name).capitalize()
+        package_name = re.sub(r"(?:^|[\W_])(\w)", lambda x: x.group(1).upper(), name)
     except ValueError:
         raise ConanException("Bad parameter, please use full package name,"
                              "e.g.: MyLib/1.2.3@user/testing")
