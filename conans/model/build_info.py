@@ -217,17 +217,6 @@ class CppInfo(_CppInfo):
             raise ConanException("self.cpp_info.components cannot be used with self.cpp_info configs"
                                  " (release/debug/...) at the same time")
 
-    def _raise_if_components_without_separator(self):
-        for comp_name, comp in self.components.items():
-            for require in comp.requires:
-                if COMPONENT_SCOPE not in require:
-                    msg_tmpl = "Require '{require}' in self.cpp_info.component['{" \
-                               "comp_name}'].requires does not include {sep} in its name. Use " \
-                               "'{sep}{require}' to indicate dependency among components."
-                    msg = msg_tmpl.format(require=require, comp_name=comp_name,
-                                          sep=COMPONENT_SCOPE)
-                    raise ConanException(msg)
-
     def _raise_if_scoped_requires_in_components(self):
         for comp_name, comp in self.components.items():
             for require in comp.requires:
