@@ -56,9 +56,9 @@ class DepsGraphBuilder(object):
         root_node.public_closure.add(root_node)
         root_node.public_deps.add(root_node)
         root_node.transitive_closure[root_node.name] = root_node
-        root_node.conanfile.settings_build = profile_build.processed_settings.copy() \
-            if profile_build else None
-        root_node.conanfile.settings_target = None
+        if profile_build:
+            root_node.conanfile.settings_build = profile_build.processed_settings.copy()
+            root_node.conanfile.settings_target = None
         dep_graph.add_node(root_node)
 
         # enter recursive computation
