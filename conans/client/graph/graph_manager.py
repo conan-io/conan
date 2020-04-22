@@ -307,7 +307,7 @@ class GraphManager(object):
                             # but the dict key is not used at all
                             package_build_requires[br_key] = build_require
                         # Profile one or in different context
-                        elif build_require.name != node.name or default_context != node.contex:
+                        elif build_require.name != node.name or default_context != node.context:
                             new_profile_build_requires.append((build_require, default_context))
 
             if package_build_requires:
