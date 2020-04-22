@@ -12,6 +12,10 @@ content = """
             tr td {
                 white-space:nowrap;
             }
+            tbody .monospaced {
+                font-family: "Courier New", Courier, monospace;
+                font-size: 80%;
+            }
         </style>
     </head>
     <body>
@@ -68,13 +72,17 @@ content = """
                 // Setup - add a text input to each footer cell
                 $('#example tfoot th').each( function () {
                     var title = $(this).text();
-                    $(this).html( '<input type="text" placeholder="Search '+title+'" />' );
+                    $(this).html( '<input type="text" placeholder="Filter '+title+'" />' );
                 });
 
                 var table = $('#example').DataTable( {
                     "dom": "lrtip",
                     "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]],
-                    "columnDefs": [{ className: "cell_border_right", "targets": [ {{ headers.keys|length -1 }}, {{ headers.keys|length + headers.settings|length -1 }}, {{ headers.keys|length + headers.settings|length + headers.options|length -1 }}  ] }]
+                    "pageLength": 10,
+                    "columnDefs": [
+                        { className: "cell_border_right", "targets": [ {{ headers.keys|length + headers.settings|length -1 }}, {{ headers.keys|length + headers.settings|length + headers.options|length -1 }}  ] },
+                        { className: "cell_border_right monospaced", "targets": [{{ headers.keys|length -1 }}, ]}
+                    ]
                 });
 
                 // Apply the search
