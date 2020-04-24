@@ -70,7 +70,7 @@ requirement_tpl = Template(textwrap.dedent("""
     include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
     conan_basic_setup(TARGETS)
 
-    target_link_libraries(<library_name> {{ cpp_info.get_name("cmake") }}::{{ name }})
+    target_link_libraries(<library_name> CONAN_PKG::{{ cpp_info.get_name("cmake") }})
     ```
 
 
