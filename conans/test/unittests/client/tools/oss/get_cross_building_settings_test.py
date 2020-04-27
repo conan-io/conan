@@ -1,12 +1,15 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from mock import mock
 import unittest
+
+from mock import mock
 
 from conans.client.tools.oss import get_cross_building_settings, OSInfo
 from conans.test.utils.conanfile import MockSettings
 
+
+# TODO: Add tests using settings_host and settings_build
 
 class GetCrossBuildSettingsTest(unittest.TestCase):
     def test_windows(self):
