@@ -217,13 +217,20 @@ class CppInfo(_CppInfo):
             raise ConanException("self.cpp_info.components cannot be used with self.cpp_info configs"
                                  " (release/debug/...) at the same time")
 
-    def _raise_if_scoped_requires_in_components(self):
+    def _raise_if_not_scoped_requires_in_components(self):
         for comp_name, comp in self.components.items():
             for require in comp.requires:
-                if COMPONENT_SCOPE in require:
-                    msg = "Character '%s' is not allowed in self.cpp_info.components[" \
-                          "'%s'].requires names" % COMPONENT_SCOPE
+                if COMPONENT_SCOPE not in require:
+                    msg = "Character '%s' not found in one or more of the " \
+                          "self.cpp_info.components['%s'].requires: %s"\
+                          % (COMPONENT_SCOPE, comp_name, comp.requires)
                     raise ConanException(msg)
+
+    def _raise_components_name(self, name):
+        for comp_name in self.components:
+            if comp_name == name:
+                raise ConanException("Component name cannot be the same as the package name: '%s'"
+                                     % comp_name)
 
 
 class _BaseDepsCppInfo(_CppInfo):
@@ -313,6 +320,7 @@ class DepCppInfo(object):
         self._framework_paths = None
         self._build_module_paths = None
         self._sorted_components = None
+        self._check_component_requires()
 
     def __getattr__(self, item):
         try:
@@ -347,33 +355,42 @@ class DepCppInfo(object):
         setattr(self, "_%s_paths" % item, paths)
         return paths
 
+    @staticmethod
+    def _filter_component_requires(requires):
+        filtered_requires = []
+        for require in requires:
+            if require.startswith(COMPONENT_SCOPE):
+                filtered_requires.append(require[len(COMPONENT_SCOPE):])
+        return filtered_requires
+
+    def _check_component_requires(self):
+        for comp_name, comp in self._cpp_info.components.items():
+            if not all([require in self._cpp_info.components for require in
+                        self._filter_component_requires(comp.requires)]):
+                raise ConanException("Component '%s' declares a missing dependency" % comp_name)
+
     def _get_sorted_components(self):
         """
         Sort Components from most dependent one first to the less dependent one last
         :return: List of sorted components
         """
         if not self._sorted_components:
-            if any([[require for require in comp.requires] for comp in
-                    self._cpp_info.components.values()]):
+            if any([[require for require in self._filter_component_requires(comp.requires)]
+                    for comp in self._cpp_info.components.values()]):
                 ordered = OrderedDict()
                 components = copy(self._cpp_info.components)
                 while len(ordered) != len(self._cpp_info.components):
                     # Search next element to be processed
                     for comp_name, comp in components.items():
-                        if comp_name in ordered:
-                            continue
-                        # check if all the deps are declared
-                        if not all([require in components for require in comp.requires]):
-                            raise ConanException("Component '%s' declares a missing dependency" % comp_name)
-                        # check if component is not required and can be added to ordered
+                        # Check if component is not required and can be added to ordered
                         if comp_name not in [require for dep in components.values() for require in
-                                             dep.requires]:
+                                             self._filter_component_requires(dep.requires)]:
                             ordered[comp_name] = comp
                             del components[comp_name]
                             break
                     else:
                         raise ConanException("There is a dependency loop in "
-                                             "'self.cpp_info.components'")
+                                             "'self.cpp_info.components' requires")
                 self._sorted_components = ordered
             else:  # If components do not have requirements, keep them in the same order
                 self._sorted_components = self._cpp_info.components

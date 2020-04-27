@@ -563,7 +563,8 @@ class BinaryInstaller(object):
                     if conanfile._conan_dep_cpp_info is None:
                         try:
                             conanfile.cpp_info._raise_if_mixing_components()
-                            conanfile.cpp_info._raise_if_scoped_requires_in_components()
+                            conanfile.cpp_info._raise_if_not_scoped_requires_in_components()
+                            conanfile.cpp_info._raise_components_name(conanfile.name)
                         except ConanException as e:
                             raise ConanException("%s package_info(): %s" % (str(conanfile), e))
                         conanfile._conan_dep_cpp_info = DepCppInfo(conanfile.cpp_info)

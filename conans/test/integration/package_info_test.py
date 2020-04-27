@@ -212,7 +212,7 @@ class HelloConan(ConanFile):
         conanfile = textwrap.dedent("""
             from conans import ConanFile
 
-            class Intermediate(ConanFile):
+            class MyConan(ConanFile):
 
                 def package_info(self):
                     self.cpp_info.defines.append("defint")
@@ -227,7 +227,7 @@ class HelloConan(ConanFile):
         conanfile = textwrap.dedent("""
             from conans import ConanFile
 
-            class Intermediate(ConanFile):
+            class MyConan(ConanFile):
 
                 def package_info(self):
                     self.cpp_info.release.defines.append("defint")
@@ -237,6 +237,19 @@ class HelloConan(ConanFile):
         client.run("create conanfile.py dep/1.0@us/ch", assert_error=True)
         self.assertIn("dep/1.0@us/ch package_info(): self.cpp_info.components cannot be used "
                       "with self.cpp_info configs (release/debug/...) at the same time", client.out)
+
+        conanfile = textwrap.dedent("""
+                    from conans import ConanFile
+
+                    class MyConan(ConanFile):
+
+                        def package_info(self):
+                            self.cpp_info.components["dep"].libs.append("libint1")
+                """)
+        client.save({"conanfile.py": conanfile})
+        client.run("create conanfile.py dep/1.0@us/ch", assert_error=True)
+        self.assertIn("dep/1.0@us/ch package_info(): Component name cannot be the same as the "
+                      "package name: 'dep'", client.out)
 
     def package_info_components_complete_test(self):
         dep = textwrap.dedent("""
@@ -252,13 +265,13 @@ class HelloConan(ConanFile):
                     self.cpp_info.components["Starlight"].libs = ["libstarlight"]
                     self.cpp_info.components["Planet"].includedirs = [os.path.join("galaxy", "planet")]
                     self.cpp_info.components["Planet"].libs = ["libplanet"]
-                    self.cpp_info.components["Planet"].requires = ["Starlight"]
+                    self.cpp_info.components["Planet"].requires = ["::Starlight"]
                     self.cpp_info.components["Launcher"].system_libs = ["ground"]
                     self.cpp_info.components["ISS"].includedirs = [os.path.join("galaxy", "iss")]
                     self.cpp_info.components["ISS"].libs = ["libiss"]
                     self.cpp_info.components["ISS"].libdirs = ["iss_libs"]
                     self.cpp_info.components["ISS"].system_libs = ["solar", "magnetism"]
-                    self.cpp_info.components["ISS"].requires = ["Starlight", "Launcher"]
+                    self.cpp_info.components["ISS"].requires = ["::Starlight", "::Launcher"]
         """)
         consumer = textwrap.dedent("""
         from conans import ConanFile
@@ -382,5 +395,5 @@ class HelloConan(ConanFile):
         self.assertIn("COMP ISS System libs: %s" % expected_comp_iss_system_libs, client.out)
         self.assertIn("COMP Starlight Requires: %s" % [], client.out)
         self.assertIn("COMP Launcher Requires: %s" % [], client.out)
-        self.assertIn("COMP Planet Requires: %s" % ["Starlight"], client.out)
-        self.assertIn("COMP ISS Requires: %s" % ["Starlight", "Launcher"], client.out)
+        self.assertIn("COMP Planet Requires: %s" % ["::Starlight"], client.out)
+        self.assertIn("COMP ISS Requires: %s" % ["::Starlight", "::Launcher"], client.out)
