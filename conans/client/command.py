@@ -2,11 +2,12 @@ import argparse
 import inspect
 import json
 import os
+import signal
 import sys
 from argparse import ArgumentError
 from difflib import get_close_matches
 
-from six.moves import input as raw_input
+from six.moves import input as user_input
 
 from conans import __version__ as client_version
 from conans.client.cmd.frogarian import cmd_frogarian
@@ -92,8 +93,8 @@ _BUILD_FOLDER_HELP = ("Directory for the build process. Defaulted to the current
                       "relative path to the current directory can also be specified")
 _INSTALL_FOLDER_HELP = ("Directory containing the conaninfo.txt and conanbuildinfo.txt files "
                         "(from previous 'conan install'). Defaulted to --build-folder")
-_KEEP_SOURCE_HELP = ("Do not remove the source folder in the local cache, even if the recipe changed. "
-                     "Use this for testing purposes only")
+_KEEP_SOURCE_HELP = ("Do not remove the source folder in the local cache, "
+                     "even if the recipe changed. Use this for testing purposes only")
 _PATTERN_OR_REFERENCE_HELP = ("Pattern or package recipe reference, e.g., '%s', "
                               "'%s'" % (_PATTERN_EXAMPLE, _REFERENCE_EXAMPLE))
 _PATTERN_REF_OR_PREF_HELP = ("Pattern, recipe reference or package reference e.g., '%s', "
@@ -110,8 +111,8 @@ _SOURCE_FOLDER_HELP = ("Directory containing the sources. Defaulted to the conan
 
 class Command(object):
     """A single command of the conan application, with all the first level commands. Manages the
-    parsing of parameters and delegates functionality in collaborators. It can also show the help of the
-    tool.
+    parsing of parameters and delegates functionality in collaborators. It can also show the
+    help of the tool.
     """
     def __init__(self, conan_api):
         assert isinstance(conan_api, Conan)
@@ -292,8 +293,8 @@ class Command(object):
                                     options=args.options_build, env=args.env_build)
 
         return self._conan.test(args.path, args.reference,
-                                args.profile_host, args.settings_host, args.options_host, args.env_host,
-                                remote_name=args.remote, update=args.update,
+                                args.profile_host, args.settings_host, args.options_host,
+                                args.env_host, remote_name=args.remote, update=args.update,
                                 build_modes=args.build, test_build_folder=args.test_build_folder,
                                 lockfile=args.lockfile, profile_build=profile_build)
 
@@ -359,8 +360,8 @@ class Command(object):
                                         options=args.options_build, env=args.env_build)
 
             info = self._conan.create(args.path, name, version, user, channel,
-                                      args.profile_host, args.settings_host, args.options_host, args.env_host,
-                                      args.test_folder, args.not_export,
+                                      args.profile_host, args.settings_host, args.options_host,
+                                      args.env_host, args.test_folder, args.not_export,
                                       args.build, args.keep_source, args.keep_build, args.verify,
                                       args.manifests, args.manifests_interactive,
                                       args.remote, args.update,
@@ -479,7 +480,8 @@ class Command(object):
         info = None
         try:
             if not path_is_reference:
-                name, version, user, channel, _ = get_reference_fields(args.reference, user_channel_input=True)
+                name, version, user, channel, _ = get_reference_fields(args.reference,
+                                                                       user_channel_input=True)
                 info = self._conan.install(path=args.path_or_reference,
                                            name=name, version=version, user=user, channel=channel,
                                            settings=args.settings_host, options=args.options_host,
@@ -501,8 +503,10 @@ class Command(object):
                 ref = ConanFileReference.loads(args.path_or_reference, validate=False)
                 manifest_interactive = args.manifests_interactive
                 info = self._conan.install_reference(ref,
-                                                     settings=args.settings_host, options=args.options_host,
-                                                     env=args.env_host, profile_names=args.profile_host,
+                                                     settings=args.settings_host,
+                                                     options=args.options_host,
+                                                     env=args.env_host,
+                                                     profile_names=args.profile_host,
                                                      profile_build=profile_build,
                                                      remote_name=args.remote,
                                                      verify=args.verify, manifests=args.manifests,
@@ -648,7 +652,8 @@ class Command(object):
             self._out.warn("Usage of `--build-order` argument is deprecated and can return"
                            " wrong results. Use `conan graph build-order ...` instead.")
 
-        if args.install_folder and (args.profile_host or args.settings_host or args.options_host or args.env_host):
+        if args.install_folder and (args.profile_host or args.settings_host
+                                    or args.options_host or args.env_host):
             raise ArgumentError(None, "--install-folder cannot be used together with a"
                                       " host profile (-s, -o, -e or -pr)")
 
@@ -1716,7 +1721,8 @@ class Command(object):
         install_parser.add_argument('path', help='path to workspace definition file (it will look'
                                                  ' for a "conanws.yml" inside if a directory is'
                                                  ' given)')
-        _add_common_install_arguments(install_parser, build_help=_help_build_policies.format("never"))
+        _add_common_install_arguments(install_parser,
+                                      build_help=_help_build_policies.format("never"))
         install_parser.add_argument("-if", "--install-folder", action=OnceArgument,
                                     help="Folder where the workspace files will be created"
                                          " (default to current working directory)")
@@ -1726,8 +1732,8 @@ class Command(object):
                                     options=args.options_build, env=args.env_build)
 
         if args.subcommand == "install":
-            self._conan.workspace_install(args.path, args.settings_host, args.options_host, args.env_host,
-                                          args.remote, args.build,
+            self._conan.workspace_install(args.path, args.settings_host, args.options_host,
+                                          args.env_host, args.remote, args.build,
                                           args.profile_host, args.update,
                                           profile_build=profile_build,
                                           install_folder=args.install_folder)
@@ -1937,27 +1943,28 @@ class Command(object):
         version = sys.version_info
         if version.major == 2:
             self._out.writeln("*"*width, front=Color.BRIGHT_RED)
-
-            self._out.writeln(textwrap.fill("Python 2 is deprecated as of 01/01/2020 and Conan has"
-                                            " stopped supporting it officially. We strongly recommend"
-                                            " you to use Python >= 3.5. Conan will completely stop"
-                                            " working with Python 2 in the following releases", width),
-                              front=Color.BRIGHT_RED)
+            msg = textwrap.fill("Python 2 is deprecated as of 01/01/2020 and Conan has"
+                                " stopped supporting it officially. We strongly recommend"
+                                " you to use Python >= 3.5. Conan will completely stop"
+                                " working with Python 2 in the following releases", width)
+            self._out.writeln(msg, front=Color.BRIGHT_RED)
             self._out.writeln("*"*width, front=Color.BRIGHT_RED)
             if os.environ.get('USE_UNSUPPORTED_CONAN_WITH_PYTHON_2', 0):
-                # IMPORTANT: This environment variable is not a silver buller. Python 2 is currently deprecated
-                # and some libraries we use as dependencies have stopped supporting it. Conan might fail to run
-                # and we are no longer fixing errors related to Python 2.
+                # IMPORTANT: This environment variable is not a silver buller. Python 2 is currently
+                # deprecated and some libraries we use as dependencies have stopped supporting it.
+                # Conan might fail to run and we are no longer fixing errors related to Python 2.
                 self._out.writeln(textwrap.fill("Python 2 deprecation notice has been bypassed"
-                                                " by envvar 'USE_UNSUPPORTED_CONAN_WITH_PYTHON_2'", width))
+                                                " by envvar 'USE_UNSUPPORTED_CONAN_WITH_PYTHON_2'",
+                                                width))
             else:
-                self._out.writeln(textwrap.fill("If you really need to run Conan with Python 2 in your"
-                                                " CI without this interactive input, please contact us"
-                                                " at info@conan.io", width), front=Color.BRIGHT_RED)
+                msg = textwrap.fill("If you really need to run Conan with Python 2 in your"
+                                    " CI without this interactive input, please contact us"
+                                    " at info@conan.io", width)
+                self._out.writeln(msg, front=Color.BRIGHT_RED)
                 self._out.writeln("*" * width, front=Color.BRIGHT_RED)
                 self._out.write(textwrap.fill("Understood the risk, keep going [y/N]: ", width,
                                               drop_whitespace=False), front=Color.BRIGHT_RED)
-                ret = raw_input().lower()
+                ret = user_input().lower()
                 if ret not in ["yes", "ye", "y"]:
                     self._out.writeln(textwrap.fill("Wise choice. Stopping here!", width))
                     sys.exit(0)
@@ -2138,29 +2145,24 @@ def main(args):
         sys.stderr.write("Error in Conan initialization: {}".format(e))
         sys.exit(ERROR_GENERAL)
 
+    def ctrl_c_handler(_, __):
+        print('You pressed Ctrl+C!')
+        sys.exit(USER_CTRL_C)
+
+    def sigterm_handler(_, __):
+        print('Received SIGTERM!')
+        sys.exit(ERROR_SIGTERM)
+
+    def ctrl_break_handler(_, __):
+        print('You pressed Ctrl+Break!')
+        sys.exit(USER_CTRL_BREAK)
+
+    signal.signal(signal.SIGINT, ctrl_c_handler)
+    signal.signal(signal.SIGTERM, sigterm_handler)
+
+    if sys.platform == 'win32':
+        signal.signal(signal.SIGBREAK, ctrl_break_handler)
+
     command = Command(conan_api)
-    current_dir = get_cwd()
-    try:
-        import signal
-
-        def ctrl_c_handler(_, __):
-            print('You pressed Ctrl+C!')
-            sys.exit(USER_CTRL_C)
-
-        def sigterm_handler(_, __):
-            print('Received SIGTERM!')
-            sys.exit(ERROR_SIGTERM)
-
-        def ctrl_break_handler(_, __):
-            print('You pressed Ctrl+Break!')
-            sys.exit(USER_CTRL_BREAK)
-
-        signal.signal(signal.SIGINT, ctrl_c_handler)
-        signal.signal(signal.SIGTERM, sigterm_handler)
-
-        if sys.platform == 'win32':
-            signal.signal(signal.SIGBREAK, ctrl_break_handler)
-        error = command.run(args)
-    finally:
-        os.chdir(current_dir)
+    error = command.run(args)
     sys.exit(error)

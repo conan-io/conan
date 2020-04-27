@@ -19,6 +19,7 @@ from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
 from conans.model.values import Values
 from conans.paths import DATA_YML
+from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
 from conans.util.files import load
 
 
@@ -67,7 +68,8 @@ class ConanFileLoader(object):
                 if scm_data:
                     conanfile.scm.update(scm_data)
 
-            self._cached_conanfile_classes[conanfile_path] = (conanfile, lock_python_requires, module)
+            self._cached_conanfile_classes[conanfile_path] = (conanfile, lock_python_requires,
+                                                              module)
             result = conanfile(self._output, self._runner, display, user, channel)
             if hasattr(result, "init") and callable(result.init):
                 result.init()
@@ -129,6 +131,9 @@ class ConanFileLoader(object):
             raise ConanException("conanfile didn't specify name")
         if not conanfile.version:
             raise ConanException("conanfile didn't specify version")
+
+        if os.environ.get(CONAN_V2_MODE_ENVVAR, False):
+            conanfile.version = str(conanfile.version)
 
         ref = ConanFileReference(conanfile.name, conanfile.version, user, channel)
         conanfile.display_name = str(ref)
@@ -194,7 +199,8 @@ class ConanFileLoader(object):
         conanfile, _ = self.load_basic_module(conanfile_path, lock_python_requires,
                                               ref.user, ref.channel, str(ref))
         conanfile.name = ref.name
-        conanfile.version = ref.version
+        conanfile.version = str(ref.version) \
+            if os.environ.get(CONAN_V2_MODE_ENVVAR, False) else ref.version
 
         if profile.dev_reference and profile.dev_reference == ref:
             conanfile.develop = True
@@ -239,7 +245,11 @@ class ConanFileLoader(object):
 
         conanfile.generators = parser.generators
 
-        options = OptionsValues.loads(parser.options)
+        try:
+            options = OptionsValues.loads(parser.options)
+        except Exception:
+            raise ConanException("Error while parsing [options] in conanfile\n"
+                                 "Options should be specified as 'pkg:option=value'")
         conanfile.options.values = options
         conanfile.options.initialize_upstream(profile.user_options)
 

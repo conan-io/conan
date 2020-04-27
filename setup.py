@@ -27,8 +27,6 @@ def get_requires(filename):
 
 
 project_requirements = get_requires("conans/requirements.txt")
-if platform.system() == "Darwin":
-    project_requirements.extend(get_requires("conans/requirements_osx.txt"))
 project_requirements.extend(get_requires("conans/requirements_server.txt"))
 dev_requirements = get_requires("conans/requirements_dev.txt")
 # The tests utils are used by conan-package-tools
@@ -38,12 +36,12 @@ exclude_test_packages = ["conans.test.{}*".format(d)
 
 
 def load_version():
-    '''Loads a file content'''
+    """ Loads a file content """
     filename = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                             "conans", "__init__.py"))
     with open(filename, "rt") as version_file:
         conan_init = version_file.read()
-        version = re.search("__version__ = '([0-9a-z.-]+)'", conan_init).group(1)
+        version = re.search(r"__version__ = '([0-9a-z.-]+)'", conan_init).group(1)
         return version
 
 
@@ -81,10 +79,10 @@ setup(
         'Intended Audience :: Developers',
         'Topic :: Software Development :: Build Tools',
         'License :: OSI Approved :: MIT License',
-        'Programming Language :: Python :: 2',
-        'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.6'
+        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8'
     ],
 
     # What does your project relate to?
