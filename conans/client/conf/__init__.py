@@ -475,6 +475,14 @@ class ConanClientConfigParser(ConfigParser, object):
             return None
 
     @property
+    def package_installs(self):
+        try:
+            fix_id = self.get_item("general.package_installs")
+            return fix_id.lower() in ("1", "true")
+        except ConanException:
+            return None
+
+    @property
     def relax_lockfile(self):
         try:
             fix_id = self.get_item("general.relax_lockfile")

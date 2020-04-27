@@ -163,6 +163,9 @@ class _PackageBuilder(object):
 
         update_package_metadata(prev, package_layout, package_id, pref.ref.revision)
 
+        if self._cache.config.package_installs:
+            install = package_layout.install(pref)
+            shutil.copytree(package_folder, install, symlinks=True)
         if get_env("CONAN_READ_ONLY_CACHE", False):
             make_read_only(package_folder)
         # FIXME: Conan 2.0 Clear the registry entry (package ref)
@@ -474,6 +477,8 @@ class BinaryInstaller(object):
                     self._recorder.package_fetched_from_cache(pref)
 
             # Call the info method
+            if self._cache.config.package_installs:
+                package_folder = layout.install(pref)
             self._call_package_info(conanfile, package_folder, ref=pref.ref)
             self._recorder.package_cpp_info(pref, conanfile.cpp_info)
 
