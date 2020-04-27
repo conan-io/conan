@@ -101,18 +101,17 @@ set_property(TARGET {name}::{name}
         build_type = str(self.conanfile.settings.build_type)
         build_type_suffix = "_{}".format(build_type.upper()) if build_type else ""
         for _, cpp_info in self.deps_build_info.dependencies:
-            # If any config matches the build_type one, add it to the cpp_info
-            dep_cpp_info = extend(cpp_info, build_type.lower())
-
             depname = cpp_info.get_name("cmake_find_package_multi")
             public_deps_names = [self.deps_build_info[dep].get_name("cmake_find_package_multi")
                                  for dep in cpp_info.public_deps]
             ret["{}Config.cmake".format(depname)] = self._config(depname, cpp_info.version,
                                                                  public_deps_names)
             ret["{}ConfigVersion.cmake".format(depname)] = self.config_version_template.\
-                format(version=dep_cpp_info.version)
+                format(version=cpp_info.version)
             ret["{}Targets.cmake".format(depname)] = self.targets_template.format(name=depname)
 
+            # If any config matches the build_type one, add it to the cpp_info
+            dep_cpp_info = extend(cpp_info, build_type.lower())
             deps = DepsCppCmake(dep_cpp_info)
             deps_names = ";".join(["{n}::{n}".format(n=n) for n in public_deps_names])
             find_lib = target_template.format(name=depname, deps=deps,
