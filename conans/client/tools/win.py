@@ -363,7 +363,7 @@ def vcvars_command(conanfile=None, arch=None, compiler_version=None, force=False
         conanfile = namedtuple('_ConanFile', ['settings'])(settings)
     del settings
 
-
+    # Here starts the actual implementation for this function
     output = default_output(output, 'conans.client.tools.win.vcvars_command')
 
     arch_setting = arch or conanfile.settings.get_safe("arch")
@@ -387,7 +387,8 @@ def vcvars_command(conanfile=None, arch=None, compiler_version=None, force=False
     vcvars_arch = None
     arch_setting = arch_setting or 'x86_64'
 
-    _, arch_build = get_build_os_arch(conanfile)
+    _, settings_arch_build = get_build_os_arch(conanfile)
+    arch_build = settings_arch_build
     if not hasattr(conanfile, 'settings_build'):
         arch_build = arch_build or detected_architecture()
 
@@ -397,7 +398,7 @@ def vcvars_command(conanfile=None, arch=None, compiler_version=None, force=False
         # Only uses x64 tooling if arch_build explicitly defines it, otherwise
         # Keep the VS default, which is x86 toolset
         # This will probably be changed in conan 2.0
-        if ((arch_build or os.getenv("PreferredToolArchitecture") == "x64")
+        if ((settings_arch_build or os.getenv("PreferredToolArchitecture") == "x64")
            and int(compiler_version) >= 12):
             x86_cross = "amd64_x86"
         else:
