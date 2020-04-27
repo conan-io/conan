@@ -104,7 +104,8 @@ def decode_text(text, encoding="auto"):
 
 def touch(fname, times=None):
     with open(fname, 'a'):
-        os.utime(fname, times)
+        pass
+    os.utime(fname, times)
 
 
 def touch_folder(folder):
@@ -433,4 +434,3 @@ def merge_directories(src, dst, excluded=None):
                 link_to_rel(src_file)
             else:
                 shutil.copy2(src_file, dst_file)
-
