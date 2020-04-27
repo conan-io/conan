@@ -403,8 +403,8 @@ class CppInfoComponentsTest(unittest.TestCase):
     def deps_cpp_info_components_test(self):
         folder = temp_folder()
         info = CppInfo(folder)
-        save(os.path.join(folder, "include", "my_file.h"), "")  # Create file so path is not
-        # cleared
+        # Create file so path is not cleared
+        save(os.path.join(folder, "include", "my_file.h"), "")
         info.components["Component"].libs = ["libcomp"]
         dep_info = DepCppInfo(info)
         deps_cpp_info = DepsCppInfo()
