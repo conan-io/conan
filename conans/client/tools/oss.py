@@ -440,7 +440,7 @@ def cross_building(conanfile=None, self_os=None, self_arch=None, skip_x64_x86=Fa
     else:
         # TODO: If Conan is using 'profile_build' here we don't have any information about it,
         #   we are falling back to the old behavior (which is probably wrong here)
-        conanfile = namedtuple('', ['settings'])(settings)
+        conanfile = namedtuple('_ConanFile', ['settings'])(settings)
         ret = get_cross_building_settings(conanfile, self_os, self_arch)
 
     build_os, build_arch, host_os, host_arch = ret

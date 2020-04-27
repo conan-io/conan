@@ -360,7 +360,7 @@ def vcvars_command(conanfile=None, arch=None, compiler_version=None, force=False
     if not conanfile:
         # TODO: If Conan is using 'profile_build' here we don't have any information about it,
         #   we are falling back to the old behavior (which is probably wrong here)
-        conanfile = namedtuple('', ['settings'])(settings)
+        conanfile = namedtuple('_ConanFile', ['settings'])(settings)
     del settings
 
 
