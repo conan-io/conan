@@ -541,13 +541,13 @@ class Pkg(ConanFile):
         content = load(client.cache.conan_conf_path)
 
         self.assertEqual(1, content.count("config_install_interval"))
-        self.assertTrue(os.path.exists(client.cache.sched_path))
-        self.assertLess(os.path.getmtime(client.cache.sched_path), time.time())
+        self.assertTrue(os.path.exists(client.cache.config_install_file))
+        self.assertLess(os.path.getmtime(client.cache.config_install_file), time.time())
 
         # 2 - Must execute again
         client.run('config install "%s"' % folder)
         self.assertIn("Processing conan.conf", client.out)
-        self.assertLess(os.path.getmtime(client.cache.sched_path), time.time())
+        self.assertLess(os.path.getmtime(client.cache.config_install_file), time.time())
 
         # 3 - Must not execute: seconds are not allowed
         client.run('config set general.config_install_interval=1s')
@@ -564,8 +564,8 @@ class Pkg(ConanFile):
             client.run('config get general.config_install_interval')
             self.assertIn("Processing conan.conf", client.out)
 
-        # 5 - Must execute: sched file has been removed after first interaction
-        os.remove(client.cache.sched_path)
+        # 5 - Must not execute: config_install.json has been removed after first interaction
+        os.remove(client.cache.config_install_file)
         client.run('config get general.config_install_interval')
-        self.assertIn("Processing conan.conf", client.out)
-        self.assertLess(os.path.getmtime(client.cache.sched_path), time.time())
+        self.assertNotIn("Processing conan.conf", client.out)
+        self.assertFalse(os.path.exists(client.cache.config_install_file))

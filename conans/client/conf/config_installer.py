@@ -215,16 +215,16 @@ def _get_current_time_now():
     return datetime.now(gettz())
 
 
-def _next_scheduled_config_install(sched_path, value, interval):
+def _next_scheduled_config_install(config_install_path, value, interval):
     """ Return when the next config install should occur.
         In case of error, the next config install should occur immediately
 
-    :param sched_path: sched file path in conan cache
+    :param config_install_path: config_install.json path in conan cache
     :param value: time interval value e.g 5 from 5m
     :param interval: time interval unit e.g m from 5m
     :return: datetime instance + time interval
     """
-    timestamp = os.path.getmtime(sched_path)
+    timestamp = os.path.getmtime(config_install_path)
     sched = datetime.fromtimestamp(timestamp, tz=gettz())
     if interval == 'm':
         sched += timedelta(minutes=float(value))
@@ -233,10 +233,6 @@ def _next_scheduled_config_install(sched_path, value, interval):
     else:
         sched += timedelta(days=float(value))
     return sched
-
-
-def _get_config_install_interval(config):
-    return config.get_item("general.config_install_interval")
 
 
 def configuration_install(app, uri, verify_ssl, config_type=None,
@@ -280,8 +276,8 @@ def configuration_install(app, uri, verify_ssl, config_type=None,
             configs = [(c if c != config else config) for c in configs]
         _save_configs(configs_file, configs)
     try:
-        if _get_config_install_interval(cache.config):
-            touch(cache.sched_path)
+        if cache.config.config_install_interval:
+            touch(cache.config_install_file)
     except ConanException:
         pass
 
@@ -296,17 +292,14 @@ def is_config_install_scheduled(api):
     :param api: Conan API instance
     :return: True, if it should occur now. Otherwise, False.
     """
-    try:
-        cache = ClientCache(api.cache_folder, api.out)
-        interval = _get_config_install_interval(cache.config)
-    except ConanException:
-        return False
-    else:
+    cache = ClientCache(api.cache_folder, api.out)
+    interval = cache.config.config_install_interval
+    if interval is not None:
         match = re.search(r"(\d+)([mhd])", interval)
         if match:
-            if not os.path.exists(cache.sched_path):
-                return True
-            sched = _next_scheduled_config_install(cache.sched_path, match.group(1), match.group(2))
+            if not os.path.exists(cache.config_install_file):
+                return False
+            sched = _next_scheduled_config_install(cache.config_install_file, match.group(1), match.group(2))
             if not sched:
                 return True
             now = _get_current_time_now()

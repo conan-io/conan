@@ -686,3 +686,10 @@ class ConanClientConfigParser(ConfigParser, object):
             "notset": logging.NOTSET
         }
         return levels.get(str(level_name).lower())
+
+    @property
+    def config_install_interval(self):
+        try:
+            return self.get_item("general.config_install_interval")
+        except ConanException:
+            return None

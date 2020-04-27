@@ -27,7 +27,6 @@ LOCALDB = ".conan.db"
 REMOTES = "remotes.json"
 PROFILES_FOLDER = "profiles"
 HOOKS_FOLDER = "hooks"
-SCHED_FILE = '.conan_config_install_sched'
 
 
 def is_case_insensitive_os():
@@ -163,10 +162,6 @@ class ClientCache(object):
     @property
     def settings_path(self):
         return join(self.cache_folder, CONAN_SETTINGS)
-
-    @property
-    def sched_path(self):
-        return join(self.cache_folder, SCHED_FILE)
 
     @property
     def default_profile_path(self):
