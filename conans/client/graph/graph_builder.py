@@ -403,7 +403,7 @@ class DepsGraphBuilder(object):
 
     def _create_new_node(self, current_node, dep_graph, requirement, check_updates,
                          update, remotes, profile_host, profile_build, graph_lock, context_switch,
-                         populate_settings_target=True):
+                         populate_settings_target):
         # If there is a context_switch, it is because it is a BR-build
         if context_switch:
             profile = profile_build
