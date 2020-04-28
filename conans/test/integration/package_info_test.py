@@ -155,6 +155,7 @@ class HelloConan(ConanFile):
                 requires = "dep/1.0@us/ch"
 
                 def package_info(self):
+                    self.cpp_info.components["int1"].requires = ["dep::dep"]  # To avoid exception
                     self.cpp_info.components["int1"].libs.append("libint1")
                     self.cpp_info.components["int1"].defines.append("defint1")
                     os.mkdir(os.path.join(self.package_folder, "include"))
