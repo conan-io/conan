@@ -140,7 +140,6 @@ class ConanFileLoader(object):
         conanfile.output.scope = conanfile.display_name
         return conanfile
 
-
     @staticmethod
     def _initialize_conanfile(conanfile, profile):
         # Prepare the settings for the loaded conanfile
