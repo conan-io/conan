@@ -2,6 +2,7 @@ import calendar
 import os
 import shutil
 import time
+import six
 
 from conans.model import Generator
 from conans.model.manifest import FileTreeManifest
@@ -41,6 +42,13 @@ class DeployGenerator(Generator):
                                        os.path.relpath(root, rootpath), f)
                     dst = os.path.normpath(dst)
                     mkdir(os.path.dirname(dst))
-                    shutil.copy(src, dst)
+                    if six.PY2:
+                        if os.path.islink(src):
+                            linkto = os.readlink(src)
+                            os.symlink(linkto, dst)
+                        else:
+                            shutil.copy(src, dst)
+                    else:
+                        shutil.copy(src, dst, follow_symlinks=False)
                     copied_files.append(dst)
         return self.deploy_manifest_content(copied_files)
