@@ -1,6 +1,8 @@
 import logging
 import os
+import re
 import textwrap
+from datetime import timedelta
 
 from jinja2 import Template
 from six.moves.configparser import ConfigParser, NoSectionError
@@ -690,6 +692,18 @@ class ConanClientConfigParser(ConfigParser, object):
     @property
     def config_install_interval(self):
         try:
-            return self.get_item("general.config_install_interval")
+            interval = self.get_item("general.config_install_interval")
         except ConanException:
             return None
+
+        match = re.search(r"(\d+)([mhd])", interval)
+        try:
+            value, unit = match.group(1), match.group(2)
+            if unit == 'm':
+                return timedelta(minutes=float(value))
+            elif unit == 'h':
+                return timedelta(hours=float(value))
+            else:
+                return timedelta(days=float(value))
+        except Exception as e:
+            raise ConanException("Incorrect definition of config_install_interval: %s" % interval)

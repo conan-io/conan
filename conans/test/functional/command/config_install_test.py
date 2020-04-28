@@ -2,17 +2,16 @@ import json
 import os
 import shutil
 import textwrap
+import time
 import unittest
 import zipfile
-import datetime
-import time
 
 import six
 from mock import patch
 
 from conans.client.cache.remote_registry import Remote
 from conans.client.conf import ConanClientConfigParser
-from conans.client.conf.config_installer import _hide_password, _ConfigOrigin, _get_current_time_now
+from conans.client.conf.config_installer import _hide_password, _ConfigOrigin
 from conans.client.rest.file_downloader import FileDownloader
 from conans.errors import ConanException
 from conans.test.utils.test_files import temp_folder
@@ -524,48 +523,52 @@ class Pkg(ConanFile):
         self.assertIn("Unzipping", self.client.out)
         http_server.stop()
 
+    def test_config_install_sched_error(self):
+        client = TestClient()
+        client.run('config set general.config_install_interval=1s')
+        # Any conan invocation will fire the configuration error
+        client.run('install .', assert_error=True)
+        self.assertIn("ERROR: Incorrect definition of config_install_interval: 1s", client.out)
+
     def test_config_install_sched_file(self):
         """ Conan must execute config once when config_install_interval is configured
         """
         folder = temp_folder(path_with_spaces=False)
-        conan_conf = textwrap.dedent("""
-                    [general]
-                    config_install_interval = 5m
-                    """)
-        save_files(folder, {"conan.conf": conan_conf})
+        conanconf = textwrap.dedent("""
+            [general]
+            config_install_interval = 5m
+            """)
+        save_files(folder, {"conan.conf": conanconf})
         client = TestClient()
 
-        # 1 - config install must be executed without restriction
+        # 1 - config install can be executed without restriction
         client.run('config install "%s"' % folder)
         self.assertIn("Processing conan.conf", client.out)
         content = load(client.cache.conan_conf_path)
-
         self.assertEqual(1, content.count("config_install_interval"))
         self.assertTrue(os.path.exists(client.cache.config_install_file))
-        self.assertLess(os.path.getmtime(client.cache.config_install_file), time.time())
+        self.assertLess(os.path.getmtime(client.cache.config_install_file), time.time() + 1)
 
-        # 2 - Must execute again
+        # 2 - Can execute again
         client.run('config install "%s"' % folder)
         self.assertIn("Processing conan.conf", client.out)
-        self.assertLess(os.path.getmtime(client.cache.config_install_file), time.time())
+        self.assertLess(os.path.getmtime(client.cache.config_install_file), time.time() + 1)
 
-        # 3 - Must not execute: seconds are not allowed
-        client.run('config set general.config_install_interval=1s')
-        self.assertNotIn("Processing conan.conf", client.out)
-
-        client.run('config install "%s"' % folder)
-        self.assertIn("Processing conan.conf", client.out)
-
-        # 4 - Must execute: forced timeout
+        # 3 - Must execute: forced timeout
         client.run('config set general.config_install_interval=1m')
         self.assertNotIn("Processing conan.conf", client.out)
-        with patch("conans.client.conf.config_installer._next_scheduled_config_install",
-                   return_value=_get_current_time_now() - datetime.timedelta(minutes=2)):
-            client.run('config get general.config_install_interval')
-            self.assertIn("Processing conan.conf", client.out)
+        past_time = int(time.time() - 120)  # 120 seconds in the past
+        os.utime(client.cache.config_install_file, (past_time, past_time))
 
-        # 5 - Must not execute: config_install.json has been removed after first interaction
-        os.remove(client.cache.config_install_file)
+        client.run('search')  # any command will fire it
+        self.assertIn("Processing conan.conf", client.out)
+        client.run('search')  # not again, it was fired already
+        self.assertNotIn("Processing conan.conf", client.out)
         client.run('config get general.config_install_interval')
         self.assertNotIn("Processing conan.conf", client.out)
-        self.assertFalse(os.path.exists(client.cache.config_install_file))
+        self.assertIn("5m", client.out)  # The previous 5 mins has been restored!
+
+        # 4 - Must error: config_install.json has been removed after first interaction
+        os.remove(client.cache.config_install_file)
+        client.run('config get general.config_install_interval', assert_error=True)
+        self.assertIn("config_install_interval defined, but no config_install file", client.out)

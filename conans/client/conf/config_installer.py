@@ -1,8 +1,7 @@
 import json
 import os
 import shutil
-import re
-from datetime import datetime, timedelta
+from datetime import datetime
 from dateutil.tz import gettz
 
 from contextlib import contextmanager
@@ -211,30 +210,6 @@ def _save_configs(configs_file, configs):
                                   indent=True))
 
 
-def _get_current_time_now():
-    return datetime.now(gettz())
-
-
-def _next_scheduled_config_install(config_install_path, value, interval):
-    """ Return when the next config install should occur.
-        In case of error, the next config install should occur immediately
-
-    :param config_install_path: config_install.json path in conan cache
-    :param value: time interval value e.g 5 from 5m
-    :param interval: time interval unit e.g m from 5m
-    :return: datetime instance + time interval
-    """
-    timestamp = os.path.getmtime(config_install_path)
-    sched = datetime.fromtimestamp(timestamp, tz=gettz())
-    if interval == 'm':
-        sched += timedelta(minutes=float(value))
-    elif interval == 'h':
-        sched += timedelta(hours=float(value))
-    else:
-        sched += timedelta(days=float(value))
-    return sched
-
-
 def configuration_install(app, uri, verify_ssl, config_type=None,
                           args=None, source_folder=None, target_folder=None):
     cache, output, requester = app.cache, app.out, app.requester
@@ -265,6 +240,7 @@ def configuration_install(app, uri, verify_ssl, config_type=None,
             for config in configs:
                 output.info("Config install:  %s" % _hide_password(config.uri))
                 _process_config(config, cache, output, requester)
+            touch(cache.config_install_file)
     else:
         # Execute and store the new one
         config = _ConfigOrigin.from_item(uri, config_type, verify_ssl, args,
@@ -275,11 +251,6 @@ def configuration_install(app, uri, verify_ssl, config_type=None,
         else:
             configs = [(c if c != config else config) for c in configs]
         _save_configs(configs_file, configs)
-    try:
-        if cache.config.config_install_interval:
-            touch(cache.config_install_file)
-    except ConanException:
-        pass
 
 
 def is_config_install_scheduled(api):
@@ -294,13 +265,13 @@ def is_config_install_scheduled(api):
     """
     cache = ClientCache(api.cache_folder, api.out)
     interval = cache.config.config_install_interval
+    config_install_file = cache.config_install_file
     if interval is not None:
-        match = re.search(r"(\d+)([mhd])", interval)
-        if match:
-            if not os.path.exists(cache.config_install_file):
-                return False
-            sched = _next_scheduled_config_install(cache.config_install_file, match.group(1), match.group(2))
-            if not sched:
-                return True
-            now = _get_current_time_now()
+        if os.path.exists(config_install_file):
+            timestamp = os.path.getmtime(config_install_file)
+            sched = datetime.fromtimestamp(timestamp, tz=gettz())
+            sched += interval
+            now = datetime.now(gettz())
             return now > sched
+        else:
+            raise ConanException("config_install_interval defined, but no config_install file")
