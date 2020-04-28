@@ -26,6 +26,8 @@ from conans.util.config_parser import get_bool_from_text
 from conans.util.files import exception_message_safe
 from conans.util.files import save
 from conans.util.log import logger
+from conans.assets import templates
+
 
 # Exit codes for conan command:
 SUCCESS = 0                         # 0: Success (done)
@@ -1307,8 +1309,10 @@ class Command(object):
                                                    remote_name=args.remote,
                                                    outdated=args.outdated)
                 # search is done for one reference
+                template = self._conan.app.cache.get_template(templates.SEARCH_TABLE_HTML)
                 self._outputer.print_search_packages(info["results"], ref, args.query,
-                                                     args.table, args.raw, outdated=args.outdated)
+                                                     args.table, args.raw, outdated=args.outdated,
+                                                     template=template)
             else:
                 if args.table:
                     raise ConanException("'--table' argument can only be used with a reference")

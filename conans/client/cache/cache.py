@@ -4,9 +4,13 @@ import shutil
 from collections import OrderedDict
 from os.path import join
 
+from jinja2 import Environment, select_autoescape
+
+from conans.assets.templates import dict_loader
 from conans.client.cache.editable import EditablePackages
 from conans.client.cache.remote_registry import RemoteRegistry
-from conans.client.conf import ConanClientConfigParser, get_default_client_conf, get_default_settings_yml
+from conans.client.conf import ConanClientConfigParser, get_default_client_conf, \
+    get_default_settings_yml
 from conans.client.conf.detect import detect_defaults_settings
 from conans.client.output import Color
 from conans.client.profile_loader import read_profile
@@ -27,6 +31,7 @@ LOCALDB = ".conan.db"
 REMOTES = "remotes.json"
 PROFILES_FOLDER = "profiles"
 HOOKS_FOLDER = "hooks"
+TEMPLATES_FOLDER = "templates"
 
 
 def is_case_insensitive_os():
@@ -247,6 +252,12 @@ class ClientCache(object):
             conan_folder = os.path.join(self._store_folder, folder)
             Lock.clean(conan_folder)
             shutil.rmtree(os.path.join(conan_folder, "locks"), ignore_errors=True)
+
+    @classmethod
+    def get_template(cls, template_name):
+        # TODO: It can be initialized only once together with the Conan app
+        env = Environment(loader=dict_loader, autoescape=select_autoescape(['html', 'xml']))
+        return env.get_template(template_name)
 
 
 def _mix_settings_with_env(settings):
