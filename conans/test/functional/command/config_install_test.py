@@ -528,7 +528,8 @@ class Pkg(ConanFile):
         client.run('config set general.config_install_interval=1s')
         # Any conan invocation will fire the configuration error
         client.run('install .', assert_error=True)
-        self.assertIn("ERROR: Incorrect definition of config_install_interval: 1s", client.out)
+        self.assertIn("ERROR: Incorrect definition of general.config_install_interval: 1s",
+                      client.out)
 
     def test_config_install_sched_file(self):
         """ Conan must execute config once when config_install_interval is configured
