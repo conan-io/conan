@@ -432,3 +432,4 @@ def merge_directories(src, dst, excluded=None):
                 link_to_rel(src_file)
             else:
                 shutil.copy2(src_file, dst_file)
+
