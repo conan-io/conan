@@ -1,4 +1,5 @@
 import os
+import re
 import time
 import traceback
 
@@ -43,8 +44,15 @@ class FileDownloader(object):
         return _call_with_retry(self._output, retry, retry_wait, self._download_file, url, auth,
                                 headers, file_path)
 
-    def _download_file(self, url, auth, headers, file_path):
+    def _download_file(self, url, auth, headers, file_path, try_resume=False):
         t1 = time.time()
+        if try_resume and file_path and os.path.exists(file_path):
+            range_start = os.path.getsize(file_path)
+            headers = headers.copy() if headers else {}
+            headers["range"] = "bytes={}-".format(range_start)
+        else:
+            range_start = 0
+
         try:
             response = self._requester.get(url, stream=True, verify=self._verify_ssl, auth=auth,
                                            headers=headers)
@@ -69,10 +77,11 @@ class FileDownloader(object):
 
         def write_chunks(chunks, path):
             ret = None
-            downloaded_size = 0
+            downloaded_size = range_start
             if path:
                 mkdir(os.path.dirname(path))
-                with open(path, 'wb') as file_handler:
+                mode = "ab" if range_start else "wb"
+                with open(path, mode) as file_handler:
                     for chunk in chunks:
                         assert ((six.PY3 and isinstance(chunk, bytes)) or
                                 (six.PY2 and isinstance(chunk, str)))
@@ -86,24 +95,42 @@ class FileDownloader(object):
                 ret = bytes(ret_data)
             return ret, downloaded_size
 
+        def get_total_length():
+            if range_start:
+                content_range = response.headers.get("Content-Range", "")
+                match = re.match(r"^bytes (\d+)-(\d+)/(\d+)", content_range)
+                if not match or range_start != int(match.group(1)):
+                    raise ConanException("Error in resumed download from %s\n"
+                                         "Incorrect Content-Range header %s" % (url, content_range))
+                return int(match.group(3))
+            else:
+                total_size = response.headers.get('Content-Length') or len(response.content)
+                return int(total_size)
+
         try:
             logger.debug("DOWNLOAD: %s" % url)
-            total_length = response.headers.get('content-length') or len(response.content)
-            total_length = int(total_length)
-            description = "Downloading {}".format(os.path.basename(file_path)) if file_path else None
+            total_length = get_total_length()
+            action = "Downloading" if range_start == 0 else "Continuing download of"
+            description = "{} {}".format(action, os.path.basename(file_path)) if file_path else None
             progress = progress_bar.Progress(total_length, self._output, description)
+            progress.initial_value(range_start)
 
             chunk_size = 1024 if not file_path else 1024 * 100
-            encoding = response.headers.get('content-encoding')
-            gzip = (encoding == "gzip")
-
             written_chunks, total_downloaded_size = write_chunks(
                 progress.update(read_response(chunk_size)),
                 file_path
             )
 
             response.close()
-            if total_downloaded_size != total_length and not gzip:
+            if (
+                file_path and total_length > total_downloaded_size > range_start
+                and response.headers.get("Accept-Ranges") == "bytes"
+            ):
+                written_chunks = self._download_file(url, auth, headers, file_path, try_resume=True)
+            elif (
+                total_downloaded_size != total_length
+                and response.headers.get("Content-Encoding") != "gzip"
+            ):
                 raise ConanException("Transfer interrupted before "
                                      "complete: %s < %s" % (total_downloaded_size, total_length))
 
