@@ -140,7 +140,7 @@ class DeployGeneratorPermissionsTest(unittest.TestCase):
         self.assertTrue(stat_info.st_mode & stat.S_IXUSR)
 
 
-class DeployGeneratorSymbolibLinkTest(unittest.TestCase):
+class DeployGeneratorSymbolicLinkTest(unittest.TestCase):
 
     def setUp(self):
         conanfile = GenConanfile()
@@ -163,3 +163,5 @@ class DeployGeneratorSymbolibLinkTest(unittest.TestCase):
         link_path = os.path.join(base_path, "include", "header.h.lnk")
         self.assertTrue(os.path.islink(link_path))
         self.assertFalse(os.path.islink(header_path))
+        linkto = os.path.join(os.path.dirname(link_path), os.readlink(link_path))
+        self.assertEqual(linkto, header_path)

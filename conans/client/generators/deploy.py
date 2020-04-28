@@ -2,12 +2,12 @@ import calendar
 import os
 import shutil
 import time
-import six
 
 from conans.model import Generator
 from conans.model.manifest import FileTreeManifest
 from conans.paths import BUILD_INFO_DEPLOY
 from conans.util.files import mkdir, md5sum
+
 
 FILTERED_FILES = ["conaninfo.txt", "conanmanifest.txt"]
 
@@ -42,13 +42,10 @@ class DeployGenerator(Generator):
                                        os.path.relpath(root, rootpath), f)
                     dst = os.path.normpath(dst)
                     mkdir(os.path.dirname(dst))
-                    if six.PY2:
-                        if os.path.islink(src):
-                            linkto = os.readlink(src)
-                            os.symlink(linkto, dst)
-                        else:
-                            shutil.copy(src, dst)
+                    if os.path.islink(src):
+                        linkto = os.path.relpath(os.readlink(src), os.path.dirname(src))
+                        os.symlink(linkto, dst)
                     else:
-                        shutil.copy(src, dst, follow_symlinks=False)
+                        shutil.copy(src, dst)
                     copied_files.append(dst)
         return self.deploy_manifest_content(copied_files)
