@@ -68,7 +68,8 @@ class ConanFileLoader(object):
                 if scm_data:
                     conanfile.scm.update(scm_data)
 
-            self._cached_conanfile_classes[conanfile_path] = (conanfile, lock_python_requires, module)
+            self._cached_conanfile_classes[conanfile_path] = (conanfile, lock_python_requires,
+                                                              module)
             result = conanfile(self._output, self._runner, display, user, channel)
             if hasattr(result, "init") and callable(result.init):
                 result.init()
@@ -243,7 +244,11 @@ class ConanFileLoader(object):
 
         conanfile.generators = parser.generators
 
-        options = OptionsValues.loads(parser.options)
+        try:
+            options = OptionsValues.loads(parser.options)
+        except Exception:
+            raise ConanException("Error while parsing [options] in conanfile\n"
+                                 "Options should be specified as 'pkg:option=value'")
         conanfile.options.values = options
         conanfile.options.initialize_upstream(profile.user_options)
 
