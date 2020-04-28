@@ -4,7 +4,6 @@ import re
 import subprocess
 import textwrap
 import unittest
-from textwrap import dedent
 
 from conans.client import tools
 from conans.model.ref import ConanFileReference, PackageReference
@@ -54,7 +53,7 @@ class InfoFoldersTest(unittest.TestCase):
         client = TestClient()
         client.save({CONANFILE: conanfile_py})
         client.run("export . %s" % self.user_channel)
-        client.run("info %s --paths" % (self.reference1))
+        client.run("info %s --paths" % self.reference1)
         base_path = os.path.join("MyPackage", "0.1.0", "myUser", "testing")
         output = client.out
         self.assertIn(os.path.join(base_path, "export"), output)
@@ -94,7 +93,7 @@ class InfoFoldersTest(unittest.TestCase):
         self._prepare_deps(client)
 
         for ref in [self.reference2, "."]:
-            client.run("info %s --paths" % (ref))
+            client.run("info %s --paths" % ref)
             output = client.out
 
             base_path = os.path.join("MyPackage", "0.1.0", "myUser", "testing")
@@ -130,7 +129,7 @@ class InfoFoldersTest(unittest.TestCase):
         client = TestClient()
         client.save({CONANFILE: conanfile_py})
         client.run("export . %s" % self.user_channel)
-        client.run("info %s --paths --only=build_folder" % (self.reference1))
+        client.run("info %s --paths --only=build_folder" % self.reference1)
         base_path = os.path.join("MyPackage", "0.1.0", "myUser", "testing")
         output = client.out
         self.assertNotIn("export", output)
@@ -233,7 +232,7 @@ class InfoFoldersTest(unittest.TestCase):
         cache_folder = temp_folder(False)
         short_folder = os.path.join(temp_folder(False), ".cn")
 
-        conanfile = dedent("""
+        conanfile = textwrap.dedent("""
             from conans import ConanFile
 
             class Conan(ConanFile):
