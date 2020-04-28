@@ -196,9 +196,9 @@ class CppInfoComponentsTest(unittest.TestCase):
 
         info = CppInfo("")
         info.components["6"].libs = ["lib6"]
-        info.components["6"].requires = ["::4", "::5"]
+        info.components["6"].requires = ["4", "5"]
         info.components["5"].libs = ["lib5"]
-        info.components["5"].requires = ["::2"]
+        info.components["5"].requires = ["2"]
         info.components["4"].libs = ["lib4"]
         info.components["4"].requires = ["1"]
         info.components["3"].libs = ["lib3"]
@@ -303,7 +303,7 @@ class CppInfoComponentsTest(unittest.TestCase):
         info = CppInfo("")
         info.components["liba"].libs = ["liba"]
         info.components["libb"].libs = ["libb"]
-        info.components["libb"].requires = ["::liba"]
+        info.components["libb"].requires = ["liba"]
         dep_cpp_info = DepCppInfo(info)
         self.assertListEqual(["libb", "liba"], dep_cpp_info.libs)
         deps_cpp_info = DepsCppInfo()
@@ -314,7 +314,7 @@ class CppInfoComponentsTest(unittest.TestCase):
         info = CppInfo("")
         info.components["liba"].libs = ["liba"]
         info.components["libb"].libs = ["libb"]
-        info.components["libb"].requires = ["::liba"]
+        info.components["libb"].requires = ["liba"]
         dep_cpp_info = DepCppInfo(info)
         info2 = CppInfo("")
         info2.components["libc"].libs = ["libc"]

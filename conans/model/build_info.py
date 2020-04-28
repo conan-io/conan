@@ -195,7 +195,8 @@ class CppInfo(_CppInfo):
 
         return self.configs.setdefault(config, _get_cpp_info())
 
-    def _raise_if_mixing_components(self):
+    def _raise_incorrect_components_definition(self, name):
+        # Raise if mixing components
         if (self.includedirs != [DEFAULT_INCLUDE] or
                 self.libdirs != [DEFAULT_LIB] or
                 self.bindirs != [DEFAULT_BIN] or
@@ -217,16 +218,7 @@ class CppInfo(_CppInfo):
             raise ConanException("self.cpp_info.components cannot be used with self.cpp_info configs"
                                  " (release/debug/...) at the same time")
 
-    def _raise_if_not_scoped_requires_in_components(self):
-        for comp_name, comp in self.components.items():
-            for require in comp.requires:
-                if COMPONENT_SCOPE not in require:
-                    msg = "Character '%s' not found in one or more of the " \
-                          "self.cpp_info.components['%s'].requires: %s"\
-                          % (COMPONENT_SCOPE, comp_name, comp.requires)
-                    raise ConanException(msg)
-
-    def _raise_components_name(self, name):
+        # Raise on component name
         for comp_name in self.components:
             if comp_name == name:
                 raise ConanException("Component name cannot be the same as the package name: '%s'"
@@ -361,6 +353,8 @@ class DepCppInfo(object):
         for require in requires:
             if require.startswith(COMPONENT_SCOPE):
                 filtered_requires.append(require[len(COMPONENT_SCOPE):])
+            elif COMPONENT_SCOPE not in require:
+                filtered_requires.append(require)
         return filtered_requires
 
     def _check_component_requires(self):
