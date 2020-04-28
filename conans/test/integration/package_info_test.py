@@ -5,6 +5,7 @@ import unittest
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE, CONANFILE_TXT
+from conans.test.utils.genconanfile import GenConanfile
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
 
 
@@ -383,3 +384,61 @@ class HelloConan(ConanFile):
         self.assertIn("COMP Launcher Requires: []", client.out)
         self.assertIn("COMP Planet Requires: ['Starlight']", client.out)
         self.assertIn("COMP ISS Requires: ['Starlight', 'Launcher']", client.out)
+
+    def package_requires_in_components_requires_test(self):
+        client = TestClient()
+        client.save({"conanfile1.py": GenConanfile("dep1", "0.1"),
+                     "conanfile2.py": GenConanfile("dep2", "0.1")})
+        client.run("create conanfile1.py")
+        client.run("create conanfile2.py")
+
+        conanfile = GenConanfile("consumer", "0.1") \
+            .with_requirement_plain("dep1/0.1") \
+            .with_requirement_plain("dep2/0.1") \
+            .with_package_info(cpp_info={"components": {"kk": {"requires": []}}},
+                               env_info={})
+        client.save({"conanfile.py": conanfile})
+        client.run("create conanfile.py", assert_error=True)
+        self.assertIn("consumer/0.1 package_info(): Package require 'dep1' not used in "
+                      "components requires", client.out)
+
+        conanfile = GenConanfile("consumer", "0.1") \
+            .with_requirement_plain("dep1/0.1") \
+            .with_requirement_plain("dep2/0.1") \
+            .with_package_info(cpp_info={"components": {"kk": {"requires": ["dep1::dep1"]}}},
+                               env_info={})
+        client.save({"conanfile.py": conanfile})
+        client.run("create conanfile.py", assert_error=True)
+        self.assertIn("consumer/0.1 package_info(): Package require 'dep2' not used in components "
+                      "requires", client.out)
+
+        conanfile = GenConanfile("consumer", "0.1") \
+            .with_requirement_plain("dep1/0.1") \
+            .with_requirement_plain("dep2/0.1") \
+            .with_package_info(cpp_info={"components": {"kk": {"requires": ["dep1::dep1"]},
+                                                        "kkk": {"requires": ["kk"]}}},
+                               env_info={})
+        client.save({"conanfile.py": conanfile})
+        client.run("create conanfile.py", assert_error=True)
+        self.assertIn("consumer/0.1 package_info(): Package require 'dep2' not used in components "
+                      "requires", client.out)
+
+        conanfile = GenConanfile("consumer", "0.1") \
+            .with_requirement_plain("dep1/0.1") \
+            .with_requirement_plain("dep2/0.1") \
+            .with_package_info(cpp_info={"components": {"kk": {"requires": []},
+                                                        "kkk": {"requires": ["kk"]}}},
+                               env_info={})
+        client.save({"conanfile.py": conanfile})
+        client.run("create conanfile.py", assert_error=True)
+        self.assertIn("consumer/0.1 package_info(): Package require 'dep1' not used in components "
+                      "requires", client.out)
+
+        conanfile = GenConanfile("consumer", "0.1") \
+            .with_requirement_plain("dep1/0.1") \
+            .with_requirement_plain("dep2/0.1") \
+            .with_package_info(cpp_info={"components": {"kk": {"requires": ["dep2::comp"]},
+                                                        "kkk": {"requires": ["dep1::dep1"]}}},
+                               env_info={})
+        client.save({"conanfile.py": conanfile})
+        client.run("create conanfile.py")

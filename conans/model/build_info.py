@@ -195,7 +195,7 @@ class CppInfo(_CppInfo):
 
         return self.configs.setdefault(config, _get_cpp_info())
 
-    def _raise_incorrect_components_definition(self, name):
+    def _raise_incorrect_components_definition(self, package_name, package_requires):
         # Raise if mixing components
         if (self.includedirs != [DEFAULT_INCLUDE] or
                 self.libdirs != [DEFAULT_LIB] or
@@ -219,10 +219,22 @@ class CppInfo(_CppInfo):
                                  " (release/debug/...) at the same time")
 
         # Raise on component name
-        for comp_name in self.components:
-            if comp_name == name:
+        for comp_name, comp in self.components.items():
+            if comp_name == package_name:
                 raise ConanException("Component name cannot be the same as the package name: '%s'"
                                      % comp_name)
+
+        # Raise on components requires without package requires
+        if package_requires and self.components:
+            comp_requires = set()
+            for comp_name, comp in self.components.items():
+                for comp_require in comp.requires:
+                    comp_requires.add(
+                        comp_require[:comp_require.find(COMPONENT_SCOPE)])
+            for require in package_requires.values():
+                if require.ref.name not in comp_requires:
+                    raise ConanException("Package require '%s' not used in components requires"
+                                         % require.ref.name)
 
 
 class _BaseDepsCppInfo(_CppInfo):
