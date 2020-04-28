@@ -349,19 +349,19 @@ class DepCppInfo(object):
 
     @staticmethod
     def _filter_component_requires(requires):
-        filtered_requires = []
-        for require in requires:
-            if require.startswith(COMPONENT_SCOPE):
-                filtered_requires.append(require[len(COMPONENT_SCOPE):])
-            elif COMPONENT_SCOPE not in require:
-                filtered_requires.append(require)
-        return filtered_requires
+        return [r for r in requires if COMPONENT_SCOPE not in r]
 
     def _check_component_requires(self):
         for comp_name, comp in self._cpp_info.components.items():
             if not all([require in self._cpp_info.components for require in
                         self._filter_component_requires(comp.requires)]):
                 raise ConanException("Component '%s' declares a missing dependency" % comp_name)
+            bad_requires = [r for r in comp.requires if r.startswith(COMPONENT_SCOPE)]
+            if bad_requires:
+                msg = "Leading character '%s' not allowed in %s requires: %s. Omit it to require " \
+                      "components inside the same package." \
+                      % (COMPONENT_SCOPE, comp_name, bad_requires)
+                raise ConanException(msg)
 
     def _get_sorted_components(self):
         """

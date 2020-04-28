@@ -202,9 +202,9 @@ class CppInfoComponentsTest(unittest.TestCase):
         info.components["4"].libs = ["lib4"]
         info.components["4"].requires = ["1"]
         info.components["3"].libs = ["lib3"]
-        info.components["3"].requires = ["::1"]
+        info.components["3"].requires = ["1"]
         info.components["1"].libs = ["lib1"]
-        info.components["1"].requires = ["::2"]
+        info.components["1"].requires = ["2"]
         info.components["2"].libs = ["lib2"]
         info.components["2"].requires = []
         dep_cpp_info = DepCppInfo(info)
@@ -217,25 +217,25 @@ class CppInfoComponentsTest(unittest.TestCase):
 
         info = CppInfo("")
         info.components["K"].libs = ["libK"]
-        info.components["K"].requires = ["::G", "::H"]
+        info.components["K"].requires = ["G", "H"]
         info.components["J"].libs = ["libJ"]
-        info.components["J"].requires = ["::F"]
+        info.components["J"].requires = ["F"]
         info.components["G"].libs = ["libG"]
-        info.components["G"].requires = ["::F"]
+        info.components["G"].requires = ["F"]
         info.components["H"].libs = ["libH"]
-        info.components["H"].requires = ["::F", "::E"]
+        info.components["H"].requires = ["F", "E"]
         info.components["L"].libs = ["libL"]
-        info.components["L"].requires = ["::I"]
+        info.components["L"].requires = ["I"]
         info.components["F"].libs = ["libF"]
-        info.components["F"].requires = ["::C", "::D"]
+        info.components["F"].requires = ["C", "D"]
         info.components["I"].libs = ["libI"]
-        info.components["I"].requires = ["::E"]
+        info.components["I"].requires = ["E"]
         info.components["C"].libs = ["libC"]
-        info.components["C"].requires = ["::A"]
+        info.components["C"].requires = ["A"]
         info.components["D"].libs = ["libD"]
-        info.components["D"].requires = ["::A"]
+        info.components["D"].requires = ["A"]
         info.components["E"].libs = ["libE"]
-        info.components["E"].requires = ["::A", "::B"]
+        info.components["E"].requires = ["A", "B"]
         info.components["A"].libs = ["libA"]
         info.components["A"].requires = []
         info.components["B"].libs = ["libB"]
@@ -251,26 +251,30 @@ class CppInfoComponentsTest(unittest.TestCase):
 
     def cppinfo_inexistent_component_dep_test(self):
         info = CppInfo(None)
-        info.components["LIB1"].requires = ["::LIB2"]
+        info.components["LIB1"].requires = ["LIB2"]
         with six.assertRaisesRegex(self, ConanException, "Component 'LIB1' "
                                                          "declares a missing dependency"):
+            DepCppInfo(info).libs
+        info.components["LIB1"].requires = ["::LIB2"]
+        with six.assertRaisesRegex(self, ConanException, "Leading character '::' not allowed in "
+                                                         "LIB1 requires"):
             DepCppInfo(info).libs
 
     def cpp_info_components_requires_loop_test(self):
         info = CppInfo("")
-        info.components["LIB1"].requires = ["::LIB1"]
+        info.components["LIB1"].requires = ["LIB1"]
         msg = "There is a dependency loop in 'self.cpp_info.components' requires"
         with six.assertRaisesRegex(self, ConanException, msg):
             DepCppInfo(info).libs
         info = CppInfo("")
-        info.components["LIB1"].requires = ["::LIB2"]
-        info.components["LIB2"].requires = ["::LIB1", "::LIB2"]
+        info.components["LIB1"].requires = ["LIB2"]
+        info.components["LIB2"].requires = ["LIB1", "LIB2"]
         with six.assertRaisesRegex(self, ConanException, msg):
             DepCppInfo(info).build_paths
         info = CppInfo("")
-        info.components["LIB1"].requires = ["::LIB2"]
-        info.components["LIB2"].requires = ["::LIB3"]
-        info.components["LIB3"].requires = ["::LIB1"]
+        info.components["LIB1"].requires = ["LIB2"]
+        info.components["LIB2"].requires = ["LIB3"]
+        info.components["LIB3"].requires = ["LIB1"]
         with six.assertRaisesRegex(self, ConanException, msg):
             DepCppInfo(info).defines
 

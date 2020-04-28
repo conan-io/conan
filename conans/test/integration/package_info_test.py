@@ -265,13 +265,13 @@ class HelloConan(ConanFile):
                     self.cpp_info.components["Starlight"].libs = ["libstarlight"]
                     self.cpp_info.components["Planet"].includedirs = [os.path.join("galaxy", "planet")]
                     self.cpp_info.components["Planet"].libs = ["libplanet"]
-                    self.cpp_info.components["Planet"].requires = ["::Starlight"]
+                    self.cpp_info.components["Planet"].requires = ["Starlight"]
                     self.cpp_info.components["Launcher"].system_libs = ["ground"]
                     self.cpp_info.components["ISS"].includedirs = [os.path.join("galaxy", "iss")]
                     self.cpp_info.components["ISS"].libs = ["libiss"]
                     self.cpp_info.components["ISS"].libdirs = ["iss_libs"]
                     self.cpp_info.components["ISS"].system_libs = ["solar", "magnetism"]
-                    self.cpp_info.components["ISS"].requires = ["::Starlight", "::Launcher"]
+                    self.cpp_info.components["ISS"].requires = ["Starlight", "Launcher"]
         """)
         consumer = textwrap.dedent("""
         from conans import ConanFile
@@ -381,5 +381,5 @@ class HelloConan(ConanFile):
         self.assertIn("COMP ISS System libs: ['solar', 'magnetism']", client.out)
         self.assertIn("COMP Starlight Requires: []", client.out)
         self.assertIn("COMP Launcher Requires: []", client.out)
-        self.assertIn("COMP Planet Requires: ['::Starlight']", client.out)
-        self.assertIn("COMP ISS Requires: ['::Starlight', '::Launcher']", client.out)
+        self.assertIn("COMP Planet Requires: ['Starlight']", client.out)
+        self.assertIn("COMP ISS Requires: ['Starlight', 'Launcher']", client.out)
