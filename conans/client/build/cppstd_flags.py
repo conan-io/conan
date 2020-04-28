@@ -118,6 +118,10 @@ def _cppstd_apple_clang(clang_version, cppstd):
         v17 = "c++17"
         vgnu17 = "gnu++17"
 
+    if Version(clang_version) >= "10.0":
+        v20 = "c++2a"
+        vgnu20 = "gnu++2a"
+
     flag = {"98": v98, "gnu98": vgnu98,
             "11": v11, "gnu11": vgnu11,
             "14": v14, "gnu14": vgnu14,
