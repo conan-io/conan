@@ -528,14 +528,6 @@ class Pkg(ConanFile):
         self.assertIn("Unzipping", self.client.out)
         http_server.stop()
 
-    def test_config_install_sched_error(self):
-        client = TestClient()
-        client.run('config set general.config_install_interval=1s')
-        # Any conan invocation will fire the configuration error
-        client.run('install .', assert_error=True)
-        self.assertIn("ERROR: Incorrect definition of general.config_install_interval: 1s",
-                      client.out)
-
 
 class ConfigInstallSchedTest(unittest.TestCase):
 
@@ -590,3 +582,12 @@ class ConfigInstallSchedTest(unittest.TestCase):
         os.remove(self.client.cache.config_install_file)
         self.client.run('config get general.config_install_interval', assert_error=True)
         self.assertIn("config_install_interval defined, but no config_install file", self.client.out)
+
+    def test_invalid_time_interval(self):
+        """ config_install_interval only accepts minutes, hours or days
+        """
+        self.client.run('config set general.config_install_interval=1s')
+        # Any conan invocation will fire the configuration error
+        self.client.run('install .', assert_error=True)
+        self.assertIn("ERROR: Incorrect definition of general.config_install_interval: 1s",
+                      self.client.out)
