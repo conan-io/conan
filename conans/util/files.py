@@ -103,8 +103,6 @@ def decode_text(text, encoding="auto"):
 
 
 def touch(fname, times=None):
-    with open(fname, 'a'):
-        pass
     os.utime(fname, times)
 
 
