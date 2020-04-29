@@ -86,7 +86,9 @@ class NoWayBackToHost(CrossBuildingBaseTestCase):
         self.assertEqual(protoc_gtest.context, CONTEXT_BUILD)
         self.assertEqual(protoc_gtest.conanfile.settings.os, "Build")
         self.assertEqual(protoc_gtest.conanfile.settings_build.os, "Build")
-        self.assertEqual(protoc_gtest.conanfile.settings_target.os, "Host")  # TODO: None??
+        # We can't think about an scenario where a `build_require-host` should know about
+        #   the target context. We are removing this information on purpose.
+        self.assertEqual(protoc_gtest.conanfile.settings_target, None)
 
         # - gtest
         gtest = application.dependencies[1].dst

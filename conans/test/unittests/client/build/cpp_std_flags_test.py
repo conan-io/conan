@@ -172,9 +172,12 @@ class CompilerFlagsTest(unittest.TestCase):
         self.assertEqual(_make_cppstd_flag("apple-clang", "9.1", "11"), '-std=c++11')
         self.assertEqual(_make_cppstd_flag("apple-clang", "9.1", "14"), '-std=c++14')
         self.assertEqual(_make_cppstd_flag("apple-clang", "9.1", "17"), "-std=c++17")
+        self.assertEqual(_make_cppstd_flag("apple-clang", "9.1", "20"), None)
 
         self.assertEqual(_make_cppstd_flag("apple-clang", "10.0", "17"), "-std=c++17")
+        self.assertEqual(_make_cppstd_flag("apple-clang", "10.0", "20"), "-std=c++2a")
         self.assertEqual(_make_cppstd_flag("apple-clang", "11.0", "17"), "-std=c++17")
+        self.assertEqual(_make_cppstd_flag("apple-clang", "11.0", "20"), "-std=c++2a")
 
     def test_apple_clang_cppstd_defaults(self):
         self.assertEqual(_make_cppstd_default("apple-clang", "2"), "gnu98")

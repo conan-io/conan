@@ -97,9 +97,11 @@ class DepsGraphBuilder(object):
 
         for br in build_requires:
             context_switch = bool(br.build_require_context == CONTEXT_BUILD)
+            populate_settings_target = context_switch  # Avoid 'settings_target' for BR-host
             self._expand_require(br, node, graph, check_updates, update,
                                  remotes, profile_host, profile_build, new_reqs, new_options,
-                                 graph_lock, context_switch=context_switch)
+                                 graph_lock, context_switch=context_switch,
+                                 populate_settings_target=populate_settings_target)
 
         new_nodes = set(n for n in graph.nodes if n.package_id is None)
         # This is to make sure that build_requires have precedence over the normal requires
@@ -180,7 +182,8 @@ class DepsGraphBuilder(object):
         return new_options, new_reqs
 
     def _expand_require(self, require, node, graph, check_updates, update, remotes, profile_host,
-                        profile_build, new_reqs, new_options, graph_lock, context_switch):
+                        profile_build, new_reqs, new_options, graph_lock, context_switch,
+                        populate_settings_target=True):
         # Handle a requirement of a node. There are 2 possibilities
         #    node -(require)-> new_node (creates a new node in the graph)
         #    node -(require)-> previous (creates a diamond with a previously existing node)
@@ -200,7 +203,8 @@ class DepsGraphBuilder(object):
             # new node, must be added and expanded (node -> new_node)
             new_node = self._create_new_node(node, graph, require, check_updates, update,
                                              remotes, profile_host, profile_build, graph_lock,
-                                             context_switch=context_switch)
+                                             context_switch=context_switch,
+                                             populate_settings_target=populate_settings_target)
 
             # The closure of a new node starts with just itself
             new_node.public_closure.add(new_node)
@@ -398,7 +402,8 @@ class DepsGraphBuilder(object):
         return new_ref, dep_conanfile, recipe_status, remote, locked_id
 
     def _create_new_node(self, current_node, dep_graph, requirement, check_updates,
-                         update, remotes, profile_host, profile_build, graph_lock, context_switch):
+                         update, remotes, profile_host, profile_build, graph_lock, context_switch,
+                         populate_settings_target):
         # If there is a context_switch, it is because it is a BR-build
         if context_switch:
             profile = profile_build
@@ -415,7 +420,10 @@ class DepsGraphBuilder(object):
         if profile_build:  # Keep existing behavior (and conanfile members) if no profile_build
             dep_conanfile.settings_build = profile_build.processed_settings.copy()
             if not context_switch:
-                dep_conanfile.settings_target = current_node.conanfile.settings_target
+                if populate_settings_target:
+                    dep_conanfile.settings_target = current_node.conanfile.settings_target
+                else:
+                    dep_conanfile.settings_target = None
             else:
                 if current_node.context == CONTEXT_HOST:
                     dep_conanfile.settings_target = profile_host.processed_settings.copy()
