@@ -89,8 +89,7 @@ class AutoToolsBuildEnvironment(object):
         else:
             target = None
 
-        settings_build = getattr(self._conanfile, 'settings_build', None)
-        if settings_build:
+        if hasattr(self._conanfile, 'settings_build'):
             os_build, arch_build = get_build_os_arch(self._conanfile)
         else:
             # FIXME: Why not use 'os_build' and 'arch_build' from conanfile.settings?

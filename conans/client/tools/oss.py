@@ -567,17 +567,15 @@ def get_gnu_triplet(os_, arch, compiler=None):
 
 def get_build_os_arch(conanfile):
     """ Returns the value for the 'os' and 'arch' settings for the build context """
-    settings_build = getattr(conanfile, 'settings_build', None)
-    if settings_build:
-        return settings_build.get_safe('os'), settings_build.get_safe('arch')
+    if hasattr(conanfile, 'settings_build'):
+        return conanfile.settings_build.get_safe('os'), conanfile.settings_build.get_safe('arch')
     else:
         return conanfile.settings.get_safe('os_build'), conanfile.settings.get_safe('arch_build')
 
 
 def get_target_os_arch(conanfile):
     """ Returns the value for the 'os' and 'arch' settings for the target context """
-    settings_target = getattr(conanfile, 'settings_target', None)
-    if settings_target:
-        return settings_target.get_safe('os'), settings_target.get_safe('arch')
+    if hasattr(conanfile, 'settings_target'):
+        return conanfile.settings_target.get_safe('os'), conanfile.settings_target.get_safe('arch')
     else:
         return conanfile.settings.get_safe('os_target'), conanfile.settings.get_safe('arch_target')
