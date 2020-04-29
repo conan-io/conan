@@ -14,6 +14,7 @@ from conans.client.cmd.frogarian import cmd_frogarian
 from conans.client.cmd.uploader import UPLOAD_POLICY_FORCE, \
     UPLOAD_POLICY_NO_OVERWRITE, UPLOAD_POLICY_NO_OVERWRITE_RECIPE, UPLOAD_POLICY_SKIP
 from conans.client.conan_api import Conan, default_manifest_folder, _make_abs_path, ProfileData
+from conans.client.conf.config_installer import is_config_install_scheduled
 from conans.client.conan_command_output import CommandOutputer
 from conans.client.output import Color
 from conans.client.printer import Printer
@@ -2009,6 +2010,10 @@ class Command(object):
                 self._out.writeln("")
                 self._print_similar(command)
                 raise ConanException("Unknown command %s" % str(exc))
+
+            if is_config_install_scheduled(self._conan) and \
+               (command != "config" or (command == "config" and args[0] != "install")):
+                self._conan.config_install(None, None)
 
             method(args[0][1:])
         except KeyboardInterrupt as exc:

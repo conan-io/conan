@@ -1,6 +1,8 @@
 import logging
 import os
+import re
 import textwrap
+from datetime import timedelta
 
 from jinja2 import Template
 from six.moves.configparser import ConfigParser, NoSectionError
@@ -173,6 +175,8 @@ _t_default_client_conf = Template(textwrap.dedent("""
     {% if conan_v2 %}
     revisions_enabled = 1
     {% endif %}
+
+    # config_install_interval = 1h
 
     [storage]
     # This is the default path, but you can write your own. It must be an absolute path or a
@@ -685,3 +689,23 @@ class ConanClientConfigParser(ConfigParser, object):
             "notset": logging.NOTSET
         }
         return levels.get(str(level_name).lower())
+
+    @property
+    def config_install_interval(self):
+        try:
+            interval = self.get_item("general.config_install_interval")
+        except ConanException:
+            return None
+
+        match = re.search(r"(\d+)([mhd])", interval)
+        try:
+            value, unit = match.group(1), match.group(2)
+            if unit == 'm':
+                return timedelta(minutes=float(value))
+            elif unit == 'h':
+                return timedelta(hours=float(value))
+            else:
+                return timedelta(days=float(value))
+        except Exception as e:
+            raise ConanException("Incorrect definition of general.config_install_interval: %s"
+                                 % interval)
