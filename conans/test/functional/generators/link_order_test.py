@@ -17,28 +17,28 @@ class LinkOrderTest(unittest.TestCase):
 
     conanfile = Template(textwrap.dedent("""
         from conans import ConanFile
-        
+
         class Recipe(ConanFile):
             name = "{{ref.name}}"
             version = "{{ref.version}}"
-            
+
             {% if requires %}
             requires = {% for req in requires %}"{{ req }}"{% if not loop.last %}, {% endif %}{% endfor %}
             {% endif %}
-            
+
             def build(self):
                 with open("lib" + self.name + ".a", "w+") as f:
                     f.write("fake library content")
                 with open(self.name + ".lib", "w+") as f:
                     f.write("fake library content")
-                    
+
                 {% for it in libs_extra %}
                 with open("lib{{ it }}.a", "w+") as f:
                     f.write("fake library content")
                 with open("{{ it }}.lib", "w+") as f:
                     f.write("fake library content")
                 {% endfor %}
-            
+
             def package(self):
                 self.copy("*.a", dst="lib")
                 self.copy("*.lib", dst="lib")
@@ -59,18 +59,18 @@ class LinkOrderTest(unittest.TestCase):
 
     conanfile_headeronly= Template(textwrap.dedent("""
         from conans import ConanFile
-        
+
         class HeaderOnly(ConanFile):
             name = "{{ref.name}}"
             version = "{{ref.version}}"
-            
+
             {% if requires %}
             requires = {% for req in requires %}"{{ req }}"{% if not loop.last %}, {% endif %}{% endfor %}
             {% endif %}
-            
+
             def package_id(self):
                 self.info.header_only()
-        
+
             def package_info(self):
                 # It may declare system libraries
                 {% for it in libs_system %}
@@ -144,7 +144,8 @@ class LinkOrderTest(unittest.TestCase):
 
     def _validate_link_order(self, libs):
         # Check that all the libraries are there:
-        self.assertEqual(len(libs), 19 if platform.system() == "Darwin" else 16 if platform.system() == "Linux" else 26)
+        self.assertEqual(len(libs), 19 if platform.system() == "Darwin" else 16 if platform.system() == "Linux" else 26,
+                         msg="Unexpected number of libs ({}): '{}'".format(len(libs), "', '".join(libs)))
         # - Regular libs
         ext = ".lib" if platform.system() == "Windows" else ".a"
         prefix = "" if platform.system() == "Windows" else "lib"
