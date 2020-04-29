@@ -14,7 +14,7 @@ class ProtobufTest(CrossBuildingBaseTestCase):
 
     protobuf = textwrap.dedent("""
         from conans import ConanFile
-        
+
         class Protobuf(ConanFile):
             settings = "os"
             def requirements(self):
@@ -22,11 +22,11 @@ class ProtobufTest(CrossBuildingBaseTestCase):
                     self.requires("zlib/1.0@user/channel")
                 else:
                     self.requires("zlib/2.0@user/channel")
-            
+
             def build(self):
                 self.output.info(">> settings.os:".format(self.settings.os))
                 self.output.info("ZLIB: %s" % self.deps_cpp_info["zlib"].libs)
-                
+
             def package_info(self):
                 protobuf_str = "protobuf-host" if self.settings.os == "Host" else "protobuf-build"
 
@@ -34,19 +34,19 @@ class ProtobufTest(CrossBuildingBaseTestCase):
                 self.cpp_info.libdirs = [protobuf_str, ]
                 self.cpp_info.bindirs = [protobuf_str, ]
                 self.cpp_info.libs = [protobuf_str]
-                
+
                 self.env_info.PATH.append(protobuf_str)
                 self.env_info.OTHERVAR = protobuf_str
         """)
 
     app = textwrap.dedent("""
         from conans import ConanFile
-        
+
         class App(ConanFile):
             settings = "os"
             requires = "protobuf/testing@user/channel"
             build_requires = "protobuf/testing@user/channel"
-            
+
             def build(self):
                 self.output.info(">> settings.os:".format(self.settings.os))
                 self.output.info("ZLIB: %s" % self.deps_cpp_info["zlib"].libs)
