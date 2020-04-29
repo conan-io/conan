@@ -254,7 +254,13 @@ class GenConanfile(object):
         lines = []
         if "cpp_info" in self._package_info:
             for k, v in self._package_info["cpp_info"].items():
-                lines.append('        self.cpp_info.{} = {}'.format(k, str(v)))
+                if k == "components":
+                    for comp_name, comp in v.items():
+                        for comp_attr_name, comp_attr_value in comp.items():
+                            lines.append('        self.cpp_info.components["{}"].{} = {}'.format(
+                                comp_name, comp_attr_name, str(comp_attr_value)))
+                else:
+                    lines.append('        self.cpp_info.{} = {}'.format(k, str(v)))
         if "env_info" in self._package_info:
             for k, v in self._package_info["env_info"].items():
                 lines.append('        self.env_info.{} = {}'.format(k, str(v)))
