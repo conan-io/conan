@@ -140,6 +140,7 @@ class DeployGeneratorPermissionsTest(unittest.TestCase):
         self.assertTrue(stat_info.st_mode & stat.S_IXUSR)
 
 
+@unittest.skipIf(platform.system() == "Windows", "Permissions in NIX systems only")
 class DeployGeneratorSymbolicLinkTest(unittest.TestCase):
 
     def setUp(self):
