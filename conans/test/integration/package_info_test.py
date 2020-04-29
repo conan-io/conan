@@ -439,7 +439,36 @@ class HelloConan(ConanFile):
             .with_requirement_plain("dep1/0.1") \
             .with_requirement_plain("dep2/0.1") \
             .with_package_info(cpp_info={"components": {"kk": {"requires": ["dep2::comp"]},
+                                                        "kkk": {"requires": ["dep3::dep3"]}}},
+                               env_info={})
+        client.save({"conanfile.py": conanfile})
+        client.run("create conanfile.py", assert_error=True)
+        self.assertIn("consumer/0.1 package_info(): Package require 'dep1' not used in components "
+                      "requires", client.out)
+
+        conanfile = GenConanfile("consumer", "0.1") \
+            .with_requirement_plain("dep2/0.1") \
+            .with_package_info(cpp_info={"components": {"kk": {"requires": ["dep2::comp"]},
+                                                        "kkk": {"requires": ["dep3::dep3"]}}},
+                               env_info={})
+        client.save({"conanfile.py": conanfile})
+        client.run("create conanfile.py", assert_error=True)
+        self.assertIn("consumer/0.1 package_info(): Package require 'dep3' declared in components "
+                      "requires but not defined as a recipe requirement", client.out)
+
+        conanfile = GenConanfile("consumer", "0.1") \
+            .with_package_info(cpp_info={"components": {"kk": {"requires": ["dep2::comp"]}}},
+                               env_info={})
+        client.save({"conanfile.py": conanfile})
+        client.run("create conanfile.py", assert_error=True)
+        self.assertIn("consumer/0.1 package_info(): Package require 'dep2' declared in components "
+                      "requires but not defined as a recipe requirement", client.out)
+
+        conanfile = GenConanfile("consumer", "0.1") \
+            .with_requirement_plain("dep1/0.1") \
+            .with_requirement_plain("dep2/0.1") \
+            .with_package_info(cpp_info={"components": {"kk": {"requires": ["dep2::comp"]},
                                                         "kkk": {"requires": ["dep1::dep1"]}}},
                                env_info={})
         client.save({"conanfile.py": conanfile})
-        client.run("create conanfile.py")
+        client.run("create conanfile.py")  # Correct usage

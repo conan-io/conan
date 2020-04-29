@@ -224,17 +224,24 @@ class CppInfo(_CppInfo):
                 raise ConanException("Component name cannot be the same as the package name: '%s'"
                                      % comp_name)
 
-        # Raise on components requires without package requires
-        if package_requires and self.components:
+        if self.components:
             comp_requires = set()
             for comp_name, comp in self.components.items():
                 for comp_require in comp.requires:
-                    comp_requires.add(
-                        comp_require[:comp_require.find(COMPONENT_SCOPE)])
-            for require in package_requires.values():
-                if require.ref.name not in comp_requires:
+                    if COMPONENT_SCOPE in comp_require:
+                        comp_requires.add(
+                            comp_require[:comp_require.find(COMPONENT_SCOPE)])
+            pkg_requires = [require.ref.name for require in package_requires.values()]
+            # Raise on components requires without package requires
+            for pkg_require in pkg_requires:
+                if pkg_require not in comp_requires:
                     raise ConanException("Package require '%s' not used in components requires"
-                                         % require.ref.name)
+                                         % pkg_require)
+            # Raise on components requires requiring inexistent package requires
+            for comp_require in comp_requires:
+                if comp_require not in pkg_requires:
+                    raise ConanException("Package require '%s' declared in components requires "
+                                         "but not defined as a recipe requirement" % comp_require)
 
 
 class _BaseDepsCppInfo(_CppInfo):
