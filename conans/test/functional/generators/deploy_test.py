@@ -138,3 +138,31 @@ class DeployGeneratorPermissionsTest(unittest.TestCase):
         header1_path = os.path.join(base1_path, "include", "header1.h")
         stat_info = os.stat(header1_path)
         self.assertTrue(stat_info.st_mode & stat.S_IXUSR)
+
+
+@unittest.skipIf(platform.system() == "Windows", "Permissions in NIX systems only")
+class DeployGeneratorSymbolicLinkTest(unittest.TestCase):
+
+    def setUp(self):
+        conanfile = GenConanfile()
+        conanfile.with_package_file("include/header.h", "whatever")
+        self.ref = ConanFileReference("name", "version", "user", "channel")
+
+        self.client = TurboTestClient()
+        self.client.create(self.ref, conanfile)
+        layout = self.client.cache.package_layout(self.ref)
+        package_folder = layout.package(PackageReference(self.ref, NO_SETTINGS_PACKAGE_ID))
+        self.header_path = os.path.join(package_folder, "include", "header.h")
+
+    def test_symbolic_links(self):
+        link_path = self.header_path + ".lnk"
+        os.symlink(self.header_path, link_path)
+        self.client.current_folder = temp_folder()
+        self.client.run("install %s -g deploy" % self.ref.full_str())
+        base_path = os.path.join(self.client.current_folder, "name")
+        header_path = os.path.join(base_path, "include", "header.h")
+        link_path = os.path.join(base_path, "include", "header.h.lnk")
+        self.assertTrue(os.path.islink(link_path))
+        self.assertFalse(os.path.islink(header_path))
+        linkto = os.path.join(os.path.dirname(link_path), os.readlink(link_path))
+        self.assertEqual(linkto, header_path)
