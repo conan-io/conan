@@ -1205,6 +1205,73 @@ class Command(object):
             if args.json and info:
                 self._outputer.json_output(info, args.json, cwd)
 
+    # TODO: Hopefully rename to conan binary search or similar for conan 2.0
+    # TODO: Add flags required to make this experimental or 2.0 only
+    # TODO: Add support for json ouptut
+    # TODO: Add unit tests , currently only one basic functional test exists
+    # TODO: Improve output, normalize offset annoations, etc
+    def search_binary(self, *args):
+        """
+        Searches binaries for a package in the local cache or a remote.
+
+        Requires a full reference or path to a recipe (conanfile.py or conanfile.txt).
+
+        """
+        parser = argparse.ArgumentParser(description=self.search.__doc__,
+                                         prog="conan search_binary",
+                                         formatter_class=SmartFormatter)
+        parser.add_argument("path_or_reference", help="Path to a folder containing a recipe"
+                                                      " (conanfile.py or conanfile.txt) or to a recipe file. e.g., "
+                                                      "./my_project/conanfile.txt. It could also be a reference")
+        parser.add_argument("-l", "--lockfile", action=OnceArgument, nargs='?', const=".",
+                            help="Path to a lockfile or folder containing 'conan.lock' file. "
+                                 "Lockfile can be updated if packages change")
+        parser.add_argument('-r', '--remote', action=OnceArgument,
+                            help="Remote to search in. '-r all' searches all remotes")
+        parser.add_argument('--table', action=OnceArgument,
+                            help="Outputs html file with a table of binaries. Only valid for a "
+                                 "reference search")
+        parser.add_argument('-c', '--closest-match', action="store_true",
+                            help="Displace list of closest binary matches.")
+        parser.add_argument('-n', '--limit', type=int,
+                            help="Limit number of results.")
+        parser.add_argument("-j", "--json", default=None, action=OnceArgument,
+                            help='json file path where the search information will be written to')
+
+        _add_profile_arguments(parser)
+        args = parser.parse_args(*args)
+        profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
+                                    options=args.options_build, env=args.env_build)
+
+        cwd = get_cwd()
+
+        info = None
+        try:
+
+            name, version, user, channel, _ = get_reference_fields(args.path_or_reference,
+                                                                   user_channel_input=True)
+            result_info = self._conan.search_binary(name=name, version=version, user=user,
+                                                    channel=channel,
+                                                    settings=args.settings_host,
+                                                    options=args.options_host,
+                                                    env=args.env_host,
+                                                    remote_name=args.remote,
+                                                    profile_names=args.profile_host,
+                                                    cwd=cwd,
+                                                    lockfile=args.lockfile,
+                                                    profile_build=profile_build)
+
+            Printer(self._out).print_search_binary_result(result_info,
+                                                          closest_match=args.closest_match,
+                                                          limit=args.limit)
+
+        except ConanException as exc:
+            info = exc.info
+            raise
+        finally:
+            if args.json and info:
+                self._outputer.json_output(info, args.json, cwd)
+
     def search(self, *args):
         """
         Searches package recipes and binaries in the local cache or a remote.
@@ -1851,12 +1918,13 @@ class Command(object):
         """
         Prints a summary of all commands.
         """
-        grps = [("Consumer commands", ("install", "config", "get", "info", "search")),
-                ("Creator commands", ("new", "create", "upload", "export", "export-pkg", "test")),
-                ("Package development commands", ("source", "build", "package", "editable",
-                                                  "workspace")),
-                ("Misc commands", ("profile", "remote", "user", "imports", "copy", "remove",
-                                   "alias", "download", "inspect", "help", "graph", "frogarian"))]
+        grps = [
+            ("Consumer commands", ("install", "config", "get", "info", "search", "search_binary")),
+            ("Creator commands", ("new", "create", "upload", "export", "export-pkg", "test")),
+            ("Package development commands", ("source", "build", "package", "editable",
+                                              "workspace")),
+            ("Misc commands", ("profile", "remote", "user", "imports", "copy", "remove",
+                               "alias", "download", "inspect", "help", "graph", "frogarian"))]
 
         def check_all_commands_listed():
             """Keep updated the main directory, raise if don't"""

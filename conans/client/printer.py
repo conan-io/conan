@@ -204,6 +204,38 @@ class Printer(object):
                                              indent=2)
                 self._out.writeln("")
 
+    def print_search_binary_result(self, result_info, closest_match=False, limit=None):
+        """
+        By default, we only print package_id of exact match, or nothing.
+        With closest_match, we show multiple results, and do some formatting
+        """
+
+        def print_comparison(comp):
+            self._out.write("\n")
+            self._print_colored_line("Package ID = {pid} : Distance = {dst} : Remote = {rem}".format(
+                pid=comp.result.package_id, dst=comp.distance, rem=comp.result.remote_name))
+            self._print_colored_line("[Configuration (Found)]")
+            annotated_result = comp.diff.annotate(comp.result.dumps())
+            for line in annotated_result.split("\n"):
+                if "###" in line:
+                    self._print_colored_line(line, color=Color.BRIGHT_RED)
+                else:
+                    self._print_colored_line(line)
+
+        if not result_info.comparisons:
+            return
+        else:
+            self._print_colored_line("[Configuration (Queried)]")
+            self._print_colored_line(result_info.query.dumps())
+            for index, comparison in enumerate(result_info.comparisons):
+                if index == limit:
+                    return
+                if not closest_match:
+                    if comparison.distance == 0:
+                        print_comparison(comparison)
+                else:
+                    print_comparison(comparison)
+
     def print_profile(self, name, profile):
         self._out.info("Configuration for profile %s:\n" % name)
         self._print_profile_section("settings", profile.settings.items(), separator="=")

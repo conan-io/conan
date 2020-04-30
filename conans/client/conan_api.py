@@ -44,6 +44,7 @@ from conans.client.rest.auth_manager import ConanApiAuthManager
 from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest.rest_client import RestApiClientFactory
 from conans.client.runner import ConanRunner
+from conans.client.search.binary_search import BinarySearcher
 from conans.client.source import config_source_local
 from conans.client.store.localdb import LocalDB
 from conans.client.tools.env import environment_append
@@ -878,6 +879,30 @@ class ConanAPIV1(object):
                                                 properties.get("full_requires", []),
                                                 remote_ref.recipe_hash != package_recipe_hash)
         return search_recorder.get_info()
+
+    @api_method
+    def search_binary(self, name=None, version=None, user=None, channel=None, settings=None,
+                      options=None, env=None, remote_name=None, profile_names=None, cwd=None,
+                      lockfile=None, profile_build=None):
+        recorder = ActionRecorder()
+        try:
+            profile_host = ProfileData(profiles=profile_names, settings=settings, options=options,
+                                       env=env)
+            remotes = self.app.load_remotes(remote_name=remote_name)
+            lockfile = _make_abs_path(lockfile, cwd) if lockfile else None
+
+            graph_info = get_graph_info(profile_host, profile_build, cwd, None,
+                                        self.app.cache, self.app.out,
+                                        name=name, version=version, user=user, channel=channel,
+                                        lockfile=lockfile)
+            searcher = BinarySearcher(self.app, recorder=recorder)
+            result_info = searcher.search(graph_info, remotes, remote_name)
+            return result_info
+
+        except ConanException as exc:
+            recorder.error = True
+            exc.info = recorder.get_info(self.app.config.revisions_enabled)
+            raise
 
     @api_method
     def upload(self, pattern, package=None, remote_name=None, all_packages=False, confirm=False,
