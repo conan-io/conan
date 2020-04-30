@@ -71,7 +71,7 @@ class LinkOrderTest(unittest.TestCase):
                 {% endif %}
     """))
 
-    conanfile_headeronly= Template(textwrap.dedent("""
+    conanfile_headeronly = Template(textwrap.dedent("""
         from conans import ConanFile
 
         class HeaderOnly(ConanFile):

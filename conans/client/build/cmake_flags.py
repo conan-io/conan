@@ -26,15 +26,15 @@ def get_toolset(settings):
     return None
 
 
-def get_generator(settings):
+def get_generator(conanfile):
     # Returns the name of the generator to be used by CMake
     if "CONAN_CMAKE_GENERATOR" in os.environ:
         return os.environ["CONAN_CMAKE_GENERATOR"]
 
-    compiler = settings.get_safe("compiler")
-    arch = settings.get_safe("arch")
-    compiler_version = settings.get_safe("compiler.version")
-    os_build, _, _, _ = get_cross_building_settings(settings)
+    compiler = conanfile.settings.get_safe("compiler")
+    arch = conanfile.settings.get_safe("arch")
+    compiler_version =conanfile. settings.get_safe("compiler.version")
+    os_build, _, _, _ = get_cross_building_settings(conanfile)
 
     if not compiler or not compiler_version or not arch:
         if os_build == "Windows":
@@ -169,7 +169,7 @@ class CMakeDefinitionsBuilder(object):
         env_sn = {"False": False, "True": True, "": None}.get(env_sn, env_sn)
         cmake_system_name = env_sn or self._forced_cmake_system_name
 
-        os_build, _, _, _ = get_cross_building_settings(self._conanfile.settings)
+        os_build, _, _, _ = get_cross_building_settings(self._conanfile)
         compiler = self._ss("compiler")
         libcxx = self._ss("compiler.libcxx")
 
@@ -189,7 +189,7 @@ class CMakeDefinitionsBuilder(object):
         if cmake_system_name is not True:  # String not empty
             definitions["CMAKE_SYSTEM_NAME"] = cmake_system_name
         else:  # detect if we are cross building and the system name and version
-            if cross_building(self._conanfile.settings):  # We are cross building
+            if cross_building(self._conanfile):  # We are cross building
                 if os_ != os_build:
                     if os_:  # the_os is the host (regular setting)
                         definitions["CMAKE_SYSTEM_NAME"] = {"iOS": "Darwin",
