@@ -2080,7 +2080,7 @@ def _add_profile_arguments(parser):
                             dest="env_{}".format(machine),
                             help='Environment variables that will be set during the'
                                  ' package build ({} machine).'
-                                 ' e.g.: -e CXX=/usr/bin/clang++'.format(machine))
+                                 ' e.g.: -e{} CXX=/usr/bin/clang++'.format(machine, short_suffix))
 
     def options_args(machine, short_suffix="", long_suffix=""):
         parser.add_argument("-o{}".format(short_suffix),
@@ -2088,7 +2088,7 @@ def _add_profile_arguments(parser):
                             nargs=1, action=Extender,
                             dest="options_{}".format(machine),
                             help='Define options values ({} machine), e.g.:'
-                                 ' -o Pkg:with_qt=true'.format(machine))
+                                 ' -o{} Pkg:with_qt=true'.format(machine, short_suffix))
 
     def profile_args(machine, short_suffix="", long_suffix=""):
         parser.add_argument("-pr{}".format(short_suffix),
@@ -2103,7 +2103,8 @@ def _add_profile_arguments(parser):
                             nargs=1, action=Extender,
                             dest='settings_{}'.format(machine),
                             help='Settings to build the package, overwriting the defaults'
-                                 ' ({} machine). e.g.: -s compiler=gcc'.format(machine))
+                                 ' ({} machine). e.g.: -s{} compiler=gcc'.format(machine,
+                                                                                 short_suffix))
 
     for item_fn in [environment_args, options_args, profile_args, settings_args]:
         item_fn("host", "", "")  # By default it is the HOST, the one we are building binaries for
