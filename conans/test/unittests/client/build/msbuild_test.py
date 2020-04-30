@@ -13,6 +13,7 @@ from conans.client.build.msbuild import MSBuild
 from conans.errors import ConanException
 from conans.model.version import Version
 from conans.test.utils.conanfile import MockConanfile, MockSettings, ConanFileMock
+from conans.test.utils.test_files import temp_folder
 
 
 class MSBuildTest(unittest.TestCase):
@@ -327,11 +328,12 @@ class MSBuildTest(unittest.TestCase):
                                  "arch": "x86_64"})
         conanfile = ConanFileMock()
         conanfile.settings = settings
+        props_file_path = os.path.join(temp_folder(), "conan_build.props")
 
         msbuild = MSBuild(conanfile)
-        msbuild.build("project_file.sln")
+        msbuild.build("project_file.sln", property_file_name=props_file_path)
         self.assertIn("vcvarsall.bat\" amd64", conanfile.command)
         self.assertIn("/p:Platform=\"x64\"", conanfile.command)
-        msbuild.build("project_file.sln", arch="x86")
+        msbuild.build("project_file.sln", arch="x86", property_file_name=props_file_path)
         self.assertIn("vcvarsall.bat\" x86", conanfile.command)
         self.assertIn("/p:Platform=\"x86\"", conanfile.command)
