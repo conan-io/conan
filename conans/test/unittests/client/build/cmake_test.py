@@ -9,6 +9,7 @@ import mock
 import six
 from parameterized.parameterized import parameterized
 
+from conans import MSBuild
 from conans.client import tools
 from conans.client.build.cmake import CMake
 from conans.client.build.cmake_flags import cmake_in_local_cache_var_name
@@ -1400,11 +1401,6 @@ build_type: [ Release]
         cmake = CMake(conanfile, msbuild_verbosity=None)
         cmake.build()
         self.assertNotIn("/verbosity", conanfile.command)
-
-        with tools.environment_append({"CONAN_MSBUILD_VERBOSITY": "detailed"}):
-            cmake = CMake(conanfile)
-            cmake.build()
-            self.assertIn("/verbosity:detailed", conanfile.command)
 
     def test_ctest_variables(self):
         conanfile = ConanFileMock()
