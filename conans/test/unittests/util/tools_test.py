@@ -298,7 +298,7 @@ class HelloConan(ConanFile):
             warnings.simplefilter("always")
             cmd = tools.msvc_build_command(settings, "project.sln", build_type="Debug",
                                            arch="x86", output=self.output)
-            self.assertEqual(len(w), 2)
+            self.assertEqual(len(w), 3)
             self.assertTrue(issubclass(w[0].category, DeprecationWarning))
         self.assertIn('msbuild "project.sln" /p:Configuration="Debug" '
                       '/p:UseEnv=false /p:Platform="x86"', cmd)
@@ -324,7 +324,7 @@ class HelloConan(ConanFile):
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
             cmd = tools.msvc_build_command(settings, "project.sln", output=self.output)
-            self.assertEqual(len(w), 2)
+            self.assertEqual(len(w), 3)
             self.assertTrue(issubclass(w[0].category, DeprecationWarning))
         self.assertIn('msbuild "project.sln" /p:Configuration="Debug" '
                       '/p:UseEnv=false /p:Platform="x86"', cmd)
