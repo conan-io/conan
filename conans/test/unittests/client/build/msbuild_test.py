@@ -319,6 +319,7 @@ class MSBuildTest(unittest.TestCase):
         command = msbuild.get_command("test.sln")
         self.assertIn('/p:Platform="YOUR PLATFORM SDK (ARMV4)"', command)
 
+    @unittest.skipUnless(platform.system() == "Windows", "Requires Visual Studio installation path")
     def test_arch_override(self):
         settings = MockSettings({"build_type": "Release",
                                  "compiler": "Visual Studio",
