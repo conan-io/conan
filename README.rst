@@ -117,14 +117,14 @@ Using tox
 
 .. code-block:: bash
 
-    $ tox
+    $ python -m tox
 
 It will install the needed requirements and launch `nose` skipping some heavy and slow tests.
 If you want to run the full test suite:
 
 .. code-block:: bash
 
-    $ tox -e full
+    $ python -m tox -e full
 
 Without tox
 -----------
@@ -133,17 +133,9 @@ Without tox
 
 .. code-block:: bash
 
-    $ pip install -r conans/requirements.txt
-    $ pip install -r conans/requirements_server.txt
-    $ pip install -r conans/requirements_dev.txt
-
-
-Only in OSX:
-
-.. code-block:: bash
-
-    $ pip install -r conans/requirements_osx.txt # You can omit this one if not running OSX
-
+    $ python -m pip install -r conans/requirements.txt
+    $ python -m pip install -r conans/requirements_server.txt
+    $ python -m pip install -r conans/requirements_dev.txt
 
 If you are not Windows and you are not using a python virtual environment, you will need to run these
 commands using `sudo`.
@@ -188,7 +180,7 @@ You can run the actual tests like this:
 
 .. code-block:: bash
 
-    $ nosetests .
+    $ python -m nose .
 
 
 There are a couple of test attributes defined, as ``slow`` that you can use
@@ -196,7 +188,7 @@ to filter the tests, and do not execute them:
 
 .. code-block:: bash
 
-    $ nosetests . -a !slow
+    $ python -m nose . -a !slow
 
 A few minutes later it should print ``OK``:
 
@@ -212,7 +204,7 @@ To run specific tests, you can specify the test name too, something like:
 
 .. code-block:: bash
 
-    $ nosetests conans.test.command.config_install_test:ConfigInstallTest.install_file_test --nocapture
+    $ python -m nose conans.test.command.config_install_test:ConfigInstallTest.install_file_test --nocapture
 
 The ``--nocapture`` argument can be useful to see some output that otherwise is captured by nosetests.
 
