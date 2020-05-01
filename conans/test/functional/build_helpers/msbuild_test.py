@@ -3,6 +3,7 @@ import platform
 import textwrap
 import unittest
 
+import six
 from nose.plugins.attrib import attr
 from parameterized import parameterized
 
@@ -18,7 +19,7 @@ from conans.util.files import load
 class MSBuildTest(unittest.TestCase):
 
     @attr('slow')
-    @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
+    @unittest.skipUnless(platform.system() == "Windows" and six.PY3, "Requires MSBuild")
     def build_vs_project_test(self):
         conan_build_vs = """
 from conans import ConanFile, MSBuild
