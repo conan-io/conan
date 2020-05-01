@@ -29,9 +29,11 @@ class BuildRequiresInRecipeExample(CrossBuildingBaseTestCase):
                 self.output.info(">> settings.os:".format(self.settings.os))
     """)
 
-    breq = CrossBuildingBaseTestCase.library_tpl.render(name="breq", requires=["breq_lib/testing@user/channel", ])
+    breq = CrossBuildingBaseTestCase.library_tpl.render(name="breq",
+                                                        requires=["breq_lib/testing@user/channel", ])
     breq_lib = CrossBuildingBaseTestCase.library_tpl.render(name="breq_lib")
-    lib = CrossBuildingBaseTestCase.library_tpl.render(name="lib", build_requires=["breq/testing@user/channel", ])
+    lib = CrossBuildingBaseTestCase.library_tpl.render(
+        name="lib", build_requires=[("breq/testing@user/channel", False), ])
 
     breq_lib_ref = ConanFileReference.loads("breq_lib/testing@user/channel")
     breq_ref = ConanFileReference.loads("breq/testing@user/channel")

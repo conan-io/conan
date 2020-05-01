@@ -206,9 +206,19 @@ class CMakeFindPathMultiGeneratorTest(unittest.TestCase):
             self.assertNotIn("-- Library %s not found in package, might be system one" %
                              library_name, client.out)
             if build_type == "Release":
-                target_libs = "$<$<CONFIG:Release>:lib1;sys1;>;$<$<CONFIG:RelWithDebInfo>:;>;$<$<CONFIG:MinSizeRel>:;>;$<$<CONFIG:Debug>:;>"
+                target_libs = "$<$<CONFIG:Release>:lib1;sys1;" \
+                              "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;" \
+                              "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>;" \
+                              "$<$<CONFIG:RelWithDebInfo>:;>;" \
+                              "$<$<CONFIG:MinSizeRel>:;>;" \
+                              "$<$<CONFIG:Debug>:;>"
             else:
-                target_libs = "$<$<CONFIG:Release>:;>;$<$<CONFIG:RelWithDebInfo>:;>;$<$<CONFIG:MinSizeRel>:;>;$<$<CONFIG:Debug>:lib1;sys1d;>"
+                target_libs = "$<$<CONFIG:Release>:;>;" \
+                              "$<$<CONFIG:RelWithDebInfo>:;>;" \
+                              "$<$<CONFIG:MinSizeRel>:;>;" \
+                              "$<$<CONFIG:Debug>:lib1;sys1d;" \
+                              "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;" \
+                              "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>"
             self.assertIn("Target libs: %s" % target_libs, client.out)
 
     def cpp_info_name_test(self):
@@ -255,12 +265,18 @@ class Conan(ConanFile):
         client.save({"conanfile.py": conanfile, "CMakeLists.txt": cmakelists})
         client.run("install .")
         client.run("build .")
-        self.assertIn("Target libs (hello2): $<$<CONFIG:Release>:CONAN_LIB::MYHELLO2_hello_RELEASE;MYHELLO::MYHELLO;>;"
+        self.assertIn("Target libs (hello2): "
+                      "$<$<CONFIG:Release>:CONAN_LIB::MYHELLO2_hello_RELEASE;MYHELLO::MYHELLO;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>;"
                       "$<$<CONFIG:RelWithDebInfo>:;>;"
                       "$<$<CONFIG:MinSizeRel>:;>;"
                       "$<$<CONFIG:Debug>:;>",
                       client.out)
-        self.assertIn("Target libs (hello): $<$<CONFIG:Release>:CONAN_LIB::MYHELLO_hello_RELEASE;>;"
+        self.assertIn("Target libs (hello): "
+                      "$<$<CONFIG:Release>:CONAN_LIB::MYHELLO_hello_RELEASE;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>;"
                       "$<$<CONFIG:RelWithDebInfo>:;>;"
                       "$<$<CONFIG:MinSizeRel>:;>;"
                       "$<$<CONFIG:Debug>:;>",
@@ -355,18 +371,18 @@ class Conan(ConanFile):
     def cpp_info_config_test(self):
         conanfile = textwrap.dedent("""
             from conans import ConanFile
-            
+
             class Requirement(ConanFile):
                 name = "requirement"
                 version = "version"
-            
+
                 settings = "os", "arch", "compiler", "build_type"
-            
+
                 def package_info(self):
                     self.cpp_info.libs = ["lib_both"]
                     self.cpp_info.debug.libs = ["lib_debug"]
                     self.cpp_info.release.libs = ["lib_release"]
-                    
+
                     self.cpp_info.cxxflags = ["-req_both"]
                     self.cpp_info.debug.cxxflags = ["-req_debug"]
                     self.cpp_info.release.cxxflags = ["-req_release"]

@@ -141,9 +141,8 @@ class CommandOutputer(object):
                 package_layout = self._cache.package_layout(ref, conanfile.short_paths)
                 item_data["export_folder"] = package_layout.export()
                 item_data["source_folder"] = package_layout.source()
-                # @todo: check if this is correct or if it must always be package_id
-                package_id = build_id(conanfile) or package_id
-                pref = PackageReference(ref, package_id)
+                pref_build_id = build_id(conanfile) or package_id
+                pref = PackageReference(ref, pref_build_id)
                 item_data["build_folder"] = package_layout.build(pref)
 
                 pref = PackageReference(ref, package_id)
@@ -236,9 +235,9 @@ class CommandOutputer(object):
         printer.print_search_recipes(search_info, pattern, raw, all_remotes_search)
 
     def print_search_packages(self, search_info, reference, packages_query, table, raw,
-                              outdated=False):
+                              template, outdated=False):
         if table:
-            html_binary_graph(search_info, reference, table)
+            html_binary_graph(search_info, reference, table, template)
         else:
             printer = Printer(self._output)
             printer.print_search_packages(search_info, reference, packages_query, raw,

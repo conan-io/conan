@@ -13,7 +13,7 @@ from conans.client.build.cppstd_flags import cppstd_from_settings, \
     cppstd_flag_new as cppstd_flag
 from conans.client.tools.env import environment_append
 from conans.client.tools.oss import OSInfo, args_to_string, cpu_count, cross_building, \
-    detected_architecture, detected_os, get_gnu_triplet
+    detected_architecture, detected_os, get_gnu_triplet, get_target_os_arch, get_build_os_arch
 from conans.client.tools.win import unix_path
 from conans.errors import ConanException
 from conans.model.build_info import DEFAULT_BIN, DEFAULT_INCLUDE, DEFAULT_LIB, DEFAULT_SHARE
@@ -39,8 +39,7 @@ class AutoToolsBuildEnvironment(object):
         self._deps_cpp_info = conanfile.deps_cpp_info
         self._os = conanfile.settings.get_safe("os")
         self._arch = conanfile.settings.get_safe("arch")
-        self._os_target = conanfile.settings.get_safe("os_target")
-        self._arch_target = conanfile.settings.get_safe("arch_target")
+        self._os_target, self._arch_target = get_target_os_arch(conanfile)
         self._build_type = conanfile.settings.get_safe("build_type")
         self._compiler = conanfile.settings.get_safe("compiler")
         self._compiler_version = conanfile.settings.get_safe("compiler.version")
@@ -81,9 +80,6 @@ class AutoToolsBuildEnvironment(object):
         """Based on google search for build/host triplets, it could need a lot
         and complex verification"""
 
-        arch_detected = detected_architecture() or platform.machine()
-        os_detected = detected_os() or platform.system()
-
         if self._os_target and self._arch_target:
             try:
                 target = get_gnu_triplet(self._os_target, self._arch_target, self._compiler)
@@ -93,13 +89,21 @@ class AutoToolsBuildEnvironment(object):
         else:
             target = None
 
-        if os_detected is None or arch_detected is None or self._arch is None or self._os is None:
+        if hasattr(self._conanfile, 'settings_build'):
+            os_build, arch_build = get_build_os_arch(self._conanfile)
+        else:
+            # FIXME: Why not use 'os_build' and 'arch_build' from conanfile.settings?
+            os_build = detected_os() or platform.system()
+            arch_build = detected_architecture() or platform.machine()
+
+        if os_build is None or arch_build is None or self._arch is None or self._os is None:
             return False, False, target
-        if not cross_building(self._conanfile.settings, os_detected, arch_detected):
+
+        if not cross_building(self._conanfile, os_build, arch_build):
             return False, False, target
 
         try:
-            build = get_gnu_triplet(os_detected, arch_detected, self._compiler)
+            build = get_gnu_triplet(os_build, arch_build, self._compiler)
         except ConanException as exc:
             self._conanfile.output.warn(str(exc))
             build = None
@@ -250,8 +254,10 @@ class AutoToolsBuildEnvironment(object):
             ret.append(sysf)
 
         if self._include_rpath_flags:
-            the_os = self._conanfile.settings.get_safe("os_build") or self._os
-            ret.extend(rpath_flags(the_os, self._compiler, self._deps_cpp_info.lib_paths))
+            os_build, _ = get_build_os_arch(self._conanfile)
+            if not hasattr(self._conanfile, 'settings_build'):
+                os_build = os_build or self._os
+            ret.extend(rpath_flags(os_build, self._compiler, self._deps_cpp_info.lib_paths))
 
         return ret
 

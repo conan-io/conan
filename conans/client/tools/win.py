@@ -3,11 +3,13 @@ import os
 import platform
 import re
 import subprocess
+import warnings
+from collections import namedtuple
 from contextlib import contextmanager
 
 from conans.client.tools import which
 from conans.client.tools.env import environment_append
-from conans.client.tools.oss import OSInfo, detected_architecture
+from conans.client.tools.oss import OSInfo, detected_architecture, get_build_os_arch
 from conans.errors import ConanException
 from conans.model.version import Version
 from conans.unicode import get_cwd
@@ -338,15 +340,37 @@ def find_windows_10_sdk():
     return None
 
 
-def vcvars_command(settings, arch=None, compiler_version=None, force=False, vcvars_ver=None,
-                   winsdk_version=None, output=None):
+def vcvars_command(conanfile=None, arch=None, compiler_version=None, force=False, vcvars_ver=None,
+                   winsdk_version=None, output=None, settings=None):
+    # Handle input arguments (backwards compatibility with 'settings' as first argument)
+    # TODO: This can be promoted to a decorator pattern for any function
+    if conanfile and settings:
+        raise ConanException("Do not set both arguments, 'conanfile' and 'settings',"
+                             " to call 'vcvars_command' function")
+
+    from conans.model.conan_file import ConanFile
+    if conanfile and not isinstance(conanfile, ConanFile):
+        return vcvars_command(settings=conanfile, arch=arch, compiler_version=compiler_version,
+                              force=force, vcvars_ver=vcvars_ver, winsdk_version=winsdk_version,
+                              output=output)
+
+    if settings:
+        warnings.warn("argument 'settings' has been deprecated, use 'conanfile' instead")
+
+    if not conanfile:
+        # TODO: If Conan is using 'profile_build' here we don't have any information about it,
+        #   we are falling back to the old behavior (which is probably wrong here)
+        conanfile = namedtuple('_ConanFile', ['settings'])(settings)
+    del settings
+
+    # Here starts the actual implementation for this function
     output = default_output(output, 'conans.client.tools.win.vcvars_command')
 
-    arch_setting = arch or settings.get_safe("arch")
+    arch_setting = arch or conanfile.settings.get_safe("arch")
 
-    compiler = settings.get_safe("compiler")
+    compiler = conanfile.settings.get_safe("compiler")
     if compiler == 'Visual Studio':
-        compiler_version = compiler_version or settings.get_safe("compiler.version")
+        compiler_version = compiler_version or conanfile.settings.get_safe("compiler.version")
     else:
         # vcvars might be still needed for other compilers, e.g. clang-cl or Intel C++,
         # as they might be using Microsoft STL and other tools
@@ -355,23 +379,27 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False, vcva
         last_version = latest_vs_version_installed(output=output)
 
         compiler_version = compiler_version or last_version
-    os_setting = settings.get_safe("os")
+    os_setting = conanfile.settings.get_safe("os")
     if not compiler_version:
         raise ConanException("compiler.version setting required for vcvars not defined")
 
     # https://msdn.microsoft.com/en-us/library/f2ccy3wt.aspx
     vcvars_arch = None
     arch_setting = arch_setting or 'x86_64'
-    arch_build = settings.get_safe("arch_build") or detected_architecture()
+
+    _, settings_arch_build = get_build_os_arch(conanfile)
+    arch_build = settings_arch_build
+    if not hasattr(conanfile, 'settings_build'):
+        arch_build = arch_build or detected_architecture()
+
     if os_setting == 'WindowsCE':
         vcvars_arch = "x86"
     elif arch_build == 'x86_64':
         # Only uses x64 tooling if arch_build explicitly defines it, otherwise
         # Keep the VS default, which is x86 toolset
         # This will probably be changed in conan 2.0
-        if ((settings.get_safe("arch_build") or
-                os.getenv("PreferredToolArchitecture") == "x64")
-                and int(compiler_version) >= 12):
+        if ((settings_arch_build or os.getenv("PreferredToolArchitecture") == "x64")
+           and int(compiler_version) >= 12):
             x86_cross = "amd64_x86"
         else:
             x86_cross = "x86"
@@ -421,7 +449,7 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False, vcva
                 command.append("-vcvars_ver=%s" % vcvars_ver)
 
         if os_setting == 'WindowsStore':
-            os_version_setting = settings.get_safe("os.version")
+            os_version_setting = conanfile.settings.get_safe("os.version")
             if os_version_setting == '8.1':
                 command.append('store 8.1')
             elif os_version_setting == '10.0':
@@ -548,6 +576,9 @@ def unix_path(path, path_flavor=None):
     c/users/path/to/file. Not working in a regular console or MinGW!"""
     if not path:
         return None
+
+    if not OSInfo().is_windows:
+        return path
 
     if os.path.exists(path):
         path = get_cased_path(path)  # if the path doesn't exist (and abs) we cannot guess the casing

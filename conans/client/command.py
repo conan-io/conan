@@ -14,6 +14,7 @@ from conans.client.cmd.frogarian import cmd_frogarian
 from conans.client.cmd.uploader import UPLOAD_POLICY_FORCE, \
     UPLOAD_POLICY_NO_OVERWRITE, UPLOAD_POLICY_NO_OVERWRITE_RECIPE, UPLOAD_POLICY_SKIP
 from conans.client.conan_api import Conan, default_manifest_folder, _make_abs_path, ProfileData
+from conans.client.conf.config_installer import is_config_install_scheduled
 from conans.client.conan_command_output import CommandOutputer
 from conans.client.output import Color
 from conans.client.printer import Printer
@@ -26,6 +27,8 @@ from conans.util.config_parser import get_bool_from_text
 from conans.util.files import exception_message_safe
 from conans.util.files import save
 from conans.util.log import logger
+from conans.assets import templates
+
 
 # Exit codes for conan command:
 SUCCESS = 0                         # 0: Success (done)
@@ -1307,8 +1310,10 @@ class Command(object):
                                                    remote_name=args.remote,
                                                    outdated=args.outdated)
                 # search is done for one reference
+                template = self._conan.app.cache.get_template(templates.SEARCH_TABLE_HTML)
                 self._outputer.print_search_packages(info["results"], ref, args.query,
-                                                     args.table, args.raw, outdated=args.outdated)
+                                                     args.table, args.raw, outdated=args.outdated,
+                                                     template=template)
             else:
                 if args.table:
                     raise ConanException("'--table' argument can only be used with a reference")
@@ -2006,6 +2011,10 @@ class Command(object):
                 self._print_similar(command)
                 raise ConanException("Unknown command %s" % str(exc))
 
+            if is_config_install_scheduled(self._conan) and \
+               (command != "config" or (command == "config" and args[0] != "install")):
+                self._conan.config_install(None, None)
+
             method(args[0][1:])
         except KeyboardInterrupt as exc:
             logger.error(exc)
@@ -2071,7 +2080,7 @@ def _add_profile_arguments(parser):
                             dest="env_{}".format(machine),
                             help='Environment variables that will be set during the'
                                  ' package build ({} machine).'
-                                 ' e.g.: -e CXX=/usr/bin/clang++'.format(machine))
+                                 ' e.g.: -e{} CXX=/usr/bin/clang++'.format(machine, short_suffix))
 
     def options_args(machine, short_suffix="", long_suffix=""):
         parser.add_argument("-o{}".format(short_suffix),
@@ -2079,7 +2088,7 @@ def _add_profile_arguments(parser):
                             nargs=1, action=Extender,
                             dest="options_{}".format(machine),
                             help='Define options values ({} machine), e.g.:'
-                                 ' -o Pkg:with_qt=true'.format(machine))
+                                 ' -o{} Pkg:with_qt=true'.format(machine, short_suffix))
 
     def profile_args(machine, short_suffix="", long_suffix=""):
         parser.add_argument("-pr{}".format(short_suffix),
@@ -2094,7 +2103,8 @@ def _add_profile_arguments(parser):
                             nargs=1, action=Extender,
                             dest='settings_{}'.format(machine),
                             help='Settings to build the package, overwriting the defaults'
-                                 ' ({} machine). e.g.: -s compiler=gcc'.format(machine))
+                                 ' ({} machine). e.g.: -s{} compiler=gcc'.format(machine,
+                                                                                 short_suffix))
 
     for item_fn in [environment_args, options_args, profile_args, settings_args]:
         item_fn("host", "", "")  # By default it is the HOST, the one we are building binaries for

@@ -1,12 +1,15 @@
 # -*- coding: utf-8 -*-
 
-from mock import mock
 import unittest
+
+from mock import mock
 
 from conans.client.conf import get_default_settings_yml
 from conans.client.tools.oss import cross_building
 from conans.model.settings import Settings
 
+
+# TODO: Add tests using a conanfile with 'settings' and 'settings_build'
 
 class CrossBuildingTest(unittest.TestCase):
     def test_same(self):

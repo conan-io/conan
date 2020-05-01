@@ -37,7 +37,7 @@ class TransitiveGraphTest(GraphManagerTest):
         self.assertEqual(len(libb.dependencies), 0)
         self.assertEqual(len(libb.dependants), 1)
         self.assertEqual(libb.inverse_neighbors(), [app])
-        self.assertEqual(libb.ancestors, {app.ref.name})
+        self.assertEqual(list(libb.ancestors), [app])
         self.assertEqual(libb.recipe, RECIPE_INCACHE)
 
         self.assertEqual(list(app.public_closure), [libb])
@@ -219,14 +219,14 @@ class TransitiveGraphTest(GraphManagerTest):
         consumer = self.recipe_consumer("app/0.1", ["libc/0.1"])
 
         with six.assertRaisesRegex(self, ConanException,
-                                   "Loop detected: 'liba/0.1' requires 'libc/0.1'"):
+                                   "Loop detected in context host: 'liba/0.1' requires 'libc/0.1'"):
             self.build_consumer(consumer)
 
     def test_self_loop(self):
         self.recipe_cache("liba/0.1")
         consumer = self.recipe_consumer("liba/0.2", ["liba/0.1"])
         with six.assertRaisesRegex(self, ConanException,
-                                   "Loop detected: 'liba/0.2' requires 'liba/0.1'"):
+                                   "Loop detected in context host: 'liba/0.2' requires 'liba/0.1'"):
             self.build_consumer(consumer)
 
     @parameterized.expand([("recipe", ), ("profile", )])
@@ -286,8 +286,9 @@ class TransitiveGraphTest(GraphManagerTest):
         self._cache_recipe(lib_ref, GenConanfile().with_name("lib").with_version("0.1")
                                                   .with_build_require(tool_ref))
 
-        with six.assertRaisesRegex(self, ConanException, "Loop detected: 'tool/0.1@user/testing' "
-                                   "requires 'lib/0.1@user/testing'"):
+        with six.assertRaisesRegex(self, ConanException, "Loop detected in context host:"
+                                                         " 'tool/0.1@user/testing' requires"
+                                                         " 'lib/0.1@user/testing'"):
             self.build_graph(GenConanfile().with_name("app").with_version("0.1")
                                            .with_require(lib_ref))
 
@@ -619,8 +620,9 @@ class TransitiveGraphTest(GraphManagerTest):
                                                    .with_require(lib_ref, private=True))
         self._cache_recipe(lib_ref, GenConanfile().with_name("lib").with_version("0.1")
                                                   .with_require(tool_ref, private=True))
-        with six.assertRaisesRegex(self, ConanException, "Loop detected: 'tool/0.1@user/testing' "
-                                   "requires 'lib/0.1@user/testing'"):
+        with six.assertRaisesRegex(self, ConanException, "Loop detected in context host:"
+                                                         " 'tool/0.1@user/testing'"
+                                                         " requires 'lib/0.1@user/testing'"):
             self.build_graph(GenConanfile().with_name("app").with_version("0.1")
                                            .with_require(lib_ref))
 
