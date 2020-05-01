@@ -19,7 +19,8 @@ from conans.util.files import normalize, save
 def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, build_modes=None,
                  update=False, manifest_folder=None, manifest_verify=False,
                  manifest_interactive=False, generators=None, no_imports=False,
-                 create_reference=None, keep_build=False, use_lock=False, recorder=None):
+                 create_reference=None, keep_build=False, use_lock=False, recorder=None,
+                 local_install=None):
     """ Fetch and build all dependencies for the given reference
     @param app: The ConanApp instance with all collaborators
     @param ref_or_path: ConanFileReference or path to user space conanfile
@@ -72,7 +73,7 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
     # TODO: Extract this from the GraphManager, reuse same object, check args earlier
     build_modes = BuildMode(build_modes, out)
     installer.install(deps_graph, remotes, build_modes, update, keep_build=keep_build,
-                      graph_info=graph_info)
+                      graph_info=graph_info, local_install=local_install)
     # GraphLock always != None here (because of graph_manager.load_graph)
     graph_info.graph_lock.update_check_graph(deps_graph, out)
 

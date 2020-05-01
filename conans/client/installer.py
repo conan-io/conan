@@ -19,11 +19,13 @@ from conans.client.tools.env import pythonpath
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
                            conanfile_exception_formatter)
 from conans.model.build_info import CppInfo, DepCppInfo
+from conans.model.conan_file import get_env_context_manager
 from conans.model.editable_layout import EditableLayout
 from conans.model.env_info import EnvInfo
 from conans.model.graph_info import GraphInfo
 from conans.model.graph_lock import GraphLockNode
 from conans.model.info import PACKAGE_ID_UNKNOWN
+from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference
 from conans.model.user_info import UserInfo
 from conans.paths import BUILD_INFO, CONANINFO, RUN_LOG_NAME
@@ -163,9 +165,6 @@ class _PackageBuilder(object):
 
         update_package_metadata(prev, package_layout, package_id, pref.ref.revision)
 
-        if self._cache.config.package_installs:
-            install = package_layout.install(pref)
-            shutil.copytree(package_folder, install, symlinks=True)
         if get_env("CONAN_READ_ONLY_CACHE", False):
             make_read_only(package_folder)
         # FIXME: Conan 2.0 Clear the registry entry (package ref)
@@ -302,14 +301,16 @@ class BinaryInstaller(object):
         self._binaries_analyzer = app.binaries_analyzer
         self._hook_manager = app.hook_manager
 
-    def install(self, deps_graph, remotes, build_mode, update, keep_build=False, graph_info=None):
+    def install(self, deps_graph, remotes, build_mode, update, keep_build=False, graph_info=None,
+                local_install=None):
         # order by levels and separate the root node (ref=None) from the rest
         nodes_by_level = deps_graph.by_levels()
         root_level = nodes_by_level.pop()
         root_node = root_level[0]
         # Get the nodes in order and if we have to build them
         self._out.info("Installing (downloading, building) binaries...")
-        self._build(nodes_by_level, keep_build, root_node, graph_info, remotes, build_mode, update)
+        self._build(nodes_by_level, keep_build, root_node, graph_info, remotes, build_mode, update,
+                    local_install)
 
     @staticmethod
     def _classify(nodes_by_level):
@@ -384,7 +385,8 @@ class BinaryInstaller(object):
             with layout.update_metadata() as metadata:
                 metadata.packages[pref.id].remote = node.binary_remote.name
 
-    def _build(self, nodes_by_level, keep_build, root_node, graph_info, remotes, build_mode, update):
+    def _build(self, nodes_by_level, keep_build, root_node, graph_info, remotes, build_mode, update,
+               local_install):
         using_build_profile = bool(graph_info.profile_build)
         missing, downloads = self._classify(nodes_by_level)
         self._raise_missing(missing)
@@ -406,7 +408,8 @@ class BinaryInstaller(object):
                     if node.binary == BINARY_UNKNOWN:
                         self._binaries_analyzer.reevaluate_node(node, remotes, build_mode, update)
                     _handle_system_requirements(conan_file, node.pref, self._cache, output)
-                    self._handle_node_cache(node, keep_build, processed_package_refs, remotes)
+                    self._handle_node_cache(node, keep_build, processed_package_refs, remotes,
+                                            local_install)
 
         # Finally, propagate information to root node (ref=None)
         self._propagate_info(root_node, using_build_profile)
@@ -447,7 +450,8 @@ class BinaryInstaller(object):
                 copied_files = run_imports(node.conanfile, build_folder)
                 report_copied_files(copied_files, output)
 
-    def _handle_node_cache(self, node, keep_build, processed_package_references, remotes):
+    def _handle_node_cache(self, node, keep_build, processed_package_references, remotes,
+                           local_install):
         pref = node.pref
         assert pref.id, "Package-ID without value"
         assert pref.id != PACKAGE_ID_UNKNOWN, "Package-ID error: %s" % str(pref)
@@ -476,9 +480,34 @@ class BinaryInstaller(object):
                     log_package_got_from_local_cache(pref)
                     self._recorder.package_fetched_from_cache(pref)
 
-            # Call the info method
+            # Do the copy to install-folder
             if self._cache.config.package_installs:
-                package_folder = layout.install(pref)
+                if local_install:
+                    # FIXME: Only valid without user/channel
+                    install_folder = os.path.join(local_install, pref.ref.name, pref.ref.version)
+                else:
+                    install_folder = layout.install(pref)
+                if os.path.exists(install_folder):
+                    # This is probably very slow, to be improved
+                    try:
+                        installed_manifest = FileTreeManifest.load(install_folder)
+                    except EnvironmentError:
+                        shutil.rmtree(install_folder)
+                    else:
+                        package_manifest = FileTreeManifest.load(package_folder)
+                        if installed_manifest != package_manifest:
+                            shutil.rmtree(install_folder)
+                if not os.path.exists(install_folder):
+                    shutil.copytree(package_folder, install_folder, symlinks=True)
+                    conanfile.install_folder = install_folder
+                    if hasattr(conanfile, "install"):
+                        with get_env_context_manager(conanfile):
+                            conanfile.output.highlight("Calling install()")
+                            with conanfile_exception_formatter(str(conanfile), "install"):
+                                conanfile.install()
+
+                package_folder = install_folder
+            # Call the info method
             self._call_package_info(conanfile, package_folder, ref=pref.ref)
             self._recorder.package_cpp_info(pref, conanfile.cpp_info)
 

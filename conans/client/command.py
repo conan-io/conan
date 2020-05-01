@@ -468,6 +468,8 @@ class Command(object):
         parser.add_argument("-j", "--json", default=None, action=OnceArgument,
                             help='Path to a json file where the install information will be '
                             'written')
+        parser.add_argument("-li", "--local-install", action=OnceArgument,
+                            help='Install deps locally')
 
         _add_common_install_arguments(parser, build_help=_help_build_policies.format("never"))
 
@@ -497,7 +499,8 @@ class Command(object):
                                            update=args.update, generators=args.generator,
                                            no_imports=args.no_imports,
                                            install_folder=args.install_folder,
-                                           lockfile=args.lockfile)
+                                           lockfile=args.lockfile,
+                                           local_install=args.local_install)
             else:
                 if args.reference:
                     raise ConanException("A full reference was provided as first argument, second "
@@ -518,7 +521,8 @@ class Command(object):
                                                      update=args.update,
                                                      generators=args.generator,
                                                      install_folder=args.install_folder,
-                                                     lockfile=args.lockfile)
+                                                     lockfile=args.lockfile,
+                                                     local_install=args.local_install)
 
         except ConanException as exc:
             info = exc.info
