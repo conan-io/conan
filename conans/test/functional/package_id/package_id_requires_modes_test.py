@@ -482,13 +482,13 @@ class Pkg(ConanFile):
         self.assertIn("""ERROR: Missing binary: libc/0.1.0@user/testing:e12c9d31fa508340bb8d0c4f9dd4c98a5d0ac082
 
 libc/0.1.0@user/testing: WARN: Can't find a 'libc/0.1.0@user/testing' package for the specified settings, options and dependencies:
-- Settings:
+- Settings:%s
 - Options: an_option=off, liba:an_option=off, libb:an_option=off, libbar:an_option=off, libfoo:an_option=off
 - Dependencies: libb/0.1.0@user/testing, libfoo/0.1.0@user/testing
 - Requirements: liba/0.1.0, libb/0.1.0, libbar/0.1.0, libfoo/0.1.0
 - Package ID: e12c9d31fa508340bb8d0c4f9dd4c98a5d0ac082
 
-ERROR: Missing prebuilt package for 'libc/0.1.0@user/testing'""", self.client.out)
+ERROR: Missing prebuilt package for 'libc/0.1.0@user/testing'""" % " ", self.client.out)
 
 
 class PackageIDErrorTest(unittest.TestCase):
