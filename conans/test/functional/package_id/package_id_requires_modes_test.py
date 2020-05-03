@@ -493,7 +493,7 @@ ERROR: Missing prebuilt package for 'libc/0.1.0@user/testing'""" % " ", self.cli
 
 class PackageIDErrorTest(unittest.TestCase):
 
-    def failure_package_id_test(self):
+    def transitive_multi_mode_package_id_test(self):
         # https://github.com/conan-io/conan/issues/6942
         client = TestClient()
         client.run("config set general.default_package_id_mode=full_package_mode")
@@ -513,3 +513,38 @@ class PackageIDErrorTest(unittest.TestCase):
         client.run('create . consumer/1.0@user/testing --build')
         self.assertIn("consumer/1.0@user/testing: Created", client.out)
 
+    def transitive_multi_mode2_package_id_test(self):
+        # https://github.com/conan-io/conan/issues/6942
+        client = TestClient()
+        client.run("config set general.default_package_id_mode=package_revision_mode")
+        # This is mandatory, otherwise it doesn't work
+        client.run("config set general.full_transitive_package_id=True")
+
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("export . dep1/1.0@user/testing")
+
+        pkg_revision_mode = "self.info.requires.full_version_mode()"
+        client.save({"conanfile.py": GenConanfile().with_require_plain("dep1/1.0@user/testing")
+                                                   .with_package_id(pkg_revision_mode)})
+        client.run("export . dep2/1.0@user/testing")
+
+        client.save({"conanfile.py": GenConanfile().with_require_plain("dep2/1.0@user/testing")})
+        client.run('create . consumer/1.0@user/testing --build')
+        self.assertIn("consumer/1.0@user/testing: Created", client.out)
+
+    def package_revision_mode_editable_test(self):
+        # Package revision mode crash when using editables
+        client = TestClient()
+        client.run("config set general.default_package_id_mode=package_revision_mode")
+        client.run("config set general.full_transitive_package_id=True")
+
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("editable add . dep1/1.0@user/testing")
+
+        client2 = TestClient(cache_folder=client.cache_folder)
+        client2.save({"conanfile.py": GenConanfile().with_require_plain("dep1/1.0@user/testing")})
+        client2.run("export . dep2/1.0@user/testing")
+
+        client2.save({"conanfile.py": GenConanfile().with_require_plain("dep2/1.0@user/testing")})
+        client2.run('create . consumer/1.0@user/testing --build')
+        self.assertIn("consumer/1.0@user/testing: Created", client2.out)
