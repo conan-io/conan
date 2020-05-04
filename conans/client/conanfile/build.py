@@ -1,4 +1,3 @@
-
 import os
 
 from conans.errors import conanfile_exception_formatter

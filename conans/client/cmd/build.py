@@ -1,6 +1,6 @@
 import os
 
-from conans.client.build.build import run_build_method
+from conans.client.conanfile.build import run_build_method
 from conans.errors import (ConanException, NotFoundException, conanfile_exception_formatter)
 from conans.model.conan_file import get_env_context_manager
 from conans.paths import CONANFILE, CONANFILE_TXT

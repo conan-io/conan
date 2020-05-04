@@ -4,7 +4,7 @@ import time
 from multiprocessing.pool import ThreadPool
 
 from conans.client import tools
-from conans.client.build.build import run_build_method
+from conans.client.conanfile.build import run_build_method
 from conans.client.file_copier import report_copied_files
 from conans.client.generators import TXTGenerator, write_generators
 from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_EDITABLE, \
