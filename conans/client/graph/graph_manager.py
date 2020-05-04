@@ -2,6 +2,7 @@ import fnmatch
 import os
 from collections import OrderedDict
 
+from conans.client.conanfile.configure import run_configure_method
 from conans.client.generators.text import TXTGenerator
 from conans.client.graph.build_mode import BuildMode
 from conans.client.graph.graph import BINARY_BUILD, Node, CONTEXT_HOST, CONTEXT_BUILD
@@ -90,14 +91,8 @@ class GraphManager(object):
             if test:
                 conanfile.display_name = "%s (test package)" % str(test)
                 conanfile.output.scope = conanfile.display_name
-            with get_env_context_manager(conanfile, without_python=True):
-                with conanfile_exception_formatter(str(conanfile), "config_options"):
-                    conanfile.config_options()
-                with conanfile_exception_formatter(str(conanfile), "configure"):
-                    conanfile.configure()
 
-                conanfile.settings.validate()  # All has to be ok!
-                conanfile.options.validate()
+            run_configure_method(conanfile, down_options=None, down_ref=None, ref=None)
         else:
             conanfile = self._loader.load_conanfile_txt(conanfile_path, profile_host)
 
@@ -174,7 +169,8 @@ class GraphManager(object):
             root_node = Node(ref, conanfile, context=CONTEXT_HOST, recipe=RECIPE_CONSUMER, path=path)
         else:
             conanfile = self._loader.load_conanfile_txt(path, profile, ref=ref)
-            root_node = Node(None, conanfile, context=CONTEXT_HOST, recipe=RECIPE_CONSUMER, path=path)
+            root_node = Node(None, conanfile, context=CONTEXT_HOST, recipe=RECIPE_CONSUMER,
+                             path=path)
 
         if graph_lock:  # Find the Node ID in the lock of current root
             node_id = graph_lock.get_node(root_node.ref)
@@ -360,12 +356,12 @@ class GraphManager(object):
 
 
 def load_deps_info(current_path, conanfile, required):
-
     def get_forbidden_access_object(field_name):
         class InfoObjectNotDefined(object):
             def __getitem__(self, item):
                 raise ConanException("self.%s not defined. If you need it for a "
                                      "local command run 'conan install'" % field_name)
+
             __getattr__ = __getitem__
 
         return InfoObjectNotDefined()
