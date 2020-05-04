@@ -398,7 +398,7 @@ class BinaryInstaller(object):
                     self._handle_node_editable(node, graph_info)
                     # Need a temporary package revision for package_revision_mode
                     # Cannot be PREV_UNKNOWN otherwise the consumers can't compute their packageID
-                    node.prev = "0"
+                    node.prev = "editable"
                 else:
                     if node.binary == BINARY_SKIP:  # Privates not necessary
                         continue
