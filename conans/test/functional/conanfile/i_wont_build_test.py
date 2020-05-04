@@ -92,6 +92,7 @@ class IWontBuildCompatiblePackagesTestCase(unittest.TestCase):
         error = client.run("install name/version@ -s compiler='Visual Studio'"
                            " -s compiler.version=15 --build=name", assert_error=True)
         self.assertEqual(error, ERROR_INVALID_CONFIGURATION)
+        self.assertIn("Invalid compiler version: 15", client.out)
 
         # ...but it can be consumed
         client.run("install name/version@ -s compiler='Visual Studio' -s compiler.version=15")
