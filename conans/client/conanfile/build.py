@@ -13,6 +13,9 @@ def run_build_method(conanfile, hook_manager, **hook_kwargs):
     with get_env_context_manager(conanfile):
         conanfile.output.highlight("Calling build()")
         with conanfile_exception_formatter(str(conanfile), "build"):
+            configure_exception = getattr(conanfile, '_conan_exception_build', None)
+            if configure_exception:
+                raise configure_exception
             conanfile.build()
 
     hook_manager.execute("post_build", conanfile=conanfile, **hook_kwargs)

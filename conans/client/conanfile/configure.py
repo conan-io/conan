@@ -1,6 +1,7 @@
 from conans.errors import (conanfile_exception_formatter)
 from conans.model.conan_file import get_env_context_manager
 from conans.util.conan_v2_mode import conan_v2_behavior
+from conans.errors import ConanIWontBuild
 
 
 def run_configure_method(conanfile, down_options, down_ref, ref):
@@ -25,7 +26,12 @@ def run_configure_method(conanfile, down_options, down_ref, ref):
                 conanfile.config()
 
         with conanfile_exception_formatter(str(conanfile), "configure"):
-            conanfile.configure()
+            try:
+                conanfile.configure()
+            except ConanIWontBuild as e:
+                # Capture and silence this exception until the 'build' method.
+                # TODO: This has to be the last exception after any ConanInvalidConfiguration
+                conanfile._conan_exception_build = e
 
         conanfile.settings.validate()  # All has to be ok!
         conanfile.options.validate()
