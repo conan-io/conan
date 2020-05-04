@@ -1,7 +1,6 @@
-from conans.errors import (conanfile_exception_formatter)
+from conans.errors import ConanIWontBuild, conanfile_exception_formatter
 from conans.model.conan_file import get_env_context_manager
 from conans.util.conan_v2_mode import conan_v2_behavior
-from conans.errors import ConanIWontBuild
 
 
 def run_configure_method(conanfile, down_options, down_ref, ref):
