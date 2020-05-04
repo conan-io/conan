@@ -86,24 +86,6 @@ class Node(object):
         self._ancestors = _NodeOrderedDict()  # set{ref.name}
         self._id = None  # Unique ID (uuid at the moment) of a node in the graph
         self.graph_lock_node = None  # the locking information can be None
-        self.id_direct_prefs = None
-        self.id_indirect_prefs = None
-
-    def package_id_transitive_reqs(self):
-        """
-        accumulate the direct and transitive requirements prefs necessary to compute the
-        package_id
-        :return: set(prefs) of direct deps, set(prefs) of transitive deps
-        """
-        self.id_direct_prefs = set()  # of PackageReference
-        self.id_indirect_prefs = set()  # of PackageReference, avoid duplicates
-        for neighbor in self.neighbors():
-            self.id_direct_prefs.add(neighbor.pref)
-            self.id_indirect_prefs.update(neighbor.id_direct_prefs)
-            self.id_indirect_prefs.update(neighbor.id_indirect_prefs)
-        # Make sure not duplicated, totally necessary
-        self.id_indirect_prefs.difference_update(self.id_direct_prefs)
-        return self.id_direct_prefs, self.id_indirect_prefs
 
     @property
     def id(self):

@@ -397,6 +397,7 @@ class BinaryInstaller(object):
                 if node.binary == BINARY_EDITABLE:
                     self._handle_node_editable(node, graph_info)
                     # Need a temporary package revision for package_revision_mode
+                    # Cannot be PREV_UNKNOWN otherwise the consumers can't compute their packageID
                     node.prev = "0"
                 else:
                     if node.binary == BINARY_SKIP:  # Privates not necessary
@@ -406,8 +407,6 @@ class BinaryInstaller(object):
                         self._binaries_analyzer.reevaluate_node(node, remotes, build_mode, update)
                     _handle_system_requirements(conan_file, node.pref, self._cache, output)
                     self._handle_node_cache(node, keep_build, processed_package_refs, remotes)
-                # After a node has been managed, better reset its transitive info
-                node.package_id_transitive_reqs()
 
         # Finally, propagate information to root node (ref=None)
         self._propagate_info(root_node, using_build_profile)
