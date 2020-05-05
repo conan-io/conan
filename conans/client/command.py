@@ -546,6 +546,7 @@ class Command(object):
                                                                   'from a local or remote zip file')
         rm_subparser = subparsers.add_parser('rm', help='Remove an existing config element')
         set_subparser = subparsers.add_parser('set', help='Set a value for a configuration item')
+        subparsers.add_parser('init', help='Initializes Conan configuration files')
 
         get_subparser.add_argument("item", nargs="?", help="Item to print")
         home_subparser.add_argument("-j", "--json", default=None, action=OnceArgument,
@@ -594,6 +595,8 @@ class Command(object):
             return self._conan.config_install(args.item, verify_ssl, args.type, args.args,
                                               source_folder=args.source_folder,
                                               target_folder=args.target_folder)
+        elif args.subcommand == 'init':
+            return self._conan.config_init()
 
     def info(self, *args):
         """

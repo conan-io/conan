@@ -611,6 +611,12 @@ class ConanAPIV1(object):
     def config_home(self):
         return self.cache_folder
 
+    @api_method
+    def config_init(self):
+        self.app.cache.registry.initialize_remotes()
+        self.app.cache.settings
+        return
+
     def _info_args(self, reference_or_path, install_folder, profile_host, profile_build, lockfile=None):
         cwd = get_cwd()
         if check_valid_ref(reference_or_path):

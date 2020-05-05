@@ -126,6 +126,12 @@ class ConfigTest(unittest.TestCase):
             client = TestClient(cache_folder=cache_folder)
             self.assertEqual(client.cache.config.short_paths_home, short_path_home_folder)
 
+    def test_init(self):
+        self.client.run('config init')
+        self.assertTrue(os.path.exists(self.client.cache.conan_conf_path))
+        self.assertTrue(os.path.exists(self.client.cache.remotes_path))
+        self.assertTrue(os.path.exists(self.client.cache.settings_path))
+
     def _assert_dict_subset(self, expected, actual):
         actual = {k: v for k, v in actual.items() if k in expected}
         self.assertDictEqual(expected, actual)
