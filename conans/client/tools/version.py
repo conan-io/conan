@@ -32,6 +32,10 @@ class Version(object):
         return str(self._semver.patch)
 
     @property
+    def micro_versions(self):
+        return str(".".join(map(str, self._semver.micro_versions)))
+
+    @property
     def prerelease(self):
         return str(".".join(map(str, self._semver.prerelease)))
 
@@ -42,9 +46,14 @@ class Version(object):
     def __eq__(self, other):
         if not isinstance(other, Version):
             other = Version(other)
-        return self._semver.compare(other._semver) == 0
+        return (self._semver.compare(other._semver) or self._compare_micro(other)) == 0
 
     def __lt__(self, other):
         if not isinstance(other, Version):
             other = Version(other)
-        return self._semver.compare(other._semver) < 0
+        return (self._semver.compare(other._semver) or self._compare_micro(other)) < 0
+
+    def _compare_micro(self, other):
+        if self.micro_versions == other.micro_versions:
+            return 0
+        return -1 if self.micro_versions < other.micro_versions else 1
