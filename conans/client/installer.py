@@ -4,7 +4,7 @@ import time
 from multiprocessing.pool import ThreadPool
 
 from conans.client import tools
-from conans.client.build.build import run_build_method
+from conans.client.conanfile.build import run_build_method
 from conans.client.file_copier import report_copied_files
 from conans.client.generators import TXTGenerator, write_generators
 from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_EDITABLE, \
@@ -401,6 +401,9 @@ class BinaryInstaller(object):
                 self._propagate_info(node, using_build_profile)
                 if node.binary == BINARY_EDITABLE:
                     self._handle_node_editable(node, graph_info)
+                    # Need a temporary package revision for package_revision_mode
+                    # Cannot be PREV_UNKNOWN otherwise the consumers can't compute their packageID
+                    node.prev = "editable"
                 else:
                     if node.binary == BINARY_SKIP:  # Privates not necessary
                         continue
