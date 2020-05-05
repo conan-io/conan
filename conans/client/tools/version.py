@@ -32,7 +32,7 @@ class Version(object):
         return str(self._semver.patch)
 
     @property
-    def micro_versions(self):
+    def micro(self):
         return str(".".join(map(str, self._semver.micro_versions)))
 
     @property
@@ -54,6 +54,6 @@ class Version(object):
         return (self._semver.compare(other._semver) or self._compare_micro(other)) < 0
 
     def _compare_micro(self, other):
-        if self.micro_versions == other.micro_versions:
+        if self.micro == other.micro:
             return 0
-        return -1 if self.micro_versions < other.micro_versions else 1
+        return -1 if self.micro < other.micro else 1

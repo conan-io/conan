@@ -47,11 +47,11 @@ class ToolVersionMainComponentsTests(unittest.TestCase):
         self.assertEqual(v.minor, "0")
         self.assertEqual(v.patch, "0")
 
-        v = Version("1.2.3.4")
+        v = Version("1.2.3.45.6")
         self.assertEqual(v.major, "1")
         self.assertEqual(v.minor, "2")
         self.assertEqual(v.patch, "3")
-        self.assertEqual(v.micro_versions, "4")
+        self.assertEqual(v.micro, "45.6")
 
     def test_convert_str(self):
         # Check that we are calling the string method
