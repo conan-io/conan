@@ -131,6 +131,7 @@ class ConfigTest(unittest.TestCase):
         self.assertTrue(os.path.exists(self.client.cache.conan_conf_path))
         self.assertTrue(os.path.exists(self.client.cache.remotes_path))
         self.assertTrue(os.path.exists(self.client.cache.settings_path))
+        self.assertTrue(os.path.exists(self.client.cache.default_profile_path))
 
     def _assert_dict_subset(self, expected, actual):
         actual = {k: v for k, v in actual.items() if k in expected}
