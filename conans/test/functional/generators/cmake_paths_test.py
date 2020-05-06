@@ -21,9 +21,9 @@ class CMakePathsGeneratorTest(unittest.TestCase):
         contents = client.load("conan_paths.cmake")
         expected = 'set(CONAN_LIB2_ROOT "{pfolder2}")\r\n' \
                    'set(CONAN_LIB1_ROOT "{pfolder1}")\r\n' \
-                   'set(CMAKE_MODULE_PATH "{pfolder2}/"\r\n\t\t\t"{pfolder1}/" ' \
+                   'list(APPEND CMAKE_MODULE_PATH "{pfolder2}/"\r\n\t\t\t"{pfolder1}/" ' \
                    '${{CMAKE_MODULE_PATH}} ${{CMAKE_CURRENT_LIST_DIR}})\r\n' \
-                   'set(CMAKE_PREFIX_PATH "{pfolder2}/"\r\n\t\t\t"{pfolder1}/" ' \
+                   'list(APPEND CMAKE_PREFIX_PATH "{pfolder2}/"\r\n\t\t\t"{pfolder1}/" ' \
                    '${{CMAKE_PREFIX_PATH}} ${{CMAKE_CURRENT_LIST_DIR}})'
         if platform.system() != "Windows":
             expected = expected.replace("\r", "")
