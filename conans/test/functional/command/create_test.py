@@ -518,17 +518,17 @@ class MyPkg(ConanFile):
     def test_compoents_json_output(self):
         self.client = TestClient()
         conanfile = textwrap.dedent("""
-        from conans import ConanFile
+            from conans import ConanFile
 
-        class MyTest(ConanFile):
-            name = "pkg"
-            version = "0.1"
-            settings = "build_type"
+            class MyTest(ConanFile):
+                name = "pkg"
+                version = "0.1"
+                settings = "build_type"
 
-            def package_info(self):
-                self.cpp_info.components["pkg1"].libs = ["libpkg1"]
-                self.cpp_info.components["pkg2"].libs = ["libpkg2"]
-                self.cpp_info.components["pkg2"].requires = ["pkg1"]
+                def package_info(self):
+                    self.cpp_info.components["pkg1"].libs = ["libpkg1"]
+                    self.cpp_info.components["pkg2"].libs = ["libpkg2"]
+                    self.cpp_info.components["pkg2"].requires = ["pkg1"]
             """)
         self.client.save({"conanfile.py": conanfile})
         self.client.run("create . --json jsonfile.json")
