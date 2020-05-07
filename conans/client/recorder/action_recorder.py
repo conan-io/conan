@@ -35,9 +35,7 @@ def _cpp_info_to_dict(cpp_info):
             doc["configs"] = configs_data
             continue
         if it == "components":
-            doc[it] = {}
-            for comp_name, comp in value.items():
-                doc[it][comp_name] = _cpp_info_to_dict(comp)
+            doc[it] = {comp_name: _cpp_info_to_dict(comp) for comp_name, comp in value.items()}
             continue
 
         doc[it] = value
