@@ -208,7 +208,7 @@ class CMakeFindPathMultiGeneratorTest(unittest.TestCase):
             if build_type == "Release":
                 target_libs = "$<$<CONFIG:Release>:lib1;sys1;" \
                               "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;" \
-                              "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE>:>;" \
+                              "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;" \
                               "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>;" \
                               "$<$<CONFIG:RelWithDebInfo>:;>;" \
                               "$<$<CONFIG:MinSizeRel>:;>;" \
@@ -219,7 +219,7 @@ class CMakeFindPathMultiGeneratorTest(unittest.TestCase):
                               "$<$<CONFIG:MinSizeRel>:;>;" \
                               "$<$<CONFIG:Debug>:lib1;sys1d;" \
                               "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;" \
-                              "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE>:>;" \
+                              "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;" \
                               "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>"
             self.assertIn("Target libs: %s" % target_libs, client.out)
 
@@ -270,7 +270,7 @@ class Conan(ConanFile):
         self.assertIn("Target libs (hello2): "
                       "$<$<CONFIG:Release>:CONAN_LIB::MYHELLO2_hello_RELEASE;MYHELLO::MYHELLO;"
                       "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
-                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE>:>;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
                       "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>;"
                       "$<$<CONFIG:RelWithDebInfo>:;>;"
                       "$<$<CONFIG:MinSizeRel>:;>;"
@@ -279,7 +279,7 @@ class Conan(ConanFile):
         self.assertIn("Target libs (hello): "
                       "$<$<CONFIG:Release>:CONAN_LIB::MYHELLO_hello_RELEASE;"
                       "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
-                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE>:>;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
                       "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>;"
                       "$<$<CONFIG:RelWithDebInfo>:;>;"
                       "$<$<CONFIG:MinSizeRel>:;>;"
