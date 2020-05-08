@@ -334,3 +334,39 @@ class CMakeGeneratorTest(unittest.TestCase):
         client.run("create consumer.py")
         self.assertIn("CONAN_LIBS: lib1;additional_lib;sys1;additional_sys", client.out)
         self.assertIn("CONAN_SYSTEM_LIBS: sys1;additional_sys", client.out)
+
+    def test_conan_get_policy(self):
+        # https://github.com/conan-io/conan/issues/6974
+        file_content = textwrap.dedent("""
+            from conans import ConanFile, CMake
+
+            class ConanFileToolsTest(ConanFile):
+                name = "consumer"
+                version = "1.0"
+                generators = "cmake"
+                settings = "os", "compiler", "arch", "build_type"
+                exports_sources = "CMakeLists.txt"
+                
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+                """)
+
+        cmakelists = textwrap.dedent("""
+            cmake_minimum_required(VERSION 2.8)
+            PROJECT(conanzlib LANGUAGES NONE)
+            set(CONAN_DISABLE_CHECK_COMPILER TRUE)
+            # test with any old build policy as we may 
+            # not have cmake version that supports 091
+            cmake_policy(SET CMP0054 OLD)
+            include(conanbuildinfo.cmake)
+            conan_get_policy(CMP0054 policy_0054)
+            message("POLICY CMP0054 IS ${policy_0054}")
+            CONAN_BASIC_SETUP()
+            """)
+        client = TestClient()
+        client.save({"conanfile.py": file_content,
+                     "CMakeLists.txt": cmakelists})
+
+        client.run('create .')
+        self.assertIn("POLICY CMP0054 IS OLD", client.out)
