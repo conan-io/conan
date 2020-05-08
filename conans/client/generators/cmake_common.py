@@ -168,22 +168,27 @@ _target_template = """
     # Property INTERFACE_LINK_FLAGS do not work, necessary to add to INTERFACE_LINK_LIBRARIES
     set_property(TARGET {name} PROPERTY INTERFACE_LINK_LIBRARIES ${{CONAN_PACKAGE_TARGETS_{uname}}} ${{_CONAN_PKG_LIBS_{uname}_DEPENDENCIES}}
                                                                  $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:${{CONAN_SHARED_LINKER_FLAGS_{uname}_LIST}}>
+                                                                 $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE>:${{CONAN_SHARED_LINKER_FLAGS_{uname}_LIST}}>
                                                                  $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:${{CONAN_EXE_LINKER_FLAGS_{uname}_LIST}}>
 
                                                                  $<$<CONFIG:Release>:${{CONAN_PACKAGE_TARGETS_{uname}_RELEASE}} ${{_CONAN_PKG_LIBS_{uname}_DEPENDENCIES_RELEASE}}
                                                                  $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:${{CONAN_SHARED_LINKER_FLAGS_{uname}_RELEASE_LIST}}>
+                                                                 $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE>:${{CONAN_SHARED_LINKER_FLAGS_{uname}_RELEASE_LIST}}>
                                                                  $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:${{CONAN_EXE_LINKER_FLAGS_{uname}_RELEASE_LIST}}>>
 
                                                                  $<$<CONFIG:RelWithDebInfo>:${{CONAN_PACKAGE_TARGETS_{uname}_RELWITHDEBINFO}} ${{_CONAN_PKG_LIBS_{uname}_DEPENDENCIES_RELWITHDEBINFO}}
                                                                  $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:${{CONAN_SHARED_LINKER_FLAGS_{uname}_RELWITHDEBINFO_LIST}}>
+                                                                 $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE>:${{CONAN_SHARED_LINKER_FLAGS_{uname}_RELWITHDEBINFO_LIST}}>
                                                                  $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:${{CONAN_EXE_LINKER_FLAGS_{uname}_RELWITHDEBINFO_LIST}}>>
 
                                                                  $<$<CONFIG:MinSizeRel>:${{CONAN_PACKAGE_TARGETS_{uname}_MINSIZEREL}} ${{_CONAN_PKG_LIBS_{uname}_DEPENDENCIES_MINSIZEREL}}
                                                                  $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:${{CONAN_SHARED_LINKER_FLAGS_{uname}_MINSIZEREL_LIST}}>
+                                                                 $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE>:${{CONAN_SHARED_LINKER_FLAGS_{uname}_MINSIZEREL_LIST}}>
                                                                  $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:${{CONAN_EXE_LINKER_FLAGS_{uname}_MINSIZEREL_LIST}}>>
 
                                                                  $<$<CONFIG:Debug>:${{CONAN_PACKAGE_TARGETS_{uname}_DEBUG}} ${{_CONAN_PKG_LIBS_{uname}_DEPENDENCIES_DEBUG}}
                                                                  $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:${{CONAN_SHARED_LINKER_FLAGS_{uname}_DEBUG_LIST}}>
+                                                                 $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE>:${{CONAN_SHARED_LINKER_FLAGS_{uname}_DEBUG_LIST}}>
                                                                  $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:${{CONAN_EXE_LINKER_FLAGS_{uname}_DEBUG_LIST}}>>)
     set_property(TARGET {name} PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${{CONAN_INCLUDE_DIRS_{uname}}}
                                                                       $<$<CONFIG:Release>:${{CONAN_INCLUDE_DIRS_{uname}_RELEASE}}>
