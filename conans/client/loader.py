@@ -94,20 +94,6 @@ class ConanFileLoader(object):
         """ loads the basic conanfile object and evaluates its name and version
         """
         conanfile, _ = self.load_basic_module(conanfile_path, lock_python_requires, user, channel)
-        conanfile.recipe_folder = os.path.dirname(conanfile_path)
-
-        if hasattr(conanfile, "set_name"):
-            if conanfile.name:
-                raise ConanException("Conanfile defined package 'name', set_name() redundant")
-            with conanfile_exception_formatter("conanfile.py", "set_name"):
-                conanfile.set_name()
-        if hasattr(conanfile, "set_version"):
-            if conanfile.version:
-                raise ConanException("Conanfile defined package 'version', set_version() redundant")
-            with conanfile_exception_formatter("conanfile.py", "set_version"):
-                conanfile.set_version()
-        # Make sure this is nowhere else available
-        del conanfile.recipe_folder
 
         # Export does a check on existing name & version
         if name:
@@ -120,6 +106,22 @@ class ConanFileLoader(object):
                 raise ConanException("Package recipe with version %s!=%s"
                                      % (version, conanfile.version))
             conanfile.version = version
+
+        conanfile.recipe_folder = os.path.dirname(conanfile_path)
+        if hasattr(conanfile, "set_name"):
+            with conanfile_exception_formatter("conanfile.py", "set_name"):
+                conanfile.set_name()
+            if name and name != conanfile.name:
+                raise ConanException("Package recipe with name %s!=%s" % (name, conanfile.name))
+        if hasattr(conanfile, "set_version"):
+            with conanfile_exception_formatter("conanfile.py", "set_version"):
+                conanfile.set_version()
+            if version and version != conanfile.version:
+                raise ConanException("Package recipe with version %s!=%s"
+                                     % (version, conanfile.version))
+        # Make sure this is nowhere else available
+        del conanfile.recipe_folder
+
         return conanfile
 
     def load_export(self, conanfile_path, name, version, user, channel, lock_python_requires=None):
