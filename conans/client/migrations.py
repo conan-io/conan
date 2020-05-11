@@ -50,7 +50,7 @@ class ClientMigrator(Migrator):
         if hasattr(migrations_settings, var_name):
             version_default_contents = getattr(migrations_settings, var_name)
             if version_default_contents != get_default_settings_yml():
-                current_settings = load(self.cache.settings_path)
+                current_settings = load(self.cache.settings_path)ImportError
                 if current_settings != version_default_contents:
                     save_new()
                 else:
