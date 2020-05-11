@@ -22,6 +22,7 @@ class GenConanfile(object):
         self._default_options = {}
         self._package_files = {}
         self._package_files_env = {}
+        self._package_files_link = {}
         self._build_messages = []
         self._scm = {}
         self._requires = []
@@ -90,13 +91,15 @@ class GenConanfile(object):
         self._default_options[option_name] = value
         return self
 
-    def with_package_file(self, file_name, contents=None, env_var=None):
+    def with_package_file(self, file_name, contents=None, env_var=None, link=None):
         if not contents and not env_var:
             raise Exception("Specify contents or env_var")
         self.with_import("import os")
         self.with_import("from conans import tools")
         if contents:
             self._package_files[file_name] = contents
+        if link:
+            self._package_files_link[file_name] = link
         if env_var:
             self._package_files_env[file_name] = env_var
         return self
@@ -229,6 +232,12 @@ class GenConanfile(object):
             lines.extend(['        tools.save(os.path.join(self.package_folder, "{}"), '
                           'os.getenv("{}"))'.format(key, value)
                           for key, value in self._package_files_env.items()])
+        if self._package_files_link:
+            lines.extend(['        with tools.chdir(os.path.dirname('
+                          'os.path.join(self.package_folder, "{}"))):\n'
+                          '            os.symlink(os.path.basename("{}"), '
+                          'os.path.join(self.package_folder, "{}"))'.format(key, key, value)
+                          for key, value in self._package_files_link.items()])
 
         if not lines:
             return ""
