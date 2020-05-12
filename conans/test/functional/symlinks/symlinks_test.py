@@ -217,15 +217,15 @@ class ConanSymlink(ConanFile):
         os.symlink(symlinked_path, symlink_path)
         client.run("create . danimtb/testing")
         ref = ConanFileReference("ConanSymlink", "3.0.0", "danimtb", "testing")
-        cache_file = os.path.join(client.cache.package_layout(ref).export_sources(), "another_directory",
-                                  "not_to_copy.txt")
+        cache_file = os.path.join(client.cache.package_layout(ref).export_sources(),
+                                  "another_directory", "not_to_copy.txt")
         self.assertTrue(os.path.exists(cache_file))
         cache_other_dir = os.path.join(client.cache.package_layout(ref).export_sources(),
                                        "another_other_directory")
         self.assertTrue(os.path.exists(cache_other_dir))
         pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
-        package_file = os.path.join(client.cache.package_layout(pref.ref).package(pref), "another_directory",
-                                    "not_to_copy.txt")
+        package_file = os.path.join(client.cache.package_layout(pref.ref).package(pref),
+                                    "another_directory", "not_to_copy.txt")
         self.assertFalse(os.path.exists(package_file))
         package_other_dir = os.path.join(client.cache.package_layout(pref.ref).package(pref),
                                          "another_other_directory")

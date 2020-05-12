@@ -8,7 +8,7 @@ from conans.test.utils.tools import TestClient
 from conans.util.files import mkdir
 
 
-class GetVersionNameTest(unittest.TestCase):
+class SetVersionNameTest(unittest.TestCase):
 
     @parameterized.expand([("", ), ("@user/channel", )])
     def set_version_name_test(self, user_channel):
