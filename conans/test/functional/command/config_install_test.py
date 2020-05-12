@@ -530,14 +530,23 @@ class Pkg(ConanFile):
         http_server.stop()
 
     def test_overwrite_read_only_file(self):
-        folder = self._create_profile_folder()
-        self.client.run('config install "%s"' % folder)
+        source_folder = self._create_profile_folder()
+        self.client.run('config install "%s"' % source_folder)
         # make existing settings.yml read-only
         os.chmod(self.client.cache.settings_path, stat.S_IREAD | stat.S_IRGRP | stat.S_IROTH)
         self.assertFalse(os.access(self.client.cache.settings_path, os.W_OK))
 
         # config install should overwrite the existing read-only file
-        self.client.run('config install "%s"' % folder)
+        self.client.run('config install "%s"' % source_folder)
+        self.assertTrue(os.access(self.client.cache.settings_path, os.W_OK))
+
+    def test_dont_copy_file_permissions(self):
+        source_folder = self._create_profile_folder()
+        # make source settings.yml read-only
+        os.chmod(os.path.join(source_folder, 'remotes.txt'),
+                 stat.S_IREAD | stat.S_IRGRP | stat.S_IROTH)
+
+        self.client.run('config install "%s"' % source_folder)
         self.assertTrue(os.access(self.client.cache.settings_path, os.W_OK))
 
 

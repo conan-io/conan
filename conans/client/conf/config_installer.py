@@ -83,7 +83,7 @@ def _filecopy(src, filename, dst):
     if os.path.exists(dst):
         os.chmod(dst, stat.S_IWRITE)  # make file writable
         os.remove(dst)
-    shutil.copy(src, dst)
+    shutil.copyfile(src, dst)
 
 
 def _process_folder(config, folder, cache, output):
