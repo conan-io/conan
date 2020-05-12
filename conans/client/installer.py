@@ -334,12 +334,12 @@ class BinaryInstaller(object):
                                              INSTALL_ERROR_MISSING, msg)
         missing_pkgs = ", ".join([str(pref.ref) for pref in missing_prefs])
         if len(missing_prefs) >= 5:
-            build_str = "--build=missing"
+            build_str = "--build missing"
         else:
-            build_str = " ".join(["--build=%s" % pref.ref.name for pref in missing_prefs])
+            build_str = " ".join(["--build %s" % pref.ref.name for pref in missing_prefs])
 
         raise ConanException(textwrap.dedent('''\
-            Missing prebuilt packages: '%s'
+            Missing prebuilt package for '%s'
             Try to build from sources with "%s"
             Or read "http://docs.conan.io/en/latest/faq/troubleshooting.html#error-missing-prebuilt-package"
             ''' % (missing_pkgs, build_str)))

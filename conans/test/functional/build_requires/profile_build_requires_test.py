@@ -179,10 +179,10 @@ build2/0.1@user/testing
                      "profile.txt": profile}, clean_first=True)
 
         client.run("install . --profile ./profile.txt", assert_error=True)
-        self.assertIn("ERROR: Missing prebuilt packages: "
+        self.assertIn("ERROR: Missing prebuilt package for "
                       "'PythonTool/0.1@lasote/stable, Tool/0.1@lasote/stable'", client.out)
         client.run("install . --profile ./profile.txt --build=PythonTool", assert_error=True)
-        self.assertIn("ERROR: Missing prebuilt packages: 'Tool/0.1@lasote/stable'", client.out)
+        self.assertIn("ERROR: Missing prebuilt packages for 'Tool/0.1@lasote/stable'", client.out)
         client.run("install . --profile ./profile.txt --build=*Tool")
         self.assertIn("Tool/0.1@lasote/stable: Generated conaninfo.txt", client.out)
         self.assertIn("PythonTool/0.1@lasote/stable: Generated conaninfo.txt", client.out)
