@@ -77,8 +77,10 @@ class _CppInfo(object):
     def _filter_paths(self, paths):
         abs_paths = [os.path.join(self.rootpath, p)
                      if not os.path.isabs(p) else p for p in paths]
-        abs_paths = [p if os.path.isdir(p) else conan_v2_behavior("Warning: " + str(p) + " is not a directory")
-        for p in abs_paths]
+        abs_paths = [
+                    p if os.path.isdir(p)
+                    else conan_v2_behavior("Warning: " + str(p) + " is not a directory")
+                    for p in abs_paths]
         if self.filter_empty:
             return [p for p in abs_paths if os.path.isdir(p)]
         else:
@@ -508,3 +510,4 @@ class DepsCppInfo(_BaseDepsCppInfo):
         super(DepsCppInfo, self).update(cpp_info)
         for config, cpp_info in cpp_info.configs.items():
             self.configs.setdefault(config, _BaseDepsCppInfo()).update(cpp_info)
+
