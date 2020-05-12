@@ -1,6 +1,7 @@
 import json
 import os
 import shutil
+import stat
 import textwrap
 import time
 import unittest
@@ -527,6 +528,17 @@ class Pkg(ConanFile):
         self.client.run("config install http://localhost:%s/myconfig.zip" % http_server.port)
         self.assertIn("Unzipping", self.client.out)
         http_server.stop()
+
+    def test_overwrite_read_only_file(self):
+        folder = self._create_profile_folder()
+        self.client.run('config install "%s"' % folder)
+        # make existing settings.yml read-only
+        os.chmod(self.client.cache.settings_path, stat.S_IREAD | stat.S_IRGRP | stat.S_IROTH)
+        self.assertFalse(os.access(self.client.cache.settings_path, os.W_OK))
+
+        # config install should overwrite the existing read-only file
+        self.client.run('config install "%s"' % folder)
+        self.assertTrue(os.access(self.client.cache.settings_path, os.W_OK))
 
 
 class ConfigInstallSchedTest(unittest.TestCase):
