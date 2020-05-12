@@ -4,13 +4,14 @@ import time
 from multiprocessing.pool import ThreadPool
 
 from conans.client import tools
-from conans.client.build.build import run_build_method
+from conans.client.conanfile.build import run_build_method
+from conans.client.conanfile.package import run_package_method
 from conans.client.file_copier import report_copied_files
 from conans.client.generators import TXTGenerator, write_generators
 from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_EDITABLE, \
     BINARY_MISSING, BINARY_SKIP, BINARY_UPDATE, BINARY_UNKNOWN, CONTEXT_HOST
 from conans.client.importer import remove_imports, run_imports
-from conans.client.packager import run_package_method, update_package_metadata
+from conans.client.packager import update_package_metadata
 from conans.client.recorder.action_recorder import INSTALL_ERROR_BUILDING, INSTALL_ERROR_MISSING, \
     INSTALL_ERROR_MISSING_BUILD_FOLDER
 from conans.client.source import complete_recipe_sources, config_source
@@ -400,6 +401,9 @@ class BinaryInstaller(object):
                 self._propagate_info(node, using_build_profile)
                 if node.binary == BINARY_EDITABLE:
                     self._handle_node_editable(node, graph_info)
+                    # Need a temporary package revision for package_revision_mode
+                    # Cannot be PREV_UNKNOWN otherwise the consumers can't compute their packageID
+                    node.prev = "editable"
                 else:
                     if node.binary == BINARY_SKIP:  # Privates not necessary
                         continue
@@ -567,7 +571,8 @@ class BinaryInstaller(object):
                     conanfile.package_info()
                     if conanfile._conan_dep_cpp_info is None:
                         try:
-                            conanfile.cpp_info._raise_if_mixing_components()
+                            conanfile.cpp_info._raise_incorrect_components_definition(
+                                conanfile.name, conanfile.requires)
                         except ConanException as e:
                             raise ConanException("%s package_info(): %s" % (str(conanfile), e))
                         conanfile._conan_dep_cpp_info = DepCppInfo(conanfile.cpp_info)

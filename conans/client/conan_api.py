@@ -7,7 +7,6 @@ from six import StringIO
 
 import conans
 from conans import __version__ as client_version
-from conans.client import packager
 from conans.client.cache.cache import ClientCache
 from conans.client.cmd.build import cmd_build
 from conans.client.cmd.create import create
@@ -20,6 +19,7 @@ from conans.client.cmd.search import Search
 from conans.client.cmd.test import install_build_and_test
 from conans.client.cmd.uploader import CmdUpload
 from conans.client.cmd.user import user_set, users_clean, users_list, token_present
+from conans.client.conanfile.package import run_package_method
 from conans.client.graph.graph import RECIPE_EDITABLE
 from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
 from conans.client.graph.graph_manager import GraphManager
@@ -79,7 +79,10 @@ class ProfileData(namedtuple("ProfileData", ["profiles", "settings", "options", 
 def api_method(f):
     def wrapper(api, *args, **kwargs):
         quiet = kwargs.pop("quiet", False)
-        old_curdir = get_cwd()
+        try:  # getcwd can fail if Conan runs on an unexisting folder
+            old_curdir = os.getcwd()
+        except EnvironmentError:
+            old_curdir = None
         old_output = api.user_io.out
         quiet_output = ConanOutput(StringIO(), color=api.color) if quiet else None
         try:
@@ -98,7 +101,8 @@ def api_method(f):
                 pass
             raise
         finally:
-            os.chdir(old_curdir)
+            if old_curdir:
+                os.chdir(old_curdir)
     return wrapper
 
 
@@ -278,7 +282,8 @@ class ConanAPIV1(object):
             conanfile_path, _, _, ref = result
             conanfile = self.app.loader.load_basic(conanfile_path)
             conanfile.name = ref.name
-            conanfile.version = ref.version
+            conanfile.version = str(ref.version) \
+                if os.environ.get(CONAN_V2_MODE_ENVVAR, False) else ref.version
 
         result = OrderedDict()
         if not attributes:
@@ -703,9 +708,9 @@ class ConanAPIV1(object):
                                  "--build-folder and package folder can't be the same")
         conanfile = self.app.graph_manager.load_consumer_conanfile(conanfile_path, install_folder,
                                                                    deps_info_required=True)
-        packager.run_package_method(conanfile, None, source_folder, build_folder, package_folder,
-                                    install_folder, self.app.hook_manager, conanfile_path, None,
-                                    local=True, copy_info=True)
+        run_package_method(conanfile, None, source_folder, build_folder, package_folder,
+                           install_folder, self.app.hook_manager, conanfile_path, None,
+                           local=True, copy_info=True)
 
     @api_method
     def source(self, path, source_folder=None, info_folder=None, cwd=None):
@@ -872,10 +877,12 @@ class ConanAPIV1(object):
             if remote_ref.ordered_packages:
                 for package_id, properties in remote_ref.ordered_packages.items():
                     package_recipe_hash = properties.get("recipe_hash", None)
+                    # Artifactory uses field 'requires', conan_center 'full_requires'
+                    requires = properties.get("requires", []) or properties.get("full_requires", [])
                     search_recorder.add_package(remote_name, ref,
                                                 package_id, properties.get("options", []),
                                                 properties.get("settings", []),
-                                                properties.get("full_requires", []),
+                                                requires,
                                                 remote_ref.recipe_hash != package_recipe_hash)
         return search_recorder.get_info()
 

@@ -1,6 +1,8 @@
 import logging
 import os
+import re
 import textwrap
+from datetime import timedelta
 
 from jinja2 import Template
 from six.moves.configparser import ConfigParser, NoSectionError
@@ -64,7 +66,8 @@ _t_default_settings_yml = Template(textwrap.dedent("""
                       "6", "6.1", "6.2", "6.3", "6.4",
                       "7", "7.1", "7.2", "7.3", "7.4",
                       "8", "8.1", "8.2", "8.3",
-                      "9", "9.1", "9.2", "9.3"]
+                      "9", "9.1", "9.2", "9.3",
+                      "10"]
             libcxx: [libstdc++, libstdc++11]
             threads: [None, posix, win32] #  Windows MinGW
             exception: [None, dwarf2, sjlj, seh] # Windows MinGW
@@ -88,7 +91,7 @@ _t_default_settings_yml = Template(textwrap.dedent("""
             libcxx: [libstdc++, libc++]
             cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
         intel:
-            version: ["11", "12", "13", "14", "15", "16", "17", "18", "19"]
+            version: ["11", "12", "13", "14", "15", "16", "17", "18", "19", "19.1"]
             base:
                 gcc:
                     <<: *gcc
@@ -172,6 +175,8 @@ _t_default_client_conf = Template(textwrap.dedent("""
     {% if conan_v2 %}
     revisions_enabled = 1
     {% endif %}
+
+    # config_install_interval = 1h
 
     [storage]
     # This is the default path, but you can write your own. It must be an absolute path or a
@@ -684,3 +689,23 @@ class ConanClientConfigParser(ConfigParser, object):
             "notset": logging.NOTSET
         }
         return levels.get(str(level_name).lower())
+
+    @property
+    def config_install_interval(self):
+        try:
+            interval = self.get_item("general.config_install_interval")
+        except ConanException:
+            return None
+
+        match = re.search(r"(\d+)([mhd])", interval)
+        try:
+            value, unit = match.group(1), match.group(2)
+            if unit == 'm':
+                return timedelta(minutes=float(value))
+            elif unit == 'h':
+                return timedelta(hours=float(value))
+            else:
+                return timedelta(days=float(value))
+        except Exception as e:
+            raise ConanException("Incorrect definition of general.config_install_interval: %s"
+                                 % interval)

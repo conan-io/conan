@@ -83,7 +83,7 @@ class Node(object):
         # on this node. It includes regular (not private and not build requires) dependencies
         self._transitive_closure = OrderedDict()
         self.inverse_closure = set()  # set of nodes that have this one in their public
-        self.ancestors = None  # set{ref.name}
+        self._ancestors = _NodeOrderedDict()  # set{ref.name}
         self._id = None  # Unique ID (uuid at the moment) of a node in the graph
         self.graph_lock_node = None  # the locking information can be None
 
@@ -124,6 +124,10 @@ class Node(object):
     @property
     def transitive_closure(self):
         return self._transitive_closure
+
+    @property
+    def ancestors(self):
+        return self._ancestors
 
     def partial_copy(self):
         # Used for collapse_graph

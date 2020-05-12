@@ -243,8 +243,7 @@ ProgramFiles(x86)=C:\Program Files (x86)
 
 """
 
-        def vcvars_command_mock(settings, arch, compiler_version, force, vcvars_ver, winsdk_version,
-                                output):  # @UnusedVariable
+        def vcvars_command_mock(*args, **kwargs):
             return "unused command"
 
         def subprocess_check_output_mock(cmd):

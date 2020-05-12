@@ -1,9 +1,12 @@
+import os
 import textwrap
 import unittest
 
 from conans.errors import ConanException
+from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE, CONANFILE_TXT
-from conans.test.utils.tools import TestClient
+from conans.test.utils.genconanfile import GenConanfile
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
 
 
 class TestPackageInfo(unittest.TestCase):
@@ -152,6 +155,7 @@ class HelloConan(ConanFile):
                 requires = "dep/1.0@us/ch"
 
                 def package_info(self):
+                    self.cpp_info.components["int1"].requires = ["dep::dep"]  # To avoid exception
                     self.cpp_info.components["int1"].libs.append("libint1")
                     self.cpp_info.components["int1"].defines.append("defint1")
                     os.mkdir(os.path.join(self.package_folder, "include"))
@@ -210,7 +214,7 @@ class HelloConan(ConanFile):
         conanfile = textwrap.dedent("""
             from conans import ConanFile
 
-            class Intermediate(ConanFile):
+            class MyConan(ConanFile):
 
                 def package_info(self):
                     self.cpp_info.defines.append("defint")
@@ -225,7 +229,7 @@ class HelloConan(ConanFile):
         conanfile = textwrap.dedent("""
             from conans import ConanFile
 
-            class Intermediate(ConanFile):
+            class MyConan(ConanFile):
 
                 def package_info(self):
                     self.cpp_info.release.defines.append("defint")
@@ -235,3 +239,236 @@ class HelloConan(ConanFile):
         client.run("create conanfile.py dep/1.0@us/ch", assert_error=True)
         self.assertIn("dep/1.0@us/ch package_info(): self.cpp_info.components cannot be used "
                       "with self.cpp_info configs (release/debug/...) at the same time", client.out)
+
+        conanfile = textwrap.dedent("""
+                    from conans import ConanFile
+
+                    class MyConan(ConanFile):
+
+                        def package_info(self):
+                            self.cpp_info.components["dep"].libs.append("libint1")
+                """)
+        client.save({"conanfile.py": conanfile})
+        client.run("create conanfile.py dep/1.0@us/ch", assert_error=True)
+        self.assertIn("dep/1.0@us/ch package_info(): Component name cannot be the same as the "
+                      "package name: 'dep'", client.out)
+
+    def package_info_components_complete_test(self):
+        dep = textwrap.dedent("""
+            import os
+            from conans import ConanFile
+            class Dep(ConanFile):
+                exports_sources = "*"
+                def package(self):
+                    self.copy("*")
+                def package_info(self):
+                    self.cpp_info.name = "Galaxy"
+                    self.cpp_info.components["Starlight"].includedirs = [os.path.join("galaxy", "starlight")]
+                    self.cpp_info.components["Starlight"].libs = ["libstarlight"]
+                    self.cpp_info.components["Planet"].includedirs = [os.path.join("galaxy", "planet")]
+                    self.cpp_info.components["Planet"].libs = ["libplanet"]
+                    self.cpp_info.components["Planet"].requires = ["Starlight"]
+                    self.cpp_info.components["Launcher"].system_libs = ["ground"]
+                    self.cpp_info.components["ISS"].includedirs = [os.path.join("galaxy", "iss")]
+                    self.cpp_info.components["ISS"].libs = ["libiss"]
+                    self.cpp_info.components["ISS"].libdirs = ["iss_libs"]
+                    self.cpp_info.components["ISS"].system_libs = ["solar", "magnetism"]
+                    self.cpp_info.components["ISS"].requires = ["Starlight", "Launcher"]
+        """)
+        consumer = textwrap.dedent("""
+        from conans import ConanFile
+        class Consumer(ConanFile):
+            requires = "dep/1.0@us/ch"
+            def build(self):
+                # Global values
+                self.output.info("GLOBAL Include paths: %s" % self.deps_cpp_info.include_paths)
+                self.output.info("GLOBAL Library paths: %s" % self.deps_cpp_info.lib_paths)
+                self.output.info("GLOBAL Binary paths: %s" % self.deps_cpp_info.bin_paths)
+                self.output.info("GLOBAL Libs: %s" % self.deps_cpp_info.libs)
+                self.output.info("GLOBAL Exes: %s" % self.deps_cpp_info.exes)
+                self.output.info("GLOBAL System libs: %s" % self.deps_cpp_info.system_libs)
+                # Deps values
+                for dep_key, dep_value in self.deps_cpp_info.dependencies:
+                    self.output.info("DEPS name: %s" % dep_value.name)
+                    self.output.info("DEPS Include paths: %s" % dep_value.include_paths)
+                    self.output.info("DEPS Library paths: %s" % dep_value.lib_paths)
+                    self.output.info("DEPS Binary paths: %s" % dep_value.bin_paths)
+                    self.output.info("DEPS Libs: %s" % dep_value.libs)
+                    self.output.info("DEPS System libs: %s" % dep_value.system_libs)
+                # Components values
+                for dep_key, dep_value in self.deps_cpp_info.dependencies:
+                    for comp_name, comp_value in dep_value.components.items():
+                        self.output.info("COMP %s Include paths: %s" % (comp_name,
+                        comp_value.include_paths))
+                        self.output.info("COMP %s Library paths: %s" % (comp_name, comp_value.lib_paths))
+                        self.output.info("COMP %s Binary paths: %s" % (comp_name, comp_value.bin_paths))
+                        self.output.info("COMP %s Libs: %s" % (comp_name, comp_value.libs))
+                        self.output.info("COMP %s Requires: %s" % (comp_name, comp_value.requires))
+                        self.output.info("COMP %s System libs: %s" % (comp_name, comp_value.system_libs))
+        """)
+
+        client = TestClient()
+        client.save({"conanfile_dep.py": dep, "conanfile_consumer.py": consumer,
+                     "galaxy/starlight/starlight.h": "",
+                     "lib/libstarlight": "",
+                     "galaxy/planet/planet.h": "",
+                     "lib/libplanet": "",
+                     "galaxy/iss/iss.h": "",
+                     "iss_libs/libiss": "",
+                     "bin/exelauncher": ""})
+        dep_ref = ConanFileReference("dep", "1.0", "us", "ch")
+        dep_pref = PackageReference(dep_ref, NO_SETTINGS_PACKAGE_ID)
+        client.run("create conanfile_dep.py dep/1.0@us/ch")
+        client.run("create conanfile_consumer.py consumer/1.0@us/ch")
+        package_folder = client.cache.package_layout(dep_ref).package(dep_pref)
+
+        expected_comp_starlight_include_paths = [os.path.join(package_folder, "galaxy", "starlight")]
+        expected_comp_planet_include_paths = [os.path.join(package_folder, "galaxy", "planet")]
+        expected_comp_launcher_include_paths = []
+        expected_comp_iss_include_paths = [os.path.join(package_folder, "galaxy", "iss")]
+        expected_comp_starlight_library_paths = [os.path.join(package_folder, "lib")]
+        expected_comp_launcher_library_paths = [os.path.join(package_folder, "lib")]
+        expected_comp_planet_library_paths = [os.path.join(package_folder, "lib")]
+        expected_comp_iss_library_paths = [os.path.join(package_folder, "iss_libs")]
+        expected_comp_starlight_binary_paths = [os.path.join(package_folder, "bin")]
+        expected_comp_launcher_binary_paths = [os.path.join(package_folder, "bin")]
+        expected_comp_planet_binary_paths = [os.path.join(package_folder, "bin")]
+        expected_comp_iss_binary_paths = [os.path.join(package_folder, "bin")]
+
+        expected_global_include_paths = expected_comp_planet_include_paths + \
+            expected_comp_iss_include_paths + expected_comp_starlight_include_paths
+        expected_global_library_paths = expected_comp_starlight_library_paths + \
+            expected_comp_iss_library_paths
+        expected_global_binary_paths = expected_comp_starlight_binary_paths
+
+        self.assertIn("GLOBAL Include paths: %s" % expected_global_include_paths, client.out)
+        self.assertIn("GLOBAL Library paths: %s" % expected_global_library_paths, client.out)
+        self.assertIn("GLOBAL Binary paths: %s" % expected_global_binary_paths, client.out)
+        self.assertIn("GLOBAL Libs: ['libplanet', 'libiss', 'libstarlight']", client.out)
+        self.assertIn("GLOBAL System libs: ['solar', 'magnetism', 'ground']", client.out)
+
+        self.assertIn("DEPS name: Galaxy", client.out)
+        self.assertIn("DEPS Include paths: %s" % expected_global_include_paths, client.out)
+        self.assertIn("DEPS Library paths: %s" % expected_global_library_paths, client.out)
+        self.assertIn("DEPS Binary paths: %s" % expected_global_binary_paths, client.out)
+        self.assertIn("DEPS Libs: ['libplanet', 'libiss', 'libstarlight']", client.out)
+        self.assertIn("DEPS System libs: ['solar', 'magnetism', 'ground']", client.out)
+
+        self.assertIn("COMP Starlight Include paths: %s" % expected_comp_starlight_include_paths,
+                      client.out)
+        self.assertIn("COMP Planet Include paths: %s" % expected_comp_planet_include_paths,
+                      client.out)
+        self.assertIn("COMP Launcher Include paths: %s" % expected_comp_launcher_include_paths,
+                      client.out)
+        self.assertIn("COMP ISS Include paths: %s" % expected_comp_iss_include_paths, client.out)
+        self.assertIn("COMP Starlight Library paths: %s" % expected_comp_starlight_library_paths,
+                      client.out)
+        self.assertIn("COMP Planet Library paths: %s" % expected_comp_planet_library_paths,
+                      client.out)
+        self.assertIn("COMP Launcher Library paths: %s" % expected_comp_launcher_library_paths,
+                      client.out)
+        self.assertIn("COMP ISS Library paths: %s" % expected_comp_iss_library_paths, client.out)
+        self.assertIn("COMP Starlight Binary paths: %s" % expected_comp_iss_binary_paths, client.out)
+        self.assertIn("COMP Planet Binary paths: %s" % expected_comp_planet_binary_paths, client.out)
+        self.assertIn("COMP Launcher Binary paths: %s" % expected_comp_launcher_binary_paths,
+                      client.out)
+        self.assertIn("COMP ISS Binary paths: %s" % expected_comp_iss_binary_paths, client.out)
+        self.assertIn("COMP Starlight Libs: ['libstarlight']", client.out)
+        self.assertIn("COMP Planet Libs: ['libplanet']", client.out)
+        self.assertIn("COMP Launcher Libs: []", client.out)
+        self.assertIn("COMP ISS Libs: ['libiss']", client.out)
+        self.assertIn("COMP Starlight System libs: []", client.out)
+        self.assertIn("COMP Planet System libs: []", client.out)
+        self.assertIn("COMP Launcher System libs: ['ground']", client.out)
+        self.assertIn("COMP ISS System libs: ['solar', 'magnetism']", client.out)
+        self.assertIn("COMP Starlight Requires: []", client.out)
+        self.assertIn("COMP Launcher Requires: []", client.out)
+        self.assertIn("COMP Planet Requires: ['Starlight']", client.out)
+        self.assertIn("COMP ISS Requires: ['Starlight', 'Launcher']", client.out)
+
+    def package_requires_in_components_requires_test(self):
+        client = TestClient()
+        client.save({"conanfile1.py": GenConanfile("dep1", "0.1"),
+                     "conanfile2.py": GenConanfile("dep2", "0.1")})
+        client.run("create conanfile1.py")
+        client.run("create conanfile2.py")
+
+        conanfile = GenConanfile("consumer", "0.1") \
+            .with_requirement_plain("dep1/0.1") \
+            .with_requirement_plain("dep2/0.1") \
+            .with_package_info(cpp_info={"components": {"kk": {"requires": []}}},
+                               env_info={})
+        client.save({"conanfile.py": conanfile})
+        client.run("create conanfile.py", assert_error=True)
+        self.assertIn("consumer/0.1 package_info(): Package require 'dep1' not used in "
+                      "components requires", client.out)
+
+        conanfile = GenConanfile("consumer", "0.1") \
+            .with_requirement_plain("dep1/0.1") \
+            .with_requirement_plain("dep2/0.1") \
+            .with_package_info(cpp_info={"components": {"kk": {"requires": ["dep1::dep1"]}}},
+                               env_info={})
+        client.save({"conanfile.py": conanfile})
+        client.run("create conanfile.py", assert_error=True)
+        self.assertIn("consumer/0.1 package_info(): Package require 'dep2' not used in components "
+                      "requires", client.out)
+
+        conanfile = GenConanfile("consumer", "0.1") \
+            .with_requirement_plain("dep1/0.1") \
+            .with_requirement_plain("dep2/0.1") \
+            .with_package_info(cpp_info={"components": {"kk": {"requires": ["dep1::dep1"]},
+                                                        "kkk": {"requires": ["kk"]}}},
+                               env_info={})
+        client.save({"conanfile.py": conanfile})
+        client.run("create conanfile.py", assert_error=True)
+        self.assertIn("consumer/0.1 package_info(): Package require 'dep2' not used in components "
+                      "requires", client.out)
+
+        conanfile = GenConanfile("consumer", "0.1") \
+            .with_requirement_plain("dep1/0.1") \
+            .with_requirement_plain("dep2/0.1") \
+            .with_package_info(cpp_info={"components": {"kk": {"requires": []},
+                                                        "kkk": {"requires": ["kk"]}}},
+                               env_info={})
+        client.save({"conanfile.py": conanfile})
+        client.run("create conanfile.py", assert_error=True)
+        self.assertIn("consumer/0.1 package_info(): Package require 'dep1' not used in components "
+                      "requires", client.out)
+
+        conanfile = GenConanfile("consumer", "0.1") \
+            .with_requirement_plain("dep1/0.1") \
+            .with_requirement_plain("dep2/0.1") \
+            .with_package_info(cpp_info={"components": {"kk": {"requires": ["dep2::comp"]},
+                                                        "kkk": {"requires": ["dep3::dep3"]}}},
+                               env_info={})
+        client.save({"conanfile.py": conanfile})
+        client.run("create conanfile.py", assert_error=True)
+        self.assertIn("consumer/0.1 package_info(): Package require 'dep1' not used in components "
+                      "requires", client.out)
+
+        conanfile = GenConanfile("consumer", "0.1") \
+            .with_requirement_plain("dep2/0.1") \
+            .with_package_info(cpp_info={"components": {"kk": {"requires": ["dep2::comp"]},
+                                                        "kkk": {"requires": ["dep3::dep3"]}}},
+                               env_info={})
+        client.save({"conanfile.py": conanfile})
+        client.run("create conanfile.py", assert_error=True)
+        self.assertIn("consumer/0.1 package_info(): Package require 'dep3' declared in components "
+                      "requires but not defined as a recipe requirement", client.out)
+
+        conanfile = GenConanfile("consumer", "0.1") \
+            .with_package_info(cpp_info={"components": {"kk": {"requires": ["dep2::comp"]}}},
+                               env_info={})
+        client.save({"conanfile.py": conanfile})
+        client.run("create conanfile.py", assert_error=True)
+        self.assertIn("consumer/0.1 package_info(): Package require 'dep2' declared in components "
+                      "requires but not defined as a recipe requirement", client.out)
+
+        conanfile = GenConanfile("consumer", "0.1") \
+            .with_requirement_plain("dep1/0.1") \
+            .with_requirement_plain("dep2/0.1") \
+            .with_package_info(cpp_info={"components": {"kk": {"requires": ["dep2::comp"]},
+                                                        "kkk": {"requires": ["dep1::dep1"]}}},
+                               env_info={})
+        client.save({"conanfile.py": conanfile})
+        client.run("create conanfile.py")  # Correct usage

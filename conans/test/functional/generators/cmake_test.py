@@ -245,8 +245,21 @@ class CMakeGeneratorTest(unittest.TestCase):
 
         self.assertNotIn("Library sys1 not found in package, might be system one", client.out)
         self.assertIn("CONAN_PKG::mylib libs: "
-                      "CONAN_LIB::mylib_lib1;CONAN_LIB::mylib_lib11;sys1;$<$<CONFIG:Release>:;>;"
-                      "$<$<CONFIG:RelWithDebInfo>:;>;$<$<CONFIG:MinSizeRel>:;>;$<$<CONFIG:Debug>:;>",
+                      "CONAN_LIB::mylib_lib1;CONAN_LIB::mylib_lib11;sys1;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>;"
+                      "$<$<CONFIG:Release>:;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>;"
+                      "$<$<CONFIG:RelWithDebInfo>:;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>;"
+                      "$<$<CONFIG:MinSizeRel>:;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>;"
+                      "$<$<CONFIG:Debug>:;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>",
                       client.out)
         self.assertIn("CONAN_LIB::mylib_lib1 libs: ;sys1;;", client.out)
         self.assertIn("CONAN_LIB::mylib_lib11 libs: ;sys1;;", client.out)
@@ -254,10 +267,20 @@ class CMakeGeneratorTest(unittest.TestCase):
         self.assertNotIn("Library sys2 not found in package, might be system one", client.out)
         self.assertIn("CONAN_PKG::myotherlib libs: "
                       "CONAN_LIB::myotherlib_lib2;sys2;CONAN_PKG::mylib;"
-                      "$<$<CONFIG:Release>:;CONAN_PKG::mylib;>;"
-                      "$<$<CONFIG:RelWithDebInfo>:;CONAN_PKG::mylib;>;"
-                      "$<$<CONFIG:MinSizeRel>:;CONAN_PKG::mylib;>;"
-                      "$<$<CONFIG:Debug>:;CONAN_PKG::mylib;>",
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>;"
+                      "$<$<CONFIG:Release>:;CONAN_PKG::mylib;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>;"
+                      "$<$<CONFIG:RelWithDebInfo>:;CONAN_PKG::mylib;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>;"
+                      "$<$<CONFIG:MinSizeRel>:;CONAN_PKG::mylib;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>;"
+                      "$<$<CONFIG:Debug>:;CONAN_PKG::mylib;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>",
                       client.out)
         self.assertIn("CONAN_LIB::myotherlib_lib2 libs: ;sys2;;CONAN_PKG::mylib", client.out)
 

@@ -1,100 +1,156 @@
-from collections import namedtuple, defaultdict
+from collections import OrderedDict, defaultdict
+
+from jinja2 import Template
+
+from conans.assets.templates import search_table_html
+from conans.model.ref import PackageReference
 from conans.util.files import save
 
 
-def html_binary_graph(search_info, reference, table_filename):
-    result = ["""<style>
-    table, th, td {
-    border: 1px solid black;
-    border-collapse: collapse;
-}
-.selected {
-    border: 3px solid black;
-}
-</style>
-<script type="text/javascript">
-    function handleEvent(id) {
-        selected = document.getElementsByClassName('selected');
-        if (selected[0]) selected[0].className = '';
-        cell = document.getElementById(id);
-        cell.className = 'selected';
-        elem = document.getElementById('SelectedPackage');
-        elem.innerHTML = id;
-    }
+class RowResult(object):
+    def __init__(self, remote, reference, data):
+        self.remote = remote
+        self.reference = reference
+        self._data = data
 
-</script>
-<h1>%s</h1>
-    """ % str(reference)]
+    @property
+    def recipe(self):
+        return self.reference
 
-    for remote_info in search_info:
-        if remote_info["remote"] != 'None':
-            result.append("<h2>'%s':</h2>" % str(remote_info["remote"]))
+    @property
+    def package_id(self):
+        return self._data['id']
 
-        ordered_packages = remote_info["items"][0]["packages"]
-        binary = namedtuple("Binary", "ID outdated")
-        columns = set()
-        table = defaultdict(dict)
-        for package in ordered_packages:
-            package_id = package["id"]
-            settings = package["settings"]
-            if settings:
-                row_name = "%s %s %s" % (settings.get("os", "None"),
-                                         settings.get("compiler", "None"),
-                                         settings.get("compiler.version", "None"))
-                column_name = []
-                for setting, value in settings.items():
-                    if setting.startswith("compiler."):
-                        if not setting.startswith("compiler.version"):
-                            row_name += " (%s)" % value
-                    elif setting not in ("os", "compiler"):
-                        column_name.append(value)
-                column_name = " ".join(column_name)
+    @property
+    def outdated(self):
+        return self._data['outdated']
+
+    def row(self, headers):
+        """ Returns package data according to headers """
+        assert isinstance(headers, Headers), "Wrong type: {}".format(type(headers))
+
+        for it in headers.keys:
+            try:
+                yield getattr(self, it)
+            except AttributeError:
+                yield self._data[it]
+        for it in headers.settings:
+            yield self._data['settings'].get(it, None)
+        for it in headers.options:
+            yield self._data['options'].get(it, None)
+        if headers.requires:
+            prefs = [PackageReference.loads(it) for it in self._data['requires']]
+            yield ', '.join(map(str, [it.ref for it in prefs]))
+
+
+class Headers(object):
+    _preferred_ordering = ['os', 'arch', 'compiler', 'build_type']
+
+    def __init__(self, settings, options, requires, keys):
+        # Keys: columns to classify
+        self.keys = keys
+        self.options = options
+        self.requires = requires
+
+        # - Order settings
+        _settings = defaultdict(list)
+        for it in settings:
+            try:
+                category, _ = it.split('.', 1)
+            except ValueError:
+                _settings[it].append(it)
             else:
-                row_name = "NO settings"
-                column_name = ""
+                _settings[category].append(it)
 
-            options = package["options"]
-            if options:
-                for k, v in options.items():
-                    column_name += "<br>%s=%s" % (k, v)
+        self.settings = []
+        for it in self._preferred_ordering:
+            if it in _settings:
+                self.settings.extend(sorted(_settings[it]))
+        for it, values in _settings.items():
+            if it not in self._preferred_ordering:
+                self.settings.extend(sorted(values))
 
-            column_name = column_name or "NO options"
-            columns.add(column_name)
-            # Always compare outdated with local recipe, simplification,
-            # if a remote check is needed install recipe first
-            if "outdated" in package:
-                outdated = package["outdated"]
+    def row(self, n_rows=2):
+        """
+        Retrieve list of headers as a single list (1-row) or as a list of tuples with
+        settings organized by categories (2-row).
+
+        Example output:
+            1-row: ['os', 'arch', 'compiler', 'compiler.version', 'compiler.libcxx', 'build_type']
+            2-row: [('os', ['']), ('arch', ['']), ('compiler', ['', 'version', 'libcxx']),]
+        """
+        headers = list(self.keys)
+        if n_rows == 1:
+            headers.extend(self.settings + self.options)
+            if self.requires:
+                headers.append('requires')
+            return headers
+        elif n_rows == 2:
+            headers = [(it, ['']) for it in headers]
+            settings = self._group_settings(self.settings)
+            headers.extend(settings)
+            headers.append(('options', self.options))
+            if self.requires:
+                headers.append(('requires', ['']))
+            return headers
+        else:
+            raise NotImplementedError("not yet")
+
+    @staticmethod
+    def _group_settings(settings):
+        """
+        From one row to two-rows using '.' as separator
+        """
+        ret = OrderedDict()
+        for setting in settings:
+            try:
+                category, value = setting.split(".", 1)
+            except ValueError:
+                ret.setdefault(setting, []).append('')
             else:
-                outdated = None
-            table[row_name][column_name] = binary(package_id, outdated)
+                ret.setdefault(category, []).append(value)
+        return [(key, values) for key, values in ret.items()]
 
-        headers = sorted(columns)
-        result.append("<table>")
-        result.append("<tr>")
-        result.append("<th></th>")
-        for header in headers:
-            result.append("<th>%s</th>" % header)
-        result.append("</tr>")
-        for row, columns in sorted(table.items()):
-            result.append("<tr>")
-            result.append("<td>%s</td>" % row)
-            for header in headers:
-                col = columns.get(header, "")
-                if col:
-                    color = "#ffff00" if col.outdated else "#00ff00"
-                    result.append('<td bgcolor=%s id="%s" onclick=handleEvent("%s")></td>'
-                                  % (color, col.ID, col.ID))
-                else:
-                    result.append("<td></td>")
-            result.append("</tr>")
-        result.append("</table>")
 
-    result.append('<br>Selected: <div id="SelectedPackage"></div>')
+class Results(object):
+    def __init__(self, results):
+        self._results = results
 
-    result.append("<br>Legend<br>"
-                  "<table><tr><td bgcolor=#ffff00>&nbsp;&nbsp;&nbsp;&nbsp;</td>"
-                  "<td>Outdated from recipe</td></tr>"
-                  "<tr><td bgcolor=#00ff00>&nbsp;&nbsp;&nbsp;&nbsp;</td><td>Updated</td></tr>"
-                  "<tr><td>&nbsp;&nbsp;&nbsp;&nbsp;</td><td>Non existing</td></tr></table>")
-    html_contents = "\n".join(result)
-    save(table_filename, html_contents)
+        # Collect data inspecting the packages
+        _settings = set()
+        _options = set()
+        _remotes = set()
+        self.requires = False
+
+        for it in results:
+            _remotes.add(it['remote'])
+            for p in it['items'][0]['packages']:
+                _settings = _settings.union(list(p['settings'].keys()))
+                _options = _options.union(list(p['options'].keys()))
+                if len(p['requires']):
+                    self.requires = True
+
+        self.settings = list(_settings)
+        self.options = list(_options)
+        self.remotes = list(_remotes)
+
+    def get_headers(self, keys=('remote', 'reference', 'outdated', 'package_id')):
+        return Headers(self.settings, self.options, self.requires, keys=keys)
+
+    def packages(self):
+        for it in self._results:
+            remote = it['remote']
+            reference = it['items'][0]['recipe']['id']
+            for p in it['items'][0]['packages']:
+                r = RowResult(remote, reference, p)
+                yield r
+
+
+def html_binary_graph(search_info, reference, table_filename, template):
+    # Adapt data to the template (think twice about the format before documenting)
+    search = {'reference': str(reference)}
+    results = Results(search_info)
+
+    # Render and save
+    content = template.render(search=search, results=results)
+    save(table_filename, content)

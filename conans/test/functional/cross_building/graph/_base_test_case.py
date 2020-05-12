@@ -52,8 +52,8 @@ class CrossBuildingBaseTestCase(GraphManagerTest):
 
             {% if build_requires %}
             def build_requirements(self):
-            {%- for it in build_requires %}
-                self.build_requires("{{ it }}")
+            {%- for it, force_host in build_requires %}
+                self.build_requires("{{ it }}"{% if force_host %}, force_host_context=True{% endif %})
             {%- endfor %}
             {%- endif %}
 
@@ -82,8 +82,8 @@ class CrossBuildingBaseTestCase(GraphManagerTest):
 
             {% if build_requires %}
             def build_requirements(self):
-            {%- for it in build_requires %}
-                self.build_requires("{{ it }}")
+            {%- for it, force_host in build_requires %}
+                self.build_requires("{{ it }}"{% if force_host %}, force_host_context=True{% endif %})
             {%- endfor %}
             {%- endif %}
 
@@ -113,11 +113,11 @@ class CrossBuildingBaseTestCase(GraphManagerTest):
 
             {% if build_requires %}
             def build_requirements(self):
-            {%- for it in build_requires %}
-                self.build_requires("{{ it }}")
+            {%- for it, force_host in build_requires %}
+                self.build_requires("{{ it }}"{% if force_host %}, force_host_context=True{% endif %})
             {%- endfor %}
             {%- endif %}
-            
+
             def build(self):
                 self.output.info(">> settings.os:".format(self.settings.os))
 
@@ -144,22 +144,22 @@ class CrossBuildingBaseTestCase(GraphManagerTest):
                 self.requires("{{ it }}")
             {%- endfor %}
             {%- endif %}
-            
+
             {% if build_requires %}
             def build_requirements(self):
-            {%- for it in build_requires %}
-                self.build_requires("{{ it }}")
+            {%- for it, force_host in build_requires %}
+                self.build_requires("{{ it }}"{% if force_host %}, force_host_context=True{% endif %})
             {%- endfor %}
             {%- endif %}
-            
+
             def package_info(self):
                 lib_str = "{{name}}-host" if self.settings.os == "Host" else "{{name}}-build"
                 lib_str += "-" + self.version
-                self.cpp_info.libs = [lib_str, ]                
+                self.cpp_info.libs = [lib_str, ]
                 self.cpp_info.includedirs = [lib_str, ]
                 self.cpp_info.libdirs = [lib_str, ]
                 self.cpp_info.bindirs = [lib_str, ]
-                
+
                 self.env_info.PATH.append(lib_str)
                 self.env_info.OTHERVAR = lib_str
         """))
