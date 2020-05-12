@@ -54,7 +54,7 @@ class CMakeToolchainBuildHelper(BaseCMakeBuildHelper):
         _validate_recipe(conanfile)
 
         # assert generator is None, "'generator' is handled by the toolchain"
-        generator = generator or get_generator(conanfile.settings)
+        generator = generator or get_generator(conanfile)
         self._is_multiconfiguration = is_multi_configuration(generator)
         self._build_flags = _compute_build_flags(conanfile, generator, parallel, msbuild_verbosity)
         self._is_windows_mingw = platform.system() == "Windows" and generator == "MinGW Makefiles"
