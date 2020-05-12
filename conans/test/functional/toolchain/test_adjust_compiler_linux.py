@@ -186,11 +186,11 @@ class AdjustAutoTestCase(unittest.TestCase):
                     "src/app.cpp": cls.app_cpp})
         # TODO: Remove the app.cpp and the add_executable, probably it is not need to run cmake configure.
 
-    def _gcc_version_full(self, compiler_version):
-        _, output = detect_runner("gcc-{} --version".format(compiler_version))
+    def _compiler_version_full(self, compiler, compiler_version):
+        _, output = detect_runner("{}-{} --version".format(compiler, compiler_version))
         output = str(output) if six.PY2 else output
         line = output.splitlines()[0] if six.PY2 else output.split('\\n')[0]
-        m = re.match(r".*(?P<version>\d\.\d\.\d)(\s\d+)?$", line)
+        m = re.match(r".*\s(?P<version>\d+\.\d+\.\d+)", line)
         if not m:
             self.fail("Cannot find version in line '{}'".format(line))
         return m.group("version")
@@ -244,7 +244,7 @@ class AdjustAutoTestCase(unittest.TestCase):
 
         configure_out, cmake_cache, cmake_cache_keys, _, _ = self._run_configure({"compiler.version": compiler_version})
 
-        full_version_str = self._gcc_version_full(compiler_version)
+        full_version_str = self._compiler_version_full("gcc", compiler_version)
         self.assertTrue(full_version_str.startswith(compiler_version))
         self.assertIn("-- The C compiler identification is GNU {}".format(full_version_str), configure_out)
         self.assertIn("-- The CXX compiler identification is GNU {}".format(full_version_str), configure_out)
@@ -273,7 +273,7 @@ class AdjustAutoTestCase(unittest.TestCase):
 
         id_str = "GNU" if compiler == "gcc" else "Clang"
         cxx_compiler = "g++" if compiler == "gcc" else "clang++"
-        full_version_str = self._gcc_version_full(compiler_version) if compiler == "gcc" else "6.0.0"
+        full_version_str = self._compiler_version_full(compiler, compiler_version)
         self.assertTrue(full_version_str.startswith(compiler_version), "{} not starting with {}".format(full_version_str, compiler_version))
         self.assertIn("-- The C compiler identification is {} {}".format(id_str, full_version_str), configure_out)
         self.assertIn("-- The CXX compiler identification is {} {}".format(id_str, full_version_str), configure_out)
@@ -285,4 +285,3 @@ class AdjustAutoTestCase(unittest.TestCase):
         self.assertEqual("/usr/bin/{}-ranlib-{}".format(tools_str, compiler_version), cmake_cache["CMAKE_CXX_COMPILER_RANLIB:FILEPATH"])
         self.assertEqual("/usr/bin/{}-ar-{}".format(tools_str, compiler_version), cmake_cache["CMAKE_C_COMPILER_AR:FILEPATH"])
         self.assertEqual("/usr/bin/{}-ranlib-{}".format(tools_str, compiler_version), cmake_cache["CMAKE_C_COMPILER_RANLIB:FILEPATH"])
-
