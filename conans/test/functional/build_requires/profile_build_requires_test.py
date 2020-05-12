@@ -180,7 +180,7 @@ build2/0.1@user/testing
 
         client.run("install . --profile ./profile.txt", assert_error=True)
         self.assertIn("ERROR: Missing prebuilt package for "
-                      "'PythonTool/0.1@lasote/stable, Tool/0.1@lasote/stable'", client.out)
+                      "'PythonTool/0.1@lasote/stable', 'Tool/0.1@lasote/stable'", client.out)
         client.run("install . --profile ./profile.txt --build=PythonTool", assert_error=True)
         self.assertIn("ERROR: Missing prebuilt package for 'Tool/0.1@lasote/stable'", client.out)
         client.run("install . --profile ./profile.txt --build=*Tool")

@@ -332,11 +332,11 @@ class BinaryInstaller(object):
         conanfile.output.warn(msg)
         self._recorder.package_install_error(PackageReference(ref, package_id),
                                              INSTALL_ERROR_MISSING, msg)
-        missing_pkgs = ", ".join([str(pref.ref) for pref in missing_prefs])
+        missing_pkgs = "', '".join([str(pref.ref) for pref in missing_prefs])
         if len(missing_prefs) >= 5:
-            build_str = "--build missing"
+            build_str = "--build=missing"
         else:
-            build_str = " ".join(["--build %s" % pref.ref.name for pref in missing_prefs])
+            build_str = " ".join(["--build=%s" % pref.ref.name for pref in missing_prefs])
 
         raise ConanException(textwrap.dedent('''\
             Missing prebuilt package for '%s'
