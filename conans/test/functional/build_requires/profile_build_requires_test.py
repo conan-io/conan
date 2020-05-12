@@ -268,16 +268,9 @@ nonexistingpattern*: SomeTool/1.2@user/channel
 
     def build_requires_options_test(self):
         client = TestClient()
-        lib_conanfile = """
-from conans import ConanFile
-
-class MyTool(ConanFile):
-    name = "MyTool"
-    version = "0.1"
-"""
-
-        client.save({CONANFILE: lib_conanfile})
+        client.save({CONANFILE: GenConanfile("MyTool", "0.1")})
         client.run("export . lasote/stable")
+
         conanfile = """
 from conans import ConanFile, tools
 
