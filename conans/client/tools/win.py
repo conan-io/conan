@@ -463,10 +463,11 @@ def vcvars_command(conanfile=None, arch=None, compiler_version=None, force=False
     return " ".join(command)
 
 
-def vcvars_dict(settings, arch=None, compiler_version=None, force=False, filter_known_paths=False,
-                vcvars_ver=None, winsdk_version=None, only_diff=True, output=None):
+def vcvars_dict(conanfile=None, arch=None, compiler_version=None, force=False,
+                filter_known_paths=False, vcvars_ver=None, winsdk_version=None, only_diff=True,
+                output=None, settings=None):
     known_path_lists = ("include", "lib", "libpath", "path")
-    cmd = vcvars_command(settings, arch=arch,
+    cmd = vcvars_command(conanfile=conanfile, settings=settings, arch=arch,
                          compiler_version=compiler_version, force=force,
                          vcvars_ver=vcvars_ver, winsdk_version=winsdk_version, output=output)
     cmd += " && set"
