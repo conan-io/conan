@@ -15,7 +15,7 @@ from conans.client.cache.remote_registry import load_registry_txt,\
 from conans.client.tools import Git
 from conans.client.tools.files import unzip
 from conans.errors import ConanException
-from conans.util.files import mkdir, rmdir, walk, save, touch
+from conans.util.files import mkdir, rmdir, walk, save, touch, remove
 from conans.client.cache.cache import ClientCache
 
 
@@ -81,8 +81,7 @@ def _filecopy(src, filename, dst):
     src = os.path.join(src, filename)
     dst = os.path.join(dst, filename)
     if os.path.exists(dst):
-        os.chmod(dst, stat.S_IWRITE)  # make file writable
-        os.remove(dst)
+        remove(dst)
     shutil.copyfile(src, dst)
 
 
