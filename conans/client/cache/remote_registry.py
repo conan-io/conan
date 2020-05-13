@@ -1,6 +1,7 @@
 import fnmatch
 import json
 import os
+import stat
 from collections import OrderedDict, namedtuple
 from six.moves.urllib.parse import urlparse
 
@@ -307,16 +308,23 @@ class RemoteRegistry(object):
         else:
             self._output.warn("The URL is empty. It must contain scheme and hostname.")
 
-    def load_remotes(self):
+    def initialize_remotes(self):
         if not os.path.exists(self._filename):
             self._output.warn("Remotes registry file missing, "
                               "creating default one in %s" % self._filename)
             remotes = Remotes.defaults()
             remotes.save(self._filename)
-        else:
-            content = load(self._filename)
-            remotes = Remotes.loads(content)
-        return remotes
+
+    def reset_remotes(self):
+        if os.path.exists(self._filename):
+            os.chmod(self._filename, stat.S_IWRITE)
+            os.remove(self._filename)
+        self.initialize_remotes()
+
+    def load_remotes(self):
+        self.initialize_remotes()
+        content = load(self._filename)
+        return Remotes.loads(content)
 
     def add(self, remote_name, url, verify_ssl=True, insert=None, force=None):
         self._validate_url(url)

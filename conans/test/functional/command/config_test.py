@@ -5,7 +5,7 @@ import six
 
 from conans.errors import ConanException
 from conans.test.utils.tools import TestClient
-from conans.util.files import load
+from conans.util.files import load, save_append
 from conans.test.utils.test_files import temp_folder
 from conans.client.tools import environment_append
 
@@ -125,6 +125,31 @@ class ConfigTest(unittest.TestCase):
         with environment_append({"CONAN_USER_HOME_SHORT": short_path_home_folder}):
             client = TestClient(cache_folder=cache_folder)
             self.assertEqual(client.cache.config.short_paths_home, short_path_home_folder)
+
+    def test_init(self):
+        self.client.run('config init')
+        self.assertTrue(os.path.exists(self.client.cache.conan_conf_path))
+        self.assertTrue(os.path.exists(self.client.cache.remotes_path))
+        self.assertTrue(os.path.exists(self.client.cache.settings_path))
+        self.assertTrue(os.path.exists(self.client.cache.default_profile_path))
+
+    def test_init_overwrite(self):
+        # create and add dummy content to the config files
+        self.client.run('config init')
+        dummy_content = 'DUMMY CONTENT. SHOULD BE REMOVED!'
+        save_append(self.client.cache.conan_conf_path, dummy_content)
+        save_append(self.client.cache.remotes_path, dummy_content)
+        save_append(self.client.cache.settings_path, dummy_content)
+        save_append(self.client.cache.default_profile_path, dummy_content)
+
+        # overwrite files
+        self.client.run('config init --force')
+
+        self.assertNotIn(dummy_content, load(self.client.cache.conan_conf_path))
+        self.assertNotIn(dummy_content, load(self.client.cache.remotes_path))
+        self.assertNotIn(dummy_content, load(self.client.cache.conan_conf_path))
+        self.assertNotIn(dummy_content, load(self.client.cache.settings_path))
+        self.assertNotIn(dummy_content, load(self.client.cache.default_profile_path))
 
     def _assert_dict_subset(self, expected, actual):
         actual = {k: v for k, v in actual.items() if k in expected}
