@@ -34,10 +34,11 @@ class MockRequester(object):
     retry = 0
     retry_wait = 0
 
-    def __init__(self, data, chunk_size=None, accept_ranges=True):
+    def __init__(self, data, chunk_size=None, accept_ranges=True, echo_header=None):
         self._data = data
         self._chunk_size = chunk_size if chunk_size is not None else len(data)
         self._accept_ranges = accept_ranges
+        self._echo_header = echo_header.copy() if echo_header else {}
 
     def get(self, *_args, **kwargs):
         start = 0
@@ -48,12 +49,17 @@ class MockRequester(object):
         headers = {"Content-Length": len(self._data), "Accept-Ranges": "bytes"}
         if match and self._accept_ranges:
             start = int(match.groups()[0])
-            status = 206
-            headers.update({"Content-Length": len(self._data) - start,
-                            "Content-Range": "bytes {}-{}/{}".format(start, len(self._data) - 1,
-                                                                     len(self._data))})
-            assert start <= len(self._data)
-
+            if start < len(self._data):
+                status = 206
+                headers.update({"Content-Length": str(len(self._data) - start),
+                                "Content-Range": "bytes {}-{}/{}".format(start, len(self._data) - 1,
+                                                                         len(self._data))})
+            else:
+                status = 416
+                headers.update({"Content-Length": "0",
+                                "Content-Range": "bytes */{}".format(len(self._data))})
+        else:
+            headers.update(self._echo_header)
         response = MockResponse(self._data[start:start + self._chunk_size], status_code=status,
                                 headers=headers)
         return response
@@ -113,3 +119,23 @@ class DownloaderUnitTest(unittest.TestCase):
                                     config=_ConfigMock())
         with self.assertRaisesRegexp(ConanException, r"Incorrect Content-Range header"):
             downloader.download("fake_url", file_path=self.target)
+
+    def test_download_with_compressed_content_and_bigger_content_length(self):
+        expected_content = b"some data"
+        echo_header = {"Content-Encoding": "gzip", "Content-Length": len(expected_content) + 1}
+        requester = MockRequester(expected_content, echo_header=echo_header)
+        downloader = FileDownloader(requester=requester, output=self.out, verify=None,
+                                    config=_ConfigMock())
+        downloader.download("fake_url", file_path=self.target)
+        actual_content = load(self.target, binary=True)
+        self.assertEqual(expected_content, actual_content)
+
+    def test_download_with_compressed_content_and_smaller_content_length(self):
+        expected_content = b"some data"
+        echo_header = {"Content-Encoding": "gzip", "Content-Length": len(expected_content) - 1}
+        requester = MockRequester(expected_content, echo_header=echo_header)
+        downloader = FileDownloader(requester=requester, output=self.out, verify=None,
+                                    config=_ConfigMock())
+        downloader.download("fake_url", file_path=self.target)
+        actual_content = load(self.target, binary=True)
+        self.assertEqual(expected_content, actual_content)
