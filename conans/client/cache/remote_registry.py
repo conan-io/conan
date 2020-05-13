@@ -1,6 +1,7 @@
 import fnmatch
 import json
 import os
+import stat
 from collections import OrderedDict, namedtuple
 from six.moves.urllib.parse import urlparse
 
@@ -313,6 +314,12 @@ class RemoteRegistry(object):
                               "creating default one in %s" % self._filename)
             remotes = Remotes.defaults()
             remotes.save(self._filename)
+
+    def reset_remotes(self):
+        if os.path.exists(self._filename):
+            os.chmod(self._filename, stat.S_IWRITE)
+            os.remove(self._filename)
+        self.initialize_remotes()
 
     def load_remotes(self):
         self.initialize_remotes()
