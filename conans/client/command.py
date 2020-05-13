@@ -569,7 +569,7 @@ class Command(object):
         rm_subparser.add_argument("item", help="Item to remove")
         set_subparser.add_argument("item", help="'item=value' to set")
         init_subparser.add_argument('-f', '--force', default=False, action='store_true',
-                            help='Overwrite existing Conan configuration files')
+                                    help='Overwrite existing Conan configuration files')
 
         args = parser.parse_args(*args)
 
