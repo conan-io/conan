@@ -1,7 +1,6 @@
 import json
 import os
 import shutil
-import stat
 import textwrap
 import time
 import unittest
@@ -17,8 +16,7 @@ from conans.client.rest.file_downloader import FileDownloader
 from conans.errors import ConanException
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, StoppableThreadBottle
-from conans.util.files import load, mkdir, save, save_files
-
+from conans.util.files import load, mkdir, save, save_files, make_file_read_only
 
 win_profile = """[settings]
     os: Windows
@@ -533,7 +531,7 @@ class Pkg(ConanFile):
         source_folder = self._create_profile_folder()
         self.client.run('config install "%s"' % source_folder)
         # make existing settings.yml read-only
-        os.chmod(self.client.cache.settings_path, stat.S_IREAD | stat.S_IRGRP | stat.S_IROTH)
+        make_file_read_only(self.client.cache.settings_path)
         self.assertFalse(os.access(self.client.cache.settings_path, os.W_OK))
 
         # config install should overwrite the existing read-only file
@@ -543,8 +541,7 @@ class Pkg(ConanFile):
     def test_dont_copy_file_permissions(self):
         source_folder = self._create_profile_folder()
         # make source settings.yml read-only
-        os.chmod(os.path.join(source_folder, 'remotes.txt'),
-                 stat.S_IREAD | stat.S_IRGRP | stat.S_IROTH)
+        make_file_read_only(os.path.join(source_folder, 'remotes.txt'))
 
         self.client.run('config install "%s"' % source_folder)
         self.assertTrue(os.access(self.client.cache.settings_path, os.W_OK))
