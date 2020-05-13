@@ -289,4 +289,4 @@ class CMakeToolchain(object):
                                self._conan_set_compiler
                            ]),
                            **context)
-        save(os.path.join(install_folder, self.filename), content.replace("\\", "/"))
+        save(os.path.join(install_folder, self.filename), content)
