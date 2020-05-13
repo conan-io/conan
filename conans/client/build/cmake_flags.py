@@ -33,7 +33,7 @@ def get_generator(conanfile):
 
     compiler = conanfile.settings.get_safe("compiler")
     arch = conanfile.settings.get_safe("arch")
-    compiler_version = conanfile.settings.get_safe("compiler.version")
+    compiler_version =conanfile. settings.get_safe("compiler.version")
     os_build, _, _, _ = get_cross_building_settings(conanfile)
 
     if not compiler or not compiler_version or not arch:
@@ -323,7 +323,7 @@ class CMakeDefinitionsBuilder(object):
         # Install to package folder
         try:
             if self._conanfile.package_folder:
-                definitions["CMAKE_INSTALL_PREFIX"] = self._conanfile.package_folder.replace("\\", "/")
+                definitions["CMAKE_INSTALL_PREFIX"] = self._conanfile.package_folder
                 definitions["CMAKE_INSTALL_BINDIR"] = DEFAULT_BIN
                 definitions["CMAKE_INSTALL_SBINDIR"] = DEFAULT_BIN
                 definitions["CMAKE_INSTALL_LIBEXECDIR"] = DEFAULT_BIN
