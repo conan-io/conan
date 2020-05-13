@@ -250,7 +250,7 @@ class CMakeToolchain(object):
             "CMAKE_BUILD_TYPE": self._build_type,
             "generator_platform": self._generator_platform,
             "toolset": self._toolset,
-            "definitions": self.definitions,
+            "definitions": self.definitions.replace("\\", "/"),
             "environment": self.environment,
             "options": {"set_rpath": self.set_rpath,
                         "set_std": self.set_std,
