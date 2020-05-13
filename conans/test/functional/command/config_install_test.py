@@ -16,8 +16,7 @@ from conans.client.rest.file_downloader import FileDownloader
 from conans.errors import ConanException
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, StoppableThreadBottle
-from conans.util.files import load, mkdir, save, save_files
-
+from conans.util.files import load, mkdir, save, save_files, make_file_read_only
 
 win_profile = """[settings]
     os: Windows
@@ -527,6 +526,25 @@ class Pkg(ConanFile):
         self.client.run("config install http://localhost:%s/myconfig.zip" % http_server.port)
         self.assertIn("Unzipping", self.client.out)
         http_server.stop()
+
+    def test_overwrite_read_only_file(self):
+        source_folder = self._create_profile_folder()
+        self.client.run('config install "%s"' % source_folder)
+        # make existing settings.yml read-only
+        make_file_read_only(self.client.cache.settings_path)
+        self.assertFalse(os.access(self.client.cache.settings_path, os.W_OK))
+
+        # config install should overwrite the existing read-only file
+        self.client.run('config install "%s"' % source_folder)
+        self.assertTrue(os.access(self.client.cache.settings_path, os.W_OK))
+
+    def test_dont_copy_file_permissions(self):
+        source_folder = self._create_profile_folder()
+        # make source settings.yml read-only
+        make_file_read_only(os.path.join(source_folder, 'remotes.txt'))
+
+        self.client.run('config install "%s"' % source_folder)
+        self.assertTrue(os.access(self.client.cache.settings_path, os.W_OK))
 
 
 class ConfigInstallSchedTest(unittest.TestCase):

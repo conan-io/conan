@@ -31,12 +31,16 @@ def walk(top, **kwargs):
     return os.walk(top, **kwargs)
 
 
-def make_read_only(path):
-    for root, _, files in walk(path):
+def make_read_only(folder_path):
+    for root, _, files in walk(folder_path):
         for f in files:
             full_path = os.path.join(root, f)
-            mode = os.stat(full_path).st_mode
-            os.chmod(full_path, mode & ~ stat.S_IWRITE)
+            make_file_read_only(full_path)
+
+
+def make_file_read_only(file_path):
+    mode = os.stat(file_path).st_mode
+    os.chmod(file_path, mode & ~ stat.S_IWRITE)
 
 
 _DIRTY_FOLDER = ".dirty"
