@@ -250,7 +250,7 @@ class CMakeToolchain(object):
             "CMAKE_BUILD_TYPE": self._build_type,
             "generator_platform": self._generator_platform,
             "toolset": self._toolset,
-            "definitions": self.definitions.replace("\\", "/"),
+            "definitions": self.definitions,
             "environment": self.environment,
             "options": {"set_rpath": self.set_rpath,
                         "set_std": self.set_std,
@@ -289,4 +289,4 @@ class CMakeToolchain(object):
                                self._conan_set_compiler
                            ]),
                            **context)
-        save(os.path.join(install_folder, self.filename), content)
+        save(os.path.join(install_folder, self.filename), content.replace("\\", "/"))
