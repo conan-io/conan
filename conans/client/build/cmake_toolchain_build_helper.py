@@ -241,8 +241,4 @@ class CMakeToolchainBuildHelper(BaseCMakeBuildHelper):
             self._build(args=args, build_dir=build_dir, target=target)
 
     def patch_config_paths(self):
-        pf = None
-        if self._conanfile.package_folder:
-            pf = self._conanfile.package_folder.replace("\\", "/")
-
-        return super(CMakeToolchainBuildHelper, self)._patch_config_paths(package_folder=pf)
+        raise AttributeError("'CMakeToolchainBuildHelper' object has no attribute 'patch_config_paths'")
