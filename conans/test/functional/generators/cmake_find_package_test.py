@@ -66,6 +66,7 @@ message("Compile options: ${tmp}")
         self.assertIn("Version: 0.1", client.out)
         self.assertIn("Target libs: fake_lib;;"
                       "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:shared_link_flag>;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:shared_link_flag>;"
                       "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>", client.out)
         self.assertIn("Compile options: a_cxx_flag;a_flag", client.out)
 
@@ -475,10 +476,12 @@ class Conan(ConanFile):
         self.assertIn("Target libs (hello2): "
                       "CONAN_LIB::MYHELLO2_hello;MYHELLO::MYHELLO;"
                       "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
                       "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>",
                       client.out)
         self.assertIn("Target libs (hello): CONAN_LIB::MYHELLO_hello;;"
                       "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
                       "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>",
                       client.out)
 
