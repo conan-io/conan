@@ -82,7 +82,7 @@ class _CppInfo(object):
                     else conan_v2_behavior("Warning: " + str(p) + " is not a directory")
                     for p in abs_paths]
         if self.filter_empty:
-            return [p for p in abs_paths if os.path.isdir(p)]
+            return [p for p in abs_paths if (p and os.path.isdir(p))]
         else:
             return abs_paths
 
