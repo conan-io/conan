@@ -42,13 +42,7 @@ class DeployGenerator(Generator):
                                        os.path.relpath(root, rootpath), f)
                     dst = os.path.normpath(dst)
                     mkdir(os.path.dirname(dst))
-                    if os.path.islink(src):
-                        link_target = os.readlink(src)
-                        if not os.path.isabs(link_target):
-                            link_target = os.path.join(os.path.dirname(src), link_target)
-                        linkto = os.path.relpath(link_target, os.path.dirname(src))
-                        os.symlink(linkto, dst)
-                    else:
-                        shutil.copy(src, dst)
+                    shutil.copy(src, dst, follow_symlinks=False)
+
                     copied_files.append(dst)
         return self.deploy_manifest_content(copied_files)
