@@ -42,6 +42,8 @@ class DeployGenerator(Generator):
                                        os.path.relpath(root, rootpath), f)
                     dst = os.path.normpath(dst)
                     mkdir(os.path.dirname(dst))
+                    if os.path.islink(src) and os.path.exists(dst):
+                        os.unlink(dst)
                     shutil.copy(src, dst, follow_symlinks=False)
 
                     copied_files.append(dst)
