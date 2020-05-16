@@ -29,6 +29,9 @@ class MSVCGenerator(Generator):
             {transitive_imports}
           </ImportGroup>
           <PropertyGroup Label="UserMacros" />
+          <PropertyGroup>
+            <conan_{name}_props_imported>True</conan_{name}_props_imported>
+          </PropertyGroup>
           <PropertyGroup Label="ConanVariables">
             <Conan{name}CompilerFlags>{compiler_flags}</Conan{name}CompilerFlags>
             <Conan{name}LinkerFlags>{linker_flags}</Conan{name}LinkerFlags>
@@ -159,6 +162,7 @@ class MSVCGenerator(Generator):
 
     @property
     def content(self):
+        self.conanfile.output.warn("*** The 'msvc' generator is EXPERIMENTAL ***")
         result = {}
         conf_name, condition = self._name_condition(self.conanfile.settings)
         for dep_name, cpp_info in self._deps_build_info.dependencies:
