@@ -129,6 +129,36 @@ class MSVCGenerator(Generator):
         content_multi = "\n".join(line for line in content_multi.splitlines() if line.strip())
         return content_multi
 
+    def _general(self, name_general, deps, conf_name, condition):
+        # read the existing mult_filename or use the template if it doesn't exist
+        multi_path = os.path.join(self.output_path, name_general)
+        if os.path.isfile(multi_path):
+            content_multi = load(multi_path)
+        else:
+            content_multi = self.dep_props
+
+        # parse the multi_file and add a new import statement if needed
+        dom = minidom.parseString(content_multi)
+        import_group = dom.getElementsByTagName('ImportGroup')[0]
+        children = import_group.getElementsByTagName("Import")
+        for dep in deps:
+            conf_props_name = "conan_%s%s.props" % (dep, conf_name)
+            for node in children:
+                if (conf_props_name == node.getAttribute("Project") and
+                        condition == node.getAttribute("Condition")):
+                    # the import statement already exists
+                    break
+            else:
+                # create a new import statement
+                import_node = dom.createElement('Import')
+                import_node.setAttribute('Condition', condition)
+                import_node.setAttribute('Project', conf_props_name)
+                # add it to the import group
+                import_group.appendChild(import_node)
+        content_multi = dom.toprettyxml()
+        content_multi = "\n".join(line for line in content_multi.splitlines() if line.strip())
+        return content_multi
+
     def _dep_conf(self, name, cpp_info, conf_name):
         def has_valid_ext(lib):
             ext = os.path.splitext(lib)[1]
@@ -164,7 +194,10 @@ class MSVCGenerator(Generator):
     def content(self):
         self.conanfile.output.warn("*** The 'msvc' generator is EXPERIMENTAL ***")
         result = {}
+        general_name = "conan_deps.props"
         conf_name, condition = self._name_condition(self.conanfile.settings)
+        public_deps = self.conanfile.requires.keys()
+        result[general_name] = self._general(general_name, public_deps, conf_name, condition)
         for dep_name, cpp_info in self._deps_build_info.dependencies:
             props_name = "conan_%s.props" % dep_name
             conf_props_name = "conan_%s%s.props" % (dep_name, conf_name)
