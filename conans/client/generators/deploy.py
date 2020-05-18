@@ -47,7 +47,7 @@ class DeployGenerator(Generator):
                         if not os.path.isabs(link_target):
                             link_target = os.path.join(os.path.dirname(src), link_target)
                         linkto = os.path.relpath(link_target, os.path.dirname(src))
-                        if os.path.isfile(dst):
+                        if os.path.isfile(dst) or os.path.islink(dst):
                             os.unlink(dst)
                         os.symlink(linkto, dst)
                     else:
