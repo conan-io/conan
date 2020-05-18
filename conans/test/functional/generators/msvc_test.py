@@ -51,7 +51,7 @@ Global
 EndGlobal
 """
 
-myproject = r"""<?xml version="1.0" encoding="utf-8"?>
+myproject_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0"
        xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
@@ -235,7 +235,7 @@ int main(){
 }
 """
 
-myapp = r"""<?xml version="1.0" encoding="utf-8"?>
+myapp_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0"
           xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
@@ -442,15 +442,15 @@ class MSVCGeneratorTest(unittest.TestCase):
             class HelloConan(ConanFile):
                 settings = "os", "build_type", "compiler", "arch"
                 requires = "Hello1/1.0", "Hello3/1.0"
-                generators = "msvc"
+                generators = "msbuild"
                 def build(self):
                     msbuild = MSBuild(self)
                     msbuild.build("MyProject.sln")
             """)
         files = {"MyProject.sln": sln_file,
-                 "MyProject/MyProject.vcxproj": myproject,
+                 "MyProject/MyProject.vcxproj": myproject_vcxproj,
                  "MyProject/MyProject.cpp": myproject_cpp,
-                 "MyApp/MyApp.vcxproj": myapp,
+                 "MyApp/MyApp.vcxproj": myapp_vcxproj,
                  "MyApp/MyApp.cpp": myapp_cpp,
                  "conanfile.py": conanfile}
 

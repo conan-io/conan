@@ -8,7 +8,7 @@ from conans.model import Generator
 from conans.util.files import load
 
 
-class MSVCGenerator(Generator):
+class MSBuildGenerator(Generator):
 
     dep_props = textwrap.dedent("""\
         <?xml version="1.0" encoding="utf-8"?>
