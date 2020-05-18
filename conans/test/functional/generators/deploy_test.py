@@ -145,7 +145,7 @@ class DeployGeneratorSymbolicLinkTest(unittest.TestCase):
 
     def setUp(self):
         conanfile = GenConanfile()
-        conanfile.with_package_file("include/header.h", "whatever")
+        conanfile.with_package_file("include/header.h", "whatever", link="include/header.h.lnk")
         self.ref = ConanFileReference("name", "version", "user", "channel")
 
         self.client = TurboTestClient()
@@ -153,6 +153,7 @@ class DeployGeneratorSymbolicLinkTest(unittest.TestCase):
         layout = self.client.cache.package_layout(self.ref)
         package_folder = layout.package(PackageReference(self.ref, NO_SETTINGS_PACKAGE_ID))
         self.header_path = os.path.join(package_folder, "include", "header.h")
+        self.link_path = os.path.join(package_folder, "include", "header.h.lnk")
 
     def test_symbolic_links(self):
         link_path = self.header_path + ".lnk"
