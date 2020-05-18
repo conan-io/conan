@@ -128,7 +128,8 @@ class ConanLib(ConanFile):
         self.client.save({"conanfile.py": conanfile, "myfile.txt": "My file is copied"})
         create_local_git_repo(folder=self.client.current_folder)
         self.client.run("export . user/channel", assert_error=True)
-        self.assertIn("Repo origin cannot be deduced", self.client.out)
+        self.assertIn("Repo origin deduced by 'auto': None", self.client.out)
+        self.assertIn("Revision deduced by 'auto'", self.client.out)
 
         self.client.run_command('git remote add origin https://myrepo.com.git')
 
