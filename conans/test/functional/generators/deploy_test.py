@@ -5,6 +5,7 @@ import unittest
 
 from conans import load
 from conans.model.ref import ConanFileReference, PackageReference
+from conans.util.files import save
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import GenConanfile, TurboTestClient, NO_SETTINGS_PACKAGE_ID
 
@@ -156,13 +157,35 @@ class DeployGeneratorSymbolicLinkTest(unittest.TestCase):
         self.link_path = os.path.join(package_folder, "include", "header.h.lnk")
 
     def test_symbolic_links(self):
-        link_path = self.header_path + ".lnk"
-        os.symlink(self.header_path, link_path)
         self.client.current_folder = temp_folder()
         self.client.run("install %s -g deploy" % self.ref.full_str())
         base_path = os.path.join(self.client.current_folder, "name")
         header_path = os.path.join(base_path, "include", "header.h")
         link_path = os.path.join(base_path, "include", "header.h.lnk")
+        self.assertTrue(os.path.islink(link_path))
+        self.assertFalse(os.path.islink(header_path))
+        linkto = os.path.join(os.path.dirname(link_path), os.readlink(link_path))
+        self.assertEqual(linkto, header_path)
+
+    def test_existing_link_symbolic_links(self):
+        self.client.current_folder = temp_folder()
+        base_path = os.path.join(self.client.current_folder, "name")
+        header_path = os.path.join(base_path, "include", "header.h")
+        link_path = os.path.join(base_path, "include", "header.h.lnk")
+        save(link_path, "")
+        self.client.run("install %s -g deploy" % self.ref.full_str())
+        self.assertTrue(os.path.islink(link_path))
+        self.assertFalse(os.path.islink(header_path))
+        linkto = os.path.join(os.path.dirname(link_path), os.readlink(link_path))
+        self.assertEqual(linkto, header_path)
+
+    def test_existing_file_symbolic_links(self):
+        self.client.current_folder = temp_folder()
+        base_path = os.path.join(self.client.current_folder, "name")
+        header_path = os.path.join(base_path, "include", "header.h")
+        link_path = os.path.join(base_path, "include", "header.h.lnk")
+        save(header_path, "")
+        self.client.run("install %s -g deploy" % self.ref.full_str())
         self.assertTrue(os.path.islink(link_path))
         self.assertFalse(os.path.islink(header_path))
         linkto = os.path.join(os.path.dirname(link_path), os.readlink(link_path))
