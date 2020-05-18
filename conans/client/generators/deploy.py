@@ -42,7 +42,6 @@ class DeployGenerator(Generator):
                                        os.path.relpath(root, rootpath), f)
                     dst = os.path.normpath(dst)
                     mkdir(os.path.dirname(dst))
-                    print('copy to {}, is link: {}, exists {}'.format(dst, os.path.islink(src), os.path.exists(dst)))
                     if os.path.islink(src) and (os.path.exists(dst) or os.path.islink(dst)):
                         os.unlink(dst)
                     if os.path.islink(src):
@@ -50,7 +49,6 @@ class DeployGenerator(Generator):
                         if not os.path.isabs(link_target):
                             link_target = os.path.join(os.path.dirname(src), link_target)
                         linkto = os.path.relpath(link_target, os.path.dirname(src))
-                        print('linkto %s'%linkto)
                         os.symlink(linkto, dst)
                     else:
                         shutil.copy(src, dst)
