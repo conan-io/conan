@@ -576,6 +576,9 @@ def get_build_os_arch(conanfile):
 def get_target_os_arch(conanfile):
     """ Returns the value for the 'os' and 'arch' settings for the target context """
     if hasattr(conanfile, 'settings_target'):
-        return conanfile.settings_target.get_safe('os'), conanfile.settings_target.get_safe('arch')
+        settings_target = conanfile.settings_target
+        if settings_target is not None:
+            return settings_target.get_safe('os'), settings_target.get_safe('arch')
+        return None, None
     else:
         return conanfile.settings.get_safe('os_target'), conanfile.settings.get_safe('arch_target')
