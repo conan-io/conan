@@ -44,7 +44,13 @@ class DeployGenerator(Generator):
                     mkdir(os.path.dirname(dst))
                     if os.path.islink(src) and os.path.exists(dst):
                         os.unlink(dst)
-                    shutil.copy(src, dst, follow_symlinks=False)
-
+                    if os.path.islink(src):
+                        link_target = os.readlink(src)
+                        if not os.path.isabs(link_target):
+                            link_target = os.path.join(os.path.dirname(src), link_target)
+                        linkto = os.path.relpath(link_target, os.path.dirname(src))
+                        os.symlink(linkto, dst)
+                    else:
+                        shutil.copy(src, dst)
                     copied_files.append(dst)
         return self.deploy_manifest_content(copied_files)
