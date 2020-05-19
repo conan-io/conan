@@ -22,7 +22,7 @@ from conans.paths import ARTIFACTS_PROPERTIES_FILE
 from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
 from conans.paths.package_layouts.package_editable_layout import PackageEditableLayout
 from conans.unicode import get_cwd
-from conans.util.files import list_folder_subdirs, load, normalize, save
+from conans.util.files import list_folder_subdirs, load, normalize, save, remove
 from conans.util.locks import Lock
 
 CONAN_CONF = 'conan.conf'
@@ -146,9 +146,7 @@ class ClientCache(object):
     @property
     def config(self):
         if not self._config:
-            if not os.path.exists(self.conan_conf_path):
-                save(self.conan_conf_path, normalize(get_default_client_conf()))
-
+            self.initialize_config()
             self._config = ConanClientConfigParser(self.conan_conf_path)
         return self._config
 
@@ -184,28 +182,8 @@ class ClientCache(object):
 
     @property
     def default_profile(self):
-        if not os.path.exists(self.default_profile_path):
-            self._output.writeln("Auto detecting your dev setup to initialize the "
-                                 "default profile (%s)" % self.default_profile_path,
-                                 Color.BRIGHT_YELLOW)
-
-            default_settings = detect_defaults_settings(self._output,
-                                                        profile_path=self.default_profile_path)
-            self._output.writeln("Default settings", Color.BRIGHT_YELLOW)
-            self._output.writeln("\n".join(["\t%s=%s" % (k, v) for (k, v) in default_settings]),
-                                 Color.BRIGHT_YELLOW)
-            self._output.writeln("*** You can change them in %s ***" % self.default_profile_path,
-                                 Color.BRIGHT_MAGENTA)
-            self._output.writeln("*** Or override with -s compiler='other' -s ...s***\n\n",
-                                 Color.BRIGHT_MAGENTA)
-
-            default_profile = Profile()
-            tmp = OrderedDict(default_settings)
-            default_profile.update_settings(tmp)
-            save(self.default_profile_path, default_profile.dumps())
-        else:
-            default_profile, _ = read_profile(self.default_profile_path, get_cwd(),
-                                              self.profiles_path)
+        self.initialize_default_profile()
+        default_profile, _ = read_profile(self.default_profile_path, get_cwd(), self.profiles_path)
 
         # Mix profile settings with environment
         mixed_settings = _mix_settings_with_env(default_profile.settings)
@@ -216,15 +194,9 @@ class ClientCache(object):
     def settings(self):
         """Returns {setting: [value, ...]} defining all the possible
            settings without values"""
-
-        if not os.path.exists(self.settings_path):
-            save(self.settings_path, normalize(get_default_settings_yml()))
-            settings = Settings.loads(get_default_settings_yml())
-        else:
-            content = load(self.settings_path)
-            settings = Settings.loads(content)
-
-        return settings
+        self.initialize_settings()
+        content = load(self.settings_path)
+        return Settings.loads(content)
 
     @property
     def hooks(self):
@@ -259,6 +231,49 @@ class ClientCache(object):
         env = Environment(loader=dict_loader, autoescape=select_autoescape(['html', 'xml']))
         return env.get_template(template_name)
 
+    def initialize_config(self):
+        if not os.path.exists(self.conan_conf_path):
+            save(self.conan_conf_path, normalize(get_default_client_conf()))
+
+    def reset_config(self):
+        if os.path.exists(self.conan_conf_path):
+            remove(self.conan_conf_path)
+        self.initialize_config()
+
+    def initialize_default_profile(self):
+        if not os.path.exists(self.default_profile_path):
+            self._output.writeln("Auto detecting your dev setup to initialize the "
+                                 "default profile (%s)" % self.default_profile_path,
+                                 Color.BRIGHT_YELLOW)
+
+            default_settings = detect_defaults_settings(self._output,
+                                                        profile_path=self.default_profile_path)
+            self._output.writeln("Default settings", Color.BRIGHT_YELLOW)
+            self._output.writeln("\n".join(["\t%s=%s" % (k, v) for (k, v) in default_settings]),
+                                 Color.BRIGHT_YELLOW)
+            self._output.writeln("*** You can change them in %s ***" % self.default_profile_path,
+                                 Color.BRIGHT_MAGENTA)
+            self._output.writeln("*** Or override with -s compiler='other' -s ...s***\n\n",
+                                 Color.BRIGHT_MAGENTA)
+
+            default_profile = Profile()
+            tmp = OrderedDict(default_settings)
+            default_profile.update_settings(tmp)
+            save(self.default_profile_path, default_profile.dumps())
+
+    def reset_default_profile(self):
+        if os.path.exists(self.default_profile_path):
+            remove(self.default_profile_path)
+        self.initialize_default_profile()
+
+    def initialize_settings(self):
+        if not os.path.exists(self.settings_path):
+            save(self.settings_path, normalize(get_default_settings_yml()))
+
+    def reset_settings(self):
+        if os.path.exists(self.settings_path):
+            remove(self.settings_path)
+        self.initialize_settings()
 
 def _mix_settings_with_env(settings):
     """Reads CONAN_ENV_XXXX variables from environment

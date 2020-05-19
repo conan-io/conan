@@ -120,19 +120,17 @@ class FileDownloader(object):
                 progress.update(read_response(chunk_size)),
                 file_path
             )
-
+            gzip = (response.headers.get("content-encoding") == "gzip")
             response.close()
-            if (
-                file_path and total_length > total_downloaded_size > range_start
-                and response.headers.get("Accept-Ranges") == "bytes"
-            ):
-                written_chunks = self._download_file(url, auth, headers, file_path, try_resume=True)
-            elif (
-                total_downloaded_size != total_length
-                and response.headers.get("Content-Encoding") != "gzip"
-            ):
-                raise ConanException("Transfer interrupted before "
-                                     "complete: %s < %s" % (total_downloaded_size, total_length))
+            # it seems that if gzip we don't know the size, cannot resume and shouldn't raise
+            if total_downloaded_size != total_length and not gzip:
+                if (file_path and total_length > total_downloaded_size > range_start
+                        and response.headers.get("Accept-Ranges") == "bytes"):
+                    written_chunks = self._download_file(url, auth, headers, file_path,
+                                                         try_resume=True)
+                else:
+                    raise ConanException("Transfer interrupted before complete: %s < %s"
+                                         % (total_downloaded_size, total_length))
 
             duration = time.time() - t1
             log_download(url, duration)

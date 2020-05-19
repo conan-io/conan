@@ -88,7 +88,7 @@ registered_generators.add("markdown", MarkdownGenerator)
 def write_generators(conanfile, path, output):
     """ produces auxiliary files, required to build a project or a package.
     """
-    for generator_name in conanfile.generators:
+    for generator_name in set(conanfile.generators):
         try:
             generator_class = registered_generators[generator_name]
         except KeyError:

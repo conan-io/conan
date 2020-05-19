@@ -74,8 +74,7 @@ class MesonTest(unittest.TestCase):
             'bindir': 'bin',
             'sbindir': 'bin',
             'libexecdir': 'bin',
-            'includedir': 'include',
-            'cpp_std': 'none'
+            'includedir': 'include'
         }
 
         meson.configure(source_dir=os.path.join(self.tempdir, "../subdir"),

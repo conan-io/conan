@@ -1,5 +1,6 @@
 import os
 import shutil
+import textwrap
 import time
 from multiprocessing.pool import ThreadPool
 
@@ -271,27 +272,6 @@ def call_system_requirements(conanfile, output):
         raise ConanException("Error in system requirements")
 
 
-def raise_package_not_found_error(conan_file, ref, package_id, dependencies, out, recorder):
-    settings_text = ", ".join(conan_file.info.full_settings.dumps().splitlines())
-    options_text = ", ".join(conan_file.info.full_options.dumps().splitlines())
-    dependencies_text = ', '.join(dependencies)
-    requires_text = ", ".join(conan_file.info.requires.dumps().splitlines())
-
-    msg = '''Can't find a '%s' package for the specified settings, options and dependencies:
-- Settings: %s
-- Options: %s
-- Dependencies: %s
-- Requirements: %s
-- Package ID: %s
-''' % (ref, settings_text, options_text, dependencies_text, requires_text, package_id)
-    out.warn(msg)
-    recorder.package_install_error(PackageReference(ref, package_id), INSTALL_ERROR_MISSING, msg)
-    raise ConanException('''Missing prebuilt package for '%s'
-Try to build it from sources with "--build %s"
-Or read "http://docs.conan.io/en/latest/faq/troubleshooting.html#error-missing-prebuilt-package"
-''' % (ref, ref.name))
-
-
 class BinaryInstaller(object):
     """ main responsible of retrieving binary packages or building them from source
     locally in case they are not found in remotes
@@ -329,17 +309,44 @@ class BinaryInstaller(object):
             return
 
         missing_prefs = set(n.pref for n in missing)  # avoid duplicated
-        for pref in sorted(missing_prefs):
+        missing_prefs = list(sorted(missing_prefs))
+        for pref in missing_prefs:
             self._out.error("Missing binary: %s" % str(pref))
         self._out.writeln("")
 
-        # Raise just the first one
+        # Report details just the first one
         node = missing[0]
         package_id = node.package_id
         ref, conanfile = node.ref, node.conanfile
         dependencies = [str(dep.dst) for dep in node.dependencies]
-        raise_package_not_found_error(conanfile, ref, package_id, dependencies,
-                                      out=conanfile.output, recorder=self._recorder)
+
+        settings_text = ", ".join(conanfile.info.full_settings.dumps().splitlines())
+        options_text = ", ".join(conanfile.info.full_options.dumps().splitlines())
+        dependencies_text = ', '.join(dependencies)
+        requires_text = ", ".join(conanfile.info.requires.dumps().splitlines())
+
+        msg = textwrap.dedent('''\
+            Can't find a '%s' package for the specified settings, options and dependencies:
+            - Settings: %s
+            - Options: %s
+            - Dependencies: %s
+            - Requirements: %s
+            - Package ID: %s
+            ''' % (ref, settings_text, options_text, dependencies_text, requires_text, package_id))
+        conanfile.output.warn(msg)
+        self._recorder.package_install_error(PackageReference(ref, package_id),
+                                             INSTALL_ERROR_MISSING, msg)
+        missing_pkgs = "', '".join([str(pref.ref) for pref in missing_prefs])
+        if len(missing_prefs) >= 5:
+            build_str = "--build=missing"
+        else:
+            build_str = " ".join(["--build=%s" % pref.ref.name for pref in missing_prefs])
+
+        raise ConanException(textwrap.dedent('''\
+            Missing prebuilt package for '%s'
+            Try to build from sources with "%s"
+            Or read "http://docs.conan.io/en/latest/faq/troubleshooting.html#error-missing-prebuilt-package"
+            ''' % (missing_pkgs, build_str)))
 
     def _download(self, downloads, processed_package_refs):
         """ executes the download of packages (both download and update), only once for a given
