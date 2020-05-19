@@ -19,15 +19,15 @@ class VisualStudioGenerator(Generator):
 </Project>'''
 
     properties_template = '''<PropertyGroup Label="ConanVariables"{condition}>
-    <ConanCompilerFlags>{compiler_flags}</ConanCompilerFlags>
-    <ConanLinkerFlags>{linker_flags}</ConanLinkerFlags>
-    <ConanPreprocessorDefinitions>{definitions}</ConanPreprocessorDefinitions>
-    <ConanIncludeDirectories>{include_dirs}</ConanIncludeDirectories>
-    <ConanResourceDirectories>{res_dirs}</ConanResourceDirectories>
-    <ConanLibraryDirectories>{lib_dirs}</ConanLibraryDirectories>
-    <ConanBinaryDirectories>{bin_dirs}</ConanBinaryDirectories>
-    <ConanLibraries>{libs}</ConanLibraries>
-    <ConanSystemDeps>{system_libs}</ConanSystemDeps>
+    <ConanCompilerFlags>{compiler_flags} $(ConanCompilerFlags)</ConanCompilerFlags>
+    <ConanLinkerFlags>{linker_flags} $(ConanLinkerFlags)</ConanLinkerFlags>
+    <ConanPreprocessorDefinitions>{definitions}$(ConanPreprocessorDefinitions)</ConanPreprocessorDefinitions>
+    <ConanIncludeDirectories>{include_dirs}$(ConanIncludeDirectories)</ConanIncludeDirectories>
+    <ConanResourceDirectories>{res_dirs}$(ConanResourceDirectories)</ConanResourceDirectories>
+    <ConanLibraryDirectories>{lib_dirs}$(ConanLibraryDirectories)</ConanLibraryDirectories>
+    <ConanBinaryDirectories>{bin_dirs}$(ConanBinaryDirectories)</ConanBinaryDirectories>
+    <ConanLibraries>{libs}$(ConanLibraries)</ConanLibraries>
+    <ConanSystemDeps>{system_libs}$(ConanSystemDeps)</ConanSystemDeps>
   </PropertyGroup>
   <PropertyGroup{condition}>
     <LocalDebuggerEnvironment>PATH=%PATH%;{bin_dirs}</LocalDebuggerEnvironment>
