@@ -12,7 +12,8 @@ from conans.client.tools.files import chdir
 from conans.client.build.msbuild import MSBuild
 from conans.errors import ConanException
 from conans.model.version import Version
-from conans.test.utils.conanfile import MockConanfile, MockSettings
+from conans.test.utils.conanfile import MockConanfile, MockSettings, ConanFileMock
+from conans.test.utils.test_files import temp_folder
 
 
 class MSBuildTest(unittest.TestCase):
@@ -317,3 +318,23 @@ class MSBuildTest(unittest.TestCase):
         msbuild = MSBuild(conanfile)
         command = msbuild.get_command("test.sln")
         self.assertIn('/p:Platform="YOUR PLATFORM SDK (ARMV4)"', command)
+
+    @unittest.skipUnless(platform.system() == "Windows", "Requires Visual Studio installation path")
+    def test_arch_override(self):
+        settings = MockSettings({"build_type": "Release",
+                                 "compiler": "Visual Studio",
+                                 "compiler.version": "15",
+                                 "compiler.runtime": "MDd",
+                                 "os": "Windows",
+                                 "arch": "x86_64"})
+        conanfile = ConanFileMock()
+        conanfile.settings = settings
+        props_file_path = os.path.join(temp_folder(), "conan_build.props")
+
+        msbuild = MSBuild(conanfile)
+        msbuild.build("project_file.sln", property_file_name=props_file_path)
+        self.assertIn("vcvarsall.bat\" amd64", conanfile.command)
+        self.assertIn("/p:Platform=\"x64\"", conanfile.command)
+        msbuild.build("project_file.sln", arch="x86", property_file_name=props_file_path)
+        self.assertIn("vcvarsall.bat\" x86", conanfile.command)
+        self.assertIn("/p:Platform=\"x86\"", conanfile.command)

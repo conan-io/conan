@@ -120,7 +120,7 @@ class Pkg(ConanFile):
         conanfile = """from conans import ConanFile, tools
 class Pkg(ConanFile):
     settings = "build_type"
-    
+
     def package(self):
         tools.save("myfile.lib", "fake")
     """
@@ -167,7 +167,7 @@ class Pkg(ConanFile):
         conanfile = """from conans import ConanFile, tools
 class Pkg(ConanFile):
     settings = "build_type"
-    
+
     def package(self):
         tools.save("myfile.lib", "fake2")
     """
@@ -281,7 +281,8 @@ class Pkg(ConanFile):
         # Nothing to update
         client.run("install Pkg/0.1@lasote/testing -o Pkg:opt=2 -r=server2 -u")
         self.assertIn("Pkg/0.1@lasote/testing from 'server2' - Cache", client.out)
-        self.assertIn("Pkg/0.1@lasote/testing:b0c3b52601b7e36532a74a37c81bb432898a951b - Cache", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing:b0c3b52601b7e36532a74a37c81bb432898a951b - Cache",
+                      client.out)
 
         # Build missing
         client.run("install Pkg/0.1@lasote/testing -o Pkg:opt=3 -r=server2", assert_error=True)

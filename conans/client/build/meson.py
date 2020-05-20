@@ -47,14 +47,15 @@ class Meson(object):
         # C++ standard
         cppstd = cppstd_from_settings(self._conanfile.settings)
         cppstd_conan2meson = {
-            None: 'none',
             '98': 'c++03', 'gnu98': 'gnu++03',
             '11': 'c++11', 'gnu11': 'gnu++11',
             '14': 'c++14', 'gnu14': 'gnu++14',
             '17': 'c++17', 'gnu17': 'gnu++17',
             '20': 'c++1z', 'gnu20': 'gnu++1z'
         }
-        self.options['cpp_std'] = cppstd_conan2meson[cppstd]
+        
+        if cppstd:
+            self.options['cpp_std'] = cppstd_conan2meson[cppstd]
 
         # shared
         shared = self._so("shared")

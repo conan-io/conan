@@ -1,10 +1,6 @@
 import textwrap
-import unittest
 
 from jinja2 import Template
-
-from conans.test.utils.tools import TestClient
-
 
 from conans.test.utils.conan_v2_tests import ConanV2ModeTestCase
 

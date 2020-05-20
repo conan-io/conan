@@ -1,3 +1,4 @@
+import json
 import os
 import textwrap
 import unittest
@@ -513,3 +514,29 @@ class MyPkg(ConanFile):
         self.assertNotIn("/_", conaninfo)
         self.assertIn("[full_requires]\n    Hello/0.1:{}\n".format(NO_SETTINGS_PACKAGE_ID),
                       conaninfo)
+
+    def test_compoents_json_output(self):
+        self.client = TestClient()
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+
+            class MyTest(ConanFile):
+                name = "pkg"
+                version = "0.1"
+                settings = "build_type"
+
+                def package_info(self):
+                    self.cpp_info.components["pkg1"].libs = ["libpkg1"]
+                    self.cpp_info.components["pkg2"].libs = ["libpkg2"]
+                    self.cpp_info.components["pkg2"].requires = ["pkg1"]
+            """)
+        self.client.save({"conanfile.py": conanfile})
+        self.client.run("create . --json jsonfile.json")
+        path = os.path.join(self.client.current_folder, "jsonfile.json")
+        content = self.client.load(path)
+        data = json.loads(content)
+        cpp_info_data = data["installed"][0]["packages"][0]["cpp_info"]
+        self.assertIn("libpkg1", cpp_info_data["components"]["pkg1"]["libs"])
+        self.assertNotIn("requires", cpp_info_data["components"]["pkg1"])
+        self.assertIn("libpkg2", cpp_info_data["components"]["pkg2"]["libs"])
+        self.assertListEqual(["pkg1"], cpp_info_data["components"]["pkg2"]["requires"])

@@ -3,6 +3,7 @@ import platform
 import textwrap
 import unittest
 
+import six
 from nose.plugins.attrib import attr
 from parameterized import parameterized
 
@@ -18,7 +19,7 @@ from conans.util.files import load
 class MSBuildTest(unittest.TestCase):
 
     @attr('slow')
-    @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
+    @unittest.skipUnless(platform.system() == "Windows" and six.PY3, "Requires MSBuild")
     def build_vs_project_test(self):
         conan_build_vs = """
 from conans import ConanFile, MSBuild
@@ -47,7 +48,7 @@ class HelloConan(ConanFile):
         with catch_deprecation_warning(self):
             client.run('create . Hello/1.2.1@lasote/stable -s cppstd=11 -s '
                        'compiler="Visual Studio" -s compiler.version=14', assert_error=True)
-        with catch_deprecation_warning(self):
+        with catch_deprecation_warning(self, n=2):
             client.run('create . Hello/1.2.1@lasote/stable -s cppstd=17 '
                        '-s compiler="Visual Studio" -s compiler.version=14')
         self.assertIn("Packaged 1 '.exe' file: MyProject.exe", client.out)
@@ -104,17 +105,17 @@ class HelloConan(ConanFile):
     def user_properties_file_test(self):
         conan_build_vs = textwrap.dedent("""
             from conans import ConanFile, MSBuild
-        
+
             class HelloConan(ConanFile):
                 exports = "*"
                 settings = "os", "build_type", "arch", "compiler"
-        
+
                 def build(self):
                     msbuild = MSBuild(self)
                     msbuild.build("MyProject.sln", verbosity="normal",
                                   definitions={"MyCustomDef": "MyCustomValue"},
                                   user_property_file_name="myuser.props")
-        
+
                 def package(self):
                     self.copy(pattern="*.exe")
             """)

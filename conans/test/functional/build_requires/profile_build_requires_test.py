@@ -179,11 +179,10 @@ build2/0.1@user/testing
                      "profile.txt": profile}, clean_first=True)
 
         client.run("install . --profile ./profile.txt", assert_error=True)
-        self.assertIn("ERROR: Missing prebuilt package for 'PythonTool/0.1@lasote/stable'",
-                      client.out)
+        self.assertIn("ERROR: Missing prebuilt package for "
+                      "'PythonTool/0.1@lasote/stable', 'Tool/0.1@lasote/stable'", client.out)
         client.run("install . --profile ./profile.txt --build=PythonTool", assert_error=True)
-        self.assertIn("ERROR: Missing prebuilt package for 'Tool/0.1@lasote/stable'",
-                      client.out)
+        self.assertIn("ERROR: Missing prebuilt package for 'Tool/0.1@lasote/stable'", client.out)
         client.run("install . --profile ./profile.txt --build=*Tool")
         self.assertIn("Tool/0.1@lasote/stable: Generated conaninfo.txt", client.out)
         self.assertIn("PythonTool/0.1@lasote/stable: Generated conaninfo.txt", client.out)
@@ -269,16 +268,9 @@ nonexistingpattern*: SomeTool/1.2@user/channel
 
     def build_requires_options_test(self):
         client = TestClient()
-        lib_conanfile = """
-from conans import ConanFile
-
-class MyTool(ConanFile):
-    name = "MyTool"
-    version = "0.1"
-"""
-
-        client.save({CONANFILE: lib_conanfile})
+        client.save({CONANFILE: GenConanfile("MyTool", "0.1")})
         client.run("export . lasote/stable")
+
         conanfile = """
 from conans import ConanFile, tools
 
