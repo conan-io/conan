@@ -17,86 +17,204 @@ class CMakeSmartGeneratorTest(unittest.TestCase):
 
     def cmake_smart_test(self):
         conanfile = textwrap.dedent("""
-        from conans import ConanFile, tools, CMake
+            from conans import ConanFile, CMake
 
-        class ZLib(ConanFile):
-            name = "zlib"
-            version = "0.1"
-            settings = "os", "arch", "compiler", "build_type"
-            exports_sources = "*.lib"
+            class GreetingsConan(ConanFile):
+                name = "greetings"
+                version = "0.0.1"
+                settings = "os", "compiler", "build_type", "arch"
+                generators = "cmake"
+                exports_sources = "src/*"
 
-            def package(self):
-                self.copy("*.lib", dst="lib")
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure(source_folder="src")
+                    cmake.build()
 
-            def package_info(self):
-                self.cpp_info.names["cmake_smart"] = "ZLIB"
-                self.cpp_info.libs.append("zlib")
+                def package(self):
+                    self.copy("*.h", dst="include", src="src")
+                    self.copy("*.lib", dst="lib", keep_path=False)
+                    self.copy("*.dll", dst="bin", keep_path=False)
+                    self.copy("*.dylib*", dst="lib", keep_path=False)
+                    self.copy("*.so", dst="lib", keep_path=False)
+                    self.copy("*.a", dst="lib", keep_path=False)
+
+                def package_info(self):
+                    self.cpp_info.names["cmake_smart"] = "greetings"
+                    self.cpp_info.components["hello"].names["cmake_smart"] = "hello"
+                    self.cpp_info.components["hello"].libs = ["hello"]
+                    self.cpp_info.components["bye"].names["cmake_smart"] = "bye"
+                    self.cpp_info.components["bye"].libs = ["bye"]
         """)
-        client = TestClient()
-        client.save({"conanfile.py": conanfile, "zlib.lib": ""})
-        client.run("create . user/channel")
+        hello_h = textwrap.dedent("""
+            #pragma once
 
-        conanfile = textwrap.dedent("""
-        from conans import ConanFile, tools, CMake
-
-        class OpenSSL(ConanFile):
-            name = "openssl"
-            version = "0.1"
-            requires = "zlib/0.1@user/channel"
-            generators = "cmake_smart"
-            exports_sources = "CMakeLists.txt", "*.lib"
-            settings = "os", "arch", "compiler"
-
-            def package(self):
-                self.copy("*.lib", dst="lib")
-
-            def package_info(self):
-                self.cpp_info.names["cmake_smart"] = "OpenSSL"
-                self.cpp_info.components["ssl"].names["cmake_smart"] = "SSL"
-                self.cpp_info.components["ssl"].libs.append("mylibssl")
-                self.cpp_info.components["crypto"].names["cmake_smart"] = "Crypto"
-                self.cpp_info.components["crypto"].libs.append("crypto")
-                #self.cpp_info.components["crypto"].requires = ["::ssl", "zlib::zlib"]
+            void hello(std::string noun);
         """)
+        hello_cpp = textwrap.dedent("""
+            #include <iostream>
+            #include "hello.h"# We need to add our requirements too
 
-        client.save({"conanfile.py": conanfile, "mylibssl.lib": "", "crypto.lib": ""})
-        client.run("create . user/channel")
+            void hello(std::string noun) {
+                std::cout << "Hello " << noun << "!" << std::endl;
+            }
+        """)
+        bye_h = textwrap.dedent("""
+            #pragma once
 
-        conanfile = textwrap.dedent("""
-        from conans import ConanFile, tools, CMake
+            void bye(std::string noun);
+        """)
+        bye_cpp = textwrap.dedent("""
+            #include <iostream>
+            #include "bye.h"
 
-        class Libcurl(ConanFile):
-            name = "libcurl"
-            version = "0.1"
-            requires = "openssl/0.1@user/channel"
-            generators = "cmake_smart"
-            exports_sources = "CMakeLists.txt"
-            settings = "os", "arch", "compiler"
-
-            def build(self):
-                cmake = CMake(self)
-                cmake.configure()
+            void bye(std::string noun) {
+                std::cout << "Bye " << noun << "!" << std::endl;
+}
         """)
         cmakelists = textwrap.dedent("""
-        cmake_minimum_required(VERSION 3.1)
-        project(consumer)
-        find_package(OpenSSL)
-        message("OpenSSL libraries to link: ${OpenSSL_LIBRARIES}")
-        message("OpenSSL Version: ${OpenSSL_VERSION}")
-        
-        get_target_property(tmp ZLIB::ZLIB INTERFACE_LINK_LIBRARIES)
-        message("Target ZLIB::ZLIB libs: ${tmp}")
-        
-        get_target_property(tmp OpenSSL::OpenSSL INTERFACE_LINK_LIBRARIES)
-        message("Target OpenSSL::OpenSSL libs: ${tmp}")
-        
-        get_target_property(tmp OpenSSL::OpenSSL INTERFACE_COMPILE_OPTIONS)
-        message("Compile options: ${tmp}")
-        
-        get_target_property(tmp OpenSSL::Crypto INTERFACE_LINK_LIBRARIES)
-        message("Target OpenSSL::Crypto libs: ${tmp}")
+            cmake_minimum_required(VERSION 2.8)
+            project(greetings CXX)
+
+            include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+            conan_basic_setup()
+
+            add_library(hello hello.cpp)
+            add_library(bye bye.cpp)
         """)
-        client.save({"conanfile.py": conanfile, "CMakeLists.txt": cmakelists})
-        client.run("create . user/channel")
-        print(client.out)
-        self.assertIn("OpenSSL libraries to link: crypto;libssl")
+        client = TestClient()
+        client.save({"conanfile.py": conanfile,
+                     "src/CMakeLists.txt": cmakelists,
+                     "src/hello.h": hello_h,
+                     "src/hello.cpp": hello_cpp,
+                     "src/bye.h": bye_h,
+                     "src/bye.cpp": bye_cpp})
+        client.run("create .")
+
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile, CMake, tools
+
+            class WorldConan(ConanFile):
+                name = "world"
+                version = "0.0.1"
+                settings = "os", "compiler", "build_type", "arch"
+                generators = "cmake_smart"
+                exports_sources = "src/*"
+                requires = "greetings/0.0.1"
+
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure(source_folder="src")
+                    cmake.build()
+
+                def package(self):
+                    self.copy("*.h", dst="include", src="src")
+                    self.copy("*.lib", dst="lib", keep_path=False)
+                    self.copy("*.dll", dst="bin", keep_path=False)
+                    self.copy("*.dylib*", dst="lib", keep_path=False)
+                    self.copy("*.so", dst="lib", keep_path=False)
+                    self.copy("*.a", dst="lib", keep_path=False)
+
+                def package_info(self):
+                    self.cpp_info.names["cmake_smart"] = "world"
+                    self.cpp_info.components["helloworld"].names["cmake_smart"] = "helloworld"
+                    self.cpp_info.components["helloworld"].requires = ["greetings::hello"]
+                    self.cpp_info.components["helloworld"].libs = ["helloworld"]
+                    self.cpp_info.components["worldall"].names["cmake_smart"] = "worldall"
+                    self.cpp_info.components["worldall"].requires = ["greetings::bye", "helloworld"]
+                    self.cpp_info.components["worldall"].libs = ["worldall"]
+        """)
+        helloworld_h = textwrap.dedent("""
+            #pragma once
+
+            void helloWorld();
+        """)
+        helloworld_cpp = textwrap.dedent("""
+            #include <iostream>
+            #include "hello.h"
+            #include "helloworld.h"
+
+            void helloWorld() {
+                hello("World");
+            }
+        """)
+        worldall_h = textwrap.dedent("""
+            #pragma once
+
+            void worldAll();
+        """)
+        worldall_cpp = textwrap.dedent("""
+            #include <iostream>
+            #include "bye.h"
+            #include "helloworld.h"
+            #include "worldall.h"
+
+            void worldAll() {
+                helloWorld();
+                bye("World");
+            }
+        """)
+        cmakelists = textwrap.dedent("""
+            cmake_minimum_required(VERSION 2.8.12)
+            project(world CXX)
+
+            find_package(greetings)
+
+            add_library(helloworld helloworld.cpp)
+            target_link_libraries(helloworld greetings::hello)
+
+            add_library(worldall worldall.cpp)
+            target_link_libraries(worldall helloworld greetings::bye)
+        """)
+        test_pacakge_conanfile = textwrap.dedent("""
+            import os
+            from conans import ConanFile, CMake
+
+            class GreetingsTestConan(ConanFile):
+                settings = "os", "compiler", "build_type", "arch"
+                generators = "cmake_smart"
+
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+                    cmake.build()
+
+                def test(self):
+                    os.chdir("bin")
+                    self.run(".%sexample" % os.sep)
+        """)
+        test_package_example_cpp = textwrap.dedent("""
+            #include <iostream>
+            #include "worldall.h"
+
+            int main() {
+                worldAll();
+            }
+        """)
+        test_pacakge_cmakelists = textwrap.dedent("""
+            cmake_minimum_required(VERSION 2.8.12)
+            project(PackageTest CXX)
+
+            set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin)
+            set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+            set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+            set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+            set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+
+            find_package(world)
+
+            add_executable(example example.cpp)
+            target_link_libraries(example world::worldall)
+        """)
+        client.save({"conanfile.py": conanfile,
+                     "src/CMakeLists.txt": cmakelists,
+                     "src/helloworld.h": helloworld_h,
+                     "src/helloworld.cpp": helloworld_cpp,
+                     "src/worldall.h": worldall_h,
+                     "src/worldall.cpp": worldall_cpp,
+                     "test_package/conanfile.py": test_pacakge_conanfile,
+                     "test_package/CMakeLists.txt": test_pacakge_cmakelists,
+                     "test_package/example.cpp": test_package_example_cpp})
+        client.run("create .")
+        self.assertIn("Hello World!", client.out)
+        self.assertIn("Bye World!", client.out)

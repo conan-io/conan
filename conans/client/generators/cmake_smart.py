@@ -80,11 +80,7 @@ class CMakeSmartGenerator(Generator):
             deps = DepsCppCmake(comp)
             require_names = []
             for require in comp.requires:
-                if require.startswith("::"):
-                    require = require[require.find("::")+2:]
-                    require_names.append("{global_name}::{require}".format(global_name=name,
-                                                                           require=require))
-                elif "::" in require:
+                if "::" in require:
                     depname = require[:require.find("::")]
                     compname = require[require.find("::")+2:]
                     global_name = self.deps_build_info[depname].get_name("cmake_smart")
@@ -94,6 +90,9 @@ class CMakeSmartGenerator(Generator):
                         else global_name
                     print("Require of requires:", depname, compname, global_name, require)
                     require_names.append("{global_name}::{require}".format(global_name=global_name,
+                                                                           require=require))
+                else:
+                    require_names.append("{global_name}::{require}".format(global_name=name,
                                                                            require=require))
             require_names = ";".join(require_names)
             print(comp_name, "requires: ", require_names)
