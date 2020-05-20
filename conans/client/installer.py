@@ -507,19 +507,19 @@ class BinaryInstaller(object):
             node.graph_lock_node.modified = GraphLockNode.MODIFIED_BUILT
         return pref
 
-    @staticmethod
-    def _propagate_info(node, using_build_profile, fixed_package_id):
+    def _propagate_info(self, node, using_build_profile, fixed_package_id):
         if fixed_package_id:
             # if using config.full_transitive_package_id, it is necessary to recompute
             # the node transitive information necessary to compute the package_id
             # as it will be used by reevaluate_node() when package_revision_mode is used and
             # PACKAGE_ID_UNKNOWN happens due to unknown revisions
-            node.package_id_transitive_reqs()
+            self._binaries_analyzer.package_id_transitive_reqs(node)
         # Get deps_cpp_info from upstream nodes
         node_order = [n for n in node.public_closure if n.binary != BINARY_SKIP]
         # List sort is stable, will keep the original order of the closure, but prioritize levels
         conan_file = node.conanfile
-        conan_file._conan_using_build_profile = using_build_profile  # FIXME: Not the best place to assign it
+        # FIXME: Not the best place to assign the _conan_using_build_profile
+        conan_file._conan_using_build_profile = using_build_profile
         transitive = [it for it in node.transitive_closure.values()]
 
         br_host = []
