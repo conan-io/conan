@@ -26,7 +26,7 @@ class PkgConfigGenerator(Generator):
 
     @property
     def filename(self):
-        pass
+        return None
 
     @property
     def compiler(self):
@@ -114,13 +114,13 @@ def _generate_dir_lines(prefix_path, varname, dirs):
     varnames = []
     for i, directory in enumerate(dirs):
         directory = os.path.normpath(directory).replace("\\", "/")
-        varname = varname if i == 0 else "%s%d" % (varname, (i + 2))
+        name = varname if i == 0 else "%s%d" % (varname, (i + 1))
         prefix = ""
         if not os.path.isabs(directory):
             prefix = "${prefix}/"
         elif directory.startswith(prefix_path):
             prefix = "${prefix}/"
             directory = os.path.relpath(directory, prefix_path)
-        lines.append("%s=%s%s" % (varname, prefix, directory))
-        varnames.append(varname)
+        lines.append("%s=%s%s" % (name, prefix, directory))
+        varnames.append(name)
     return lines, varnames
