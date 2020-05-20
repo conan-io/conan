@@ -215,13 +215,20 @@ class CMake(object):
         the_os = self._settings.get_safe("os")
         is_clangcl = the_os == "Windows" and compiler == "clang"
         is_msvc = compiler == "Visual Studio"
-        if ((is_msvc or is_clangcl) and platform.system() == "Windows" and
-                self.generator in ["Ninja", "NMake Makefiles", "NMake Makefiles JOM"]):
-            vcvars_dict = tools.vcvars_dict(self._settings, force=True, filter_known_paths=False,
-                                            output=self._conanfile.output)
-            with _environment_add(vcvars_dict, post=self._append_vcvars):
-                self._conanfile.run(command)
-        else:
+        is_intel = compiler == "intel"
+        context = tools.no_op()
+
+        if (is_msvc or is_clangcl) and platform.system() == "Windows":
+            if self.generator in ["Ninja", "NMake Makefiles", "NMake Makefiles JOM"]:
+                vcvars_dict = tools.vcvars_dict(self._settings, force=True, filter_known_paths=False,
+                                                output=self._conanfile.output)
+                context = _environment_add(vcvars_dict, post=self._append_vcvars)
+        elif is_intel:
+            if self.generator in ["Ninja", "NMake Makefiles", "NMake Makefiles JOM",
+                                  "Unix Makefiles"]:
+                compilervars_dict = tools.compilervars_dict(self._settings, force=True)
+                context = _environment_add(compilervars_dict, post=self._append_vcvars)
+        with context:
             self._conanfile.run(command)
 
     def configure(self, args=None, defs=None, source_dir=None, build_dir=None,

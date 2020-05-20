@@ -57,6 +57,13 @@ def _system_registry_key(key, subkey, query):
             winreg.CloseKey(hkey)
 
 
+def is_win64():
+    from six.moves import winreg  # @UnresolvedImport
+    return _system_registry_key(winreg.HKEY_LOCAL_MACHINE,
+                                r"SOFTWARE\Microsoft\Windows\CurrentVersion",
+                                "ProgramFilesDir (x86)") is not None
+
+
 def _visual_compiler(output, version):
     """"version have to be 8.0, or 9.0 or... anything .0"""
     if platform.system().startswith("CYGWIN"):
@@ -74,14 +81,10 @@ def _visual_compiler(output, version):
     version = "%s.0" % version
 
     from six.moves import winreg  # @UnresolvedImport
-    is_64bits = _system_registry_key(winreg.HKEY_LOCAL_MACHINE,
-                                     r"SOFTWARE\Microsoft\Windows\CurrentVersion",
-                                     "ProgramFilesDir (x86)") is not None
-
-    if is_64bits:
+    if is_win64():
         key_name = r'SOFTWARE\Wow6432Node\Microsoft\VisualStudio\SxS\VC7'
     else:
-        key_name = r'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\SxS\VC7'
+        key_name = r'SOFTWARE\Microsoft\VisualStudio\SxS\VC7'
 
     if _system_registry_key(winreg.HKEY_LOCAL_MACHINE, key_name, version):
         installed_version = Version(version).major(fill=False)
@@ -94,6 +97,16 @@ def _visual_compiler(output, version):
 
 def latest_vs_version_installed(output):
     return latest_visual_studio_version_installed(output=output)
+
+
+MSVS_YEAR = {"16": "2019",
+             "15": "2017",
+             "14": "2015",
+             "12": "2013",
+             "11": "2012",
+             "10": "2010",
+             "9": "2008",
+             "8": "2005"}
 
 
 MSVS_DEFAULT_TOOLSETS = {"16": "v142",
