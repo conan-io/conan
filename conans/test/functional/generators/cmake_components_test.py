@@ -13,9 +13,9 @@ from conans.test.utils.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 
 
-class CMakeSmartGeneratorTest(unittest.TestCase):
+class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
 
-    def cmake_smart_test(self):
+    def general_test(self):
         conanfile = textwrap.dedent("""
             from conans import ConanFile, CMake
 
@@ -40,10 +40,10 @@ class CMakeSmartGeneratorTest(unittest.TestCase):
                     self.copy("*.a", dst="lib", keep_path=False)
 
                 def package_info(self):
-                    self.cpp_info.names["cmake_smart"] = "greetings"
-                    self.cpp_info.components["hello"].names["cmake_smart"] = "hello"
+                    self.cpp_info.names["cmake_find_package"] = "greetings"
+                    self.cpp_info.components["hello"].names["cmake_find_package"] = "hello"
                     self.cpp_info.components["hello"].libs = ["hello"]
-                    self.cpp_info.components["bye"].names["cmake_smart"] = "bye"
+                    self.cpp_info.components["bye"].names["cmake_find_package"] = "bye"
                     self.cpp_info.components["bye"].libs = ["bye"]
         """)
         hello_h = textwrap.dedent("""
@@ -98,7 +98,7 @@ class CMakeSmartGeneratorTest(unittest.TestCase):
                 name = "world"
                 version = "0.0.1"
                 settings = "os", "compiler", "build_type", "arch"
-                generators = "cmake_smart"
+                generators = "cmake_find_package"
                 exports_sources = "src/*"
                 requires = "greetings/0.0.1"
 
@@ -116,11 +116,11 @@ class CMakeSmartGeneratorTest(unittest.TestCase):
                     self.copy("*.a", dst="lib", keep_path=False)
 
                 def package_info(self):
-                    self.cpp_info.names["cmake_smart"] = "world"
-                    self.cpp_info.components["helloworld"].names["cmake_smart"] = "helloworld"
+                    self.cpp_info.names["cmake_find_package"] = "world"
+                    self.cpp_info.components["helloworld"].names["cmake_find_package"] = "helloworld"
                     self.cpp_info.components["helloworld"].requires = ["greetings::hello"]
                     self.cpp_info.components["helloworld"].libs = ["helloworld"]
-                    self.cpp_info.components["worldall"].names["cmake_smart"] = "worldall"
+                    self.cpp_info.components["worldall"].names["cmake_find_package"] = "worldall"
                     self.cpp_info.components["worldall"].requires = ["greetings::bye", "helloworld"]
                     self.cpp_info.components["worldall"].libs = ["worldall"]
         """)
@@ -172,7 +172,7 @@ class CMakeSmartGeneratorTest(unittest.TestCase):
 
             class GreetingsTestConan(ConanFile):
                 settings = "os", "compiler", "build_type", "arch"
-                generators = "cmake_smart"
+                generators = "cmake_find_package"
 
                 def build(self):
                     cmake = CMake(self)
@@ -218,3 +218,4 @@ class CMakeSmartGeneratorTest(unittest.TestCase):
         client.run("create .")
         self.assertIn("Hello World!", client.out)
         self.assertIn("Bye World!", client.out)
+        print(client.out)

@@ -3,7 +3,6 @@ from os.path import join
 
 from conans.client.generators.cmake_find_package import CMakeFindPackageGenerator
 from conans.client.generators.cmake_find_package_multi import CMakeFindPackageMultiGenerator
-from conans.client.generators.cmake_smart import CMakeSmartGenerator
 from conans.client.generators.compiler_args import CompilerArgsGenerator
 from conans.client.generators.pkg_config import PkgConfigGenerator
 from conans.errors import ConanException
@@ -64,7 +63,6 @@ registered_generators.add("cmake_multi", CMakeMultiGenerator)
 registered_generators.add("cmake_paths", CMakePathsGenerator)
 registered_generators.add("cmake_find_package", CMakeFindPackageGenerator)
 registered_generators.add("cmake_find_package_multi", CMakeFindPackageMultiGenerator)
-registered_generators.add("cmake_smart", CMakeSmartGenerator)
 registered_generators.add("qmake", QmakeGenerator)
 registered_generators.add("qbs", QbsGenerator)
 registered_generators.add("scons", SConsGenerator)

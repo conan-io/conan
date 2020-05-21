@@ -1,15 +1,14 @@
 import textwrap
 
 from conans.client.generators.cmake import DepsCppCmake
-from conans.client.generators.cmake_find_package_common import (target_template,
-                                                                CMakeFindPackageCommonMacros,
-                                                                find_transitive_dependencies)
+from conans.client.generators.cmake_find_package_common import target_template, \
+    CMakeFindPackageCommonMacros, find_transitive_dependencies
 from conans.client.generators.cmake_multi import extend
 from conans.model import Generator
 
 
 class CMakeFindPackageGenerator(Generator):
-    find_template = textwrap.dedent("""
+    template = textwrap.dedent("""
         {macros_and_functions}
 
         include(FindPackageHandleStandardArgs)
@@ -19,25 +18,23 @@ class CMakeFindPackageGenerator(Generator):
         set({name}_FOUND 1)
         set({name}_VERSION "{version}")
 
-        find_package_handle_standard_args({name} REQUIRED_VARS
-                                          {name}_VERSION VERSION_VAR {name}_VERSION)
+        find_package_handle_standard_args({name} REQUIRED_VARS {name}_VERSION VERSION_VAR {name}_VERSION)
         mark_as_advanced({name}_FOUND {name}_VERSION)
 
         {find_libraries_block}
+        {target_approach_block}
+        """)
+    target_approach_template = textwrap.dedent("""
         if(NOT ${{CMAKE_VERSION}} VERSION_LESS "3.0")
             # Target approach
-            if(NOT TARGET {name}::{name})
-                add_library({name}::{name} INTERFACE IMPORTED)
+            if(NOT TARGET {global_name}::{name})
+                add_library({global_name}::{name} INTERFACE IMPORTED)
                 if({name}_INCLUDE_DIRS)
-                    set_target_properties({name}::{name} PROPERTIES INTERFACE_INCLUDE_DIRECTORIES
-                                          "${{{name}_INCLUDE_DIRS}}")
+                  set_target_properties({global_name}::{name} PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${{{name}_INCLUDE_DIRS}}")
                 endif()
-                set_property(TARGET {name}::{name} PROPERTY INTERFACE_LINK_LIBRARIES
-                             "${{{name}_LIBRARIES_TARGETS}};${{{name}_LINKER_FLAGS_LIST}}")
-                set_property(TARGET {name}::{name} PROPERTY INTERFACE_COMPILE_DEFINITIONS
-                             ${{{name}_COMPILE_DEFINITIONS}})
-                set_property(TARGET {name}::{name} PROPERTY INTERFACE_COMPILE_OPTIONS
-                             "${{{name}_COMPILE_OPTIONS_LIST}}")
+                set_property(TARGET {global_name}::{name} PROPERTY INTERFACE_LINK_LIBRARIES "${{{name}_LIBRARIES_TARGETS}};${{{name}_LINKER_FLAGS_LIST}}")
+                set_property(TARGET {global_name}::{name} PROPERTY INTERFACE_COMPILE_DEFINITIONS ${{{name}_COMPILE_DEFINITIONS}})
+                set_property(TARGET {global_name}::{name} PROPERTY INTERFACE_COMPILE_OPTIONS "${{{name}_COMPILE_OPTIONS_LIST}}")
                 {find_dependencies_block}
             endif()
         endif()
@@ -61,7 +58,7 @@ class CMakeFindPackageGenerator(Generator):
             CMakeFindPackageCommonMacros.conan_message,
             CMakeFindPackageCommonMacros.apple_frameworks_macro,
             CMakeFindPackageCommonMacros.conan_package_library_targets,
-            ])
+        ])
 
         # compose the cpp_info with its "debug" or "release" specific config
         dep_cpp_info = cpp_info
@@ -69,26 +66,57 @@ class CMakeFindPackageGenerator(Generator):
         if build_type:
             dep_cpp_info = extend(dep_cpp_info, build_type.lower())
 
-        # The find_libraries_block, all variables for the package, and creation of targets
+        deps = DepsCppCmake(dep_cpp_info)
         public_deps_names = [self.deps_build_info[dep].get_name("cmake_find_package") for dep in
                              dep_cpp_info.public_deps]
-        deps_names = ";".join(["{n}::{n}".format(n=n) for n in public_deps_names])
-
-        deps = DepsCppCmake(dep_cpp_info)
-        find_libraries_block = target_template.format(name=name, deps=deps, build_type_suffix="",
-                                                      deps_names=deps_names)
-
-        # The find_transitive_dependencies block
         find_dependencies_block = ""
         if dep_cpp_info.public_deps:
             # Here we are generating FindXXX, so find_modules=True
             f = find_transitive_dependencies(public_deps_names, find_modules=True)
             # proper indentation
-            find_dependencies_block = ''.join("        " + line if line.strip() else line
+            find_dependencies_block = "".join("        " + line if line.strip() else line
                                               for line in f.splitlines(True))
 
-        tmp = self.find_template.format(name=name, version=dep_cpp_info.version,
-                                        find_libraries_block=find_libraries_block,
-                                        find_dependencies_block=find_dependencies_block,
-                                        macros_and_functions=macros_and_functions)
+        find_libraries_block = ""
+        target_approach_block = ""
+        for comp_name, comp in cpp_info.components.items():
+            comp_name = comp.get_name("cmake_find_package")
+            deps = DepsCppCmake(comp)
+            require_names = []
+            for require in comp.requires:
+                if "::" in require:
+                    depname = require[:require.find("::")]
+                    compname = require[require.find("::")+2:]
+                    global_name = self.deps_build_info[depname].get_name("cmake_find_package")
+                    print("Require of requires:", depname, compname, global_name)
+                    if compname in self.deps_build_info[depname].components:
+                        require = self.deps_build_info[depname].components[compname].get_name("cmake_find_package")
+                    else:
+                        require = global_name  # TODO: raise error!
+                    print("Require of requires2:", depname, compname, global_name, require)
+                    require_names.append("{global_name}::{require}".format(global_name=global_name,
+                                                                           require=require))
+                else:
+                    require_names.append("{global_name}::{require}".format(global_name=name,
+                                                                           require=require))
+            require_names = ";".join(require_names)
+            print(comp_name, "requires: ", require_names)
+            find_libraries_block += target_template.format(name=comp_name, deps=deps,
+                                                           build_type_suffix="",
+                                                           deps_names=require_names)
+            target_approach_block += self.target_approach_template.format(global_name=name,
+                                                                          name=comp_name,
+                                                                          find_dependencies_block="")
+
+        deps_names = ";".join(["{n}::{n}".format(n=n) for n in public_deps_names])
+        find_libraries_block += target_template.format(name=name, deps=deps, build_type_suffix="",
+                                                       deps_names=deps_names)
+        target_approach_block += self.target_approach_template.format(global_name=name, name=name,
+                                                                      find_dependencies_block=find_dependencies_block)
+
+        tmp = self.template.format(macros_and_functions=macros_and_functions,
+                                   name=name,
+                                   version=dep_cpp_info.version,
+                                   find_libraries_block=find_libraries_block,
+                                   target_approach_block=target_approach_block)
         return tmp
