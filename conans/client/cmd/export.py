@@ -257,9 +257,15 @@ def _capture_scm_auto_fields(conanfile, conanfile_dir, package_layout, output, i
         if scm.is_local_repository():
             output.warn("Repo origin looks like a local path: %s" % origin)
         output.success("Repo origin deduced by 'auto': %s" % origin)
-        if origin is None:
-            output.warn("origin is None, upload' command will prevent uploading recipes with None values in these fields.")
-        scm_data.url = origin
+        if origin:
+            scm_data.url = origin
+        else:
+            output.warn(
+                "origin is auto, upload' command will prevent uploading recipes with None values in these fields.")
+
+    if scm_data.url is None:
+        output.warn(
+            "origin is None, upload' command will prevent uploading recipes with None values in these fields.")
 
     if scm_data.revision == "auto":
         # If it is pristine by default we don't replace the "auto" unless forcing
