@@ -127,7 +127,7 @@ class ConanLib(ConanFile):
         conanfile = base_git.format(directory="None", url=_quoted("auto"), revision="auto")
         self.client.save({"conanfile.py": conanfile, "myfile.txt": "My file is copied"})
         create_local_git_repo(folder=self.client.current_folder)
-        self.client.run("export . user/channel", assert_error=False)
+        self.client.run("export . user/channel")
         self.assertIn("Repo origin deduced by 'auto': None", self.client.out)
         self.assertIn("Revision deduced by 'auto'", self.client.out)
 
