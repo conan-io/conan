@@ -43,9 +43,9 @@ class PkgConfigConan(ConanFile):
         pc_content = load(pc_path)
         expected_rpaths = ""
         if platform.system() == "Linux":
-            expected_rpaths = ' -Wl,-rpath="${libdir}" -Wl,-rpath="${libdir3}"'
+            expected_rpaths = ' -Wl,-rpath="${libdir}" -Wl,-rpath="${libdir2}"'
         elif platform.system() == "Darwin":
-            expected_rpaths = ' -Wl,-rpath,"${libdir}" -Wl,-rpath,"${libdir3}"'
+            expected_rpaths = ' -Wl,-rpath,"${libdir}" -Wl,-rpath,"${libdir2}"'
         expected_content = """libdir=/my_absoulte_path/fake/mylib/lib
 libdir2=${prefix}/lib2
 includedir=/my_absoulte_path/fake/mylib/include
