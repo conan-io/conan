@@ -1348,6 +1348,34 @@ build_type: [ Release]
             cmake.build()
             self.assertTrue(vcvars_mock.called, "vcvars weren't called")
 
+    @parameterized.expand([('Ninja',),
+                           ('NMake Makefiles',),
+                           ('NMake Makefiles JOM',),
+                           ('Unix Makefiles',),
+                           ])
+    def test_compilervars_applied(self, generator):
+        conanfile = ConanFileMock()
+        settings = Settings.loads(get_default_settings_yml())
+        settings.os = "Windows"
+        settings.compiler = "intel"
+        settings.arch = "x86_64"
+        settings.compiler.version = "19"
+        conanfile.settings = settings
+
+        cmake = CMake(conanfile, generator=generator)
+
+        with mock.patch("conans.client.tools.compilervars_dict") as cvars_mock:
+            cvars_mock.__enter__ = mock.MagicMock(return_value=(mock.MagicMock(), None))
+            cvars_mock.__exit__ = mock.MagicMock(return_value=None)
+            cmake.configure()
+            self.assertTrue(cvars_mock.called, "compilervars weren't called")
+
+        with mock.patch("conans.client.tools.compilervars_dict") as cvars_mock:
+            cvars_mock.__enter__ = mock.MagicMock(return_value=(mock.MagicMock(), None))
+            cvars_mock.__exit__ = mock.MagicMock(return_value=None)
+            cmake.build()
+            self.assertTrue(cvars_mock.called, "compilervars weren't called")
+
     def test_cmake_program(self):
         conanfile = ConanFileMock()
         settings = Settings.loads(get_default_settings_yml())
