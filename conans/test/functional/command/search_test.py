@@ -231,7 +231,7 @@ class SearchTest(unittest.TestCase):
     def test_search_with_none_user_channel(self):
         conanfile = textwrap.dedent("""
         from conans import ConanFile
-        
+
         class Test(ConanFile):
             name = "lib"
             version = "1.0"
@@ -384,10 +384,20 @@ helloTest/1.4.10@myuser/stable""".format(remote)
 
     def search_html_table_test(self):
         self.client.run("search Hello/1.4.10@myuser/testing --table=table.html")
-        html = self.client.load("table.html")
+        html = ''.join([line.strip() for line in self.client.load("table.html").splitlines()])
         self.assertIn("<h1>Hello/1.4.10@myuser/testing</h1>", html)
-        self.assertIn("<td>Linux gcc 4.5 (libstdc++11)</td>", html)
-        self.assertIn("<td>Windows Visual Studio 8.1</td>", html)
+        self.assertIn("<td>LinuxPackageSHA</td>"
+                      "<td>Linux</td>"
+                      "<td>x86</td>"
+                      "<td>gcc</td>"
+                      "<td>libstdc++11</td>"
+                      "<td>4.5</td>", html)
+        self.assertIn("<td>WindowsPackageSHA</td>"
+                      "<td>Windows</td>"
+                      "<td>x64</td>"
+                      "<td>Visual Studio</td>"
+                      "<td></td>"
+                      "<td>8.1</td>", html)
 
     def search_html_table_all_test(self):
         os.rmdir(self.servers["local"].server_store.store)
@@ -396,14 +406,23 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         self._copy_to_server(self.client.cache, self.servers["search_able"].server_store)
 
         self.client.run("search Hello/1.4.10@myuser/testing -r=all --table=table.html")
-        html = self.client.load("table.html")
+        html = ''.join([line.strip() for line in self.client.load("table.html").splitlines()])
 
         self.assertIn("<h1>Hello/1.4.10@myuser/testing</h1>", html)
-        self.assertIn("<h2>'local':</h2>", html)
-        self.assertIn("<h2>'search_able':</h2>", html)
-
-        self.assertEqual(html.count("<td>Linux gcc 4.5 (libstdc++11)</td>"), 2)
-        self.assertEqual(html.count("<td>Windows Visual Studio 8.1</td>"), 2)
+        self.assertIn("<td>local</td>"
+                      "<td>LinuxPackageSHA</td>"
+                      "<td>Linux</td>"
+                      "<td>x86</td>"
+                      "<td>gcc</td>"
+                      "<td>libstdc++11</td>"
+                      "<td>4.5</td>", html)
+        self.assertIn("<td>search_able</td>"
+                      "<td>WindowsPackageSHA</td>"
+                      "<td>Windows</td>"
+                      "<td>x64</td>"
+                      "<td>Visual Studio</td>"
+                      "<td></td>"
+                      "<td>8.1</td>", html)
 
     def search_html_table_with_no_reference_test(self):
         self.client.run("search Hello* --table=table.html", assert_error=True)

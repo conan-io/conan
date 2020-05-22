@@ -189,6 +189,7 @@ class RequirementsInfo(object):
     def refs(self):
         """ used for updating downstream requirements with this
         """
+        # FIXME: This is a very bad name, it return prefs, not refs
         return list(self._data.keys())
 
     def _get_key(self, item):

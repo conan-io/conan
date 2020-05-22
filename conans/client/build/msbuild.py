@@ -83,7 +83,7 @@ class MSBuild(object):
             props_file_contents = self._get_props_file_contents(definitions)
             property_file_name = os.path.abspath(property_file_name)
             save(property_file_name, props_file_contents)
-            vcvars = vcvars_command(self._conanfile.settings, force=force_vcvars,
+            vcvars = vcvars_command(self._conanfile.settings, arch=arch, force=force_vcvars,
                                     vcvars_ver=vcvars_ver, winsdk_version=winsdk_version,
                                     output=self._output)
             command = self.get_command(project_file, property_file_name,

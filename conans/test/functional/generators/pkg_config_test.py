@@ -1,5 +1,6 @@
 import os
 import platform
+import textwrap
 import unittest
 
 from conans.test.utils.tools import TestClient
@@ -42,17 +43,17 @@ class PkgConfigConan(ConanFile):
         pc_content = load(pc_path)
         expected_rpaths = ""
         if platform.system() == "Linux":
-            expected_rpaths = ' -Wl,-rpath="${libdir}" -Wl,-rpath="${libdir3}"'
+            expected_rpaths = ' -Wl,-rpath="${libdir}" -Wl,-rpath="${libdir2}"'
         elif platform.system() == "Darwin":
-            expected_rpaths = ' -Wl,-rpath,"${libdir}" -Wl,-rpath,"${libdir3}"'
+            expected_rpaths = ' -Wl,-rpath,"${libdir}" -Wl,-rpath,"${libdir2}"'
         expected_content = """libdir=/my_absoulte_path/fake/mylib/lib
-libdir3=${prefix}/lib2
+libdir2=${prefix}/lib2
 includedir=/my_absoulte_path/fake/mylib/include
 
 Name: MyLib
 Description: Conan package: MyLib
 Version: 0.1
-Libs: -L${libdir} -L${libdir3}%s
+Libs: -L${libdir} -L${libdir2}%s
 Cflags: -I${includedir}""" % expected_rpaths
         self.assertEqual("\n".join(pc_content.splitlines()[1:]), expected_content)
 
@@ -92,13 +93,13 @@ class PkgConfigConan(ConanFile):
         pc_path = os.path.join(client.current_folder, "MyLib.pc")
         self.assertTrue(os.path.exists(pc_path))
         pc_content = load(pc_path)
-        self.assertEqual("\n".join(pc_content.splitlines()[1:]),
-                          """
-Name: MyLib
-Description: Conan package: MyLib
-Version: 0.1
-Libs: 
-Cflags: """)
+        expected = textwrap.dedent("""
+            Name: MyLib
+            Description: Conan package: MyLib
+            Version: 0.1
+            Libs:%s
+            Cflags: """ % " ")  # ugly hack for trailing whitespace removed by IDEs
+        self.assertEqual("\n".join(pc_content.splitlines()[1:]), expected)
 
     def pkg_config_rpaths_test(self):
         # rpath flags are only generated for gcc and clang
@@ -156,3 +157,27 @@ class PkgConfigConan(ConanFile):
         pc_content = client.load("MyLib.pc")
         self.assertIn("Libs: -L${libdir} -lmylib1  -lmylib2  -lsystem_lib1  -lsystem_lib2 ",
                       pc_content)
+
+    def multiple_include_test(self):
+        # https://github.com/conan-io/conan/issues/7056
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+
+            class PkgConfigConan(ConanFile):
+                def package_info(self):
+                    self.cpp_info.includedirs = ["inc1", "inc2", "inc3/foo"]
+                    self.cpp_info.libdirs = ["lib1", "lib2"]
+            """)
+        client = TestClient()
+        client.save({"conanfile.py": conanfile})
+        client.run("create . pkg/0.1@")
+        client.run("install pkg/0.1@ -g pkg_config")
+
+        pc_content = client.load("pkg.pc")
+        self.assertIn("includedir=${prefix}/inc1", pc_content)
+        self.assertIn("includedir2=${prefix}/inc2", pc_content)
+        self.assertIn("includedir3=${prefix}/inc3/foo", pc_content)
+        self.assertIn("libdir=${prefix}/lib1", pc_content)
+        self.assertIn("libdir2=${prefix}/lib2", pc_content)
+        self.assertIn("Libs: -L${libdir} -L${libdir2}", pc_content)
+        self.assertIn("Cflags: -I${includedir} -I${includedir2} -I${includedir3}", pc_content)

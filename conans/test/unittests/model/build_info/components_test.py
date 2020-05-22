@@ -3,8 +3,12 @@ import os
 import unittest
 import warnings
 
+import six
+
+from conans.errors import ConanException
 from conans.model.build_info import CppInfo, DepsCppInfo, DepCppInfo
 from conans.test.utils.test_files import temp_folder
+from conans.util.files import save
 
 
 class CppInfoComponentsTest(unittest.TestCase):
@@ -176,3 +180,241 @@ class CppInfoComponentsTest(unittest.TestCase):
         self.assertListEqual([], deps_cpp_info["dep1"].debug.libs)
         self.assertListEqual(["libdep2_d"], deps_cpp_info["dep2"].debug.libs)
         self.assertListEqual(["libdep2_d"], deps_cpp_info.debug.libs)
+
+    def cpp_info_link_order_test(self):
+
+        def _assert_link_order(sorted_libs):
+            """
+            Assert that dependent libs of a component are always found later in the list
+            """
+            assert sorted_libs, "'sorted_libs' is empty"
+            for num, lib in enumerate(sorted_libs):
+                component_name = lib[-1]
+                for dep in info.components[component_name].requires:
+                    for lib in info.components[dep].libs:
+                        self.assertIn(lib, sorted_libs[num:])
+
+        info = CppInfo("")
+        info.components["6"].libs = ["lib6"]
+        info.components["6"].requires = ["4", "5"]
+        info.components["5"].libs = ["lib5"]
+        info.components["5"].requires = ["2"]
+        info.components["4"].libs = ["lib4"]
+        info.components["4"].requires = ["1"]
+        info.components["3"].libs = ["lib3"]
+        info.components["3"].requires = ["1"]
+        info.components["1"].libs = ["lib1"]
+        info.components["1"].requires = ["2"]
+        info.components["2"].libs = ["lib2"]
+        info.components["2"].requires = []
+        dep_cpp_info = DepCppInfo(info)
+        _assert_link_order(dep_cpp_info.libs)
+        self.assertEqual(["lib6", "lib5", "lib4", "lib3", "lib1", "lib2"], dep_cpp_info.libs)
+        deps_cpp_info = DepsCppInfo()
+        deps_cpp_info.update(dep_cpp_info, "dep1")
+        self.assertEqual(["lib6", "lib5", "lib4", "lib3", "lib1", "lib2"],
+                         deps_cpp_info.libs)
+
+        info = CppInfo("")
+        info.components["K"].libs = ["libK"]
+        info.components["K"].requires = ["G", "H"]
+        info.components["J"].libs = ["libJ"]
+        info.components["J"].requires = ["F"]
+        info.components["G"].libs = ["libG"]
+        info.components["G"].requires = ["F"]
+        info.components["H"].libs = ["libH"]
+        info.components["H"].requires = ["F", "E"]
+        info.components["L"].libs = ["libL"]
+        info.components["L"].requires = ["I"]
+        info.components["F"].libs = ["libF"]
+        info.components["F"].requires = ["C", "D"]
+        info.components["I"].libs = ["libI"]
+        info.components["I"].requires = ["E"]
+        info.components["C"].libs = ["libC"]
+        info.components["C"].requires = ["A"]
+        info.components["D"].libs = ["libD"]
+        info.components["D"].requires = ["A"]
+        info.components["E"].libs = ["libE"]
+        info.components["E"].requires = ["A", "B"]
+        info.components["A"].libs = ["libA"]
+        info.components["A"].requires = []
+        info.components["B"].libs = ["libB"]
+        info.components["B"].requires = []
+        dep_cpp_info = DepCppInfo(info)
+        _assert_link_order(dep_cpp_info.libs)
+        self.assertEqual(["libK", "libJ", "libG", "libH", "libL", "libF", "libI", "libC", "libD",
+                          "libE", "libA", "libB"], dep_cpp_info.libs)
+        deps_cpp_info.update(dep_cpp_info, "dep2")
+        self.assertEqual(["lib6", "lib5", "lib4", "lib3", "lib1", "lib2","libK", "libJ", "libG",
+                          "libH", "libL", "libF", "libI", "libC", "libD", "libE", "libA", "libB"],
+                         deps_cpp_info.libs)
+
+    def cppinfo_inexistent_component_dep_test(self):
+        info = CppInfo(None)
+        info.components["LIB1"].requires = ["LIB2"]
+        with six.assertRaisesRegex(self, ConanException, "Component 'LIB1' "
+                                                         "declares a missing dependency"):
+            DepCppInfo(info).libs
+        info.components["LIB1"].requires = ["::LIB2"]
+        with six.assertRaisesRegex(self, ConanException, "Leading character '::' not allowed in "
+                                                         "LIB1 requires"):
+            DepCppInfo(info).libs
+
+    def cpp_info_components_requires_loop_test(self):
+        info = CppInfo("")
+        info.components["LIB1"].requires = ["LIB1"]
+        msg = "There is a dependency loop in 'self.cpp_info.components' requires"
+        with six.assertRaisesRegex(self, ConanException, msg):
+            DepCppInfo(info).libs
+        info = CppInfo("")
+        info.components["LIB1"].requires = ["LIB2"]
+        info.components["LIB2"].requires = ["LIB1", "LIB2"]
+        with six.assertRaisesRegex(self, ConanException, msg):
+            DepCppInfo(info).build_paths
+        info = CppInfo("")
+        info.components["LIB1"].requires = ["LIB2"]
+        info.components["LIB2"].requires = ["LIB3"]
+        info.components["LIB3"].requires = ["LIB1"]
+        with six.assertRaisesRegex(self, ConanException, msg):
+            DepCppInfo(info).defines
+
+    def components_libs_order_test(self):
+        info = CppInfo("")
+        info.components["liba"].libs = ["liba"]
+        info.components["libb"].libs = ["libb"]
+        dep_cpp_info = DepCppInfo(info)
+        self.assertListEqual(["liba", "libb"], dep_cpp_info.libs)
+        deps_cpp_info = DepsCppInfo()
+        deps_cpp_info.update(dep_cpp_info, "dep1")
+        self.assertListEqual(["liba", "libb"], deps_cpp_info["dep1"].libs)
+        self.assertListEqual(["liba", "libb"], deps_cpp_info.libs)
+
+        info = CppInfo("")
+        info.components["liba"].libs = ["liba"]
+        info.components["libb"].libs = ["libb"]
+        dep_cpp_info = DepCppInfo(info)
+        info2 = CppInfo("")
+        info2.components["libc"].libs = ["libc"]
+        dep_cpp_info2 = DepCppInfo(info2)
+        deps_cpp_info = DepsCppInfo()
+        # Update in reverse order
+        deps_cpp_info.update(dep_cpp_info2, "dep2")
+        deps_cpp_info.update(dep_cpp_info, "dep1")
+        self.assertListEqual(["liba", "libb"], deps_cpp_info["dep1"].libs)
+        self.assertListEqual(["libc"], deps_cpp_info["dep2"].libs)
+        self.assertListEqual(["libc", "liba", "libb"], deps_cpp_info.libs)
+
+        info = CppInfo("")
+        info.components["liba"].libs = ["liba"]
+        info.components["libb"].libs = ["libb"]
+        info.components["libb"].requires = ["liba"]
+        dep_cpp_info = DepCppInfo(info)
+        self.assertListEqual(["libb", "liba"], dep_cpp_info.libs)
+        deps_cpp_info = DepsCppInfo()
+        deps_cpp_info.update(dep_cpp_info, "dep1")
+        self.assertListEqual(["libb", "liba"], deps_cpp_info["dep1"].libs)
+        self.assertListEqual(["libb", "liba"], deps_cpp_info.libs)
+
+        info = CppInfo("")
+        info.components["liba"].libs = ["liba"]
+        info.components["libb"].libs = ["libb"]
+        info.components["libb"].requires = ["liba"]
+        dep_cpp_info = DepCppInfo(info)
+        info2 = CppInfo("")
+        info2.components["libc"].libs = ["libc"]
+        dep_cpp_info2 = DepCppInfo(info2)
+        deps_cpp_info = DepsCppInfo()
+        # Update in reverse order
+        deps_cpp_info.update(dep_cpp_info2, "dep2")
+        deps_cpp_info.update(dep_cpp_info, "dep1")
+        self.assertListEqual(["libb", "liba"], deps_cpp_info["dep1"].libs)
+        self.assertListEqual(["libc"], deps_cpp_info["dep2"].libs)
+        self.assertListEqual(["libc", "libb", "liba"], deps_cpp_info.libs)
+
+    def cppinfo_components_dirs_test(self):
+        folder = temp_folder()
+        info = CppInfo(folder)
+        info.name = "OpenSSL"
+        info.components["OpenSSL"].includedirs = ["include"]
+        info.components["OpenSSL"].libdirs = ["lib"]
+        info.components["OpenSSL"].builddirs = ["build"]
+        info.components["OpenSSL"].bindirs = ["bin"]
+        info.components["OpenSSL"].resdirs = ["res"]
+        info.components["Crypto"].includedirs = ["headers"]
+        info.components["Crypto"].libdirs = ["libraries"]
+        info.components["Crypto"].builddirs = ["build_scripts"]
+        info.components["Crypto"].bindirs = ["binaries"]
+        info.components["Crypto"].resdirs = ["resources"]
+        self.assertEqual(["include"], info.components["OpenSSL"].includedirs)
+        self.assertEqual(["lib"], info.components["OpenSSL"].libdirs)
+        self.assertEqual(["build"], info.components["OpenSSL"].builddirs)
+        self.assertEqual(["bin"], info.components["OpenSSL"].bindirs)
+        self.assertEqual(["res"], info.components["OpenSSL"].resdirs)
+        self.assertEqual(["headers"], info.components["Crypto"].includedirs)
+        self.assertEqual(["libraries"], info.components["Crypto"].libdirs)
+        self.assertEqual(["build_scripts"], info.components["Crypto"].builddirs)
+        self.assertEqual(["binaries"], info.components["Crypto"].bindirs)
+        self.assertEqual(["resources"], info.components["Crypto"].resdirs)
+
+        info.components["Crypto"].includedirs = ["different_include"]
+        info.components["Crypto"].libdirs = ["different_lib"]
+        info.components["Crypto"].builddirs = ["different_build"]
+        info.components["Crypto"].bindirs = ["different_bin"]
+        info.components["Crypto"].resdirs = ["different_res"]
+        self.assertEqual(["different_include"], info.components["Crypto"].includedirs)
+        self.assertEqual(["different_lib"], info.components["Crypto"].libdirs)
+        self.assertEqual(["different_build"], info.components["Crypto"].builddirs)
+        self.assertEqual(["different_bin"], info.components["Crypto"].bindirs)
+        self.assertEqual(["different_res"], info.components["Crypto"].resdirs)
+
+        info.components["Crypto"].includedirs.extend(["another_include"])
+        info.components["Crypto"].includedirs.append("another_other_include")
+        info.components["Crypto"].libdirs.extend(["another_lib"])
+        info.components["Crypto"].libdirs.append("another_other_lib")
+        info.components["Crypto"].builddirs.extend(["another_build"])
+        info.components["Crypto"].builddirs.append("another_other_build")
+        info.components["Crypto"].bindirs.extend(["another_bin"])
+        info.components["Crypto"].bindirs.append("another_other_bin")
+        info.components["Crypto"].resdirs.extend(["another_res"])
+        info.components["Crypto"].resdirs.append("another_other_res")
+        self.assertEqual(["different_include", "another_include", "another_other_include"],
+                         info.components["Crypto"].includedirs)
+        self.assertEqual(["different_lib", "another_lib", "another_other_lib"],
+                         info.components["Crypto"].libdirs)
+        self.assertEqual(["different_build", "another_build", "another_other_build"],
+                         info.components["Crypto"].builddirs)
+        self.assertEqual(["different_bin", "another_bin", "another_other_bin"],
+                         info.components["Crypto"].bindirs)
+        self.assertEqual(["different_res", "another_res", "another_other_res"],
+                         info.components["Crypto"].resdirs)
+
+    def component_default_dirs_deps_cpp_info_test(self):
+        folder = temp_folder()
+        info = CppInfo(folder)
+        info.components["Component"]
+        info.components["Component"].filter_empty = False  # For testing purposes
+        dep_info = DepCppInfo(info)
+        deps_cpp_info = DepsCppInfo()
+        deps_cpp_info.update(dep_info, "my_lib")
+        self.assertListEqual([os.path.join(folder, "include")], deps_cpp_info.includedirs)
+        self.assertListEqual([], deps_cpp_info.srcdirs)
+        self.assertListEqual([os.path.join(folder, "lib")], deps_cpp_info.libdirs)
+        self.assertListEqual([os.path.join(folder, "bin")], deps_cpp_info.bindirs)
+        self.assertListEqual([os.path.join(folder, "")], deps_cpp_info.builddirs)
+        self.assertListEqual([os.path.join(folder, "res")], deps_cpp_info.resdirs)
+        self.assertListEqual([os.path.join(folder, "Frameworks")], deps_cpp_info.frameworkdirs)
+
+    def deps_cpp_info_components_test(self):
+        folder = temp_folder()
+        info = CppInfo(folder)
+        # Create file so path is not cleared
+        save(os.path.join(folder, "include", "my_file.h"), "")
+        info.components["Component"].libs = ["libcomp"]
+        dep_info = DepCppInfo(info)
+        deps_cpp_info = DepsCppInfo()
+        deps_cpp_info.update(dep_info, "my_lib")
+        self.assertListEqual(["libcomp"], deps_cpp_info.libs)
+        self.assertListEqual(["libcomp"], deps_cpp_info["my_lib"].components["Component"].libs)
+        self.assertListEqual([os.path.join(folder, "include")], deps_cpp_info.include_paths)
+        self.assertListEqual([os.path.join(folder, "include")],
+                             deps_cpp_info["my_lib"].components["Component"].include_paths)

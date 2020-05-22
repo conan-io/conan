@@ -8,7 +8,7 @@ from conans.test.utils.tools import TestClient
 from conans.util.files import mkdir
 
 
-class GetVersionNameTest(unittest.TestCase):
+class SetVersionNameTest(unittest.TestCase):
 
     @parameterized.expand([("", ), ("@user/channel", )])
     def set_version_name_test(self, user_channel):
@@ -84,6 +84,30 @@ class GetVersionNameTest(unittest.TestCase):
         # Local flow should also fail
         client.run("install . other/1.2@", assert_error=True)
         self.assertIn("ERROR: Package recipe with name other!=pkg", client.out)
+
+    def set_version_name_only_not_cli_test(self):
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class Lib(ConanFile):
+                def set_name(self):
+                    self.name = self.name or "pkg"
+                def set_version(self):
+                    self.version = self.version or "2.0"
+            """)
+        client.save({"conanfile.py": conanfile})
+        client.run("export . other/1.1@user/testing")
+        self.assertIn("other/1.1@user/testing: Exported", client.out)
+        client.run("export . 1.1@user/testing")
+        self.assertIn("pkg/1.1@user/testing: Exported", client.out)
+        client.run("export . user/testing")
+        self.assertIn("pkg/2.0@user/testing: Exported", client.out)
+
+        # Local flow should also work
+        client.run("install . other/1.2@")
+        self.assertIn("conanfile.py (other/1.2)", client.out)
+        client.run("install .")
+        self.assertIn("conanfile.py (pkg/2.0)", client.out)
 
     def set_version_name_crash_test(self):
         client = TestClient()

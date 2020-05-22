@@ -19,17 +19,17 @@ class ClassicProtocExampleBase(CrossBuildingBaseTestCase):
 
     application = textwrap.dedent("""
         from conans import ConanFile
-        
+
         class Protoc(ConanFile):
             name = "app"
             version = "testing"
-            
+
             settings = "os"
             requires = "protobuf/testing@user/channel"
-            
+
             def build_requirements(self):
                 self.build_requires("protoc/testing@user/channel")
-            
+
             def build(self):
                 self.output.info(">> settings.os:".format(self.settings.os))
     """)
@@ -56,7 +56,8 @@ class ClassicProtocExample(ClassicProtocExampleBase):
         else:
             profile_build = None
 
-        deps_graph = self._build_graph(profile_host=profile_host, profile_build=profile_build, install=True)
+        deps_graph = self._build_graph(profile_host=profile_host, profile_build=profile_build,
+                                       install=True)
 
         # Check HOST packages
         #   - application

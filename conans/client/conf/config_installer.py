@@ -2,17 +2,20 @@ import json
 import os
 import shutil
 
+from datetime import datetime
+from dateutil.tz import gettz
+
 from contextlib import contextmanager
 from six.moves.urllib.parse import urlparse
 
 from conans import load
 from conans.client import tools
-from conans.client.cache.remote_registry import load_registry_txt,\
-    migrate_registry_file
+from conans.client.cache.remote_registry import load_registry_txt, migrate_registry_file
 from conans.client.tools import Git
 from conans.client.tools.files import unzip
 from conans.errors import ConanException
-from conans.util.files import mkdir, rmdir, walk, save
+from conans.util.files import mkdir, rmdir, walk, save, touch, remove
+from conans.client.cache.cache import ClientCache
 
 
 def _hide_password(resource):
@@ -59,9 +62,9 @@ def _process_git_repo(config, cache, output):
         _process_folder(config, tmp_folder, cache, output)
 
 
-def _process_zip_file(config, zippath, cache, output, tmp_folder, remove=False):
+def _process_zip_file(config, zippath, cache, output, tmp_folder, first_remove=False):
     unzip(zippath, tmp_folder, output=output)
-    if remove:
+    if first_remove:
         os.unlink(zippath)
     _process_folder(config, tmp_folder, cache, output)
 
@@ -74,11 +77,13 @@ def _handle_conan_conf(current_conan_conf, new_conan_conf_path):
 
 def _filecopy(src, filename, dst):
     # https://github.com/conan-io/conan/issues/6556
+    # This is just a local convenience for "conan config install", using copyfile to avoid
+    # copying with permissions that later cause bugs
     src = os.path.join(src, filename)
     dst = os.path.join(dst, filename)
     if os.path.exists(dst):
-        os.remove(dst)
-    shutil.copy(src, dst)
+        remove(dst)
+    shutil.copyfile(src, dst)
 
 
 def _process_folder(config, folder, cache, output):
@@ -132,7 +137,7 @@ def _process_download(config, cache, output, requester):
         try:
             tools.download(config.uri, zippath, out=output, verify=config.verify_ssl,
                            requester=requester)
-            _process_zip_file(config, zippath, cache, output, tmp_folder, remove=True)
+            _process_zip_file(config, zippath, cache, output, tmp_folder, first_remove=True)
         except Exception as e:
             raise ConanException("Error while installing config from %s\n%s" % (config.uri, str(e)))
 
@@ -237,6 +242,7 @@ def configuration_install(app, uri, verify_ssl, config_type=None,
             for config in configs:
                 output.info("Config install:  %s" % _hide_password(config.uri))
                 _process_config(config, cache, output, requester)
+            touch(cache.config_install_file)
     else:
         # Execute and store the new one
         config = _ConfigOrigin.from_item(uri, config_type, verify_ssl, args,
@@ -247,3 +253,27 @@ def configuration_install(app, uri, verify_ssl, config_type=None,
         else:
             configs = [(c if c != config else config) for c in configs]
         _save_configs(configs_file, configs)
+
+
+def is_config_install_scheduled(api):
+    """ Validate if the next config install is scheduled to occur now
+
+        When config_install_interval is not configured, config install should not run
+        When config_install_interval is configured, config install will respect the delta from:
+            last conan install execution (sched file) + config_install_interval value < now
+
+    :param api: Conan API instance
+    :return: True, if it should occur now. Otherwise, False.
+    """
+    cache = ClientCache(api.cache_folder, api.out)
+    interval = cache.config.config_install_interval
+    config_install_file = cache.config_install_file
+    if interval is not None:
+        if os.path.exists(config_install_file):
+            timestamp = os.path.getmtime(config_install_file)
+            sched = datetime.fromtimestamp(timestamp, tz=gettz())
+            sched += interval
+            now = datetime.now(gettz())
+            return now > sched
+        else:
+            raise ConanException("config_install_interval defined, but no config_install file")

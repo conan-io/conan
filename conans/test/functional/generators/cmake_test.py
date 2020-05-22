@@ -245,8 +245,26 @@ class CMakeGeneratorTest(unittest.TestCase):
 
         self.assertNotIn("Library sys1 not found in package, might be system one", client.out)
         self.assertIn("CONAN_PKG::mylib libs: "
-                      "CONAN_LIB::mylib_lib1;CONAN_LIB::mylib_lib11;sys1;$<$<CONFIG:Release>:;>;"
-                      "$<$<CONFIG:RelWithDebInfo>:;>;$<$<CONFIG:MinSizeRel>:;>;$<$<CONFIG:Debug>:;>",
+                      "CONAN_LIB::mylib_lib1;CONAN_LIB::mylib_lib11;sys1;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>;"
+                      "$<$<CONFIG:Release>:;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>;"
+                      "$<$<CONFIG:RelWithDebInfo>:;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>;"
+                      "$<$<CONFIG:MinSizeRel>:;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>;"
+                      "$<$<CONFIG:Debug>:;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>",
                       client.out)
         self.assertIn("CONAN_LIB::mylib_lib1 libs: ;sys1;;", client.out)
         self.assertIn("CONAN_LIB::mylib_lib11 libs: ;sys1;;", client.out)
@@ -254,10 +272,25 @@ class CMakeGeneratorTest(unittest.TestCase):
         self.assertNotIn("Library sys2 not found in package, might be system one", client.out)
         self.assertIn("CONAN_PKG::myotherlib libs: "
                       "CONAN_LIB::myotherlib_lib2;sys2;CONAN_PKG::mylib;"
-                      "$<$<CONFIG:Release>:;CONAN_PKG::mylib;>;"
-                      "$<$<CONFIG:RelWithDebInfo>:;CONAN_PKG::mylib;>;"
-                      "$<$<CONFIG:MinSizeRel>:;CONAN_PKG::mylib;>;"
-                      "$<$<CONFIG:Debug>:;CONAN_PKG::mylib;>",
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>;"
+                      "$<$<CONFIG:Release>:;CONAN_PKG::mylib;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>;"
+                      "$<$<CONFIG:RelWithDebInfo>:;CONAN_PKG::mylib;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>;"
+                      "$<$<CONFIG:MinSizeRel>:;CONAN_PKG::mylib;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>;"
+                      "$<$<CONFIG:Debug>:;CONAN_PKG::mylib;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>",
                       client.out)
         self.assertIn("CONAN_LIB::myotherlib_lib2 libs: ;sys2;;CONAN_PKG::mylib", client.out)
 
@@ -311,3 +344,39 @@ class CMakeGeneratorTest(unittest.TestCase):
         client.run("create consumer.py")
         self.assertIn("CONAN_LIBS: lib1;additional_lib;sys1;additional_sys", client.out)
         self.assertIn("CONAN_SYSTEM_LIBS: sys1;additional_sys", client.out)
+
+    def test_conan_get_policy(self):
+        # https://github.com/conan-io/conan/issues/6974
+        file_content = textwrap.dedent("""
+            from conans import ConanFile, CMake
+
+            class ConanFileToolsTest(ConanFile):
+                name = "consumer"
+                version = "1.0"
+                generators = "cmake"
+                settings = "os", "compiler", "arch", "build_type"
+                exports_sources = "CMakeLists.txt"
+                
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+                """)
+
+        cmakelists = textwrap.dedent("""
+            cmake_minimum_required(VERSION 2.8)
+            PROJECT(conanzlib LANGUAGES NONE)
+            set(CONAN_DISABLE_CHECK_COMPILER TRUE)
+            # test with any old build policy as we may 
+            # not have cmake version that supports 091
+            cmake_policy(SET CMP0054 OLD)
+            include(conanbuildinfo.cmake)
+            conan_get_policy(CMP0054 policy_0054)
+            message("POLICY CMP0054 IS ${policy_0054}")
+            CONAN_BASIC_SETUP()
+            """)
+        client = TestClient()
+        client.save({"conanfile.py": file_content,
+                     "CMakeLists.txt": cmakelists})
+
+        client.run('create .')
+        self.assertIn("POLICY CMP0054 IS OLD", client.out)

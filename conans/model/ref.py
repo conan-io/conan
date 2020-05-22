@@ -287,6 +287,13 @@ class PackageReference(namedtuple("PackageReference", "ref id revision")):
     def __str__(self):
         return "%s:%s" % (self.ref, self.id)
 
+    def __lt__(self, other):
+        # We need this operator to sort prefs to compute the package_id
+        # package_id() -> ConanInfo.package_id() -> RequirementsInfo.sha() -> sorted(prefs) -> lt
+        me = self.ref, self.id, self.revision or ""
+        other = other.ref, other.id, other.revision or ""
+        return me < other
+
     def full_str(self):
         str_rev = "#%s" % self.revision if self.revision else ""
         tmp = "%s:%s%s" % (self.ref.full_str(), self.id, str_rev)
