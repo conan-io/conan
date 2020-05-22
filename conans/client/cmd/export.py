@@ -10,7 +10,6 @@ from conans.client.file_copier import FileCopier
 from conans.client.output import Color, ScopedOutput
 from conans.client.remover import DiskRemover
 from conans.errors import ConanException, ConanV2Exception
-from conans.model.build_info import DepsCppInfo
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference
 from conans.model.scm import SCM, get_scm_data
@@ -228,7 +227,8 @@ def _check_settings_for_warnings(conanfile, output):
         pass
 
 
-def _capture_scm_auto_fields(conanfile, conanfile_dir, package_layout, output, ignore_dirty, scm_to_conandata):
+def _capture_scm_auto_fields(conanfile, conanfile_dir, package_layout, output, ignore_dirty,
+                             scm_to_conandata):
     """Deduce the values for the scm auto fields or functions assigned to 'url' or 'revision'
        and replace the conanfile.py contents.
        Returns a tuple with (scm_data, path_to_scm_local_directory)"""
@@ -282,7 +282,8 @@ def _replace_scm_data_in_recipe(package_layout, scm_data, scm_to_conandata):
         if os.path.exists(conandata_path):
             conandata_yml = yaml.safe_load(load(conandata_path))
             if '.conan' in conandata_yml:
-                raise ConanException("Field '.conan' inside '{}' file is reserved to Conan usage.".format(DATA_YML))
+                raise ConanException("Field '.conan' inside '{}' file is reserved to "
+                                     "Conan usage.".format(DATA_YML))
         scm_data_copied = scm_data.as_dict()
         scm_data_copied.pop('username', None)
         scm_data_copied.pop('password', None)
@@ -294,6 +295,7 @@ def _replace_scm_data_in_recipe(package_layout, scm_data, scm_to_conandata):
 
 
 def _replace_scm_data_in_conanfile(conanfile_path, scm_data):
+    # FIXME: Remove in Conan 2.0, it will use conandata.yml as the only way
     # Parsing and replacing the SCM field
     content = load(conanfile_path)
     headers = []
@@ -334,8 +336,9 @@ def _replace_scm_data_in_conanfile(conanfile_path, scm_data):
                                 # Next statement can be a comment or anything else
                                 next_statement = statements[i+1]
                                 if isPY38 and isinstance(next_statement, ast.Expr):
-                                    # Python 3.8 properly parses multiline comments with start and end lines,
-                                    #  here we preserve the same (wrong) implementation of previous releases
+                                    # Python 3.8 properly parses multiline comments with start
+                                    # and end lines, here we preserve the same (wrong)
+                                    # implementation of previous releases
                                     next_line = next_statement.end_lineno - 1
                                 else:
                                     next_line = next_statement.lineno - 1
@@ -449,50 +452,63 @@ def _export_scm(scm_data, origin_folder, scm_sources_folder, output):
 
 def export_source(conanfile, origin_folder, destination_source_folder):
     if callable(conanfile.exports_sources):
-        conanfile.deps_cpp_info = DepsCppInfo()
-        conanfile.copy = FileCopier([origin_folder], destination_source_folder)
-        conanfile.export_sources()
-    else:
-        if isinstance(conanfile.exports_sources, str):
-            conanfile.exports_sources = (conanfile.exports_sources, )
+        raise ConanException("conanfile 'exports_sources' shouldn't be a method, "
+                             "use 'export_sources()' instead")
 
-        included_sources, excluded_sources = _classify_patterns(conanfile.exports_sources)
+    if isinstance(conanfile.exports_sources, str):
+        conanfile.exports_sources = (conanfile.exports_sources, )
+
+    included_sources, excluded_sources = _classify_patterns(conanfile.exports_sources)
+    copier = FileCopier([origin_folder], destination_source_folder)
+    for pattern in included_sources:
+        copier(pattern, links=True, excludes=excluded_sources)
+    output = conanfile.output
+    package_output = ScopedOutput("%s exports_sources" % output.scope, output)
+    copier.report(package_output)
+
+    if hasattr(conanfile, "export_sources"):
+        if not callable(conanfile.export_sources):
+            raise ConanException("conanfile 'export_sources' must be a method")
         copier = FileCopier([origin_folder], destination_source_folder)
-        for pattern in included_sources:
-            copier(pattern, links=True, excludes=excluded_sources)
-        output = conanfile.output
-        package_output = ScopedOutput("%s exports_sources" % output.scope, output)
-        copier.report(package_output)
+        conanfile.copy = copier
+        conanfile.export_sources()
+        export_method_output = ScopedOutput("%s export_sources() method" % output.scope, output)
+        copier.report(export_method_output)
 
 
 def export_recipe(conanfile, origin_folder, destination_folder):
     if callable(conanfile.exports):
-        conanfile.deps_cpp_info = DepsCppInfo()
-        conanfile.copy = FileCopier([origin_folder], destination_folder)
-        conanfile.exports()
-    else:
-        if isinstance(conanfile.exports, str):
-            conanfile.exports = (conanfile.exports, )
+        raise ConanException("conanfile 'exports' shouldn't be a method, use 'export()' instead")
+    if isinstance(conanfile.exports, str):
+        conanfile.exports = (conanfile.exports, )
 
-        output = conanfile.output
-        package_output = ScopedOutput("%s exports" % output.scope, output)
+    output = conanfile.output
+    package_output = ScopedOutput("%s exports" % output.scope, output)
 
-        if os.path.exists(os.path.join(origin_folder, DATA_YML)):
-            package_output.info("File '{}' found. Exporting it...".format(DATA_YML))
-            tmp = [DATA_YML]
-            if conanfile.exports:
-                tmp.extend(conanfile.exports)  # conanfile.exports could be a tuple (immutable)
-            conanfile.exports = tmp
+    if os.path.exists(os.path.join(origin_folder, DATA_YML)):
+        package_output.info("File '{}' found. Exporting it...".format(DATA_YML))
+        tmp = [DATA_YML]
+        if conanfile.exports:
+            tmp.extend(conanfile.exports)  # conanfile.exports could be a tuple (immutable)
+        conanfile.exports = tmp
 
-        included_exports, excluded_exports = _classify_patterns(conanfile.exports)
+    included_exports, excluded_exports = _classify_patterns(conanfile.exports)
 
-        try:
-            os.unlink(os.path.join(origin_folder, CONANFILE + 'c'))
-        except OSError:
-            pass
+    try:
+        os.unlink(os.path.join(origin_folder, CONANFILE + 'c'))
+    except OSError:
+        pass
 
+    copier = FileCopier([origin_folder], destination_folder)
+    for pattern in included_exports:
+        copier(pattern, links=True, excludes=excluded_exports)
+    copier.report(package_output)
+
+    if hasattr(conanfile, "export"):
+        if not callable(conanfile.export):
+            raise ConanException("conanfile 'export' must be a method")
         copier = FileCopier([origin_folder], destination_folder)
-        for pattern in included_exports:
-            copier(pattern, links=True, excludes=excluded_exports)
-
-        copier.report(package_output)
+        conanfile.copy = copier
+        conanfile.export()
+        export_method_output = ScopedOutput("%s export() method" % output.scope, output)
+        copier.report(export_method_output)

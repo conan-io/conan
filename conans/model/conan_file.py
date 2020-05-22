@@ -106,8 +106,8 @@ class ConanFile(object):
     build_policy = None
     short_paths = False
     apply_env = True  # Apply environment variables from requires deps_env_info and profiles
-    exports = None # Can be a string, tuple, or function
-    exports_sources = None # Can be a string, tuple, or function 
+    exports = None
+    exports_sources = None
     generators = ["txt"]
     revision_mode = "hash"
 
