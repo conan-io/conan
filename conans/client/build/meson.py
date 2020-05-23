@@ -17,17 +17,20 @@ from conans.util.runners import version_runner
 
 class Meson(object):
 
-    def __init__(self, conanfile, backend=None, build_type=None, append_vcvars=False):
+    def __init__(self, conanfile, backend=None, build_type=None, append_vcvars=False,exe_wrapper=None):
         """
         :param conanfile: Conanfile instance (or settings for retro compatibility)
         :param backend: Generator name to use or none to autodetect.
                Possible values: ninja,vs,vs2010,vs2015,vs2017,xcode
         :param build_type: Overrides default build type comming from settings
+        :param exe_wrapper: Tells meson to add the needs_exe_wrapper=true
         """
         self._conanfile = conanfile
         self._settings = conanfile.settings
         self._append_vcvars = append_vcvars
-
+        self.exe_wrapper='false'
+        if exe_wrapper:
+            self.exe_wrapper='true'
         self._os = self._ss("os")
         self._compiler = self._ss("compiler")
         self._compiler_version = self._ss("compiler.version")
@@ -53,7 +56,7 @@ class Meson(object):
             '17': 'c++17', 'gnu17': 'gnu++17',
             '20': 'c++1z', 'gnu20': 'gnu++1z'
         }
-        
+
         if cppstd:
             self.options['cpp_std'] = cppstd_conan2meson[cppstd]
 
@@ -128,37 +131,60 @@ class Meson(object):
             'x86': ('x86', 'x86', 'little'),
             'x86_64': ('x86_64', 'x86_64', 'little'),
         }
+        host_cpu_family,host_cpu ,host_endian = cpu_translate[str(self._conanfile.settings_build.arch)]
+
+        os_build=str(self._conanfile.settings_build.os_build).lower()
+        os_host=str(self._conanfile.settings_build.os).lower()
         cpu_family, cpu, endian = cpu_translate[str(self._conanfile.settings.arch)]
+
         cflags = ', '.join(repr(x) for x in os.environ.get('CFLAGS', '').split(' '))
+        cxxflags = ', '.join(repr(x) for x in os.environ.get('CXXFLAGS', '').split(' '))
+
         cc = os.environ.get('CC', 'cc')
         cpp = os.environ.get('CXX', 'c++')
+        ld = os.environ.get('LD','ld')
+        ar = os.environ.get('AR','ar')
+        strip = os.environ.get('STRIP','strip')
+        ranlib = os.environ.get('RANLIB','ranlib')
+        libdir = environ_append['PKG_CONFIG_PATH']
+        #self.needs_exe_wrapper='true'
+
         with open(cross_filename, "w") as fd:
-            fd.write("""
+            fd.write(F"""
+                [build_machine]
+                system = '{os_build}'
+                cpu_family = '{host_cpu_family}'
+                cpu = '{host_cpu}'
+                endian = '{host_endian}'
+
                 [host_machine]
-                system = '{os}'
+                system = '{os_host}'
                 cpu_family = '{cpu_family}'
                 cpu = '{cpu}'
                 endian = '{endian}'
 
                 [properties]
-                needs_exe_wrapper = true
+                needs_exe_wrapper = '{self.exe_wrapper}'
+                cpp_args = [{cxxflags}]
                 c_args = [{cflags}]
+                pkg_config_libdir='{libdir}'
+
                 [binaries]
                 c = '{cc}'
                 cpp = '{cpp}'
+                ar = '{ar}'
+                ld = '{ld}'
+                strip = '{strip}'
+                ranlib = '{ranlib}'
                 pkgconfig = 'pkg-config'
-            """.format(os=self._os.lower(),
-                       cpu_family=cpu_family,
-                       cpu=cpu,
-                       endian=endian,
-                       cflags=cflags,
-                       cc=cc,
-                       cpp=cpp))
+            """)
         environ_append.update({'CC': None,
                                'CXX': None,
                                'CFLAGS': None,
                                'CXXFLAGS': None,
-                               'CPPFLAGS': None})
+                               'CPPFLAGS': None,
+                               'LDFLAGS':None,
+                               })
 
     def configure(self, args=None, defs=None, source_dir=None, build_dir=None,
                   pkg_config_paths=None, cache_build_folder=None,
@@ -206,19 +232,23 @@ class Meson(object):
         ])
         command = 'meson "%s" "%s" %s' % (source_dir, self.build_dir, arg_list)
         with environment_append(environ_append):
-            self._run(command, use_auto_tools=not is_cross)
+            self._run(command)
 
     @property
     def _vcvars_needed(self):
         return (self._compiler == "Visual Studio" and self.backend == "ninja" and
                 platform.system() == "Windows")
 
-    def _run(self, command):
-        with tools.vcvars(self._settings,
-                          output=self._conanfile.output) if self._vcvars_needed else tools.no_op():
-            env_build = AutoToolsBuildEnvironment(self._conanfile)
-            with environment_append(env_build.vars):
-                self._conanfile.run(command)
+    def _run(self, command, use_auto_tools=True):
+        def _build():
+            with tools.vcvars(self._settings,
+                output=self._conanfile.output) if self._vcvars_needed else tools.no_op():
+                if use_auto_tools:
+                    env_build = AutoToolsBuildEnvironment(self._conanfile)
+                    with environment_append(env_build.vars):
+                        self._conanfile.run(command)
+                else:
+                    self._conanfile.run(command)
 
         if self._vcvars_needed:
             vcvars_dict = tools.vcvars_dict(self._settings, output=self._conanfile.output)
@@ -253,6 +283,8 @@ class Meson(object):
         self._run("meson %s" % arg_list)
 
     def build(self, args=None, build_dir=None, targets=None):
+        #with tools.vcvars(self._settings,
+        #    output=self._conanfile.output) if self._vcvars_needed else tools.no_op():
         if not self._conanfile.should_build:
             return
         self._run_ninja_targets(args=args, build_dir=build_dir, targets=targets)
