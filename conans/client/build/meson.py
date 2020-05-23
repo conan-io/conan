@@ -131,7 +131,7 @@ class Meson(object):
             'x86': ('x86', 'x86', 'little'),
             'x86_64': ('x86_64', 'x86_64', 'little'),
         }
-        host_cpu_family,host_cpu ,host_endian = cpu_translate[str(self._conanfile.settings_build.arch)]
+        build_cpu_family,build_cpu ,build_endian = cpu_translate[str(self._conanfile.settings_build.arch)]
 
         os_build=str(self._conanfile.settings_build.os_build).lower()
         os_host=str(self._conanfile.settings_build.os).lower()
@@ -149,12 +149,12 @@ class Meson(object):
         libdir = environ_append['PKG_CONFIG_PATH']
 
         with open(cross_filename, "w") as fd:
-            fd.write(F"""
+            fd.write("""
                 [build_machine]
                 system = '{os_build}'
-                cpu_family = '{host_cpu_family}'
-                cpu = '{host_cpu}'
-                endian = '{host_endian}'
+                cpu_family = '{build_cpu_family}'
+                cpu = '{build_cpu}'
+                endian = '{build_endian}'
 
                 [host_machine]
                 system = '{os_host}'
@@ -163,7 +163,7 @@ class Meson(object):
                 endian = '{endian}'
 
                 [properties]
-                needs_exe_wrapper = '{self.exe_wrapper}'
+                needs_exe_wrapper = '{exe_wrapper}'
                 cpp_args = [{cxxflags}]
                 c_args = [{cflags}]
                 pkg_config_libdir='{libdir}'
@@ -176,7 +176,26 @@ class Meson(object):
                 strip = '{strip}'
                 ranlib = '{ranlib}'
                 pkgconfig = 'pkg-config'
-            """)
+                """.format(
+                    os_build=os_build,
+                    build_cpu_family=build_cpu_family,
+                    build_cpu=build_cpu,
+                    build_endian=build_endian,
+                    os_host=os_host,
+                    cpu_family=cpu_family,
+                    cpu=cpu,
+                    endian=endian,
+                    exe_wrapper=self.exe_wrapper,
+                    cxxflags=cxxflags,
+                    cflags=cflags,
+                    libdir=libdir,
+                    cc=cc,
+                    cpp=cpp,
+                    ar=ar,
+                    ld=ld,
+                    strip=strip,
+                    ranlib=ranlib,
+                ))
         environ_append.update({'CC': None,
                                'CXX': None,
                                'CFLAGS': None,
