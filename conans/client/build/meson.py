@@ -131,10 +131,11 @@ class Meson(object):
             'x86': ('x86', 'x86', 'little'),
             'x86_64': ('x86_64', 'x86_64', 'little'),
         }
-        build_cpu_family,build_cpu ,build_endian = cpu_translate[str(self._conanfile.settings_build.arch)]
+        if hasattr(self._conanfile,'settings_build'):
+            build_cpu_family,build_cpu ,build_endian = cpu_translate[str(self._conanfile.settings_build.arch)]
+            os_build=str(self._conanfile.settings_build.os_build).lower()
 
-        os_build=str(self._conanfile.settings_build.os_build).lower()
-        os_host=str(self._conanfile.settings_build.os).lower()
+        os_host=str(self._conanfile.settings.os).lower()
         cpu_family, cpu, endian = cpu_translate[str(self._conanfile.settings.arch)]
 
         cflags = ', '.join(repr(x) for x in os.environ.get('CFLAGS', '').split(' '))
@@ -149,13 +150,20 @@ class Meson(object):
         libdir = environ_append['PKG_CONFIG_PATH']
 
         with open(cross_filename, "w") as fd:
+            if hasattr(self._conanfile,'settings_build') :
+                fd.write("""
+                    [build_machine]
+                    system = '{os_build}'
+                    cpu_family = '{build_cpu_family}'
+                    cpu = '{build_cpu}'
+                    endian = '{build_endian}'
+                """.format(
+                    os_build=os_build,
+                    build_cpu_family=build_cpu_family,
+                    build_cpu=build_cpu,
+                    build_endian=build_endian,
+                ))
             fd.write("""
-                [build_machine]
-                system = '{os_build}'
-                cpu_family = '{build_cpu_family}'
-                cpu = '{build_cpu}'
-                endian = '{build_endian}'
-
                 [host_machine]
                 system = '{os_host}'
                 cpu_family = '{cpu_family}'
@@ -177,10 +185,6 @@ class Meson(object):
                 ranlib = '{ranlib}'
                 pkgconfig = 'pkg-config'
                 """.format(
-                    os_build=os_build,
-                    build_cpu_family=build_cpu_family,
-                    build_cpu=build_cpu,
-                    build_endian=build_endian,
                     os_host=os_host,
                     cpu_family=cpu_family,
                     cpu=cpu,
