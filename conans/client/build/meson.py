@@ -23,14 +23,14 @@ class Meson(object):
         :param backend: Generator name to use or none to autodetect.
                Possible values: ninja,vs,vs2010,vs2015,vs2017,xcode
         :param build_type: Overrides default build type comming from settings
-        :param exe_wrapper: Tells meson to add the needs_exe_wrapper=true
+        :param exe_wrapper: Tells meson what exe wrapper to use eg wine
         """
         self._conanfile = conanfile
         self._settings = conanfile.settings
         self._append_vcvars = append_vcvars
         self.exe_wrapper='false'
         if exe_wrapper:
-            self.exe_wrapper='true'
+            self.exe_wrapper=exe_wrapper
         self._os = self._ss("os")
         self._compiler = self._ss("compiler")
         self._compiler_version = self._ss("compiler.version")
@@ -235,8 +235,7 @@ class Meson(object):
         build_type = "--buildtype=%s" % bt
         cross_option = None
         environ_append = {"PKG_CONFIG_PATH": pc_paths}
-        is_cross = tools.cross_building(self._conanfile.settings)
-        if is_cross:
+        if tools.cross_building(self._conanfile.settings):
             cross_filename = os.path.join(self.build_dir, "cross_file.txt")
             cross_option = "--cross-file=%s" % cross_filename
             self._configure_cross_compile(cross_filename, environ_append)
@@ -257,16 +256,11 @@ class Meson(object):
         return (self._compiler == "Visual Studio" and self.backend == "ninja" and
                 platform.system() == "Windows")
 
-    def _run(self, command, use_auto_tools=True):
+    def _run(self, command):
         def _build():
-            with tools.vcvars(self._settings,
-                output=self._conanfile.output) if self._vcvars_needed else tools.no_op():
-                if use_auto_tools:
-                    env_build = AutoToolsBuildEnvironment(self._conanfile)
-                    with environment_append(env_build.vars):
-                        self._conanfile.run(command)
-                else:
-                    self._conanfile.run(command)
+            env_build = AutoToolsBuildEnvironment(self._conanfile)
+            with environment_append(env_build.vars):
+                self._conanfile.run(command)
 
         if self._vcvars_needed:
             vcvars_dict = tools.vcvars_dict(self._settings, output=self._conanfile.output)
@@ -301,8 +295,6 @@ class Meson(object):
         self._run("meson %s" % arg_list)
 
     def build(self, args=None, build_dir=None, targets=None):
-        #with tools.vcvars(self._settings,
-        #    output=self._conanfile.output) if self._vcvars_needed else tools.no_op():
         if not self._conanfile.should_build:
             return
         self._run_ninja_targets(args=args, build_dir=build_dir, targets=targets)
