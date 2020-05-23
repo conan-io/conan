@@ -147,7 +147,6 @@ class Meson(object):
         strip = os.environ.get('STRIP','strip')
         ranlib = os.environ.get('RANLIB','ranlib')
         libdir = environ_append['PKG_CONFIG_PATH']
-        #self.needs_exe_wrapper='true'
 
         with open(cross_filename, "w") as fd:
             fd.write(F"""
