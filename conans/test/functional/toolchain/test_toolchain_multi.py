@@ -12,7 +12,7 @@ from conans.client.toolchain.cmake import CMakeToolchain
 from conans.client.tools import environment_append
 from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TurboTestClient
-from conans.util.files import load, rmdir
+from conans.util.files import rmdir
 
 
 @attr("toolchain")
@@ -55,11 +55,11 @@ class FindPackageMultiTestCase(unittest.TestCase):
     cmakelist = textwrap.dedent("""
         cmake_minimum_required(VERSION 2.8)
         project(App CXX)
-        
+
         if(CONAN_TOOLCHAIN_INCLUDED AND CMAKE_VERSION VERSION_LESS "3.15")
             include("${CMAKE_BINARY_DIR}/conan_project_include.cmake")
         endif()
-        
+
         if(NOT CMAKE_TOOLCHAIN_FILE)
             message(">> Not using toolchain")
             include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
@@ -68,18 +68,18 @@ class FindPackageMultiTestCase(unittest.TestCase):
 
         message(">> CONAN_EXPORTED: ${CONAN_EXPORTED}")
         message(">> CONAN_IN_LOCAL_CACHE: ${CONAN_IN_LOCAL_CACHE}")
-        
+
         message(">> DEFINITIONS_BOTH: ${DEFINITIONS_BOTH}")
         message(">> DEFINITIONS_DEBUG: ${DEFINITIONS_DEBUG}")
         message(">> DEFINITIONS_RELEASE: ${DEFINITIONS_RELEASE}")
         message(">> DEFINITIONS_VALUE: ${DEFINITIONS_VALUE}")
-        
+
         add_executable(app src/app.cpp)
         target_compile_definitions(app PRIVATE DEFINITIONS_BOTH="${DEFINITIONS_BOTH}")
         target_compile_definitions(app PRIVATE DEFINITIONS_DEBUG=${DEFINITIONS_DEBUG})
         target_compile_definitions(app PRIVATE DEFINITIONS_RELEASE=${DEFINITIONS_RELEASE})
         target_compile_definitions(app PRIVATE DEFINITIONS_VALUE=${DEFINITIONS_VALUE})
-        
+
     """)
 
     app_cpp = textwrap.dedent("""
