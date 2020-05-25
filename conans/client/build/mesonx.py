@@ -18,6 +18,8 @@ from conans.util.runners import version_runner
 # - add pkg_config_path to configure (cross scenario and native)
 # - fix env variables reading for native\cross
 # - cleanup comments
+# - add tests
+# - remove _ss from MesonX __init__()
 
 # Difference from Meson:
 # - does not override 'default_library' if no 'shared' options was set
@@ -260,13 +262,12 @@ class MesonX(object):
         self._conanfile = conanfile
         self._settings = conanfile.settings
         self._append_vcvars = append_vcvars
-
         self._build_dir = build_dir
-
+        self._build_type = self._ss('build_type')
+        
+        # Needed for internal checks
         self._os = self._ss('os')
         self._compiler = self._ss('compiler')
-        self._compiler_version = self._ss('compiler.version')
-        self._build_type = self._ss('build_type')
 
         # Meson recommends to use ninja by default
         self.backend = backend or 'ninja'
@@ -358,6 +359,8 @@ class MesonX(object):
         }
         env_dict = {ev: None for ev in env_vars_to_clean}
         env_dict.update({'{}_FOR_BUILD'.format(ev): None for ev in env_vars_to_clean})
+        
+        # TODO: replace pkg_config_path with cmd line arg instead
         env_dict.update({'PKG_CONFIG_PATH': os.pathsep.join(pc_paths)})
 
         with environment_append(env_dict):
@@ -369,7 +372,7 @@ class MesonX(object):
 
         minimum_meson_version = '0.55.0' if targets else '0.54.0'
         if self._can_use_meson_method(minimum_meson_version):
-            combined_args = (args or []) + (targets or [])
+            combined_args = (targets or []) + (args or []) # order is important, since args might contain `-- -posix-like -positional-args`
             self._run_meson_command(subcommand='compile', args=combined_args)
         else:
             if self.backend != 'ninja':
@@ -482,7 +485,7 @@ class MesonX(object):
         else:
             self._conanfile.run(command)
 
-    def _run_ninja_targets(self, args=[], targets=None):
+    def _run_ninja_targets(self, targets=None, args=[]):
         if self.backend != 'ninja':
             raise ConanException('Internal error: this command should not be invoked non-`ninja` backend')
 
@@ -495,7 +498,7 @@ class MesonX(object):
         ])
         self._run('ninja {}'.format(arg_list))
 
-    def _run_meson_command(self, subcommand=None, args=[]):
+    def _run_meson_command(self, subcomman, args=[]):
         build_dir = self.build_dir or self._conanfile.build_folder
 
         arg_list = join_arguments([
