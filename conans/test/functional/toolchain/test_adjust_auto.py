@@ -106,11 +106,11 @@ class AdjustAutoTestCase(unittest.TestCase):
     cmakelist = textwrap.dedent("""
         cmake_minimum_required(VERSION 2.8)
         project(App C CXX)
-        
+
         if(CONAN_TOOLCHAIN_INCLUDED AND CMAKE_VERSION VERSION_LESS "3.15")
             include("${CMAKE_BINARY_DIR}/conan_project_include.cmake")
         endif()
-        
+
         if(NOT CMAKE_TOOLCHAIN_FILE)
             message(">> Not using toolchain")
             include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
@@ -121,7 +121,7 @@ class AdjustAutoTestCase(unittest.TestCase):
         message(">> CONAN_IN_LOCAL_CACHE: ${CONAN_IN_LOCAL_CACHE}")
 
         message(">> CMAKE_GENERATOR_PLATFORM: ${CMAKE_GENERATOR_PLATFORM}")
-        
+
         message(">> CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
         message(">> CMAKE_CXX_FLAGS: ${CMAKE_CXX_FLAGS}")
         message(">> CMAKE_CXX_FLAGS_DEBUG: ${CMAKE_CXX_FLAGS_DEBUG}")
@@ -143,12 +143,12 @@ class AdjustAutoTestCase(unittest.TestCase):
         message(">> CMAKE_INSTALL_OLDINCLUDEDIR: ${CMAKE_INSTALL_OLDINCLUDEDIR}")
         message(">> CMAKE_INSTALL_SBINDIR: ${CMAKE_INSTALL_SBINDIR}")
         message(">> CMAKE_INSTALL_PREFIX: ${CMAKE_INSTALL_PREFIX}")
-        
+
         message(">> CMAKE_POSITION_INDEPENDENT_CODE: ${CMAKE_POSITION_INDEPENDENT_CODE}")
-        
+
         message(">> CMAKE_INSTALL_NAME_DIR: ${CMAKE_INSTALL_NAME_DIR}")
         message(">> CMAKE_SKIP_RPATH: ${CMAKE_SKIP_RPATH}")
-        
+
         message(">> CMAKE_MODULE_PATH: ${CMAKE_MODULE_PATH}")
         message(">> CMAKE_PREFIX_PATH: ${CMAKE_PREFIX_PATH}")
 
@@ -156,7 +156,7 @@ class AdjustAutoTestCase(unittest.TestCase):
         message(">> CMAKE_LIBRARY_PATH: ${CMAKE_LIBRARY_PATH}")
 
         add_executable(app src/app.cpp)
-        
+
         get_directory_property(_COMPILE_DEFINITONS DIRECTORY ${CMAKE_SOURCE_DIR} COMPILE_DEFINITIONS )
         message(">> COMPILE_DEFINITONS: ${_COMPILE_DEFINITONS}")
     """)
@@ -213,23 +213,6 @@ class AdjustAutoTestCase(unittest.TestCase):
             cmake_cache_items[key] = value
         cmake_cache_keys = [item.split(":")[0] for item in cmake_cache_items.keys()]
         return configure_out, cmake_cache_items, cmake_cache_keys, build_directory, package_directory
-
-    def test_conan_stuff(self):
-        # self.skipTest("Disabled")
-        configure_out, cmake_cache, cmake_cache_keys, _, _ = self._run_configure()
-
-        in_local_cache = "ON" if self.in_cache else "OFF"
-        exported_str = "1" if self.build_helper else ""
-
-        self.assertIn(">> CONAN_EXPORTED: {}".format(exported_str), configure_out)
-        self.assertIn(">> CONAN_IN_LOCAL_CACHE: {}".format(in_local_cache), configure_out)
-        if self.build_helper:
-            self.assertEqual(exported_str, cmake_cache["CONAN_EXPORTED:UNINITIALIZED"])
-        else:
-            self.assertNotIn("CONAN_EXPORTED", cmake_cache_keys)
-
-        type_str = "STRING" if self.use_toolchain else "UNINITIALIZED"
-        self.assertEqual(in_local_cache, cmake_cache["CONAN_IN_LOCAL_CACHE:" + type_str])
 
     @parameterized.expand([("Debug",), ("Release",)])
     @unittest.skipIf(platform.system() == "Windows", "Windows uses Visual Studio, CMAKE_BUILD_TYPE is not used")
