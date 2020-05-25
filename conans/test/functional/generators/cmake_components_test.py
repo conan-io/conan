@@ -1,16 +1,7 @@
-import os
-import platform
 import textwrap
 import unittest
 
-import six
-from nose.plugins.attrib import attr
-
-from conans.client.tools import replace_in_file
-from conans.model.ref import ConanFileReference, PackageReference
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files
-from conans.test.utils.genconanfile import GenConanfile
-from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
+from conans.test.utils.tools import TestClient
 
 
 class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
