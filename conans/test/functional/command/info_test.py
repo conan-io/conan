@@ -163,7 +163,7 @@ class InfoTest(unittest.TestCase):
         create_export(test_deps, "Hello0")
 
         node_regex = re.compile(r'"([^"]+)"')
-        dot_regex = re.compile(r'^\s+"[^"]+" -> {"[^"]+"( "[^"]+")*}$')
+        dot_regex = re.compile(r'^\s+"[^"]+" -> "[^"]+"\s+$')
 
         self.client.run("info . --graph", assert_error=True)
 
@@ -198,7 +198,7 @@ class InfoTest(unittest.TestCase):
         html = self.client.load(arg_filename)
         self.assertIn("<body>", html)
         self.assertIn("{ from: 0, to: 1 }", html)
-        self.assertIn("id: 0, label: 'Hello0/0.1'", html)
+        self.assertIn("id: 0,\n                        label: 'Hello0/0.1',", html)
 
     def graph_html_embedded_visj_test(self):
         client = TestClient()
@@ -239,9 +239,15 @@ class AConan(ConanFile):
         self.assertIn("html", html)
         # To check that this node is not duplicated
         self.assertEqual(1, html.count("label: 'dep/0.1'"))
-        self.assertIn("label: 'Pkg2/0.1', shape: 'box', color: {background: 'Khaki'}", html)
-        self.assertIn("label: 'Pkg/0.1', shape: 'box', color: {background: 'Khaki'}", html)
-        self.assertIn("label: 'tool/0.1', shape: 'ellipse', color: {background: 'SkyBlue'}", html)
+        self.assertIn("label: 'Pkg2/0.1',\n                        "
+                      "shape: 'box',\n                        "
+                      "color: { background: 'Khaki'},", html)
+        self.assertIn("label: 'Pkg/0.1',\n                        "
+                      "shape: 'box',\n                        "
+                      "color: { background: 'Khaki'},", html)
+        self.assertIn("label: 'tool/0.1',\n                        "
+                      "shape: 'ellipse',\n                        "
+                      "color: { background: 'SkyBlue'},", html)
 
     def only_names_test(self):
         self.client = TestClient()
@@ -628,7 +634,7 @@ class MyTest(ConanFile):
         client.run("info Pkg/0.2@lasote/testing --graph file.html")
         html_content = client.load("file.html")
         self.assertIn("<h3>Pkg/0.2@lasote/testing</h3>", html_content)
-        self.assertIn("<li><b>topics</b>: (\"foo\", \"bar\", \"qux\")</li><ul>", html_content)
+        self.assertIn("<li><b>topics</b>: (&#34;foo&#34;, &#34;bar&#34;, &#34;qux&#34;)</li>", html_content)
 
         # Topics as a string
         conanfile = conanfile.replace("(\"foo\", \"bar\", \"qux\")", "\"foo\"")

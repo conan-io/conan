@@ -16,7 +16,14 @@ class Node(object):
 
     @property
     def label(self):
-        return self._ref or self._conanfile.display_name
+        return self._conanfile.display_name
+
+    @property
+    def short_label(self):
+        if self._ref and self._ref.name:
+            return "{}/{}".format(self._ref.name, self._ref.version)
+        else:
+            return self.label
 
     @property
     def is_build_requires(self):
@@ -28,7 +35,7 @@ class Node(object):
 
         def join_if_iterable(value):
             if isinstance(value, (list, tuple)):
-                return ", ".join(value)
+                return '("{}")'.format('", "'.join(value))
             return value
 
         return {

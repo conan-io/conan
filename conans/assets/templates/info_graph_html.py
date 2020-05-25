@@ -51,7 +51,7 @@ content = """
                 {%- for node in graph.nodes %}
                     {
                         id: {{ node.id }},
-                        label: '{{ node.label }}',
+                        label: '{{ node.short_label }}',
                         shape: '{% if node.is_build_requires %}ellipse{% else %}box{% endif %}',
                         color: { background: '{{ graph.binary_color(node) }}'},
                         fulllabel: '<h3>{{ node.label }}</h3>' +
