@@ -133,9 +133,9 @@ class Meson(object):
         }
         if hasattr(self._conanfile,'settings_build'):
             build_cpu_family,build_cpu ,build_endian = cpu_translate[str(self._conanfile.settings_build.arch)]
-            os_build=str(self._conanfile.settings_build.os_build).lower()
+            os_build = str(self._conanfile.settings_build.os_build).lower()
 
-        os_host=str(self._conanfile.settings.os).lower()
+        os_host = str(self._conanfile.settings.os).lower()
         cpu_family, cpu, endian = cpu_translate[str(self._conanfile.settings.arch)]
 
         cflags = ', '.join(repr(x) for x in os.environ.get('CFLAGS', '').split(' '))
@@ -158,10 +158,10 @@ class Meson(object):
                     cpu = '{build_cpu}'
                     endian = '{build_endian}'
                 """.format(
-                    os_build=os_build,
-                    build_cpu_family=build_cpu_family,
-                    build_cpu=build_cpu,
-                    build_endian=build_endian,
+                    os_build = os_build,
+                    build_cpu_family = build_cpu_family,
+                    build_cpu = build_cpu,
+                    build_endian = build_endian,
                 ))
             fd.write("""
                 [host_machine]
@@ -185,20 +185,20 @@ class Meson(object):
                 ranlib = '{ranlib}'
                 pkgconfig = 'pkg-config'
                 """.format(
-                    os_host=os_host,
-                    cpu_family=cpu_family,
-                    cpu=cpu,
-                    endian=endian,
-                    exe_wrapper=self.exe_wrapper,
-                    cxxflags=cxxflags,
-                    cflags=cflags,
-                    libdir=libdir,
-                    cc=cc,
-                    cpp=cpp,
-                    ar=ar,
-                    ld=ld,
-                    strip=strip,
-                    ranlib=ranlib,
+                    os_host = os_host,
+                    cpu_family = cpu_family,
+                    cpu = cpu,
+                    endian = endian,
+                    exe_wrapper = self.exe_wrapper,
+                    cxxflags = cxxflags,
+                    cflags = cflags,
+                    libdir = libdir,
+                    cc = cc,
+                    cpp = cpp,
+                    ar = ar,
+                    ld = ld,
+                    strip = strip,
+                    ranlib = ranlib,
                 ))
         environ_append.update({'CC': None,
                                'CXX': None,
