@@ -41,18 +41,30 @@ class GetCasedPath(unittest.TestCase):
 
 class UnixPathTest(unittest.TestCase):
 
+    def test_none(self):
+        self.assertEqual(None, tools.unix_path(path=None))
+
+    @unittest.skipIf(platform.system() == "Windows", "All but Windows")
+    def test_not_windows(self):
+        path = 'C:\\Windows\\System32'
+        self.assertEqual(path, tools.unix_path(path))
+
+    @unittest.skipUnless(platform.system() == "Windows", "Only windows")
     def test_msys_path(self):
         self.assertEqual('/c/windows/system32', tools.unix_path('C:\\Windows\\System32',
                                                                 path_flavor=tools.MSYS2))
 
+    @unittest.skipUnless(platform.system() == "Windows", "Only windows")
     def test_cygwin_path(self):
         self.assertEqual('/cygdrive/c/windows/system32', tools.unix_path('C:\\Windows\\System32',
                                                                          path_flavor=tools.CYGWIN))
 
+    @unittest.skipUnless(platform.system() == "Windows", "Only windows")
     def test_wsl_path(self):
         self.assertEqual('/mnt/c/Windows/System32', tools.unix_path('C:\\Windows\\System32',
                                                                     path_flavor=tools.WSL))
 
+    @unittest.skipUnless(platform.system() == "Windows", "Only windows")
     def test_sfu_path(self):
         self.assertEqual('/dev/fs/C/windows/system32', tools.unix_path('C:\\Windows\\System32',
                                                                        path_flavor=tools.SFU))

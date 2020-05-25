@@ -17,28 +17,31 @@ class LinkOrderTest(unittest.TestCase):
 
     conanfile = Template(textwrap.dedent("""
         from conans import ConanFile
-        
+
         class Recipe(ConanFile):
             name = "{{ref.name}}"
             version = "{{ref.version}}"
-            
+
             {% if requires %}
-            requires = {% for req in requires %}"{{ req }}"{% if not loop.last %}, {% endif %}{% endfor %}
+            requires =
+                {%- for req in requires -%}
+                "{{ req }}"{% if not loop.last %}, {% endif %}
+                {%- endfor -%}
             {% endif %}
-            
+
             def build(self):
                 with open("lib" + self.name + ".a", "w+") as f:
                     f.write("fake library content")
                 with open(self.name + ".lib", "w+") as f:
                     f.write("fake library content")
-                    
+
                 {% for it in libs_extra %}
                 with open("lib{{ it }}.a", "w+") as f:
                     f.write("fake library content")
                 with open("{{ it }}.lib", "w+") as f:
                     f.write("fake library content")
                 {% endfor %}
-            
+
             def package(self):
                 self.copy("*.a", dst="lib")
                 self.copy("*.lib", dst="lib")
@@ -53,32 +56,57 @@ class LinkOrderTest(unittest.TestCase):
                 self.cpp_info.libs.append("{{ it }}")
                 {% endfor %}
 
-                {% if system_libs %}self.cpp_info.system_libs = [{% for it in system_libs %}"{{ it }}"{% if not loop.last %}, {% endif %}{% endfor %}]{% endif %}
-                {% if frameworks %}self.cpp_info.frameworks.extend([{% for it in frameworks %}"{{ it }}"{% if not loop.last %}, {% endif %}{% endfor %}]){% endif %}
+                {% if system_libs %}
+                self.cpp_info.system_libs = [
+                    {%- for it in system_libs -%}
+                    "{{ it }}"{% if not loop.last %}, {% endif %}
+                    {%- endfor -%}]
+                {% endif %}
+
+                {% if frameworks %}
+                self.cpp_info.frameworks.extend([
+                    {%- for it in frameworks -%}
+                    "{{ it }}"{% if not loop.last %}, {% endif %}
+                    {%- endfor -%}])
+                {% endif %}
     """))
 
-    conanfile_headeronly= Template(textwrap.dedent("""
+    conanfile_headeronly = Template(textwrap.dedent("""
         from conans import ConanFile
-        
+
         class HeaderOnly(ConanFile):
             name = "{{ref.name}}"
             version = "{{ref.version}}"
-            
+
             {% if requires %}
-            requires = {% for req in requires %}"{{ req }}"{% if not loop.last %}, {% endif %}{% endfor %}
+            requires =
+                {%- for req in requires -%}
+                "{{ req }}"{% if not loop.last %}, {% endif %}
+                {%- endfor -%}
             {% endif %}
-            
+
             def package_id(self):
                 self.info.header_only()
-        
+
             def package_info(self):
                 # It may declare system libraries
                 {% for it in libs_system %}
                 self.cpp_info.libs.append("{{ it }}")
                 {% endfor %}
 
-                {% if system_libs %}self.cpp_info.system_libs = [{% for it in system_libs %}"{{ it }}"{% if not loop.last %}, {% endif %}{% endfor %}]{% endif %}
-                {% if frameworks %}self.cpp_info.frameworks.extend([{% for it in frameworks %}"{{ it }}"{% if not loop.last %}, {% endif %}{% endfor %}]){% endif %}
+                {% if system_libs %}
+                self.cpp_info.system_libs = [
+                    {%- for it in system_libs -%}
+                    "{{ it }}"{% if not loop.last %}, {% endif %}
+                    {%- endfor -%}]
+                {% endif %}
+
+                {% if frameworks %}
+                self.cpp_info.frameworks.extend([
+                    {%- for it in frameworks -%}
+                    "{{ it }}"{% if not loop.last %}, {% endif %}
+                    {%- endfor -%}])
+                {% endif %}
     """))
 
     main_cpp = textwrap.dedent("""
@@ -98,39 +126,51 @@ class LinkOrderTest(unittest.TestCase):
         t = TestClient(path_with_spaces=False)
         cls._cache_folder = t.cache_folder
         t.save({
-            'libZ/conanfile.py': cls.conanfile.render(ref=libZ_ref,
-                                                      libs_extra=["Z2"], libs_system=["system_assumed"],
-                                                      system_libs=["system_lib"],
-                                                      frameworks=["Carbon"]),
-            'libH2/conanfile.py': cls.conanfile_headeronly.render(ref=libH2_ref,
-                                                                  libs_system=["header2_system_assumed"],
-                                                                  system_libs=["header2_system_lib"],
-                                                                  frameworks=["Security"]),
-            'libH/conanfile.py': cls.conanfile_headeronly.render(ref=libH_ref,
-                                                                 requires=[libH2_ref, libZ_ref],
-                                                                 libs_system=["header_system_assumed"],
-                                                                 system_libs=["header_system_lib"],
-                                                                 frameworks=["CoreAudio"]),
-            'libA/conanfile.py': cls.conanfile.render(ref=libA_ref,
-                                                      requires=[libH_ref],
-                                                      libs_extra=["A2"], libs_system=["system_assumed"],
-                                                      system_libs=["system_lib"],
-                                                      frameworks=["Carbon"]),
-            'libB/conanfile.py': cls.conanfile.render(ref=libB_ref,
-                                                      requires=[libA_ref],
-                                                      libs_extra=["B2"], libs_system=["system_assumed"],
-                                                      system_libs=["system_lib"],
-                                                      frameworks=["Carbon"]),
-            'libC/conanfile.py': cls.conanfile.render(ref=libC_ref,
-                                                      requires=[libA_ref],
-                                                      libs_extra=["C2"], libs_system=["system_assumed"],
-                                                      system_libs=["system_lib"],
-                                                      frameworks=["Carbon"]),
-            'libD/conanfile.py': cls.conanfile.render(ref=libD_ref,
-                                                      requires=[libB_ref, libC_ref],
-                                                      libs_extra=["D2"], libs_system=["system_assumed"],
-                                                      system_libs=["system_lib"],
-                                                      frameworks=["Carbon"]),
+            'libZ/conanfile.py': cls.conanfile.render(
+                ref=libZ_ref,
+                libs_extra=["Z2"],
+                libs_system=["system_assumed"],
+                system_libs=["system_lib"],
+                frameworks=["Carbon"]),
+            'libH2/conanfile.py': cls.conanfile_headeronly.render(
+                ref=libH2_ref,
+                libs_system=["header2_system_assumed"],
+                system_libs=["header2_system_lib"],
+                frameworks=["Security"]),
+            'libH/conanfile.py': cls.conanfile_headeronly.render(
+                ref=libH_ref,
+                requires=[libH2_ref, libZ_ref],
+                libs_system=["header_system_assumed"],
+                system_libs=["header_system_lib"],
+                frameworks=["CoreAudio"]),
+            'libA/conanfile.py': cls.conanfile.render(
+                ref=libA_ref,
+                requires=[libH_ref],
+                libs_extra=["A2"],
+                libs_system=["system_assumed"],
+                system_libs=["system_lib"],
+                frameworks=["Carbon"]),
+            'libB/conanfile.py': cls.conanfile.render(
+                ref=libB_ref,
+                requires=[libA_ref],
+                libs_extra=["B2"],
+                libs_system=["system_assumed"],
+                system_libs=["system_lib"],
+                frameworks=["Carbon"]),
+            'libC/conanfile.py': cls.conanfile.render(
+                ref=libC_ref,
+                requires=[libA_ref],
+                libs_extra=["C2"],
+                libs_system=["system_assumed"],
+                system_libs=["system_lib"],
+                frameworks=["Carbon"]),
+            'libD/conanfile.py': cls.conanfile.render(
+                ref=libD_ref,
+                requires=[libB_ref, libC_ref],
+                libs_extra=["D2"],
+                libs_system=["system_assumed"],
+                system_libs=["system_lib"],
+                frameworks=["Carbon"]),
         })
 
         # Create all of them
@@ -144,7 +184,10 @@ class LinkOrderTest(unittest.TestCase):
 
     def _validate_link_order(self, libs):
         # Check that all the libraries are there:
-        self.assertEqual(len(libs), 19 if platform.system() == "Darwin" else 16 if platform.system() == "Linux" else 26)
+        self.assertEqual(len(libs), 19 if platform.system() == "Darwin" else
+                         16 if platform.system() == "Linux" else 26,
+                         msg="Unexpected number of libs ({}):"
+                             " '{}'".format(len(libs), "', '".join(libs)))
         # - Regular libs
         ext = ".lib" if platform.system() == "Windows" else ".a"
         prefix = "" if platform.system() == "Windows" else "lib"
@@ -152,27 +195,34 @@ class LinkOrderTest(unittest.TestCase):
                                                       'libA', 'A2', 'libZ', 'Z2']}
         # - System libs
         ext_system = ".lib" if platform.system() == "Windows" else ""
-        expected_libs.update([it + ext_system for it in ['header_system_assumed', 'header_system_lib',
-                                                         'header2_system_assumed', 'header2_system_lib',
-                                                         'system_assumed', 'system_lib']])
+        expected_libs.update([it + ext_system for it in ['header_system_assumed',
+                                                         'header_system_lib',
+                                                         'header2_system_assumed',
+                                                         'header2_system_lib',
+                                                         'system_assumed',
+                                                         'system_lib']])
         # - Add MacOS frameworks
         if platform.system() == "Darwin":
             expected_libs.update(['CoreAudio', 'Security', 'Carbon'])
         # - Add Windows libs
         if platform.system() == "Windows":
-            expected_libs.update(['kernel32.lib', 'user32.lib', 'gdi32.lib', 'winspool.lib', 'shell32.lib', 'ole32.lib',
-                                  'oleaut32.lib', 'uuid.lib', 'comdlg32.lib', 'advapi32.lib'])
+            expected_libs.update(['kernel32.lib', 'user32.lib', 'gdi32.lib', 'winspool.lib',
+                                  'shell32.lib', 'ole32.lib', 'oleaut32.lib', 'uuid.lib',
+                                  'comdlg32.lib', 'advapi32.lib'])
         self.assertSetEqual(set(libs), expected_libs)
 
         # These are the first libraries and order is mandatory
-        mandatory_1 = [prefix + it + ext for it in ['libD', 'D2', 'libB', 'B2', 'libC', 'C2', 'libA', 'A2', ]]
+        mandatory_1 = [prefix + it + ext for it in ['libD', 'D2', 'libB', 'B2', 'libC',
+                                                    'C2', 'libA', 'A2', ]]
         self.assertListEqual(mandatory_1, libs[:len(mandatory_1)])
 
         # Then, libZ ones must be before system libraries that are consuming
         self.assertLess(libs.index(prefix + 'libZ' + ext),
-                        min(libs.index('system_assumed' + ext_system), libs.index('system_lib' + ext_system)))
+                        min(libs.index('system_assumed' + ext_system),
+                            libs.index('system_lib' + ext_system)))
         self.assertLess(libs.index(prefix + 'Z2' + ext),
-                        min(libs.index('system_assumed' + ext_system), libs.index('system_lib' + ext_system)))
+                        min(libs.index('system_assumed' + ext_system),
+                            libs.index('system_lib' + ext_system)))
         if platform.system() == "Darwin":
             self.assertLess(libs.index('liblibZ.a'), libs.index('Carbon'))
             self.assertLess(libs.index('libZ2.a'), libs.index('Carbon'))
@@ -215,8 +265,9 @@ class LinkOrderTest(unittest.TestCase):
     def _get_link_order_from_xcode(content):
         libs = []
         for line in content.splitlines():
-            if 'OTHER_LDFLAGS = " -Wl,-search_paths_first -Wl,-headerpad_max_install_names' in line.strip():
-                _, links = line.split('OTHER_LDFLAGS = " -Wl,-search_paths_first -Wl,-headerpad_max_install_names')
+            split_key = 'OTHER_LDFLAGS = " -Wl,-search_paths_first -Wl,-headerpad_max_install_names'
+            if split_key in line.strip():
+                _, links = line.split(split_key)
                 if links.strip() == '";':
                     continue
                 for it_lib in links.strip().split():
@@ -294,11 +345,12 @@ class LinkOrderTest(unittest.TestCase):
                           " -DCMAKE_CONFIGURATION_TYPES=Release".format(extra_cmake))
             t.run_command("cmake --build .", assert_error=True)
             # Get the actual link order from the CMake call
-            libs = self._get_link_order_from_xcode(t.load(os.path.join('executable.xcodeproj', 'project.pbxproj')))
+            libs = self._get_link_order_from_xcode(t.load(os.path.join('executable.xcodeproj',
+                                                                       'project.pbxproj')))
         else:
             t.run_command("cmake . {} -DCMAKE_VERBOSE_MAKEFILE:BOOL=True"
                           " -DCMAKE_BUILD_TYPE=Release".format(extra_cmake))
-            extra_build = "--config Release" if platform.system() == "Windows" else ""  # Windows uses VS
+            extra_build = "--config Release" if platform.system() == "Windows" else ""  # Windows VS
             t.run_command("cmake --build . {}".format(extra_build), assert_error=True)
             # Get the actual link order from the CMake call
             libs = self._get_link_order_from_cmake(str(t.out))

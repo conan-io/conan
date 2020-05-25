@@ -4,6 +4,7 @@ import unittest
 from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.test.utils.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, TestServer
 
 
@@ -21,9 +22,8 @@ class OnlySourceTest(unittest.TestCase):
             client.run("export . lasote/stable")
 
     def conan_test_test(self):
-        '''Checks --build in test command'''
-
-        client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
+        # Checks --build in test command
+        client = TestClient()
         self._create(client, "Hello0", "0.0")
         self._create(client, "Hello1", "1.1", ["Hello0/0.0@lasote/stable"])
 
@@ -32,31 +32,21 @@ class OnlySourceTest(unittest.TestCase):
         hello2conanfile = client.load(CONANFILE)
         client.save({CONANFILE: hello2conanfile})
 
-        test_conanfile = '''
-from conans.model.conan_file import ConanFile
-
-class DefaultNameConan(ConanFile):
-    settings = "os", "compiler", "arch"
-    requires = "Hello2/2.2@lasote/stable"
-    generators = "cmake"
-
-    def test(self):
-        pass
-        '''
-        client.save({"test/%s" % CONANFILE: test_conanfile})
+        conanfile = GenConanfile().with_test("pass").with_require_plain("Hello2/2.2@lasote/stable")
+        client.save({"test/conanfile.py": conanfile})
 
         # Should recognize the hello package
         # Will Fail because Hello0/0.0 and Hello1/1.1 has not built packages
         # and by default no packages are built
         client.run("create . lasote/stable", assert_error=True)
-        self.assertIn('Try to build it from sources with "--build Hello0"', client.out)
+        self.assertIn('Try to build from sources with "--build=Hello0 --build=Hello1"', client.out)
 
         # We generate the package for Hello0/0.0
         client.run("install Hello0/0.0@lasote/stable --build Hello0")
 
         # Still missing Hello1/1.1
         client.run("create . lasote/stable", assert_error=True)
-        self.assertIn('Try to build it from sources with "--build Hello1"', client.out)
+        self.assertIn('Try to build from sources with "--build=Hello1"', client.out)
 
         # We generate the package for Hello1/1.1
         client.run("install Hello1/1.1@lasote/stable --build Hello1")
@@ -64,13 +54,11 @@ class DefaultNameConan(ConanFile):
         # Now Hello2 should be built and not fail
         client.run("create . lasote/stable")
         self.assertNotIn("Can't find a 'Hello2/2.2@lasote/stable' package", client.out)
-        self.assertIn('Hello2/2.2@lasote/stable: Forced build from source',
-                      client.out)
+        self.assertIn('Hello2/2.2@lasote/stable: Forced build from source', client.out)
 
         # Now package is generated but should be built again
         client.run("create . lasote/stable")
-        self.assertIn('Hello2/2.2@lasote/stable: Forced build from source',
-                      client.out)
+        self.assertIn('Hello2/2.2@lasote/stable: Forced build from source', client.out)
 
     def build_policies_update_test(self):
         client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})

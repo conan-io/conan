@@ -1,6 +1,7 @@
 import os
 
 from conans.client.build.compiler_flags import rpath_flags, format_frameworks, format_framework_paths
+from conans.client.tools.oss import get_build_os_arch
 from conans.model import Generator
 
 """
@@ -25,7 +26,7 @@ class PkgConfigGenerator(Generator):
 
     @property
     def filename(self):
-        pass
+        return None
 
     @property
     def compiler(self):
@@ -63,9 +64,12 @@ class PkgConfigGenerator(Generator):
         libdirs_flags = ["-L${%s}" % name for name in libdir_vars]
         libnames_flags = ["-l%s " % name for name in (cpp_info.libs + cpp_info.system_libs)]
         shared_flags = cpp_info.sharedlinkflags + cpp_info.exelinkflags
-        the_os = (self.conanfile.settings.get_safe("os_build") or
-                  self.conanfile.settings.get_safe("os"))
-        rpaths = rpath_flags(the_os, self.compiler, ["${%s}" % libdir for libdir in libdir_vars])
+
+        os_build, _ = get_build_os_arch(self.conanfile)
+        if not hasattr(self.conanfile, 'settings_build'):
+            os_build = os_build or self.conanfile.settings.get_safe("os")
+
+        rpaths = rpath_flags(os_build, self.compiler, ["${%s}" % libdir for libdir in libdir_vars])
         frameworks = format_frameworks(cpp_info.frameworks, compiler=self.compiler)
         framework_paths = format_framework_paths(cpp_info.framework_paths, compiler=self.compiler)
         lines.append("Libs: %s" % _concat_if_not_empty([libdirs_flags,
@@ -110,13 +114,13 @@ def _generate_dir_lines(prefix_path, varname, dirs):
     varnames = []
     for i, directory in enumerate(dirs):
         directory = os.path.normpath(directory).replace("\\", "/")
-        varname = varname if i == 0 else "%s%d" % (varname, (i + 2))
+        name = varname if i == 0 else "%s%d" % (varname, (i + 1))
         prefix = ""
         if not os.path.isabs(directory):
             prefix = "${prefix}/"
         elif directory.startswith(prefix_path):
             prefix = "${prefix}/"
             directory = os.path.relpath(directory, prefix_path)
-        lines.append("%s=%s%s" % (varname, prefix, directory))
-        varnames.append(varname)
+        lines.append("%s=%s%s" % (name, prefix, directory))
+        varnames.append(name)
     return lines, varnames

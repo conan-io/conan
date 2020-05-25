@@ -482,10 +482,50 @@ class Pkg(ConanFile):
         self.assertIn("""ERROR: Missing binary: libc/0.1.0@user/testing:e12c9d31fa508340bb8d0c4f9dd4c98a5d0ac082
 
 libc/0.1.0@user/testing: WARN: Can't find a 'libc/0.1.0@user/testing' package for the specified settings, options and dependencies:
-- Settings: 
+- Settings:%s
 - Options: an_option=off, liba:an_option=off, libb:an_option=off, libbar:an_option=off, libfoo:an_option=off
 - Dependencies: libb/0.1.0@user/testing, libfoo/0.1.0@user/testing
 - Requirements: liba/0.1.0, libb/0.1.0, libbar/0.1.0, libfoo/0.1.0
 - Package ID: e12c9d31fa508340bb8d0c4f9dd4c98a5d0ac082
 
-ERROR: Missing prebuilt package for 'libc/0.1.0@user/testing'""", self.client.out)
+ERROR: Missing prebuilt package for 'libc/0.1.0@user/testing'""" % " ", self.client.out)
+
+
+class PackageIDErrorTest(unittest.TestCase):
+
+    def transitive_multi_mode_package_id_test(self):
+        # https://github.com/conan-io/conan/issues/6942
+        client = TestClient()
+        client.run("config set general.default_package_id_mode=full_package_mode")
+        client.run("config set general.full_transitive_package_id=True")
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("export . dep1/1.0@user/testing")
+        client.save({"conanfile.py": GenConanfile().with_require_plain("dep1/1.0@user/testing")})
+        client.run("export . dep2/1.0@user/testing")
+
+        pkg_revision_mode = "self.info.requires.package_revision_mode()"
+        client.save({"conanfile.py": GenConanfile().with_require_plain("dep1/1.0@user/testing")
+                                                   .with_package_id(pkg_revision_mode)})
+        client.run("export . dep3/1.0@user/testing")
+
+        client.save({"conanfile.py": GenConanfile().with_require_plain("dep2/1.0@user/testing")
+                                                   .with_require_plain("dep3/1.0@user/testing")})
+        client.run('create . consumer/1.0@user/testing --build')
+        self.assertIn("consumer/1.0@user/testing: Created", client.out)
+
+    def package_revision_mode_editable_test(self):
+        # Package revision mode crash when using editables
+        client = TestClient()
+        client.run("config set general.default_package_id_mode=package_revision_mode")
+        client.run("config set general.full_transitive_package_id=True")
+
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("editable add . dep1/1.0@user/testing")
+
+        client2 = TestClient(cache_folder=client.cache_folder)
+        client2.save({"conanfile.py": GenConanfile().with_require_plain("dep1/1.0@user/testing")})
+        client2.run("export . dep2/1.0@user/testing")
+
+        client2.save({"conanfile.py": GenConanfile().with_require_plain("dep2/1.0@user/testing")})
+        client2.run('create . consumer/1.0@user/testing --build')
+        self.assertIn("consumer/1.0@user/testing: Created", client2.out)

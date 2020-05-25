@@ -30,8 +30,10 @@ class BuildRequireOfBuildRequire(CrossBuildingBaseTestCase):
                 self.output.info(">> settings.os:".format(self.settings.os))
     """)
 
-    gtest = CrossBuildingBaseTestCase.gtest_tpl.render(build_requires=["cmake/testing@user/channel", ])
-    protoc = CrossBuildingBaseTestCase.protoc_tpl.render(build_requires=["cmake/testing@user/channel", ])
+    gtest = CrossBuildingBaseTestCase.gtest_tpl.render(
+        build_requires=((CrossBuildingBaseTestCase.cmake_ref, False), ))
+    protoc = CrossBuildingBaseTestCase.protoc_tpl.render(
+        build_requires=((CrossBuildingBaseTestCase.cmake_ref, False), ))
 
     def setUp(self):
         super(BuildRequireOfBuildRequire, self).setUp()

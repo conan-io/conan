@@ -5,6 +5,7 @@ import unittest
 
 from conans import load
 from conans.model.ref import ConanFileReference, PackageReference
+from conans.util.files import save
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import GenConanfile, TurboTestClient, NO_SETTINGS_PACKAGE_ID
 
@@ -138,3 +139,81 @@ class DeployGeneratorPermissionsTest(unittest.TestCase):
         header1_path = os.path.join(base1_path, "include", "header1.h")
         stat_info = os.stat(header1_path)
         self.assertTrue(stat_info.st_mode & stat.S_IXUSR)
+
+
+@unittest.skipIf(platform.system() == "Windows", "Permissions in NIX systems only")
+class DeployGeneratorSymbolicLinkTest(unittest.TestCase):
+
+    def setUp(self):
+        conanfile = GenConanfile()
+        conanfile.with_package_file("include/header.h", "whatever", link="include/header.h.lnk")
+        self.ref = ConanFileReference("name", "version", "user", "channel")
+
+        self.client = TurboTestClient()
+        self.client.create(self.ref, conanfile)
+        layout = self.client.cache.package_layout(self.ref)
+        package_folder = layout.package(PackageReference(self.ref, NO_SETTINGS_PACKAGE_ID))
+        self.header_path = os.path.join(package_folder, "include", "header.h")
+        self.link_path = os.path.join(package_folder, "include", "header.h.lnk")
+
+    def test_symbolic_links(self):
+        self.client.current_folder = temp_folder()
+        self.client.run("install %s -g deploy" % self.ref.full_str())
+        base_path = os.path.join(self.client.current_folder, "name")
+        header_path = os.path.join(base_path, "include", "header.h")
+        link_path = os.path.join(base_path, "include", "header.h.lnk")
+        self.assertTrue(os.path.islink(link_path))
+        self.assertFalse(os.path.islink(header_path))
+        linkto = os.path.join(os.path.dirname(link_path), os.readlink(link_path))
+        self.assertEqual(linkto, header_path)
+
+    def test_existing_link_symbolic_links(self):
+        self.client.current_folder = temp_folder()
+        base_path = os.path.join(self.client.current_folder, "name")
+        header_path = os.path.join(base_path, "include", "header.h")
+        link_path = os.path.join(base_path, "include", "header.h.lnk")
+        save(link_path, "")
+        self.client.run("install %s -g deploy" % self.ref.full_str())
+        self.assertTrue(os.path.islink(link_path))
+        self.assertFalse(os.path.islink(header_path))
+        linkto = os.path.join(os.path.dirname(link_path), os.readlink(link_path))
+        self.assertEqual(linkto, header_path)
+
+    def test_existing_real_link_symbolic_links(self):
+        self.client.current_folder = temp_folder()
+        base_path = os.path.join(self.client.current_folder, "name")
+        header_path = os.path.join(base_path, "include", "header.h")
+        link_path = os.path.join(base_path, "include", "header.h.lnk")
+        save(header_path, "")
+        os.symlink(header_path, link_path)
+        self.client.run("install %s -g deploy" % self.ref.full_str())
+        self.assertTrue(os.path.islink(link_path))
+        self.assertFalse(os.path.islink(header_path))
+        linkto = os.path.join(os.path.dirname(link_path), os.readlink(link_path))
+        self.assertEqual(linkto, header_path)
+
+    def test_existing_broken_link_symbolic_links(self):
+        self.client.current_folder = temp_folder()
+        base_path = os.path.join(self.client.current_folder, "name")
+        header_path = os.path.join(base_path, "include", "header.h")
+        link_path = os.path.join(base_path, "include", "header.h.lnk")
+        save(header_path, "")
+        os.symlink(header_path, link_path)
+        os.remove(header_path)  # This will make it a broken symlink
+        self.client.run("install %s -g deploy" % self.ref.full_str())
+        self.assertTrue(os.path.islink(link_path))
+        self.assertFalse(os.path.islink(header_path))
+        linkto = os.path.join(os.path.dirname(link_path), os.readlink(link_path))
+        self.assertEqual(linkto, header_path)
+
+    def test_existing_file_symbolic_links(self):
+        self.client.current_folder = temp_folder()
+        base_path = os.path.join(self.client.current_folder, "name")
+        header_path = os.path.join(base_path, "include", "header.h")
+        link_path = os.path.join(base_path, "include", "header.h.lnk")
+        save(header_path, "")
+        self.client.run("install %s -g deploy" % self.ref.full_str())
+        self.assertTrue(os.path.islink(link_path))
+        self.assertFalse(os.path.islink(header_path))
+        linkto = os.path.join(os.path.dirname(link_path), os.readlink(link_path))
+        self.assertEqual(linkto, header_path)
