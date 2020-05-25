@@ -28,8 +28,6 @@ class Meson(object):
         self._conanfile = conanfile
         self._settings = conanfile.settings
         self._append_vcvars = append_vcvars
-        self.exe_wrapper = 'false'
-        if exe_wrapper:
         self.exe_wrapper = exe_wrapper or self.exe_wrapper
         self._os = self._ss("os")
         self._compiler = self._ss("compiler")
@@ -159,7 +157,7 @@ class Meson(object):
         }
         if hasattr(self._conanfile,'settings_build'):
             build_cpu_family, build_cpu, build_endian = cpu_translate[str(self._conanfile.settings_build.arch)]
-            os_build = str(self._conanfile.settings_build.os_build).lower()
+            os_build = get_build_os_arch(self._conanfile).lower()
 
         os_host = str(self._conanfile.settings.os).lower()
         cpu_family, cpu, endian = cpu_translate[str(self._conanfile.settings.arch)]
