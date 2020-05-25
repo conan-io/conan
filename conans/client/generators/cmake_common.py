@@ -344,7 +344,7 @@ class CMakeCommonMacros:
                 (CMAKE_VERSION VERSION_LESS "3.12" AND ("${CONAN_CMAKE_CXX_STANDARD}" STREQUAL "20" OR "${CONAN_CMAKE_CXX_STANDARD}" STREQUAL "gnu20")))
                 if(CONAN_STD_CXX_FLAG)
                     conan_message(STATUS "Conan setting CXX_FLAGS flags: ${CONAN_STD_CXX_FLAG}")
-                    set(CONAN_CXX_FLAGS "${CONAN_STD_CXX_FLAG} ${CONAN_CXX_FLAGS}")
+                    set(CMAKE_CXX_FLAGS "${CONAN_STD_CXX_FLAG} ${CMAKE_CXX_FLAGS}")
                 endif()
             else()
                 if(CONAN_CMAKE_CXX_STANDARD)
@@ -368,8 +368,8 @@ class CMakeCommonMacros:
                 #     libMyLib0.dylib (compatibility version 0.0.0, current version 0.0.0)
                 #     /usr/lib/libc++.1.dylib (compatibility version 1.0.0, current version 120.0.0)
                 #     /usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1197.1.1)
-                set(CMAKE_SKIP_RPATH 1 CACHE BOOL "rpaths" FORCE)  # AVOID RPATH FOR *.dylib, ALL LIBS BETWEEN THEM AND THE EXE
-                                                                   # SHOULD BE ON THE LINKER RESOLVER PATH (./ IS ONE OF THEM)
+                set(CMAKE_SKIP_RPATH 1)  # AVOID RPATH FOR *.dylib, ALL LIBS BETWEEN THEM AND THE EXE
+                                         # SHOULD BE ON THE LINKER RESOLVER PATH (./ IS ONE OF THEM)
                 # Policy CMP0068
                 # We want the old behavior, in CMake >= 3.9 CMAKE_SKIP_RPATH won't affect the install_name in OSX
                 set(CMAKE_INSTALL_NAME_DIR "")
