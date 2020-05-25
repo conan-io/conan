@@ -227,7 +227,6 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
                          test_package_cmakelists)
         self.assertIn("Hello World!", out)
         self.assertIn("Bye World!", out)
-        print(out)
 
     def find_package_components_test(self):
         conanfile1 = textwrap.dedent("""
@@ -466,7 +465,6 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
         """)
         out = self._test(conanfile1, cmakelists1, conanfile2, cmakelists2, test_package_conanfile,
                          test_package_cmakelists)
-        print(out)
         self.assertIn("Hello World!", out)
         self.assertIn("Bye World!", out)
 

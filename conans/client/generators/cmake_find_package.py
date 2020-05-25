@@ -47,7 +47,6 @@ class CMakeFindPackageGenerator(Generator):
                 add_library({global_name}::{name} INTERFACE IMPORTED)
                 set_target_properties({global_name}::{name} PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${{{name}_INCLUDE_DIRS}}")
                 set_property(TARGET {global_name}::{name} PROPERTY INTERFACE_LINK_DIRECTORIES "${{{name}_LIB_DIRS}}")
-                conan_message(STATUS "Conan: COMPONENT {global_name}::{name} libs -> ${{{name}_LIBS}}")
                 set_property(TARGET {global_name}::{name} PROPERTY INTERFACE_LINK_LIBRARIES "${{{name}_LIBS}};${{{name}_LINKER_FLAGS_LIST}}")
                 set_property(TARGET {global_name}::{name} PROPERTY INTERFACE_COMPILE_DEFINITIONS ${{{name}_COMPILE_DEFINITIONS}})
                 set_property(TARGET {global_name}::{name} PROPERTY INTERFACE_COMPILE_OPTIONS "${{{name}_COMPILE_OPTIONS_LIST}}")
