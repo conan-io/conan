@@ -75,3 +75,5 @@ class CreateEditablePackageTest(unittest.TestCase):
         t.save(files={'othername.py': self.conanfile})
         t.run('editable add ./othername.py {}'.format(ref))
         self.assertIn("Reference 'lib/version@user/name' in editable mode", t.out)
+        t.run('install {}'.format(ref))
+        self.assertIn("Installing package: {}".format(ref), t.out)
