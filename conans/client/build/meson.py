@@ -17,7 +17,7 @@ from conans.util.runners import version_runner
 
 class Meson(object):
 
-    def __init__(self, conanfile, backend=None, build_type=None, append_vcvars=False,exe_wrapper=None):
+    def __init__(self, conanfile, backend=None, build_type=None, append_vcvars=False, exe_wrapper=None):
         """
         :param conanfile: Conanfile instance (or settings for retro compatibility)
         :param backend: Generator name to use or none to autodetect.
