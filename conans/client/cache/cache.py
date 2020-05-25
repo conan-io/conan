@@ -275,6 +275,7 @@ class ClientCache(object):
             remove(self.settings_path)
         self.initialize_settings()
 
+
 def _mix_settings_with_env(settings):
     """Reads CONAN_ENV_XXXX variables from environment
     and if it's defined uses these value instead of the default
