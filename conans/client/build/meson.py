@@ -146,7 +146,7 @@ class Meson(object):
         ld = os.environ.get('LD', 'ld')
         ar = os.environ.get('AR', 'ar')
         strip = os.environ.get('STRIP', 'strip')
-        ranlib = os.environ.get('RANLIB','ranlib')
+        ranlib = os.environ.get('RANLIB', 'ranlib')
         libdir = environ_append['PKG_CONFIG_PATH']
 
         with open(cross_filename, "w") as fd:
