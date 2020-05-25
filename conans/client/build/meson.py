@@ -126,10 +126,36 @@ class Meson(object):
         return defs_to_string(self.options)
 
     def _configure_cross_compile(self, cross_filename, environ_append):
+
+        arm=('arm','arm','little')
         cpu_translate = {
-            'armv8': ('aarch64', 'aarch64', 'little'),
-            'x86': ('x86', 'x86', 'little'),
-            'x86_64': ('x86_64', 'x86_64', 'little'),
+            'x86' : ('x86', 'x86', 'little'),
+            'x86_64' : ('x86_64', 'x86_64', 'little'),
+            'x86' : ('x86','x86','little'),
+            'ppc32be' : ('ppc','ppc','big'),
+            'ppc32' : ('ppc','ppc','little'),
+            'ppc64le' : ('ppc64','ppc64','little'),
+            'ppc64' : ('ppc64','ppc64','big'),
+            'armv4' : arm,
+            'armv4i' : arm,
+            'armv5el' : arm,
+            'armv5hf' : arm,
+            'armv6' : arm,
+            'armv7' : arm,
+            'armv7hf' : arm,
+            'armv7s' : arm,
+            'armv7k' : arm,
+            'armv8_32' : arm,
+            'armv8' : ('aarch64', 'aarch64', 'little'),
+            'armv8.3' : ('aarch64', 'aarch64', 'little'),
+            'sparc' : ('sparc','sparc','big'),
+            'sparcv9' : ('sparc64','sparc64','big'),
+            'mips' : ('mips','mips','big'),
+            'mips64' : ('mips64','mips64','big'),
+            'avr' : ('avr','avr','little'),
+            's390' : ('s390','s390','big'),
+            's390x' : ('s390','s390','big'),
+            'wasm' : ('wasm','wasm','little'),
         }
         if hasattr(self._conanfile,'settings_build'):
             build_cpu_family, build_cpu, build_endian = cpu_translate[str(self._conanfile.settings_build.arch)]
