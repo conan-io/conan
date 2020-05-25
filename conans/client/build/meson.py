@@ -144,7 +144,7 @@ class Meson(object):
         cc = os.environ.get('CC', 'cc')
         cpp = os.environ.get('CXX', 'c++')
         ld = os.environ.get('LD','ld')
-        ar = os.environ.get('AR','ar')
+        ar = os.environ.get('AR', 'ar')
         strip = os.environ.get('STRIP', 'strip')
         ranlib = os.environ.get('RANLIB','ranlib')
         libdir = environ_append['PKG_CONFIG_PATH']
