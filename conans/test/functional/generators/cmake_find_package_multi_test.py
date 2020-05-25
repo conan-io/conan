@@ -398,6 +398,8 @@ class Conan(ConanFile):
 
         t.run("install requirement/version@ -g cmake_find_package_multi -s build_type=Release")
         t.run("install requirement/version@ -g cmake_find_package_multi -s build_type=Debug")
+        print(t.out)
+        print(t.current_folder)
         content_release = t.load("requirementTarget-release.cmake")
         content_debug = t.load("requirementTarget-debug.cmake")
 
