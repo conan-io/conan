@@ -181,8 +181,8 @@ the old general
     def test_migration_editables_to_conanfile_name(self):
         # Create the old editable_packages.json file (and user workspace)
         tmp_folder = temp_folder()
-        conanfile1 = os.path.join(tmp_folder, 'dir1/conanfile.py')
-        conanfile2 = os.path.join(tmp_folder, 'dir2/conanfile.py')
+        conanfile1 = os.path.join(tmp_folder, 'dir1', 'conanfile.py')
+        conanfile2 = os.path.join(tmp_folder, 'dir2', 'conanfile.py')
         save(conanfile1, "anything")
         save(conanfile2, "anything")
         save(os.path.join(tmp_folder, EDITABLE_PACKAGES_FILE),
