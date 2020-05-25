@@ -30,7 +30,7 @@ class Meson(object):
         self._append_vcvars = append_vcvars
         self.exe_wrapper='false'
         if exe_wrapper:
-            self.exe_wrapper=exe_wrapper
+        self.exe_wrapper = exe_wrapper or self.exe_wrapper
         self._os = self._ss("os")
         self._compiler = self._ss("compiler")
         self._compiler_version = self._ss("compiler.version")
