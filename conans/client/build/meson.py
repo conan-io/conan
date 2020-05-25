@@ -240,9 +240,10 @@ class Meson(object):
         cross_option = None
         environ_append = {"PKG_CONFIG_PATH": pc_paths}
         if tools.cross_building(self._conanfile.settings):
-            cross_filename = os.path.join(self.build_dir, "cross_file.txt")
-            cross_option = "--cross-file=%s" % cross_filename
-            self._configure_cross_compile(cross_filename, environ_append)
+            if not "--cross-file" in args:
+                cross_filename = os.path.join(self.build_dir, "cross_file.txt")
+                cross_option = "--cross-file=%s" % cross_filename
+                self._configure_cross_compile(cross_filename, environ_append)
 
         arg_list = join_arguments([
             "--backend=%s" % self.backend,
