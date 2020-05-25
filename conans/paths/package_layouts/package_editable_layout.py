@@ -11,12 +11,12 @@ from conans.paths import CONANFILE
 
 class PackageEditableLayout(object):
 
-    def __init__(self, base_folder, layout_file, ref, conanfile=CONANFILE):
+    def __init__(self, base_folder, layout_file, ref, conanfile_name=CONANFILE):
         assert isinstance(ref, ConanFileReference)
         self._ref = ref
         self._base_folder = base_folder
         self._layout_file = layout_file
-        self._conanfile_name = conanfile
+        self._conanfile_name = conanfile_name
 
     @property
     def ref(self):
