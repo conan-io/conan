@@ -103,11 +103,18 @@ class CMakeFindPackageGenerator(Generator):
             for require in comp.requires:
                 if "::" in require:
                     comp_require_dep_name = require[:require.find("::")]
-                    comp_require_comp_name = require[require.find("::")+2:]
+                    if comp_require_dep_name not in self.deps_build_info.deps:
+                        raise ConanException("Component '%s' not found: '%s' is not a package "
+                                             "requirement" % (require, comp_require_dep_name))
                     comp_require_dep_findname = self.deps_build_info[comp_require_dep_name].get_name("cmake_find_package")
-                    if comp_require_comp_name not in self.deps_build_info[comp_require_dep_name].components:
-                        raise ConanException("Error!")
-                    comp_require_comp_findname = self.deps_build_info[comp_require_dep_name].components[comp_require_comp_name].get_name("cmake_find_package")
+                    comp_require_comp_name = require[require.find("::")+2:]
+                    if comp_require_comp_name in self.deps_build_info.deps:
+                        comp_require_comp_findname = comp_require_dep_findname
+                    elif comp_require_comp_name in self.deps_build_info[comp_require_dep_name].components:
+                        comp_require_comp_findname = self.deps_build_info[comp_require_dep_name].components[comp_require_comp_name].get_name("cmake_find_package")
+                    else:
+                        raise ConanException("Component '%s' not found in '%s' package requirement"
+                                             % (require, comp_require_dep_name))
                     comp_requires_findnames.append("{}::{}".format(comp_require_dep_findname, comp_require_comp_findname))
                 else:
                     comp_require_findname = self.deps_build_info[dep_name].components[require].get_name("cmake_find_package")
