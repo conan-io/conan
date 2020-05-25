@@ -7,7 +7,7 @@ from conans.client.build import defs_to_string, join_arguments
 from conans.client.build.autotools_environment import AutoToolsBuildEnvironment
 from conans.client.build.cppstd_flags import cppstd_from_settings
 from conans.client.tools.env import environment_append, _environment_add
-from conans.client.tools.oss import args_to_string
+from conans.client.tools.oss import args_to_string, get_build_os_arch
 from conans.errors import ConanException
 from conans.model.build_info import DEFAULT_BIN, DEFAULT_INCLUDE, DEFAULT_LIB
 from conans.model.version import Version
@@ -28,6 +28,7 @@ class Meson(object):
         self._conanfile = conanfile
         self._settings = conanfile.settings
         self._append_vcvars = append_vcvars
+        self.exe_wrapper='false'
         self.exe_wrapper = exe_wrapper or self.exe_wrapper
         self._os = self._ss("os")
         self._compiler = self._ss("compiler")
@@ -157,7 +158,7 @@ class Meson(object):
         }
         if hasattr(self._conanfile,'settings_build'):
             build_cpu_family, build_cpu, build_endian = cpu_translate[str(self._conanfile.settings_build.arch)]
-            os_build = get_build_os_arch(self._conanfile).lower()
+            os_build, _ = get_build_os_arch(self._conanfile)
 
         os_host = str(self._conanfile.settings.os).lower()
         cpu_family, cpu, endian = cpu_translate[str(self._conanfile.settings.arch)]
@@ -182,7 +183,7 @@ class Meson(object):
                     cpu = '{build_cpu}'
                     endian = '{build_endian}'
                 """.format(
-                    os_build = os_build,
+                    os_build = os_build.lower(),
                     build_cpu_family = build_cpu_family,
                     build_cpu = build_cpu,
                     build_endian = build_endian,
