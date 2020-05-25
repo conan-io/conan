@@ -14,6 +14,7 @@ from conans.model.manifest import FileTreeManifest
 from conans.model.package_metadata import PackageMetadata
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.version import Version
+from conans.paths import CONANFILE
 from conans.paths import EXPORT_SOURCES_DIR_OLD
 from conans.paths import PACKAGE_METADATA
 from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
@@ -105,6 +106,9 @@ class ClientMigrator(Migrator):
 
         if old_version < Version("1.19.0"):
             migrate_localdb_refresh_token(self.cache, self.out)
+
+        if old_version < Version("1.26.0"):
+            migrate_editables_use_conanfile_name(self.cache, self.out)
 
 
 def _get_refs(cache):
@@ -303,3 +307,16 @@ def migrate_plugins_to_hooks(cache, output=None):
         os.rename(plugins_path, cache.hooks_path)
     conf_path = cache.conan_conf_path
     replace_in_file(conf_path, "[plugins]", "[hooks]", strict=False, output=output)
+
+
+def migrate_editables_use_conanfile_name(cache, output=None):
+    """
+    In Conan v1.26 we store full path to the conanfile in the editable_package.json file, before
+    it Conan was storing just the directory and assume that the 'conanfile' was a file
+    named 'conanfile.py' inside that folder
+    """
+    for ref, data in cache.editable_packages.edited_refs.items():
+        path = data["path"]
+        if os.path.isdir(path):
+            path = os.path.join(path, CONANFILE)
+        cache.editable_packages.add(ref, path, layout=data["layout"])

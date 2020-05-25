@@ -98,15 +98,10 @@ class ClientCache(object):
         assert isinstance(ref, ConanFileReference), "It is a {}".format(type(ref))
         edited_ref = self.editable_packages.get(ref.copy_clear_rev())
         if edited_ref:
-            base_path = edited_ref["path"]
+            conanfile_path = edited_ref["path"]
             layout_file = edited_ref["layout"]
-            if os.path.isfile(base_path):
-                conanfile_name = os.path.basename(base_path)
-                base_path = os.path.dirname(base_path)
-                return PackageEditableLayout(base_path, layout_file, ref, conanfile_name)
-            else:
-                # FIXME: Remove in Conan 2.0, introduced for <= 1.25 backward compatibility
-                return PackageEditableLayout(base_path, layout_file, ref)
+            return PackageEditableLayout(os.path.dirname(conanfile_path), layout_file, ref,
+                                         conanfile_path)
         else:
             check_ref_case(ref, self.store)
             base_folder = os.path.normpath(os.path.join(self.store, ref.dir_repr()))
