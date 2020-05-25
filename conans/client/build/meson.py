@@ -132,7 +132,7 @@ class Meson(object):
             'x86_64': ('x86_64', 'x86_64', 'little'),
         }
         if hasattr(self._conanfile,'settings_build'):
-            build_cpu_family,build_cpu ,build_endian = cpu_translate[str(self._conanfile.settings_build.arch)]
+            build_cpu_family, build_cpu, build_endian = cpu_translate[str(self._conanfile.settings_build.arch)]
             os_build = str(self._conanfile.settings_build.os_build).lower()
 
         os_host = str(self._conanfile.settings.os).lower()
