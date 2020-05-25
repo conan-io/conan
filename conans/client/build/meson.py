@@ -28,7 +28,7 @@ class Meson(object):
         self._conanfile = conanfile
         self._settings = conanfile.settings
         self._append_vcvars = append_vcvars
-        self.exe_wrapper='false'
+        self.exe_wrapper = 'false'
         if exe_wrapper:
         self.exe_wrapper = exe_wrapper or self.exe_wrapper
         self._os = self._ss("os")
