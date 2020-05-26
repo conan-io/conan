@@ -232,7 +232,7 @@ class AdjustAutoTestCase(unittest.TestCase):
         if not self.use_toolchain:
             self.assertEqual(libcxx, cmake_cache["CONAN_LIBCXX:UNINITIALIZED"])
         else:
-            self.assertEqual(libcxx, cmake_cache["CONAN_LIBCXX:STRING"])
+            self.assertNotIn("CONAN_LIBCXX", cmake_cache_keys)
 
     @parameterized.expand([("libstdc++",), ("libstdc++11", ), ])
     @unittest.skipIf(platform.system() != "Linux", "libcxx for Linux")
@@ -399,12 +399,14 @@ class AdjustAutoTestCase(unittest.TestCase):
         # FIXME: Cache doesn't match those in CMakeLists
         self.assertNotIn("CMAKE_CXX_STANDARD", cmake_cache_keys)
         self.assertNotIn("CMAKE_CXX_EXTENSIONS", cmake_cache_keys)
-        type_str = "STRING" if self.use_toolchain else "UNINITIALIZED"
-        cxx_flag_str = "gnu++" if "gnu" in cppstd else "c++"
-        self.assertEqual("-std={}14".format(cxx_flag_str), cmake_cache["CONAN_STD_CXX_FLAG:" + type_str])
         if self.use_toolchain:
-            self.assertEqual(extensions_str, cmake_cache["CONAN_CMAKE_CXX_EXTENSIONS:STRING"])
-            self.assertEqual("14", cmake_cache["CONAN_CMAKE_CXX_STANDARD:STRING"])
+            self.assertNotIn("CONAN_STD_CXX_FLAG", cmake_cache_keys)
+            self.assertNotIn("CONAN_CMAKE_CXX_EXTENSIONS", cmake_cache_keys)
+            self.assertNotIn("CONAN_CMAKE_CXX_STANDARD", cmake_cache_keys)
+        else:
+            type_str = "STRING" if self.use_toolchain else "UNINITIALIZED"
+            cxx_flag_str = "gnu++" if "gnu" in cppstd else "c++"
+            self.assertEqual("-std={}14".format(cxx_flag_str), cmake_cache["CONAN_STD_CXX_FLAG:" + type_str])
 
     @parameterized.expand([("14",), ("17",), ])
     @unittest.skipUnless(platform.system() == "Windows", "Only for windows")
@@ -435,8 +437,11 @@ class AdjustAutoTestCase(unittest.TestCase):
         self.assertIn("-- Conan: Adjusting fPIC flag ({})".format(fpic_str), configure_out)
         self.assertIn(">> CMAKE_POSITION_INDEPENDENT_CODE: {}".format(fpic_str), configure_out)
 
-        type_str = "STRING" if self.use_toolchain else "UNINITIALIZED"
-        self.assertEqual(fpic_str, cmake_cache["CONAN_CMAKE_POSITION_INDEPENDENT_CODE:" + type_str])
+        if self.use_toolchain:
+            self.assertNotIn("CONAN_CMAKE_POSITION_INDEPENDENT_CODE", cmake_cache_keys)
+        else:
+            type_str = "STRING" if self.use_toolchain else "UNINITIALIZED"
+            self.assertEqual(fpic_str, cmake_cache["CONAN_CMAKE_POSITION_INDEPENDENT_CODE:" + type_str])
         self.assertNotIn("CMAKE_POSITION_INDEPENDENT_CODE", cmake_cache_keys)
 
     @unittest.skipIf(platform.system() != "Darwin", "rpath is only handled for Darwin")
