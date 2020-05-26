@@ -58,6 +58,6 @@ class ExportCommandTestCase(unittest.TestCase):
                                                                     rev_value=rev_value)})
         self.client = TestClient()
         self.client.current_folder = self.path
-        self.client.run("export . lib/version@user/channel", assert_error=bool(auto_url))
+        self.client.run("export . lib/version@user/channel")
         if auto_url:
-            self.assertIn("ERROR: Repo origin cannot be deduced", self.client.out)
+            self.assertIn("Repo origin deduced by 'auto': None", self.client.out)
