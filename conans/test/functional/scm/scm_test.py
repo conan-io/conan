@@ -1033,8 +1033,62 @@ class SCMBlockUploadTest(unittest.TestCase):
         # The upload has to fail, no "auto" fields are allowed
         client.run("upload lib/0.1@user/channel -r default", assert_error=True)
         self.assertIn("ERROR: lib/0.1@user/channel: Upload recipe to 'default' failed: "
-                      "The recipe has 'scm.url' with None or 'auto', or 'scm.revision' with 'auto' values. "
-                      "Use '--force' to ignore", client.out)
+                      "The recipe has 'scm.url' with None or 'auto', or 'scm.revision' "
+                      "with 'auto' values. Use '--force' to ignore", client.out)
         # The upload with --force should work
         client.run("upload lib/0.1@user/channel -r default --force")
         self.assertIn("Uploaded conan recipe", client.out)
+
+    def test_export_blocking_type_none(self):
+        client = TestClient(default_server_user=True)
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class ConanLib(ConanFile):
+                scm = {
+                    "type": None,
+                    "url": "some url",
+                    "revision": "some_rev",
+                }
+            """)
+        client.save({"conanfile.py": conanfile})
+        client.run("export . pkg/0.1@user/channel", assert_error=True)
+        self.assertIn("ERROR: SCM not supported: None", client.out)
+
+    def test_create_blocking_url_none(self):
+        # If URL is None, it cannot create locally, as it will try to clone it
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class ConanLib(ConanFile):
+                scm = {
+                    "type": "git",
+                    "url": None,
+                    "revision": "some_rev",
+                }
+            """)
+        client.save({"conanfile.py": conanfile})
+        client.run("create . pkg/0.1@user/channel", assert_error=True)
+        self.assertIn("Couldn't checkout SCM:", client.out)
+
+    def test_upload_blocking_url_none_revision_auto(self):
+        # if the revision is auto and the url is None, it can be created locally, but not uploaded
+        client = TestClient(default_server_user=True)
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class ConanLib(ConanFile):
+                scm = {
+                    "type": "git",
+                    "url": None,
+                    "revision": "auto",
+                }
+            """)
+        client.save({"conanfile.py": conanfile})
+        create_local_git_repo(folder=client.current_folder)
+        client.run("create . pkg/0.1@user/channel")
+        self.assertIn("pkg/0.1@user/channel: WARN: origin is None, upload' command", client.out)
+
+        client.run("upload pkg/0.1@user/channel -r default", assert_error=True)
+        self.assertIn("ERROR: pkg/0.1@user/channel: Upload recipe to 'default' failed: "
+                      "The recipe has 'scm.url' with None or 'auto', or 'scm.revision' "
+                      "with 'auto' values. Use '--force' to ignore", client.out)
+        client.run("upload pkg/0.1@user/channel -r default --force")
