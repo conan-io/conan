@@ -377,6 +377,40 @@ class PyRequiresExtendTest(unittest.TestCase):
         self.assertIn("Pkg/0.1@user/testing: Author! frodo", client.out)
         self.assertIn("Pkg/0.1@user/testing: os: Windows arch: armv7", client.out)
 
+    def failure_init_method_test(self):
+        client = TestClient()
+        base = textwrap.dedent("""
+            from conans import ConanFile
+            class MyBase(object):
+                settings = "os", "compiler", "build_type", "arch"
+                options = {"base_option": [True, False]}
+                default_options = {"base_option": False}
+
+            class BaseConanFile(ConanFile):
+                pass
+            """)
+        client.save({"conanfile.py": base})
+        client.run("export . base/1.0@")
+        derived = textwrap.dedent("""
+            from conans import ConanFile
+            class DerivedConan(ConanFile):
+                settings = "os", "compiler", "build_type", "arch"
+
+                python_requires = "base/1.0"
+                python_requires_extend = 'base.MyBase'
+
+                options = {"derived_option": [True, False]}
+                default_options = {"derived_option": False}
+
+                def init(self):
+                    base = self.python_requires['base'].module.MyBase
+                    self.options.update(base.options)
+                    self.default_options.update(base.default_options)
+                """)
+        client.save({"conanfile.py": derived})
+        client.run("create . pkg/0.1@ -o base_option=True")
+        self.assertIn("pkg/0.1: Created package", client.out)
+
     def transitive_imports_conflicts_test(self):
         # https://github.com/conan-io/conan/issues/3874
         client = TestClient()
