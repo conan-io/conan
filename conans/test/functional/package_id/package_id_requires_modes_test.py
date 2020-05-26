@@ -1,4 +1,5 @@
 import os
+import textwrap
 import unittest
 
 from conans.model.info import ConanInfo
@@ -528,8 +529,16 @@ class PackageIDErrorTest(unittest.TestCase):
                     .with_package_id(pkg_revision_mode)})
         client.run("export . dep2/1.0@user/testing")
 
-        client.save({"conanfile.py": GenConanfile().with_require_plain("dep2/1.0@user/testing")})
+        consumer = textwrap.dedent("""
+            from conans import ConanFile
+            class Consumer(ConanFile):
+                requires = "dep2/1.0@user/testing"
+                def build(self):
+                    self.output.info("PKGNAMES: %s" % sorted(self.info.requires.pkg_names))
+                """)
+        client.save({"conanfile.py": consumer})
         client.run('create . consumer/1.0@user/testing --build')
+        self.assertIn("consumer/1.0@user/testing: PKGNAMES: ['dep1', 'dep2']", client.out)
         self.assertIn("consumer/1.0@user/testing: Created", client.out)
 
     def package_revision_mode_editable_test(self):
