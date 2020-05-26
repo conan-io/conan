@@ -40,7 +40,8 @@ class Pkg(ConanFile):
         self.assertIn("set(CONAN_LIBS PkgA PkgC ${CONAN_LIBS})", conanbuildinfo)
         client.run("info . --graph=file.html")
         html = client.load("file.html")
-        self.assertEqual(1, html.count("label: 'PkgC/0.1', shape: 'box'"))
+        self.assertEqual(1, html.count("label: 'PkgC/0.1',\n                        "
+                                       "shape: 'box'"))
 
     def test_private_regression_skip(self):
         # https://github.com/conan-io/conan/issues/3166

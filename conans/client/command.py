@@ -10,6 +10,7 @@ from difflib import get_close_matches
 from six.moves import input as user_input
 
 from conans import __version__ as client_version
+from conans.assets import templates
 from conans.client.cmd.frogarian import cmd_frogarian
 from conans.client.cmd.uploader import UPLOAD_POLICY_FORCE, \
     UPLOAD_POLICY_NO_OVERWRITE, UPLOAD_POLICY_NO_OVERWRITE_RECIPE, UPLOAD_POLICY_SKIP
@@ -730,7 +731,11 @@ class Command(object):
                                      % (only, str_only_options))
 
             if args.graph:
-                self._outputer.info_graph(args.graph, deps_graph, get_cwd())
+                if args.graph.endswith(".html"):
+                    template = self._conan.app.cache.get_template(templates.INFO_GRAPH_HTML)
+                else:
+                    template = self._conan.app.cache.get_template(templates.INFO_GRAPH_DOT)
+                self._outputer.info_graph(args.graph, deps_graph, get_cwd(), template=template)
             if args.json:
                 json_arg = True if args.json == "1" else args.json
                 self._outputer.json_info(deps_graph, json_arg, get_cwd(), show_paths=args.paths)

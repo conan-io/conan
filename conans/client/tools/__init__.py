@@ -7,6 +7,8 @@ from .env import *
 # noinspection PyUnresolvedReferences
 from .files import *
 # noinspection PyUnresolvedReferences
+from .intel import *
+# noinspection PyUnresolvedReferences
 from .net import *
 # noinspection PyUnresolvedReferences
 from .oss import *
