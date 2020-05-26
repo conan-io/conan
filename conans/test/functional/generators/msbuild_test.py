@@ -421,10 +421,10 @@ int main(){
 """
 
 
+@unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
 class MSBuildGeneratorTest(unittest.TestCase):
 
     @attr('slow')
-    @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
     def msbuild_generator_test(self):
         client = TestClient()
         # Upload to alternative server Hello0 but Hello1 to the default
@@ -475,3 +475,10 @@ class MSBuildGeneratorTest(unittest.TestCase):
         client.run("install mypkg/0.1@ -g msbuild")
         self.assertIn("Generator msbuild created conan_deps.props", client.out)
         self.assertIn("Generator msbuild created conan_mypkg.props", client.out)
+
+    def install_reference_gcc_test(self):
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . mypkg/0.1@ -s compiler=gcc")
+        client.run("install mypkg/0.1@ -s compiler=gcc -g msbuild", assert_error=True)
+        self.assertIn("The 'msbuild' generator only works with Visual Studio compiler", client.out)

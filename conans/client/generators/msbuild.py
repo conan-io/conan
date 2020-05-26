@@ -17,8 +17,6 @@ class MSBuildGenerator(Generator):
             </ImportGroup>
             <PropertyGroup Label="UserMacros" />
             <PropertyGroup />
-            <ItemDefinitionGroup />
-            <ItemGroup />
         </Project>
         """)
 
@@ -26,7 +24,7 @@ class MSBuildGenerator(Generator):
         <?xml version="1.0" encoding="utf-8"?>
         <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
           <ImportGroup Label="PropertySheets">
-            {transitive_imports}
+          {transitive_imports}
           </ImportGroup>
           <PropertyGroup Label="UserMacros" />
           <PropertyGroup>
@@ -44,40 +42,30 @@ class MSBuildGenerator(Generator):
             <Conan{name}SystemDeps>{system_libs}</Conan{name}SystemDeps>
           </PropertyGroup>
           <PropertyGroup>
-            <LocalDebuggerEnvironment>PATH=%PATH%;$(Conan{name}BinaryDirectories)
-            </LocalDebuggerEnvironment>
+            <LocalDebuggerEnvironment>PATH=%PATH%;$(Conan{name}BinaryDirectories)</LocalDebuggerEnvironment>
             <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
           </PropertyGroup>
           <ItemDefinitionGroup>
             <ClCompile>
-              <AdditionalIncludeDirectories>$(Conan{name}IncludeDirectories)
-              %(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-              <PreprocessorDefinitions>$(Conan{name}PreprocessorDefinitions)
-              %(PreprocessorDefinitions)</PreprocessorDefinitions>
+              <AdditionalIncludeDirectories>$(Conan{name}IncludeDirectories)%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+              <PreprocessorDefinitions>$(Conan{name}PreprocessorDefinitions)%(PreprocessorDefinitions)</PreprocessorDefinitions>
               <AdditionalOptions>$(Conan{name}CompilerFlags) %(AdditionalOptions)</AdditionalOptions>
             </ClCompile>
             <Link>
-              <AdditionalLibraryDirectories>$(Conan{name}LibraryDirectories)
-              %(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-              <AdditionalDependencies>$(Conan{name}Libraries)%(AdditionalDependencies)
-              </AdditionalDependencies>
-              <AdditionalDependencies>$(Conan{name}SystemDeps)%(AdditionalDependencies)
-              </AdditionalDependencies>
+              <AdditionalLibraryDirectories>$(Conan{name}LibraryDirectories)%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+              <AdditionalDependencies>$(Conan{name}Libraries)%(AdditionalDependencies)</AdditionalDependencies>
+              <AdditionalDependencies>$(Conan{name}SystemDeps)%(AdditionalDependencies)</AdditionalDependencies>
               <AdditionalOptions>$(Conan{name}LinkerFlags) %(AdditionalOptions)</AdditionalOptions>
             </Link>
             <Midl>
-              <AdditionalIncludeDirectories>$(Conan{name}IncludeDirectories)
-              %(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+              <AdditionalIncludeDirectories>$(Conan{name}IncludeDirectories)%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
             </Midl>
             <ResourceCompile>
-              <AdditionalIncludeDirectories>$(Conan{name}IncludeDirectories)
-              %(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-              <PreprocessorDefinitions>$(Conan{name}PreprocessorDefinitions)
-              %(PreprocessorDefinitions)</PreprocessorDefinitions>
+              <AdditionalIncludeDirectories>$(Conan{name}IncludeDirectories)%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+              <PreprocessorDefinitions>$(Conan{name}PreprocessorDefinitions)%(PreprocessorDefinitions)</PreprocessorDefinitions>
               <AdditionalOptions>$(Conan{name}CompilerFlags) %(AdditionalOptions)</AdditionalOptions>
             </ResourceCompile>
           </ItemDefinitionGroup>
-          <ItemGroup />
         </Project>
         """)
 
@@ -156,6 +144,7 @@ class MSBuildGenerator(Generator):
                 # add it to the import group
                 import_group.appendChild(import_node)
         content_multi = dom.toprettyxml()
+        # To remove all extra blank lines
         content_multi = "\n".join(line for line in content_multi.splitlines() if line.strip())
         return content_multi
 
@@ -164,7 +153,7 @@ class MSBuildGenerator(Generator):
             ext = os.path.splitext(lib)[1]
             return ext in VALID_LIB_EXTENSIONS
 
-        t = "<Import Project=\"{}\" Condition=\"'$(conan_{}_props_imported)' != 'True'\"/>"
+        t = "   <Import Project=\"{}\" Condition=\"'$(conan_{}_props_imported)' != 'True'\"/>"
         transitive_imports = []
         for dep_name in cpp_info.public_deps:
             conf_props_name = "conan_%s%s.props" % (dep_name, conf_name)
@@ -193,6 +182,8 @@ class MSBuildGenerator(Generator):
     @property
     def content(self):
         print("*** The 'msbuild' generator is EXPERIMENTAL ***")
+        if self.conanfile.settings.compiler != "Visual Studio":
+            raise ConanException("The 'msbuild' generator only works with Visual Studio compiler")
         result = {}
         general_name = "conan_deps.props"
         conf_name, condition = self._name_condition(self.conanfile.settings)
