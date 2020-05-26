@@ -363,3 +363,14 @@ def unix2dos(filepath):
 
 def dos2unix(filepath):
     _replace_with_separator(filepath, "\n")
+
+
+def remove_files_by_mask(directory, pattern):
+    removed_names = []
+    for root, _, filenames in os.walk(directory):
+        for filename in filenames:
+            if fnmatch(filename, pattern):
+                fullname = os.path.join(root, filename)
+                os.unlink(fullname)
+                removed_names.append(os.path.relpath(fullname, directory))
+    return removed_names
