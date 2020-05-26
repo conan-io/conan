@@ -252,15 +252,20 @@ def _capture_scm_auto_fields(conanfile, conanfile_dir, package_layout, output, i
         origin = scm.get_qualified_remote_url(remove_credentials=True)
         local_src_path = scm.get_local_path_to_url(origin)
         return scm_data, local_src_path
-
     if scm_data.url == "auto":
         origin = scm.get_qualified_remote_url(remove_credentials=True)
-        if not origin:
-            raise ConanException("Repo origin cannot be deduced")
         if scm.is_local_repository():
             output.warn("Repo origin looks like a local path: %s" % origin)
         output.success("Repo origin deduced by 'auto': %s" % origin)
-        scm_data.url = origin
+        if origin:
+            scm_data.url = origin
+        else:
+            output.warn(
+                "origin is auto, upload' command will prevent uploading recipes with None values in these fields.")
+
+    if scm_data.url is None:
+        output.warn(
+            "origin is None, upload' command will prevent uploading recipes with None values in these fields.")
 
     if scm_data.revision == "auto":
         # If it is pristine by default we don't replace the "auto" unless forcing
@@ -270,7 +275,6 @@ def _capture_scm_auto_fields(conanfile, conanfile_dir, package_layout, output, i
 
     local_src_path = scm.get_local_path_to_url(scm_data.url)
     _replace_scm_data_in_recipe(package_layout, scm_data, scm_to_conandata)
-
     return scm_data, local_src_path
 
 

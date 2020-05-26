@@ -127,8 +127,9 @@ class ConanLib(ConanFile):
         conanfile = base_git.format(directory="None", url=_quoted("auto"), revision="auto")
         self.client.save({"conanfile.py": conanfile, "myfile.txt": "My file is copied"})
         create_local_git_repo(folder=self.client.current_folder)
-        self.client.run("export . user/channel", assert_error=True)
-        self.assertIn("Repo origin cannot be deduced", self.client.out)
+        self.client.run("export . user/channel")
+        self.assertIn("Repo origin deduced by 'auto': None", self.client.out)
+        self.assertIn("Revision deduced by 'auto'", self.client.out)
 
         self.client.run_command('git remote add origin https://myrepo.com.git')
 
@@ -1032,7 +1033,7 @@ class SCMBlockUploadTest(unittest.TestCase):
         # The upload has to fail, no "auto" fields are allowed
         client.run("upload lib/0.1@user/channel -r default", assert_error=True)
         self.assertIn("ERROR: lib/0.1@user/channel: Upload recipe to 'default' failed: "
-                      "The recipe has 'scm.url' or 'scm.revision' with 'auto' values. "
+                      "The recipe has 'scm.url' with None or 'auto', or 'scm.revision' with 'auto' values. "
                       "Use '--force' to ignore", client.out)
         # The upload with --force should work
         client.run("upload lib/0.1@user/channel -r default --force")
