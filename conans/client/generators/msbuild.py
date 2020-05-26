@@ -81,7 +81,7 @@ class MSBuildGenerator(Generator):
                                'x86_64': 'x64'}.get(settings.get_safe("arch"))),
                  ("PlatformToolset", toolset)]
 
-        name = "".join("_%s" % v for _, v in props if v)
+        name = "".join("_%s" % v for _, v in props)
         condition = " And ".join("'$(%s)' == '%s'" % (k, v) for k, v in props if v)
         return name.lower(), condition
 
