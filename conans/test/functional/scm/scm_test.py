@@ -128,8 +128,8 @@ class ConanLib(ConanFile):
         self.client.save({"conanfile.py": conanfile, "myfile.txt": "My file is copied"})
         create_local_git_repo(folder=self.client.current_folder)
         self.client.run("export . user/channel")
-        self.assertIn("Repo origin deduced by 'auto': None", self.client.out)
-        self.assertIn("Revision deduced by 'auto'", self.client.out)
+        self.assertIn("WARN: Repo origin cannot be deduced, 'auto' fields won't be replaced",
+                      self.client.out)
 
         self.client.run_command('git remote add origin https://myrepo.com.git')
 
@@ -1032,9 +1032,10 @@ class SCMBlockUploadTest(unittest.TestCase):
                       "Use --ignore-dirty to force it.", client.out)
         # The upload has to fail, no "auto" fields are allowed
         client.run("upload lib/0.1@user/channel -r default", assert_error=True)
-        self.assertIn("ERROR: lib/0.1@user/channel: Upload recipe to 'default' failed: "
-                      "The recipe has 'scm.url' with None or 'auto', or 'scm.revision' "
-                      "with 'auto' values. Use '--force' to ignore", client.out)
+        self.assertIn("ERROR: lib/0.1@user/channel: Upload recipe to 'default' failed:"
+                      " The recipe contains invalid data in the 'scm' attribute (some 'auto'"
+                      " values or missing fields 'type', 'url' or 'revision'). Use '--force'"
+                      " to ignore", client.out)
         # The upload with --force should work
         client.run("upload lib/0.1@user/channel -r default --force")
         self.assertIn("Uploaded conan recipe", client.out)
@@ -1085,10 +1086,9 @@ class SCMBlockUploadTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile})
         create_local_git_repo(folder=client.current_folder)
         client.run("create . pkg/0.1@user/channel")
-        self.assertIn("pkg/0.1@user/channel: WARN: origin is None, upload' command", client.out)
-
         client.run("upload pkg/0.1@user/channel -r default", assert_error=True)
-        self.assertIn("ERROR: pkg/0.1@user/channel: Upload recipe to 'default' failed: "
-                      "The recipe has 'scm.url' with None or 'auto', or 'scm.revision' "
-                      "with 'auto' values. Use '--force' to ignore", client.out)
+        self.assertIn("ERROR: pkg/0.1@user/channel: Upload recipe to 'default' failed: The recipe"
+                      " contains invalid data in the 'scm' attribute (some 'auto' values or"
+                      " missing fields 'type', 'url' or 'revision'). Use '--force' to ignore",
+                      client.out)
         client.run("upload pkg/0.1@user/channel -r default --force")

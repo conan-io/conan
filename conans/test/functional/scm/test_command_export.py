@@ -60,4 +60,5 @@ class ExportCommandTestCase(unittest.TestCase):
         self.client.current_folder = self.path
         self.client.run("export . lib/version@user/channel")
         if auto_url:
-            self.assertIn("Repo origin deduced by 'auto': None", self.client.out)
+            self.assertIn("WARN: Repo origin cannot be deduced, 'auto' fields won't be replaced.",
+                          self.client.out)
