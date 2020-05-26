@@ -82,7 +82,7 @@ class MSBuildGenerator(Generator):
                  ("PlatformToolset", toolset)]
 
         name = "".join("_%s" % v for _, v in props)
-        condition = " And ".join("'$(%s)' == '%s'" % (k, v) for k, v in props if v)
+        condition = " And ".join("'$(%s)' == '%s'" % (k, v) for k, v in props)
         return name.lower(), condition
 
     def _multi(self, name_multi, name_conf, condition):
