@@ -192,7 +192,7 @@ class MSBuildGenerator(Generator):
 
     @property
     def content(self):
-        self.conanfile.output.warn("*** The 'msvc' generator is EXPERIMENTAL ***")
+        print("*** The 'msbuild' generator is EXPERIMENTAL ***")
         result = {}
         general_name = "conan_deps.props"
         conf_name, condition = self._name_condition(self.conanfile.settings)

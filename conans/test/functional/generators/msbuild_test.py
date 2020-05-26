@@ -5,6 +5,7 @@ import unittest
 from nose.plugins.attrib import attr
 
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.test.utils.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
 
@@ -420,11 +421,11 @@ int main(){
 """
 
 
-class MSVCGeneratorTest(unittest.TestCase):
+class MSBuildGeneratorTest(unittest.TestCase):
 
     @attr('slow')
     @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
-    def msvc_generator_test(self):
+    def msbuild_generator_test(self):
         client = TestClient()
         # Upload to alternative server Hello0 but Hello1 to the default
         files = cpp_hello_conan_files("Hello0", "1.0")
@@ -466,3 +467,11 @@ class MSVCGeneratorTest(unittest.TestCase):
         self.assertIn("Hello App!", client.out)
         self.assertIn("Hello Hello1", client.out)
         self.assertIn("Hello Hello0", client.out)
+
+    def install_reference_test(self):
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . mypkg/0.1@")
+        client.run("install mypkg/0.1@ -g msbuild")
+        self.assertIn("Generator msbuild created conan_deps.props", client.out)
+        self.assertIn("Generator msbuild created conan_mypkg.props", client.out)
