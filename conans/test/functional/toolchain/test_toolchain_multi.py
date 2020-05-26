@@ -66,9 +66,6 @@ class FindPackageMultiTestCase(unittest.TestCase):
             conan_basic_setup()
         endif()
 
-        message(">> CONAN_EXPORTED: ${CONAN_EXPORTED}")
-        message(">> CONAN_IN_LOCAL_CACHE: ${CONAN_IN_LOCAL_CACHE}")
-
         message(">> DEFINITIONS_BOTH: ${DEFINITIONS_BOTH}")
         message(">> DEFINITIONS_DEBUG: ${DEFINITIONS_DEBUG}")
         message(">> DEFINITIONS_RELEASE: ${DEFINITIONS_RELEASE}")

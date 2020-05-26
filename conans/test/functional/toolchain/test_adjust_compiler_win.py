@@ -122,9 +122,6 @@ class AdjustAutoTestCase(unittest.TestCase):
             conan_basic_setup()
         endif()
 
-        message(">> CONAN_EXPORTED: ${CONAN_EXPORTED}")
-        message(">> CONAN_IN_LOCAL_CACHE: ${CONAN_IN_LOCAL_CACHE}")
-
         message(">> CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
         message(">> CMAKE_CXX_FLAGS: ${CMAKE_CXX_FLAGS}")
         message(">> CMAKE_CXX_FLAGS_DEBUG: ${CMAKE_CXX_FLAGS_DEBUG}")

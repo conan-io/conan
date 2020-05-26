@@ -116,7 +116,11 @@ class CMakeToolchain(object):
 
         # --  - CMake.flags --> CMakeDefinitionsBuilder::get_definitions
         {%- for it, value in definitions.items() %}
-        set({{ it }} "{{ value }}" CACHE STRING "Do we want to set all these vars in the cache?" FORCE)
+        {%- if it.startswith('CONAN_') %}
+        set({{ it }} "{{ value }}")
+        {%- else %}
+        set({{ it }} "{{ value }}" CACHE STRING "Value assigned from the Conan toolchain" FORCE)
+        {%- endif %}
         {%- endfor %}
 
         # Set some environment variables
