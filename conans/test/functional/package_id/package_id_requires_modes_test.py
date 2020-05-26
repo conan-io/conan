@@ -525,19 +525,22 @@ class PackageIDErrorTest(unittest.TestCase):
         client.run("export . dep1/1.0@user/testing")
 
         pkg_revision_mode = "self.info.requires.full_version_mode()"
+        package_id_print = "self.output.info('PkgNames: %s' % sorted(self.info.requires.pkg_names))"
         client.save({"conanfile.py": GenConanfile().with_require_plain("dep1/1.0@user/testing")
-                    .with_package_id(pkg_revision_mode)})
+                    .with_package_id(pkg_revision_mode)
+                    .with_package_id(package_id_print)})
         client.run("export . dep2/1.0@user/testing")
 
         consumer = textwrap.dedent("""
             from conans import ConanFile
             class Consumer(ConanFile):
                 requires = "dep2/1.0@user/testing"
-                def build(self):
+                def package_id(self):
                     self.output.info("PKGNAMES: %s" % sorted(self.info.requires.pkg_names))
                 """)
         client.save({"conanfile.py": consumer})
         client.run('create . consumer/1.0@user/testing --build')
+        self.assertIn("dep2/1.0@user/testing: PkgNames: ['dep1']", client.out)
         self.assertIn("consumer/1.0@user/testing: PKGNAMES: ['dep1', 'dep2']", client.out)
         self.assertIn("consumer/1.0@user/testing: Created", client.out)
 
