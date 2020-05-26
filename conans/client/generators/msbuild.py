@@ -150,7 +150,7 @@ class MSBuildGenerator(Generator):
             ext = os.path.splitext(lib)[1]
             return ext in VALID_LIB_EXTENSIONS
 
-        t = "   <Import Project=\"{}\" Condition=\"'$(conan_{}_props_imported)' != 'True'\"/>"
+        t = "    <Import Project=\"{}\" Condition=\"'$(conan_{}_props_imported)' != 'True'\"/>"
         transitive_imports = []
         for dep_name in cpp_info.public_deps:
             conf_props_name = "conan_%s.props" % dep_name
