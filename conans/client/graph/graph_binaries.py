@@ -272,7 +272,8 @@ class GraphBinariesAnalyzer(object):
         """
         node.id_direct_prefs = set()  # of PackageReference
         node.id_indirect_prefs = set()  # of PackageReference, avoid duplicates
-        for neighbor in node.neighbors():
+        neigbors = [d.dst for d in node.dependencies if not d.build_require]
+        for neighbor in neigbors:
             node.id_direct_prefs.add(neighbor.pref)
             node.id_indirect_prefs.update(neighbor.id_direct_prefs)
             node.id_indirect_prefs.update(neighbor.id_indirect_prefs)
