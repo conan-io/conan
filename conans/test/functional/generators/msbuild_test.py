@@ -482,3 +482,11 @@ class MSBuildGeneratorTest(unittest.TestCase):
         client.run("create . mypkg/0.1@ -s compiler=gcc")
         client.run("install mypkg/0.1@ -s compiler=gcc -g msbuild", assert_error=True)
         self.assertIn("The 'msbuild' generator only works with Visual Studio compiler", client.out)
+
+    def no_build_type_error_test(self):
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . mypkg/0.1@")
+        client.run("install mypkg/0.1@ -g msbuild -s build_type=None", assert_error=True)
+        self.assertIn("ERROR: The 'msbuild' generator requires a 'build_type' setting value",
+                      client.out)
