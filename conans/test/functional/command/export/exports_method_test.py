@@ -3,7 +3,9 @@ import textwrap
 import unittest
 
 from conans.model.ref import ConanFileReference
+from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
+from conans.util.files import save_files
 
 
 class ExportsMethodTest(unittest.TestCase):
@@ -27,6 +29,27 @@ class ExportsMethodTest(unittest.TestCase):
         exported_files = os.listdir(layout.export())
         self.assertIn("file.txt", exported_files)
         self.assertIn("LICENSE.md", exported_files)
+
+    def test_export_method_parent_folder(self):
+        folder = temp_folder()
+        save_files(folder, {"subdir/subdir2/file2.txt": "", "subdir/file1.txt": ""})
+        client = TestClient(current_folder=os.path.join(folder, "recipe"))
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+
+            class MethodConan(ConanFile):
+                def export(self):
+                    self.output.info("Executing export() method")
+                    self.copy("*.txt", src="../subdir")
+            """)
+        client.save({"conanfile.py": conanfile})
+        client.run("export . pkg/0.1@")
+        self.assertIn("pkg/0.1 export() method: Copied 2 '.txt' files: file1.txt, file2.txt",
+                      client.out)
+
+        layout = client.cache.package_layout(ConanFileReference.loads("pkg/0.1"))
+        self.assertTrue(os.path.isfile(os.path.join(layout.export(), "file1.txt")))
+        self.assertTrue(os.path.isfile(os.path.join(layout.export(), "subdir2", "file2.txt")))
 
     def test_export_attribute_error(self):
         client = TestClient()
