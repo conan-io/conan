@@ -74,9 +74,6 @@ class MSBuildGenerator(Generator):
     @ staticmethod
     def _name_condition(settings):
         toolset = msvs_toolset(settings)
-        if toolset is None:
-            raise ConanException("Undefined Visual Studio version %s" %
-                                 settings.get_safe("compiler.version"))
 
         props = [("Configuration", settings.build_type),
                  # FIXME: This probably requires mapping ARM architectures
