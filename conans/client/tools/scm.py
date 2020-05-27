@@ -191,7 +191,7 @@ class Git(SCMBase):
             name, url = remote.split(None, 1)
             if name == remote_name:
                 url, _ = url.rsplit(None, 1)
-                if url and remove_credentials and not os.path.exists(url):  # only if not local
+                if remove_credentials and not os.path.exists(url):  # only if not local
                     url = self._remove_credentials_url(url)
                 if os.path.exists(url):  # Windows local directory
                     url = url.replace("\\", "/")
@@ -200,10 +200,7 @@ class Git(SCMBase):
 
     def is_local_repository(self):
         url = self.get_remote_url()
-        if url:
-            return os.path.exists(url)
-        else:
-            return None
+        return os.path.exists(url)
 
     def get_commit(self):
         self.check_repo()
@@ -345,7 +342,7 @@ class SVN(SCMBase):
 
     def get_remote_url(self, remove_credentials=False):
         url = self._show_item('url')
-        if url and remove_credentials and not os.path.exists(url):  # only if not local
+        if remove_credentials and not os.path.exists(url):  # only if not local
             url = self._remove_credentials_url(url)
         return url
 
@@ -357,11 +354,8 @@ class SVN(SCMBase):
 
     def is_local_repository(self):
         url = self.get_remote_url()
-        if url:
-            return (url.startswith(self.file_protocol) and
+        return (url.startswith(self.file_protocol) and
                 os.path.exists(unquote(url[len(self.file_protocol):])))
-        else:
-            return True
 
     def is_pristine(self):
         # Check if working copy is pristine/consistent
