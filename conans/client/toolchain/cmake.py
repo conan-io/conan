@@ -239,6 +239,10 @@ class CMakeToolchain(object):
         self.definitions = Definitions()
         self.definitions.update(builder.get_definitions())
         self.definitions.pop("CMAKE_BUILD_TYPE", None)
+        self.definitions.pop("CONAN_IN_LOCAL_CACHE", None)
+        for install in ("PREFIX", "BINDIR", "SBINDIR", "LIBEXECDIR", "LIBDIR", "INCLUDEDIR",
+                        "OLDINCLUDEDIR", "DATAROOTDIR"):
+            self.definitions.pop("CMAKE_INSTALL_%s" % install, None)
 
         # Some variables can go to the environment
         # TODO: Do we need this or can we move it to environment stuff

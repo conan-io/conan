@@ -11,7 +11,7 @@ from nose.plugins.attrib import attr
 from parameterized.parameterized import parameterized
 from parameterized.parameterized import parameterized_class
 
-from conans.test.functional.toolchain.builds import compile_cache_workflow_without_toolchain, \
+from conans.test.functional.toolchain.builds import \
     compile_cache_workflow_with_toolchain, compile_local_workflow, compile_cmake_workflow
 from conans.test.utils.tools import TurboTestClient
 
@@ -19,14 +19,9 @@ from conans.test.utils.tools import TurboTestClient
 _running_ci = 'JOB_NAME' in os.environ
 
 
-@parameterized_class([{"function": compile_cache_workflow_without_toolchain, "use_toolchain": False,
-                       "in_cache": True, "build_helper": True},
-                      {"function": compile_cache_workflow_with_toolchain, "use_toolchain": True,
-                       "in_cache": True, "build_helper": True},
-                      {"function": compile_local_workflow, "use_toolchain": True,
-                       "in_cache": False, "build_helper": True},
-                      {"function": compile_cmake_workflow, "use_toolchain": True,
-                       "in_cache": False, "build_helper": False},
+@parameterized_class([{"function": compile_cache_workflow_with_toolchain},
+                      {"function": compile_local_workflow},
+                      {"function": compile_cmake_workflow},
                       ])
 @attr("toolchain")
 class AdjustAutoTestCase(unittest.TestCase):
@@ -42,24 +37,19 @@ class AdjustAutoTestCase(unittest.TestCase):
             version = "version"
             settings = "os", "arch", "compiler", "build_type"
             exports = "*.cpp", "*.txt"
-            generators = {% if use_toolchain %}"cmake_find_package"{% else %}"cmake"{% endif %}
-            options = {"use_toolchain": [True, False], "fPIC": [True, False]}
-            default_options = {"use_toolchain": True,
-                               "fPIC": False}
+            generators = "cmake_find_package"
+            options = {"fPIC": [True, False]}
+            default_options = {"fPIC": False}
 
-            {% if use_toolchain %}
             def toolchain(self):
-                tc = CMakeToolchain(self)
-                return tc
-            {% endif %}
+                return CMakeToolchain(self)
 
             def build(self):
                 # Do not actually build, just configure
                 cmake = CMake(self)
-                cmake.configure(source_folder=".")
+                cmake.configure()
     """)
-    conanfile_toolchain = Template(_conanfile).render(use_toolchain=True)
-    conanfile_no_toolchain = Template(_conanfile).render(use_toolchain=False)
+    conanfile = Template(_conanfile).render()
 
     cmakelist = textwrap.dedent("""
         cmake_minimum_required(VERSION 2.8)
@@ -70,9 +60,7 @@ class AdjustAutoTestCase(unittest.TestCase):
         endif()
 
         if(NOT CMAKE_TOOLCHAIN_FILE)
-            message(">> Not using toolchain")
-            include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-            conan_basic_setup()
+            message(FATAL ">> Not using toolchain")
         endif()
 
         message(">> CMAKE_GENERATOR_PLATFORM: ${CMAKE_GENERATOR_PLATFORM}")
@@ -122,8 +110,7 @@ class AdjustAutoTestCase(unittest.TestCase):
         cls.t = TurboTestClient(path_with_spaces=False)
 
         # Prepare the actual consumer package
-        conanfile = cls.conanfile_toolchain if cls.use_toolchain else cls.conanfile_no_toolchain
-        cls.t.save({"conanfile.py": conanfile,
+        cls.t.save({"conanfile.py": cls.conanfile,
                     "CMakeLists.txt": cls.cmakelist})
 
     def _run_configure(self, settings_dict=None, options_dict=None):
@@ -158,9 +145,10 @@ class AdjustAutoTestCase(unittest.TestCase):
         return configure_out, cmake_cache_items, cmake_cache_keys, build_directory, package_directory
 
     @parameterized.expand([("Debug",), ("Release",)])
-    @unittest.skipIf(platform.system() == "Windows", "Windows uses Visual Studio, CMAKE_BUILD_TYPE is not used")
+    @unittest.skipIf(platform.system() == "Windows", "Windows uses VS, CMAKE_BUILD_TYPE is not used")
     def test_build_type(self, build_type):
-        configure_out, cmake_cache, cmake_cache_keys, _, _ = self._run_configure({"build_type": build_type})
+        configure_out, cmake_cache, cmake_cache_keys, _, _ = self._run_configure({"build_type":
+                                                                                  build_type})
 
         self.assertIn(">> CMAKE_BUILD_TYPE: {}".format(build_type), configure_out)
 
@@ -169,93 +157,43 @@ class AdjustAutoTestCase(unittest.TestCase):
     @parameterized.expand([("libc++",), ])  # ("libstdc++",), is deprecated
     @unittest.skipIf(platform.system() != "Darwin", "libcxx for Darwin")
     def test_libcxx_macos(self, libcxx):
-        configure_out, cmake_cache, cmake_cache_keys, _, _ = self._run_configure({"compiler.libcxx": libcxx})
+        configure_out, cmake_cache, cmake_cache_keys, _, _ = self._run_configure({"compiler.libcxx":
+                                                                                  libcxx})
 
-        #self.assertIn("compiler.libcxx={}".format(libcxx), configure_out)
         self.assertIn("-- Conan: C++ stdlib: {}".format(libcxx), configure_out)
         self.assertIn(">> CMAKE_CXX_FLAGS: -m64 -stdlib={}".format(libcxx), configure_out)
-
-        if not self.use_toolchain:
-            self.assertEqual(libcxx, cmake_cache["CONAN_LIBCXX:UNINITIALIZED"])
-        else:
-            self.assertNotIn("CONAN_LIBCXX", cmake_cache_keys)
+        self.assertNotIn("CONAN_LIBCXX", cmake_cache_keys)
 
     @parameterized.expand([("libstdc++",), ("libstdc++11", ), ])
     @unittest.skipIf(platform.system() != "Linux", "libcxx for Linux")
     def test_libcxx_linux(self, libcxx):
-        configure_out, cmake_cache, cmake_cache_keys, _, _ = self._run_configure({"compiler.libcxx": libcxx})
+        configure_out, cmake_cache, cmake_cache_keys, _, _ = self._run_configure({"compiler.libcxx":
+                                                                                  libcxx})
 
         self.assertIn("-- Conan: C++ stdlib: {}".format(libcxx), configure_out)
         cxx11_abi_str = "1" if libcxx == "libstdc++11" else "0"
-        self.assertIn(">> COMPILE_DEFINITONS: _GLIBCXX_USE_CXX11_ABI={}".format(cxx11_abi_str), configure_out)
+        self.assertIn(">> COMPILE_DEFINITONS: _GLIBCXX_USE_CXX11_ABI={}".format(cxx11_abi_str),
+                      configure_out)
 
-        if not self.use_toolchain:
-            self.assertEqual(libcxx, cmake_cache["CONAN_LIBCXX:UNINITIALIZED"])
-        else:
-            self.assertNotIn("CONAN_LIBCXX", cmake_cache_keys)
-
-    def test_install_paths(self):
-        configure_out, cmake_cache, cmake_cache_keys, _, package_dir = self._run_configure()
-
-        value_f = lambda u: u if self.in_cache else ""
-        self.assertIn(">> CMAKE_INSTALL_BINDIR: {}".format(value_f("bin")), configure_out)
-        self.assertIn(">> CMAKE_INSTALL_DATAROOTDIR: {}".format(value_f("share")), configure_out)
-        self.assertIn(">> CMAKE_INSTALL_INCLUDEDIR: {}".format(value_f("include")), configure_out)
-        self.assertIn(">> CMAKE_INSTALL_LIBDIR: {}".format(value_f("lib")), configure_out)
-        self.assertIn(">> CMAKE_INSTALL_LIBEXECDIR: {}".format(value_f("bin")), configure_out)
-        self.assertIn(">> CMAKE_INSTALL_OLDINCLUDEDIR: {}".format(value_f("include")), configure_out)
-        self.assertIn(">> CMAKE_INSTALL_SBINDIR: {}".format(value_f("bin")), configure_out)
-        if self.in_cache:
-            self.assertIn(">> CMAKE_INSTALL_PREFIX: {}".format(package_dir), configure_out)
-        else:
-            pass  # TODO: It takes the default value, override it to something?
-
-        if self.in_cache:
-            type_str = "STRING" if self.use_toolchain else "UNINITIALIZED"
-            self.assertEqual("bin", cmake_cache["CMAKE_INSTALL_BINDIR:" + type_str])
-            self.assertEqual("share", cmake_cache["CMAKE_INSTALL_DATAROOTDIR:" + type_str])
-            self.assertEqual("include", cmake_cache["CMAKE_INSTALL_INCLUDEDIR:" + type_str])
-            self.assertEqual("lib", cmake_cache["CMAKE_INSTALL_LIBDIR:" + type_str])
-            self.assertEqual("bin", cmake_cache["CMAKE_INSTALL_LIBEXECDIR:" + type_str])
-            self.assertEqual("include", cmake_cache["CMAKE_INSTALL_OLDINCLUDEDIR:" + type_str])
-            self.assertEqual("bin", cmake_cache["CMAKE_INSTALL_SBINDIR:" + type_str])
-            type_str = "STRING" if self.use_toolchain else "PATH"
-            self.assertEqual(package_dir, cmake_cache["CMAKE_INSTALL_PREFIX:" + type_str])
-        else:
-            self.assertNotIn("CMAKE_INSTALL_BINDIR", cmake_cache_keys)
-            self.assertNotIn("CMAKE_INSTALL_DATAROOTDIR", cmake_cache_keys)
-            self.assertNotIn("CMAKE_INSTALL_INCLUDEDIR", cmake_cache_keys)
-            self.assertNotIn("CMAKE_INSTALL_LIBDIR", cmake_cache_keys)
-            self.assertNotIn("CMAKE_INSTALL_LIBEXECDIR", cmake_cache_keys)
-            self.assertNotIn("CMAKE_INSTALL_OLDINCLUDEDIR", cmake_cache_keys)
-            self.assertNotIn("CMAKE_INSTALL_SBINDIR", cmake_cache_keys)
-            # self.assertNotIn("CMAKE_INSTALL_PREFIX", cmake_cache_keys)  # TODO: It takes the default value '/usr/local', override to?
+        self.assertNotIn("CONAN_LIBCXX", cmake_cache_keys)
 
     @unittest.skipIf(platform.system() != "Darwin", "Only MacOS")
     def test_ccxx_flags_macos(self):
         configure_out, cmake_cache, cmake_cache_keys, _, _ = self._run_configure()
 
-        extra_blank = "" if self.use_toolchain else " "  # FIXME: There is an extra blank for no-toolchain
         self.assertIn(">> CMAKE_CXX_FLAGS: -m64 -stdlib=libc++", configure_out)
         self.assertIn(">> CMAKE_C_FLAGS: -m64", configure_out)
-        self.assertIn(">> CMAKE_CXX_FLAGS_DEBUG: -g" + extra_blank, configure_out)
-        self.assertIn(">> CMAKE_CXX_FLAGS_RELEASE: -O3 -DNDEBUG" + extra_blank, configure_out)
-        self.assertIn(">> CMAKE_C_FLAGS_DEBUG: -g" + extra_blank, configure_out)
-        self.assertIn(">> CMAKE_C_FLAGS_RELEASE: -O3 -DNDEBUG" + extra_blank, configure_out)
+        self.assertIn(">> CMAKE_CXX_FLAGS_DEBUG: -g", configure_out)
+        self.assertIn(">> CMAKE_CXX_FLAGS_RELEASE: -O3 -DNDEBUG", configure_out)
+        self.assertIn(">> CMAKE_C_FLAGS_DEBUG: -g", configure_out)
+        self.assertIn(">> CMAKE_C_FLAGS_RELEASE: -O3 -DNDEBUG", configure_out)
 
         self.assertIn(">> CMAKE_SHARED_LINKER_FLAGS: -m64", configure_out)
         self.assertIn(">> CMAKE_EXE_LINKER_FLAGS: ", configure_out)
 
-        if self.use_toolchain:
-            self.assertEqual("-m64 -stdlib=libc++", cmake_cache["CMAKE_CXX_FLAGS:STRING"])
-            self.assertEqual("-m64", cmake_cache["CMAKE_C_FLAGS:STRING"])
-            self.assertEqual("-m64", cmake_cache["CMAKE_SHARED_LINKER_FLAGS:STRING"])
-        else:
-            # FIXME: No-toolchain doesn't match those in CMakeLists
-            self.assertEqual("", cmake_cache["CMAKE_CXX_FLAGS:STRING"])
-            self.assertEqual("", cmake_cache["CMAKE_C_FLAGS:STRING"])
-            self.assertEqual("", cmake_cache["CMAKE_SHARED_LINKER_FLAGS:STRING"])
-
+        self.assertEqual("-m64 -stdlib=libc++", cmake_cache["CMAKE_CXX_FLAGS:STRING"])
+        self.assertEqual("-m64", cmake_cache["CMAKE_C_FLAGS:STRING"])
+        self.assertEqual("-m64", cmake_cache["CMAKE_SHARED_LINKER_FLAGS:STRING"])
         self.assertEqual("-g", cmake_cache["CMAKE_CXX_FLAGS_DEBUG:STRING"])
         self.assertEqual("-O3 -DNDEBUG", cmake_cache["CMAKE_CXX_FLAGS_RELEASE:STRING"])
         self.assertEqual("-g", cmake_cache["CMAKE_C_FLAGS_DEBUG:STRING"])
@@ -267,27 +205,20 @@ class AdjustAutoTestCase(unittest.TestCase):
     def test_ccxx_flags_win(self):
         configure_out, cmake_cache, cmake_cache_keys, _, _ = self._run_configure()
 
-        mp1_prefix = "/MP1 " if self.use_toolchain else ""
-        mp1_postfix = "" if self.use_toolchain else " /MP1"
-        extra_blank = "" if self.use_toolchain else " "
-        mdd_flag = "MDd" if self.use_toolchain else "MD"  # FIXME: no-toolchain modifies it
-        self.assertIn(">> CMAKE_CXX_FLAGS: {}/DWIN32 /D_WINDOWS /W3 /GR /EHsc{}".format(mp1_prefix, mp1_postfix), configure_out)
-        self.assertIn(">> CMAKE_CXX_FLAGS_DEBUG: /{} /Zi /Ob0 /Od /RTC1".format(mdd_flag) + extra_blank, configure_out)
-        self.assertIn(">> CMAKE_CXX_FLAGS_RELEASE: /MD /O2 /Ob2 /DNDEBUG" + extra_blank, configure_out)
-        self.assertIn(">> CMAKE_C_FLAGS: {}/DWIN32 /D_WINDOWS /W3{}".format(mp1_prefix, mp1_postfix), configure_out)
-        self.assertIn(">> CMAKE_C_FLAGS_DEBUG: /{} /Zi /Ob0 /Od /RTC1".format(mdd_flag) + extra_blank, configure_out)
-        self.assertIn(">> CMAKE_C_FLAGS_RELEASE: /MD /O2 /Ob2 /DNDEBUG" + extra_blank, configure_out)
+        mp1_prefix = "/MP1 "
+        mdd_flag = "MDd"
+        self.assertIn(">> CMAKE_CXX_FLAGS: {}/DWIN32 /D_WINDOWS /W3 /GR /EHsc".format(mp1_prefix), configure_out)
+        self.assertIn(">> CMAKE_CXX_FLAGS_DEBUG: /{} /Zi /Ob0 /Od /RTC1".format(mdd_flag), configure_out)
+        self.assertIn(">> CMAKE_CXX_FLAGS_RELEASE: /MD /O2 /Ob2 /DNDEBUG", configure_out)
+        self.assertIn(">> CMAKE_C_FLAGS: {}/DWIN32 /D_WINDOWS /W3".format(mp1_prefix), configure_out)
+        self.assertIn(">> CMAKE_C_FLAGS_DEBUG: /{} /Zi /Ob0 /Od /RTC1".format(mdd_flag), configure_out)
+        self.assertIn(">> CMAKE_C_FLAGS_RELEASE: /MD /O2 /Ob2 /DNDEBUG", configure_out)
 
-        self.assertIn(">> CMAKE_SHARED_LINKER_FLAGS: /machine:x64" + extra_blank, configure_out)
-        self.assertIn(">> CMAKE_EXE_LINKER_FLAGS: /machine:x64" + extra_blank, configure_out)
+        self.assertIn(">> CMAKE_SHARED_LINKER_FLAGS: /machine:x64", configure_out)
+        self.assertIn(">> CMAKE_EXE_LINKER_FLAGS: /machine:x64", configure_out)
 
-        if self.use_toolchain:
-            self.assertEqual("/MP1 /DWIN32 /D_WINDOWS /W3 /GR /EHsc", cmake_cache["CMAKE_CXX_FLAGS:STRING"])
-            self.assertEqual("/MP1 /DWIN32 /D_WINDOWS /W3", cmake_cache["CMAKE_C_FLAGS:STRING"])
-        else:
-            # FIXME: Cache doesn't match those in CMakeLists
-            self.assertEqual("/DWIN32 /D_WINDOWS /W3 /GR /EHsc", cmake_cache["CMAKE_CXX_FLAGS:STRING"])
-            self.assertEqual("/DWIN32 /D_WINDOWS /W3", cmake_cache["CMAKE_C_FLAGS:STRING"])
+        self.assertEqual("/MP1 /DWIN32 /D_WINDOWS /W3 /GR /EHsc", cmake_cache["CMAKE_CXX_FLAGS:STRING"])
+        self.assertEqual("/MP1 /DWIN32 /D_WINDOWS /W3", cmake_cache["CMAKE_C_FLAGS:STRING"])
 
         self.assertEqual("/MDd /Zi /Ob0 /Od /RTC1", cmake_cache["CMAKE_CXX_FLAGS_DEBUG:STRING"])
         self.assertEqual("/MD /O2 /Ob2 /DNDEBUG", cmake_cache["CMAKE_CXX_FLAGS_RELEASE:STRING"])
@@ -305,63 +236,50 @@ class AdjustAutoTestCase(unittest.TestCase):
 
         configure_out, cmake_cache, cmake_cache_keys, _, _ = self._run_configure()
 
-        extra_blank = "" if self.use_toolchain else " "  # FIXME: There is an extra blank for no-toolchain
         self.assertIn(">> CMAKE_CXX_FLAGS: -m64", configure_out)
         self.assertIn(">> CMAKE_C_FLAGS: -m64", configure_out)
-        self.assertIn(">> CMAKE_CXX_FLAGS_DEBUG: -g" + extra_blank, configure_out)
-        self.assertIn(">> CMAKE_CXX_FLAGS_RELEASE: -O3 -DNDEBUG" + extra_blank, configure_out)
-        self.assertIn(">> CMAKE_C_FLAGS_DEBUG: -g" + extra_blank, configure_out)
-        self.assertIn(">> CMAKE_C_FLAGS_RELEASE: -O3 -DNDEBUG" + extra_blank, configure_out)
+        self.assertIn(">> CMAKE_CXX_FLAGS_DEBUG: -g", configure_out)
+        self.assertIn(">> CMAKE_CXX_FLAGS_RELEASE: -O3 -DNDEBUG", configure_out)
+        self.assertIn(">> CMAKE_C_FLAGS_DEBUG: -g", configure_out)
+        self.assertIn(">> CMAKE_C_FLAGS_RELEASE: -O3 -DNDEBUG", configure_out)
 
         self.assertIn(">> CMAKE_SHARED_LINKER_FLAGS: -m64", configure_out)
         self.assertIn(">> CMAKE_EXE_LINKER_FLAGS: ", configure_out)
 
-        if self.use_toolchain:
-            self.assertEqual("-m64", cmake_cache["CMAKE_CXX_FLAGS:STRING"])
-            self.assertEqual("-m64", cmake_cache["CMAKE_C_FLAGS:STRING"])
-            self.assertEqual("-m64", cmake_cache["CMAKE_SHARED_LINKER_FLAGS:STRING"])
-        else:
-            # FIXME: No-toolchain doesn't match those in CMakeLists
-            self.assertEqual("", cmake_cache["CMAKE_CXX_FLAGS:STRING"])
-            self.assertEqual("", cmake_cache["CMAKE_C_FLAGS:STRING"])
-            self.assertEqual("", cmake_cache["CMAKE_SHARED_LINKER_FLAGS:STRING"])
-
+        self.assertEqual("-m64", cmake_cache["CMAKE_CXX_FLAGS:STRING"])
+        self.assertEqual("-m64", cmake_cache["CMAKE_C_FLAGS:STRING"])
+        self.assertEqual("-m64", cmake_cache["CMAKE_SHARED_LINKER_FLAGS:STRING"])
         self.assertEqual("-g", cmake_cache["CMAKE_CXX_FLAGS_DEBUG:STRING"])
         self.assertEqual("-O3 -DNDEBUG", cmake_cache["CMAKE_CXX_FLAGS_RELEASE:STRING"])
         self.assertEqual("-g", cmake_cache["CMAKE_C_FLAGS_DEBUG:STRING"])
         self.assertEqual("-O3 -DNDEBUG", cmake_cache["CMAKE_C_FLAGS_RELEASE:STRING"])
-
         self.assertEqual("", cmake_cache["CMAKE_EXE_LINKER_FLAGS:STRING"])
 
     @parameterized.expand([("gnu14",), ("14", ), ])
     @unittest.skipIf(platform.system() == "Windows", "Not for windows")
     def test_stdcxx_flags(self, cppstd):
-        configure_out, cmake_cache, cmake_cache_keys, _, _ = self._run_configure({"compiler.cppstd": cppstd})
+        configure_out, cmake_cache, cmake_cache_keys, _, _ = self._run_configure({"compiler.cppstd":
+                                                                                  cppstd})
 
         extensions_str = "ON" if "gnu" in cppstd else "OFF"
         # self.assertIn("compiler.cppstd={}".format(cppstd), configure_out)
-        self.assertIn("-- Conan setting CPP STANDARD: 14 WITH EXTENSIONS {}".format(extensions_str), configure_out)
+        self.assertIn("-- Conan setting CPP STANDARD: 14 WITH EXTENSIONS {}".format(extensions_str),
+                      configure_out)
         self.assertIn(">> CMAKE_CXX_STANDARD: 14", configure_out)
         self.assertIn(">> CMAKE_CXX_EXTENSIONS: {}".format(extensions_str), configure_out)
 
         # FIXME: Cache doesn't match those in CMakeLists
         self.assertNotIn("CMAKE_CXX_STANDARD", cmake_cache_keys)
         self.assertNotIn("CMAKE_CXX_EXTENSIONS", cmake_cache_keys)
-        if self.use_toolchain:
-            self.assertNotIn("CONAN_STD_CXX_FLAG", cmake_cache_keys)
-            self.assertNotIn("CONAN_CMAKE_CXX_EXTENSIONS", cmake_cache_keys)
-            self.assertNotIn("CONAN_CMAKE_CXX_STANDARD", cmake_cache_keys)
-        else:
-            type_str = "STRING" if self.use_toolchain else "UNINITIALIZED"
-            cxx_flag_str = "gnu++" if "gnu" in cppstd else "c++"
-            self.assertEqual("-std={}14".format(cxx_flag_str), cmake_cache["CONAN_STD_CXX_FLAG:" + type_str])
+        self.assertNotIn("CONAN_STD_CXX_FLAG", cmake_cache_keys)
+        self.assertNotIn("CONAN_CMAKE_CXX_EXTENSIONS", cmake_cache_keys)
+        self.assertNotIn("CONAN_CMAKE_CXX_STANDARD", cmake_cache_keys)
 
     @parameterized.expand([("14",), ("17",), ])
     @unittest.skipUnless(platform.system() == "Windows", "Only for windows")
     def test_stdcxx_flags_windows(self, cppstd):
         configure_out, cmake_cache, cmake_cache_keys, _, _ = self._run_configure({"compiler.cppstd": cppstd})
 
-        #self.assertIn("compiler.cppstd={}".format(cppstd), configure_out)
         self.assertIn("-- Conan setting CPP STANDARD: {} WITH EXTENSIONS OFF".format(cppstd), configure_out)
         self.assertIn(">> CMAKE_CXX_STANDARD: {}".format(cppstd), configure_out)
         self.assertIn(">> CMAKE_CXX_EXTENSIONS: OFF", configure_out)
@@ -369,11 +287,10 @@ class AdjustAutoTestCase(unittest.TestCase):
         # FIXME: Cache doesn't match those in CMakeLists
         self.assertNotIn("CMAKE_CXX_STANDARD", cmake_cache_keys)
         self.assertNotIn("CMAKE_CXX_EXTENSIONS", cmake_cache_keys)
-        type_str = "STRING" if self.use_toolchain else "UNINITIALIZED"
-        self.assertEqual("/std:c++{}".format(cppstd), cmake_cache["CONAN_STD_CXX_FLAG:" + type_str])
-        if self.use_toolchain:
-            self.assertEqual("OFF", cmake_cache["CONAN_CMAKE_CXX_EXTENSIONS:STRING"])
-            self.assertEqual(cppstd, cmake_cache["CONAN_CMAKE_CXX_STANDARD:STRING"])
+
+        self.assertEqual("/std:c++{}".format(cppstd), cmake_cache["CONAN_STD_CXX_FLAG:STRING"])
+        self.assertEqual("OFF", cmake_cache["CONAN_CMAKE_CXX_EXTENSIONS:STRING"])
+        self.assertEqual(cppstd, cmake_cache["CONAN_CMAKE_CXX_STANDARD:STRING"])
 
     @parameterized.expand([("True",), ("False", ), ])
     @unittest.skipIf(platform.system() == "Windows", "fPIC is not used for Windows")
@@ -385,11 +302,7 @@ class AdjustAutoTestCase(unittest.TestCase):
         self.assertIn("-- Conan: Adjusting fPIC flag ({})".format(fpic_str), configure_out)
         self.assertIn(">> CMAKE_POSITION_INDEPENDENT_CODE: {}".format(fpic_str), configure_out)
 
-        if self.use_toolchain:
-            self.assertNotIn("CONAN_CMAKE_POSITION_INDEPENDENT_CODE", cmake_cache_keys)
-        else:
-            type_str = "STRING" if self.use_toolchain else "UNINITIALIZED"
-            self.assertEqual(fpic_str, cmake_cache["CONAN_CMAKE_POSITION_INDEPENDENT_CODE:" + type_str])
+        self.assertNotIn("CONAN_CMAKE_POSITION_INDEPENDENT_CODE", cmake_cache_keys)
         self.assertNotIn("CMAKE_POSITION_INDEPENDENT_CODE", cmake_cache_keys)
 
     @unittest.skipIf(platform.system() != "Darwin", "rpath is only handled for Darwin")
@@ -403,18 +316,11 @@ class AdjustAutoTestCase(unittest.TestCase):
     def test_find_paths(self):
         configure_out, cmake_cache, cmake_cache_keys, build_directory, _ = self._run_configure()
 
-        # TODO: CONAN_CMAKE_MODULE_PATH, we are not populating that variable! never?!
+        self.assertIn(">> CMAKE_MODULE_PATH: {}".format(build_directory), configure_out)
+        # FIXME: CMAKE_PREFIX_PATH empty?
+        #  self.assertIn(">> CMAKE_PREFIX_PATH: ", configure_out)
 
-        if self.use_toolchain:
-            self.assertIn(">> CMAKE_MODULE_PATH: {}".format(build_directory), configure_out)
-        else:
-            self.assertIn(">> CMAKE_MODULE_PATH: ".format(build_directory), configure_out)
-        self.assertIn(">> CMAKE_PREFIX_PATH: ", configure_out)
-
-        if self.use_toolchain:
-            self.assertEqual(build_directory, cmake_cache["CMAKE_MODULE_PATH:STRING"])
-        else:
-            self.assertNotIn("CMAKE_MODULE_PATH", cmake_cache_keys)
+        self.assertEqual(build_directory, cmake_cache["CMAKE_MODULE_PATH:STRING"])
         self.assertNotIn("CMAKE_PREFIX_PATH", cmake_cache_keys)
 
     def test_find_library_paths(self):
@@ -434,29 +340,22 @@ class AdjustAutoTestCase(unittest.TestCase):
         configure_out, cmake_cache, cmake_cache_keys, _, _ = self._run_configure({"compiler.runtime": runtime,
                                                                                   "build_type": build_type})
 
-        mp1_prefix = "/MP1 " if self.use_toolchain else ""
-        mp1_postfix = "" if self.use_toolchain else " /MP1"
-        runtime_debug = runtime + "d" if self.use_toolchain and build_type == "Release" else runtime  # FIXME: no-toolchain uses the same
-        runtime_release = runtime[:2] if self.use_toolchain and build_type == "Debug" else runtime
-        extra_blank = "" if self.use_toolchain else " "
+        mp1_prefix = "/MP1 "
+        runtime_debug = runtime + "d" if build_type == "Release" else runtime  # FIXME: no-toolchain uses the same
+        runtime_release = runtime[:2] if build_type == "Debug" else runtime
 
-        self.assertIn(">> CMAKE_SHARED_LINKER_FLAGS: /machine:x64" + extra_blank, configure_out)
-        self.assertIn(">> CMAKE_EXE_LINKER_FLAGS: /machine:x64" + extra_blank, configure_out)
+        self.assertIn(">> CMAKE_SHARED_LINKER_FLAGS: /machine:x64", configure_out)
+        self.assertIn(">> CMAKE_EXE_LINKER_FLAGS: /machine:x64", configure_out)
 
-        self.assertIn(">> CMAKE_CXX_FLAGS: {}/DWIN32 /D_WINDOWS /W3 /GR /EHsc{}".format(mp1_prefix, mp1_postfix), configure_out)
-        self.assertIn(">> CMAKE_CXX_FLAGS_DEBUG: /{} /Zi /Ob0 /Od /RTC1".format(runtime_debug) + extra_blank, configure_out)  # FIXME: Same runtime for debug and release!
-        self.assertIn(">> CMAKE_CXX_FLAGS_RELEASE: /{} /O2 /Ob2 /DNDEBUG".format(runtime_release) + extra_blank, configure_out)
-        self.assertIn(">> CMAKE_C_FLAGS: {}/DWIN32 /D_WINDOWS /W3{}".format(mp1_prefix, mp1_postfix), configure_out)
-        self.assertIn(">> CMAKE_C_FLAGS_DEBUG: /{} /Zi /Ob0 /Od /RTC1".format(runtime_debug) + extra_blank, configure_out)  # FIXME: Same runtime for debug and release
-        self.assertIn(">> CMAKE_C_FLAGS_RELEASE: /{} /O2 /Ob2 /DNDEBUG".format(runtime_release) + extra_blank, configure_out)
+        self.assertIn(">> CMAKE_CXX_FLAGS: {}/DWIN32 /D_WINDOWS /W3 /GR /EHsc".format(mp1_prefix), configure_out)
+        self.assertIn(">> CMAKE_CXX_FLAGS_DEBUG: /{} /Zi /Ob0 /Od /RTC1".format(runtime_debug), configure_out)  # FIXME: Same runtime for debug and release!
+        self.assertIn(">> CMAKE_CXX_FLAGS_RELEASE: /{} /O2 /Ob2 /DNDEBUG".format(runtime_release), configure_out)
+        self.assertIn(">> CMAKE_C_FLAGS: {}/DWIN32 /D_WINDOWS /W3".format(mp1_prefix), configure_out)
+        self.assertIn(">> CMAKE_C_FLAGS_DEBUG: /{} /Zi /Ob0 /Od /RTC1".format(runtime_debug), configure_out)  # FIXME: Same runtime for debug and release
+        self.assertIn(">> CMAKE_C_FLAGS_RELEASE: /{} /O2 /Ob2 /DNDEBUG".format(runtime_release), configure_out)
 
-        if self.use_toolchain:
-            self.assertEqual("/MP1 /DWIN32 /D_WINDOWS /W3 /GR /EHsc", cmake_cache["CMAKE_CXX_FLAGS:STRING"])
-            self.assertEqual("/MP1 /DWIN32 /D_WINDOWS /W3", cmake_cache["CMAKE_C_FLAGS:STRING"])
-        else:
-            # FIXME: Cache doesn't match those in CMakeLists
-            self.assertEqual("/DWIN32 /D_WINDOWS /W3 /GR /EHsc".format(runtime), cmake_cache["CMAKE_CXX_FLAGS:STRING"])
-            self.assertEqual("/DWIN32 /D_WINDOWS /W3".format(runtime), cmake_cache["CMAKE_C_FLAGS:STRING"])
+        self.assertEqual("/MP1 /DWIN32 /D_WINDOWS /W3 /GR /EHsc", cmake_cache["CMAKE_CXX_FLAGS:STRING"])
+        self.assertEqual("/MP1 /DWIN32 /D_WINDOWS /W3", cmake_cache["CMAKE_C_FLAGS:STRING"])
 
         self.assertEqual("/MDd /Zi /Ob0 /Od /RTC1".format(runtime), cmake_cache["CMAKE_CXX_FLAGS_DEBUG:STRING"])
         self.assertEqual("/MD /O2 /Ob2 /DNDEBUG".format(runtime), cmake_cache["CMAKE_CXX_FLAGS_RELEASE:STRING"])
@@ -466,8 +365,7 @@ class AdjustAutoTestCase(unittest.TestCase):
         self.assertEqual("/machine:x64", cmake_cache["CMAKE_SHARED_LINKER_FLAGS:STRING"])
         self.assertEqual("/machine:x64", cmake_cache["CMAKE_EXE_LINKER_FLAGS:STRING"])
 
-        type_str = "STRING" if self.use_toolchain else "UNINITIALIZED"
-        self.assertEqual("/{}".format(runtime), cmake_cache["CONAN_LINK_RUNTIME:" + type_str])
+        self.assertEqual("/{}".format(runtime), cmake_cache["CONAN_LINK_RUNTIME:STRING"])
 
     @parameterized.expand([("15", "x86_64",), ("15", "x86",), ("16", "x86_64"), ("16", "x86")])
     @unittest.skipUnless(platform.system() == "Windows", "Only windows")
@@ -481,20 +379,16 @@ class AdjustAutoTestCase(unittest.TestCase):
         configure_out, cmake_cache, cmake_cache_keys, _, _ = self._run_configure({"arch": arch,
                                                                                   "compiler.version": compiler_version})
 
-        extra_blank = "" if self.use_toolchain else " "
-
         arch_str = "x64" if arch == "x86_64" else "X86"
-        self.assertIn(">> CMAKE_SHARED_LINKER_FLAGS: /machine:{}".format(arch_str) + extra_blank, configure_out)
-        self.assertIn(">> CMAKE_EXE_LINKER_FLAGS: /machine:{}".format(arch_str) + extra_blank, configure_out)
+        self.assertIn(">> CMAKE_SHARED_LINKER_FLAGS: /machine:{}".format(arch_str), configure_out)
+        self.assertIn(">> CMAKE_EXE_LINKER_FLAGS: /machine:{}".format(arch_str), configure_out)
         generator_str = "x64" if arch == "x86_64" else "Win32"
-        if self.use_toolchain or compiler_version == "16":
-            self.assertIn(">> CMAKE_GENERATOR_PLATFORM: {}".format(generator_str), configure_out)
+        self.assertIn(">> CMAKE_GENERATOR_PLATFORM: {}".format(generator_str), configure_out)
 
         self.assertEqual("/machine:{}".format(arch_str), cmake_cache["CMAKE_SHARED_LINKER_FLAGS:STRING"])
         self.assertEqual("/machine:{}".format(arch_str), cmake_cache["CMAKE_EXE_LINKER_FLAGS:STRING"])
-        if self.use_toolchain or compiler_version == "16":
-            type_str = "STRING" if self.use_toolchain else "INTERNAL"
-            self.assertEqual(generator_str, cmake_cache["CMAKE_GENERATOR_PLATFORM:" + type_str])
+
+        self.assertEqual(generator_str, cmake_cache["CMAKE_GENERATOR_PLATFORM:STRING"])
 
     @parameterized.expand([("x86_64",), ("x86",), ])
     @unittest.skipUnless(platform.system() == "Linux", "Only linux")
@@ -512,15 +406,8 @@ class AdjustAutoTestCase(unittest.TestCase):
         self.assertIn(">> CMAKE_SHARED_LINKER_FLAGS: -{}".format(arch_str), configure_out)
         self.assertIn(">> CMAKE_EXE_LINKER_FLAGS: ", configure_out)
 
-        if self.use_toolchain:
-            self.assertEqual("-{}".format(arch_str), cmake_cache["CMAKE_CXX_FLAGS:STRING"])
-            self.assertEqual("-{}".format(arch_str), cmake_cache["CMAKE_C_FLAGS:STRING"])
-            self.assertEqual("-{}".format(arch_str), cmake_cache["CMAKE_SHARED_LINKER_FLAGS:STRING"])
-
-        else:
-            # FIXME: Cache doesn't match those in CMakeLists
-            self.assertEqual("", cmake_cache["CMAKE_CXX_FLAGS:STRING"])
-            self.assertEqual("", cmake_cache["CMAKE_C_FLAGS:STRING"])
-            self.assertEqual("", cmake_cache["CMAKE_SHARED_LINKER_FLAGS:STRING"])
+        self.assertEqual("-{}".format(arch_str), cmake_cache["CMAKE_CXX_FLAGS:STRING"])
+        self.assertEqual("-{}".format(arch_str), cmake_cache["CMAKE_C_FLAGS:STRING"])
+        self.assertEqual("-{}".format(arch_str), cmake_cache["CMAKE_SHARED_LINKER_FLAGS:STRING"])
 
         self.assertEqual("", cmake_cache["CMAKE_EXE_LINKER_FLAGS:STRING"])
