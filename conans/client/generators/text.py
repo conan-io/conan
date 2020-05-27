@@ -13,6 +13,8 @@ from conans.util.log import logger
 
 class DepsCppTXT(object):
     def __init__(self, cpp_info):
+        self.version = cpp_info.version
+        self.name = cpp_info.name
         self.include_paths = "\n".join(p.replace("\\", "/")
                                        for p in cpp_info.include_paths)
         self.lib_paths = "\n".join(p.replace("\\", "/")
@@ -108,8 +110,12 @@ class TXTGenerator(Generator):
                     var_name, config = tokens
                 else:
                     config = None
-                tokens = var_name.split("_", 1)
-                field = tokens[0]
+                if 'system_libs' in var_name:
+                    tokens = var_name.split("system_libs_", 1)
+                    field = 'system_libs'
+                else:
+                    tokens = var_name.split("_", 1)
+                    field = tokens[0]
                 dep = tokens[1] if len(tokens) == 2 else None
                 if field == "cppflags":
                     field = "cxxflags"
@@ -127,7 +133,7 @@ class TXTGenerator(Generator):
                     item_to_apply = cpp_info if not config else getattr(cpp_info, config)
 
                     for key, value in fields.items():
-                        if key in ['rootpath', 'sysroot']:
+                        if key in ['rootpath', 'sysroot', 'version', 'name']:
                             value = value[0]
                         setattr(item_to_apply, key, value)
             return deps_cpp_info
@@ -153,7 +159,7 @@ class TXTGenerator(Generator):
                     '[exelinkflags{dep}{config}]\n{deps.exelinkflags}\n\n'
                     '[sysroot{dep}{config}]\n{deps.sysroot}\n\n'
                     '[frameworks{dep}{config}]\n{deps.frameworks}\n\n'
-                    '[framework_paths{dep}{config}]\n{deps.framework_paths}\n\n')
+                    '[frameworkdirs{dep}{config}]\n{deps.framework_paths}\n\n')
 
         sections = []
         deps = DepsCppTXT(self.deps_build_info)
@@ -166,7 +172,9 @@ class TXTGenerator(Generator):
             sections.append(all_flags)
 
         # Makes no sense to have an accumulated rootpath
-        template_deps = template + '[rootpath{dep}]\n{deps.rootpath}\n\n'
+        template_deps = (template + '[rootpath{dep}]\n{deps.rootpath}\n\n' +
+                         '[name{dep}]\n{deps.name}\n\n' +
+                         '[version{dep}]\n{deps.version}\n\n')
 
         for dep_name, dep_cpp_info in self.deps_build_info.dependencies:
             dep = "_" + dep_name

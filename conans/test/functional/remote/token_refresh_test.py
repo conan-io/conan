@@ -1,32 +1,14 @@
 import unittest
+from collections import namedtuple
 
 from mock import Mock
 
 from conans.client.cache.remote_registry import Remote
 from conans.client.rest.auth_manager import ConanApiAuthManager
-from conans.client.rest.rest_client import RestApiClient
+from conans.client.rest.rest_client import RestApiClientFactory
 from conans.model.ref import ConanFileReference
-from conans.test.utils.tools import TestBufferConanOutput
+from conans.test.utils.tools import TestBufferConanOutput, LocalDBMock
 from conans.client.userio import UserIO
-
-
-class LocalDBMock(object):
-
-    def __init__(self):
-        self.user = None
-        self.access_token = None
-        self.refresh_token = None
-
-    def get_login(self, _):
-        return self.user, self.access_token, self.refresh_token
-
-    def get_username(self, _):
-        return self.user
-
-    def store(self, user, access_token, refresh_token, _):
-        self.user = user
-        self.access_token = access_token
-        self.refresh_token = refresh_token
 
 
 common_headers = {"X-Conan-Server-Capabilities": "oauth_token", "Content-Type": "application/json"}
@@ -70,10 +52,6 @@ class ResponseAuthenticationRequired(object):
 
 class RequesterWithTokenMock(object):
 
-    def __init__(self):
-        self.retry = 1
-        self.retry_wait = 1
-
     def get(self, url, **kwargs):
         if not kwargs["auth"].token or kwargs["auth"].token == "expired":
             return ResponseAuthenticationRequired()
@@ -102,16 +80,19 @@ class TestTokenRefresh(unittest.TestCase):
         mocked_user_io.get_password = Mock(return_value="mypassword")
 
         requester = RequesterWithTokenMock()
-        self.rest_client = RestApiClient(mocked_user_io.out,
-                                         requester, revisions_enabled=False, artifacts_properties=None)
+        config = namedtuple("ConfigMock", "revisions_enabled download_cache")(False, None)
+        self.rest_client_factory = RestApiClientFactory(mocked_user_io.out,
+                                                        requester, config=config,
+                                                        artifacts_properties=None)
         self.localdb = LocalDBMock()
-        self.auth_manager = ConanApiAuthManager(self.rest_client, mocked_user_io, self.localdb)
-        self.auth_manager.remote = Remote("myremote", "myurl", True, True)
-        self.auth_manager.user = None
+        self.auth_manager = ConanApiAuthManager(self.rest_client_factory, mocked_user_io,
+                                                self.localdb)
+        self.remote = Remote("myremote", "myurl", True, True)
+        self.ref = ConanFileReference.loads("lib/1.0@conan/stable")
 
     def test_auth_with_token(self):
         """Test that if the capability is there, then we use the new endpoint"""
-        self.auth_manager.get_recipe(ConanFileReference.loads("lib/1.0@conan/stable"), ".")
+        self.auth_manager.call_rest_api_method(self.remote, "get_recipe", self.ref, ".")
         self.assertEqual(self.localdb.user, "myuser")
         self.assertEqual(self.localdb.access_token, "access_token")
         self.assertEqual(self.localdb.refresh_token, "refresh_token")
@@ -122,10 +103,8 @@ class TestTokenRefresh(unittest.TestCase):
         """
         self.localdb.access_token = "expired"
         self.localdb.refresh_token = "refresh_token"
-        self.rest_client.token = self.localdb.access_token
-        self.rest_client.refresh_token = self.localdb.refresh_token
 
-        self.auth_manager.get_recipe(ConanFileReference.loads("lib/1.0@conan/stable"), ".")
+        self.auth_manager.call_rest_api_method(self.remote, "get_recipe", self.ref, ".")
         self.assertEqual(self.localdb.user, "myuser")
         self.assertEqual(self.localdb.access_token, "refreshed_access_token")
         self.assertEqual(self.localdb.refresh_token, "refresh_token")

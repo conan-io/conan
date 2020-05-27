@@ -10,6 +10,7 @@ from conans.errors import ConanException, ConanExceptionInUserConanfileMethod, \
 from conans.model.conan_file import get_env_context_manager
 from conans.model.scm import SCM, get_scm_data
 from conans.paths import CONANFILE, CONAN_MANIFEST, EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME
+from conans.util.conan_v2_mode import conan_v2_property
 from conans.util.files import (set_dirty, is_dirty, mkdir, rmdir, set_dirty_context_manager,
                                merge_directories)
 
@@ -19,7 +20,8 @@ def complete_recipe_sources(remote_manager, cache, conanfile, ref, remotes):
     occassions, conan needs to get them too, like if uploading to a server, to keep the recipes
     complete
     """
-    sources_folder = cache.package_layout(ref, conanfile.short_paths).export_sources()
+    package_layout = cache.package_layout(ref, conanfile.short_paths)
+    sources_folder = package_layout.export_sources()
     if os.path.exists(sources_folder):
         return None
 
@@ -29,15 +31,23 @@ def complete_recipe_sources(remote_manager, cache, conanfile, ref, remotes):
 
     # If not path to sources exists, we have a problem, at least an empty folder
     # should be there
-    current_remote = cache.package_layout(ref).load_metadata().recipe.remote
+    current_remote = package_layout.load_metadata().recipe.remote
     if current_remote:
         current_remote = remotes[current_remote]
     if not current_remote:
-        raise ConanException("Error while trying to get recipe sources for %s. "
-                             "No remote defined" % str(ref))
+        msg = ("The '%s' package has 'exports_sources' but sources not found in local cache.\n"
+               "Probably it was installed from a remote that is no longer available.\n"
+               % str(ref))
+        raise ConanException(msg)
 
-    export_path = cache.package_layout(ref).export()
-    remote_manager.get_recipe_sources(ref, export_path, sources_folder, current_remote)
+    export_path = package_layout.export()
+    try:
+        remote_manager.get_recipe_sources(ref, export_path, sources_folder, current_remote)
+    except Exception as e:
+        msg = ("The '%s' package has 'exports_sources' but sources not found in local cache.\n"
+               "Probably it was installed from a remote that is no longer available.\n"
+               % str(ref))
+        raise ConanException("\n".join([str(e), msg]))
 
 
 def config_source_local(src_folder, conanfile, conanfile_path, hook_manager):
@@ -125,7 +135,12 @@ def _run_source(conanfile, conanfile_path, src_folder, hook_manager, reference, 
                 if cache:
                     _clean_source_folder(src_folder)  # TODO: Why is it needed in cache?
                 with conanfile_exception_formatter(conanfile.display_name, "source"):
-                    conanfile.source()
+
+                    with conan_v2_property(conanfile, 'settings',
+                                           "'self.settings' access in source() method is deprecated"):
+                        with conan_v2_property(conanfile, 'options',
+                                               "'self.options' access in source() method is deprecated"):
+                            conanfile.source()
 
                 hook_manager.execute("post_source", conanfile=conanfile,
                                      conanfile_path=conanfile_path,
@@ -170,8 +185,11 @@ def _run_cache_scm(conanfile, scm_sources_folder, src_folder, output):
         merge_directories(scm_sources_folder, dest_dir)
     else:
         output.info("SCM: Getting sources from url: '%s'" % scm_data.url)
-        scm = SCM(scm_data, dest_dir, output)
-        scm.checkout()
+        try:
+            scm = SCM(scm_data, dest_dir, output)
+            scm.checkout()
+        except Exception as e:
+            raise ConanException("Couldn't checkout SCM: %s" % str(e))
         # This is a bit weird. Why after a SCM should we remove files.
         # Maybe check conan 2.0
         # TODO: Why removing in the cache? There is no danger.

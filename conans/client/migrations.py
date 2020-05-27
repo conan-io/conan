@@ -14,6 +14,7 @@ from conans.model.manifest import FileTreeManifest
 from conans.model.package_metadata import PackageMetadata
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.version import Version
+from conans.paths import CONANFILE
 from conans.paths import EXPORT_SOURCES_DIR_OLD
 from conans.paths import PACKAGE_METADATA
 from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
@@ -29,7 +30,7 @@ class ClientMigrator(Migrator):
 
     def _update_settings_yml(self, old_version):
 
-        from conans.client.conf import default_settings_yml
+        from conans.client.conf import get_default_settings_yml
         settings_path = self.cache.settings_path
         if not os.path.exists(settings_path):
             self.out.warn("Migration: This conan installation doesn't have settings yet")
@@ -40,7 +41,7 @@ class ClientMigrator(Migrator):
 
         def save_new():
             new_path = self.cache.settings_path + ".new"
-            save(new_path, default_settings_yml)
+            save(new_path, get_default_settings_yml())
             self.out.warn("*" * 40)
             self.out.warn("settings.yml is locally modified, can't be updated")
             self.out.warn("The new settings.yml has been stored in: %s" % new_path)
@@ -49,12 +50,12 @@ class ClientMigrator(Migrator):
         self.out.warn("Migration: Updating settings.yml")
         if hasattr(migrations_settings, var_name):
             version_default_contents = getattr(migrations_settings, var_name)
-            if version_default_contents != default_settings_yml:
+            if version_default_contents != get_default_settings_yml():
                 current_settings = load(self.cache.settings_path)
                 if current_settings != version_default_contents:
                     save_new()
                 else:
-                    save(self.cache.settings_path, default_settings_yml)
+                    save(self.cache.settings_path, get_default_settings_yml())
             else:
                 self.out.info("Migration: Settings already up to date")
         else:
@@ -105,6 +106,9 @@ class ClientMigrator(Migrator):
 
         if old_version < Version("1.19.0"):
             migrate_localdb_refresh_token(self.cache, self.out)
+
+        if old_version < Version("1.26.0"):
+            migrate_editables_use_conanfile_name(self.cache, self.out)
 
 
 def _get_refs(cache):
@@ -303,3 +307,16 @@ def migrate_plugins_to_hooks(cache, output=None):
         os.rename(plugins_path, cache.hooks_path)
     conf_path = cache.conan_conf_path
     replace_in_file(conf_path, "[plugins]", "[hooks]", strict=False, output=output)
+
+
+def migrate_editables_use_conanfile_name(cache, output=None):
+    """
+    In Conan v1.26 we store full path to the conanfile in the editable_package.json file, before
+    it Conan was storing just the directory and assume that the 'conanfile' was a file
+    named 'conanfile.py' inside that folder
+    """
+    for ref, data in cache.editable_packages.edited_refs.items():
+        path = data["path"]
+        if os.path.isdir(path):
+            path = os.path.join(path, CONANFILE)
+        cache.editable_packages.add(ref, path, layout=data["layout"])

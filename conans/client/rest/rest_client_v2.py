@@ -2,10 +2,13 @@ import os
 import time
 import traceback
 
+from conans import DEFAULT_REVISION_V1
 from conans.client.remote_manager import check_compressed_files
 from conans.client.rest.client_routes import ClientV2Router
+from conans.client.rest.download_cache import CachedFileDownloader
+from conans.client.rest.file_uploader import FileUploader
 from conans.client.rest.rest_client_common import RestCommonMethods, get_exception_from_error
-from conans.client.rest.uploader_downloader import FileDownloader, FileUploader
+from conans.client.rest.file_downloader import FileDownloader
 from conans.errors import ConanException, NotFoundException, PackageNotFoundException, \
     RecipeNotFoundException, AuthenticationException, ForbiddenException
 from conans.model.info import ConanInfo
@@ -18,16 +21,17 @@ from conans.util.log import logger
 
 class RestV2Methods(RestCommonMethods):
 
-    def __init__(self, remote_url, token, custom_headers, output, requester, verify_ssl,
-                 artifacts_properties=None, checksum_deploy=False):
+    def __init__(self, remote_url, token, custom_headers, output, requester, config, verify_ssl,
+                 artifacts_properties=None, checksum_deploy=False, matrix_params=False):
 
         super(RestV2Methods, self).__init__(remote_url, token, custom_headers, output, requester,
-                                            verify_ssl, artifacts_properties)
+                                            config, verify_ssl, artifacts_properties, matrix_params)
         self._checksum_deploy = checksum_deploy
 
     @property
     def router(self):
-        return ClientV2Router(self.remote_url.rstrip("/"))
+        return ClientV2Router(self.remote_url.rstrip("/"), self._artifacts_properties,
+                              self._matrix_params)
 
     def _get_file_list_json(self, url):
         data = self.get_json(url)
@@ -35,9 +39,11 @@ class RestV2Methods(RestCommonMethods):
         data["files"] = list(data["files"].keys())
         return data
 
-    def _get_remote_file_contents(self, url):
+    def _get_remote_file_contents(self, url, use_cache):
         # We don't want traces in output of these downloads, they are ugly in output
-        downloader = FileDownloader(self.requester, None, self.verify_ssl)
+        downloader = FileDownloader(self.requester, None, self.verify_ssl, self._config)
+        if use_cache and self._config.download_cache:
+            downloader = CachedFileDownloader(self._config.download_cache, downloader)
         contents = downloader.download(url, auth=self.auth)
         return contents
 
@@ -54,12 +60,14 @@ class RestV2Methods(RestCommonMethods):
         if not ref.revision:
             ref = self.get_latest_recipe_revision(ref)
         url = self.router.recipe_manifest(ref)
-        content = self._get_remote_file_contents(url)
+        cache = (ref.revision != DEFAULT_REVISION_V1)
+        content = self._get_remote_file_contents(url, use_cache=cache)
         return FileTreeManifest.loads(decode_text(content))
 
     def get_package_manifest(self, pref):
         url = self.router.package_manifest(pref)
-        content = self._get_remote_file_contents(url)
+        cache = (pref.revision != DEFAULT_REVISION_V1)
+        content = self._get_remote_file_contents(url, use_cache=cache)
         try:
             return FileTreeManifest.loads(decode_text(content))
         except Exception as e:
@@ -71,7 +79,8 @@ class RestV2Methods(RestCommonMethods):
 
     def get_package_info(self, pref):
         url = self.router.package_info(pref)
-        content = self._get_remote_file_contents(url)
+        cache = (pref.revision != DEFAULT_REVISION_V1)
+        content = self._get_remote_file_contents(url, use_cache=cache)
         return ConanInfo.loads(decode_text(content))
 
     def get_recipe(self, ref, dest_folder):
@@ -84,7 +93,8 @@ class RestV2Methods(RestCommonMethods):
 
         # If we didn't indicated reference, server got the latest, use absolute now, it's safer
         urls = {fn: self.router.recipe_file(ref, fn) for fn in files}
-        self._download_and_save_files(urls, dest_folder, files)
+        cache = (ref.revision != DEFAULT_REVISION_V1)
+        self._download_and_save_files(urls, dest_folder, files, use_cache=cache)
         ret = {fn: os.path.join(dest_folder, fn) for fn in files}
         return ret
 
@@ -102,7 +112,8 @@ class RestV2Methods(RestCommonMethods):
 
         # If we didn't indicated reference, server got the latest, use absolute now, it's safer
         urls = {fn: self.router.recipe_file(ref, fn) for fn in files}
-        self._download_and_save_files(urls, dest_folder, files)
+        cache = (ref.revision != DEFAULT_REVISION_V1)
+        self._download_and_save_files(urls, dest_folder, files, use_cache=cache)
         ret = {fn: os.path.join(dest_folder, fn) for fn in files}
         return ret
 
@@ -113,7 +124,8 @@ class RestV2Methods(RestCommonMethods):
         check_compressed_files(PACKAGE_TGZ_NAME, files)
         # If we didn't indicated reference, server got the latest, use absolute now, it's safer
         urls = {fn: self.router.package_file(pref, fn) for fn in files}
-        self._download_and_save_files(urls, dest_folder, files)
+        cache = (pref.revision != DEFAULT_REVISION_V1)
+        self._download_and_save_files(urls, dest_folder, files, use_cache=cache)
         ret = {fn: os.path.join(dest_folder, fn) for fn in files}
         return ret
 
@@ -124,7 +136,8 @@ class RestV2Methods(RestCommonMethods):
             return self._list_dir_contents(path, files)
         else:
             url = self.router.recipe_file(ref, path)
-            content = self._get_remote_file_contents(url)
+            cache = (ref.revision != DEFAULT_REVISION_V1)
+            content = self._get_remote_file_contents(url, use_cache=cache)
             return decode_text(content)
 
     def get_package_path(self, pref, path):
@@ -135,7 +148,8 @@ class RestV2Methods(RestCommonMethods):
             return self._list_dir_contents(path, files)
         else:
             url = self.router.package_file(pref, path)
-            content = self._get_remote_file_contents(url)
+            cache = (pref.revision != DEFAULT_REVISION_V1)
+            content = self._get_remote_file_contents(url, use_cache=cache)
             return decode_text(content)
 
     @staticmethod
@@ -161,29 +175,34 @@ class RestV2Methods(RestCommonMethods):
 
     def _upload_recipe(self, ref, files_to_upload, retry, retry_wait):
         # Direct upload the recipe
-        urls = {fn: self.router.recipe_file(ref, fn) for fn in files_to_upload}
-        self._upload_files(files_to_upload, urls, retry, retry_wait)
+        urls = {fn: self.router.recipe_file(ref, fn, add_matrix_params=True)
+                for fn in files_to_upload}
+        self._upload_files(files_to_upload, urls, retry, retry_wait, display_name=str(ref))
 
     def _upload_package(self, pref, files_to_upload, retry, retry_wait):
-        urls = {fn: self.router.package_file(pref, fn)
+        urls = {fn: self.router.package_file(pref, fn, add_matrix_params=True)
                 for fn in files_to_upload}
-        self._upload_files(files_to_upload, urls, retry, retry_wait)
 
-    def _upload_files(self, files, urls, retry, retry_wait):
+        short_pref_name = "%s:%s" % (pref.ref, pref.id[0:4])
+        self._upload_files(files_to_upload, urls, retry, retry_wait, display_name=short_pref_name)
+
+    def _upload_files(self, files, urls, retry, retry_wait, display_name=None):
         t1 = time.time()
         failed = []
-        uploader = FileUploader(self.requester, self._output, self.verify_ssl)
+        uploader = FileUploader(self.requester, self._output, self.verify_ssl, self._config)
         # conan_package.tgz and conan_export.tgz are uploaded first to avoid uploading conaninfo.txt
         # or conanamanifest.txt with missing files due to a network failure
         for filename in sorted(files):
             if self._output and not self._output.is_terminal:
-                self._output.rewrite_line("Uploading %s" % filename)
+                msg = "Uploading: %s" % filename if not display_name else (
+                            "Uploading %s -> %s" % (filename, display_name))
+                self._output.writeln(msg)
             resource_url = urls[filename]
             try:
+                headers = self._artifacts_properties if not self._matrix_params else {}
                 uploader.upload(resource_url, files[filename], auth=self.auth,
-                                dedup=self._checksum_deploy, retry=retry,
-                                retry_wait=retry_wait,
-                                headers=self._artifacts_properties)
+                                dedup=self._checksum_deploy, retry=retry, retry_wait=retry_wait,
+                                headers=headers, display_name=display_name)
             except (AuthenticationException, ForbiddenException):
                 raise
             except Exception as exc:
@@ -196,8 +215,10 @@ class RestV2Methods(RestCommonMethods):
         else:
             logger.debug("\nUPLOAD: All uploaded! Total time: %s\n" % str(time.time() - t1))
 
-    def _download_and_save_files(self, urls, dest_folder, files):
-        downloader = FileDownloader(self.requester, self._output, self.verify_ssl)
+    def _download_and_save_files(self, urls, dest_folder, files, use_cache):
+        downloader = FileDownloader(self.requester, self._output, self.verify_ssl, self._config)
+        if use_cache and self._config.download_cache:
+            downloader = CachedFileDownloader(self._config.download_cache, downloader)
         # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz
         # can be < conanfile, conaninfo, and sent always the last, so smaller files go first
         for filename in sorted(files, reverse=True):

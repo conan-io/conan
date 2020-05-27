@@ -21,7 +21,7 @@ class GetPackageManifestTestCase(unittest.TestCase):
              patch.object(ClientV2Router, "package_manifest", return_value=None):
 
             v2 = RestV2Methods(remote_url, token=None, custom_headers=None, output=None,
-                               requester=None, verify_ssl=None)
+                               requester=None, config=None, verify_ssl=None)
             with self.assertRaises(ConanException) as exc:
                 v2.get_package_manifest(pref=pref)
 

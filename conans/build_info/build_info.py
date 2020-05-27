@@ -9,7 +9,9 @@ from six.moves.urllib.parse import urlparse, urljoin
 from conans.client.cache.cache import ClientCache
 from conans.client.rest import response_to_str
 from conans.errors import AuthenticationException, RequestErrorException, ConanException
+from conans.model.graph_lock import LOCKFILE_VERSION
 from conans.model.ref import ConanFileReference
+from conans.model.version import Version
 from conans.paths import ARTIFACTS_PROPERTIES_PUT_PREFIX
 from conans.paths import get_conan_user_home
 from conans.util.files import save
@@ -38,22 +40,20 @@ def _parse_profile(contents):
 
 
 class BuildInfoCreator(object):
-    def __init__(self, output, build_info_file, lockfile, multi_module=True, skip_env=True,
-                 user=None, password=None, apikey=None):
+    def __init__(self, output, build_info_file, lockfile, user=None, password=None, apikey=None):
         self._build_info_file = build_info_file
         self._lockfile = lockfile
-        self._multi_module = multi_module
-        self._skip_env = skip_env
         self._user = user
         self._password = password
         self._apikey = apikey
+        self._output = output
         self._conan_cache = ClientCache(os.path.join(get_conan_user_home(), ".conan"), output)
 
     def parse_pref(self, pref):
         ref = ConanFileReference.loads(pref, validate=False)
         rrev = ref.revision.split("#")[0].split(":")[0]
         pid = ref.revision.split("#")[0].split(":")[1]
-        prev = ref.revision.split("#")[1]
+        prev = "" if len(ref.revision.split("#")) == 1 else ref.revision.split("#")[1]
         return {
             "name": ref.name,
             "version": ref.version,
@@ -107,17 +107,12 @@ class BuildInfoCreator(object):
 
             if response.status_code == 200:
                 data = response.json()
-                ret[data["checksums"]["sha1"]] = {"md5": data["checksums"],
-                                                  "name": "conan_sources.tgz",
-                                                  "id": None}
-            elif response.status_code == 401:
-                raise AuthenticationException(response_to_str(response))
-            else:
-                raise RequestErrorException(response_to_str(response))
-
+                ret[data["checksums"]["sha1"]] = {"md5": data["checksums"]["md5"],
+                                                  "name": "conan_sources.tgz" if not use_id else None,
+                                                  "id": "conan_sources.tgz" if use_id else None}
         return set([Artifact(k, **v) for k, v in ret.items()])
 
-    def _get_recipe_artifacts(self, pref, add_prefix, use_id):
+    def _get_recipe_artifacts(self, pref, is_dependency):
         r = self.parse_pref(pref)
         if r.get("user") and r.get("channel"):
             ref = "{name}/{version}@{user}/{channel}#{rrev}".format(**r)
@@ -126,15 +121,15 @@ class BuildInfoCreator(object):
         reference = ConanFileReference.loads(ref)
         package_layout = self._conan_cache.package_layout(reference)
         metadata = package_layout.load_metadata()
-        name_format = "{} :: {{}}".format(self._get_reference(pref)) if add_prefix else "{}"
+        name_format = "{} :: {{}}".format(self._get_reference(pref)) if is_dependency else "{}"
         if r.get("user") and r.get("channel"):
             url = "{user}/{name}/{version}/{channel}/{rrev}/export".format(**r)
         else:
             url = "_/{name}/{version}/_/{rrev}/export".format(**r)
 
-        return self._get_metadata_artifacts(metadata, url, name_format=name_format, use_id=use_id)
+        return self._get_metadata_artifacts(metadata, url, name_format=name_format, use_id=is_dependency)
 
-    def _get_package_artifacts(self, pref, add_prefix, use_id):
+    def _get_package_artifacts(self, pref, is_dependency):
         r = self.parse_pref(pref)
         if r.get("user") and r.get("channel"):
             ref = "{name}/{version}@{user}/{channel}#{rrev}".format(**r)
@@ -143,12 +138,12 @@ class BuildInfoCreator(object):
         reference = ConanFileReference.loads(ref)
         package_layout = self._conan_cache.package_layout(reference)
         metadata = package_layout.load_metadata()
-        name_format = "{} :: {{}}".format(self._get_package_reference(pref)) if add_prefix else "{}"
+        name_format = "{} :: {{}}".format(self._get_package_reference(pref)) if is_dependency else "{}"
         if r.get("user") and r.get("channel"):
             url = "{user}/{name}/{version}/{channel}/{rrev}/package/{pid}/{prev}".format(**r)
         else:
             url = "_/{name}/{version}/_/{rrev}/package/{pid}/{prev}".format(**r)
-        arts = self._get_metadata_artifacts(metadata, url, name_format=name_format, use_id=use_id,
+        arts = self._get_metadata_artifacts(metadata, url, name_format=name_format, use_id=is_dependency,
                                             package_id=r["pid"])
         return arts
 
@@ -157,13 +152,20 @@ class BuildInfoCreator(object):
 
         def _gather_deps(node_uid, contents, func):
             node_content = contents["graph_lock"]["nodes"].get(node_uid)
-            artifacts = func(node_content["pref"], add_prefix=True, use_id=True)
-            for _, id_node in node_content.get("requires", {}).items():
+            artifacts = func(node_content["pref"], is_dependency=True)
+            for id_node in node_content.get("requires", []):
+                artifacts.update(_gather_deps(id_node, contents, func))
+            for id_node in node_content.get("build_requires", []):
                 artifacts.update(_gather_deps(id_node, contents, func))
             return artifacts
 
         with open(self._lockfile) as json_data:
             data = json.load(json_data)
+
+        version = Version(data["version"])
+        if version < LOCKFILE_VERSION:
+            raise ConanException("This lockfile was created with a previous incompatible version "
+                                 "of Conan. Please update all your Conan clients")
 
         # Gather modules, their artifacts and recursively all required artifacts
         for _, node in data["graph_lock"]["nodes"].items():
@@ -173,25 +175,23 @@ class BuildInfoCreator(object):
                 recipe_key = self._get_reference(pref)
                 modules[recipe_key]["id"] = recipe_key
                 modules[recipe_key]["artifacts"].update(
-                    self._get_recipe_artifacts(pref, add_prefix=not self._multi_module,
-                                               use_id=False))
+                    self._get_recipe_artifacts(pref, is_dependency=False))
                 # TODO: what about `python_requires`?
                 # TODO: can we associate any properties to the recipe? Profile/options may be different per lockfile
 
                 # Create module for the package_id
-                package_key = self._get_package_reference(pref) if self._multi_module else recipe_key
+                package_key = self._get_package_reference(pref)
                 modules[package_key]["id"] = package_key
                 modules[package_key]["artifacts"].update(
-                    self._get_package_artifacts(pref, add_prefix=not self._multi_module,
-                                                use_id=False))
+                    self._get_package_artifacts(pref, is_dependency=False))
 
                 # Recurse requires
-                if node.get("requires"):
-                    for _, node_id in node["requires"].items():
-                        modules[recipe_key]["dependencies"].update(
-                            _gather_deps(node_id, data, self._get_recipe_artifacts))
-                        modules[package_key]["dependencies"].update(
-                            _gather_deps(node_id, data, self._get_package_artifacts))
+                node_ids = node.get("requires", []) + node.get("build_requires", [])
+                for node_id in node_ids:
+                    modules[recipe_key]["dependencies"].update(
+                        _gather_deps(node_id, data, self._get_recipe_artifacts))
+                    modules[package_key]["dependencies"].update(
+                        _gather_deps(node_id, data, self._get_package_artifacts))
 
                 # TODO: Is the recipe a 'dependency' of the package
 
@@ -209,26 +209,17 @@ class BuildInfoCreator(object):
                "buildAgent": {"name": "Conan Client", "version": "1.X"},
                "modules": list(modules.values())}
 
-        if not self._skip_env:
-            excluded = ["secret", "key", "password"]
-            environment = {"buildInfo.env.{}".format(k): v for k, v in os.environ.items() if
-                           k not in excluded}
-            ret["properties"] = environment
-
         def dump_custom_types(obj):
             if isinstance(obj, set):
                 artifacts = [{k: v for k, v in o._asdict().items() if v is not None} for o in obj]
                 return sorted(artifacts, key=lambda u: u.get("name") or u.get("id"))
             raise TypeError
 
-        with open(self._build_info_file, "w") as f:
-            f.write(json.dumps(ret, indent=4, default=dump_custom_types))
+        save(self._build_info_file, json.dumps(ret, indent=4, default=dump_custom_types))
 
 
-def create_build_info(output, build_info_file, lockfile, multi_module, skip_env, user, password,
-                      apikey):
-    bi = BuildInfoCreator(output, build_info_file, lockfile, multi_module, skip_env, user, password,
-                          apikey)
+def create_build_info(output, build_info_file, lockfile, user, password, apikey):
+    bi = BuildInfoCreator(output, build_info_file, lockfile, user, password, apikey)
     bi.create()
 
 
@@ -318,8 +309,6 @@ def update_build_info(buildinfo, output_file):
     for it in buildinfo:
         with open(it) as json_data:
             data = json.load(json_data)
-
         build_info = merge_buildinfo(build_info, data)
 
-    with open(output_file, "w") as f:
-        f.write(json.dumps(build_info, indent=4))
+    save(output_file, json.dumps(build_info, indent=4))

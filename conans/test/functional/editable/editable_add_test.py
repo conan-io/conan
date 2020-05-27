@@ -64,7 +64,16 @@ class CreateEditablePackageTest(unittest.TestCase):
         self.assertIn("ERROR: Name and version from reference (wrong/version@user/channel) and "
                       "target conanfile.py (lib/version) must match", t.out)
 
-    def missing_subarguments_test(self):
+    def test_missing_subarguments(self):
         t = TestClient()
         t.run("editable", assert_error=True)
         self.assertIn("ERROR: Exiting with code: 2", t.out)
+
+    def test_conanfile_name(self):
+        ref = ConanFileReference.loads('lib/version@user/name')
+        t = TestClient()
+        t.save(files={'othername.py': self.conanfile})
+        t.run('editable add ./othername.py {}'.format(ref))
+        self.assertIn("Reference 'lib/version@user/name' in editable mode", t.out)
+        t.run('install {}'.format(ref))
+        self.assertIn("Installing package: {}".format(ref), t.out)

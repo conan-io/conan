@@ -15,7 +15,8 @@ class WhichTest(unittest.TestCase):
     @staticmethod
     def _touch(filename):
         with open(filename, 'a'):
-            os.utime(filename, None)
+            pass
+        os.utime(filename, None)
 
     @staticmethod
     def _add_executable_bit(filename):

@@ -2,16 +2,15 @@ import os
 import platform
 import re
 import subprocess
+import textwrap
 import unittest
-from textwrap import dedent
 
 from conans.client import tools
-from conans.client.tools.oss import check_output
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, \
-    TestServer
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
+from conans.util.runners import check_output_runner
 
 conanfile_py = """
 from conans import ConanFile
@@ -54,7 +53,7 @@ class InfoFoldersTest(unittest.TestCase):
         client = TestClient()
         client.save({CONANFILE: conanfile_py})
         client.run("export . %s" % self.user_channel)
-        client.run("info %s --paths" % (self.reference1))
+        client.run("info %s --paths" % self.reference1)
         base_path = os.path.join("MyPackage", "0.1.0", "myUser", "testing")
         output = client.out
         self.assertIn(os.path.join(base_path, "export"), output)
@@ -62,12 +61,39 @@ class InfoFoldersTest(unittest.TestCase):
         self.assertIn(os.path.join(base_path, "build", NO_SETTINGS_PACKAGE_ID), output)
         self.assertIn(os.path.join(base_path, "package", NO_SETTINGS_PACKAGE_ID), output)
 
+    def test_build_id(self):
+        # https://github.com/conan-io/conan/issues/6915
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+
+            class Pkg(ConanFile):
+                options = {"myOption": [True, False]}
+                def build_id(self):
+                    self.info_build.options.myOption = "Any"
+            """)
+        client.save({CONANFILE: conanfile})
+        client.run("export . pkg/0.1@user/testing")
+        client.run("info pkg/0.1@user/testing --paths -o pkg:myOption=True")
+        out = str(client.out).replace("\\", "/")
+        self.assertIn("ID: e8618d1abf841d16789cf55a0978a47d83fb859f", out)
+        self.assertIn("BuildID: 5c5eb4795e3cae1cbe06f4592b1bbd864ac68131", out)
+        self.assertIn("pkg/0.1/user/testing/build/5c5eb4795e3cae1cbe06f4592b1bbd864ac68131", out)
+        self.assertIn("pkg/0.1/user/testing/package/e8618d1abf841d16789cf55a0978a47d83fb859f", out)
+
+        client.run("info pkg/0.1@user/testing --paths -o pkg:myOption=False")
+        out = str(client.out).replace("\\", "/")
+        self.assertIn("ID: 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", out)
+        self.assertIn("BuildID: 5c5eb4795e3cae1cbe06f4592b1bbd864ac68131", out)
+        self.assertIn("pkg/0.1/user/testing/build/5c5eb4795e3cae1cbe06f4592b1bbd864ac68131", out)
+        self.assertIn("pkg/0.1/user/testing/package/5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", out)
+
     def test_deps_basic(self):
         client = TestClient()
         self._prepare_deps(client)
 
         for ref in [self.reference2, "."]:
-            client.run("info %s --paths" % (ref))
+            client.run("info %s --paths" % ref)
             output = client.out
 
             base_path = os.path.join("MyPackage", "0.1.0", "myUser", "testing")
@@ -103,7 +129,7 @@ class InfoFoldersTest(unittest.TestCase):
         client = TestClient()
         client.save({CONANFILE: conanfile_py})
         client.run("export . %s" % self.user_channel)
-        client.run("info %s --paths --only=build_folder" % (self.reference1))
+        client.run("info %s --paths --only=build_folder" % self.reference1)
         base_path = os.path.join("MyPackage", "0.1.0", "myUser", "testing")
         output = client.out
         self.assertNotIn("export", output)
@@ -181,7 +207,8 @@ class InfoFoldersTest(unittest.TestCase):
 
         # Retrieve ACLs from short_folder
         try:
-            short_folder_acls = check_output("cacls %s" % short_folder, stderr=subprocess.STDOUT)
+            short_folder_acls = check_output_runner("cacls %s" % short_folder,
+                                                    stderr=subprocess.STDOUT)
         except subprocess.CalledProcessError as e:
             raise Exception("Error %s getting ACL from short_folder: '%s'." % (e, short_folder))
 
@@ -205,7 +232,7 @@ class InfoFoldersTest(unittest.TestCase):
         cache_folder = temp_folder(False)
         short_folder = os.path.join(temp_folder(False), ".cn")
 
-        conanfile = dedent("""
+        conanfile = textwrap.dedent("""
             from conans import ConanFile
 
             class Conan(ConanFile):

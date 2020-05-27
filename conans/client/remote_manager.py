@@ -176,9 +176,8 @@ class RemoteManager(object):
 
     def search_recipes(self, remote, pattern=None, ignorecase=True):
         """
-        Search exported conans information from remotes
-
-        returns (dict str(ref): {packages_info}"""
+        returns (dict str(ref): {packages_info}
+        """
         return self._call_remote(remote, "search", pattern, ignorecase)
 
     def search_packages(self, remote, ref, query):
@@ -186,16 +185,10 @@ class RemoteManager(object):
         packages = filter_packages(query, packages)
         return packages
 
-    def remove(self, ref, remote):
-        """
-        Removed conans or packages from remote
-        """
-        return self._call_remote(remote, "remove", ref)
+    def remove_recipe(self, ref, remote):
+        return self._call_remote(remote, "remove_recipe", ref)
 
     def remove_packages(self, ref, remove_ids, remote):
-        """
-        Removed conans or packages from remote
-        """
         return self._call_remote(remote, "remove_packages", ref, remove_ids)
 
     def get_recipe_path(self, ref, path, remote):
@@ -238,11 +231,10 @@ class RemoteManager(object):
                 pref = pref.copy_with_revs(pref.ref.revision, DEFAULT_REVISION_V1)
         return pref
 
-    def _call_remote(self, remote, method, *argc, **argv):
+    def _call_remote(self, remote, method, *args, **kwargs):
         assert(isinstance(remote, Remote))
-        self._auth_manager.remote = remote
         try:
-            return getattr(self._auth_manager, method)(*argc, **argv)
+            return self._auth_manager.call_rest_api_method(remote, method, *args, **kwargs)
         except ConnectionError as exc:
             raise ConanConnectionError(("%s\n\nUnable to connect to %s=%s\n" +
                                         "1. Make sure the remote is reachable or,\n" +
@@ -258,7 +250,8 @@ class RemoteManager(object):
 
 
 def calc_files_checksum(files):
-    return {file_name: {"md5": md5sum(path), "sha1": sha1sum(path)} for file_name, path in files.items()}
+    return {file_name: {"md5": md5sum(path), "sha1": sha1sum(path)}
+            for file_name, path in files.items()}
 
 
 def is_package_snapshot_complete(snapshot):

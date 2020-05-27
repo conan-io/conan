@@ -31,12 +31,16 @@ def walk(top, **kwargs):
     return os.walk(top, **kwargs)
 
 
-def make_read_only(path):
-    for root, _, files in walk(path):
+def make_read_only(folder_path):
+    for root, _, files in walk(folder_path):
         for f in files:
             full_path = os.path.join(root, f)
-            mode = os.stat(full_path).st_mode
-            os.chmod(full_path, mode & ~ stat.S_IWRITE)
+            make_file_read_only(full_path)
+
+
+def make_file_read_only(file_path):
+    mode = os.stat(file_path).st_mode
+    os.chmod(file_path, mode & ~ stat.S_IWRITE)
 
 
 _DIRTY_FOLDER = ".dirty"
@@ -317,7 +321,9 @@ def gzopen_without_timestamps(name, mode="r", fileobj=None, compresslevel=None, 
         raise
 
     try:
-        t = tarfile.TarFile.taropen(name, mode, fileobj, **kwargs)
+        # Format is forced because in Python3.8, it changed and it generates different tarfiles
+        # with different checksums, which break hashes of tgzs
+        t = tarfile.TarFile.taropen(name, mode, fileobj, format=tarfile.GNU_FORMAT, **kwargs)
     except IOError:
         fileobj.close()
         if mode == 'r':
@@ -342,6 +348,7 @@ def tar_extract(fileobj, destination_dir):
 
         for finfo in members:
             if badpath(finfo.name, base) or finfo.islnk():
+                logger.warning("file:%s is skipped since it's not safe." % str(finfo.name))
                 continue
             else:
                 # Fixes unzip a windows zipped file in linux

@@ -2,6 +2,7 @@ import json
 import os
 import shutil
 import textwrap
+import time
 import unittest
 import zipfile
 
@@ -11,12 +12,11 @@ from mock import patch
 from conans.client.cache.remote_registry import Remote
 from conans.client.conf import ConanClientConfigParser
 from conans.client.conf.config_installer import _hide_password, _ConfigOrigin
-from conans.client.rest.uploader_downloader import FileDownloader
+from conans.client.rest.file_downloader import FileDownloader
 from conans.errors import ConanException
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, StoppableThreadBottle
-from conans.util.files import load, mkdir, save, save_files
-
+from conans.util.files import load, mkdir, save, save_files, make_file_read_only
 
 win_profile = """[settings]
     os: Windows
@@ -53,7 +53,7 @@ default_package_id_mode = full_package_mode # environment CONAN_DEFAULT_PACKAGE_
 
 [proxies]
 # Empty (or missing) section will try to use system proxies.
-# As documented in https://requests.kennethreitz.org/en/latest/user/advanced/#proxies
+# As documented in https://requests.readthedocs.io/en/master/user/advanced/#proxies
 http = http://user:pass@10.10.1.10:3128/
 https = None
 # http = http://10.10.1.10:3128
@@ -62,6 +62,11 @@ https = None
 
 myfuncpy = """def mycooladd(a, b):
     return a + b
+"""
+
+conanconf_interval = """
+[general]
+config_install_interval = 5m
 """
 
 
@@ -448,11 +453,11 @@ class Pkg(ConanFile):
         fake_url = "https://fakeurl.com/myconf.zip"
 
         def download_verify_false(obj, url, filename, **kwargs):  # @UnusedVariable
-            self.assertFalse(obj.verify)
+            self.assertFalse(obj._verify_ssl)
             self._create_zip(filename)
 
         def download_verify_true(obj, url, filename, **kwargs):  # @UnusedVariable
-            self.assertTrue(obj.verify)
+            self.assertTrue(obj._verify_ssl)
             self._create_zip(filename)
 
         with patch.object(FileDownloader, 'download', new=download_verify_false):
@@ -521,3 +526,86 @@ class Pkg(ConanFile):
         self.client.run("config install http://localhost:%s/myconfig.zip" % http_server.port)
         self.assertIn("Unzipping", self.client.out)
         http_server.stop()
+
+    def test_overwrite_read_only_file(self):
+        source_folder = self._create_profile_folder()
+        self.client.run('config install "%s"' % source_folder)
+        # make existing settings.yml read-only
+        make_file_read_only(self.client.cache.settings_path)
+        self.assertFalse(os.access(self.client.cache.settings_path, os.W_OK))
+
+        # config install should overwrite the existing read-only file
+        self.client.run('config install "%s"' % source_folder)
+        self.assertTrue(os.access(self.client.cache.settings_path, os.W_OK))
+
+    def test_dont_copy_file_permissions(self):
+        source_folder = self._create_profile_folder()
+        # make source settings.yml read-only
+        make_file_read_only(os.path.join(source_folder, 'remotes.txt'))
+
+        self.client.run('config install "%s"' % source_folder)
+        self.assertTrue(os.access(self.client.cache.settings_path, os.W_OK))
+
+
+class ConfigInstallSchedTest(unittest.TestCase):
+
+    def setUp(self):
+        self.folder = temp_folder(path_with_spaces=False)
+        save_files(self.folder, {"conan.conf": conanconf_interval})
+        self.client = TestClient()
+
+    def test_config_install_sched_file(self):
+        """ Config install can be executed without restriction
+        """
+        self.client.run('config install "%s"' % self.folder)
+        self.assertIn("Processing conan.conf", self.client.out)
+        content = load(self.client.cache.conan_conf_path)
+        self.assertEqual(1, content.count("config_install_interval"))
+        self.assertIn("config_install_interval = 5m", content.splitlines())
+        self.assertTrue(os.path.exists(self.client.cache.config_install_file))
+        self.assertLess(os.path.getmtime(self.client.cache.config_install_file), time.time() + 1)
+
+    def test_execute_more_than_once(self):
+        """ Once executed by the scheduler, conan config install must executed again
+            when invoked manually
+        """
+        self.client.run('config install "%s"' % self.folder)
+        self.assertIn("Processing conan.conf", self.client.out)
+
+        self.client.run('config install "%s"' % self.folder)
+        self.assertIn("Processing conan.conf", self.client.out)
+        self.assertLess(os.path.getmtime(self.client.cache.config_install_file), time.time() + 1)
+
+    def test_sched_timeout(self):
+        """ Conan config install must be executed when the scheduled time reaches
+        """
+        self.client.run('config install "%s"' % self.folder)
+        self.client.run('config set general.config_install_interval=1m')
+        self.assertNotIn("Processing conan.conf", self.client.out)
+        past_time = int(time.time() - 120)  # 120 seconds in the past
+        os.utime(self.client.cache.config_install_file, (past_time, past_time))
+
+        self.client.run('search')  # any command will fire it
+        self.assertIn("Processing conan.conf", self.client.out)
+        self.client.run('search')  # not again, it was fired already
+        self.assertNotIn("Processing conan.conf", self.client.out)
+        self.client.run('config get general.config_install_interval')
+        self.assertNotIn("Processing conan.conf", self.client.out)
+        self.assertIn("5m", self.client.out)  # The previous 5 mins has been restored!
+
+    def test_invalid_scheduler(self):
+        """ An exception must be raised when conan_config.json is not listed
+        """
+        self.client.run('config install "%s"' % self.folder)
+        os.remove(self.client.cache.config_install_file)
+        self.client.run('config get general.config_install_interval', assert_error=True)
+        self.assertIn("config_install_interval defined, but no config_install file", self.client.out)
+
+    def test_invalid_time_interval(self):
+        """ config_install_interval only accepts minutes, hours or days
+        """
+        self.client.run('config set general.config_install_interval=1s')
+        # Any conan invocation will fire the configuration error
+        self.client.run('install .', assert_error=True)
+        self.assertIn("ERROR: Incorrect definition of general.config_install_interval: 1s",
+                      self.client.out)

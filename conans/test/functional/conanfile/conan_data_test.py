@@ -1,4 +1,5 @@
 import os
+import textwrap
 import unittest
 
 from bottle import static_file
@@ -7,6 +8,7 @@ from nose.plugins.attrib import attr
 from conans.model.ref import ConanFileReference
 from conans.test.utils.test_files import tgz_with_contents
 from conans.test.utils.tools import TestClient, StoppableThreadBottle
+from conans.util.files import md5sum, sha1sum, sha256sum, load
 
 
 class ConanDataTest(unittest.TestCase):
@@ -83,43 +85,52 @@ sources:
     @attr("slow")
     @attr('local_bottle')
     def conan_data_as_source_test(self):
-
-        tgz_path = tgz_with_contents({"foo.txt": "bar"})
+        tgz_path = tgz_with_contents({"foo.txt": "foo"})
+        md5_value = "2ef49b5a102db1abb775eaf1922d5662"
+        sha1_value = "18dbea2d9a97bb9e9948604a41976bba5b5940bf"
+        sha256_value = "9619013c1f7b83cca4bf3f336f8b4525a23d5463e0768599fe5339e02dd0a338"
+        self.assertEqual(md5_value, md5sum(tgz_path))
+        self.assertEqual(sha1_value, sha1sum(tgz_path))
+        self.assertEqual(sha256_value, sha256sum(tgz_path))
 
         # Instance stoppable thread server and add endpoints
         thread = StoppableThreadBottle()
 
         @thread.server.get("/myfile.tar.gz")
         def get_file():
-            return static_file(os.path.basename(tgz_path), root=os.path.dirname(tgz_path))
+            return static_file(os.path.basename(tgz_path), root=os.path.dirname(tgz_path),
+                               mimetype="")
 
         thread.run_server()
 
         client = TestClient()
-        conanfile = """
-from conans import ConanFile, tools
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile, tools
 
-class Lib(ConanFile):
- 
-    def source(self):
-        tools.get(**self.conan_data["sources"]["all"])
-        self.output.info("OK!")
-"""
+            class Lib(ConanFile):
+                def source(self):
+                    data = self.conan_data["sources"]["all"]
+                    tools.get(**data)
+                    self.output.info("OK!")
+            """)
+        conandata = textwrap.dedent("""
+            sources:
+              all:
+                url: "http://localhost:{}/myfile.tar.gz"
+                md5: "{}"
+                sha1: "{}"
+                sha256: "{}"
+            """)
         client.save({"conanfile.py": conanfile,
-                     "conandata.yml": """
-sources:
-  all:
-    url: "http://localhost:{}/myfile.tar.gz"
-    md5: "530e88952844f62f4b322ca13191062e"
-    sha1: "fae807733fcc7d1f22354755d468b748ab972a4d"
-    sha256: "8ac04f26347c82b2305dd3beb9c24d81e275f5c30cd4840f94cf31dfa8eaf381"                   
-""".format(thread.port)})
+                     "conandata.yml": conandata.format(thread.port, md5_value, sha1_value,
+                                                       sha256_value)})
         ref = ConanFileReference.loads("Lib/0.1@user/testing")
         client.run("create . {}".format(ref))
         self.assertIn("OK!", client.out)
 
         source_folder = client.cache.package_layout(ref).source()
-        self.assertTrue(os.path.exists(os.path.join(source_folder, "foo.txt")))
+        downloaded_file = os.path.join(source_folder, "foo.txt")
+        self.assertEqual("foo", load(downloaded_file))
 
     def invalid_yml_test(self):
         client = TestClient()
@@ -133,4 +144,5 @@ class Lib(ConanFile):
         ref = ConanFileReference.loads("Lib/0.1@user/testing")
         client.run("create . {}".format(ref), assert_error=True)
         self.assertIn("ERROR: Error loading conanfile at", client.out)
-        self.assertIn(": Invalid yml format at conandata.yml: while scanning a block scalar", client.out)
+        self.assertIn(": Invalid yml format at conandata.yml: while scanning a block scalar",
+                      client.out)

@@ -190,9 +190,13 @@ VAR2=23
         folder = temp_folder()
         info = CppInfo(folder)
         info.name = "MyName"
+        info.names["my_generator"] = "MyNameForMyGenerator"
         deps_cpp_info = DepsCppInfo()
         deps_cpp_info.update(info, "myname")
         self.assertIn("MyName", deps_cpp_info["myname"].name)
+        self.assertIn("MyNameForMyGenerator", deps_cpp_info["myname"].names["my_generator"])
+        self.assertIn("MyName", deps_cpp_info["myname"].get_name("my_undefined_generator"))
+        self.assertIn("MyNameForMyGenerator", deps_cpp_info["myname"].get_name("my_generator"))
 
     def cpp_info_build_modules_test(self):
         folder = temp_folder()
@@ -205,3 +209,25 @@ VAR2=23
                              deps_cpp_info["myname"].build_modules_paths)
         self.assertListEqual([os.path.join(folder, "mod-release.cmake")],
                              deps_cpp_info["myname"].debug.build_modules_paths)
+
+    def cppinfo_public_interface_test(self):
+        folder = temp_folder()
+        info = CppInfo(folder)
+        self.assertEqual([], info.libs)
+        self.assertEqual([], info.system_libs)
+        self.assertEqual(["include"], info.includedirs)
+        self.assertEqual([], info.srcdirs)
+        self.assertEqual(["res"], info.resdirs)
+        self.assertEqual([""], info.builddirs)
+        self.assertEqual(["bin"], info.bindirs)
+        self.assertEqual(["lib"], info.libdirs)
+        self.assertEqual(folder, info.rootpath)
+        self.assertEqual([], info.defines)
+        self.assertIsNone(info.name)
+        self.assertEqual("", info.sysroot)
+        self.assertEqual([], info.cflags)
+        self.assertEqual({}, info.configs)
+        self.assertEqual([], info.cxxflags)
+        self.assertEqual([], info.exelinkflags)
+        self.assertEqual([], info.public_deps)
+        self.assertEqual([], info.sharedlinkflags)
