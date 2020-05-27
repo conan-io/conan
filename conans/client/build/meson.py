@@ -235,7 +235,7 @@ class Meson(object):
 
     def configure(self, args=None, defs=None, source_dir=None, build_dir=None,
                   pkg_config_paths=None, cache_build_folder=None,
-                  build_folder=None, source_folder=None):
+                  build_folder=None, source_folder=None,no_generated_cross_file=None):
         if not self._conanfile.should_configure:
             return
         args = args or []
@@ -265,17 +265,17 @@ class Meson(object):
         cross_option = None
         environ_append = {"PKG_CONFIG_PATH": pc_paths}
         if tools.cross_building(self._conanfile.settings):
-            if not "--cross-file" in args:
+            if not no_generated_cross_file:
                 cross_filename = os.path.join(self.build_dir, "cross_file.txt")
                 cross_option = "--cross-file=%s" % cross_filename
                 self._configure_cross_compile(cross_filename, environ_append)
 
         arg_list = join_arguments([
+            cross_option,
             "--backend=%s" % self.backend,
             self.flags,
             args_to_string(args),
             build_type,
-            cross_option,
         ])
         command = 'meson "%s" "%s" %s' % (source_dir, self.build_dir, arg_list)
         with environment_append(environ_append):
