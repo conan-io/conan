@@ -11,64 +11,22 @@ from nose.plugins.attrib import attr
 from parameterized.parameterized import parameterized
 from parameterized.parameterized import parameterized_class
 
-from conans.client.toolchain.cmake import CMakeToolchain
-from conans.model.ref import ConanFileReference
+from conans.test.functional.toolchain.builds import compile_cache_workflow_without_toolchain, \
+    compile_cache_workflow_with_toolchain, compile_local_workflow, compile_cmake_workflow
 from conans.test.utils.tools import TurboTestClient
-from conans.util.files import load, rmdir
+
 
 _running_ci = 'JOB_NAME' in os.environ
 
 
-def compile_local_workflow(testcase, client, profile):
-    # Conan local workflow
-    build_directory = os.path.join(client.current_folder, "build")
-    rmdir(build_directory)
-    with client.chdir(build_directory):
-        client.run("install .. --profile={}".format(profile))
-        client.run("build ..")
-        testcase.assertIn("Using Conan toolchain", client.out)
-
-    cmake_cache = load(os.path.join(build_directory, "CMakeCache.txt"))
-    return client.out, cmake_cache, build_directory, None
-
-
-def _compile_cache_workflow(testcase, client, profile, use_toolchain):
-    # Compile the app in the cache
-    pref = client.create(ref=ConanFileReference.loads("app/version@user/channel"), conanfile=None,
-                         args=" --profile={}".format(profile))
-    if use_toolchain:
-        testcase.assertIn("Using Conan toolchain", client.out)
-
-    package_layout = client.cache.package_layout(pref.ref)
-    build_directory = package_layout.build(pref)
-    cmake_cache = load(os.path.join(build_directory, "CMakeCache.txt"))
-    return client.out, cmake_cache, build_directory, package_layout.package(pref)
-
-
-def compile_cache_workflow_with_toolchain(testcase, client, profile):
-    return _compile_cache_workflow(testcase, client, profile, use_toolchain=True)
-
-
-def compile_cache_workflow_without_toolchain(testcase, client, profile):
-    return _compile_cache_workflow(testcase, client, profile, use_toolchain=False)
-
-
-def compile_cmake_workflow(testcase, client, profile):
-    build_directory = os.path.join(client.current_folder, "build")
-    rmdir(build_directory)
-    with client.chdir(build_directory):
-        client.run("install .. --profile={}".format(profile))
-        client.run_command("cmake .. -DCMAKE_TOOLCHAIN_FILE={}".format(CMakeToolchain.filename))
-        testcase.assertIn("Using Conan toolchain", client.out)
-
-    cmake_cache = load(os.path.join(build_directory, "CMakeCache.txt"))
-    return client.out, cmake_cache, build_directory, None
-
-
-@parameterized_class([{"function": compile_cache_workflow_without_toolchain, "use_toolchain": False, "in_cache": True, "build_helper": True},
-                      {"function": compile_cache_workflow_with_toolchain, "use_toolchain": True, "in_cache": True, "build_helper": True},
-                      {"function": compile_local_workflow, "use_toolchain": True, "in_cache": False, "build_helper": True},
-                      {"function": compile_cmake_workflow, "use_toolchain": True, "in_cache": False, "build_helper": False},
+@parameterized_class([{"function": compile_cache_workflow_without_toolchain, "use_toolchain": False,
+                       "in_cache": True, "build_helper": True},
+                      {"function": compile_cache_workflow_with_toolchain, "use_toolchain": True,
+                       "in_cache": True, "build_helper": True},
+                      {"function": compile_local_workflow, "use_toolchain": True,
+                       "in_cache": False, "build_helper": True},
+                      {"function": compile_cmake_workflow, "use_toolchain": True,
+                       "in_cache": False, "build_helper": False},
                       ])
 @attr("toolchain")
 class AdjustAutoTestCase(unittest.TestCase):
@@ -152,18 +110,8 @@ class AdjustAutoTestCase(unittest.TestCase):
         message(">> CMAKE_INCLUDE_PATH: ${CMAKE_INCLUDE_PATH}")
         message(">> CMAKE_LIBRARY_PATH: ${CMAKE_LIBRARY_PATH}")
 
-        add_executable(app src/app.cpp)
-
-        get_directory_property(_COMPILE_DEFINITONS DIRECTORY ${CMAKE_SOURCE_DIR} COMPILE_DEFINITIONS )
+        get_directory_property(_COMPILE_DEFINITONS DIRECTORY ${CMAKE_SOURCE_DIR} COMPILE_DEFINITIONS)
         message(">> COMPILE_DEFINITONS: ${_COMPILE_DEFINITONS}")
-    """)
-
-    app_cpp = textwrap.dedent("""
-        #include <iostream>
-
-        int main() {
-            return 0;
-        }
     """)
 
     @classmethod
@@ -176,21 +124,19 @@ class AdjustAutoTestCase(unittest.TestCase):
         # Prepare the actual consumer package
         conanfile = cls.conanfile_toolchain if cls.use_toolchain else cls.conanfile_no_toolchain
         cls.t.save({"conanfile.py": conanfile,
-                    "CMakeLists.txt": cls.cmakelist,
-                    "src/app.cpp": cls.app_cpp})
-        # TODO: Remove the app.cpp and the add_executable, probably it is not need to run cmake configure.
+                    "CMakeLists.txt": cls.cmakelist})
 
     def _run_configure(self, settings_dict=None, options_dict=None):
         # Build the profile according to the settings provided
         settings_lines = "\n".join("{}={}".format(k, v) for k, v in settings_dict.items()) if settings_dict else ""
         options_lines = "\n".join("{}={}".format(k, v) for k, v in options_dict.items()) if options_dict else ""
         profile = textwrap.dedent("""
-                    include(default)
-                    [settings]
-                    {}
-                    [options]
-                    {}
-                """.format(settings_lines, options_lines))
+                include(default)
+                [settings]
+                {}
+                [options]
+                {}
+            """.format(settings_lines, options_lines))
         self.t.save({"profile": profile})
         profile_path = os.path.join(self.t.current_folder, "profile").replace("\\", "/")
 
@@ -243,8 +189,10 @@ class AdjustAutoTestCase(unittest.TestCase):
         cxx11_abi_str = "1" if libcxx == "libstdc++11" else "0"
         self.assertIn(">> COMPILE_DEFINITONS: _GLIBCXX_USE_CXX11_ABI={}".format(cxx11_abi_str), configure_out)
 
-        type_str = "STRING" if self.use_toolchain else "UNINITIALIZED"
-        self.assertEqual(libcxx, cmake_cache["CONAN_LIBCXX:" + type_str])
+        if not self.use_toolchain:
+            self.assertEqual(libcxx, cmake_cache["CONAN_LIBCXX:UNINITIALIZED"])
+        else:
+            self.assertNotIn("CONAN_LIBCXX", cmake_cache_keys)
 
     def test_install_paths(self):
         configure_out, cmake_cache, cmake_cache_keys, _, package_dir = self._run_configure()
