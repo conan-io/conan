@@ -1,9 +1,12 @@
 import textwrap
 import unittest
 
+from nose.plugins.attrib import attr
+
 from conans.test.utils.tools import TestClient
 
 
+@attr('slow')
 class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
 
     def _test(self, conanfile_greetings=None, cmakelists_greetings=None, conanfile_world=None,
