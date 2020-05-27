@@ -9,7 +9,8 @@ import yaml
 from conans.client.file_copier import FileCopier
 from conans.client.output import Color, ScopedOutput
 from conans.client.remover import DiskRemover
-from conans.errors import ConanException, ConanV2Exception
+from conans.client.tools import chdir
+from conans.errors import ConanException, ConanV2Exception, conanfile_exception_formatter
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference
 from conans.model.scm import SCM, get_scm_data
@@ -466,14 +467,7 @@ def export_source(conanfile, origin_folder, destination_source_folder):
     package_output = ScopedOutput("%s exports_sources" % output.scope, output)
     copier.report(package_output)
 
-    if hasattr(conanfile, "export_sources"):
-        if not callable(conanfile.export_sources):
-            raise ConanException("conanfile 'export_sources' must be a method")
-        copier = FileCopier([origin_folder], destination_source_folder)
-        conanfile.copy = copier
-        conanfile.export_sources()
-        export_method_output = ScopedOutput("%s export_sources() method" % output.scope, output)
-        copier.report(export_method_output)
+    _run_method(conanfile, "export_sources", origin_folder, destination_source_folder, output)
 
 
 def export_recipe(conanfile, origin_folder, destination_folder):
@@ -504,11 +498,27 @@ def export_recipe(conanfile, origin_folder, destination_folder):
         copier(pattern, links=True, excludes=excluded_exports)
     copier.report(package_output)
 
-    if hasattr(conanfile, "export"):
-        if not callable(conanfile.export):
-            raise ConanException("conanfile 'export' must be a method")
+    _run_method(conanfile, "export", origin_folder, destination_folder, output)
+
+
+def _run_method(conanfile, method, origin_folder, destination_folder, output):
+    export_method = getattr(conanfile, method, None)
+    if export_method:
+        if not callable(export_method):
+            raise ConanException("conanfile '%s' must be a method" % method)
         copier = FileCopier([origin_folder], destination_folder)
         conanfile.copy = copier
-        conanfile.export()
-        export_method_output = ScopedOutput("%s export() method" % output.scope, output)
+        folder_name = "%s_folder" % method
+        setattr(conanfile, folder_name, destination_folder)
+        default_options = conanfile.default_options
+        try:
+            # TODO: Poor man attribute control access. Convert to nice decorator
+            conanfile.default_options = None
+            with chdir(origin_folder):
+                with conanfile_exception_formatter(str(conanfile), method):
+                    export_method()
+        finally:
+            conanfile.default_options = default_options
+            delattr(conanfile, folder_name)
+        export_method_output = ScopedOutput("%s %s() method" % (output.scope, method), output)
         copier.report(export_method_output)
