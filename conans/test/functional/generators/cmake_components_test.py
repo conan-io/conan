@@ -46,7 +46,7 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
             """)
         hello_cpp = textwrap.dedent("""
             #include <iostream>
-            #include "hello.h"# We need to add our requirements too
+            #include "hello.h"
 
             void hello(std::string noun) {
                 std::cout << "Hello " << noun << "!" << std::endl;
@@ -84,7 +84,7 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
         client.run("create .")
 
         _conanfile_world = textwrap.dedent("""
-            from conans import ConanFile, CMake, tools
+            from conans import ConanFile, CMake
 
             class WorldConan(ConanFile):
                 name = "world"
@@ -184,7 +184,7 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
             }
             """)
         _test_package_cmakelists = textwrap.dedent("""
-            cmake_minimum_required(VERSION 2.8.12)
+            cmake_minimum_required(VERSION 3.0)
             project(PackageTest CXX)
 
             set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin)
@@ -296,7 +296,7 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
             target_link_libraries(Worldall Helloworld Greetings::Bye)
         """)
         test_package_cmakelists = textwrap.dedent("""
-            cmake_minimum_required(VERSION 2.8.12)
+            cmake_minimum_required(VERSION 3.0)
             project(PackageTest CXX)
 
             set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin)
@@ -321,7 +321,7 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
 
     def find_package_components_test(self):
         conanfile2 = textwrap.dedent("""
-            from conans import ConanFile, CMake, tools
+            from conans import ConanFile, CMake
 
             class WorldConan(ConanFile):
                 name = "world"
