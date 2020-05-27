@@ -1,50 +1,43 @@
 import platform
+import textwrap
 import unittest
 
 from conans.test.utils.tools import TestClient
-
-file_content = '''
-from conans import ConanFile, CMake
-
-class ConanFileToolsTest(ConanFile):
-    name = "test"
-    version = "1.9"
-    settings = "os", "compiler", "arch", "build_type"
-    export = ["CMakeLists.txt", "main.c"]
-    generators = ["cmake"]
-
-    def build(self):
-        self.output.warn("Building...")
-        cmake = CMake(self)
-        self.output.warn(cmake.command_line)
-        self.run('cmake . %s' % cmake.command_line)
-        self.run("cmake --build . %s" %  cmake.build_config)
-
-    def package(self):
-        self.copy("*")
-    '''
-
-cmakelists = '''PROJECT(conanzlib)
-set(CONAN_DISABLE_CHECK_COMPILER TRUE)
-cmake_minimum_required(VERSION 2.8)
-include(conanbuildinfo.cmake)
-CONAN_BASIC_SETUP()
-MESSAGE("CXX FLAGS=> ${CMAKE_CXX_FLAGS}")
-get_directory_property( DirDefs DIRECTORY ${CMAKE_SOURCE_DIR} COMPILE_DEFINITIONS)
-foreach( d ${DirDefs} )
-    message( STATUS "Found Define: " ${d} )
-endforeach()
-'''
 
 
 class LibcxxSettingTest(unittest.TestCase):
 
     @unittest.skipIf(platform.system() == "Windows", "Not in Windows")
     def test_declared_stdlib_and_passed(self):
+        file_content = textwrap.dedent('''
+            from conans import ConanFile, CMake
+
+            class ConanFileToolsTest(ConanFile):
+                settings = "os", "compiler", "arch", "build_type"
+                generators = ["cmake"]
+
+                def build(self):
+                    cmake = CMake(self)
+                    self.output.warn(cmake.command_line)
+                    self.run('cmake . %s' % cmake.command_line)
+                    self.run("cmake --build . %s" %  cmake.build_config)
+                ''')
+
+        cmakelists = textwrap.dedent('''PROJECT(conanzlib)
+            set(CONAN_DISABLE_CHECK_COMPILER TRUE)
+            cmake_minimum_required(VERSION 2.8)
+            include(conanbuildinfo.cmake)
+            conan_basic_setup()
+            message("CXX FLAGS=> ${CMAKE_CXX_FLAGS}")
+            get_directory_property( DirDefs DIRECTORY ${CMAKE_SOURCE_DIR} COMPILE_DEFINITIONS)
+            foreach( d ${DirDefs} )
+                message( STATUS "Found Define: " ${d} )
+            endforeach()
+            ''')
         client = TestClient()
         client.save({"conanfile.py": file_content,
                      "CMakeLists.txt": cmakelists})
-        client.run("export . lasote/testing")
+        client.run("export . pkg/0.1@lasote/testing")
 
         if platform.system() == "SunOS":
             client.run('install . -s compiler=sun-cc -s compiler.libcxx=libCstd')
@@ -58,19 +51,21 @@ class LibcxxSettingTest(unittest.TestCase):
             client.run('install . -s compiler=sun-cc -s compiler.libcxx=libstlport')
             client.run('build .')
             self.assertIn("-library=stlport4", client.out)
-
         else:
-            client.run('install . -s compiler=clang -s compiler.version=3.3 -s compiler.libcxx=libstdc++ ')
+            client.run('install . -s compiler=clang -s compiler.version=3.3 '
+                       '-s compiler.libcxx=libstdc++ ')
             client.run('build .')
             self.assertIn("-stdlib=libstdc++", client.out)
             self.assertIn("Found Define: _GLIBCXX_USE_CXX11_ABI=0", client.out)
 
-            client.run('install . -s compiler=clang -s compiler.version=3.3 -s compiler.libcxx=libstdc++11')
+            client.run('install . -s compiler=clang -s compiler.version=3.3 '
+                       '-s compiler.libcxx=libstdc++11')
             client.run('build .')
             self.assertIn("-stdlib=libstdc++", client.out)
             self.assertIn("Found Define: _GLIBCXX_USE_CXX11_ABI=1", client.out)
 
-            client.run('install . -s compiler=clang -s compiler.version=3.3 -s compiler.libcxx=libc++')
+            client.run('install . -s compiler=clang -s compiler.version=3.3 '
+                       '-s compiler.libcxx=libc++')
             client.run('build .')
             self.assertIn("-stdlib=libc++", client.out)
             self.assertNotIn("Found Define: _GLIBCXX_USE_CXX11", client.out)
@@ -111,7 +106,8 @@ class ConanFileToolsTest(ConanFile):
     '''
 
         client.save({"conanfile.py": newlib_content})
-        client.run('install . -s compiler=gcc -s compiler.libcxx=libstdc++11 -s compiler.version=4.9')
+        client.run('install . -s compiler=gcc -s compiler.libcxx=libstdc++11 '
+                   '-s compiler.version=4.9')
         # Package is found and everything is ok
         self.assertIn("test/1.9@lasote/testing: Already installed!", client.out)
         self.assertIn("conanfile.py: Generated conaninfo.txt", client.out)
