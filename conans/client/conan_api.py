@@ -1203,7 +1203,7 @@ class ConanAPIV1(object):
         layout_abs_path = get_editable_abs_path(layout, cwd, self.app.cache.cache_folder)
         if layout_abs_path:
             self.app.out.success("Using layout file: %s" % layout_abs_path)
-        self.app.cache.editable_packages.add(ref, os.path.dirname(target_path), layout_abs_path)
+        self.app.cache.editable_packages.add(ref, target_path, layout_abs_path)
 
     @api_method
     def editable_remove(self, reference):

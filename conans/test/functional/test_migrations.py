@@ -5,7 +5,9 @@ import unittest
 from six import StringIO
 
 from conans import __version__
-from conans.client.migrations import migrate_plugins_to_hooks, migrate_to_default_profile
+from conans.client.cache.editable import EDITABLE_PACKAGES_FILE
+from conans.client.migrations import migrate_plugins_to_hooks, migrate_to_default_profile, \
+    migrate_editables_use_conanfile_name
 from conans.client.output import ConanOutput
 from conans.client.tools.version import Version
 from conans.migrations import CONAN_VERSION
@@ -154,7 +156,7 @@ the old general
             cache = TestClient(cache_folder=old_user_home, cpu_count=False).cache
             assert old_conan_folder == cache.cache_folder
             return old_user_home, old_conan_folder, old_conf_path, \
-                old_attribute_checker_plugin, cache
+                   old_attribute_checker_plugin, cache
 
         output = ConanOutput(StringIO())
         _, old_cf, old_cp, old_acp, cache = _create_old_layout()
@@ -175,3 +177,27 @@ the old general
         conf_content = load(old_cp)
         self.assertNotIn("[plugins]", conf_content)
         self.assertIn("[hooks]", conf_content)
+
+    def test_migration_editables_to_conanfile_name(self):
+        # Create the old editable_packages.json file (and user workspace)
+        tmp_folder = temp_folder()
+        conanfile1 = os.path.join(tmp_folder, 'dir1', 'conanfile.py')
+        conanfile2 = os.path.join(tmp_folder, 'dir2', 'conanfile.py')
+        save(conanfile1, "anything")
+        save(conanfile2, "anything")
+        save(os.path.join(tmp_folder, EDITABLE_PACKAGES_FILE),
+             json.dumps({"name/version": {"path": os.path.dirname(conanfile1), "layout": None},
+                         "other/version@user/testing": {"path": os.path.dirname(conanfile2),
+                                                        "layout": "anyfile"}}))
+
+        cache = TestClient(cache_folder=tmp_folder).cache
+        migrate_editables_use_conanfile_name(cache, None)
+
+        # Now we have same info and full paths
+        with open(os.path.join(tmp_folder, EDITABLE_PACKAGES_FILE)) as f:
+            data = json.load(f)
+
+        self.assertEqual(data["name/version"]["path"], conanfile1)
+        self.assertEqual(data["name/version"]["layout"], None)
+        self.assertEqual(data["other/version@user/testing"]["path"], conanfile2)
+        self.assertEqual(data["other/version@user/testing"]["layout"], "anyfile")
