@@ -506,6 +506,7 @@ def _run_method(conanfile, method, origin_folder, destination_folder, output):
     if export_method:
         if not callable(export_method):
             raise ConanException("conanfile '%s' must be a method" % method)
+        output.highlight("Calling %s()" % method)
         copier = FileCopier([origin_folder], destination_folder)
         conanfile.copy = copier
         folder_name = "%s_folder" % method

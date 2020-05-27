@@ -22,6 +22,7 @@ class ExportsMethodTest(unittest.TestCase):
             """)
         client.save({"conanfile.py": conanfile, "LICENSE.md": "license", "file.txt": "file"})
         client.run("export . pkg/0.1@")
+        self.assertIn("pkg/0.1: Calling export()", client.out)
         self.assertIn("pkg/0.1 exports: Copied 1 '.txt' file: file.txt", client.out)
         self.assertIn("pkg/0.1 export() method: Copied 1 '.md' file: LICENSE.md", client.out)
 
@@ -85,6 +86,10 @@ class ExportsMethodTest(unittest.TestCase):
             class MethodConan(ConanFile):
                 options = {"myopt": ["myval"]}
                 default_options = {"myopt": "myval"}
+                def export(self):
+                    pass
+                def export_sources(self):
+                    pass
                 def build(self):
                     self.output.info("MYOPT: %s" % self.options.myopt)
             """)
