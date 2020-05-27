@@ -321,7 +321,7 @@ class CMakeFindPackageGenerator(Generator):
             find_dependencies_block = ""
             if dep_cpp_info.public_deps:
                 # Here we are generating FindXXX, so find_modules=True
-                f = find_transitive_dependencies(public_deps_names, find_modules=True)
+                f = find_transitive_dependencies(pkg_public_deps, find_modules=True)
                 # proper indentation
                 find_dependencies_block = ''.join("        " + line if line.strip() else line
                                                   for line in f.splitlines(True))
