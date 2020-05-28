@@ -211,6 +211,7 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
                      "test_package/CMakeLists.txt": test_package_cmakelists or _test_package_cmakelists,
                      "test_package/example.cpp": test_package_example_cpp})
         client.run("create .")
+        print(client.out)
         return client.out
 
     def component_depends_on_full_package_test(self):

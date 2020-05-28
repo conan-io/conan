@@ -174,8 +174,10 @@ class CMakeFindPackageGenerator(Generator):
         set({{ comp_name }}_FRAMEWORKS_FOUND "") # Will be filled later
         conan_find_apple_frameworks({{ comp_name }}_FRAMEWORKS_FOUND "${% raw %}{{% endraw %}{{ comp_name }}_FRAMEWORKS{% raw %}}{% endraw %}" "${% raw %}{{% endraw %}{{ comp_name }}_FRAMEWORK_DIRS{% raw %}}{% endraw %}")
 
-        set({{ comp_name }}_LINK_LIBS "${% raw %}{{% endraw %}{{ comp_name }}_LIB_TARGETS{% raw %}}{% endraw %};${% raw %}{{% endraw %}{{ comp_name }}_SYSTEM_LIBS{% raw %}}{% endraw %};${% raw %}{{% endraw %}{{ comp_name }}_FRAMEWORKS_FOUND{% raw %}}{% endraw %};${% raw %}{{% endraw %}{{ comp_name }}_DEPENDENCIES{% raw %}}{% endraw %}")
-
+        conan_message(STATUS "COMPONENT LIB TARGETS: ${% raw %}{{% endraw %}{{ comp_name }}_LIB_TARGETS{% raw %}}{% endraw %}")
+        conan_message(STATUS "COMPONENT_DEPENDENCIES: ${% raw %}{{% endraw %}{{ comp_name }}_DEPENDENCIES{% raw %}}{% endraw %}")
+        set({{ comp_name }}_LINK_LIBS ${% raw %}{{% endraw %}{{ comp_name }}_LIB_TARGETS{% raw %}}{% endraw %} ${% raw %}{{% endraw %}{{ comp_name }}_SYSTEM_LIBS{% raw %}}{% endraw %} ${% raw %}{{% endraw %}{{ comp_name }}_FRAMEWORKS_FOUND{% raw %}}{% endraw %} ${% raw %}{{% endraw %}{{ comp_name }}_DEPENDENCIES{% raw %}}{% endraw %})
+        conan_message(STATUS "COMPONENT LINK LIBS: ${% raw %}{{% endraw %}{{ comp_name }}_LINK_LIBS{% raw %}}{% endraw %}")
 
         set(CMAKE_MODULE_PATH {{ comp.build_paths }} ${CMAKE_MODULE_PATH})
         set(CMAKE_PREFIX_PATH {{ comp.build_paths }} ${CMAKE_PREFIX_PATH})
@@ -203,7 +205,8 @@ class CMakeFindPackageGenerator(Generator):
                 set_property(TARGET {{ pkg_name }}::{{ comp_name }} PROPERTY INTERFACE_LINK_DIRECTORIES
                              "${% raw %}{{% endraw %}{{ comp_name }}_LIB_DIRS{% raw %}}{% endraw %}")
                 set_property(TARGET {{ pkg_name }}::{{ comp_name }} PROPERTY INTERFACE_LINK_LIBRARIES
-                             "${% raw %}{{% endraw %}{{ comp_name }}_LINK_LIBS{% raw %}}{% endraw %};${% raw %}{{% endraw %}{{ comp_name }}_LINKER_FLAGS_LIST{% raw %}}{% endraw %}")
+                             ${% raw %}{{% endraw %}{{ comp_name }}_LINK_LIBS{% raw %}}{% endraw %}
+                             ${% raw %}{{% endraw %}{{ comp_name }}_LINKER_FLAGS_LIST{% raw %}}{% endraw %})
                 set_property(TARGET {{ pkg_name }}::{{ comp_name }} PROPERTY INTERFACE_COMPILE_DEFINITIONS
                              ${% raw %}{{% endraw %}{{ comp_name }}_COMPILE_DEFINITIONS{% raw %}}{% endraw %})
                 set_property(TARGET {{ pkg_name }}::{{ comp_name }} PROPERTY INTERFACE_COMPILE_OPTIONS
@@ -218,8 +221,11 @@ class CMakeFindPackageGenerator(Generator):
         if(NOT ${CMAKE_VERSION} VERSION_LESS "3.0")
             if(NOT TARGET {{ pkg_name }}::{{ pkg_name }})
                 add_library({{ pkg_name }}::{{ pkg_name }} INTERFACE IMPORTED)
+                conan_message("${% raw %}{{% endraw %}{{ pkg_name }}_COMPONENTS{% raw %}}{% endraw %}")
+                conan_message(STATUS "PKG DEPENDENCIES: ${% raw %}{{% endraw %}{{ pkg_name }}_DEPENDENCIES{% raw %}}{% endraw %}")
                 set_property(TARGET {{ pkg_name }}::{{ pkg_name }} PROPERTY INTERFACE_LINK_LIBRARIES
-                             "${% raw %}{{% endraw %}{{ pkg_name }}_COMPONENTS{% raw %}}{% endraw %};${% raw %}{{% endraw %}{{ pkg_name }}_DEPENDENCIES{% raw %}}{% endraw %}")
+                             ${% raw %}{{% endraw %}{{ pkg_name }}_COMPONENTS{% raw %}}{% endraw %}
+                             ${% raw %}{{% endraw %}{{ pkg_name }}_DEPENDENCIES{% raw %}}{% endraw %})
             endif()
         endif()
 
@@ -247,6 +253,7 @@ class CMakeFindPackageGenerator(Generator):
             comp_findname = self._get_name(cpp_info.components[comp_name])
             deps_cpp_cmake = DepsCppCmake(comp)
             deps_cpp_cmake.public_deps = self._get_component_requires(pkg_name, pkg_findname, comp)
+            print(comp_name, "public_deps: ",  deps_cpp_cmake.public_deps)
             find_package_components.append((comp_findname, deps_cpp_cmake))
         find_package_components.reverse()  # From the less dependent to most one
         return find_package_components
@@ -276,18 +283,18 @@ class CMakeFindPackageGenerator(Generator):
                 comp_require_comp_findname = self._get_name(comp_require_comp)
             f = "{}::{}".format(comp_require_pkg_findname, comp_require_comp_findname)
             comp_requires_findnames.append(f)
-        return ";".join(comp_requires_findnames)
+        return " ".join(comp_requires_findnames)
 
     def _find_for_dep(self, pkg_name, pkg_findname, cpp_info):
         pkg_version = cpp_info.version
         pkg_public_deps = [self._get_name(self.deps_build_info[public_dep]) for public_dep in
                            cpp_info.public_deps]
         if cpp_info.components:
-            pkg_components = ";".join(["{p}::{c}".format(p=pkg_findname, c=comp_findname) for
+            pkg_components = " ".join(["{p}::{c}".format(p=pkg_findname, c=comp_findname) for
                                        comp_findname, _ in self._get_components(pkg_name,
                                                                                 pkg_findname,
                                                                                 cpp_info)])
-            pkg_dependencies = ";".join(["{n}::{n}".format(n=dep) for dep in pkg_public_deps])
+            pkg_dependencies = " ".join(["{n}::{n}".format(n=dep) for dep in pkg_public_deps])
             return self.find_components_tpl.render(
                 pkg_name=pkg_findname,
                 pkg_version=pkg_version,
