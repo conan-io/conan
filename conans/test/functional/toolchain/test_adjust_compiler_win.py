@@ -210,7 +210,7 @@ class AdjustAutoTestCase(unittest.TestCase):
                                r"Microsoft Visual Studio\/2019\/Community\/VC\/Tools\/"
                                r"MSVC\/14\.24\.28314\/bin\/Hostx64\/x64\/cl\.exe -- works", configure_out)
 
-        self.assertEqual(compiler_name, cmake_cache["CMAKE_GENERATOR:INTERNAL"])
+        self.assertEqual(compiler_name, cmake_cache["CMAKE_GENERATOR:STRING"])
 
     @parameterized.expand([("v140",), ("v141",), ("v142",), ])
     def test_compiler_toolset_win(self, compiler_toolset):
