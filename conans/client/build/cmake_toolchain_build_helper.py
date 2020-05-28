@@ -43,28 +43,24 @@ class CMakeToolchainBuildHelper(BaseCMakeBuildHelper):
         with the toolchain.
     """
 
-    def __init__(self, conanfile, generator=None, build_type=None, build_folder=None,
-                 parallel=True, msbuild_verbosity="minimal"):
+    def __init__(self, conanfile, generator=None, build_folder=None, parallel=True,
+                 msbuild_verbosity="minimal"):
 
         _validate_recipe(conanfile)
 
         # assert generator is None, "'generator' is handled by the toolchain"
         self._generator = generator or get_generator(conanfile)
         self._is_multiconfiguration = is_multi_configuration(self._generator)
-        if not self._is_multiconfiguration:
-            assert build_type is None, "'build_type' is handled by the toolchain" \
-                                       " in not-multi_config generators"
 
         # Store a reference to useful data
         self._conanfile = conanfile
         self._parallel = parallel
         self._msbuild_verbosity = os.getenv("CONAN_MSBUILD_VERBOSITY") or msbuild_verbosity
 
-        self._build_type = build_type
         self._build_folder = build_folder
         self._cmake_program = "cmake"  # Path to CMake should be handled by environment
 
-    def configure(self, source_folder=None, build_folder=None, build_type=None):
+    def configure(self, source_folder=None):
         # TODO: environment?
         if not self._conanfile.should_configure:
             return
@@ -74,14 +70,10 @@ class CMakeToolchainBuildHelper(BaseCMakeBuildHelper):
             sf = os.path.join(self._conanfile.source_folder, source_folder)
 
         bf = self._conanfile.build_folder
-        if build_folder or self._build_folder:
-            bf = os.path.join(self._conanfile.build_folder, build_folder or self._build_folder)
-
-        bt = build_type or self._build_type or self._conanfile.settings.get_safe("build_type")
+        if self._build_folder:
+            bf = os.path.join(self._conanfile.build_folder, self._build_folder)
 
         defs = {"CMAKE_TOOLCHAIN_FILE": CMakeToolchain.filename}
-        if bt and not self._is_multiconfiguration:
-            defs["CMAKE_BUILD_TYPE"] = bt
 
         mkdir(bf)
         arg_list = join_arguments([
@@ -97,11 +89,11 @@ class CMakeToolchainBuildHelper(BaseCMakeBuildHelper):
         else:
             self._conanfile.run(command)
 
-    def _build(self, build_folder=None, build_type=None, target=None):
+    def _build(self, build_type=None, target=None):
         bf = self._conanfile.build_folder
-        if build_folder or self._build_folder:
-            bf = os.path.join(self._conanfile.build_folder, build_folder or self._build_folder)
-        bt = build_type or self._build_type or self._conanfile.settings.get_safe("build_type")
+        if self._build_folder:
+            bf = os.path.join(self._conanfile.build_folder, self._build_folder)
+        bt = build_type or self._conanfile.settings.get_safe("build_type")
 
         if bt and self._is_multiconfiguration:
             build_config = "--config %s" % bt
@@ -121,18 +113,18 @@ class CMakeToolchainBuildHelper(BaseCMakeBuildHelper):
         command = "%s --build %s" % (self._cmake_program, join_arguments(arg_list))
         self._conanfile.run(command)
 
-    def build(self, build_folder=None, build_type=None, target=None):
+    def build(self, build_type=None, target=None):
         if not self._conanfile.should_build:
             return
-        self._build(build_folder, build_type, target)
+        self._build(build_type, target)
 
-    def install(self, build_folder=None):
+    def install(self, build_type=None):
         if not self._conanfile.should_install:
             return
         mkdir(self._conanfile.package_folder)
-        self._build(build_folder=build_folder, target="install")
+        self._build(build_type=build_type, target="install")
 
-    def test(self, build_folder=None, target=None, output_on_failure=False):
+    def test(self, build_type=None, target=None, output_on_failure=False):
         if not self._conanfile.should_test:
             return
         if not target:
@@ -142,4 +134,4 @@ class CMakeToolchainBuildHelper(BaseCMakeBuildHelper):
         if self._parallel:
             env['CTEST_PARALLEL_LEVEL'] = str(cpu_count(self._conanfile.output))
         with tools.environment_append(env):
-            self._build(build_folder=build_folder, target=target)
+            self._build(build_type=build_type, target=target)

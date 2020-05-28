@@ -179,6 +179,7 @@ class CMakeToolchain(object):
 
         # Now the debug/release stuff
         # CMAKE_BUILD_TYPE: Use it only if it isn't a multi-config generator
+        # This GENERATOR_IS_MULTI_CONFIG property requires CMake 3.9
         get_property(_GENERATOR_IS_MULTI_CONFIG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG )
         if(NOT _GENERATOR_IS_MULTI_CONFIG)
             set(CMAKE_BUILD_TYPE "{{ CMAKE_BUILD_TYPE }}" CACHE STRING "Choose the type of build." FORCE)
