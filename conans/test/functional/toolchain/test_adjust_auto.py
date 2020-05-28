@@ -288,9 +288,8 @@ class AdjustAutoTestCase(unittest.TestCase):
         self.assertNotIn("CMAKE_CXX_STANDARD", cmake_cache_keys)
         self.assertNotIn("CMAKE_CXX_EXTENSIONS", cmake_cache_keys)
 
-        self.assertEqual("/std:c++{}".format(cppstd), cmake_cache["CONAN_STD_CXX_FLAG:STRING"])
-        self.assertEqual("OFF", cmake_cache["CONAN_CMAKE_CXX_EXTENSIONS:STRING"])
-        self.assertEqual(cppstd, cmake_cache["CONAN_CMAKE_CXX_STANDARD:STRING"])
+        self.assertNotIn("CONAN_CMAKE_CXX_EXTENSIONS", cmake_cache_keys)
+        self.assertNotIn("CONAN_CMAKE_CXX_STANDARD", cmake_cache_keys)
 
     @parameterized.expand([("True",), ("False", ), ])
     @unittest.skipIf(platform.system() == "Windows", "fPIC is not used for Windows")
@@ -365,7 +364,7 @@ class AdjustAutoTestCase(unittest.TestCase):
         self.assertEqual("/machine:x64", cmake_cache["CMAKE_SHARED_LINKER_FLAGS:STRING"])
         self.assertEqual("/machine:x64", cmake_cache["CMAKE_EXE_LINKER_FLAGS:STRING"])
 
-        self.assertEqual("/{}".format(runtime), cmake_cache["CONAN_LINK_RUNTIME:STRING"])
+        self.assertNotIn("CONAN_LINK_RUNTIME", cmake_cache_keys)
 
     @parameterized.expand([("15", "x86_64",), ("15", "x86",), ("16", "x86_64"), ("16", "x86")])
     @unittest.skipUnless(platform.system() == "Windows", "Only windows")
