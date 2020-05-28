@@ -7,7 +7,7 @@ from collections import OrderedDict, defaultdict
 from jinja2 import Template
 
 from conans.client.build.cmake_flags import get_generator, get_generator_platform, \
-    CMakeDefinitionsBuilder, get_toolset
+    CMakeDefinitionsBuilder, get_toolset, is_multi_configuration
 from conans.client.generators.cmake_common import CMakeCommonMacros
 from conans.util.files import save
 
@@ -114,6 +114,9 @@ class CMakeToolchain(object):
         {% if generator_platform %}set(CMAKE_GENERATOR_PLATFORM "{{ generator_platform }}" CACHE STRING "" FORCE){% endif %}
         {% if toolset %}set(CMAKE_GENERATOR_TOOLSET "{{ toolset }}" CACHE STRING "" FORCE){% endif%}
 
+        # build_type (Release, Debug, etc) is only defined for single-config generators
+        {% if build_type %} set(CMAKE_BUILD_TYPE "{{ build_type }}" CACHE STRING "Choose the type of build." FORCE){% endif %}
+
         # --  - CMake.flags --> CMakeDefinitionsBuilder::get_definitions
         {%- for it, value in definitions.items() %}
         {%- if it.startswith('CONAN_') %}
@@ -177,15 +180,6 @@ class CMakeToolchain(object):
         {{ cmake_macros_and_functions }}
         ########### End of Utility macros and functions ###########
 
-        # Now the debug/release stuff
-        # CMAKE_BUILD_TYPE: Use it only if it isn't a multi-config generator
-        # This GENERATOR_IS_MULTI_CONFIG property requires CMake 3.9
-        get_property(_GENERATOR_IS_MULTI_CONFIG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG )
-        if(NOT _GENERATOR_IS_MULTI_CONFIG)
-            set(CMAKE_BUILD_TYPE "{{ CMAKE_BUILD_TYPE }}" CACHE STRING "Choose the type of build." FORCE)
-        endif()
-        unset(_GENERATOR_IS_MULTI_CONFIG)
-
         # Variables scoped to a configuration
         {%- for it, values in configuration_types_definitions.items() -%}
             {%- set generator_expression = namespace(str='') %}
@@ -199,18 +193,18 @@ class CMakeToolchain(object):
         {%- endfor %}
 
         # Adjustments that depends on the build_type
-        {% if options.set_vs_runtime %}conan_set_vs_runtime(){% endif %}
+        {% if set_vs_runtime %}conan_set_vs_runtime(){% endif %}
     """)
 
     def __init__(self, conanfile,
                  generator=None,
+                 generator_platform=None,
                  cmake_system_name=True,
                  parallel=True,
                  build_type=None,
                  toolset=None,
                  make_program=None,
                  # cmake_program=None,  # TODO: cmake program should be considered in the environment
-                 generator_platform=None
                  ):
         self._conanfile = conanfile
         del conanfile
@@ -224,16 +218,16 @@ class CMakeToolchain(object):
         self.set_compiler = True
         self.set_vs_runtime = True
 
-        generator = generator or get_generator(self._conanfile)
+        self._generator = generator or get_generator(self._conanfile)
         self._generator_platform = generator_platform or \
-                                   get_generator_platform(self._conanfile.settings, generator)
+                                   get_generator_platform(self._conanfile.settings, self._generator)
         self._toolset = toolset or get_toolset(self._conanfile.settings)
         self._build_type = build_type or self._conanfile.settings.get_safe("build_type")
 
         builder = CMakeDefinitionsBuilder(self._conanfile,
                                           cmake_system_name=cmake_system_name,
                                           make_program=make_program, parallel=parallel,
-                                          generator=generator,
+                                          generator=self._generator,
                                           set_cmake_flags=False,
                                           forced_build_type=build_type,
                                           output=self._conanfile.output)
@@ -254,9 +248,22 @@ class CMakeToolchain(object):
             })
 
     def dump(self, install_folder):
-        # The user can modify these dictionaries, add them to the context in the very last moment
+        conan_project_include_cmake = os.path.join(install_folder, "conan_project_include.cmake")
+        t = Template(self._template_project_include)
+        content = t.render(configuration_types_definitions=self.definitions.configuration_types,
+                           cmake_macros_and_functions="\n".join([
+                               CMakeCommonMacros.conan_set_vs_runtime_preserve_build_type
+                           ]),
+                           set_vs_runtime=self.set_vs_runtime)
+        save(conan_project_include_cmake, content)
+
+        # TODO: I need the profile_host and profile_build here!
+        # TODO: What if the compiler is a build require?
+        # TODO: Add all the stuff related to settings (ALL settings or just _MY_ settings?)
+        # TODO: I would want to have here the path to the compiler too
+        build_type = self._build_type if is_multi_configuration(self._generator) else None
         context = {
-            "CMAKE_BUILD_TYPE": self._build_type,
+            "build_type": build_type,
             "generator_platform": self._generator_platform,
             "toolset": self._toolset,
             "definitions": self.definitions,
@@ -267,23 +274,8 @@ class CMakeToolchain(object):
                         "set_libcxx": self.set_libcxx,
                         "set_find_paths": self.set_find_paths,
                         "set_find_library_paths": self.set_find_library_paths,
-                        "set_compiler": self.set_compiler,
-                        "set_vs_runtime": self.set_vs_runtime}
+                        "set_compiler": self.set_compiler}
         }
-
-        conan_project_include_cmake = os.path.join(install_folder, "conan_project_include.cmake")
-        t = Template(self._template_project_include)
-        content = t.render(configuration_types_definitions=self.definitions.configuration_types,
-                           cmake_macros_and_functions="\n".join([
-                               CMakeCommonMacros.conan_set_vs_runtime_preserve_build_type
-                           ]),
-                           **context)
-        save(conan_project_include_cmake, content)
-
-        # TODO: I need the profile_host and profile_build here!
-        # TODO: What if the compiler is a build require?
-        # TODO: Add all the stuff related to settings (ALL settings or just _MY_ settings?)
-        # TODO: I would want to have here the path to the compiler too
         t = Template(self._template_toolchain)
         content = t.render(conan_project_include_cmake=conan_project_include_cmake.replace("\\", "/"),
                            cmake_macros_and_functions="\n".join([
