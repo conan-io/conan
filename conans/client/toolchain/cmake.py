@@ -117,6 +117,10 @@ class CMakeToolchain(object):
         # build_type (Release, Debug, etc) is only defined for single-config generators
         {% if build_type %} set(CMAKE_BUILD_TYPE "{{ build_type }}" CACHE STRING "Choose the type of build." FORCE){% endif %}
 
+        # To support the cmake_find_package generators:
+        {% if cmake_module_path %}set(CMAKE_MODULE_PATH {{ cmake_module_path }} ${CMAKE_MODULE_PATH}){% endif%}
+        {% if cmake_prefix_path %}set(CMAKE_PREFIX_PATH {{ cmake_prefix_path }} ${CMAKE_PREFIX_PATH}){% endif%}
+
         # --  - CMake.flags --> CMakeDefinitionsBuilder::get_definitions
         {%- for it, value in definitions.items() %}
         {%- if it.startswith('CONAN_') %}
@@ -154,10 +158,7 @@ class CMakeToolchain(object):
             {% if options.set_rpath %}conan_set_rpath(){% endif %}
             {% if options.set_std %}conan_set_std(){% endif %}
             {% if options.set_fpic %}conan_set_fpic(){% endif %}
-
             {% if options.set_libcxx %}conan_set_libcxx(){% endif %}
-            {% if options.set_find_paths %}conan_set_find_paths(){% endif %}
-            {% if options.set_find_library_paths %}conan_set_find_library_paths(){% endif %}
 
             set(CMAKE_CXX_FLAGS_INIT "${CONAN_CXX_FLAGS}" CACHE STRING "" FORCE)
             set(CMAKE_C_FLAGS_INIT "${CONAN_C_FLAGS}" CACHE STRING "" FORCE)
@@ -213,10 +214,10 @@ class CMakeToolchain(object):
         self.set_std = True
         self.set_fpic = True
         self.set_libcxx = True
-        self.set_find_paths = True
-        self.set_find_library_paths = True
         self.set_compiler = True
         self.set_vs_runtime = True
+        self.cmake_prefix_path = "${CMAKE_BINARY_DIR}"
+        self.cmake_module_path = "${CMAKE_BINARY_DIR}"
 
         self._generator = generator or get_generator(self._conanfile)
         self._generator_platform = generator_platform or \
@@ -268,12 +269,12 @@ class CMakeToolchain(object):
             "toolset": self._toolset,
             "definitions": self.definitions,
             "environment": self.environment,
+            "cmake_prefix_path": self.cmake_prefix_path,
+            "cmake_module_path": self.cmake_module_path,
             "options": {"set_rpath": self.set_rpath,
                         "set_std": self.set_std,
                         "set_fpic": self.set_fpic,
                         "set_libcxx": self.set_libcxx,
-                        "set_find_paths": self.set_find_paths,
-                        "set_find_library_paths": self.set_find_library_paths,
                         "set_compiler": self.set_compiler}
         }
         t = Template(self._template_toolchain)
@@ -285,8 +286,6 @@ class CMakeToolchain(object):
                                CMakeCommonMacros.conan_set_std,
                                CMakeCommonMacros.conan_set_fpic,
                                self._conan_set_libcxx,
-                               CMakeCommonMacros.conan_set_find_paths,
-                               CMakeCommonMacros.conan_set_find_library_paths,
                                self._conan_set_compiler
                            ]),
                            **context)
