@@ -284,7 +284,7 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
                     self.cpp_info.components["worldall"].requires = ["greetings::bye", "helloworld"]
                     self.cpp_info.components["worldall"].libs = ["worldall"]
         """)
-        cmakelists2 = textwrap.dedent("""
+        cmakelists_world = textwrap.dedent("""
             cmake_minimum_required(VERSION 3.0)
             project(world CXX)
 
@@ -306,7 +306,7 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
             set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
             set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 
-            find_package(world)
+            find_package(World)
 
             add_executable(example example.cpp)
             target_link_libraries(example World::Worldall)
@@ -315,7 +315,7 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
             target_link_libraries(example2 World::World)
             """)
         out = self._test(conanfile_greetings=conanfile_greetings,
-                         conanfile_world=conanfile_world, cmakelists_world=cmakelists2,
+                         conanfile_world=conanfile_world, cmakelists_world=cmakelists_world,
                          test_package_cmakelists=test_package_cmakelists)
         self.assertIn("Hello World!", out)
         self.assertIn("Bye World!", out)
