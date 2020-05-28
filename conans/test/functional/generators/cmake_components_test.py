@@ -194,6 +194,9 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
             set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 
             find_package(world)
+            
+            get_target_property(tmp world::worldall INTERFACE_LINK_LIBRARIES)
+            message("world::worldall target libs: ${tmp}")
 
             add_executable(example example.cpp)
             target_link_libraries(example world::worldall)
@@ -279,10 +282,10 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
                     self.cpp_info.names["cmake_find_package"] = "World"
                     self.cpp_info.components["helloworld"].names["cmake_find_package"] = "Helloworld"
                     self.cpp_info.components["helloworld"].requires = ["greetings::hello"]
-                    self.cpp_info.components["helloworld"].libs = ["helloworld"]
+                    self.cpp_info.components["helloworld"].libs = ["Helloworld"]
                     self.cpp_info.components["worldall"].names["cmake_find_package"] = "Worldall"
                     self.cpp_info.components["worldall"].requires = ["greetings::bye", "helloworld"]
-                    self.cpp_info.components["worldall"].libs = ["worldall"]
+                    self.cpp_info.components["worldall"].libs = ["Worldall"]
         """)
         cmakelists_world = textwrap.dedent("""
             cmake_minimum_required(VERSION 3.0)
@@ -307,6 +310,9 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
             set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 
             find_package(World)
+
+            get_target_property(tmp World::Worldall INTERFACE_LINK_LIBRARIES)
+            message("World::Worldall target libs: ${tmp}")
 
             add_executable(example example.cpp)
             target_link_libraries(example World::Worldall)
