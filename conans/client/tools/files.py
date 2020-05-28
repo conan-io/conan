@@ -134,7 +134,7 @@ def unzip(filename, destination=".", keep_permissions=False, pattern=None, outpu
                         os.chmod(os.path.join(full_path, file_.filename), perm)
                 except Exception as e:
                     output.error("Error extract %s\n%s" % (file_.filename, str(e)))
-            output.writeln("")
+        output.writeln("")
 
 
 def untargz(filename, destination=".", pattern=None):
