@@ -78,6 +78,7 @@ class CMakeToolchain(object):
         macro(conan_set_compiler)
             if(CONAN_COMPILER STREQUAL "gcc")
                 conan_message(STATUS "Conan: Adjust compiler: ${CONAN_COMPILER} ${CONAN_COMPILER_VERSION}")
+                # FIXME: This fails for MinGW
                 set(CMAKE_C_COMPILER gcc-${CONAN_COMPILER_VERSION})
                 #set(CMAKE_C_COMPILER_VERSION 7.4.0) # ${CONAN_COMPILER_VERSION})
                 set(CMAKE_CXX_COMPILER g++-${CONAN_COMPILER_VERSION})
@@ -102,8 +103,6 @@ class CMakeToolchain(object):
           return()
         endif()
         set(CONAN_TOOLCHAIN_INCLUDED true)
-
-        message("Using Conan toolchain through ${CMAKE_TOOLCHAIN_FILE}.")
 
         ########### Utility macros and functions ###########
         {{ cmake_macros_and_functions }}
@@ -138,6 +137,8 @@ class CMakeToolchain(object):
 
         get_property( _CMAKE_IN_TRY_COMPILE GLOBAL PROPERTY IN_TRY_COMPILE )
         if(NOT _CMAKE_IN_TRY_COMPILE)
+            message("Using Conan toolchain through ${CMAKE_TOOLCHAIN_FILE}.")
+
             if(CMAKE_VERSION VERSION_LESS "3.15")
                 message(WARNING
                     " CMake version less than 3.15 doesn't support CMAKE_PROJECT_INCLUDE variable\\n"
@@ -263,7 +264,7 @@ class CMakeToolchain(object):
         # TODO: What if the compiler is a build require?
         # TODO: Add all the stuff related to settings (ALL settings or just _MY_ settings?)
         # TODO: I would want to have here the path to the compiler too
-        build_type = self._build_type if is_multi_configuration(self._generator) else None
+        build_type = self._build_type if not is_multi_configuration(self._generator) else None
         context = {
             "build_type": build_type,
             "generator": self._generator,
