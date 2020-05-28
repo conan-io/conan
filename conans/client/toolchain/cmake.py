@@ -111,6 +111,7 @@ class CMakeToolchain(object):
 
         # Configure
         # -- CMake::command_line
+        {% if generator %}set(CMAKE_GENERATOR "{{ generator }}" CACHE STRING "" FORCE){% endif %}
         {% if generator_platform %}set(CMAKE_GENERATOR_PLATFORM "{{ generator_platform }}" CACHE STRING "" FORCE){% endif %}
         {% if toolset %}set(CMAKE_GENERATOR_TOOLSET "{{ toolset }}" CACHE STRING "" FORCE){% endif%}
 
@@ -265,6 +266,7 @@ class CMakeToolchain(object):
         build_type = self._build_type if is_multi_configuration(self._generator) else None
         context = {
             "build_type": build_type,
+            "generator": self._generator,
             "generator_platform": self._generator_platform,
             "toolset": self._toolset,
             "definitions": self.definitions,

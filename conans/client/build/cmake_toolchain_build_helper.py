@@ -106,6 +106,7 @@ class CMakeToolchainBuildHelper(BaseCMakeBuildHelper):
 
         build_flags = _compute_build_flags(self._conanfile, self._generator, self._parallel,
                                            self._msbuild_verbosity)
+
         if build_flags:
             args += ['--'] + build_flags
 
