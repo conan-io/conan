@@ -173,7 +173,7 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
                 def test(self):
                     os.chdir("bin")
                     self.run(".%sexample" % os.sep)
-                    self.run(".%sexample2" % os.sep)
+                    # self.run(".%sexample2" % os.sep)
         """)
         test_package_example_cpp = textwrap.dedent("""
             #include <iostream>
@@ -198,8 +198,8 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
             add_executable(example example.cpp)
             target_link_libraries(example world::worldall)
 
-            add_executable(example2 example.cpp)
-            target_link_libraries(example2 world::world)
+            # add_executable(example2 example.cpp)
+            # target_link_libraries(example2 world::world)
             """)
         client.save({"conanfile.py": conanfile_world or _conanfile_world,
                      "src/CMakeLists.txt": cmakelists_world or _cmakelists_world,
@@ -311,8 +311,8 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
             add_executable(example example.cpp)
             target_link_libraries(example World::Worldall)
 
-            add_executable(example2 example.cpp)
-            target_link_libraries(example2 World::World)
+            # add_executable(example2 example.cpp)
+            # target_link_libraries(example2 World::World)
             """)
         out = self._test(conanfile_greetings=conanfile_greetings,
                          conanfile_world=conanfile_world, cmakelists_world=cmakelists_world,
