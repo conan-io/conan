@@ -175,6 +175,10 @@ class CMakeFindPackageGenerator(Generator):
         set({{ comp_name }}_LIB_TARGETS "") # Will be filled later, if CMake 3
         conan_component_library_targets({{ comp_name }}_LIB_TARGETS "${% raw %}{{% endraw %}{{ comp_name }}_LIB_DIRS{% raw %}}{% endraw %}" "${% raw %}{{% endraw %}{{ comp_name }}_LIBS{% raw %}}{% endraw %}")
         conan_message(STATUS "Components Library targets2: ${% raw %}{{% endraw %}{{ comp_name }}_LIB_TARGETS{% raw %}}{% endraw %}")
+        # foreach(_LIB ${% raw %}{{% endraw %}{{ comp_name }}_LIB_TARGETS{% raw %}}{% endraw %})
+        #     set_target_properties(${_LIB} PROPERTIES INTERFACE_INCLUDE_DIRECTORIES
+        #                           "${% raw %}{{% endraw %}{{ comp_name }}_INCLUDE_DIRS{% raw %}}{% endraw %}")
+        # endforeach()
 
         set({{ comp_name }}_FRAMEWORKS_FOUND "") # Will be filled later
         conan_find_apple_frameworks({{ comp_name }}_FRAMEWORKS_FOUND "${% raw %}{{% endraw %}{{ comp_name }}_FRAMEWORKS{% raw %}}{% endraw %}" "${% raw %}{{% endraw %}{{ comp_name }}_FRAMEWORK_DIRS{% raw %}}{% endraw %}")
