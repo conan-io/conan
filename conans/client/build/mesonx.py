@@ -66,18 +66,16 @@ class MesonToolchain:
             yield i
 
     def dump(self, output: str):
-      if self.native_files:
-        outpath = Path(output) / 'native'
-        if not outpath.exists():
-            outpath.mkdir(parents=True)
-        for f in self.native_files:
-          f.dump(outpath)
-      if self.cross_files:
-        outpath = Path(output) / 'cross'
-        if not outpath.exists():
-            outpath.mkdir(parents=True)
-        for f in self.cross_files:
-          f.dump(outpath)
+        def dump_files(files, outpath: str):
+            if not files:
+                pass
+            if not outpath.exists():
+                outpath.mkdir(parents=True)
+            for f in self.native_files:
+                f.dump(outpath)
+
+        dump_files(self.native_files, Path(output) / 'native')
+        dump_files(self.cross_files, Path(output) / 'cross')
 
 class MesonDefaultToolchainGenerator(object):
     def __init__(self, conanfile):
@@ -85,12 +83,13 @@ class MesonDefaultToolchainGenerator(object):
 
     def generate(self, force_cross: bool = False) -> MesonToolchain:
         mt = MesonToolchain()
-        if hasattr(self._conanfile, 'settings_build') and self._conanfile.settings_build:
+        has_settings_build = hasattr(self._conanfile, 'settings_build') and self._conanfile.settings_build
+        has_settings_target = hasattr(self._conanfile, 'settings_target') and self._conanfile.settings_target
+        if has_settings_build:
             mt.native_files += [MesonMachineFile(name='default.ini', config=self._dict_to_config(self._create_native(self._conanfile.settings_build, True)))]
-        if hasattr(self._conanfile, 'settings_target') and self._conanfile.settings_target:
+        if has_settings_target:
             mt.cross_files += [MesonMachineFile(name='default.ini', config=self._dict_to_config(self._create_cross(self._conanfile.settings_target)))]
-        if (not (hasattr(self._conanfile, 'settings_build') and self._conanfile.settings_build) and 
-            not (hasattr(self._conanfile, 'settings_target') and self._conanfile.settings_target)):
+        if not has_settings_build and not has_settings_target:
             tmp_native_files, tmp_cross_files = self._create_machine_files_from_settings(self._conanfile.settings, force_cross)
             mt.native_files += tmp_native_files
             mt.cross_files += tmp_cross_files
@@ -102,8 +101,11 @@ class MesonDefaultToolchainGenerator(object):
         return config
 
     def _to_ini(self, config):
-        return {section_name: {key: self._to_ini_value(value) for key, value in section.items() if value is not None}
-                for section_name, section in config.items()}
+        return {
+            section_name: {
+                key: self._to_ini_value(value) for key, value in section.items() if value is not None
+            } for section_name, section in config.items()
+        }
 
     def _to_ini_value(self, value):
         if isinstance(value, bool):
@@ -270,12 +272,11 @@ class MesonDefaultToolchainGenerator(object):
 
 class MesonX(object):
     def __init__(self, conanfile, build_dir: str = None, backend: str = None, append_vcvars: boolean = False) -> None:
-        """
-        :param conanfile: Conanfile instance
-        :param backend: Generator name to use or none to autodetect.
-               Possible values: ninja, vs, vs2010, vs2015, vs2017, vs2019, xcode
-        :param build_type: Overrides default build type comming from settings
-        """
+        if self.get_version() < '0.42.0':
+            raise ConanException('`meson` is too old: minimum required version `0.42.0` vs current version `{}`'.format(self.get_version()))
+        if not 'pkg_config' in conanfile.generators:
+            raise ConanException('`pkg_config` generator is required for `meson` integration')
+
         self._conanfile = conanfile
         self._settings = conanfile.settings
         self._append_vcvars = append_vcvars
@@ -288,9 +289,6 @@ class MesonX(object):
 
         # Meson recommends to use ninja by default
         self.backend = backend or 'ninja'
-
-        if not 'pkg_config' in self._conanfile.generators:
-            raise ConanException('`pkg_config` generator is required for Meson integration')
 
     @staticmethod
     def get_version() -> Version:
