@@ -269,7 +269,7 @@ class MesonDefaultToolchainGenerator(object):
         return arch_to_cpu[arch]
 
 class MesonX(object):
-    def __init__(self, conanfile, build_dir: str = None, backend: str = None, append_vcvars: boolean = False):
+    def __init__(self, conanfile, build_dir: str = None, backend: str = None, append_vcvars: boolean = False) -> None:
         """
         :param conanfile: Conanfile instance
         :param backend: Generator name to use or none to autodetect.
@@ -367,15 +367,21 @@ class MesonX(object):
             pc_paths += [get_abs_path(f, self._conanfile.install_folder) for f in pkg_config_paths]
         resolved_options.update({'pkg_config_path': '{}'.format(os.pathsep.join(pc_paths))})
 
-        # Machine files are passed through arguments and not options, because they can be specified multiple times.
+        if 'native-file' in options:
+            raise ConanException('Don\'t pass `native-file` via `options`: use `native_files` kwarg in the class constructor instead')
+        if 'cross-file' in options:
+            raise ConanException('Don\'t pass `cross-file` via `options`: use `cross_files` kwarg in the class constructor instead')
+        if any(map(lambda a: a.startswith('--native-file'), args)):
+            raise ConanException('Don\'t pass `native-file` via `args`: use `native_files` kwarg in the class constructor instead')
+        if any(map(lambda a: a.startswith('--cross-file'), args)):
+            raise ConanException('Don\'t pass `cross-file` via `args`: use `cross_files` kwarg in the class constructor instead')
         machine_file_args = []
         if native_files:
             machine_file_args += ['--native-file={}'.format(f) for f in native_files]
         if cross_files:
             machine_file_args += ['--cross-file={}'.format(f) for f in cross_files]
-        # Machine files are specified first, so that they do not override values from files from `args`
-        # (if a user decides to pass additional machine files via `args` for some reason)
-        args = machine_file_args + args
+        # Machine files are passed through arguments and not options, because they can be specified multiple times.
+        args += machine_file_args
 
         arg_list = join_arguments([
             defs_to_string(resolved_options),
