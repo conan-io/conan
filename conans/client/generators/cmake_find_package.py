@@ -172,17 +172,17 @@ class CMakeFindPackageGenerator(Generator):
         ########## COMPONENT {{ comp_name }} FIND LIBRARIES & FRAMEWORKS / DYNAMIC VARS #############
 
         set({{ comp_name }}_LIB_TARGETS "") # Will be filled later, if CMake 3
-        conan_component_library_targets({{ comp_name }}_LIB_TARGETS "${% raw %}{{% endraw %}{{ comp_name }}_LIB_DIRS{% raw %}}{% endraw %}" "${% raw %}{{% endraw %}{{ comp_name }}_LIBS{% raw %}}{% endraw %}")
+        conan_component_library_targets({{ comp_name }}_LIB_TARGETS "{{ '${'+comp_name+'_LIB_DIRS}' }}" "{{ '${'+comp_name+'_LIBS}' }}")
 
         set({{ comp_name }}_FRAMEWORKS_FOUND "") # Will be filled later
-        conan_find_apple_frameworks({{ comp_name }}_FRAMEWORKS_FOUND "${% raw %}{{% endraw %}{{ comp_name }}_FRAMEWORKS{% raw %}}{% endraw %}" "${% raw %}{{% endraw %}{{ comp_name }}_FRAMEWORK_DIRS{% raw %}}{% endraw %}")
+        conan_find_apple_frameworks({{ comp_name }}_FRAMEWORKS_FOUND "{{ '${'+comp_name+'_FRAMEWORKS}' }}" "{{ '${'+comp_name+'_FRAMEWORK_DIRS}' }}")
 
-        set({{ comp_name }}_LINK_LIBS ${% raw %}{{% endraw %}{{ comp_name }}_LIB_TARGETS{% raw %}}{% endraw %} ${% raw %}{{% endraw %}{{ comp_name }}_SYSTEM_LIBS{% raw %}}{% endraw %} ${% raw %}{{% endraw %}{{ comp_name }}_FRAMEWORKS_FOUND{% raw %}}{% endraw %} ${% raw %}{{% endraw %}{{ comp_name }}_DEPENDENCIES{% raw %}}{% endraw %})
+        set({{ comp_name }}_LINK_LIBS {{ '${'+comp_name+'_LIB_TARGETS}' }} {{ '${'+comp_name+'_SYSTEM_LIBS}' }} {{ '${'+comp_name+'_FRAMEWORKS_FOUND}' }} {{ '${'+comp_name+'_DEPENDENCIES}' }})
 
         set(CMAKE_MODULE_PATH {{ comp.build_paths }} ${CMAKE_MODULE_PATH})
         set(CMAKE_PREFIX_PATH {{ comp.build_paths }} ${CMAKE_PREFIX_PATH})
 
-        foreach(_BUILD_MODULE_PATH ${% raw %}{{% endraw %}{{ comp_name }}_BUILD_MODULES_PATHS{% raw %}}{% endraw %})
+        foreach(_BUILD_MODULE_PATH {{ '${'+comp_name+'_BUILD_MODULES_PATHS}' }})
             include(${_BUILD_MODULE_PATH})
         endforeach()
 
@@ -201,15 +201,15 @@ class CMakeFindPackageGenerator(Generator):
             if(NOT TARGET {{ pkg_name }}::{{ comp_name }})
                 add_library({{ pkg_name }}::{{ comp_name }} INTERFACE IMPORTED)
                 set_target_properties({{ pkg_name }}::{{ comp_name }} PROPERTIES INTERFACE_INCLUDE_DIRECTORIES
-                                      "${% raw %}{{% endraw %}{{ comp_name }}_INCLUDE_DIRS{% raw %}}{% endraw %}")
+                                      "{{ '${'+comp_name+'_INCLUDE_DIRS}' }}")
                 set_target_properties({{ pkg_name }}::{{ comp_name }} PROPERTIES INTERFACE_LINK_DIRECTORIES
-                                      "${% raw %}{{% endraw %}{{ comp_name }}_LIB_DIRS{% raw %}}{% endraw %}")
+                                      "{{ '${'+comp_name+'_LIB_DIRS}' }}")
                 set_target_properties({{ pkg_name }}::{{ comp_name }} PROPERTIES INTERFACE_LINK_LIBRARIES
-                                      "${% raw %}{{% endraw %}{{ comp_name }}_LINK_LIBS{% raw %}}{% endraw %};${% raw %}{{% endraw %}{{ comp_name }}_LINKER_FLAGS_LIST{% raw %}}{% endraw %}")
+                                      "{{ '${'+comp_name+'_LINK_LIBS}' }};{{ '${'+comp_name+'_LINKER_FLAGS_LIST}' }}")
                 set_target_properties({{ pkg_name }}::{{ comp_name }} PROPERTIES INTERFACE_COMPILE_DEFINITIONS
-                                      "${% raw %}{{% endraw %}{{ comp_name }}_COMPILE_DEFINITIONS{% raw %}}{% endraw %}")
+                                      "{{ '${'+comp_name+'_COMPILE_DEFINITIONS}' }}")
                 set_target_properties({{ pkg_name }}::{{ comp_name }} PROPERTIES INTERFACE_COMPILE_OPTIONS
-                                      "${% raw %}{{% endraw %}{{ comp_name }}_COMPILE_OPTIONS_LIST{% raw %}}{% endraw %}")
+                                      "{{ '${'+comp_name+'_COMPILE_OPTIONS_LIST}' }}")
             endif()
         endif()
 
@@ -221,7 +221,7 @@ class CMakeFindPackageGenerator(Generator):
             if(NOT TARGET {{ pkg_name }}::{{ pkg_name }})
                 add_library({{ pkg_name }}::{{ pkg_name }} INTERFACE IMPORTED)
                 set_target_properties({{ pkg_name }}::{{ pkg_name }} PROPERTIES INTERFACE_LINK_LIBRARIES
-                                      "${% raw %}{{% endraw %}{{ pkg_name }}_COMPONENTS{% raw %}}{% endraw %};${% raw %}{{% endraw %}{{ pkg_name }}_DEPENDENCIES{% raw %}}{% endraw %}")
+                                      "{{ '${'+pkg_name+'_COMPONENTS}' }};{{ '${'+pkg_name+'_DEPENDENCIES}' }}")
             endif()
         endif()
 
