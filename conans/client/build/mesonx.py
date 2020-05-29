@@ -506,7 +506,6 @@ class MesonX(object):
         options['libexecdir'] = DEFAULT_BIN
         options['includedir'] = DEFAULT_INCLUDE
 
-        # C++ standard
         cppstd = cppstd_from_settings(self._conanfile.settings)
         cppstd_conan2meson = {
             '98': 'c++03', 'gnu98': 'gnu++03',
@@ -518,12 +517,10 @@ class MesonX(object):
         if cppstd:
             options['cpp_std'] = cppstd_conan2meson[cppstd]
 
-        # shared
         shared = self._so('shared')
         if shared != None:
             options['default_library'] = shared
 
-        # fpic
         if self._os and 'Windows' not in self._os:
             fpic = self._so('fPIC')
             if fpic != None:
