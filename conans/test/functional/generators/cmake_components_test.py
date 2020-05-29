@@ -46,6 +46,8 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
             """)
         hello_cpp = textwrap.dedent("""
             #include <iostream>
+            #include <string>
+
             #include "hello.h"
 
             void hello(std::string noun) {
@@ -59,6 +61,8 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
             """)
         bye_cpp = textwrap.dedent("""
             #include <iostream>
+            #include <string>
+
             #include "bye.h"
 
             void bye(std::string noun) {
@@ -119,8 +123,9 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
             void helloWorld();
             """)
         helloworld_cpp = textwrap.dedent("""
-            #include <iostream>
+            #include <string>
             #include "hello.h"
+
             #include "helloworld.h"
 
             void helloWorld() {
@@ -133,9 +138,10 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
             void worldAll();
             """)
         worldall_cpp = textwrap.dedent("""
-            #include <iostream>
+            #include <string>
             #include "bye.h"
             #include "helloworld.h"
+
             #include "worldall.h"
 
             void worldAll() {
@@ -179,7 +185,6 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
                     self.run(".%sexample2" % os.sep)
             """)
         test_package_example_cpp = textwrap.dedent("""
-            #include <iostream>
             #include "worldall.h"
 
             int main() {
@@ -249,6 +254,8 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
             """)
         hello_cpp = textwrap.dedent("""
             #include <iostream>
+            #include <string>
+
             #include "hello.h"
 
             void hello(std::string noun) {
@@ -262,6 +269,8 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
             """)
         bye_cpp = textwrap.dedent("""
             #include <iostream>
+            #include <string>
+
             #include "bye.h"
 
             void bye(std::string noun) {
@@ -296,7 +305,8 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
                     self.run(".%sexample" % os.sep)
             """)
         test_package_greetings_cpp = textwrap.dedent("""
-            #include <iostream>
+            #include <string>
+
             #include "hello.h"
             #include "bye.h"
 
@@ -423,15 +433,6 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
             conan_basic_setup()
 
             find_package(World)
-
-            get_target_property(tmp World::Worldall INTERFACE_LINK_LIBRARIES)
-            message("World::Worldall target libs: ${tmp}")
-            get_target_property(tmp World::Helloworld INTERFACE_LINK_LIBRARIES)
-            message("World::Helloworld target libs: ${tmp}")
-            get_target_property(tmp Greetings::Bye INTERFACE_LINK_LIBRARIES)
-            message("Greetings::Bye target libs: ${tmp}")
-            get_target_property(tmp Greetings::Hello INTERFACE_LINK_LIBRARIES)
-            message("Greetings::Hello target libs: ${tmp}")
 
             add_executable(example example.cpp)
             target_link_libraries(example World::Worldall)
