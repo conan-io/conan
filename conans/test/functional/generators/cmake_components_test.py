@@ -110,7 +110,7 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
                 def package_info(self):
                     self.cpp_info.components["helloworld"].requires = ["greetings::greetings"]
                     self.cpp_info.components["helloworld"].libs = ["helloworld"]
-                    self.cpp_info.components["worldall"].requires = ["greetings::greetings", "helloworld"]
+                    self.cpp_info.components["worldall"].requires = ["helloworld", "greetings::greetings"]
                     self.cpp_info.components["worldall"].libs = ["worldall"]
             """)
         helloworld_h = textwrap.dedent("""
@@ -194,9 +194,15 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
             conan_basic_setup()
 
             find_package(world)
-            
+
+            get_target_property(tmp world::world INTERFACE_LINK_LIBRARIES)
+            message("world::world target libs: ${tmp}")
             get_target_property(tmp world::worldall INTERFACE_LINK_LIBRARIES)
             message("world::worldall target libs: ${tmp}")
+            get_target_property(tmp world::helloworld INTERFACE_LINK_LIBRARIES)
+            message("world::helloworld target libs: ${tmp}")
+            get_target_property(tmp greetings::greetings INTERFACE_LINK_LIBRARIES)
+            message("greetings::greetings target libs: ${tmp}")
 
             add_executable(example example.cpp)
             target_link_libraries(example world::worldall)

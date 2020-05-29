@@ -90,7 +90,6 @@ class CMakeFindPackageGenerator(Generator):
                         endif()
                         list(APPEND _out_libraries_target ${_LIB_NAME})
                     endif()
-                    conan_message(STATUS "Found: ${CONAN_FOUND_LIBRARY}")
                 else()
                     message(FATAL_ERROR "Component library ${_LIBRARY_NAME} not found in paths: ${libdir}")
                 endif()
