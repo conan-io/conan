@@ -20,14 +20,18 @@ from conans.util.runners import version_runner
 # - cleanup comments
 # - add tests
 # - remove _ss from MesonX __init__()
+# - add minimum meson version check (0.42.0?)
 
-# Differences from Meson:
+# Differences from stock Meson integration:
 # - does not override 'default_library' if no 'shared' options was set
 # - saves `build_dir` in __init__
 # - cleaned up interface: removed old arguments, removed build_dir and etc
 # - added machine file support
 # - added machine file generation for `toolchain`
-# - made backend-agnostic used by default. ninja is used if possible as a fallback.
+# - backend-agnostic meson methods are used by default now with ninja as a fallback for older meson versions.
+# - env variables with dependency search paths are not appended when executing meson
+# - requires pkg-config generator
+
 
 class MesonMachineFile:
     def __init__(self,
@@ -43,20 +47,17 @@ class MesonMachineFile:
         if path:
             config = ConfigParser()
             config.read(path)
-        options = config
+        self.options = config
 
     def dump(self, output: str):
         outpath = Path(output)
-        if not outpath.exists:
+        if not outpath.exists():
             outpath.mkdir(parents=True)
         with open(outpath/self.name, 'w') as f:
-            options.write(f)
+            self.options.write(f)
 
 class MesonToolchain:
-    def __init__(self,
-                 native_files = None, # Type: List[MesonMachineFile]
-                 cross_files = None # Type: List[MesonMachineFile]
-                 ):
+    def __init__(self, native_files = None, cross_files = None ):
         self.native_files = native_files or []
         self.cross_files = cross_files or []
 
@@ -65,99 +66,110 @@ class MesonToolchain:
             yield i
 
     def dump(self, output: str):
-      if native_files:
-        outpath = Path(output) \ 'native'
-        if not outpath.exists:
+      if self.native_files:
+        outpath = Path(output) / 'native'
+        if not outpath.exists():
             outpath.mkdir(parents=True)
-        for f in native_files:
+        for f in self.native_files:
           f.dump(outpath)
-      if cross_files:
-        outpath = Path(output) \ 'cross'
-        if not outpath.exists:
+      if self.cross_files:
+        outpath = Path(output) / 'cross'
+        if not outpath.exists():
             outpath.mkdir(parents=True)
-        for f in cross_files:
+        for f in self.cross_files:
           f.dump(outpath)
 
 class MesonDefaultToolchainGenerator(object):
     def __init__(self, conanfile):
         self._conanfile = conanfile
 
-    def generate(self, force_cross: boolean = False) -> MesonToolchain:
+    def generate(self, force_cross: bool = False) -> MesonToolchain:
         mt = MesonToolchain()
-        if self._conanfile.settings_build:
-            mt.native_files += [MesonMachineFile(name='default.ini', config=self._dict_to_config(self._create_native()))]
-        if self._conanfile.settings_target:
-            mt.cross_files += [MesonMachineFile(name='default.ini', config=self._dict_to_config(self._create_cross()))]
-        if not hasattr(self._conanfile, 'settings_build') and not hasattr(self._conanfile, 'settings_target'):
-            tmp_native_files, tmp_cross_files = self._create_machine_files_from_settings(force_cross)
+        if hasattr(self._conanfile, 'settings_build') and self._conanfile.settings_build:
+            mt.native_files += [MesonMachineFile(name='default.ini', config=self._dict_to_config(self._create_native(self._conanfile.settings_build, True)))]
+        if hasattr(self._conanfile, 'settings_target') and self._conanfile.settings_target:
+            mt.cross_files += [MesonMachineFile(name='default.ini', config=self._dict_to_config(self._create_cross(self._conanfile.settings_target)))]
+        if (not (hasattr(self._conanfile, 'settings_build') and self._conanfile.settings_build) and 
+            not (hasattr(self._conanfile, 'settings_target') and self._conanfile.settings_target)):
+            tmp_native_files, tmp_cross_files = self._create_machine_files_from_settings(self._conanfile.settings, force_cross)
             mt.native_files += tmp_native_files
             mt.cross_files += tmp_cross_files
         return mt
 
-    @staticmethod
-    def _dict_to_config(machine_dict: dict) -> ConfigParser:
-        return ConfigParser().read_dict(self._filter_undefined(machine_dict))
+    def _dict_to_config(self, machine_dict: dict) -> ConfigParser:
+        config = ConfigParser()
+        config.read_dict(self._to_ini(machine_dict))
+        return config
 
-    @staticmethod
-    def _filter_undefined(config):
-        return {section_name: {key: value for key, value in section.items() if value is not None}
+    def _to_ini(self, config):
+        return {section_name: {key: self._to_ini_value(value) for key, value in section.items() if value is not None}
                 for section_name, section in config.items()}
 
-    @staticmethod
-    def _create_native(settings) -> dict:
-        def none_if_empty(input: str):
-            return input if input.strip() else None
-        def env_or_for_build(input: str):
-            return os.environ.get('{}_FOR_BUILD'.format(input)) or os.environ.get(input)
-        def atr_or_for_build(settings, input: str):
-            return settings.get_safe('{}_build'.format(input)) or settings.get_safe(input)
+    def _to_ini_value(self, value):
+        if isinstance(value, bool):
+            return str(value).lower()
+        if isinstance(value, str):
+            return "'{}'".format(value)
+        return value
 
-        # `_FOR_BUILD` logic is mirroring built-in meson environment variables handling logic
+    def _create_native(self, settings, is_separate_profile: bool) -> dict:
+        def none_if_empty(input: str):
+            stripped_input = input.strip()
+            return stripped_input if stripped_input else None
+        def env_or_for_build(input: str, is_separate_profile, default_val = None):
+            if is_separate_profile:
+                return os.environ.get(input, default_val)
+            else:
+                return os.environ.get('{}_FOR_BUILD'.format(input), default_val)
+        def atr_or_for_build(settings, input: str, is_separate_profile):
+            if is_separate_profile:
+                return settings.get_safe(input)
+            else:
+                return settings.get_safe('{}_build'.format(input))
+
         config_template = {
             'binaries': {
-                'c': env_or_for_build('CC'),
-                'cpp': env_or_for_build('CXX'),
-                'c_ld': env_or_for_build('LD'),
-                'cpp_ld': env_or_for_build'LD'),
-                'ar': env_or_for_build('AR'),
-                'strip': env_or_for_build('STRIP'),
-                'as': env_or_for_build('AS'),
-                'ranlib': env_or_for_build('RANLIB'),
+                'c': env_or_for_build('CC', is_separate_profile),
+                'cpp': env_or_for_build('CXX', is_separate_profile),
+                'ld': env_or_for_build('LD', is_separate_profile),
+                'ar': env_or_for_build('AR', is_separate_profile),
+                'strip': env_or_for_build('STRIP', is_separate_profile),
+                'as': env_or_for_build('AS', is_separate_profile),
+                'ranlib': env_or_for_build('RANLIB', is_separate_profile),
                 'pkgconfig': tools.which('pkg-config')
             },
             'properties': {
-                'c_args': none_if_empty(env_or_for_build('CPPFLAGS', '') + ' ' + env_or_for_build('CFLAGS', '')),
-                'cpp_args': none_if_empty(env_or_for_build('CPPFLAGS', '') + ' ' + env_or_for_build('CXXFLAGS', '')),
-                'c_link_args': env_or_for_build('LDFLAGS'),
-                'cpp_link_args': env_or_for_build('LDFLAGS'),
-                'pkg_config_path': env_or_for_build('PKG_CONFIG_PATH'),
+                'c_args': none_if_empty(env_or_for_build('CPPFLAGS', is_separate_profile, '') + ' ' + env_or_for_build('CFLAGS', is_separate_profile, '')),
+                'cpp_args': none_if_empty(env_or_for_build('CPPFLAGS', is_separate_profile, '') + ' ' + env_or_for_build('CXXFLAGS', is_separate_profile, '')),
+                'c_link_args': env_or_for_build('LDFLAGS', is_separate_profile),
+                'cpp_link_args': env_or_for_build('LDFLAGS', is_separate_profile),
+                'pkg_config_path': env_or_for_build('PKG_CONFIG_PATH', is_separate_profile),
             }
         }
 
-        if atr_or_for_build(settings, 'os'):
-            os = atr_or_for_build(settings, 'os')
-            arch = atr_or_for_build(settings, 'arch')
-            cpu_family, endian = _get_cpu_family_and_endianness_from_arch(settings.arch)
+        if atr_or_for_build(settings, 'os', is_separate_profile):
+            resolved_os = atr_or_for_build(settings, 'os', is_separate_profile)
+            arch = atr_or_for_build(settings, 'arch', is_separate_profile)
+            cpu_family, endian = self._get_cpu_family_and_endianness_from_arch(str(arch))
             config_template['build_machine'] = {
-                'system': self._get_system_from_os(os),
-                'cpu': arch,
+                'system': self._get_system_from_os(str(resolved_os)),
+                'cpu': str(arch),
                 'cpu_family': cpu_family,
                 'endian': endian,
             }
 
         return config_template
 
-    @staticmethod
-    def _create_cross(settings) -> dict:
-        def none_if_empty(str):
-            return str if str.strip() else None
+    def _create_cross(self, settings) -> dict:
+        def none_if_empty(input: str):
+            stripped_input = input.strip()
+            return stripped_input if stripped_input else None
 
         config_template = {
             'binaries': {
                 'c': os.environ.get('CC'),
                 'cpp': os.environ.get('CXX'),
-                'c_ld': os.environ.get('LD'),
-                'cpp_ld': os.environ.get('LD'),
+                'ld': os.environ.get('LD'),
                 'ar': os.environ.get('AR'),
                 'strip': os.environ.get('STRIP'),
                 'as': os.environ.get('AS'),
@@ -173,36 +185,35 @@ class MesonDefaultToolchainGenerator(object):
                 'needs_exe_wrapper': tools.cross_building(settings),
             },
             'host_machine': {
-                'system': elf._get_system_from_os(settings.os),
-                'cpu': settings.arch
+                'system': self._get_system_from_os(str(settings.os)),
+                'cpu': str(settings.arch)
             }
         }
 
-        cpu_family, endian =  _get_cpu_family_and_endianness_from_arch(settings.arch)
+        cpu_family, endian = self._get_cpu_family_and_endianness_from_arch(str(settings.arch))
         config_template['host_machine']['cpu_family'] = cpu_family
         config_template['host_machine']['endian'] = endian
 
-        if not config['binaries']['c'] and not config['binaries']['cpp']:
+        if not config_template['binaries']['c'] and not config_template['binaries']['cpp']:
             raise ConanException(f'CC and CXX are undefined: C or C++ compiler must be defined when cross-building')
 
         return config_template
 
-    @staticmethod
-    def _create_machine_files_from_settings(settings, force_cross: boolean):
+    def _create_machine_files_from_settings(self, settings, force_cross: bool):
         is_cross = force_cross
         has_for_build = False
 
         if not is_cross:
-            has_for_build = any(map(lambda e: os.environ.get(e), ['CC_FOR_BUILD', 'CXX_FOR_BUILD'])
-            is_cross = has_for_build or any(map(lambda a: has_attr(settings, a), ['os_build', 'arch_build']))
+            has_for_build = any(map(lambda e: os.environ.get(e), ['CC_FOR_BUILD', 'CXX_FOR_BUILD']))
+            is_cross = has_for_build or any(map(lambda a: hasattr(settings, a), ['os_build', 'arch_build']))
 
         native_files = []
         if has_for_build or not is_cross:
-            native_files += [MesonMachineFile(name='default.ini', config=self._create_native(settings))]
+            native_files += [MesonMachineFile(name='default.ini', config=self._dict_to_config(self._create_native(settings, False)))]
 
         cross_files = []
         if is_cross:
-            cross_files += [MesonMachineFile(name='default.ini', config=self._create_cross(settings))]
+            cross_files += [MesonMachineFile(name='default.ini', config=self._dict_to_config(self._create_cross(settings)))]
 
         return (native_files, cross_files)
 
@@ -245,9 +256,9 @@ class MesonDefaultToolchainGenerator(object):
             'sparc' : ('sparc', 'big'),
             'sparcv9' : ('sparc64', 'big'),
             'mips' : ('mips', 'big'),
-            'mips64' : ('mips64', ,'big'),
+            'mips64' : ('mips64', 'big'),
             'avr' : ('avr', 'little'),
-            's390' : ('s390', ,'big'),
+            's390' : ('s390', 'big'),
             's390x' : ('s390', 'big'),
             'wasm' : ('wasm', 'little'),
         }
@@ -255,7 +266,7 @@ class MesonDefaultToolchainGenerator(object):
         if (arch not in arch_to_cpu):
             raise ConanException('Unknown arch: {}'.format(arch))
 
-        return arch_to_cpu_family[arch]
+        return arch_to_cpu[arch]
 
 class MesonX(object):
     def __init__(self, conanfile, build_dir: str = None, backend: str = None, append_vcvars: boolean = False):
@@ -299,20 +310,24 @@ class MesonX(object):
         return MesonDefaultToolchainGenerator(self._conanfile).generate(force_cross)
 
     def get_native_files(self):
+        """
+        Get all native files in the build_dir
+        """
         bdir = Path(self.build_dir)
         if not bdir.exists:
             raise ConanException('Build directory does not exist: `{}`'.format(self.build_dir))
-        if not (bdir \ 'native').exists:
-            return []
-        return list((bdir \ 'native').glob('*'))
+        machine_file_path = bdir / 'native'
+        return list(machine_file_path.glob('*')) if machine_file_path.exists else []
 
     def get_cross_files(self):
+        """
+        Get all cross files in the build_dir
+        """
         bdir = Path(self.build_dir)
         if not bdir.exists:
             raise ConanException('Build directory does not exist: `{}`'.format(self.build_dir))
-        if not (bdir \ 'cross').exists:
-            return []
-        return list((bdir \ 'cross').glob('*'))
+        machine_file_path = bdir / 'cross'
+        return list(machine_file_path.glob('*')) if machine_file_path.exists else []
 
     def configure(self, source_folder=None, cache_build_folder=None, build_type=None, pkg_config_paths=None, args=None, options=None, native_files=None, cross_files=None):
         if not self._conanfile.should_configure:
@@ -329,17 +344,21 @@ class MesonX(object):
         resolved_options = self._get_default_options()
         # overwrite default values with user's inputs
         resolved_options.update(options)
+
+        if 'backend' in options:
+            raise ConanException('Don\'t pass `backend` via `options`: use `backend` kwarg in the class constructor instead')
         resolved_options.update({'backend': '{}'.format(self.backend)})
 
-        if build_type and build_type != self._settings.get_safe('build_type'):
+        settings_bulld_type = self._settings.get_safe('build_type')
+        if build_type and build_type != settings_bulld_type:
             self._conanfile.output.warn(
-                'Set build type "{}" is different than the settings build_type "{}"'.format(build_type, settings_build_type))
-        resolved_build_type = build_type or self._settings.get_safe('build_type')
+                'Set build type "{}" is different than the settings build_type "{}"'.format(build_type, settings_bulld_type))
+        resolved_build_type = build_type or settings_bulld_type
         if resolved_build_type:
             resolved_options.update({'buildtype': '{}'.format(resolved_build_type)})
 
         if 'pkg_config_path' in options:
-            raise ConanException('Don\'t pass `pkg_config_path` via `options` use `pkg_config_paths` instead')
+            raise ConanException('Don\'t pass `pkg_config_path` via `options`: use `pkg_config_paths` kwarg instead')
         pc_paths = []
         if 'pkg_config' in self._conanfile.generators:
             # Add install folder to search paths only if there is a corresponding generator
@@ -354,7 +373,8 @@ class MesonX(object):
             machine_file_args += ['--native-file={}'.format(f) for f in native_files]
         if cross_files:
             machine_file_args += ['--cross-file={}'.format(f) for f in cross_files]
-        # Machine files are specified first in case they are overriden by machine files from user args
+        # Machine files are specified first, so that they do not override values from files from `args`
+        # (if a user decides to pass additional machine files via `args` for some reason)
         args = machine_file_args + args
 
         arg_list = join_arguments([
@@ -365,6 +385,7 @@ class MesonX(object):
         env_vars_to_clean = {
             'CC',
             'CXX',
+            'LD',
             'CCFLAGS',
             'CXXFLAGS',
             'CPPFLAGS',
@@ -387,17 +408,18 @@ class MesonX(object):
         args = args or []
         targets = targets or []
 
-        minimum_meson_version = '0.55.0' if targets else '0.54.0'
+        minimum_version = '0.55.0' if targets else '0.54.0'
         if self.get_version() >= minimum_version:
             combined_args = targets + args # order is important, since args might contain `-- -posix-like -positional-args`
             self._run_meson_command(subcommand='compile', args=combined_args)
         else:
-            self._validate_ninja_usage_and_warn_agnostic_method_unavailable(minimum_meson_version)
-            if any(map(lambda t: ':' in t, targets)
-                raise ConanException('Your targets contain meson syntax which is not supported by ninja: `{}`'.format(t))
+            self._validate_ninja_usage_and_warn_agnostic_method_unavailable(minimum_version)
+            meson_target = next( (t for t in targets if ':' in t), None)
+            if meson_target:
+                raise ConanException('Your targets contain meson syntax which is not supported by ninja: `{}`'.format(meson_target))
             self._run_ninja_targets(targets=targets,
                                     args=self._filter_non_ninja_args(args=args,
-                                                                     ninja_args=['--verbose', '-j*', '-l*']))
+                                                                     ninja_args=['--verbose', '-v', '-j*', '-l*']))
 
     def install(self, args=None):
         if not self._conanfile.should_install:
@@ -409,7 +431,7 @@ class MesonX(object):
         if self.get_version() >= minimum_version:
             self._run_meson_command(subcommand='install', args=args)
         else:
-            self._validate_ninja_usage_and_warn_agnostic_method_unavailable(minimum_meson_version)
+            self._validate_ninja_usage_and_warn_agnostic_method_unavailable(minimum_version)
             self._run_ninja_targets(targets=['install'],
                                     args=self._filter_non_ninja_args(args=args))
 
@@ -419,13 +441,7 @@ class MesonX(object):
 
         args = args or []
 
-        minimum_version = '0.42.0'
-        if self.get_version() >= minimum_version:
-            self._run_meson_command(subcommand='test', args=args)
-        else:
-            self._validate_ninja_usage_and_warn_agnostic_method_unavailable(minimum_meson_version)
-            self._run_ninja_targets(targets=['test'],
-                                    args=self._filter_non_ninja_args(args=args))
+        self._run_meson_command(subcommand='test', args=args)
 
     def _ss(self, setname):
         """safe setting"""
@@ -435,13 +451,13 @@ class MesonX(object):
         """safe option"""
         return self._conanfile.options.get_safe(setname)
 
-    def _validate_ninja_usage_and_warn_agnostic_method_unavailable(self, minimum_version: str)
+    def _validate_ninja_usage_and_warn_agnostic_method_unavailable(self, minimum_version: str):
         if self.backend != 'ninja':
-            raise ConanException('This method is not implemented yet for `{}` backend. Change your backend to `ninja` or update your `meson`.\n'.format(self.backend)
+            raise ConanException('This method is not implemented yet for `{}` backend. Change your backend to `ninja` or update your `meson`.\n'.format(self.backend) +
                                  'Minimum required `meson` version is {}'.format(minimum_version))
         self._conanfile.output.warn(
             'Backend agnostic version of this method is not supported on this `meson` version. Using `ninja` directly instead.\n'
-            'Minimum required `meson` version is {}'.format(minimum_version)))
+            'Minimum required `meson` version is {}'.format(minimum_version))
 
     def _filter_non_ninja_args(self, args=None, ninja_args=None):
         if not args:
@@ -537,7 +553,7 @@ class MesonX(object):
         if self.backend != 'ninja':
             raise ConanException('Internal error: this command should not be invoked non-`ninja` backend')
 
-        targets = target or []
+        targets = targets or []
         args = args or []
 
         build_dir = self.build_dir or self._conanfile.build_folder
@@ -556,7 +572,7 @@ class MesonX(object):
 
         arg_list = join_arguments([
             subcommand,
-            '-C "()"'.format(build_dir),
+            '-C "{}"'.format(build_dir),
             args_to_string(args)
         ])
         self._run('meson {}'.format(arg_list))
