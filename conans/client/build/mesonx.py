@@ -339,6 +339,12 @@ class MesonX(object):
         native_files = native_files or []
         cross_files = cross_files or []
 
+        def check_arg_not_in_opts_or_args(arg_name, use_instead_msg):
+            if arg_name in options:
+                raise ConanException('Don\'t pass `{}` via `options`: {}'.format(arg_name, use_instead_msg))
+            if any(map(lambda a: a.startswith('--{}'.format(arg_name)) or a.startswith('-D{}'.format(arg_name), args))):
+                raise ConanException('Don\'t pass `{}` via `args`: {}'.format(arg_name, use_instead_msg))
+
         source_dir, self.build_dir = self._get_dirs(source_folder, build_folder, cache_build_folder)
         mkdir(self.build_dir)
 
@@ -346,10 +352,10 @@ class MesonX(object):
         # overwrite default values with user's inputs
         resolved_options.update(options)
 
-        if 'backend' in options:
-            raise ConanException('Don\'t pass `backend` via `options`: use `backend` kwarg in the class constructor instead')
+        check_arg_not_in_opts_or_args('backend', 'use `backend` kwarg in the class constructor instead')
         resolved_options.update({'backend': '{}'.format(self.backend)})
 
+        check_arg_not_in_opts_or_args('buildtype', 'use `build_type` kwarg instead')
         settings_bulld_type = self._settings.get_safe('build_type')
         if build_type and build_type != settings_bulld_type:
             self._conanfile.output.warn(
@@ -358,21 +364,14 @@ class MesonX(object):
         if resolved_build_type:
             resolved_options.update({'buildtype': '{}'.format(resolved_build_type)})
 
-        if 'pkg_config_path' in options:
-            raise ConanException('Don\'t pass `pkg_config_path` via `options`: use `pkg_config_paths` kwarg instead')
+        check_arg_not_in_opts_or_args('pkg_config_path', 'use `pkg_config_paths` kwarg instead')
         pc_paths = [self._conanfile.install_folder]
         if pkg_config_paths:
             pc_paths += [get_abs_path(f, self._conanfile.install_folder) for f in pkg_config_paths]
         resolved_options.update({'pkg_config_path': '{}'.format(os.pathsep.join(pc_paths))})
 
-        if 'native-file' in options:
-            raise ConanException('Don\'t pass `native-file` via `options`: use `native_files` kwarg in the class constructor instead')
-        if 'cross-file' in options:
-            raise ConanException('Don\'t pass `cross-file` via `options`: use `cross_files` kwarg in the class constructor instead')
-        if any(map(lambda a: a.startswith('--native-file'), args)):
-            raise ConanException('Don\'t pass `native-file` via `args`: use `native_files` kwarg in the class constructor instead')
-        if any(map(lambda a: a.startswith('--cross-file'), args)):
-            raise ConanException('Don\'t pass `cross-file` via `args`: use `cross_files` kwarg in the class constructor instead')
+        check_arg_not_in_opts_or_args('native-file', 'use `native_files` kwarg instead')
+        check_arg_not_in_opts_or_args('cross-file', 'use `cross_files` kwarg instead')
         machine_file_args = []
         if native_files:
             machine_file_args += ['--native-file={}'.format(f) for f in native_files]
