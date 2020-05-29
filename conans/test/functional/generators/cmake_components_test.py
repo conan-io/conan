@@ -433,8 +433,7 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
             project(PackageTest CXX)
 
             include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-            conan_set_std()
-            conan_output_dirs_setup()
+            conan_basic_setup()
 
             find_package(World)
 
@@ -448,7 +447,7 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
             message("Greetings::Hello target libs: ${tmp}")
 
             add_executable(example example.cpp)
-            target_link_libraries(example World::Worldall Greetings::Bye Greetings::Hello)
+            target_link_libraries(example World::Worldall)
 
             # add_executable(example2 example.cpp)
             # target_link_libraries(example2 World::World)
