@@ -66,7 +66,7 @@ class CMakeFindPackageGenerator(Generator):
                     if(CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND)
                         list(APPEND ${FRAMEWORKS_FOUND} ${CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND})
                     else()
-                        message(FATAL_ERROR "Framework library ${_FRAMEWORK} not found in paths: ${FRAMEWORKS_DIRS}")
+                        message(FATAL_ERROR "Conan:Framework library ${_FRAMEWORK} not found in paths: ${FRAMEWORKS_DIRS}")
                     endif()
                 endforeach()
             endif()
@@ -77,7 +77,7 @@ class CMakeFindPackageGenerator(Generator):
                 find_library(CONAN_FOUND_LIBRARY NAME ${_LIBRARY_NAME} PATHS ${libdir}
                              NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
                 if(CONAN_FOUND_LIBRARY)
-                    conan_message(STATUS "Library ${_LIBRARY_NAME} found ${CONAN_FOUND_LIBRARY}")
+                    conan_message(STATUS "Conan: Library ${_LIBRARY_NAME} found ${CONAN_FOUND_LIBRARY}")
                     if(NOT ${CMAKE_VERSION} VERSION_LESS "3.0")
                         # Create a micro-target for each lib/a found
                         set(_LIB_NAME ${_LIBRARY_NAME})
@@ -86,17 +86,17 @@ class CMakeFindPackageGenerator(Generator):
                             add_library(${_LIB_NAME} UNKNOWN IMPORTED)
                             set_target_properties(${_LIB_NAME} PROPERTIES IMPORTED_LOCATION ${CONAN_FOUND_LIBRARY})
                         else()
-                            conan_message(STATUS "Skipping already existing target: ${_LIB_NAME}")
+                            conan_message(STATUS "Conan: Skipping already existing target: ${_LIB_NAME}")
                         endif()
                         list(APPEND _out_libraries_target ${_LIB_NAME})
                     endif()
                 else()
-                    message(FATAL_ERROR "Component library ${_LIBRARY_NAME} not found in paths: ${libdir}")
+                    conan_message(FATAL_ERROR "Conan: Component library ${_LIBRARY_NAME} not found in paths: ${libdir}")
                 endif()
                 unset(CONAN_FOUND_LIBRARY CACHE)
             endforeach()
 
-            conan_message(STATUS "Components Library targets: ${_out_libraries_target}")
+            conan_message(STATUS "Conan: Component library targets: ${_out_libraries_target}")
             set(${out_libraries_target} ${_out_libraries_target} PARENT_SCOPE)
         endfunction()
         {% endraw %}
@@ -158,7 +158,7 @@ class CMakeFindPackageGenerator(Generator):
         if(NOT {{ public_dep }}_FOUND)
             find_dependency({{ public_dep }} REQUIRED)
         else()
-            message(STATUS "Dependency {{ public_dep }} already found")
+            conan_message(STATUS "Conan: Dependency {{ public_dep }} already found")
         endif()
 
         {%- endfor %}
@@ -173,19 +173,11 @@ class CMakeFindPackageGenerator(Generator):
 
         set({{ comp_name }}_LIB_TARGETS "") # Will be filled later, if CMake 3
         conan_component_library_targets({{ comp_name }}_LIB_TARGETS "${% raw %}{{% endraw %}{{ comp_name }}_LIB_DIRS{% raw %}}{% endraw %}" "${% raw %}{{% endraw %}{{ comp_name }}_LIBS{% raw %}}{% endraw %}")
-        conan_message(STATUS "Components Library targets2: ${% raw %}{{% endraw %}{{ comp_name }}_LIB_TARGETS{% raw %}}{% endraw %}")
-        # foreach(_LIB ${% raw %}{{% endraw %}{{ comp_name }}_LIB_TARGETS{% raw %}}{% endraw %})
-        #     set_target_properties(${_LIB} PROPERTIES INTERFACE_INCLUDE_DIRECTORIES
-        #                           "${% raw %}{{% endraw %}{{ comp_name }}_INCLUDE_DIRS{% raw %}}{% endraw %}")
-        # endforeach()
 
         set({{ comp_name }}_FRAMEWORKS_FOUND "") # Will be filled later
         conan_find_apple_frameworks({{ comp_name }}_FRAMEWORKS_FOUND "${% raw %}{{% endraw %}{{ comp_name }}_FRAMEWORKS{% raw %}}{% endraw %}" "${% raw %}{{% endraw %}{{ comp_name }}_FRAMEWORK_DIRS{% raw %}}{% endraw %}")
 
-        conan_message(STATUS "COMPONENT LIB TARGETS: ${% raw %}{{% endraw %}{{ comp_name }}_LIB_TARGETS{% raw %}}{% endraw %}")
-        conan_message(STATUS "COMPONENT_DEPENDENCIES: ${% raw %}{{% endraw %}{{ comp_name }}_DEPENDENCIES{% raw %}}{% endraw %}")
         set({{ comp_name }}_LINK_LIBS ${% raw %}{{% endraw %}{{ comp_name }}_LIB_TARGETS{% raw %}}{% endraw %} ${% raw %}{{% endraw %}{{ comp_name }}_SYSTEM_LIBS{% raw %}}{% endraw %} ${% raw %}{{% endraw %}{{ comp_name }}_FRAMEWORKS_FOUND{% raw %}}{% endraw %} ${% raw %}{{% endraw %}{{ comp_name }}_DEPENDENCIES{% raw %}}{% endraw %})
-        conan_message(STATUS "COMPONENT LINK LIBS: ${% raw %}{{% endraw %}{{ comp_name }}_LINK_LIBS{% raw %}}{% endraw %}")
 
         set(CMAKE_MODULE_PATH {{ comp.build_paths }} ${CMAKE_MODULE_PATH})
         set(CMAKE_PREFIX_PATH {{ comp.build_paths }} ${CMAKE_PREFIX_PATH})
@@ -228,8 +220,6 @@ class CMakeFindPackageGenerator(Generator):
         if(NOT ${CMAKE_VERSION} VERSION_LESS "3.0")
             if(NOT TARGET {{ pkg_name }}::{{ pkg_name }})
                 add_library({{ pkg_name }}::{{ pkg_name }} INTERFACE IMPORTED)
-                conan_message("${% raw %}{{% endraw %}{{ pkg_name }}_COMPONENTS{% raw %}}{% endraw %}")
-                conan_message(STATUS "PKG DEPENDENCIES: ${% raw %}{{% endraw %}{{ pkg_name }}_DEPENDENCIES{% raw %}}{% endraw %}")
                 set_target_properties({{ pkg_name }}::{{ pkg_name }} PROPERTIES INTERFACE_LINK_LIBRARIES
                                       "${% raw %}{{% endraw %}{{ pkg_name }}_COMPONENTS{% raw %}}{% endraw %};${% raw %}{{% endraw %}{{ pkg_name }}_DEPENDENCIES{% raw %}}{% endraw %}")
             endif()
@@ -253,28 +243,28 @@ class CMakeFindPackageGenerator(Generator):
             ret["Find%s.cmake" % pkg_findname] = self._find_for_dep(pkg_name, pkg_findname, cpp_info)
         return ret
 
-    def _get_components(self, pkg_name, pkg_findname, cpp_info):
+    def _get_components(self, pkg_name, pkg_findname, cpp_info, reverse=True):
         find_package_components = []
         for comp_name, comp in cpp_info._get_sorted_components().items():
             comp_findname = self._get_name(cpp_info.components[comp_name])
             deps_cpp_cmake = DepsCppCmake(comp)
             deps_cpp_cmake.public_deps = self._get_component_requires(pkg_name, pkg_findname, comp)
-            print(comp_name, "public_deps: ",  deps_cpp_cmake.public_deps)
             find_package_components.append((comp_findname, deps_cpp_cmake))
-        find_package_components.reverse()  # From the less dependent to most one
+        if reverse:
+            find_package_components.reverse()  # From the less dependent to most one
         return find_package_components
 
     def _get_component_requires(self, pkg_name, pkg_findname, comp):
         comp_requires_findnames = []
         for require in comp.requires:
             if COMPONENT_SCOPE in require:
-                comp_require_pkg_name = require[:require.find("::")]
+                comp_require_pkg_name = require[:require.find(COMPONENT_SCOPE)]
                 if comp_require_pkg_name not in self.deps_build_info.deps:
                     raise ConanException("Component '%s' not found: '%s' is not a package "
                                          "requirement" % (require, comp_require_pkg_name))
                 comp_require_pkg = self.deps_build_info[comp_require_pkg_name]
                 comp_require_pkg_findname = self._get_name(comp_require_pkg)
-                comp_require_comp_name = require[require.find("::") + 2:]
+                comp_require_comp_name = require[require.find(COMPONENT_SCOPE)+len(COMPONENT_SCOPE):]
                 if comp_require_comp_name in self.deps_build_info.deps:
                     comp_require_comp_findname = comp_require_pkg_findname
                 elif comp_require_comp_name in self.deps_build_info[comp_require_pkg_name].components:
@@ -299,7 +289,8 @@ class CMakeFindPackageGenerator(Generator):
             pkg_components = " ".join(["{p}::{c}".format(p=pkg_findname, c=comp_findname) for
                                        comp_findname, _ in self._get_components(pkg_name,
                                                                                 pkg_findname,
-                                                                                cpp_info)])
+                                                                                cpp_info,
+                                                                                reverse=False)])
             pkg_dependencies = " ".join(["{n}::{n}".format(n=dep) for dep in pkg_public_deps])
             return self.find_components_tpl.render(
                 pkg_name=pkg_findname,

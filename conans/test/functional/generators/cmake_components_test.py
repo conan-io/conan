@@ -176,7 +176,7 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
                 def test(self):
                     os.chdir("bin")
                     self.run(".%sexample" % os.sep)
-                    # self.run(".%sexample2" % os.sep)
+                    self.run(".%sexample2" % os.sep)
             """)
         test_package_example_cpp = textwrap.dedent("""
             #include <iostream>
@@ -195,20 +195,11 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
 
             find_package(world)
 
-            get_target_property(tmp world::world INTERFACE_LINK_LIBRARIES)
-            message("world::world target libs: ${tmp}")
-            get_target_property(tmp world::worldall INTERFACE_LINK_LIBRARIES)
-            message("world::worldall target libs: ${tmp}")
-            get_target_property(tmp world::helloworld INTERFACE_LINK_LIBRARIES)
-            message("world::helloworld target libs: ${tmp}")
-            get_target_property(tmp greetings::greetings INTERFACE_LINK_LIBRARIES)
-            message("greetings::greetings target libs: ${tmp}")
-
             add_executable(example example.cpp)
             target_link_libraries(example world::worldall)
 
-            # add_executable(example2 example.cpp)
-            # target_link_libraries(example2 world::world)
+            add_executable(example2 example.cpp)
+            target_link_libraries(example2 world::world)
             """)
         client.save({"conanfile.py": conanfile_world or _conanfile_world,
                      "src/CMakeLists.txt": cmakelists_world or _cmakelists_world,
@@ -220,7 +211,6 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
                      "test_package/CMakeLists.txt": test_package_cmakelists or _test_package_cmakelists,
                      "test_package/example.cpp": test_package_example_cpp})
         client.run("create .")
-        print(client.out)
         return client.out
 
     def basic_test(self):
@@ -323,15 +313,6 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
             conan_basic_setup()
 
             find_package(greetings)
-
-            get_target_property(tmp greetings::greetings INTERFACE_LINK_LIBRARIES)
-            message("greetings::greetings target libs: ${tmp}")
-            get_target_property(tmp greetings::hello INTERFACE_LINK_LIBRARIES)
-            message("greetings::Hello target libs: ${tmp}")
-            get_target_property(tmp greetings::bye INTERFACE_LINK_LIBRARIES)
-            message("greetings::bye target libs: ${tmp}")
-            get_target_property(tmp bye IMPORTED_LOCATION)
-            message("bye imported location: ${tmp}")
 
             add_executable(example example.cpp)
             target_link_libraries(example greetings::greetings)
@@ -455,8 +436,8 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
             add_executable(example example.cpp)
             target_link_libraries(example World::Worldall)
 
-            # add_executable(example2 example.cpp)
-            # target_link_libraries(example2 World::World)
+            add_executable(example2 example.cpp)
+            target_link_libraries(example2 World::World)
             """)
         out = self._test(conanfile_greetings=conanfile_greetings,
                          conanfile_world=conanfile_world, cmakelists_world=cmakelists_world,
@@ -492,7 +473,7 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
                 def package_info(self):
                     self.cpp_info.components["helloworld"].requires = ["greetings::hello"]
                     self.cpp_info.components["helloworld"].libs = ["helloworld"]
-                    self.cpp_info.components["worldall"].requires = ["greetings::bye", "helloworld"]
+                    self.cpp_info.components["worldall"].requires = ["helloworld", "greetings::bye"]
                     self.cpp_info.components["worldall"].libs = ["worldall"]
         """)
         cmakelists2 = textwrap.dedent("""
