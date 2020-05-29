@@ -28,8 +28,8 @@ from conans.util.runners import version_runner
 # - cleaned up interface: removed old arguments, removed build_dir and etc
 # - added machine file support
 # - added machine file generation for `toolchain`
-# - backend-agnostic meson methods are used by default now with ninja as a fallback for older meson versions.
-# - env variables with dependency search paths are not appended when executing meson
+# - backend-agnostic meson methods are used by default with ninja as a fallback for older meson versions.
+# - env variables with dependency search paths are not appended when executing meson commands
 # - requires pkg-config generator
 
 
@@ -289,6 +289,9 @@ class MesonX(object):
         # Meson recommends to use ninja by default
         self.backend = backend or 'ninja'
 
+        if not 'pkg_config' in self._conanfile.generators:
+            raise ConanException('`pkg_config` generator is required for Meson integration')
+
     @staticmethod
     def get_version() -> Version:
         try:
@@ -359,10 +362,7 @@ class MesonX(object):
 
         if 'pkg_config_path' in options:
             raise ConanException('Don\'t pass `pkg_config_path` via `options`: use `pkg_config_paths` kwarg instead')
-        pc_paths = []
-        if 'pkg_config' in self._conanfile.generators:
-            # Add install folder to search paths only if there is a corresponding generator
-            pc_paths += [self._conanfile.install_folder]
+        pc_paths = [self._conanfile.install_folder]
         if pkg_config_paths:
             pc_paths += [get_abs_path(f, self._conanfile.install_folder) for f in pkg_config_paths]
         resolved_options.update({'pkg_config_path': '{}'.format(os.pathsep.join(pc_paths))})
