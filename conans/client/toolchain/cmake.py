@@ -240,7 +240,7 @@ class CMakeToolchain(object):
         self.definitions.pop("CMAKE_BUILD_TYPE", None)
         self.definitions.pop("CONAN_IN_LOCAL_CACHE", None)
         self.definitions.pop("CMAKE_PREFIX_PATH", None)
-        self.definitions.pop("CMAKE_MODULE_PAHT", None)
+        self.definitions.pop("CMAKE_MODULE_PATH", None)
         for install in ("PREFIX", "BINDIR", "SBINDIR", "LIBEXECDIR", "LIBDIR", "INCLUDEDIR",
                         "OLDINCLUDEDIR", "DATAROOTDIR"):
             self.definitions.pop("CMAKE_INSTALL_%s" % install, None)
