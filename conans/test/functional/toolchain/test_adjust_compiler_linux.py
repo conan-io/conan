@@ -218,8 +218,8 @@ class AdjustAutoTestCase(unittest.TestCase):
         self.assertTrue(full_version_str.startswith(compiler_version), "{} not starting with {}".format(full_version_str, compiler_version))
         self.assertIn("-- The C compiler identification is {} {}".format(id_str, full_version_str), configure_out)
         self.assertIn("-- The CXX compiler identification is {} {}".format(id_str, full_version_str), configure_out)
-        self.assertIn("-- Check for working C compiler: /usr/bin/{}-{} -- works".format(compiler, compiler_version), configure_out)
-        self.assertIn("-- Check for working CXX compiler: /usr/bin/{}-{} -- works".format(cxx_compiler, compiler_version), configure_out)
+        self.assertIn("-- Check for working C compiler: /usr/bin/{} -- works".format(compiler), configure_out)
+        self.assertIn("-- Check for working CXX compiler: /usr/bin/{} -- works".format(cxx_compiler), configure_out)
 
         tools_str = "gcc" if compiler == "gcc" else "llvm"
         self.assertEqual("/usr/bin/{}-ar-{}".format(tools_str, compiler_version), cmake_cache["CMAKE_CXX_COMPILER_AR:FILEPATH"])
