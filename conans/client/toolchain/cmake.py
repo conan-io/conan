@@ -216,8 +216,9 @@ class CMakeToolchain(object):
         self.set_std = True
         self.set_fpic = True
         self.set_libcxx = True
-        self.set_compiler = True
+        self.set_compiler = False
         self.set_vs_runtime = True
+        # To find the generated cmake_find_package finders
         self.cmake_prefix_path = "${CMAKE_BINARY_DIR}"
         self.cmake_module_path = "${CMAKE_BINARY_DIR}"
 
@@ -238,6 +239,8 @@ class CMakeToolchain(object):
         self.definitions.update(builder.get_definitions())
         self.definitions.pop("CMAKE_BUILD_TYPE", None)
         self.definitions.pop("CONAN_IN_LOCAL_CACHE", None)
+        self.definitions.pop("CMAKE_PREFIX_PATH", None)
+        self.definitions.pop("CMAKE_MODULE_PAHT", None)
         for install in ("PREFIX", "BINDIR", "SBINDIR", "LIBEXECDIR", "LIBDIR", "INCLUDEDIR",
                         "OLDINCLUDEDIR", "DATAROOTDIR"):
             self.definitions.pop("CMAKE_INSTALL_%s" % install, None)

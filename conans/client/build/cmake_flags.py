@@ -33,7 +33,7 @@ def get_generator(conanfile):
 
     compiler = conanfile.settings.get_safe("compiler")
     arch = conanfile.settings.get_safe("arch")
-    compiler_version =conanfile. settings.get_safe("compiler.version")
+    compiler_version = conanfile. settings.get_safe("compiler.version")
     os_build, _, _, _ = get_cross_building_settings(conanfile)
 
     if not compiler or not compiler_version or not arch:

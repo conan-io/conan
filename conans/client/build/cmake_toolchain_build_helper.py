@@ -6,6 +6,7 @@ from conans.client.build import defs_to_string, join_arguments
 from conans.client.build.cmake import BaseCMakeBuildHelper
 from conans.client.build.cmake_flags import is_multi_configuration, get_generator
 from conans.client.toolchain.cmake import CMakeToolchain
+from conans.client.tools.files import chdir
 from conans.client.tools.oss import cpu_count, args_to_string
 from conans.errors import ConanException
 from conans.model.version import Version
@@ -65,29 +66,31 @@ class CMakeToolchainBuildHelper(BaseCMakeBuildHelper):
         if not self._conanfile.should_configure:
             return
 
-        sf = self._conanfile.source_folder
+        source = self._conanfile.source_folder
         if source_folder:
-            sf = os.path.join(self._conanfile.source_folder, source_folder)
+            source = os.path.join(self._conanfile.source_folder, source_folder)
 
-        bf = self._conanfile.build_folder
+        build_folder = self._conanfile.build_folder
         if self._build_folder:
-            bf = os.path.join(self._conanfile.build_folder, self._build_folder)
+            build_folder = os.path.join(self._conanfile.build_folder, self._build_folder)
 
         defs = {"CMAKE_TOOLCHAIN_FILE": CMakeToolchain.filename}
 
-        mkdir(bf)
+        mkdir(build_folder)
         arg_list = join_arguments([
             defs_to_string(defs),
-            args_to_string([sf])
+            args_to_string([source])
         ])
-        command = "cd %s && %s %s" % (args_to_string([bf]), self._cmake_program, arg_list)
+        generator = '-G "{}"'.format(self._generator) if self._generator else ""
+        command = "%s %s%s" % (self._cmake_program, generator, arg_list)
 
         is_windows_mingw = platform.system() == "Windows" and self._generator == "MinGW Makefiles"
-        if is_windows_mingw:
-            with tools.remove_from_path("sh"):
+        with chdir(build_folder):
+            if is_windows_mingw:
+                with tools.remove_from_path("sh"):
+                    self._conanfile.run(command)
+            else:
                 self._conanfile.run(command)
-        else:
-            self._conanfile.run(command)
 
     def _build(self, build_type=None, target=None):
         bf = self._conanfile.build_folder
