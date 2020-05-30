@@ -81,7 +81,7 @@ class CMakeToolchainBuildHelper(BaseCMakeBuildHelper):
             defs_to_string(defs),
             args_to_string([source])
         ])
-        generator = '-G "{}"'.format(self._generator) if self._generator else ""
+        generator = '-G "{}" '.format(self._generator) if self._generator else ""
         command = "%s %s%s" % (self._cmake_program, generator, arg_list)
 
         is_windows_mingw = platform.system() == "Windows" and self._generator == "MinGW Makefiles"
