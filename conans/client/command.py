@@ -557,7 +557,7 @@ class Command(object):
 
         install_subparser.add_argument("--verify-ssl", nargs="?", default="True",
                                        help='Verify SSL connection when downloading file')
-        install_subparser.add_argument("--type", "-t", choices=["git"],
+        install_subparser.add_argument("--type", "-t", choices=["git", "dir", "file", "url"],
                                        help='Type of remote config')
         install_subparser.add_argument("--args", "-a",
                                        help='String with extra arguments for "git clone"')
