@@ -303,27 +303,6 @@ class AdjustAutoTestCase(unittest.TestCase):
         self.assertIn(">> CMAKE_SKIP_RPATH: 1", configure_out)
         self.assertEqual("1", cmake_cache["CMAKE_SKIP_RPATH:BOOL"])
 
-    def test_find_paths(self):
-        configure_out, cmake_cache, cmake_cache_keys, build_directory, _ = self._run_configure()
-
-        self.assertIn(">> CMAKE_MODULE_PATH: {}".format(build_directory), configure_out)
-        # FIXME: CMAKE_PREFIX_PATH empty?
-        #  self.assertIn(">> CMAKE_PREFIX_PATH: ", configure_out)
-
-        self.assertEqual(build_directory, cmake_cache["CMAKE_MODULE_PATH:STRING"])
-        self.assertNotIn("CMAKE_PREFIX_PATH", cmake_cache_keys)
-
-    def test_find_library_paths(self):
-        configure_out, cmake_cache, cmake_cache_keys, _, _ = self._run_configure()
-
-        self.assertIn(">> CMAKE_INCLUDE_PATH: ", configure_out)
-        self.assertIn(">> CMAKE_LIBRARY_PATH: ", configure_out)
-
-        self.assertNotIn("CMAKE_INCLUDE_PATH", cmake_cache_keys)
-        self.assertNotIn("CMAKE_LIBRARY_PATH", cmake_cache_keys)
-
-        # TODO: We need a test using dependencies
-
     @parameterized.expand([("Debug", "MTd",), ("Debug", "MDd"), ("Release", "MT"), ("Release", "MD")])
     @unittest.skipUnless(platform.system() == "Windows", "Only windows")
     def test_vs_runtime(self, build_type, runtime):

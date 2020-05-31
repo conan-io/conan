@@ -189,8 +189,8 @@ class AdjustAutoTestCase(unittest.TestCase):
         self.assertTrue(full_version_str.startswith(compiler_version))
         self.assertIn("-- The C compiler identification is GNU {}".format(full_version_str), configure_out)
         self.assertIn("-- The CXX compiler identification is GNU {}".format(full_version_str), configure_out)
-        self.assertIn("-- Check for working C compiler: /usr/bin/gcc-{} -- works".format(compiler_version), configure_out)
-        self.assertIn("-- Check for working CXX compiler: /usr/bin/g++-{} -- works".format(compiler_version), configure_out)
+        self.assertIn("-- Check for working C compiler: /usr/bin/gcc -- works", configure_out)
+        self.assertIn("-- Check for working CXX compiler: /usr/bin/g++ -- works", configure_out)
 
         self.assertEqual("/usr/bin/gcc-ar-{}".format(compiler_version), cmake_cache["CMAKE_CXX_COMPILER_AR:FILEPATH"])
         self.assertEqual("/usr/bin/gcc-ranlib-{}".format(compiler_version), cmake_cache["CMAKE_CXX_COMPILER_RANLIB:FILEPATH"])

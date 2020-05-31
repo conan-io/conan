@@ -9,6 +9,7 @@ from jinja2 import Template
 from conans.client.build.cmake_flags import get_generator, get_generator_platform, \
     CMakeDefinitionsBuilder, get_toolset, is_multi_configuration
 from conans.client.generators.cmake_common import CMakeCommonMacros
+from conans.errors import ConanException
 from conans.util.files import save
 
 
@@ -110,16 +111,12 @@ class CMakeToolchain(object):
 
         # Configure
         # -- CMake::command_line
-        {% if generator %}set(CMAKE_GENERATOR "{{ generator }}" CACHE STRING "" FORCE){% endif %}
         {% if generator_platform %}set(CMAKE_GENERATOR_PLATFORM "{{ generator_platform }}" CACHE STRING "" FORCE){% endif %}
         {% if toolset %}set(CMAKE_GENERATOR_TOOLSET "{{ toolset }}" CACHE STRING "" FORCE){% endif%}
 
         # build_type (Release, Debug, etc) is only defined for single-config generators
         {% if build_type %} set(CMAKE_BUILD_TYPE "{{ build_type }}" CACHE STRING "Choose the type of build." FORCE){% endif %}
 
-        # To support the cmake_find_package generators:
-        {% if cmake_module_path %}set(CMAKE_MODULE_PATH {{ cmake_module_path }} ${CMAKE_MODULE_PATH}){% endif%}
-        {% if cmake_prefix_path %}set(CMAKE_PREFIX_PATH {{ cmake_prefix_path }} ${CMAKE_PREFIX_PATH}){% endif%}
 
         # --  - CMake.flags --> CMakeDefinitionsBuilder::get_definitions
         {%- for it, value in definitions.items() %}
@@ -136,37 +133,47 @@ class CMakeToolchain(object):
         {%- endfor %}
 
         get_property( _CMAKE_IN_TRY_COMPILE GLOBAL PROPERTY IN_TRY_COMPILE )
-        if(NOT _CMAKE_IN_TRY_COMPILE)
-            message("Using Conan toolchain through ${CMAKE_TOOLCHAIN_FILE}.")
-
-            if(CMAKE_VERSION VERSION_LESS "3.15")
-                message(WARNING
-                    " CMake version less than 3.15 doesn't support CMAKE_PROJECT_INCLUDE variable\\n"
-                    " used by Conan toolchain to work. In order to get the same behavior you will\\n"
-                    " need to manually include the generated file after your 'project()' call in the\\n"
-                    " main CMakeLists.txt file:\\n"
-                    " \\n"
-                    "     project(YourProject C CXX)\\n"
-                    "     include(\\"{{conan_project_include_cmake}}\\")\\n"
-                    " \\n"
-                    " This file contains some definitions and extra adjustments that depend on\\n"
-                    " the build_type and it cannot be done in the toolchain.")
-            else()
-                set(CMAKE_PROJECT_INCLUDE "{{ conan_project_include_cmake }}")  # Will be executed after the 'project()' command
-            endif()
-
-            # We are going to adjust automagically many things as requested by Conan
-            #   these are the things done by 'conan_basic_setup()'
-            {% if options.set_rpath %}conan_set_rpath(){% endif %}
-            {% if options.set_std %}conan_set_std(){% endif %}
-            {% if options.set_fpic %}conan_set_fpic(){% endif %}
-            {% if options.set_libcxx %}conan_set_libcxx(){% endif %}
-
-            set(CMAKE_CXX_FLAGS_INIT "${CONAN_CXX_FLAGS}" CACHE STRING "" FORCE)
-            set(CMAKE_C_FLAGS_INIT "${CONAN_C_FLAGS}" CACHE STRING "" FORCE)
-            set(CMAKE_SHARED_LINKER_FLAGS_INIT "${CONAN_SHARED_LINKER_FLAGS}" CACHE STRING "" FORCE)
-            set(CMAKE_EXE_LINKER_FLAGS_INIT "${CONAN_EXE_LINKER_FLAGS}" CACHE STRING "" FORCE)
+        if(_CMAKE_IN_TRY_COMPILE)
+            message(STATUS "Running toolchain IN_TRY_COMPILE")
+            return()
         endif()
+
+        message("Using Conan toolchain through ${CMAKE_TOOLCHAIN_FILE}.")
+
+        if(CMAKE_VERSION VERSION_LESS "3.15")
+            message(WARNING
+                " CMake version less than 3.15 doesn't support CMAKE_PROJECT_INCLUDE variable\\n"
+                " used by Conan toolchain to work. In order to get the same behavior you will\\n"
+                " need to manually include the generated file after your 'project()' call in the\\n"
+                " main CMakeLists.txt file:\\n"
+                " \\n"
+                "     project(YourProject C CXX)\\n"
+                "     include(\\"{{conan_project_include_cmake}}\\")\\n"
+                " \\n"
+                " This file contains some definitions and extra adjustments that depend on\\n"
+                " the build_type and it cannot be done in the toolchain.")
+        else()
+            # Will be executed after the 'project()' command
+            set(CMAKE_PROJECT_INCLUDE "{{ conan_project_include_cmake }}")
+        endif()
+
+        # We are going to adjust automagically many things as requested by Conan
+        #   these are the things done by 'conan_basic_setup()'
+         # To support the cmake_find_package generators:
+        {% if cmake_module_path %}set(CMAKE_MODULE_PATH {{ cmake_module_path }} ${CMAKE_MODULE_PATH}){% endif%}
+        {% if cmake_prefix_path %}set(CMAKE_PREFIX_PATH {{ cmake_prefix_path }} ${CMAKE_PREFIX_PATH}){% endif%}
+
+        {% if fpic %}set(CMAKE_POSITION_INDEPENDENT_CODE ON){% endif %}
+
+        {% if options.set_rpath %}conan_set_rpath(){% endif %}
+        {% if options.set_std %}conan_set_std(){% endif %}
+        {% if options.set_libcxx %}conan_set_libcxx(){% endif %}
+
+        set(CMAKE_CXX_FLAGS_INIT "${CONAN_CXX_FLAGS}" CACHE STRING "" FORCE)
+        set(CMAKE_C_FLAGS_INIT "${CONAN_C_FLAGS}" CACHE STRING "" FORCE)
+        set(CMAKE_SHARED_LINKER_FLAGS_INIT "${CONAN_SHARED_LINKER_FLAGS}" CACHE STRING "" FORCE)
+        set(CMAKE_EXE_LINKER_FLAGS_INIT "${CONAN_EXE_LINKER_FLAGS}" CACHE STRING "" FORCE)
+
 
         {% if options.set_compiler %}conan_set_compiler(){% endif %}
     """)
@@ -212,9 +219,10 @@ class CMakeToolchain(object):
         self._conanfile = conanfile
         del conanfile
 
+        self._fpic = self._deduce_fpic()
+
         self.set_rpath = True
         self.set_std = True
-        self.set_fpic = True
         self.set_libcxx = True
         self.set_compiler = False
         self.set_vs_runtime = True
@@ -253,6 +261,18 @@ class CMakeToolchain(object):
                 "PKG_CONFIG_PATH": self._conanfile.install_folder
             })
 
+    def _deduce_fpic(self):
+        fpic = self._conanfile.options.get_safe("fPIC")
+        if fpic is None:
+            return None
+        os_ = self._conanfile.settings.get_safe("os")
+        if "Windows" in os_:
+            raise ConanException("fPIC option defined for Windows. Remove it.")
+        shared = self._conanfile.options.get_safe("shared")
+        if shared:
+            raise ConanException("fPIC option defined for a shared library. Remove it.")
+        return fpic
+
     def dump(self, install_folder):
         conan_project_include_cmake = os.path.join(install_folder, "conan_project_include.cmake")
         t = Template(self._template_project_include)
@@ -270,16 +290,15 @@ class CMakeToolchain(object):
         build_type = self._build_type if not is_multi_configuration(self._generator) else None
         context = {
             "build_type": build_type,
-            "generator": self._generator,
             "generator_platform": self._generator_platform,
             "toolset": self._toolset,
             "definitions": self.definitions,
             "environment": self.environment,
             "cmake_prefix_path": self.cmake_prefix_path,
             "cmake_module_path": self.cmake_module_path,
+            "fpic": self._fpic,
             "options": {"set_rpath": self.set_rpath,
                         "set_std": self.set_std,
-                        "set_fpic": self.set_fpic,
                         "set_libcxx": self.set_libcxx,
                         "set_compiler": self.set_compiler}
         }
@@ -290,7 +309,6 @@ class CMakeToolchain(object):
                                CMakeCommonMacros.conan_get_policy,
                                CMakeCommonMacros.conan_set_rpath,
                                CMakeCommonMacros.conan_set_std,
-                               CMakeCommonMacros.conan_set_fpic,
                                self._conan_set_libcxx,
                                self._conan_set_compiler
                            ]),
