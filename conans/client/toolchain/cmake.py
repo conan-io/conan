@@ -163,7 +163,10 @@ class CMakeToolchain(object):
         {% if cmake_module_path %}set(CMAKE_MODULE_PATH {{ cmake_module_path }} ${CMAKE_MODULE_PATH}){% endif%}
         {% if cmake_prefix_path %}set(CMAKE_PREFIX_PATH {{ cmake_prefix_path }} ${CMAKE_PREFIX_PATH}){% endif%}
 
-        {% if fpic %}set(CMAKE_POSITION_INDEPENDENT_CODE ON){% endif %}
+        {% if fpic %}
+        message(STATUS "Toolchain: Setting CMAKE_POSITION_INDEPENDENT_CODE=ON (options.fPIC)")
+        set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+        {% endif %}
 
         {% if options.set_rpath %}conan_set_rpath(){% endif %}
         {% if options.set_std %}conan_set_std(){% endif %}

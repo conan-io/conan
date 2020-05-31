@@ -288,8 +288,9 @@ class AdjustAutoTestCase(unittest.TestCase):
         configure_out, cmake_cache, cmake_cache_keys, _, _ = self._run_configure(options_dict={"app:fPIC": fpic})
 
         fpic_str = "ON" if fpic == "True" else "OFF"
-        #self.assertIn("app:fPIC={}".format(fpic), configure_out)
-        self.assertIn("-- Conan: Adjusting fPIC flag ({})".format(fpic_str), configure_out)
+        if fpic:
+            self.assertIn("Toolchain: Setting CMAKE_POSITION_INDEPENDENT_CODE=ON (options.fPIC)",
+                          configure_out)
         self.assertIn(">> CMAKE_POSITION_INDEPENDENT_CODE: {}".format(fpic_str), configure_out)
 
         self.assertNotIn("CONAN_CMAKE_POSITION_INDEPENDENT_CODE", cmake_cache_keys)
