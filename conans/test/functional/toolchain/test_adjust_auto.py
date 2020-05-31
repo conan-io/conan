@@ -289,7 +289,7 @@ class AdjustAutoTestCase(unittest.TestCase):
 
         fpic_str = "ON" if fpic == "True" else "OFF"
         if fpic:
-            self.assertIn("Toolchain: Setting CMAKE_POSITION_INDEPENDENT_CODE=ON (options.fPIC)",
+            self.assertIn("-- Conan toolchain: Setting CMAKE_POSITION_INDEPENDENT_CODE=ON (options.fPIC)",
                           configure_out)
         self.assertIn(">> CMAKE_POSITION_INDEPENDENT_CODE: {}".format(fpic_str), configure_out)
 

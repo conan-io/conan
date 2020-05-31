@@ -164,7 +164,7 @@ class CMakeToolchain(object):
         {% if cmake_prefix_path %}set(CMAKE_PREFIX_PATH {{ cmake_prefix_path }} ${CMAKE_PREFIX_PATH}){% endif%}
 
         {% if fpic %}
-        message(STATUS "Toolchain: Setting CMAKE_POSITION_INDEPENDENT_CODE=ON (options.fPIC)")
+        message(STATUS "Conan toolchain: Setting CMAKE_POSITION_INDEPENDENT_CODE=ON (options.fPIC)")
         set(CMAKE_POSITION_INDEPENDENT_CODE ON)
         {% endif %}
 
