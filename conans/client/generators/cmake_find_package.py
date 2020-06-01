@@ -51,27 +51,9 @@ class CMakeFindPackageGenerator(Generator):
     find_components_tpl = Template(textwrap.dedent("""\
         ########## MACROS ###########################################################################
         #############################################################################################
+        {{ conan_message }}
+        {{ conan_find_apple_frameworks }}
         {% raw %}
-        function(conan_message MESSAGE_OUTPUT)
-            if(NOT CONAN_CMAKE_SILENT_OUTPUT)
-                message(${ARGV${0}})
-            endif()
-        endfunction()
-
-        macro(conan_find_apple_frameworks FRAMEWORKS_FOUND FRAMEWORKS FRAMEWORKS_DIRS)
-            if(APPLE)
-                foreach(_FRAMEWORK ${FRAMEWORKS})
-                    # https://cmake.org/pipermail/cmake-developers/2017-August/030199.html
-                    find_library(CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND NAME ${_FRAMEWORK} PATHS ${FRAMEWORKS_DIRS})
-                    if(CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND)
-                        list(APPEND ${FRAMEWORKS_FOUND} ${CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND})
-                    else()
-                        message(FATAL_ERROR "Conan:Framework library ${_FRAMEWORK} not found in paths: ${FRAMEWORKS_DIRS}")
-                    endif()
-                endforeach()
-            endif()
-        endmacro()
-
         function(conan_component_library_targets out_libraries_target libdir libraries dependencies system_libs frameworks)
             foreach(_LIBRARY_NAME ${libraries})
                 find_library(CONAN_FOUND_LIBRARY NAME ${_LIBRARY_NAME} PATHS ${libdir}
@@ -307,7 +289,9 @@ class CMakeFindPackageGenerator(Generator):
                 pkg_version=pkg_version,
                 pkg_components=pkg_components,
                 pkg_public_deps=pkg_public_deps,
-                components=self._get_components(pkg_name, pkg_findname, cpp_info))
+                components=self._get_components(pkg_name, pkg_findname, cpp_info),
+                conan_message=CMakeFindPackageCommonMacros.conan_message,
+                conan_find_apple_frameworks=CMakeFindPackageCommonMacros.apple_frameworks_macro)
         else:
             # The common macros
             macros_and_functions = "\n".join([
