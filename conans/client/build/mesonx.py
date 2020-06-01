@@ -16,10 +16,11 @@ from conans.util.runners import version_runner
 
 # TODO:
 # - add pkg_config_path to configure (cross scenario and native)
-# - fix env variables reading for native\cross
+# - fix env variables reading for native\cross (once it's possible)
 # - cleanup comments
 # - add tests
-# - remove _ss from MesonX __init__()
+# - deal with typings (remove? add everywhere?). Note: meson requires Python 3.5+, so typings wull available when meson is used.
+# - clean up if Py3.5+ is required: remove inheritance from `object`
 
 # Differences from stock Meson integration:
 # - does not override 'default_library' if no 'shared' options was set
@@ -30,13 +31,15 @@ from conans.util.runners import version_runner
 # - backend-agnostic meson methods are used by default with ninja as a fallback for older meson versions.
 # - env variables with dependency search paths are not appended when executing meson commands
 # - requires pkg-config generator
-# - removed args kwarg from configure
 
 # Question:
-# - Should we keep `cross-file`/`native-file` kwarg?
+# - Should we keep `cross-file`/`native-file` kwarg or should they be moved to `options` instead?
 # - Should we generate and use the default toolchain by default? If so, how should that be done?
 
-class MesonMachineFile:
+class MesonMachineFile(object):
+    """
+    A wrapper for meson machine files for the use in `MesonToolchain`
+    """
     def __init__(self,
                  name: str,
                  path: str = None,
@@ -59,7 +62,10 @@ class MesonMachineFile:
         with open(outpath/self.name, 'w') as f:
             self.options.write(f)
 
-class MesonToolchain:
+class MesonToolchain(object):
+    """
+    A wrapper for `MesonMachineFile` for the use in `ConanFile.toolchain()`
+    """
     def __init__(self, native_files = None, cross_files = None ):
         self.native_files = native_files or []
         self.cross_files = cross_files or []
@@ -81,6 +87,9 @@ class MesonToolchain:
         dump_files(self.cross_files, Path(output) / 'cross')
 
 class MesonDefaultToolchainGenerator(object):
+    """
+    Generates machine files from conan profiles
+    """
     def __init__(self, conanfile):
         self._conanfile = conanfile
 
@@ -274,7 +283,7 @@ class MesonDefaultToolchainGenerator(object):
         return arch_to_cpu[arch]
 
 class MesonX(object):
-    def __init__(self, conanfile, build_dir: str = None, backend: str = None, append_vcvars: boolean = False) -> None:
+    def __init__(self, conanfile, build_dir: str = None, backend: str = None, append_vcvars: bool = False) -> None:
         if self.get_version() < '0.42.0':
             raise ConanException('`meson` is too old: minimum required version `0.42.0` vs current version `{}`'.format(self.get_version()))
         if not 'pkg_config' in conanfile.generators:
@@ -287,7 +296,6 @@ class MesonX(object):
         self._build_type = self._ss('build_type')
 
         # Needed for internal checks
-        self._os = self._ss('os')
         self._compiler = self._ss('compiler')
 
         # Meson recommends to use ninja by default
@@ -307,7 +315,7 @@ class MesonX(object):
     def build_folder(self) -> str:
         return self.build_dir
 
-    def get_default_toolchain(self, force_cross: boolean = False) -> MesonToolchain:
+    def get_default_toolchain(self, force_cross: bool = False) -> MesonToolchain:
         """
         Should be used in the recipe's `toolchain()` method
         """
@@ -361,6 +369,8 @@ class MesonX(object):
             resolved_options['native-file'] = resolved_native_files
         if resolved_cross_files:
             resolved_options['cross-file'] = resolved_cross_files
+        if not resolved_native_files and not resolved_cross_files:
+            self._conanfile.output.warn('No machine files were generated or supplied. Using a system compiler instead.')
 
         arg_list = join_arguments([
             self._options_to_string(resolved_options),
@@ -500,7 +510,8 @@ class MesonX(object):
         if shared != None:
             options['default_library'] = shared
 
-        if self._os and 'Windows' not in self._os:
+        host_os = self._ss('os')
+        if host_os and 'Windows' not in host_os:
             fpic = self._so('fPIC')
             if fpic != None:
                 shared = self._so('shared')
@@ -510,7 +521,7 @@ class MesonX(object):
 
     def _get_default_machine_files(self, machine_file_type: str):
         """
-        Get all native files in the build_dir
+        Get all machines files in the build_dir
         """
         bdir = Path(self.build_dir)
         if not bdir.exists:
@@ -555,7 +566,7 @@ class MesonX(object):
 
     def _run_ninja_targets(self, targets=None, args=None):
         if self.backend != 'ninja':
-            raise ConanException('Internal error: this command should not be invoked non-`ninja` backend')
+            raise ConanException('Internal error: this command should not be invoked on non-`ninja` backend')
 
         targets = targets or []
         args = args or []
