@@ -563,3 +563,105 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
         client.run("install world/0.0.1@ -g cmake_find_package", assert_error=True)
         self.assertIn("ERROR: Component 'greetings::non-existent' not found in 'greetings' "
                       "package requirement", client.out)
+
+    def same_names_test(self):
+        client = TestClient()
+        conanfile_greetings = textwrap.dedent("""
+            from conans import ConanFile, CMake
+
+            class HelloConan(ConanFile):
+                name = "hello"
+                version = "0.0.1"
+                settings = "os", "compiler", "build_type", "arch"
+                generators = "cmake"
+                exports_sources = "src/*"
+
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure(source_folder="src")
+                    cmake.build()
+
+                def package(self):
+                    self.copy("*.h", dst="include", src="src")
+                    self.copy("*.lib", dst="lib", keep_path=False)
+                    self.copy("*.dll", dst="bin", keep_path=False)
+                    self.copy("*.dylib*", dst="lib", keep_path=False)
+                    self.copy("*.so", dst="lib", keep_path=False)
+                    self.copy("*.a", dst="lib", keep_path=False)
+
+                def package_info(self):
+                    self.cpp_info.components["global"].name = "hello"
+                    self.cpp_info.components["global"].libs = ["hello"]
+            """)
+        hello_h = textwrap.dedent("""
+            #pragma once
+
+            void hello(std::string noun);
+            """)
+        hello_cpp = textwrap.dedent("""
+            #include <iostream>
+            #include <string>
+
+            #include "hello.h"
+
+            void hello(std::string noun) {
+                std::cout << "Hello " << noun << "!" << std::endl;
+            }
+            """)
+        cmakelists_greetings = textwrap.dedent("""
+            cmake_minimum_required(VERSION 3.0)
+            project(greetings CXX)
+
+            include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+            conan_basic_setup()
+
+            add_library(hello hello.cpp)
+            """)
+        test_package_greetings_conanfile = textwrap.dedent("""
+            import os
+            from conans import ConanFile, CMake
+
+            class HelloTestConan(ConanFile):
+                settings = "os", "compiler", "build_type", "arch"
+                generators = "cmake", "cmake_find_package"
+
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+                    cmake.build()
+
+                def test(self):
+                    os.chdir("bin")
+                    self.run(".%sexample" % os.sep)
+            """)
+        test_package_greetings_cpp = textwrap.dedent("""
+            #include <string>
+
+            #include "hello.h"
+
+            int main() {
+                hello("Moon");
+            }
+            """)
+        test_package_greetings_cmakelists = textwrap.dedent("""
+            cmake_minimum_required(VERSION 3.0)
+            project(PackageTest CXX)
+
+            include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+            conan_basic_setup()
+
+            find_package(hello)
+
+            add_executable(example example.cpp)
+            target_link_libraries(example hello::hello)
+            """)
+        client.save({"conanfile.py": conanfile_greetings,
+                     "src/CMakeLists.txt": cmakelists_greetings,
+                     "src/hello.h": hello_h,
+                     "src/hello.cpp": hello_cpp,
+                     "test_package/conanfile.py": test_package_greetings_conanfile,
+                     "test_package/example.cpp": test_package_greetings_cpp,
+                     "test_package/CMakeLists.txt": test_package_greetings_cmakelists})
+        client.run("create .")
+        print(client.out)
+        self.assertIn("Hello Moon!", client.out)
