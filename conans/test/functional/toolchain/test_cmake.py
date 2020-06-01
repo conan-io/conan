@@ -289,12 +289,12 @@ class AppleTest(Base):
         self.assertIn('CMake command: cmake -G "Unix Makefiles" '
                       '-DCMAKE_TOOLCHAIN_FILE="conan_toolchain.cmake"', self.client.out)
         if shared:
-            self.assertIn("libapp_lib.so", self.client.out)
+            self.assertIn("libapp_lib..dylib", self.client.out)
         else:
             self.assertIn("libapp_lib.a", self.client.out)
 
         out = str(self.client.out).splitlines()
-        vals = {"CMAKE_CXX_STANDARD": "14",
+        vals = {"CMAKE_CXX_STANDARD": cppstd,
                 "CMAKE_CXX_EXTENSIONS": "OFF",
                 "CMAKE_BUILD_TYPE": build_type,
                 "CMAKE_CXX_FLAGS": "-m64 -stdlib=libc++",

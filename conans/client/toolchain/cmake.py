@@ -74,25 +74,6 @@ class CMakeToolchain(object):
         endmacro()
     """)
 
-    _conan_set_compiler = textwrap.dedent("""
-        macro(conan_set_compiler)
-            if(CONAN_COMPILER STREQUAL "gcc")
-                conan_message(STATUS "Conan: Adjust compiler: ${CONAN_COMPILER} ${CONAN_COMPILER_VERSION}")
-                # FIXME: This fails for MinGW
-                set(CMAKE_C_COMPILER gcc-${CONAN_COMPILER_VERSION})
-                #set(CMAKE_C_COMPILER_VERSION 7.4.0) # ${CONAN_COMPILER_VERSION})
-                set(CMAKE_CXX_COMPILER g++-${CONAN_COMPILER_VERSION})
-                #set(CMAKE_CXX_COMPILER_VERSION 7.4.0) # ${CONAN_COMPILER_VERSION})
-            elseif(CONAN_COMPILER STREQUAL "clang")
-                conan_message(STATUS "Conan: Adjust compiler: ${CONAN_COMPILER} ${CONAN_COMPILER_VERSION}")
-                set(CMAKE_C_COMPILER clang-${CONAN_COMPILER_VERSION})
-                #set(CMAKE_C_COMPILER_VERSION 7.4.0) # ${CONAN_COMPILER_VERSION})
-                set(CMAKE_CXX_COMPILER clang++-${CONAN_COMPILER_VERSION})
-                #set(CMAKE_CXX_COMPILER_VERSION 7.4.0) # ${CONAN_COMPILER_VERSION})
-            endif()
-        endmacro()
-    """)
-
     _template_toolchain = textwrap.dedent("""
         # Conan generated toolchain file
         cmake_minimum_required(VERSION 3.0)  # Needed for targets
@@ -167,17 +148,14 @@ class CMakeToolchain(object):
         set(CMAKE_POSITION_INDEPENDENT_CODE ON)
         {% endif %}
 
-        {% if options.set_rpath %}conan_set_rpath(){% endif %}
-        {% if options.set_std %}conan_set_std(){% endif %}
-        {% if options.set_libcxx %}conan_set_libcxx(){% endif %}
+        {% if set_rpath %}conan_set_rpath(){% endif %}
+        {% if set_std %}conan_set_std(){% endif %}
+        {% if set_libcxx %}conan_set_libcxx(){% endif %}
 
         set(CMAKE_CXX_FLAGS_INIT "${CONAN_CXX_FLAGS}" CACHE STRING "" FORCE)
         set(CMAKE_C_FLAGS_INIT "${CONAN_C_FLAGS}" CACHE STRING "" FORCE)
         set(CMAKE_SHARED_LINKER_FLAGS_INIT "${CONAN_SHARED_LINKER_FLAGS}" CACHE STRING "" FORCE)
         set(CMAKE_EXE_LINKER_FLAGS_INIT "${CONAN_EXE_LINKER_FLAGS}" CACHE STRING "" FORCE)
-
-
-        {% if options.set_compiler %}conan_set_compiler(){% endif %}
     """)
 
     _template_project_include = textwrap.dedent("""
@@ -240,7 +218,6 @@ class CMakeToolchain(object):
         self.set_rpath = True
         self.set_std = True
         self.set_libcxx = True
-        self.set_compiler = False
 
         # To find the generated cmake_find_package finders
         self.cmake_prefix_path = "${CMAKE_BINARY_DIR}"
@@ -320,10 +297,9 @@ class CMakeToolchain(object):
             "cmake_prefix_path": self.cmake_prefix_path,
             "cmake_module_path": self.cmake_module_path,
             "fpic": self._fpic,
-            "options": {"set_rpath": self.set_rpath,
-                        "set_std": self.set_std,
-                        "set_libcxx": self.set_libcxx,
-                        "set_compiler": self.set_compiler}
+            "set_rpath": self.set_rpath,
+            "set_std": self.set_std,
+            "set_libcxx": self.set_libcxx,
         }
         t = Template(self._template_toolchain)
         content = t.render(conan_project_include_cmake=conan_project_include_cmake.replace("\\", "/"),
@@ -333,7 +309,6 @@ class CMakeToolchain(object):
                                CMakeCommonMacros.conan_set_rpath,
                                CMakeCommonMacros.conan_set_std,
                                self._conan_set_libcxx,
-                               self._conan_set_compiler
                            ]),
                            **context)
         save(os.path.join(install_folder, self.filename), content)
