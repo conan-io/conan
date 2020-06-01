@@ -314,7 +314,11 @@ class AppleTest(Base):
         for k, v in vals.items():
             self.assertIn(">> %s: %s" % (k, v), out)
 
-        self.client.run_command("build/app")
+        if shared:
+            build_directory = os.path.join(self.client.current_folder, "build").replace("\\", "/")
+            self.client.run_command('DYLD_LIBRARY_PATH="%s" && build/app' % build_directory)
+        else:
+            self.client.run_command('build/app')
         self.assertIn("Hello: %s" % build_type, self.client.out)
         self.assertIn("App: %s!" % build_type, self.client.out)
         self.assertIn("DEFINITIONS_BOTH: True", self.client.out)
