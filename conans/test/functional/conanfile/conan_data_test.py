@@ -2,6 +2,7 @@ import os
 import textwrap
 import unittest
 
+import yaml
 from bottle import static_file
 from nose.plugins.attrib import attr
 
@@ -15,21 +16,24 @@ class ConanDataTest(unittest.TestCase):
 
     def conan_exports_kept_test(self):
         client = TestClient()
-        conanfile = """from conans import ConanFile
-
-class Lib(ConanFile):
-    exports = "myfile.txt"
-"""
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class Lib(ConanFile):
+                exports = "myfile.txt"
+            """)
+        conandata = textwrap.dedent("""
+            foo:
+              bar: "as"
+            """)
         client.save({"conanfile.py": conanfile,
                      "myfile.txt": "bar",
-                     "conandata.yml": """
-foo:
-  bar: "as"                   
-"""})
+                     "conandata.yml": conandata})
         ref = ConanFileReference.loads("Lib/0.1@user/testing")
         client.run("export . {}".format(ref))
         export_folder = client.cache.package_layout(ref).export()
-        self.assertTrue(os.path.exists(os.path.join(export_folder, "conandata.yml")))
+        exported_data = os.path.join(export_folder, "conandata.yml")
+        data = yaml.safe_load(load(exported_data))
+        self.assertEqual(data, {"foo": {"bar": "as"}})
         self.assertTrue(os.path.exists(os.path.join(export_folder, "myfile.txt")))
 
     def conan_data_everywhere_test(self):
@@ -54,7 +58,7 @@ class Lib(ConanFile):
 
     def build(self):
         self._assert_data()
-        
+
     def package(self):
         self._assert_data()
 
@@ -66,7 +70,7 @@ class Lib(ConanFile):
 sources:
   all:
     url: "the url"
-    other: "field"                   
+    other: "field"
 """})
         ref = ConanFileReference.loads("Lib/0.1@user/testing")
         client.run("create . {}".format(ref))
