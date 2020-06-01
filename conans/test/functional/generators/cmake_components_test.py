@@ -1,8 +1,11 @@
+import os
 import textwrap
 import unittest
 
 from nose.plugins.attrib import attr
 
+from conans.model.ref import ConanFileReference
+from conans.test.utils.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
 
@@ -712,3 +715,22 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
                      "test_package/CMakeLists.txt": test_package_greetings_cmakelists})
         client.run("create .")
         self.assertIn("Hello Moon!", client.out)
+
+    def component_not_found_same_name_as_pkg_require_test(self):
+        zlib = GenConanfile("zlib", "0.1").with_generator("cmake_find_package")
+        mypkg = GenConanfile("mypkg", "0.1").with_generator("cmake_find_package")
+        final = GenConanfile("final", "0.1").with_generator("cmake_find_package")\
+            .with_require(ConanFileReference("zlib", "0.1", None, None))\
+            .with_require(ConanFileReference("mypkg", "0.1", None, None))\
+            .with_package_info(cpp_info={"components": {"cmp": {"requires": ["mypkg::zlib",
+                                                                             "zlib::zlib"]}}},
+                               env_info={})
+        consumer = GenConanfile("consumer", "0.1").with_generator("cmake_find_package")\
+            .with_requirement(ConanFileReference("final", "0.1", None, None))
+        client = TestClient()
+        client.save({"zlib.py": zlib, "mypkg.py": mypkg, "final.py": final, "consumer.py": consumer})
+        client.run("create zlib.py")
+        client.run("create mypkg.py")
+        client.run("create final.py")
+        client.run("install consumer.py", assert_error=True)
+        self.assertIn("Component 'mypkg::zlib' not found in 'mypkg' package requirement", client.out)

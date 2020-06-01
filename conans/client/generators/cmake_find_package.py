@@ -254,7 +254,7 @@ class CMakeFindPackageGenerator(Generator):
                 comp_require_pkg_name, comp_require_comp_name = require.split(COMPONENT_SCOPE)
                 comp_require_pkg = self.deps_build_info[comp_require_pkg_name]
                 comp_require_pkg_findname = self._get_name(comp_require_pkg)
-                if comp_require_comp_name in self.deps_build_info.deps:
+                if comp_require_comp_name == comp_require_pkg_name:
                     comp_require_comp_findname = comp_require_pkg_findname
                 elif comp_require_comp_name in self.deps_build_info[comp_require_pkg_name].components:
                     comp_require_comp = comp_require_pkg.components[comp_require_comp_name]
