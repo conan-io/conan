@@ -663,5 +663,4 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
                      "test_package/example.cpp": test_package_greetings_cpp,
                      "test_package/CMakeLists.txt": test_package_greetings_cmakelists})
         client.run("create .")
-        print(client.out)
         self.assertIn("Hello Moon!", client.out)

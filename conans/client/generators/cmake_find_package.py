@@ -119,7 +119,6 @@ class CMakeFindPackageGenerator(Generator):
         #############################################################################################
 
         set({{ pkg_name }}_COMPONENTS {{ pkg_components }})
-        set({{ pkg_name }}_DEPENDENCIES {{ pkg_dependencies }})
 
         {%- for comp_name, comp in components %}
 
@@ -221,7 +220,7 @@ class CMakeFindPackageGenerator(Generator):
             if(NOT TARGET {{ pkg_name }}::{{ pkg_name }})
                 add_library({{ pkg_name }}::{{ pkg_name }} INTERFACE IMPORTED)
                 set_target_properties({{ pkg_name }}::{{ pkg_name }} PROPERTIES INTERFACE_LINK_LIBRARIES
-                                      "{{ '${'+pkg_name+'_COMPONENTS}' }};{{ '${'+pkg_name+'_DEPENDENCIES}' }}")
+                                      "{{ '${'+pkg_name+'_COMPONENTS}' }}")
             endif()
         endif()
 
@@ -291,12 +290,10 @@ class CMakeFindPackageGenerator(Generator):
                                                                                 pkg_findname,
                                                                                 cpp_info,
                                                                                 reverse=False)])
-            pkg_dependencies = " ".join(["{n}::{n}".format(n=dep) for dep in pkg_public_deps])
             return self.find_components_tpl.render(
                 pkg_name=pkg_findname,
                 pkg_version=pkg_version,
                 pkg_components=pkg_components,
-                pkg_dependencies=pkg_dependencies,
                 pkg_public_deps=pkg_public_deps,
                 components=self._get_components(pkg_name, pkg_findname, cpp_info))
         else:
