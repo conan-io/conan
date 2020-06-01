@@ -10,7 +10,7 @@ from conans.util.files import load
 
 class MSBuildGenerator(Generator):
 
-    dep_props = textwrap.dedent("""\
+    _general_props = textwrap.dedent("""\
         <?xml version="1.0" encoding="utf-8"?>
         <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
             <ImportGroup Label="PropertySheets" >
@@ -18,16 +18,9 @@ class MSBuildGenerator(Generator):
         </Project>
         """)
 
-    dep_conf_props = textwrap.dedent("""\
+    _vars_conf_props = textwrap.dedent("""\
         <?xml version="1.0" encoding="utf-8"?>
         <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-          <ImportGroup Label="PropertySheets">
-        {transitive_imports}
-          </ImportGroup>
-          <PropertyGroup Label="UserMacros" />
-          <PropertyGroup>
-            <conan_{name}_props_imported>True</conan_{name}_props_imported>
-          </PropertyGroup>
           <PropertyGroup Label="ConanVariables">
             <Conan{name}CompilerFlags>{compiler_flags}</Conan{name}CompilerFlags>
             <Conan{name}LinkerFlags>{linker_flags}</Conan{name}LinkerFlags>
@@ -38,6 +31,19 @@ class MSBuildGenerator(Generator):
             <Conan{name}BinaryDirectories>{bin_dirs}</Conan{name}BinaryDirectories>
             <Conan{name}Libraries>{libs}</Conan{name}Libraries>
             <Conan{name}SystemDeps>{system_libs}</Conan{name}SystemDeps>
+          </PropertyGroup>
+        </Project>
+        """)
+
+    _dep_props = textwrap.dedent("""\
+        <?xml version="1.0" encoding="utf-8"?>
+        <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+          <ImportGroup Label="TransitiveDependencies">
+          </ImportGroup>
+          <ImportGroup Label="Configurations">
+          </ImportGroup>
+          <PropertyGroup>
+            <conan_{name}_props_imported>True</conan_{name}_props_imported>
           </PropertyGroup>
           <PropertyGroup>
             <LocalDebuggerEnvironment>PATH=%PATH%;$(Conan{name}BinaryDirectories)</LocalDebuggerEnvironment>
@@ -85,41 +91,13 @@ class MSBuildGenerator(Generator):
         condition = " And ".join("'$(%s)' == '%s'" % (k, v) for k, v in props)
         return name.lower(), condition
 
-    def _multi(self, name_multi, name_conf, condition):
-        # read the existing mult_filename or use the template if it doesn't exist
-        multi_path = os.path.join(self.output_path, name_multi)
-        if os.path.isfile(multi_path):
-            content_multi = load(multi_path)
-        else:
-            content_multi = self.dep_props
-
-        # parse the multi_file and add a new import statement if needed
-        dom = minidom.parseString(content_multi)
-        import_group = dom.getElementsByTagName('ImportGroup')[0]
-        children = import_group.getElementsByTagName("Import")
-        for node in children:
-            if (name_conf == node.getAttribute("Project") and
-                    condition == node.getAttribute("Condition")):
-                # the import statement already exists
-                break
-        else:
-            # create a new import statement
-            import_node = dom.createElement('Import')
-            import_node.setAttribute('Condition', condition)
-            import_node.setAttribute('Project', name_conf)
-            # add it to the import group
-            import_group.appendChild(import_node)
-        content_multi = dom.toprettyxml()
-        content_multi = "\n".join(line for line in content_multi.splitlines() if line.strip())
-        return content_multi
-
     def _general(self, name_general, deps):
         # read the existing mult_filename or use the template if it doesn't exist
         multi_path = os.path.join(self.output_path, name_general)
         if os.path.isfile(multi_path):
             content_multi = load(multi_path)
         else:
-            content_multi = self.dep_props
+            content_multi = self._general_props
 
         # parse the multi_file and add a new import statement if needed
         dom = minidom.parseString(content_multi)
@@ -142,21 +120,13 @@ class MSBuildGenerator(Generator):
         content_multi = "\n".join(line for line in content_multi.splitlines() if line.strip())
         return content_multi
 
-    def _dep_conf(self, name, cpp_info):
+    def _vars_conf(self, name, cpp_info):
         def has_valid_ext(lib):
             ext = os.path.splitext(lib)[1]
             return ext in VALID_LIB_EXTENSIONS
 
-        t = "    <Import Project=\"{}\" Condition=\"'$(conan_{}_props_imported)' != 'True'\"/>"
-        transitive_imports = []
-        for dep_name in cpp_info.public_deps:
-            conf_props_name = "conan_%s.props" % dep_name
-            transitive_imports.append(t.format(conf_props_name, dep_name))
-        transitive_imports = os.linesep.join(transitive_imports)
-
         fields = {
             'name': name,
-            'transitive_imports': transitive_imports,
             'bin_dirs': "".join("%s;" % p for p in cpp_info.bin_paths),
             'res_dirs': "".join("%s;" % p for p in cpp_info.res_paths),
             'include_dirs': "".join("%s;" % p for p in cpp_info.include_paths),
@@ -170,8 +140,53 @@ class MSBuildGenerator(Generator):
             'linker_flags': " ".join(cpp_info.sharedlinkflags),
             'exe_flags': " ".join(cpp_info.exelinkflags)
         }
-        formatted_template = self.dep_conf_props.format(**fields)
+        formatted_template = self._vars_conf_props.format(**fields)
         return formatted_template
+
+    def _multi(self, name_multi, dep_name, vars_props_name, condition, cpp_info):
+        # read the existing mult_filename or use the template if it doesn't exist
+        multi_path = os.path.join(self.output_path, name_multi)
+        if os.path.isfile(multi_path):
+            content_multi = load(multi_path)
+        else:
+            content_multi = self._dep_props
+
+        content_multi = content_multi.format(name=dep_name)
+
+        # parse the multi_file and add new import sstatement if needed
+        dom = minidom.parseString(content_multi)
+        import_deps, import_vars = dom.getElementsByTagName('ImportGroup')
+
+        # Transitive Deps
+        children = import_deps.getElementsByTagName("Import")
+        for dep in cpp_info.public_deps:
+            dep_props_name = "conan_%s.props" % dep
+            dep_imported = "'$(conan_%s_props_imported)' != 'True'" % dep
+            for node in children:
+                if (dep_props_name == node.getAttribute("Project") and
+                        dep_imported == node.getAttribute("Condition")):
+                    break  # the import statement already exists
+            else:  # create a new import statement
+                import_node = dom.createElement('Import')
+                import_node.setAttribute('Condition', dep_imported)
+                import_node.setAttribute('Project', dep_props_name)
+                import_deps.appendChild(import_node)
+
+        # Current vars
+        children = import_vars.getElementsByTagName("Import")
+        for node in children:
+            if (vars_props_name == node.getAttribute("Project") and
+                    condition == node.getAttribute("Condition")):
+                break  # the import statement already exists
+        else:  # create a new import statement
+            import_node = dom.createElement('Import')
+            import_node.setAttribute('Condition', condition)
+            import_node.setAttribute('Project', vars_props_name)
+            import_vars.appendChild(import_node)
+
+        content_multi = dom.toprettyxml()
+        content_multi = "\n".join(line for line in content_multi.splitlines() if line.strip())
+        return content_multi
 
     @property
     def content(self):
@@ -186,10 +201,14 @@ class MSBuildGenerator(Generator):
         public_deps = self.conanfile.requires.keys()
         result[general_name] = self._general(general_name, public_deps)
         for dep_name, cpp_info in self._deps_build_info.dependencies:
+            # One file per configuration, with jus tthe variables
+            vars_props_name = "conan_%s%s.props" % (dep_name, conf_name)
+            vars_conf_content = self._vars_conf(dep_name, cpp_info)
+            result[vars_props_name] = vars_conf_content
+
+            # The entry point for each package, it will have conditionals to the others
             props_name = "conan_%s.props" % dep_name
-            conf_props_name = "conan_%s%s.props" % (dep_name, conf_name)
-            dep_content = self._multi(props_name, conf_props_name, condition)
+            dep_content = self._multi(props_name, dep_name, vars_props_name, condition, cpp_info)
             result[props_name] = dep_content
-            dep_conf_content = self._dep_conf(dep_name, cpp_info)
-            result[conf_props_name] = dep_conf_content
+
         return result
