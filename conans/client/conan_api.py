@@ -532,7 +532,7 @@ class ConanAPIV1(object):
                          update=update, manifest_folder=manifest_folder,
                          manifest_verify=manifest_verify,
                          manifest_interactive=manifest_interactive,
-                         generators=generators, use_lock=lockfile, recorder=recorder)
+                         generators=generators, lockfile=lockfile, recorder=recorder)
             return recorder.get_info(self.app.config.revisions_enabled)
         except ConanException as exc:
             recorder.error = True

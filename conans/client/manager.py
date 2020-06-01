@@ -19,7 +19,7 @@ from conans.util.files import normalize, save
 def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, build_modes=None,
                  update=False, manifest_folder=None, manifest_verify=False,
                  manifest_interactive=False, generators=None, no_imports=False,
-                 create_reference=None, keep_build=False, use_lock=False, recorder=None):
+                 create_reference=None, keep_build=False, lockfile=None, recorder=None):
     """ Fetch and build all dependencies for the given reference
     @param app: The ConanApp instance with all collaborators
     @param ref_or_path: ConanFileReference or path to user space conanfile
@@ -96,12 +96,12 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
             tmp.extend([g for g in generators if g not in tmp])
             conanfile.generators = tmp
             write_generators(conanfile, install_folder, output)
-        if not isinstance(ref_or_path, ConanFileReference) or use_lock:
+        if not isinstance(ref_or_path, ConanFileReference) or lockfile is not None:
             # Write conaninfo
             content = normalize(conanfile.info.dumps())
             save(os.path.join(install_folder, CONANINFO), content)
             output.info("Generated %s" % CONANINFO)
-            graph_info.save(install_folder)
+            graph_info.save(install_folder, lockfile=lockfile)
             output.info("Generated graphinfo")
         if not no_imports:
             run_imports(conanfile, install_folder)
