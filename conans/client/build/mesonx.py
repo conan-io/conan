@@ -1,12 +1,12 @@
 import os
 import platform
-from pathlib import Path
 from configparser import ConfigParser
+from pathlib import Path
 
 from conans.client import tools
 from conans.client.build import defs_to_string, join_arguments
 from conans.client.build.cppstd_flags import cppstd_from_settings
-from conans.client.tools.env import environment_append, _environment_add
+from conans.client.tools.env import environment_append, _environment_add, no_op
 from conans.client.tools.oss import args_to_string
 from conans.errors import ConanException
 from conans.model.build_info import DEFAULT_BIN, DEFAULT_INCLUDE, DEFAULT_LIB
@@ -20,7 +20,6 @@ from conans.util.runners import version_runner
 # - cleanup comments
 # - add tests
 # - remove _ss from MesonX __init__()
-# - add minimum meson version check (0.42.0?)
 
 # Differences from stock Meson integration:
 # - does not override 'default_library' if no 'shared' options was set
@@ -31,7 +30,11 @@ from conans.util.runners import version_runner
 # - backend-agnostic meson methods are used by default with ninja as a fallback for older meson versions.
 # - env variables with dependency search paths are not appended when executing meson commands
 # - requires pkg-config generator
+# - removed args kwarg from configure
 
+# Question:
+# - Should we keep `cross-file`/`native-file` kwarg?
+# - Should we use generate and use the default toolchain by default?
 
 class MesonMachineFile:
     def __init__(self,
@@ -310,7 +313,7 @@ class MesonX(object):
         """
         return MesonDefaultToolchainGenerator(self._conanfile).generate(force_cross)
 
-    def get_native_files(self):
+    def get_default_native_files(self):
         """
         Get all native files in the build_dir
         """
@@ -320,7 +323,7 @@ class MesonX(object):
         machine_file_path = bdir / 'native'
         return list(machine_file_path.glob('*')) if machine_file_path.exists else []
 
-    def get_cross_files(self):
+    def get_default_cross_files(self):
         """
         Get all cross files in the build_dir
         """
@@ -330,20 +333,17 @@ class MesonX(object):
         machine_file_path = bdir / 'cross'
         return list(machine_file_path.glob('*')) if machine_file_path.exists else []
 
-    def configure(self, source_folder=None, cache_build_folder=None, build_type=None, pkg_config_paths=None, args=None, options=None, native_files=None, cross_files=None):
+    def configure(self, source_folder=None, cache_build_folder=None, build_type=None, pkg_config_paths=None, options=None, native_files=None, cross_files=None):
         if not self._conanfile.should_configure:
             return
 
-        args = args or []
         options = options or []
         native_files = native_files or []
         cross_files = cross_files or []
 
-        def check_arg_not_in_opts_or_args(arg_name, use_instead_msg):
+        def check_arg_not_in_opts(arg_name, use_instead_msg):
             if arg_name in options:
                 raise ConanException('Don\'t pass `{}` via `options`: {}'.format(arg_name, use_instead_msg))
-            if any(map(lambda a: a.startswith('--{}'.format(arg_name)) or a.startswith('-D{}'.format(arg_name), args))):
-                raise ConanException('Don\'t pass `{}` via `args`: {}'.format(arg_name, use_instead_msg))
 
         source_dir, self.build_dir = self._get_dirs(source_folder, build_folder, cache_build_folder)
         mkdir(self.build_dir)
@@ -352,10 +352,10 @@ class MesonX(object):
         # overwrite default values with user's inputs
         resolved_options.update(options)
 
-        check_arg_not_in_opts_or_args('backend', 'use `backend` kwarg in the class constructor instead')
+        check_arg_not_in_opts('backend', 'use `backend` kwarg in the class constructor instead')
         resolved_options.update({'backend': '{}'.format(self.backend)})
 
-        check_arg_not_in_opts_or_args('buildtype', 'use `build_type` kwarg instead')
+        check_arg_not_in_opts('buildtype', 'use `build_type` kwarg instead')
         settings_bulld_type = self._settings.get_safe('build_type')
         if build_type and build_type != settings_bulld_type:
             self._conanfile.output.warn(
@@ -364,26 +364,25 @@ class MesonX(object):
         if resolved_build_type:
             resolved_options.update({'buildtype': '{}'.format(resolved_build_type)})
 
-        check_arg_not_in_opts_or_args('pkg_config_path', 'use `pkg_config_paths` kwarg instead')
+        check_arg_not_in_opts('pkg_config_path', 'use `pkg_config_paths` kwarg instead')
         pc_paths = [self._conanfile.install_folder]
         if pkg_config_paths:
             pc_paths += [get_abs_path(f, self._conanfile.install_folder) for f in pkg_config_paths]
         resolved_options.update({'pkg_config_path': '{}'.format(os.pathsep.join(pc_paths))})
 
-        check_arg_not_in_opts_or_args('native-file', 'use `native_files` kwarg instead')
-        check_arg_not_in_opts_or_args('cross-file', 'use `cross_files` kwarg instead')
+        check_arg_not_in_opts('native-file', 'use `native_files` kwarg instead')
+        check_arg_not_in_opts('cross-file', 'use `cross_files` kwarg instead')
         machine_file_args = []
         if native_files:
-            machine_file_args += ['--native-file={}'.format(f) for f in native_files]
+            if 'native-file' in resolved_options:
+                resolved_options['native-file'] += native_files
+            else:
+                resolved_options['native-file'] = native_files
         if cross_files:
-            machine_file_args += ['--cross-file={}'.format(f) for f in cross_files]
-        # Machine files are passed through arguments and not options, because they can be specified multiple times.
-        args += machine_file_args
-
-        arg_list = join_arguments([
-            defs_to_string(resolved_options),
-            args_to_string(args),
-        ])
+            if 'cross-file' in resolved_options:
+                resolved_options['cross-file'] += cross_files
+            else:
+                resolved_options['cross-file'] = cross_files
 
         env_vars_to_clean = {
             'CC',
@@ -402,7 +401,7 @@ class MesonX(object):
         clean_env.update({'{}_FOR_BUILD'.format(ev): None for ev in env_vars_to_clean})
 
         with environment_append(clean_env):
-            self._run('meson setup "{}" "{}" {}'.format(source_dir, self.build_dir, arg_list))
+            self._run('meson setup "{}" "{}" {}'.format(source_dir, self.build_dir, self._options_to_string(resolved_options)))
 
     def build(self, args=None, targets=None):
         if not self._conanfile.should_build:
@@ -526,6 +525,18 @@ class MesonX(object):
 
         return options
 
+    def _options_to_string(self, options):
+        return ' '.join([self._option_to_string(k, v) for k, v in options.items()])
+    
+    @staticmethod
+    def _option_to_string(key, value):
+        if isinstance(value, list):
+            return ' '.join(['-D{}="{}"'.format(key, v) for v in value])
+        elif value is None:
+            return '-D{}'.format(key)
+        else:
+            return '-D{}="{}"'.format(key, value)
+
     @staticmethod
     def _get_meson_buildtype(build_type):
         build_types = {'RelWithDebInfo': 'debugoptimized',
@@ -544,9 +555,10 @@ class MesonX(object):
     def _run(self, command):
         if self._vcvars_needed:
             vcvars_dict = tools.vcvars_dict(self._settings, output=self._conanfile.output)
-            with _environment_add(vcvars_dict, post=self._append_vcvars):
-                self._conanfile.run(command)
+            cm = _environment_add(vcvars_dict, post=self._append_vcvars)
         else:
+            cm = no_op()
+        with cm:
             self._conanfile.run(command)
 
     def _run_ninja_targets(self, targets=None, args=None):
