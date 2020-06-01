@@ -12,7 +12,7 @@ from conans.model.build_info import COMPONENT_SCOPE
 
 
 class CMakeFindPackageGenerator(Generator):
-    generator_name = "cmake_find_package"
+    name = "cmake_find_package"
 
     find_template = textwrap.dedent("""
         {macros_and_functions}
@@ -241,9 +241,10 @@ class CMakeFindPackageGenerator(Generator):
     def filename(self):
         return None
 
-    def _get_name(self, obj):
+    @classmethod
+    def _get_name(cls, obj):
         get_name = getattr(obj, "get_name")
-        return get_name(self.generator_name)
+        return get_name(cls.name)
 
     @property
     def content(self):
