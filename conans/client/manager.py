@@ -12,6 +12,7 @@ from conans.client.source import complete_recipe_sources
 from conans.client.tools import cross_building, get_cross_building_settings
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
+from conans.model.graph_lock import LOCKFILE
 from conans.paths import CONANINFO
 from conans.util.files import normalize, save
 
@@ -101,6 +102,7 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
             content = normalize(conanfile.info.dumps())
             save(os.path.join(install_folder, CONANINFO), content)
             output.info("Generated %s" % CONANINFO)
+            lockfile = LOCKFILE if lockfile is None else lockfile
             graph_info.save(install_folder, lockfile=lockfile)
             output.info("Generated graphinfo")
         if not no_imports:
