@@ -112,7 +112,7 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
                     self.copy("*.a", dst="lib", keep_path=False)
 
                 def package_info(self):
-                    self.cpp_info.components["helloworld"].requires = ["greetings::greetings"]
+                    self.cpp_info.components["helloworld"].requires = ["greetings::hello"]
                     self.cpp_info.components["helloworld"].libs = ["helloworld"]
                     self.cpp_info.components["worldall"].requires = ["helloworld", "greetings::greetings"]
                     self.cpp_info.components["worldall"].libs = ["worldall"]
@@ -159,7 +159,7 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
             find_package(greetings COMPONENTS hello)
 
             add_library(helloworld helloworld.cpp)
-            target_link_libraries(helloworld greetings::greetings)
+            target_link_libraries(helloworld greetings::hello)
 
             find_package(greetings COMPONENTS bye)
 
@@ -525,7 +525,55 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
                 def package_info(self):
                     self.cpp_info.libs = ["hello", "bye"]
         """)
-        out = self._test(conanfile_greetings=conanfile1)
+        conanfile2 = textwrap.dedent("""
+                    from conans import ConanFile, CMake
+
+                    class WorldConan(ConanFile):
+                        name = "world"
+                        version = "0.0.1"
+                        settings = "os", "compiler", "build_type", "arch"
+                        generators = "cmake", "cmake_find_package"
+                        exports_sources = "src/*"
+                        requires = "greetings/0.0.1"
+
+                        def build(self):
+                            cmake = CMake(self)
+                            cmake.configure(source_folder="src")
+                            cmake.build()
+
+                        def package(self):
+                            self.copy("*.h", dst="include", src="src")
+                            self.copy("*.lib", dst="lib", keep_path=False)
+                            self.copy("*.dll", dst="bin", keep_path=False)
+                            self.copy("*.dylib*", dst="lib", keep_path=False)
+                            self.copy("*.so", dst="lib", keep_path=False)
+                            self.copy("*.a", dst="lib", keep_path=False)
+
+                        def package_info(self):
+                            self.cpp_info.components["helloworld"].requires = ["greetings::greetings"]
+                            self.cpp_info.components["helloworld"].libs = ["helloworld"]
+                            self.cpp_info.components["worldall"].requires = ["helloworld", "greetings::greetings"]
+                            self.cpp_info.components["worldall"].libs = ["worldall"]
+                """)
+        cmakelists2 = textwrap.dedent("""
+                    cmake_minimum_required(VERSION 3.0)
+                    project(world CXX)
+
+                    include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+                    conan_basic_setup()
+
+                    find_package(greetings COMPONENTS hello)
+
+                    add_library(helloworld helloworld.cpp)
+                    target_link_libraries(helloworld greetings::greetings)
+
+                    find_package(greetings COMPONENTS bye)
+
+                    add_library(worldall worldall.cpp)
+                    target_link_libraries(worldall helloworld greetings::greetings)
+                """)
+        out = self._test(conanfile_greetings=conanfile1, conanfile_world=conanfile2,
+                         cmakelists_world=cmakelists2)
         self.assertIn("Hello World!", out)
         self.assertIn("Bye World!", out)
 
