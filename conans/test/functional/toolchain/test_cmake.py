@@ -100,7 +100,8 @@ class Base(unittest.TestCase):
 
         message(">> CMAKE_POSITION_INDEPENDENT_CODE: ${CMAKE_POSITION_INDEPENDENT_CODE}")
         message(">> CMAKE_SKIP_RPATH: ${CMAKE_SKIP_RPATH}")
-        
+        message(">> CMAKE_INSTALL_NAME_DIR: ${CMAKE_INSTALL_NAME_DIR}")
+
         message(">> CMAKE_MODULE_PATH: ${CMAKE_MODULE_PATH}")
         message(">> CMAKE_PREFIX_PATH: ${CMAKE_PREFIX_PATH}")
 
