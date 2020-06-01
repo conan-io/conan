@@ -34,7 +34,7 @@ from conans.util.runners import version_runner
 
 # Question:
 # - Should we keep `cross-file`/`native-file` kwarg?
-# - Should we use generate and use the default toolchain by default?
+# - Should we generate and use the default toolchain by default? If so, how should that be done?
 
 class MesonMachineFile:
     def __init__(self,
@@ -313,26 +313,6 @@ class MesonX(object):
         """
         return MesonDefaultToolchainGenerator(self._conanfile).generate(force_cross)
 
-    def get_default_native_files(self):
-        """
-        Get all native files in the build_dir
-        """
-        bdir = Path(self.build_dir)
-        if not bdir.exists:
-            raise ConanException('Build directory does not exist: `{}`'.format(self.build_dir))
-        machine_file_path = bdir / 'native'
-        return list(machine_file_path.glob('*')) if machine_file_path.exists else []
-
-    def get_default_cross_files(self):
-        """
-        Get all cross files in the build_dir
-        """
-        bdir = Path(self.build_dir)
-        if not bdir.exists:
-            raise ConanException('Build directory does not exist: `{}`'.format(self.build_dir))
-        machine_file_path = bdir / 'cross'
-        return list(machine_file_path.glob('*')) if machine_file_path.exists else []
-
     def configure(self, source_folder=None, cache_build_folder=None, build_type=None, pkg_config_paths=None, options=None, native_files=None, cross_files=None):
         if not self._conanfile.should_configure:
             return
@@ -341,7 +321,7 @@ class MesonX(object):
         native_files = native_files or []
         cross_files = cross_files or []
 
-        def check_arg_not_in_opts_or_args_or_args(arg_name, use_instead_msg):
+        def check_arg_not_in_opts_or_args(arg_name, use_instead_msg):
             if arg_name in options:
                 raise ConanException('Don\'t pass `{}` via `options`: {}'.format(arg_name, use_instead_msg))
             if any(map(lambda a: a.startswith('--{}'.format(arg_name)) or a.startswith('-D{}'.format(arg_name), args))):
@@ -374,17 +354,12 @@ class MesonX(object):
 
         check_arg_not_in_opts_or_args('native-file', 'use `native_files` kwarg instead')
         check_arg_not_in_opts_or_args('cross-file', 'use `cross_files` kwarg instead')
-        machine_file_args = []
-        if native_files:
-            if 'native-file' in resolved_options:
-                resolved_options['native-file'] += native_files
-            else:
-                resolved_options['native-file'] = native_files
-        if cross_files:
-            if 'cross-file' in resolved_options:
-                resolved_options['cross-file'] += cross_files
-            else:
-                resolved_options['cross-file'] = cross_files
+        resolved_native_files = self._get_default_machine_files('native') + native_files
+        resolved_cross_files = self._get_default_machine_files('cross') + cross_files
+        if resolved_native_files:
+            resolved_options['native-file'] = resolved_native_files
+        if resolved_cross_files:
+            resolved_options['cross-file'] = resolved_cross_files
 
         arg_list = join_arguments([
             self._options_to_string(resolved_options)
@@ -531,6 +506,16 @@ class MesonX(object):
                 options['b_staticpic'] = fpic or shared
 
         return options
+
+    def _get_default_machine_files(self, machine_file_type: str):
+        """
+        Get all native files in the build_dir
+        """
+        bdir = Path(self.build_dir)
+        if not bdir.exists:
+            raise ConanException('Build directory does not exist: `{}`'.format(self.build_dir))
+        machine_file_path = bdir / machine_file_type
+        return list(machine_file_path.glob('*')) if machine_file_path.exists else []
 
     def _options_to_string(self, options):
         return ' '.join([self._option_to_string(k, v) for k, v in options.items()])
