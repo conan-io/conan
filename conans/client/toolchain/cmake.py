@@ -148,7 +148,7 @@ class CMakeToolchain(object):
                 " main CMakeLists.txt file:\\n"
                 " \\n"
                 "     project(YourProject C CXX)\\n"
-                "     include(\\"{{conan_project_include_cmake}}\\")\\n"
+                "     include(\\"\\${CMAKE_BINARY_DIR}/conan_project_include.cmake\\")\\n"
                 " \\n"
                 " This file contains some definitions and extra adjustments that depend on\\n"
                 " the build_type and it cannot be done in the toolchain.")
@@ -206,7 +206,21 @@ class CMakeToolchain(object):
         {%- endfor %}
 
         # Adjustments that depends on the build_type
-        {% if set_vs_runtime %}conan_set_vs_runtime(){% endif %}
+        {% if vs_static_runtime %}
+        conan_get_policy(CMP0091 policy_0091)
+        if(policy_0091 STREQUAL "NEW")
+            set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+        else()
+            foreach(flag CMAKE_C_FLAGS_RELEASE CMAKE_CXX_FLAGS_RELEASE
+                         CMAKE_C_FLAGS_RELWITHDEBINFO CMAKE_CXX_FLAGS_RELWITHDEBINFO
+                         CMAKE_C_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_MINSIZEREL
+                         CMAKE_C_FLAGS_DEBUG CMAKE_CXX_FLAGS_DEBUG)
+                if(DEFINED ${flag})
+                    string(REPLACE "/MD" "/MT" ${flag} "${${flag}}")
+                endif()
+            endforeach()
+        endif()
+        {% endif %}
     """)
 
     def __init__(self, conanfile,
@@ -220,15 +234,15 @@ class CMakeToolchain(object):
                  # cmake_program=None,  # TODO: cmake program should be considered in the environment
                  ):
         self._conanfile = conanfile
-        del conanfile
 
         self._fpic = self._deduce_fpic()
+        self._vs_static_runtime = self._deduce_vs_static_runtime()
 
         self.set_rpath = True
         self.set_std = True
         self.set_libcxx = True
         self.set_compiler = False
-        self.set_vs_runtime = True
+
         # To find the generated cmake_find_package finders
         self.cmake_prefix_path = "${CMAKE_BINARY_DIR}"
         self.cmake_module_path = "${CMAKE_BINARY_DIR}"
@@ -252,6 +266,7 @@ class CMakeToolchain(object):
         self.definitions.pop("CONAN_IN_LOCAL_CACHE", None)
         self.definitions.pop("CMAKE_PREFIX_PATH", None)
         self.definitions.pop("CMAKE_MODULE_PATH", None)
+        self.definitions.pop("CONAN_LINK_RUNTIME", None)
         for install in ("PREFIX", "BINDIR", "SBINDIR", "LIBEXECDIR", "LIBDIR", "INCLUDEDIR",
                         "OLDINCLUDEDIR", "DATAROOTDIR"):
             self.definitions.pop("CMAKE_INSTALL_%s" % install, None)
@@ -269,21 +284,25 @@ class CMakeToolchain(object):
         if fpic is None:
             return None
         os_ = self._conanfile.settings.get_safe("os")
-        if "Windows" in os_:
+        if os_ and "Windows" in os_:
             raise ConanException("fPIC option defined for Windows. Remove it.")
         shared = self._conanfile.options.get_safe("shared")
         if shared:
             raise ConanException("fPIC option defined for a shared library. Remove it.")
         return fpic
 
+    def _deduce_vs_static_runtime(self):
+        settings = self._conanfile.settings
+        if (settings.get_safe("compiler") == "Visual Studio" and
+                "MT" in settings.get_safe("compiler.runtime")):
+            return True
+        return False
+
     def dump(self, install_folder):
         conan_project_include_cmake = os.path.join(install_folder, "conan_project_include.cmake")
         t = Template(self._template_project_include)
         content = t.render(configuration_types_definitions=self.definitions.configuration_types,
-                           cmake_macros_and_functions="\n".join([
-                               CMakeCommonMacros.conan_set_vs_runtime_preserve_build_type
-                           ]),
-                           set_vs_runtime=self.set_vs_runtime)
+                           vs_static_runtime=self._vs_static_runtime)
         save(conan_project_include_cmake, content)
 
         # TODO: I need the profile_host and profile_build here!

@@ -85,6 +85,7 @@ class CMakeToolchainBuildHelper(BaseCMakeBuildHelper):
         command = "%s %s%s" % (self._cmake_program, generator, arg_list)
 
         is_windows_mingw = platform.system() == "Windows" and self._generator == "MinGW Makefiles"
+        self._conanfile.output.info("CMake command: %s" % command)
         with chdir(build_folder):
             if is_windows_mingw:
                 with tools.remove_from_path("sh"):
@@ -115,6 +116,7 @@ class CMakeToolchainBuildHelper(BaseCMakeBuildHelper):
 
         arg_list = [args_to_string([bf]), build_config, args_to_string(args)]
         command = "%s --build %s" % (self._cmake_program, join_arguments(arg_list))
+        self._conanfile.output.info("CMake command: %s" % command)
         self._conanfile.run(command)
 
     def build(self, build_type=None, target=None):
