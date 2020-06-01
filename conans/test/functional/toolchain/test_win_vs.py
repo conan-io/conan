@@ -12,7 +12,7 @@ from conans.test.utils.tools import TestClient
 
 
 @attr("toolchain")
-class TestToolchain(unittest.TestCase):
+class Base(unittest.TestCase):
 
     conanfile = textwrap.dedent("""
         from conans import ConanFile, CMake, CMakeToolchain
@@ -21,6 +21,8 @@ class TestToolchain(unittest.TestCase):
             settings = "os", "arch", "compiler", "build_type"
             requires = "hello/0.1"
             generators = "cmake_find_package_multi"
+            options = {"shared": [True, False], "fPIC": [True, False]}
+            default_options = {"shared": False, "fPIC": True}
 
             def toolchain(self):
                 tc = CMakeToolchain(self)
@@ -35,11 +37,22 @@ class TestToolchain(unittest.TestCase):
                 cmake.build()
         """)
 
-    app = textwrap.dedent("""
+    lib_h = textwrap.dedent("""
+        #pragma once
+        #ifdef WIN32
+          #define APP_LIB_EXPORT __declspec(dllexport)
+        #else
+          #define APP_LIB_EXPORT
+        #endif
+        APP_LIB_EXPORT void app();
+        """)
+
+    lib_cpp = textwrap.dedent("""
         #include <iostream>
+        #include "app.h"
         #include "hello.h"
 
-        int main() {
+        void app() {
             std::cout << "Hello: " << HELLO_MSG <<std::endl;
             #ifdef NDEBUG
             std::cout << "App: Release!" <<std::endl;
@@ -48,7 +61,14 @@ class TestToolchain(unittest.TestCase):
             #endif
             std::cout << "DEFINITIONS_BOTH: " << DEFINITIONS_BOTH << "\\n";
             std::cout << "DEFINITIONS_CONFIG: " << DEFINITIONS_CONFIG << "\\n";
-            return 0;
+        }
+        """)
+
+    app = textwrap.dedent("""
+        #include "app.h"
+
+        int main() {
+            app();
         }
         """)
 
@@ -83,11 +103,16 @@ class TestToolchain(unittest.TestCase):
         message(">> CMAKE_MODULE_PATH: ${CMAKE_MODULE_PATH}")
         message(">> CMAKE_PREFIX_PATH: ${CMAKE_PREFIX_PATH}")
 
+        message(">> BUILD_SHARED_LIBS: ${BUILD_SHARED_LIBS}")
+
         find_package(hello REQUIRED)
+        add_library(app_lib app_lib.cpp)
+        target_link_libraries(app_lib PRIVATE hello::hello)
+        target_compile_definitions(app_lib PRIVATE DEFINITIONS_BOTH="${DEFINITIONS_BOTH}")
+        target_compile_definitions(app_lib PRIVATE DEFINITIONS_CONFIG=${DEFINITIONS_CONFIG})
+
         add_executable(app app.cpp)
-        target_link_libraries(app PRIVATE hello::hello)
-        target_compile_definitions(app PRIVATE DEFINITIONS_BOTH="${DEFINITIONS_BOTH}")
-        target_compile_definitions(app PRIVATE DEFINITIONS_CONFIG=${DEFINITIONS_CONFIG})
+        target_link_libraries(app PRIVATE app_lib)
         """)
 
     def setUp(self):
@@ -112,7 +137,9 @@ class TestToolchain(unittest.TestCase):
         # Prepare the actual consumer package
         self.client.save({"conanfile.py": self.conanfile,
                           "CMakeLists.txt": self.cmakelist,
-                          "app.cpp": self.app})
+                          "app.cpp": self.app,
+                          "app_lib.cpp": self.lib_cpp,
+                          "app.h": self.lib_h})
 
     def _run_build(self, settings=None, options=None):
         # Build the profile according to the settings provided
@@ -124,12 +151,16 @@ class TestToolchain(unittest.TestCase):
         build_directory = os.path.join(self.client.current_folder, "build").replace("\\", "/")
         with self.client.chdir(build_directory):
             self.client.run("install .. %s %s" % (settings, options))
+            install_out = self.client.out
             self.client.run("build ..")
+        return install_out
 
-    @unittest.skipUnless(platform.system() == "Windows", "Only for windows")
-    @parameterized.expand([("Debug", "MTd", "15", "14", "x86", "v140"),
-                           ("Release", "MD", "15", "17", "x86_64", "")])
-    def test_toolchain_win(self, build_type, runtime, version, cppstd, arch, toolset):
+
+@unittest.skipUnless(platform.system() == "Windows", "Only for windows")
+class WinTest(Base):
+    @parameterized.expand([("Debug", "MTd", "15", "14", "x86", "v140", True),
+                           ("Release", "MD", "15", "17", "x86_64", "", False)])
+    def test_toolchain_win(self, build_type, runtime, version, cppstd, arch, toolset, shared):
         settings = {"compiler": "Visual Studio",
                     "compiler.version": version,
                     "compiler.toolset": toolset,
@@ -138,7 +169,9 @@ class TestToolchain(unittest.TestCase):
                     "arch": arch,
                     "build_type": build_type,
                     }
-        self._run_build(settings)
+        options = {"shared": shared}
+        install_out = self._run_build(settings, options)
+        self.assertIn("ERROR: fPIC option defined for Windows. Remove it.", install_out)
 
         # FIXME: Hardcoded VS version and partial toolset check
         self.assertIn('CMake command: cmake -G "Visual Studio 15 2017" '
@@ -147,11 +180,16 @@ class TestToolchain(unittest.TestCase):
             self.assertIn("Microsoft Visual Studio 14.0", self.client.out)
         else:
             self.assertIn("Microsoft Visual Studio/2017", self.client.out)
-
+        if shared:
+            self.assertIn("app_lib.dll", self.client.out)
+        else:
+            self.assertNotIn("app_lib.dll", self.client.out)
+        
         out = str(self.client.out).splitlines()
         runtime = "MT" if "MT" in runtime else "MD"
         generator_platform = "x64" if arch == "x86_64" else "Win32"
         arch = "x64" if arch == "x86_64" else "X86"
+        shared_str = "ON" if shared else "OFF"
         vals = {"CMAKE_GENERATOR_PLATFORM": generator_platform,
                 "CMAKE_BUILD_TYPE": "",
                 "CMAKE_CXX_FLAGS": "/MP1 /DWIN32 /D_WINDOWS /W3 /GR /EHsc",
@@ -163,14 +201,15 @@ class TestToolchain(unittest.TestCase):
                 "CMAKE_SHARED_LINKER_FLAGS": "/machine:%s" % arch,
                 "CMAKE_EXE_LINKER_FLAGS": "/machine:%s" % arch,
                 "CMAKE_CXX_STANDARD": cppstd,
-                "CMAKE_CXX_EXTENSIONS": "OFF"}
+                "CMAKE_CXX_EXTENSIONS": "OFF",
+                "BUILD_SHARED_LIBS": shared_str}
         for k, v in vals.items():
             self.assertIn(">> %s: %s" % (k, v), out)
 
         toolchain = self.client.load("build/conan_toolchain.cmake")
         include = self.client.load("build/conan_project_include.cmake")
         settings["build_type"] = "Release" if build_type == "Debug" else "Debug"
-        self._run_build(settings)
+        self._run_build(settings, options)
         # The generated toolchain files must be identical
         self.assertEqual(toolchain, self.client.load("build/conan_toolchain.cmake"))
         self.assertEqual(include, self.client.load("build/conan_project_include.cmake"))
@@ -188,7 +227,9 @@ class TestToolchain(unittest.TestCase):
         self.assertIn("DEFINITIONS_BOTH: True", self.client.out)
         self.assertIn("DEFINITIONS_CONFIG: Release", self.client.out)
 
-    @unittest.skipUnless(platform.system() == "Linux", "Only for Linux")
+
+@unittest.skipUnless(platform.system() == "Linux", "Only for Linux")
+class LinuxTest(Base):
     @parameterized.expand([("Debug",  "14", "x86", "libstdc++"),
                            ("Release", "gnu14", "x86_64", "libstdc++11")])
     def test_toolchain_linux(self, build_type, cppstd, arch, libcxx):
@@ -205,6 +246,7 @@ class TestToolchain(unittest.TestCase):
         out = str(self.client.out).splitlines()
         extensions_str = "ON" if "gnu" in cppstd else "OFF"
         arch_str = "-m32" if arch == "x86" else "-m64"
+        cxx11_abi_str = "1" if libcxx == "libstdc++11" else "0"
         vals = {"CMAKE_CXX_STANDARD": "14",
                 "CMAKE_CXX_EXTENSIONS": extensions_str,
                 "CMAKE_BUILD_TYPE": build_type,
@@ -215,7 +257,8 @@ class TestToolchain(unittest.TestCase):
                 "CMAKE_C_FLAGS_DEBUG": "-g",
                 "CMAKE_C_FLAGS_RELEASE": "-O3 -DNDEBUG",
                 "CMAKE_SHARED_LINKER_FLAGS": arch_str,
-                "CMAKE_EXE_LINKER_FLAGS": ""
+                "CMAKE_EXE_LINKER_FLAGS": "",
+                "COMPILE_DEFINITIONS": "_GLIBCXX_USE_CXX11_ABI=%s" % cxx11_abi_str
                 }
         for k, v in vals.items():
             self.assertIn(">> %s: %s" % (k, v), out)
@@ -225,22 +268,3 @@ class TestToolchain(unittest.TestCase):
         self.assertIn("App: %s!" % build_type, self.client.out)
         self.assertIn("DEFINITIONS_BOTH: True", self.client.out)
         self.assertIn("DEFINITIONS_CONFIG: %s" % build_type, self.client.out)
-
-
-@attr("toolchain")
-class OptionsTest(unittest.TestCase):
-    @unittest.skipUnless(platform.system() == "Windows", "Only for windows")
-    def test_error_fpic(self):
-        conanfile = textwrap.dedent("""
-            from conans import ConanFile
-
-            class App(ConanFile):
-                settings = "os"
-                options = {"fPIC": [True, False]}
-                default_options = {"fPIC": False}
-                toolchain = "cmake"
-            """)
-        client = TestClient()
-        client.save({"conanfile.py": conanfile})
-        client.run("install . ", assert_error=True)
-        self.assertIn("ERROR: fPIC option defined for Windows. Remove it.", client.out)

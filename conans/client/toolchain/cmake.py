@@ -9,7 +9,6 @@ from jinja2 import Template
 from conans.client.build.cmake_flags import get_generator, get_generator_platform, \
     CMakeDefinitionsBuilder, get_toolset, is_multi_configuration
 from conans.client.generators.cmake_common import CMakeCommonMacros
-from conans.errors import ConanException
 from conans.util.files import save
 
 
@@ -285,10 +284,10 @@ class CMakeToolchain(object):
             return None
         os_ = self._conanfile.settings.get_safe("os")
         if os_ and "Windows" in os_:
-            raise ConanException("fPIC option defined for Windows. Remove it.")
+            self._conanfile.output.error("fPIC option defined for Windows. Remove it.")
         shared = self._conanfile.options.get_safe("shared")
         if shared:
-            raise ConanException("fPIC option defined for a shared library. Remove it.")
+            self._conanfile.output.error("fPIC option defined for a shared library. Remove it.")
         return fpic
 
     def _deduce_vs_static_runtime(self):

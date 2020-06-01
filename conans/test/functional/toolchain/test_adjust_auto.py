@@ -20,28 +20,6 @@ class AdjustAutoTestCase(unittest.TestCase):
     """
         Check that it works adjusting values from the toolchain file
     """
-    @parameterized.expand([("libc++",), ])  # ("libstdc++",), is deprecated
-    @unittest.skipIf(platform.system() != "Darwin", "libcxx for Darwin")
-    def test_libcxx_macos(self, libcxx):
-        configure_out, cmake_cache, cmake_cache_keys, _, _ = self._run_configure({"compiler.libcxx":
-                                                                                  libcxx})
-
-        self.assertIn("-- Conan: C++ stdlib: {}".format(libcxx), configure_out)
-        self.assertIn(">> CMAKE_CXX_FLAGS: -m64 -stdlib={}".format(libcxx), configure_out)
-        self.assertNotIn("CONAN_LIBCXX", cmake_cache_keys)
-
-    @parameterized.expand([("libstdc++",), ("libstdc++11", ), ])
-    @unittest.skipIf(platform.system() != "Linux", "libcxx for Linux")
-    def test_libcxx_linux(self, libcxx):
-        configure_out, cmake_cache, cmake_cache_keys, _, _ = self._run_configure({"compiler.libcxx":
-                                                                                  libcxx})
-
-        self.assertIn("-- Conan: C++ stdlib: {}".format(libcxx), configure_out)
-        cxx11_abi_str = "1" if libcxx == "libstdc++11" else "0"
-        self.assertIn(">> COMPILE_DEFINITONS: _GLIBCXX_USE_CXX11_ABI={}".format(cxx11_abi_str),
-                      configure_out)
-
-        self.assertNotIn("CONAN_LIBCXX", cmake_cache_keys)
 
     @unittest.skipIf(platform.system() != "Darwin", "Only MacOS")
     def test_ccxx_flags_macos(self):
