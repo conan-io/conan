@@ -313,10 +313,11 @@ class MesonX(object):
         """
         return MesonDefaultToolchainGenerator(self._conanfile).generate(force_cross)
 
-    def configure(self, source_folder=None, cache_build_folder=None, build_type=None, pkg_config_paths=None, options=None, native_files=None, cross_files=None):
+    def configure(self, source_folder=None, cache_build_folder=None, build_type=None, pkg_config_paths=None, native_files=None, cross_files=None, options=None, args=None):
         if not self._conanfile.should_configure:
             return
 
+        args = args or []
         options = options or []
         native_files = native_files or []
         cross_files = cross_files or []
@@ -324,7 +325,7 @@ class MesonX(object):
         def check_arg_not_in_opts_or_args(arg_name, use_instead_msg):
             if arg_name in options:
                 raise ConanException('Don\'t pass `{}` via `options`: {}'.format(arg_name, use_instead_msg))
-            if any(map(lambda a: a.startswith('--{}'.format(arg_name)) or a.startswith('-D{}'.format(arg_name), args))):
+            if any(map(lambda a: a.startswith('--{}'.format(arg_name)) or a.startswith('-D{}'.format(arg_name)), args)):
                 raise ConanException('Don\'t pass `{}` via `args`: {}'.format(arg_name, use_instead_msg))
 
         source_dir, self.build_dir = self._get_dirs(source_folder, build_folder, cache_build_folder)
@@ -362,7 +363,7 @@ class MesonX(object):
             resolved_options['cross-file'] = resolved_cross_files
 
         arg_list = join_arguments([
-            self._options_to_string(resolved_options)
+            self._options_to_string(resolved_options),
             args_to_string(args),
         ])
 
