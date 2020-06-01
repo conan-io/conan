@@ -105,8 +105,8 @@ class Base(unittest.TestCase):
 
         message(">> BUILD_SHARED_LIBS: ${BUILD_SHARED_LIBS}")
 
-        get_directory_property(_COMPILE_DEFINITONS DIRECTORY ${CMAKE_SOURCE_DIR} COMPILE_DEFINITIONS )
-        message(">> COMPILE_DEFINITIONS: ${_COMPILE_DEFINITONS}")
+        get_directory_property(_COMPILE_DEFS DIRECTORY ${CMAKE_SOURCE_DIR} COMPILE_DEFINITIONS)
+        message(">> COMPILE_DEFINITIONS: ${_COMPILE_DEFS}")
 
         find_package(hello REQUIRED)
         add_library(app_lib app_lib.cpp)
@@ -119,9 +119,6 @@ class Base(unittest.TestCase):
         """)
 
     def setUp(self):
-        # This is intended as a classmethod, this way the client will use the `CMakeCache` between
-        #   builds and it will be testing that the toolchain initializes all the variables
-        #   properly (it doesn't use preexisting data)
         self.client = TestClient(path_with_spaces=False)
         conanfile = textwrap.dedent("""
             from conans import ConanFile
@@ -187,7 +184,7 @@ class WinTest(Base):
             self.assertIn("app_lib.dll", self.client.out)
         else:
             self.assertNotIn("app_lib.dll", self.client.out)
-        
+
         out = str(self.client.out).splitlines()
         runtime = "MT" if "MT" in runtime else "MD"
         generator_platform = "x64" if arch == "x86_64" else "Win32"
@@ -252,6 +249,7 @@ class LinuxTest(Base):
 
         out = str(self.client.out).splitlines()
         extensions_str = "ON" if "gnu" in cppstd else "OFF"
+        pic_str = "" if shared else "ON"
         arch_str = "-m32" if arch == "x86" else "-m64"
         cxx11_abi_str = "1" if libcxx == "libstdc++11" else "0"
         vals = {"CMAKE_CXX_STANDARD": "14",
@@ -265,7 +263,50 @@ class LinuxTest(Base):
                 "CMAKE_C_FLAGS_RELEASE": "-O3 -DNDEBUG",
                 "CMAKE_SHARED_LINKER_FLAGS": arch_str,
                 "CMAKE_EXE_LINKER_FLAGS": "",
-                "COMPILE_DEFINITIONS": "_GLIBCXX_USE_CXX11_ABI=%s" % cxx11_abi_str
+                "COMPILE_DEFINITIONS": "_GLIBCXX_USE_CXX11_ABI=%s" % cxx11_abi_str,
+                "CMAKE_POSITION_INDEPENDENT_CODE": pic_str
+                }
+        for k, v in vals.items():
+            self.assertIn(">> %s: %s" % (k, v), out)
+
+        self.client.run_command("build/app")
+        self.assertIn("Hello: %s" % build_type, self.client.out)
+        self.assertIn("App: %s!" % build_type, self.client.out)
+        self.assertIn("DEFINITIONS_BOTH: True", self.client.out)
+        self.assertIn("DEFINITIONS_CONFIG: %s" % build_type, self.client.out)
+
+
+@unittest.skipUnless(platform.system() == "Darwin", "Only for Apple")
+class AppleTest(Base):
+    @parameterized.expand([("Debug",  "14",  True),
+                           ("Release", "", False)])
+    def test_toolchain_apple(self, build_type, cppstd, shared):
+        settings = {"compiler": "apple-clang",
+                    "compiler.cppstd": cppstd,
+                    "build_type": build_type}
+        self._run_build(settings, {"shared": shared})
+
+        self.assertIn('CMake command: cmake -G "Unix Makefiles" '
+                      '-DCMAKE_TOOLCHAIN_FILE="conan_toolchain.cmake"', self.client.out)
+        if shared:
+            self.assertIn("libapp_lib.so", self.client.out)
+        else:
+            self.assertIn("libapp_lib.a", self.client.out)
+
+        out = str(self.client.out).splitlines()
+        vals = {"CMAKE_CXX_STANDARD": "14",
+                "CMAKE_CXX_EXTENSIONS": "OFF",
+                "CMAKE_BUILD_TYPE": build_type,
+                "CMAKE_CXX_FLAGS": "-m64 -stdlib=libc++",
+                "CMAKE_CXX_FLAGS_DEBUG": "-g",
+                "CMAKE_CXX_FLAGS_RELEASE": "-O3 -DNDEBUG",
+                "CMAKE_C_FLAGS": "-m64",
+                "CMAKE_C_FLAGS_DEBUG": "-g",
+                "CMAKE_C_FLAGS_RELEASE": "-O3 -DNDEBUG",
+                "CMAKE_SHARED_LINKER_FLAGS": "-m64",
+                "CMAKE_EXE_LINKER_FLAGS": "",
+                "CMAKE_SKIP_RPATH": "1",
+                "CMAKE_INSTALL_NAME_DIR": ""
                 }
         for k, v in vals.items():
             self.assertIn(">> %s: %s" % (k, v), out)
