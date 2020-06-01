@@ -72,7 +72,7 @@ class CMakeFindPackageGenerator(Generator):
             endif()
         endmacro()
 
-        function(conan_component_library_targets out_libraries_target libdir libraries)
+        function(conan_component_library_targets out_libraries_target libdir libraries dependencies system_libs frameworks)
             foreach(_LIBRARY_NAME ${libraries})
                 find_library(CONAN_FOUND_LIBRARY NAME ${_LIBRARY_NAME} PATHS ${libdir}
                              NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
@@ -94,6 +94,12 @@ class CMakeFindPackageGenerator(Generator):
                     conan_message(FATAL_ERROR "Conan: Component library ${_LIBRARY_NAME} not found in paths: ${libdir}")
                 endif()
                 unset(CONAN_FOUND_LIBRARY CACHE)
+            endforeach()
+
+            # Add all dependencies to all targets
+            string(REPLACE " " ";" deps_list "${dependencies}")
+            foreach(_out_library_target ${_out_libraries_target})
+                set_property(TARGET ${_out_library_target} PROPERTY INTERFACE_LINK_LIBRARIES "${deps_list};${system_libs};${frameworks}")
             endforeach()
 
             conan_message(STATUS "Conan: Component library targets: ${_out_libraries_target}")
@@ -170,13 +176,18 @@ class CMakeFindPackageGenerator(Generator):
 
         ########## COMPONENT {{ comp_name }} FIND LIBRARIES & FRAMEWORKS / DYNAMIC VARS #############
 
-        set({{ comp_name }}_LIB_TARGETS "") # Will be filled later, if CMake 3
-        conan_component_library_targets({{ comp_name }}_LIB_TARGETS "{{ '${'+comp_name+'_LIB_DIRS}' }}" "{{ '${'+comp_name+'_LIBS}' }}")
-
-        set({{ comp_name }}_FRAMEWORKS_FOUND "") # Will be filled later
+        set({{ comp_name }}_FRAMEWORKS_FOUND "")
         conan_find_apple_frameworks({{ comp_name }}_FRAMEWORKS_FOUND "{{ '${'+comp_name+'_FRAMEWORKS}' }}" "{{ '${'+comp_name+'_FRAMEWORK_DIRS}' }}")
 
-        set({{ comp_name }}_LINK_LIBS {{ '${'+comp_name+'_LIB_TARGETS}' }} {{ '${'+comp_name+'_SYSTEM_LIBS}' }} {{ '${'+comp_name+'_FRAMEWORKS_FOUND}' }} {{ '${'+comp_name+'_DEPENDENCIES}' }})
+        set({{ comp_name }}_LIB_TARGETS "")
+        conan_component_library_targets({{ comp_name }}_LIB_TARGETS
+                                        "{{ '${'+comp_name+'_LIB_DIRS}' }}"
+                                        "{{ '${'+comp_name+'_LIBS}' }}"
+                                        "{{ '${'+comp_name+'_DEPENDENCIES}' }}"
+                                        "{{ '${'+comp_name+'_SYSTEM_LIBS}' }}"
+                                        "{{ '${'+comp_name+'_FRAMEWORKS_FOUND}' }}")
+
+        set({{ comp_name }}_LINK_LIBS {{ '${'+comp_name+'_LIB_TARGETS}' }} {{ '${'+comp_name+'_DEPENDENCIES}' }})
 
         set(CMAKE_MODULE_PATH {{ comp.build_paths }} ${CMAKE_MODULE_PATH})
         set(CMAKE_PREFIX_PATH {{ comp.build_paths }} ${CMAKE_PREFIX_PATH})
