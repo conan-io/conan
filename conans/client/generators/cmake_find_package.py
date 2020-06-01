@@ -251,13 +251,9 @@ class CMakeFindPackageGenerator(Generator):
         comp_requires_findnames = []
         for require in comp.requires:
             if COMPONENT_SCOPE in require:
-                comp_require_pkg_name = require[:require.find(COMPONENT_SCOPE)]
-                if comp_require_pkg_name not in self.deps_build_info.deps:
-                    raise ConanException("Component '%s' not found: '%s' is not a package "
-                                         "requirement" % (require, comp_require_pkg_name))
+                comp_require_pkg_name, comp_require_comp_name = require.split(COMPONENT_SCOPE)
                 comp_require_pkg = self.deps_build_info[comp_require_pkg_name]
                 comp_require_pkg_findname = self._get_name(comp_require_pkg)
-                comp_require_comp_name = require[require.find(COMPONENT_SCOPE)+len(COMPONENT_SCOPE):]
                 if comp_require_comp_name in self.deps_build_info.deps:
                     comp_require_comp_findname = comp_require_pkg_findname
                 elif comp_require_comp_name in self.deps_build_info[comp_require_pkg_name].components:
