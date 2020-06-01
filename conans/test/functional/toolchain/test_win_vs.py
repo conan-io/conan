@@ -105,6 +105,9 @@ class Base(unittest.TestCase):
 
         message(">> BUILD_SHARED_LIBS: ${BUILD_SHARED_LIBS}")
 
+        get_directory_property(_COMPILE_DEFINITONS DIRECTORY ${CMAKE_SOURCE_DIR} COMPILE_DEFINITIONS )
+        message(">> COMPILE_DEFINITIONS: ${_COMPILE_DEFINITONS}")
+
         find_package(hello REQUIRED)
         add_library(app_lib app_lib.cpp)
         target_link_libraries(app_lib PRIVATE hello::hello)
@@ -230,18 +233,22 @@ class WinTest(Base):
 
 @unittest.skipUnless(platform.system() == "Linux", "Only for Linux")
 class LinuxTest(Base):
-    @parameterized.expand([("Debug",  "14", "x86", "libstdc++"),
-                           ("Release", "gnu14", "x86_64", "libstdc++11")])
-    def test_toolchain_linux(self, build_type, cppstd, arch, libcxx):
+    @parameterized.expand([("Debug",  "14", "x86", "libstdc++", True),
+                           ("Release", "gnu14", "x86_64", "libstdc++11", False)])
+    def test_toolchain_linux(self, build_type, cppstd, arch, libcxx, shared):
         settings = {"compiler": "gcc",
                     "compiler.cppstd": cppstd,
                     "compiler.libcxx": libcxx,
                     "arch": arch,
                     "build_type": build_type}
-        self._run_build(settings)
+        self._run_build(settings, {"shared": shared})
 
         self.assertIn('CMake command: cmake -G "Unix Makefiles" '
                       '-DCMAKE_TOOLCHAIN_FILE="conan_toolchain.cmake"', self.client.out)
+        if shared:
+            self.assertIn("libapp_lib.so", self.client.out)
+        else:
+            self.assertIn("libapp_lib.a", self.client.out)
 
         out = str(self.client.out).splitlines()
         extensions_str = "ON" if "gnu" in cppstd else "OFF"
