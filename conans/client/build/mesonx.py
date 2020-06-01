@@ -341,9 +341,11 @@ class MesonX(object):
         native_files = native_files or []
         cross_files = cross_files or []
 
-        def check_arg_not_in_opts(arg_name, use_instead_msg):
+        def check_arg_not_in_opts_or_args_or_args(arg_name, use_instead_msg):
             if arg_name in options:
                 raise ConanException('Don\'t pass `{}` via `options`: {}'.format(arg_name, use_instead_msg))
+            if any(map(lambda a: a.startswith('--{}'.format(arg_name)) or a.startswith('-D{}'.format(arg_name), args))):
+                raise ConanException('Don\'t pass `{}` via `args`: {}'.format(arg_name, use_instead_msg))
 
         source_dir, self.build_dir = self._get_dirs(source_folder, build_folder, cache_build_folder)
         mkdir(self.build_dir)
@@ -352,10 +354,10 @@ class MesonX(object):
         # overwrite default values with user's inputs
         resolved_options.update(options)
 
-        check_arg_not_in_opts('backend', 'use `backend` kwarg in the class constructor instead')
+        check_arg_not_in_opts_or_args('backend', 'use `backend` kwarg in the class constructor instead')
         resolved_options.update({'backend': '{}'.format(self.backend)})
 
-        check_arg_not_in_opts('buildtype', 'use `build_type` kwarg instead')
+        check_arg_not_in_opts_or_args('buildtype', 'use `build_type` kwarg instead')
         settings_bulld_type = self._settings.get_safe('build_type')
         if build_type and build_type != settings_bulld_type:
             self._conanfile.output.warn(
@@ -364,14 +366,14 @@ class MesonX(object):
         if resolved_build_type:
             resolved_options.update({'buildtype': '{}'.format(resolved_build_type)})
 
-        check_arg_not_in_opts('pkg_config_path', 'use `pkg_config_paths` kwarg instead')
+        check_arg_not_in_opts_or_args('pkg_config_path', 'use `pkg_config_paths` kwarg instead')
         pc_paths = [self._conanfile.install_folder]
         if pkg_config_paths:
             pc_paths += [get_abs_path(f, self._conanfile.install_folder) for f in pkg_config_paths]
         resolved_options.update({'pkg_config_path': '{}'.format(os.pathsep.join(pc_paths))})
 
-        check_arg_not_in_opts('native-file', 'use `native_files` kwarg instead')
-        check_arg_not_in_opts('cross-file', 'use `cross_files` kwarg instead')
+        check_arg_not_in_opts_or_args('native-file', 'use `native_files` kwarg instead')
+        check_arg_not_in_opts_or_args('cross-file', 'use `cross_files` kwarg instead')
         machine_file_args = []
         if native_files:
             if 'native-file' in resolved_options:
@@ -383,6 +385,11 @@ class MesonX(object):
                 resolved_options['cross-file'] += cross_files
             else:
                 resolved_options['cross-file'] = cross_files
+
+        arg_list = join_arguments([
+            self._options_to_string(resolved_options)
+            args_to_string(args),
+        ])
 
         env_vars_to_clean = {
             'CC',
@@ -401,7 +408,7 @@ class MesonX(object):
         clean_env.update({'{}_FOR_BUILD'.format(ev): None for ev in env_vars_to_clean})
 
         with environment_append(clean_env):
-            self._run('meson setup "{}" "{}" {}'.format(source_dir, self.build_dir, self._options_to_string(resolved_options)))
+            self._run('meson setup "{}" "{}" {}'.format(source_dir, self.build_dir, arg_list))
 
     def build(self, args=None, targets=None):
         if not self._conanfile.should_build:
@@ -531,9 +538,8 @@ class MesonX(object):
     @staticmethod
     def _option_to_string(key, value):
         if isinstance(value, list):
-            return ' '.join(['-D{}="{}"'.format(key, v) for v in value])
-        elif value is None:
-            return '-D{}'.format(key)
+            # "-Doption=['a,1', 'b']"
+            return '"-D{}={}"'.format(key, ', '.join(['\'{}\''.format(v) for v in value]))
         else:
             return '-D{}="{}"'.format(key, value)
 
