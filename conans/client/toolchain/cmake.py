@@ -18,6 +18,7 @@ from conans.util.files import save
 
 
 class Definitions(OrderedDict):
+    _configuration_types = None  # Needed for py27 to avoid infinite recursion
 
     def __init__(self):
         super(Definitions, self).__init__()
