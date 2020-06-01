@@ -285,9 +285,11 @@ class CMakeToolchain(object):
         os_ = self._conanfile.settings.get_safe("os")
         if os_ and "Windows" in os_:
             self._conanfile.output.error("fPIC option defined for Windows. Remove it.")
+            return None
         shared = self._conanfile.options.get_safe("shared")
         if shared:
             self._conanfile.output.error("fPIC option defined for a shared library. Remove it.")
+            return None
         return fpic
 
     def _deduce_vs_static_runtime(self):
