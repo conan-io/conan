@@ -99,7 +99,8 @@ class Base(unittest.TestCase):
         message(">> CMAKE_CXX_EXTENSIONS: ${CMAKE_CXX_EXTENSIONS}")
 
         message(">> CMAKE_POSITION_INDEPENDENT_CODE: ${CMAKE_POSITION_INDEPENDENT_CODE}")
-
+        message(">> CMAKE_SKIP_RPATH: ${CMAKE_SKIP_RPATH}")
+        
         message(">> CMAKE_MODULE_PATH: ${CMAKE_MODULE_PATH}")
         message(">> CMAKE_PREFIX_PATH: ${CMAKE_PREFIX_PATH}")
 

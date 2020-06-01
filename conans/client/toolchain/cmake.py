@@ -18,7 +18,6 @@ from conans.util.files import save
 
 
 class Definitions(OrderedDict):
-    _configuration_types = None
 
     def __init__(self):
         super(Definitions, self).__init__()
@@ -90,13 +89,14 @@ class CMakeToolchain(object):
         ########### End of Utility macros and functions ###########
 
         # Configure
-        # -- CMake::command_line
-        {% if generator_platform %}set(CMAKE_GENERATOR_PLATFORM "{{ generator_platform }}" CACHE STRING "" FORCE){% endif %}
+        {% if generator_platform %}
+        set(CMAKE_GENERATOR_PLATFORM "{{ generator_platform }}" CACHE STRING "" FORCE){% endif %}
         {% if toolset %}set(CMAKE_GENERATOR_TOOLSET "{{ toolset }}" CACHE STRING "" FORCE){% endif%}
 
         # build_type (Release, Debug, etc) is only defined for single-config generators
-        {% if build_type %} set(CMAKE_BUILD_TYPE "{{ build_type }}" CACHE STRING "Choose the type of build." FORCE){% endif %}
-
+        {% if build_type %}
+        set(CMAKE_BUILD_TYPE "{{ build_type }}" CACHE STRING "Choose the type of build." FORCE)
+        {% endif %}
 
         # --  - CMake.flags --> CMakeDefinitionsBuilder::get_definitions
         {%- for it, value in definitions.items() %}
@@ -105,11 +105,6 @@ class CMakeToolchain(object):
         {%- else %}
         set({{ it }} "{{ value }}" CACHE STRING "Value assigned from the Conan toolchain" FORCE)
         {%- endif %}
-        {%- endfor %}
-
-        # Set some environment variables
-        {%- for it, value in environment.items() %}
-        set(ENV{{ '{' }}{{ it }}{{ '}' }} "{{ value }}")
         {%- endfor %}
 
         get_property( _CMAKE_IN_TRY_COMPILE GLOBAL PROPERTY IN_TRY_COMPILE )
@@ -140,8 +135,10 @@ class CMakeToolchain(object):
         # We are going to adjust automagically many things as requested by Conan
         #   these are the things done by 'conan_basic_setup()'
          # To support the cmake_find_package generators:
-        {% if cmake_module_path %}set(CMAKE_MODULE_PATH {{ cmake_module_path }} ${CMAKE_MODULE_PATH}){% endif%}
-        {% if cmake_prefix_path %}set(CMAKE_PREFIX_PATH {{ cmake_prefix_path }} ${CMAKE_PREFIX_PATH}){% endif%}
+        {% if cmake_module_path %}
+        set(CMAKE_MODULE_PATH {{ cmake_module_path }} ${CMAKE_MODULE_PATH}){% endif%}
+        {% if cmake_prefix_path %}
+        set(CMAKE_PREFIX_PATH {{ cmake_prefix_path }} ${CMAKE_PREFIX_PATH}){% endif%}
 
         {% if fpic %}
         message(STATUS "Conan toolchain: Setting CMAKE_POSITION_INDEPENDENT_CODE=ON (options.fPIC)")
@@ -159,7 +156,7 @@ class CMakeToolchain(object):
     """)
 
     _template_project_include = textwrap.dedent("""
-        # When using a Conan toolchain, this file is included as the last step of all `project()` calls.
+        # When using a Conan toolchain, this file is included as the last step of `project()` calls.
         #  https://cmake.org/cmake/help/latest/variable/CMAKE_PROJECT_INCLUDE.html
 
         if (NOT CONAN_TOOLCHAIN_INCLUDED)
@@ -172,14 +169,14 @@ class CMakeToolchain(object):
 
         # Variables scoped to a configuration
         {%- for it, values in configuration_types_definitions.items() -%}
-            {%- set generator_expression = namespace(str='') %}
+            {%- set genexpr = namespace(str='') %}
             {%- for conf, value in values -%}
-                {%- set generator_expression.str = generator_expression.str + '$<IF:$<CONFIG:' + conf + '>,"' + value|string + '",' %}
-                {#- {%- if loop.last %}{% set generator_expression.str = generator_expression.str + '"' + it + '-NOTFOUND"' %}{% endif %} -#}
-                {%- if loop.last %}{% set generator_expression.str = generator_expression.str + '""' %}{% endif %}
+                {%- set genexpr.str = genexpr.str +
+                                      '$<IF:$<CONFIG:' + conf + '>,"' + value|string + '",' %}
+                {%- if loop.last %}{% set genexpr.str = genexpr.str + '""' %}{% endif %}
             {%- endfor -%}
-            {% for i in range(values|count) %}{%- set generator_expression.str = generator_expression.str + '>' %}{% endfor %}
-        set({{ it }} {{ generator_expression.str }})
+            {% for i in range(values|count) %}{%- set genexpr.str = genexpr.str + '>' %}{% endfor %}
+        set({{ it }} {{ genexpr.str }})
         {%- endfor %}
 
         # Adjustments that depends on the build_type
@@ -200,14 +197,8 @@ class CMakeToolchain(object):
         {% endif %}
     """)
 
-    def __init__(self, conanfile,
-                 generator=None,
-                 generator_platform=None,
-                 cmake_system_name=True,
-                 parallel=True,
-                 build_type=None,
-                 toolset=None,
-                 make_program=None,
+    def __init__(self, conanfile, generator=None, generator_platform=None, build_type=None,
+                 cmake_system_name=True, toolset=None, parallel=True, make_program=None,
                  # cmake_program=None,  # TODO: cmake program should be considered in the environment
                  ):
         self._conanfile = conanfile
@@ -215,17 +206,18 @@ class CMakeToolchain(object):
         self._fpic = self._deduce_fpic()
         self._vs_static_runtime = self._deduce_vs_static_runtime()
 
-        self.set_rpath = True
-        self.set_std = True
-        self.set_libcxx = True
+        self._set_rpath = True
+        self._set_std = True
+        self._set_libcxx = True
 
         # To find the generated cmake_find_package finders
-        self.cmake_prefix_path = "${CMAKE_BINARY_DIR}"
-        self.cmake_module_path = "${CMAKE_BINARY_DIR}"
+        self._cmake_prefix_path = "${CMAKE_BINARY_DIR}"
+        self._cmake_module_path = "${CMAKE_BINARY_DIR}"
 
         self._generator = generator or get_generator(self._conanfile)
-        self._generator_platform = generator_platform or \
-                                   get_generator_platform(self._conanfile.settings, self._generator)
+        self._generator_platform = (generator_platform or
+                                    get_generator_platform(self._conanfile.settings,
+                                                           self._generator))
         self._toolset = toolset or get_toolset(self._conanfile.settings)
         self._build_type = build_type or self._conanfile.settings.get_safe("build_type")
 
@@ -234,10 +226,11 @@ class CMakeToolchain(object):
                                           make_program=make_program, parallel=parallel,
                                           generator=self._generator,
                                           set_cmake_flags=False,
-                                          forced_build_type=build_type,
                                           output=self._conanfile.output)
         self.definitions = Definitions()
         self.definitions.update(builder.get_definitions())
+        # FIXME: Removing too many things. We want to bring the new logic for the toolchain here
+        # so we don't mess with the common code.
         self.definitions.pop("CMAKE_BUILD_TYPE", None)
         self.definitions.pop("CONAN_IN_LOCAL_CACHE", None)
         self.definitions.pop("CMAKE_PREFIX_PATH", None)
@@ -246,14 +239,6 @@ class CMakeToolchain(object):
         for install in ("PREFIX", "BINDIR", "SBINDIR", "LIBEXECDIR", "LIBDIR", "INCLUDEDIR",
                         "OLDINCLUDEDIR", "DATAROOTDIR"):
             self.definitions.pop("CMAKE_INSTALL_%s" % install, None)
-
-        # Some variables can go to the environment
-        # TODO: Do we need this or can we move it to environment stuff
-        self.environment = {}
-        if "pkg_config" in self._conanfile.generators and "PKG_CONFIG_PATH" not in os.environ:
-            self.environment.update({
-                "PKG_CONFIG_PATH": self._conanfile.install_folder
-            })
 
     def _deduce_fpic(self):
         fpic = self._conanfile.options.get_safe("fPIC")
@@ -278,6 +263,7 @@ class CMakeToolchain(object):
 
     def dump(self, install_folder):
         conan_project_include_cmake = os.path.join(install_folder, "conan_project_include.cmake")
+        conan_project_include_cmake = conan_project_include_cmake.replace("\\", "/")
         t = Template(self._template_project_include)
         content = t.render(configuration_types_definitions=self.definitions.configuration_types,
                            vs_static_runtime=self._vs_static_runtime)
@@ -293,16 +279,15 @@ class CMakeToolchain(object):
             "generator_platform": self._generator_platform,
             "toolset": self._toolset,
             "definitions": self.definitions,
-            "environment": self.environment,
-            "cmake_prefix_path": self.cmake_prefix_path,
-            "cmake_module_path": self.cmake_module_path,
+            "cmake_prefix_path": self._cmake_prefix_path,
+            "cmake_module_path": self._cmake_module_path,
             "fpic": self._fpic,
-            "set_rpath": self.set_rpath,
-            "set_std": self.set_std,
-            "set_libcxx": self.set_libcxx,
+            "set_rpath": self._set_rpath,
+            "set_std": self._set_std,
+            "set_libcxx": self._set_libcxx,
         }
         t = Template(self._template_toolchain)
-        content = t.render(conan_project_include_cmake=conan_project_include_cmake.replace("\\", "/"),
+        content = t.render(conan_project_include_cmake=conan_project_include_cmake,
                            cmake_macros_and_functions="\n".join([
                                CMakeCommonMacros.conan_message,
                                CMakeCommonMacros.conan_get_policy,
