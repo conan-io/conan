@@ -83,7 +83,7 @@ class CMakeBuildHelper(BaseCMakeBuildHelper):
         self.definitions = builder.get_definitions()
         self.definitions["CONAN_EXPORTED"] = "1"
 
-        self.toolset = toolset or get_toolset(self._settings)
+        self.toolset = toolset or get_toolset(self._settings, self.generator)
         self.build_dir = None
         self.msbuild_verbosity = os.getenv("CONAN_MSBUILD_VERBOSITY") or msbuild_verbosity
 

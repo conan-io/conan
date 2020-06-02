@@ -77,7 +77,7 @@ class ClientCache(object):
         # paths
         self._store_folder = self.config.storage_path or self.cache_folder
         # Just call it to make it raise in case of short_paths misconfiguration
-        self.config.short_paths_home
+        _ = self.config.short_paths_home
 
     def all_refs(self):
         subdirs = list_folder_subdirs(basedir=self._store_folder, level=4)
@@ -98,9 +98,10 @@ class ClientCache(object):
         assert isinstance(ref, ConanFileReference), "It is a {}".format(type(ref))
         edited_ref = self.editable_packages.get(ref.copy_clear_rev())
         if edited_ref:
-            base_path = edited_ref["path"]
+            conanfile_path = edited_ref["path"]
             layout_file = edited_ref["layout"]
-            return PackageEditableLayout(base_path, layout_file, ref)
+            return PackageEditableLayout(os.path.dirname(conanfile_path), layout_file, ref,
+                                         conanfile_path)
         else:
             check_ref_case(ref, self.store)
             base_folder = os.path.normpath(os.path.join(self.store, ref.dir_repr()))
@@ -274,6 +275,7 @@ class ClientCache(object):
         if os.path.exists(self.settings_path):
             remove(self.settings_path)
         self.initialize_settings()
+
 
 def _mix_settings_with_env(settings):
     """Reads CONAN_ENV_XXXX variables from environment

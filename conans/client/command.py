@@ -730,7 +730,11 @@ class Command(object):
                                      % (only, str_only_options))
 
             if args.graph:
-                self._outputer.info_graph(args.graph, deps_graph, get_cwd())
+                if args.graph.endswith(".html"):
+                    template = self._conan.app.cache.get_template(templates.INFO_GRAPH_HTML)
+                else:
+                    template = self._conan.app.cache.get_template(templates.INFO_GRAPH_DOT)
+                self._outputer.info_graph(args.graph, deps_graph, get_cwd(), template=template)
             if args.json:
                 json_arg = True if args.json == "1" else args.json
                 self._outputer.json_info(deps_graph, json_arg, get_cwd(), show_paths=args.paths)
@@ -1366,7 +1370,9 @@ class Command(object):
         parser.add_argument("--skip-upload", action='store_true', default=False,
                             help='Do not upload anything, just run the checks and the compression')
         parser.add_argument("--force", action='store_true', default=False,
-                            help='Do not check conan recipe date, override remote with local')
+                            help='Ignore checks before uploading the recipe: it will bypass missing'
+                                 ' fields in the scm attribute and it will override remote recipe'
+                                 ' with local regardless of recipe date')
         parser.add_argument("--check", action='store_true', default=False,
                             help='Perform an integrity check, using the manifests, before upload')
         parser.add_argument('-c', '--confirm', default=False, action='store_true',

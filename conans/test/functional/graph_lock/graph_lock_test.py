@@ -874,3 +874,21 @@ class GraphLockBuildRequiresNotNeeded(unittest.TestCase):
         bo1 = client.load("bo.json")
         client.run("graph build-order . --json=bo.json --build=missing")
         self.assertEqual(bo1, client.load("bo.json"))
+
+class GraphInstallArgumentsUpdated(unittest.TestCase):
+
+    def test_lockfile_argument_updated_install(self):
+        # https://github.com/conan-io/conan/issues/6845
+        # --lockfile parameter is not updated after install and
+        # outputs results to conan.lock
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . somelib/1.0@")
+        client.run("graph lock somelib/1.0@ --lockfile=somelib.lock")
+        client.run("install somelib/1.0@ --lockfile=somelib.lock --build somelib")
+        lock_file_json = json.loads(client.load("somelib.lock"))
+        self.assertEqual(lock_file_json["graph_lock"]["nodes"]["1"]["modified"], "built")
+        client.run("graph lock somelib/1.0@")
+        client.run("install somelib/1.0@ --lockfile --build somelib")
+        lock_file_json = json.loads(client.load("conan.lock"))
+        self.assertEqual(lock_file_json["graph_lock"]["nodes"]["1"]["modified"], "built")
