@@ -53,13 +53,14 @@ def intel_installation_path(version, arch):
     return installation_path
 
 
-def compilervars_command(settings, arch=None, compiler_version=None, force=False):
+def compilervars_command(conanfile, arch=None, compiler_version=None, force=False):
     """
     https://software.intel.com/en-us/intel-system-studio-cplusplus-compiler-user-and-reference-guide-using-compilervars-file
     :return:
     """
     if "PSTLROOT" in os.environ and not force:
         return "echo Conan:compilervars already set"
+    settings = conanfile.settings
     compiler_version = compiler_version or settings.get_safe("compiler.version")
     arch = arch or settings.get_safe("arch")
     system = platform.system()
@@ -96,8 +97,8 @@ def compilervars_command(settings, arch=None, compiler_version=None, force=False
     return command
 
 
-def compilervars_dict(settings, arch=None, compiler_version=None, force=False, only_diff=True):
-    cmd = compilervars_command(settings, arch, compiler_version, force)
+def compilervars_dict(conanfile, arch=None, compiler_version=None, force=False, only_diff=True):
+    cmd = compilervars_command(conanfile, arch, compiler_version, force)
     return env_diff(cmd, only_diff)
 
 
