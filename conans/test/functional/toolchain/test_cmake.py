@@ -316,7 +316,7 @@ class AppleTest(Base):
 
         if shared:
             build_directory = os.path.join(self.client.current_folder, "build").replace("\\", "/")
-            self.client.run_command('DYLD_LIBRARY_PATH="%s" && build/app' % build_directory)
+            self.client.run_command('DYLD_LIBRARY_PATH="%s" build/app' % build_directory)
         else:
             self.client.run_command('build/app')
         self.assertIn("Hello: %s" % build_type, self.client.out)
