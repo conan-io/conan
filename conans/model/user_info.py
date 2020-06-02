@@ -11,7 +11,10 @@ class UserInfo(object):
         if name.startswith("_") and name.endswith("_"):
             return super(UserInfo, self).__getattr__(name)
 
-        return self._values_[name]
+        try:
+            return self._values_[name]
+        except KeyError:
+            raise AttributeError
 
     def __setattr__(self, name, value):
         if name.startswith("_") and name.endswith("_"):
