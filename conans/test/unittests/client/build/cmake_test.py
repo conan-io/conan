@@ -10,7 +10,7 @@ import six
 from parameterized.parameterized import parameterized
 
 from conans.client import tools
-from conans.client.build import CMake
+from conans.client.build.cmake import CMake
 from conans.client.build.cmake_flags import cmake_in_local_cache_var_name
 from conans.client.conf import get_default_settings_yml
 from conans.client.tools.oss import cpu_count
@@ -904,7 +904,7 @@ build_type: [ Release]
                          '{1} -DCONAN_IN_LOCAL_CACHE="OFF"'
                          ' -DCONAN_COMPILER="{2}" -DCONAN_COMPILER_VERSION="{3}"'
                          ' -DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON"'
-                         ' -DCONAN_EXPORTED="1"' 
+                         ' -DCONAN_EXPORTED="1"'
                          ' -Wno-dev {0}'.format(dot_dir, cross, settings.compiler,
                                                 settings.compiler.version),
                          conanfile.command)
