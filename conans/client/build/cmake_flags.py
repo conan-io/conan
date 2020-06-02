@@ -85,7 +85,7 @@ def get_generator_platform(settings, generator):
         return settings.get_safe("os.platform")
 
     if (compiler == "Visual Studio" or compiler_base == "Visual Studio") and \
-        generator and "Visual" in generator:
+            generator and "Visual" in generator:
         return {"x86": "Win32",
                 "x86_64": "x64",
                 "armv7": "ARM",

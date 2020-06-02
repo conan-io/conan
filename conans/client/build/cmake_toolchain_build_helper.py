@@ -3,7 +3,6 @@ import platform
 
 from conans.client import tools
 from conans.client.build import defs_to_string, join_arguments
-from conans.client.build.cmake import BaseCMakeBuildHelper
 from conans.client.build.cmake_flags import is_multi_configuration, get_generator
 from conans.client.toolchain.cmake import CMakeToolchain
 from conans.client.tools.files import chdir
@@ -37,7 +36,7 @@ def _compute_build_flags(conanfile, generator, parallel, msbuild_verbosity):
     return args
 
 
-class CMakeToolchainBuildHelper(BaseCMakeBuildHelper):
+class CMakeToolchainBuildHelper(object):
     """ CMake helper to use together with the toolchain feature, it has the same interface
         as the original 'conans.client.build.cmake.CMake' helper, but it will warn the
         user about arguments forbidden, not used,... and how to achieve the same behavior
@@ -56,7 +55,7 @@ class CMakeToolchainBuildHelper(BaseCMakeBuildHelper):
         # Store a reference to useful data
         self._conanfile = conanfile
         self._parallel = parallel
-        self._msbuild_verbosity = os.getenv("CONAN_MSBUILD_VERBOSITY") or msbuild_verbosity
+        self._msbuild_verbosity = msbuild_verbosity
 
         self._build_folder = build_folder
         self._cmake_program = "cmake"  # Path to CMake should be handled by environment

@@ -5,6 +5,7 @@ from itertools import chain
 
 from six import StringIO  # Python 2 and 3 compatible
 
+
 from conans.client import tools
 from conans.client.build import defs_to_string, join_arguments
 from conans.client.build.cmake_flags import CMakeDefinitionsBuilder, \
@@ -21,21 +22,25 @@ from conans.util.config_parser import get_bool_from_text
 from conans.util.files import mkdir, get_abs_path, walk, decode_text
 
 
-class BaseCMakeBuildHelper(object):
-    """ Just a couple of functions shared between the CMake build helpers """
+def CMake(conanfile, *args, **kwargs):
+    from conans import ConanFile
+    if not isinstance(conanfile, ConanFile):
+        raise ConanException("First argument of CMake() has to be ConanFile. Use CMake(self)")
 
-    @staticmethod
-    def get_version():
-        try:
-            out, _ = subprocess.Popen(["cmake", "--version"], stdout=subprocess.PIPE).communicate()
-            version_line = decode_text(out).split('\n', 1)[0]
-            version_str = version_line.rsplit(' ', 1)[-1]
-            return Version(version_str)
-        except Exception as e:
-            raise ConanException("Error retrieving CMake version: '{}'".format(e))
+    from conans.client.build.cmake_toolchain_build_helper import CMakeToolchainBuildHelper
+
+    # If there is a toolchain, then use the toolchain helper one
+    toolchain_method = getattr(conanfile, "toolchain", None)
+    if toolchain_method:
+        if not callable(toolchain_method):
+            raise ConanException("Member 'toolchain' in your ConanFile has to be a function"
+                                 " returning a CMakeToolchain object")
+        return CMakeToolchainBuildHelper(conanfile, *args, **kwargs)
+    else:
+        return CMakeBuildHelper(conanfile, *args, **kwargs)
 
 
-class CMakeBuildHelper(BaseCMakeBuildHelper):
+class CMakeBuildHelper(object):
 
     def __init__(self, conanfile, generator=None, cmake_system_name=True,
                  parallel=True, build_type=None, toolset=None, make_program=None,
@@ -436,3 +441,15 @@ class CMakeBuildHelper(BaseCMakeBuildHelper):
                             self._conanfile.output.info("Patched paths for %s: %s to %s"
                                                         % (dep, from_str, dep_str))
 
+    @staticmethod
+    def get_version():
+        try:
+            out, _ = subprocess.Popen(["cmake", "--version"], stdout=subprocess.PIPE).communicate()
+            version_line = decode_text(out).split('\n', 1)[0]
+            version_str = version_line.rsplit(' ', 1)[-1]
+            return Version(version_str)
+        except Exception as e:
+            raise ConanException("Error retrieving CMake version: '{}'".format(e))
+
+
+CMake.get_version = CMakeBuildHelper.get_version

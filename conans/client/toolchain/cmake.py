@@ -219,7 +219,7 @@ class CMakeToolchain(object):
         self._generator_platform = (generator_platform or
                                     get_generator_platform(self._conanfile.settings,
                                                            self._generator))
-        self._toolset = toolset or get_toolset(self._conanfile.settings)
+        self._toolset = toolset or get_toolset(self._conanfile.settings, self._generator)
         self._build_type = build_type or self._conanfile.settings.get_safe("build_type")
 
         builder = CMakeDefinitionsBuilder(self._conanfile,
