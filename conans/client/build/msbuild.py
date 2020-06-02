@@ -116,7 +116,7 @@ class MSBuild(object):
         build_type = build_type or self._settings.get_safe("build_type")
         arch = arch or self._settings.get_safe("arch")
         if toolset is None:  # False value to skip adjusting
-            toolset = tools.msvs_toolset(self._settings)
+            toolset = tools.msvs_toolset(self._conanfile)
         verbosity = os.getenv("CONAN_MSBUILD_VERBOSITY") or verbosity or "minimal"
         if not build_type:
             raise ConanException("Cannot build_sln_command, build_type not defined")
