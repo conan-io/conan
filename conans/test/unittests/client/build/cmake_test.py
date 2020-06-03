@@ -189,6 +189,40 @@ class CMakeTest(unittest.TestCase):
             cmake = CMake(conanfile)
             self.assertIn('-G "My CMake Generator"', cmake.command_line)
 
+    def cmake_generator_intel_test(self):
+        settings = Settings.loads(get_default_settings_yml())
+        settings.os = "Windows"
+        settings.compiler = "intel"
+        settings.compiler.version = "19"
+        settings.compiler.base = "Visual Studio"
+        settings.compiler.base.version = "15"
+        settings.arch = "x86_64"
+
+        conanfile = ConanFileMock()
+        conanfile.settings = settings
+
+        cmake = CMake(conanfile)
+        self.assertIn('-G "Visual Studio 15 2017" -A "x64"', cmake.command_line)
+        self.assertIn('-T "Intel C++ Compiler 19.0', cmake.command_line)
+
+    def cmake_custom_generator_intel_test(self):
+        settings = Settings.loads(get_default_settings_yml())
+        settings.os = "Windows"
+        settings.compiler = "intel"
+        settings.compiler.version = "19"
+        settings.compiler.base = "Visual Studio"
+        settings.compiler.base.version = "15"
+        settings.arch = "x86_64"
+
+        conanfile = ConanFileMock()
+        conanfile.settings = settings
+
+        with tools.environment_append({"CONAN_CMAKE_GENERATOR": "My CMake Generator"}):
+            cmake = CMake(conanfile)
+            self.assertIn('-G "My CMake Generator"', cmake.command_line)
+            self.assertNotIn('-G "Visual Studio 15 2017" -A "x64"', cmake.command_line)
+            self.assertNotIn('-T "Intel C++ Compiler 19.0', cmake.command_line)
+
     def cmake_generator_platform_test(self):
         conanfile = ConanFileMock()
         conanfile.settings = Settings()

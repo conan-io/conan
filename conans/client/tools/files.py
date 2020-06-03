@@ -96,7 +96,6 @@ def unzip(filename, destination=".", keep_permissions=False, pattern=None, outpu
                 print_progress.last_size = the_size
                 if int(the_size) == 99:
                     output.rewrite_line(txt_msg % 100)
-                    output.writeln("")
     else:
         def print_progress(_, __):
             pass
@@ -135,6 +134,7 @@ def unzip(filename, destination=".", keep_permissions=False, pattern=None, outpu
                         os.chmod(os.path.join(full_path, file_.filename), perm)
                 except Exception as e:
                     output.error("Error extract %s\n%s" % (file_.filename, str(e)))
+        output.writeln("")
 
 
 def untargz(filename, destination=".", pattern=None):
@@ -363,3 +363,14 @@ def unix2dos(filepath):
 
 def dos2unix(filepath):
     _replace_with_separator(filepath, "\n")
+
+
+def remove_files_by_mask(directory, pattern):
+    removed_names = []
+    for root, _, filenames in os.walk(directory):
+        for filename in filenames:
+            if fnmatch(filename, pattern):
+                fullname = os.path.join(root, filename)
+                os.unlink(fullname)
+                removed_names.append(os.path.relpath(fullname, directory))
+    return removed_names

@@ -263,6 +263,24 @@ class GraphBinariesAnalyzer(object):
         conanfile.options.clear_unused(transitive_reqs)
         conanfile.options.freeze()
 
+    @staticmethod
+    def package_id_transitive_reqs(node):
+        """
+        accumulate the direct and transitive requirements prefs necessary to compute the
+        package_id
+        :return: set(prefs) of direct deps, set(prefs) of transitive deps
+        """
+        node.id_direct_prefs = set()  # of PackageReference
+        node.id_indirect_prefs = set()  # of PackageReference, avoid duplicates
+        neighbors = [d.dst for d in node.dependencies if not d.build_require]
+        for neighbor in neighbors:
+            node.id_direct_prefs.add(neighbor.pref)
+            node.id_indirect_prefs.update(neighbor.id_direct_prefs)
+            node.id_indirect_prefs.update(neighbor.id_indirect_prefs)
+        # Make sure not duplicated, totally necessary
+        node.id_indirect_prefs.difference_update(node.id_direct_prefs)
+        return node.id_direct_prefs, node.id_indirect_prefs
+
     def _compute_package_id(self, node, default_package_id_mode, default_python_requires_id_mode):
         """
         Compute the binary package ID of this node
@@ -283,16 +301,7 @@ class GraphBinariesAnalyzer(object):
             # Make sure not duplicated
             indirect_reqs.difference_update(direct_reqs)
         else:
-            node.id_direct_prefs = set()  # of PackageReference
-            node.id_indirect_prefs = set()  # of PackageReference, avoid duplicates
-            for neighbor in neighbors:
-                node.id_direct_prefs.add(neighbor.pref)
-                node.id_indirect_prefs.update(neighbor.id_direct_prefs)
-                node.id_indirect_prefs.update(neighbor.id_indirect_prefs)
-            # Make sure not duplicated, totally necessary
-            node.id_indirect_prefs.difference_update(node.id_direct_prefs)
-            direct_reqs = node.id_direct_prefs
-            indirect_reqs = node.id_indirect_prefs
+            direct_reqs, indirect_reqs = self.package_id_transitive_reqs(node)
 
         python_requires = getattr(conanfile, "python_requires", None)
         if python_requires:

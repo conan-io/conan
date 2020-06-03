@@ -532,7 +532,7 @@ class ConanAPIV1(object):
                          update=update, manifest_folder=manifest_folder,
                          manifest_verify=manifest_verify,
                          manifest_interactive=manifest_interactive,
-                         generators=generators, use_lock=lockfile, recorder=recorder)
+                         generators=generators, lockfile=lockfile, recorder=recorder)
             return recorder.get_info(self.app.config.revisions_enabled)
         except ConanException as exc:
             recorder.error = True
@@ -1203,7 +1203,7 @@ class ConanAPIV1(object):
         layout_abs_path = get_editable_abs_path(layout, cwd, self.app.cache.cache_folder)
         if layout_abs_path:
             self.app.out.success("Using layout file: %s" % layout_abs_path)
-        self.app.cache.editable_packages.add(ref, os.path.dirname(target_path), layout_abs_path)
+        self.app.cache.editable_packages.add(ref, target_path, layout_abs_path)
 
     @api_method
     def editable_remove(self, reference):

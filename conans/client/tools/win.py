@@ -129,7 +129,13 @@ MSVS_DEFAULT_TOOLSETS_INVERSE = {"v142": "16",
                                  "v80": "8"}
 
 
-def msvs_toolset(settings):
+def msvs_toolset(conanfile):
+    from conans.model.conan_file import ConanFile
+
+    if isinstance(conanfile, ConanFile):
+        settings = conanfile.settings
+    else:
+        settings = conanfile
     toolset = settings.get_safe("compiler.toolset")
     if not toolset:
         vs_version = settings.get_safe("compiler.version")

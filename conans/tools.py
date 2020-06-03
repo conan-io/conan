@@ -194,6 +194,7 @@ WSL = tools_win.WSL
 SFU = tools_win.SFU
 unix_path = tools_win.unix_path
 run_in_windows_bash = tools_win.run_in_windows_bash
+msvs_toolset = tools_win.msvs_toolset
 
 
 @contextmanager

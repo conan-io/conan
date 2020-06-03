@@ -10,7 +10,6 @@ from difflib import get_close_matches
 from six.moves import input as user_input
 
 from conans import __version__ as client_version
-from conans.assets import templates
 from conans.client.cmd.frogarian import cmd_frogarian
 from conans.client.cmd.uploader import UPLOAD_POLICY_FORCE, \
     UPLOAD_POLICY_NO_OVERWRITE, UPLOAD_POLICY_NO_OVERWRITE_RECIPE, UPLOAD_POLICY_SKIP
@@ -1371,7 +1370,9 @@ class Command(object):
         parser.add_argument("--skip-upload", action='store_true', default=False,
                             help='Do not upload anything, just run the checks and the compression')
         parser.add_argument("--force", action='store_true', default=False,
-                            help='Do not check conan recipe date, override remote with local')
+                            help='Ignore checks before uploading the recipe: it will bypass missing'
+                                 ' fields in the scm attribute and it will override remote recipe'
+                                 ' with local regardless of recipe date')
         parser.add_argument("--check", action='store_true', default=False,
                             help='Perform an integrity check, using the manifests, before upload')
         parser.add_argument('-c', '--confirm', default=False, action='store_true',

@@ -73,7 +73,7 @@ class CMake(object):
         self.definitions = builder.get_definitions()
         self.definitions["CONAN_EXPORTED"] = "1"
 
-        self.toolset = toolset or get_toolset(self._settings)
+        self.toolset = toolset or get_toolset(self._settings, self.generator)
         self.build_dir = None
         self.msbuild_verbosity = os.getenv("CONAN_MSBUILD_VERBOSITY") or msbuild_verbosity
 
@@ -226,7 +226,7 @@ class CMake(object):
         elif is_intel:
             if self.generator in ["Ninja", "NMake Makefiles", "NMake Makefiles JOM",
                                   "Unix Makefiles"]:
-                compilervars_dict = tools.compilervars_dict(self._settings, force=True)
+                compilervars_dict = tools.compilervars_dict(self._conanfile, force=True)
                 context = _environment_add(compilervars_dict, post=self._append_vcvars)
         with context:
             self._conanfile.run(command)

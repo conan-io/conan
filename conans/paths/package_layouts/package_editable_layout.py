@@ -11,11 +11,12 @@ from conans.paths import CONANFILE
 
 class PackageEditableLayout(object):
 
-    def __init__(self, base_folder, layout_file, ref):
+    def __init__(self, base_folder, layout_file, ref, conanfile_path):
         assert isinstance(ref, ConanFileReference)
         self._ref = ref
         self._base_folder = base_folder
         self._layout_file = layout_file
+        self._conanfile_path = conanfile_path
 
     @property
     def ref(self):
@@ -29,7 +30,7 @@ class PackageEditableLayout(object):
         """ Path to the conanfile. We can agree that an editable package
             needs to be a Conan package
         """
-        return os.path.join(self._base_folder, CONANFILE)
+        return self._conanfile_path
 
     def editable_cpp_info(self):
         if self._layout_file:
