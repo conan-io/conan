@@ -33,13 +33,14 @@ class GraphLockBuildRequireTestCase(unittest.TestCase):
         t.run("export zlib/conanfile.py")
         t.run("export bzip2/conanfile.py")
 
-        t.run("install boost/conanfile.py --build".format(boost_ref))
-        lockfile = t.load("conan.lock")
-        # TODO: Add checks, there are two 'br/version' nodes
-        # TODO: Why some packages already have prev?
+        # 1. Create build req
+        t.run("create br/conanfile.py")
 
-        t.run("create boost/conanfile.py --profile:build=default --profile:host=default --lock=conan.lock --update --build")
-        # TODO: Some BR doesn't have prev!
+        # 2. Create lock
+        t.run("graph lock boost/conanfile.py --build".format(boost_ref))
 
-        print(t.out)
-        self.fail("AAAA")
+        # 3. Compute build order
+        t.run("graph build-order conan.lock --build")
+
+        # 4. Create the first element of build order
+        t.run("install {}@ --lockfile=conan.lock --build={}".format(br_ref, br_ref.name))
