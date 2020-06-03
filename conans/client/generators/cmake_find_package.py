@@ -236,15 +236,14 @@ class CMakeFindPackageGenerator(Generator):
             ret["Find%s.cmake" % pkg_findname] = self._find_for_dep(pkg_name, pkg_findname, cpp_info)
         return ret
 
-    def _get_components(self, pkg_name, pkg_findname, cpp_info, reverse=True):
+    def _get_components(self, pkg_name, pkg_findname, cpp_info):
         find_package_components = []
         for comp_name, comp in self.sorted_components(cpp_info).items():
             comp_findname = self._get_name(cpp_info.components[comp_name])
             deps_cpp_cmake = DepsCppCmake(comp)
             deps_cpp_cmake.public_deps = self._get_component_requires(pkg_name, pkg_findname, comp)
             find_package_components.append((comp_findname, deps_cpp_cmake))
-        if reverse:
-            find_package_components.reverse()  # From the less dependent to most one
+        find_package_components.reverse()  # From the less dependent to most one
         return find_package_components
 
     def _get_component_requires(self, pkg_name, pkg_findname, comp):
@@ -271,21 +270,21 @@ class CMakeFindPackageGenerator(Generator):
         return " ".join(comp_requires_findnames)
 
     def _find_for_dep(self, pkg_name, pkg_findname, cpp_info):
+        # return the content of the FindXXX.cmake file for the package "pkg_name"
         pkg_version = cpp_info.version
         pkg_public_deps = [self._get_name(self.deps_build_info[public_dep]) for public_dep in
                            cpp_info.public_deps]
         if cpp_info.components:
+            components = self._get_components(pkg_name, pkg_findname, cpp_info)
+            # Note these are in reversed order, from more dependent to less dependent
             pkg_components = " ".join(["{p}::{c}".format(p=pkg_findname, c=comp_findname) for
-                                       comp_findname, _ in self._get_components(pkg_name,
-                                                                                pkg_findname,
-                                                                                cpp_info,
-                                                                                reverse=False)])
+                                       comp_findname, _ in reversed(components)])
             return self.find_components_tpl.render(
                 pkg_name=pkg_findname,
                 pkg_version=pkg_version,
                 pkg_components=pkg_components,
                 pkg_public_deps=pkg_public_deps,
-                components=self._get_components(pkg_name, pkg_findname, cpp_info),
+                components=components,
                 conan_message=CMakeFindPackageCommonMacros.conan_message,
                 conan_find_apple_frameworks=CMakeFindPackageCommonMacros.apple_frameworks_macro)
         else:
