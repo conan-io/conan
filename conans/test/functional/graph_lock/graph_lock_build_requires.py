@@ -44,3 +44,37 @@ class GraphLockBuildRequireTestCase(unittest.TestCase):
 
         # 4. Create the first element of build order
         t.run("install {}@ --lockfile=conan.lock --build={}".format(br_ref, br_ref.name))
+
+
+    def test_package_both_contexts(self):
+        protobuf_ref = ConanFileReference.loads("protobuf/version")
+        lib_ref = ConanFileReference.loads("lib/version")
+        app_ref = ConanFileReference.loads("app/version")
+
+        t = TestClient()
+        t.save({
+            'protobuf/conanfile.py': GenConanfile().with_name(protobuf_ref.name)
+                                                   .with_version(protobuf_ref.version),
+            'lib/conanfile.py': GenConanfile().with_name(lib_ref.name)
+                                              .with_version(lib_ref.version)
+                                              .with_require(protobuf_ref)
+                                              .with_build_require(protobuf_ref),
+            'app/conanfile.py': GenConanfile().with_name(app_ref.name)
+                                              .with_version(app_ref.version)
+                                              .with_require(lib_ref)
+        })
+        t.run("export protobuf/conanfile.py")
+        t.run("export lib/conanfile.py")
+        t.run("export app/conanfile.py")
+
+        # 1. Create build req
+        t.run("create protobuf/conanfile.py")
+
+        # 2. Create lock
+        t.run("graph lock app/conanfile.py --profile:build=default --profile:host=default --build")
+
+        # 3. Compute build order
+        t.run("graph build-order conan.lock --build")
+
+        # 4. Create the first element of build order
+        t.run("install {}@ --profile:build=default --profile:host=default --lockfile=conan.lock --build={}".format(protobuf_ref, protobuf_ref.name))
