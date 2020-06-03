@@ -241,7 +241,7 @@ class CMakeBuildHelper(object):
         elif is_intel:
             if self.generator in ["Ninja", "NMake Makefiles", "NMake Makefiles JOM",
                                   "Unix Makefiles"]:
-                compilervars_dict = tools.compilervars_dict(self._settings, force=True)
+                compilervars_dict = tools.compilervars_dict(self._conanfile, force=True)
                 context = _environment_add(compilervars_dict, post=self._append_vcvars)
         with context:
             self._conanfile.run(command)

@@ -18,6 +18,7 @@ from .gcc import GCCGenerator
 from .json_generator import JsonGenerator
 from .make import MakeGenerator
 from .markdown import MarkdownGenerator
+from .msbuild import MSBuildGenerator
 from .premake import PremakeGenerator
 from .qbs import QbsGenerator
 from .qmake import QmakeGenerator
@@ -67,6 +68,7 @@ registered_generators.add("qmake", QmakeGenerator)
 registered_generators.add("qbs", QbsGenerator)
 registered_generators.add("scons", SConsGenerator)
 registered_generators.add("visual_studio", VisualStudioGenerator)
+registered_generators.add("msbuild", MSBuildGenerator)
 registered_generators.add("visual_studio_multi", VisualStudioMultiGenerator)
 registered_generators.add("visual_studio_legacy", VisualStudioLegacyGenerator)
 registered_generators.add("xcode", XCodeGenerator)

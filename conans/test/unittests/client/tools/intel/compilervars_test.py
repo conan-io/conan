@@ -7,20 +7,21 @@ from conans.client.conf import get_default_settings_yml
 from conans.client.tools.env import environment_append
 from conans.client.tools.intel import compilervars_command
 from conans.errors import ConanException
+from conans.test.utils.conanfile import MockConanfile
 
 
 class CompilerVarsTest(unittest.TestCase):
     def test_already_set(self):
         with environment_append({"PSTLROOT": "1"}):
             settings = Settings.loads(get_default_settings_yml())
-            cvars = compilervars_command(settings)
+            cvars = compilervars_command(MockConanfile(settings))
             self.assertEqual("echo Conan:compilervars already set", cvars)
 
     def test_bas_os(self):
         settings = Settings.loads(get_default_settings_yml())
         settings.os = "SunOS"
         with self.assertRaises(ConanException):
-            compilervars_command(settings)
+            compilervars_command(MockConanfile(settings))
 
     def test_win(self):
         install_dir = "C:\\Intel"
@@ -33,23 +34,23 @@ class CompilerVarsTest(unittest.TestCase):
             settings.compiler.base = "Visual Studio"
             settings.arch = "ppc32"
             with self.assertRaises(ConanException):
-                compilervars_command(settings)
+                compilervars_command(MockConanfile(settings))
 
             path = os.path.join(install_dir, "bin", "compilervars.bat")
 
             settings.arch = "x86"
-            cvars = compilervars_command(settings)
+            cvars = compilervars_command(MockConanfile(settings))
             expected = '"%s" -arch ia32' % path
             self.assertEqual(expected, cvars)
 
             settings.compiler.base.version = "16"
-            cvars = compilervars_command(settings)
+            cvars = compilervars_command(MockConanfile(settings))
             expected = '"%s" -arch ia32 vs2019' % path
             self.assertEqual(expected, cvars)
 
             settings.arch = "x86_64"
             expected = '"%s" -arch intel64 vs2019' % path
-            cvars = compilervars_command(settings)
+            cvars = compilervars_command(MockConanfile(settings))
             self.assertEqual(expected, cvars)
 
 
@@ -64,12 +65,12 @@ class CompilerVarsTest(unittest.TestCase):
             settings.compiler.base = "gcc"
             settings.arch = "ppc32"
             with self.assertRaises(ConanException):
-                compilervars_command(settings)
+                compilervars_command(MockConanfile(settings))
 
             path = os.path.join(install_dir, "bin", "compilervars.sh")
 
             settings.arch = "x86"
-            cvars = compilervars_command(settings)
+            cvars = compilervars_command(MockConanfile(settings))
             expected = 'COMPILERVARS_PLATFORM=linux COMPILERVARS_ARCHITECTURE=ia32 . ' \
                        '"%s" -arch ia32 -platform linux' % path
             self.assertEqual(expected, cvars)
@@ -77,7 +78,7 @@ class CompilerVarsTest(unittest.TestCase):
             settings.arch = "x86_64"
             expected = 'COMPILERVARS_PLATFORM=linux COMPILERVARS_ARCHITECTURE=intel64 . ' \
                        '"%s" -arch intel64 -platform linux' % path
-            cvars = compilervars_command(settings)
+            cvars = compilervars_command(MockConanfile(settings))
             self.assertEqual(expected, cvars)
 
     def test_mac(self):
@@ -91,12 +92,12 @@ class CompilerVarsTest(unittest.TestCase):
             settings.compiler.base = "apple-clang"
             settings.arch = "ppc32"
             with self.assertRaises(ConanException):
-                compilervars_command(settings)
+                compilervars_command(MockConanfile(settings))
 
             path = os.path.join(install_dir, "bin", "compilervars.sh")
 
             settings.arch = "x86"
-            cvars = compilervars_command(settings)
+            cvars = compilervars_command(MockConanfile(settings))
             expected = 'COMPILERVARS_PLATFORM=mac COMPILERVARS_ARCHITECTURE=ia32 . ' \
                        '"%s" -arch ia32 -platform mac' % path
             self.assertEqual(expected, cvars)
@@ -104,5 +105,5 @@ class CompilerVarsTest(unittest.TestCase):
             settings.arch = "x86_64"
             expected = 'COMPILERVARS_PLATFORM=mac COMPILERVARS_ARCHITECTURE=intel64 . ' \
                        '"%s" -arch intel64 -platform mac' % path
-            cvars = compilervars_command(settings)
+            cvars = compilervars_command(MockConanfile(settings))
             self.assertEqual(expected, cvars)
