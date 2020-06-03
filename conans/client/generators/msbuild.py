@@ -92,7 +92,7 @@ class MSBuildGenerator(Generator):
         return name.lower(), condition
 
     def _general(self, name_general, deps):
-        # read the existing mult_filename or use the template if it doesn't exist
+        # read the existing multi_filename or use the template if it doesn't exist
         multi_path = os.path.join(self.output_path, name_general)
         if os.path.isfile(multi_path):
             content_multi = load(multi_path)
@@ -120,7 +120,8 @@ class MSBuildGenerator(Generator):
         content_multi = "\n".join(line for line in content_multi.splitlines() if line.strip())
         return content_multi
 
-    def _vars_conf(self, name, cpp_info):
+    def _vars_props_per_pkg_conf(self, name, cpp_info):
+        # returns a .props file with the variables definition for one package for one configuration
         def has_valid_ext(lib):
             ext = os.path.splitext(lib)[1]
             return ext in VALID_LIB_EXTENSIONS
@@ -153,7 +154,7 @@ class MSBuildGenerator(Generator):
 
         content_multi = content_multi.format(name=dep_name)
 
-        # parse the multi_file and add new import sstatement if needed
+        # parse the multi_file and add new import statement if needed
         dom = minidom.parseString(content_multi)
         import_deps, import_vars = dom.getElementsByTagName('ImportGroup')
 
@@ -201,9 +202,9 @@ class MSBuildGenerator(Generator):
         public_deps = self.conanfile.requires.keys()
         result[general_name] = self._general(general_name, public_deps)
         for dep_name, cpp_info in self._deps_build_info.dependencies:
-            # One file per configuration, with jus tthe variables
+            # One file per configuration, with just the variables
             vars_props_name = "conan_%s%s.props" % (dep_name, conf_name)
-            vars_conf_content = self._vars_conf(dep_name, cpp_info)
+            vars_conf_content = self._vars_props_per_pkg_conf(dep_name, cpp_info)
             result[vars_props_name] = vars_conf_content
 
             # The entry point for each package, it will have conditionals to the others
