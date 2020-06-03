@@ -53,41 +53,7 @@ class CMakeFindPackageGenerator(Generator):
         #############################################################################################
         {{ conan_message }}
         {{ conan_find_apple_frameworks }}
-        {% raw %}
-        function(conan_component_library_targets out_libraries_target libdir libraries dependencies system_libs frameworks)
-            foreach(_LIBRARY_NAME ${libraries})
-                find_library(CONAN_FOUND_LIBRARY NAME ${_LIBRARY_NAME} PATHS ${libdir}
-                             NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
-                if(CONAN_FOUND_LIBRARY)
-                    conan_message(STATUS "Conan: Library ${_LIBRARY_NAME} found ${CONAN_FOUND_LIBRARY}")
-                    if(NOT ${CMAKE_VERSION} VERSION_LESS "3.0")
-                        # Create a micro-target for each lib/a found
-                        set(_LIB_NAME ${_LIBRARY_NAME})
-                        if(NOT TARGET ${_LIB_NAME})
-                            # Create a micro-target for each lib/a found
-                            add_library(${_LIB_NAME} UNKNOWN IMPORTED)
-                            set_target_properties(${_LIB_NAME} PROPERTIES IMPORTED_LOCATION ${CONAN_FOUND_LIBRARY})
-                        else()
-                            conan_message(STATUS "Conan: Skipping already existing target: ${_LIB_NAME}")
-                        endif()
-                        list(APPEND _out_libraries_target ${_LIB_NAME})
-                    endif()
-                else()
-                    conan_message(FATAL_ERROR "Conan: Component library ${_LIBRARY_NAME} not found in paths: ${libdir}")
-                endif()
-                unset(CONAN_FOUND_LIBRARY CACHE)
-            endforeach()
-
-            # Add all dependencies to all targets
-            string(REPLACE " " ";" deps_list "${dependencies}")
-            foreach(_out_library_target ${_out_libraries_target})
-                set_property(TARGET ${_out_library_target} PROPERTY INTERFACE_LINK_LIBRARIES "${deps_list};${system_libs};${frameworks}")
-            endforeach()
-
-            conan_message(STATUS "Conan: Component library targets: ${_out_libraries_target}")
-            set(${out_libraries_target} ${_out_libraries_target} PARENT_SCOPE)
-        endfunction()
-        {% endraw %}
+        {{ conan_package_library_targets }}
 
         ########### FOUND PACKAGE ###################################################################
         #############################################################################################
@@ -162,12 +128,15 @@ class CMakeFindPackageGenerator(Generator):
         conan_find_apple_frameworks({{ pkg_name }}_{{ comp_name }}_FRAMEWORKS_FOUND "{{ '${'+pkg_name+'_'+comp_name+'_FRAMEWORKS}' }}" "{{ '${'+pkg_name+'_'+comp_name+'_FRAMEWORK_DIRS}' }}")
 
         set({{ pkg_name }}_{{ comp_name }}_LIB_TARGETS "")
-        conan_component_library_targets({{ pkg_name }}_{{ comp_name }}_LIB_TARGETS
-                                        "{{ '${'+pkg_name+'_'+comp_name+'_LIB_DIRS}' }}"
-                                        "{{ '${'+pkg_name+'_'+comp_name+'_LIBS}' }}"
-                                        "{{ '${'+pkg_name+'_'+comp_name+'_DEPENDENCIES}' }}"
-                                        "{{ '${'+pkg_name+'_'+comp_name+'_SYSTEM_LIBS}' }}"
-                                        "{{ '${'+pkg_name+'_'+comp_name+'_FRAMEWORKS_FOUND}' }}")
+        set({{ pkg_name }}_{{ comp_name }}_NOT_USED "")
+        set({{ pkg_name }}_{{ comp_name }}_LIBS_FRAMEWORKS_DEPS {{ '${'+pkg_name+'_'+comp_name+'_FRAMEWORKS_FOUND}' }} {{ '${'+pkg_name+'_'+comp_name+'_SYSTEM_LIBS}' }} {{ '${'+pkg_name+'_'+comp_name+'_DEPENDENCIES}' }})
+        conan_package_library_targets("{{ '${'+pkg_name+'_'+comp_name+'_LIBS}' }}"
+                                      "{{ '${'+pkg_name+'_'+comp_name+'_LIB_DIRS}' }}"
+                                      "{{ '${'+pkg_name+'_'+comp_name+'_LIBS_FRAMEWORKS_DEPS}' }}"
+                                      {{ pkg_name }}_{{ comp_name }}_NOT_USED
+                                      {{ pkg_name }}_{{ comp_name }}_LIB_TARGETS
+                                      ""
+                                      "{{ pkg_name }}_{{ comp_name }}")
 
         set({{ pkg_name }}_{{ comp_name }}_LINK_LIBS {{ '${'+pkg_name+'_'+comp_name+'_LIB_TARGETS}' }} {{ '${'+pkg_name+'_'+comp_name+'_DEPENDENCIES}' }})
 
@@ -286,7 +255,8 @@ class CMakeFindPackageGenerator(Generator):
                 pkg_public_deps=pkg_public_deps,
                 components=components,
                 conan_message=CMakeFindPackageCommonMacros.conan_message,
-                conan_find_apple_frameworks=CMakeFindPackageCommonMacros.apple_frameworks_macro)
+                conan_find_apple_frameworks=CMakeFindPackageCommonMacros.apple_frameworks_macro,
+                conan_package_library_targets=CMakeFindPackageCommonMacros.conan_package_library_targets)
         else:
             # The common macros
             macros_and_functions = "\n".join([
