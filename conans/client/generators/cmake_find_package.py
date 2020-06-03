@@ -112,21 +112,21 @@ class CMakeFindPackageGenerator(Generator):
 
         ########### COMPONENT {{ comp_name }} VARIABLES #############################################
 
-        set({{ comp_name }}_INCLUDE_DIRS {{ comp.include_paths }})
-        set({{ comp_name }}_INCLUDE_DIR {{ comp.include_path }})
-        set({{ comp_name }}_INCLUDES {{ comp.include_paths }})
-        set({{ comp_name }}_LIB_DIRS {{ comp.lib_paths }})
-        set({{ comp_name }}_RES_DIRS {{ comp.res_paths }})
-        set({{ comp_name }}_DEFINITIONS {{ comp.defines }})
-        set({{ comp_name }}_COMPILE_DEFINITIONS {{ comp.compile_definitions }})
-        set({{ comp_name }}_COMPILE_OPTIONS_LIST "{{ comp.cxxflags_list }}" "{{ comp.cflags_list }}")
-        set({{ comp_name }}_LIBS {{ comp.libs }})
-        set({{ comp_name }}_SYSTEM_LIBS {{ comp.system_libs }})
-        set({{ comp_name }}_FRAMEWORK_DIRS {{ comp.framework_paths }})
-        set({{ comp_name }}_FRAMEWORKS {{ comp.frameworks }})
-        set({{ comp_name }}_BUILD_MODULES_PATHS {{ comp.build_modules_paths }})
-        set({{ comp_name }}_DEPENDENCIES {{ comp.public_deps }})
-        set({{ comp_name }}_LINKER_FLAGS_LIST
+        set({{ pkg_name }}_{{ comp_name }}_INCLUDE_DIRS {{ comp.include_paths }})
+        set({{ pkg_name }}_{{ comp_name }}_INCLUDE_DIR {{ comp.include_path }})
+        set({{ pkg_name }}_{{ comp_name }}_INCLUDES {{ comp.include_paths }})
+        set({{ pkg_name }}_{{ comp_name }}_LIB_DIRS {{ comp.lib_paths }})
+        set({{ pkg_name }}_{{ comp_name }}_RES_DIRS {{ comp.res_paths }})
+        set({{ pkg_name }}_{{ comp_name }}_DEFINITIONS {{ comp.defines }})
+        set({{ pkg_name }}_{{ comp_name }}_COMPILE_DEFINITIONS {{ comp.compile_definitions }})
+        set({{ pkg_name }}_{{ comp_name }}_COMPILE_OPTIONS_LIST "{{ comp.cxxflags_list }}" "{{ comp.cflags_list }}")
+        set({{ pkg_name }}_{{ comp_name }}_LIBS {{ comp.libs }})
+        set({{ pkg_name }}_{{ comp_name }}_SYSTEM_LIBS {{ comp.system_libs }})
+        set({{ pkg_name }}_{{ comp_name }}_FRAMEWORK_DIRS {{ comp.framework_paths }})
+        set({{ pkg_name }}_{{ comp_name }}_FRAMEWORKS {{ comp.frameworks }})
+        set({{ pkg_name }}_{{ comp_name }}_BUILD_MODULES_PATHS {{ comp.build_modules_paths }})
+        set({{ pkg_name }}_{{ comp_name }}_DEPENDENCIES {{ comp.public_deps }})
+        set({{ pkg_name }}_{{ comp_name }}_LINKER_FLAGS_LIST
                 $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:{{ comp.sharedlinkflags_list }}>
                 $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:{{ comp.sharedlinkflags_list }}>
                 $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:{{ comp.exelinkflags_list }}>
@@ -158,23 +158,23 @@ class CMakeFindPackageGenerator(Generator):
 
         ########## COMPONENT {{ comp_name }} FIND LIBRARIES & FRAMEWORKS / DYNAMIC VARS #############
 
-        set({{ comp_name }}_FRAMEWORKS_FOUND "")
-        conan_find_apple_frameworks({{ comp_name }}_FRAMEWORKS_FOUND "{{ '${'+comp_name+'_FRAMEWORKS}' }}" "{{ '${'+comp_name+'_FRAMEWORK_DIRS}' }}")
+        set({{ pkg_name }}_{{ comp_name }}_FRAMEWORKS_FOUND "")
+        conan_find_apple_frameworks({{ pkg_name }}_{{ comp_name }}_FRAMEWORKS_FOUND "{{ '${'+pkg_name+'_'+comp_name+'_FRAMEWORKS}' }}" "{{ '${'+pkg_name+'_'+comp_name+'_FRAMEWORK_DIRS}' }}")
 
-        set({{ comp_name }}_LIB_TARGETS "")
-        conan_component_library_targets({{ comp_name }}_LIB_TARGETS
-                                        "{{ '${'+comp_name+'_LIB_DIRS}' }}"
-                                        "{{ '${'+comp_name+'_LIBS}' }}"
-                                        "{{ '${'+comp_name+'_DEPENDENCIES}' }}"
-                                        "{{ '${'+comp_name+'_SYSTEM_LIBS}' }}"
-                                        "{{ '${'+comp_name+'_FRAMEWORKS_FOUND}' }}")
+        set({{ pkg_name }}_{{ comp_name }}_LIB_TARGETS "")
+        conan_component_library_targets({{ pkg_name }}_{{ comp_name }}_LIB_TARGETS
+                                        "{{ '${'+pkg_name+'_'+comp_name+'_LIB_DIRS}' }}"
+                                        "{{ '${'+pkg_name+'_'+comp_name+'_LIBS}' }}"
+                                        "{{ '${'+pkg_name+'_'+comp_name+'_DEPENDENCIES}' }}"
+                                        "{{ '${'+pkg_name+'_'+comp_name+'_SYSTEM_LIBS}' }}"
+                                        "{{ '${'+pkg_name+'_'+comp_name+'_FRAMEWORKS_FOUND}' }}")
 
-        set({{ comp_name }}_LINK_LIBS {{ '${'+comp_name+'_LIB_TARGETS}' }} {{ '${'+comp_name+'_DEPENDENCIES}' }})
+        set({{ pkg_name }}_{{ comp_name }}_LINK_LIBS {{ '${'+pkg_name+'_'+comp_name+'_LIB_TARGETS}' }} {{ '${'+pkg_name+'_'+comp_name+'_DEPENDENCIES}' }})
 
         set(CMAKE_MODULE_PATH {{ comp.build_paths }} ${CMAKE_MODULE_PATH})
         set(CMAKE_PREFIX_PATH {{ comp.build_paths }} ${CMAKE_PREFIX_PATH})
 
-        foreach(_BUILD_MODULE_PATH {{ '${'+comp_name+'_BUILD_MODULES_PATHS}' }})
+        foreach(_BUILD_MODULE_PATH {{ '${'+pkg_name+'_'+comp_name+'_BUILD_MODULES_PATHS}' }})
             include(${_BUILD_MODULE_PATH})
         endforeach()
 
@@ -193,15 +193,15 @@ class CMakeFindPackageGenerator(Generator):
             if(NOT TARGET {{ pkg_name }}::{{ comp_name }})
                 add_library({{ pkg_name }}::{{ comp_name }} INTERFACE IMPORTED)
                 set_target_properties({{ pkg_name }}::{{ comp_name }} PROPERTIES INTERFACE_INCLUDE_DIRECTORIES
-                                      "{{ '${'+comp_name+'_INCLUDE_DIRS}' }}")
+                                      "{{ '${'+pkg_name+'_'+comp_name+'_INCLUDE_DIRS}' }}")
                 set_target_properties({{ pkg_name }}::{{ comp_name }} PROPERTIES INTERFACE_LINK_DIRECTORIES
-                                      "{{ '${'+comp_name+'_LIB_DIRS}' }}")
+                                      "{{ '${'+pkg_name+'_'+comp_name+'_LIB_DIRS}' }}")
                 set_target_properties({{ pkg_name }}::{{ comp_name }} PROPERTIES INTERFACE_LINK_LIBRARIES
-                                      "{{ '${'+comp_name+'_LINK_LIBS}' }};{{ '${'+comp_name+'_LINKER_FLAGS_LIST}' }}")
+                                      "{{ '${'+pkg_name+'_'+comp_name+'_LINK_LIBS}' }};{{ '${'+pkg_name+'_'+comp_name+'_LINKER_FLAGS_LIST}' }}")
                 set_target_properties({{ pkg_name }}::{{ comp_name }} PROPERTIES INTERFACE_COMPILE_DEFINITIONS
-                                      "{{ '${'+comp_name+'_COMPILE_DEFINITIONS}' }}")
+                                      "{{ '${'+pkg_name+'_'+comp_name+'_COMPILE_DEFINITIONS}' }}")
                 set_target_properties({{ pkg_name }}::{{ comp_name }} PROPERTIES INTERFACE_COMPILE_OPTIONS
-                                      "{{ '${'+comp_name+'_COMPILE_OPTIONS_LIST}' }}")
+                                      "{{ '${'+pkg_name+'_'+comp_name+'_COMPILE_OPTIONS_LIST}' }}")
             endif()
         endif()
 
