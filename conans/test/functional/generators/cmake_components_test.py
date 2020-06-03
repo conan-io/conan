@@ -149,7 +149,7 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
         client.run("create .")
 
     @staticmethod
-    def _create_world(client, conanfile=None, cmakelists=None, test_package_cmakelists=None):
+    def _create_world(client, conanfile=None, cmakelists=None, test_cmakelists=None):
         _conanfile_world = textwrap.dedent("""
             from conans import ConanFile, CMake
 
@@ -227,7 +227,7 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
             add_library(worldall worldall.cpp)
             target_link_libraries(worldall helloworld greetings::greetings)
             """)
-        test_package_conanfile = textwrap.dedent("""
+        test_conanfile = textwrap.dedent("""
             import os
             from conans import ConanFile, CMake
 
@@ -245,14 +245,14 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
                     self.run(".%sexample" % os.sep)
                     self.run(".%sexample2" % os.sep)
             """)
-        test_package_example_cpp = textwrap.dedent("""
+        test_example_cpp = textwrap.dedent("""
             #include "worldall.h"
 
             int main() {
                 worldAll();
             }
             """)
-        _test_package_cmakelists = textwrap.dedent("""
+        _test_cmakelists = textwrap.dedent("""
             cmake_minimum_required(VERSION 3.0)
             project(PackageTest CXX)
 
@@ -273,9 +273,9 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
                      "src/helloworld.cpp": helloworld_cpp,
                      "src/worldall.h": worldall_h,
                      "src/worldall.cpp": worldall_cpp,
-                     "test_package/conanfile.py": test_package_conanfile,
-                     "test_package/CMakeLists.txt": test_package_cmakelists or _test_package_cmakelists,
-                     "test_package/example.cpp": test_package_example_cpp})
+                     "test_package/conanfile.py": test_conanfile,
+                     "test_package/CMakeLists.txt": test_cmakelists or _test_cmakelists,
+                     "test_package/example.cpp": test_example_cpp})
         client.run("create .")
 
     def basic_test(self):
@@ -291,7 +291,7 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
         client = TestClient()
         self._create_greetings(client, custom_names=True)
 
-        conanfile_world = textwrap.dedent("""
+        conanfile = textwrap.dedent("""
             from conans import ConanFile, CMake
 
             class WorldConan(ConanFile):
@@ -321,7 +321,7 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
                     self.cpp_info.components["worldall"].requires = ["greetings::bye", "helloworld"]
                     self.cpp_info.components["worldall"].libs = ["Worldall"]
         """)
-        cmakelists_world = textwrap.dedent("""
+        cmakelists = textwrap.dedent("""
             cmake_minimum_required(VERSION 3.0)
             project(world CXX)
 
@@ -336,7 +336,7 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
             add_library(Worldall worldall.cpp)
             target_link_libraries(Worldall Helloworld Greetings::Bye)
         """)
-        test_package_cmakelists = textwrap.dedent("""
+        test_cmakelists = textwrap.dedent("""
             cmake_minimum_required(VERSION 3.0)
             project(PackageTest CXX)
 
@@ -351,8 +351,8 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
             add_executable(example2 example.cpp)
             target_link_libraries(example2 World::World)
             """)
-        self._create_world(client, conanfile=conanfile_world, cmakelists=cmakelists_world,
-                           test_package_cmakelists=test_package_cmakelists)
+        self._create_world(client, conanfile=conanfile, cmakelists=cmakelists,
+                           test_cmakelists=test_cmakelists)
         self.assertIn("Hello World!", client.out)
         self.assertIn("Bye World!", client.out)
 
@@ -411,7 +411,35 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
         client = TestClient()
         self._create_greetings(client, components=False)
 
-        cmakelists2 = textwrap.dedent("""
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile, CMake
+
+            class WorldConan(ConanFile):
+                name = "world"
+                version = "0.0.1"
+                settings = "os", "compiler", "build_type", "arch"
+                generators = "cmake_find_package", "cmake"
+                exports_sources = "src/*"
+                requires = "greetings/0.0.1"
+
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure(source_folder="src")
+                    cmake.build()
+
+                def package(self):
+                    self.copy("*.h", dst="include", src="src")
+                    self.copy("*.lib", dst="lib", keep_path=False)
+                    self.copy("*.a", dst="lib", keep_path=False)
+
+                def package_info(self):
+                    self.cpp_info.components["helloworld"].requires = ["greetings::greetings"]
+                    self.cpp_info.components["helloworld"].libs = ["helloworld"]
+                    self.cpp_info.components["worldall"].requires = ["helloworld",
+                                                                     "greetings::greetings"]
+                    self.cpp_info.components["worldall"].libs = ["worldall"]
+            """)
+        cmakelists = textwrap.dedent("""
             cmake_minimum_required(VERSION 3.0)
             project(world CXX)
 
@@ -428,7 +456,7 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
             add_library(worldall worldall.cpp)
             target_link_libraries(worldall helloworld greetings::greetings)
             """)
-        self._create_world(client, cmakelists=cmakelists2)
+        self._create_world(client, conanfile=conanfile, cmakelists=cmakelists)
         self.assertIn("Hello World!", client.out)
         self.assertIn("Bye World!", client.out)
 
