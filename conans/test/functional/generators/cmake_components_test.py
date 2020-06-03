@@ -451,12 +451,30 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
             add_library(helloworld helloworld.cpp)
             target_link_libraries(helloworld greetings::greetings)
 
-            find_package(greetings COMPONENTS hello bye)
+            find_package(greetings COMPONENTS bye)
 
             add_library(worldall worldall.cpp)
             target_link_libraries(worldall helloworld greetings::greetings)
             """)
-        self._create_world(client, conanfile=conanfile, cmakelists=cmakelists)
+        with self.assertRaises(Exception):
+            self._create_world(client, conanfile=conanfile, cmakelists=cmakelists)
+        self.assertIn("Conan: Component hello NOT found in package greetings", client.out)
+        cmakelists2 = textwrap.dedent("""
+            cmake_minimum_required(VERSION 3.0)
+            project(world CXX)
+
+            include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+            conan_basic_setup()
+
+            find_package(greetings)
+
+            add_library(helloworld helloworld.cpp)
+            target_link_libraries(helloworld greetings::greetings)
+
+            add_library(worldall worldall.cpp)
+            target_link_libraries(worldall helloworld greetings::greetings)
+            """)
+        self._create_world(client, conanfile=conanfile, cmakelists=cmakelists2)
         self.assertIn("Hello World!", client.out)
         self.assertIn("Bye World!", client.out)
 
@@ -487,6 +505,42 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
         client.run("install world/0.0.1@ -g cmake_find_package", assert_error=True)
         self.assertIn("ERROR: Component 'greetings::non-existent' not found in 'greetings' "
                       "package requirement", client.out)
+
+    def component_not_found_cmake_test(self):
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+
+            class GreetingsConan(ConanFile):
+                def package_info(self):
+                    self.cpp_info.components["hello"].libs = ["hello"]
+        """)
+        client = TestClient()
+        client.save({"conanfile.py": conanfile})
+        client.run("create . greetings/0.0.1@")
+
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile, CMake
+
+            class ConsumerConan(ConanFile):
+                generators = "cmake_find_package"
+                requires = "greetings/0.0.1"
+
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+        """)
+        cmakelists = textwrap.dedent("""
+            cmake_minimum_required(VERSION 3.0)
+            project(Consumer CXX)
+
+            find_package(greetings COMPONENTS hello)
+            find_package(greetings COMPONENTS non-existent)
+            """)
+        client.save({"conanfile.py": conanfile, "CMakeLists.txt": cmakelists})
+        client.run("install .")
+        client.run("build .", assert_error=True)
+        self.assertIn("Conan: Component 'hello' found in package 'greetings'", client.out)
+        self.assertIn("Conan: Component 'non-existent' NOT found in package 'greetings'", client.out)
 
     def same_names_test(self):
         client = TestClient()
