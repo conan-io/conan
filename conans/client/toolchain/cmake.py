@@ -91,8 +91,11 @@ class CMakeToolchain(object):
 
         # Configure
         {% if generator_platform %}
-        set(CMAKE_GENERATOR_PLATFORM "{{ generator_platform }}" CACHE STRING "" FORCE){% endif %}
-        {% if toolset %}set(CMAKE_GENERATOR_TOOLSET "{{ toolset }}" CACHE STRING "" FORCE){% endif%}
+        set(CMAKE_GENERATOR_PLATFORM "{{ generator_platform }}" CACHE STRING "" FORCE)
+        {% endif %}
+        {% if toolset %}
+        set(CMAKE_GENERATOR_TOOLSET "{{ toolset }}" CACHE STRING "" FORCE)
+        {% endif%}
 
         # build_type (Release, Debug, etc) is only defined for single-config generators
         {% if build_type %}
@@ -137,9 +140,11 @@ class CMakeToolchain(object):
         #   these are the things done by 'conan_basic_setup()'
          # To support the cmake_find_package generators:
         {% if cmake_module_path %}
-        set(CMAKE_MODULE_PATH {{ cmake_module_path }} ${CMAKE_MODULE_PATH}){% endif%}
+        set(CMAKE_MODULE_PATH {{ cmake_module_path }} ${CMAKE_MODULE_PATH})
+        {% endif%}
         {% if cmake_prefix_path %}
-        set(CMAKE_PREFIX_PATH {{ cmake_prefix_path }} ${CMAKE_PREFIX_PATH}){% endif%}
+        set(CMAKE_PREFIX_PATH {{ cmake_prefix_path }} ${CMAKE_PREFIX_PATH})
+        {% endif%}
 
         {% if fpic %}
         message(STATUS "Conan toolchain: Setting CMAKE_POSITION_INDEPENDENT_CODE=ON (options.fPIC)")
