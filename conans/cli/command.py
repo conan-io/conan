@@ -33,7 +33,7 @@ class SmartFormatter(argparse.HelpFormatter):
 
 class Command(object):
     """A single command of the conan application, with all the first level commands. Manages the
-    parsing of parameters and delegates functionality in collaborators. It can also show the
+    parsing of parameters and delegates functionality to the conan python api. It can also show the
     help of the tool.
     """
     def __init__(self, conan_api):
@@ -45,8 +45,7 @@ class Command(object):
         """
         Shows help for a specific command.
         """
-        parser = argparse.ArgumentParser(description=self.help.__doc__,
-                                         prog="conan help",
+        parser = argparse.ArgumentParser(description=self.help.__doc__, prog="conan help",
                                          formatter_class=SmartFormatter)
         parser.add_argument("command", help='command', nargs="?")
         args = parser.parse_args(*args)
@@ -62,10 +61,9 @@ class Command(object):
 
     def search(self, *args):
         """
-        Searches package recipes
+        Search package recipes
         """
-        parser = argparse.ArgumentParser(description=self.search.__doc__,
-                                         prog="conan search",
+        parser = argparse.ArgumentParser(description=self.search.__doc__, prog="conan search",
                                          formatter_class=SmartFormatter)
         parser.add_argument('pattern', help="pattern for matching package recipes")
         parser.add_argument('-r', '--remote', action="append", nargs='?',
