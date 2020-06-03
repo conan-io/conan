@@ -131,6 +131,7 @@ MSVS_DEFAULT_TOOLSETS_INVERSE = {"v142": "16",
 
 def msvs_toolset(conanfile):
     from conans.model.conan_file import ConanFile
+
     if isinstance(conanfile, ConanFile):
         settings = conanfile.settings
     else:
