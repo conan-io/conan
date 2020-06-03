@@ -83,7 +83,7 @@ class CMakeToolchain(object):
         if(CONAN_TOOLCHAIN_INCLUDED)
           return()
         endif()
-        set(CONAN_TOOLCHAIN_INCLUDED true)
+        set(CONAN_TOOLCHAIN_INCLUDED TRUE)
 
         ########### Utility macros and functions ###########
         {{ cmake_macros_and_functions }}
