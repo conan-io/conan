@@ -83,7 +83,8 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
             info = textwrap.dedent("""
                         self.cpp_info.libs = ["hello", "bye"]
                         """)
-        conanfile_greetings = conanfile_greetings % textwrap.indent(info, "        ")
+        wrapper = textwrap.TextWrapper(width=81, initial_indent="   ", subsequent_indent="        ")
+        conanfile_greetings = conanfile_greetings % wrapper.fill(info)
 
         cmakelists_greetings = textwrap.dedent("""
             cmake_minimum_required(VERSION 3.0)
@@ -458,7 +459,7 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
             """)
         with self.assertRaises(Exception):
             self._create_world(client, conanfile=conanfile, cmakelists=cmakelists)
-        self.assertIn("Conan: Component hello NOT found in package greetings", client.out)
+        self.assertIn("Conan: Component 'hello' NOT found in package 'greetings'", client.out)
         cmakelists2 = textwrap.dedent("""
             cmake_minimum_required(VERSION 3.0)
             project(world CXX)
