@@ -83,6 +83,29 @@ class CMakeFindPackageGenerator(Generator):
         ########### VARIABLES #######################################################################
         #############################################################################################
 
+        set({{ pkg_name }}_INCLUDE_DIRS {{ pkg.include_paths }})
+        set({{ pkg_name }}_INCLUDE_DIR {{ pkg.include_path }})
+        set({{ pkg_name }}_INCLUDES {{ pkg.include_paths }})
+        set({{ pkg_name }}_LIB_DIRS {{ pkg.lib_paths }})
+        set({{ pkg_name }}_RES_DIRS {{ pkg.res_paths }})
+        set({{ pkg_name }}_DEFINITIONS {{ pkg.defines }})
+        set({{ pkg_name }}_LINKER_FLAGS_LIST
+                $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:{{ pkg.sharedlinkflags_list }}>
+                $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:{{ pkg.sharedlinkflags_list }}>
+                $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:{{ pkg.exelinkflags_list }}>
+        )
+        set({{ pkg_name }}_COMPILE_DEFINITIONS {{ pkg.compile_definitions }})
+        set({{ pkg_name }}_COMPILE_OPTIONS_LIST "{{ pkg.cxxflags_list }}" "{{ pkg.cflags_list }}")
+        set({{ pkg_name }}_LIBRARIES_TARGETS "") # Will be filled later, if CMake 3
+        set({{ pkg_name }}_LIBRARIES "") # Will be filled later
+        set({{ pkg_name }}_LIBS "") # Same as {{ pkg_name }}_LIBRARIES
+        set({{ pkg_name }}_LIBRARY_LIST {{ pkg.libs }})
+        set({{ pkg_name }}_SYSTEM_LIBS {{ pkg.system_libs }})
+        set({{ pkg_name }}_FRAMEWORK_DIRS {{ pkg.framework_paths }})
+        set({{ pkg_name }}_FRAMEWORKS {{ pkg.frameworks }})
+        set({{ pkg_name }}_FRAMEWORKS_FOUND "") # Will be filled later
+        set({{ pkg_name }}_BUILD_MODULES_PATHS {{ pkg.build_modules_paths }})
+
         {%- for comp_name, comp in components %}
 
         ########### COMPONENT {{ comp_name }} VARIABLES #############################################
@@ -257,10 +280,12 @@ class CMakeFindPackageGenerator(Generator):
             # Note these are in reversed order, from more dependent to less dependent
             pkg_components = " ".join(["{p}::{c}".format(p=pkg_findname, c=comp_findname) for
                                        comp_findname, _ in reversed(components)])
+            pkg = DepsCppCmake(cpp_info)
             return self.find_components_tpl.render(
                 pkg_name=pkg_findname,
                 pkg_version=pkg_version,
                 pkg_components=pkg_components,
+                pkg=pkg,
                 pkg_public_deps=pkg_public_deps,
                 components=components,
                 conan_message=CMakeFindPackageCommonMacros.conan_message,
