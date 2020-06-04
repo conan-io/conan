@@ -37,10 +37,10 @@ def _compute_build_flags(conanfile, generator, parallel, msbuild_verbosity):
 
 
 class CMakeToolchainBuildHelper(object):
-    """ CMake helper to use together with the toolchain feature, it has the same interface
-        as the original 'conans.client.build.cmake.CMake' helper, but it will warn the
-        user about arguments forbidden, not used,... and how to achieve the same behavior
-        with the toolchain.
+    """ CMake helper to use together with the toolchain feature. It implements a very simple
+    wrapper to call the cmake executable, but without passing compile flags, preprocessor
+    definitions... all that is set by the toolchain. Only the generator and the CMAKE_TOOLCHAIN_FILE
+    are passed to the command line, plus the ``--config Release`` for builds in multi-config
     """
 
     def __init__(self, conanfile, generator=None, build_folder=None, parallel=True,
@@ -96,6 +96,11 @@ class CMakeToolchainBuildHelper(object):
         bf = self._conanfile.build_folder
         if self._build_folder:
             bf = os.path.join(self._conanfile.build_folder, self._build_folder)
+
+        if build_type and not self._is_multiconfiguration:
+            self._conanfile.output.error("Don't specify 'build_type' at build time for "
+                                         "single-config build systems")
+
         bt = build_type or self._conanfile.settings.get_safe("build_type")
 
         if bt and self._is_multiconfiguration:

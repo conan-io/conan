@@ -154,6 +154,9 @@ class CMakeToolchain(object):
         {% if set_rpath %}conan_set_rpath(){% endif %}
         {% if set_std %}conan_set_std(){% endif %}
         {% if set_libcxx %}conan_set_libcxx(){% endif %}
+        {% if install_prefix %}
+        set(CMAKE_INSTALL_PREFIX {{install_prefix}} CACHE STRING "" FORCE)
+        {% endif %}
 
         set(CMAKE_CXX_FLAGS_INIT "${CONAN_CXX_FLAGS}" CACHE STRING "" FORCE)
         set(CMAKE_C_FLAGS_INIT "${CONAN_C_FLAGS}" CACHE STRING "" FORCE)
@@ -280,6 +283,12 @@ class CMakeToolchain(object):
         # TODO: Add all the stuff related to settings (ALL settings or just _MY_ settings?)
         # TODO: I would want to have here the path to the compiler too
         build_type = self._build_type if not is_multi_configuration(self._generator) else None
+        try:
+            # This is only defined in the cache, not in the local flow
+            install_prefix = self._conanfile.package_folder.replace("\\", "/")
+        except AttributeError:
+            # FIXME: In the local flow, we don't know the package_folder
+            install_prefix = None
         context = {
             "build_type": build_type,
             "generator_platform": self._generator_platform,
@@ -291,6 +300,7 @@ class CMakeToolchain(object):
             "set_rpath": self._set_rpath,
             "set_std": self._set_std,
             "set_libcxx": self._set_libcxx,
+            "install_prefix": install_prefix
         }
         t = Template(self._template_toolchain)
         content = t.render(conan_project_include_cmake=conan_project_include_cmake,

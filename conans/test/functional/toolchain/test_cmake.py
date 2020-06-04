@@ -8,6 +8,7 @@ import unittest
 from nose.plugins.attrib import attr
 from parameterized.parameterized import parameterized
 
+from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.utils.tools import TestClient
 
 
@@ -212,7 +213,7 @@ class WinTest(Base):
         include = self.client.load("build/conan_project_include.cmake")
         settings["build_type"] = "Release" if build_type == "Debug" else "Debug"
         self._run_build(settings, options)
-        # The generated toolchain files must be identical
+        # The generated toolchain files must be identical because it is a multi-config
         self.assertEqual(toolchain, self.client.load("build/conan_toolchain.cmake"))
         self.assertEqual(include, self.client.load("build/conan_project_include.cmake"))
 
@@ -323,3 +324,66 @@ class AppleTest(Base):
         self.assertIn("App: %s!" % build_type, self.client.out)
         self.assertIn("DEFINITIONS_BOTH: True", self.client.out)
         self.assertIn("DEFINITIONS_CONFIG: %s" % build_type, self.client.out)
+
+
+@attr("toolchain")
+class CMakeInstallTest(unittest.TestCase):
+
+    def test_install(self):
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile, CMake, CMakeToolchain
+
+            class App(ConanFile):
+                settings = "os", "arch", "compiler", "build_type"
+                exports_sources = "CMakeLists.txt", "header.h"
+
+                def toolchain(self):
+                    tc = CMakeToolchain(self)
+                    return tc
+
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+
+                def package(self):
+                    cmake = CMake(self)
+                    cmake.install()
+            """)
+
+        cmakelist = textwrap.dedent("""
+            cmake_minimum_required(VERSION 2.8)
+            project(App C)
+
+            if(CONAN_TOOLCHAIN_INCLUDED AND CMAKE_VERSION VERSION_LESS "3.15")
+                include("${CMAKE_BINARY_DIR}/conan_project_include.cmake")
+            endif()
+
+            if(NOT CMAKE_TOOLCHAIN_FILE)
+                message(FATAL ">> Not using toolchain")
+            endif()
+
+            install(FILES header.h DESTINATION include)
+            """)
+        client = TestClient(path_with_spaces=False)
+        client.save({"conanfile.py": conanfile,
+                     "CMakeLists.txt": cmakelist,
+                     "header.h": "# my header file"})
+
+        # FIXME: This is broken, because the toolchain at install time, doesn't have the package
+        # folder yet. We need to define the layout for local development
+        """
+        with client.chdir("build"):
+            client.run("install ..")
+            client.run("build ..")
+            client.run("package .. -pf=mypkg")  # -pf=mypkg ignored
+        self.assertTrue(os.path.exists(os.path.join(client.current_folder, "build",
+                                                    "include", "header.h")))"""
+
+        # The create flow must work
+        client.run("create . pkg/0.1@")
+        self.assertIn("pkg/0.1 package(): Packaged 1 '.h' file: header.h", client.out)
+        ref = ConanFileReference.loads("pkg/0.1")
+        layout = client.cache.package_layout(ref)
+        package_id = layout.conan_packages()[0]
+        package_folder = layout.package(PackageReference(ref, package_id))
+        self.assertTrue(os.path.exists(os.path.join(package_folder, "include", "header.h")))
