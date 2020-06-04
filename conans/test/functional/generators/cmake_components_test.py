@@ -457,25 +457,7 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
             add_library(worldall worldall.cpp)
             target_link_libraries(worldall helloworld greetings::greetings)
             """)
-        with self.assertRaises(Exception):
-            self._create_world(client, conanfile=conanfile, cmakelists=cmakelists)
-        self.assertIn("Conan: Component 'hello' NOT found in package 'greetings'", client.out)
-        cmakelists2 = textwrap.dedent("""
-            cmake_minimum_required(VERSION 3.0)
-            project(world CXX)
-
-            include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-            conan_basic_setup()
-
-            find_package(greetings)
-
-            add_library(helloworld helloworld.cpp)
-            target_link_libraries(helloworld greetings::greetings)
-
-            add_library(worldall worldall.cpp)
-            target_link_libraries(worldall helloworld greetings::greetings)
-            """)
-        self._create_world(client, conanfile=conanfile, cmakelists=cmakelists2)
+        self._create_world(client, conanfile=conanfile, cmakelists=cmakelists)
         self.assertIn("Hello World!", client.out)
         self.assertIn("Bye World!", client.out)
 

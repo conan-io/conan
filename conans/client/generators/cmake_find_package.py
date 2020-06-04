@@ -28,12 +28,6 @@ class CMakeFindPackageGenerator(Generator):
                                           {name}_VERSION VERSION_VAR {name}_VERSION)
         mark_as_advanced({name}_FOUND {name}_VERSION)
 
-        if({name}_FIND_COMPONENTS)
-            foreach(_FIND_COMPONENT ${{{name}_FIND_COMPONENTS}})
-                conan_message(FATAL_ERROR "Conan: Component '${{_FIND_COMPONENT}}' NOT found in package '{name}'")
-            endforeach()
-        endif()
-
         {find_libraries_block}
         if(NOT ${{CMAKE_VERSION}} VERSION_LESS "3.0")
             # Target approach
