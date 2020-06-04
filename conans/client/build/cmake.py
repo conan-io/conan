@@ -1,6 +1,5 @@
 import os
 import platform
-import subprocess
 from itertools import chain
 
 from six import StringIO  # Python 2 and 3 compatible
@@ -28,14 +27,10 @@ def CMake(conanfile, *args, **kwargs):
     if not isinstance(conanfile, ConanFile):
         raise ConanException("First argument of CMake() has to be ConanFile. Use CMake(self)")
 
-    from conans.client.build.cmake_toolchain_build_helper import CMakeToolchainBuildHelper
-
     # If there is a toolchain, then use the toolchain helper one
-    toolchain_method = getattr(conanfile, "toolchain", None)
-    if toolchain_method:
-        if not callable(toolchain_method):
-            raise ConanException("Member 'toolchain' in your ConanFile has to be a function"
-                                 " returning a CMakeToolchain object")
+    toolchain = getattr(conanfile, "toolchain", None)
+    if toolchain:
+        from conans.client.build.cmake_toolchain_build_helper import CMakeToolchainBuildHelper
         return CMakeToolchainBuildHelper(conanfile, *args, **kwargs)
     else:
         return CMakeBuildHelper(conanfile, *args, **kwargs)

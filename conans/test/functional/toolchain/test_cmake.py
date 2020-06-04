@@ -338,8 +338,7 @@ class CMakeInstallTest(unittest.TestCase):
                 exports_sources = "CMakeLists.txt", "header.h"
 
                 def toolchain(self):
-                    tc = CMakeToolchain(self)
-                    return tc
+                    return CMakeToolchain(self)
 
                 def build(self):
                     cmake = CMake(self)
