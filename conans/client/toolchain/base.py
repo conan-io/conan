@@ -1,4 +1,5 @@
 from conans.client.toolchain.cmake import CMakeToolchain
+from conans.client.toolchain.cmake import MesonDefaultToolchain
 from conans.errors import conanfile_exception_formatter, ConanException
 
 
@@ -10,7 +11,10 @@ def write_toolchain(conanfile, path, output):
                 tc = conanfile.toolchain()
         else:
             try:
-                toolchain = {"cmake": CMakeToolchain}[conanfile.toolchain]
+                toolchain = {
+                    "cmake": CMakeToolchain,
+                    "meson": MesonDefaultToolchain,
+                }[conanfile.toolchain]
             except KeyError:
                 raise ConanException("Unknown toolchain '%s'" % conanfile.toolchain)
             tc = toolchain(conanfile)

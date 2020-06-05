@@ -15,14 +15,6 @@ from conans.model.version import Version
 from conans.util.files import decode_text, get_abs_path, mkdir
 from conans.util.runners import version_runner
 
-# TODO:
-# - add pkg_config_path to configure properly (cross scenario and native) or move it to machine file generation
-# - fix env variables reading for native\cross (once it's possible)
-# - cleanup comments
-# - add tests
-# - Can we use Py3.x? meson requires Python 3.5+
-# - deal with typings (remove? add everywhere?)
-
 # Differences from stock Meson integration:
 # - does not override 'default_library' if no 'shared' options was set
 # - saves `build_dir` in __init__
@@ -34,7 +26,15 @@ from conans.util.runners import version_runner
 # - requires pkg-config generator
 # - install_folder is always added to pkg-config search paths now (since pc generator is required now)
 
-# Question:
+# TODO:
+# - add pkg_config_path to configure properly (cross scenario and native) or move it to machine file generation
+# - fix env variables reading for native\cross once it's possible (i.e when <https://github.com/conan-io/conan/issues/7091> is fixed)
+# - cleanup comments
+# - add tests
+# - Can we use Py3.x? meson requires Python 3.5+
+# - deal with typings (remove? add everywhere?)
+
+# Questions:
 # - Should we keep `cross-file`/`native-file` kwarg or should they be moved to `options` instead?
 # - Same q as ^ for pkg-config-paths
 # - How should the user extend `_get_cpu_family_and_endianness_from_arch` in case he has a custom unknown arch?
@@ -434,10 +434,18 @@ class MesonX(object):
         args = args or []
         targets = targets or []
 
-        minimum_version = '0.55.0' if targets else '0.54.0'
+        # FIXME: remove this check and the block below once <https://github.com/mesonbuild/meson/issues/6740> is merged.
+        # Update version if necessary
+        if targets:
+            raise ConanException('Targets are not supported by `meson compile` yet')
+
+        # minimum_version = '0.55.0' if targets else '0.54.0'
+        # if self._version >= minimum_version:
+        #     self._run_meson_command(subcommand='compile', args=targets + args)
+
+        minimum_version = '0.54.0'
         if self._version >= minimum_version:
-            combined_args = targets + args # order is important, since args might contain `-- -posix-like -positional-args`
-            self._run_meson_command(subcommand='compile', args=combined_args)
+            self._run_meson_command(subcommand='compile', args=args)
         else:
             self._validate_ninja_usage_and_warn_agnostic_method_unavailable(minimum_version)
             meson_target = next( (t for t in targets if ':' in t), None)
