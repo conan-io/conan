@@ -29,8 +29,11 @@ class CMakeFindPackageGenerator(Generator):
             if(NOT TARGET {name}::{name})
                 add_library({name}::{name} INTERFACE IMPORTED)
                 if({name}_INCLUDE_DIRS)
-                    set_target_properties({name}::{name} PROPERTIES INTERFACE_INCLUDE_DIRECTORIES
-                                          "${{{name}_INCLUDE_DIRS}}")
+                    if(CONAN_SYSTEM_INCLUDES)
+                        target_include_directories({name}::{name} SYSTEM INTERFACE "${{{name}_INCLUDE_DIRS}}")
+                    else()
+                        target_include_directories({name}::{name} INTERFACE "${{{name}_INCLUDE_DIRS}}")
+                    endif()
                 endif()
                 set_property(TARGET {name}::{name} PROPERTY INTERFACE_LINK_LIBRARIES
                              "${{{name}_LIBRARIES_TARGETS}};${{{name}_LINKER_FLAGS_LIST}}")

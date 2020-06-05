@@ -190,11 +190,21 @@ _target_template = """
                                                                  $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:${{CONAN_SHARED_LINKER_FLAGS_{uname}_DEBUG_LIST}}>
                                                                  $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:${{CONAN_SHARED_LINKER_FLAGS_{uname}_DEBUG_LIST}}>
                                                                  $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:${{CONAN_EXE_LINKER_FLAGS_{uname}_DEBUG_LIST}}>>)
-    set_property(TARGET {name} PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${{CONAN_INCLUDE_DIRS_{uname}}}
-                                                                      $<$<CONFIG:Release>:${{CONAN_INCLUDE_DIRS_{uname}_RELEASE}}>
-                                                                      $<$<CONFIG:RelWithDebInfo>:${{CONAN_INCLUDE_DIRS_{uname}_RELWITHDEBINFO}}>
-                                                                      $<$<CONFIG:MinSizeRel>:${{CONAN_INCLUDE_DIRS_{uname}_MINSIZEREL}}>
-                                                                      $<$<CONFIG:Debug>:${{CONAN_INCLUDE_DIRS_{uname}_DEBUG}}>)
+
+    if(CONAN_SYSTEM_INCLUDES)
+        target_include_directories( {name} SYSTEM INTERFACE ${{CONAN_INCLUDE_DIRS_{uname}}}
+                                                            $<$<CONFIG:Release>:${{CONAN_INCLUDE_DIRS_{uname}_RELEASE}}>
+                                                            $<$<CONFIG:RelWithDebInfo>:${{CONAN_INCLUDE_DIRS_{uname}_RELWITHDEBINFO}}>
+                                                            $<$<CONFIG:MinSizeRel>:${{CONAN_INCLUDE_DIRS_{uname}_MINSIZEREL}}>
+                                                            $<$<CONFIG:Debug>:${{CONAN_INCLUDE_DIRS_{uname}_DEBUG}}>)
+    else()
+        target_include_directories( {name} INTERFACE ${{CONAN_INCLUDE_DIRS_{uname}}}
+                                                     $<$<CONFIG:Release>:${{CONAN_INCLUDE_DIRS_{uname}_RELEASE}}>
+                                                     $<$<CONFIG:RelWithDebInfo>:${{CONAN_INCLUDE_DIRS_{uname}_RELWITHDEBINFO}}>
+                                                     $<$<CONFIG:MinSizeRel>:${{CONAN_INCLUDE_DIRS_{uname}_MINSIZEREL}}>
+                                                     $<$<CONFIG:Debug>:${{CONAN_INCLUDE_DIRS_{uname}_DEBUG}}>)
+    endif()
+
     set_property(TARGET {name} PROPERTY INTERFACE_COMPILE_DEFINITIONS ${{CONAN_COMPILE_DEFINITIONS_{uname}}}
                                                                       $<$<CONFIG:Release>:${{CONAN_COMPILE_DEFINITIONS_{uname}_RELEASE}}>
                                                                       $<$<CONFIG:RelWithDebInfo>:${{CONAN_COMPILE_DEFINITIONS_{uname}_RELWITHDEBINFO}}>

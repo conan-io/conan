@@ -46,12 +46,19 @@ set_property(TARGET {name}::{name}
                  $<$<CONFIG:RelWithDebInfo>:${{{name}_LIBRARIES_TARGETS_RELWITHDEBINFO}} ${{{name}_LINKER_FLAGS_RELWITHDEBINFO_LIST}}>
                  $<$<CONFIG:MinSizeRel>:${{{name}_LIBRARIES_TARGETS_MINSIZEREL}} ${{{name}_LINKER_FLAGS_MINSIZEREL_LIST}}>
                  $<$<CONFIG:Debug>:${{{name}_LIBRARIES_TARGETS_DEBUG}} ${{{name}_LINKER_FLAGS_DEBUG_LIST}}>)
-set_property(TARGET {name}::{name}
-             PROPERTY INTERFACE_INCLUDE_DIRECTORIES
-                 $<$<CONFIG:Release>:${{{name}_INCLUDE_DIRS_RELEASE}}>
-                 $<$<CONFIG:RelWithDebInfo>:${{{name}_INCLUDE_DIRS_RELWITHDEBINFO}}>
-                 $<$<CONFIG:MinSizeRel>:${{{name}_INCLUDE_DIRS_MINSIZEREL}}>
-                 $<$<CONFIG:Debug>:${{{name}_INCLUDE_DIRS_DEBUG}}>)
+if(CONAN_SYSTEM_INCLUDES)
+    target_include_directories({name}::{name} SYSTEM INTERFACE
+                     $<$<CONFIG:Release>:${{{name}_INCLUDE_DIRS_RELEASE}}>
+                     $<$<CONFIG:RelWithDebInfo>:${{{name}_INCLUDE_DIRS_RELWITHDEBINFO}}>
+                     $<$<CONFIG:MinSizeRel>:${{{name}_INCLUDE_DIRS_MINSIZEREL}}>
+                     $<$<CONFIG:Debug>:${{{name}_INCLUDE_DIRS_DEBUG}}>)
+else()
+    target_include_directories({name}::{name} INTERFACE
+                     $<$<CONFIG:Release>:${{{name}_INCLUDE_DIRS_RELEASE}}>
+                     $<$<CONFIG:RelWithDebInfo>:${{{name}_INCLUDE_DIRS_RELWITHDEBINFO}}>
+                     $<$<CONFIG:MinSizeRel>:${{{name}_INCLUDE_DIRS_MINSIZEREL}}>
+                     $<$<CONFIG:Debug>:${{{name}_INCLUDE_DIRS_DEBUG}}>)
+endif()
 set_property(TARGET {name}::{name}
              PROPERTY INTERFACE_COMPILE_DEFINITIONS
                  $<$<CONFIG:Release>:${{{name}_COMPILE_DEFINITIONS_RELEASE}}>
