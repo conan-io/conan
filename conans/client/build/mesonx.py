@@ -326,6 +326,9 @@ class MesonX(object):
         # Needed for internal checks
         self._compiler = self._ss('compiler')
 
+        # Cache version value for future use
+        self._version = self.get_version()
+
         # Meson recommends to use ninja by default
         self.backend = backend or 'ninja'
 
@@ -432,7 +435,7 @@ class MesonX(object):
         targets = targets or []
 
         minimum_version = '0.55.0' if targets else '0.54.0'
-        if self.get_version() >= minimum_version:
+        if self._version >= minimum_version:
             combined_args = targets + args # order is important, since args might contain `-- -posix-like -positional-args`
             self._run_meson_command(subcommand='compile', args=combined_args)
         else:
@@ -451,7 +454,7 @@ class MesonX(object):
         args = args or []
 
         minimum_version = '0.47.0'
-        if self.get_version() >= minimum_version:
+        if self._version >= minimum_version:
             self._run_meson_command(subcommand='install', args=args)
         else:
             self._validate_ninja_usage_and_warn_agnostic_method_unavailable(minimum_version)
@@ -468,7 +471,7 @@ class MesonX(object):
 
     def is_configured(self):
         _, build_dir = self._get_resolve_dirs()
-        if self.get_version() >= '0.50.0':
+        if self._version >= '0.50.0':
             return (Path(build_dir) / 'meson-info' / 'meson-info.json').exists()
         else:
             return (Path(build_dir) / 'meson-private' / 'coredata.dat').exists()
