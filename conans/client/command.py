@@ -260,7 +260,13 @@ class Command(object):
         result = self._conan.inspect(args.path_or_reference, attributes, args.remote, quiet=quiet)
         Printer(self._out).print_inspect(result, raw=args.raw)
         if args.json:
-            json_output = json.dumps(result)
+
+            def dump_custom_types(obj):
+                if isinstance(obj, set):
+                    return sorted(list(obj))
+                raise TypeError
+
+            json_output = json.dumps(result, default=dump_custom_types)
             if not os.path.isabs(args.json):
                 json_output_file = os.path.join(get_cwd(), args.json)
             else:
