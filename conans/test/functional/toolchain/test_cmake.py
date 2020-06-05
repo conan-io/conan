@@ -174,7 +174,7 @@ class WinTest(Base):
                     }
         options = {"shared": shared}
         install_out = self._run_build(settings, options)
-        self.assertIn("ERROR: fPIC option defined for Windows. Remove it.", install_out)
+        self.assertIn("WARN: Toolchain: Ignoring fPIC option defined for Windows", install_out)
 
         # FIXME: Hardcoded VS version and partial toolset check
         self.assertIn('CMake command: cmake -G "Visual Studio 15 2017" '
