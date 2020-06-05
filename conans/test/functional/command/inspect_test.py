@@ -464,3 +464,15 @@ class InspectRawTest(unittest.TestCase):
         os.remove(client.cache.remotes_path)
         client.run("inspect MyPkg/1.2.3@user/channel --raw=version")
         self.assertEqual("1.2.3", client.out)
+
+    def test_inspect_settings_set(self):
+        client = TestClient()
+        client.save({"conanfile.py": textwrap.dedent("""
+            from conans import ConanFile
+
+            class Recipe(ConanFile):
+                settings = {"os", "compiler"}
+        """)})
+        client.run("inspect . --json=file.json")
+        contents = client.load("file.json")
+        self.assertIn('"settings": ["compiler", "os"]', contents)

@@ -263,7 +263,7 @@ class Command(object):
 
             def dump_custom_types(obj):
                 if isinstance(obj, set):
-                    return list(obj)
+                    return sorted(list(obj))
                 raise TypeError
 
             json_output = json.dumps(result, default=dump_custom_types)
