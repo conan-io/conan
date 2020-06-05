@@ -41,3 +41,6 @@ class Generator(object):
     @abstractproperty
     def filename(self):
         raise NotImplementedError()
+
+    def sorted_components(self, cpp_info):
+        return cpp_info._get_sorted_components()

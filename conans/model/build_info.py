@@ -25,6 +25,7 @@ class DefaultOrderedDict(OrderedDict):
     def __getitem__(self, key):
         if key not in self.keys():
             super(DefaultOrderedDict, self).__setitem__(key, self.factory())
+            super(DefaultOrderedDict, self).__getitem__(key).name = key
         return super(DefaultOrderedDict, self).__getitem__(key)
 
     def __copy__(self):
