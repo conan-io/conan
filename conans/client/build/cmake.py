@@ -4,6 +4,7 @@ from itertools import chain
 
 from six import StringIO  # Python 2 and 3 compatible
 
+
 from conans.client import tools
 from conans.client.build import defs_to_string, join_arguments
 from conans.client.build.cmake_flags import CMakeDefinitionsBuilder, \
@@ -15,14 +16,27 @@ from conans.client.output import ConanOutput
 from conans.client.tools.env import environment_append, _environment_add
 from conans.client.tools.oss import cpu_count, args_to_string
 from conans.errors import ConanException
-from conans.model.conan_file import ConanFile
 from conans.model.version import Version
 from conans.util.config_parser import get_bool_from_text
 from conans.util.files import mkdir, get_abs_path, walk, decode_text
 from conans.util.runners import version_runner
 
 
-class CMake(object):
+def CMake(conanfile, *args, **kwargs):
+    from conans import ConanFile
+    if not isinstance(conanfile, ConanFile):
+        raise ConanException("First argument of CMake() has to be ConanFile. Use CMake(self)")
+
+    # If there is a toolchain, then use the toolchain helper one
+    toolchain = getattr(conanfile, "toolchain", None)
+    if toolchain:
+        from conans.client.build.cmake_toolchain_build_helper import CMakeToolchainBuildHelper
+        return CMakeToolchainBuildHelper(conanfile, *args, **kwargs)
+    else:
+        return CMakeBuildHelper(conanfile, *args, **kwargs)
+
+
+class CMakeBuildHelper(object):
 
     def __init__(self, conanfile, generator=None, cmake_system_name=True,
                  parallel=True, build_type=None, toolset=None, make_program=None,
@@ -44,9 +58,6 @@ class CMake(object):
         :param cmake_program: Path to the custom cmake executable
         :param generator_platform: Generator platform name or none to autodetect (-A cmake option)
         """
-        if not isinstance(conanfile, ConanFile):
-            raise ConanException("First argument of CMake() has to be ConanFile. Use CMake(self)")
-
         self._append_vcvars = append_vcvars
         self._conanfile = conanfile
         self._settings = conanfile.settings
@@ -435,3 +446,6 @@ class CMake(object):
             return Version(version_str)
         except Exception as e:
             raise ConanException("Error retrieving CMake version: '{}'".format(e))
+
+
+CMake.get_version = CMakeBuildHelper.get_version
