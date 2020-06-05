@@ -22,29 +22,34 @@ class CompilerArgsGenerator(Generator):
         return self.conanfile.settings.get_safe("compiler")
 
     @property
+    def _settings(self):
+        settings = self.conanfile.settings.copy()
+        if self.settings.get_safe("compiler"):
+            settings.compiler = self.compiler
+        return settings
+
+    @property
     def content(self):
         """With compiler_args you can invoke your compiler:
         $ gcc main.c @conanbuildinfo.args -o main
         $ clang main.c @conanbuildinfo.args -o main
         $ cl /EHsc main.c @conanbuildinfo.args
         """
+
         flags = []
         flags.extend(format_defines(self._deps_build_info.defines))
         flags.extend(format_include_paths(self._deps_build_info.include_paths,
-                                          compiler=self.compiler))
+                                          self._settings))
 
         flags.extend(self._deps_build_info.cxxflags)
         flags.extend(self._deps_build_info.cflags)
 
-        arch_flag = architecture_flag(arch=self.conanfile.settings.get_safe("arch"),
-                                      os=self.conanfile.settings.get_safe("os"),
-                                      compiler=self.compiler)
+        arch_flag = architecture_flag(self._settings)
         if arch_flag:
             flags.append(arch_flag)
 
         build_type = self.conanfile.settings.get_safe("build_type")
-        btfs = build_type_flags(compiler=self.compiler, build_type=build_type,
-                                vs_toolset=self.conanfile.settings.get_safe("compiler.toolset"))
+        btfs = build_type_flags(self._settings)
         if btfs:
             flags.extend(btfs)
         btd = build_type_define(build_type=build_type)
@@ -62,32 +67,32 @@ class CompilerArgsGenerator(Generator):
         if not hasattr(self.conanfile, 'settings_build'):
             os_build = os_build or self.conanfile.settings.get_safe("os")
 
-        flags.extend(rpath_flags(os_build, self.compiler, self._deps_build_info.lib_paths))
-        flags.extend(format_library_paths(self._deps_build_info.lib_paths, compiler=self.compiler))
-        flags.extend(format_libraries(self._deps_build_info.libs, compiler=self.compiler))
-        flags.extend(format_libraries(self._deps_build_info.system_libs, compiler=self.compiler))
+        flags.extend(rpath_flags(self._settings, os_build, self._deps_build_info.lib_paths))
+        flags.extend(format_library_paths(self._deps_build_info.lib_paths, self._settings))
+        flags.extend(format_libraries(self._deps_build_info.libs, self._settings))
+        flags.extend(format_libraries(self._deps_build_info.system_libs, self._settings))
+
         flags.extend(self._deps_build_info.sharedlinkflags)
         flags.extend(self._deps_build_info.exelinkflags)
         flags.extend(self._libcxx_flags())
-        flags.extend(format_frameworks(self._deps_build_info.frameworks, compiler=self.compiler))
+        flags.extend(format_frameworks(self._deps_build_info.frameworks, self._settings))
         flags.extend(format_framework_paths(self._deps_build_info.framework_paths,
-                                            compiler=self.compiler))
-        flags.append(cppstd_flag(self.conanfile.settings))
-        sysrf = sysroot_flag(self._deps_build_info.sysroot, compiler=self.compiler)
+                                            self._settings))
+        flags.append(cppstd_flag(self._settings))
+        sysrf = sysroot_flag(self._deps_build_info.sysroot, self._settings)
         if sysrf:
             flags.append(sysrf)
 
         return " ".join(flag for flag in flags if flag)
 
     def _libcxx_flags(self):
-        libcxx = self.conanfile.settings.get_safe("compiler.libcxx")
-        compiler = self.conanfile.settings.get_safe("compiler")
+        libcxx = self._settings.get_safe("compiler.libcxx")
 
         lib_flags = []
         if libcxx:
-            stdlib_define = libcxx_define(compiler=compiler, libcxx=libcxx)
+            stdlib_define = libcxx_define(self._settings)
             lib_flags.extend(format_defines([stdlib_define]))
-            cxxf = libcxx_flag(compiler=compiler, libcxx=libcxx)
+            cxxf = libcxx_flag(self._settings)
             if cxxf:
                 lib_flags.append(cxxf)
 

@@ -154,12 +154,12 @@ class TestConan(ConanFile):
 
         result = {"Debug": "['-Zi', '-Ob0', '-Od']",
                   "Release": "['-DNDEBUG', '-O2', '-Ob2']",
-                  "RelWithDebInfo": "['-Zi', '-O2', '-Ob1']",
-                  "MinSizeRel": "['-O1', '-Ob1']"}
+                  "RelWithDebInfo": "['-DNDEBUG', '-Zi', '-O2', '-Ob1']",
+                  "MinSizeRel": "['-DNDEBUG', '-O1', '-Ob1']"}
         result_toolset_clang = {"Debug": "['-gline-tables-only', '-fno-inline', '-O0']",
                                 "Release": "['-DNDEBUG', '-O2']",
-                                "RelWithDebInfo": "['-gline-tables-only', '-O2', '-fno-inline']",
-                                "MinSizeRel": "[]"}
+                                "RelWithDebInfo": "['-DNDEBUG', '-gline-tables-only', '-O2', '-fno-inline']",
+                                "MinSizeRel": "['-DNDEBUG']"}
 
         for build_type in ["Debug", "Release", "RelWithDebInfo", "MinSizeRel"]:
             client.run("create . danimtb/testing -pr=profile -s build_type=%s" % build_type)

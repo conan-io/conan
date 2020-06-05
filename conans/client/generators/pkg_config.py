@@ -69,9 +69,10 @@ class PkgConfigGenerator(Generator):
         if not hasattr(self.conanfile, 'settings_build'):
             os_build = os_build or self.conanfile.settings.get_safe("os")
 
-        rpaths = rpath_flags(os_build, self.compiler, ["${%s}" % libdir for libdir in libdir_vars])
-        frameworks = format_frameworks(cpp_info.frameworks, compiler=self.compiler)
-        framework_paths = format_framework_paths(cpp_info.framework_paths, compiler=self.compiler)
+        rpaths = rpath_flags(self.conanfile.settings, os_build, ["${%s}" % libdir for libdir in libdir_vars])
+        frameworks = format_frameworks(cpp_info.frameworks, self.conanfile.settings)
+        framework_paths = format_framework_paths(cpp_info.framework_paths, self.conanfile.settings)
+
         lines.append("Libs: %s" % _concat_if_not_empty([libdirs_flags,
                                                         libnames_flags,
                                                         shared_flags,
