@@ -1,5 +1,5 @@
 from conans.client.toolchain.cmake import CMakeToolchain
-from conans.client.toolchain.cmake import MesonDefaultToolchain
+from conans.client.toolchain.meson import MesonDefaultToolchain
 from conans.errors import conanfile_exception_formatter, ConanException
 
 
