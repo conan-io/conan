@@ -2,6 +2,7 @@
 
 import os
 import platform
+import sys
 import textwrap
 import unittest
 
@@ -14,6 +15,7 @@ from conans.test.utils.tools import TestClient
 from conans import MesonX
 
 @attr("toolchain")
+@unittest.skipUnless(sys.version_info.major == 3 and sys.version_info.minor >= 5, "Requires Python 3.5+")
 class Base(unittest.TestCase):
 
     conanfile = textwrap.dedent("""
@@ -189,6 +191,7 @@ class LinuxTest(Base):
         self.assertIn("USER_OPTION_VALUE: FOO", self.client.out)
 
 @attr("toolchain")
+@unittest.skipUnless(sys.version_info.major == 3 and sys.version_info.minor >= 5, "Requires Python 3.5+")
 class MesonInstallTest(unittest.TestCase):
 
     def test_install(self):
