@@ -1,4 +1,5 @@
 import os
+import platform
 from collections import OrderedDict
 
 from conans.client import tools
@@ -294,9 +295,12 @@ class CMakeDefinitionsBuilder(object):
         definitions.update(build_type_definition(self._forced_build_type, build_type,
                                                  self._generator, self._output))
 
-        if str(os_) == "Macos":
-            if arch == "x86":
-                definitions["CMAKE_OSX_ARCHITECTURES"] = "i386"
+        if tools.is_apple_os(os_):
+            definitions["CMAKE_OSX_ARCHITECTURES"] = tools.to_apple_arch(arch)
+            # xcrun is only available on macOS, otherwise it's cross-compiling and it needs to be
+            # set within CMake toolchain
+            if platform.system == "Darwin":
+                definitions["CMAKE_OSX_SYSROOT"] = tools.XCRun(self._conanfile.settings).sdk_path
 
         definitions.update(self._cmake_cross_build_defines())
         definitions.update(self._get_cpp_standard_vars())
