@@ -16,6 +16,7 @@ from conans.client.packager import update_package_metadata
 from conans.client.recorder.action_recorder import INSTALL_ERROR_BUILDING, INSTALL_ERROR_MISSING, \
     INSTALL_ERROR_MISSING_BUILD_FOLDER
 from conans.client.source import complete_recipe_sources, config_source
+from conans.client.toolchain.base import write_toolchain
 from conans.client.tools.env import no_op
 from conans.client.tools.env import pythonpath
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
@@ -121,6 +122,9 @@ class _PackageBuilder(object):
         # Read generators from conanfile and generate the needed files
         logger.info("GENERATORS: Writing generators")
         write_generators(conanfile, conanfile.build_folder, self._output)
+
+        logger.info("TOOLCHAIN: Writing toolchain")
+        write_toolchain(conanfile, conanfile.build_folder, self._output)
 
         # Build step might need DLLs, binaries as protoc to generate source files
         # So execute imports() before build, storing the list of copied_files
@@ -442,6 +446,7 @@ class BinaryInstaller(object):
                 build_folder = os.path.join(base_path, build_folder)
                 output = node.conanfile.output
                 write_generators(node.conanfile, build_folder, output)
+                write_toolchain(node.conanfile, build_folder, output)
                 save(os.path.join(build_folder, CONANINFO), node.conanfile.info.dumps())
                 output.info("Generated %s" % CONANINFO)
                 graph_info_node = GraphInfo(graph_info.profile_host, root_ref=node.ref)

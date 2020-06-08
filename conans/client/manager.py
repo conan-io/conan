@@ -9,6 +9,7 @@ from conans.client.installer import BinaryInstaller, call_system_requirements
 from conans.client.manifest_manager import ManifestManager
 from conans.client.output import Color
 from conans.client.source import complete_recipe_sources
+from conans.client.toolchain.base import write_toolchain
 from conans.client.tools import cross_building, get_cross_building_settings
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
@@ -97,6 +98,7 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
             tmp.extend([g for g in generators if g not in tmp])
             conanfile.generators = tmp
             write_generators(conanfile, install_folder, output)
+            write_toolchain(conanfile, install_folder, output)
         if not isinstance(ref_or_path, ConanFileReference) or lockfile is not None:
             # Write conaninfo
             content = normalize(conanfile.info.dumps())

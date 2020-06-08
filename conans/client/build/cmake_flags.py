@@ -85,7 +85,7 @@ def get_generator_platform(settings, generator):
         return settings.get_safe("os.platform")
 
     if (compiler == "Visual Studio" or compiler_base == "Visual Studio") and \
-        generator and "Visual" in generator:
+            generator and "Visual" in generator:
         return {"x86": "Win32",
                 "x86_64": "x64",
                 "armv7": "ARM",
@@ -315,7 +315,7 @@ class CMakeDefinitionsBuilder(object):
                 definitions['CONAN_CXX_FLAGS'] = flag
                 definitions['CONAN_C_FLAGS'] = flag
         else:  # arch_flag is only set for non Visual Studio
-            arch_flag = architecture_flag(compiler=compiler, os=os_, arch=arch)
+            arch_flag = architecture_flag(self._conanfile.settings)
             if arch_flag:
                 definitions['CONAN_CXX_FLAGS'] = arch_flag
                 definitions['CONAN_SHARED_LINKER_FLAGS'] = arch_flag
