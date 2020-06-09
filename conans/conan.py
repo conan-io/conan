@@ -1,15 +1,14 @@
 import os
 import sys
 
-from conans.client.command import main
-from conans.cli.command import main
+if os.getenv("CONAN_V2_CLI"):
+    from conans.cli.command import main
+else:
+    from conans.client.command import main
 
 
 def run():
-    if os.getenv("CONAN_V2_CLI"):
-        main(sys.argv[1:])
-    else:
-        main(sys.argv[1:])
+    main(sys.argv[1:])
 
 
 if __name__ == '__main__':
