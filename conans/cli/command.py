@@ -7,7 +7,7 @@ from difflib import get_close_matches
 
 
 from conans import __version__ as client_version
-from conans.client.conan_api import Conan
+from conans.client.conan_api_v2 import Conan
 from conans.client.output import Color
 from conans.errors import ConanException, ConanInvalidConfiguration,  ConanMigrationError
 from conans.util.files import exception_message_safe
@@ -59,6 +59,9 @@ class Command(object):
         except KeyError:
             raise ConanException("Unknown command '%s'" % args.command)
 
+    # conan v2 search:
+    #
+
     def search(self, *args):
         """
         Searches for package recipes whose name contain <query> in a remote or in the local cache
@@ -68,10 +71,11 @@ class Command(object):
         parser.add_argument('query',
                             help="Search query to find package recipe reference, e.g., 'boost', 'lib*'")
         parser.add_argument('-r', '--remote', action="append", nargs='?',
-                            help="Remote to search")
+                            help="Remote to search. Accepts wildcards. To search in all remotes use *")
         parser.add_argument('-c', '--cache', action="store_true", help="Search in the local cache")
         args = parser.parse_args(*args)
-        info = self._conan.search_recipes(args.pattern, remote_name=args.remote)
+
+        info = self._conan.search_recipes(args.query, remote_name=args.remote)
 
     def _show_help(self):
         """
