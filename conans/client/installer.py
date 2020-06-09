@@ -538,7 +538,7 @@ class BinaryInstaller(object):
 
             if not using_build_profile:  # Do not touch anything
                 conan_file.deps_user_info[n.ref.name] = n.conanfile.user_info
-                conan_file.deps_cpp_info.update(n.conanfile._conan_dep_cpp_info, n.ref.name)
+                conan_file.deps_cpp_info.add(n.ref.name, n.conanfile._conan_dep_cpp_info)
                 conan_file.deps_env_info.update(n.conanfile.env_info, n.ref.name)
             else:
                 if n in transitive or n in br_host:
@@ -559,8 +559,7 @@ class BinaryInstaller(object):
         add_env_conaninfo(conan_file, subtree_libnames)
 
     def _call_package_info(self, conanfile, package_folder, ref):
-        conanfile.cpp_info = CppInfo(package_folder)
-        conanfile.cpp_info.name = conanfile.name
+        conanfile.cpp_info = CppInfo(conanfile.name, package_folder)
         conanfile.cpp_info.version = conanfile.version
         conanfile.cpp_info.description = conanfile.description
         conanfile.env_info = EnvInfo()

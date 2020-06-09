@@ -190,12 +190,11 @@ Requires: my_pkg_custom_name my_pkg1_custom_name zlib
         conanfile.initialize(Settings({}), EnvValues())
         conanfile.settings = settings
         ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
-        cpp_info = CppInfo("dummy_root_folder1")
-        cpp_info.name = ref.name
+        cpp_info = CppInfo(ref.name, "dummy_root_folder1")
         cpp_info.frameworks = ['AudioUnit', 'AudioToolbox']
         cpp_info.version = "1.3"
         cpp_info.description = "My cool description"
-        conanfile.deps_cpp_info.update(cpp_info, ref.name)
+        conanfile.deps_cpp_info.add(ref.name, cpp_info)
 
         generator = PkgConfigGenerator(conanfile)
         files = generator.content

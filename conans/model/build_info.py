@@ -41,7 +41,7 @@ class _CppInfo(object):
     specific systems will be produced from this info
     """
     def __init__(self):
-        self.name = None
+        self._name = None
         self.names = {}
         self.system_libs = []  # Ordered list of system libraries
         self.includedirs = []  # Ordered list of include paths
@@ -132,8 +132,16 @@ class _CppInfo(object):
             self._framework_paths = self._filter_paths(self.frameworkdirs)
         return self._framework_paths
 
+    @property
+    def name(self):
+        raise RuntimeError("Use 'get_name(generator)' instead")
+
+    @name.setter
+    def name(self, value):
+        self._name = value
+
     def get_name(self, generator):
-        return self.names.get(generator, self.name)
+        return self.names.get(generator, self._name)
 
     # Compatibility for 'cppflags' (old style property to allow decoration)
     def get_cppflags(self):
@@ -167,8 +175,10 @@ class CppInfo(_CppInfo):
     to build properly.
     Defined in user CONANFILE, directories are relative at user definition time
     """
-    def __init__(self, root_folder):
+    def __init__(self, ref_name, root_folder):
         super(CppInfo, self).__init__()
+        self._ref_name = ref_name
+        self._name = ref_name
         self.rootpath = root_folder  # the full path of the package in which the conans is found
         self.includedirs.append(DEFAULT_INCLUDE)
         self.libdirs.append(DEFAULT_LIB)
@@ -180,6 +190,9 @@ class CppInfo(_CppInfo):
         # public_deps is needed to accumulate list of deps for cmake targets
         self.public_deps = []
         self._configs = {}
+
+    def __str__(self):
+        return self._ref_name
 
     def get_configs(self):
         return self._configs
@@ -336,6 +349,9 @@ class DepCppInfo(object):
         self._build_module_paths = None
         self._sorted_components = None
         self._check_component_requires()
+
+    def __str__(self):
+        return str(self._cpp_info)
 
     def __getattr__(self, item):
         try:
@@ -507,7 +523,8 @@ class DepsCppInfo(_BaseDepsCppInfo):
     def __getitem__(self, item):
         return self._dependencies[item]
 
-    def update(self, cpp_info, pkg_name):
+    def add(self, pkg_name, cpp_info):
+        assert pkg_name == str(cpp_info), "'{}' != '{}'".format(pkg_name, cpp_info)
         assert isinstance(cpp_info, (CppInfo, DepCppInfo))
         self._dependencies[pkg_name] = cpp_info
         super(DepsCppInfo, self).update(cpp_info)

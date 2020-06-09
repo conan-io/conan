@@ -279,62 +279,61 @@ class CppInfoComponentsTest(unittest.TestCase):
             DepCppInfo(info).defines
 
     def components_libs_order_test(self):
-        info = CppInfo("")
+        info = CppInfo("dep1", "")
         info.components["liba"].libs = ["liba"]
         info.components["libb"].libs = ["libb"]
         dep_cpp_info = DepCppInfo(info)
         self.assertListEqual(["liba", "libb"], dep_cpp_info.libs)
         deps_cpp_info = DepsCppInfo()
-        deps_cpp_info.update(dep_cpp_info, "dep1")
+        deps_cpp_info.add("dep1", dep_cpp_info)
         self.assertListEqual(["liba", "libb"], deps_cpp_info["dep1"].libs)
         self.assertListEqual(["liba", "libb"], deps_cpp_info.libs)
 
-        info = CppInfo("")
+        info = CppInfo("dep1", "")
         info.components["liba"].libs = ["liba"]
         info.components["libb"].libs = ["libb"]
         dep_cpp_info = DepCppInfo(info)
-        info2 = CppInfo("")
+        info2 = CppInfo("dep2", "")
         info2.components["libc"].libs = ["libc"]
         dep_cpp_info2 = DepCppInfo(info2)
         deps_cpp_info = DepsCppInfo()
         # Update in reverse order
-        deps_cpp_info.update(dep_cpp_info2, "dep2")
-        deps_cpp_info.update(dep_cpp_info, "dep1")
+        deps_cpp_info.add("dep2", dep_cpp_info2)
+        deps_cpp_info.add("dep1", dep_cpp_info)
         self.assertListEqual(["liba", "libb"], deps_cpp_info["dep1"].libs)
         self.assertListEqual(["libc"], deps_cpp_info["dep2"].libs)
         self.assertListEqual(["libc", "liba", "libb"], deps_cpp_info.libs)
 
-        info = CppInfo("")
+        info = CppInfo("dep1", "")
         info.components["liba"].libs = ["liba"]
         info.components["libb"].libs = ["libb"]
         info.components["libb"].requires = ["liba"]
         dep_cpp_info = DepCppInfo(info)
         self.assertListEqual(["libb", "liba"], dep_cpp_info.libs)
         deps_cpp_info = DepsCppInfo()
-        deps_cpp_info.update(dep_cpp_info, "dep1")
+        deps_cpp_info.add("dep1", dep_cpp_info)
         self.assertListEqual(["libb", "liba"], deps_cpp_info["dep1"].libs)
         self.assertListEqual(["libb", "liba"], deps_cpp_info.libs)
 
-        info = CppInfo("")
+        info = CppInfo("dep1", "")
         info.components["liba"].libs = ["liba"]
         info.components["libb"].libs = ["libb"]
         info.components["libb"].requires = ["liba"]
         dep_cpp_info = DepCppInfo(info)
-        info2 = CppInfo("")
+        info2 = CppInfo("dep2", "")
         info2.components["libc"].libs = ["libc"]
         dep_cpp_info2 = DepCppInfo(info2)
         deps_cpp_info = DepsCppInfo()
         # Update in reverse order
-        deps_cpp_info.update(dep_cpp_info2, "dep2")
-        deps_cpp_info.update(dep_cpp_info, "dep1")
+        deps_cpp_info.add("dep2", dep_cpp_info2)
+        deps_cpp_info.add("dep1", dep_cpp_info)
         self.assertListEqual(["libb", "liba"], deps_cpp_info["dep1"].libs)
         self.assertListEqual(["libc"], deps_cpp_info["dep2"].libs)
         self.assertListEqual(["libc", "libb", "liba"], deps_cpp_info.libs)
 
     def cppinfo_components_dirs_test(self):
         folder = temp_folder()
-        info = CppInfo(folder)
-        info.name = "OpenSSL"
+        info = CppInfo("OpenSSL", folder)
         info.components["OpenSSL"].includedirs = ["include"]
         info.components["OpenSSL"].libdirs = ["lib"]
         info.components["OpenSSL"].builddirs = ["build"]
@@ -390,12 +389,12 @@ class CppInfoComponentsTest(unittest.TestCase):
 
     def component_default_dirs_deps_cpp_info_test(self):
         folder = temp_folder()
-        info = CppInfo(folder)
+        info = CppInfo("my_lib", folder)
         info.components["Component"]
         info.components["Component"].filter_empty = False  # For testing purposes
         dep_info = DepCppInfo(info)
         deps_cpp_info = DepsCppInfo()
-        deps_cpp_info.update(dep_info, "my_lib")
+        deps_cpp_info.add("my_lib", dep_info)
         self.assertListEqual([os.path.join(folder, "include")], deps_cpp_info.includedirs)
         self.assertListEqual([], deps_cpp_info.srcdirs)
         self.assertListEqual([os.path.join(folder, "lib")], deps_cpp_info.libdirs)

@@ -14,7 +14,7 @@ def extend(cpp_info, config):
     if config_info:
         def add_lists(seq1, seq2):
             return seq1 + [s for s in seq2 if s not in seq1]
-        result = CppInfo(config_info.rootpath)
+        result = CppInfo(str(config_info), config_info.rootpath)
         result.filter_empty = cpp_info.filter_empty
         result.includedirs = add_lists(cpp_info.includedirs, config_info.includedirs)
         result.libdirs = add_lists(cpp_info.libdirs, config_info.libdirs)
