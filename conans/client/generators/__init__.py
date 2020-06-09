@@ -56,7 +56,7 @@ class _GeneratorManager(object):
 
 registered_generators = _GeneratorManager()
 
-registered_generators.add("txt", TXTGenerator)
+registered_generators.add(TXTGenerator.name, TXTGenerator)
 registered_generators.add("gcc", GCCGenerator)
 registered_generators.add("compiler_args", CompilerArgsGenerator)
 registered_generators.add("cmake", CMakeGenerator)

@@ -27,7 +27,7 @@ class SConsGenerator(Generator):
         all_flags = template.format(dep="conan", info=self.deps_build_info)
         sections.append(all_flags)
 
-        for config, cpp_info in self.deps_build_info.configs.items():
+        for config, cpp_info in self.deps_build_info.get_configs().items():
             all_flags = template.format(dep="conan:" + config, info=cpp_info)
             sections.append(all_flags)
 
@@ -36,7 +36,7 @@ class SConsGenerator(Generator):
             dep_flags = template.format(dep=dep_name, info=info)
             sections.append(dep_flags)
 
-            for config, cpp_info in info.configs.items():
+            for config, cpp_info in info.get_configs().items():
                 all_flags = template.format(dep=dep_name + ":" + config, info=cpp_info)
                 sections.append(all_flags)
 

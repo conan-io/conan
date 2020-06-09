@@ -84,7 +84,7 @@ class CMakeGenerator(Generator):
             dep_flags = cmake_dependency_vars(dep_name, deps=deps)
             sections.append(dep_flags)
 
-            for config, cpp_info in dep_cpp_info.configs.items():
+            for config, cpp_info in dep_cpp_info.get_configs().items():
                 deps = DepsCppCmake(cpp_info)
                 dep_flags = cmake_dependency_vars(dep_name, deps=deps, build_type=config)
                 sections.append(dep_flags)
@@ -100,7 +100,7 @@ class CMakeGenerator(Generator):
         all_flags = cmake_global_vars(deps=deps)
         sections.append(all_flags)
 
-        for config, cpp_info in self.deps_build_info.configs.items():
+        for config, cpp_info in self.deps_build_info.get_configs().items():
             deps = DepsCppCmake(cpp_info)
             dep_flags = cmake_global_vars(deps=deps, build_type=config)
             sections.append(dep_flags)

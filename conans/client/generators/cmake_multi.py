@@ -10,7 +10,7 @@ from conans.model.build_info import CppInfo
 def extend(cpp_info, config):
     """ adds the specific config configuration to the common one
     """
-    config_info = cpp_info.configs.get(config)
+    config_info = cpp_info.get_configs().get(config)
     if config_info:
         def add_lists(seq1, seq2):
             return seq1 + [s for s in seq2 if s not in seq1]

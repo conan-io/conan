@@ -179,7 +179,10 @@ class CppInfo(_CppInfo):
         self.components = DefaultOrderedDict(lambda: Component(self.rootpath))
         # public_deps is needed to accumulate list of deps for cmake targets
         self.public_deps = []
-        self.configs = {}
+        self._configs = {}
+
+    def get_configs(self):
+        return self._configs
 
     def __getattr__(self, config):
         def _get_cpp_info():
@@ -194,7 +197,7 @@ class CppInfo(_CppInfo):
             result.frameworkdirs.append(DEFAULT_FRAMEWORK)
             return result
 
-        return self.configs.setdefault(config, _get_cpp_info())
+        return self._configs.setdefault(config, _get_cpp_info())
 
     def _raise_incorrect_components_definition(self, package_name, package_requires):
         # Raise if mixing components
@@ -215,7 +218,7 @@ class CppInfo(_CppInfo):
                 self.build_modules) and self.components:
             raise ConanException("self.cpp_info.components cannot be used with self.cpp_info "
                                  "global values at the same time")
-        if self.configs and self.components:
+        if self._configs and self.components:
             raise ConanException("self.cpp_info.components cannot be used with self.cpp_info configs"
                                  " (release/debug/...) at the same time")
 
@@ -485,10 +488,13 @@ class DepsCppInfo(_BaseDepsCppInfo):
     def __init__(self):
         super(DepsCppInfo, self).__init__()
         self._dependencies = OrderedDict()
-        self.configs = {}
+        self._configs = {}
 
     def __getattr__(self, config):
-        return self.configs.setdefault(config, _BaseDepsCppInfo())
+        return self._configs.setdefault(config, _BaseDepsCppInfo())
+
+    def get_configs(self):
+        return self._configs
 
     @property
     def dependencies(self):
@@ -505,5 +511,5 @@ class DepsCppInfo(_BaseDepsCppInfo):
         assert isinstance(cpp_info, (CppInfo, DepCppInfo))
         self._dependencies[pkg_name] = cpp_info
         super(DepsCppInfo, self).update(cpp_info)
-        for config, cpp_info in cpp_info.configs.items():
-            self.configs.setdefault(config, _BaseDepsCppInfo()).update(cpp_info)
+        for config, cpp_info in cpp_info.get_configs().items():
+            self._configs.setdefault(config, _BaseDepsCppInfo()).update(cpp_info)
