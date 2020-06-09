@@ -158,6 +158,30 @@ class Base(unittest.TestCase):
             self.client.run("build ..")
         return install_out
 
+    def _modify_code(self):
+        file_path = os.path.join(self.client.current_folder, "app_lib.cpp")
+        content = self.client.load("app_lib.cpp")
+        content = content.replace("App:", "AppImproved:")
+        self.client.save({file_path: content})
+
+    def _incremental_build(self, build_type=None):
+        build_directory = os.path.join(self.client.current_folder, "build").replace("\\", "/")
+        with self.client.chdir(build_directory):
+            config = "--config %s" % build_type if build_type else ""
+            self.client.run_command("cmake --build . %s" % config)
+
+    def _run_app(self, build_type, msg="App", dyld_path=None):
+        if dyld_path:
+            build_directory = os.path.join(self.client.current_folder, "build").replace("\\", "/")
+            command_str = 'DYLD_LIBRARY_PATH="%s" build/app' % build_directory
+        else:
+            command_str = "build\\%s\\app.exe" % build_type if build_type else "build/app"
+        self.client.run_command(command_str)
+        self.assertIn("Hello: %s" % build_type, self.client.out)
+        self.assertIn("%s: %s!" % (msg, build_type), self.client.out)
+        self.assertIn("DEFINITIONS_BOTH: True", self.client.out)
+        self.assertIn("DEFINITIONS_CONFIG: %s" % build_type, self.client.out)
+
 
 @unittest.skipUnless(platform.system() == "Windows", "Only for windows")
 class WinTest(Base):
@@ -211,24 +235,21 @@ class WinTest(Base):
 
         toolchain = self.client.load("build/conan_toolchain.cmake")
         include = self.client.load("build/conan_project_include.cmake")
-        settings["build_type"] = "Release" if build_type == "Debug" else "Debug"
+        opposite_build_type = "Release" if build_type == "Debug" else "Debug"
+        settings["build_type"] = opposite_build_type
         self._run_build(settings, options)
         # The generated toolchain files must be identical because it is a multi-config
         self.assertEqual(toolchain, self.client.load("build/conan_toolchain.cmake"))
         self.assertEqual(include, self.client.load("build/conan_project_include.cmake"))
 
-        command_str = "build\\Debug\\app.exe"
-        self.client.run_command(command_str)
-        self.assertIn("Hello: Debug", self.client.out)
-        self.assertIn("App: Debug!", self.client.out)
-        self.assertIn("DEFINITIONS_BOTH: True", self.client.out)
-        self.assertIn("DEFINITIONS_CONFIG: Debug", self.client.out)
-        command_str = "build\\Release\\app.exe"
-        self.client.run_command(command_str)
-        self.assertIn("Hello: Release", self.client.out)
-        self.assertIn("App: Release!", self.client.out)
-        self.assertIn("DEFINITIONS_BOTH: True", self.client.out)
-        self.assertIn("DEFINITIONS_CONFIG: Release", self.client.out)
+        self._run_app("Release")
+        self._run_app("Debug")
+
+        self._modify_code()
+        self._incremental_build(build_type=build_type)
+        self._run_app(build_type, msg="AppImproved")
+        self._incremental_build(build_type=opposite_build_type)
+        self._run_app(opposite_build_type, msg="AppImproved")
 
 
 @unittest.skipUnless(platform.system() == "Linux", "Only for Linux")
@@ -272,11 +293,11 @@ class LinuxTest(Base):
         for k, v in vals.items():
             self.assertIn(">> %s: %s" % (k, v), out)
 
-        self.client.run_command("build/app")
-        self.assertIn("Hello: %s" % build_type, self.client.out)
-        self.assertIn("App: %s!" % build_type, self.client.out)
-        self.assertIn("DEFINITIONS_BOTH: True", self.client.out)
-        self.assertIn("DEFINITIONS_CONFIG: %s" % build_type, self.client.out)
+        self._run_app()
+
+        self._modify_code()
+        self._incremental_build()
+        self._run_app(msg="AppImproved")
 
 
 @unittest.skipUnless(platform.system() == "Darwin", "Only for Apple")
@@ -315,15 +336,11 @@ class AppleTest(Base):
         for k, v in vals.items():
             self.assertIn(">> %s: %s" % (k, v), out)
 
-        if shared:
-            build_directory = os.path.join(self.client.current_folder, "build").replace("\\", "/")
-            self.client.run_command('DYLD_LIBRARY_PATH="%s" build/app' % build_directory)
-        else:
-            self.client.run_command('build/app')
-        self.assertIn("Hello: %s" % build_type, self.client.out)
-        self.assertIn("App: %s!" % build_type, self.client.out)
-        self.assertIn("DEFINITIONS_BOTH: True", self.client.out)
-        self.assertIn("DEFINITIONS_CONFIG: %s" % build_type, self.client.out)
+        self._run_app(dyld_path=shared)
+
+        self._modify_code()
+        self._incremental_build()
+        self._run_app(dyld_path=shared, msg="AppImproved")
 
 
 @attr("toolchain")
