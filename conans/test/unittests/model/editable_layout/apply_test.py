@@ -42,7 +42,7 @@ class ApplyEditableLayoutTest(unittest.TestCase):
     def test_require_no_namespace(self):
         content = base_content.format(namespace="", path_prefix="")
         save(self.layout_filepath, content)
-        cpp_info = CppInfo(None)
+        cpp_info = CppInfo(self.ref.name, None)
         self.editable_cpp_info.apply_to(self.ref, cpp_info, settings=None, options=None)
         self.assertListEqual(cpp_info.includedirs, ['dirs/includedirs'])
         self.assertListEqual(cpp_info.libdirs, ['dirs/libdirs'])

@@ -129,7 +129,7 @@ class TXTGenerator(Generator):
                 if dep is None:
                     cpp_info = deps_cpp_info
                 else:
-                    cpp_info = deps_cpp_info._dependencies.setdefault(dep, CppInfo(root_folder=""))
+                    cpp_info = deps_cpp_info._dependencies.setdefault(dep, CppInfo(dep, root_folder=""))
 
                 for config, fields in configs_cpp_info.items():
                     item_to_apply = cpp_info if not config else getattr(cpp_info, config)
