@@ -59,11 +59,11 @@ Cflags: -I${includedir} -cxxflag -DMYDEFINE2
 Requires: my_pkg
 """)
 
-        self.assertEqual(files["mypkg1.pc"], """prefix=dummy_root_folder1
+        self.assertEqual(files["MYPKG1.pc"], """prefix=dummy_root_folder1
 libdir=${prefix}/lib
 includedir=${prefix}/include
 
-Name: mypkg1
+Name: MYPKG1
 Description: My other cool description
 Version: 1.7
 Libs: -L${libdir}
@@ -139,6 +139,10 @@ Cflags: -I${includedir} -Flag1=23 -DMYDEFINE1
         generator = PkgConfigGenerator(conanfile)
         files = generator.content
 
+        self.assertListEqual(sorted(files.keys()), sorted(
+            ['my_pkg_custom_name.pc', 'my_pkg1_custom_name.pc', 'my_pkg2_custom_name.pc', 'ZLIB.pc',
+             'BZip2.pc']))
+
         self.assertEqual(files["my_pkg2_custom_name.pc"], """prefix=dummy_root_folder2
 libdir=${prefix}/lib
 includedir=${prefix}/include
@@ -179,7 +183,7 @@ Description: Conan package: BZip2
 Version: 2.3
 Libs: -L${libdir} -sharedlinkflag -exelinkflag
 Cflags: -I${includedir} -cxxflag -DMYDEFINE2
-Requires: my_pkg_custom_name my_pkg1_custom_name zlib
+Requires: my_pkg_custom_name my_pkg1_custom_name ZLIB
 """)
 
     def apple_frameworks_test(self):
