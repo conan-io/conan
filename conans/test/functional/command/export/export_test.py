@@ -48,11 +48,7 @@ class TestConan(ConanFile):
         self.assertIn("lib/1.0@lasote/channel: A new conanfile.py version was exported",
                       client.out)
 
-        client.save({"conanfile.py": """from conans import ConanFile
-class MyPkg(ConanFile):
-    name="Lib"
-    version="1.0"
-"""})
+        client.save({"conanfile.py": GenConanfile("Lib", "1.0")})
         client.run("export . lasote", assert_error=True)
         self.assertIn("Invalid parameter 'lasote', specify the full reference or user/channel",
                       client.out)
@@ -180,14 +176,7 @@ class TestConan(ConanFile):
     @parameterized.expand([("myconanfile.py", ), ("Conanfile.py", )])
     def test_filename(self, filename):
         client = TestClient()
-        conanfile = """
-from conans import ConanFile
-class TestConan(ConanFile):
-    name = "Hello"
-    version = "1.2"
-"""
-
-        client.save({filename: conanfile})
+        client.save({filename: GenConanfile("Hello", "1.2")})
         client.run("export %s lasote/stable" % filename)
         self.assertIn("Hello/1.2@lasote/stable: A new conanfile.py version was exported",
                       client.out)
@@ -255,8 +244,6 @@ class ExportTest(unittest.TestCase):
         self.client.run("export . lasote/stable")
 
     def test_basic(self):
-        """ simple registration of a new conans
-        """
         reg_path = self.client.cache.package_layout(self.ref).export()
         manif = FileTreeManifest.load(self.client.cache.package_layout(self.ref).export())
 
@@ -285,14 +272,7 @@ class ExportTest(unittest.TestCase):
                       self.client.out)
 
     def test_export_filter(self):
-        content = """
-from conans import ConanFile
-
-class OpenSSLConan(ConanFile):
-    name = "openssl"
-    version = "2.0.1"
-"""
-        self.client.save({CONANFILE: content})
+        self.client.save({CONANFILE: GenConanfile("openssl", "2.0.1")})
         self.client.run("export . lasote/stable")
         ref = ConanFileReference.loads('openssl/2.0.1@lasote/stable')
         reg_path = self.client.cache.package_layout(ref).export()
@@ -310,8 +290,7 @@ class OpenSSLConan(ConanFile):
         self.client.save({CONANFILE: content})
         self.client.run("export . lasote/stable")
         self.assertEqual(sorted(os.listdir(reg_path)),
-                         ['CMakeLists.txt', CONANFILE, CONAN_MANIFEST,
-                          'helloHello0.h'])
+                         ['CMakeLists.txt', CONANFILE, CONAN_MANIFEST, 'helloHello0.h'])
 
         # Now exports being a list instead a tuple
         content = """
