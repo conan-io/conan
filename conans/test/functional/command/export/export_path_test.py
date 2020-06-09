@@ -50,8 +50,7 @@ class ExportPathTest(unittest.TestCase):
         reg_path = client.cache.package_layout(ref).export()
         manif = FileTreeManifest.load(client.cache.package_layout(ref).export())
 
-        self.assertIn('%s: A new conanfile.py version was exported' % str(ref),
-                      client.out)
+        self.assertIn('%s: A new conanfile.py version was exported' % str(ref), client.out)
         self.assertIn('%s: Folder: %s' % (str(ref), reg_path), client.out)
         self.assertTrue(os.path.exists(reg_path))
 
@@ -82,8 +81,7 @@ class ExportPathTest(unittest.TestCase):
         reg_path = client.cache.package_layout(ref).export()
         manif = FileTreeManifest.load(client.cache.package_layout(ref).export())
 
-        self.assertIn('%s: A new conanfile.py version was exported' % str(ref),
-                      client.out)
+        self.assertIn('%s: A new conanfile.py version was exported' % str(ref), client.out)
         self.assertIn('%s: Folder: %s' % (str(ref), reg_path), client.out)
         self.assertTrue(os.path.exists(reg_path))
 
@@ -119,8 +117,7 @@ class ExportPathTest(unittest.TestCase):
         reg_path = client.cache.package_layout(ref).export()
         manif = FileTreeManifest.load(client.cache.package_layout(ref).export())
 
-        self.assertIn('%s: A new conanfile.py version was exported' % str(ref),
-                      client.out)
+        self.assertIn('%s: A new conanfile.py version was exported' % str(ref), client.out)
         self.assertIn('%s: Folder: %s' % (str(ref), reg_path), client.out)
         self.assertTrue(os.path.exists(reg_path))
 
