@@ -293,11 +293,11 @@ class LinuxTest(Base):
         for k, v in vals.items():
             self.assertIn(">> %s: %s" % (k, v), out)
 
-        self._run_app()
+        self._run_app(build_type)
 
         self._modify_code()
         self._incremental_build()
-        self._run_app(msg="AppImproved")
+        self._run_app(build_type, msg="AppImproved")
 
 
 @unittest.skipUnless(platform.system() == "Darwin", "Only for Apple")
@@ -336,11 +336,11 @@ class AppleTest(Base):
         for k, v in vals.items():
             self.assertIn(">> %s: %s" % (k, v), out)
 
-        self._run_app(dyld_path=shared)
+        self._run_app(build_type, dyld_path=shared)
 
         self._modify_code()
         self._incremental_build()
-        self._run_app(dyld_path=shared, msg="AppImproved")
+        self._run_app(build_type, dyld_path=shared, msg="AppImproved")
 
 
 @attr("toolchain")
