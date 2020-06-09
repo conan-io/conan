@@ -15,7 +15,7 @@ from conans.client.cmd.export import cmd_export, export_alias
 from conans.client.cmd.export_pkg import export_pkg
 from conans.client.cmd.profile import (cmd_profile_create, cmd_profile_delete_key, cmd_profile_get,
                                        cmd_profile_list, cmd_profile_update)
-from conans.client.cmd.search import Search
+from conans.client.cmd.search_v2 import Search
 from conans.client.cmd.test import install_build_and_test
 from conans.client.cmd.uploader import CmdUpload
 from conans.client.cmd.user import user_set, users_clean, users_list, token_present
@@ -848,14 +848,13 @@ class ConanAPIV2(object):
             raise
 
     @api_method
-    def search_recipes(self, query, remote_name=None, case_sensitive=False,
-                       fill_revisions=False):
+    def search_recipes(self, query, remote_pattern=None):
         search_recorder = SearchRecorder()
         remotes = self.app.cache.registry.load_remotes()
         search = Search(self.app.cache, self.app.remote_manager, remotes)
 
         try:
-            references = search.search_recipes(query, remote_name, case_sensitive)
+            references = search.search_recipes(query, remote_pattern)
         except ConanException as exc:
             search_recorder.error = True
             exc.info = search_recorder.get_info()
@@ -863,11 +862,6 @@ class ConanAPIV2(object):
 
         for remote_name, refs in references.items():
             for ref in refs:
-                if fill_revisions:
-                    layout = self.app.cache.package_layout(ref)
-                    if isinstance(layout, PackageCacheLayout):
-                        ref = ref.copy_with_rev(layout.recipe_revision())
-
                 search_recorder.add_recipe(remote_name, ref, with_packages=False)
         return search_recorder.get_info()
 
