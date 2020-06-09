@@ -61,11 +61,12 @@ class Command(object):
 
     def search(self, *args):
         """
-        Search package recipes
+        Searches for package recipes whose name contain <query> in a remote or in the local cache
         """
         parser = argparse.ArgumentParser(description=self.search.__doc__, prog="conan search",
                                          formatter_class=SmartFormatter)
-        parser.add_argument('pattern', help="pattern for matching package recipes")
+        parser.add_argument('query',
+                            help="Search query to find package recipe reference, e.g., 'boost', 'lib*'")
         parser.add_argument('-r', '--remote', action="append", nargs='?',
                             help="Remote to search")
         parser.add_argument('-c', '--cache', action="store_true", help="Search in the local cache")
