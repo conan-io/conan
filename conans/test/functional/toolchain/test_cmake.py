@@ -159,10 +159,13 @@ class Base(unittest.TestCase):
         return install_out
 
     def _modify_code(self):
-        file_path = os.path.join(self.client.current_folder, "app_lib.cpp")
         content = self.client.load("app_lib.cpp")
         content = content.replace("App:", "AppImproved:")
-        self.client.save({file_path: content})
+        self.client.save({"app_lib.cpp": content})
+
+        content = self.client.load("CMakeLists.txt")
+        content = content.replace(">>", "++>>")
+        self.client.save({"CMakeLists.txt": content})
 
     def _incremental_build(self, build_type=None):
         build_directory = os.path.join(self.client.current_folder, "build").replace("\\", "/")
@@ -207,12 +210,7 @@ class WinTest(Base):
             self.assertIn("Microsoft Visual Studio 14.0", self.client.out)
         else:
             self.assertIn("Microsoft Visual Studio/2017", self.client.out)
-        if shared:
-            self.assertIn("app_lib.dll", self.client.out)
-        else:
-            self.assertNotIn("app_lib.dll", self.client.out)
 
-        out = str(self.client.out).splitlines()
         runtime = "MT" if "MT" in runtime else "MD"
         generator_platform = "x64" if arch == "x86_64" else "Win32"
         arch = "x64" if arch == "x86_64" else "X86"
@@ -230,8 +228,18 @@ class WinTest(Base):
                 "CMAKE_CXX_STANDARD": cppstd,
                 "CMAKE_CXX_EXTENSIONS": "OFF",
                 "BUILD_SHARED_LIBS": shared_str}
-        for k, v in vals.items():
-            self.assertIn(">> %s: %s" % (k, v), out)
+
+        def _verify_out(marker=">>"):
+            if shared:
+                self.assertIn("app_lib.dll", self.client.out)
+            else:
+                self.assertNotIn("app_lib.dll", self.client.out)
+
+            out = str(self.client.out).splitlines()
+            for k, v in vals.items():
+                self.assertIn("%s %s: %s" % (marker, k, v), out)
+
+        _verify_out()
 
         toolchain = self.client.load("build/conan_toolchain.cmake")
         include = self.client.load("build/conan_project_include.cmake")
@@ -247,6 +255,7 @@ class WinTest(Base):
 
         self._modify_code()
         self._incremental_build(build_type=build_type)
+        _verify_out(marker="++>>")
         self._run_app(build_type, bin_folder=True, msg="AppImproved")
         self._incremental_build(build_type=opposite_build_type)
         self._run_app(opposite_build_type, bin_folder=True, msg="AppImproved")
@@ -266,12 +275,7 @@ class LinuxTest(Base):
 
         self.assertIn('CMake command: cmake -G "Unix Makefiles" '
                       '-DCMAKE_TOOLCHAIN_FILE="conan_toolchain.cmake"', self.client.out)
-        if shared:
-            self.assertIn("libapp_lib.so", self.client.out)
-        else:
-            self.assertIn("libapp_lib.a", self.client.out)
 
-        out = str(self.client.out).splitlines()
         extensions_str = "ON" if "gnu" in cppstd else "OFF"
         pic_str = "" if shared else "ON"
         arch_str = "-m32" if arch == "x86" else "-m64"
@@ -290,13 +294,24 @@ class LinuxTest(Base):
                 "COMPILE_DEFINITIONS": "_GLIBCXX_USE_CXX11_ABI=%s" % cxx11_abi_str,
                 "CMAKE_POSITION_INDEPENDENT_CODE": pic_str
                 }
-        for k, v in vals.items():
-            self.assertIn(">> %s: %s" % (k, v), out)
+
+        def _verify_out(marker=">>"):
+            if shared:
+                self.assertIn("libapp_lib.so", self.client.out)
+            else:
+                self.assertIn("libapp_lib.a", self.client.out)
+
+            out = str(self.client.out).splitlines()
+            for k, v in vals.items():
+                self.assertIn("%s %s: %s" % (marker, k, v), out)
+
+        _verify_out()
 
         self._run_app(build_type)
 
         self._modify_code()
         self._incremental_build()
+        _verify_out(marker="++>>")
         self._run_app(build_type, msg="AppImproved")
 
 
@@ -312,12 +327,7 @@ class AppleTest(Base):
 
         self.assertIn('CMake command: cmake -G "Unix Makefiles" '
                       '-DCMAKE_TOOLCHAIN_FILE="conan_toolchain.cmake"', self.client.out)
-        if shared:
-            self.assertIn("libapp_lib.dylib", self.client.out)
-        else:
-            self.assertIn("libapp_lib.a", self.client.out)
 
-        out = str(self.client.out).splitlines()
         extensions_str = "OFF" if cppstd else ""
         vals = {"CMAKE_CXX_STANDARD": cppstd,
                 "CMAKE_CXX_EXTENSIONS": extensions_str,
@@ -333,13 +343,24 @@ class AppleTest(Base):
                 "CMAKE_SKIP_RPATH": "1",
                 "CMAKE_INSTALL_NAME_DIR": ""
                 }
-        for k, v in vals.items():
-            self.assertIn(">> %s: %s" % (k, v), out)
+
+        def _verify_out(marker=">>"):
+            if shared:
+                self.assertIn("libapp_lib.dylib", self.client.out)
+            else:
+                self.assertIn("libapp_lib.a", self.client.out)
+
+            out = str(self.client.out).splitlines()
+            for k, v in vals.items():
+                self.assertIn("%s %s: %s" % (marker, k, v), out)
+
+        _verify_out()
 
         self._run_app(build_type, dyld_path=shared)
 
         self._modify_code()
         self._incremental_build()
+        _verify_out(marker="++>>")
         self._run_app(build_type, dyld_path=shared, msg="AppImproved")
 
 
