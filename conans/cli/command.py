@@ -12,6 +12,7 @@ from conans.client.output import Color
 from conans.errors import ConanException, ConanInvalidConfiguration,  ConanMigrationError
 from conans.util.files import exception_message_safe
 from conans.util.log import logger
+from conans.client.outputers import OutputerFormats
 
 
 # Exit codes for conan command:
@@ -82,18 +83,18 @@ class Command(object):
                                          formatter_class=SmartFormatter)
         parser.add_argument('query',
                             help="Search query to find package recipe reference, e.g., 'boost', 'lib*'")
-        # -r and -c can't exist at the same time
+
         exclusive_args = parser.add_mutually_exclusive_group()
         exclusive_args.add_argument('-r', '--remote', default=None, action=OnceArgument, nargs='?',
                                     help="Remote to search. Accepts wildcards. To search in all remotes use *")
         exclusive_args.add_argument('-c', '--cache', action="store_true", help="Search in the local cache")
-        # default cli?
-        parser.add_argument('-o', '--output', default=None, action=OnceArgument,
+        parser.add_argument('-o', '--output', default="cli", action=OnceArgument,
                             help="Select the output format: json, html,...")
         args = parser.parse_args(*args)
 
+        out_kwargs = {'out': self._out, 'f': 'search'}
         info = self._conan.search_recipes(args.query, remote_pattern=args.remote)
-        print(info)
+        OutputerFormats.get(args.output).out(info=info, **out_kwargs)
 
     def _show_help(self):
         """
