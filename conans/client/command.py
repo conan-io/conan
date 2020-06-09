@@ -2080,7 +2080,9 @@ def _add_common_install_arguments(parser, build_help, lockfile=True):
     parser.add_argument("-r", "--remote", action=OnceArgument,
                         help='Look in the specified remote server')
     parser.add_argument("-u", "--update", action='store_true', default=False,
-                        help="Check updates exist from upstream remotes")
+                        help="Check updates exist for the current reference from upstream remotes."
+                             " It doesn't check for updates for the dependencies, clean the local"
+                             " cache to update also dependencies.")
     if lockfile:
         parser.add_argument("-l", "--lockfile", action=OnceArgument, nargs='?', const=".",
                             help="Path to a lockfile or folder containing 'conan.lock' file. "
