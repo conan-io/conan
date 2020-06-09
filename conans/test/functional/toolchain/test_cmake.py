@@ -170,12 +170,12 @@ class Base(unittest.TestCase):
             config = "--config %s" % build_type if build_type else ""
             self.client.run_command("cmake --build . %s" % config)
 
-    def _run_app(self, build_type, msg="App", dyld_path=None):
+    def _run_app(self, build_type, bin_folder=False, msg="App", dyld_path=None):
         if dyld_path:
             build_directory = os.path.join(self.client.current_folder, "build").replace("\\", "/")
             command_str = 'DYLD_LIBRARY_PATH="%s" build/app' % build_directory
         else:
-            command_str = "build\\%s\\app.exe" % build_type if build_type else "build/app"
+            command_str = "build\\%s\\app.exe" % build_type if bin_folder else "build/app"
         self.client.run_command(command_str)
         self.assertIn("Hello: %s" % build_type, self.client.out)
         self.assertIn("%s: %s!" % (msg, build_type), self.client.out)
@@ -242,14 +242,14 @@ class WinTest(Base):
         self.assertEqual(toolchain, self.client.load("build/conan_toolchain.cmake"))
         self.assertEqual(include, self.client.load("build/conan_project_include.cmake"))
 
-        self._run_app("Release")
-        self._run_app("Debug")
+        self._run_app("Release", bin_folder=True)
+        self._run_app("Debug", bin_folder=True)
 
         self._modify_code()
         self._incremental_build(build_type=build_type)
-        self._run_app(build_type, msg="AppImproved")
+        self._run_app(build_type, bin_folder=True, msg="AppImproved")
         self._incremental_build(build_type=opposite_build_type)
-        self._run_app(opposite_build_type, msg="AppImproved")
+        self._run_app(opposite_build_type, bin_folder=True, msg="AppImproved")
 
 
 @unittest.skipUnless(platform.system() == "Linux", "Only for Linux")
