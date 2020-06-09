@@ -24,6 +24,17 @@ ERROR_SIGTERM = 5                   # 5: SIGTERM
 ERROR_INVALID_CONFIGURATION = 6     # 6: Invalid configuration (done)
 
 
+class OnceArgument(argparse.Action):
+    """Allows declaring a parameter that can have only one value, by default argparse takes the
+    latest declared and it's very confusing.
+    """
+    def __call__(self, parser, namespace, values, option_string=None):
+        if getattr(namespace, self.dest) is not None and self.default is None:
+            msg = '{o} can only be specified once'.format(o=option_string)
+            raise argparse.ArgumentError(None, msg)
+        setattr(namespace, self.dest, values)
+
+
 class SmartFormatter(argparse.HelpFormatter):
 
     def _fill_text(self, text, width, indent):
@@ -60,7 +71,8 @@ class Command(object):
             raise ConanException("Unknown command '%s'" % args.command)
 
     # conan v2 search:
-    #
+    # conan search "*" will search in the default remote
+    # to search in the local cache: conan search "*" --cache explicitly
 
     def search(self, *args):
         """
@@ -70,12 +82,18 @@ class Command(object):
                                          formatter_class=SmartFormatter)
         parser.add_argument('query',
                             help="Search query to find package recipe reference, e.g., 'boost', 'lib*'")
-        parser.add_argument('-r', '--remote', action="append", nargs='?',
-                            help="Remote to search. Accepts wildcards. To search in all remotes use *")
-        parser.add_argument('-c', '--cache', action="store_true", help="Search in the local cache")
+        # -r and -c can't exist at the same time
+        exclusive_args = parser.add_mutually_exclusive_group()
+        exclusive_args.add_argument('-r', '--remote', default=None, action=OnceArgument, nargs='?',
+                                    help="Remote to search. Accepts wildcards. To search in all remotes use *")
+        exclusive_args.add_argument('-c', '--cache', action="store_true", help="Search in the local cache")
+        # default cli?
+        parser.add_argument('-o', '--output', default=None, action=OnceArgument,
+                            help="Select the output format: json, html,...")
         args = parser.parse_args(*args)
 
-        info = self._conan.search_recipes(args.query, remote_name=args.remote)
+        info = self._conan.search_recipes(args.query, remote_pattern=args.remote)
+        print(info)
 
     def _show_help(self):
         """
