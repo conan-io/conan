@@ -299,7 +299,7 @@ class CMakeDefinitionsBuilder(object):
             definitions["CMAKE_OSX_ARCHITECTURES"] = tools.to_apple_arch(arch)
             # xcrun is only available on macOS, otherwise it's cross-compiling and it needs to be
             # set within CMake toolchain
-            if platform.system == "Darwin":
+            if platform.system() == "Darwin":
                 definitions["CMAKE_OSX_SYSROOT"] = tools.XCRun(self._conanfile.settings).sdk_path
 
         definitions.update(self._cmake_cross_build_defines())
