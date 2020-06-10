@@ -40,6 +40,7 @@ default_manifest_folder = '.conan_manifests'
 class ProfileData(namedtuple("ProfileData", ["profiles", "settings", "options", "env"])):
     def __bool__(self):
         return bool(self.profiles or self.settings or self.options or self.env)
+
     __nonzero__ = __bool__
 
 
@@ -70,6 +71,7 @@ def api_method(f):
         finally:
             if old_curdir:
                 os.chdir(old_curdir)
+
     return wrapper
 
 
@@ -177,5 +179,6 @@ class ConanAPIV2(object):
             for ref in refs:
                 search_recorder.add_recipe(remote_name, ref, with_packages=False)
         return search_recorder.get_info()
+
 
 Conan = ConanAPIV2
