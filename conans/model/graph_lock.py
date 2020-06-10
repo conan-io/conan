@@ -82,11 +82,11 @@ class GraphLockNode(object):
     def __init__(self, pref, python_requires, options, requires, build_requires, path,
                  modified=None):
         self.pref = pref
+        self.requires = requires
+        self.build_requires = build_requires
         self.python_requires = python_requires
         self.options = options
         self.modified = modified  # variable
-        self.requires = requires
-        self.build_requires = build_requires
         self.path = path
 
     @staticmethod
@@ -129,27 +129,27 @@ class GraphLockNode(object):
 class GraphLock(object):
 
     def __init__(self, graph=None):
-        self._nodes = {}  # {numeric id: PREF or None}
+        self._nodes = {}  # {id: GraphLockNode}
         self.revisions_enabled = None
-        self.relax = False
+        self.relax = False  # If True, the lock can be expanded with new Nodes
 
         if graph is not None:
-            for node in graph.nodes:
-                if node.recipe == RECIPE_VIRTUAL:
+            for graph_node in graph.nodes:
+                if graph_node.recipe == RECIPE_VIRTUAL:
                     continue
-                self._upsert_node(node)
+                self._upsert_node(graph_node)
 
-    def _upsert_node(self, node):
+    def _upsert_node(self, graph_node):
         requires = []
         build_requires = []
-        for edge in node.dependencies:
+        for edge in graph_node.dependencies:
             if edge.build_require:
                 build_requires.append(edge.dst.id)
             else:
                 requires.append(edge.dst.id)
         # It is necessary to lock the transitive python-requires too, for this node
         python_reqs = None
-        reqs = getattr(node.conanfile, "python_requires", {})
+        reqs = getattr(graph_node.conanfile, "python_requires", {})
         if isinstance(reqs, dict):  # Old python_requires
             python_reqs = {}
             while reqs:
@@ -162,19 +162,19 @@ class GraphLock(object):
             python_reqs = [r.ref for _, r in python_reqs.items()]
         elif isinstance(reqs, PyRequires):
             # If py_requires are defined, they overwrite old python_reqs
-            python_reqs = node.conanfile.python_requires.all_refs()
+            python_reqs = graph_node.conanfile.python_requires.all_refs()
 
-        previous = node.graph_lock_node
+        previous = graph_node.graph_lock_node
         modified = previous.modified if previous else None
-        graph_node = GraphLockNode(node.pref if node.ref else None, python_reqs,
-                                   node.conanfile.options.values, requires, build_requires,
-                                   node.path, modified)
-        node.graph_lock_node = graph_node
-        self._nodes[node.id] = graph_node
+        lock_node = GraphLockNode(graph_node.pref if graph_node.ref else None, python_reqs,
+                                  graph_node.conanfile.options.values, requires, build_requires,
+                                  graph_node.path, modified)
+        graph_node.graph_lock_node = lock_node
+        self._nodes[graph_node.id] = lock_node
 
     @property
     def initial_counter(self):
-        # IDs are string, we need to compute the maximum
+        # IDs are string, we need to compute the maximum integer
         return max(int(x) for x in self._nodes.keys())
 
     def root_node_ref(self):
