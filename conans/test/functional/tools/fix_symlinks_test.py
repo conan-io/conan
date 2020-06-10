@@ -1,4 +1,5 @@
 import os
+import platform
 import textwrap
 import unittest
 
@@ -6,6 +7,7 @@ from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.utils.tools import TestClient
 
 
+@unittest.skipIf(platform.system() == "Windows", "symlink need admin privileges")
 class FixSymlinksTestCase(unittest.TestCase):
     name_ref = ConanFileReference.loads("name/version")
 
