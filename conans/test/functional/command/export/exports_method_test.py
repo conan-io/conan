@@ -118,27 +118,6 @@ class ExportsMethodTest(unittest.TestCase):
         layout = client.cache.package_layout(ConanFileReference.loads("pkg/0.1"))
         self.assertEqual("mycontent", load(os.path.join(layout.export(), "myfile.txt")))
 
-    def test_export_source_folders(self):
-        client = TestClient()
-        conanfile = textwrap.dedent("""
-           from conans import ConanFile
-           from conans.tools import save, load
-           import os
-
-           class MethodConan(ConanFile):
-               def export_sources(self):
-                   content = load(os.path.join(os.getcwd(), "data.txt"))
-                   save(os.path.join(self.export_sources_folder, "myfile.txt"), content)
-           """)
-        client.save({"recipe/conanfile.py": conanfile, "recipe/data.txt": "mycontent"})
-        client.run("export recipe pkg/0.1@")
-        layout = client.cache.package_layout(ConanFileReference.loads("pkg/0.1"))
-        self.assertEqual("mycontent", load(os.path.join(layout.export_sources(), "myfile.txt")))
-        client.current_folder = os.path.join(client.current_folder, "recipe")
-        client.run("export . pkg/0.1@")
-        layout = client.cache.package_layout(ConanFileReference.loads("pkg/0.1"))
-        self.assertEqual("mycontent", load(os.path.join(layout.export_sources(), "myfile.txt")))
-
     def test_export_attribute_error(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
@@ -185,6 +164,27 @@ class ExportsSourcesMethodTest(unittest.TestCase):
         exported_files = os.listdir(layout.export_sources())
         self.assertIn("file.txt", exported_files)
         self.assertIn("LICENSE.md", exported_files)
+
+    def test_export_source_folders(self):
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+           from conans import ConanFile
+           from conans.tools import save, load
+           import os
+
+           class MethodConan(ConanFile):
+               def export_sources(self):
+                   content = load(os.path.join(os.getcwd(), "data.txt"))
+                   save(os.path.join(self.export_sources_folder, "myfile.txt"), content)
+           """)
+        client.save({"recipe/conanfile.py": conanfile, "recipe/data.txt": "mycontent"})
+        client.run("export recipe pkg/0.1@")
+        layout = client.cache.package_layout(ConanFileReference.loads("pkg/0.1"))
+        self.assertEqual("mycontent", load(os.path.join(layout.export_sources(), "myfile.txt")))
+        client.current_folder = os.path.join(client.current_folder, "recipe")
+        client.run("export . pkg/0.1@")
+        layout = client.cache.package_layout(ConanFileReference.loads("pkg/0.1"))
+        self.assertEqual("mycontent", load(os.path.join(layout.export_sources(), "myfile.txt")))
 
     def test_export_sources_attribute_error(self):
         client = TestClient()
