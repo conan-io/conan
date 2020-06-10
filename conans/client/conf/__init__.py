@@ -177,6 +177,7 @@ _t_default_client_conf = Template(textwrap.dedent("""
     {% endif %}
 
     # config_install_interval = 1h
+    # required_conan_version = >=1.26
 
     [storage]
     # This is the default path, but you can write your own. It must be an absolute path or a
@@ -261,6 +262,7 @@ class ConanClientConfigParser(ConfigParser, object):
             ("CONAN_MSBUILD_VERBOSITY", "msbuild_verbosity", None),
             ("CONAN_CACERT_PATH", "cacert_path", None),
             ("CONAN_DEFAULT_PACKAGE_ID_MODE", "default_package_id_mode", None),
+            ("CONAN_REQUIRED_CONAN_VERSION", "required_conan_version", None),
             # ("CONAN_DEFAULT_PROFILE_PATH", "default_profile", DEFAULT_PROFILE_NAME),
         ],
         "hooks": [
@@ -709,3 +711,10 @@ class ConanClientConfigParser(ConfigParser, object):
         except Exception as e:
             raise ConanException("Incorrect definition of general.config_install_interval: %s"
                                  % interval)
+
+    @property
+    def required_conan_version(self):
+        try:
+            return self.get_item("general.required_conan_version")
+        except ConanException:
+            return None
