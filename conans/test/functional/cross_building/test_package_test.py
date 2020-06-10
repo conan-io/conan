@@ -1,9 +1,10 @@
-import unittest
-from conans.test.utils.tools import TestClient
 import textwrap
-from conans.client.tools import save
-from conans.test.utils.tools import TestClient, GenConanfile
+import unittest
+
 from jinja2 import Template
+
+from conans.client.tools import save
+from conans.test.utils.tools import TestClient
 
 
 class TestPackageTestCase(unittest.TestCase):
@@ -46,7 +47,7 @@ class TestPackageTestCase(unittest.TestCase):
                      'conanfile.py': self.conanfile,
                      'test_package/conanfile.py': self.conanfile_test,
                      'profile_host': '[settings]\nos=Host',
-                     'profile_build': '[settings]\nos=Build',})
+                     'profile_build': '[settings]\nos=Build', })
         self.t.run("export br.py br1/version@")
         self.t.run("export br.py br2/version@")
 
