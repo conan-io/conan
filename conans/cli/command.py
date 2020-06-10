@@ -12,7 +12,7 @@ from conans.client.output import Color
 from conans.errors import ConanException, ConanInvalidConfiguration,  ConanMigrationError
 from conans.util.files import exception_message_safe
 from conans.util.log import logger
-from conans.client.outputers import OutputerFormats
+from conans.client.formatters import FormatterFormats
 
 
 # Exit codes for conan command:
@@ -94,7 +94,7 @@ class Command(object):
 
         out_kwargs = {'out': self._out, 'f': 'search'}
         info = self._conan.search_recipes(args.query, remote_pattern=args.remote)
-        OutputerFormats.get(args.output).out(info=info, **out_kwargs)
+        FormatterFormats.get(args.output).out(info=info, **out_kwargs)
 
     def _show_help(self):
         """

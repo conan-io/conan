@@ -1,11 +1,11 @@
 # coding=utf-8
 from conans.client.output import Color
-from conans.client.outputers.base_outputer import BaseOutputer
-from conans.client.outputers.formats import OutputerFormats
+from conans.client.formatters.base_formatter import BaseFormatter
+from conans.client.formatters.formats import FormatterFormats
 
 
-@OutputerFormats.register("cli")
-class CLIOutputer(BaseOutputer):
+@FormatterFormats.register("cli")
+class CLIFormatter(BaseFormatter):
 
     def search(self, info, out, *args, **kwargs):
         results = info["results"]

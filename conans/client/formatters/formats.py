@@ -7,15 +7,15 @@ import logging
 log = logging.getLogger(__name__)
 
 
-class OutputerFormats(object):
+class FormatterFormats(object):
     _registry = {}
 
     @classmethod
     def register(cls, format):
-        def real_decorator(outputer_class):
-            log.debug("Formats::register: {})".format(outputer_class))
-            cls._registry[format] = outputer_class
-            return outputer_class
+        def real_decorator(formatter_class):
+            log.debug("Formats::register: {})".format(formatter_class))
+            cls._registry[format] = formatter_class
+            return formatter_class
         return real_decorator
 
     @classmethod
@@ -23,5 +23,5 @@ class OutputerFormats(object):
     def get(cls, format, *args, **kwargs):
         _class = cls._registry.get(format, None)
         if not _class:
-            raise ConanException("Outputer for format '{}' not found".format(format))
+            raise ConanException("Formatter for format '{}' not found".format(format))
         return _class(*args, **kwargs)
