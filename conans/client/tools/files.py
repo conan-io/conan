@@ -69,8 +69,8 @@ def unzip(filename, destination=".", keep_permissions=False, pattern=None, outpu
     output = default_output(output, 'conans.client.tools.files.unzip')
 
     if (filename.endswith(".tar.gz") or filename.endswith(".tgz") or
-            filename.endswith(".tbz2") or filename.endswith(".tar.bz2") or
-            filename.endswith(".tar")):
+        filename.endswith(".tbz2") or filename.endswith(".tar.bz2") or
+        filename.endswith(".tar")):
         return untargz(filename, destination, pattern)
     if filename.endswith(".gz"):
         import gzip
@@ -320,6 +320,7 @@ def collect_libs(conanfile, folder=None):
 
 def which(filename):
     """ same affect as posix which command or shutil.which from python3 """
+
     def verify(filepath):
         if os.path.isfile(filepath) and os.access(filepath, os.X_OK):
             return os.path.join(path, filename)
@@ -374,3 +375,45 @@ def remove_files_by_mask(directory, pattern):
                 os.unlink(fullname)
                 removed_names.append(os.path.relpath(fullname, directory))
     return removed_names
+
+
+def fix_symlinks(conanfile, raise_if_error=False):
+    """ Fix the symlinks in the conanfile.package_folder: make symlinks relative and remove
+        those links to files outside the package (it will print an error, or raise
+        if 'raise_if_error' evaluates to true).
+    """
+    offending_files = []
+
+    def work_on_element(dirpath, element, token):
+        fullpath = os.path.join(dirpath, element)
+        if os.path.islink(fullpath):
+            link_target = os.readlink(fullpath)
+            link_abs_target = os.path.join(dirpath, link_target)
+            link_rel_target = os.path.relpath(link_abs_target, conanfile.package_folder)
+            if link_rel_target.startswith('..'):
+                offending_file = os.path.relpath(fullpath, conanfile.package_folder)
+                offending_files.append(offending_file)
+                conanfile.output.error("{token} '{item}' links to a {token} outside the package, "
+                                       "it's been removed.".format(item=offending_file, token=token))
+                os.unlink(fullpath)
+            elif not os.path.exists(link_abs_target):
+                # This is a broken symlink. Failure is controlled by config variable
+                #  'general.skip_broken_symlinks_check'. Do not fail here.
+                offending_file = os.path.relpath(fullpath, conanfile.package_folder)
+                offending_files.append(offending_file)
+                conanfile.output.error("{token} '{item}' links to a {token} that doesn't exist, it's"
+                                       " been removed.".format(item=offending_file, token=token))
+                os.unlink(fullpath)
+            elif link_target != link_rel_target:
+                os.unlink(fullpath)
+                os.symlink(link_rel_target, fullpath)
+
+    for (dirpath, dirnames, filenames) in os.walk(conanfile.package_folder):
+        for filename in filenames:
+            work_on_element(dirpath, filename, token="file")
+
+        for dirname in dirnames:
+            work_on_element(dirpath, dirname, token="directory")
+
+    if offending_files and raise_if_error:
+        raise ConanException("There are invalid symlinks in the package!")
