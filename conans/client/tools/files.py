@@ -401,7 +401,7 @@ def fix_symlinks(conanfile, raise_if_error=False):
                 #  'general.skip_broken_symlinks_check'. Do not fail here.
                 offending_file = os.path.relpath(fullpath, conanfile.package_folder)
                 offending_files.append(offending_file)
-                conanfile.output.error("{token} '{item}' links to a {token} that doesn't exist, it's"
+                conanfile.output.error("{token} '{item}' links to a path that doesn't exist, it's"
                                        " been removed.".format(item=offending_file, token=token))
                 os.unlink(fullpath)
             elif link_target != link_rel_target:

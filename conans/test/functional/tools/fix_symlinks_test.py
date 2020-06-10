@@ -11,6 +11,7 @@ class FixSymlinksTestCase(unittest.TestCase):
 
     conanfile = textwrap.dedent("""
         import os
+        import shutil
         from conans import ConanFile, tools
 
         class Recipe(ConanFile):
@@ -37,11 +38,20 @@ class FixSymlinksTestCase(unittest.TestCase):
                            os.path.join(self.package_folder, "broken.txt"))
                 os.unlink(os.path.join(self.package_folder, "file.txt"))
 
+                # Folder: Symlink outside package
+                os.symlink(self.build_folder, os.path.join(self.package_folder, "outside_folder"))
+
                 # Folder: a regular folder and symlinks to it
                 tools.save(os.path.join(self.package_folder, "folder", "file.txt"), "contents")
                 os.symlink(os.path.join(self.package_folder, "folder"),
                            os.path.join(self.package_folder, "absolute"))
                 os.symlink("folder", os.path.join(self.package_folder, "relative"))
+
+                # Folder: broken symlink
+                tools.save(os.path.join(self.package_folder, "tmp", "file.txt"), "contents")
+                os.symlink(os.path.join(self.package_folder, "tmp"),
+                           os.path.join(self.package_folder, "broken_folder"))
+                shutil.rmtree(os.path.join(self.package_folder, "tmp"))
 
                 #
                 os.symlink(os.path.join(self.package_folder, "folder", "file.txt"),
@@ -57,8 +67,12 @@ class FixSymlinksTestCase(unittest.TestCase):
         t.run("create . {}@ -o raise_if_error=False".format(self.name_ref))
         self.assertIn("name/version: ERROR: file 'outside_symlink.txt' links to a file outside"
                       " the package, it's been removed.", t.out)
-        self.assertIn("name/version: ERROR: file 'broken.txt' links to a file that doesn't exist,"
+        self.assertIn("name/version: ERROR: file 'broken.txt' links to a path that doesn't exist,"
                       " it's been removed.", t.out)
+        self.assertIn("name/version: ERROR: file 'broken_folder' links to a path that doesn't"
+                      " exist, it's been removed.", t.out)
+        self.assertIn("name/version: ERROR: directory 'outside_folder' links to a directory outside"
+                      " the package, it's been removed.", t.out)
 
         # Check the work is done
         pkg_ref = PackageReference(self.name_ref, "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
@@ -93,6 +107,10 @@ class FixSymlinksTestCase(unittest.TestCase):
         t.run("create . name/version@ -o raise_if_error=True", assert_error=True)
         self.assertIn("name/version: ERROR: file 'outside_symlink.txt' links to a file outside"
                       " the package, it's been removed.", t.out)
-        self.assertIn("name/version: ERROR: file 'broken.txt' links to a file that doesn't exist,"
+        self.assertIn("name/version: ERROR: file 'broken.txt' links to a path that doesn't exist,"
                       " it's been removed.", t.out)
+        self.assertIn("name/version: ERROR: file 'broken_folder' links to a path that doesn't"
+                      " exist, it's been removed.", t.out)
+        self.assertIn("name/version: ERROR: directory 'outside_folder' links to a directory outside"
+                      " the package, it's been removed.", t.out)
         self.assertIn("ConanException: There are invalid symlinks in the package!", t.out)
