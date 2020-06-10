@@ -226,7 +226,7 @@ class ClientCache(object):
             Lock.clean(conan_folder)
             shutil.rmtree(os.path.join(conan_folder, "locks"), ignore_errors=True)
 
-    def get_template(self, template_name, user_overrides=True):
+    def get_template(self, template_name, user_overrides=False):
         # TODO: It can be initialized only once together with the Conan app
         loaders = [dict_loader]
         if user_overrides:
