@@ -4,6 +4,8 @@ from copy import copy
 
 from conans.errors import ConanException
 from conans.util.conan_v2_mode import conan_v2_behavior
+from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
+from conans.util.env_reader import get_env
 
 DEFAULT_INCLUDE = "include"
 DEFAULT_LIB = "lib"
@@ -193,6 +195,21 @@ class CppInfo(_CppInfo):
 
     def __str__(self):
         return self._ref_name
+
+    def get_name(self, generator):
+        name = super(CppInfo, self).get_name(generator)
+
+        # Legacy logic for pkg_config generator
+        from conans.client.generators.pkg_config import PkgConfigGenerator
+        if generator == PkgConfigGenerator.name:
+            fallback = self._name.lower() if self._name != self._ref_name else self._ref_name
+            if PkgConfigGenerator.name not in self.names and self._name != self._name.lower():
+                conan_v2_behavior("Generated file and name for {gen} generator will change in"
+                                  " Conan v2 to '{name}'. Use 'self.cpp_info.names[\"{gen}\"]"
+                                  " = '{fallback}' in your recipe to continue using current name."
+                                  .format(gen=PkgConfigGenerator.name, name=name, fallback=fallback))
+            name = self.names.get(generator, fallback)
+        return name
 
     def get_configs(self):
         return self._configs
