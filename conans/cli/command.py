@@ -7,7 +7,7 @@ from difflib import get_close_matches
 
 
 from conans import __version__ as client_version
-from conans.client.conan_api_v2 import Conan
+from conans.client.api.conan_api import Conan
 from conans.client.output import Color
 from conans.errors import ConanException, ConanInvalidConfiguration,  ConanMigrationError
 from conans.util.files import exception_message_safe
