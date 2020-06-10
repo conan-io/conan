@@ -29,7 +29,7 @@ def cmd_build(app, conanfile_path, source_folder, build_folder, package_folder, 
 
     if test:
         try:
-            conan_file.requires.add_ref(test)
+            conan_file.requires.add_ref(test)  # TODO: Optionally a build_requires
         except ConanException:
             pass
 
