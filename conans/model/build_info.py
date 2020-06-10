@@ -206,7 +206,7 @@ class CppInfo(_CppInfo):
             if PkgConfigGenerator.name not in self.names and self._name != self._name.lower():
                 conan_v2_behavior("Generated file and name for {gen} generator will change in"
                                   " Conan v2 to '{name}'. Use 'self.cpp_info.names[\"{gen}\"]"
-                                  " = '{fallback}' in your recipe to continue using current name."
+                                  " = \"{fallback}\"' in your recipe to continue using current name."
                                   .format(gen=PkgConfigGenerator.name, name=name, fallback=fallback))
             name = self.names.get(generator, fallback)
         return name
