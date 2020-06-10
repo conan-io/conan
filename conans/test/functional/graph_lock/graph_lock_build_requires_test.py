@@ -1,80 +1,60 @@
-import textwrap
 import unittest
 
 from conans.test.utils.tools import TestClient, GenConanfile
-from conans.model.ref import ConanFileReference
 
 
 class GraphLockBuildRequireTestCase(unittest.TestCase):
 
-
-    def test_br_dupe(self):
-        br_ref = ConanFileReference.loads("br/version")
-        zlib_ref = ConanFileReference.loads("zlib/version")
-        bzip2_ref = ConanFileReference.loads("bzip2/version")
-        boost_ref = ConanFileReference.loads("boost/version")
-
+    def test_duplicated_build_require(self):
         t = TestClient()
         t.save({
-            'br/conanfile.py': GenConanfile().with_name(br_ref.name).with_version(br_ref.version),
-            'zlib/conanfile.py': GenConanfile().with_name(zlib_ref.name)
-                                               .with_version(zlib_ref.version)
-                                               .with_build_require(br_ref),
-            'bzip2/conanfile.py': GenConanfile().with_name(bzip2_ref.name)
-                                                .with_version(zlib_ref.version)
-                                                .with_build_require(br_ref),
-            'boost/conanfile.py': GenConanfile().with_name(boost_ref.name)
-                                                .with_version(boost_ref.version)
-                                                .with_require(zlib_ref)
-                                                .with_require(bzip2_ref)
-                                                .with_build_require(br_ref),
-        })
+            'br/conanfile.py': GenConanfile("br", "0.1"),
+            'zlib/conanfile.py': GenConanfile("zlib", "0.1").with_build_require_plain("br/0.1"),
+            'bzip2/conanfile.py': GenConanfile("bzip2", "0.1").with_build_require_plain("br/0.1"),
+            'boost/conanfile.py': GenConanfile("boost", "0.1").with_require_plain("zlib/0.1")
+                                                              .with_require_plain("bzip2/0.1")
+                                                              .with_build_require_plain("br/0.1")
+            })
         t.run("export br/conanfile.py")
         t.run("export zlib/conanfile.py")
         t.run("export bzip2/conanfile.py")
 
-        # 1. Create build req
-        t.run("create br/conanfile.py")
+        # Create lock
+        t.run("graph lock boost/conanfile.py --build")
+        self.assertIn("br/0.1#99b906c1d69c56560d0b12ff2b3d10c0:"
+                      "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", t.load("conan.lock"))
 
-        # 2. Create lock
-        t.run("graph lock boost/conanfile.py --build".format(boost_ref))
-
-        # 3. Compute build order
+        # Compute build order
         t.run("graph build-order conan.lock --build")
+        self.assertIn("br/0.1#99b906c1d69c56560d0b12ff2b3d10c0:"
+                      "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", t.out)
 
-        # 4. Create the first element of build order
-        t.run("install {}@ --lockfile=conan.lock --build={}".format(br_ref, br_ref.name))
-
+        # Create the first element of build order
+        t.run("install br/0.1@ --lockfile=conan.lock --build=br/0.1")
+        self.assertIn("br/0.1:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Build", t.out)
+        self.assertIn("br/0.1: Created package revision", t.out)
 
     def test_package_both_contexts(self):
-        protobuf_ref = ConanFileReference.loads("protobuf/version")
-        lib_ref = ConanFileReference.loads("lib/version")
-        app_ref = ConanFileReference.loads("app/version")
-
         t = TestClient()
         t.save({
-            'protobuf/conanfile.py': GenConanfile().with_name(protobuf_ref.name)
-                                                   .with_version(protobuf_ref.version),
-            'lib/conanfile.py': GenConanfile().with_name(lib_ref.name)
-                                              .with_version(lib_ref.version)
-                                              .with_require(protobuf_ref)
-                                              .with_build_require(protobuf_ref),
-            'app/conanfile.py': GenConanfile().with_name(app_ref.name)
-                                              .with_version(app_ref.version)
-                                              .with_require(lib_ref)
+            'protobuf/conanfile.py': GenConanfile("protobuf", "0.1"),
+            'lib/conanfile.py': GenConanfile("lib", "0.1").with_require_plain("protobuf/0.1")
+                                                          .with_build_require_plain("protobuf/0.1"),
+            'app/conanfile.py': GenConanfile("app", "0.1").with_require_plain("lib/0.1")
         })
         t.run("export protobuf/conanfile.py")
         t.run("export lib/conanfile.py")
         t.run("export app/conanfile.py")
 
-        # 1. Create build req
-        t.run("create protobuf/conanfile.py")
-
-        # 2. Create lock
+        # Create lock
         t.run("graph lock app/conanfile.py --profile:build=default --profile:host=default --build")
-
-        # 3. Compute build order
+        self.assertIn("protobuf/0.1#a2f7b9ca9a4d2ebe512f9bc455802d34:"
+                      "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", t.load("conan.lock"))
+        # Compute build order
         t.run("graph build-order conan.lock --build")
-
-        # 4. Create the first element of build order
-        t.run("install {}@ --profile:build=default --profile:host=default --lockfile=conan.lock --build={}".format(protobuf_ref, protobuf_ref.name))
+        self.assertIn("protobuf/0.1#a2f7b9ca9a4d2ebe512f9bc455802d34:"
+                      "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", t.out)
+        # Create the first element of build order
+        t.run("install protobuf/0.1@ --profile:build=default --profile:host=default "
+              "--lockfile=conan.lock --build=protobuf")
+        self.assertIn("protobuf/0.1: Created package revision", t.out)
