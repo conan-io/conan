@@ -70,3 +70,11 @@ class TestPackageTestCase(unittest.TestCase):
         self.assertIn("name/version (test package): >> settings.os: Host", t.out)
         self.assertIn("name/version (test package): >> settings_build.os: Build", t.out)
         self.assertIn("name/version (test package): >> tools.get_env('INFO'): br2-Build", t.out)
+
+        t.run("test test_package/conanfile.py name/version@"
+              " --profile:host=profile_host --profile:build=profile_build")
+
+        # Test_package is executed with the same profiles as the package itself
+        self.assertIn("name/version (test package): >> settings.os: Host", t.out)
+        self.assertIn("name/version (test package): >> settings_build.os: Build", t.out)
+        self.assertIn("name/version (test package): >> tools.get_env('INFO'): br2-Build", t.out)
