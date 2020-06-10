@@ -78,10 +78,11 @@ class GraphManager(object):
         else:
             name, version, user, channel, _ = graph_info.root
             profile_host.process_settings(self._cache, preprocess=False)
-            profile_build.process_settings(self._cache, preprocess=False)
             # This is the hack of recovering the options from the graph_info
             profile_host.options.update(graph_info.options)
-            # TODO: Options for the build_profile?
+            if profile_build:
+                profile_build.process_settings(self._cache, preprocess=False)
+                # TODO: Options for the build_profile?
         if conanfile_path.endswith(".py"):
             lock_python_requires = None
             if graph_lock and not test:  # Only lock python requires if it is not test_package
