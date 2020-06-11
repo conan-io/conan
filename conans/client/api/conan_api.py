@@ -34,15 +34,6 @@ from conans.util.files import exception_message_safe, mkdir, save_files
 from conans.util.log import configure_logger
 from conans.util.tracer import log_command, log_exception
 
-default_manifest_folder = '.conan_manifests'
-
-
-class ProfileData(namedtuple("ProfileData", ["profiles", "settings", "options", "env"])):
-    def __bool__(self):
-        return bool(self.profiles or self.settings or self.options or self.env)
-
-    __nonzero__ = __bool__
-
 
 def api_method(f):
     def wrapper(api, *args, **kwargs):
