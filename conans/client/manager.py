@@ -13,7 +13,7 @@ from conans.client.toolchain.base import write_toolchain
 from conans.client.tools import cross_building, get_cross_building_settings
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
-from conans.model.graph_lock import LOCKFILE
+from conans.model.graph_lock import LOCKFILE, GraphLock
 from conans.paths import CONANINFO
 from conans.util.files import normalize, save
 
@@ -76,7 +76,8 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
     installer.install(deps_graph, remotes, build_modes, update, keep_build=keep_build,
                       graph_info=graph_info)
     # GraphLock always != None here (because of graph_manager.load_graph)
-    graph_info.graph_lock.update_check_graph(deps_graph, out)
+    # TODO: How to maintain the "modified" and "build" status?
+    graph_info.graph_lock = GraphLock(deps_graph)
 
     if manifest_folder:
         manifest_manager = ManifestManager(manifest_folder, user_io=user_io, cache=cache)

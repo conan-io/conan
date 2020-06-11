@@ -191,7 +191,7 @@ class GraphManager(object):
         root_node = Node(ref=None, conanfile=conanfile, context=CONTEXT_HOST, recipe=RECIPE_VIRTUAL)
         if graph_lock:  # Find the Node ID in the lock of current root
             node_id = graph_lock.get_node(reference)
-            locked_ref = graph_lock.pref(node_id).ref
+            locked_ref = graph_lock.ref(node_id)
             conanfile.requires[reference.name].lock(locked_ref, node_id)
         return root_node
 
@@ -218,7 +218,7 @@ class GraphManager(object):
         root_node = Node(ref, conanfile, recipe=RECIPE_CONSUMER, context=CONTEXT_HOST, path=path)
         if graph_lock:
             node_id = graph_lock.get_node(create_reference)
-            locked_ref = graph_lock.pref(node_id).ref
+            locked_ref = graph_lock.ref(node_id)
             conanfile.requires[create_reference.name].lock(locked_ref, node_id)
         return root_node
 
@@ -240,10 +240,8 @@ class GraphManager(object):
         graph_info.options = root_node.conanfile.options.values
         if root_node.ref:
             graph_info.root = root_node.ref
-        if graph_info.graph_lock is None:
-            graph_info.graph_lock = GraphLock(deps_graph)
-        else:
-            graph_info.graph_lock.update_check_graph(deps_graph, self._output)
+
+        graph_info.graph_lock = GraphLock(deps_graph)
 
         version_ranges_output = self._resolver.output
         if version_ranges_output:

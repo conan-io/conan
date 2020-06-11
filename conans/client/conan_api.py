@@ -1263,9 +1263,27 @@ class ConanAPIV1(object):
 
     @api_method
     def create_lock(self, reference, remote_name=None, settings=None, options=None, env=None,
-                    profile_names=None, update=False, lockfile=None, build=None, profile_build=None):
+                    profile_names=None, update=False, lockfile=None, build=None, profile_build=None,
+                    only_recipes=False, input_lockfile=None):
         profile_host = ProfileData(profiles=profile_names, settings=settings, options=options, env=env)
-        reference, graph_info = self._info_args(reference, None, profile_host, profile_build)
+        reference, graph_info = self._info_args(reference, None, profile_host, profile_build,
+                                                lockfile=input_lockfile)
+        if input_lockfile:
+            cwd = os.getcwd()
+            phost = profile_from_args(profile_host.profiles, profile_host.settings,
+                                      profile_host.options,
+                                      profile_host.env, cwd, self.app.cache)
+            phost.process_settings(self.app.cache)
+            graph_info.profile_host = phost
+            if profile_build:
+                # Only work on the profile_build if something is provided
+                pbuild = profile_from_args(profile_build.profiles, profile_build.settings,
+                                           profile_build.options, profile_build.env, cwd,
+                                           self.app.cache)
+                pbuild.process_settings(self.app.cache)
+            else:
+                pbuild = None
+            graph_info.profile_build = pbuild
         recorder = ActionRecorder()
         # FIXME: Using update as check_update?
         remotes = self.app.load_remotes(remote_name=remote_name, check_updates=update)
@@ -1273,6 +1291,8 @@ class ConanAPIV1(object):
                                                        False, remotes, recorder)
 
         print_graph(deps_graph, self.app.out)
+        if only_recipes:
+            graph_info.graph_lock.only_recipes()
         lockfile = _make_abs_path(lockfile)
         graph_info.save_lock(lockfile)
         self.app.out.info("Generated lockfile")
@@ -1295,7 +1315,8 @@ def get_graph_info(profile_host, profile_build, cwd, install_folder, cache, outp
         graph_lock_file = GraphLockFile.load(lockfile, cache.config.revisions_enabled)
         graph_lock_file.graph_lock.relax = cache.config.relax_lockfile
         graph_info.profile_host = graph_lock_file.profile_host
-        graph_info.profile_host.process_settings(cache, preprocess=False)
+        if graph_lock_file.profile_host is not None:
+            graph_info.profile_host.process_settings(cache, preprocess=False)
         graph_info.graph_lock = graph_lock_file.graph_lock
         output.info("Using lockfile: '{}'".format(lockfile))
         return graph_info

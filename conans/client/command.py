@@ -1845,6 +1845,10 @@ class Command(object):
         lock_cmd.add_argument("-l", "--lockfile", action=OnceArgument,
                               help="Path to lockfile to be created. If not specified 'conan.lock'"
                               " will be created in current folder")
+        lock_cmd.add_argument("--recipes", action="store_true",
+                              help="lock only recipe versions and revisions")
+        lock_cmd.add_argument("--input-lockfile", action=OnceArgument,
+                              help="Use an input lockfile")
         _add_common_install_arguments(lock_cmd, build_help="Packages to build from source",
                                       lockfile=False)
 
@@ -1873,7 +1877,9 @@ class Command(object):
                                     profile_build=profile_build,
                                     update=args.update,
                                     lockfile=args.lockfile,
-                                    build=args.build)
+                                    build=args.build,
+                                    only_recipes=args.recipes,
+                                    input_lockfile=args.input_lockfile)
 
     def _show_help(self):
         """
@@ -2045,6 +2051,8 @@ class Command(object):
             ret_code = ERROR_INVALID_CONFIGURATION
             self._out.error(exc)
         except ConanException as exc:
+            import traceback
+            print(traceback.format_exc())
             ret_code = ERROR_GENERAL
             self._out.error(exc)
         except Exception as exc:

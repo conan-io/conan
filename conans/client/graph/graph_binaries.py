@@ -4,7 +4,8 @@ from conans.client.graph.build_mode import BuildMode
 from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_MISSING,
                                        BINARY_UPDATE, RECIPE_EDITABLE, BINARY_EDITABLE,
                                        RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP, BINARY_UNKNOWN)
-from conans.errors import NoRemoteAvailable, NotFoundException, conanfile_exception_formatter
+from conans.errors import NoRemoteAvailable, NotFoundException, conanfile_exception_formatter, \
+    ConanException
 from conans.model.info import ConanInfo, PACKAGE_ID_UNKNOWN
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference
@@ -156,12 +157,18 @@ class GraphBinariesAnalyzer(object):
 
         # If it has lock
         locked = node.graph_lock_node
-        if locked and locked.pref.id == node.package_id:
-            pref = locked.pref  # Keep the locked with PREV
-            self._process_node(node, pref, build_mode, update, remotes)
-            if node.binary == BINARY_MISSING and build_mode.allowed(node.conanfile):
-                node.binary = BINARY_BUILD
-        else:
+        if locked:
+            assert locked.ref == node.ref
+            if locked.package_id:
+                if locked.package_id != node.package_id:
+                    raise ConanException("Lockfile error in '%s'. The locked package_id '%s' "
+                                         "does not match the graph '%s'"
+                                         % (node.ref, locked.package_id, node.package_id))
+                if locked.prev is not None:  # The actual package PREV is fully locked, find it
+                    pref = PackageReference(node.ref, node.package_id, locked.prev)
+                    self._process_locked_node(node, pref, remotes)
+
+        if node.binary is None:
             assert node.prev is None, "Non locked node shouldn't have PREV in evaluate_node"
             pref = PackageReference(node.ref, node.package_id)
             self._process_node(node, pref, build_mode, update, remotes)
@@ -190,6 +197,36 @@ class GraphBinariesAnalyzer(object):
                             break
                 if node.binary == BINARY_MISSING and build_mode.allowed(node.conanfile):
                     node.binary = BINARY_BUILD
+
+    def _process_locked_node(self, node, pref, remotes):
+        # When the lock contains a PREV, it means it cannot be built
+        if self._evaluate_is_cached(node, pref):
+            return
+
+        conanfile = node.conanfile
+
+        package_layout = self._cache.package_layout(pref.ref, short_paths=conanfile.short_paths)
+        metadata = package_layout.load_metadata()
+        assert metadata.recipe.revision == node.ref.revision
+        if metadata.packages[pref.id].revision == pref.revision:
+            node.binary == BINARY_CACHE
+            return
+
+        def _search_in_remote(_pref, r):
+            try:
+                remote_info, _pref_result = self._remote_manager.get_package_info(_pref, r)
+                assert _pref_result == _pref
+                node.binary_remote = r
+            except NotFoundException:
+                return None
+
+        selected = remotes.selected
+        if selected:
+            _search_in_remote(pref, selected)
+
+        for remote in remotes.values():
+            if node.binary_remote is None and remote != selected:
+                _search_in_remote(pref, remote)
 
     def _process_node(self, node, pref, build_mode, update, remotes):
         # Check that this same reference hasn't already been checked

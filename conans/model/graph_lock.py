@@ -13,7 +13,7 @@ from conans.model.version import Version
 from conans.util.files import load, save
 
 LOCKFILE = "conan.lock"
-LOCKFILE_VERSION = "0.3"
+LOCKFILE_VERSION = "0.4"
 
 
 class GraphLockFile(object):
@@ -48,10 +48,11 @@ class GraphLockFile(object):
                 raise ConanException("This lockfile was created with a previous incompatible "
                                      "version. Please regenerate the lockfile")
             # Do something with it, migrate, raise...
-        profile_host = graph_json.get("profile_host") or graph_json["profile"]
+        profile_host = graph_json.get("profile_host") or graph_json.get("profile")
         profile_build = graph_json.get("profile_build", None)
         # FIXME: Reading private very ugly
-        profile_host, _ = _load_profile(profile_host, None, None)
+        if profile_host:
+            profile_host, _ = _load_profile(profile_host, None, None)
         if profile_build:
             profile_build, _ = _load_profile(profile_build, None, None)
         graph_lock = GraphLock.from_dict(graph_json["graph_lock"])
@@ -71,17 +72,20 @@ class GraphLockFile(object):
                   "version": LOCKFILE_VERSION}
         if self.profile_build:
             result["profile_build"] = self.profile_build.dumps()
+        if self.graph_lock.only_recipe:
+            result.pop("profile_host", None)
+            result.pop("profile_build", None)
         return json.dumps(result, indent=True)
 
 
 class GraphLockNode(object):
-    # if recipe is exported, it will modify lockfile. No packageID or prev
-    MODIFIED_EXPORTED = "exported"
     MODIFIED_BUILT = "built"
 
-    def __init__(self, pref, python_requires, options, requires, build_requires, path,
-                 modified=None):
-        self.pref = pref
+    def __init__(self, ref, package_id, prev, python_requires, options, requires, build_requires,
+                 path, modified=None):
+        self.ref = ref if ref and ref.name else None  # includes rrev
+        self.package_id = package_id
+        self.prev = prev
         self.requires = requires
         self.build_requires = build_requires
         self.python_requires = python_requires
@@ -89,30 +93,45 @@ class GraphLockNode(object):
         self.modified = modified  # variable
         self.path = path
 
+    def only_recipe(self):
+        self.package_id = None
+        self.prev = None
+        self.options = None
+        self.modified = None
+
     @staticmethod
     def from_dict(data):
         """ constructs a GraphLockNode from a json like dict
         """
-        json_pref = data["pref"]
-        pref = PackageReference.loads(json_pref, validate=False) if json_pref else None
+        json_ref = data.get("ref")
+        ref = ConanFileReference.loads(json_ref) if json_ref else None
+        package_id = data.get("package_id")
+        prev = data.get("prev")
         python_requires = data.get("python_requires")
         if python_requires:
             python_requires = [ConanFileReference.loads(ref, validate=False)
                                for ref in python_requires]
-        options = OptionsValues.loads(data["options"])
+        options = OptionsValues.loads(data.get("options", ""))
         modified = data.get("modified")
         requires = data.get("requires", [])
         build_requires = data.get("build_requires", [])
         path = data.get("path")
-        return GraphLockNode(pref, python_requires, options, requires, build_requires, path,
-                             modified)
+        return GraphLockNode(ref, package_id, prev, python_requires, options, requires,
+                             build_requires, path, modified)
 
     def as_dict(self):
         """ returns the object serialized as a dict of plain python types
         that can be converted to json
         """
-        result = {"pref": repr(self.pref) if self.pref else None,
-                  "options": self.options.dumps()}
+        result = {}
+        if self.ref:
+            result["ref"] = repr(self.ref)
+        if self.options:
+            result["options"] = self.options.dumps()
+        if self.package_id:
+            result["package_id"] = self.package_id
+        if self.prev:
+            result["prev"] = self.prev
         if self.python_requires:
             result["python_requires"] = [repr(r) for r in self.python_requires]
         if self.modified:
@@ -132,12 +151,18 @@ class GraphLock(object):
         self._nodes = {}  # {id: GraphLockNode}
         self.revisions_enabled = None
         self.relax = False  # If True, the lock can be expanded with new Nodes
+        self.only_recipe = False
 
         if graph is not None:
             for graph_node in graph.nodes:
                 if graph_node.recipe == RECIPE_VIRTUAL:
                     continue
                 self._upsert_node(graph_node)
+
+    def only_recipes(self):
+        for node in self._nodes.values():
+            node.only_recipe()
+        self.only_recipe = True
 
     def _upsert_node(self, graph_node):
         requires = []
@@ -166,9 +191,12 @@ class GraphLock(object):
 
         previous = graph_node.graph_lock_node
         modified = previous.modified if previous else None
-        lock_node = GraphLockNode(graph_node.pref if graph_node.ref else None, python_reqs,
-                                  graph_node.conanfile.options.values, requires, build_requires,
-                                  graph_node.path, modified)
+        ref = graph_node.ref if graph_node.ref and graph_node.ref.name else None
+        package_id = graph_node.package_id if ref and ref.revision else None
+        prev = graph_node.prev if ref and ref.revision else None
+        lock_node = GraphLockNode(ref, package_id, prev, python_reqs,
+                                  graph_node.conanfile.options.values, requires,
+                                  build_requires, graph_node.path, modified)
         graph_node.graph_lock_node = lock_node
         self._nodes[graph_node.id] = lock_node
 
@@ -192,7 +220,7 @@ class GraphLock(object):
         if root_node.path:
             return root_node.path
         if not self.revisions_enabled:
-            return root_node.pref.ref.copy_clear_rev()
+            return root_node.ref.copy_clear_rev()
         return root_node.pref.ref
 
     @staticmethod
@@ -230,24 +258,6 @@ class GraphLock(object):
         for _, node in self._nodes.items():
             node.modified = None
 
-    def _closure_affected(self):
-        """ returns all the IDs of the nodes that depend directly or indirectly of some
-        package marked as "modified"
-        """
-        closure = set()
-        current = [id_ for id_, node in self._nodes.items() if node.modified]
-        # closure.update(current)
-        while current:
-            new_current = set()
-            for n in current:
-                new_neighs = self._inverse_neighbors(n)
-                to_add = set(new_neighs).difference(current)
-                new_current.update(to_add)
-                closure.update(to_add)
-            current = new_current
-
-        return closure
-
     def _inverse_neighbors(self, node_id):
         """ return all the nodes that have an edge to the "node_id". Useful for computing
         the set of nodes affected downstream by a change in one package
@@ -259,40 +269,6 @@ class GraphLock(object):
             if node_id in node.build_requires:
                 result.append(id_)
         return result
-
-    def update_check_graph(self, deps_graph, output):
-        """ update the lockfile, checking for security that only nodes that are being built
-        from sources can change their PREF, or nodes that depend on some other "modified"
-        package, because their binary-id can change too
-        """
-
-        affected = self._closure_affected()
-        for node in deps_graph.nodes:
-            if node.recipe == RECIPE_VIRTUAL:
-                continue
-            try:
-                lock_node = self._nodes[node.id]
-            except KeyError:
-                if node.recipe == RECIPE_CONSUMER:
-                    continue  # If the consumer node is not found, could be a test_package
-                if self.relax:
-                    continue
-                else:
-                    raise ConanException("The node %s ID %s was not found in the lock"
-                                         % (node.ref, node.id))
-
-            if lock_node.pref:
-                pref = lock_node.pref if self.revisions_enabled else lock_node.pref.copy_clear_revs()
-                node_pref = node.pref if self.revisions_enabled else node.pref.copy_clear_revs()
-                # If the update is compatible (resolved complete PREV) or if the node has
-                # been build, then update the graph
-                if (pref.id == PACKAGE_ID_UNKNOWN or pref.is_compatible_with(node_pref) or
-                        node.binary == BINARY_BUILD or node.id in affected or
-                        node.recipe == RECIPE_CONSUMER):
-                    lock_node.pref = node.pref
-                else:
-                    raise ConanException("Mismatch between lock and graph:\nLock:  %s\nGraph: %s"
-                                         % (repr(pref), repr(node.pref)))
 
     def pre_lock_node(self, node):
         if node.recipe == RECIPE_VIRTUAL:
@@ -324,16 +300,16 @@ class GraphLock(object):
         else:
             locked_requires = locked_node.requires or []
         if self.revisions_enabled:
-            prefs = {self._nodes[id_].pref.ref.name: (self._nodes[id_].pref, id_)
-                     for id_ in locked_requires}
+            refs = {self._nodes[id_].ref.name: (self._nodes[id_].ref, id_)
+                    for id_ in locked_requires}
         else:
-            prefs = {self._nodes[id_].pref.ref.name: (self._nodes[id_].pref.copy_clear_revs(), id_)
-                     for id_ in locked_requires}
+            refs = {self._nodes[id_].ref.name: (self._nodes[id_].ref.copy_clear_rev(), id_)
+                    for id_ in locked_requires}
 
         for require in requires:
             try:
-                locked_pref, locked_id = prefs[require.ref.name]
-                require.lock(locked_pref.ref, locked_id)
+                locked_ref, locked_id = refs[require.ref.name]
+                require.lock(locked_ref, locked_id)
             except KeyError:
                 t = "Build-require" if build_requires else "Require"
                 msg = "%s '%s' cannot be found in lockfile" % (t, require.ref.name)
@@ -347,8 +323,8 @@ class GraphLock(object):
             return self._nodes[node_id].python_requires
         return [r.copy_clear_rev() for r in self._nodes[node_id].python_requires or []]
 
-    def pref(self, node_id):
-        return self._nodes[node_id].pref
+    def ref(self, node_id):
+        return self._nodes[node_id].ref
 
     def get_node(self, ref):
         """ given a REF, return the Node of the package in the lockfile that correspond to that
@@ -356,17 +332,17 @@ class GraphLock(object):
         First, search with REF without revisions is done, then approximate search by just name
         """
         # None reference
-        if ref is None:
+        if ref is None or ref.name is None:
             # Is a conanfile.txt consumer
             for id_, node in self._nodes.items():
-                if not node.pref and node.path:
+                if not node.ref and node.path:
                     return id_
 
         # First search by ref (without RREV)
         ids = []
         search_ref = repr(ref)
         for id_, node in self._nodes.items():
-            if node.pref and repr(node.pref.ref) == search_ref:
+            if node.ref and repr(node.ref) == search_ref:
                 ids.append(id_)
         if ids:
             if len(ids) == 1:
@@ -376,7 +352,7 @@ class GraphLock(object):
         # Search by approximate name
         ids = []
         for id_, node in self._nodes.items():
-            if node.pref and node.pref.ref.name == ref.name:
+            if node.ref and node.ref.name == ref.name:
                 ids.append(id_)
         if ids:
             if len(ids) == 1:
@@ -391,6 +367,7 @@ class GraphLock(object):
         be marked as modified
         """
         lock_node = self._nodes[node_id]
-        if lock_node.pref.ref != ref:
-            lock_node.pref = PackageReference(ref, lock_node.pref.id)
-            lock_node.modified = GraphLockNode.MODIFIED_EXPORTED
+        lock_node.ref = ref
+        lock_node.package_id = None
+        lock_node.prev = None
+        lock_node.path = None
