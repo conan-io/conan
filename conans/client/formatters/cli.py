@@ -11,7 +11,7 @@ class CLIFormatter(BaseFormatter):
         results = info["results"]
         for remote_info in results:
             source = "cache" if remote_info["remote"] is None else str(remote_info["remote"])
-            out.writeln("source: {}".format(source), Color.BRIGHT_WHITE)
+            out.writeln("{}:".format(source), Color.BRIGHT_WHITE)
             for conan_item in remote_info["items"]:
                 reference = conan_item["recipe"]["id"]
                 out.writeln("  {}".format(reference))
