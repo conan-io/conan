@@ -92,9 +92,15 @@ class Command(object):
                             help="Select the output format: json, html,...")
         args = parser.parse_args(*args)
 
-        out_kwargs = {'out': self._out, 'f': 'search'}
-        info = self._conan.search_recipes(args.query, remote_pattern=args.remote)
-        FormatterFormats.get(args.output).out(info=info, **out_kwargs)
+        try:
+            info = self._conan.search_recipes(args.query, remote_pattern=args.remote,
+                                              local_cache=args.cache)
+        except ConanException as exc:
+            info = exc.info
+            raise
+        finally:
+            out_kwargs = {'out': self._out, 'f': 'search'}
+            FormatterFormats.get(args.output).out(info=info, **out_kwargs)
 
     def _show_help(self):
         """
