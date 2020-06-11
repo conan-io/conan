@@ -262,7 +262,6 @@ class ConanClientConfigParser(ConfigParser, object):
             ("CONAN_MSBUILD_VERBOSITY", "msbuild_verbosity", None),
             ("CONAN_CACERT_PATH", "cacert_path", None),
             ("CONAN_DEFAULT_PACKAGE_ID_MODE", "default_package_id_mode", None),
-            ("CONAN_REQUIRED_CONAN_VERSION", "required_conan_version", None),
             # ("CONAN_DEFAULT_PROFILE_PATH", "default_profile", DEFAULT_PROFILE_NAME),
         ],
         "hooks": [
