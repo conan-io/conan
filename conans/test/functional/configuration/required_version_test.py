@@ -1,40 +1,48 @@
 import unittest
+import mock
 from conans.test.utils.tools import TestClient
-from conans import __version__ as client_version
+from conans.errors import ConanException
 
 
 class RequiredVersionTest(unittest.TestCase):
 
-    def setUp(self):
-        self.client = TestClient()
-
+    @mock.patch("conans.client.conf.required_version.client_version", "1.26.0")
     def test_wrong_version(self):
-        # include_prerelease is required due the suffix -dev
-        required_version = ">=10.0.0,include_prerelease=True"
-        self.client.run("config set general.required_conan_version={}".format(required_version))
-        self.client.run("help")
-        self.assertIn("WARN: The current Conan version ({}) "
+        required_version = "1.23.0"
+        client = TestClient()
+        client.run("config set general.required_conan_version={}".format(required_version))
+        with self.assertRaises(ConanException) as error:
+            client.run("help")
+        self.assertIn("The current Conan version ({}) "
                       "does not match to the required version ({})."
-                      .format(client_version, required_version), self.client.out)
+                      .format( "1.26.0", required_version), str(error.exception))
 
+    @mock.patch("conans.client.conf.required_version.client_version", "1.22.0")
     def test_exact_version(self):
-        self.client.run("config set general.required_conan_version={}".format(client_version))
-        self.client.run("help")
-        self.assertNotIn("WARN", self.client.out)
+        client = TestClient()
+        client.run("config set general.required_conan_version={}".format("1.22.0"))
+        client.run("help")
+        self.assertNotIn("ERROR", client.out)
 
+    @mock.patch("conans.client.conf.required_version.client_version", "2.1.0")
     def test_lesser_version(self):
-        self.client.run("config set general.required_conan_version=<3,include_prerelease=True")
-        self.client.run("help")
-        self.assertNotIn("WARN", self.client.out)
+        client = TestClient()
+        client.run("config set general.required_conan_version=<3")
+        client.run("help")
+        self.assertNotIn("ERROR", client.out)
 
+    @mock.patch("conans.client.conf.required_version.client_version", "1.0.0")
     def test_greater_version(self):
-        self.client.run("config set general.required_conan_version=>0.1.0,include_prerelease=True")
-        self.client.run("help")
-        self.assertNotIn("WARN", self.client.out)
+        client = TestClient()
+        client.run("config set general.required_conan_version=>0.1.0")
+        client.run("help")
+        self.assertNotIn("ERROR", client.out)
 
     def test_bad_format(self):
+        client = TestClient()
         required_version = "1.0.0.0-foobar"
-        self.client.run("config set general.required_conan_version={}".format(required_version))
-        self.client.run("help", assert_error=True)
-        self.assertIn("ERROR: version range expression '1.0.0.0-foobar' is not valid",
-                      self.client.out)
+        client.run("config set general.required_conan_version={}".format(required_version))
+        with self.assertRaises(ConanException) as error:
+            client.run("help", assert_error=True)
+        self.assertIn("version range expression '1.0.0.0-foobar' is not valid",
+                      str(error.exception))
