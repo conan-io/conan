@@ -23,21 +23,21 @@ class UserOverridesTemplatesTestCase(unittest.TestCase):
 
     def test_table_html(self):
         table_template_path = os.path.join(self.t.cache_folder, 'templates', SEARCH_TABLE_HTML)
-        save(table_template_path, content='Custom template')
+        save(table_template_path, content='{{ base_template_path }}')
         self.t.run("search {}@ --table=output.html".format(self.lib_ref))
         content = self.t.load("output.html")
-        self.assertEqual("Custom template", content)
+        self.assertEqual(os.path.join(self.t.cache_folder, 'templates', 'output'), content)
 
     def test_graph_html(self):
         table_template_path = os.path.join(self.t.cache_folder, 'templates', INFO_GRAPH_HTML)
-        save(table_template_path, content='Custom template')
+        save(table_template_path, content='{{ base_template_path }}')
         self.t.run("info {}@ --graph=output.html".format(self.app_ref))
         content = self.t.load("output.html")
-        self.assertEqual("Custom template", content)
+        self.assertEqual(os.path.join(self.t.cache_folder, 'templates', 'output'), content)
 
     def test_graph_dot(self):
         table_template_path = os.path.join(self.t.cache_folder, 'templates', INFO_GRAPH_DOT)
-        save(table_template_path, content='Custom template')
+        save(table_template_path, content='{{ base_template_path }}')
         self.t.run("info {}@ --graph=output.dot".format(self.app_ref))
         content = self.t.load("output.dot")
-        self.assertEqual("Custom template", content)
+        self.assertEqual(os.path.join(self.t.cache_folder, 'templates', 'output'), content)
