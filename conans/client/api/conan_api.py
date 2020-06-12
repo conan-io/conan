@@ -154,22 +154,22 @@ class ConanAPIV2(object):
                             self.runner, quiet_output=quiet_output)
 
     @api_method
-    def search_recipes(self, query, remote_pattern=None, local_cache=False):
+    def search_recipes(self, query, remote_patterns=None, local_cache=False):
         search_recorder = SearchRecorder()
         remotes = self.app.cache.registry.load_remotes()
         search = Search(self.app.cache, self.app.remote_manager, remotes)
 
-        if local_cache is False and remote_pattern is None:
-            default_remote = remotes.get_remote(remote_pattern)
+        if local_cache is False and len(remote_patterns) == 0:
+            default_remote = remotes.default
             if default_remote.disabled is False:
-                remote_pattern = default_remote.name
+                remote_patterns = [default_remote.name]
             else:
                 raise ConanException("No remote was specified for the search and the default "
                                      "remote '{}' is disabled. Please enable it to search "
                                      "in the remote or use another remote".format(default_remote.name))
 
         try:
-            references = search.search_recipes(query, remote_pattern)
+            references = search.search_recipes(query, remote_patterns)
         except ConanException as exc:
             search_recorder.error = True
             exc.info = search_recorder.get_info()

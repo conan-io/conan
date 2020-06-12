@@ -25,6 +25,34 @@ ERROR_SIGTERM = 5                   # 5: SIGTERM
 ERROR_INVALID_CONFIGURATION = 6     # 6: Invalid configuration (done)
 
 
+class Extender(argparse.Action):
+    """Allows using the same flag several times in command and creates a list with the values.
+    For example:
+        conan install MyPackage/1.2@user/channel -o qt:value -o mode:2 -s cucumber:true
+      It creates:
+          options = ['qt:value', 'mode:2']
+          settings = ['cucumber:true']
+    """
+    def __call__(self, parser, namespace, values, option_strings=None):  # @UnusedVariable
+        # Need None here incase `argparse.SUPPRESS` was supplied for `dest`
+        dest = getattr(namespace, self.dest, None)
+        if not hasattr(dest, 'extend') or dest == self.default:
+            dest = []
+            setattr(namespace, self.dest, dest)
+            # if default isn't set to None, this method might be called
+            # with the default as `values` for other arguments which
+            # share this destination.
+            parser.set_defaults(**{self.dest: None})
+
+        if isinstance(values, str):
+            dest.append(values)
+        elif values:
+            try:
+                dest.extend(values)
+            except ValueError:
+                dest.append(values)
+
+
 class OnceArgument(argparse.Action):
     """Allows declaring a parameter that can have only one value, by default argparse takes the
     latest declared and it's very confusing.
@@ -85,7 +113,7 @@ class Command(object):
                             help="Search query to find package recipe reference, e.g., 'boost', 'lib*'")
 
         exclusive_args = parser.add_mutually_exclusive_group()
-        exclusive_args.add_argument('-r', '--remote', default=None, action=OnceArgument, nargs='?',
+        exclusive_args.add_argument('-r', '--remote', default=None, action=Extender, nargs='?',
                                     help="Remote to search. Accepts wildcards. To search in all remotes use *")
         exclusive_args.add_argument('-c', '--cache', action="store_true", help="Search in the local cache")
         parser.add_argument('-o', '--output', default="cli", action=OnceArgument,
@@ -93,7 +121,8 @@ class Command(object):
         args = parser.parse_args(*args)
 
         try:
-            info = self._conan.search_recipes(args.query, remote_pattern=args.remote,
+            remotes = args.remote if args.remote is not None else []
+            info = self._conan.search_recipes(args.query, remote_patterns=remotes,
                                               local_cache=args.cache)
         except ConanException as exc:
             info = exc.info
