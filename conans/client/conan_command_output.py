@@ -229,7 +229,9 @@ class CommandOutputer(object):
         if os.path.exists(vis_css):
             assets['vis_css'] = vis_css
 
-        save(graph_filename, template.render(graph=graph, assets=assets))
+        template_folder = os.path.dirname(template.filename)
+        save(graph_filename,
+             template.render(graph=graph, assets=assets, base_template_path=template_folder))
 
     def json_info(self, deps_graph, json_output, cwd, show_paths):
         data = self._grab_info_data(deps_graph, grab_paths=show_paths)

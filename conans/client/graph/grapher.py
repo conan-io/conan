@@ -37,7 +37,8 @@ class Node(object):
             if isinstance(value, (list, tuple)):
                 return '("{}")'.format('", "'.join(value))
             return value
-
+        # TODO: Do not apply `format_url` by default
+        # TODO: Keep tuple, string-join should be delegated to the template
         return {
             'build_id': build_id(self._conanfile),
             'url': format_url(self._conanfile.url),
