@@ -1,5 +1,5 @@
 from conans.client.cache.cache import ClientCache
-from conans.client.graph.range_resolver import satisfying
+from semver import satisfies, Range
 from conans import __version__ as client_version
 from conans.errors import ConanException
 
@@ -19,10 +19,12 @@ def check_required_conan_version(cache_folder, out):
     cache = ClientCache(cache_folder, out)
     required_version = cache.config.required_conan_version
     if required_version:
-        output = ""
-        result = satisfying([client_version], required_version, output)
+        try:
+            Range(required_version, False)
+        except ValueError:
+            raise ConanException("The required version expression '{}' is not valid."
+                                 .format(required_version))
+        result = satisfies(client_version, required_version)
         if not result:
-            raise ConanException("The current Conan version ({}) does not match to the required version ({})."
-                     .format(client_version, required_version))
-        elif result != client_version:
-            raise ConanException(result)
+            raise ConanException("The current Conan version ({}) does not match to the required"
+                                 " version ({}).".format(client_version, required_version))

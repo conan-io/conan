@@ -15,12 +15,12 @@ class RequiredVersionTest(unittest.TestCase):
             client.run("help")
         self.assertIn("The current Conan version ({}) "
                       "does not match to the required version ({})."
-                      .format( "1.26.0", required_version), str(error.exception))
+                      .format("1.26.0", required_version), str(error.exception))
 
     @mock.patch("conans.client.conf.required_version.client_version", "1.22.0")
     def test_exact_version(self):
         client = TestClient()
-        client.run("config set general.required_conan_version={}".format("1.22.0"))
+        client.run("config set general.required_conan_version=1.22.0")
         client.run("help")
         self.assertNotIn("ERROR", client.out)
 
@@ -44,5 +44,5 @@ class RequiredVersionTest(unittest.TestCase):
         client.run("config set general.required_conan_version={}".format(required_version))
         with self.assertRaises(ConanException) as error:
             client.run("help", assert_error=True)
-        self.assertIn("version range expression '1.0.0.0-foobar' is not valid",
+        self.assertIn("The required version expression '{}' is not valid.".format(required_version),
                       str(error.exception))
