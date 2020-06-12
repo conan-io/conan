@@ -1307,8 +1307,9 @@ build_type: [ Release]
                            ("iOS", "7.0",),
                            ("watchOS", "4.0",),
                            ("tvOS", "11.0",)])
-    @mock.patch('platform.system', return_value="Macos")
-    def test_cmake_system_version_osx(self, the_os, os_version, _):
+    @mock.patch("platform.system", return_value="Darwin")
+    @mock.patch("conans.client.tools.apple.XCRun.sdk_path", return_value='/opt')
+    def test_cmake_system_version_osx(self, the_os, os_version, _, __):
         settings = Settings.loads(get_default_settings_yml())
         settings.os = the_os
 
