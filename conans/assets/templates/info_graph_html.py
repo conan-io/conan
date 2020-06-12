@@ -59,7 +59,13 @@ content = """
                                    '    <li><b>id</b>: {{ node.package_id }}</li>' +
                                    {%- for key, value in node.data().items() %}
                                    {%- if value %}
+                                        {%- if key in ['url', 'homepage'] %}
+                                   '    <li><b>{{ key }}</b>: <a href="{{ value }}">{{ value }}</a></li>' +
+                                        {%- elif key in ['topics'] %}
+                                   '    <li><b>{{ key }}</b>: {{ value|join(", ") }}</li>' +
+                                        {%- else %}
                                    '    <li><b>{{ key }}</b>: {{ value }}</li>' +
+                                        {%-  endif %}
                                    {%- endif %}
                                    {%- endfor %}
                                    '</ul>'
