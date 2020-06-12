@@ -15,3 +15,5 @@ class BaseFormatter(object):
     def search(self, *args, **kwargs):
         raise NotImplementedError
 
+    def dig(self, *args, **kwargs):
+        raise NotImplementedError

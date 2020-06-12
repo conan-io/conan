@@ -25,6 +25,7 @@ from conans.client.store.localdb import LocalDB
 from conans.client.tools.env import environment_append
 from conans.client.userio import UserIO
 from conans.errors import ConanException
+from conans.model.ref import ConanFileReference
 from conans.model.version import Version
 from conans.paths import get_conan_user_home
 from conans.tools import set_global_instances
@@ -169,15 +170,52 @@ class ConanAPIV2(object):
                                      "in the remote or use another remote".format(default_remote.name))
 
         try:
-            references = search.search_recipes(query, remote_patterns)
+            results = search.search_recipes(query, remote_patterns)
         except ConanException as exc:
             search_recorder.error = True
             exc.info = search_recorder.get_info()
             raise
 
-        for remote_name, refs in references.items():
+        for remote_name, refs in results.items():
             for ref in refs:
                 search_recorder.add_recipe(remote_name, ref, with_packages=False)
+        return search_recorder.get_info()
+
+    @api_method
+    def search_packages(self, reference, query=None, remote_patterns=None, outdated=False,
+                        local_cache=False):
+        search_recorder = SearchRecorder()
+        remotes = self.app.cache.registry.load_remotes()
+        search = Search(self.app.cache, self.app.remote_manager, remotes)
+
+        if local_cache is False and len(remote_patterns) == 0:
+            default_remote = remotes.default
+            if default_remote.disabled is False:
+                remote_patterns = [default_remote.name]
+            else:
+                raise ConanException("No remote was specified for the search and the default "
+                                     "remote '{}' is disabled. Please enable it to search "
+                                     "in the remote or use another remote".format(default_remote.name))
+
+        try:
+            results = search.search_packages(reference, remote_patterns, query=query, outdated=outdated)
+        except ConanException as exc:
+            search_recorder.error = True
+            exc.info = search_recorder.get_info()
+            raise
+
+        for remote_name, remote_ref in results.items():
+            search_recorder.add_recipe(remote_name, reference)
+            if remote_ref.ordered_packages:
+                for package_id, properties in remote_ref.ordered_packages.items():
+                    package_recipe_hash = properties.get("recipe_hash", None)
+                    # Artifactory uses field 'requires', conan_center 'full_requires'
+                    requires = properties.get("requires", []) or properties.get("full_requires", [])
+                    search_recorder.add_package(remote_name, reference,
+                                                package_id, properties.get("options", []),
+                                                properties.get("settings", []),
+                                                requires,
+                                                remote_ref.recipe_hash != package_recipe_hash)
         return search_recorder.get_info()
 
 

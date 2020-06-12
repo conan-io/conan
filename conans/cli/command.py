@@ -5,24 +5,23 @@ import sys
 import textwrap
 from difflib import get_close_matches
 
-
 from conans import __version__ as client_version
 from conans.client.api.conan_api import Conan
 from conans.client.output import Color
-from conans.errors import ConanException, ConanInvalidConfiguration,  ConanMigrationError
+from conans.errors import ConanException, ConanInvalidConfiguration, ConanMigrationError
+from conans.model.ref import ConanFileReference
 from conans.util.files import exception_message_safe
 from conans.util.log import logger
 from conans.client.formatters import FormatterFormats
 
-
 # Exit codes for conan command:
-SUCCESS = 0                         # 0: Success (done)
-ERROR_GENERAL = 1                   # 1: General ConanException error (done)
-ERROR_MIGRATION = 2                 # 2: Migration error
-USER_CTRL_C = 3                     # 3: Ctrl+C
-USER_CTRL_BREAK = 4                 # 4: Ctrl+Break
-ERROR_SIGTERM = 5                   # 5: SIGTERM
-ERROR_INVALID_CONFIGURATION = 6     # 6: Invalid configuration (done)
+SUCCESS = 0  # 0: Success (done)
+ERROR_GENERAL = 1  # 1: General ConanException error (done)
+ERROR_MIGRATION = 2  # 2: Migration error
+USER_CTRL_C = 3  # 3: Ctrl+C
+USER_CTRL_BREAK = 4  # 4: Ctrl+Break
+ERROR_SIGTERM = 5  # 5: SIGTERM
+ERROR_INVALID_CONFIGURATION = 6  # 6: Invalid configuration (done)
 
 
 class Extender(argparse.Action):
@@ -33,6 +32,7 @@ class Extender(argparse.Action):
           options = ['qt:value', 'mode:2']
           settings = ['cucumber:true']
     """
+
     def __call__(self, parser, namespace, values, option_strings=None):  # @UnusedVariable
         # Need None here incase `argparse.SUPPRESS` was supplied for `dest`
         dest = getattr(namespace, self.dest, None)
@@ -57,6 +57,7 @@ class OnceArgument(argparse.Action):
     """Allows declaring a parameter that can have only one value, by default argparse takes the
     latest declared and it's very confusing.
     """
+
     def __call__(self, parser, namespace, values, option_string=None):
         if getattr(namespace, self.dest) is not None and self.default is None:
             msg = '{o} can only be specified once'.format(o=option_string)
@@ -76,6 +77,7 @@ class Command(object):
     parsing of parameters and delegates functionality to the conan python api. It can also show the
     help of the tool.
     """
+
     def __init__(self, conan_api):
         assert isinstance(conan_api, Conan)
         self._conan = conan_api
@@ -115,7 +117,8 @@ class Command(object):
         exclusive_args = parser.add_mutually_exclusive_group()
         exclusive_args.add_argument('-r', '--remote', default=None, action=Extender, nargs='?',
                                     help="Remote to search. Accepts wildcards. To search in all remotes use *")
-        exclusive_args.add_argument('-c', '--cache', action="store_true", help="Search in the local cache")
+        exclusive_args.add_argument('-c', '--cache', action="store_true",
+                                    help="Search in the local cache")
         parser.add_argument('-o', '--output', default="cli", action=OnceArgument,
                             help="Select the output format: json, html,...")
         args = parser.parse_args(*args)
@@ -131,12 +134,52 @@ class Command(object):
             out_kwargs = {'out': self._out, 'f': 'search'}
             FormatterFormats.get(args.output).out(info=info, **out_kwargs)
 
+    #  This command accepts a conan package reference as input. Could be in different forms:
+    #  name/version
+    #  name/version@user/channel
+    #  name/version@user/channel#<recipe_revision>
+    #  name/version@user/channel#<recipe_revision>:<package_id>
+    #  name/version@user/channel#<recipe_revision>:<package_id>#<package_revision>
+
+    def dig(self, *args):
+        """
+        Gets information about available package binaries in the local cache or a remote
+        """
+        parser = argparse.ArgumentParser(description=self.search.__doc__, prog="conan search",
+                                         formatter_class=SmartFormatter)
+        parser.add_argument('reference',
+                            help="Package recipe reference, e.g., 'zlib/1.2.8', \
+                                 'boost/1.73.0@mycompany/stable'")
+
+        exclusive_args = parser.add_mutually_exclusive_group()
+        exclusive_args.add_argument('-r', '--remote', default=None, action=Extender, nargs='?',
+                                    help="Remote to search. Accepts wildcards. To search in all remotes use *")
+        exclusive_args.add_argument('-c', '--cache', action="store_true",
+                                    help="Search in the local cache")
+        parser.add_argument('-o', '--output', default="cli", action=OnceArgument,
+                            help="Select the output format: json, html,...")
+        args = parser.parse_args(*args)
+
+        try:
+            remotes = args.remote if args.remote is not None else []
+            ref = ConanFileReference.loads(args.reference)
+            info = self._conan.search_packages(ref, query=None,
+                                               remote_patterns=remotes,
+                                               outdated=False,
+                                               local_cache=args.cache)
+        except ConanException as exc:
+            info = exc.info
+            raise
+        finally:
+            out_kwargs = {'out': self._out, 'f': 'dig'}
+            FormatterFormats.get(args.output).out(info=info, **out_kwargs)
+
     def _show_help(self):
         """
         Prints a summary of all commands.
         """
-        grps = [("Consumer commands", ("search", )),
-                ("Misc commands", ("help", ))]
+        grps = [("Consumer commands", ("search",)),
+                ("Misc commands", ("help",))]
 
         def check_all_commands_listed():
             """Keep updated the main directory, raise if don't"""
@@ -170,7 +213,7 @@ class Command(object):
                         continue
                     data.append(line)
 
-                txt = textwrap.fill(' '.join(data), 80, subsequent_indent=" "*(max_len+2))
+                txt = textwrap.fill(' '.join(data), 80, subsequent_indent=" " * (max_len + 2))
                 self._out.writeln(txt)
 
         self._out.writeln("")

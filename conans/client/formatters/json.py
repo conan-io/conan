@@ -12,3 +12,7 @@ class JSONFormatter(BaseFormatter):
     def search(self, info, out, *args, **kwargs):
         myjson = json.dumps(info, indent=4)
         out.writeln(myjson)
+
+    def dig(self, info, out, *args, **kwargs):
+        myjson = json.dumps(info, indent=4)
+        out.writeln(myjson)
