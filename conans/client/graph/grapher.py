@@ -1,5 +1,3 @@
-from jinja2 import Markup
-
 from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_MISSING, \
     BINARY_UPDATE
 from conans.client.installer import build_id
@@ -42,7 +40,7 @@ class Node(object):
             'homepage': self._conanfile.homepage,
             'license': self._conanfile.license,
             'author': self._conanfile.author,
-            'topics': ensure_iterable(self._conanfile.topics)
+            'topics': ensure_iterable(self._conanfile.topics) if self._conanfile.topics else None
         }
 
 
