@@ -2,6 +2,7 @@
 # to allow refactors
 from conans.client.build.autotools_environment import AutoToolsBuildEnvironment
 from conans.client.build.cmake import CMake
+from conans.client.build.cmake_toolchain_build_helper import CMakeCmd
 from conans.client.toolchain.cmake import CMakeToolchain
 from conans.client.build.meson import Meson
 from conans.client.build.msbuild import MSBuild

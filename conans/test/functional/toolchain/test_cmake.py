@@ -16,7 +16,7 @@ from conans.test.utils.tools import TestClient
 class Base(unittest.TestCase):
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile, CMake, CMakeToolchain
+        from conans import ConanFile, CMakeCmd, CMakeToolchain
 
         class App(ConanFile):
             settings = "os", "arch", "compiler", "build_type"
@@ -33,7 +33,7 @@ class Base(unittest.TestCase):
                 return tc
 
             def build(self):
-                cmake = CMake(self)
+                cmake = CMakeCmd(self)
                 cmake.configure()
                 cmake.build()
         """)
@@ -331,7 +331,7 @@ class CMakeInstallTest(unittest.TestCase):
 
     def test_install(self):
         conanfile = textwrap.dedent("""
-            from conans import ConanFile, CMake, CMakeToolchain
+            from conans import ConanFile, CMakeCmd, CMakeToolchain
 
             class App(ConanFile):
                 settings = "os", "arch", "compiler", "build_type"
@@ -341,11 +341,11 @@ class CMakeInstallTest(unittest.TestCase):
                     return CMakeToolchain(self)
 
                 def build(self):
-                    cmake = CMake(self)
+                    cmake = CMakeCmd(self)
                     cmake.configure()
 
                 def package(self):
-                    cmake = CMake(self)
+                    cmake = CMakeCmd(self)
                     cmake.install()
             """)
 

@@ -155,11 +155,11 @@ class PyRequiresExtendTest(unittest.TestCase):
         self.assertIn("'base' is not a python_require", client.out)
 
         conanfile = textwrap.dedent("""
-                    from conans import ConanFile
-                    class Pkg(ConanFile):
-                        python_requires = "helper/1.0@user/channel"
-                        python_requires_extend = "base.HelloConan"
-                    """)
+            from conans import ConanFile
+            class Pkg(ConanFile):
+                python_requires = "helper/1.0@user/channel"
+                python_requires_extend = "base.HelloConan"
+            """)
         client.save({"conanfile.py": conanfile})
         client.run("create . pkg/0.1@user/channel", assert_error=True)
         self.assertIn("'base' is not a python_require", client.out)

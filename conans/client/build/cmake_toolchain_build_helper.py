@@ -36,7 +36,7 @@ def _compute_build_flags(conanfile, generator, parallel, msbuild_verbosity):
     return args
 
 
-class CMakeToolchainBuildHelper(object):
+class CMakeCmd(object):
     """ CMake helper to use together with the toolchain feature. It implements a very simple
     wrapper to call the cmake executable, but without passing compile flags, preprocessor
     definitions... all that is set by the toolchain. Only the generator and the CMAKE_TOOLCHAIN_FILE

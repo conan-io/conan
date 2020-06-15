@@ -22,21 +22,7 @@ from conans.util.files import mkdir, get_abs_path, walk, decode_text
 from conans.util.runners import version_runner
 
 
-def CMake(conanfile, *args, **kwargs):
-    from conans import ConanFile
-    if not isinstance(conanfile, ConanFile):
-        raise ConanException("First argument of CMake() has to be ConanFile. Use CMake(self)")
-
-    # If there is a toolchain, then use the toolchain helper one
-    toolchain = getattr(conanfile, "toolchain", None)
-    if toolchain:
-        from conans.client.build.cmake_toolchain_build_helper import CMakeToolchainBuildHelper
-        return CMakeToolchainBuildHelper(conanfile, *args, **kwargs)
-    else:
-        return CMakeBuildHelper(conanfile, *args, **kwargs)
-
-
-class CMakeBuildHelper(object):
+class CMake(object):
 
     def __init__(self, conanfile, generator=None, cmake_system_name=True,
                  parallel=True, build_type=None, toolset=None, make_program=None,
@@ -446,6 +432,3 @@ class CMakeBuildHelper(object):
             return Version(version_str)
         except Exception as e:
             raise ConanException("Error retrieving CMake version: '{}'".format(e))
-
-
-CMake.get_version = CMakeBuildHelper.get_version
