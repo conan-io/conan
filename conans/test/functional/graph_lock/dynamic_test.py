@@ -17,14 +17,36 @@ class GraphLockDynamicTest(unittest.TestCase):
         client.run("create . LibC/0.1@")
         client.save({"conanfile.py": GenConanfile().with_require_plain("LibC/0.1")})
         client.run("graph lock .")
-        lock1 = json.loads(client.load("conan.lock"))["graph_lock"]["nodes"]
+        lock1 = client.load("conan.lock")
+        print(lock1)
+        lock1 = json.loads(lock1)["graph_lock"]["nodes"]
         self.assertEqual(4, len(lock1))
-        self.assertIn("LibC", lock1["1"]["pref"])
-        self.assertEqual(lock1["1"]["requires"], ["2", "3"])
+        liba = lock1["2"]
+        self.assertEqual(liba["ref"], "LibA/0.1#f3367e0e7d170aa12abccb175fee5f97")
+        self.assertEqual(liba["package_id"], "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+        self.assertEqual(liba["prev"], "83c38d3b4e5f1b8450434436eec31b00")
+        libc = lock1["3"]
+        self.assertEqual(libc["ref"], "LibB/0.1#f3367e0e7d170aa12abccb175fee5f97")
+        libc = lock1["1"]
+        self.assertEqual(libc["ref"], "LibC/0.1#3cc68234fe3b976e1cb15c61afdace6d")
+        self.assertEqual(libc["requires"], ["2", "3"])
+
         # Remove one dep in LibC
         client.save({"conanfile.py": GenConanfile().with_require_plain("LibA/0.1")})
-        client.run("create . LibC/0.1@ --lockfile")
-        lock2 = json.loads(client.load("conan.lock"))["graph_lock"]["nodes"]
-        self.assertEqual(4, len(lock2))
-        self.assertIn("LibC", lock2["1"]["pref"])
-        self.assertEqual(lock2["1"]["requires"], ["2", "3"])
+        # If the graph is modified, a create should fail
+        client.run("create . LibC/0.1@ --lockfile", assert_error=True)
+        self.assertIn("Locked requires 'LibB/0.1' not found", client.out)
+
+        print("NEW LOCK----------------------------------------")
+        # FIXME: This syntax doesn't work yet, LibC/0.1 needs to be in conanfile.py
+        # client.run("graph lock . LibC/0.1@ --lockfile=conan.lock --input-lockfile=conan.lock")
+        client.run("graph lock . --lockfile=lib.lock --input-lockfile=conan.lock")
+        lock2 = client.load("conan.lock")
+        print(lock2)
+        lock2 = json.loads(lock2)["graph_lock"]["nodes"]
+        self.assertEqual(2, len(lock2))
+        liba = lock2["2"]
+        self.assertEqual(liba["ref"], "LibA/0.1#f3367e0e7d170aa12abccb175fee5f97")
+        self.assertEqual(liba["package_id"], "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+        self.assertEqual(liba["prev"], "83c38d3b4e5f1b8450434436eec31b00")
+

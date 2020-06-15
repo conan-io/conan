@@ -279,6 +279,7 @@ class GraphLock(object):
             if node.recipe == RECIPE_CONSUMER:
                 return
             if self.relax:
+                print("**************RELAX CANT PRELOCK ", node)
                 node.conanfile.output.warn("Package can't be locked, not found in the lockfile")
                 return
             else:
@@ -306,6 +307,8 @@ class GraphLock(object):
             refs = {self._nodes[id_].ref.name: (self._nodes[id_].ref.copy_clear_rev(), id_)
                     for id_ in locked_requires}
 
+        print("LOCKING NODE WITH REFS ", refs)
+
         for require in requires:
             try:
                 locked_ref, locked_id = refs[require.ref.name]
@@ -314,9 +317,18 @@ class GraphLock(object):
                 t = "Build-require" if build_requires else "Require"
                 msg = "%s '%s' cannot be found in lockfile" % (t, require.ref.name)
                 if self.relax:
+                    print("**************RELAX IS ADDING NEW NODE ", require)
                     node.conanfile.output.warn(msg)
                 else:
                     raise ConanException(msg)
+
+        # Check all refs are locked
+        if not self.relax:
+            declared_requires = set([r.ref.name for r in requires])
+            for require in locked_node.requires:
+                node = self._nodes[require]
+                if node.ref.name not in declared_requires:
+                    raise ConanException("Locked requires '%s' not found" % str(node.ref))
 
     def python_requires(self, node_id):
         if self.revisions_enabled:

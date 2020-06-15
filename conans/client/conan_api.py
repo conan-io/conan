@@ -1284,6 +1284,9 @@ class ConanAPIV1(object):
             else:
                 pbuild = None
             graph_info.profile_build = pbuild
+            graph_info.graph_lock.relax = True
+            # If given an input lockfile, then construct it from the root
+            reference = graph_info.graph_lock.root_node_ref()
         recorder = ActionRecorder()
         # FIXME: Using update as check_update?
         remotes = self.app.load_remotes(remote_name=remote_name, check_updates=update)
