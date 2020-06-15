@@ -15,8 +15,8 @@ from conans.util.runners import check_output_runner, version_runner, muted_runne
     pyinstaller_bundle_env_cleaned
 
 
-def _check_repo(cmd, folder, msg=None):
-    msg = msg or "Not a valid '{}' repository".format(cmd[0])
+def _check_repo(cmd, folder):
+    msg = "Not a valid '{0}' repository or '{0}' not found.".format(cmd[0])
     try:
         ret = muted_runner(cmd, folder=folder)
     except Exception:
