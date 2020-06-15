@@ -53,7 +53,7 @@ from conans.errors import (ConanException, RecipeNotFoundException,
                            PackageNotFoundException, NoRestV2Available, NotFoundException)
 from conans.model.editable_layout import get_editable_abs_path
 from conans.model.graph_info import GraphInfo, GRAPH_INFO_FILE
-from conans.model.graph_lock import GraphLockFile, LOCKFILE
+from conans.model.graph_lock import GraphLockFile, LOCKFILE, GraphLock
 from conans.model.ref import ConanFileReference, PackageReference, check_valid_ref
 from conans.model.version import Version
 from conans.model.workspace import Workspace
@@ -1296,6 +1296,8 @@ class ConanAPIV1(object):
                                                        False, remotes, recorder)
 
         print_graph(deps_graph, self.app.out)
+        if input_lockfile:
+            graph_info.graph_lock = GraphLock(deps_graph)
         if only_recipes:
             graph_info.graph_lock.only_recipes()
         lockfile = _make_abs_path(lockfile)

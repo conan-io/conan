@@ -509,6 +509,8 @@ class BinaryInstaller(object):
         builder = _PackageBuilder(self._cache, output, self._hook_manager, self._remote_manager)
         pref = builder.build_package(node, keep_build, self._recorder, remotes)
         if node.graph_lock_node:
+            assert node.graph_lock_node.prev is None, "A locked PREV was built"
+            node.graph_lock_node.prev = pref.revision
             node.graph_lock_node.modified = GraphLockNode.MODIFIED_BUILT
         return pref
 

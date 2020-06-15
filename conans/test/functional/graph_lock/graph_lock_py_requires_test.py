@@ -66,7 +66,7 @@ class GraphLockPyRequiresTest(unittest.TestCase):
         client.run("install .")
         self.assertIn("Tool/0.1@user/channel", client.out)
         self.assertIn("conanfile.py (Pkg/None): CONFIGURE VAR=42", client.out)
-        self._check_lock("Pkg/None@")
+        self._check_lock("Pkg/None")
 
         client.run("build .")
         self.assertIn("conanfile.py (Pkg/None): CONFIGURE VAR=42", client.out)
@@ -77,15 +77,18 @@ class GraphLockPyRequiresTest(unittest.TestCase):
         client.run("export . Tool/0.2@user/channel")
         client.save({"conanfile.py": consumer})
 
-    def _check_lock(self, ref_b):
-        ref_b = repr(ConanFileReference.loads(ref_b, validate=False))
+    def _check_lock(self, ref_b, pkg_id_b=None):
         lock_file = self.client.load(LOCKFILE)
         self.assertIn("Tool/0.1@user/channel", lock_file)
         self.assertNotIn("Tool/0.2@user/channel", lock_file)
         lock_file_json = json.loads(lock_file)
-        self.assertEqual(1, len(lock_file_json["graph_lock"]["nodes"]))
-        self.assertIn("%s:1e1576940da80e70cd2d2ce2dddeb0571f91c6e3" % ref_b, lock_file)
-        self.assertIn('"Tool/0.1@user/channel#ac4036130c39cab7715b1402e8c211d3"', lock_file)
+        nodes = lock_file_json["graph_lock"]["nodes"]
+        self.assertEqual(1, len(nodes))
+        pkg = nodes["0"]
+        self.assertEqual(pkg["ref"], ref_b)
+        self.assertEqual(pkg["python_requires"],
+                         ["Tool/0.1@user/channel#ac4036130c39cab7715b1402e8c211d3"])
+        self.assertEqual(pkg.get("package_id"), pkg_id_b)
 
     def install_info_test(self):
         client = self.client
@@ -99,7 +102,7 @@ class GraphLockPyRequiresTest(unittest.TestCase):
         client.run("install . --lockfile")
         self.assertIn("Tool/0.1@user/channel", client.out)
         self.assertNotIn("Tool/0.2@user/channel", client.out)
-        self._check_lock("Pkg/None@")
+        self._check_lock("Pkg/None")
         client.run("build .")
         self.assertIn("conanfile.py (Pkg/None): CONFIGURE VAR=42", client.out)
         self.assertIn("conanfile.py (Pkg/None): BUILD VAR=42", client.out)
@@ -117,13 +120,15 @@ class GraphLockPyRequiresTest(unittest.TestCase):
         self.assertIn("Pkg/0.1@user/channel: BUILD VAR=42", client.out)
         self.assertIn("Tool/0.1@user/channel", client.out)
         self.assertNotIn("Tool/0.2@user/channel", client.out)
-        self._check_lock("Pkg/0.1@user/channel#67fdc942d6157fc4db1971fd6d6c5c28")
+        self._check_lock("Pkg/0.1@user/channel#67fdc942d6157fc4db1971fd6d6c5c28",
+                         "1e1576940da80e70cd2d2ce2dddeb0571f91c6e3")
 
     def export_pkg_test(self):
         client = self.client
         client.run("export-pkg . Pkg/0.1@user/channel --install-folder=.  --lockfile")
         self.assertIn("Pkg/0.1@user/channel: CONFIGURE VAR=42", client.out)
-        self._check_lock("Pkg/0.1@user/channel#67fdc942d6157fc4db1971fd6d6c5c28")
+        self._check_lock("Pkg/0.1@user/channel#67fdc942d6157fc4db1971fd6d6c5c28",
+                         "1e1576940da80e70cd2d2ce2dddeb0571f91c6e3")
 
 
 class GraphLockPythonRequiresTest(unittest.TestCase):
@@ -156,7 +161,7 @@ class GraphLockPythonRequiresTest(unittest.TestCase):
         client.run("install .")
         self.assertIn("Tool/0.1@user/channel", client.out)
         self.assertIn("conanfile.py (Pkg/None): CONFIGURE VAR=42", client.out)
-        self._check_lock("Pkg/None@")
+        self._check_lock("Pkg/None")
 
         client.run("build .")
         self.assertIn("conanfile.py (Pkg/None): CONFIGURE VAR=42", client.out)
@@ -167,15 +172,18 @@ class GraphLockPythonRequiresTest(unittest.TestCase):
         client.run("export . Tool/0.2@user/channel")
         client.save({"conanfile.py": consumer})
 
-    def _check_lock(self, ref_b):
-        ref_b = repr(ConanFileReference.loads(ref_b, validate=False))
-        lock_file = load(os.path.join(self.client.current_folder, LOCKFILE))
+    def _check_lock(self, ref_b, pkg_id_b=None):
+        lock_file = self.client.load(LOCKFILE)
         self.assertIn("Tool/0.1@user/channel", lock_file)
         self.assertNotIn("Tool/0.2@user/channel", lock_file)
         lock_file_json = json.loads(lock_file)
-        self.assertEqual(1, len(lock_file_json["graph_lock"]["nodes"]))
-        self.assertIn("%s:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9" % ref_b, lock_file)
-        self.assertIn('"Tool/0.1@user/channel#ac4036130c39cab7715b1402e8c211d3"', lock_file)
+        nodes = lock_file_json["graph_lock"]["nodes"]
+        self.assertEqual(1, len(nodes))
+        pkg = nodes["0"]
+        self.assertEqual(pkg["ref"], ref_b)
+        self.assertEqual(pkg["python_requires"],
+                         ["Tool/0.1@user/channel#ac4036130c39cab7715b1402e8c211d3"])
+        self.assertEqual(pkg.get("package_id"), pkg_id_b)
 
     def install_info_test(self):
         client = self.client
@@ -189,7 +197,7 @@ class GraphLockPythonRequiresTest(unittest.TestCase):
         client.run("install . --lockfile")
         self.assertIn("Tool/0.1@user/channel", client.out)
         self.assertNotIn("Tool/0.2@user/channel", client.out)
-        self._check_lock("Pkg/None@")
+        self._check_lock("Pkg/None")
         client.run("build .")
         self.assertIn("conanfile.py (Pkg/None): CONFIGURE VAR=42", client.out)
         self.assertIn("conanfile.py (Pkg/None): BUILD VAR=42", client.out)
@@ -207,10 +215,12 @@ class GraphLockPythonRequiresTest(unittest.TestCase):
         self.assertIn("Pkg/0.1@user/channel: BUILD VAR=42", client.out)
         self.assertIn("Tool/0.1@user/channel", client.out)
         self.assertNotIn("Tool/0.2@user/channel", client.out)
-        self._check_lock("Pkg/0.1@user/channel#332c2615c2ff9f78fc40682e733e5aa5")
+        self._check_lock("Pkg/0.1@user/channel#332c2615c2ff9f78fc40682e733e5aa5",
+                         "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
 
     def export_pkg_test(self):
         client = self.client
         client.run("export-pkg . Pkg/0.1@user/channel --install-folder=.  --lockfile")
         self.assertIn("Pkg/0.1@user/channel: CONFIGURE VAR=42", client.out)
-        self._check_lock("Pkg/0.1@user/channel#332c2615c2ff9f78fc40682e733e5aa5")
+        self._check_lock("Pkg/0.1@user/channel#332c2615c2ff9f78fc40682e733e5aa5",
+                         "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")

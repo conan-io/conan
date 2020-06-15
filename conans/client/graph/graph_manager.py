@@ -241,7 +241,8 @@ class GraphManager(object):
         if root_node.ref:
             graph_info.root = root_node.ref
 
-        graph_info.graph_lock = GraphLock(deps_graph)
+        if graph_info.graph_lock is None:
+            graph_info.graph_lock = GraphLock(deps_graph)
 
         version_ranges_output = self._resolver.output
         if version_ranges_output:

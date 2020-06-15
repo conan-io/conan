@@ -160,6 +160,7 @@ class GraphLockVersionRangeTest(unittest.TestCase):
 
     def _check_lock(self, ref_b, rev_b=None, package_id_b=None):
         lock_file = self.client.load(LOCKFILE)
+        print(lock_file)
         lock_file_json = json.loads(lock_file)
 
         nodes = lock_file_json["graph_lock"]["nodes"]
@@ -678,6 +679,7 @@ class GraphLockBuildRequiresNotNeeded(unittest.TestCase):
 
         # Create the full graph lock
         client.run("graph lock app/1.0@ --build")
+        print(client.load("conan.lock"))
         client.run("create libA libA/2.0@ --lockfile")
         client.run("graph build-order . --json=bo.json --build=missing")
         bo1 = client.load("bo.json")
@@ -695,10 +697,11 @@ class GraphInstallArgumentsUpdated(unittest.TestCase):
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . somelib/1.0@")
         client.run("graph lock somelib/1.0@ --lockfile=somelib.lock")
-        client.run("install somelib/1.0@ --lockfile=somelib.lock --build somelib")
-        lock_file_json = json.loads(client.load("somelib.lock"))
-        self.assertEqual(lock_file_json["graph_lock"]["nodes"]["1"]["modified"], "built")
-        client.run("graph lock somelib/1.0@")
-        client.run("install somelib/1.0@ --lockfile --build somelib")
-        lock_file_json = json.loads(client.load("conan.lock"))
-        self.assertEqual(lock_file_json["graph_lock"]["nodes"]["1"]["modified"], "built")
+        previous_lock = client.load("somelib.lock")
+        # This should fail, because somelib is locked
+        client.run("install somelib/1.0@ --lockfile=somelib.lock --build somelib", assert_error=True)
+        self.assertIn("Trying to build 'somelib/1.0#f3367e0e7d170aa12abccb175fee5f97', "
+                      "but it is locked", client.out)
+        new_lock = client.load("somelib.lock")
+        self.assertEqual(previous_lock, new_lock)
+

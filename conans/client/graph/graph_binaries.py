@@ -166,37 +166,48 @@ class GraphBinariesAnalyzer(object):
                                          % (node.ref, locked.package_id, node.package_id))
                 if locked.prev is not None:  # The actual package PREV is fully locked, find it
                     pref = PackageReference(node.ref, node.package_id, locked.prev)
+                    if self._evaluate_build(node, build_mode):
+                        raise ConanException("Trying to build '%s', but it is locked"
+                                             % repr(node.ref))
+                        return
                     self._process_locked_node(node, pref, remotes)
+                    return
 
-        if node.binary is None:
-            assert node.prev is None, "Non locked node shouldn't have PREV in evaluate_node"
-            pref = PackageReference(node.ref, node.package_id)
-            self._process_node(node, pref, build_mode, update, remotes)
-            if node.binary == BINARY_MISSING:
-                if node.conanfile.compatible_packages:
-                    compatible_build_mode = BuildMode(None, self._out)
-                    for compatible_package in node.conanfile.compatible_packages:
-                        package_id = compatible_package.package_id()
-                        if package_id == node.package_id:
-                            node.conanfile.output.info("Compatible package ID %s equal to the "
-                                                       "default package ID" % package_id)
-                            continue
-                        pref = PackageReference(node.ref, package_id)
-                        node.binary = None  # Invalidate it
-                        # NO Build mode
-                        self._process_node(node, pref, compatible_build_mode, update, remotes)
-                        assert node.binary is not None
-                        if node.binary != BINARY_MISSING:
-                            node.conanfile.output.info("Main binary package '%s' missing. Using "
-                                                       "compatible package '%s'"
-                                                       % (node.package_id, package_id))
-                            node._package_id = package_id
-                            # So they are available in package_info() method
-                            node.conanfile.settings.values = compatible_package.settings
-                            node.conanfile.options.values = compatible_package.options
-                            break
-                if node.binary == BINARY_MISSING and build_mode.allowed(node.conanfile):
-                    node.binary = BINARY_BUILD
+        assert node.prev is None, "Non locked node shouldn't have PREV in evaluate_node"
+        assert node.binary is None, "Node.binary should be None if not locked"
+        pref = PackageReference(node.ref, node.package_id)
+        self._process_node(node, pref, build_mode, update, remotes)
+        if node.binary == BINARY_MISSING:
+            if node.conanfile.compatible_packages:
+                compatible_build_mode = BuildMode(None, self._out)
+                for compatible_package in node.conanfile.compatible_packages:
+                    package_id = compatible_package.package_id()
+                    if package_id == node.package_id:
+                        node.conanfile.output.info("Compatible package ID %s equal to the "
+                                                   "default package ID" % package_id)
+                        continue
+                    pref = PackageReference(node.ref, package_id)
+                    node.binary = None  # Invalidate it
+                    # NO Build mode
+                    self._process_node(node, pref, compatible_build_mode, update, remotes)
+                    assert node.binary is not None
+                    if node.binary != BINARY_MISSING:
+                        node.conanfile.output.info("Main binary package '%s' missing. Using "
+                                                   "compatible package '%s'"
+                                                   % (node.package_id, package_id))
+                        # Modifying package id under the hood, FIXME
+                        node._package_id = package_id
+                        # So they are available in package_info() method
+                        node.conanfile.settings.values = compatible_package.settings
+                        node.conanfile.options.values = compatible_package.options
+                        break
+            if node.binary == BINARY_MISSING and build_mode.allowed(node.conanfile):
+                node.binary = BINARY_BUILD
+
+        if locked:
+            locked.package_id = node.package_id
+            assert locked.prev is None, "Unexpected update of PREV in lock"
+            locked.prev = node.prev
 
     def _process_locked_node(self, node, pref, remotes):
         # When the lock contains a PREV, it means it cannot be built
@@ -209,24 +220,30 @@ class GraphBinariesAnalyzer(object):
         metadata = package_layout.load_metadata()
         assert metadata.recipe.revision == node.ref.revision
         if metadata.packages[pref.id].revision == pref.revision:
-            node.binary == BINARY_CACHE
+            node.binary = BINARY_CACHE
+            node.prev = pref.revision
             return
 
-        def _search_in_remote(_pref, r):
+        def _search_in_remote(r):
             try:
-                remote_info, _pref_result = self._remote_manager.get_package_info(_pref, r)
-                assert _pref_result == _pref
+                remote_info, _pref_result = self._remote_manager.get_package_info(pref, r)
+                assert _pref_result == pref
+                node.binary = BINARY_DOWNLOAD
                 node.binary_remote = r
+                node.prev = pref.revision
             except NotFoundException:
                 return None
 
         selected = remotes.selected
         if selected:
-            _search_in_remote(pref, selected)
+            _search_in_remote(selected)
 
         for remote in remotes.values():
             if node.binary_remote is None and remote != selected:
-                _search_in_remote(pref, remote)
+                _search_in_remote(remote)
+
+        if node.binary is None:
+            raise ConanException("Locked package revision not found %s" % repr(pref))
 
     def _process_node(self, node, pref, build_mode, update, remotes):
         # Check that this same reference hasn't already been checked

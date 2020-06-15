@@ -2,13 +2,12 @@ import json
 import os
 from collections import OrderedDict
 
-from conans.client.graph.graph import RECIPE_VIRTUAL, RECIPE_CONSUMER, BINARY_BUILD
+from conans.client.graph.graph import RECIPE_VIRTUAL, RECIPE_CONSUMER
 from conans.client.graph.python_requires import PyRequires
 from conans.client.profile_loader import _load_profile
 from conans.errors import ConanException
-from conans.model.info import PACKAGE_ID_UNKNOWN
 from conans.model.options import OptionsValues
-from conans.model.ref import PackageReference, ConanFileReference
+from conans.model.ref import ConanFileReference
 from conans.model.version import Version
 from conans.util.files import load, save
 
@@ -307,8 +306,6 @@ class GraphLock(object):
             refs = {self._nodes[id_].ref.name: (self._nodes[id_].ref.copy_clear_rev(), id_)
                     for id_ in locked_requires}
 
-        print("LOCKING NODE WITH REFS ", refs)
-
         for require in requires:
             try:
                 locked_ref, locked_id = refs[require.ref.name]
@@ -317,7 +314,6 @@ class GraphLock(object):
                 t = "Build-require" if build_requires else "Require"
                 msg = "%s '%s' cannot be found in lockfile" % (t, require.ref.name)
                 if self.relax:
-                    print("**************RELAX IS ADDING NEW NODE ", require)
                     node.conanfile.output.warn(msg)
                 else:
                     raise ConanException(msg)
@@ -326,9 +322,10 @@ class GraphLock(object):
         if not self.relax:
             declared_requires = set([r.ref.name for r in requires])
             for require in locked_node.requires:
-                node = self._nodes[require]
-                if node.ref.name not in declared_requires:
-                    raise ConanException("Locked requires '%s' not found" % str(node.ref))
+                req_node = self._nodes[require]
+                if req_node.ref.name not in declared_requires:
+                    raise ConanException("'%s' locked requirement '%s' not found"
+                                         % (str(node.ref), str(req_node.ref)))
 
     def python_requires(self, node_id):
         if self.revisions_enabled:
