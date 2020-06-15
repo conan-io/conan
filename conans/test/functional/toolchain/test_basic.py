@@ -41,11 +41,11 @@ class BasicTest(unittest.TestCase):
 
     def test_declarative_new_helper(self):
         conanfile = textwrap.dedent("""
-            from conans import ConanFile, CMake
+            from conans import ConanFile, CMakeCmd
             class Pkg(ConanFile):
                 toolchain = "cmake"
                 def build(self):
-                    cmake = CMake(self)
+                    cmake = CMakeCmd(self)
                     cmake.configure()
             """)
         client = TestClient()
