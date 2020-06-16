@@ -39,6 +39,7 @@ class Pkg(ConanFile):
         self.assertEqual(os.listdir(os.path.join(client.cache.package_layout(ref).source())), [])
 
 
+@unittest.skipIf(platform.system() != "Windows", "Needs windows for rmdir block")
 class ExportDirtyTest(unittest.TestCase):
     """ Make sure than when the source folder becomes dirty, due to a export of
     a new recipe with a rmdir failure, or to an uncomplete execution of source(),
@@ -46,8 +47,6 @@ class ExportDirtyTest(unittest.TestCase):
     """
 
     def setUp(self):
-        if platform.system() != "Windows":
-            return
         self.client = TestClient()
         files = cpp_hello_conan_files("Hello0", "0.1", build=False)
 
@@ -67,28 +66,20 @@ class ExportDirtyTest(unittest.TestCase):
                       "Will be marked as corrupted for deletion",
                       self.client.out)
 
-        err = self.client.run("install Hello0/0.1@lasote/stable --build", assert_error=True)
-        self.assertTrue(err)
+        self.client.run("install Hello0/0.1@lasote/stable --build", assert_error=True)
         self.assertIn("ERROR: Unable to remove source folder", self.client.out)
 
     def test_export_remove(self):
-        """ The export is able to remove dirty source folders
-        """
-        if platform.system() != "Windows":
-            return
+        # export is able to remove dirty source folders
         self.f.close()
         self.client.run("export . lasote/stable")
         self.assertIn("Source folder is corrupted, forcing removal", self.client.out)
-        err = self.client.run("install Hello0/0.1@lasote/stable --build")
-        self.assertFalse(err)
+        self.client.run("install Hello0/0.1@lasote/stable --build")
+        self.assertIn("WARN: Trying to remove corrupted source folder", self.client.out)
 
     def test_install_remove(self):
-        """ The install is also able to remove dirty source folders
-        """
-        if platform.system() != "Windows":
-            return
+        # install is also able to remove dirty source folders
         # Now, release the handle to the file
         self.f.close()
-        err = self.client.run("install Hello0/0.1@lasote/stable --build")
-        self.assertFalse(err)
+        self.client.run("install Hello0/0.1@lasote/stable --build")
         self.assertIn("WARN: Trying to remove corrupted source folder", self.client.out)
