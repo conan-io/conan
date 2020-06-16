@@ -45,6 +45,11 @@ class CMake(object):
     def __init__(self, *args, **kwargs):
         super(CMake, self).__init__(*args, **kwargs)
 
+    @staticmethod
+    def get_version():
+        # FIXME: Conan 2.0 This function is require for python2
+        return CMakeBuildHelper.get_version()
+
 
 class CMakeBuildHelper(object):
 
@@ -456,6 +461,3 @@ class CMakeBuildHelper(object):
             return Version(version_str)
         except Exception as e:
             raise ConanException("Error retrieving CMake version: '{}'".format(e))
-
-
-CMake.get_version = CMakeBuildHelper.get_version
