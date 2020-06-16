@@ -130,8 +130,8 @@ class Command(object):
 
         self._commands["help"] = self.help
 
-    def _add_command(self, import_path, module_name):
-        command_wrapper = getattr(importlib.import_module(import_path), module_name)
+    def _add_command(self, import_path, method_name):
+        command_wrapper = getattr(importlib.import_module(import_path), method_name)
         if command_wrapper.doc and not command_wrapper.doc.startswith('HIDDEN'):
             self._commands[command_wrapper.name] = command_wrapper.method
             self._groups.setdefault(command_wrapper.group, []).append(command_wrapper.name)
