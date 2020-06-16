@@ -1,18 +1,19 @@
 import argparse
 import inspect
+import os
 import signal
 import sys
 import textwrap
 from difflib import get_close_matches
+import importlib
+import pkgutil
 
 from conans import __version__ as client_version
 from conans.client.api.conan_api import Conan
 from conans.client.output import Color
 from conans.errors import ConanException, ConanInvalidConfiguration, ConanMigrationError
-from conans.model.ref import ConanFileReference
 from conans.util.files import exception_message_safe
 from conans.util.log import logger
-from conans.client.formatters import FormatterFormats
 
 # Exit codes for conan command:
 SUCCESS = 0  # 0: Success (done)
@@ -72,6 +73,38 @@ class SmartFormatter(argparse.HelpFormatter):
         return ''.join(indent + line for line in text.splitlines(True))
 
 
+class ConanCommand(object):
+    def __init__(self, method, group=None):
+        self._group = group if group is not None else "Custom command"
+        self._name = method.__name__.replace("_", "-")
+        self._method = method
+        self._doc = method.__doc__
+
+    @property
+    def group(self):
+        return self._group
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def method(self):
+        return self._method
+
+    @property
+    def doc(self):
+        return self._doc
+
+
+def conan_command(group=None):
+    def decorator(f):
+        cmd = ConanCommand(f, group)
+        return cmd
+
+    return decorator
+
+
 class Command(object):
     """A single command of the conan application, with all the first level commands. Manages the
     parsing of parameters and delegates functionality to the conan python api. It can also show the
@@ -82,8 +115,28 @@ class Command(object):
         assert isinstance(conan_api, Conan)
         self._conan = conan_api
         self._out = conan_api.out
+        self._groups = {}
+        self._commands = {}
 
-    def help(self, *args):
+        conan_commands_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "commands")
+        for module in pkgutil.iter_modules([conan_commands_path]):
+            self._add_command("conans.cli.commands.{}".format(module.name), module.name)
+
+        user_commands_path = os.path.join(self._conan.cache_folder, "commands")
+        sys.path.append(user_commands_path)
+        for module in pkgutil.iter_modules([user_commands_path]):
+            if module.name.startswith("cmd_"):
+                self._add_command(module.name, module.name.replace("cmd_", ""))
+
+        self._commands["help"] = self.help
+
+    def _add_command(self, import_path, module_name):
+        command_wrapper = getattr(importlib.import_module(import_path), module_name)
+        if command_wrapper.doc and not command_wrapper.doc.startswith('HIDDEN'):
+            self._commands[command_wrapper.name] = command_wrapper.method
+            self._groups.setdefault(command_wrapper.group, []).append(command_wrapper.name)
+
+    def help(self, conan_api, out, *args):
         """
         Shows help for a specific command.
         """
@@ -95,106 +148,21 @@ class Command(object):
             self._show_help()
             return
         try:
-            commands = self._commands()
+            commands = self.commands
             method = commands[args.command]
             method(["--help"])
         except KeyError:
             raise ConanException("Unknown command '%s'" % args.command)
 
-    # conan v2 search:
-    # conan search "*" will search in the default remote
-    # to search in the local cache: conan search "*" --cache explicitly
-
-    def search(self, *args):
-        """
-        Searches for package recipes whose name contain <query> in a remote or in the local cache
-        """
-        parser = argparse.ArgumentParser(description=self.search.__doc__, prog="conan search",
-                                         formatter_class=SmartFormatter)
-        parser.add_argument('query',
-                            help="Search query to find package recipe reference, e.g., 'boost', 'lib*'")
-
-        exclusive_args = parser.add_mutually_exclusive_group()
-        exclusive_args.add_argument('-r', '--remote', default=None, action=Extender, nargs='?',
-                                    help="Remote to search. Accepts wildcards. To search in all remotes use *")
-        exclusive_args.add_argument('-c', '--cache', action="store_true",
-                                    help="Search in the local cache")
-        parser.add_argument('-o', '--output', default="cli", action=OnceArgument,
-                            help="Select the output format: json, html,...")
-        args = parser.parse_args(*args)
-
-        try:
-            remotes = args.remote if args.remote is not None else []
-            info = self._conan.search_recipes(args.query, remote_patterns=remotes,
-                                              local_cache=args.cache)
-        except ConanException as exc:
-            info = exc.info
-            raise
-        finally:
-            out_kwargs = {'out': self._out, 'f': 'search'}
-            FormatterFormats.get(args.output).out(info=info, **out_kwargs)
-
-    #  This command accepts a conan package reference as input. Could be in different forms:
-    #  name/version
-    #  name/version@user/channel
-    #  name/version@user/channel#<recipe_revision>
-    #  name/version@user/channel#<recipe_revision>:<package_id>
-    #  name/version@user/channel#<recipe_revision>:<package_id>#<package_revision>
-
-    def dig(self, *args):
-        """
-        Gets information about available package binaries in the local cache or a remote
-        """
-        parser = argparse.ArgumentParser(description=self.search.__doc__, prog="conan search",
-                                         formatter_class=SmartFormatter)
-        parser.add_argument('reference',
-                            help="Package recipe reference, e.g., 'zlib/1.2.8', \
-                                 'boost/1.73.0@mycompany/stable'")
-
-        exclusive_args = parser.add_mutually_exclusive_group()
-        exclusive_args.add_argument('-r', '--remote', default=None, action=Extender, nargs='?',
-                                    help="Remote to search. Accepts wildcards. To search in all remotes use *")
-        exclusive_args.add_argument('-c', '--cache', action="store_true",
-                                    help="Search in the local cache")
-        parser.add_argument('-o', '--output', default="cli", action=OnceArgument,
-                            help="Select the output format: json, html,...")
-        args = parser.parse_args(*args)
-
-        try:
-            remotes = args.remote if args.remote is not None else []
-            ref = ConanFileReference.loads(args.reference)
-            info = self._conan.search_packages(ref, query=None,
-                                               remote_patterns=remotes,
-                                               outdated=False,
-                                               local_cache=args.cache)
-        except ConanException as exc:
-            info = exc.info
-            raise
-        finally:
-            out_kwargs = {'out': self._out, 'f': 'dig'}
-            FormatterFormats.get(args.output).out(info=info, **out_kwargs)
-
     def _show_help(self):
         """
         Prints a summary of all commands.
         """
-        grps = [("Consumer commands", ("search",)),
-                ("Misc commands", ("help",))]
-
-        def check_all_commands_listed():
-            """Keep updated the main directory, raise if don't"""
-            all_commands = self._commands()
-            all_in_grps = [command for _, command_list in grps for command in command_list]
-            if set(all_in_grps) != set(all_commands):
-                diff = set(all_commands) - set(all_in_grps)
-                raise Exception("Some command is missing in the main help: %s" % ",".join(diff))
-            return all_commands
-
-        commands = check_all_commands_listed()
+        commands = self.commands
         max_len = max((len(c) for c in commands)) + 1
         fmt = '  %-{}s'.format(max_len)
 
-        for group_name, comm_names in grps:
+        for group_name, comm_names in self._groups.items():
             self._out.writeln(group_name, Color.BRIGHT_MAGENTA)
             for name in comm_names:
                 # future-proof way to ensure tabular formatting
@@ -219,25 +187,15 @@ class Command(object):
         self._out.writeln("")
         self._out.writeln('Conan commands. Type "conan <command> -h" for help', Color.BRIGHT_YELLOW)
 
-    def _commands(self):
-        """ Returns a list of available commands.
-        """
-        result = {}
-        for m in inspect.getmembers(self, predicate=inspect.ismethod):
-            method_name = m[0]
-            if not method_name.startswith('_'):
-                if "export_pkg" == method_name:
-                    method_name = "export-pkg"
-                method = m[1]
-                if method.__doc__ and not method.__doc__.startswith('HIDDEN'):
-                    result[method_name] = method
-        return result
+    @property
+    def commands(self):
+        return self._commands
 
     def _print_similar(self, command):
         """ Looks for similar commands and prints them if found.
         """
         matches = get_close_matches(
-            word=command, possibilities=self._commands().keys(), n=5, cutoff=0.75)
+            word=command, possibilities=self.commands.keys(), n=5, cutoff=0.75)
 
         if len(matches) == 0:
             return
@@ -268,8 +226,8 @@ class Command(object):
                 self._show_help()
                 return False
             try:
-                commands = self._commands()
-                method = commands[command]
+                conan_commands = self.commands
+                method = conan_commands[command]
             except KeyError as exc:
                 if command in ["-v", "--version"]:
                     self._out.success("Conan version %s" % client_version)
@@ -284,7 +242,7 @@ class Command(object):
                 self._print_similar(command)
                 raise ConanException("Unknown command %s" % str(exc))
 
-            method(args[0][1:])
+            method(self._conan, self._out, args[0][1:])
         except KeyboardInterrupt as exc:
             logger.error(exc)
             ret_code = SUCCESS
