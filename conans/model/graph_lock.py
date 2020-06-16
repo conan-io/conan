@@ -7,7 +7,7 @@ from conans.client.graph.python_requires import PyRequires
 from conans.client.profile_loader import _load_profile
 from conans.errors import ConanException
 from conans.model.options import OptionsValues
-from conans.model.ref import ConanFileReference
+from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.version import Version
 from conans.util.files import load, save
 
@@ -157,6 +157,41 @@ class GraphLock(object):
                 if graph_node.recipe == RECIPE_VIRTUAL:
                     continue
                 self._upsert_node(graph_node)
+
+    def build_order(self):
+        levels = []
+        opened = list(self._nodes.keys())
+        while opened:
+            current_level = []
+            for o in opened:
+                node = self._nodes[o]
+                requires = node.requires
+                if node.python_requires:
+                    requires += node.python_requires
+                if node.build_requires:
+                    requires += node.build_requires
+                if not any(n in opened for n in requires):
+                    current_level.append(o)
+
+            current_level.sort()
+            levels.append(current_level)
+            # now initialize new level
+            opened = set(opened).difference(current_level)
+
+        result = []
+        total_prefs = set()  # to remove duplicates, same pref shouldn't build twice
+        for level in levels:
+            new_level = []
+            for n in level:
+                locked_node = self._nodes[n]
+                if locked_node.prev is None and locked_node.package_id is not None:
+                    pref = PackageReference(locked_node.ref, locked_node.package_id)
+                    new_level.append((n, pref))
+                    total_prefs.add(pref)
+            if new_level:
+                result.append(new_level)
+
+        return result
 
     def only_recipes(self):
         for node in self._nodes.values():

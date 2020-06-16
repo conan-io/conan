@@ -164,14 +164,18 @@ class GraphBinariesAnalyzer(object):
                     raise ConanException("Lockfile error in '%s'. The locked package_id '%s' "
                                          "does not match the graph '%s'"
                                          % (node.ref, locked.package_id, node.package_id))
+
+                need_build = self._evaluate_build(node, build_mode)
                 if locked.prev is not None:  # The actual package PREV is fully locked, find it
-                    pref = PackageReference(node.ref, node.package_id, locked.prev)
-                    if self._evaluate_build(node, build_mode):
+                    if need_build:
                         raise ConanException("Trying to build '%s', but it is locked"
                                              % repr(node.ref))
-                        return
-                    self._process_locked_node(node, pref, remotes)
-                    return
+                    pref = PackageReference(node.ref, node.package_id, locked.prev)
+                    self._find_locked_node(node, pref, remotes)
+                else:  # prev = None
+                    if not need_build:
+                        node.binary = BINARY_MISSING
+                return
 
         assert node.prev is None, "Non locked node shouldn't have PREV in evaluate_node"
         assert node.binary is None, "Node.binary should be None if not locked"
@@ -209,7 +213,7 @@ class GraphBinariesAnalyzer(object):
             assert locked.prev is None, "Unexpected update of PREV in lock"
             locked.prev = node.prev
 
-    def _process_locked_node(self, node, pref, remotes):
+    def _find_locked_node(self, node, pref, remotes):
         # When the lock contains a PREV, it means it cannot be built
         if self._evaluate_is_cached(node, pref):
             return

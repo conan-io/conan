@@ -1231,25 +1231,13 @@ class ConanAPIV1(object):
         old_lock.save(old_lockfile)
 
     @api_method
-    def build_order(self, lockfile, build=None, cwd=None):
+    def build_order(self, lockfile, cwd=None):
         cwd = cwd or os.getcwd()
         lockfile = _make_abs_path(lockfile, cwd)
 
-        recorder = ActionRecorder()
-        remotes = self.app.load_remotes()
-
-        graph_info = get_graph_info(None, None,
-                                    cwd=cwd, install_folder=None,
-                                    cache=self.app.cache, output=self.app.out,
-                                    lockfile=lockfile)
-        # The reference of the root node could be a local path or a ref
-        reference = graph_info.graph_lock.root_node_ref()
-        deps_graph = self.app.graph_manager.load_graph(reference, None, graph_info, build,
-                                                       False, False, remotes, recorder)
-
-        print_graph(deps_graph, self.app.out)
-        graph_info.save_lock(lockfile)
-        build_order = deps_graph.new_build_order()
+        graph_lock_file = GraphLockFile.load(lockfile, self.app.cache.config.revisions_enabled)
+        graph_lock = graph_lock_file.graph_lock
+        build_order = graph_lock.build_order()
         # Build order returns refs, we need to convert to flat python primitives
         for level in build_order:
             level[:] = [(id_, repr(pref)) for id_, pref in level]

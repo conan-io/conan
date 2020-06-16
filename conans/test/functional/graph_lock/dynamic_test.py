@@ -35,3 +35,50 @@ class GraphLockDynamicTest(unittest.TestCase):
         # If the graph is modified, a create should fail
         client.run("create . LibC/0.1@ --lockfile", assert_error=True)
         self.assertIn("'LibC/0.1' locked requirement 'LibB/0.1' not found", client.out)
+
+
+class GraphLockModifyConanfileTestCase(unittest.TestCase):
+
+    def test(self):
+        # https://github.com/conan-io/conan/issues/5807
+        # Modifying dependencies do NOT modify the lockfile
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . zlib/1.0@")
+
+        client2 = TestClient(cache_folder=client.cache_folder)
+        client2.save({"conanfile.py": GenConanfile()})
+        client2.run("graph lock .")
+        client2.save({"conanfile.py": GenConanfile().with_require_plain("zlib/1.0")})
+
+        client2.run("config set general.relax_lockfile=1")
+        client2.run("install . --lockfile")
+        self.assertIn("conanfile.py: WARN: Require 'zlib' cannot be found in lockfile", client2.out)
+        self.assertIn("zlib/1.0: WARN: Package can't be locked", client2.out)
+        self.assertIn("zlib/1.0:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache", client2.out)
+        lock_file_json = json.loads(client2.load("conan.lock"))
+        self.assertNotIn("zlib", lock_file_json)
+        self.assertEqual(1, len(lock_file_json["graph_lock"]["nodes"]))
+
+
+class GraphLockTestPackageTest(unittest.TestCase):
+    def augment_test_package_requires(self):
+        # https://github.com/conan-io/conan/issues/6067
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile("tool", "0.1")})
+        client.run("create .")
+
+        client.save({"conanfile.py": GenConanfile().with_name("dep").with_version("0.1"),
+                     "test_package/conanfile.py": GenConanfile().with_test("pass"),
+                     "consumer.txt": "[requires]\ndep/0.1\n",
+                     "profile": "[build_requires]\ntool/0.1\n"})
+
+        client.run("export .")
+        client.run("graph lock consumer.txt -pr=profile --build missing")
+
+        # Check lock
+        client.run("config set general.relax_lockfile=1")
+        client.run("create . -pr=profile --lockfile --build missing")
+        self.assertIn("tool/0.1:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache", client.out)
+        self.assertIn("dep/0.1: Applying build-requirement: tool/0.1", client.out)
+        self.assertIn("dep/0.1 (test package): Running test()", client.out)

@@ -103,21 +103,3 @@ class LockRecipeTest(unittest.TestCase):
         self.assertEqual(pkg_node["package_id"], "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
         self.assertEqual(pkg_node["prev"], "83c38d3b4e5f1b8450434436eec31b00")
         self.assertEqual(pkg_node["options"], "")
-
-
-class BasicLockTest(unittest.TestCase):
-
-    def lock_build_test(self):
-        client = TestClient()
-        client.save({"conanfile.py": GenConanfile()})
-        client.run("create . pkg/0.1@")
-
-        client.save({"conanfile.py": GenConanfile().with_require_plain("pkg/0.1")})
-        client.run("graph lock . --build")
-        lock = json.loads(client.load("conan.lock"))
-        pkg_node = lock["graph_lock"]["nodes"]["1"]
-        self.assertEqual(pkg_node["ref"], "pkg/0.1#f3367e0e7d170aa12abccb175fee5f97")
-        self.assertEqual(pkg_node["package_id"], "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
-        self.assertIsNone(pkg_node.get("prev"))
-        self.assertEqual(pkg_node["options"], "")
-        self.assertIn("pkg/0.1:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Build", client.out)
