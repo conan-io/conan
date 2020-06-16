@@ -136,7 +136,7 @@ class Command(object):
             self._commands[command_wrapper.name] = command_wrapper.method
             self._groups.setdefault(command_wrapper.group, []).append(command_wrapper.name)
 
-    def help(self, conan_api, out, *args):
+    def help(self, *args):
         """
         Shows help for a specific command.
         """
@@ -242,7 +242,7 @@ class Command(object):
                 self._print_similar(command)
                 raise ConanException("Unknown command %s" % str(exc))
 
-            method(self._conan, self._out, args[0][1:])
+            method(args[0][1:]) if command == "help" else method(self._conan, self._out, args[0][1:])
         except KeyboardInterrupt as exc:
             logger.error(exc)
             ret_code = SUCCESS
