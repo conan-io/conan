@@ -57,8 +57,6 @@ class B2GeneratorTest(unittest.TestCase):
         }
 
         for ck, cv in generator.content.items():
-            print("----- {}".format(ck))
-            print(cv)
             self.assertEqual(cv, content[ck])
 
     def b2_empty_settings_test(self):
