@@ -215,6 +215,10 @@ class CppInfo(_CppInfo):
     def get_configs(self):
         return self._configs
 
+    def __len__(self):
+        # Avoid creating a '__len__' config
+        return super(CppInfo, self).__len__()
+
     def __getattr__(self, config):
         def _get_cpp_info():
             result = _CppInfo()
@@ -522,6 +526,10 @@ class DepsCppInfo(_BaseDepsCppInfo):
         super(DepsCppInfo, self).__init__()
         self._dependencies = OrderedDict()
         self._configs = {}
+
+    def __len__(self):
+        # Avoid creating a '__len__' config
+        return super(DepsCppInfo, self).__len__()
 
     def __getattr__(self, config):
         return self._configs.setdefault(config, _BaseDepsCppInfo())

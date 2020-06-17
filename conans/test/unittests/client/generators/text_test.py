@@ -1,4 +1,3 @@
-# coding=utf-8
 import textwrap
 import unittest
 
@@ -48,17 +47,56 @@ class TextGeneratorTest(unittest.TestCase):
     def test_load_sytem_libs(self):
         content = textwrap.dedent("""
             [system_libs]
-            main
+            a-real-flow-contains-aggregated-list-here
+
+            [name_requirement]
+            requirement_name
+
+            [rootpath_requirement]
+            requirement_rootpath
 
             [system_libs_requirement]
             requirement
+
+            [name_requirement_other]
+            requirement_other_name
+
+            [rootpath_requirement_other]
+            requirement_other_rootpath
 
             [system_libs_requirement_other]
             requirement_other
         """)
 
         deps_cpp_info, _, _ = TXTGenerator.loads(content)
-        self.assertEqual(deps_cpp_info.system_libs, ["main", ])
-        a = deps_cpp_info["requirement"]
-        self.assertEqual(deps_cpp_info["requirement"].system_libs, ["requirement", ])
-        self.assertEqual(deps_cpp_info["requirement_other"].system_libs, ["requirement_other", ])
+        self.assertListEqual(list(deps_cpp_info.system_libs), ["requirement", "requirement_other"])
+        self.assertListEqual(list(deps_cpp_info["requirement"].system_libs), ["requirement", ])
+        self.assertListEqual(list(deps_cpp_info["requirement_other"].system_libs),
+                             ["requirement_other", ])
+
+    def test_read_write(self):
+        conanfile = ConanFile(TestBufferConanOutput(), None)
+        conanfile.initialize(Settings({}), EnvValues())
+        ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
+        cpp_info = CppInfo(ref.name, "dummy_root_folder1")
+        cpp_info.names["txt"] = "mypkg1-txt"
+        cpp_info.version = ref.version
+        cpp_info.defines = ["MYDEFINE1"]
+        cpp_info.cxxflags = ["-cxxflag_parent"]
+        cpp_info.includedirs = ["mypkg1/include"]
+        cpp_info.filter_empty = False
+        conanfile.deps_cpp_info.add(ref.name, cpp_info)
+
+        ref = ConanFileReference.loads("MyPkg2/0.1@lasote/stables")
+        cpp_info = CppInfo(ref.name, "dummy_root_folder2")
+        cpp_info.defines = ["MYDEFINE2"]
+        cpp_info.cxxflags = ["-cxxflag_dep"]
+        cpp_info.filter_empty = False
+        conanfile.deps_cpp_info.add(ref.name, cpp_info)
+
+        master_content = TXTGenerator(conanfile).content
+        after_parse, _, _ = TXTGenerator.loads(master_content, filter_empty=False)
+        conanfile.deps_cpp_info = after_parse
+        after_content = TXTGenerator(conanfile).content
+
+        self.assertListEqual(master_content.splitlines(), after_content.splitlines())

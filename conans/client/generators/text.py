@@ -1,3 +1,4 @@
+import os
 import re
 import traceback
 from collections import defaultdict
@@ -52,7 +53,7 @@ class TXTGenerator(Generator):
         return BUILD_INFO
 
     @staticmethod
-    def loads(text):
+    def loads(text, filter_empty=False):
         user_defines_index = text.find("[USER_")
         env_defines_index = text.find("[ENV_")
         if user_defines_index != -1:
@@ -73,7 +74,7 @@ class TXTGenerator(Generator):
 
             user_info_txt = ""
 
-        deps_cpp_info = TXTGenerator._loads_cpp_info(deps_cpp_info_txt)
+        deps_cpp_info = TXTGenerator._loads_cpp_info(deps_cpp_info_txt, filter_empty=filter_empty)
         deps_user_info = TXTGenerator._loads_deps_user_info(user_info_txt)
         deps_env_info = DepsEnvInfo.loads(deps_env_info_txt)
         return deps_cpp_info, deps_user_info, deps_env_info
@@ -95,7 +96,7 @@ class TXTGenerator(Generator):
         return ret
 
     @staticmethod
-    def _loads_cpp_info(text):
+    def _loads_cpp_info(text, filter_empty):
         pattern = re.compile(r"^\[([a-zA-Z0-9._:-]+)\]([^\[]+)", re.MULTILINE)
 
         try:
@@ -129,20 +130,35 @@ class TXTGenerator(Generator):
                 data[dep][config][field] = lines
 
             # Build the data structures
+            def _populate_cpp_info(_cpp_info, _data, _rootpath):
+                for it, value in _data.items():
+                    if it.endswith('dirs'):
+                        value = [os.path.relpath(it, _rootpath) for it in value]
+                        value = ['' if it == '.' else it for it in value]
+                    setattr(_cpp_info, it, value)
+
+            _ = data.pop(None, {})  # This is the data for the root object
             deps_cpp_info = DepsCppInfo()
             for dep, configs_cpp_info in data.items():
-                if dep is None:
-                    cpp_info = deps_cpp_info
-                else:
-                    cpp_info = deps_cpp_info._dependencies.setdefault(dep, CppInfo(dep, root_folder=""))
+                # Data for the 'cpp_info' object (no configs)
+                no_config_data = configs_cpp_info.pop(None)
+                rootpath = no_config_data.pop('rootpath')[0]
+                dep_cpp_info = CppInfo(dep, rootpath)
+                dep_cpp_info.names[TXTGenerator.name] = no_config_data.pop('name')[0]
+                dep_cpp_info.sysroot = no_config_data.pop('sysroot', [""])[0]
+                _populate_cpp_info(dep_cpp_info, no_config_data, rootpath)
 
-                for config, fields in configs_cpp_info.items():
-                    item_to_apply = cpp_info if not config else getattr(cpp_info, config)
+                # Now the configs
+                for config, config_data in configs_cpp_info.items():
+                    cpp_info_config = getattr(dep_cpp_info, config)
+                    _populate_cpp_info(cpp_info_config, config_data, rootpath)
 
-                    for key, value in fields.items():
-                        if key in ['rootpath', 'sysroot', 'version', 'name']:
-                            value = value[0]
-                        setattr(item_to_apply, key, value)
+                # Add to the dependecy list
+                version = no_config_data.pop('version', [""])[0]
+                dep_cpp_info.version = version
+                dep_cpp_info.filter_empty = filter_empty
+                deps_cpp_info.add(dep, dep_cpp_info)
+
             return deps_cpp_info
 
         except Exception as e:
