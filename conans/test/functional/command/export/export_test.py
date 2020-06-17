@@ -45,14 +45,9 @@ class TestConan(ConanFile):
 
         client.save({"conanfile.py": GenConanfile()})
         client.run("export . lib/1.0@lasote/channel")
-        self.assertIn("lib/1.0@lasote/channel: A new conanfile.py version was exported",
-                      client.out)
+        self.assertIn("lib/1.0@lasote/channel: A new conanfile.py version was exported", client.out)
 
-        client.save({"conanfile.py": """from conans import ConanFile
-class MyPkg(ConanFile):
-    name="Lib"
-    version="1.0"
-"""})
+        client.save({"conanfile.py": GenConanfile("Lib", "1.0")})
         client.run("export . lasote", assert_error=True)
         self.assertIn("Invalid parameter 'lasote', specify the full reference or user/channel",
                       client.out)
@@ -71,10 +66,9 @@ class MyPkg(ConanFile):
         export_path = client.cache.package_layout(ref).export()
         export_src_path = client.cache.package_layout(ref).export_sources()
 
-        files = {CONANFILE: conanfile,
-                 "file1.txt": "",
-                 "file2.txt": ""}
-        client.save(files)
+        client.save({CONANFILE: conanfile,
+                     "file1.txt": "",
+                     "file2.txt": ""})
         mode1 = os.stat(os.path.join(client.current_folder, "file1.txt")).st_mode
         mode2 = os.stat(os.path.join(client.current_folder, "file2.txt")).st_mode
         os.chmod(os.path.join(client.current_folder, "file1.txt"), mode1 & ~stat.S_IWRITE)
@@ -88,12 +82,12 @@ class MyPkg(ConanFile):
         with self.assertRaises(IOError):
             save(os.path.join(export_src_path, "file2.txt"), "")
         self.assertIn("WARN: Conanfile doesn't have 'license'", client.out)
-        files = {CONANFILE: conanfile,
-                 "file1.txt": "file1",
-                 "file2.txt": "file2"}
+
         os.chmod(os.path.join(client.current_folder, "file1.txt"), mode1 | stat.S_IWRITE)
         os.chmod(os.path.join(client.current_folder, "file2.txt"), mode2 | stat.S_IWRITE)
-        client.save(files)
+        client.save({CONANFILE: conanfile,
+                     "file1.txt": "file1",
+                     "file2.txt": "file2"})
         client.run("export . lasote/stable")
 
         self.assertEqual(load(os.path.join(export_path, "file1.txt")), "file1")
@@ -101,10 +95,9 @@ class MyPkg(ConanFile):
         client.run("install Hello/1.2@lasote/stable --build=missing")
         self.assertIn("Hello/1.2@lasote/stable: Generating the package", client.out)
 
-        files = {CONANFILE: conanfile,
-                 "file1.txt": "",
-                 "file2.txt": ""}
-        client.save(files)
+        client.save({CONANFILE: conanfile,
+                     "file1.txt": "",
+                     "file2.txt": ""})
         os.chmod(os.path.join(client.current_folder, "file1.txt"), mode1 & ~stat.S_IWRITE)
         os.chmod(os.path.join(client.current_folder, "file2.txt"), mode2 & ~stat.S_IWRITE)
         client.run("export . lasote/stable")
@@ -114,8 +107,7 @@ class MyPkg(ConanFile):
         self.assertIn("Hello/1.2@lasote/stable: Generating the package", client.out)
 
     def test_code_parent(self):
-        """ when referencing the parent, the relative folder "sibling" will be kept
-        """
+        # when referencing the parent, the relative folder "sibling" will be kept
         base = """
 from conans import ConanFile
 class TestConan(ConanFile):
@@ -125,9 +117,8 @@ class TestConan(ConanFile):
 """
         for conanfile in (base, base.replace("../*.txt", "../sibling*")):
             client = TestClient()
-            files = {"recipe/conanfile.py": conanfile,
-                     "sibling/file.txt": "Hello World!"}
-            client.save(files)
+            client.save({"recipe/conanfile.py": conanfile,
+                         "sibling/file.txt": "Hello World!"})
             client.current_folder = os.path.join(client.current_folder, "recipe")
             client.run("export . lasote/stable")
             ref = ConanFileReference("Hello", "1.2", "lasote", "stable")
@@ -158,18 +149,17 @@ class TestConan(ConanFile):
     def test_code_several_sibling(self):
         # if provided a path with slash, it will use as a export base
         client = TestClient()
-        conanfile = """
-from conans import ConanFile
-class TestConan(ConanFile):
-    name = "Hello"
-    version = "1.2"
-    exports_sources = "../test/src/*", "../cpp/*", "../include/*"
-"""
-        files = {"recipe/conanfile.py": conanfile,
-                 "test/src/file.txt": "Hello World!",
-                 "cpp/file.cpp": "Hello World!",
-                 "include/file.h": "Hello World!"}
-        client.save(files)
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class TestConan(ConanFile):
+                name = "Hello"
+                version = "1.2"
+                exports_sources = "../test/src/*", "../cpp/*", "../include/*"
+            """)
+        client.save({"recipe/conanfile.py": conanfile,
+                     "test/src/file.txt": "Hello World!",
+                     "cpp/file.cpp": "Hello World!",
+                     "include/file.h": "Hello World!"})
         client.current_folder = os.path.join(client.current_folder, "recipe")
         client.run("export . lasote/stable")
         ref = ConanFileReference("Hello", "1.2", "lasote", "stable")
@@ -180,23 +170,15 @@ class TestConan(ConanFile):
     @parameterized.expand([("myconanfile.py", ), ("Conanfile.py", )])
     def test_filename(self, filename):
         client = TestClient()
-        conanfile = """
-from conans import ConanFile
-class TestConan(ConanFile):
-    name = "Hello"
-    version = "1.2"
-"""
-
-        client.save({filename: conanfile})
-        client.run("export %s lasote/stable" % filename)
-        self.assertIn("Hello/1.2@lasote/stable: A new conanfile.py version was exported",
-                      client.out)
-        ref = ConanFileReference("Hello", "1.2", "lasote", "stable")
+        client.save({filename: GenConanfile("Hello", "1.2")})
+        client.run("export %s user/stable" % filename)
+        self.assertIn("Hello/1.2@user/stable: A new conanfile.py version was exported", client.out)
+        ref = ConanFileReference("Hello", "1.2", "user", "stable")
         export_path = client.cache.package_layout(ref).export()
         conanfile = load(os.path.join(export_path, "conanfile.py"))
-        self.assertIn('name = "Hello"', conanfile)
+        self.assertIn("name = 'Hello'", conanfile)
         manifest = load(os.path.join(export_path, "conanmanifest.txt"))
-        self.assertIn('conanfile.py: cac514c81a0af0d87fa379b0bf16fbaa', manifest)
+        self.assertIn('conanfile.py: aa4e485651a4281b79d343af7d7b20e4', manifest)
 
     def test_exclude_basic(self):
         client = TestClient()
@@ -255,8 +237,6 @@ class ExportTest(unittest.TestCase):
         self.client.run("export . lasote/stable")
 
     def test_basic(self):
-        """ simple registration of a new conans
-        """
         reg_path = self.client.cache.package_layout(self.ref).export()
         manif = FileTreeManifest.load(self.client.cache.package_layout(self.ref).export())
 
@@ -285,14 +265,7 @@ class ExportTest(unittest.TestCase):
                       self.client.out)
 
     def test_export_filter(self):
-        content = """
-from conans import ConanFile
-
-class OpenSSLConan(ConanFile):
-    name = "openssl"
-    version = "2.0.1"
-"""
-        self.client.save({CONANFILE: content})
+        self.client.save({CONANFILE: GenConanfile("openssl", "2.0.1")})
         self.client.run("export . lasote/stable")
         ref = ConanFileReference.loads('openssl/2.0.1@lasote/stable')
         reg_path = self.client.cache.package_layout(ref).export()
@@ -310,8 +283,7 @@ class OpenSSLConan(ConanFile):
         self.client.save({CONANFILE: content})
         self.client.run("export . lasote/stable")
         self.assertEqual(sorted(os.listdir(reg_path)),
-                         ['CMakeLists.txt', CONANFILE, CONAN_MANIFEST,
-                          'helloHello0.h'])
+                         ['CMakeLists.txt', CONANFILE, CONAN_MANIFEST, 'helloHello0.h'])
 
         # Now exports being a list instead a tuple
         content = """

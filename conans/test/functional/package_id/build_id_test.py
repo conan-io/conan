@@ -1,4 +1,5 @@
 import os
+import textwrap
 import unittest
 
 from parameterized.parameterized import parameterized
@@ -54,35 +55,36 @@ class BuildIdTest(unittest.TestCase):
         # Check that conaninfo is correct
         pref_debug = PackageReference.loads("Pkg/0.1@user/channel:"
                                             "f3989dcba0ab50dc5ed9b40ede202bdd7b421f09")
-        conaninfo = load(os.path.join(client.cache.package_layout(pref_debug.ref).package(pref_debug), "conaninfo.txt"))
+        layout = client.cache.package_layout(pref_debug.ref)
+        conaninfo = load(os.path.join(layout.package(pref_debug), "conaninfo.txt"))
         self.assertIn("os=Windows", conaninfo)
         self.assertIn("build_type=Debug", conaninfo)
         self.assertNotIn("Release", conaninfo)
 
         pref_release = PackageReference.loads("Pkg/0.1@user/channel:"
                                               "ab2e9f86b4109980930cdc685f4a320b359e7bb4")
-        conaninfo = load(os.path.join(client.cache.package_layout(pref_release.ref).package(pref_release), "conaninfo.txt"))
+        conaninfo = load(os.path.join(layout.package(pref_release), "conaninfo.txt"))
         self.assertIn("os=Windows", conaninfo)
         self.assertIn("build_type=Release", conaninfo)
         self.assertNotIn("Debug", conaninfo)
 
         pref_debug = PackageReference.loads("Pkg/0.1@user/channel:"
                                             "322de4b4a41f905f6b18f454ab5f498690b39c2a")
-        conaninfo = load(os.path.join(client.cache.package_layout(pref_debug.ref).package(pref_debug), "conaninfo.txt"))
+        conaninfo = load(os.path.join(layout.package(pref_debug), "conaninfo.txt"))
         self.assertIn("os=Linux", conaninfo)
         self.assertIn("build_type=Debug", conaninfo)
         self.assertNotIn("Release", conaninfo)
 
         pref_release = PackageReference.loads("Pkg/0.1@user/channel:"
                                               "24c3aa2d6c5929d53bd86b31e020c55d96b265c7")
-        conaninfo = load(os.path.join(client.cache.package_layout(pref_release.ref).package(pref_release), "conaninfo.txt"))
+        conaninfo = load(os.path.join(layout.package(pref_release), "conaninfo.txt"))
         self.assertIn("os=Linux", conaninfo)
         self.assertIn("build_type=Release", conaninfo)
         self.assertNotIn("Debug", conaninfo)
 
     def create_test(self):
-        """ Ensure that build_id() works when multiple create calls are made
-        """
+        # Ensure that build_id() works when multiple create calls are made
+
         client = TestClient()
         client.save({"conanfile.py": conanfile})
         client.run("create . user/channel -s os=Windows -s build_type=Release")
@@ -207,19 +209,19 @@ class BuildIdTest(unittest.TestCase):
         def _check_builds():
             builds = client.cache.package_layout(ref).conan_builds()
             self.assertEqual(1, len(builds))
-            packages = client.cache.package_layout(ref).conan_packages()
-            self.assertEqual(2, len(packages))
-            self.assertNotIn(builds[0], packages)
-            return builds[0], packages
+            pkgs = client.cache.package_layout(ref).conan_packages()
+            self.assertEqual(2, len(pkgs))
+            self.assertNotIn(builds[0], pkgs)
+            return builds[0], pkgs
 
         build, packages = _check_builds()
         client.run("remove Pkg/0.1@user/channel -b %s -f" % packages[0])
         _check_builds()
         client.run("remove Pkg/0.1@user/channel -b %s -f" % build)
-        builds = client.cache.package_layout(ref).conan_builds()
-        self.assertEqual(0, len(builds))
-        packages = client.cache.package_layout(ref).conan_packages()
-        self.assertEqual(2, len(packages))
+        cache_builds = client.cache.package_layout(ref).conan_builds()
+        self.assertEqual(0, len(cache_builds))
+        cache_packages = client.cache.package_layout(ref).conan_packages()
+        self.assertEqual(2, len(cache_packages))
 
     @parameterized.expand([(True, ), (False,)])
     def info_test(self, python_consumer):
@@ -265,27 +267,25 @@ class BuildIdTest(unittest.TestCase):
             self.assertNotIn("ID: f3989dcba0ab50dc5ed9b40ede202bdd7b421f09", client.out)
 
     def failed_build_test(self):
-        conanfile = """from conans import ConanFile
-class MyTest(ConanFile):
-    settings = "os"
-    def build(self):
-        raise Exception("Failed build!!")
-"""
+        # Repeated failed builds keep failing
+        fail_conanfile = textwrap.dedent("""\
+            from conans import ConanFile
+            class MyTest(ConanFile):
+                settings = "os"
+                def build(self):
+                    raise Exception("Failed build!!")
+            """)
         client = TestClient()
         # NORMAL case, every create fails
-        client.save({"conanfile.py": conanfile})
+        client.save({"conanfile.py": fail_conanfile})
         client.run("create . pkg/0.1@user/channel", assert_error=True)
-        self.assertIn("ERROR: pkg/0.1@user/channel: Error in build() method, line 5",
-                      client.out)
+        self.assertIn("ERROR: pkg/0.1@user/channel: Error in build() method, line 5", client.out)
         client.run("create . pkg/0.1@user/channel", assert_error=True)
-        self.assertIn("ERROR: pkg/0.1@user/channel: Error in build() method, line 5",
-                      client.out)
+        self.assertIn("ERROR: pkg/0.1@user/channel: Error in build() method, line 5", client.out)
         # now test with build_id
-        client.save({"conanfile.py": conanfile +
+        client.save({"conanfile.py": fail_conanfile +
                      "    def build_id(self): self.info_build.settings.os = 'any'"})
         client.run("create . pkg/0.1@user/channel", assert_error=True)
-        self.assertIn("ERROR: pkg/0.1@user/channel: Error in build() method, line 5",
-                      client.out)
+        self.assertIn("ERROR: pkg/0.1@user/channel: Error in build() method, line 5", client.out)
         client.run("create . pkg/0.1@user/channel", assert_error=True)
-        self.assertIn("ERROR: pkg/0.1@user/channel: Error in build() method, line 5",
-                      client.out)
+        self.assertIn("ERROR: pkg/0.1@user/channel: Error in build() method, line 5", client.out)
