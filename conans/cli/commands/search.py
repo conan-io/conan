@@ -10,10 +10,11 @@ from conans.cli.command import SmartFormatter, OnceArgument, Extender, conan_com
 # to search in the local cache: conan search "*" --cache explicitly
 
 @conan_command(group="Consumer commands")
-def search(conan_api, out, *args):
+def search(conan_api, *args):
     """
     Searches for package recipes whose name contain <query> in a remote or in the local cache
     """
+    out = conan_api.out
     search.command_group = "Consumer commands"
     parser = argparse.ArgumentParser(description=search.__doc__, prog="conan search",
                                      formatter_class=SmartFormatter)

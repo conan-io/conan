@@ -14,10 +14,11 @@ from conans.cli.command import SmartFormatter, OnceArgument, Extender, conan_com
 #  name/version@user/channel#<recipe_revision>:<package_id>#<package_revision>
 
 @conan_command(group="Consumer commands")
-def dig(conan_api, out, *args):
+def dig(conan_api, *args):
     """
     Gets information about available package binaries in the local cache or a remote
     """
+    out = conan_api.out
     parser = argparse.ArgumentParser(description=dig.__doc__, prog="conan search",
                                      formatter_class=SmartFormatter)
     parser.add_argument('reference',

@@ -242,7 +242,7 @@ class Command(object):
                 self._print_similar(command)
                 raise ConanException("Unknown command %s" % str(exc))
 
-            method(args[0][1:]) if command == "help" else method(self._conan, self._out, args[0][1:])
+            method(args[0][1:]) if command == "help" else method(self._conan, args[0][1:])
         except KeyboardInterrupt as exc:
             logger.error(exc)
             ret_code = SUCCESS
