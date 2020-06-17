@@ -128,68 +128,23 @@ class Command(object):
             if module.name.startswith("cmd_"):
                 self._add_command(module.name, module.name.replace("cmd_", ""))
 
-        self._commands["help"] = self.help
-
     def _add_command(self, import_path, method_name):
         command_wrapper = getattr(importlib.import_module(import_path), method_name)
         if command_wrapper.doc:
-            self._commands[command_wrapper.name] = command_wrapper.method
+            self._commands[command_wrapper.name] = command_wrapper
             self._groups.setdefault(command_wrapper.group, []).append(command_wrapper.name)
 
-    def help(self, *args):
-        """
-        Shows help for a specific command.
-        """
-        parser = argparse.ArgumentParser(description=self.help.__doc__, prog="conan help",
-                                         formatter_class=SmartFormatter)
-        parser.add_argument("command", help='command', nargs="?")
-        args = parser.parse_args(*args)
-        if not args.command:
-            self._show_help()
-            return
-        try:
-            commands = self.commands
-            method = commands[args.command]
-            method(["--help"])
-        except KeyError:
-            raise ConanException("Unknown command '%s'" % args.command)
-
-    def _show_help(self):
-        """
-        Prints a summary of all commands.
-        """
-        commands = self.commands
-        max_len = max((len(c) for c in commands)) + 1
-        fmt = '  %-{}s'.format(max_len)
-
-        for group_name, comm_names in self._groups.items():
-            self._out.writeln(group_name, Color.BRIGHT_MAGENTA)
-            for name in comm_names:
-                # future-proof way to ensure tabular formatting
-                self._out.write(fmt % name, Color.GREEN)
-
-                # Help will be all the lines up to the first empty one
-                docstring_lines = commands[name].__doc__.split('\n')
-                start = False
-                data = []
-                for line in docstring_lines:
-                    line = line.strip()
-                    if not line:
-                        if start:
-                            break
-                        start = True
-                        continue
-                    data.append(line)
-
-                txt = textwrap.fill(' '.join(data), 80, subsequent_indent=" " * (max_len + 2))
-                self._out.writeln(txt)
-
-        self._out.writeln("")
-        self._out.writeln('Conan commands. Type "conan <command> -h" for help', Color.BRIGHT_YELLOW)
+    @property
+    def conan_api(self):
+        return self._conan
 
     @property
     def commands(self):
         return self._commands
+
+    @property
+    def groups(self):
+        return self._groups
 
     def _print_similar(self, command):
         """ Looks for similar commands and prints them if found.
@@ -210,6 +165,9 @@ class Command(object):
 
         self._out.writeln("")
 
+    def help_message(self):
+        self.commands["help"].method(self.conan_api, self.commands, self.groups)
+
     def run(self, *args):
         """ Entry point for executing commands, dispatcher to class
         methods
@@ -223,18 +181,17 @@ class Command(object):
             try:
                 command = args[0][0]
             except IndexError:  # No parameters
-                self._show_help()
+                self.help_message()
                 return False
             try:
-                conan_commands = self.commands
-                method = conan_commands[command]
+                method = self.commands[command].method
             except KeyError as exc:
                 if command in ["-v", "--version"]:
                     self._out.success("Conan version %s" % client_version)
                     return False
 
                 if command in ["-h", "--help"]:
-                    self._show_help()
+                    self.help_message()
                     return False
 
                 self._out.writeln("'%s' is not a Conan command. See 'conan --help'." % command)
@@ -242,7 +199,8 @@ class Command(object):
                 self._print_similar(command)
                 raise ConanException("Unknown command %s" % str(exc))
 
-            method(args[0][1:]) if command == "help" else method(self._conan, args[0][1:])
+            method(self.conan_api, self.commands, self.groups,
+                   args[0][1:]) if command == "help" else method(self.conan_api, args[0][1:])
         except KeyboardInterrupt as exc:
             logger.error(exc)
             ret_code = SUCCESS
