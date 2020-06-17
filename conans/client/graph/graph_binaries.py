@@ -1,5 +1,6 @@
 import os
 
+from conans import DEFAULT_REVISION_V1
 from conans.client.graph.build_mode import BuildMode
 from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_MISSING,
                                        BINARY_UPDATE, RECIPE_EDITABLE, BINARY_EDITABLE,
@@ -158,7 +159,8 @@ class GraphBinariesAnalyzer(object):
         # If it has lock
         locked = node.graph_lock_node
         if locked:
-            assert locked.ref == node.ref
+            assert locked.ref.copy_clear_rev() == node.ref.copy_clear_rev(), "%s != %s" % (repr(locked.ref), repr(node.ref))
+
             if locked.package_id:
                 if locked.package_id != node.package_id:
                     raise ConanException("Lockfile error in '%s'. The locked package_id '%s' "
@@ -170,9 +172,12 @@ class GraphBinariesAnalyzer(object):
                     if need_build:
                         raise ConanException("Trying to build '%s', but it is locked"
                                              % repr(node.ref))
-                    pref = PackageReference(node.ref, node.package_id, locked.prev)
+                    #prev = None if locked.prev == DEFAULT_REVISION_V1 else locked.prev
+                    #ref = locked.ref.copy_clear_rev() if locked.ref.revision == DEFAULT_REVISION_V1 else locked.ref
+                    pref = PackageReference(locked.ref, locked.package_id, locked.prev)
+                    print("FINDING LOCKED NODE ", repr(pref), remotes)
                     self._find_locked_node(node, pref, remotes)
-                else:  # prev = None
+                else:  # prev = None could be not locked or locked but not using revisions
                     if not need_build:
                         node.binary = BINARY_MISSING
                 return
@@ -210,7 +215,6 @@ class GraphBinariesAnalyzer(object):
 
         if locked:
             locked.package_id = node.package_id
-            assert locked.prev is None, "Unexpected update of PREV in lock"
             locked.prev = node.prev
 
     def _find_locked_node(self, node, pref, remotes):
@@ -222,13 +226,21 @@ class GraphBinariesAnalyzer(object):
 
         package_layout = self._cache.package_layout(pref.ref, short_paths=conanfile.short_paths)
         metadata = package_layout.load_metadata()
-        assert metadata.recipe.revision == node.ref.revision
-        if metadata.packages[pref.id].revision == pref.revision:
-            node.binary = BINARY_CACHE
-            node.prev = pref.revision
-            return
+        if self._cache.config.revisions_enabled:
+            assert metadata.recipe.revision == node.ref.revision
+            if metadata.packages[pref.id].revision == pref.revision:
+                node.binary = BINARY_CACHE
+                node.prev = pref.revision
+                return
+        else:
+            package_folder = package_layout.package(pref)
+            if os.path.exists(package_folder):
+                node.binary = BINARY_CACHE
+                node.prev = pref.revision
+                return
 
         def _search_in_remote(r):
+            print("SEARCHING IN REMOTE ", r.name)
             try:
                 remote_info, _pref_result = self._remote_manager.get_package_info(pref, r)
                 assert _pref_result == pref
@@ -236,6 +248,7 @@ class GraphBinariesAnalyzer(object):
                 node.binary_remote = r
                 node.prev = pref.revision
             except NotFoundException:
+                print("NOT FOUND IN REMOTE")
                 return None
 
         selected = remotes.selected

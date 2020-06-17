@@ -138,14 +138,19 @@ class ReproducibleLockfiles(unittest.TestCase):
         self.assertEqual(lockfile, lockfile2)
 
 
+@unittest.skipIf(get_env("TESTING_REVISIONS_ENABLED", False), "Only without revisions")
 class GraphLockVersionRangeTest(unittest.TestCase):
     user_channel = "user/channel"
     consumer = GenConanfile("PkgB", "0.1").with_require_plain("PkgA/[>=0.1]@%s" % user_channel)
-    pkg_b_revision = "e8cabe5f1c737bcb8223b667f071842d"
-    pkg_b_id = "5bf1ba84b5ec8663764a406f08a7f9ae5d3d5fb5"
-    pkg_b_package_revision = "97d1695f4e456433cc5a1dfa14655a0f"
-    modified_pkg_b_revision = "6073b7f447ba8d88f43a610a15481f2a"
-    modified_pkg_b_package_revision = "ecc8f5e8fbe7847fbd9673ddd29f4f10"
+    ref_a = "PkgA/0.1@%s#0" % user_channel if user_channel else "PkgA/0.1#0"
+    pkg_id_a = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
+    prev_a = "0"
+    ref_b = "PkgB/0.1@%s" % user_channel if user_channel else "PkgB/0.1"
+    rrev_b = "0"
+    pkg_id_b = "5bf1ba84b5ec8663764a406f08a7f9ae5d3d5fb5"
+    prev_b = "0"
+    rrev_b_modified = "0"
+    prev_b_modified = "0"
     upload = True
 
     def setUp(self):
@@ -154,36 +159,39 @@ class GraphLockVersionRangeTest(unittest.TestCase):
         client.save({"conanfile.py": GenConanfile("PkgA", "0.1")})
         client.run("create . %s" % self.user_channel)
         if self.upload:
-            client.run("upload * --all --confirm")
+            client.run("upload PkgA/0.1* --all --confirm")
             client.run("remove * -f")
 
         # Use a consumer with a version range
         client.save({"conanfile.py": self.consumer})
-        client.run("graph lock .")
+        client.run("graph lock . %s" % self.user_channel)
 
-        self._check_lock("PkgB/0.1")
+        self._check_lock()
 
         # If we create a new PkgA version
         client.save({"conanfile.py": GenConanfile("PkgA", "0.2")})
         client.run("create . %s" % self.user_channel)
+        if self.upload:
+            client.run("upload PkgA/0.2* --all --confirm")
+            client.run("remove * -f")
         client.save({"conanfile.py": self.consumer})
 
-    def _check_lock(self, ref_b, rev_b=None, package_id_b=None):
+    def _check_lock(self, rrev_b=None, prev_b=None, package_id_b=None):
         lock_file = self.client.load(LOCKFILE)
         lock_file_json = json.loads(lock_file)
 
         nodes = lock_file_json["graph_lock"]["nodes"]
         pkg_a = nodes["1"]
-        user_channel = "@%s" % self.user_channel if self.user_channel else ""
-        ref_a = "PkgA/0.1%s#fa090239f8ba41ad559f8e934494ee2a" % user_channel
-        self.assertEqual(pkg_a["ref"], ref_a)
-        self.assertEqual(pkg_a["package_id"], "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
-        self.assertEqual(pkg_a["prev"], "0d561e10e25511b9bfa339d06360d7c1")
+
+        self.assertEqual(pkg_a["ref"], self.ref_a)
+        self.assertEqual(pkg_a["package_id"],  self.pkg_id_a)
+        self.assertEqual(pkg_a["prev"], self.prev_a)
 
         pkg_b = nodes["0"]
+        ref_b = self.ref_b if rrev_b is None else "%s#%s" % (self.ref_b, rrev_b)
         self.assertEqual(pkg_b["ref"], ref_b)
         self.assertEqual(pkg_b.get("package_id"), package_id_b)
-        self.assertEqual(pkg_b.get("prev"), rev_b)
+        self.assertEqual(pkg_b.get("prev"), prev_b)
 
     def install_lock_test(self):
         # Normal install will use it (use install-folder to not change graph-info)
@@ -195,7 +203,7 @@ class GraphLockVersionRangeTest(unittest.TestCase):
         # Locked install will use PkgA/0.1
         # To use the stored graph_info.json, it has to be explicit in "--install-folder"
         client.run("install . -g=cmake --lockfile")
-        self._check_lock("PkgB/0.1")
+        self._check_lock()
 
         self.assertIn("PkgA/0.1", client.out)
         self.assertNotIn("PkgA/0.2", client.out)
@@ -208,33 +216,39 @@ class GraphLockVersionRangeTest(unittest.TestCase):
         client.run("info . --lockfile")
         self.assertIn("PkgA/0.1", client.out)
         self.assertNotIn("PkgA/0.2", client.out)
-        self._check_lock("PkgB/0.1")
+        self._check_lock()
 
     def install_ref_lock_test(self):
         client = self.client
         # Make sure not using lockfile, will get PkgA/0.2
         client.run("install PkgA/[>=0.1]@%s -if=tmp" % self.user_channel)
         user_channel = "@%s" % self.user_channel if self.user_channel else ""
-        self.assertIn("PkgA/0.2%s: Already installed!" % user_channel, client.out)
+        if self.upload:
+            self.assertIn("PkgA/0.2%s: Downloaded package" % user_channel, client.out)
+        else:
+            self.assertIn("PkgA/0.2%s: Already installed!" % user_channel, client.out)
         self.assertNotIn("PkgA/0.1", client.out)
         # Not using lockfile, even if one in the folder
         client.run("install PkgA/0.1@%s --install-folder=." % self.user_channel)
-        self.assertIn("PkgA/0.1%s: Already installed!" % user_channel, client.out)
+        if self.upload:
+            self.assertIn("PkgA/0.1%s: Downloaded package" % user_channel, client.out)
+        else:
+            self.assertIn("PkgA/0.1%s: Already installed!" % user_channel, client.out)
         self.assertNotIn("PkgA/0.2", client.out)
         client.run("install PkgA/0.2@%s --install-folder=." % self.user_channel)
         self.assertIn("PkgA/0.2%s: Already installed!" % user_channel, client.out)
         self.assertNotIn("PkgA/0.1", client.out)
-        self._check_lock("PkgB/0.1")
+        self._check_lock()
         # Range locked one
         client.run("install PkgA/[>=0.1]@%s --lockfile" % self.user_channel)
         self.assertIn("PkgA/0.1%s: Already installed!" % user_channel, client.out)
         self.assertNotIn("PkgA/0.2", client.out)
-        self._check_lock("PkgB/0.1")
+        self._check_lock()
 
     def export_lock_test(self):
         # locking a version range at export
         self.client.run("export . user/channel --lockfile")
-        self._check_lock("PkgB/0.1@user/channel#%s" % self.pkg_b_revision)
+        self._check_lock(self.rrev_b)
 
     def create_lock_test(self):
         # Create is also possible
@@ -242,8 +256,7 @@ class GraphLockVersionRangeTest(unittest.TestCase):
         client.run("create . PkgB/0.1@user/channel --lockfile")
         self.assertIn("PkgA/0.1", client.out)
         self.assertNotIn("PkgA/0.2", client.out)
-        self._check_lock("PkgB/0.1@user/channel#%s" % self.pkg_b_revision,
-                         self.pkg_b_package_revision, self.pkg_b_id)
+        self._check_lock(self.rrev_b, self.prev_b, self.pkg_id_b)
 
     def create_test_lock_test(self):
         # Create with test_package is also possible
@@ -253,20 +266,37 @@ class GraphLockVersionRangeTest(unittest.TestCase):
         self.assertIn("(test package)", client.out)
         self.assertIn("PkgA/0.1", client.out)
         self.assertNotIn("PkgA/0.2", client.out)
-        self._check_lock("PkgB/0.1@user/channel#%s" % self.pkg_b_revision,
-                         self.pkg_b_package_revision, self.pkg_b_id)
+        self._check_lock(self.rrev_b, self.prev_b, self.pkg_id_b)
 
     def export_pkg_test(self):
         client = self.client
         client.run("export-pkg . PkgB/0.1@user/channel --lockfile")
-        self._check_lock("PkgB/0.1@user/channel#%s" % self.pkg_b_revision,
-                         self.pkg_b_package_revision, self.pkg_b_id)
+        self._check_lock(self.rrev_b, self.prev_b, self.pkg_id_b)
 
         # Same, but modifying also PkgB Recipe
         client.save({"conanfile.py": str(self.consumer) + "\n#comment"})
         client.run("export-pkg . PkgB/0.1@user/channel --lockfile --force")
-        self._check_lock("PkgB/0.1@user/channel#%s" % self.modified_pkg_b_revision,
-                         self.modified_pkg_b_package_revision, self.pkg_b_id)
+        self._check_lock(self.rrev_b_modified, self.prev_b_modified, self.pkg_id_b)
+
+
+os.environ["TESTING_REVISIONS_ENABLED"] = "1"
+
+
+@unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only with revisions")
+class GraphLockVersionRangeWithRevisionsTest(GraphLockVersionRangeTest):
+    user_channel = "user/channel"
+    consumer = GenConanfile("PkgB", "0.1").with_require_plain("PkgA/[>=0.1]@%s" % user_channel)
+    ref_a = ("PkgA/0.1@%s#fa090239f8ba41ad559f8e934494ee2a" % user_channel
+             if user_channel else "PkgA/0.1#fa090239f8ba41ad559f8e934494ee2a")
+    pkg_id_a = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
+    prev_a = "0d561e10e25511b9bfa339d06360d7c1"
+    ref_b = "PkgB/0.1@%s" % user_channel if user_channel else "PkgB/0.1"
+    rrev_b = "e8cabe5f1c737bcb8223b667f071842d"
+    pkg_id_b = "5bf1ba84b5ec8663764a406f08a7f9ae5d3d5fb5"
+    prev_b = "97d1695f4e456433cc5a1dfa14655a0f"
+    rrev_b_modified = "2"
+    prev_b_modified = "20"
+    upload = False
 
 
 class GraphLockVersionRangeNoUserChannelTest(GraphLockVersionRangeTest):

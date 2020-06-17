@@ -66,6 +66,7 @@ class ConanProxy(object):
                 status = RECIPE_DOWNLOADED
                 return conanfile_path, status, remote, new_ref
             else:
+                print("REVISIONS ", ref, ref.revision, cur_revision)
                 raise NotFoundException("The recipe in the local cache doesn't match the specified "
                                         "revision. Use '--update' to check in the remote.")
 

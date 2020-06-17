@@ -70,7 +70,6 @@ def export_pkg(app, recorder, full_ref, source_folder, build_folder, package_fol
     pref = PackageReference(pref.ref, pref.id, prev)
     if pkg_node.graph_lock_node:
         # after the package has been created we need to update the node PREV
-        assert pkg_node.graph_lock_node.prev is None, "export-pkg tried to update existing PREV"
-        pkg_node.graph_lock_node.prev = pref.revision
         pkg_node.prev = pref.revision
+        pkg_node.graph_lock_node.prev = pref.revision
     recorder.package_exported(pref)

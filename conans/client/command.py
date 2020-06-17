@@ -1840,6 +1840,9 @@ class Command(object):
         lock_cmd.add_argument("path_or_reference", help="Path to a folder containing a recipe"
                               " (conanfile.py or conanfile.txt) or to a recipe file. e.g., "
                               "./my_project/conanfile.txt. It could also be a reference")
+        lock_cmd.add_argument("reference", nargs='?', default=None,
+                              help='user/channel, version@user/channel or pkg/version@user/channel '
+                              '(if name or version declared in conanfile.py, they should match)')
         lock_cmd.add_argument("-l", "--lockfile", action=OnceArgument,
                               help="Path to lockfile to be created. If not specified 'conan.lock'"
                               " will be created in current folder")
@@ -1866,6 +1869,12 @@ class Command(object):
         elif args.subcommand == "lock":
             profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
                                         options=args.options_build, env=args.env_build)
+            name, version, user, channel, _ = get_reference_fields(args.reference,
+                                                                   user_channel_input=True)
+            if any([user, channel]) and not all([user, channel]):
+                # Or user/channel or nothing, but not partial
+                raise ConanException("Invalid parameter '%s', "
+                                     "specify the full reference or user/channel" % args.reference)
             self._conan.create_lock(args.path_or_reference,
                                     remote_name=args.remote,
                                     settings=args.settings_host,
@@ -1877,7 +1886,11 @@ class Command(object):
                                     lockfile=args.lockfile,
                                     build=args.build,
                                     only_recipes=args.recipes,
-                                    input_lockfile=args.input_lockfile)
+                                    input_lockfile=args.input_lockfile,
+                                    name=name,
+                                    version=version,
+                                    user=user,
+                                    channel=channel)
 
     def _show_help(self):
         """
