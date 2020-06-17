@@ -33,7 +33,7 @@ def search(conan_api, *args):
     try:
         remotes = args.remote if args.remote is not None else []
         info = conan_api.search_recipes(args.query, remote_patterns=remotes,
-                                          local_cache=args.cache)
+                                        local_cache=args.cache)
     except ConanException as exc:
         info = exc.info
         raise

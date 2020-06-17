@@ -38,9 +38,9 @@ def dig(conan_api, *args):
         remotes = args.remote if args.remote is not None else []
         ref = ConanFileReference.loads(args.reference)
         info = conan_api.search_packages(ref, query=None,
-                                           remote_patterns=remotes,
-                                           outdated=False,
-                                           local_cache=args.cache)
+                                         remote_patterns=remotes,
+                                         outdated=False,
+                                         local_cache=args.cache)
     except ConanException as exc:
         info = exc.info
         raise
