@@ -49,10 +49,10 @@ class AutoToolsBuildEnvironment(object):
 
         # Set the generic objects before mapping to env vars to let the user
         # alter some value
-        self.libs = copy.copy(self._deps_cpp_info.libs)
-        self.libs.extend(copy.copy(self._deps_cpp_info.system_libs))
-        self.include_paths = copy.copy(self._deps_cpp_info.include_paths)
-        self.library_paths = copy.copy(self._deps_cpp_info.lib_paths)
+        self.libs = list(self._deps_cpp_info.libs)
+        self.libs.extend(list(self._deps_cpp_info.system_libs))
+        self.include_paths = list(self._deps_cpp_info.include_paths)
+        self.library_paths = list(self._deps_cpp_info.lib_paths)
 
         self.defines = self._configure_defines()
         # Will go to CFLAGS and CXXFLAGS ["-m64" "-m32", "-g", "-s"]
@@ -239,8 +239,8 @@ class AutoToolsBuildEnvironment(object):
 
     def _configure_link_flags(self):
         """Not the -L"""
-        ret = copy.copy(self._deps_cpp_info.sharedlinkflags)
-        ret.extend(self._deps_cpp_info.exelinkflags)
+        ret = list(self._deps_cpp_info.sharedlinkflags)
+        ret.extend(list(self._deps_cpp_info.exelinkflags))
         ret.extend(format_frameworks(self._deps_cpp_info.frameworks, self._conanfile.settings))
         ret.extend(format_framework_paths(self._deps_cpp_info.framework_paths, self._conanfile.settings))
         arch_flag = architecture_flag(self._conanfile.settings)
@@ -262,7 +262,7 @@ class AutoToolsBuildEnvironment(object):
         return ret
 
     def _configure_flags(self):
-        ret = copy.copy(self._deps_cpp_info.cflags)
+        ret = list(self._deps_cpp_info.cflags)
         arch_flag = architecture_flag(self._conanfile.settings)
         if arch_flag:
             ret.append(arch_flag)
@@ -281,7 +281,7 @@ class AutoToolsBuildEnvironment(object):
         return ret
 
     def _configure_cxx_flags(self):
-        ret = copy.copy(self._deps_cpp_info.cxxflags)
+        ret = list(self._deps_cpp_info.cxxflags)
         cxxf = libcxx_flag(self._conanfile.settings)
         if cxxf:
             ret.append(cxxf)
@@ -289,7 +289,7 @@ class AutoToolsBuildEnvironment(object):
 
     def _configure_defines(self):
         # requires declared defines
-        ret = copy.copy(self._deps_cpp_info.defines)
+        ret = list(self._deps_cpp_info.defines)
 
         # Debug definition for GCC
         btf = build_type_define(build_type=self._build_type)
