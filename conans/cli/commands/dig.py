@@ -1,8 +1,8 @@
 import argparse
 
+from conans.client.formatters.dig_formatter import DigFormatter
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
-from conans.client.formatters import FormatterFormats
 from conans.cli.command import SmartFormatter, OnceArgument, Extender, conan_command
 
 
@@ -45,5 +45,4 @@ def dig(conan_api, *args):
         info = exc.info
         raise
     finally:
-        out_kwargs = {'out': out, 'f': 'dig'}
-        FormatterFormats.get(args.output).out(info=info, **out_kwargs)
+        DigFormatter.out(args.output, info, out)

@@ -118,10 +118,14 @@ class Command(object):
         self._commands = None
 
     def _add_command(self, import_path, method_name):
-        command_wrapper = getattr(importlib.import_module(import_path), method_name)
-        if command_wrapper.doc:
-            self._commands[command_wrapper.name] = command_wrapper
-            self._groups.setdefault(command_wrapper.group, []).append(command_wrapper.name)
+        try:
+            command_wrapper = getattr(importlib.import_module(import_path), method_name)
+            if command_wrapper.doc:
+                self._commands[command_wrapper.name] = command_wrapper
+                self._groups.setdefault(command_wrapper.group, []).append(command_wrapper.name)
+        except AttributeError:
+            raise ConanException("There is no {} method defined in {}.".format(method_name,
+                                                                              import_path))
 
     @property
     def conan_api(self):
@@ -131,7 +135,8 @@ class Command(object):
     def commands(self):
         if self._commands is None:
             self._commands = {}
-            conan_commands_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "commands")
+            conan_commands_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                               "commands")
             for module in pkgutil.iter_modules([conan_commands_path]):
                 self._add_command("conans.cli.commands.{}".format(module.name), module.name)
             user_commands_path = os.path.join(self._conan.cache_folder, "commands")

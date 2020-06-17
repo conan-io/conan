@@ -1,7 +1,7 @@
 import argparse
 
+from conans.client.formatters.search_formatter import SearchFormatter
 from conans.errors import ConanException
-from conans.client.formatters import FormatterFormats
 from conans.cli.command import SmartFormatter, OnceArgument, Extender, conan_command
 
 
@@ -15,7 +15,6 @@ def search(conan_api, *args):
     Searches for package recipes whose name contain <query> in a remote or in the local cache
     """
     out = conan_api.out
-    search.command_group = "Consumer commands"
     parser = argparse.ArgumentParser(description=search.__doc__, prog="conan search",
                                      formatter_class=SmartFormatter)
     parser.add_argument('query',
@@ -38,5 +37,5 @@ def search(conan_api, *args):
         info = exc.info
         raise
     finally:
-        out_kwargs = {'out': out, 'f': 'search'}
-        FormatterFormats.get(args.output).out(info=info, **out_kwargs)
+        SearchFormatter.out(args.output, info, out)
+

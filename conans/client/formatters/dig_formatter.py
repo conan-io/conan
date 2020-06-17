@@ -1,22 +1,13 @@
-# coding=utf-8
-from conans.client.output import Color
+import json
+
 from conans.client.formatters.base_formatter import BaseFormatter
-from conans.client.formatters.formats import FormatterFormats
+from conans.client.output import Color
 
 
-@FormatterFormats.register("cli")
-class CLIFormatter(BaseFormatter):
+class DigFormatter(BaseFormatter):
 
-    def search(self, info, out, *args, **kwargs):
-        results = info["results"]
-        for remote_info in results:
-            source = "cache" if remote_info["remote"] is None else str(remote_info["remote"])
-            out.writeln("{}:".format(source), Color.BRIGHT_WHITE)
-            for conan_item in remote_info["items"]:
-                reference = conan_item["recipe"]["id"]
-                out.writeln(" {}".format(reference))
-
-    def dig(self, info, out, *args, **kwargs):
+    @classmethod
+    def cli(cls, info, out):
         results = info["results"]
         for remote_info in results:
             source = "cache" if remote_info["remote"] is None else str(remote_info["remote"])
@@ -35,3 +26,7 @@ class CLIFormatter(BaseFormatter):
                         out.write("  {}: ".format(setting), Color.YELLOW)
                         out.write("{}".format(value), newline=True)
 
+    @classmethod
+    def json(cls, info, out):
+        myjson = json.dumps(info, indent=4)
+        out.writeln(myjson)
