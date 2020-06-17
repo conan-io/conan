@@ -75,7 +75,7 @@ class SmartFormatter(argparse.HelpFormatter):
 
 class ConanCommand(object):
     def __init__(self, method, group=None):
-        self._group = group if group is not None else "Custom command"
+        self._group = group if group is not None else "Misc commands"
         self._name = method.__name__.replace("_", "-")
         self._method = method
         self._doc = method.__doc__
