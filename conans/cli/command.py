@@ -132,7 +132,7 @@ class Command(object):
 
     def _add_command(self, import_path, method_name):
         command_wrapper = getattr(importlib.import_module(import_path), method_name)
-        if command_wrapper.doc and not command_wrapper.doc.startswith('HIDDEN'):
+        if command_wrapper.doc:
             self._commands[command_wrapper.name] = command_wrapper.method
             self._groups.setdefault(command_wrapper.group, []).append(command_wrapper.name)
 
@@ -211,7 +211,7 @@ class Command(object):
         self._out.writeln("")
 
     def run(self, *args):
-        """HIDDEN: entry point for executing commands, dispatcher to class
+        """ Entry point for executing commands, dispatcher to class
         methods
         """
         version = sys.version_info
