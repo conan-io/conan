@@ -10,7 +10,6 @@ import pkgutil
 
 from conans import __version__ as client_version
 from conans.client.api.conan_api import Conan
-from conans.client.output import Color
 from conans.errors import ConanException, ConanInvalidConfiguration, ConanMigrationError
 from conans.util.files import exception_message_safe
 from conans.util.log import logger
