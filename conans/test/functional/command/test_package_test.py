@@ -139,7 +139,7 @@ class TestPackageTest(unittest.TestCase):
                 requires = "dep/1.1"
                 def build(self):
                     info = self.deps_cpp_info["dep"]
-                    self.output.info("BUILD Dep %s VERSION %s" % (info.get_name('txt'), info.version))
+                    self.output.info("BUILD Dep %s VERSION %s" % (info.name, info.version))
                 def package_info(self):
                     self.cpp_info.name = "MyHello"
             """)

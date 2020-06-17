@@ -4,8 +4,6 @@ from copy import copy
 
 from conans.errors import ConanException
 from conans.util.conan_v2_mode import conan_v2_behavior
-from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
-from conans.util.env_reader import get_env
 
 DEFAULT_INCLUDE = "include"
 DEFAULT_LIB = "lib"
@@ -42,6 +40,7 @@ class _CppInfo(object):
     It is intended to be system independent, translation to
     specific systems will be produced from this info
     """
+
     def __init__(self):
         self._name = None
         self.names = {}
@@ -136,7 +135,8 @@ class _CppInfo(object):
 
     @property
     def name(self):
-        raise RuntimeError("Use 'get_name(generator)' instead")
+        conan_v2_behavior("Use 'get_name(generator)' instead")
+        return self._name
 
     @name.setter
     def name(self, value):
@@ -177,6 +177,7 @@ class CppInfo(_CppInfo):
     to build properly.
     Defined in user CONANFILE, directories are relative at user definition time
     """
+
     def __init__(self, ref_name, root_folder):
         super(CppInfo, self).__init__()
         self._ref_name = ref_name
@@ -232,20 +233,20 @@ class CppInfo(_CppInfo):
     def _raise_incorrect_components_definition(self, package_name, package_requires):
         # Raise if mixing components
         if (self.includedirs != [DEFAULT_INCLUDE] or
-                self.libdirs != [DEFAULT_LIB] or
-                self.bindirs != [DEFAULT_BIN] or
-                self.resdirs != [DEFAULT_RES] or
-                self.builddirs != [DEFAULT_BUILD] or
-                self.frameworkdirs != [DEFAULT_FRAMEWORK] or
-                self.libs or
-                self.system_libs or
-                self.frameworks or
-                self.defines or
-                self.cflags or
-                self.cxxflags or
-                self.sharedlinkflags or
-                self.exelinkflags or
-                self.build_modules) and self.components:
+            self.libdirs != [DEFAULT_LIB] or
+            self.bindirs != [DEFAULT_BIN] or
+            self.resdirs != [DEFAULT_RES] or
+            self.builddirs != [DEFAULT_BUILD] or
+            self.frameworkdirs != [DEFAULT_FRAMEWORK] or
+            self.libs or
+            self.system_libs or
+            self.frameworks or
+            self.defines or
+            self.cflags or
+            self.cxxflags or
+            self.sharedlinkflags or
+            self.exelinkflags or
+            self.build_modules) and self.components:
             raise ConanException("self.cpp_info.components cannot be used with self.cpp_info "
                                  "global values at the same time")
         if self._configs and self.components:
@@ -283,7 +284,6 @@ class _BaseDepsCppInfo(_CppInfo):
         super(_BaseDepsCppInfo, self).__init__()
 
     def update(self, dep_cpp_info):
-
         def merge_lists(seq1, seq2):
             return [s for s in seq1 if s not in seq2] + seq2
 
