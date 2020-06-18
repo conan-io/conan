@@ -124,7 +124,7 @@ class Command(object):
                 self._commands[command_wrapper.name] = command_wrapper
                 self._groups.setdefault(command_wrapper.group, []).append(command_wrapper.name)
         except AttributeError:
-            raise ConanException("There is no {} method defined in {}.".format(method_name,
+            raise ConanException("There is no {} method defined in {}".format(method_name,
                                                                               import_path))
 
     @property
