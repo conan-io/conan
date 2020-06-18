@@ -3,7 +3,6 @@ import textwrap
 from conans.test.utils.tools import TestClient, TestServer, GenConanfile
 
 
-
 class BuildRequiresFromProfile(unittest.TestCase):
     profile_host = textwrap.dedent("""
         [settings]
@@ -46,5 +45,4 @@ class BuildRequiresFromProfile(unittest.TestCase):
         t.run("export br1.py br1/version@")
         t.run("export br2.py br2/version@")
         t.run("create library.py --profile:host=profile_host --profile:build=profile_build --build *")
-
-        self.assertNotIn("br1/version: Applying build-requirement", t.out)
+        self.assertNotIn("br1/version: Applying build-requirement: br2/version", t.out)
