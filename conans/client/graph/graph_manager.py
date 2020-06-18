@@ -312,10 +312,13 @@ class GraphManager(object):
                                                          br_list,
                                                          check_updates, update, remotes,
                                                          profile_host, profile_build, graph_lock)
-
+                if default_context == CONTEXT_BUILD:
+                    profile_build_build_requires = profile_build.build_requires
+                else:
+                    profile_build_build_requires = {}
                 self._recurse_build_requires(graph, builder,
                                              check_updates, update, build_mode,
-                                             remotes, profile_build_requires, recorder,
+                                             remotes, profile_build_build_requires, recorder,
                                              profile_host, profile_build, graph_lock,
                                              nodes_subset=nodessub, root=node)
 
