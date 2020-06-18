@@ -27,8 +27,6 @@ from webtest.app import TestApp
 from conans import load
 from conans.client.cache.cache import ClientCache
 from conans.client.cache.remote_registry import Remotes
-from conans.client.command import Command
-from conans.client.conan_api import Conan
 from conans.client.output import ConanOutput
 from conans.client.rest.file_uploader import IterableToFileAdapter
 from conans.client.runner import ConanRunner
@@ -52,6 +50,7 @@ from conans.test.utils.test_files import temp_folder
 from conans.util.env_reader import get_env
 from conans.util.files import mkdir, save_files
 from conans.util.runners import check_output_runner
+
 
 NO_SETTINGS_PACKAGE_ID = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
 
@@ -818,6 +817,10 @@ servers["r2"] = TestServer()
             self.out = TestBufferConanOutput()
         user_io = user_io or MockedUserIO(self.users, out=self.out)
 
+        if os.getenv("CONAN_V2_CLI"):
+            from conans.client.api.conan_api import Conan
+        else:
+            from conans.client.conan_api import Conan
         conan = Conan(cache_folder=self.cache_folder, output=self.out, user_io=user_io,
                       http_requester=self._http_requester, runner=self.runner)
         return conan
@@ -827,6 +830,10 @@ servers["r2"] = TestServer()
             If user or password is filled, user_io will be mocked to return this
             tuple if required
         """
+        if os.getenv("CONAN_V2_CLI"):
+            from conans.cli.command import Command
+        else:
+            from conans.client.command import Command
         conan = self.get_conan_api(user_io)
         self.api = conan
         command = Command(conan)
