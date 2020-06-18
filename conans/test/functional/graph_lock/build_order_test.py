@@ -1,5 +1,4 @@
 import json
-import textwrap
 import unittest
 
 from parameterized import parameterized
@@ -30,23 +29,28 @@ class GraphLockBuildOrderTest(unittest.TestCase):
         else:
             client.run("create .")
             client.run("graph lock test4/0.1@ --build=test4")
+        if client.cache.config.revisions_enabled:
+            ref = "test4/0.1#f876ec9ea0f44cb7adb1588e431b391a"
+            prev = "92cf292e73488c3527dab5f5ba81b947"
+        else:
+            ref = "test4/0.1#0"
+            prev = "0"
         locked = json.loads(client.load("conan.lock"))["graph_lock"]["nodes"]
         test4 = locked["1"]
-        self.assertEqual(test4["ref"], "test4/0.1#f876ec9ea0f44cb7adb1588e431b391a")
+        self.assertEqual(test4["ref"], ref)
         self.assertEqual(test4["package_id"], "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
         self.assertEqual(test4.get("prev"), None)  # PREV is not defined yet, only exported
         client.run("graph build-order . --json=bo.json")
         jsonbo = json.loads(client.load("bo.json"))
-        expected = [[['1', 'test4/0.1#f876ec9ea0f44cb7adb1588e431b391a:'
-                           '5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9']]]
+        expected = [[['1', ref + ':5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9']]]
         self.assertEqual(expected, jsonbo)
         client.run("install test4/0.1@ --lockfile --build")
         self.assertIn("test4/0.1:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Build", client.out)
         locked = json.loads(client.load("conan.lock"))["graph_lock"]["nodes"]
         test4 = locked["1"]
-        self.assertEqual(test4["ref"], "test4/0.1#f876ec9ea0f44cb7adb1588e431b391a")
+        self.assertEqual(test4["ref"], ref)
         self.assertEqual(test4["package_id"], "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
-        self.assertEqual(test4["prev"], "92cf292e73488c3527dab5f5ba81b947")
+        self.assertEqual(test4["prev"], prev)
 
         # New build order, nothing else to do
         client.run("graph build-order . --json=bo.json")
@@ -60,9 +64,15 @@ class GraphLockBuildOrderTest(unittest.TestCase):
         client.run("graph lock test4/0.1@")
         locked = json.loads(client.load("conan.lock"))["graph_lock"]["nodes"]
         test4 = locked["1"]
-        self.assertEqual(test4["ref"], "test4/0.1#f876ec9ea0f44cb7adb1588e431b391a")
+        if client.cache.config.revisions_enabled:
+            ref = "test4/0.1#f876ec9ea0f44cb7adb1588e431b391a"
+            prev = "92cf292e73488c3527dab5f5ba81b947"
+        else:
+            ref = "test4/0.1#0"
+            prev = "0"
+        self.assertEqual(test4["ref"], ref)
         self.assertEqual(test4["package_id"], "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
-        self.assertEqual(test4["prev"], "92cf292e73488c3527dab5f5ba81b947")
+        self.assertEqual(test4["prev"], prev)
         client.run("graph build-order . --json=bo.json")
         jsonbo = json.loads(client.load("bo.json"))
         self.assertEqual([], jsonbo)
@@ -90,12 +100,27 @@ class GraphLockBuildOrderTest(unittest.TestCase):
             client.run("graph lock app/0.1@ --build")
 
         locked = json.loads(client.load("conan.lock"))["graph_lock"]["nodes"]
-        nodes = [("1", "app/0.1#5e0af887c3e9391c872773734ccd2ca0",
-                  "745ccd40fd696b66b0cb160fd5251a533563bbb4"),
-                 ("2", "pkg/0.1#447b56f0334b7e2a28aa86e218c8b3bd",
-                  "0b3845ce7fd8c0b4e46566097797bd872cb5bcf6"),
-                 ("3", "dep/0.1#f3367e0e7d170aa12abccb175fee5f97",
-                  "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")]
+        if client.cache.config.revisions_enabled:
+            nodes = [("1", "app/0.1#5e0af887c3e9391c872773734ccd2ca0",
+                      "745ccd40fd696b66b0cb160fd5251a533563bbb4"),
+                     ("2", "pkg/0.1#447b56f0334b7e2a28aa86e218c8b3bd",
+                      "0b3845ce7fd8c0b4e46566097797bd872cb5bcf6"),
+                     ("3", "dep/0.1#f3367e0e7d170aa12abccb175fee5f97",
+                      "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")]
+            prev_dep = "83c38d3b4e5f1b8450434436eec31b00"
+            prev_pkg = "bcde0c25612a6d296cf2cab2c264054d"
+            prev_app = "9f30558ce471f676e3e06b633aabcf99"
+        else:
+            nodes = [("1", "app/0.1#0",
+                      "745ccd40fd696b66b0cb160fd5251a533563bbb4"),
+                     ("2", "pkg/0.1#0",
+                      "0b3845ce7fd8c0b4e46566097797bd872cb5bcf6"),
+                     ("3", "dep/0.1#0",
+                      "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")]
+            prev_dep = "0"
+            prev_pkg = "0"
+            prev_app = "0"
+
         for lockid, ref, package_id in nodes:
             node = locked[lockid]
             self.assertEqual(node["ref"], ref)
@@ -116,7 +141,7 @@ class GraphLockBuildOrderTest(unittest.TestCase):
         self.assertIn("dep/0.1:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Build", client.out)
         locked = json.loads(client.load("conan.lock"))["graph_lock"]["nodes"]
         node = locked["3"]
-        self.assertEqual(node.get("prev"), "83c38d3b4e5f1b8450434436eec31b00")
+        self.assertEqual(node.get("prev"), prev_dep)
         node = locked["2"]
         self.assertEqual(node.get("prev"), None)  # PREV is not defined yet, only exported
         node = locked["1"]
@@ -136,9 +161,9 @@ class GraphLockBuildOrderTest(unittest.TestCase):
         self.assertIn("pkg/0.1:0b3845ce7fd8c0b4e46566097797bd872cb5bcf6 - Build", client.out)
         locked = json.loads(client.load("conan.lock"))["graph_lock"]["nodes"]
         node = locked["3"]
-        self.assertEqual(node.get("prev"), "83c38d3b4e5f1b8450434436eec31b00")
+        self.assertEqual(node.get("prev"), prev_dep)
         node = locked["2"]
-        self.assertEqual(node.get("prev"), "bcde0c25612a6d296cf2cab2c264054d")
+        self.assertEqual(node.get("prev"), prev_pkg)
         node = locked["1"]
         self.assertEqual(node.get("prev"), None)  # PREV is not defined yet, only exported
 
@@ -158,11 +183,11 @@ class GraphLockBuildOrderTest(unittest.TestCase):
 
         locked = json.loads(client.load("conan.lock"))["graph_lock"]["nodes"]
         node = locked["3"]
-        self.assertEqual(node.get("prev"), "83c38d3b4e5f1b8450434436eec31b00")
+        self.assertEqual(node.get("prev"), prev_dep)
         node = locked["2"]
-        self.assertEqual(node.get("prev"), "bcde0c25612a6d296cf2cab2c264054d")
+        self.assertEqual(node.get("prev"), prev_pkg)
         node = locked["1"]
-        self.assertEqual(node.get("prev"), "9f30558ce471f676e3e06b633aabcf99")
+        self.assertEqual(node.get("prev"), prev_app)
 
         # New build order, nothing else to do
         client.run("graph build-order . --json=bo.json")
