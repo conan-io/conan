@@ -168,7 +168,7 @@ class TXTGenerator(Generator):
         all_flags = template.format(dep="", deps=deps, config="")
         sections.append(all_flags)
 
-        for config, cpp_info in self.deps_build_info.get_configs().items():
+        for config, cpp_info in self.deps_build_info.configs.items():
             deps = DepsCppTXT(cpp_info)
             all_flags = template.format(dep="", deps=deps, config=":" + config)
             sections.append(all_flags)
@@ -184,7 +184,7 @@ class TXTGenerator(Generator):
             dep_flags = template_deps.format(dep=dep, deps=deps, config="")
             sections.append(dep_flags)
 
-            for config, cpp_info in dep_cpp_info.get_configs().items():
+            for config, cpp_info in dep_cpp_info.configs.items():
                 deps = DepsCppTXT(cpp_info)
                 all_flags = template.format(dep=dep, deps=deps, config=":" + config)
                 sections.append(all_flags)

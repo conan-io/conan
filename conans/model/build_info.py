@@ -212,7 +212,8 @@ class CppInfo(_CppInfo):
             name = self.names.get(generator, fallback)
         return name
 
-    def get_configs(self):
+    @property
+    def configs(self):
         return self._configs
 
     def __getattr__(self, config):
@@ -526,7 +527,8 @@ class DepsCppInfo(_BaseDepsCppInfo):
     def __getattr__(self, config):
         return self._configs.setdefault(config, _BaseDepsCppInfo())
 
-    def get_configs(self):
+    @property
+    def configs(self):
         return self._configs
 
     @property
@@ -545,5 +547,5 @@ class DepsCppInfo(_BaseDepsCppInfo):
         assert isinstance(cpp_info, (CppInfo, DepCppInfo))
         self._dependencies[pkg_name] = cpp_info
         super(DepsCppInfo, self).update(cpp_info)
-        for config, cpp_info in cpp_info.get_configs().items():
+        for config, cpp_info in cpp_info.configs.items():
             self._configs.setdefault(config, _BaseDepsCppInfo()).update(cpp_info)
