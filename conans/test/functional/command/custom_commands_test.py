@@ -20,18 +20,17 @@ class CustomConanCommandsTest(unittest.TestCase):
 
 
             @conan_command(group="My Company commands")
-            def {}(conan_api, *args):
+            def {}(*args, **kwargs):
                 \"""
                 Custom command
                 \"""
-                out = conan_api.out
-                parser = argparse.ArgumentParser(description=my_command.__doc__, prog="conan my-command",
-                                                 formatter_class=SmartFormatter)
+                conan_api = kwargs["conan_api"]
+                parser = kwargs["parser"]
                 parser.add_argument('-o', '--output', default="cli", action=OnceArgument,
                                     help="Select the output format: json, html,...")
                 args = parser.parse_args(*args)
                 message = "Hello custom command!"
-                MyCommandFormatter.out(args.output, message, out)
+                MyCommandFormatter.out(args.output, message, conan_api.out)
             """)
         self._formatter_file = textwrap.dedent("""
             from conans.client.formatters.base_formatter import BaseFormatter

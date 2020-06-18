@@ -6,12 +6,15 @@ from conans.cli.command import SmartFormatter, conan_command
 
 
 @conan_command(group="Misc commands")
-def help(conan_api, commands, groups, *args):
+def help(*args, **kwargs):
     """
     Shows help for a specific command.
     """
-    parser = argparse.ArgumentParser(description=help.__doc__, prog="conan help",
-                                     formatter_class=SmartFormatter)
+    conan_api = kwargs["conan_api"]
+    parser = kwargs["parser"]
+    commands = kwargs["commands"]
+    groups = kwargs["groups"]
+
     parser.add_argument("command", help='command', nargs="?")
     args = parser.parse_args(*args)
     if not args.command:

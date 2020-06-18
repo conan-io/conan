@@ -14,13 +14,13 @@ from conans.cli.command import SmartFormatter, OnceArgument, Extender, conan_com
 #  name/version@user/channel#<recipe_revision>:<package_id>#<package_revision>
 
 @conan_command(group="Consumer commands")
-def dig(conan_api, *args):
+def dig(*args, **kwargs):
     """
     Gets information about available package binaries in the local cache or a remote
     """
-    out = conan_api.out
-    parser = argparse.ArgumentParser(description=dig.__doc__, prog="conan search",
-                                     formatter_class=SmartFormatter)
+    conan_api = kwargs["conan_api"]
+    parser = kwargs["parser"]
+
     parser.add_argument('reference',
                         help="Package recipe reference, e.g., 'zlib/1.2.8', \
                              'boost/1.73.0@mycompany/stable'")
@@ -45,4 +45,4 @@ def dig(conan_api, *args):
         info = exc.info
         raise
     finally:
-        DigFormatter.out(args.output, info, out)
+        DigFormatter.out(args.output, info, conan_api.out)

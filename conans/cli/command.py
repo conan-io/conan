@@ -78,6 +78,9 @@ class ConanCommand(object):
         self._name = method.__name__.replace("_", "-")
         self._method = method
         self._doc = method.__doc__
+        self._parser = argparse.ArgumentParser(description=self._doc,
+                                               prog="conan {}".format(self._name),
+                                               formatter_class=SmartFormatter)
 
     @property
     def group(self):
@@ -94,6 +97,10 @@ class ConanCommand(object):
     @property
     def doc(self):
         return self._doc
+
+    @property
+    def parser(self):
+        return self._parser
 
 
 def conan_command(group=None):
@@ -203,8 +210,9 @@ class Command(object):
                 self._print_similar(command)
                 raise ConanException("Unknown command %s" % str(exc))
 
-            method(self.conan_api, self.commands, self.groups,
-                   args[0][1:]) if command == "help" else method(self.conan_api, args[0][1:])
+            method(args[0][1:], conan_api=self.conan_api, parser=self.commands[command].parser,
+                   commands=self.commands, groups=self.groups) if command == "help" else method(
+                args[0][1:], conan_api=self.conan_api, parser=self.commands[command].parser)
         except KeyboardInterrupt as exc:
             logger.error(exc)
             ret_code = SUCCESS
