@@ -59,8 +59,10 @@ class BuildMode(object):
 
         # Patterns to match, if package matches pattern, build is forced
         for pattern in self.patterns:
-            is_matching_name = fnmatch.fnmatchcase(ref.name, pattern)
-            is_matching_ref = fnmatch.fnmatchcase(repr(ref.copy_clear_rev()), pattern)
+            # Remove the @ at the end, to match for "conan install pkg/0.1@ --build=pkg/0.1@"
+            clean_pattern = pattern[:-1] if pattern.endswith("@") else pattern
+            is_matching_name = fnmatch.fnmatchcase(ref.name, clean_pattern)
+            is_matching_ref = fnmatch.fnmatchcase(repr(ref.copy_clear_rev()), clean_pattern)
             if is_matching_name or is_matching_ref:
                 try:
                     self._unused_patterns.remove(pattern)
