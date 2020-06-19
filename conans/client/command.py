@@ -172,8 +172,11 @@ class Command(object):
         parser.add_argument("-b", "--bare", action='store_true', default=False,
                             help='Create the minimum package recipe, without build() method. '
                             'Useful in combination with "export-pkg" command')
-        parser.add_argument("-m", "--template",
-                            help='Use the given template from the local cache for conanfile.py')
+        template_args = parser.add_mutually_exclusive_group()
+        template_args.add_argument("-m", "--template",
+                                   help='Use the given template from the local cache for conanfile.py')
+        template_args.add_argument("-md", "--template-dir",
+                                   help='Use the given template directory from the local cache to generate a conan project')
         parser.add_argument("-cis", "--ci-shared", action='store_true',
                             default=False,
                             help='Package will have a "shared" option to be used in CI')
@@ -224,7 +227,9 @@ class Command(object):
                         circleci_gcc_versions=args.ci_circleci_gcc,
                         circleci_clang_versions=args.ci_circleci_clang,
                         circleci_osx_versions=args.ci_circleci_osx,
-                        template=args.template)
+                        template=args.template,
+                        template_dir=args.template_dir
+                        )
 
     def inspect(self, *args):
         """

@@ -236,13 +236,38 @@ test_package/build
 
 """
 
+def _get_files_from_template_dir(template_dir, name, version, package_name):
+    if not os.path.isfile(os.path.join(template_dir, "conanfile.py")):
+        raise ConanException("Template is missing 'conanfile.py': {}".format(template_dir))
+
+    render_args = {'name': name, 'version': version, 'package_name': package_name}
+
+    files = []
+    for d, _, fs in os.walk(template_dir):
+        for f in fs:
+            rel_d = os.path.relpath(d, template_dir)
+            rel_f = os.path.join(rel_d, f)
+            files += [rel_f]
+
+    out_files = dict()
+    for f in files:
+        f_path = os.path.join(template_dir, f)
+        if not os.path.isfile(f_path):
+            continue
+        t = Template(f, keep_trailing_newline=True)
+        rendered_path = t.render(**render_args)
+        t = Template(load(f_path), keep_trailing_newline=True)
+        rendered_file = t.render(**render_args)
+        out_files[rendered_path] = rendered_file
+
+    return out_files
 
 def cmd_new(ref, header=False, pure_c=False, test=False, exports_sources=False, bare=False,
             visual_versions=None, linux_gcc_versions=None, linux_clang_versions=None,
             osx_clang_versions=None, shared=None, upload_url=None, gitignore=None,
             gitlab_gcc_versions=None, gitlab_clang_versions=None,
             circleci_gcc_versions=None, circleci_clang_versions=None, circleci_osx_versions=None,
-            template=None, cache=None):
+            template=None, template_dir=None, cache=None):
     try:
         tokens = ref.split("@")
         name, version = tokens[0].split("/")
@@ -264,8 +289,10 @@ def cmd_new(ref, header=False, pure_c=False, test=False, exports_sources=False, 
         raise ConanException("'pure_c' is incompatible with 'header' and 'sources'")
     if bare and (header or exports_sources):
         raise ConanException("'bare' is incompatible with 'header' and 'sources'")
-    if template and (header or exports_sources or bare):
-        raise ConanException("'template' argument incompatible with 'header', "
+    if template and template_dir:
+        raise ConanException("'template' and 'template_dir' are incompatible options")
+    if (template or template_dir) and (header or exports_sources or bare):
+        raise ConanException("'template' and 'template-dir' arguments are incompatible with 'header', "
                              "'sources', and 'bare'")
 
     if header:
@@ -289,6 +316,17 @@ def cmd_new(ref, header=False, pure_c=False, test=False, exports_sources=False, 
         t = Template(conanfile_template)
         replaced = t.render(name=name, version=version, package_name=package_name)
         files = {"conanfile.py": replaced}
+    elif template_dir:
+        if not os.path.isabs(template_dir):
+            template_dir = os.path.join(cache.cache_folder, "templates", template_dir)
+        if not os.path.isdir(template_dir):
+            raise ConanException("Template directory doesn't exist: {}".format(template_dir))
+        template_dir = os.path.normpath(template_dir)
+
+        files = _get_files_from_template_dir(template_dir=template_dir,
+                                             name=name,
+                                             version=version,
+                                             package_name=package_name)
     else:
         files = {"conanfile.py": conanfile.format(name=name, version=version,
                                                   package_name=package_name)}

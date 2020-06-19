@@ -26,6 +26,34 @@ class NewCommandTest(unittest.TestCase):
         self.assertIn('name = "hello"', conanfile)
         self.assertIn('version = "0.1"', conanfile)
 
+    def template_dir_test(self):
+        client = TestClient()
+        template_dir = "templates/t_dir"
+        template_recipe = textwrap.dedent("""
+            class {{package_name}}Conan(ConanFile):
+                name = "{{name}}"
+                version = "{{version}}"
+        """)
+        save(os.path.join(client.cache_folder, template_dir + "/conanfile.py"), template_recipe)
+
+        template_txt = textwrap.dedent("""
+            package_name={{package_name}}
+            name={{name}}
+            version={{version}}
+        """)
+        save(os.path.join(client.cache_folder, template_dir + "/{{name}}/hello.txt"), template_txt)
+
+        client.run("new hello/0.1 --template-dir=t_dir")
+        conanfile = client.load("conanfile.py")
+        self.assertIn("class HelloConan(ConanFile):", conanfile)
+        self.assertIn('name = "hello"', conanfile)
+        self.assertIn('version = "0.1"', conanfile)
+
+        hellotxt = client.load("hello/hello.txt")
+        self.assertIn("package_name=Hello", hellotxt)
+        self.assertIn("name=hello", hellotxt)
+        self.assertIn("version=0.1", hellotxt)
+
     def template_test_package_test(self):
         client = TestClient()
         template2 = textwrap.dedent("""
@@ -58,8 +86,17 @@ class NewCommandTest(unittest.TestCase):
         client.run("new hello/0.1 -m=mytemplate.py", assert_error=True)
         self.assertIn("ERROR: Template doesn't exist", client.out)
         client.run("new hello/0.1 --template=mytemplate.py --bare", assert_error=True)
-        self.assertIn("ERROR: 'template' argument incompatible", client.out)
+        self.assertIn("ERROR: 'template' and 'template-dir' arguments are incompatible", client.out)
         client.run("new hello/0.1 --template", assert_error=True)
+        self.assertIn("ERROR: Exiting with code: 2", client.out)
+
+    def template_dir_errors_test(self):
+        client = TestClient()
+        client.run("new hello/0.1 -md=mytemplate", assert_error=True)
+        self.assertIn("ERROR: Template directory doesn't exist", client.out)
+        client.run("new hello/0.1 --template-dir=mytemplate --bare", assert_error=True)
+        self.assertIn("ERROR: 'template' and 'template-dir' arguments are incompatible", client.out)
+        client.run("new hello/0.1 --template-dir", assert_error=True)
         self.assertIn("ERROR: Exiting with code: 2", client.out)
 
     def new_test(self):
