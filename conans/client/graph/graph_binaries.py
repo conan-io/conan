@@ -172,10 +172,7 @@ class GraphBinariesAnalyzer(object):
                     if need_build:
                         raise ConanException("Trying to build '%s', but it is locked"
                                              % repr(node.ref))
-                    #prev = None if locked.prev == DEFAULT_REVISION_V1 else locked.prev
-                    #ref = locked.ref.copy_clear_rev() if locked.ref.revision == DEFAULT_REVISION_V1 else locked.ref
                     pref = PackageReference(locked.ref, locked.package_id, locked.prev)
-                    print("FINDING LOCKED NODE ", repr(pref), remotes)
                     self._find_locked_node(node, pref, remotes)
                 else:  # prev = None could be not locked or locked but not using revisions
                     if not need_build:
@@ -240,7 +237,6 @@ class GraphBinariesAnalyzer(object):
                 return
 
         def _search_in_remote(r):
-            print("SEARCHING IN REMOTE ", r.name)
             try:
                 remote_info, _pref_result = self._remote_manager.get_package_info(pref, r)
                 assert _pref_result == pref
@@ -248,7 +244,6 @@ class GraphBinariesAnalyzer(object):
                 node.binary_remote = r
                 node.prev = pref.revision
             except NotFoundException:
-                print("NOT FOUND IN REMOTE")
                 return None
 
         selected = remotes.selected

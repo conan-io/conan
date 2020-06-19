@@ -93,11 +93,8 @@ class GraphLockNode(object):
         self.modified = modified  # variable
         self._path = path
         if not revisions_enabled:
-            print("REF ", ref, repr(ref), ref.revision)
             if ref and ref.revision:
-                print("REMOVING RREV from ", repr(ref))
                 self._ref = ref.copy_with_rev(DEFAULT_REVISION_V1)
-                print("REMOVED RREV from ", repr(ref))
             if prev:
                 self._prev = DEFAULT_REVISION_V1
 
@@ -309,7 +306,7 @@ class GraphLock(object):
         root_node = self._nodes[roots.pop()]
         if root_node.path:
             return root_node.path
-        if not self.revisions_enabled:
+        if not self._revisions_enabled:
             return root_node.ref.copy_clear_rev()
         return root_node.pref.ref
 
