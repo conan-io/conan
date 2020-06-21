@@ -73,8 +73,8 @@ content = """
                     "lengthMenu": [[10, 25, 50, -1], [10, 25, 50, "All"]],
                     "pageLength": 10,
                     "columnDefs": [
-                        { className: "cell_border_right", "targets": [ 7, 10  ] },
-                        { className: "cell_border_right monospaced", "targets": [1, ]}
+                        { className: "cell_border_right", "targets": [ {{ headers.keys|length + headers.settings|length -1 }}, {{ headers.keys|length + headers.settings|length + headers.options|length -1 }}  ] },
+                        { className: "cell_border_right monospaced", "targets": [{{ headers.keys|length -1 }}, ]}
                     ]
                 });
 
