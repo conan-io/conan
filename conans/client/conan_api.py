@@ -1240,9 +1240,6 @@ class ConanAPIV1(object):
         graph_lock_file = GraphLockFile.load(lockfile, self.app.cache.config.revisions_enabled)
         graph_lock = graph_lock_file.graph_lock
         build_order = graph_lock.build_order()
-        # Build order returns refs, we need to convert to flat python primitives
-        for level in build_order:
-            level[:] = [(id_, repr(pref)) for id_, pref in level]
         return build_order
 
     @api_method

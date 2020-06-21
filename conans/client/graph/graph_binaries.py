@@ -168,11 +168,12 @@ class GraphBinariesAnalyzer(object):
                                          % (node.ref, locked.package_id, node.package_id))
 
                 need_build = self._evaluate_build(node, build_mode)
-                if locked.prev is not None:  # The actual package PREV is fully locked, find it
+                if locked.prev is not None:  # The actual package PREV is locked, find it
                     if need_build:
                         raise ConanException("Trying to build '%s', but it is locked"
                                              % repr(node.ref))
-                    pref = PackageReference(locked.ref, locked.package_id, locked.prev)
+                    prev = None if locked.prev == DEFAULT_REVISION_V1 else locked.prev
+                    pref = PackageReference(locked.ref, locked.package_id, prev)
                     self._find_locked_node(node, pref, remotes)
                 else:  # prev = None could be not locked or locked but not using revisions
                     if not need_build:

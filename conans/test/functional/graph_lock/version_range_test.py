@@ -19,7 +19,7 @@ class GraphLockVersionRangeTest(unittest.TestCase):
         pkg_id_b = "5bf1ba84b5ec8663764a406f08a7f9ae5d3d5fb5"
         prev_b = "97d1695f4e456433cc5a1dfa14655a0f"
     else:
-        ref_a = "PkgA/0.1@user/channel#0"
+        ref_a = "PkgA/0.1@user/channel"
         pkg_id_a = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
         prev_a = "0"
         ref_b = "PkgB/0.1@user/channel"
@@ -61,7 +61,7 @@ class GraphLockVersionRangeTest(unittest.TestCase):
         self.assertEqual(pkg_a["prev"], self.prev_a)
 
         pkg_b = nodes["0"]
-        ref_b = self.ref_b if rrev_b is None else "%s#%s" % (self.ref_b, rrev_b)
+        ref_b = self.ref_b if (rrev_b is None or rrev_b == "0") else "%s#%s" % (self.ref_b, rrev_b)
         self.assertEqual(pkg_b["ref"], ref_b)
         self.assertEqual(pkg_b.get("package_id"), package_id_b)
         self.assertEqual(pkg_b.get("prev"), prev_b)
@@ -176,7 +176,7 @@ class GraphLockVersionRangeNoUserChannelTest(GraphLockVersionRangeTest):
         pkg_id_b = "5bf1ba84b5ec8663764a406f08a7f9ae5d3d5fb5"
         prev_b = "f97ac3d1bee62d55a35085dd42fa847a"
     else:
-        ref_a = "PkgA/0.1#0"
+        ref_a = "PkgA/0.1"
         pkg_id_a = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
         prev_a = "0"
         ref_b = "PkgB/0.1"
@@ -202,7 +202,7 @@ class GraphLockBuildRequireVersionRangeTest(GraphLockVersionRangeTest):
         pkg_id_b = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
         prev_b = "33a5634bbd9ec26b369d3900d91ea9a0"
     else:
-        ref_a = "PkgA/0.1@user/channel#0"
+        ref_a = "PkgA/0.1@user/channel"
         pkg_id_a = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
         prev_a = "0"
         ref_b = "PkgB/0.1@user/channel"

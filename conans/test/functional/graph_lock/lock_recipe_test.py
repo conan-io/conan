@@ -29,9 +29,14 @@ class LockRecipeTest(unittest.TestCase):
         client.run("graph lock . -s os=Linux --lockfile=linux.lock --input-lockfile=conan.lock")
         lock = json.loads(client.load("linux.lock"))
         pkg_node = lock["graph_lock"]["nodes"]["1"]
-        self.assertEqual(pkg_node["ref"], "pkg/0.1#f096d7d54098b7ad7012f9435d9c33f3")
-        self.assertEqual(pkg_node["package_id"], "cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31")
-        self.assertEqual(pkg_node["prev"], "9e99cfd92d0d7df79d687b01512ce844")
+        if client.cache.config.revisions_enabled:
+            self.assertEqual(pkg_node["ref"], "pkg/0.1#f096d7d54098b7ad7012f9435d9c33f3")
+            self.assertEqual(pkg_node["package_id"], "cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31")
+            self.assertEqual(pkg_node["prev"], "9e99cfd92d0d7df79d687b01512ce844")
+        else:
+            self.assertEqual(pkg_node["ref"], "pkg/0.1")
+            self.assertEqual(pkg_node["package_id"], "cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31")
+            self.assertEqual(pkg_node["prev"], "0")
         self.assertEqual(pkg_node["options"], "")
 
         client.run("graph lock . -s os=Windows --lockfile=windows.lock --input-lockfile=conan.lock")

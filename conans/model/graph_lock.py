@@ -55,7 +55,7 @@ class GraphLockFile(object):
             profile_host, _ = _load_profile(profile_host, None, None)
         if profile_build:
             profile_build, _ = _load_profile(profile_build, None, None)
-        graph_lock = GraphLock.from_dict(graph_json["graph_lock"], revisions_enabled)
+        graph_lock = GraphLock.deserialize(graph_json["graph_lock"], revisions_enabled)
         graph_lock_file = GraphLockFile(profile_host, profile_build, graph_lock)
         return graph_lock_file
 
@@ -67,7 +67,7 @@ class GraphLockFile(object):
 
     def dumps(self):
         result = {"profile_host": self.profile_host.dumps(),
-                  "graph_lock": self.graph_lock.as_dict(),
+                  "graph_lock": self.graph_lock.serialize(),
                   "version": LOCKFILE_VERSION}
         if self.profile_build:
             result["profile_build"] = self.profile_build.dumps()
@@ -93,8 +93,8 @@ class GraphLockNode(object):
         self.modified = modified  # variable
         self._path = path
         if not revisions_enabled:
-            if ref and ref.revision:
-                self._ref = ref.copy_with_rev(DEFAULT_REVISION_V1)
+            if ref:
+                self._ref = ref.copy_clear_rev()
             if prev:
                 self._prev = DEFAULT_REVISION_V1
 
@@ -106,7 +106,7 @@ class GraphLockNode(object):
     def ref(self, value):
         # only used at export time, to assign rrev
         if not self._revisions_enabled:
-            value = value.copy_with_rev(DEFAULT_REVISION_V1)
+            value = value.copy_clear_rev()
         if self._ref:
             if (self._ref.copy_clear_rev() != value.copy_clear_rev() or
                     (self._ref.revision and self._ref.revision != value.revision)):
@@ -152,7 +152,7 @@ class GraphLockNode(object):
         self.modified = None
 
     @staticmethod
-    def from_dict(data, revisions_enabled):
+    def deserialize(data, revisions_enabled):
         """ constructs a GraphLockNode from a json like dict
         """
         json_ref = data.get("ref")
@@ -171,7 +171,7 @@ class GraphLockNode(object):
         return GraphLockNode(ref, package_id, prev, python_requires, options, requires,
                              build_requires, path, revisions_enabled, modified)
 
-    def as_dict(self):
+    def serialize(self):
         """ returns the object serialized as a dict of plain python types
         that can be converted to json
         """
@@ -238,6 +238,7 @@ class GraphLock(object):
             for n in level:
                 locked_node = self._nodes[n]
                 if locked_node.prev is None and locked_node.package_id is not None:
+                    # Manipulate the ref so it can be used directly in install command
                     if not self._revisions_enabled:
                         ref = locked_node.ref.copy_clear_rev()
                         ref = repr(ref)
@@ -246,10 +247,8 @@ class GraphLock(object):
                     else:
                         ref = locked_node.ref
                         ref = repr(ref)
-                   
                         if "@" not in ref:
                             ref = ref.replace("#", "@#")
-                    print("FINAL REF ", ref)
                     if ref not in total_prefs:
                         new_level.append((n, ref))
                         total_prefs.add(ref)
@@ -318,29 +317,32 @@ class GraphLock(object):
         root_node = self._nodes[roots.pop()]
         if root_node.path:
             return root_node.path
-        if not self._revisions_enabled:
-            return root_node.ref.copy_clear_rev()
-        return root_node.pref.ref
+        return root_node.ref
 
     @staticmethod
-    def from_dict(data, revisions_enabled):
+    def deserialize(data, revisions_enabled):
         """ constructs a GraphLock from a json like dict
         """
+        revs_enabled = data.get("revisions_enabled", False)
+        if revs_enabled != revisions_enabled:
+            raise ConanException("Lockfile revisions: '%s' != Current revisions '%s'"
+                                 % (revs_enabled, revisions_enabled))
         graph_lock = GraphLock(deps_graph=None, revisions_enabled=revisions_enabled)
         for id_, node in data["nodes"].items():
-            graph_lock._nodes[id_] = GraphLockNode.from_dict(node, revisions_enabled)
+            graph_lock._nodes[id_] = GraphLockNode.deserialize(node, revisions_enabled)
 
         return graph_lock
 
-    def as_dict(self):
+    def serialize(self):
         """ returns the object serialized as a dict of plain python types
         that can be converted to json
         """
         nodes = OrderedDict()  # Serialized ordered, so lockfiles are more deterministic
         # Sorted using the IDs as integers
         for id_, node in sorted(self._nodes.items(), key=lambda x: int(x[0])):
-            nodes[id_] = node.as_dict()
-        return {"nodes": nodes}
+            nodes[id_] = node.serialize()
+        return {"nodes": nodes,
+                "revisions_enabled": self._revisions_enabled}
 
     def update_lock(self, new_lock):
         """ update the lockfile with the contents of other one that was branched from this
@@ -399,12 +401,8 @@ class GraphLock(object):
             locked_requires = locked_node.build_requires or []
         else:
             locked_requires = locked_node.requires or []
-        if self._revisions_enabled:
-            refs = {self._nodes[id_].ref.name: (self._nodes[id_].ref, id_)
-                    for id_ in locked_requires}
-        else:
-            refs = {self._nodes[id_].ref.name: (self._nodes[id_].ref.copy_clear_rev(), id_)
-                    for id_ in locked_requires}
+
+        refs = {self._nodes[id_].ref.name: (self._nodes[id_].ref, id_) for id_ in locked_requires}
 
         for require in requires:
             try:
@@ -433,12 +431,7 @@ class GraphLock(object):
         return [r.copy_clear_rev() for r in self._nodes[node_id].python_requires or []]
 
     def ref(self, node_id):
-        if not self._revisions_enabled:
-            locked_ref = self._nodes[node_id].ref
-            locked_ref = locked_ref.copy_clear_rev()
-            return locked_ref
-        else:
-            return self._nodes[node_id].ref
+        return self._nodes[node_id].ref
 
     def get_node(self, ref):
         """ given a REF, return the Node of the package in the lockfile that correspond to that

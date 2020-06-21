@@ -4,6 +4,7 @@ import unittest
 
 from conans.model.graph_lock import LOCKFILE
 from conans.test.utils.tools import TestClient, GenConanfile
+from conans.util.env_reader import get_env
 
 
 class GraphLockPyRequiresTransitiveTest(unittest.TestCase):
@@ -36,7 +37,10 @@ class GraphLockPyRequiresTransitiveTest(unittest.TestCase):
 
 
 class GraphLockPyRequiresTest(unittest.TestCase):
-    pkg_ref = "Pkg/0.1@user/channel#67fdc942d6157fc4db1971fd6d6c5c28"
+    if get_env("TESTING_REVISIONS_ENABLED", False):
+        pkg_ref = "Pkg/0.1@user/channel#67fdc942d6157fc4db1971fd6d6c5c28"
+    else:
+        pkg_ref = "Pkg/0.1@user/channel"
     pkg_id = "1e1576940da80e70cd2d2ce2dddeb0571f91c6e3"
     consumer = textwrap.dedent("""
         from conans import ConanFile
@@ -63,14 +67,14 @@ class GraphLockPyRequiresTest(unittest.TestCase):
 
         # Use a consumer with a version range
         client.save({"conanfile.py": self.consumer})
-        client.run("install .")
+        client.run("install . Pkg/0.1@user/channel")
         self.assertIn("Tool/0.1@user/channel", client.out)
-        self.assertIn("conanfile.py (Pkg/None): CONFIGURE VAR=42", client.out)
-        self._check_lock("Pkg/None")
+        self.assertIn("conanfile.py (Pkg/0.1@user/channel): CONFIGURE VAR=42", client.out)
+        self._check_lock("Pkg/0.1@user/channel")
 
         client.run("build .")
-        self.assertIn("conanfile.py (Pkg/None): CONFIGURE VAR=42", client.out)
-        self.assertIn("conanfile.py (Pkg/None): BUILD VAR=42", client.out)
+        self.assertIn("conanfile.py (Pkg/0.1@user/channel): CONFIGURE VAR=42", client.out)
+        self.assertIn("conanfile.py (Pkg/0.1@user/channel): BUILD VAR=42", client.out)
 
         # If we create a new Tool version
         client.save({"conanfile.py": conanfile.replace("42", "111")})
@@ -102,16 +106,16 @@ class GraphLockPyRequiresTest(unittest.TestCase):
         client.run("install . --lockfile")
         self.assertIn("Tool/0.1@user/channel", client.out)
         self.assertNotIn("Tool/0.2@user/channel", client.out)
-        self._check_lock("Pkg/None")
+        self._check_lock("Pkg/0.1@user/channel")
         client.run("build .")
-        self.assertIn("conanfile.py (Pkg/None): CONFIGURE VAR=42", client.out)
-        self.assertIn("conanfile.py (Pkg/None): BUILD VAR=42", client.out)
+        self.assertIn("conanfile.py (Pkg/0.1@user/channel): CONFIGURE VAR=42", client.out)
+        self.assertIn("conanfile.py (Pkg/0.1@user/channel): BUILD VAR=42", client.out)
 
         client.run("package .")
-        self.assertIn("conanfile.py (Pkg/None): CONFIGURE VAR=42", client.out)
+        self.assertIn("conanfile.py (Pkg/0.1@user/channel): CONFIGURE VAR=42", client.out)
 
         client.run("info . --lockfile")
-        self.assertIn("conanfile.py (Pkg/None): CONFIGURE VAR=42", client.out)
+        self.assertIn("conanfile.py (Pkg/0.1@user/channel): CONFIGURE VAR=42", client.out)
 
     def create_test(self):
         client = self.client
@@ -130,7 +134,10 @@ class GraphLockPyRequiresTest(unittest.TestCase):
 
 
 class GraphLockPythonRequiresTest(GraphLockPyRequiresTest):
-    pkg_ref = "Pkg/0.1@user/channel#332c2615c2ff9f78fc40682e733e5aa5"
+    if get_env("TESTING_REVISIONS_ENABLED", False):
+        pkg_ref = "Pkg/0.1@user/channel#332c2615c2ff9f78fc40682e733e5aa5"
+    else:
+        pkg_ref = "Pkg/0.1@user/channel"
     pkg_id = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
     consumer = textwrap.dedent("""
        from conans import ConanFile, python_requires
