@@ -1222,9 +1222,10 @@ class ConanAPIV1(object):
     def update_lock(self, old_lockfile, new_lockfile, cwd=None):
         cwd = cwd or os.getcwd()
         old_lockfile = _make_abs_path(old_lockfile, cwd)
-        old_lock = GraphLockFile.load(old_lockfile, True)
+        revisions_enabled = self.app.config.revisions_enabled
+        old_lock = GraphLockFile.load(old_lockfile, revisions_enabled)
         new_lockfile = _make_abs_path(new_lockfile, cwd)
-        new_lock = GraphLockFile.load(new_lockfile, True)
+        new_lock = GraphLockFile.load(new_lockfile, revisions_enabled)
         if old_lock.profile_host.dumps() != new_lock.profile_host.dumps():
             raise ConanException("Profiles of lockfiles are different\n%s:\n%s\n%s:\n%s"
                                  % (old_lockfile, old_lock.profile_host.dumps(),

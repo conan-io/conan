@@ -99,6 +99,10 @@ class GraphLockNode(object):
                 self._prev = DEFAULT_REVISION_V1
 
     @property
+    def path(self):
+        return self._path
+
+    @property
     def ref(self):
         return self._ref
 
