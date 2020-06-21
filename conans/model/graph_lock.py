@@ -238,9 +238,21 @@ class GraphLock(object):
             for n in level:
                 locked_node = self._nodes[n]
                 if locked_node.prev is None and locked_node.package_id is not None:
-                    pref = PackageReference(locked_node.ref, locked_node.package_id)
-                    new_level.append((n, pref))
-                    total_prefs.add(pref)
+                    if not self._revisions_enabled:
+                        ref = locked_node.ref.copy_clear_rev()
+                        ref = repr(ref)
+                        if "@" not in ref:
+                            ref += "@"
+                    else:
+                        ref = locked_node.ref
+                        ref = repr(ref)
+                   
+                        if "@" not in ref:
+                            ref = ref.replace("#", "@#")
+                    print("FINAL REF ", ref)
+                    if ref not in total_prefs:
+                        new_level.append((n, ref))
+                        total_prefs.add(ref)
             if new_level:
                 result.append(new_level)
 

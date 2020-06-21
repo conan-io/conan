@@ -110,6 +110,9 @@ class GraphLockBuildOrderTest(unittest.TestCase):
             prev_dep = "83c38d3b4e5f1b8450434436eec31b00"
             prev_pkg = "bcde0c25612a6d296cf2cab2c264054d"
             prev_app = "9f30558ce471f676e3e06b633aabcf99"
+            build_order = [[["3", "dep/0.1@#f3367e0e7d170aa12abccb175fee5f97"]],
+                           [["2", "pkg/0.1@#447b56f0334b7e2a28aa86e218c8b3bd"]],
+                           [["1", "app/0.1@#5e0af887c3e9391c872773734ccd2ca0"]]]
         else:
             nodes = [("1", "app/0.1#0",
                       "745ccd40fd696b66b0cb160fd5251a533563bbb4"),
@@ -120,6 +123,9 @@ class GraphLockBuildOrderTest(unittest.TestCase):
             prev_dep = "0"
             prev_pkg = "0"
             prev_app = "0"
+            build_order = [[["3", "dep/0.1@"]],
+                           [["2", "pkg/0.1@"]],
+                           [["1", "app/0.1@"]]]
 
         for lockid, ref, package_id in nodes:
             node = locked[lockid]
@@ -129,8 +135,7 @@ class GraphLockBuildOrderTest(unittest.TestCase):
 
         client.run("graph build-order . --json=bo.json")
         jsonbo = json.loads(client.load("bo.json"))
-        expected = [[[lockid, '%s:%s' % (ref, pkgid)]] for lockid, ref, pkgid in reversed(nodes)]
-        self.assertEqual(expected, jsonbo)
+        self.assertEqual(build_order, jsonbo)
 
         # prev is None, --build needs to be explicit or it will fail
         client.run("install app/0.1@ --lockfile", assert_error=True)
@@ -149,9 +154,7 @@ class GraphLockBuildOrderTest(unittest.TestCase):
 
         client.run("graph build-order . --json=bo.json")
         jsonbo = json.loads(client.load("bo.json"))
-        nodes_to_build = reversed(nodes[:2])
-        expected = [[[lockid, '%s:%s' % (ref, pkgid)]] for lockid, ref, pkgid in nodes_to_build]
-        self.assertEqual(expected, jsonbo)
+        self.assertEqual(build_order[:2], jsonbo)
 
         client.run("install pkg/0.1@ --lockfile --build", assert_error=True)
         self.assertIn("Trying to build 'dep/0.1#f3367e0e7d170aa12abccb175fee5f97', but it is locked",
@@ -169,9 +172,7 @@ class GraphLockBuildOrderTest(unittest.TestCase):
 
         client.run("graph build-order . --json=bo.json")
         jsonbo = json.loads(client.load("bo.json"))
-        nodes_to_build = reversed(nodes[:1])
-        expected = [[[lockid, '%s:%s' % (ref, pkgid)]] for lockid, ref, pkgid in nodes_to_build]
-        self.assertEqual(expected, jsonbo)
+        self.assertEqual(build_order[:1], jsonbo)
 
         client.run("install app/0.1@ --lockfile --build", assert_error=True)
         self.assertIn("Trying to build 'dep/0.1#f3367e0e7d170aa12abccb175fee5f97', but it is locked",
