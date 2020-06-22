@@ -481,14 +481,6 @@ class ConanClientConfigParser(ConfigParser, object):
             return None
 
     @property
-    def relax_lockfile(self):
-        try:
-            fix_id = self.get_item("general.relax_lockfile")
-            return fix_id.lower() in ("1", "true")
-        except ConanException:
-            return None
-
-    @property
     def short_paths_home(self):
         short_paths_home = get_env("CONAN_USER_HOME_SHORT")
         if short_paths_home:

@@ -90,6 +90,7 @@ class GraphLockNode(object):
         self.python_requires = python_requires
         self._options = options
         self._revisions_enabled = revisions_enabled
+        self._relaxed = False
         self.modified = modified  # variable
         self._path = path
         if not revisions_enabled:
@@ -97,6 +98,14 @@ class GraphLockNode(object):
                 self._ref = ref.copy_clear_rev()
             if prev:
                 self._prev = DEFAULT_REVISION_V1
+
+    @property
+    def relaxed(self):
+        return self._relaxed
+
+    @relaxed.setter
+    def relaxed(self, value):
+        self._relaxed = value
 
     @property
     def path(self):
@@ -129,8 +138,10 @@ class GraphLockNode(object):
 
     @package_id.setter
     def package_id(self, value):
-        assert self._package_id is None, ("Attempt to define package_id of locked '%s'"
-                                          % repr(self._ref))
+        if not self._relaxed and self._package_id is not None and self._package_id != value:
+            raise ConanException("Attempt to change package_id of locked '%s'" % repr(self._ref))
+        if value != self._package_id:  # When the package_id is being assigned, prev becomes invalid
+            self._prev = None
         self._package_id = value
 
     @property
@@ -139,11 +150,11 @@ class GraphLockNode(object):
 
     @prev.setter
     def prev(self, value):
-        assert self._prev is None, "A locked PREV of '%s' was alredy built" % repr(self._ref)
-        if self._revisions_enabled:
-            self._prev = value
-        elif value is not None:
-            self._prev = DEFAULT_REVISION_V1
+        if not self._revisions_enabled and value is not None:
+            value = DEFAULT_REVISION_V1
+        if not self._relaxed and self._prev is not None and self._prev != value:
+            raise ConanException("A locked PREV of '%s' was already built" % repr(self._ref))
+        self._prev = value
 
     @property
     def options(self):
@@ -206,7 +217,7 @@ class GraphLock(object):
     def __init__(self, deps_graph, revisions_enabled):
         self._nodes = {}  # {id: GraphLockNode}
         self._revisions_enabled = revisions_enabled
-        self.relax = False  # If True, the lock can be expanded with new Nodes
+        self._relaxed = False  # If True, the lock can be expanded with new Nodes
         self.only_recipe = False
 
         if deps_graph is not None:
@@ -214,6 +225,16 @@ class GraphLock(object):
                 if graph_node.recipe == RECIPE_VIRTUAL:
                     continue
                 self._upsert_node(graph_node)
+
+    @property
+    def relaxed(self):
+        return self._relaxed
+
+    @relaxed.setter
+    def relaxed(self, value):
+        self._relaxed = value
+        for n in self._nodes.values():
+            n.relaxed = value
 
     def build_order(self):
         levels = []
@@ -383,7 +404,7 @@ class GraphLock(object):
         except KeyError:  # If the consumer node is not found, could be a test_package
             if node.recipe == RECIPE_CONSUMER:
                 return
-            if self.relax:
+            if self._relaxed:
                 print("**************RELAX CANT PRELOCK ", node)
                 node.conanfile.output.warn("Package can't be locked, not found in the lockfile")
                 return
@@ -415,13 +436,13 @@ class GraphLock(object):
             except KeyError:
                 t = "Build-require" if build_requires else "Require"
                 msg = "%s '%s' cannot be found in lockfile" % (t, require.ref.name)
-                if self.relax:
+                if self._relaxed:
                     node.conanfile.output.warn(msg)
                 else:
                     raise ConanException(msg)
 
         # Check all refs are locked
-        if not self.relax:
+        if not self._relaxed:
             declared_requires = set([r.ref.name for r in requires])
             for require in locked_node.requires:
                 req_node = self._nodes[require]
@@ -478,4 +499,5 @@ class GraphLock(object):
         be marked as modified
         """
         lock_node = self._nodes[node_id]
+        print("UPDATING EXPORT ", ref, node_id)
         lock_node.ref = ref

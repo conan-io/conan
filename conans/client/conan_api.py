@@ -1277,9 +1277,9 @@ class ConanAPIV1(object):
             else:
                 pbuild = None
             graph_info.profile_build = pbuild
-            graph_info.graph_lock.relax = True
+            graph_info.graph_lock.relaxed = True
             # If given an input lockfile, then construct it from the root
-            reference = graph_info.graph_lock.root_node_ref()
+            # reference = graph_info.graph_lock.root_node_ref()
         recorder = ActionRecorder()
         # FIXME: Using update as check_update?
         remotes = self.app.load_remotes(remote_name=remote_name, check_updates=update)
@@ -1311,7 +1311,6 @@ def get_graph_info(profile_host, profile_build, cwd, install_folder, cache, outp
             graph_info.root = root_ref
         lockfile = lockfile if os.path.isfile(lockfile) else os.path.join(lockfile, LOCKFILE)
         graph_lock_file = GraphLockFile.load(lockfile, cache.config.revisions_enabled)
-        graph_lock_file.graph_lock.relax = cache.config.relax_lockfile
         graph_info.profile_host = graph_lock_file.profile_host
         if graph_lock_file.profile_host is not None:
             graph_info.profile_host.process_settings(cache, preprocess=False)

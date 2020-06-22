@@ -138,9 +138,9 @@ class GraphLockBuildOrderTest(unittest.TestCase):
         jsonbo = json.loads(client.load("bo.json"))
         self.assertEqual(build_order, jsonbo)
 
-        # prev is None, --build needs to be explicit or it will fail
-        client.run("install app/0.1@ --lockfile", assert_error=True)
-        self.assertIn("Missing prebuilt package for 'app/0.1', 'dep/0.1', 'pkg/0.1'", client.out)
+        if export:
+            client.run("install app/0.1@ --lockfile", assert_error=True)
+            self.assertIn("Missing prebuilt package for 'app/0.1', 'dep/0.1', 'pkg/0.1'", client.out)
 
         # Build one by one
         client.run("install {0} --lockfile --build={0}".format(build_order[0][0][1]))
@@ -256,8 +256,9 @@ class BuildRequiresBuildOrderTest(unittest.TestCase):
         self.assertEqual(build_order, jsonbo)
 
         # prev is None, --build needs to be explicit or it will fail
-        client.run("install app/0.1@ --lockfile", assert_error=True)
-        self.assertIn("Missing prebuilt package for 'app/0.1', 'pkg/0.1'", client.out)
+        if export:
+            client.run("install app/0.1@ --lockfile", assert_error=True)
+            self.assertIn("Missing prebuilt package for 'app/0.1', 'pkg/0.1'", client.out)
 
         # Build one by one
         client.run("install {0} --lockfile --build={0}".format(build_order[0][0][1]))
@@ -381,8 +382,8 @@ class GraphLockWarningsTestCase(unittest.TestCase):
         client.save({"harfbuzz.py": GenConanfile("harfbuzz", "1.0"),
                      "ffmpeg.py":
                          GenConanfile("ffmpeg", "1.0").with_requirement_plain("harfbuzz/[>=1.0]"),
-                     "meta.py": GenConanfile("meta", "1.0").with_requirement("ffmpeg/1.0")
-                                                           .with_requirement("harfbuzz/1.0")
+                     "meta.py": GenConanfile("meta", "1.0").with_requirement_plain("ffmpeg/1.0")
+                                                           .with_requirement_plain("harfbuzz/1.0")
                      })
         client.run("export harfbuzz.py")
         client.run("export ffmpeg.py")
@@ -440,7 +441,7 @@ class GraphLockBuildRequireErrorTestCase(unittest.TestCase):
         self.assertEqual(harf_id, nodes["3"]["package_id"])
         self.assertEqual(zlib, nodes["4"]["ref"])
 
-        client.run("config set general.relax_lockfile=1")
+        ERROR client.run("config set general.relax_lockfile=1")
         client.run("graph build-order . --build cascade --build outdated --json=bo.json")
         self.assertIn("ffmpeg/1.0: WARN: Build-require 'fontconfig' cannot be found in lockfile",
                       client.out)
