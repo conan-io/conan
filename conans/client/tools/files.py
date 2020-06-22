@@ -388,9 +388,12 @@ def fix_symlinks(conanfile, raise_if_error=False):
         fullpath = os.path.join(dirpath, element)
         if os.path.islink(fullpath):
             link_target = os.readlink(fullpath)
+            if link_target in ['/dev/null', ]:
+                return
+
             link_abs_target = os.path.join(dirpath, link_target)
             link_rel_target = os.path.relpath(link_abs_target, conanfile.package_folder)
-            if link_rel_target.startswith('..'):
+            if link_rel_target.startswith('..') or os.path.isabs(link_rel_target):
                 offending_file = os.path.relpath(fullpath, conanfile.package_folder)
                 offending_files.append(offending_file)
                 conanfile.output.error("{token} '{item}' links to a {token} outside the package, "

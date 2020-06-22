@@ -24,6 +24,8 @@ class FixSymlinksTestCase(unittest.TestCase):
                 tools.save(os.path.join(self.build_folder, "build.txt"), "contents")
 
             def package(self):
+                os.symlink('/dev/null', os.path.join(self.package_folder, "black_hole"))
+
                 # Files: Symlink to file outside the package
                 os.symlink(os.path.join(self.build_folder, "build.txt"),
                            os.path.join(self.package_folder, "outside_symlink.txt"))
@@ -84,6 +86,7 @@ class FixSymlinksTestCase(unittest.TestCase):
                              ['abs_to_file_in_folder.txt',
                               'absolute',
                               'absolute_symlink.txt',
+                              'black_hole',
                               'conaninfo.txt',
                               'conanmanifest.txt',
                               'folder',
