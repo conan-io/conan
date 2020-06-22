@@ -52,5 +52,6 @@ class BuildRequiresFromProfile(unittest.TestCase):
         t.run("create library.py --profile:host=profile_host --profile:build=profile_build --build *")
         self.assertNotIn("br1/version: Applying build-requirement: br2/version", t.out)
         self.assertIn("br1/version: Applying build-requirement: br3/version", t.out)
+        self.assertIn("br2/version: Applying build-requirement: br3/version", t.out)
         self.assertIn("library/version: Applying build-requirement: br2/version", t.out)
         self.assertIn("library/version: Applying build-requirement: br1/version", t.out)
