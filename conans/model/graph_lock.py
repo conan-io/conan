@@ -405,7 +405,6 @@ class GraphLock(object):
             if node.recipe == RECIPE_CONSUMER:
                 return
             if self._relaxed:
-                print("**************RELAX CANT PRELOCK ", node)
                 node.conanfile.output.warn("Package can't be locked, not found in the lockfile")
                 return
             else:
