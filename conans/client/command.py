@@ -171,12 +171,9 @@ class Command(object):
                                  'the "source()" method')
         parser.add_argument("-b", "--bare", action='store_true', default=False,
                             help='Create the minimum package recipe, without build() method. '
-                            'Useful in combination with "export-pkg" command')
-        template_args = parser.add_mutually_exclusive_group()
-        template_args.add_argument("-m", "--template",
-                                   help='Use the given template from the local cache for conanfile.py')
-        template_args.add_argument("-md", "--template-dir",
-                                   help='Use the given template directory from the local cache to generate a conan project')
+                            'Useful in combination with "export-pkg" command')        
+        parser.add_argument("-m", "--template",
+                            help='Use the given template from the local cache for conanfile.py')
         parser.add_argument("-cis", "--ci-shared", action='store_true',
                             default=False,
                             help='Package will have a "shared" option to be used in CI')

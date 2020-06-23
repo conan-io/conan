@@ -3,6 +3,7 @@ import re
 
 from jinja2 import Template
 
+from conans import __version__ as client_version
 from conans.client.cmd.new_ci import ci_get_files
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
@@ -236,11 +237,17 @@ test_package/build
 
 """
 
+def _render_template(text, name, version, package_name):
+    context = {'name': name, 
+               'version': version, 
+               'package_name': package_name,
+               'conan_version': client_version}
+    t = Template(text, keep_trailing_newline=True)
+    return t.render(**context)
+
 def _get_files_from_template_dir(template_dir, name, version, package_name):
     if not os.path.isfile(os.path.join(template_dir, "conanfile.py")):
         raise ConanException("Template is missing 'conanfile.py': {}".format(template_dir))
-
-    render_args = {'name': name, 'version': version, 'package_name': package_name}
 
     files = []
     for d, _, fs in os.walk(template_dir):
@@ -254,10 +261,8 @@ def _get_files_from_template_dir(template_dir, name, version, package_name):
         f_path = os.path.join(template_dir, f)
         if not os.path.isfile(f_path):
             continue
-        t = Template(f, keep_trailing_newline=True)
-        rendered_path = t.render(**render_args)
-        t = Template(load(f_path), keep_trailing_newline=True)
-        rendered_file = t.render(**render_args)
+        rendered_path = _render_template(f, name=name, version=version, package_name=package_name)
+        rendered_file = _render_template(load(f_path), name=name, version=version, package_name=package_name)
         out_files[rendered_path] = rendered_file
 
     return out_files
@@ -289,10 +294,8 @@ def cmd_new(ref, header=False, pure_c=False, test=False, exports_sources=False, 
         raise ConanException("'pure_c' is incompatible with 'header' and 'sources'")
     if bare and (header or exports_sources):
         raise ConanException("'bare' is incompatible with 'header' and 'sources'")
-    if template and template_dir:
-        raise ConanException("'template' and 'template_dir' are incompatible options")
-    if (template or template_dir) and (header or exports_sources or bare):
-        raise ConanException("'template' and 'template-dir' arguments are incompatible with 'header', "
+    if template and (header or exports_sources or bare):
+        raise ConanException("'template' is incompatible with 'header', "
                              "'sources', and 'bare'")
 
     if header:
@@ -308,25 +311,29 @@ def cmd_new(ref, header=False, pure_c=False, test=False, exports_sources=False, 
         files = {"conanfile.py": conanfile_bare.format(name=name, version=version,
                                                        package_name=package_name)}
     elif template:
-        if not os.path.isabs(template):
-            template = os.path.join(cache.cache_folder, "templates", template)
-        if not os.path.isfile(template):
-            raise ConanException("Template doesn't exist: %s" % template)
-        conanfile_template = load(template)
-        t = Template(conanfile_template)
-        replaced = t.render(name=name, version=version, package_name=package_name)
-        files = {"conanfile.py": replaced}
-    elif template_dir:
-        if not os.path.isabs(template_dir):
-            template_dir = os.path.join(cache.cache_folder, "templates", template_dir)
-        if not os.path.isdir(template_dir):
-            raise ConanException("Template directory doesn't exist: {}".format(template_dir))
-        template_dir = os.path.normpath(template_dir)
-
-        files = _get_files_from_template_dir(template_dir=template_dir,
-                                             name=name,
-                                             version=version,
-                                             package_name=package_name)
+        is_file_template = os.path.basename(template).endswith('.py')
+        if is_file_template:
+            if not os.path.isabs(template):
+                old_path = os.path.join(cache.cache_folder, "templates", template)
+                new_path = os.path.join(cache.cache_folder, "templates", "cmd_new", template)
+                template = new_path if os.path.isfile(new_path) else old_path
+            if not os.path.isfile(template):
+                raise ConanException("Template doesn't exist: %s" % template)
+            replaced = _render_template(load(template), 
+                                        name=name, 
+                                        version=version, 
+                                        package_name=package_name)
+            files = {"conanfile.py": replaced}
+        else:
+            if not os.path.isabs(template):
+                template = os.path.join(cache.cache_folder, "templates", "cmd_new", template)
+            if not os.path.isdir(template):
+                raise ConanException("Template doesn't exist: {}".format(template))
+            template = os.path.normpath(template)
+            files = _get_files_from_template_dir(template_dir=template,
+                                                 name=name,
+                                                 version=version,
+                                                 package_name=package_name)
     else:
         files = {"conanfile.py": conanfile.format(name=name, version=version,
                                                   package_name=package_name)}
