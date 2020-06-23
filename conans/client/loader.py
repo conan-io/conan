@@ -60,6 +60,10 @@ class ConanFileLoader(object):
             if self._pyreq_loader:
                 self._pyreq_loader.load_py_requires(conanfile, lock_python_requires, self)
 
+            # If the scm is inherited, create my own instance
+            if hasattr(conanfile, "scm") and "scm" not in conanfile.__class__.__dict__:
+                conanfile.scm = conanfile.scm.copy()
+
             # Load and populate dynamic fields from the data file
             conan_data = self._load_data(conanfile_path)
             conanfile.conan_data = conan_data
