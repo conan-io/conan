@@ -220,7 +220,6 @@ class GraphManager(object):
             node_id = graph_lock.get_node(create_reference)
             locked_ref = graph_lock.ref(node_id)
             conanfile.requires[create_reference.name].lock(locked_ref, node_id)
-            # root_node.graph_lock_node = GraphLockNode()
         return root_node
 
     def _resolve_graph(self, root_node, graph_info, build_mode, check_updates,

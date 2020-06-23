@@ -9,30 +9,31 @@ from conans.util.env_reader import get_env
 from conans.util.files import load
 from conans.model.ref import PackageReference
 
+conanfile = textwrap.dedent("""
+    from conans import ConanFile, load
+    import os
+    class Pkg(ConanFile):
+        {requires}
+        exports_sources = "myfile.txt"
+        keep_imports = True
+        def imports(self):
+            self.copy("myfile.txt", folder=True)
+        def package(self):
+            self.copy("*myfile.txt")
+        def package_info(self):
+            self.output.info("SELF FILE: %s"
+                % load(os.path.join(self.package_folder, "myfile.txt")))
+            for d in os.listdir(self.package_folder):
+                p = os.path.join(self.package_folder, d, "myfile.txt")
+                if os.path.isfile(p):
+                    self.output.info("DEP FILE %s: %s" % (d, load(p)))
+        """)
+
 
 class GraphLockCITest(unittest.TestCase):
 
     @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
     def test_revisions(self):
-        conanfile = textwrap.dedent("""
-            from conans import ConanFile, load
-            import os
-            class Pkg(ConanFile):
-                {requires}
-                exports_sources = "myfile.txt"
-                keep_imports = True
-                def imports(self):
-                    self.copy("myfile.txt", folder=True)
-                def package(self):
-                    self.copy("*myfile.txt")
-                def package_info(self):
-                    self.output.info("SELF FILE: %s"
-                        % load(os.path.join(self.package_folder, "myfile.txt")))
-                    for d in os.listdir(self.package_folder):
-                        p = os.path.join(self.package_folder, d, "myfile.txt")
-                        if os.path.isfile(p):
-                            self.output.info("DEP FILE %s: %s" % (d, load(p)))
-                """)
         test_server = TestServer(users={"user": "mypass"})
         client = TestClient(servers={"default": test_server},
                             users={"default": [("user", "mypass")]})
@@ -61,39 +62,13 @@ class GraphLockCITest(unittest.TestCase):
         client.run("graph lock PkgD/0.1@user/channel")
         lock_file = client.load(LOCKFILE)
         initial_lock_file = lock_file
-        self.assertIn("PkgB/0.1@user/channel#c51f99a8622d6c837cd9dcd2595e43e4:"
-                      "5bf1ba84b5ec8663764a406f08a7f9ae5d3d5fb5#e7f906f2f693abccb3dc3419c4270413",
-                      lock_file)
-        self.assertIn("PkgA/0.1@user/channel#189390ce059842ce984e0502c52cf736:"
-                      "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9#5ba7f606729949527141beef73c72bc8",
-                      lock_file)
-        self.assertIn("PkgC/0.1@user/channel#1c63e932e9392857cdada81f34bf4690:"
-                      "8f97510bcea8206c1c046cc8d71cc395d4146547#7ae97bd9488da55592ab7d94a1885282",
-                      lock_file)
-        self.assertIn("PkgD/0.1@user/channel#d3d184611fb757faa65e4d4203198579:"
-                      "7e4312d9a6d3726436d62a6b508f361d13e65354#55f822331b182e54b5144e578ba9135b",
-                      lock_file)
 
         # Do a change in B
         clientb = TestClient(cache_folder=client.cache_folder, servers={"default": test_server})
         clientb.save({"conanfile.py": conanfile.format(requires='requires="PkgA/0.1@user/channel"'),
-                     "myfile.txt": "ByeB World!!",
-                      LOCKFILE: lock_file})
-        clientb.run("create . PkgB/0.1@user/channel --lockfile")
-        lock_fileb = load(os.path.join(clientb.current_folder, LOCKFILE))
-        self.assertIn("PkgB/0.1@user/channel#569839e7b741ee474406de1db69d19c2:"
-                      "5bf1ba84b5ec8663764a406f08a7f9ae5d3d5fb5#d1974c85c53dfaa549478a9ead361fe2",
-                      lock_fileb)
-        self.assertIn("PkgA/0.1@user/channel#189390ce059842ce984e0502c52cf736:"
-                      "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9#5ba7f606729949527141beef73c72bc8",
-                      lock_fileb)
-        self.assertIn("PkgC/0.1@user/channel#1c63e932e9392857cdada81f34bf4690:"
-                      "8f97510bcea8206c1c046cc8d71cc395d4146547#7ae97bd9488da55592ab7d94a1885282",
-                      lock_fileb)
-        self.assertIn("PkgD/0.1@user/channel#d3d184611fb757faa65e4d4203198579:"
-                      "7e4312d9a6d3726436d62a6b508f361d13e65354#55f822331b182e54b5144e578ba9135b",
-                      lock_fileb)
-        self.assertIn('"modified": "%s"' % GraphLockNode.MODIFIED_BUILT, lock_fileb)
+                     "myfile.txt": "ByeB World!!"})
+        clientb.run("create . PkgB/0.1@user/channel")
+
         # Go back to main orchestrator
         client.save({"new_lock/%s" % LOCKFILE: lock_fileb})
         client.run("graph update-lock . new_lock")
@@ -139,25 +114,6 @@ class GraphLockCITest(unittest.TestCase):
 
     @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
     def test_package_revision_mode(self):
-        conanfile = textwrap.dedent("""
-            from conans import ConanFile, load
-            import os
-            class Pkg(ConanFile):
-                {requires}
-                exports_sources = "myfile.txt"
-                keep_imports = True
-                def imports(self):
-                    self.copy("myfile.txt", folder=True)
-                def package(self):
-                    self.copy("*myfile.txt")
-                def package_info(self):
-                    self.output.info("SELF FILE: %s"
-                        % load(os.path.join(self.package_folder, "myfile.txt")))
-                    for d in os.listdir(self.package_folder):
-                        p = os.path.join(self.package_folder, d, "myfile.txt")
-                        if os.path.isfile(p):
-                            self.output.info("DEP FILE %s: %s" % (d, load(p)))
-                """)
         test_server = TestServer(users={"user": "mypass"})
         client = TestClient(servers={"default": test_server},
                             users={"default": [("user", "mypass")]})
@@ -187,18 +143,6 @@ class GraphLockCITest(unittest.TestCase):
         client.run("graph lock PkgD/0.1@user/channel")
         lock_file = client.load(LOCKFILE)
         initial_lock_file = lock_file
-        self.assertIn("PkgB/0.1@user/channel#c51f99a8622d6c837cd9dcd2595e43e4:"
-                      "6e9742c2106791c1c777da8ccfb12a1408385d8d#f25c123185dcbd2fe326cecb0d73edaa",
-                      lock_file)
-        self.assertIn("PkgA/0.1@user/channel#189390ce059842ce984e0502c52cf736:"
-                      "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9#5ba7f606729949527141beef73c72bc8",
-                      lock_file)
-        self.assertIn("PkgC/0.1@user/channel#1c63e932e9392857cdada81f34bf4690:"
-                      "d27e81082fa545d364f19bd07bdf7975acd9e1ac#667a94f8b740b0f35519116997eabeff",
-                      lock_file)
-        self.assertIn("PkgD/0.1@user/channel#d3d184611fb757faa65e4d4203198579:"
-                      "d80dd9662f447164906643ab88a1ed4e7b12925b#50246cbe82411551e5ebc5bcc75f1a9a",
-                      lock_file)
 
         # Do a change in B
         clientb = TestClient(cache_folder=client.cache_folder, servers={"default": test_server})
@@ -220,7 +164,7 @@ class GraphLockCITest(unittest.TestCase):
         self.assertIn("PkgD/0.1@user/channel#d3d184611fb757faa65e4d4203198579:"
                       "d80dd9662f447164906643ab88a1ed4e7b12925b#50246cbe82411551e5ebc5bcc75f1a9a",
                       lock_fileb)
-        self.assertIn('"modified": "%s"' % GraphLockNode.MODIFIED_BUILT, lock_fileb)
+
         # Go back to main orchestrator
         client.save({"new_lock/%s" % LOCKFILE: lock_fileb})
         client.run("graph update-lock . new_lock")
@@ -265,25 +209,6 @@ class GraphLockCITest(unittest.TestCase):
         self.assertIn("PkgD/0.1@user/channel: DEP FILE PkgB: ByeB World!!", client.out)
 
     def test_version_ranges(self):
-        conanfile = textwrap.dedent("""
-            from conans import ConanFile, load
-            import os
-            class Pkg(ConanFile):
-                {requires}
-                exports_sources = "myfile.txt"
-                keep_imports = True
-                def imports(self):
-                    self.copy("myfile.txt", folder=True)
-                def package(self):
-                    self.copy("*myfile.txt")
-                def package_info(self):
-                    self.output.info("SELF FILE: %s"
-                        % load(os.path.join(self.package_folder, "myfile.txt")))
-                    for d in os.listdir(self.package_folder):
-                        p = os.path.join(self.package_folder, d, "myfile.txt")
-                        if os.path.isfile(p):
-                            self.output.info("DEP FILE %s: %s" % (d, load(p)))
-                """)
         client = TestClient()
         client.run("config set general.default_package_id_mode=full_package_mode")
         client.save({"conanfile.py": conanfile.format(requires=""),
@@ -351,25 +276,6 @@ class GraphLockCITest(unittest.TestCase):
         self.assertIn("PkgD/0.1@user/channel: DEP FILE PkgB: ByeB World!!", client.out)
 
     def test_version_ranges_diamond(self):
-        conanfile = textwrap.dedent("""
-            from conans import ConanFile, load
-            import os
-            class Pkg(ConanFile):
-                {requires}
-                exports_sources = "myfile.txt"
-                keep_imports = True
-                def imports(self):
-                    self.copy("myfile.txt", folder=True)
-                def package(self):
-                    self.copy("*myfile.txt")
-                def package_info(self):
-                    self.output.info("SELF FILE: %s"
-                        % load(os.path.join(self.package_folder, "myfile.txt")))
-                    for d in os.listdir(self.package_folder):
-                        p = os.path.join(self.package_folder, d, "myfile.txt")
-                        if os.path.isfile(p):
-                            self.output.info("DEP FILE %s: %s" % (d, load(p)))
-                """)
         client = TestClient()
         client.run("config set general.default_package_id_mode=full_package_mode")
         client.save({"conanfile.py": conanfile.format(requires=""),
@@ -405,10 +311,9 @@ class GraphLockCITest(unittest.TestCase):
         client.run("graph build-order . --json=build_order.json")
         master_lockfile = client.load("conan.lock")
 
-        lock_fileb = client.load(LOCKFILE)
         json_file = os.path.join(client.current_folder, "build_order.json")
         to_build = json.loads(load(json_file))
-        lock_fileaux = lock_fileb
+        lock_fileaux = master_lockfile
         while to_build:
             _, ref = to_build[0].pop(0)
             client_aux = TestClient(cache_folder=client.cache_folder)
@@ -494,8 +399,7 @@ class GraphLockCITest(unittest.TestCase):
         self.assertIn("PkgB/0.1@user/channel: PACKAGE_INFO OPTION: 4!!", client2.out)
         self.assertIn("PkgA/0.1@user/channel: PACKAGE_INFO OPTION: 5!!", client2.out)
 
-        client2.save({"conanfile.py": conanfile.format(
-            requires='requires="PkgC/0.1@user/channel"')})
+        client2.save({"conanfile.py": conanfiled})
         client2.run("create . PkgD/0.1@user/channel --lockfile")
         self.assertIn("PkgD/0.1@user/channel: PACKAGE_INFO OPTION: 2!!", client2.out)
         self.assertIn("PkgD/0.1@user/channel: BUILDING WITH OPTION: 2!!", client2.out)

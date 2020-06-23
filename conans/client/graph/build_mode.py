@@ -61,9 +61,11 @@ class BuildMode(object):
         for pattern in self.patterns:
             # Remove the @ at the end, to match for "conan install pkg/0.1@ --build=pkg/0.1@"
             clean_pattern = pattern[:-1] if pattern.endswith("@") else pattern
+            clean_pattern = clean_pattern.replace("@#", "#")
             is_matching_name = fnmatch.fnmatchcase(ref.name, clean_pattern)
             is_matching_ref = fnmatch.fnmatchcase(repr(ref.copy_clear_rev()), clean_pattern)
-            if is_matching_name or is_matching_ref:
+            is_matching_fullref = fnmatch.fnmatchcase(repr(ref), clean_pattern)
+            if is_matching_name or is_matching_ref or is_matching_fullref:
                 try:
                     self._unused_patterns.remove(pattern)
                 except ValueError:

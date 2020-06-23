@@ -510,7 +510,6 @@ class BinaryInstaller(object):
         pref = builder.build_package(node, keep_build, self._recorder, remotes)
         if node.graph_lock_node:
             node.graph_lock_node.prev = pref.revision
-            node.graph_lock_node.modified = GraphLockNode.MODIFIED_BUILT
         return pref
 
     def _propagate_info(self, node, using_build_profile, fixed_package_id):

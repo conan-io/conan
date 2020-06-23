@@ -259,15 +259,15 @@ class BuildRequiresBuildOrderTest(unittest.TestCase):
         if client.cache.config.revisions_enabled:
             nodes = [("1", "app/0.1#5e0af887c3e9391c872773734ccd2ca0",
                       "a925a8281740e4cb4bcad9cf41ecc4c215210604"),
-                     ("2", "pkg/0.1#447b56f0334b7e2a28aa86e218c8b3bd",
-                      "0b3845ce7fd8c0b4e46566097797bd872cb5bcf6"),
+                     ("2", "pkg/0.1#1364f701b47130c7e38f04c5e5fab985",
+                      "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"),
                      ("3", "dep/0.1#f3367e0e7d170aa12abccb175fee5f97",
                       "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")]
             prev_dep = "83c38d3b4e5f1b8450434436eec31b00"
-            prev_pkg = "bcde0c25612a6d296cf2cab2c264054d"
-            prev_app = "9f30558ce471f676e3e06b633aabcf99"
+            prev_pkg = "5d3d587702b55a456c9b6b71e5f40cfa"
+            prev_app = "eeb6de9b69fb0905e15788315f77a8e2"
             build_order = [[["3", "dep/0.1@#f3367e0e7d170aa12abccb175fee5f97"]],
-                           [["2", "pkg/0.1@#447b56f0334b7e2a28aa86e218c8b3bd"]],
+                           [["2", "pkg/0.1@#1364f701b47130c7e38f04c5e5fab985"]],
                            [["1", "app/0.1@#5e0af887c3e9391c872773734ccd2ca0"]]]
         else:
             nodes = [("1", "app/0.1",
@@ -407,11 +407,18 @@ class GraphLockBuildRequireErrorTestCase(unittest.TestCase):
             font = "fontconfig/1.0#f3367e0e7d170aa12abccb175fee5f97"
             harf = "harfbuzz/1.0#3172f5e84120f235f75f8dd90fdef84f"
             zlib = "zlib/1.0#f3367e0e7d170aa12abccb175fee5f97"
+            expected = [[['2', 'fontconfig/1.0@#f3367e0e7d170aa12abccb175fee5f97'],
+                        ['4', 'zlib/1.0@#f3367e0e7d170aa12abccb175fee5f97']],
+                        [['3', 'harfbuzz/1.0@#3172f5e84120f235f75f8dd90fdef84f']],
+                        [['1', 'ffmpeg/1.0@#5522e93e2abfbd455e6211fe4d0531a2']]]
         else:
             fmpe = "ffmpeg/1.0"
             font = "fontconfig/1.0"
             harf = "harfbuzz/1.0"
             zlib = "zlib/1.0"
+            expected = [[['2', 'fontconfig/1.0@'], ['4', 'zlib/1.0@']],
+                        [['3', 'harfbuzz/1.0@']],
+                        [['1', 'ffmpeg/1.0@']]]
 
         lock1 = client.load("conan.lock")
         lock = json.loads(lock1)
@@ -429,11 +436,7 @@ class GraphLockBuildRequireErrorTestCase(unittest.TestCase):
         self.assertNotIn("cannot be found in lockfile", client.out)
         lock2 = client.load("conan.lock")
         self.assertEqual(lock2, lock1)
-
         build_order = json.loads(client.load("bo.json"))
-        expected = [[['2', 'fontconfig/1.0@'], ['4', 'zlib/1.0@']],
-                    [['3', 'harfbuzz/1.0@']],
-                    [['1', 'ffmpeg/1.0@']]]
         self.assertEqual(expected, build_order)
 
     def test_build_requires_not_needed(self):
@@ -485,7 +488,11 @@ class GraphLockBuildRequireErrorTestCase(unittest.TestCase):
         self.assertEqual(expected, json.loads(bo0))
 
         client.run("create libA libA/2.0@ --lockfile", assert_error=True)
-        self.assertIn("ERROR: Attempt to modify locked libA/1.0 to libA/2.0", client.out)
+        if client.cache.config.revisions_enabled:
+            self.assertIn("Attempt to modify locked libA/1.0#3fb401b4f9169fab06be253aa3fbcc1b "
+                          "to libA/2.0#3fb401b4f9169fab06be253aa3fbcc1b", client.out)
+        else:
+            self.assertIn("ERROR: Attempt to modify locked libA/1.0 to libA/2.0", client.out)
 
         # Instead we export it and create a new graph lock
         client.run("export libA libA/2.0@")

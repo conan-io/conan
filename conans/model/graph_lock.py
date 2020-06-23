@@ -78,7 +78,6 @@ class GraphLockFile(object):
 
 
 class GraphLockNode(object):
-    MODIFIED_BUILT = "built"
 
     def __init__(self, ref, package_id, prev, python_requires, options, requires, build_requires,
                  path, revisions_enabled, modified=None):
@@ -495,5 +494,4 @@ class GraphLock(object):
         be marked as modified
         """
         lock_node = self._nodes[node_id]
-        print("UPDATING EXPORT ", ref, node_id)
         lock_node.ref = ref

@@ -1,13 +1,10 @@
 import json
-import os
 import textwrap
 import unittest
 
 from conans.model.graph_lock import LOCKFILE, LOCKFILE_VERSION
-from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient, GenConanfile
 from conans.util.env_reader import get_env
-from conans.util.files import load
 
 
 class GraphLockErrorsTest(unittest.TestCase):
@@ -169,7 +166,7 @@ class GraphLockRevisionTest(unittest.TestCase):
                                      % ",".join(self.deps_cpp_info.libs))
             """)
         client.save({"conanfile.py": str(consumer)})
-        client.run("install .")
+        client.run("install . PkgB/0.1@user/channel")
 
         self._check_lock("PkgB/0.1@")
 
@@ -183,14 +180,11 @@ class GraphLockRevisionTest(unittest.TestCase):
         client.save({"conanfile.py": str(consumer)})
 
     def _check_lock(self, ref_b, rev_b=""):
-        lock_file = load(os.path.join(self.client.current_folder, LOCKFILE))
-        lock_file_json = json.loads(lock_file)
+        lockfile = self.client.load(LOCKFILE)
+        lock_file_json = json.loads(lockfile)
         self.assertEqual(2, len(lock_file_json["graph_lock"]["nodes"]))
-        self.assertIn("PkgA/0.1@user/channel#fa090239f8ba41ad559f8e934494ee2a:"
-                      "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9#0d561e10e25511b9bfa339d06360d7c1",
-                      lock_file)
-        self.assertIn('"%s:%s%s"' % (repr(ConanFileReference.loads(ref_b)),
-                                     self.pkg_b_id, rev_b), lock_file)
+        pkga = lock_file_json["graph_lock"]["nodes"]["1"]
+        self.assertEqual(pkga["ref"], "PkgA/0.1@user/channel#fa090239f8ba41ad559f8e934494ee2a")
 
     def install_info_lock_test(self):
         # Normal install will use it (use install-folder to not change graph-info)
@@ -204,7 +198,7 @@ class GraphLockRevisionTest(unittest.TestCase):
         client.run("install . -g=cmake --lockfile --update")
         self._check_lock("PkgB/0.1@")
         client.run("build .")
-        self.assertIn("conanfile.py (PkgB/0.1): BUILD DEP LIBS: !!", client.out)
+        self.assertIn("conanfile.py (PkgB/0.1@user/channel): BUILD DEP LIBS: !!", client.out)
 
         # Info also works
         client.run("info . --lockfile")
