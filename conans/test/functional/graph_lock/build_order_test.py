@@ -3,11 +3,11 @@ import unittest
 
 from parameterized import parameterized
 
-from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient, GenConanfile
+from conans.util.env_reader import get_env
 
 
-class GraphLockBuildOrderTest(unittest.TestCase):
+class BuildOrderTest(unittest.TestCase):
 
     def single_consumer_test(self):
         # https://github.com/conan-io/conan/issues/5727
@@ -196,6 +196,44 @@ class GraphLockBuildOrderTest(unittest.TestCase):
         jsonbo = json.loads(client.load("bo.json"))
         self.assertEqual([], jsonbo)
 
+    @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
+    def package_revision_mode_build_order_test(self):
+        # https://github.com/conan-io/conan/issues/6232
+        client = TestClient()
+        client.run("config set general.default_package_id_mode=package_revision_mode")
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("export . libb/0.1@")
+        client.run("export . libc/0.1@")
+        client.save({"conanfile.py": GenConanfile().with_require_plain("libc/0.1")})
+        client.run("export . liba/0.1@")
+        client.save({"conanfile.py": GenConanfile().with_require_plain("liba/0.1")
+                                                   .with_require_plain("libb/0.1")})
+        client.run("export . app/0.1@")
+
+        client.run("graph lock app/0.1@ --build=missing")
+        self.assertIn("app/0.1:Package_ID_unknown - Unknown", client.out)
+        self.assertIn("liba/0.1:Package_ID_unknown - Unknown", client.out)
+        self.assertIn("libb/0.1:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Build", client.out)
+        self.assertIn("libc/0.1:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Build", client.out)
+        lock = json.loads(client.load("conan.lock"))
+        app = lock["graph_lock"]["nodes"]["1"]
+        self.assertEqual(app["package_id"], "Package_ID_unknown")
+        liba = lock["graph_lock"]["nodes"]["2"]
+        self.assertEqual(liba["package_id"], "Package_ID_unknown")
+        libc = lock["graph_lock"]["nodes"]["3"]
+        self.assertEqual(libc["package_id"], "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+        libd = lock["graph_lock"]["nodes"]["4"]
+        self.assertEqual(libd["package_id"], "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+
+        client.run("graph build-order . --json=bo.json")
+        bo = client.load("bo.json")
+        build_order = json.loads(bo)
+        expected = [[['3', 'libc/0.1@#f3367e0e7d170aa12abccb175fee5f97'],
+                     ['4', 'libb/0.1@#f3367e0e7d170aa12abccb175fee5f97']],
+                    [['2', 'liba/0.1@#7086607aa6efbad8e2527748e3ee8237']],
+                    [['1', 'app/0.1@#7742ee9e2f19af4f9ed7619f231ca871']]]
+        self.assertEqual(build_order, expected)
+
 
 class BuildRequiresBuildOrderTest(unittest.TestCase):
 
@@ -314,66 +352,6 @@ class BuildRequiresBuildOrderTest(unittest.TestCase):
         jsonbo = json.loads(client.load("bo.json"))
         self.assertEqual([], jsonbo)
 
-    """def build_order_build_requires_test(self):
-        # https://github.com/conan-io/conan/issues/5474
-        client = TestClient()
-        client.save({"conanfile.py": GenConanfile()})
-        client.run("create . CA/1.0@user/channel")
-        client.save({"conanfile.py": GenConanfile().with_build_require_plain("CA/1.0@user/channel")})
-        client.run("create . CB/1.0@user/channel")
-
-        consumer = textwrap.dedent('''
-            [requires]
-            CA/1.0@user/channel
-            CB/1.0@user/channel
-        ''')
-        client.save({"conanfile.txt": consumer})
-        client.run("graph lock conanfile.txt --build")
-        client.run("graph build-order . --build --json=bo.json")
-        jsonbo = json.loads(client.load("bo.json"))
-        level0 = jsonbo[0]
-        ca = level0[0]
-        self.assertEqual("CA/1.0@user/channel#f3367e0e7d170aa12abccb175fee5f97"
-                         ":5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", ca[1])
-        level1 = jsonbo[1]
-        cb = level1[0]
-        self.assertEqual("CB/1.0@user/channel#29352c82c9c6b7d1be85524ef607f77f"
-                         ":5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", cb[1])
-
-    def package_revision_mode_build_order_test(self):
-        # https://github.com/conan-io/conan/issues/6232
-        client = TestClient()
-        client.run("config set general.default_package_id_mode=package_revision_mode")
-        client.save({"conanfile.py": GenConanfile()})
-        client.run("export . libb/0.1@")
-        client.run("export . libc/0.1@")
-        client.save({"conanfile.py": GenConanfile().with_require_plain("libc/0.1")})
-        client.run("export . liba/0.1@")
-        client.save({"conanfile.py": GenConanfile().with_require_plain("liba/0.1")
-                                                   .with_require_plain("libb/0.1")})
-        client.run("export . app/0.1@")
-
-        client.run("graph lock app/0.1@ --build=missing")
-        client.run("graph build-order . --build=missing --json=bo.json")
-        self.assertIn("app/0.1:Package_ID_unknown - Unknown", client.out)
-        self.assertIn("liba/0.1:Package_ID_unknown - Unknown", client.out)
-        self.assertIn("libb/0.1:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Build", client.out)
-        self.assertIn("libc/0.1:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Build", client.out)
-        bo = client.load("bo.json")
-        build_order = json.loads(bo)
-        expected = [
-            # First level
-            [['3',
-              'libc/0.1#f3367e0e7d170aa12abccb175fee5f97:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9']],
-            # second level
-            [['2', 'liba/0.1#7086607aa6efbad8e2527748e3ee8237:Package_ID_unknown'],
-             ['4',
-              'libb/0.1#f3367e0e7d170aa12abccb175fee5f97:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9']],
-            # last level to build
-            [['1', 'app/0.1#7742ee9e2f19af4f9ed7619f231ca871:Package_ID_unknown']]
-        ]
-        self.assertEqual(build_order, expected)"""
-
 
 class GraphLockWarningsTestCase(unittest.TestCase):
 
@@ -402,66 +380,6 @@ class GraphLockWarningsTestCase(unittest.TestCase):
 
 class GraphLockBuildRequireErrorTestCase(unittest.TestCase):
 
-    def test_not_locked_build_requires(self):
-        # https://github.com/conan-io/conan/issues/5807
-        # even if the build requires are not locked, the graph can be augmented to add them
-        client = TestClient()
-        client.save({"zlib.py": GenConanfile(),
-                     "harfbuzz.py": GenConanfile().with_require_plain("fontconfig/1.0"),
-                     "fontconfig.py": GenConanfile(),
-                     "ffmpeg.py": GenConanfile().with_build_require_plain("fontconfig/1.0")
-                                                .with_build_require_plain("harfbuzz/1.0"),
-                     "variant.py": GenConanfile().with_require_plain("ffmpeg/1.0")
-                                                 .with_require_plain("fontconfig/1.0")
-                                                 .with_require_plain("harfbuzz/1.0")
-                                                 .with_require_plain("zlib/1.0")
-                     })
-        client.run("export zlib.py zlib/1.0@")
-        client.run("export fontconfig.py fontconfig/1.0@")
-        client.run("export harfbuzz.py harfbuzz/1.0@")
-        client.run("export ffmpeg.py ffmpeg/1.0@")
-
-        # Building the graphlock we get the message
-        client.run("graph lock variant.py")
-        fmpe = "ffmpeg/1.0#5522e93e2abfbd455e6211fe4d0531a2"
-        fmpe_id = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
-        font = "fontconfig/1.0#f3367e0e7d170aa12abccb175fee5f97"
-        font_id = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
-        harf = "harfbuzz/1.0#3172f5e84120f235f75f8dd90fdef84f"
-        harf_id = "ea61889683885a5517800e8ebb09547d1d10447a"
-        zlib = "zlib/1.0#f3367e0e7d170aa12abccb175fee5f97:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
-        lock = json.loads(client.load("conan.lock"))
-        nodes = lock["graph_lock"]["nodes"]
-        self.assertEqual(5, len(nodes))
-        self.assertEqual(fmpe, nodes["1"]["ref"])
-        self.assertEqual(fmpe_id, nodes["1"]["package_id"])
-        self.assertEqual(font, nodes["2"]["ref"])
-        self.assertEqual(font_id, nodes["2"]["package_id"])
-        self.assertEqual(harf, nodes["3"]["ref"])
-        self.assertEqual(harf_id, nodes["3"]["package_id"])
-        self.assertEqual(zlib, nodes["4"]["ref"])
-
-        ERROR client.run("config set general.relax_lockfile=1")
-        client.run("graph build-order . --build cascade --build outdated --json=bo.json")
-        self.assertIn("ffmpeg/1.0: WARN: Build-require 'fontconfig' cannot be found in lockfile",
-                      client.out)
-        self.assertIn("ffmpeg/1.0: WARN: Build-require 'harfbuzz' cannot be found in lockfile",
-                      client.out)
-        lock = json.loads(client.load("conan.lock"))
-        nodes = lock["graph_lock"]["nodes"]
-        self.assertEqual(5, len(nodes))
-        self.assertEqual(fmpe, nodes["1"]["pref"])
-        # The lockfile doesn't add build_requires
-        self.assertEqual(None, nodes["1"].get("build_requires"))
-        self.assertEqual(font, nodes["2"]["pref"])
-        self.assertEqual(harf, nodes["3"]["pref"])
-        self.assertEqual(zlib, nodes["4"]["pref"])
-
-        build_order = json.loads(client.load("bo.json"))
-        self.assertEqual([["5", font]], build_order[0])
-        self.assertEqual([["6", harf]], build_order[1])
-        self.assertEqual([["1", fmpe], ["4", zlib]], build_order[2])
-
     def test_build_requires_should_be_locked(self):
         # https://github.com/conan-io/conan/issues/5807
         # this is the recommended approach, build_requires should be locked from the beginning
@@ -482,44 +400,41 @@ class GraphLockBuildRequireErrorTestCase(unittest.TestCase):
         client.run("export ffmpeg.py ffmpeg/1.0@")
 
         # Building the graphlock we get the message
-        client.run("graph lock variant.py --build")
-        fmpe = "ffmpeg/1.0#5522e93e2abfbd455e6211fe4d0531a2:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
-        font = "fontconfig/1.0#f3367e0e7d170aa12abccb175fee5f97:"\
-               "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
-        harf = "harfbuzz/1.0#3172f5e84120f235f75f8dd90fdef84f:"\
-               "ea61889683885a5517800e8ebb09547d1d10447a"
-        zlib = "zlib/1.0#f3367e0e7d170aa12abccb175fee5f97:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
-        lock = json.loads(client.load("conan.lock"))
-        nodes = lock["graph_lock"]["nodes"]
-        self.assertEqual(7, len(nodes))
-        self.assertEqual(fmpe, nodes["1"]["pref"])
-        self.assertEqual(["5", "6"], nodes["1"]["build_requires"])
-        self.assertEqual(font, nodes["2"]["pref"])
-        self.assertEqual(harf, nodes["3"]["pref"])
-        self.assertEqual(zlib, nodes["4"]["pref"])
-        self.assertEqual(font, nodes["5"]["pref"])
-        self.assertEqual(harf, nodes["6"]["pref"])
+        client.run("graph lock variant.py --build cascade --build outdated")
 
-        client.run("graph build-order . --build cascade --build outdated --json=bo.json")
-        self.assertNotIn("cannot be found in lockfile", client.out)
-        lock = json.loads(client.load("conan.lock"))
+        if client.cache.config.revisions_enabled:
+            fmpe = "ffmpeg/1.0#5522e93e2abfbd455e6211fe4d0531a2"
+            font = "fontconfig/1.0#f3367e0e7d170aa12abccb175fee5f97"
+            harf = "harfbuzz/1.0#3172f5e84120f235f75f8dd90fdef84f"
+            zlib = "zlib/1.0#f3367e0e7d170aa12abccb175fee5f97"
+        else:
+            fmpe = "ffmpeg/1.0"
+            font = "fontconfig/1.0"
+            harf = "harfbuzz/1.0"
+            zlib = "zlib/1.0"
+
+        lock1 = client.load("conan.lock")
+        lock = json.loads(lock1)
         nodes = lock["graph_lock"]["nodes"]
         self.assertEqual(7, len(nodes))
-        self.assertEqual(fmpe, nodes["1"]["pref"])
+        self.assertEqual(fmpe, nodes["1"]["ref"])
         self.assertEqual(["5", "6"], nodes["1"]["build_requires"])
-        self.assertEqual(font, nodes["2"]["pref"])
-        self.assertEqual(harf, nodes["3"]["pref"])
-        self.assertEqual(zlib, nodes["4"]["pref"])
-        self.assertEqual(font, nodes["5"]["pref"])
-        self.assertEqual(harf, nodes["6"]["pref"])
+        self.assertEqual(font, nodes["2"]["ref"])
+        self.assertEqual(harf, nodes["3"]["ref"])
+        self.assertEqual(zlib, nodes["4"]["ref"])
+        self.assertEqual(font, nodes["5"]["ref"])
+        self.assertEqual(harf, nodes["6"]["ref"])
+
+        client.run("graph build-order . --json=bo.json")
+        self.assertNotIn("cannot be found in lockfile", client.out)
+        lock2 = client.load("conan.lock")
+        self.assertEqual(lock2, lock1)
 
         build_order = json.loads(client.load("bo.json"))
-        self.assertEqual([["5", font]], build_order[0])
-        self.assertEqual([["6", harf]], build_order[1])
-        self.assertEqual([["1", fmpe], ["4", zlib]], build_order[2])
-
-
-class GraphLockBuildRequiresNotNeeded(unittest.TestCase):
+        expected = [[['2', 'fontconfig/1.0@'], ['4', 'zlib/1.0@']],
+                    [['3', 'harfbuzz/1.0@']],
+                    [['1', 'ffmpeg/1.0@']]]
+        self.assertEqual(expected, build_order)
 
     def test_build_requires_not_needed(self):
         client = TestClient()
@@ -534,46 +449,48 @@ class GraphLockBuildRequiresNotNeeded(unittest.TestCase):
         client.run("graph lock app/1.0@ --build")
         lock = json.loads(client.load("conan.lock"))["graph_lock"]["nodes"]
         app = lock["1"]
-        self.assertEqual(app["ref"], "app/1.0#ac2e355bf59f54e838c9d2f1d8d1126c")
+        liba = lock["2"]
+        tool = lock["3"]
+        if client.cache.config.revisions_enabled:
+            self.assertEqual(app["ref"], "app/1.0#ac2e355bf59f54e838c9d2f1d8d1126c")
+            self.assertEqual(liba["ref"], "libA/1.0#3fb401b4f9169fab06be253aa3fbcc1b")
+            self.assertEqual(tool["ref"], "tool/1.0#f3367e0e7d170aa12abccb175fee5f97")
+        else:
+            self.assertEqual(app["ref"], "app/1.0")
+            self.assertEqual(liba["ref"], "libA/1.0")
+            self.assertEqual(tool["ref"], "tool/1.0")
+
         self.assertEqual(app["package_id"], "8a4d75100b721bfde375a978c780bf3880a22bab")
         self.assertIsNone(app.get("prev"))
-        liba = lock["2"]
-        self.assertEqual(liba["ref"], "libA/1.0#3fb401b4f9169fab06be253aa3fbcc1b")
         self.assertEqual(liba["package_id"], "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
         self.assertIsNone(liba.get("prev"))
-        tool = lock["3"]
-        self.assertEqual(tool["ref"], "tool/1.0#f3367e0e7d170aa12abccb175fee5f97")
         self.assertEqual(tool["package_id"], "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
         self.assertIsNone(tool.get("prev"))
 
         client.run("graph build-order . --json=bo.json")
         bo0 = client.load("bo.json")
-        tool = "tool/1.0#f3367e0e7d170aa12abccb175fee5f97:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
-        liba = "libA/1.0#3fb401b4f9169fab06be253aa3fbcc1b:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
-        app = "app/1.0#ac2e355bf59f54e838c9d2f1d8d1126c:8a4d75100b721bfde375a978c780bf3880a22bab"
+        if client.cache.config.revisions_enabled:
+            tool = "tool/1.0@#f3367e0e7d170aa12abccb175fee5f97"
+            liba = "libA/1.0@#3fb401b4f9169fab06be253aa3fbcc1b"
+            app = "app/1.0@#ac2e355bf59f54e838c9d2f1d8d1126c"
+        else:
+            tool = "tool/1.0@"
+            liba = "libA/1.0@"
+            app = "app/1.0@"
         expected = [
             [["3", tool]],
             [["2", liba]],
             [["1", app]]
             ]
         self.assertEqual(expected, json.loads(bo0))
-        # FIXME: This libA/2.0 is NOT required by the app
-        client.run("create libA libA/2.0@ --lockfile")
-        lock = json.loads(client.load("conan.lock"))["graph_lock"]["nodes"]
-        app = lock["1"]
-        self.assertEqual(app["ref"], "app/1.0#ac2e355bf59f54e838c9d2f1d8d1126c")
-        self.assertEqual(app["package_id"], "8a4d75100b721bfde375a978c780bf3880a22bab")
-        self.assertIsNone(app.get("prev"))
-        liba = lock["2"]
-        self.assertEqual(liba["ref"], "libA/1.0#3fb401b4f9169fab06be253aa3fbcc1b")
-        self.assertEqual(liba["package_id"], "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
-        self.assertEqual(liba["prev"], )
-        tool = lock["3"]
-        self.assertEqual(tool["ref"], "tool/1.0#f3367e0e7d170aa12abccb175fee5f97")
-        self.assertEqual(tool["package_id"], "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
-        self.assertIsNone(tool.get("prev"))
 
-        client.run("graph build-order . --json=bo.json")
-        bo1 = client.load("bo.json")
-        client.run("graph build-order . --json=bo.json")
-        self.assertEqual(bo1, client.load("bo.json"))
+        client.run("create libA libA/2.0@ --lockfile", assert_error=True)
+        self.assertIn("ERROR: Attempt to modify locked libA/1.0 to libA/2.0", client.out)
+
+        # Instead we export it and create a new graph lock
+        client.run("export libA libA/2.0@")
+        client.run("graph lock app/1.0@ --build=missing --lockfile=new.lock")
+        new = client.load("new.lock")
+        self.assertNotIn("libA/2.0", new)
+        client.run("graph build-order new.lock --json=bo.json")
+        self.assertEqual(json.loads(client.load("bo.json")), [])

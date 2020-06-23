@@ -3,8 +3,7 @@ import unittest
 
 from conans.test.utils.tools import TestClient, GenConanfile
 
-import os
-os.environ["TESTING_REVISIONS_ENABLED"] = "1"
+
 class GraphLockDynamicTest(unittest.TestCase):
 
     def remove_dep_test(self):
@@ -60,9 +59,11 @@ class GraphLockDynamicTest(unittest.TestCase):
         self.assertEqual(libc["requires"], ["2"])
 
         # It is also possible to use the existing one as base
-        client.run("graph lock . --input-lockfile=conan.lock --lockfile=updated.lock")
-        updated_lock = client.load("updated.lock")
-        self.assertEqual(new_lock, updated_lock)
+        if not client.cache.config.revisions_enabled:
+            # This only works if revisions disabled, otherwise, the revision is locked
+            client.run("graph lock . --input-lockfile=conan.lock --lockfile=updated.lock")
+            updated_lock = client.load("updated.lock")
+            self.assertEqual(new_lock, updated_lock)
 
     def add_dep_test(self):
         # https://github.com/conan-io/conan/issues/5807
@@ -83,13 +84,13 @@ class GraphLockDynamicTest(unittest.TestCase):
         new = client.load("new.lock")
         lock_file_json = json.loads(new)
         self.assertEqual(2, len(lock_file_json["graph_lock"]["nodes"]))
+        zlib = lock_file_json["graph_lock"]["nodes"]["1"]["ref"]
         if client.cache.config.revisions_enabled:
-            self.assertEqual("zlib/1.0#f3367e0e7d170aa12abccb175fee5f97",
-                             lock_file_json["graph_lock"]["nodes"]["1"]["ref"])
+            self.assertEqual("zlib/1.0#f3367e0e7d170aa12abccb175fee5f97", zlib)
         else:
-            self.assertEqual("zlib/1.0", lock_file_json["graph_lock"]["nodes"]["1"]["ref"])
+            self.assertEqual("zlib/1.0", zlib)
 
-        # augment the existing one
+        # augment the existing one, works only because it is a consumer only, not package
         client.run("graph lock . --input-lockfile=conan.lock --lockfile=updated.lock")
         updated = client.load("updated.lock")
         self.assertEqual(updated, new)
@@ -108,21 +109,28 @@ class GraphLockDynamicTest(unittest.TestCase):
         client.run("export .")
         client.run("graph lock consumer.txt -pr=profile --build missing")
         lock1 = client.load("conan.lock")
-        print(lock1)
+        json_lock1 = json.loads(lock1)
+        dep = json_lock1["graph_lock"]["nodes"]["1"]
+        self.assertEqual(dep["build_requires"], ["2"])
+        self.assertEqual(dep["package_id"], "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+        if client.cache.config.revisions_enabled:
+            self.assertEqual(dep["ref"], "dep/0.1#01b22a14739e1e2d4cd409c45cac6422")
+            self.assertEqual(dep.get("prev"), None)
+        else:
+            self.assertEqual(dep["ref"], "dep/0.1")
+            self.assertEqual(dep.get("prev"), None)
 
-        # Check lock
-        client.run("create . -pr=profile --lockfile --build missing", assert_error=True)
-        self.assertIn("The node tool/0.1 ID 5 was not found in the lock", client.out)
-        return
-
-        # We need a new lock
-        client.run("graph lock test_package -pr=profile --build missing --input-lockfile=conan.lock"
-                   " --lockfile=create.lock")
-        lock2 = client.load("conan.lock")
-        self.assertEqual(lock1, lock2)
-        print(client.load("create.lock"))
-        client.run("create . -pr=profile --lockfile=create.lock --build missing")
-
+        client.run("create . -pr=profile --lockfile --build missing")
+        self.assertIn("dep/0.1:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Build", client.out)
         self.assertIn("tool/0.1:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache", client.out)
-        self.assertIn("dep/0.1: Applying build-requirement: tool/0.1", client.out)
-        self.assertIn("dep/0.1 (test package): Running test()", client.out)
+        lock2 = client.load("conan.lock")
+        json_lock2 = json.loads(lock2)
+        dep = json_lock2["graph_lock"]["nodes"]["1"]
+        self.assertEqual(dep["build_requires"], ["2"])
+        self.assertEqual(dep["package_id"], "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+        if client.cache.config.revisions_enabled:
+            self.assertEqual(dep["ref"], "dep/0.1#01b22a14739e1e2d4cd409c45cac6422")
+            self.assertEqual(dep["prev"], "0")
+        else:
+            self.assertEqual(dep["ref"], "dep/0.1")
+            self.assertEqual(dep["prev"], "0")

@@ -264,14 +264,11 @@ class GraphLock(object):
                 locked_node = self._nodes[n]
                 if locked_node.prev is None and locked_node.package_id is not None:
                     # Manipulate the ref so it can be used directly in install command
+                    ref = repr(locked_node.ref)
                     if not self._revisions_enabled:
-                        ref = locked_node.ref.copy_clear_rev()
-                        ref = repr(ref)
                         if "@" not in ref:
                             ref += "@"
                     else:
-                        ref = locked_node.ref
-                        ref = repr(ref)
                         if "@" not in ref:
                             ref = ref.replace("#", "@#")
                     if ref not in total_prefs:

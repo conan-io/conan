@@ -75,11 +75,15 @@ class GraphLockCustomFilesTest(unittest.TestCase):
         nodes = lock_file_json["graph_lock"]["nodes"]
         self.assertEqual(2, len(nodes))
         pkg_a = nodes["1"]
-        self.assertEqual(pkg_a["ref"], "PkgA/0.1@user/channel#f3367e0e7d170aa12abccb175fee5f97")
-        self.assertEqual(pkg_a["package_id"], "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
-        self.assertEqual(pkg_a["prev"], "83c38d3b4e5f1b8450434436eec31b00")
-
         pkg_b = nodes["0"]
+        if self.client.cache.config.revisions_enabled:
+            self.assertEqual(pkg_a["ref"], "PkgA/0.1@user/channel#f3367e0e7d170aa12abccb175fee5f97")
+            self.assertEqual(pkg_a["prev"], "83c38d3b4e5f1b8450434436eec31b00")
+        else:
+            self.assertEqual(pkg_a["ref"], "PkgA/0.1@user/channel")
+            self.assertEqual(pkg_a["prev"], "0")
+
+        self.assertEqual(pkg_a["package_id"], "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
         self.assertEqual(pkg_b["ref"], "PkgB/0.1")
         self.assertIsNone(pkg_b.get("package_id"))
         self.assertIsNone(pkg_b.get("prev"))
