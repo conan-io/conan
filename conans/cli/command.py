@@ -74,7 +74,7 @@ class SmartFormatter(argparse.HelpFormatter):
 
 class ConanCommand(object):
     def __init__(self, method, group=None):
-        self._group = group if group is not None else "Misc commands"
+        self._group = group or "Misc commands"
         self._name = method.__name__.replace("_", "-")
         self._method = method
         self._doc = method.__doc__
@@ -118,10 +118,10 @@ class Command(object):
     """
 
     def __init__(self, conan_api):
-        assert isinstance(conan_api, Conan)
+        assert isinstance(conan_api, Conan), "Expected 'Conan' type, got '{}'".format(type(conan_api))
         self._conan = conan_api
         self._out = conan_api.out
-        self._groups = {}
+        self._groups = defaultdict(list)
         self._commands = None
 
     def _add_command(self, import_path, method_name):
@@ -129,7 +129,7 @@ class Command(object):
             command_wrapper = getattr(importlib.import_module(import_path), method_name)
             if command_wrapper.doc:
                 self._commands[command_wrapper.name] = command_wrapper
-                self._groups.setdefault(command_wrapper.group, []).append(command_wrapper.name)
+                self._groups[command_wrapper.group].append(command_wrapper.name)
         except AttributeError:
             raise ConanException("There is no {} method defined in {}".format(method_name,
                                                                               import_path))
