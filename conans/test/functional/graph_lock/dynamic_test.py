@@ -130,7 +130,7 @@ class GraphLockDynamicTest(unittest.TestCase):
         self.assertEqual(dep["package_id"], "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
         if client.cache.config.revisions_enabled:
             self.assertEqual(dep["ref"], "dep/0.1#01b22a14739e1e2d4cd409c45cac6422")
-            self.assertEqual(dep["prev"], "0")
+            self.assertEqual(dep["prev"], "08cd3e7664b886564720123959c05bdf")
         else:
             self.assertEqual(dep["ref"], "dep/0.1")
             self.assertEqual(dep["prev"], "0")

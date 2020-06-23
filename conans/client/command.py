@@ -1867,8 +1867,6 @@ class Command(object):
             if args.json:
                 json_file = _make_abs_path(args.json)
                 save(json_file, json.dumps(build_order, indent=True))
-        elif args.subcommand == "clean-modified":
-            self._conan.lock_clean_modified(args.lockfile)
         elif args.subcommand == "lock":
             profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
                                         options=args.options_build, env=args.env_build)

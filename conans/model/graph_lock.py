@@ -372,14 +372,14 @@ class GraphLock(object):
         been exported or re-built), will be processed and updated.
         """
         for id_, node in new_lock._nodes.items():
-            if node.modified:
-                self._nodes[id_] = node
-
-    def clean_modified(self):
-        """ remove all the "modified" flags from the lockfile
-        """
-        for _, node in self._nodes.items():
-            node.modified = None
+            current = self._nodes[id_]
+            if current.ref:
+                if node.ref.copy_clear_rev() != current.ref.copy_clear_rev():
+                    raise ConanException("Incompatible reference")
+            if current.package_id is None:
+                current.package_id = node.package_id
+            if current.prev is None:
+                current.prev = node.prev
 
     def _inverse_neighbors(self, node_id):
         """ return all the nodes that have an edge to the "node_id". Useful for computing
