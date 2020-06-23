@@ -1,8 +1,6 @@
-import argparse
-
-from conans.client.formatters.search_formatter import SearchFormatter
+from conans.cli.formatters.search_formatter import SearchFormatter
 from conans.errors import ConanException
-from conans.cli.command import SmartFormatter, OnceArgument, Extender, conan_command
+from conans.cli.command import OnceArgument, Extender, conan_command
 
 
 # conan v2 search:
@@ -10,12 +8,10 @@ from conans.cli.command import SmartFormatter, OnceArgument, Extender, conan_com
 # to search in the local cache: conan search "*" --cache explicitly
 
 @conan_command(group="Consumer commands")
-def search(*args, **kwargs):
+def search(conan_api, parser, *args, **kwargs):
     """
     Searches for package recipes whose name contain <query> in a remote or in the local cache
     """
-    conan_api = kwargs["conan_api"]
-    parser = kwargs["parser"]
 
     parser.add_argument('query',
                         help="Search query to find package recipe reference, e.g., 'boost', 'lib*'")

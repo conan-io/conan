@@ -16,11 +16,10 @@ class CustomConanCommandsTest(unittest.TestCase):
         self._command_file = textwrap.dedent("""
             import argparse
             from conans.cli.command import SmartFormatter, conan_command, OnceArgument
-            from my_command_formatter import MyCommandFormatter
 
 
             @conan_command(group="My Company commands")
-            def {}(*args, **kwargs):
+            def {}(conan_api, parser, *args, **kwargs):
                 \"""
                 Custom command
                 \"""
@@ -31,9 +30,6 @@ class CustomConanCommandsTest(unittest.TestCase):
                 args = parser.parse_args(*args)
                 message = "Hello custom command!"
                 MyCommandFormatter.out(args.output, message, conan_api.out)
-            """)
-        self._formatter_file = textwrap.dedent("""
-            from conans.client.formatters.base_formatter import BaseFormatter
 
 
             class MyCommandFormatter(BaseFormatter):

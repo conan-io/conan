@@ -1,6 +1,6 @@
 import textwrap
 
-from conans.client.formatters.base_formatter import BaseFormatter
+from conans.cli.formatters.base_formatter import BaseFormatter
 from conans.client.output import Color
 
 

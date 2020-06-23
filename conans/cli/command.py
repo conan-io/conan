@@ -211,8 +211,7 @@ class Command(object):
                 raise ConanException("Unknown command %s" % str(exc))
 
             method(args[0][1:], conan_api=self.conan_api, parser=self.commands[command].parser,
-                   commands=self.commands, groups=self.groups) if command == "help" else method(
-                args[0][1:], conan_api=self.conan_api, parser=self.commands[command].parser)
+                   commands=self.commands, groups=self.groups)
         except KeyboardInterrupt as exc:
             logger.error(exc)
             ret_code = SUCCESS

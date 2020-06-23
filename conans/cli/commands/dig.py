@@ -1,9 +1,7 @@
-import argparse
-
-from conans.client.formatters.dig_formatter import DigFormatter
+from conans.cli.formatters.dig_formatter import DigFormatter
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
-from conans.cli.command import SmartFormatter, OnceArgument, Extender, conan_command
+from conans.cli.command import OnceArgument, Extender, conan_command
 
 
 #  This command accepts a conan package reference as input. Could be in different forms:
@@ -14,12 +12,10 @@ from conans.cli.command import SmartFormatter, OnceArgument, Extender, conan_com
 #  name/version@user/channel#<recipe_revision>:<package_id>#<package_revision>
 
 @conan_command(group="Consumer commands")
-def dig(*args, **kwargs):
+def dig(conan_api, parser, *args, **kwargs):
     """
     Gets information about available package binaries in the local cache or a remote
     """
-    conan_api = kwargs["conan_api"]
-    parser = kwargs["parser"]
 
     parser.add_argument('reference',
                         help="Package recipe reference, e.g., 'zlib/1.2.8', \

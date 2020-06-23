@@ -1,19 +1,13 @@
-import argparse
-
-from conans.client.formatters.help_formatter import HelpFormatter
+from conans.cli.formatters.help_formatter import HelpFormatter
 from conans.errors import ConanException
-from conans.cli.command import SmartFormatter, conan_command
+from conans.cli.command import conan_command
 
 
 @conan_command(group="Misc commands")
-def help(*args, **kwargs):
+def help(conan_api, parser, commands, groups, *args, **kwargs):
     """
     Shows help for a specific command.
     """
-    conan_api = kwargs["conan_api"]
-    parser = kwargs["parser"]
-    commands = kwargs["commands"]
-    groups = kwargs["groups"]
 
     parser.add_argument("command", help='command', nargs="?")
     args = parser.parse_args(*args)
