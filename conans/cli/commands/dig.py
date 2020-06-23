@@ -1,5 +1,5 @@
 from conans.cli.formatters.dig_formatter import DigFormatter
-from conans.errors import ConanException
+from conans.errors import ConanException, InvalidNameException
 from conans.model.ref import ConanFileReference
 from conans.cli.command import OnceArgument, Extender, conan_command
 
@@ -12,7 +12,7 @@ from conans.cli.command import OnceArgument, Extender, conan_command
 #  name/version@user/channel#<recipe_revision>:<package_id>#<package_revision>
 
 @conan_command(group="Consumer commands")
-def dig(conan_api, parser, *args, **kwargs):
+def dig(*args, conan_api, parser, **kwargs):
     """
     Gets information about available package binaries in the local cache or a remote
     """

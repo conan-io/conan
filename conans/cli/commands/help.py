@@ -4,7 +4,7 @@ from conans.cli.command import conan_command
 
 
 @conan_command(group="Misc commands")
-def help(conan_api, parser, commands, groups, *args, **kwargs):
+def help(*args, conan_api, parser, commands, groups, **kwargs):
     """
     Shows help for a specific command.
     """

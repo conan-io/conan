@@ -8,7 +8,7 @@ from conans.cli.command import OnceArgument, Extender, conan_command
 # to search in the local cache: conan search "*" --cache explicitly
 
 @conan_command(group="Consumer commands")
-def search(conan_api, parser, *args, **kwargs):
+def search(*args, conan_api, parser, **kwargs):
     """
     Searches for package recipes whose name contain <query> in a remote or in the local cache
     """

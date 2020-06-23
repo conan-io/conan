@@ -4,6 +4,7 @@ import os
 import signal
 import sys
 import textwrap
+from collections import defaultdict
 from difflib import get_close_matches
 import importlib
 import pkgutil
