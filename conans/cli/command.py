@@ -118,7 +118,7 @@ class Command(object):
     """
 
     def __init__(self, conan_api):
-        assert isinstance(conan_api, Conan)
+        assert isinstance(conan_api, Conan), "Expected 'Conan' type, got '{}'".format(type(conan_api))
         self._conan = conan_api
         self._out = conan_api.out
         self._groups = {}
