@@ -121,7 +121,7 @@ class Command(object):
         assert isinstance(conan_api, Conan), "Expected 'Conan' type, got '{}'".format(type(conan_api))
         self._conan = conan_api
         self._out = conan_api.out
-        self._groups = {}
+        self._groups = defaultdict(list)
         self._commands = None
 
     def _add_command(self, import_path, method_name):
