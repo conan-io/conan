@@ -129,7 +129,7 @@ class Command(object):
             command_wrapper = getattr(importlib.import_module(import_path), method_name)
             if command_wrapper.doc:
                 self._commands[command_wrapper.name] = command_wrapper
-                self._groups.setdefault(command_wrapper.group, []).append(command_wrapper.name)
+                self._groups[command_wrapper.group].append(command_wrapper.name)
         except AttributeError:
             raise ConanException("There is no {} method defined in {}".format(method_name,
                                                                               import_path))
