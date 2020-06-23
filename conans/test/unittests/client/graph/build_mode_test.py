@@ -54,6 +54,20 @@ class BuildModeTest(unittest.TestCase):
         build_mode.report_matches()
         self.assertEqual("", self.output)
 
+    def test_revision_included(self):
+        reference = ConanFileReference.loads("Hello/0.1@user/channel#rrev1")
+        build_mode = BuildMode(["Hello/0.1@user/channel#rrev1"], self.output)
+        self.assertTrue(build_mode.forced(self.conanfile, reference))
+        build_mode.report_matches()
+        self.assertEqual("", self.output)
+
+    def test_no_user_channel_revision_included(self):
+        reference = ConanFileReference.loads("Hello/0.1@#rrev1")
+        build_mode = BuildMode(["Hello/0.1@#rrev1"], self.output)
+        self.assertTrue(build_mode.forced(self.conanfile, reference))
+        build_mode.report_matches()
+        self.assertEqual("", self.output)
+
     def test_non_matching_build_force(self):
         reference = ConanFileReference.loads("Bar/0.1@user/testing")
         build_mode = BuildMode(["Hello"], self.output)
