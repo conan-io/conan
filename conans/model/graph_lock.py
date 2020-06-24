@@ -7,6 +7,7 @@ from conans.client.graph.graph import RECIPE_VIRTUAL, RECIPE_CONSUMER
 from conans.client.graph.python_requires import PyRequires
 from conans.client.profile_loader import _load_profile
 from conans.errors import ConanException
+from conans.model.info import PACKAGE_ID_UNKNOWN
 from conans.model.options import OptionsValues
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.version import Version
@@ -43,9 +44,8 @@ class GraphLockFile(object):
         graph_json = json.loads(text)
         version = graph_json.get("version")
         if version:
-            version = Version(version)
-            if version < "0.2":
-                raise ConanException("This lockfile was created with a previous incompatible "
+            if version != LOCKFILE_VERSION:
+                raise ConanException("This lockfile was created with an incompatible "
                                      "version. Please regenerate the lockfile")
             # Do something with it, migrate, raise...
         profile_host = graph_json.get("profile_host") or graph_json.get("profile")
@@ -137,7 +137,8 @@ class GraphLockNode(object):
 
     @package_id.setter
     def package_id(self, value):
-        if not self._relaxed and self._package_id is not None and self._package_id != value:
+        if (not self._relaxed and self._package_id is not None and
+                self._package_id != PACKAGE_ID_UNKNOWN and self._package_id != value):
             raise ConanException("Attempt to change package_id of locked '%s'" % repr(self._ref))
         if value != self._package_id:  # When the package_id is being assigned, prev becomes invalid
             self._prev = None
@@ -175,8 +176,8 @@ class GraphLockNode(object):
         prev = data.get("prev")
         python_requires = data.get("python_requires")
         if python_requires:
-            python_requires = [ConanFileReference.loads(ref, validate=False)
-                               for ref in python_requires]
+            python_requires = [ConanFileReference.loads(py_req, validate=False)
+                               for py_req in python_requires]
         options = OptionsValues.loads(data.get("options", ""))
         modified = data.get("modified")
         requires = data.get("requires", [])
