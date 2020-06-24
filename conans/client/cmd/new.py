@@ -271,7 +271,7 @@ def cmd_new(ref, header=False, pure_c=False, test=False, exports_sources=False, 
             osx_clang_versions=None, shared=None, upload_url=None, gitignore=None,
             gitlab_gcc_versions=None, gitlab_clang_versions=None,
             circleci_gcc_versions=None, circleci_clang_versions=None, circleci_osx_versions=None,
-            template=None, template_dir=None, cache=None):
+            template=None, cache=None):
     try:
         tokens = ref.split("@")
         name, version = tokens[0].split("/")
