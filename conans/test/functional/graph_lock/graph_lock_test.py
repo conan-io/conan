@@ -32,7 +32,7 @@ class GraphLockErrorsTest(unittest.TestCase):
         lockfile = lockfile.replace('"0.4"', '"0.1"').replace('"0"', '"UUID"')
         client.save({"conan.lock": lockfile})
         client.run("install . --lockfile", assert_error=True)
-        self.assertIn("This lockfile was created with a previous incompatible version", client.out)
+        self.assertIn("This lockfile was created with an incompatible version", client.out)
 
 
 class GraphLockConanfileTXTTest(unittest.TestCase):

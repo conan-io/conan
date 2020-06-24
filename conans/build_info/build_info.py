@@ -162,14 +162,14 @@ class BuildInfoCreator(object):
         with open(self._lockfile) as json_data:
             data = json.load(json_data)
 
-        version = Version(data["version"])
-        if version < LOCKFILE_VERSION:
-            raise ConanException("This lockfile was created with a previous incompatible version "
+        version = data["version"]
+        if version != LOCKFILE_VERSION:
+            raise ConanException("This lockfile was created with an incompatible version "
                                  "of Conan. Please update all your Conan clients")
 
         # Gather modules, their artifacts and recursively all required artifacts
         for _, node in data["graph_lock"]["nodes"].items():
-            pref = node["pref"]
+            ref = node["ref"]
             if node.get("modified"):  # Work only on generated nodes
                 # Create module for the recipe reference
                 recipe_key = self._get_reference(pref)

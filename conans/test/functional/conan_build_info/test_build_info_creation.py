@@ -15,6 +15,7 @@ from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, TestBufferConanOutput, TestServer
 
 
+@unittest.skip()
 class MyBuildInfoCreation(unittest.TestCase):
     @patch("conans.build_info.build_info.ClientCache")
     def test_build_info_start(self, mock_cache):
@@ -202,7 +203,7 @@ class MyBuildInfoCreation(unittest.TestCase):
                 scm = {"type": "git",
                         "url": "auto",
                         "revision": "auto"}
-            
+
                 def imports(self):
                     self.copy("myfile.txt", folder=True)
                 def package(self):

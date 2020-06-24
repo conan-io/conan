@@ -3,11 +3,11 @@ import os
 import textwrap
 import unittest
 
-from conans.model.graph_lock import LOCKFILE, GraphLockNode
+from conans.model.graph_lock import LOCKFILE
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.env_reader import get_env
 from conans.util.files import load
-from conans.model.ref import PackageReference
+
 
 conanfile = textwrap.dedent("""
     from conans import ConanFile, load
@@ -37,6 +37,7 @@ class GraphLockCITest(unittest.TestCase):
         test_server = TestServer(users={"user": "mypass"})
         client = TestClient(servers={"default": test_server},
                             users={"default": [("user", "mypass")]})
+        client.run("config set general.default_package_id_mode=recipe_revision_mode")
         client.save({"conanfile.py": conanfile.format(requires=""),
                      "myfile.txt": "HelloA"})
         client.run("create . PkgA/0.1@user/channel")
@@ -60,36 +61,33 @@ class GraphLockCITest(unittest.TestCase):
         client.run("upload * --all --confirm")
 
         client.run("graph lock PkgD/0.1@user/channel")
-        lock_file = client.load(LOCKFILE)
-        initial_lock_file = lock_file
+        initial_lock_file = client.load(LOCKFILE)
 
-        # Do a change in B
+        # Do a change in B, this will be a new revision
         clientb = TestClient(cache_folder=client.cache_folder, servers={"default": test_server})
         clientb.save({"conanfile.py": conanfile.format(requires='requires="PkgA/0.1@user/channel"'),
                      "myfile.txt": "ByeB World!!"})
         clientb.run("create . PkgB/0.1@user/channel")
 
         # Go back to main orchestrator
-        client.save({"new_lock/%s" % LOCKFILE: lock_fileb})
-        client.run("graph update-lock . new_lock")
-        client.run("graph build-order . --json=build_order.json --build=cascade")
-        lock_file_order = load(os.path.join(clientb.current_folder, LOCKFILE))
-        json_file = os.path.join(client.current_folder, "build_order.json")
-        to_build = json.loads(load(json_file))
-        lock_fileaux = lock_file_order
+        client.run("graph lock PkgD/0.1@user/channel --build=missing")
+        client.run("graph build-order . --json=build_order.json")
+        master_lockfile = client.load("conan.lock")
+
+        build_order = client.load("build_order.json")
+        to_build = json.loads(build_order)
+        lock_fileaux = master_lockfile
         while to_build:
-            for _, pkg_ref in to_build[0]:
-                pkg_ref = PackageReference.loads(pkg_ref)
+            for _, ref in to_build[0]:
                 client_aux = TestClient(cache_folder=client.cache_folder,
                                         servers={"default": test_server})
                 client_aux.save({LOCKFILE: lock_fileaux})
-                client_aux.run("install %s --build=%s --lockfile"
-                               % (pkg_ref.ref, pkg_ref.ref.name))
+                client_aux.run("install %s --build=%s --lockfile" % (ref, ref))
                 lock_fileaux = load(os.path.join(client_aux.current_folder, LOCKFILE))
                 client.save({"new_lock/%s" % LOCKFILE: lock_fileaux})
                 client.run("graph update-lock . new_lock")
 
-            client.run("graph build-order . --build=cascade")
+            client.run("graph build-order .")
             lock_fileaux = client.load(LOCKFILE)
             output = str(client.out).splitlines()[-1]
             to_build = eval(output)
@@ -139,53 +137,35 @@ class GraphLockCITest(unittest.TestCase):
         self.assertIn("PkgD/0.1@user/channel: DEP FILE PkgC: HelloC", client.out)
 
         client.run("upload * --all --confirm")
-
         client.run("graph lock PkgD/0.1@user/channel")
-        lock_file = client.load(LOCKFILE)
-        initial_lock_file = lock_file
+        initial_lock_file = client.load(LOCKFILE)
 
         # Do a change in B
         clientb = TestClient(cache_folder=client.cache_folder, servers={"default": test_server})
         clientb.run("config set general.default_package_id_mode=package_revision_mode")
         clientb.save({"conanfile.py": conanfile.format(requires='requires="PkgA/0.1@user/channel"'),
-                     "myfile.txt": "ByeB World!!",
-                      LOCKFILE: lock_file})
-        clientb.run("create . PkgB/0.1@user/channel --lockfile")
-        lock_fileb = load(os.path.join(clientb.current_folder, LOCKFILE))
-        self.assertIn("PkgB/0.1@user/channel#569839e7b741ee474406de1db69d19c2:"
-                      "6e9742c2106791c1c777da8ccfb12a1408385d8d#2711a0a3b580e72544af8f36d0a87424",
-                      lock_fileb)
-        self.assertIn("PkgA/0.1@user/channel#189390ce059842ce984e0502c52cf736:"
-                      "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9#5ba7f606729949527141beef73c72bc8",
-                      lock_fileb)
-        self.assertIn("PkgC/0.1@user/channel#1c63e932e9392857cdada81f34bf4690:"
-                      "d27e81082fa545d364f19bd07bdf7975acd9e1ac#667a94f8b740b0f35519116997eabeff",
-                      lock_fileb)
-        self.assertIn("PkgD/0.1@user/channel#d3d184611fb757faa65e4d4203198579:"
-                      "d80dd9662f447164906643ab88a1ed4e7b12925b#50246cbe82411551e5ebc5bcc75f1a9a",
-                      lock_fileb)
+                     "myfile.txt": "ByeB World!!"})
+        clientb.run("create . PkgB/0.1@user/channel")
 
         # Go back to main orchestrator
-        client.save({"new_lock/%s" % LOCKFILE: lock_fileb})
-        client.run("graph update-lock . new_lock")
-        client.run("graph build-order . --json=build_order.json --build=cascade")
-        lock_file_order = load(os.path.join(clientb.current_folder, LOCKFILE))
+        client.run("graph lock PkgD/0.1@user/channel --build=missing")
+        client.run("graph build-order . --json=build_order.json")
+        master_lockfile = client.load("conan.lock")
+
         json_file = os.path.join(client.current_folder, "build_order.json")
         to_build = json.loads(load(json_file))
-        lock_fileaux = lock_file_order
+        lock_fileaux = master_lockfile
         while to_build:
-            for _, pkg_ref in to_build[0]:
-                pkg_ref = PackageReference.loads(pkg_ref)
+            for _, ref in to_build[0]:
                 client_aux = TestClient(cache_folder=client.cache_folder,
                                         servers={"default": test_server})
                 client_aux.save({LOCKFILE: lock_fileaux})
-                client_aux.run("install %s --build=%s --lockfile"
-                               % (pkg_ref.ref, pkg_ref.ref.name))
+                client_aux.run("install %s --build=%s --lockfile" % (ref, ref))
                 lock_fileaux = client_aux.load(LOCKFILE)
                 client.save({"new_lock/%s" % LOCKFILE: lock_fileaux})
                 client.run("graph update-lock . new_lock")
 
-            client.run("graph build-order . --build=cascade")
+            client.run("graph build-order .")
             lock_fileaux = client.load(LOCKFILE)
             output = str(client.out).splitlines()[-1]
             to_build = eval(output)
