@@ -259,8 +259,6 @@ def _get_files_from_template_dir(template_dir, name, version, package_name):
     out_files = dict()
     for f in files:
         f_path = os.path.join(template_dir, f)
-        if not os.path.isfile(f_path):
-            continue
         rendered_path = _render_template(f, name=name, version=version, package_name=package_name)
         rendered_file = _render_template(load(f_path), name=name, version=version, package_name=package_name)
         out_files[rendered_path] = rendered_file
