@@ -15,7 +15,7 @@ from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, TestBufferConanOutput, TestServer
 
 
-@unittest.skip()
+@unittest.skip("Build-info not working with current lockfiles")
 class MyBuildInfoCreation(unittest.TestCase):
     @patch("conans.build_info.build_info.ClientCache")
     def test_build_info_start(self, mock_cache):
