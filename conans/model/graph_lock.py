@@ -479,7 +479,7 @@ class GraphLock(object):
         ids = []
         search_ref = str(ref)
         for id_, node in self._nodes.items():
-            if node.pref and str(node.pref.ref) == search_ref:
+            if node.ref and str(node.ref) == search_ref:
                 ids.append(id_)
         if len(ids) >= 1:
             return ids[0]
