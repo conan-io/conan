@@ -254,7 +254,7 @@ def _get_files_from_template_dir(template_dir, name, version, package_name):
         for f in fs:
             rel_d = os.path.relpath(d, template_dir)
             rel_f = os.path.join(rel_d, f)
-            files += [rel_f]
+            files.append(rel_f)
 
     out_files = dict()
     for f in files:
