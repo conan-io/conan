@@ -466,16 +466,23 @@ class GraphLock(object):
                 if not node.ref and node.path:
                     return id_
 
-        # First search by ref (without RREV)
+        # First search by exact ref (with RREV)
         ids = []
         search_ref = repr(ref)
         for id_, node in self._nodes.items():
             if node.ref and repr(node.ref) == search_ref:
                 ids.append(id_)
-        if ids:
-            if len(ids) == 1:
-                return ids[0]
-            raise ConanException("There are %s binaries for ref %s" % (len(ids), ref))
+        if len(ids) >= 1:
+            return ids[0]
+
+        # First search by aprox ref (without RREV)
+        ids = []
+        search_ref = str(ref)
+        for id_, node in self._nodes.items():
+            if node.pref and str(node.pref.ref) == search_ref:
+                ids.append(id_)
+        if len(ids) >= 1:
+            return ids[0]
 
         # Search by approximate name
         ids = []
@@ -483,7 +490,7 @@ class GraphLock(object):
             if node.ref and node.ref.name == ref.name:
                 ids.append(id_)
         if ids:
-            if len(ids) == 1:
+            if len(ids) >= 1:
                 return ids[0]
             raise ConanException("There are %s binaries with name %s" % (len(ids), ref.name))
 
