@@ -246,8 +246,9 @@ def _render_template(text, name, version, package_name):
     return t.render(**context)
 
 def _get_files_from_template_dir(template_dir, name, version, package_name):
-    if not os.path.isfile(os.path.join(template_dir, "conanfile.py")):
-        raise ConanException("Template is missing 'conanfile.py': {}".format(template_dir))
+    if (not os.path.isfile(os.path.join(template_dir, "conanfile.py")) 
+        and not os.path.isfile(os.path.join(template_dir, "conanfile.txt"))):
+        raise ConanException("Template is missing a recipe file: {}".format(template_dir))
 
     files = []
     for d, _, fs in os.walk(template_dir):
@@ -292,9 +293,9 @@ def cmd_new(ref, header=False, pure_c=False, test=False, exports_sources=False, 
         raise ConanException("'pure_c' is incompatible with 'header' and 'sources'")
     if bare and (header or exports_sources):
         raise ConanException("'bare' is incompatible with 'header' and 'sources'")
-    if template and (header or exports_sources or bare):
+    if template and (header or exports_sources or bare or pure_c):
         raise ConanException("'template' is incompatible with 'header', "
-                             "'sources', and 'bare'")
+                             "'sources', 'pure-c' and 'bare'")
 
     if header:
         files = {"conanfile.py": conanfile_header.format(name=name, version=version,
@@ -312,6 +313,7 @@ def cmd_new(ref, header=False, pure_c=False, test=False, exports_sources=False, 
         is_file_template = os.path.basename(template).endswith('.py')
         if is_file_template:
             if not os.path.isabs(template):
+                # FIXME: Conan 2.0. The old path should be removed
                 old_path = os.path.join(cache.cache_folder, "templates", template)
                 new_path = os.path.join(cache.cache_folder, "templates", "cmd_new", template)
                 template = new_path if os.path.isfile(new_path) else old_path

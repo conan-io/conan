@@ -224,9 +224,7 @@ class Command(object):
                         circleci_gcc_versions=args.ci_circleci_gcc,
                         circleci_clang_versions=args.ci_circleci_clang,
                         circleci_osx_versions=args.ci_circleci_osx,
-                        template=args.template,
-                        template_dir=args.template_dir
-                        )
+                        template=args.template)
 
     def inspect(self, *args):
         """
