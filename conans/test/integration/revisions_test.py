@@ -14,7 +14,8 @@ from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestServer, TurboTestClient, GenConanfile
 from conans.util.env_reader import get_env
 
-
+import os
+os.environ["TESTING_REVISIONS_ENABLED"] = "1"
 @attr("artifactory_ready")
 @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
 class InstallingPackagesWithRevisionsTest(unittest.TestCase):
@@ -321,9 +322,9 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
 
     @parameterized.expand([(True,), (False,)])
     def test_revision_install_explicit_mismatch_rrev(self, v1):
-        """If we have a recipe in local, but we request to install a different one with RREV
-         1. With revisions enabled, it fail and won't look the remotes unless --update
-         2. Without revisions enabled it raises an input error"""
+        # If we have a recipe in local, but we request to install a different one with RREV
+        # 1. With revisions enabled, it fail and won't look the remotes unless --update
+        # 2. Without revisions enabled it raises an input error
         client = self.c_v1 if v1 else self.c_v2
         ref = client.export(self.ref)
         command = "install {}#fakerevision".format(ref)
@@ -333,7 +334,8 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
                           "specify a reference without revision", client.out)
         else:
             client.run(command, assert_error=True)
-            self.assertIn("The recipe in the local cache doesn't match the specified revision. "
+            self.assertIn("The 'f3367e0e7d170aa12abccb175fee5f97' revision recipe in the local "
+                          "cache doesn't match the requested 'lib/1.0@conan/testing#fakerevision'. "
                           "Use '--update' to check in the remote", client.out)
             command = "install {}#fakerevision --update".format(ref)
             client.run(command, assert_error=True)
