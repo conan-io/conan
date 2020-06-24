@@ -16,15 +16,13 @@ class CustomConanCommandsTest(unittest.TestCase):
         self._command_file = textwrap.dedent("""
             import argparse
             from conans.cli.command import SmartFormatter, conan_command, OnceArgument
-
+            from conans.cli.formatters.base_formatter import BaseFormatter
 
             @conan_command(group="My Company commands")
-            def {}(conan_api, parser, *args, **kwargs):
+            def {}(*args, conan_api, parser, **kwargs):
                 \"""
                 Custom command
                 \"""
-                conan_api = kwargs["conan_api"]
-                parser = kwargs["parser"]
                 parser.add_argument('-o', '--output', default="cli", action=OnceArgument,
                                     help="Select the output format: json, html,...")
                 args = parser.parse_args(*args)
@@ -43,8 +41,6 @@ class CustomConanCommandsTest(unittest.TestCase):
         client = TestClient()
         save(os.path.join(client.cache.cache_folder, "commands", "cmd_my_command.py"),
              self._command_file.format("my_command"))
-        save(os.path.join(client.cache.cache_folder, "commands", "my_command_formatter.py"),
-             self._formatter_file)
         client.run("help")
         self.assertIn("My Company commands", client.out)
         self.assertIn("my-command Custom command", client.out)
@@ -55,7 +51,5 @@ class CustomConanCommandsTest(unittest.TestCase):
         client = TestClient()
         save(os.path.join(client.cache.cache_folder, "commands", "cmd_my_command.py"),
              self._command_file.format("some_name"))
-        save(os.path.join(client.cache.cache_folder, "commands", "my_command_formatter.py"),
-             self._formatter_file)
         client.run("help", assert_error=True)
         self.assertIn("ERROR: There is no my_command method defined in cmd_my_command", client.out)
