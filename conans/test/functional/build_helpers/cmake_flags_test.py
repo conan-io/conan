@@ -7,7 +7,7 @@ from textwrap import dedent
 from nose.plugins.attrib import attr
 from parameterized.parameterized import parameterized
 
-from conans.client.build.cmake import CMake
+from conans.client.build.cmake import CMakeBuildHelper
 from conans.model.version import Version
 from conans.test.utils.deprecation import catch_deprecation_warning
 from conans.test.utils.tools import TestClient
@@ -404,7 +404,7 @@ conan_set_std()
 
         def conan_set_std_branch():
             # Replicate logic from cmake_common definition of 'macro(conan_set_std)'
-            cmake_version = CMake.get_version()
+            cmake_version = CMakeBuildHelper.get_version()
             return cmake_version < Version("3.12")
 
         with catch_deprecation_warning(self):

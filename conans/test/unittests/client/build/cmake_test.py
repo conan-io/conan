@@ -189,6 +189,40 @@ class CMakeTest(unittest.TestCase):
             cmake = CMake(conanfile)
             self.assertIn('-G "My CMake Generator"', cmake.command_line)
 
+    def cmake_generator_intel_test(self):
+        settings = Settings.loads(get_default_settings_yml())
+        settings.os = "Windows"
+        settings.compiler = "intel"
+        settings.compiler.version = "19"
+        settings.compiler.base = "Visual Studio"
+        settings.compiler.base.version = "15"
+        settings.arch = "x86_64"
+
+        conanfile = ConanFileMock()
+        conanfile.settings = settings
+
+        cmake = CMake(conanfile)
+        self.assertIn('-G "Visual Studio 15 2017" -A "x64"', cmake.command_line)
+        self.assertIn('-T "Intel C++ Compiler 19.0', cmake.command_line)
+
+    def cmake_custom_generator_intel_test(self):
+        settings = Settings.loads(get_default_settings_yml())
+        settings.os = "Windows"
+        settings.compiler = "intel"
+        settings.compiler.version = "19"
+        settings.compiler.base = "Visual Studio"
+        settings.compiler.base.version = "15"
+        settings.arch = "x86_64"
+
+        conanfile = ConanFileMock()
+        conanfile.settings = settings
+
+        with tools.environment_append({"CONAN_CMAKE_GENERATOR": "My CMake Generator"}):
+            cmake = CMake(conanfile)
+            self.assertIn('-G "My CMake Generator"', cmake.command_line)
+            self.assertNotIn('-G "Visual Studio 15 2017" -A "x64"', cmake.command_line)
+            self.assertNotIn('-T "Intel C++ Compiler 19.0', cmake.command_line)
+
     def cmake_generator_platform_test(self):
         conanfile = ConanFileMock()
         conanfile.settings = Settings()
@@ -870,7 +904,7 @@ build_type: [ Release]
                          '{1} -DCONAN_IN_LOCAL_CACHE="OFF"'
                          ' -DCONAN_COMPILER="{2}" -DCONAN_COMPILER_VERSION="{3}"'
                          ' -DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON"'
-                         ' -DCONAN_EXPORTED="1"' 
+                         ' -DCONAN_EXPORTED="1"'
                          ' -Wno-dev {0}'.format(dot_dir, cross, settings.compiler,
                                                 settings.compiler.version),
                          conanfile.command)
@@ -1273,8 +1307,9 @@ build_type: [ Release]
                            ("iOS", "7.0",),
                            ("watchOS", "4.0",),
                            ("tvOS", "11.0",)])
-    @mock.patch('platform.system', return_value="Macos")
-    def test_cmake_system_version_osx(self, the_os, os_version, _):
+    @mock.patch("platform.system", return_value="Darwin")
+    @mock.patch("conans.client.tools.apple.XCRun.sdk_path", return_value='/opt')
+    def test_cmake_system_version_osx(self, the_os, os_version, _, __):
         settings = Settings.loads(get_default_settings_yml())
         settings.os = the_os
 
@@ -1347,6 +1382,34 @@ build_type: [ Release]
             vcvars_mock.__exit__ = mock.MagicMock(return_value=None)
             cmake.build()
             self.assertTrue(vcvars_mock.called, "vcvars weren't called")
+
+    @parameterized.expand([('Ninja',),
+                           ('NMake Makefiles',),
+                           ('NMake Makefiles JOM',),
+                           ('Unix Makefiles',),
+                           ])
+    def test_compilervars_applied(self, generator):
+        conanfile = ConanFileMock()
+        settings = Settings.loads(get_default_settings_yml())
+        settings.os = "Windows"
+        settings.compiler = "intel"
+        settings.arch = "x86_64"
+        settings.compiler.version = "19"
+        conanfile.settings = settings
+
+        cmake = CMake(conanfile, generator=generator)
+
+        with mock.patch("conans.client.tools.compilervars_dict") as cvars_mock:
+            cvars_mock.__enter__ = mock.MagicMock(return_value=(mock.MagicMock(), None))
+            cvars_mock.__exit__ = mock.MagicMock(return_value=None)
+            cmake.configure()
+            self.assertTrue(cvars_mock.called, "compilervars weren't called")
+
+        with mock.patch("conans.client.tools.compilervars_dict") as cvars_mock:
+            cvars_mock.__enter__ = mock.MagicMock(return_value=(mock.MagicMock(), None))
+            cvars_mock.__exit__ = mock.MagicMock(return_value=None)
+            cmake.build()
+            self.assertTrue(cvars_mock.called, "compilervars weren't called")
 
     def test_cmake_program(self):
         conanfile = ConanFileMock()

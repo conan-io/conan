@@ -57,6 +57,13 @@ def _system_registry_key(key, subkey, query):
             winreg.CloseKey(hkey)
 
 
+def is_win64():
+    from six.moves import winreg  # @UnresolvedImport
+    return _system_registry_key(winreg.HKEY_LOCAL_MACHINE,
+                                r"SOFTWARE\Microsoft\Windows\CurrentVersion",
+                                "ProgramFilesDir (x86)") is not None
+
+
 def _visual_compiler(output, version):
     """"version have to be 8.0, or 9.0 or... anything .0"""
     if platform.system().startswith("CYGWIN"):
@@ -74,14 +81,10 @@ def _visual_compiler(output, version):
     version = "%s.0" % version
 
     from six.moves import winreg  # @UnresolvedImport
-    is_64bits = _system_registry_key(winreg.HKEY_LOCAL_MACHINE,
-                                     r"SOFTWARE\Microsoft\Windows\CurrentVersion",
-                                     "ProgramFilesDir (x86)") is not None
-
-    if is_64bits:
+    if is_win64():
         key_name = r'SOFTWARE\Wow6432Node\Microsoft\VisualStudio\SxS\VC7'
     else:
-        key_name = r'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\SxS\VC7'
+        key_name = r'SOFTWARE\Microsoft\VisualStudio\SxS\VC7'
 
     if _system_registry_key(winreg.HKEY_LOCAL_MACHINE, key_name, version):
         installed_version = Version(version).major(fill=False)
@@ -94,6 +97,16 @@ def _visual_compiler(output, version):
 
 def latest_vs_version_installed(output):
     return latest_visual_studio_version_installed(output=output)
+
+
+MSVS_YEAR = {"16": "2019",
+             "15": "2017",
+             "14": "2015",
+             "12": "2013",
+             "11": "2012",
+             "10": "2010",
+             "9": "2008",
+             "8": "2005"}
 
 
 MSVS_DEFAULT_TOOLSETS = {"16": "v142",
@@ -116,7 +129,13 @@ MSVS_DEFAULT_TOOLSETS_INVERSE = {"v142": "16",
                                  "v80": "8"}
 
 
-def msvs_toolset(settings):
+def msvs_toolset(conanfile):
+    from conans.model.conan_file import ConanFile
+
+    if isinstance(conanfile, ConanFile):
+        settings = conanfile.settings
+    else:
+        settings = conanfile
     toolset = settings.get_safe("compiler.toolset")
     if not toolset:
         vs_version = settings.get_safe("compiler.version")
@@ -463,10 +482,11 @@ def vcvars_command(conanfile=None, arch=None, compiler_version=None, force=False
     return " ".join(command)
 
 
-def vcvars_dict(settings, arch=None, compiler_version=None, force=False, filter_known_paths=False,
-                vcvars_ver=None, winsdk_version=None, only_diff=True, output=None):
+def vcvars_dict(conanfile=None, arch=None, compiler_version=None, force=False,
+                filter_known_paths=False, vcvars_ver=None, winsdk_version=None, only_diff=True,
+                output=None, settings=None):
     known_path_lists = ("include", "lib", "libpath", "path")
-    cmd = vcvars_command(settings, arch=arch,
+    cmd = vcvars_command(conanfile, settings=settings, arch=arch,
                          compiler_version=compiler_version, force=force,
                          vcvars_ver=vcvars_ver, winsdk_version=winsdk_version, output=output)
     cmd += " && set"

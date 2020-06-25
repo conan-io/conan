@@ -7,7 +7,6 @@ from six import StringIO
 
 import conans
 from conans import __version__ as client_version
-from conans.client import packager
 from conans.client.cache.cache import ClientCache
 from conans.client.cmd.build import cmd_build
 from conans.client.cmd.create import create
@@ -20,6 +19,8 @@ from conans.client.cmd.search import Search
 from conans.client.cmd.test import install_build_and_test
 from conans.client.cmd.uploader import CmdUpload
 from conans.client.cmd.user import user_set, users_clean, users_list, token_present
+from conans.client.conanfile.package import run_package_method
+from conans.client.conf.required_version import check_required_conan_version
 from conans.client.graph.graph import RECIPE_EDITABLE
 from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
 from conans.client.graph.graph_manager import GraphManager
@@ -233,6 +234,7 @@ class ConanAPIV1(object):
         # Migration system
         migrator = ClientMigrator(self.cache_folder, Version(client_version), self.out)
         migrator.migrate()
+        check_required_conan_version(self.cache_folder, self.out)
         if not get_env(CONAN_V2_MODE_ENVVAR, False):
             # FIXME Remove in Conan 2.0
             sys.path.append(os.path.join(self.cache_folder, "python"))
@@ -533,7 +535,7 @@ class ConanAPIV1(object):
                          update=update, manifest_folder=manifest_folder,
                          manifest_verify=manifest_verify,
                          manifest_interactive=manifest_interactive,
-                         generators=generators, use_lock=lockfile, recorder=recorder,
+                         generators=generators, lockfile=lockfile, recorder=recorder,
                          local_install=local_install)
             return recorder.get_info(self.app.config.revisions_enabled)
         except ConanException as exc:
@@ -615,6 +617,19 @@ class ConanAPIV1(object):
     @api_method
     def config_home(self):
         return self.cache_folder
+
+    @api_method
+    def config_init(self, force=False):
+        if force:
+            self.app.cache.reset_config()
+            self.app.cache.registry.reset_remotes()
+            self.app.cache.reset_default_profile()
+            self.app.cache.reset_settings()
+        else:
+            self.app.cache.initialize_config()
+            self.app.cache.registry.initialize_remotes()
+            self.app.cache.initialize_default_profile()
+            self.app.cache.initialize_settings()
 
     def _info_args(self, reference_or_path, install_folder, profile_host, profile_build, lockfile=None):
         cwd = get_cwd()
@@ -713,9 +728,9 @@ class ConanAPIV1(object):
                                  "--build-folder and package folder can't be the same")
         conanfile = self.app.graph_manager.load_consumer_conanfile(conanfile_path, install_folder,
                                                                    deps_info_required=True)
-        packager.run_package_method(conanfile, None, source_folder, build_folder, package_folder,
-                                    install_folder, self.app.hook_manager, conanfile_path, None,
-                                    local=True, copy_info=True)
+        run_package_method(conanfile, None, source_folder, build_folder, package_folder,
+                           install_folder, self.app.hook_manager, conanfile_path, None,
+                           local=True, copy_info=True)
 
     @api_method
     def source(self, path, source_folder=None, info_folder=None, cwd=None):
@@ -1195,7 +1210,7 @@ class ConanAPIV1(object):
         layout_abs_path = get_editable_abs_path(layout, cwd, self.app.cache.cache_folder)
         if layout_abs_path:
             self.app.out.success("Using layout file: %s" % layout_abs_path)
-        self.app.cache.editable_packages.add(ref, os.path.dirname(target_path), layout_abs_path)
+        self.app.cache.editable_packages.add(ref, target_path, layout_abs_path)
 
     @api_method
     def editable_remove(self, reference):

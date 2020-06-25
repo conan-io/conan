@@ -86,6 +86,8 @@ class Node(object):
         self._ancestors = _NodeOrderedDict()  # set{ref.name}
         self._id = None  # Unique ID (uuid at the moment) of a node in the graph
         self.graph_lock_node = None  # the locking information can be None
+        self.id_direct_prefs = None
+        self.id_indirect_prefs = None
 
     @property
     def id(self):

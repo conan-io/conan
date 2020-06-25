@@ -1,6 +1,7 @@
 import json
 import os
 import shutil
+
 from datetime import datetime
 from dateutil.tz import gettz
 
@@ -9,12 +10,11 @@ from six.moves.urllib.parse import urlparse
 
 from conans import load
 from conans.client import tools
-from conans.client.cache.remote_registry import load_registry_txt,\
-    migrate_registry_file
+from conans.client.cache.remote_registry import load_registry_txt, migrate_registry_file
 from conans.client.tools import Git
 from conans.client.tools.files import unzip
 from conans.errors import ConanException
-from conans.util.files import mkdir, rmdir, walk, save, touch
+from conans.util.files import mkdir, rmdir, walk, save, touch, remove
 from conans.client.cache.cache import ClientCache
 
 
@@ -62,9 +62,9 @@ def _process_git_repo(config, cache, output):
         _process_folder(config, tmp_folder, cache, output)
 
 
-def _process_zip_file(config, zippath, cache, output, tmp_folder, remove=False):
+def _process_zip_file(config, zippath, cache, output, tmp_folder, first_remove=False):
     unzip(zippath, tmp_folder, output=output)
-    if remove:
+    if first_remove:
         os.unlink(zippath)
     _process_folder(config, tmp_folder, cache, output)
 
@@ -77,11 +77,13 @@ def _handle_conan_conf(current_conan_conf, new_conan_conf_path):
 
 def _filecopy(src, filename, dst):
     # https://github.com/conan-io/conan/issues/6556
+    # This is just a local convenience for "conan config install", using copyfile to avoid
+    # copying with permissions that later cause bugs
     src = os.path.join(src, filename)
     dst = os.path.join(dst, filename)
     if os.path.exists(dst):
-        os.remove(dst)
-    shutil.copy(src, dst)
+        remove(dst)
+    shutil.copyfile(src, dst)
 
 
 def _process_folder(config, folder, cache, output):
@@ -135,7 +137,7 @@ def _process_download(config, cache, output, requester):
         try:
             tools.download(config.uri, zippath, out=output, verify=config.verify_ssl,
                            requester=requester)
-            _process_zip_file(config, zippath, cache, output, tmp_folder, remove=True)
+            _process_zip_file(config, zippath, cache, output, tmp_folder, first_remove=True)
         except Exception as e:
             raise ConanException("Error while installing config from %s\n%s" % (config.uri, str(e)))
 

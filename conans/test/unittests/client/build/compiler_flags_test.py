@@ -8,6 +8,7 @@ from parameterized.parameterized import parameterized
 from conans.client.build.compiler_flags import adjust_path, architecture_flag, build_type_define, \
     build_type_flags, format_defines, format_include_paths, format_libraries, \
     format_library_paths, libcxx_define, libcxx_flag, pic_flag, sysroot_flag
+from conans.test.utils.conanfile import MockSettings
 
 
 class CompilerFlagsTest(unittest.TestCase):
@@ -34,8 +35,22 @@ class CompilerFlagsTest(unittest.TestCase):
                            ("gcc", "ppc32", "AIX", "-maix32"),
                            ("gcc", "ppc64", "AIX", "-maix64"),
                            ])
-    def test_arch_flag(self, compiler, arch, os, flag):
-        self.assertEqual(architecture_flag(compiler=compiler, arch=arch, os=os), flag)
+    def test_arch_flag(self, compiler, arch, the_os, flag):
+        settings = MockSettings({"compiler": compiler,
+                                 "arch": arch,
+                                 "os": the_os})
+        self.assertEqual(architecture_flag(settings), flag)
+
+    @parameterized.expand([("gcc", "x86", "-m32"),
+                           ("gcc", "x86_64", "-m64"),
+                           ("Visual Studio", "x86", "/Qm32"),
+                           ("Visual Studio", "x86_64", "/Qm64"),
+                           ])
+    def test_arch_flag_intel(self, base, arch, flag):
+        settings = MockSettings({"compiler": "intel",
+                                 "compiler.base": base,
+                                 "arch": arch})
+        self.assertEqual(architecture_flag(settings), flag)
 
     @parameterized.expand([("gcc", "libstdc++", "_GLIBCXX_USE_CXX11_ABI=0"),
                            ("gcc", "libstdc++11", "_GLIBCXX_USE_CXX11_ABI=1"),
@@ -45,7 +60,9 @@ class CompilerFlagsTest(unittest.TestCase):
                            ("Visual Studio", None, ""),
                            ])
     def test_libcxx_define(self, compiler, libcxx, define):
-        self.assertEqual(libcxx_define(compiler=compiler, libcxx=libcxx), define)
+        settings = MockSettings({"compiler": compiler,
+                                 "compiler.libcxx": libcxx})
+        self.assertEqual(libcxx_define(settings), define)
 
     @parameterized.expand([("gcc", "libstdc++", ""),
                            ("gcc", "libstdc++11", ""),
@@ -62,7 +79,9 @@ class CompilerFlagsTest(unittest.TestCase):
                            ("sun-cc", "libstdc++", "-library=stdcpp")
                            ])
     def test_libcxx_flags(self, compiler, libcxx, flag):
-        self.assertEqual(libcxx_flag(compiler=compiler, libcxx=libcxx), flag)
+        settings = MockSettings({"compiler": compiler,
+                                 "compiler.libcxx": libcxx})
+        self.assertEqual(libcxx_flag(settings), flag)
 
     @parameterized.expand([("cxx",),
                            ("gpp",),
@@ -73,18 +92,26 @@ class CompilerFlagsTest(unittest.TestCase):
                            ("ecpp",),
                            ("ecpp-ne",)])
     def test_libcxx_flags_qnx(self, libcxx):
-        arch_flags = libcxx_flag(compiler='qcc', libcxx=libcxx)
+        settings = MockSettings({"compiler": "qcc",
+                                 "compiler.libcxx": libcxx})
+        arch_flags = libcxx_flag(settings)
         self.assertEqual(arch_flags, '-Y _%s' % libcxx)
 
     def test_pic_flags(self):
-        flag = pic_flag()
+        flag = pic_flag(MockSettings({}))
         self.assertEqual(flag, '')
 
-        flags = pic_flag(compiler='gcc')
+        flags = pic_flag(MockSettings({"compiler": 'gcc'}))
         self.assertEqual(flags, '-fPIC')
 
-        flags = pic_flag(compiler='Visual Studio')
+        flags = pic_flag(MockSettings({"compiler": 'Visual Studio'}))
         self.assertEqual(flags, "")
+
+        flags = pic_flag(MockSettings({"compiler": 'intel', "compiler.base": "gcc"}))
+        self.assertEqual(flags, '-fPIC')
+
+        flags = pic_flag(MockSettings({"compiler": 'intel', "compiler.base": "Visual Studio"}))
+        self.assertEqual(flags, '')
 
     @parameterized.expand([("Visual Studio", "Debug", None, "-Zi -Ob0 -Od"),
                            ("Visual Studio", "Release", None, "-O2 -Ob2"),
@@ -112,58 +139,78 @@ class CompilerFlagsTest(unittest.TestCase):
                            ("sun-cc", "MinSizeRel", None, "-xO2 -xspace"),
                            ])
     def test_build_type_flags(self, compiler, build_type, vs_toolset, flags):
-        self.assertEqual(' '.join(build_type_flags(compiler=compiler, build_type=build_type, vs_toolset=vs_toolset)),
+        settings = MockSettings({"compiler": compiler,
+                                 "build_type": build_type,
+                                 "compiler.toolset": vs_toolset})
+        self.assertEqual(' '.join(build_type_flags(settings)),
                          flags)
 
     def test_build_type_define(self):
         define = build_type_define(build_type='Release')
         self.assertEqual(define, 'NDEBUG')
 
-    def test_adjust_path(self):
-        self.assertEqual('home/www', adjust_path('home\\www'))
-        self.assertEqual('home/www', adjust_path('home\\www', compiler='gcc'))
+        define = build_type_define(build_type='Debug')
+        self.assertEqual(define, '')
 
-        self.assertEqual('"home/www root"', adjust_path('home\\www root'))
-        self.assertEqual('"home/www root"', adjust_path('home\\www root', compiler='gcc'))
+        define = build_type_define(build_type='MinSizeRel')
+        self.assertEqual(define, 'NDEBUG')
+
+        define = build_type_define(build_type='RelWithDebInfo')
+        self.assertEqual(define, 'NDEBUG')
+
+    def test_adjust_path(self):
+        settings = MockSettings({"compiler": 'gcc'})
+        self.assertEqual('home/www', adjust_path('home\\www', MockSettings({})))
+        self.assertEqual('home/www', adjust_path('home\\www', settings))
+
+        self.assertEqual('"home/www root"', adjust_path('home\\www root', MockSettings({})))
+        self.assertEqual('"home/www root"', adjust_path('home\\www root', settings))
 
     @unittest.skipUnless(platform.system() == "Windows", "requires Windows")
     def test_adjust_path_visual_studio(self):
         #  NOTE : test cannot be run on *nix systems, as adjust_path uses
         # tools.unix_path which is Windows-only
-        self.assertEqual('home\\www', adjust_path('home/www', compiler='Visual Studio'))
+        settings = MockSettings({"compiler": 'Visual Studio'})
+        self.assertEqual('home\\www', adjust_path('home/www', settings))
         self.assertEqual('"home\\www root"',
-                          adjust_path('home/www root', compiler='Visual Studio'))
+                         adjust_path('home/www root', settings))
         self.assertEqual('home/www',
-                          adjust_path('home\\www', compiler='Visual Studio', win_bash=True))
+                         adjust_path('home\\www', settings, win_bash=True))
         self.assertEqual('home/www',
-                          adjust_path('home/www', compiler='Visual Studio', win_bash=True))
+                         adjust_path('home/www', settings, win_bash=True))
         self.assertEqual('"home/www root"',
-                          adjust_path('home\\www root', compiler='Visual Studio', win_bash=True))
+                         adjust_path('home\\www root', settings, win_bash=True))
         self.assertEqual('"home/www root"',
-                          adjust_path('home/www root', compiler='Visual Studio', win_bash=True))
+                         adjust_path('home/www root', settings, win_bash=True))
 
     def test_sysroot_flag(self):
-        sysroot = sysroot_flag(sysroot=None)
+        sysroot = sysroot_flag(sysroot=None, settings=MockSettings({}))
         self.assertEqual(sysroot, "")
 
-        sysroot = sysroot_flag(sysroot='sys/root', compiler='Visual Studio')
+        sysroot = sysroot_flag(sysroot='sys/root',
+                               settings=MockSettings({"compiler": "Visual Studio"}))
         self.assertEqual(sysroot, "")
 
-        sysroot = sysroot_flag(sysroot='sys/root')
+        sysroot = sysroot_flag(sysroot='sys/root', settings=MockSettings({}))
         self.assertEqual(sysroot, "--sysroot=sys/root")
 
     def test_format_defines(self):
         self.assertEqual(['-DFOO', '-DBAR=1'], format_defines(['FOO', 'BAR=1']))
 
     def test_format_include_paths(self):
-        self.assertEqual(['-Ipath1', '-I"with spaces"'], format_include_paths(['path1', 'with spaces']))
+        self.assertEqual(['-Ipath1', '-I"with spaces"'],
+                         format_include_paths(['path1', 'with spaces'], MockSettings({})))
 
     def test_format_library_paths(self):
-        self.assertEqual(['-Lpath1', '-L"with spaces"'], format_library_paths(['path1', 'with spaces']))
+        self.assertEqual(['-Lpath1', '-L"with spaces"'],
+                         format_library_paths(['path1', 'with spaces'], MockSettings({})))
         self.assertEqual(['-LIBPATH:path1', '-LIBPATH:"with spaces"'],
-                          format_library_paths(['path1', 'with spaces'], compiler='Visual Studio'))
+                         format_library_paths(['path1', 'with spaces'],
+                                              MockSettings({"compiler": "Visual Studio"})))
 
     def test_format_libraries(self):
-        self.assertEqual(['-llib1', '-llib2'], format_libraries(['lib1', 'lib2']))
-        self.assertEqual(['lib1.lib', 'lib2.lib'], format_libraries(['lib1', 'lib2'],
-                                                                     compiler='Visual Studio'))
+        self.assertEqual(['-llib1', '-llib2'],
+                         format_libraries(['lib1', 'lib2'], MockSettings({})))
+        self.assertEqual(['lib1.lib', 'lib2.lib'],
+                         format_libraries(['lib1', 'lib2'],
+                                          MockSettings({"compiler": "Visual Studio"})))

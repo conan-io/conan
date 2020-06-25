@@ -260,7 +260,13 @@ class Command(object):
         result = self._conan.inspect(args.path_or_reference, attributes, args.remote, quiet=quiet)
         Printer(self._out).print_inspect(result, raw=args.raw)
         if args.json:
-            json_output = json.dumps(result)
+
+            def dump_custom_types(obj):
+                if isinstance(obj, set):
+                    return sorted(list(obj))
+                raise TypeError
+
+            json_output = json.dumps(result, default=dump_custom_types)
             if not os.path.isabs(args.json):
                 json_output_file = os.path.join(get_cwd(), args.json)
             else:
@@ -550,6 +556,7 @@ class Command(object):
                                                                   'from a local or remote zip file')
         rm_subparser = subparsers.add_parser('rm', help='Remove an existing config element')
         set_subparser = subparsers.add_parser('set', help='Set a value for a configuration item')
+        init_subparser = subparsers.add_parser('init', help='Initializes Conan configuration files')
 
         get_subparser.add_argument("item", nargs="?", help="Item to print")
         home_subparser.add_argument("-j", "--json", default=None, action=OnceArgument,
@@ -571,6 +578,8 @@ class Command(object):
                                        help='Install to that path in the conan cache')
         rm_subparser.add_argument("item", help="Item to remove")
         set_subparser.add_argument("item", help="'item=value' to set")
+        init_subparser.add_argument('-f', '--force', default=False, action='store_true',
+                                    help='Overwrite existing Conan configuration files')
 
         args = parser.parse_args(*args)
 
@@ -598,6 +607,8 @@ class Command(object):
             return self._conan.config_install(args.item, verify_ssl, args.type, args.args,
                                               source_folder=args.source_folder,
                                               target_folder=args.target_folder)
+        elif args.subcommand == 'init':
+            return self._conan.config_init(force=args.force)
 
     def info(self, *args):
         """
@@ -729,7 +740,13 @@ class Command(object):
                                      % (only, str_only_options))
 
             if args.graph:
-                self._outputer.info_graph(args.graph, deps_graph, get_cwd())
+                if args.graph.endswith(".html"):
+                    template = self._conan.app.cache.get_template(templates.INFO_GRAPH_HTML,
+                                                                  user_overrides=True)
+                else:
+                    template = self._conan.app.cache.get_template(templates.INFO_GRAPH_DOT,
+                                                                  user_overrides=True)
+                self._outputer.info_graph(args.graph, deps_graph, get_cwd(), template=template)
             if args.json:
                 json_arg = True if args.json == "1" else args.json
                 self._outputer.json_info(deps_graph, json_arg, get_cwd(), show_paths=args.paths)
@@ -1314,7 +1331,8 @@ class Command(object):
                                                    remote_name=args.remote,
                                                    outdated=args.outdated)
                 # search is done for one reference
-                template = self._conan.app.cache.get_template(templates.SEARCH_TABLE_HTML)
+                template = self._conan.app.cache.get_template(templates.SEARCH_TABLE_HTML,
+                                                              user_overrides=True)
                 self._outputer.print_search_packages(info["results"], ref, args.query,
                                                      args.table, args.raw, outdated=args.outdated,
                                                      template=template)
@@ -1365,7 +1383,9 @@ class Command(object):
         parser.add_argument("--skip-upload", action='store_true', default=False,
                             help='Do not upload anything, just run the checks and the compression')
         parser.add_argument("--force", action='store_true', default=False,
-                            help='Do not check conan recipe date, override remote with local')
+                            help='Ignore checks before uploading the recipe: it will bypass missing'
+                                 ' fields in the scm attribute and it will override remote recipe'
+                                 ' with local regardless of recipe date')
         parser.add_argument("--check", action='store_true', default=False,
                             help='Perform an integrity check, using the manifests, before upload')
         parser.add_argument('-c', '--confirm', default=False, action='store_true',

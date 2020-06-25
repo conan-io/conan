@@ -5,7 +5,9 @@ import unittest
 from six import StringIO
 
 from conans import __version__
-from conans.client.migrations import migrate_plugins_to_hooks, migrate_to_default_profile
+from conans.client.cache.editable import EDITABLE_PACKAGES_FILE
+from conans.client.migrations import migrate_plugins_to_hooks, migrate_to_default_profile, \
+    migrate_editables_use_conanfile_name
 from conans.client.output import ConanOutput
 from conans.client.tools.version import Version
 from conans.migrations import CONAN_VERSION
@@ -13,9 +15,22 @@ from conans.model.ref import ConanFileReference
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, GenConanfile
 from conans.util.files import load, save
+from conans.client import migrations_settings
+from conans.client.conf import get_default_settings_yml
 
 
 class TestMigrations(unittest.TestCase):
+
+    def test_migrations_matches_config(self):
+        # Check that the current settings matches what is stored in the migrations file
+        current_settings = get_default_settings_yml()
+        v = Version(__version__)
+        var_name = "settings_{}".format("_".join([v.major, v.minor, v.patch]))
+
+        self.assertTrue(hasattr(migrations_settings, var_name),
+                        "Migrations var '{}' not found".format(var_name))
+        migrations_settings_content = getattr(migrations_settings, var_name)
+        self.assertListEqual(current_settings.splitlines(), migrations_settings_content.splitlines())
 
     def is_there_var_for_settings_previous_version_test(self):
         from conans import __version__ as current_version
@@ -154,7 +169,7 @@ the old general
             cache = TestClient(cache_folder=old_user_home, cpu_count=False).cache
             assert old_conan_folder == cache.cache_folder
             return old_user_home, old_conan_folder, old_conf_path, \
-                old_attribute_checker_plugin, cache
+                   old_attribute_checker_plugin, cache
 
         output = ConanOutput(StringIO())
         _, old_cf, old_cp, old_acp, cache = _create_old_layout()
@@ -175,3 +190,27 @@ the old general
         conf_content = load(old_cp)
         self.assertNotIn("[plugins]", conf_content)
         self.assertIn("[hooks]", conf_content)
+
+    def test_migration_editables_to_conanfile_name(self):
+        # Create the old editable_packages.json file (and user workspace)
+        tmp_folder = temp_folder()
+        conanfile1 = os.path.join(tmp_folder, 'dir1', 'conanfile.py')
+        conanfile2 = os.path.join(tmp_folder, 'dir2', 'conanfile.py')
+        save(conanfile1, "anything")
+        save(conanfile2, "anything")
+        save(os.path.join(tmp_folder, EDITABLE_PACKAGES_FILE),
+             json.dumps({"name/version": {"path": os.path.dirname(conanfile1), "layout": None},
+                         "other/version@user/testing": {"path": os.path.dirname(conanfile2),
+                                                        "layout": "anyfile"}}))
+
+        cache = TestClient(cache_folder=tmp_folder).cache
+        migrate_editables_use_conanfile_name(cache, None)
+
+        # Now we have same info and full paths
+        with open(os.path.join(tmp_folder, EDITABLE_PACKAGES_FILE)) as f:
+            data = json.load(f)
+
+        self.assertEqual(data["name/version"]["path"], conanfile1)
+        self.assertEqual(data["name/version"]["layout"], None)
+        self.assertEqual(data["other/version@user/testing"]["path"], conanfile2)
+        self.assertEqual(data["other/version@user/testing"]["layout"], "anyfile")

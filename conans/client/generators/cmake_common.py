@@ -168,22 +168,27 @@ _target_template = """
     # Property INTERFACE_LINK_FLAGS do not work, necessary to add to INTERFACE_LINK_LIBRARIES
     set_property(TARGET {name} PROPERTY INTERFACE_LINK_LIBRARIES ${{CONAN_PACKAGE_TARGETS_{uname}}} ${{_CONAN_PKG_LIBS_{uname}_DEPENDENCIES}}
                                                                  $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:${{CONAN_SHARED_LINKER_FLAGS_{uname}_LIST}}>
+                                                                 $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:${{CONAN_SHARED_LINKER_FLAGS_{uname}_LIST}}>
                                                                  $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:${{CONAN_EXE_LINKER_FLAGS_{uname}_LIST}}>
 
                                                                  $<$<CONFIG:Release>:${{CONAN_PACKAGE_TARGETS_{uname}_RELEASE}} ${{_CONAN_PKG_LIBS_{uname}_DEPENDENCIES_RELEASE}}
                                                                  $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:${{CONAN_SHARED_LINKER_FLAGS_{uname}_RELEASE_LIST}}>
+                                                                 $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:${{CONAN_SHARED_LINKER_FLAGS_{uname}_RELEASE_LIST}}>
                                                                  $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:${{CONAN_EXE_LINKER_FLAGS_{uname}_RELEASE_LIST}}>>
 
                                                                  $<$<CONFIG:RelWithDebInfo>:${{CONAN_PACKAGE_TARGETS_{uname}_RELWITHDEBINFO}} ${{_CONAN_PKG_LIBS_{uname}_DEPENDENCIES_RELWITHDEBINFO}}
                                                                  $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:${{CONAN_SHARED_LINKER_FLAGS_{uname}_RELWITHDEBINFO_LIST}}>
+                                                                 $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:${{CONAN_SHARED_LINKER_FLAGS_{uname}_RELWITHDEBINFO_LIST}}>
                                                                  $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:${{CONAN_EXE_LINKER_FLAGS_{uname}_RELWITHDEBINFO_LIST}}>>
 
                                                                  $<$<CONFIG:MinSizeRel>:${{CONAN_PACKAGE_TARGETS_{uname}_MINSIZEREL}} ${{_CONAN_PKG_LIBS_{uname}_DEPENDENCIES_MINSIZEREL}}
                                                                  $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:${{CONAN_SHARED_LINKER_FLAGS_{uname}_MINSIZEREL_LIST}}>
+                                                                 $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:${{CONAN_SHARED_LINKER_FLAGS_{uname}_MINSIZEREL_LIST}}>
                                                                  $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:${{CONAN_EXE_LINKER_FLAGS_{uname}_MINSIZEREL_LIST}}>>
 
                                                                  $<$<CONFIG:Debug>:${{CONAN_PACKAGE_TARGETS_{uname}_DEBUG}} ${{_CONAN_PKG_LIBS_{uname}_DEPENDENCIES_DEBUG}}
                                                                  $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:${{CONAN_SHARED_LINKER_FLAGS_{uname}_DEBUG_LIST}}>
+                                                                 $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:${{CONAN_SHARED_LINKER_FLAGS_{uname}_DEBUG_LIST}}>
                                                                  $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:${{CONAN_EXE_LINKER_FLAGS_{uname}_DEBUG_LIST}}>>)
     set_property(TARGET {name} PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${{CONAN_INCLUDE_DIRS_{uname}}}
                                                                       $<$<CONFIG:Release>:${{CONAN_INCLUDE_DIRS_{uname}_RELEASE}}>
@@ -242,9 +247,9 @@ class CMakeCommonMacros:
         function(conan_get_policy policy_id policy)
             if(POLICY "${policy_id}")
                 cmake_policy(GET "${policy_id}" _policy)
-                set(policy "${_policy}" PARENT_SCOPE)
+                set(${policy} "${_policy}" PARENT_SCOPE)
             else()
-                set(policy "" PARENT_SCOPE)
+                set(${policy} "" PARENT_SCOPE)
             endif()
         endfunction()
     """)
@@ -363,8 +368,9 @@ class CMakeCommonMacros:
                 #     libMyLib0.dylib (compatibility version 0.0.0, current version 0.0.0)
                 #     /usr/lib/libc++.1.dylib (compatibility version 1.0.0, current version 120.0.0)
                 #     /usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1197.1.1)
-                set(CMAKE_SKIP_RPATH 1)  # AVOID RPATH FOR *.dylib, ALL LIBS BETWEEN THEM AND THE EXE
-                                         # SHOULD BE ON THE LINKER RESOLVER PATH (./ IS ONE OF THEM)
+                # AVOID RPATH FOR *.dylib, ALL LIBS BETWEEN THEM AND THE EXE
+                # SHOULD BE ON THE LINKER RESOLVER PATH (./ IS ONE OF THEM)
+                set(CMAKE_SKIP_RPATH 1 CACHE BOOL "rpaths" FORCE)
                 # Policy CMP0068
                 # We want the old behavior, in CMake >= 3.9 CMAKE_SKIP_RPATH won't affect the install_name in OSX
                 set(CMAKE_INSTALL_NAME_DIR "")
@@ -422,7 +428,8 @@ class CMakeCommonMacros:
             message(FATAL_ERROR "Detected a mismatch for the compiler version between your conan profile settings and CMake: \\n"
                                 "Compiler version specified in your conan profile: ${CONAN_COMPILER_VERSION}\\n"
                                 "Compiler version detected in CMake: ${VERSION_MAJOR}.${VERSION_MINOR}\\n"
-                                "Please check your conan profile settings (conan profile show [default|your_profile_name])"
+                                "Please check your conan profile settings (conan profile show [default|your_profile_name])\\n"
+                                "P.S. You may set CONAN_DISABLE_CHECK_COMPILER CMake variable in order to disable this check."
                    )
         endmacro()
     """)
@@ -487,29 +494,34 @@ class CMakeCommonMacros:
                     conan_error_compiler_version()
                 endif()
             elseif(CONAN_COMPILER STREQUAL "gcc")
+                conan_split_version(${CONAN_COMPILER_VERSION} CONAN_COMPILER_MAJOR CONAN_COMPILER_MINOR)
                 set(_CHECK_VERSION ${VERSION_MAJOR}.${VERSION_MINOR})
+                set(_CONAN_VERSION ${CONAN_COMPILER_MAJOR}.${CONAN_COMPILER_MINOR})
                 if(NOT ${CONAN_COMPILER_VERSION} VERSION_LESS 5.0)
                     conan_message(STATUS "Conan: Compiler GCC>=5, checking major version ${CONAN_COMPILER_VERSION}")
                     conan_split_version(${CONAN_COMPILER_VERSION} CONAN_COMPILER_MAJOR CONAN_COMPILER_MINOR)
                     if("${CONAN_COMPILER_MINOR}" STREQUAL "")
                         set(_CHECK_VERSION ${VERSION_MAJOR})
+                        set(_CONAN_VERSION ${CONAN_COMPILER_MAJOR})
                     endif()
                 endif()
                 conan_message(STATUS "Conan: Checking correct version: ${_CHECK_VERSION}")
-                if(NOT ${_CHECK_VERSION} VERSION_EQUAL CONAN_COMPILER_VERSION)
+                if(NOT ${_CHECK_VERSION} VERSION_EQUAL ${_CONAN_VERSION})
                     conan_error_compiler_version()
                 endif()
             elseif(CONAN_COMPILER STREQUAL "clang")
+                conan_split_version(${CONAN_COMPILER_VERSION} CONAN_COMPILER_MAJOR CONAN_COMPILER_MINOR)
                 set(_CHECK_VERSION ${VERSION_MAJOR}.${VERSION_MINOR})
+                set(_CONAN_VERSION ${CONAN_COMPILER_MAJOR}.${CONAN_COMPILER_MINOR})
                 if(NOT ${CONAN_COMPILER_VERSION} VERSION_LESS 8.0)
                     conan_message(STATUS "Conan: Compiler Clang>=8, checking major version ${CONAN_COMPILER_VERSION}")
-                    conan_split_version(${CONAN_COMPILER_VERSION} CONAN_COMPILER_MAJOR CONAN_COMPILER_MINOR)
                     if("${CONAN_COMPILER_MINOR}" STREQUAL "")
                         set(_CHECK_VERSION ${VERSION_MAJOR})
+                        set(_CONAN_VERSION ${CONAN_COMPILER_MAJOR})
                     endif()
                 endif()
                 conan_message(STATUS "Conan: Checking correct version: ${_CHECK_VERSION}")
-                if(NOT ${_CHECK_VERSION} VERSION_EQUAL CONAN_COMPILER_VERSION)
+                if(NOT ${_CHECK_VERSION} VERSION_EQUAL ${_CONAN_VERSION})
                     conan_error_compiler_version()
                 endif()
             elseif(CONAN_COMPILER STREQUAL "apple-clang" OR CONAN_COMPILER STREQUAL "sun-cc")
@@ -518,13 +530,13 @@ class CMakeCommonMacros:
                    conan_error_compiler_version()
                 endif()
             elseif(CONAN_COMPILER STREQUAL "intel")
+                conan_split_version(${CONAN_COMPILER_VERSION} CONAN_COMPILER_MAJOR CONAN_COMPILER_MINOR)
                 if(NOT ${CONAN_COMPILER_VERSION} VERSION_LESS 19.1)
-                    conan_split_version(${CONAN_COMPILER_VERSION} CONAN_COMPILER_MAJOR CONAN_COMPILER_MINOR)
                     if(NOT ${VERSION_MAJOR}.${VERSION_MINOR} VERSION_EQUAL ${CONAN_COMPILER_MAJOR}.${CONAN_COMPILER_MINOR})
                        conan_error_compiler_version()
                     endif()
                 else()
-                    if(NOT ${VERSION_MAJOR} VERSION_EQUAL ${CONAN_COMPILER_VERSION})
+                    if(NOT ${VERSION_MAJOR} VERSION_EQUAL ${CONAN_COMPILER_MAJOR})
                        conan_error_compiler_version()
                     endif()
                 endif()
@@ -825,7 +837,7 @@ class CMakeCommonMacros:
                         set(CONAN_FRAMEWORK_DIRS${SUFFIX} ${CONAN_FRAMEWORK_DIRS${SUFFIX}_RELEASE} ${CONAN_FRAMEWORK_DIRS${SUFFIX}})
                     elseif(${CMAKE_BUILD_TYPE} MATCHES "RelWithDebInfo")
                         set(CONAN_FRAMEWORKS${SUFFIX} ${CONAN_FRAMEWORKS${SUFFIX}_RELWITHDEBINFO} ${CONAN_FRAMEWORKS${SUFFIX}})
-                        set(CONAN_FRAMEWORK_DIRS${SUFFIX} ${CONAN_FRAMEWORK_DIRS_RELWITHDEBINFO} ${CONAN_FRAMEWORK_DIRS})
+                        set(CONAN_FRAMEWORK_DIRS${SUFFIX} ${CONAN_FRAMEWORK_DIRS${SUFFIX}_RELWITHDEBINFO} ${CONAN_FRAMEWORK_DIRS${SUFFIX}})
                     elseif(${CMAKE_BUILD_TYPE} MATCHES "MinSizeRel")
                         set(CONAN_FRAMEWORKS${SUFFIX} ${CONAN_FRAMEWORKS${SUFFIX}_MINSIZEREL} ${CONAN_FRAMEWORKS${SUFFIX}})
                         set(CONAN_FRAMEWORK_DIRS${SUFFIX} ${CONAN_FRAMEWORK_DIRS${SUFFIX}_MINSIZEREL} ${CONAN_FRAMEWORK_DIRS${SUFFIX}})

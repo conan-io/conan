@@ -47,8 +47,9 @@ class _MockSettings(object):
 
 class CMakeGeneratorTest(unittest.TestCase):
 
-    def _extract_macro(self, name, text):
-        pattern = ".*(macro\(%s\).*?endmacro\(\)).*" % name
+    @staticmethod
+    def _extract_macro(name, text):
+        pattern = r".*(macro\(%s\).*?endmacro\(\)).*" % name
         return re.sub(pattern, r"\1", text, flags=re.DOTALL)
 
     def variables_setup_test(self):
@@ -306,8 +307,8 @@ endmacro()""", macro)
         self.assertIn('set(CONAN_SETTINGS_OS "Windows")', cmake_lines)
 
     def cmake_find_package_multi_definitions_test(self):
-        """ CMAKE_PREFIX_PATH and CMAKE_MODULE_PATH must be present in cmake_find_package_multi definitions
-        """
+        # CMAKE_PREFIX_PATH and CMAKE_MODULE_PATH must be in cmake_find_package_multi definitions
+
         settings_mock = _MockSettings(build_type="Release")
         conanfile = ConanFile(TestBufferConanOutput(), None)
         conanfile.initialize(settings_mock, EnvValues())

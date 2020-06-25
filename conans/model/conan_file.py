@@ -1,5 +1,6 @@
 import os
 from contextlib import contextmanager
+from six import string_types
 
 import six
 
@@ -271,7 +272,9 @@ class ConanFile(object):
             # When using_build_profile the required environment is already applied through 'conanfile.env'
             # in the contextmanager 'get_env_context_manager'
             with tools.run_environment(self) if not self._conan_using_build_profile else no_op():
-                if OSInfo().is_macos:
+                if OSInfo().is_macos and isinstance(command, string_types):
+                    # Security policy on macOS clears this variable when executing /bin/sh. To
+                    # keep its value, set it again inside the shell when running the command.
                     command = 'DYLD_LIBRARY_PATH="%s" DYLD_FRAMEWORK_PATH="%s" %s' % \
                               (os.environ.get('DYLD_LIBRARY_PATH', ''),
                                os.environ.get("DYLD_FRAMEWORK_PATH", ''),

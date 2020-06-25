@@ -5,16 +5,20 @@ from conans.test.utils.conanfile import MockSettings
 from conans.tools import cppstd_flag
 
 
-def _make_cppstd_flag(compiler, compiler_version, cppstd):
+def _make_cppstd_flag(compiler, compiler_version, cppstd=None, compiler_base=None):
     settings = MockSettings({"compiler": compiler,
                              "compiler.version": compiler_version,
                              "compiler.cppstd": cppstd})
+    if compiler_base:
+        settings.values["compiler.base"] = compiler_base
     return cppstd_flag(settings)
 
 
-def _make_cppstd_default(compiler, compiler_version):
+def _make_cppstd_default(compiler, compiler_version, compiler_base=None):
     settings = MockSettings({"compiler": compiler,
                              "compiler.version": compiler_version})
+    if compiler_base:
+        settings.values["compiler.base"] = compiler_base
     return cppstd_default(settings)
 
 
@@ -211,3 +215,83 @@ class CompilerFlagsTest(unittest.TestCase):
         self.assertEqual(_make_cppstd_default("Visual Studio", "13"), None)
         self.assertEqual(_make_cppstd_default("Visual Studio", "14"), "14")
         self.assertEqual(_make_cppstd_default("Visual Studio", "15"), "14")
+
+    def test_intel_visual_cppstd_defaults(self):
+        self.assertEquals(_make_cppstd_default("intel", "19", "Visual Studio"), None)
+
+    def test_intel_gcc_cppstd_defaults(self):
+        self.assertEquals(_make_cppstd_default("intel", "19", "gcc"), 'gnu98')
+
+    def test_intel_visual_cppstd_flag(self):
+        self.assertEquals(_make_cppstd_flag("intel", "19.1", "gnu98", "Visual Studio"), None)
+        self.assertEquals(_make_cppstd_flag("intel", "19.1", "11", "Visual Studio"), '/Qstd=c++11')
+        self.assertEquals(_make_cppstd_flag("intel", "19.1", "14", "Visual Studio"), '/Qstd=c++14')
+        self.assertEquals(_make_cppstd_flag("intel", "19.1", "17", "Visual Studio"), '/Qstd=c++17')
+        self.assertEquals(_make_cppstd_flag("intel", "19.1", "20", "Visual Studio"), '/Qstd=c++20')
+
+        self.assertEquals(_make_cppstd_flag("intel", "19", "gnu98", "Visual Studio"), None)
+        self.assertEquals(_make_cppstd_flag("intel", "19", "11", "Visual Studio"), '/Qstd=c++11')
+        self.assertEquals(_make_cppstd_flag("intel", "19", "14", "Visual Studio"), '/Qstd=c++14')
+        self.assertEquals(_make_cppstd_flag("intel", "19", "17", "Visual Studio"), '/Qstd=c++17')
+        self.assertEquals(_make_cppstd_flag("intel", "19", "20", "Visual Studio"), None)
+
+        self.assertEquals(_make_cppstd_flag("intel", "17", "gnu98", "Visual Studio"), None)
+        self.assertEquals(_make_cppstd_flag("intel", "17", "11", "Visual Studio"), '/Qstd=c++11')
+        self.assertEquals(_make_cppstd_flag("intel", "17", "14", "Visual Studio"), '/Qstd=c++14')
+        self.assertEquals(_make_cppstd_flag("intel", "17", "17", "Visual Studio"), None)
+        self.assertEquals(_make_cppstd_flag("intel", "17", "20", "Visual Studio"), None)
+
+        self.assertEquals(_make_cppstd_flag("intel", "15", "gnu98", "Visual Studio"), None)
+        self.assertEquals(_make_cppstd_flag("intel", "15", "11", "Visual Studio"), '/Qstd=c++11')
+        self.assertEquals(_make_cppstd_flag("intel", "15", "14", "Visual Studio"), None)
+        self.assertEquals(_make_cppstd_flag("intel", "15", "17", "Visual Studio"), None)
+        self.assertEquals(_make_cppstd_flag("intel", "15", "20", "Visual Studio"), None)
+
+        self.assertEquals(_make_cppstd_flag("intel", "12", "gnu98", "Visual Studio"), None)
+        self.assertEquals(_make_cppstd_flag("intel", "12", "11", "Visual Studio"), '/Qstd=c++0x')
+        self.assertEquals(_make_cppstd_flag("intel", "12", "14", "Visual Studio"), None)
+        self.assertEquals(_make_cppstd_flag("intel", "12", "17", "Visual Studio"), None)
+        self.assertEquals(_make_cppstd_flag("intel", "12", "20", "Visual Studio"), None)
+
+        self.assertEquals(_make_cppstd_flag("intel", "11", "gnu98", "Visual Studio"), None)
+        self.assertEquals(_make_cppstd_flag("intel", "11", "11", "Visual Studio"), None)
+        self.assertEquals(_make_cppstd_flag("intel", "11", "14", "Visual Studio"), None)
+        self.assertEquals(_make_cppstd_flag("intel", "11", "17", "Visual Studio"), None)
+        self.assertEquals(_make_cppstd_flag("intel", "11", "20", "Visual Studio"), None)
+
+    def test_intel_gcc_cppstd_flag(self):
+        self.assertEquals(_make_cppstd_flag("intel", "19.1", "gnu98", "gcc"), '-std=gnu++98')
+        self.assertEquals(_make_cppstd_flag("intel", "19.1", "11", "gcc"), '-std=c++11')
+        self.assertEquals(_make_cppstd_flag("intel", "19.1", "14", "gcc"), '-std=c++14')
+        self.assertEquals(_make_cppstd_flag("intel", "19.1", "17", "gcc"), '-std=c++17')
+        self.assertEquals(_make_cppstd_flag("intel", "19.1", "20", "gcc"), '-std=c++20')
+
+        self.assertEquals(_make_cppstd_flag("intel", "19", "gnu98", "gcc"), '-std=gnu++98')
+        self.assertEquals(_make_cppstd_flag("intel", "19", "11", "gcc"), '-std=c++11')
+        self.assertEquals(_make_cppstd_flag("intel", "19", "14", "gcc"), '-std=c++14')
+        self.assertEquals(_make_cppstd_flag("intel", "19", "17", "gcc"), '-std=c++17')
+        self.assertEquals(_make_cppstd_flag("intel", "19", "20", "gcc"), None)
+
+        self.assertEquals(_make_cppstd_flag("intel", "17", "gnu98", "gcc"), '-std=gnu++98')
+        self.assertEquals(_make_cppstd_flag("intel", "17", "11", "gcc"), '-std=c++11')
+        self.assertEquals(_make_cppstd_flag("intel", "17", "14", "gcc"), '-std=c++14')
+        self.assertEquals(_make_cppstd_flag("intel", "17", "17", "gcc"), None)
+        self.assertEquals(_make_cppstd_flag("intel", "17", "20", "gcc"), None)
+
+        self.assertEquals(_make_cppstd_flag("intel", "15", "gnu98", "gcc"), '-std=gnu++98')
+        self.assertEquals(_make_cppstd_flag("intel", "15", "11", "gcc"), '-std=c++11')
+        self.assertEquals(_make_cppstd_flag("intel", "15", "14", "gcc"), None)
+        self.assertEquals(_make_cppstd_flag("intel", "15", "17", "gcc"), None)
+        self.assertEquals(_make_cppstd_flag("intel", "15", "20", "gcc"), None)
+
+        self.assertEquals(_make_cppstd_flag("intel", "12", "gnu98", "gcc"), '-std=gnu++98')
+        self.assertEquals(_make_cppstd_flag("intel", "12", "11", "gcc"), '-std=c++0x')
+        self.assertEquals(_make_cppstd_flag("intel", "12", "14", "gcc"), None)
+        self.assertEquals(_make_cppstd_flag("intel", "12", "17", "gcc"), None)
+        self.assertEquals(_make_cppstd_flag("intel", "12", "20", "gcc"), None)
+
+        self.assertEquals(_make_cppstd_flag("intel", "11", "gnu98", "gcc"), '-std=gnu++98')
+        self.assertEquals(_make_cppstd_flag("intel", "11", "11", "gcc"), None)
+        self.assertEquals(_make_cppstd_flag("intel", "11", "14", "gcc"), None)
+        self.assertEquals(_make_cppstd_flag("intel", "11", "17", "gcc"), None)
+        self.assertEquals(_make_cppstd_flag("intel", "11", "20", "gcc"), None)

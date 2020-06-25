@@ -51,7 +51,7 @@ class ConanRunner(object):
             log_filepath = None
 
         # Log the command call in output and logger
-        call_message = "\n----Running------\n> %s\n-----------------\n" % command
+        call_message = "\n----Running------\n> %s\n-----------------\n" % (command,)
         if self._print_commands_to_output and stream_output and self._log_run_to_output:
             stream_output.write(call_message)
 
@@ -62,7 +62,7 @@ class ConanRunner(object):
                 return self._simple_os_call(command, cwd)
             elif log_filepath:
                 if stream_output:
-                    stream_output.write("Logging command output to file '%s'\n" % log_filepath)
+                    stream_output.write("Logging command output to file '%s'\n" % (log_filepath,))
                 with open(log_filepath, "a+") as log_handler:
                     if self._print_commands_to_output:
                         log_handler.write(call_message)
@@ -76,7 +76,7 @@ class ConanRunner(object):
             # piping both stdout, stderr and then later only reading one will hang the process
             # if the other fills the pip. So piping stdout, and redirecting stderr to stdout,
             # so both are merged and use just a single get_stream_lines() call
-            proc = Popen(command, shell=True, stdout=PIPE, stderr=STDOUT, cwd=cwd)
+            proc = Popen(command, shell=isinstance(command, six.string_types), stdout=PIPE, stderr=STDOUT, cwd=cwd)
         except Exception as e:
             raise ConanException("Error while executing '%s'\n\t%s" % (command, str(e)))
 
@@ -108,12 +108,12 @@ class ConanRunner(object):
 
     def _simple_os_call(self, command, cwd):
         if not cwd:
-            return os.system(command)
+            return subprocess.call(command, shell=isinstance(command, six.string_types))
         else:
             try:
                 old_dir = get_cwd()
                 os.chdir(cwd)
-                result = os.system(command)
+                result = subprocess.call(command, shell=isinstance(command, six.string_types))
             except Exception as e:
                 raise ConanException("Error while executing"
                                      " '%s'\n\t%s" % (command, str(e)))

@@ -26,7 +26,7 @@ class PkgConfigGenerator(Generator):
 
     @property
     def filename(self):
-        pass
+        return None
 
     @property
     def compiler(self):
@@ -69,9 +69,10 @@ class PkgConfigGenerator(Generator):
         if not hasattr(self.conanfile, 'settings_build'):
             os_build = os_build or self.conanfile.settings.get_safe("os")
 
-        rpaths = rpath_flags(os_build, self.compiler, ["${%s}" % libdir for libdir in libdir_vars])
-        frameworks = format_frameworks(cpp_info.frameworks, compiler=self.compiler)
-        framework_paths = format_framework_paths(cpp_info.framework_paths, compiler=self.compiler)
+        rpaths = rpath_flags(self.conanfile.settings, os_build, ["${%s}" % libdir for libdir in libdir_vars])
+        frameworks = format_frameworks(cpp_info.frameworks, self.conanfile.settings)
+        framework_paths = format_framework_paths(cpp_info.framework_paths, self.conanfile.settings)
+
         lines.append("Libs: %s" % _concat_if_not_empty([libdirs_flags,
                                                         libnames_flags,
                                                         shared_flags,
@@ -114,13 +115,13 @@ def _generate_dir_lines(prefix_path, varname, dirs):
     varnames = []
     for i, directory in enumerate(dirs):
         directory = os.path.normpath(directory).replace("\\", "/")
-        varname = varname if i == 0 else "%s%d" % (varname, (i + 2))
+        name = varname if i == 0 else "%s%d" % (varname, (i + 1))
         prefix = ""
         if not os.path.isabs(directory):
             prefix = "${prefix}/"
         elif directory.startswith(prefix_path):
             prefix = "${prefix}/"
             directory = os.path.relpath(directory, prefix_path)
-        lines.append("%s=%s%s" % (varname, prefix, directory))
-        varnames.append(varname)
+        lines.append("%s=%s%s" % (name, prefix, directory))
+        varnames.append(name)
     return lines, varnames

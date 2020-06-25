@@ -139,8 +139,7 @@ def vs_build_type_flags(settings, with_flags=True):
         ret.extend(format_defines([btd]))
     if with_flags:
         # When using to build a vs project we don't want to adjust these flags
-        btfs = build_type_flags("Visual Studio", build_type=build_type,
-                                vs_toolset=settings.get_safe("compiler.toolset"))
+        btfs = build_type_flags(settings)
         if btfs:
             ret.extend(btfs)
 

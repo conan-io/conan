@@ -63,11 +63,11 @@ _t_default_settings_yml = Template(textwrap.dedent("""
         gcc: &gcc
             version: ["4.1", "4.4", "4.5", "4.6", "4.7", "4.8", "4.9",
                       "5", "5.1", "5.2", "5.3", "5.4", "5.5",
-                      "6", "6.1", "6.2", "6.3", "6.4",
-                      "7", "7.1", "7.2", "7.3", "7.4",
-                      "8", "8.1", "8.2", "8.3",
+                      "6", "6.1", "6.2", "6.3", "6.4", "6.5",
+                      "7", "7.1", "7.2", "7.3", "7.4", "7.5",
+                      "8", "8.1", "8.2", "8.3", "8.4",
                       "9", "9.1", "9.2", "9.3",
-                      "10"]
+                      "10", "10.1"]
             libcxx: [libstdc++, libstdc++11]
             threads: [None, posix, win32] #  Windows MinGW
             exception: [None, dwarf2, sjlj, seh] # Windows MinGW
@@ -177,6 +177,7 @@ _t_default_client_conf = Template(textwrap.dedent("""
     {% endif %}
 
     # config_install_interval = 1h
+    # required_conan_version = >=1.26
 
     [storage]
     # This is the default path, but you can write your own. It must be an absolute path or a
@@ -717,3 +718,10 @@ class ConanClientConfigParser(ConfigParser, object):
         except Exception as e:
             raise ConanException("Incorrect definition of general.config_install_interval: %s"
                                  % interval)
+
+    @property
+    def required_conan_version(self):
+        try:
+            return self.get_item("general.required_conan_version")
+        except ConanException:
+            return None

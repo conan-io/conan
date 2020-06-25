@@ -1,19 +1,22 @@
 import os
 import shutil
+import textwrap
 import time
 from multiprocessing.pool import ThreadPool
 
 from conans.client import tools
 from conans.client.conanfile.build import run_build_method
+from conans.client.conanfile.package import run_package_method
 from conans.client.file_copier import report_copied_files
 from conans.client.generators import TXTGenerator, write_generators
 from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_EDITABLE, \
     BINARY_MISSING, BINARY_SKIP, BINARY_UPDATE, BINARY_UNKNOWN, CONTEXT_HOST
 from conans.client.importer import remove_imports, run_imports
-from conans.client.packager import run_package_method, update_package_metadata
+from conans.client.packager import update_package_metadata
 from conans.client.recorder.action_recorder import INSTALL_ERROR_BUILDING, INSTALL_ERROR_MISSING, \
     INSTALL_ERROR_MISSING_BUILD_FOLDER
 from conans.client.source import complete_recipe_sources, config_source
+from conans.client.toolchain.base import write_toolchain
 from conans.client.tools.env import no_op
 from conans.client.tools.env import pythonpath
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
@@ -121,6 +124,9 @@ class _PackageBuilder(object):
         # Read generators from conanfile and generate the needed files
         logger.info("GENERATORS: Writing generators")
         write_generators(conanfile, conanfile.build_folder, self._output)
+
+        logger.info("TOOLCHAIN: Writing toolchain")
+        write_toolchain(conanfile, conanfile.build_folder, self._output)
 
         # Build step might need DLLs, binaries as protoc to generate source files
         # So execute imports() before build, storing the list of copied_files
@@ -268,27 +274,6 @@ def call_system_requirements(conanfile, output):
         raise ConanException("Error in system requirements")
 
 
-def raise_package_not_found_error(conan_file, ref, package_id, dependencies, out, recorder):
-    settings_text = ", ".join(conan_file.info.full_settings.dumps().splitlines())
-    options_text = ", ".join(conan_file.info.full_options.dumps().splitlines())
-    dependencies_text = ', '.join(dependencies)
-    requires_text = ", ".join(conan_file.info.requires.dumps().splitlines())
-
-    msg = '''Can't find a '%s' package for the specified settings, options and dependencies:
-- Settings: %s
-- Options: %s
-- Dependencies: %s
-- Requirements: %s
-- Package ID: %s
-''' % (ref, settings_text, options_text, dependencies_text, requires_text, package_id)
-    out.warn(msg)
-    recorder.package_install_error(PackageReference(ref, package_id), INSTALL_ERROR_MISSING, msg)
-    raise ConanException('''Missing prebuilt package for '%s'
-Try to build it from sources with "--build %s"
-Or read "http://docs.conan.io/en/latest/faq/troubleshooting.html#error-missing-prebuilt-package"
-''' % (ref, ref.name))
-
-
 class BinaryInstaller(object):
     """ main responsible of retrieving binary packages or building them from source
     locally in case they are not found in remotes
@@ -328,17 +313,44 @@ class BinaryInstaller(object):
             return
 
         missing_prefs = set(n.pref for n in missing)  # avoid duplicated
-        for pref in sorted(missing_prefs):
+        missing_prefs = list(sorted(missing_prefs))
+        for pref in missing_prefs:
             self._out.error("Missing binary: %s" % str(pref))
         self._out.writeln("")
 
-        # Raise just the first one
+        # Report details just the first one
         node = missing[0]
         package_id = node.package_id
         ref, conanfile = node.ref, node.conanfile
         dependencies = [str(dep.dst) for dep in node.dependencies]
-        raise_package_not_found_error(conanfile, ref, package_id, dependencies,
-                                      out=conanfile.output, recorder=self._recorder)
+
+        settings_text = ", ".join(conanfile.info.full_settings.dumps().splitlines())
+        options_text = ", ".join(conanfile.info.full_options.dumps().splitlines())
+        dependencies_text = ', '.join(dependencies)
+        requires_text = ", ".join(conanfile.info.requires.dumps().splitlines())
+
+        msg = textwrap.dedent('''\
+            Can't find a '%s' package for the specified settings, options and dependencies:
+            - Settings: %s
+            - Options: %s
+            - Dependencies: %s
+            - Requirements: %s
+            - Package ID: %s
+            ''' % (ref, settings_text, options_text, dependencies_text, requires_text, package_id))
+        conanfile.output.warn(msg)
+        self._recorder.package_install_error(PackageReference(ref, package_id),
+                                             INSTALL_ERROR_MISSING, msg)
+        missing_pkgs = "', '".join([str(pref.ref) for pref in missing_prefs])
+        if len(missing_prefs) >= 5:
+            build_str = "--build=missing"
+        else:
+            build_str = " ".join(["--build=%s" % pref.ref.name for pref in missing_prefs])
+
+        raise ConanException(textwrap.dedent('''\
+            Missing prebuilt package for '%s'
+            Try to build from sources with "%s"
+            Or read "http://docs.conan.io/en/latest/faq/troubleshooting.html#error-missing-prebuilt-package"
+            ''' % (missing_pkgs, build_str)))
 
     def _download(self, downloads, processed_package_refs):
         """ executes the download of packages (both download and update), only once for a given
@@ -392,13 +404,14 @@ class BinaryInstaller(object):
         self._raise_missing(missing)
         processed_package_refs = set()
         self._download(downloads, processed_package_refs)
+        fix_package_id = self._cache.config.full_transitive_package_id
 
         for level in nodes_by_level:
             for node in level:
                 ref, conan_file = node.ref, node.conanfile
                 output = conan_file.output
 
-                self._propagate_info(node, using_build_profile)
+                self._propagate_info(node, using_build_profile, fix_package_id)
                 if node.binary == BINARY_EDITABLE:
                     self._handle_node_editable(node, graph_info)
                     # Need a temporary package revision for package_revision_mode
@@ -415,7 +428,7 @@ class BinaryInstaller(object):
                                             local_install)
 
         # Finally, propagate information to root node (ref=None)
-        self._propagate_info(root_node, using_build_profile)
+        self._propagate_info(root_node, using_build_profile, fix_package_id)
 
     def _handle_node_editable(self, node, graph_info):
         # Get source of information
@@ -439,6 +452,7 @@ class BinaryInstaller(object):
                 build_folder = os.path.join(base_path, build_folder)
                 output = node.conanfile.output
                 write_generators(node.conanfile, build_folder, output)
+                write_toolchain(node.conanfile, build_folder, output)
                 save(os.path.join(build_folder, CONANINFO), node.conanfile.info.dumps())
                 output.info("Generated %s" % CONANINFO)
                 graph_info_node = GraphInfo(graph_info.profile_host, root_ref=node.ref)
@@ -532,13 +546,19 @@ class BinaryInstaller(object):
             node.graph_lock_node.modified = GraphLockNode.MODIFIED_BUILT
         return pref
 
-    @staticmethod
-    def _propagate_info(node, using_build_profile):
+    def _propagate_info(self, node, using_build_profile, fixed_package_id):
+        if fixed_package_id:
+            # if using config.full_transitive_package_id, it is necessary to recompute
+            # the node transitive information necessary to compute the package_id
+            # as it will be used by reevaluate_node() when package_revision_mode is used and
+            # PACKAGE_ID_UNKNOWN happens due to unknown revisions
+            self._binaries_analyzer.package_id_transitive_reqs(node)
         # Get deps_cpp_info from upstream nodes
         node_order = [n for n in node.public_closure if n.binary != BINARY_SKIP]
         # List sort is stable, will keep the original order of the closure, but prioritize levels
         conan_file = node.conanfile
-        conan_file._conan_using_build_profile = using_build_profile  # FIXME: Not the best place to assign it
+        # FIXME: Not the best place to assign the _conan_using_build_profile
+        conan_file._conan_using_build_profile = using_build_profile
         transitive = [it for it in node.transitive_closure.values()]
 
         br_host = []
