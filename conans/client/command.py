@@ -1017,7 +1017,7 @@ class Command(object):
                                  "and version are not declared in the conanfile.py")
         parser.add_argument('-k', '-ks', '--keep-source', default=False, action='store_true',
                             help=_KEEP_SOURCE_HELP)
-        parser.add_argument("-l", "--lockfile", action=OnceArgument, nargs='?', const=".",
+        parser.add_argument("-l", "--lockfile", action=OnceArgument,
                             help="Path to a lockfile or folder containing 'conan.lock' file. "
                             "Lockfile will be updated with the exported package")
         parser.add_argument("--ignore-dirty", default=False, action='store_true',
