@@ -60,7 +60,7 @@ class GraphLockCITest(unittest.TestCase):
 
         client.run("upload * --all --confirm")
 
-        client.run("graph lock PkgD/0.1@user/channel")
+        client.run("lock create --reference=PkgD/0.1@user/channel")
         initial_lock_file = client.load(LOCKFILE)
 
         # Do a change in B, this will be a new revision
@@ -70,8 +70,8 @@ class GraphLockCITest(unittest.TestCase):
         clientb.run("create . PkgB/0.1@user/channel")
 
         # Go back to main orchestrator
-        client.run("graph lock PkgD/0.1@user/channel --build=missing")
-        client.run("graph build-order . --json=build_order.json")
+        client.run("lock create --reference=PkgD/0.1@user/channel --build=missing")
+        client.run("lock build-order conan.lock --json=build_order.json")
         master_lockfile = client.load("conan.lock")
 
         build_order = client.load("build_order.json")
@@ -82,31 +82,31 @@ class GraphLockCITest(unittest.TestCase):
                 client_aux = TestClient(cache_folder=client.cache_folder,
                                         servers={"default": test_server})
                 client_aux.save({LOCKFILE: lock_fileaux})
-                client_aux.run("install %s --build=%s --lockfile" % (ref, ref))
+                client_aux.run("install %s --build=%s --lockfile=conan.lock" % (ref, ref))
                 lock_fileaux = load(os.path.join(client_aux.current_folder, LOCKFILE))
                 client.save({"new_lock/%s" % LOCKFILE: lock_fileaux})
-                client.run("graph update-lock . new_lock")
+                client.run("lock update conan.lock new_lock/conan.lock")
 
-            client.run("graph build-order .")
+            client.run("lock build-order conan.lock")
             lock_fileaux = client.load(LOCKFILE)
             output = str(client.out).splitlines()[-1]
             to_build = eval(output)
 
         new_lockfile = client.load(LOCKFILE)
-        client.run("install PkgD/0.1@user/channel --lockfile")
+        client.run("install PkgD/0.1@user/channel --lockfile=conan.lock")
         self.assertIn("PkgC/0.1@user/channel: DEP FILE PkgB: ByeB World!!", client.out)
         self.assertIn("PkgD/0.1@user/channel: DEP FILE PkgB: ByeB World!!", client.out)
         client.run("upload * --all --confirm")
 
         client.save({LOCKFILE: initial_lock_file})
         client.run("remove * -f")
-        client.run("install PkgD/0.1@user/channel --lockfile")
+        client.run("install PkgD/0.1@user/channel --lockfile=conan.lock")
         self.assertIn("PkgC/0.1@user/channel: DEP FILE PkgB: HelloB", client.out)
         self.assertIn("PkgD/0.1@user/channel: DEP FILE PkgB: HelloB", client.out)
 
         client.save({LOCKFILE: new_lockfile})
         client.run("remove * -f")
-        client.run("install PkgD/0.1@user/channel --lockfile")
+        client.run("install PkgD/0.1@user/channel --lockfile=conan.lock")
         self.assertIn("PkgC/0.1@user/channel: DEP FILE PkgB: ByeB World!!", client.out)
         self.assertIn("PkgD/0.1@user/channel: DEP FILE PkgB: ByeB World!!", client.out)
 
@@ -137,7 +137,7 @@ class GraphLockCITest(unittest.TestCase):
         self.assertIn("PkgD/0.1@user/channel: DEP FILE PkgC: HelloC", client.out)
 
         client.run("upload * --all --confirm")
-        client.run("graph lock PkgD/0.1@user/channel")
+        client.run("lock create --reference=PkgD/0.1@user/channel")
         initial_lock_file = client.load(LOCKFILE)
 
         # Do a change in B
@@ -148,8 +148,8 @@ class GraphLockCITest(unittest.TestCase):
         clientb.run("create . PkgB/0.1@user/channel")
 
         # Go back to main orchestrator
-        client.run("graph lock PkgD/0.1@user/channel --build=missing")
-        client.run("graph build-order . --json=build_order.json")
+        client.run("lock create --reference=PkgD/0.1@user/channel --build=missing")
+        client.run("lock build-order conan.lock --json=build_order.json")
         master_lockfile = client.load("conan.lock")
 
         json_file = os.path.join(client.current_folder, "build_order.json")
@@ -160,31 +160,31 @@ class GraphLockCITest(unittest.TestCase):
                 client_aux = TestClient(cache_folder=client.cache_folder,
                                         servers={"default": test_server})
                 client_aux.save({LOCKFILE: lock_fileaux})
-                client_aux.run("install %s --build=%s --lockfile" % (ref, ref))
+                client_aux.run("install %s --build=%s --lockfile=conan.lock" % (ref, ref))
                 lock_fileaux = client_aux.load(LOCKFILE)
                 client.save({"new_lock/%s" % LOCKFILE: lock_fileaux})
-                client.run("graph update-lock . new_lock")
+                client.run("lock update conan.lock new_lock/conan.lock")
 
-            client.run("graph build-order .")
+            client.run("lock build-order conan.lock")
             lock_fileaux = client.load(LOCKFILE)
             output = str(client.out).splitlines()[-1]
             to_build = eval(output)
 
         new_lockfile = client.load(LOCKFILE)
-        client.run("install PkgD/0.1@user/channel --lockfile")
+        client.run("install PkgD/0.1@user/channel --lockfile=conan.lock")
         self.assertIn("PkgC/0.1@user/channel: DEP FILE PkgB: ByeB World!!", client.out)
         self.assertIn("PkgD/0.1@user/channel: DEP FILE PkgB: ByeB World!!", client.out)
         client.run("upload * --all --confirm")
 
         client.save({LOCKFILE: initial_lock_file})
         client.run("remove * -f")
-        client.run("install PkgD/0.1@user/channel --lockfile")
+        client.run("install PkgD/0.1@user/channel --lockfile=conan.lock")
         self.assertIn("PkgC/0.1@user/channel: DEP FILE PkgB: HelloB", client.out)
         self.assertIn("PkgD/0.1@user/channel: DEP FILE PkgB: HelloB", client.out)
 
         client.save({LOCKFILE: new_lockfile})
         client.run("remove * -f")
-        client.run("install PkgD/0.1@user/channel --lockfile")
+        client.run("install PkgD/0.1@user/channel --lockfile=conan.lock")
         self.assertIn("PkgC/0.1@user/channel: DEP FILE PkgB: ByeB World!!", client.out)
         self.assertIn("PkgD/0.1@user/channel: DEP FILE PkgB: ByeB World!!", client.out)
 
@@ -207,7 +207,7 @@ class GraphLockCITest(unittest.TestCase):
         self.assertIn("PkgD/0.1@user/channel: DEP FILE PkgA: HelloA", client.out)
         self.assertIn("PkgD/0.1@user/channel: DEP FILE PkgB: HelloB", client.out)
         self.assertIn("PkgD/0.1@user/channel: DEP FILE PkgC: HelloC", client.out)
-        client.run("graph lock PkgD/0.1@user/channel")
+        client.run("lock create --reference=PkgD/0.1@user/channel")
         initial_lockfile = client.load("conan.lock")
 
         # Do a change in B
@@ -218,8 +218,8 @@ class GraphLockCITest(unittest.TestCase):
         clientb.run("create . PkgB/0.2@user/channel")
 
         # Go back to main orchestrator
-        client.run("graph lock PkgD/0.1@user/channel --build=missing")
-        client.run("graph build-order . --json=build_order.json")
+        client.run("lock create --reference=PkgD/0.1@user/channel --build=missing")
+        client.run("lock build-order conan.lock --json=build_order.json")
         master_lockfile = client.load("conan.lock")
 
         json_file = client.load("build_order.json")
@@ -230,28 +230,28 @@ class GraphLockCITest(unittest.TestCase):
                 client_aux = TestClient(cache_folder=client.cache_folder)
                 client_aux.run("config set general.default_package_id_mode=full_package_mode")
                 client_aux.save({LOCKFILE: lock_fileaux})
-                client_aux.run("install %s --build=%s --lockfile" % (ref, ref))
+                client_aux.run("install %s --build=%s --lockfile=conan.lock" % (ref, ref))
                 lock_fileaux = client_aux.load(LOCKFILE)
                 client.save({"new_lock/%s" % LOCKFILE: lock_fileaux})
-                client.run("graph update-lock . new_lock")
+                client.run("lock update conan.lock new_lock/conan.lock")
 
-            client.run("graph build-order .")
+            client.run("lock build-order conan.lock")
             lock_fileaux = client.load(LOCKFILE)
             output = str(client.out).splitlines()[-1]
             to_build = eval(output)
 
         new_lockfile = client.load(LOCKFILE)
-        client.run("install PkgD/0.1@user/channel --lockfile")
+        client.run("install PkgD/0.1@user/channel --lockfile=conan.lock")
         self.assertIn("PkgC/0.1@user/channel: DEP FILE PkgB: ByeB World!!", client.out)
         self.assertIn("PkgD/0.1@user/channel: DEP FILE PkgB: ByeB World!!", client.out)
 
         client.save({LOCKFILE: initial_lockfile})
-        client.run("install PkgD/0.1@user/channel --lockfile")
+        client.run("install PkgD/0.1@user/channel --lockfile=conan.lock")
         self.assertIn("PkgC/0.1@user/channel: DEP FILE PkgB: HelloB", client.out)
         self.assertIn("PkgD/0.1@user/channel: DEP FILE PkgB: HelloB", client.out)
 
         client.save({LOCKFILE: new_lockfile})
-        client.run("install PkgD/0.1@user/channel --lockfile")
+        client.run("install PkgD/0.1@user/channel --lockfile=conan.lock")
         self.assertIn("PkgC/0.1@user/channel: DEP FILE PkgB: ByeB World!!", client.out)
         self.assertIn("PkgD/0.1@user/channel: DEP FILE PkgB: ByeB World!!", client.out)
 
@@ -276,7 +276,7 @@ class GraphLockCITest(unittest.TestCase):
         self.assertIn("PkgD/0.1@user/channel: DEP FILE PkgB: HelloB", client.out)
         self.assertIn("PkgD/0.1@user/channel: DEP FILE PkgC: HelloC", client.out)
 
-        client.run("graph lock PkgD/0.1@user/channel")
+        client.run("lock create --reference=PkgD/0.1@user/channel")
         lock_file = client.load(LOCKFILE)
         initial_lock_file = lock_file
 
@@ -287,8 +287,8 @@ class GraphLockCITest(unittest.TestCase):
                      "myfile.txt": "ByeA World!!"})
         clientb.run("create . PkgA/0.2@user/channel")
 
-        client.run("graph lock PkgD/0.1@user/channel --build=missing")
-        client.run("graph build-order . --json=build_order.json")
+        client.run("lock create --reference=PkgD/0.1@user/channel --build=missing")
+        client.run("lock build-order conan.lock --json=build_order.json")
         master_lockfile = client.load("conan.lock")
 
         json_file = os.path.join(client.current_folder, "build_order.json")
@@ -299,29 +299,29 @@ class GraphLockCITest(unittest.TestCase):
             client_aux = TestClient(cache_folder=client.cache_folder)
             client_aux.run("config set general.default_package_id_mode=full_package_mode")
             client_aux.save({LOCKFILE: lock_fileaux})
-            client_aux.run("install %s --build=%s --lockfile" % (ref, ref))
+            client_aux.run("install %s --build=%s --lockfile=conan.lock" % (ref, ref))
             lock_fileaux = load(os.path.join(client_aux.current_folder, LOCKFILE))
             client.save({"new_lock/%s" % LOCKFILE: lock_fileaux})
-            client.run("graph update-lock . new_lock")
-            client.run("graph build-order .")
+            client.run("lock update conan.lock new_lock/conan.lock")
+            client.run("lock build-order conan.lock")
             lock_fileaux = client.load(LOCKFILE)
             output = str(client.out).splitlines()[-1]
             to_build = eval(output)
 
         new_lockfile = client.load(LOCKFILE)
-        client.run("install PkgD/0.1@user/channel --lockfile")
+        client.run("install PkgD/0.1@user/channel --lockfile=conan.lock")
         self.assertIn("PkgB/0.1@user/channel: DEP FILE PkgA: ByeA World!!", client.out)
         self.assertIn("PkgC/0.1@user/channel: DEP FILE PkgA: ByeA World!!", client.out)
         self.assertIn("PkgD/0.1@user/channel: DEP FILE PkgA: ByeA World!!", client.out)
 
         client.save({LOCKFILE: initial_lock_file})
-        client.run("install PkgD/0.1@user/channel --lockfile")
+        client.run("install PkgD/0.1@user/channel --lockfile=conan.lock")
         self.assertIn("PkgB/0.1@user/channel: DEP FILE PkgA: HelloA", client.out)
         self.assertIn("PkgC/0.1@user/channel: DEP FILE PkgA: HelloA", client.out)
         self.assertIn("PkgD/0.1@user/channel: DEP FILE PkgA: HelloA", client.out)
 
         client.save({LOCKFILE: new_lockfile})
-        client.run("install PkgD/0.1@user/channel --lockfile")
+        client.run("install PkgD/0.1@user/channel --lockfile=conan.lock")
         self.assertIn("PkgB/0.1@user/channel: DEP FILE PkgA: ByeA World!!", client.out)
         self.assertIn("PkgC/0.1@user/channel: DEP FILE PkgA: ByeA World!!", client.out)
         self.assertIn("PkgD/0.1@user/channel: DEP FILE PkgA: ByeA World!!", client.out)
@@ -360,27 +360,27 @@ class GraphLockCITest(unittest.TestCase):
 
         client2 = TestClient(cache_folder=client.cache_folder)
         client2.save({"conanfile.py": conanfile.format(requires=""), LOCKFILE: lock_file})
-        client2.run("create . PkgA/0.1@user/channel --lockfile")
+        client2.run("create . PkgA/0.1@user/channel --lockfile=conan.lock")
         self.assertIn("PkgA/0.1@user/channel: BUILDING WITH OPTION: 5!!", client2.out)
         self.assertIn("PkgA/0.1@user/channel: PACKAGE_INFO OPTION: 5!!", client2.out)
 
         client2.save({"conanfile.py": conanfile.format(
             requires='requires="PkgA/0.1@user/channel"')})
-        client2.run("create . PkgB/0.1@user/channel --lockfile")
+        client2.run("create . PkgB/0.1@user/channel --lockfile=conan.lock")
         self.assertIn("PkgB/0.1@user/channel: PACKAGE_INFO OPTION: 4!!", client2.out)
         self.assertIn("PkgB/0.1@user/channel: BUILDING WITH OPTION: 4!!", client2.out)
         self.assertIn("PkgA/0.1@user/channel: PACKAGE_INFO OPTION: 5!!", client2.out)
 
         client2.save({"conanfile.py": conanfile.format(
             requires='requires="PkgB/0.1@user/channel"')})
-        client2.run("create . PkgC/0.1@user/channel --lockfile")
+        client2.run("create . PkgC/0.1@user/channel --lockfile=conan.lock")
         self.assertIn("PkgC/0.1@user/channel: PACKAGE_INFO OPTION: 3!!", client2.out)
         self.assertIn("PkgC/0.1@user/channel: BUILDING WITH OPTION: 3!!", client2.out)
         self.assertIn("PkgB/0.1@user/channel: PACKAGE_INFO OPTION: 4!!", client2.out)
         self.assertIn("PkgA/0.1@user/channel: PACKAGE_INFO OPTION: 5!!", client2.out)
 
         client2.save({"conanfile.py": conanfiled})
-        client2.run("create . PkgD/0.1@user/channel --lockfile")
+        client2.run("create . PkgD/0.1@user/channel --lockfile=conan.lock")
         self.assertIn("PkgD/0.1@user/channel: PACKAGE_INFO OPTION: 2!!", client2.out)
         self.assertIn("PkgD/0.1@user/channel: BUILDING WITH OPTION: 2!!", client2.out)
         self.assertIn("PkgC/0.1@user/channel: PACKAGE_INFO OPTION: 3!!", client2.out)

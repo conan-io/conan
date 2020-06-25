@@ -35,7 +35,7 @@ class GraphLockDynamicTest(unittest.TestCase):
         # Remove one dep (LibB) in LibC, will fail to create
         client.save({"conanfile.py": GenConanfile().with_require_plain("LibA/0.1")})
         # If the graph is modified, a create should fail
-        client.run("create . LibC/0.1@ --lockfile", assert_error=True)
+        client.run("create . LibC/0.1@ --lockfile=conan.lock", assert_error=True)
         if client.cache.config.revisions_enabled:
             self.assertIn("Attempt to modify locked LibC/0.1", client.out)
         else:
@@ -74,7 +74,7 @@ class GraphLockDynamicTest(unittest.TestCase):
         client.save({"conanfile.py": GenConanfile()})
         client.run("lock create conanfile.py")
         client.save({"conanfile.py": GenConanfile().with_require_plain("zlib/1.0")})
-        client.run("install . --lockfile", assert_error=True)
+        client.run("install . --lockfile=conan.lock", assert_error=True)
         self.assertIn("ERROR: Require 'zlib' cannot be found in lockfile", client.out)
 
         # Correct way is generate a new lockfile
@@ -120,7 +120,7 @@ class GraphLockDynamicTest(unittest.TestCase):
             self.assertEqual(dep["ref"], "dep/0.1")
             self.assertEqual(dep.get("prev"), None)
 
-        client.run("create . -pr=profile --lockfile --build missing")
+        client.run("create . -pr=profile --lockfile=conan.lock --build missing")
         self.assertIn("dep/0.1:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Build", client.out)
         self.assertIn("tool/0.1:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache", client.out)
         lock2 = client.load("conan.lock")

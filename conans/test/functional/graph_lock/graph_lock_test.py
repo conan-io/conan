@@ -11,7 +11,7 @@ class GraphLockErrorsTest(unittest.TestCase):
     def missing_lock_error_test(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile("PkgA", "0.1")})
-        client.run("install . --lockfile", assert_error=True)
+        client.run("install . --lockfile=conan.lock", assert_error=True)
         self.assertIn("ERROR: Missing lockfile in", client.out)
 
     def update_different_profile_test(self):
@@ -31,7 +31,7 @@ class GraphLockErrorsTest(unittest.TestCase):
         lockfile = client.load("conan.lock")
         lockfile = lockfile.replace('"0.4"', '"0.1"').replace('"0"', '"UUID"')
         client.save({"conan.lock": lockfile})
-        client.run("install . --lockfile", assert_error=True)
+        client.run("install . --lockfile=conan.lock", assert_error=True)
         self.assertIn("This lockfile was created with an incompatible version", client.out)
 
 
@@ -40,7 +40,7 @@ class GraphLockConanfileTXTTest(unittest.TestCase):
         client = TestClient()
         client.save({"conanfile.txt": ""})
         client.run("install .")
-        client.run("install . --lockfile")
+        client.run("install . --lockfile=conan.lock")
         self.assertIn("Using lockfile", client.out)
 
     def conanfile_txt_deps_test(self):
@@ -55,7 +55,7 @@ class GraphLockConanfileTXTTest(unittest.TestCase):
 
         client.run("create . pkg/0.2@user/testing")
 
-        client2.run("install . --lockfile")
+        client2.run("install . --lockfile=conan.lock")
         self.assertIn("pkg/0.1@user/testing from local cache - Cache", client2.out)
         self.assertNotIn("pkg/0.2", client2.out)
         client2.run("install .")
@@ -195,24 +195,24 @@ class GraphLockRevisionTest(unittest.TestCase):
 
         # Locked install will use PkgA/0.1
         # This is a bit weird, that is necessary to force the --update the get the rigth revision
-        client.run("install . -g=cmake --lockfile --update")
+        client.run("install . -g=cmake --lockfile=conan.lock --update")
         self._check_lock("PkgB/0.1@")
         client.run("build .")
         self.assertIn("conanfile.py (PkgB/0.1@user/channel): BUILD DEP LIBS: !!", client.out)
 
         # Info also works
-        client.run("info . --lockfile")
+        client.run("info . --lockfile=conan.lock")
         self.assertIn("Revision: fa090239f8ba41ad559f8e934494ee2a", client.out)
 
     def export_lock_test(self):
         # locking a version range at export
-        self.client.run("export . user/channel --lockfile")
+        self.client.run("export . user/channel --lockfile=conan.lock")
         self._check_lock("PkgB/0.1@user/channel#%s" % self.pkg_b_revision)
 
     def create_lock_test(self):
         # Create is also possible
         client = self.client
-        client.run("create . PkgB/0.1@user/channel --update --lockfile")
+        client.run("create . PkgB/0.1@user/channel --update --lockfile=conan.lock")
         self._check_lock("PkgB/0.1@user/channel#%s" % self.pkg_b_revision,
                          self.pkg_b_package_revision)
 
@@ -220,7 +220,7 @@ class GraphLockRevisionTest(unittest.TestCase):
         client = self.client
         # Necessary to clean previous revision
         client.run("remove * -f")
-        client.run("export-pkg . PkgB/0.1@user/channel --lockfile")
+        client.run("export-pkg . PkgB/0.1@user/channel --lockfile=conan.lock")
         self._check_lock("PkgB/0.1@user/channel#%s" % self.pkg_b_revision,
                          self.pkg_b_package_revision)
 
@@ -256,7 +256,7 @@ class LockFileOptionsTest(unittest.TestCase):
         client.run("lock create --reference=nano/1.0@ --build")
         lockfile = client.load("conan.lock")
         self.assertIn('"options": "variation=nano"', lockfile)
-        client.run("create ffmepg ffmpeg/1.0@ --build --lockfile")
+        client.run("create ffmepg ffmpeg/1.0@ --build --lockfile=conan.lock")
         self.assertIn("ffmpeg/1.0: Requirements: Variation nano!!", client.out)
 
 

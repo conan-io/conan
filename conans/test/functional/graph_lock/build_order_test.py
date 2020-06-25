@@ -45,7 +45,7 @@ class BuildOrderTest(unittest.TestCase):
         client.run("lock build-order conan.lock --json=bo.json")
         jsonbo = json.loads(client.load("bo.json"))
         self.assertEqual(build_order, jsonbo)
-        client.run("install test4/0.1@ --lockfile --build")
+        client.run("install test4/0.1@ --lockfile=conan.lock --build")
         self.assertIn("test4/0.1:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Build", client.out)
         locked = json.loads(client.load("conan.lock"))["graph_lock"]["nodes"]
         test4 = locked["1"]
@@ -78,7 +78,7 @@ class BuildOrderTest(unittest.TestCase):
         jsonbo = json.loads(client.load("bo.json"))
         self.assertEqual([], jsonbo)
         # if we try to build anyway, error
-        client.run("install test4/0.1@ --lockfile --build", assert_error=True)
+        client.run("install test4/0.1@ --lockfile=conan.lock --build", assert_error=True)
         self.assertIn("Trying to build 'test4/0.1#f876ec9ea0f44cb7adb1588e431b391a', "
                       "but it is locked", client.out)
 
@@ -139,11 +139,11 @@ class BuildOrderTest(unittest.TestCase):
         self.assertEqual(build_order, jsonbo)
 
         if export:
-            client.run("install app/0.1@ --lockfile", assert_error=True)
+            client.run("install app/0.1@ --lockfile=conan.lock", assert_error=True)
             self.assertIn("Missing prebuilt package for 'app/0.1', 'dep/0.1', 'pkg/0.1'", client.out)
 
         # Build one by one
-        client.run("install {0} --lockfile --build={0}".format(build_order[0][0][1]))
+        client.run("install {0} --lockfile=conan.lock --build={0}".format(build_order[0][0][1]))
         self.assertIn("dep/0.1:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Build", client.out)
         locked = json.loads(client.load("conan.lock"))["graph_lock"]["nodes"]
         node = locked["3"]
@@ -157,10 +157,10 @@ class BuildOrderTest(unittest.TestCase):
         jsonbo = json.loads(client.load("bo.json"))
         self.assertEqual(build_order[1:], jsonbo)
 
-        client.run("install pkg/0.1@ --lockfile --build", assert_error=True)
+        client.run("install pkg/0.1@ --lockfile=conan.lock --build", assert_error=True)
         self.assertIn("Trying to build 'dep/0.1#f3367e0e7d170aa12abccb175fee5f97', but it is locked",
                       client.out)
-        client.run("install {0} --lockfile --build={0}".format(build_order[1][0][1]))
+        client.run("install {0} --lockfile=conan.lock --build={0}".format(build_order[1][0][1]))
         self.assertIn("dep/0.1:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache", client.out)
         self.assertIn("pkg/0.1:0b3845ce7fd8c0b4e46566097797bd872cb5bcf6 - Build", client.out)
         locked = json.loads(client.load("conan.lock"))["graph_lock"]["nodes"]
@@ -175,10 +175,10 @@ class BuildOrderTest(unittest.TestCase):
         jsonbo = json.loads(client.load("bo.json"))
         self.assertEqual(build_order[2:], jsonbo)
 
-        client.run("install app/0.1@ --lockfile --build", assert_error=True)
+        client.run("install app/0.1@ --lockfile=conan.lock --build", assert_error=True)
         self.assertIn("Trying to build 'dep/0.1#f3367e0e7d170aa12abccb175fee5f97', but it is locked",
                       client.out)
-        client.run("install {0} --lockfile --build={0}".format(build_order[2][0][1]))
+        client.run("install {0} --lockfile=conan.lock --build={0}".format(build_order[2][0][1]))
         self.assertIn("dep/0.1:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache", client.out)
         self.assertIn("pkg/0.1:0b3845ce7fd8c0b4e46566097797bd872cb5bcf6 - Cache", client.out)
         self.assertIn("app/0.1:745ccd40fd696b66b0cb160fd5251a533563bbb4 - Build", client.out)
@@ -210,7 +210,7 @@ class BuildOrderTest(unittest.TestCase):
                                                    .with_require_plain("libb/0.1")})
         client.run("export . app/0.1@")
 
-        client.run("lock create app/0.1@ --build=missing")
+        client.run("lock create --reference=app/0.1@ --build=missing")
         self.assertIn("app/0.1:Package_ID_unknown - Unknown", client.out)
         self.assertIn("liba/0.1:Package_ID_unknown - Unknown", client.out)
         self.assertIn("libb/0.1:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Build", client.out)
@@ -225,7 +225,7 @@ class BuildOrderTest(unittest.TestCase):
         libd = lock["graph_lock"]["nodes"]["4"]
         self.assertEqual(libd["package_id"], "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
 
-        client.run("graph build-order . --json=bo.json")
+        client.run("lock build-order conan.lock --json=bo.json")
         bo = client.load("bo.json")
         build_order = json.loads(bo)
         expected = [[['3', 'libc/0.1@#f3367e0e7d170aa12abccb175fee5f97'],
@@ -296,11 +296,11 @@ class BuildRequiresBuildOrderTest(unittest.TestCase):
 
         # prev is None, --build needs to be explicit or it will fail
         if export:
-            client.run("install app/0.1@ --lockfile", assert_error=True)
+            client.run("install app/0.1@ --lockfile=conan.lock", assert_error=True)
             self.assertIn("Missing prebuilt package for 'app/0.1', 'pkg/0.1'", client.out)
 
         # Build one by one
-        client.run("install {0} --lockfile --build={0}".format(build_order[0][0][1]))
+        client.run("install {0} --lockfile=conan.lock --build={0}".format(build_order[0][0][1]))
         self.assertIn("dep/0.1:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Build", client.out)
         locked = json.loads(client.load("conan.lock"))["graph_lock"]["nodes"]
         node = locked["3"]
@@ -314,10 +314,10 @@ class BuildRequiresBuildOrderTest(unittest.TestCase):
         jsonbo = json.loads(client.load("bo.json"))
         self.assertEqual(build_order[1:], jsonbo)
 
-        client.run("install pkg/0.1@ --lockfile --build", assert_error=True)
+        client.run("install pkg/0.1@ --lockfile=conan.lock --build", assert_error=True)
         self.assertIn("Trying to build 'dep/0.1#f3367e0e7d170aa12abccb175fee5f97', but it is locked",
                       client.out)
-        client.run("install {0} --lockfile --build={0}".format(build_order[1][0][1]))
+        client.run("install {0} --lockfile=conan.lock --build={0}".format(build_order[1][0][1]))
         self.assertIn("dep/0.1:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache", client.out)
         self.assertIn("pkg/0.1:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Build", client.out)
         locked = json.loads(client.load("conan.lock"))["graph_lock"]["nodes"]
@@ -332,10 +332,10 @@ class BuildRequiresBuildOrderTest(unittest.TestCase):
         jsonbo = json.loads(client.load("bo.json"))
         self.assertEqual(build_order[2:], jsonbo)
 
-        client.run("install app/0.1@ --lockfile --build", assert_error=True)
+        client.run("install app/0.1@ --lockfile=conan.lock --build", assert_error=True)
         self.assertIn("Trying to build 'pkg/0.1#1364f701b47130c7e38f04c5e5fab985', but it is locked",
                       client.out)
-        client.run("install {0} --lockfile --build={0}".format(build_order[2][0][1]))
+        client.run("install {0} --lockfile=conan.lock --build={0}".format(build_order[2][0][1]))
         self.assertNotIn("dep/0.1", client.out)
         self.assertIn("pkg/0.1:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache", client.out)
         self.assertIn("app/0.1:a925a8281740e4cb4bcad9cf41ecc4c215210604 - Build", client.out)
@@ -488,7 +488,7 @@ class GraphLockBuildRequireErrorTestCase(unittest.TestCase):
             ]
         self.assertEqual(expected, json.loads(bo0))
 
-        client.run("create libA libA/2.0@ --lockfile", assert_error=True)
+        client.run("create libA libA/2.0@ --lockfile=conan.lock", assert_error=True)
         if client.cache.config.revisions_enabled:
             self.assertIn("Attempt to modify locked libA/1.0#3fb401b4f9169fab06be253aa3fbcc1b "
                           "to libA/2.0#3fb401b4f9169fab06be253aa3fbcc1b", client.out)

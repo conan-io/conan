@@ -1254,6 +1254,8 @@ class ConanAPIV1(object):
 
         if path:
             ref_or_path = _make_abs_path(path, cwd)
+            if not os.path.isfile(ref_or_path):
+                raise ConanException("Conanfile does not exist in %s" % ref_or_path)
         else: # reference
             ref_or_path = ConanFileReference.loads(reference)
 
@@ -1269,18 +1271,20 @@ class ConanAPIV1(object):
         if not phost:
             phost = profile_from_args(profile_host.profiles, profile_host.settings,
                                       profile_host.options, profile_host.env, cwd, self.app.cache)
-            phost.process_settings(self.app.cache)
 
-        if not pbuild:
+        if profile_build and not pbuild:
             # Only work on the profile_build if something is provided
             pbuild = profile_from_args(profile_build.profiles, profile_build.settings,
                                        profile_build.options, profile_build.env, cwd, self.app.cache)
-            pbuild.process_settings(self.app.cache)
 
             # If given an input lockfile, then construct it from the root
             # reference = graph_info.graph_lock.root_node_ref()
 
         root_ref = ConanFileReference(name, version, user, channel, validate=False)
+        if phost:
+            phost.process_settings(self.app.cache)
+        if pbuild:
+            pbuild.process_settings(self.app.cache)
         graph_info = GraphInfo(profile_host=phost, profile_build=pbuild, root_ref=root_ref)
         graph_info.graph_lock = graph_lock
 

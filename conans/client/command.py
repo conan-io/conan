@@ -1827,7 +1827,7 @@ class Command(object):
         subparsers.required = True
 
         # create the parser for the "a" command
-        update_cmd = subparsers.add_parser('update', help='merge two lockfiles')
+        update_cmd = subparsers.add_parser('update', help='update a lockfile with another lockfile')
         update_cmd.add_argument('old_lockfile', help='path to previous lockfile')
         update_cmd.add_argument('new_lockfile', help='path to modified lockfile')
 
@@ -1898,7 +1898,7 @@ class Command(object):
                 ("Package development commands", ("source", "build", "package", "editable",
                                                   "workspace")),
                 ("Misc commands", ("profile", "remote", "user", "imports", "copy", "remove",
-                                   "alias", "download", "inspect", "help", "graph", "frogarian"))]
+                                   "alias", "download", "inspect", "help", "lock", "frogarian"))]
 
         def check_all_commands_listed():
             """Keep updated the main directory, raise if don't"""
@@ -2059,8 +2059,6 @@ class Command(object):
             ret_code = ERROR_INVALID_CONFIGURATION
             self._out.error(exc)
         except ConanException as exc:
-            import traceback
-            print(traceback.format_exc())
             ret_code = ERROR_GENERAL
             self._out.error(exc)
         except Exception as exc:
@@ -2098,7 +2096,7 @@ def _add_common_install_arguments(parser, build_help, lockfile=True):
     parser.add_argument("-u", "--update", action='store_true', default=False,
                         help="Check updates exist from upstream remotes")
     if lockfile:
-        parser.add_argument("-l", "--lockfile", action=OnceArgument, nargs='?', const=".",
+        parser.add_argument("-l", "--lockfile", action=OnceArgument,
                             help="Path to a lockfile or folder containing 'conan.lock' file. "
                             "Lockfile can be updated if packages change")
     _add_profile_arguments(parser)
