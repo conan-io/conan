@@ -20,7 +20,7 @@ class LockRecipeTest(unittest.TestCase):
                       client.out)
 
         client.save({"conanfile.py": GenConanfile().with_require_plain("pkg/0.1")})
-        client.run("graph lock . --recipes")
+        client.run("lock create conanfile.py --base")
         lock = json.loads(client.load("conan.lock"))
         self.assertEqual(2, len(lock["graph_lock"]["nodes"]))
         pkg_node = lock["graph_lock"]["nodes"]["1"]
@@ -28,7 +28,8 @@ class LockRecipeTest(unittest.TestCase):
             self.assertEqual(pkg_node["ref"], "pkg/0.1#f096d7d54098b7ad7012f9435d9c33f3")
         else:
             self.assertEqual(pkg_node["ref"], "pkg/0.1")
-        client.run("graph lock . -s os=Linux --lockfile=linux.lock --input-lockfile=conan.lock")
+        client.run("lock create conanfile.py -s os=Linux "
+                   "--lockfile-out=linux.lock --lockfile=conan.lock")
         lock = json.loads(client.load("linux.lock"))
         pkg_node = lock["graph_lock"]["nodes"]["1"]
         if client.cache.config.revisions_enabled:
@@ -41,7 +42,8 @@ class LockRecipeTest(unittest.TestCase):
             self.assertEqual(pkg_node["prev"], "0")
         self.assertEqual(pkg_node["options"], "")
 
-        client.run("graph lock . -s os=Windows --lockfile=windows.lock --input-lockfile=conan.lock")
+        client.run("lock create conanfile.py -s os=Windows "
+                   "--lockfile-out=windows.lock --lockfile=conan.lock")
         lock = json.loads(client.load("windows.lock"))
         pkg_node = lock["graph_lock"]["nodes"]["1"]
         if client.cache.config.revisions_enabled:
@@ -73,7 +75,7 @@ class LockRecipeTest(unittest.TestCase):
                         self.requires("linux/0.1")
             """)
         client.save({"conanfile.py": conanfile})
-        client.run("graph lock . --recipes -s os=Windows")
+        client.run("lock create conanfile.py --base -s os=Windows")
         lock = json.loads(client.load("conan.lock"))
         self.assertEqual(3, len(lock["graph_lock"]["nodes"]))
         common = lock["graph_lock"]["nodes"]["1"]
@@ -91,7 +93,8 @@ class LockRecipeTest(unittest.TestCase):
         self.assertIsNone(win.get("prev"))
         self.assertIsNone(win.get("options"))
 
-        client.run("graph lock . -s os=Linux --lockfile=linux.lock --input-lockfile=conan.lock")
+        client.run("lock create conanfile.py -s os=Linux "
+                   "--lockfile-out=linux.lock --lockfile=conan.lock")
         lock = json.loads(client.load("linux.lock"))
         self.assertEqual(3, len(lock["graph_lock"]["nodes"]))
         common = lock["graph_lock"]["nodes"]["1"]
@@ -112,7 +115,8 @@ class LockRecipeTest(unittest.TestCase):
         self.assertEqual(linux["package_id"], "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
         self.assertEqual(linux["options"], "")
 
-        client.run("graph lock . -s os=Windows --lockfile=windows.lock --input-lockfile=conan.lock")
+        client.run("lock create conanfile.py -s os=Windows "
+                   "--lockfile-out=windows.lock --lockfile=conan.lock")
         lock = json.loads(client.load("windows.lock"))
         self.assertEqual(3, len(lock["graph_lock"]["nodes"]))
         common = lock["graph_lock"]["nodes"]["1"]

@@ -13,8 +13,8 @@ class BuildOrderTest(unittest.TestCase):
         # https://github.com/conan-io/conan/issues/5727
         client = TestClient()
         client.save({"conanfile.py": GenConanfile("test4", "0.1")})
-        client.run("graph lock . --build")
-        client.run("graph build-order . --json=bo.json")
+        client.run("lock create conanfile.py --build")
+        client.run("lock build-order conan.lock --json=bo.json")
         jsonbo = json.loads(client.load("bo.json"))
         self.assertEqual([], jsonbo)
 
@@ -25,10 +25,10 @@ class BuildOrderTest(unittest.TestCase):
         client.save({"conanfile.py": GenConanfile("test4", "0.1")})
         if export:
             client.run("export .")
-            client.run("graph lock test4/0.1@")
+            client.run("lock create --reference=test4/0.1@")
         else:
             client.run("create .")
-            client.run("graph lock test4/0.1@ --build=test4")
+            client.run("lock create --reference=test4/0.1@ --build=test4")
         if client.cache.config.revisions_enabled:
             ref = "test4/0.1#f876ec9ea0f44cb7adb1588e431b391a"
             prev = "92cf292e73488c3527dab5f5ba81b947"
@@ -42,7 +42,7 @@ class BuildOrderTest(unittest.TestCase):
         self.assertEqual(test4["ref"], ref)
         self.assertEqual(test4["package_id"], "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
         self.assertEqual(test4.get("prev"), None)  # PREV is not defined yet, only exported
-        client.run("graph build-order . --json=bo.json")
+        client.run("lock build-order conan.lock --json=bo.json")
         jsonbo = json.loads(client.load("bo.json"))
         self.assertEqual(build_order, jsonbo)
         client.run("install test4/0.1@ --lockfile --build")
@@ -54,7 +54,7 @@ class BuildOrderTest(unittest.TestCase):
         self.assertEqual(test4["prev"], prev)
 
         # New build order, nothing else to do
-        client.run("graph build-order . --json=bo.json")
+        client.run("lock build-order conan.lock --json=bo.json")
         jsonbo = json.loads(client.load("bo.json"))
         self.assertEqual([], jsonbo)
 
@@ -62,7 +62,7 @@ class BuildOrderTest(unittest.TestCase):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile("test4", "0.1")})
         client.run("create .")
-        client.run("graph lock test4/0.1@")
+        client.run("lock create --reference=test4/0.1@")
         locked = json.loads(client.load("conan.lock"))["graph_lock"]["nodes"]
         test4 = locked["1"]
         if client.cache.config.revisions_enabled:
@@ -74,7 +74,7 @@ class BuildOrderTest(unittest.TestCase):
         self.assertEqual(test4["ref"], ref)
         self.assertEqual(test4["package_id"], "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
         self.assertEqual(test4["prev"], prev)
-        client.run("graph build-order . --json=bo.json")
+        client.run("lock build-order conan.lock --json=bo.json")
         jsonbo = json.loads(client.load("bo.json"))
         self.assertEqual([], jsonbo)
         # if we try to build anyway, error
@@ -93,12 +93,12 @@ class BuildOrderTest(unittest.TestCase):
             client.run("export dep dep/0.1@")
             client.run("export pkg pkg/0.1@")
             client.run("export app app/0.1@")
-            client.run("graph lock app/0.1@")
+            client.run("lock create --reference=app/0.1@")
         else:
             client.run("create dep dep/0.1@")
             client.run("create pkg pkg/0.1@")
             client.run("create app app/0.1@")
-            client.run("graph lock app/0.1@ --build")
+            client.run("lock create --reference=app/0.1@ --build")
 
         locked = json.loads(client.load("conan.lock"))["graph_lock"]["nodes"]
         if client.cache.config.revisions_enabled:
@@ -134,7 +134,7 @@ class BuildOrderTest(unittest.TestCase):
             self.assertEqual(node["package_id"], package_id)
             self.assertEqual(node.get("prev"), None)  # PREV is not defined yet, only exported
 
-        client.run("graph build-order . --json=bo.json")
+        client.run("lock build-order conan.lock --json=bo.json")
         jsonbo = json.loads(client.load("bo.json"))
         self.assertEqual(build_order, jsonbo)
 
@@ -153,7 +153,7 @@ class BuildOrderTest(unittest.TestCase):
         node = locked["1"]
         self.assertEqual(node.get("prev"), None)  # PREV is not defined yet, only exported
 
-        client.run("graph build-order . --json=bo.json")
+        client.run("lock build-order conan.lock --json=bo.json")
         jsonbo = json.loads(client.load("bo.json"))
         self.assertEqual(build_order[1:], jsonbo)
 
@@ -171,7 +171,7 @@ class BuildOrderTest(unittest.TestCase):
         node = locked["1"]
         self.assertEqual(node.get("prev"), None)  # PREV is not defined yet, only exported
 
-        client.run("graph build-order . --json=bo.json")
+        client.run("lock build-order conan.lock --json=bo.json")
         jsonbo = json.loads(client.load("bo.json"))
         self.assertEqual(build_order[2:], jsonbo)
 
@@ -192,7 +192,7 @@ class BuildOrderTest(unittest.TestCase):
         self.assertEqual(node.get("prev"), prev_app)
 
         # New build order, nothing else to do
-        client.run("graph build-order . --json=bo.json")
+        client.run("lock build-order conan.lock --json=bo.json")
         jsonbo = json.loads(client.load("bo.json"))
         self.assertEqual([], jsonbo)
 
@@ -210,7 +210,7 @@ class BuildOrderTest(unittest.TestCase):
                                                    .with_require_plain("libb/0.1")})
         client.run("export . app/0.1@")
 
-        client.run("graph lock app/0.1@ --build=missing")
+        client.run("lock create app/0.1@ --build=missing")
         self.assertIn("app/0.1:Package_ID_unknown - Unknown", client.out)
         self.assertIn("liba/0.1:Package_ID_unknown - Unknown", client.out)
         self.assertIn("libb/0.1:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Build", client.out)
@@ -248,12 +248,13 @@ class BuildRequiresBuildOrderTest(unittest.TestCase):
             client.run("export dep dep/0.1@")
             client.run("export pkg pkg/0.1@")
             client.run("export app app/0.1@")
-            client.run("graph lock app/0.1@ --build=missing")  # Necessary for build-requires
+            # Necessary for build-requires
+            client.run("lock create --reference app/0.1@ --build=missing")
         else:
             client.run("create dep dep/0.1@")
             client.run("create pkg pkg/0.1@")
             client.run("create app app/0.1@")
-            client.run("graph lock app/0.1@ --build")
+            client.run("lock create --reference=app/0.1@ --build")
 
         locked = json.loads(client.load("conan.lock"))["graph_lock"]["nodes"]
         if client.cache.config.revisions_enabled:
@@ -289,7 +290,7 @@ class BuildRequiresBuildOrderTest(unittest.TestCase):
             self.assertEqual(node["package_id"], package_id)
             self.assertEqual(node.get("prev"), None)  # PREV is not defined yet, only exported
 
-        client.run("graph build-order . --json=bo.json")
+        client.run("lock build-order conan.lock --json=bo.json")
         jsonbo = json.loads(client.load("bo.json"))
         self.assertEqual(build_order, jsonbo)
 
@@ -309,7 +310,7 @@ class BuildRequiresBuildOrderTest(unittest.TestCase):
         node = locked["1"]
         self.assertEqual(node.get("prev"), None)  # PREV is not defined yet, only exported
 
-        client.run("graph build-order . --json=bo.json")
+        client.run("lock build-order conan.lock --json=bo.json")
         jsonbo = json.loads(client.load("bo.json"))
         self.assertEqual(build_order[1:], jsonbo)
 
@@ -327,7 +328,7 @@ class BuildRequiresBuildOrderTest(unittest.TestCase):
         node = locked["1"]
         self.assertEqual(node.get("prev"), None)  # PREV is not defined yet, only exported
 
-        client.run("graph build-order . --json=bo.json")
+        client.run("lock build-order conan.lock --json=bo.json")
         jsonbo = json.loads(client.load("bo.json"))
         self.assertEqual(build_order[2:], jsonbo)
 
@@ -348,7 +349,7 @@ class BuildRequiresBuildOrderTest(unittest.TestCase):
         self.assertEqual(node.get("prev"), prev_app)
 
         # New build order, nothing else to do
-        client.run("graph build-order . --json=bo.json")
+        client.run("lock build-order conan.lock --json=bo.json")
         jsonbo = json.loads(client.load("bo.json"))
         self.assertEqual([], jsonbo)
 
@@ -368,12 +369,12 @@ class GraphLockWarningsTestCase(unittest.TestCase):
         client.run("export meta.py")
 
         # Building the graphlock we get the message
-        client.run("graph lock meta.py")
+        client.run("lock create meta.py")
         self.assertIn("WARN: ffmpeg/1.0: requirement harfbuzz/[>=1.0] overridden by meta/1.0"
                       " to harfbuzz/1.0", client.out)
 
         # Using the graphlock there is no warning message
-        client.run("graph build-order conan.lock")
+        client.run("lock build-order conan.lock")
         self.assertNotIn("overridden", client.out)
         self.assertNotIn("WARN", client.out)
 
@@ -400,7 +401,7 @@ class GraphLockBuildRequireErrorTestCase(unittest.TestCase):
         client.run("export ffmpeg.py ffmpeg/1.0@")
 
         # Building the graphlock we get the message
-        client.run("graph lock variant.py --build cascade --build outdated")
+        client.run("lock create variant.py --build cascade --build outdated")
 
         if client.cache.config.revisions_enabled:
             fmpe = "ffmpeg/1.0#5522e93e2abfbd455e6211fe4d0531a2"
@@ -432,7 +433,7 @@ class GraphLockBuildRequireErrorTestCase(unittest.TestCase):
         self.assertEqual(font, nodes["5"]["ref"])
         self.assertEqual(harf, nodes["6"]["ref"])
 
-        client.run("graph build-order . --json=bo.json")
+        client.run("lock build-order conan.lock --json=bo.json")
         self.assertNotIn("cannot be found in lockfile", client.out)
         lock2 = client.load("conan.lock")
         self.assertEqual(lock2, lock1)
@@ -448,8 +449,8 @@ class GraphLockBuildRequireErrorTestCase(unittest.TestCase):
         client.run("create libA libA/1.0@")
         client.run("create App app/1.0@")
 
-        # Create the full graph lock
-        client.run("graph lock app/1.0@ --build")
+        # Create the full lock create
+        client.run("lock create --reference=app/1.0@ --build")
         lock = json.loads(client.load("conan.lock"))["graph_lock"]["nodes"]
         app = lock["1"]
         liba = lock["2"]
@@ -470,7 +471,7 @@ class GraphLockBuildRequireErrorTestCase(unittest.TestCase):
         self.assertEqual(tool["package_id"], "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
         self.assertIsNone(tool.get("prev"))
 
-        client.run("graph build-order . --json=bo.json")
+        client.run("lock build-order conan.lock --json=bo.json")
         bo0 = client.load("bo.json")
         if client.cache.config.revisions_enabled:
             tool = "tool/1.0@#f3367e0e7d170aa12abccb175fee5f97"
@@ -494,10 +495,10 @@ class GraphLockBuildRequireErrorTestCase(unittest.TestCase):
         else:
             self.assertIn("ERROR: Attempt to modify locked libA/1.0 to libA/2.0", client.out)
 
-        # Instead we export it and create a new graph lock
+        # Instead we export it and create a new lock create
         client.run("export libA libA/2.0@")
-        client.run("graph lock app/1.0@ --build=missing --lockfile=new.lock")
+        client.run("lock create --reference=app/1.0@ --build=missing --lockfile-out=new.lock")
         new = client.load("new.lock")
         self.assertNotIn("libA/2.0", new)
-        client.run("graph build-order new.lock --json=bo.json")
+        client.run("lock build-order new.lock --json=bo.json")
         self.assertEqual(json.loads(client.load("bo.json")), [])

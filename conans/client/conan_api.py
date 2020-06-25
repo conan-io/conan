@@ -626,8 +626,7 @@ class ConanAPIV1(object):
             self.app.cache.initialize_default_profile()
             self.app.cache.initialize_settings()
 
-    def _info_args(self, reference_or_path, install_folder, profile_host, profile_build, lockfile=None,
-                   name=None, version=None, user=None, channel=None):
+    def _info_args(self, reference_or_path, install_folder, profile_host, profile_build, lockfile=None):
         cwd = get_cwd()
         if check_valid_ref(reference_or_path):
             ref = ConanFileReference.loads(reference_or_path)
@@ -641,8 +640,7 @@ class ConanAPIV1(object):
 
         lockfile = _make_abs_path(lockfile, cwd) if lockfile else None
         graph_info = get_graph_info(profile_host, profile_build, cwd, install_folder,
-                                    self.app.cache, self.app.out, lockfile=lockfile,
-                                    name=name, version=version, user=user, channel=channel)
+                                    self.app.cache, self.app.out, lockfile=lockfile)
 
         return ref, graph_info
 
@@ -1244,48 +1242,63 @@ class ConanAPIV1(object):
         return build_order
 
     @api_method
-    def create_lock(self, reference, remote_name=None, settings=None, options=None, env=None,
-                    profile_names=None, update=False, lockfile=None, build=None, profile_build=None,
-                    only_recipes=False, input_lockfile=None, name=None, version=None, user=None,
-                    channel=None):
-        profile_host = ProfileData(profiles=profile_names, settings=settings, options=options,
-                                   env=env)
-        reference, graph_info = self._info_args(reference, None, profile_host, profile_build,
-                                                lockfile=input_lockfile, name=name, version=version,
-                                                user=user, channel=channel)
-        if input_lockfile:
-            cwd = os.getcwd()
+    def create_lock(self, path, reference=None, name=None, version=None, user=None, channel=None,
+                    profile_host=None, profile_build=None, remote_name=None, update=None, build=None,
+                    base=None, lockfile=None, lockfile_out=None):
+        # profile_host is mandatory
+        profile_host = profile_host or ProfileData(None, None, None, None)
+        cwd = get_cwd()
+
+        if path and reference:
+            raise ConanException("Both path and reference were provided")
+
+        if path:
+            ref_or_path = _make_abs_path(path, cwd)
+        else: # reference
+            ref_or_path = ConanFileReference.loads(reference)
+
+        phost = pbuild = graph_lock = None
+        if lockfile:
+            lockfile = _make_abs_path(lockfile, cwd)
+            graph_lock_file = GraphLockFile.load(lockfile, self.app.cache.config.revisions_enabled)
+            phost = graph_lock_file.profile_host
+            pbuild = graph_lock_file.profile_build
+            graph_lock = graph_lock_file.graph_lock
+            graph_lock.relaxed = True
+
+        if not phost:
             phost = profile_from_args(profile_host.profiles, profile_host.settings,
-                                      profile_host.options,
-                                      profile_host.env, cwd, self.app.cache)
+                                      profile_host.options, profile_host.env, cwd, self.app.cache)
             phost.process_settings(self.app.cache)
-            graph_info.profile_host = phost
-            if profile_build:
-                # Only work on the profile_build if something is provided
-                pbuild = profile_from_args(profile_build.profiles, profile_build.settings,
-                                           profile_build.options, profile_build.env, cwd,
-                                           self.app.cache)
-                pbuild.process_settings(self.app.cache)
-            else:
-                pbuild = None
-            graph_info.profile_build = pbuild
-            graph_info.graph_lock.relaxed = True
+
+        if not pbuild:
+            # Only work on the profile_build if something is provided
+            pbuild = profile_from_args(profile_build.profiles, profile_build.settings,
+                                       profile_build.options, profile_build.env, cwd, self.app.cache)
+            pbuild.process_settings(self.app.cache)
+
             # If given an input lockfile, then construct it from the root
             # reference = graph_info.graph_lock.root_node_ref()
+
+        root_ref = ConanFileReference(name, version, user, channel, validate=False)
+        graph_info = GraphInfo(profile_host=phost, profile_build=pbuild, root_ref=root_ref)
+        graph_info.graph_lock = graph_lock
+
         recorder = ActionRecorder()
         # FIXME: Using update as check_update?
         remotes = self.app.load_remotes(remote_name=remote_name, check_updates=update)
-        deps_graph = self.app.graph_manager.load_graph(reference, None, graph_info, build, update,
+        deps_graph = self.app.graph_manager.load_graph(ref_or_path, None, graph_info, build, update,
                                                        False, remotes, recorder)
 
         print_graph(deps_graph, self.app.out)
-        if input_lockfile:
+        if lockfile:
             graph_info.graph_lock = GraphLock(deps_graph, self.app.config.revisions_enabled)
-        if only_recipes:
+        if base:
             graph_info.graph_lock.only_recipes()
-        lockfile = _make_abs_path(lockfile)
-        graph_info.save_lock(lockfile)
-        self.app.out.info("Generated lockfile")
+
+        lockfile_out = _make_abs_path(lockfile_out or "conan.lock")
+        graph_info.save_lock(lockfile_out)
+        self.app.out.info("Generated lockfile: %s" % lockfile_out)
 
 
 Conan = ConanAPIV1

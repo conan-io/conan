@@ -9,8 +9,7 @@ from conans.client.profile_loader import _load_profile
 from conans.errors import ConanException
 from conans.model.info import PACKAGE_ID_UNKNOWN
 from conans.model.options import OptionsValues
-from conans.model.ref import ConanFileReference, PackageReference
-from conans.model.version import Version
+from conans.model.ref import ConanFileReference
 from conans.util.files import load, save
 
 LOCKFILE = "conan.lock"
@@ -29,10 +28,7 @@ class GraphLockFile(object):
         if not path:
             raise IOError("Invalid path")
         if not os.path.isfile(path):
-            p = os.path.join(path, LOCKFILE)
-            if not os.path.isfile(p):
-                raise ConanException("Missing lockfile in: %s" % path)
-            path = p
+            raise ConanException("Missing lockfile in: %s" % path)
         content = load(path)
         try:
             return GraphLockFile.loads(content, revisions_enabled)

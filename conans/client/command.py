@@ -1816,50 +1816,51 @@ class Command(object):
         """
         cmd_frogarian(self._out)
 
-    def graph(self, *args):
+    def lock(self, *args):
         """
         Generates and manipulates lock files.
         """
-        parser = argparse.ArgumentParser(description=self.graph.__doc__,
-                                         prog="conan graph",
+        parser = argparse.ArgumentParser(description=self.lock.__doc__,
+                                         prog="conan lock",
                                          formatter_class=SmartFormatter)
         subparsers = parser.add_subparsers(dest='subcommand', help='sub-command help')
         subparsers.required = True
 
         # create the parser for the "a" command
-        merge_cmd = subparsers.add_parser('update-lock', help='merge two lockfiles')
-        merge_cmd.add_argument('old_lockfile', help='path to previous lockfile')
-        merge_cmd.add_argument('new_lockfile', help='path to modified lockfile')
+        update_cmd = subparsers.add_parser('update', help='merge two lockfiles')
+        update_cmd.add_argument('old_lockfile', help='path to previous lockfile')
+        update_cmd.add_argument('new_lockfile', help='path to modified lockfile')
 
         build_order_cmd = subparsers.add_parser('build-order', help='Returns build-order')
-        build_order_cmd.add_argument('lockfile', help='lockfile folder')
+        build_order_cmd.add_argument('lockfile', help='lockfile file')
         build_order_cmd.add_argument("--json", action=OnceArgument,
                                      help="generate output file in json format")
 
-        clean_cmd = subparsers.add_parser('clean-modified', help='Clean modified')
-        clean_cmd.add_argument('lockfile', help='lockfile folder')
-
-        lock_cmd = subparsers.add_parser('lock', help='create a lockfile')
-        lock_cmd.add_argument("path_or_reference", help="Path to a folder containing a recipe"
-                              " (conanfile.py or conanfile.txt) or to a recipe file. e.g., "
-                              "./my_project/conanfile.txt. It could also be a reference")
-        lock_cmd.add_argument("reference", nargs='?', default=None,
-                              help='user/channel, version@user/channel or pkg/version@user/channel '
-                              '(if name or version declared in conanfile.py, they should match)')
-        lock_cmd.add_argument("-l", "--lockfile", action=OnceArgument,
-                              help="Path to lockfile to be created. If not specified 'conan.lock'"
-                              " will be created in current folder")
-        lock_cmd.add_argument("--recipes", action="store_true",
-                              help="lock only recipe versions and revisions")
-        lock_cmd.add_argument("--input-lockfile", action=OnceArgument,
-                              help="Use an input lockfile")
-        _add_common_install_arguments(lock_cmd, build_help="Packages to build from source",
+        create_cmd = subparsers.add_parser('create', help='create a lockfile')
+        create_cmd.add_argument("path", nargs="?", help="Path to a conanfile")
+        create_cmd.add_argument("--name", action=OnceArgument,
+                                help='Provide a package name if not specified in conanfile')
+        create_cmd.add_argument("--version", action=OnceArgument,
+                                help='Provide a package version if not specified in conanfile')
+        create_cmd.add_argument("--user", action=OnceArgument,
+                                help='Provide a user')
+        create_cmd.add_argument("--channel", action=OnceArgument,
+                                help='Provide a channel')
+        create_cmd.add_argument("--reference", action=OnceArgument,
+                                help='Provide a package reference instead of a conanfile')
+        create_cmd.add_argument("-l", "--lockfile", action=OnceArgument,
+                                help="Path to lockfile to be used as a base'")
+        create_cmd.add_argument("--base", action="store_true",
+                                help="lock only recipe versions and revisions")
+        create_cmd.add_argument("--lockfile-out", action=OnceArgument,
+                                help="Filename of the created lockfile, conan.lock if not specified")
+        _add_common_install_arguments(create_cmd, build_help="Packages to build from source",
                                       lockfile=False)
 
         args = parser.parse_args(*args)
         self._warn_python_version()
 
-        if args.subcommand == "update-lock":
+        if args.subcommand == "update":
             self._conan.update_lock(args.old_lockfile, args.new_lockfile)
         elif args.subcommand == "build-order":
             build_order = self._conan.build_order(args.lockfile)
@@ -1867,31 +1868,26 @@ class Command(object):
             if args.json:
                 json_file = _make_abs_path(args.json)
                 save(json_file, json.dumps(build_order, indent=True))
-        elif args.subcommand == "lock":
+        elif args.subcommand == "create":
             profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
                                         options=args.options_build, env=args.env_build)
-            name, version, user, channel, _ = get_reference_fields(args.reference,
-                                                                   user_channel_input=True)
-            if any([user, channel]) and not all([user, channel]):
-                # Or user/channel or nothing, but not partial
-                raise ConanException("Invalid parameter '%s', "
-                                     "specify the full reference or user/channel" % args.reference)
-            self._conan.create_lock(args.path_or_reference,
-                                    remote_name=args.remote,
-                                    settings=args.settings_host,
-                                    options=args.options_host,
-                                    env=args.env_host,
-                                    profile_names=args.profile_host,
+            profile_host = ProfileData(profiles=args.profile_host, settings=args.settings_host,
+                                       options=args.options_host, env=args.env_host)
+
+            self._conan.create_lock(path=args.path,
+                                    reference=args.reference,
+                                    name=args.name,
+                                    version=args.version,
+                                    user=args.user,
+                                    channel=args.channel,
+                                    profile_host=profile_host,
                                     profile_build=profile_build,
+                                    remote_name=args.remote,
                                     update=args.update,
-                                    lockfile=args.lockfile,
                                     build=args.build,
-                                    only_recipes=args.recipes,
-                                    input_lockfile=args.input_lockfile,
-                                    name=name,
-                                    version=version,
-                                    user=user,
-                                    channel=channel)
+                                    base=args.base,
+                                    lockfile=args.lockfile,
+                                    lockfile_out=args.lockfile_out)
 
     def _show_help(self):
         """
@@ -2063,6 +2059,8 @@ class Command(object):
             ret_code = ERROR_INVALID_CONFIGURATION
             self._out.error(exc)
         except ConanException as exc:
+            import traceback
+            print(traceback.format_exc())
             ret_code = ERROR_GENERAL
             self._out.error(exc)
         except Exception as exc:

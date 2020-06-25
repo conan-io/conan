@@ -38,7 +38,11 @@ class GraphLockVersionRangeTest(unittest.TestCase):
 
         # Use a consumer with a version range
         client.save({"conanfile.py": self.consumer})
-        client.run("graph lock . %s" % self.user_channel)
+        if self.user_channel:
+            user, channel = self.user_channel.split("/")
+            client.run("lock create conanfile.py --user=%s --channel=%s" % (user, channel))
+        else:
+            client.run("lock create conanfile.py")
 
         self._check_lock()
 

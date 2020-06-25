@@ -19,7 +19,7 @@ class GraphLockErrorsTest(unittest.TestCase):
         client.save({"conanfile.py": GenConanfile("PkgA", "0.1")})
         client.run("install . -if=conf1 -s os=Windows")
         client.run("install . -if=conf2 -s os=Linux")
-        client.run("graph update-lock conf1 conf2", assert_error=True)
+        client.run("lock update conf1/conan.lock conf2/conan.lock", assert_error=True)
         self.assertIn("Profiles of lockfiles are different", client.out)
         self.assertIn("os=Windows", client.out)
         self.assertIn("os=Linux", client.out)
@@ -94,7 +94,7 @@ class GraphLockCustomFilesTest(unittest.TestCase):
         # Use a consumer with a version range
         consumer = GenConanfile("PkgB", "0.1").with_require_plain("PkgA/[>=0.1]@user/channel")
         client.save({"conanfile.py": consumer})
-        client.run("graph lock . --lockfile=custom.lock")
+        client.run("lock create conanfile.py --lockfile-out=custom.lock")
         self.assertIn("PkgA/0.1@user/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache",
                       client.out)
         self._check_lock()
@@ -116,9 +116,9 @@ class ReproducibleLockfiles(unittest.TestCase):
         # Use a consumer with a version range
         client.save({"conanfile.py":
                      GenConanfile("PkgB", "0.1").with_require_plain("PkgA/[>=0.1]@user/channel")})
-        client.run("graph lock .")
+        client.run("lock create conanfile.py")
         lockfile = client.load(LOCKFILE)
-        client.run("graph lock .")
+        client.run("lock create conanfile.py")
         lockfile2 = client.load(LOCKFILE)
         self.assertEqual(lockfile, lockfile2)
         # different commands still generate identical lock
@@ -253,7 +253,7 @@ class LockFileOptionsTest(unittest.TestCase):
         client.run("export ffmepg ffmpeg/1.0@")
         client.run("export variant nano/1.0@")
 
-        client.run("graph lock nano/1.0@ --build")
+        client.run("lock create --reference=nano/1.0@ --build")
         lockfile = client.load("conan.lock")
         self.assertIn('"options": "variation=nano"', lockfile)
         client.run("create ffmepg ffmpeg/1.0@ --build --lockfile")
@@ -269,7 +269,7 @@ class GraphInstallArgumentsUpdated(unittest.TestCase):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . somelib/1.0@")
-        client.run("graph lock somelib/1.0@ --lockfile=somelib.lock")
+        client.run("lock create --reference=somelib/1.0@ --lockfile-out=somelib.lock")
         previous_lock = client.load("somelib.lock")
         # This should fail, because somelib is locked
         client.run("install somelib/1.0@ --lockfile=somelib.lock --build somelib", assert_error=True)

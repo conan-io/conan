@@ -62,7 +62,8 @@ class GraphManager(object):
         """
         try:
             graph_info = GraphInfo.load(info_folder)
-            graph_lock_file = GraphLockFile.load(info_folder, self._cache.config.revisions_enabled)
+            lock_path = os.path.join(info_folder, "conan.lock")
+            graph_lock_file = GraphLockFile.load(lock_path, self._cache.config.revisions_enabled)
             graph_lock = graph_lock_file.graph_lock
             self._output.info("Using lockfile: '{}/conan.lock'".format(info_folder))
             profile_host = graph_lock_file.profile_host
