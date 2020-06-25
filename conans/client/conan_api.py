@@ -1335,7 +1335,8 @@ def get_graph_info(profile_host, profile_build, cwd, install_folder, cache, outp
                                  % install_folder)
         graph_info = None
     else:
-        graph_lock_file = GraphLockFile.load(install_folder, cache.config.revisions_enabled)
+        lockfilename = os.path.join(install_folder, LOCKFILE)
+        graph_lock_file = GraphLockFile.load(lockfilename, cache.config.revisions_enabled)
         graph_info.profile_host = graph_lock_file.profile_host
         graph_info.profile_host.process_settings(cache, preprocess=False)
 
