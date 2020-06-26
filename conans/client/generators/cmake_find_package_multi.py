@@ -1,6 +1,7 @@
 from jinja2 import Template
 import textwrap
 
+from conans.client.generators import CMakeFindPackageGenerator
 from conans.client.generators.cmake import DepsCppCmake
 from conans.client.generators.cmake_find_package_common import (find_transitive_dependencies,
                                                                 target_template,
@@ -11,7 +12,7 @@ from conans.model import Generator
 from conans.model.build_info import COMPONENT_SCOPE
 
 
-class CMakeFindPackageMultiGenerator(Generator):
+class CMakeFindPackageMultiGenerator(CMakeFindPackageGenerator):
     name = "cmake_find_package_multi"
     config_template = textwrap.dedent("""
         {macros_and_functions}
@@ -256,44 +257,6 @@ set_property(TARGET {name}::{name}
                              $<$<CONFIG:Debug>:{{ '${'+pkg_name+'_COMPONENTS_DEBUG}' }}>)
         endif()
         """))
-
-    def _get_components(self, pkg_name, pkg_findname, cpp_info):
-        find_package_components = []
-        for comp_name, comp in self.sorted_components(cpp_info).items():
-            comp_findname = self._get_name(cpp_info.components[comp_name])
-            deps_cpp_cmake = DepsCppCmake(comp)
-            deps_cpp_cmake.public_deps = self._get_component_requires(pkg_name, pkg_findname, comp)
-            find_package_components.append((comp_findname, deps_cpp_cmake))
-        find_package_components.reverse()  # From the less dependent to most one
-        return find_package_components
-
-    def _get_component_requires(self, pkg_name, pkg_findname, comp):
-        comp_requires_findnames = []
-        for require in comp.requires:
-            if COMPONENT_SCOPE in require:
-                comp_require_pkg_name, comp_require_comp_name = require.split(COMPONENT_SCOPE)
-                comp_require_pkg = self.deps_build_info[comp_require_pkg_name]
-                comp_require_pkg_findname = self._get_name(comp_require_pkg)
-                if comp_require_comp_name == comp_require_pkg_name:
-                    comp_require_comp_findname = comp_require_pkg_findname
-                elif comp_require_comp_name in self.deps_build_info[comp_require_pkg_name].components:
-                    comp_require_comp = comp_require_pkg.components[comp_require_comp_name]
-                    comp_require_comp_findname = self._get_name(comp_require_comp)
-                else:
-                    raise ConanException("Component '%s' not found in '%s' package requirement"
-                                         % (require, comp_require_pkg_name))
-            else:
-                comp_require_pkg_findname = pkg_findname
-                comp_require_comp = self.deps_build_info[pkg_name].components[require]
-                comp_require_comp_findname = self._get_name(comp_require_comp)
-            f = "{}::{}".format(comp_require_pkg_findname, comp_require_comp_findname)
-            comp_requires_findnames.append(f)
-        return " ".join(comp_requires_findnames)
-
-    @classmethod
-    def _get_name(cls, obj):
-        get_name = getattr(obj, "get_name")
-        return get_name(cls.name)
 
     @property
     def filename(self):
