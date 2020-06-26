@@ -315,7 +315,7 @@ def cmd_new(ref, header=False, pure_c=False, test=False, exports_sources=False, 
             if not os.path.isabs(template):
                 # FIXME: Conan 2.0. The old path should be removed
                 old_path = os.path.join(cache.cache_folder, "templates", template)
-                new_path = os.path.join(cache.cache_folder, "templates", "cmd_new", template)
+                new_path = os.path.join(cache.cache_folder, "templates", "command/new", template)
                 template = new_path if os.path.isfile(new_path) else old_path
             if not os.path.isfile(template):
                 raise ConanException("Template doesn't exist: %s" % template)
@@ -326,7 +326,7 @@ def cmd_new(ref, header=False, pure_c=False, test=False, exports_sources=False, 
             files = {"conanfile.py": replaced}
         else:
             if not os.path.isabs(template):
-                template = os.path.join(cache.cache_folder, "templates", "cmd_new", template)
+                template = os.path.join(cache.cache_folder, "templates", "command/new", template)
             if not os.path.isdir(template):
                 raise ConanException("Template doesn't exist: {}".format(template))
             template = os.path.normpath(template)

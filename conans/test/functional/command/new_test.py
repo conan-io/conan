@@ -31,7 +31,7 @@ class NewCommandTest(unittest.TestCase):
 
     def template_dir_test(self):
         client = TestClient()
-        template_dir = "templates/cmd_new/t_dir"
+        template_dir = "templates/command/new/t_dir"
         template_recipe = textwrap.dedent("""
             class {{package_name}}Conan(ConanFile):
                 name = "{{name}}"
