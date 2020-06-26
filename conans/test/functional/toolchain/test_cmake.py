@@ -1,5 +1,3 @@
-# coding=utf-8
-
 import os
 import platform
 import textwrap
@@ -17,21 +15,18 @@ class Base(unittest.TestCase):
 
     conanfile = textwrap.dedent("""
         from conans import ConanFile, CMake, CMakeToolchain
-
         class App(ConanFile):
             settings = "os", "arch", "compiler", "build_type"
             requires = "hello/0.1"
             generators = "cmake_find_package_multi"
             options = {"shared": [True, False], "fPIC": [True, False]}
             default_options = {"shared": False, "fPIC": True}
-
             def toolchain(self):
                 tc = CMakeToolchain(self)
                 tc.definitions["DEFINITIONS_BOTH"] = True
                 tc.definitions.debug["DEFINITIONS_CONFIG"] = "Debug"
                 tc.definitions.release["DEFINITIONS_CONFIG"] = "Release"
                 return tc
-
             def build(self):
                 cmake = CMake(self)
                 cmake.configure()
@@ -52,7 +47,6 @@ class Base(unittest.TestCase):
         #include <iostream>
         #include "app.h"
         #include "hello.h"
-
         void app() {
             std::cout << "Hello: " << HELLO_MSG <<std::endl;
             #ifdef NDEBUG
@@ -67,7 +61,6 @@ class Base(unittest.TestCase):
 
     app = textwrap.dedent("""
         #include "app.h"
-
         int main() {
             app();
         }
@@ -76,15 +69,12 @@ class Base(unittest.TestCase):
     cmakelist = textwrap.dedent("""
         cmake_minimum_required(VERSION 2.8)
         project(App C CXX)
-
         if(CONAN_TOOLCHAIN_INCLUDED AND CMAKE_VERSION VERSION_LESS "3.15")
             include("${CMAKE_BINARY_DIR}/conan_project_include.cmake")
         endif()
-
         if(NOT CMAKE_TOOLCHAIN_FILE)
             message(FATAL ">> Not using toolchain")
         endif()
-
         message(">> CMAKE_GENERATOR_PLATFORM: ${CMAKE_GENERATOR_PLATFORM}")
         message(">> CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
         message(">> CMAKE_CXX_FLAGS: ${CMAKE_CXX_FLAGS}")
@@ -95,28 +85,21 @@ class Base(unittest.TestCase):
         message(">> CMAKE_C_FLAGS_RELEASE: ${CMAKE_C_FLAGS_RELEASE}")
         message(">> CMAKE_SHARED_LINKER_FLAGS: ${CMAKE_SHARED_LINKER_FLAGS}")
         message(">> CMAKE_EXE_LINKER_FLAGS: ${CMAKE_EXE_LINKER_FLAGS}")
-
         message(">> CMAKE_CXX_STANDARD: ${CMAKE_CXX_STANDARD}")
         message(">> CMAKE_CXX_EXTENSIONS: ${CMAKE_CXX_EXTENSIONS}")
-
         message(">> CMAKE_POSITION_INDEPENDENT_CODE: ${CMAKE_POSITION_INDEPENDENT_CODE}")
         message(">> CMAKE_SKIP_RPATH: ${CMAKE_SKIP_RPATH}")
         message(">> CMAKE_INSTALL_NAME_DIR: ${CMAKE_INSTALL_NAME_DIR}")
-
         message(">> CMAKE_MODULE_PATH: ${CMAKE_MODULE_PATH}")
         message(">> CMAKE_PREFIX_PATH: ${CMAKE_PREFIX_PATH}")
-
         message(">> BUILD_SHARED_LIBS: ${BUILD_SHARED_LIBS}")
-
         get_directory_property(_COMPILE_DEFS DIRECTORY ${CMAKE_SOURCE_DIR} COMPILE_DEFINITIONS)
         message(">> COMPILE_DEFINITIONS: ${_COMPILE_DEFS}")
-
         find_package(hello REQUIRED)
         add_library(app_lib app_lib.cpp)
         target_link_libraries(app_lib PRIVATE hello::hello)
         target_compile_definitions(app_lib PRIVATE DEFINITIONS_BOTH="${DEFINITIONS_BOTH}")
         target_compile_definitions(app_lib PRIVATE DEFINITIONS_CONFIG=${DEFINITIONS_CONFIG})
-
         add_executable(app app.cpp)
         target_link_libraries(app PRIVATE app_lib)
         """)
@@ -158,6 +141,33 @@ class Base(unittest.TestCase):
             self.client.run("build ..")
         return install_out
 
+    def _modify_code(self):
+        content = self.client.load("app_lib.cpp")
+        content = content.replace("App:", "AppImproved:")
+        self.client.save({"app_lib.cpp": content})
+
+        content = self.client.load("CMakeLists.txt")
+        content = content.replace(">>", "++>>")
+        self.client.save({"CMakeLists.txt": content})
+
+    def _incremental_build(self, build_type=None):
+        build_directory = os.path.join(self.client.current_folder, "build").replace("\\", "/")
+        with self.client.chdir(build_directory):
+            config = "--config %s" % build_type if build_type else ""
+            self.client.run_command("cmake --build . %s" % config)
+
+    def _run_app(self, build_type, bin_folder=False, msg="App", dyld_path=None):
+        if dyld_path:
+            build_directory = os.path.join(self.client.current_folder, "build").replace("\\", "/")
+            command_str = 'DYLD_LIBRARY_PATH="%s" build/app' % build_directory
+        else:
+            command_str = "build\\%s\\app.exe" % build_type if bin_folder else "build/app"
+        self.client.run_command(command_str)
+        self.assertIn("Hello: %s" % build_type, self.client.out)
+        self.assertIn("%s: %s!" % (msg, build_type), self.client.out)
+        self.assertIn("DEFINITIONS_BOTH: True", self.client.out)
+        self.assertIn("DEFINITIONS_CONFIG: %s" % build_type, self.client.out)
+
 
 @unittest.skipUnless(platform.system() == "Windows", "Only for windows")
 class WinTest(Base):
@@ -183,12 +193,7 @@ class WinTest(Base):
             self.assertIn("Microsoft Visual Studio 14.0", self.client.out)
         else:
             self.assertIn("Microsoft Visual Studio/2017", self.client.out)
-        if shared:
-            self.assertIn("app_lib.dll", self.client.out)
-        else:
-            self.assertNotIn("app_lib.dll", self.client.out)
 
-        out = str(self.client.out).splitlines()
         runtime = "MT" if "MT" in runtime else "MD"
         generator_platform = "x64" if arch == "x86_64" else "Win32"
         arch = "x64" if arch == "x86_64" else "X86"
@@ -206,29 +211,37 @@ class WinTest(Base):
                 "CMAKE_CXX_STANDARD": cppstd,
                 "CMAKE_CXX_EXTENSIONS": "OFF",
                 "BUILD_SHARED_LIBS": shared_str}
-        for k, v in vals.items():
-            self.assertIn(">> %s: %s" % (k, v), out)
+
+        def _verify_out(marker=">>"):
+            if shared:
+                self.assertIn("app_lib.dll", self.client.out)
+            else:
+                self.assertNotIn("app_lib.dll", self.client.out)
+
+            out = str(self.client.out).splitlines()
+            for k, v in vals.items():
+                self.assertIn("%s %s: %s" % (marker, k, v), out)
+
+        _verify_out()
 
         toolchain = self.client.load("build/conan_toolchain.cmake")
         include = self.client.load("build/conan_project_include.cmake")
-        settings["build_type"] = "Release" if build_type == "Debug" else "Debug"
+        opposite_build_type = "Release" if build_type == "Debug" else "Debug"
+        settings["build_type"] = opposite_build_type
         self._run_build(settings, options)
         # The generated toolchain files must be identical because it is a multi-config
         self.assertEqual(toolchain, self.client.load("build/conan_toolchain.cmake"))
         self.assertEqual(include, self.client.load("build/conan_project_include.cmake"))
 
-        command_str = "build\\Debug\\app.exe"
-        self.client.run_command(command_str)
-        self.assertIn("Hello: Debug", self.client.out)
-        self.assertIn("App: Debug!", self.client.out)
-        self.assertIn("DEFINITIONS_BOTH: True", self.client.out)
-        self.assertIn("DEFINITIONS_CONFIG: Debug", self.client.out)
-        command_str = "build\\Release\\app.exe"
-        self.client.run_command(command_str)
-        self.assertIn("Hello: Release", self.client.out)
-        self.assertIn("App: Release!", self.client.out)
-        self.assertIn("DEFINITIONS_BOTH: True", self.client.out)
-        self.assertIn("DEFINITIONS_CONFIG: Release", self.client.out)
+        self._run_app("Release", bin_folder=True)
+        self._run_app("Debug", bin_folder=True)
+
+        self._modify_code()
+        self._incremental_build(build_type=build_type)
+        _verify_out(marker="++>>")
+        self._run_app(build_type, bin_folder=True, msg="AppImproved")
+        self._incremental_build(build_type=opposite_build_type)
+        self._run_app(opposite_build_type, bin_folder=True, msg="AppImproved")
 
 
 @unittest.skipUnless(platform.system() == "Linux", "Only for Linux")
@@ -245,12 +258,7 @@ class LinuxTest(Base):
 
         self.assertIn('CMake command: cmake -G "Unix Makefiles" '
                       '-DCMAKE_TOOLCHAIN_FILE="conan_toolchain.cmake"', self.client.out)
-        if shared:
-            self.assertIn("libapp_lib.so", self.client.out)
-        else:
-            self.assertIn("libapp_lib.a", self.client.out)
 
-        out = str(self.client.out).splitlines()
         extensions_str = "ON" if "gnu" in cppstd else "OFF"
         pic_str = "" if shared else "ON"
         arch_str = "-m32" if arch == "x86" else "-m64"
@@ -269,14 +277,25 @@ class LinuxTest(Base):
                 "COMPILE_DEFINITIONS": "_GLIBCXX_USE_CXX11_ABI=%s" % cxx11_abi_str,
                 "CMAKE_POSITION_INDEPENDENT_CODE": pic_str
                 }
-        for k, v in vals.items():
-            self.assertIn(">> %s: %s" % (k, v), out)
 
-        self.client.run_command("build/app")
-        self.assertIn("Hello: %s" % build_type, self.client.out)
-        self.assertIn("App: %s!" % build_type, self.client.out)
-        self.assertIn("DEFINITIONS_BOTH: True", self.client.out)
-        self.assertIn("DEFINITIONS_CONFIG: %s" % build_type, self.client.out)
+        def _verify_out(marker=">>"):
+            if shared:
+                self.assertIn("libapp_lib.so", self.client.out)
+            else:
+                self.assertIn("libapp_lib.a", self.client.out)
+
+            out = str(self.client.out).splitlines()
+            for k, v in vals.items():
+                self.assertIn("%s %s: %s" % (marker, k, v), out)
+
+        _verify_out()
+
+        self._run_app(build_type)
+
+        self._modify_code()
+        self._incremental_build()
+        _verify_out(marker="++>>")
+        self._run_app(build_type, msg="AppImproved")
 
 
 @unittest.skipUnless(platform.system() == "Darwin", "Only for Apple")
@@ -291,12 +310,7 @@ class AppleTest(Base):
 
         self.assertIn('CMake command: cmake -G "Unix Makefiles" '
                       '-DCMAKE_TOOLCHAIN_FILE="conan_toolchain.cmake"', self.client.out)
-        if shared:
-            self.assertIn("libapp_lib.dylib", self.client.out)
-        else:
-            self.assertIn("libapp_lib.a", self.client.out)
 
-        out = str(self.client.out).splitlines()
         extensions_str = "OFF" if cppstd else ""
         vals = {"CMAKE_CXX_STANDARD": cppstd,
                 "CMAKE_CXX_EXTENSIONS": extensions_str,
@@ -312,18 +326,25 @@ class AppleTest(Base):
                 "CMAKE_SKIP_RPATH": "1",
                 "CMAKE_INSTALL_NAME_DIR": ""
                 }
-        for k, v in vals.items():
-            self.assertIn(">> %s: %s" % (k, v), out)
 
-        if shared:
-            build_directory = os.path.join(self.client.current_folder, "build").replace("\\", "/")
-            self.client.run_command('DYLD_LIBRARY_PATH="%s" build/app' % build_directory)
-        else:
-            self.client.run_command('build/app')
-        self.assertIn("Hello: %s" % build_type, self.client.out)
-        self.assertIn("App: %s!" % build_type, self.client.out)
-        self.assertIn("DEFINITIONS_BOTH: True", self.client.out)
-        self.assertIn("DEFINITIONS_CONFIG: %s" % build_type, self.client.out)
+        def _verify_out(marker=">>"):
+            if shared:
+                self.assertIn("libapp_lib.dylib", self.client.out)
+            else:
+                self.assertIn("libapp_lib.a", self.client.out)
+
+            out = str(self.client.out).splitlines()
+            for k, v in vals.items():
+                self.assertIn("%s %s: %s" % (marker, k, v), out)
+
+        _verify_out()
+
+        self._run_app(build_type, dyld_path=shared)
+
+        self._modify_code()
+        self._incremental_build()
+        _verify_out(marker="++>>")
+        self._run_app(build_type, dyld_path=shared, msg="AppImproved")
 
 
 @attr("toolchain")
@@ -332,18 +353,14 @@ class CMakeInstallTest(unittest.TestCase):
     def test_install(self):
         conanfile = textwrap.dedent("""
             from conans import ConanFile, CMake, CMakeToolchain
-
             class App(ConanFile):
                 settings = "os", "arch", "compiler", "build_type"
                 exports_sources = "CMakeLists.txt", "header.h"
-
                 def toolchain(self):
                     return CMakeToolchain(self)
-
                 def build(self):
                     cmake = CMake(self)
                     cmake.configure()
-
                 def package(self):
                     cmake = CMake(self)
                     cmake.install()
@@ -352,15 +369,12 @@ class CMakeInstallTest(unittest.TestCase):
         cmakelist = textwrap.dedent("""
             cmake_minimum_required(VERSION 2.8)
             project(App C)
-
             if(CONAN_TOOLCHAIN_INCLUDED AND CMAKE_VERSION VERSION_LESS "3.15")
                 include("${CMAKE_BINARY_DIR}/conan_project_include.cmake")
             endif()
-
             if(NOT CMAKE_TOOLCHAIN_FILE)
                 message(FATAL ">> Not using toolchain")
             endif()
-
             install(FILES header.h DESTINATION include)
             """)
         client = TestClient(path_with_spaces=False)
