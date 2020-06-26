@@ -1,5 +1,7 @@
 from conans.model import Generator
-from conans.paths import BUILD_INFO_QMAKE
+
+
+BUILD_INFO_QMAKE = 'conanbuildinfo.pri'
 
 
 class DepsCppQmake(object):
@@ -15,7 +17,7 @@ class DepsCppQmake(object):
         self.res_paths = multiline(cpp_info.res_paths)
         self.build_paths = multiline(cpp_info.build_paths)
 
-        self.libs = " ".join('-l%s' % l for l in cpp_info.libs)
+        self.libs = " ".join('-l%s' % lib for lib in cpp_info.libs)
         self.defines = " \\\n    ".join('"%s"' % d for d in cpp_info.defines)
         self.cxxflags = " ".join(cpp_info.cxxflags)
         self.cflags = " ".join(cpp_info.cflags)
@@ -61,8 +63,7 @@ class QmakeGenerator(Generator):
         for dep_name, dep_cpp_info in self.deps_build_info.dependencies:
             dep_name = "_" + dep_name.upper().replace("-", "_").replace(".", "_")
             deps = DepsCppQmake(dep_cpp_info)
-            dep_flags = template_deps.format(dep_name=dep_name, deps=deps,
-                                             build_type="")
+            dep_flags = template_deps.format(dep_name=dep_name, deps=deps, build_type="")
             sections.append(dep_flags)
 
             for config, cpp_info in dep_cpp_info.configs.items():
@@ -79,14 +80,12 @@ class QmakeGenerator(Generator):
     BINDIRS += $$CONAN_BINDIRS
     DEFINES += $$CONAN_DEFINES
     CONFIG(release, debug|release) {
-        message("Release config")
         INCLUDEPATH += $$CONAN_INCLUDEPATH_RELEASE
         LIBS += $$CONAN_LIBS_RELEASE
         LIBS += $$CONAN_LIBDIRS_RELEASE
         BINDIRS += $$CONAN_BINDIRS_RELEASE
         DEFINES += $$CONAN_DEFINES_RELEASE
     } else {
-        message("Debug config")
         INCLUDEPATH += $$CONAN_INCLUDEPATH_DEBUG
         LIBS += $$CONAN_LIBS_DEBUG
         LIBS += $$CONAN_LIBDIRS_DEBUG

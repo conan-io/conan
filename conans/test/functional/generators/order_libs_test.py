@@ -1,4 +1,5 @@
 import os
+import textwrap
 import unittest
 
 from conans.paths import CONANFILE
@@ -76,18 +77,18 @@ class LibCConan(ConanFile):
                 libs = ""
             return libs
         deps = ", ".join(['"%s/1.0@lasote/stable"' % d for d in deps or []]) or '""'
-        conanfile = """
-from conans import ConanFile, CMake
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile, CMake
 
-class HelloReuseConan(ConanFile):
-    name = "%s"
-    version = "1.0"
-    requires = %s
-    generators = "txt", "cmake"
+            class HelloReuseConan(ConanFile):
+                name = "%s"
+                version = "1.0"
+                requires = %s
+                generators = "txt", "cmake"
 
-    def package_info(self):
-        self.cpp_info.libs = ["%s", %s]
-""" % (name, deps, name, _libs())
+                def package_info(self):
+                    self.cpp_info.libs = ["%s", %s]
+            """ % (name, deps, name, _libs()))
 
         files = {CONANFILE: conanfile}
         self.client.save(files, clean_first=True)
@@ -104,8 +105,7 @@ class HelloReuseConan(ConanFile):
         self._export("MyProject", ["SDL2_ttf"], export=False)
 
         self.client.run("install . --build missing")
-        self.assertIn("conanfile.py (MyProject/1.0): Generated conaninfo.txt",
-                      self.client.out)
+        self.assertIn("conanfile.py (MyProject/1.0): Generated conaninfo.txt", self.client.out)
 
         expected_libs = ['SDL2_ttf', 'freeType', 'SDL2', 'rt', 'pthread', 'dl',
                          'BZip2', 'LibPNG', 'm', 'ZLib']

@@ -394,11 +394,10 @@ class GitToolsTests(unittest.TestCase):
         self.assertIsNone(tag)
 
     def test_get_tag_no_git_repo(self):
-        """
-        Try to get tag out of a git repo
-        """
+        # Try to get tag out of a git repo
         git = Git(folder=temp_folder())
-        with six.assertRaisesRegex(self, ConanException, "Not a valid 'git' repository"):
+        with six.assertRaisesRegex(self, ConanException,
+                                   "Not a valid 'git' repository or 'git' not found"):
             git.get_tag()
 
     def test_excluded_files(self):
@@ -406,4 +405,5 @@ class GitToolsTests(unittest.TestCase):
         save(os.path.join(folder, "file"), "some contents")
         git = Git(folder)
         with tools.environment_append({"PATH": ""}):
-            git.excluded_files()
+            excluded = git.excluded_files()
+            self.assertEqual(excluded, [])

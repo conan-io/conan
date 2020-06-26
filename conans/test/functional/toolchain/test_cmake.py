@@ -1,5 +1,3 @@
-# coding=utf-8
-
 import os
 import platform
 import textwrap
@@ -17,21 +15,18 @@ class Base(unittest.TestCase):
 
     conanfile = textwrap.dedent("""
         from conans import ConanFile, CMake, CMakeToolchain
-
         class App(ConanFile):
             settings = "os", "arch", "compiler", "build_type"
             requires = "hello/0.1"
             generators = "cmake_find_package_multi"
             options = {"shared": [True, False], "fPIC": [True, False]}
             default_options = {"shared": False, "fPIC": True}
-
             def toolchain(self):
                 tc = CMakeToolchain(self)
                 tc.definitions["DEFINITIONS_BOTH"] = True
                 tc.definitions.debug["DEFINITIONS_CONFIG"] = "Debug"
                 tc.definitions.release["DEFINITIONS_CONFIG"] = "Release"
                 return tc
-
             def build(self):
                 cmake = CMake(self)
                 cmake.configure()
@@ -52,7 +47,6 @@ class Base(unittest.TestCase):
         #include <iostream>
         #include "app.h"
         #include "hello.h"
-
         void app() {
             std::cout << "Hello: " << HELLO_MSG <<std::endl;
             #ifdef NDEBUG
@@ -67,7 +61,6 @@ class Base(unittest.TestCase):
 
     app = textwrap.dedent("""
         #include "app.h"
-
         int main() {
             app();
         }
@@ -76,15 +69,12 @@ class Base(unittest.TestCase):
     cmakelist = textwrap.dedent("""
         cmake_minimum_required(VERSION 2.8)
         project(App C CXX)
-
         if(CONAN_TOOLCHAIN_INCLUDED AND CMAKE_VERSION VERSION_LESS "3.15")
             include("${CMAKE_BINARY_DIR}/conan_project_include.cmake")
         endif()
-
         if(NOT CMAKE_TOOLCHAIN_FILE)
             message(FATAL ">> Not using toolchain")
         endif()
-
         message(">> CMAKE_GENERATOR_PLATFORM: ${CMAKE_GENERATOR_PLATFORM}")
         message(">> CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
         message(">> CMAKE_CXX_FLAGS: ${CMAKE_CXX_FLAGS}")
@@ -95,28 +85,21 @@ class Base(unittest.TestCase):
         message(">> CMAKE_C_FLAGS_RELEASE: ${CMAKE_C_FLAGS_RELEASE}")
         message(">> CMAKE_SHARED_LINKER_FLAGS: ${CMAKE_SHARED_LINKER_FLAGS}")
         message(">> CMAKE_EXE_LINKER_FLAGS: ${CMAKE_EXE_LINKER_FLAGS}")
-
         message(">> CMAKE_CXX_STANDARD: ${CMAKE_CXX_STANDARD}")
         message(">> CMAKE_CXX_EXTENSIONS: ${CMAKE_CXX_EXTENSIONS}")
-
         message(">> CMAKE_POSITION_INDEPENDENT_CODE: ${CMAKE_POSITION_INDEPENDENT_CODE}")
         message(">> CMAKE_SKIP_RPATH: ${CMAKE_SKIP_RPATH}")
         message(">> CMAKE_INSTALL_NAME_DIR: ${CMAKE_INSTALL_NAME_DIR}")
-
         message(">> CMAKE_MODULE_PATH: ${CMAKE_MODULE_PATH}")
         message(">> CMAKE_PREFIX_PATH: ${CMAKE_PREFIX_PATH}")
-
         message(">> BUILD_SHARED_LIBS: ${BUILD_SHARED_LIBS}")
-
         get_directory_property(_COMPILE_DEFS DIRECTORY ${CMAKE_SOURCE_DIR} COMPILE_DEFINITIONS)
         message(">> COMPILE_DEFINITIONS: ${_COMPILE_DEFS}")
-
         find_package(hello REQUIRED)
         add_library(app_lib app_lib.cpp)
         target_link_libraries(app_lib PRIVATE hello::hello)
         target_compile_definitions(app_lib PRIVATE DEFINITIONS_BOTH="${DEFINITIONS_BOTH}")
         target_compile_definitions(app_lib PRIVATE DEFINITIONS_CONFIG=${DEFINITIONS_CONFIG})
-
         add_executable(app app.cpp)
         target_link_libraries(app PRIVATE app_lib)
         """)
@@ -370,18 +353,14 @@ class CMakeInstallTest(unittest.TestCase):
     def test_install(self):
         conanfile = textwrap.dedent("""
             from conans import ConanFile, CMake, CMakeToolchain
-
             class App(ConanFile):
                 settings = "os", "arch", "compiler", "build_type"
                 exports_sources = "CMakeLists.txt", "header.h"
-
                 def toolchain(self):
                     return CMakeToolchain(self)
-
                 def build(self):
                     cmake = CMake(self)
                     cmake.configure()
-
                 def package(self):
                     cmake = CMake(self)
                     cmake.install()
@@ -390,15 +369,12 @@ class CMakeInstallTest(unittest.TestCase):
         cmakelist = textwrap.dedent("""
             cmake_minimum_required(VERSION 2.8)
             project(App C)
-
             if(CONAN_TOOLCHAIN_INCLUDED AND CMAKE_VERSION VERSION_LESS "3.15")
                 include("${CMAKE_BINARY_DIR}/conan_project_include.cmake")
             endif()
-
             if(NOT CMAKE_TOOLCHAIN_FILE)
                 message(FATAL ">> Not using toolchain")
             endif()
-
             install(FILES header.h DESTINATION include)
             """)
         client = TestClient(path_with_spaces=False)
