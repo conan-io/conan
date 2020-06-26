@@ -1,3 +1,4 @@
+import os
 import textwrap
 import unittest
 
@@ -25,7 +26,11 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
             #include "hello.h"
 
             void hello(std::string noun) {
-                std::cout << "Hello " << noun << "!" << std::endl;
+                #ifdef NDEBUG
+                std::cout << "Hello " << noun << " release!" << std::endl;
+                #else
+                std::cout << "Hello " << noun << " debug!" << std::endl;
+                #endif
             }
             """)
 
@@ -41,7 +46,11 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
             #include "bye.h"
 
             void bye(std::string noun) {
-                std::cout << "Bye " << noun << "!" << std::endl;
+                #ifdef NDEBUG
+                std::cout << "Bye " << noun << " release!" << std::endl;
+                #else
+                std::cout << "Bye " << noun << " debug!" << std::endl;
+                #endif
             }
             """)
 
@@ -83,7 +92,7 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
             info = textwrap.dedent("""
                         self.cpp_info.libs = ["hello", "bye"]
                         """)
-        wrapper = textwrap.TextWrapper(width=81, initial_indent="   ", subsequent_indent="        ")
+        wrapper = textwrap.TextWrapper(width=85, initial_indent="   ", subsequent_indent="        ")
         conanfile_greetings = conanfile_greetings % wrapper.fill(info)
 
         cmakelists_greetings = textwrap.dedent("""
@@ -104,6 +113,7 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
             class GreetingsTestConan(ConanFile):
                 settings = "os", "compiler", "build_type", "arch"
                 generators = "cmake", "cmake_find_package_multi"
+                requires = "greetings/0.0.1"
 
                 def build(self):
                     cmake = CMake(self)
@@ -144,10 +154,11 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
                      "src/bye.h": bye_h,
                      "src/bye.cpp": bye_cpp})
         if test:
-            client.save({"test_package/conanfile.py": test_package_greetings_conanfile,
-                         "test_package/example.cpp": test_package_greetings_cpp,
-                         "test_package/CMakeLists.txt": test_package_greetings_cmakelists})
-        client.run("create .")
+            client.save({"fake_test_package/conanfile.py": test_package_greetings_conanfile,
+                         "fake_test_package/example.cpp": test_package_greetings_cpp,
+                         "fake_test_package/CMakeLists.txt": test_package_greetings_cmakelists})
+        client.run("create . -s build_type=Release")
+        client.run("create . -s build_type=Debug")
 
     @staticmethod
     def _create_world(client, conanfile=None, cmakelists=None, test_cmakelists=None):
@@ -235,6 +246,7 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
             class WorldTestConan(ConanFile):
                 settings = "os", "compiler", "build_type", "arch"
                 generators = "cmake", "cmake_find_package_multi"
+                requires = "world/0.0.1"
 
                 def build(self):
                     cmake = CMake(self)
@@ -274,19 +286,37 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
                      "src/helloworld.cpp": helloworld_cpp,
                      "src/worldall.h": worldall_h,
                      "src/worldall.cpp": worldall_cpp,
-                     "test_package/conanfile.py": test_conanfile,
-                     "test_package/CMakeLists.txt": test_cmakelists or _test_cmakelists,
-                     "test_package/example.cpp": test_example_cpp})
-        client.run("create .")
+                     "fake_test_package/conanfile.py": test_conanfile,
+                     "fake_test_package/CMakeLists.txt": test_cmakelists or _test_cmakelists,
+                     "fake_test_package/example.cpp": test_example_cpp}, clean_first=True)
+        client.run("create . -s build_type=Release")
+        client.run("create . -s build_type=Debug")
+
+    def _install_build_run_test_package(self, client, build_type, run_example2=False):
+        client.run("install fake_test_package -s build_type=%s" % build_type)
+        client.run("build fake_test_package")
+        with client.chdir(os.path.join(client.current_folder, "bin")):
+            client.run_command(".%sexample" % os.sep)
+            if run_example2:
+                client.run_command(".%sexample2" % os.sep)
+
 
     def basic_test(self):
         client = TestClient()
         self._create_greetings(client, test=True)
-        self.assertIn("Hello Moon!", client.out)
-        self.assertIn("Bye Moon!", client.out)
+        self._install_build_run_test_package(client, "Release")
+        self.assertIn("Hello Moon release!", client.out)
+        self.assertIn("Bye Moon release!", client.out)
+        self._install_build_run_test_package(client, "Debug")
+        self.assertIn("Hello Moon debug!", client.out)
+        self.assertIn("Bye Moon debug!", client.out)
         self._create_world(client)
-        self.assertIn("Hello World!", client.out)
-        self.assertIn("Bye World!", client.out)
+        self._install_build_run_test_package(client, "Release", run_example2=True)
+        self.assertIn("Hello World release!", client.out)
+        self.assertIn("Bye World release!", client.out)
+        self._install_build_run_test_package(client, "Debug", run_example2=True)
+        self.assertIn("Hello World debug!", client.out)
+        self.assertIn("Bye World debug!", client.out)
 
     def find_package_general_test(self):
         client = TestClient()
@@ -354,8 +384,12 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
             """)
         self._create_world(client, conanfile=conanfile, cmakelists=cmakelists,
                            test_cmakelists=test_cmakelists)
-        self.assertIn("Hello World!", client.out)
-        self.assertIn("Bye World!", client.out)
+        self._install_build_run_test_package(client, "Release", run_example2=True)
+        self.assertIn("Hello World release!", client.out)
+        self.assertIn("Bye World release!", client.out)
+        self._install_build_run_test_package(client, "Debug", run_example2=True)
+        self.assertIn("Hello World debug!", client.out)
+        self.assertIn("Bye World debug!", client.out)
 
     def find_package_components_test(self):
         client = TestClient()
@@ -405,8 +439,12 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
             target_link_libraries(worldall helloworld greetings::bye)
         """)
         self._create_world(client, conanfile=conanfile2, cmakelists=cmakelists2)
-        self.assertIn("Hello World!", client.out)
-        self.assertIn("Bye World!", client.out)
+        self._install_build_run_test_package(client, "Release", run_example2=True)
+        self.assertIn("Hello World release!", client.out)
+        self.assertIn("Bye World release!", client.out)
+        self._install_build_run_test_package(client, "Debug", run_example2=True)
+        self.assertIn("Hello World debug!", client.out)
+        self.assertIn("Bye World debug!", client.out)
 
     def recipe_with_components_requiring_recipe_without_components_test(self):
         client = TestClient()
@@ -458,8 +496,12 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
             target_link_libraries(worldall helloworld greetings::greetings)
             """)
         self._create_world(client, conanfile=conanfile, cmakelists=cmakelists)
-        self.assertIn("Hello World!", client.out)
-        self.assertIn("Bye World!", client.out)
+        self._install_build_run_test_package(client, "Release", run_example2=True)
+        self.assertIn("Hello World release!", client.out)
+        self.assertIn("Bye World release!", client.out)
+        self._install_build_run_test_package(client, "Debug", run_example2=True)
+        self.assertIn("Hello World debug!", client.out)
+        self.assertIn("Bye World debug!", client.out)
 
     def component_not_found_test(self):
         conanfile = textwrap.dedent("""
@@ -505,6 +547,7 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
             from conans import ConanFile, CMake
 
             class ConsumerConan(ConanFile):
+                settings = "build_type"
                 generators = "cmake_find_package_multi"
                 requires = "greetings/0.0.1"
 
@@ -624,15 +667,19 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
         self.assertIn("Hello Moon!", client.out)
 
     def component_not_found_same_name_as_pkg_require_test(self):
-        zlib = GenConanfile("zlib", "0.1").with_generator("cmake_find_package_multi")
-        mypkg = GenConanfile("mypkg", "0.1").with_generator("cmake_find_package_multi")
-        final = GenConanfile("final", "0.1").with_generator("cmake_find_package_multi")\
+        zlib = GenConanfile("zlib", "0.1").with_setting("build_type")\
+            .with_generator("cmake_find_package_multi")
+        mypkg = GenConanfile("mypkg", "0.1").with_setting("build_type")\
+            .with_generator("cmake_find_package_multi")
+        final = GenConanfile("final", "0.1").with_setting("build_type")\
+            .with_generator("cmake_find_package_multi")\
             .with_require(ConanFileReference("zlib", "0.1", None, None))\
             .with_require(ConanFileReference("mypkg", "0.1", None, None))\
             .with_package_info(cpp_info={"components": {"cmp": {"requires": ["mypkg::zlib",
                                                                              "zlib::zlib"]}}},
                                env_info={})
-        consumer = GenConanfile("consumer", "0.1").with_generator("cmake_find_package_multi")\
+        consumer = GenConanfile("consumer", "0.1").with_setting("build_type")\
+            .with_generator("cmake_find_package_multi")\
             .with_requirement(ConanFileReference("final", "0.1", None, None))
         client = TestClient()
         client.save({"zlib.py": zlib, "mypkg.py": mypkg, "final.py": final, "consumer.py": consumer})
@@ -641,3 +688,4 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
         client.run("create final.py")
         client.run("install consumer.py", assert_error=True)
         self.assertIn("Component 'mypkg::zlib' not found in 'mypkg' package requirement", client.out)
+
