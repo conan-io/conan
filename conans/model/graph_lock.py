@@ -398,8 +398,13 @@ class GraphLock(object):
             if node.recipe == RECIPE_CONSUMER:
                 return
             if self._relaxed:
-                node.conanfile.output.warn("Package can't be locked, not found in the lockfile")
-                return
+                node_id = self.get_node(node.ref)
+                if node_id:
+                    locked_node = self._nodes[node_id]
+                    node.id = node_id
+                else:
+                    node.conanfile.output.warn("Package can't be locked, not found in the lockfile")
+                    return
             else:
                 raise ConanException("The node %s ID %s was not found in the lock"
                                      % (node.ref, node.id))
@@ -443,6 +448,8 @@ class GraphLock(object):
                                          % (str(node.ref), str(req_node.ref)))
 
     def python_requires(self, node_id):
+        if node_id is None and self._relaxed:
+            return None
         if self._revisions_enabled:
             return self._nodes[node_id].python_requires
         return [r.copy_clear_rev() for r in self._nodes[node_id].python_requires or []]
@@ -488,14 +495,16 @@ class GraphLock(object):
         if ids:
             if len(ids) >= 1:
                 return ids[0]
-            raise ConanException("There are %s binaries with name %s" % (len(ids), ref.name))
 
-        raise ConanException("Couldn't find '%s' in graph-lock" % ref.full_str())
+        if not self._relaxed:
+            raise ConanException("Couldn't find '%s' in graph-lock" % ref.full_str())
 
     def update_exported_ref(self, node_id, ref):
         """ when the recipe is exported, it will change its reference, typically the RREV, and
         the lockfile needs to be updated. The lockfile reference will lose PREV information and
         be marked as modified
         """
+        if node_id is None and self._relaxed:
+            return
         lock_node = self._nodes[node_id]
         lock_node.ref = ref
