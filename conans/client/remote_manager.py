@@ -126,20 +126,27 @@ class RemoteManager(object):
             rmdir(c_src_path)
         touch_folder(export_sources_folder)
 
-    def get_package(self, pref, dest_folder, remote, output, recorder):
+    def get_package(self, pref, layout, remote, output, recorder):
+
+        package_folder = layout.package(pref)
+        unzip_folder = package_folder if not self._cache.config.package_installs \
+            else layout.install(pref)
 
         conanfile_path = self._cache.package_layout(pref.ref).conanfile()
         self._hook_manager.execute("pre_download_package", conanfile_path=conanfile_path,
                                    reference=pref.ref, package_id=pref.id, remote=remote)
         output.info("Retrieving package %s from remote '%s' " % (pref.id, remote.name))
-        rm_conandir(dest_folder)  # Remove first the destination folder
+        rm_conandir(package_folder)  # Remove first the destination folder
+        if package_folder != unzip_folder:
+            rm_conandir(unzip_folder)
+
         t1 = time.time()
         try:
             pref = self._resolve_latest_pref(pref, remote)
             snapshot = self._call_remote(remote, "get_package_snapshot", pref)
             if not is_package_snapshot_complete(snapshot):
                 raise PackageNotFoundException(pref)
-            zipped_files = self._call_remote(remote, "get_package", pref, dest_folder)
+            zipped_files = self._call_remote(remote, "get_package", pref, package_folder)
 
             package_checksums = calc_files_checksum(zipped_files)
 
@@ -150,11 +157,11 @@ class RemoteManager(object):
 
             duration = time.time() - t1
             log_package_download(pref, duration, remote, zipped_files)
-            unzip_and_get_files(zipped_files, dest_folder, PACKAGE_TGZ_NAME, output=self._output)
+            unzip_and_get_files(zipped_files, unzip_folder, PACKAGE_TGZ_NAME, output=self._output)
             # Issue #214 https://github.com/conan-io/conan/issues/214
-            touch_folder(dest_folder)
+            touch_folder(unzip_folder)
             if get_env("CONAN_READ_ONLY_CACHE", False):
-                make_read_only(dest_folder)
+                make_read_only(package_folder)
             recorder.package_downloaded(pref, remote.url)
             output.success('Package installed %s' % pref.id)
         except NotFoundException:
@@ -162,13 +169,16 @@ class RemoteManager(object):
         except BaseException as e:
             output.error("Exception while getting package: %s" % str(pref.id))
             output.error("Exception: %s %s" % (type(e), str(e)))
-            try:
-                output.warn("Trying to remove package folder: %s" % dest_folder)
-                rmdir(dest_folder)
-            except OSError as e:
-                raise ConanException("%s\n\nCouldn't remove folder '%s', might be busy or open. "
-                                     "Close any app using it, and retry" % (str(e), dest_folder))
-            raise
+            for folder in package_folder, unzip_folder:
+                try:
+                    output.warn("Trying to remove package folder: %s" % folder)
+                    rmdir(folder)
+                    if package_folder == unzip_folder:
+                        break
+                except OSError as e:
+                    raise ConanException("%s\n\nCouldn't remove folder '%s', might be busy or open. "
+                                         "Close any app using it, and retry" % (str(e), folder))
+                raise
         self._hook_manager.execute("post_download_package", conanfile_path=conanfile_path,
                                    reference=pref.ref, package_id=pref.id, remote=remote)
 

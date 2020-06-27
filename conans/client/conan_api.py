@@ -509,7 +509,7 @@ class ConanAPIV1(object):
                           remote_name=None, verify=None, manifests=None,
                           manifests_interactive=None, build=None, profile_names=None,
                           update=False, generators=None, install_folder=None, cwd=None,
-                          lockfile=None, profile_build=None, local_install=None):
+                          lockfile=None, profile_build=None):
         profile_host = ProfileData(profiles=profile_names, settings=settings, options=options, env=env)
         try:
             recorder = ActionRecorder()
@@ -526,8 +526,6 @@ class ConanAPIV1(object):
                 generators = False
 
             install_folder = _make_abs_path(install_folder, cwd)
-            if local_install:
-                local_install = _make_abs_path(local_install, cwd)
             mkdir(install_folder)
             remotes = self.app.load_remotes(remote_name=remote_name, update=update)
             deps_install(self.app, ref_or_path=reference, install_folder=install_folder,
@@ -535,8 +533,7 @@ class ConanAPIV1(object):
                          update=update, manifest_folder=manifest_folder,
                          manifest_verify=manifest_verify,
                          manifest_interactive=manifest_interactive,
-                         generators=generators, lockfile=lockfile, recorder=recorder,
-                         local_install=local_install)
+                         generators=generators, lockfile=lockfile, recorder=recorder)
             return recorder.get_info(self.app.config.revisions_enabled)
         except ConanException as exc:
             recorder.error = True
@@ -549,7 +546,7 @@ class ConanAPIV1(object):
                 remote_name=None, verify=None, manifests=None,
                 manifests_interactive=None, build=None, profile_names=None,
                 update=False, generators=None, no_imports=False, install_folder=None, cwd=None,
-                lockfile=None, profile_build=None, local_install=None):
+                lockfile=None, profile_build=None):
         profile_host = ProfileData(profiles=profile_names, settings=settings, options=options, env=env)
         try:
             recorder = ActionRecorder()
@@ -565,9 +562,6 @@ class ConanAPIV1(object):
 
             install_folder = _make_abs_path(install_folder, cwd)
             conanfile_path = _get_conanfile_path(path, cwd, py=None)
-            if local_install:
-                local_install = _make_abs_path(local_install, cwd)
-
             remotes = self.app.load_remotes(remote_name=remote_name, update=update)
             deps_install(app=self.app,
                          ref_or_path=conanfile_path,
@@ -581,8 +575,7 @@ class ConanAPIV1(object):
                          manifest_interactive=manifest_interactive,
                          generators=generators,
                          no_imports=no_imports,
-                         recorder=recorder,
-                         local_install=local_install)
+                         recorder=recorder)
             return recorder.get_info(self.app.config.revisions_enabled)
         except ConanException as exc:
             recorder.error = True

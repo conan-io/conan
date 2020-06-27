@@ -219,6 +219,11 @@ class _PackageBuilder(object):
                     prev = self._package(conanfile, pref, package_layout, conanfile_path, build_folder, package_folder)
                     assert prev
                     node.prev = prev
+
+                    install_folder = package_layout.install(pref)
+                    if self._cache.config.package_installs:
+                        shutil.copytree(package_folder, install_folder, symlinks=True)
+
                     log_file = os.path.join(build_folder, RUN_LOG_NAME)
                     log_file = log_file if os.path.exists(log_file) else None
                     log_package_built(pref, time.time() - t1, log_file)
@@ -286,16 +291,14 @@ class BinaryInstaller(object):
         self._binaries_analyzer = app.binaries_analyzer
         self._hook_manager = app.hook_manager
 
-    def install(self, deps_graph, remotes, build_mode, update, keep_build=False, graph_info=None,
-                local_install=None):
+    def install(self, deps_graph, remotes, build_mode, update, keep_build=False, graph_info=None):
         # order by levels and separate the root node (ref=None) from the rest
         nodes_by_level = deps_graph.by_levels()
         root_level = nodes_by_level.pop()
         root_node = root_level[0]
         # Get the nodes in order and if we have to build them
         self._out.info("Installing (downloading, building) binaries...")
-        self._build(nodes_by_level, keep_build, root_node, graph_info, remotes, build_mode, update,
-                    local_install)
+        self._build(nodes_by_level, keep_build, root_node, graph_info, remotes, build_mode, update)
 
     @staticmethod
     def _classify(nodes_by_level):
@@ -391,14 +394,12 @@ class BinaryInstaller(object):
         package_folder = layout.package(pref)
         output = conanfile.output
         with set_dirty_context_manager(package_folder):
-            self._remote_manager.get_package(pref, package_folder, node.binary_remote,
-                                             output, self._recorder)
+            self._remote_manager.get_package(pref, layout, node.binary_remote, output, self._recorder)
             output.info("Downloaded package revision %s" % pref.revision)
             with layout.update_metadata() as metadata:
                 metadata.packages[pref.id].remote = node.binary_remote.name
 
-    def _build(self, nodes_by_level, keep_build, root_node, graph_info, remotes, build_mode, update,
-               local_install):
+    def _build(self, nodes_by_level, keep_build, root_node, graph_info, remotes, build_mode, update):
         using_build_profile = bool(graph_info.profile_build)
         missing, downloads = self._classify(nodes_by_level)
         self._raise_missing(missing)
@@ -424,8 +425,7 @@ class BinaryInstaller(object):
                     if node.binary == BINARY_UNKNOWN:
                         self._binaries_analyzer.reevaluate_node(node, remotes, build_mode, update)
                     _handle_system_requirements(conan_file, node.pref, self._cache, output)
-                    self._handle_node_cache(node, keep_build, processed_package_refs, remotes,
-                                            local_install)
+                    self._handle_node_cache(node, keep_build, processed_package_refs, remotes)
 
         # Finally, propagate information to root node (ref=None)
         self._propagate_info(root_node, using_build_profile, fix_package_id)
@@ -467,8 +467,7 @@ class BinaryInstaller(object):
                 copied_files = run_imports(node.conanfile, build_folder)
                 report_copied_files(copied_files, output)
 
-    def _handle_node_cache(self, node, keep_build, processed_package_references, remotes,
-                           local_install):
+    def _handle_node_cache(self, node, keep_build, processed_package_references, remotes):
         pref = node.pref
         assert pref.id, "Package-ID without value"
         assert pref.id != PACKAGE_ID_UNKNOWN, "Package-ID error: %s" % str(pref)
@@ -497,33 +496,14 @@ class BinaryInstaller(object):
                     log_package_got_from_local_cache(pref)
                     self._recorder.package_fetched_from_cache(pref)
 
-            # Do the copy to install-folder
-            if self._cache.config.package_installs:
-                if local_install:
-                    # FIXME: Only valid without user/channel
-                    install_folder = os.path.join(local_install, pref.ref.name, pref.ref.version)
-                else:
-                    install_folder = layout.install(pref)
-                if os.path.exists(install_folder):
-                    # This is probably very slow, to be improved
-                    try:
-                        installed_manifest = FileTreeManifest.load(install_folder)
-                    except EnvironmentError:
-                        shutil.rmtree(install_folder)
-                    else:
-                        package_manifest = FileTreeManifest.load(package_folder)
-                        if installed_manifest != package_manifest:
-                            shutil.rmtree(install_folder)
-                if not os.path.exists(install_folder):
-                    shutil.copytree(package_folder, install_folder, symlinks=True)
-                    conanfile.install_folder = install_folder
-                    if hasattr(conanfile, "install"):
+                if self._cache.config.package_installs:  # The opt-in
+                    if node.binary != BINARY_CACHE and hasattr(conanfile, "install"):
+                        # If already in the cache the install method was called already
                         with get_env_context_manager(conanfile):
                             conanfile.output.highlight("Calling install()")
                             with conanfile_exception_formatter(str(conanfile), "install"):
                                 conanfile.install()
 
-                package_folder = install_folder
             # Call the info method
             self._call_package_info(conanfile, package_folder, ref=pref.ref)
             self._recorder.package_cpp_info(pref, conanfile.cpp_info)
