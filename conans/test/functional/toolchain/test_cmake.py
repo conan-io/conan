@@ -331,8 +331,10 @@ class AppleTest(Base):
             if shared:
                 self.assertIn("libapp_lib.dylib", self.client.out)
             else:
-                self.assertIn("libapp_lib.a", self.client.out)
-
+                if marker == ">>":
+                    self.assertIn("libapp_lib.a", self.client.out)
+                else:  # Incremental build not the same msg
+                    self.assertIn("Built target app_lib", self.client.out)
             out = str(self.client.out).splitlines()
             for k, v in vals.items():
                 self.assertIn("%s %s: %s" % (marker, k, v), out)
