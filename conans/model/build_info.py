@@ -61,6 +61,7 @@ class _CppInfo(object):
         self.sharedlinkflags = []  # linker flags
         self.exelinkflags = []  # linker flags
         self.build_modules = []
+        self.filenames = {}  # name of filename to create for various generators
         self.rootpath = ""
         self.sysroot = ""
         self._build_modules_paths = None
@@ -144,6 +145,9 @@ class _CppInfo(object):
 
     def get_name(self, generator):
         return self.names.get(generator, self._name)
+
+    def get_filename(self, generator):
+        return self.filenames.get(generator, self.name)
 
     # Compatibility for 'cppflags' (old style property to allow decoration)
     def get_cppflags(self):
@@ -262,19 +266,25 @@ class CppInfo(_CppInfo):
 
         if self.components:
             comp_requires = set()
+            print(f"MARIO components={self.components}")
             for comp_name, comp in self.components.items():
+                print(f"    MARIO comp_name={comp_name}")
                 for comp_require in comp.requires:
+                    print(f"        MARIO comp_require={comp_require}")
                     if COMPONENT_SCOPE in comp_require:
+                        print(f"            --- adding it baby, COMPONENT_SCOPE={COMPONENT_SCOPE}")
                         comp_requires.add(
                             comp_require[:comp_require.find(COMPONENT_SCOPE)])
             pkg_requires = [require.ref.name for require in package_requires.values()]
             # Raise on components requires without package requires
             for pkg_require in pkg_requires:
                 if pkg_require not in comp_requires:
-                    raise ConanException("Package require '%s' not used in components requires"
-                                         % pkg_require)
+                    all = '\n'.join(str(c) for c in comp_requires)
+                    all2 = '\n'.join(str(c) for c in pkg_requires)
+                    raise ConanException(f"Package require '{pkg_require}' not used in components requires: comp_requires: {all}\npkg_requires: {all2}")
             # Raise on components requires requiring inexistent package requires
             for comp_require in comp_requires:
+                print(f"MARIO checking {comp_require} in {comp_requires}, to see if it is in {pkg_requires}...")
                 if comp_require not in pkg_requires:
                     raise ConanException("Package require '%s' declared in components requires "
                                          "but not defined as a recipe requirement" % comp_require)
