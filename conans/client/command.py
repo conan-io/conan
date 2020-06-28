@@ -572,6 +572,10 @@ class Command(object):
                                        'specified origin')
         install_subparser.add_argument("-tf", "--target-folder",
                                        help='Install to that path in the conan cache')
+        install_subparser.add_argument("-l", "--list", default=False, action='store_true',
+                                       help='List stored configuration origins')
+        install_subparser.add_argument("-r", "--remove", type=int,
+                                       help='Remove configuration origin')
         rm_subparser.add_argument("item", help="Item to remove")
         set_subparser.add_argument("item", help="'item=value' to set")
         init_subparser.add_argument('-f', '--force', default=False, action='store_true',
@@ -599,6 +603,14 @@ class Command(object):
                 self._outputer.json_output({"home": conan_home}, args.json, os.getcwd())
             return conan_home
         elif args.subcommand == "install":
+            if args.list:
+                configs = self._conan.config_install_list()
+                for index, config in enumerate(configs):
+                    self._out.writeln("%s: %s" % (index, config))
+                return
+            elif args.remove is not None:
+                self._conan.config_install_remove(index=args.remove)
+                return
             verify_ssl = get_bool_from_text(args.verify_ssl)
             return self._conan.config_install(args.item, verify_ssl, args.type, args.args,
                                               source_folder=args.source_folder,
