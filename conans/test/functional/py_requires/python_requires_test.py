@@ -54,6 +54,26 @@ class PyRequiresExtendTest(unittest.TestCase):
         self.assertIn("Pkg/0.1@user/testing: Package installed "
                       "69265e58ddc68274e0c5510905003ff78c9db5de", client.out)
 
+    def reuse_dot_test(self):
+        client = TestClient(default_server_user=True)
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class MyConanfileBase(ConanFile):
+                def build(self):
+                    self.output.info("My cool build!")
+            """)
+        client.save({"conanfile.py": conanfile})
+        client.run("export . my.base/1.1@user/testing")
+        reuse = textwrap.dedent("""
+            from conans import ConanFile
+            class PkgTest(ConanFile):
+                python_requires = "my.base/1.1@user/testing"
+                python_requires_extend = "my.base.MyConanfileBase"
+            """)
+        client.save({"conanfile.py": reuse}, clean_first=True)
+        client.run("create . Pkg/0.1@user/testing")
+        self.assertIn("Pkg/0.1@user/testing: My cool build!", client.out)
+
     def with_alias_test(self):
         client = TestClient()
         self._define_base(client)
