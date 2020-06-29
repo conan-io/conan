@@ -1,5 +1,7 @@
-from conans.cli.formatters.dig_formatter import DigFormatter
-from conans.errors import ConanException, InvalidNameException
+import json
+
+from conans.client.output import Color
+from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
 from conans.cli.command import OnceArgument, Extender, conan_command
 
@@ -11,7 +13,32 @@ from conans.cli.command import OnceArgument, Extender, conan_command
 #  name/version@user/channel#<recipe_revision>:<package_id>
 #  name/version@user/channel#<recipe_revision>:<package_id>#<package_revision>
 
-@conan_command(group="Consumer commands")
+def output_dig_cli(info, out):
+    results = info["results"]
+    for remote_info in results:
+        source = "cache" if remote_info["remote"] is None else str(remote_info["remote"])
+        out.writeln("{}:".format(source), Color.BRIGHT_WHITE)
+        for conan_item in remote_info["items"]:
+            reference = conan_item["recipe"]["id"]
+            out.writeln(" {}".format(reference), Color.BRIGHT_GREEN)
+            for package in conan_item["packages"]:
+                out.writeln(" :{}".format(package["id"]), Color.BRIGHT_GREEN)
+                out.writeln("  [options]", Color.BRIGHT_WHITE)
+                for option, value in package["options"].items():
+                    out.write("  {}: ".format(option), Color.YELLOW)
+                    out.write("{}".format(value), newline=True)
+                out.writeln("  [settings]", Color.BRIGHT_WHITE)
+                for setting, value in package["settings"].items():
+                    out.write("  {}: ".format(setting), Color.YELLOW)
+                    out.write("{}".format(value), newline=True)
+
+
+def output_dig_json(info, out):
+    myjson = json.dumps(info["results"], indent=4)
+    out.writeln(myjson)
+
+
+@conan_command(group="Consumer commands", cli=output_dig_cli, json=output_dig_json)
 def dig(*args, conan_api, parser, **kwargs):
     """
     Gets information about available package binaries in the local cache or a remote
@@ -41,4 +68,4 @@ def dig(*args, conan_api, parser, **kwargs):
         info = exc.info
         raise
     finally:
-        DigFormatter.out(args.output, info, conan_api.out)
+        return info, args.output

@@ -1,5 +1,4 @@
 import argparse
-import inspect
 import os
 import signal
 import sys
@@ -74,7 +73,11 @@ class SmartFormatter(argparse.HelpFormatter):
 
 
 class ConanCommand(object):
-    def __init__(self, method, group=None):
+    def __init__(self, method, group=None, **kwargs):
+        self._formatters = {}
+        for kind, action in kwargs.items():
+            if callable(action):
+                self._formatters[kind] = action
         self._group = group or "Misc commands"
         self._name = method.__name__.replace("_", "-")
         self._method = method
@@ -82,6 +85,11 @@ class ConanCommand(object):
         self._parser = argparse.ArgumentParser(description=self._doc,
                                                prog="conan {}".format(self._name),
                                                formatter_class=SmartFormatter)
+
+    def run(self, *args, conan_api, **kwargs):
+        info, formatter = self._method(*args, conan_api=conan_api, **kwargs)
+        if info:
+            self._formatters[formatter](info, conan_api.out)
 
     @property
     def group(self):
@@ -104,9 +112,9 @@ class ConanCommand(object):
         return self._parser
 
 
-def conan_command(group=None):
+def conan_command(**kwargs):
     def decorator(f):
-        cmd = ConanCommand(f, group)
+        cmd = ConanCommand(f, **kwargs)
         return cmd
 
     return decorator
@@ -191,28 +199,30 @@ class Command(object):
         ret_code = SUCCESS
         try:
             try:
-                command = args[0][0]
+                command_argument = args[0][0]
             except IndexError:  # No parameters
                 self.help_message()
                 return False
             try:
-                method = self.commands[command].method
+                command = self.commands[command_argument]
             except KeyError as exc:
-                if command in ["-v", "--version"]:
+                if command_argument in ["-v", "--version"]:
                     self._out.success("Conan version %s" % client_version)
                     return False
 
-                if command in ["-h", "--help"]:
+                if command_argument in ["-h", "--help"]:
                     self.help_message()
                     return False
 
-                self._out.writeln("'%s' is not a Conan command. See 'conan --help'." % command)
+                self._out.writeln("'%s' is not a Conan command. See 'conan --help'." % command_argument)
                 self._out.writeln("")
-                self._print_similar(command)
+                self._print_similar(command_argument)
                 raise ConanException("Unknown command %s" % str(exc))
 
-            method(args[0][1:], conan_api=self.conan_api, parser=self.commands[command].parser,
-                   commands=self.commands, groups=self.groups)
+            command.run(args[0][1:], conan_api=self.conan_api,
+                        parser=self.commands[command_argument].parser,
+                        commands=self.commands, groups=self.groups)
+
         except KeyboardInterrupt as exc:
             logger.error(exc)
             ret_code = SUCCESS

@@ -1,4 +1,6 @@
-from conans.cli.formatters.search_formatter import SearchFormatter
+import json
+
+from conans.client.output import Color
 from conans.errors import ConanException
 from conans.cli.command import OnceArgument, Extender, conan_command
 
@@ -7,7 +9,22 @@ from conans.cli.command import OnceArgument, Extender, conan_command
 # conan search "*" will search in the default remote
 # to search in the local cache: conan search "*" --cache explicitly
 
-@conan_command(group="Consumer commands")
+def output_search_cli(info, out):
+    results = info["results"]
+    for remote_info in results:
+        source = "cache" if remote_info["remote"] is None else str(remote_info["remote"])
+        out.writeln("{}:".format(source), Color.BRIGHT_WHITE)
+        for conan_item in remote_info["items"]:
+            reference = conan_item["recipe"]["id"]
+            out.writeln(" {}".format(reference))
+
+
+def output_search_json(info, out):
+    myjson = json.dumps(info["results"], indent=4)
+    out.writeln(myjson)
+
+
+@conan_command(group="Consumer commands", cli=output_search_cli, json=output_search_json)
 def search(*args, conan_api, parser, **kwargs):
     """
     Searches for package recipes whose name contain <query> in a remote or in the local cache
@@ -33,5 +50,4 @@ def search(*args, conan_api, parser, **kwargs):
         info = exc.info
         raise
     finally:
-        SearchFormatter.out(args.output, info, conan_api.out)
-
+        return info, args.output
