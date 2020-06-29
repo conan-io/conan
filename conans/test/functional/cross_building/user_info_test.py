@@ -50,15 +50,15 @@ class UserInfoTestCase(unittest.TestCase):
 
             def build(self):
                 _info = self.output.info
-                _info("[deps] {}".format(', '.join(self.deps_user_info.keys())))
+                _info("[deps] {}".format(', '.join(sorted(self.deps_user_info.keys()))))
                 _info("[deps] library.DATA={}".format(self.deps_user_info["library"].DATA))
                 _info("[deps] br_host.DATA={}".format(self.deps_user_info["br_host"].DATA))
 
-                _info("[host] {}".format(', '.join(self.user_info_host.keys())))
+                _info("[host] {}".format(', '.join(sorted(self.user_info_host.keys()))))
                 _info("[host] library.DATA={}".format(self.user_info_host["library"].DATA))
                 _info("[host] br_host.DATA={}".format(self.user_info_host["br_host"].DATA))
 
-                _info("[build] {}".format(', '.join(self.user_info_build.keys())))
+                _info("[build] {}".format(', '.join(sorted(self.user_info_build.keys()))))
                 _info("[build] library.DATA={}".format(self.user_info_build["library"].DATA))
                 _info("[build] br_build.DATA={}".format(self.user_info_build["br_build"].DATA))
     """)
