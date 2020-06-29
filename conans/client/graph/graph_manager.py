@@ -82,7 +82,6 @@ class GraphManager(object):
             profile_host.options.update(graph_info.options)
             if profile_build:
                 profile_build.process_settings(self._cache, preprocess=False)
-                # TODO: Options for the build_profile?
         if conanfile_path.endswith(".py"):
             lock_python_requires = None
             if graph_lock and not test:  # Only lock python requires if it is not test_package
@@ -105,7 +104,6 @@ class GraphManager(object):
             run_configure_method(conanfile, down_options=None, down_ref=None, ref=None)
         else:
             conanfile = self._loader.load_conanfile_txt(conanfile_path, profile_host=profile_host)
-            # TODO: Can I have here a 'profile_build'?
 
         load_deps_info(info_folder, conanfile, required=deps_info_required)
 
