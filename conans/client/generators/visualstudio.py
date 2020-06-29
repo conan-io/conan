@@ -101,7 +101,7 @@ class VisualStudioGenerator(Generator):
         per_item_props = self._format_items()
 
         properties = [self._format_properties(self._deps_build_info, condition='')]
-        for config, cpp_info in self._deps_build_info.get_configs().items():
+        for config, cpp_info in self._deps_build_info.configs.items():
             condition = " Condition=\"'$(Configuration)' == '%s'\"" % config
             properties.append(self._format_properties(cpp_info, condition=condition))
 

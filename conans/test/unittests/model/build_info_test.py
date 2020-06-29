@@ -81,7 +81,7 @@ VAR2=23
         fakeconan = namedtuple("Conanfile", "deps_cpp_info cpp_info deps_env_info env_info user_info deps_user_info")
         output = TXTGenerator(fakeconan(deps_cpp_info, None, deps_env_info, None, {}, defaultdict(dict))).content
         deps_cpp_info2, _, _ = TXTGenerator.loads(output)
-        self.assertEqual(deps_cpp_info.get_configs(), deps_cpp_info2.get_configs())
+        self.assertEqual(deps_cpp_info.configs, deps_cpp_info2.configs)
         self.assertEqual(deps_cpp_info.includedirs, deps_cpp_info2.includedirs)
         self.assertEqual(deps_cpp_info.libdirs, deps_cpp_info2.libdirs)
         self.assertEqual(deps_cpp_info.bindirs, deps_cpp_info2.bindirs)
@@ -222,7 +222,7 @@ VAR2=23
         self.assertEqual([], info.defines)
         self.assertEqual("", info.sysroot)
         self.assertEqual([], info.cflags)
-        self.assertEqual({}, info.get_configs())
+        self.assertEqual({}, info.configs)
         self.assertEqual([], info.cxxflags)
         self.assertEqual([], info.exelinkflags)
         self.assertEqual([], info.public_deps)
