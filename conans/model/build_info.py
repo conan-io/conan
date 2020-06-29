@@ -147,7 +147,10 @@ class _CppInfo(object):
         return self.names.get(generator, self._name)
 
     def get_filename(self, generator):
-        return self.filenames.get(generator, self.name)
+        result = self.filenames.get(generator)
+        if result:
+            return result
+        return self.get_name(generator)
 
     # Compatibility for 'cppflags' (old style property to allow decoration)
     def get_cppflags(self):
