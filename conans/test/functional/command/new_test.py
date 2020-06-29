@@ -4,6 +4,7 @@ import unittest
 
 from parameterized import parameterized
 
+from conans import __version__ as client_version
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
 from conans.tools import save
@@ -18,6 +19,7 @@ class NewCommandTest(unittest.TestCase):
             class {{package_name}}Conan(ConanFile):
                 name = "{{name}}"
                 version = "{{version}}"
+                conan_version = "{{conan_version}}"
         """)
         save(os.path.join(client.cache_folder, "templates/mytemplate.py"), template1)
         client.run("new hello/0.1 --template=mytemplate.py")
@@ -25,6 +27,39 @@ class NewCommandTest(unittest.TestCase):
         self.assertIn("class HelloConan(ConanFile):", conanfile)
         self.assertIn('name = "hello"', conanfile)
         self.assertIn('version = "0.1"', conanfile)
+        self.assertIn('conan_version = "{}"'.format(client_version), conanfile)
+
+    def template_dir_test(self):
+        client = TestClient()
+        template_dir = "templates/command/new/t_dir"
+        template_recipe = textwrap.dedent("""
+            class {{package_name}}Conan(ConanFile):
+                name = "{{name}}"
+                version = "{{version}}"
+                conan_version = "{{conan_version}}"
+        """)
+        save(os.path.join(client.cache_folder, template_dir + "/conanfile.py"), template_recipe)
+
+        template_txt = textwrap.dedent("""
+            package_name={{package_name}}
+            name={{name}}
+            version={{version}}
+            conan_version={{conan_version}}
+        """)
+        save(os.path.join(client.cache_folder, template_dir + "/{{name}}/hello.txt"), template_txt)
+
+        client.run("new hello/0.1 --template=t_dir")
+        conanfile = client.load("conanfile.py")
+        self.assertIn("class HelloConan(ConanFile):", conanfile)
+        self.assertIn('name = "hello"', conanfile)
+        self.assertIn('version = "0.1"', conanfile)
+        self.assertIn('conan_version = "{}"'.format(client_version), conanfile)
+
+        hellotxt = client.load("hello/hello.txt")
+        self.assertIn("package_name=Hello", hellotxt)
+        self.assertIn("name=hello", hellotxt)
+        self.assertIn('version=0.1', hellotxt)
+        self.assertIn("conan_version={}".format(client_version), hellotxt)
 
     def template_test_package_test(self):
         client = TestClient()
@@ -57,8 +92,10 @@ class NewCommandTest(unittest.TestCase):
         client = TestClient()
         client.run("new hello/0.1 -m=mytemplate.py", assert_error=True)
         self.assertIn("ERROR: Template doesn't exist", client.out)
+        client.run("new hello/0.1 -m=mytemplate", assert_error=True)
+        self.assertIn("ERROR: Template doesn't exist", client.out)
         client.run("new hello/0.1 --template=mytemplate.py --bare", assert_error=True)
-        self.assertIn("ERROR: 'template' argument incompatible", client.out)
+        self.assertIn("ERROR: 'template' is incompatible", client.out)
         client.run("new hello/0.1 --template", assert_error=True)
         self.assertIn("ERROR: Exiting with code: 2", client.out)
 

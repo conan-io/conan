@@ -1,7 +1,6 @@
 # coding=utf-8
 import os
 import unittest
-import warnings
 
 import six
 
@@ -27,7 +26,7 @@ class CppInfoComponentsTest(unittest.TestCase):
         cpp_info = CppInfo("", "root_folder")
         cpp_info.components["liba"].name = "LIBA"
         with self.assertRaises(AttributeError):
-            cpp_info.components["libb"].components
+            _ = cpp_info.components["libb"].components
 
     def test_deps_cpp_info_libs(self):
         deps_cpp_info = DepsCppInfo()
@@ -253,29 +252,29 @@ class CppInfoComponentsTest(unittest.TestCase):
         info.components["LIB1"].requires = ["LIB2"]
         with six.assertRaisesRegex(self, ConanException, "Component 'LIB1' "
                                                          "declares a missing dependency"):
-            DepCppInfo(info).libs
+            _ = DepCppInfo(info).libs
         info.components["LIB1"].requires = ["::LIB2"]
         with six.assertRaisesRegex(self, ConanException, "Leading character '::' not allowed in "
                                                          "LIB1 requires"):
-            DepCppInfo(info).libs
+            _ = DepCppInfo(info).libs
 
     def cpp_info_components_requires_loop_test(self):
         info = CppInfo("", "")
         info.components["LIB1"].requires = ["LIB1"]
         msg = "There is a dependency loop in 'self.cpp_info.components' requires"
         with six.assertRaisesRegex(self, ConanException, msg):
-            DepCppInfo(info).libs
+            _ = DepCppInfo(info).libs
         info = CppInfo("", "")
         info.components["LIB1"].requires = ["LIB2"]
         info.components["LIB2"].requires = ["LIB1", "LIB2"]
         with six.assertRaisesRegex(self, ConanException, msg):
-            DepCppInfo(info).build_paths
+            _ = DepCppInfo(info).build_paths
         info = CppInfo("", "")
         info.components["LIB1"].requires = ["LIB2"]
         info.components["LIB2"].requires = ["LIB3"]
         info.components["LIB3"].requires = ["LIB1"]
         with six.assertRaisesRegex(self, ConanException, msg):
-            DepCppInfo(info).defines
+            _ = DepCppInfo(info).defines
 
     def components_libs_order_test(self):
         info = CppInfo("dep1", "")

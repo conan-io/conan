@@ -290,7 +290,6 @@ class GraphManager(object):
             package_build_requires = self._get_recipe_build_requires(node.conanfile, default_context)
             str_ref = str(node.ref)
             new_profile_build_requires = []
-            profile_build_requires = profile_build_requires or {}
             for pattern, build_requires in profile_build_requires.items():
                 if ((node.recipe == RECIPE_CONSUMER and pattern == "&") or
                         (node.recipe != RECIPE_CONSUMER and pattern == "&!") or
@@ -312,10 +311,11 @@ class GraphManager(object):
                                                          br_list,
                                                          check_updates, update, remotes,
                                                          profile_host, profile_build, graph_lock)
-
+                build_requires = profile_build.build_requires if default_context == CONTEXT_BUILD \
+                    else profile_build_requires
                 self._recurse_build_requires(graph, builder,
                                              check_updates, update, build_mode,
-                                             remotes, profile_build_requires, recorder,
+                                             remotes, build_requires, recorder,
                                              profile_host, profile_build, graph_lock,
                                              nodes_subset=nodessub, root=node)
 

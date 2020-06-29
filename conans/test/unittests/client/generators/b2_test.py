@@ -32,8 +32,8 @@ class B2GeneratorTest(unittest.TestCase):
         cpp_info.version = "1.3"
         cpp_info.description = "My cool description"
         cpp_info.libs = ["MyLib1"]
-        conanfile.deps_cpp_info.add(ref.name, cpp_info)
 
+        conanfile.deps_cpp_info.add(ref.name, cpp_info)
         ref = ConanFileReference.loads("MyPkg2/0.1@lasote/stables")
         cpp_info = CppInfo(ref.name, "dummy_root_folder2")
         cpp_info.libs = ["MyLib2"]

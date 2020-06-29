@@ -28,13 +28,6 @@ class ToolsNetTest(unittest.TestCase):
         net.ftp_download("test.rebex.net", filename, "demo", "password")
         self.assertTrue(os.path.exists(os.path.basename(filename)))
 
-    # FIXME. This was removed cause failures in CI, but doesn't make sense to fail only on OSX
-    @unittest.skipIf(platform.system() == "Darwin", "Fails in Macos")
-    def test_ftp_anonymous(self):
-        filename = "1KB.zip"
-        net.ftp_download("speedtest.tele2.net", filename)
-        self.assertTrue(os.path.exists(os.path.basename(filename)))
-
     def test_ftp_invalid_path(self):
         with six.assertRaisesRegex(self, ConanException,
                                    "550 The system cannot find the file specified."):
