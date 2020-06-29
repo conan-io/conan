@@ -2,10 +2,19 @@ import platform
 import textwrap
 import unittest
 
+from conans.client.build.meson import Meson
+from conans.model.version import Version
 from conans.test.utils.tools import TestClient
 
 
 class MesonTest(unittest.TestCase):
+
+    def test_get_version(self):
+        try:
+            v = Meson.get_version()
+            self.assertIsInstance(v, Version)
+        except Exception as e:
+            self.fail("Meson.get_version failed: {}".format(e))
 
     @unittest.skipIf(platform.system() != "Windows", "Needs windows for vcvars")
     def test_vcvars_priority(self):
@@ -14,7 +23,7 @@ class MesonTest(unittest.TestCase):
         conanfile_vcvars = textwrap.dedent("""
             import os
             from conans import ConanFile, Meson
-    
+
             class HelloConan(ConanFile):
                 settings = "os", "compiler", "arch", "build_type"
                 def build(self):
