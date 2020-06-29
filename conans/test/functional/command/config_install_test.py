@@ -551,8 +551,8 @@ class Pkg(ConanFile):
         self.assertNotIn("myconfig.zip", self.client.out)
 
     def test_list_empty_config(self):
-        self.client.run("config install --list", assert_error=True)
-        self.assertIn("There is no config data. Need to install config first.", self.client.out)
+        self.client.run("config install --list")
+        self.assertEqual("", self.client.out)
 
     def test_remove_empty_config(self):
         self.client.run("config install --remove=0", assert_error=True)
