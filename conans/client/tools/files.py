@@ -69,8 +69,8 @@ def unzip(filename, destination=".", keep_permissions=False, pattern=None, outpu
     output = default_output(output, 'conans.client.tools.files.unzip')
 
     if (filename.endswith(".tar.gz") or filename.endswith(".tgz") or
-        filename.endswith(".tbz2") or filename.endswith(".tar.bz2") or
-        filename.endswith(".tar")):
+            filename.endswith(".tbz2") or filename.endswith(".tar.bz2") or
+            filename.endswith(".tar")):
         return untargz(filename, destination, pattern)
     if filename.endswith(".gz"):
         import gzip
