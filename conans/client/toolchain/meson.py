@@ -1,21 +1,20 @@
 import os
 import platform
-from configparser import ConfigParser
-from pathlib import Path
+import sys
+if sys.version_info[0] == 3 and sys.version_info[1] >= 5:
+    from configparser import ConfigParser
+    from pathlib import Path
 
 from conans.client import tools
 from conans.errors import ConanException
 from conans.util.files import mkdir
 
-class MesonMachineFile():
+class MesonMachineFile(object):
     """
     A wrapper for meson machine files for the use in `MesonToolchain`.
     Note: Meson requires that all ini values are quoted. E.g. `name = 'value'`
     """
-    def __init__(self,
-                 name: str,
-                 path: str = None,
-                 config: ConfigParser = None):
+    def __init__(self, name, path = None, config = None):
         if not name:
             raise ConanException('`name` is empty: machine file must have a unique name supplied')
         self.name = name
@@ -27,14 +26,14 @@ class MesonMachineFile():
             config.read(path)
         self.options = config
 
-    def dump(self, install_dir: str):
+    def dump(self, install_dir):
         outpath = Path(install_dir)
         if not outpath.exists():
             outpath.mkdir(parents=True)
         with open(outpath/self.name, 'w') as f:
             self.options.write(f)
 
-class MesonToolchain():
+class MesonToolchain(object):
     """
     A wrapper for `MesonMachineFile` for the use in `ConanFile.toolchain()`.
     Uses only supplied machine files and does *not* generate any files by itself.
@@ -42,7 +41,7 @@ class MesonToolchain():
     native_file_subdir = 'native'
     cross_file_subdir = 'cross'
 
-    def __init__(self, native_files = None, cross_files = None ):
+    def __init__(self, native_files = None, cross_files = None):
         self.native_files = native_files or []
         self.cross_files = cross_files or []
 
@@ -50,8 +49,8 @@ class MesonToolchain():
         for i in [self.native_files, self.cross_files]:
             yield i
 
-    def dump(self, install_dir: str):
-        def dump_files(files, outpath: str):
+    def dump(self, install_dir):
+        def dump_files(files, outpath):
             if not files:
                 pass
             if not outpath.exists():
@@ -72,14 +71,14 @@ class MesonDefaultToolchain(MesonToolchain):
         native_files, cross_files = mt_gen.generate(force_cross)
         super(MesonDefaultToolchain, self).__init__(native_files, cross_files)
 
-class MesonDefaultToolchainGenerator():
+class MesonDefaultToolchainGenerator(object):
     """
     Generates machine files from conan profiles
     """
     def __init__(self, conanfile):
         self._conanfile = conanfile
 
-    def generate(self, force_cross: bool = False) -> MesonToolchain:
+    def generate(self, force_cross = False):
         mt = MesonToolchain()
         has_settings_build = hasattr(self._conanfile, 'settings_build') and self._conanfile.settings_build
         has_settings_target = hasattr(self._conanfile, 'settings_target') and self._conanfile.settings_target
@@ -94,7 +93,7 @@ class MesonDefaultToolchainGenerator():
             mt.cross_files += tmp_cross_files
         return mt
 
-    def _dict_to_config(self, machine_dict: dict) -> ConfigParser:
+    def _dict_to_config(self, machine_dict):
         config = ConfigParser()
         config.read_dict(self._to_ini(machine_dict))
         return config
@@ -120,7 +119,7 @@ class MesonDefaultToolchainGenerator():
             return "'{}'".format(value)
         return value
 
-    def _create_native(self, settings, is_separate_profile: bool) -> dict:        
+    def _create_native(self, settings, is_separate_profile):        
         """
         Parameters:
             is_separate_profile: true, if machine file is generated from a separate conan profile 
@@ -132,15 +131,15 @@ class MesonDefaultToolchainGenerator():
         """
 
         # FIXME: Rewrite this once <https://github.com/conan-io/conan/issues/7091> is fixed
-        def none_if_empty(input: str):
+        def none_if_empty(input):
             stripped_input = input.strip()
             return stripped_input if stripped_input else None
-        def env_or_for_build(input: str, is_separate_profile, default_val = None):
+        def env_or_for_build(input, is_separate_profile, default_val = None):
             if is_separate_profile:
                 return os.environ.get(input, default_val)
             else:
                 return os.environ.get('{}_FOR_BUILD'.format(input), default_val)
-        def atr_or_for_build(settings, input: str, is_separate_profile):
+        def atr_or_for_build(settings, input, is_separate_profile):
             if is_separate_profile:
                 return settings.get_safe(input)
             else:
@@ -179,8 +178,8 @@ class MesonDefaultToolchainGenerator():
 
         return config_template
 
-    def _create_cross(self, settings) -> dict:
-        def none_if_empty(input: str):
+    def _create_cross(self, settings):
+        def none_if_empty(input):
             stripped_input = input.strip()
             return stripped_input if stripped_input else None
 
@@ -226,7 +225,7 @@ class MesonDefaultToolchainGenerator():
 
         return config_template
 
-    def _create_machine_files_from_settings(self, settings, force_cross: bool):
+    def _create_machine_files_from_settings(self, settings, force_cross):
         is_cross = tools.cross_building(settings) or force_cross
         has_for_build = False
 
@@ -246,7 +245,7 @@ class MesonDefaultToolchainGenerator():
         return (native_files, cross_files)
 
     @staticmethod
-    def _get_system_from_os(os: str) -> str:
+    def _get_system_from_os(os):
         """
         Converts from `conan/conans/client/conf/__init__.py` to `https://mesonbuild.com/Reference-tables.html#operating-system-names`
         """
@@ -257,7 +256,7 @@ class MesonDefaultToolchainGenerator():
             return os
 
     @staticmethod
-    def _get_cpu_family_and_endianness_from_arch(arch: str):
+    def _get_cpu_family_and_endianness_from_arch(arch):
         """
         Converts from `conan/conans/client/conf/__init__.py` to `https://mesonbuild.com/Reference-tables.html#cpu-families`
         """

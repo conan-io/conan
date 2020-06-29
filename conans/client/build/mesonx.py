@@ -1,7 +1,9 @@
 import os
 import platform
-from configparser import ConfigParser
-from pathlib import Path
+import sys
+if sys.version_info[0] == 3 and sys.version_info[1] >= 5:
+    from configparser import ConfigParser
+    from pathlib import Path
 
 from conans.client import tools
 from conans.client.build import defs_to_string, join_arguments
@@ -31,8 +33,6 @@ from conans.util.runners import version_runner
 # - fix env variables reading for native\cross once it's possible (i.e when <https://github.com/conan-io/conan/issues/7091> is fixed)
 # - cleanup comments
 # - add tests
-# - Can we use Py3.x? meson requires Python 3.5+
-# - deal with typings (remove? add everywhere?)
 
 # Questions:
 # - Should we keep `cross-file`/`native-file` kwarg or should they be moved to `options` instead?
@@ -41,8 +41,8 @@ from conans.util.runners import version_runner
 # - Should we generate machine files in dump() or in __init__()?
 # - Move `MesonDefaultToolchainGenerator` to `MesonDefaultToolchain`?
 
-class MesonX():
-    def __init__(self, conanfile, build_subdir: str = None, backend: str = None, append_vcvars: bool = False) -> None:
+class MesonX(object):
+    def __init__(self, conanfile, build_subdir = None, backend = None, append_vcvars = False):
         if self.get_version() < '0.42.0':
             raise ConanException('`meson` is too old: minimum required version `0.42.0` vs current version `{}`'.format(self.get_version()))
         if not 'pkg_config' in conanfile.generators:
@@ -64,7 +64,7 @@ class MesonX():
         self.backend = backend or 'ninja'
 
     @staticmethod
-    def get_version() -> Version:
+    def get_version():
         try:
             out = version_runner(['meson', '--version'])
             version_line = decode_text(out).split('\n', 1)[0]
@@ -217,7 +217,7 @@ class MesonX():
         """safe option"""
         return self._conanfile.options.get_safe(setname)
 
-    def _validate_ninja_usage_and_warn_agnostic_method_unavailable(self, minimum_version: str):
+    def _validate_ninja_usage_and_warn_agnostic_method_unavailable(self, minimum_version):
         if self.backend != 'ninja':
             raise ConanException('This method is not implemented yet for `{}` backend. Change your backend to `ninja` or update your `meson`.\n'.format(self.backend) +
                                  'Minimum required `meson` version is {}'.format(minimum_version))
@@ -260,7 +260,7 @@ class MesonX():
             build_dir = str(Path(self._conanfile.build_folder) / _build_subdir)
         return (source_dir, build_dir)
 
-    def _get_default_options(self) -> dict:
+    def _get_default_options(self):
         options = dict()
         if self._conanfile.package_folder:
             options['prefix'] = self._conanfile.package_folder
