@@ -28,6 +28,7 @@ from conans.model.graph_info import GraphInfo
 from conans.model.graph_lock import GraphLockNode
 from conans.model.info import PACKAGE_ID_UNKNOWN
 from conans.model.ref import PackageReference
+from conans.model.user_info import DepsUserInfo
 from conans.model.user_info import UserInfo
 from conans.paths import BUILD_INFO, CONANINFO, RUN_LOG_NAME
 from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
@@ -532,6 +533,11 @@ class BinaryInstaller(object):
             if it.require.build_require_context == CONTEXT_HOST:
                 br_host.extend(it.dst.transitive_closure.values())
 
+        # Initialize some members if we are using different contexts
+        if using_build_profile:
+            conan_file.user_info_host = DepsUserInfo()
+            conan_file.user_info_build = DepsUserInfo()
+
         for n in node_order:
             if n not in transitive:
                 conan_file.output.info("Applying build-requirement: %s" % str(n.ref))
@@ -543,7 +549,10 @@ class BinaryInstaller(object):
             else:
                 if n in transitive or n in br_host:
                     conan_file.deps_cpp_info.update(n.conanfile._conan_dep_cpp_info, n.ref.name)
+                    conan_file.deps_user_info[n.ref.name] = n.conanfile.user_info
+                    conan_file.user_info_host[n.ref.name] = n.conanfile.user_info
                 else:
+                    conan_file.user_info_build[n.ref.name] = n.conanfile.user_info
                     env_info = EnvInfo()
                     env_info._values_ = n.conanfile.env_info._values_.copy()
                     # Add cpp_info.bin_paths/lib_paths to env_info (it is needed for runtime)
@@ -552,6 +561,7 @@ class BinaryInstaller(object):
                     env_info.LD_LIBRARY_PATH.extend(n.conanfile._conan_dep_cpp_info.lib_paths)
                     env_info.PATH.extend(n.conanfile._conan_dep_cpp_info.bin_paths)
                     conan_file.deps_env_info.update(env_info, n.ref.name)
+
 
         # Update the info but filtering the package values that not apply to the subtree
         # of this current node and its dependencies.
