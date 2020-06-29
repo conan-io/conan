@@ -164,7 +164,7 @@ VAR2=23
         mkdir(abs_include)
         mkdir(abs_lib)
         mkdir(abs_bin)
-        info = CppInfo(folder)
+        info = CppInfo("", folder)
         info.includedirs.append(abs_include)
         info.libdirs.append(abs_lib)
         info.bindirs.append(abs_bin)
@@ -175,36 +175,34 @@ VAR2=23
                                           os.path.join(folder, "local_bindir")])
 
     def cpp_info_system_libs_test(self):
-        info1 = CppInfo("folder1")
+        info1 = CppInfo("dep1", "folder1")
         info1.system_libs = ["sysdep1"]
-        info2 = CppInfo("folder2")
+        info2 = CppInfo("dep2", "folder2")
         info2.system_libs = ["sysdep2", "sysdep3"]
         deps_cpp_info = DepsCppInfo()
-        deps_cpp_info.update(info1, "dep1")
-        deps_cpp_info.update(info2, "dep2")
+        deps_cpp_info.add("dep1", info1)
+        deps_cpp_info.add("dep2", info2)
         self.assertEqual(["sysdep1", "sysdep2", "sysdep3"], deps_cpp_info.system_libs)
         self.assertEqual(["sysdep1"], deps_cpp_info["dep1"].system_libs)
         self.assertEqual(["sysdep2", "sysdep3"], deps_cpp_info["dep2"].system_libs)
 
     def cpp_info_name_test(self):
         folder = temp_folder()
-        info = CppInfo(folder)
+        info = CppInfo("myname", folder)
         info.name = "MyName"
         info.names["my_generator"] = "MyNameForMyGenerator"
         deps_cpp_info = DepsCppInfo()
-        deps_cpp_info.update(info, "myname")
-        self.assertIn("MyName", deps_cpp_info["myname"].name)
-        self.assertIn("MyNameForMyGenerator", deps_cpp_info["myname"].names["my_generator"])
+        deps_cpp_info.add("myname", info)
         self.assertIn("MyName", deps_cpp_info["myname"].get_name("my_undefined_generator"))
         self.assertIn("MyNameForMyGenerator", deps_cpp_info["myname"].get_name("my_generator"))
 
     def cpp_info_build_modules_test(self):
         folder = temp_folder()
-        info = CppInfo(folder)
+        info = CppInfo("myname", folder)
         info.build_modules.append("my_module.cmake")
         info.debug.build_modules = ["mod-release.cmake"]
         deps_cpp_info = DepsCppInfo()
-        deps_cpp_info.update(info, "myname")
+        deps_cpp_info.add("myname", info)
         self.assertListEqual([os.path.join(folder, "my_module.cmake")],
                              deps_cpp_info["myname"].build_modules_paths)
         self.assertListEqual([os.path.join(folder, "mod-release.cmake")],
@@ -212,7 +210,7 @@ VAR2=23
 
     def cppinfo_public_interface_test(self):
         folder = temp_folder()
-        info = CppInfo(folder)
+        info = CppInfo("", folder)
         self.assertEqual([], info.libs)
         self.assertEqual([], info.system_libs)
         self.assertEqual(["include"], info.includedirs)
@@ -223,7 +221,6 @@ VAR2=23
         self.assertEqual(["lib"], info.libdirs)
         self.assertEqual(folder, info.rootpath)
         self.assertEqual([], info.defines)
-        self.assertIsNone(info.name)
         self.assertEqual("", info.sysroot)
         self.assertEqual([], info.cflags)
         self.assertEqual({}, info.configs)

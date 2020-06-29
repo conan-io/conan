@@ -17,16 +17,16 @@ class TextGeneratorTest(unittest.TestCase):
         conanfile = ConanFile(TestBufferConanOutput(), None)
         conanfile.initialize(Settings({}), EnvValues())
         ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
-        cpp_info = CppInfo("dummy_root_folder1")
+        cpp_info = CppInfo(ref.name, "dummy_root_folder1")
         cpp_info.defines = ["MYDEFINE1"]
         cpp_info.cxxflags = ["-cxxflag_parent"]
+        conanfile.deps_cpp_info.add(ref.name, cpp_info)
 
-        conanfile.deps_cpp_info.update(cpp_info, ref.name)
         ref = ConanFileReference.loads("MyPkg2/0.1@lasote/stables")
-        cpp_info = CppInfo("dummy_root_folder2")
+        cpp_info = CppInfo(ref.name, "dummy_root_folder2")
         cpp_info.defines = ["MYDEFINE2"]
         cpp_info.cxxflags = ["-cxxflag_dep"]
-        conanfile.deps_cpp_info.update(cpp_info, ref.name)
+        conanfile.deps_cpp_info.add(ref.name, cpp_info)
 
         generator = TXTGenerator(conanfile)
         txt_out = generator.content

@@ -20,11 +20,11 @@ class VisualStudioGeneratorTest(unittest.TestCase):
         conanfile = ConanFile(TestBufferConanOutput(), None)
         conanfile.initialize(Settings({}), EnvValues())
         ref = ConanFileReference.loads("MyPkg/0.1@user/testing")
-        cpp_info = CppInfo("dummy_root_folder1")
-        conanfile.deps_cpp_info.update(cpp_info, ref.name)
+        cpp_info = CppInfo(ref.name, "dummy_root_folder1")
+        conanfile.deps_cpp_info.add(ref.name, cpp_info)
         ref = ConanFileReference.loads("My.Fancy-Pkg_2/0.1@user/testing")
-        cpp_info = CppInfo("dummy_root_folder2")
-        conanfile.deps_cpp_info.update(cpp_info, ref.name)
+        cpp_info = CppInfo(ref.name, "dummy_root_folder2")
+        conanfile.deps_cpp_info.add(ref.name, cpp_info)
         generator = VisualStudioGenerator(conanfile)
 
         content = generator.content
@@ -41,16 +41,16 @@ class VisualStudioGeneratorTest(unittest.TestCase):
         ref = ConanFileReference.loads("MyPkg/0.1@user/testing")
         tmp_folder = temp_folder()
         pkg1 = os.path.join(tmp_folder, "pkg1")
-        cpp_info = CppInfo(pkg1)
+        cpp_info = CppInfo(ref.name, pkg1)
         cpp_info.includedirs = ["include"]
         save(os.path.join(pkg1, "include", "file.h"), "")
-        conanfile.deps_cpp_info.update(cpp_info, ref.name)
+        conanfile.deps_cpp_info.add(ref.name, cpp_info)
         ref = ConanFileReference.loads("My.Fancy-Pkg_2/0.1@user/testing")
         pkg2 = os.path.join(tmp_folder, "pkg2")
-        cpp_info = CppInfo(pkg2)
+        cpp_info = CppInfo(ref.name, pkg2)
         cpp_info.includedirs = ["include"]
         save(os.path.join(pkg2, "include", "file.h"), "")
-        conanfile.deps_cpp_info.update(cpp_info, ref.name)
+        conanfile.deps_cpp_info.add(ref.name, cpp_info)
         generator = VisualStudioGenerator(conanfile)
 
         path1 = os.path.join("$(USERPROFILE)", "pkg1", "include")
@@ -75,12 +75,12 @@ class VisualStudioGeneratorTest(unittest.TestCase):
         ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
         conanfile = ConanFile(TestBufferConanOutput(), None)
         conanfile.initialize(Settings({}), EnvValues())
-        cpp_info = CppInfo(tmp_folder)
+        cpp_info = CppInfo(ref.name, tmp_folder)
         cpp_info.defines = ["_WIN32_WINNT=x0501"]
         cpp_info.debug.defines = ["_DEBUG", "DEBUG"]
         cpp_info.release.defines = ["NDEBUG"]
         cpp_info.custom.defines = ["CUSTOM_BUILD"]
-        conanfile.deps_cpp_info.update(cpp_info, ref.name)
+        conanfile.deps_cpp_info.add(ref.name, cpp_info)
         generator = VisualStudioGenerator(conanfile)
 
         content = generator.content
@@ -118,9 +118,9 @@ class VisualStudioGeneratorTest(unittest.TestCase):
             conanfile = ConanFile(TestBufferConanOutput(), None)
             conanfile.initialize(Settings({}), EnvValues())
             ref = ConanFileReference.loads("MyPkg/0.1@user/testing")
-            cpp_info = CppInfo("dummy_root_folder1")
+            cpp_info = CppInfo(ref.name, "dummy_root_folder1")
             cpp_info.libs = [lib]
-            conanfile.deps_cpp_info.update(cpp_info, ref.name)
+            conanfile.deps_cpp_info.add(ref.name, cpp_info)
             generator = VisualStudioGenerator(conanfile)
             content = generator.content
             self.assertIn("<ConanLibraries>%s;</ConanLibraries>" % additional_dep, content)
