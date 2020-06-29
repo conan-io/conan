@@ -100,7 +100,7 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
             project(greetings CXX)
 
             include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-            conan_basic_setup()
+            conan_basic_setup(NO_OUTPUT_DIRS)
 
             add_library(hello hello.cpp)
             add_library(bye bye.cpp)
@@ -140,7 +140,7 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
             project(PackageTest CXX)
 
             include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-            conan_basic_setup()
+            conan_basic_setup(NO_OUTPUT_DIRS)
 
             find_package(greetings)
 
@@ -227,7 +227,7 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
             project(world CXX)
 
             include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-            conan_basic_setup()
+            conan_basic_setup(NO_OUTPUT_DIRS)
 
             find_package(greetings COMPONENTS hello)
 
@@ -270,7 +270,7 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
             project(PackageTest CXX)
 
             include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-            conan_basic_setup()
+            conan_basic_setup(NO_OUTPUT_DIRS)
 
             find_package(world)
 
@@ -295,11 +295,10 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
     def _install_build_run_test_package(self, client, build_type, run_example2=False):
         client.run("install fake_test_package -s build_type=%s" % build_type)
         client.run("build fake_test_package")
-        with client.chdir(os.path.join(client.current_folder, "bin")):
+        with client.chdir(os.path.join(client.current_folder, build_type)):
             client.run_command(".%sexample" % os.sep)
             if run_example2:
                 client.run_command(".%sexample2" % os.sep)
-
 
     def basic_test(self):
         client = TestClient()
@@ -357,7 +356,7 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
             project(world CXX)
 
             include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-            conan_basic_setup()
+            conan_basic_setup(NO_OUTPUT_DIRS)
 
             find_package(Greetings)
 
@@ -372,7 +371,7 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
             project(PackageTest CXX)
 
             include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-            conan_basic_setup()
+            conan_basic_setup(NO_OUTPUT_DIRS)
 
             find_package(World)
 
@@ -426,7 +425,7 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
             project(world CXX)
 
             include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-            conan_basic_setup()
+            conan_basic_setup(NO_OUTPUT_DIRS)
 
             find_package(greetings COMPONENTS hello)
 
@@ -483,7 +482,7 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
             project(world CXX)
 
             include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-            conan_basic_setup()
+            conan_basic_setup(NO_OUTPUT_DIRS)
 
             find_package(greetings COMPONENTS hello)
 
