@@ -604,7 +604,12 @@ class ConanAPIV1(object):
 
     @api_method
     def config_install_list(self):
-        return json.loads(load(self.app.cache.config_install_file))
+        try:
+            return json.loads(load(self.app.cache.config_install_file))
+        except FileNotFoundError:
+            raise ConanException("There is no config data. Need to install config first.")
+        except Exception as error:
+            raise ConanException("Could not load config data: {}".format(error))
 
     @api_method
     def config_install_remove(self, index):
