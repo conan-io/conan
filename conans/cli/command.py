@@ -86,7 +86,8 @@ class ConanCommand(object):
                                                prog="conan {}".format(self._name),
                                                formatter_class=SmartFormatter)
 
-    def run(self, *args, conan_api, **kwargs):
+    def run(self, *args, **kwargs):
+        conan_api = kwargs["conan_api"]
         info, formatter = self._method(*args, conan_api=conan_api, **kwargs)
         if info:
             self._formatters[formatter](info, conan_api.out)
