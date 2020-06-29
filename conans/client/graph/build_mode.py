@@ -37,7 +37,10 @@ class BuildMode(object):
                 elif param == "cascade":
                     self.cascade = True
                 else:
-                    self.patterns.append("%s" % param)
+                    # Remove the @ at the end, to match for "conan install pkg/0.1@ --build=pkg/0.1@"
+                    clean_pattern = param[:-1] if param.endswith("@") else param
+                    clean_pattern = clean_pattern.replace("@#", "#")
+                    self.patterns.append(clean_pattern)
 
             if self.never and (self.outdated or self.missing or self.patterns or self.cascade):
                 raise ConanException("--build=never not compatible with other options")
@@ -59,9 +62,9 @@ class BuildMode(object):
 
         # Patterns to match, if package matches pattern, build is forced
         for pattern in self.patterns:
-            is_matching_name = fnmatch.fnmatchcase(ref.name, pattern)
-            is_matching_ref = fnmatch.fnmatchcase(repr(ref.copy_clear_rev()), pattern)
-            if is_matching_name or is_matching_ref:
+            if (fnmatch.fnmatchcase(ref.name, pattern) or
+                    fnmatch.fnmatchcase(repr(ref.copy_clear_rev()), pattern) or
+                    fnmatch.fnmatchcase(repr(ref), pattern)):
                 try:
                     self._unused_patterns.remove(pattern)
                 except ValueError:

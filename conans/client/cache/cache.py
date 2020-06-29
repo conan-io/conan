@@ -4,7 +4,7 @@ import shutil
 from collections import OrderedDict
 from os.path import join
 
-from jinja2 import Environment, select_autoescape
+from jinja2 import Environment, select_autoescape, FileSystemLoader, ChoiceLoader
 
 from conans.assets.templates import dict_loader
 from conans.client.cache.editable import EditablePackages
@@ -226,10 +226,13 @@ class ClientCache(object):
             Lock.clean(conan_folder)
             shutil.rmtree(os.path.join(conan_folder, "locks"), ignore_errors=True)
 
-    @classmethod
-    def get_template(cls, template_name):
+    def get_template(self, template_name, user_overrides=False):
         # TODO: It can be initialized only once together with the Conan app
-        env = Environment(loader=dict_loader, autoescape=select_autoescape(['html', 'xml']))
+        loaders = [dict_loader]
+        if user_overrides:
+            loaders.insert(0, FileSystemLoader(os.path.join(self.cache_folder, 'templates')))
+        env = Environment(loader=ChoiceLoader(loaders),
+                          autoescape=select_autoescape(['html', 'xml']))
         return env.get_template(template_name)
 
     def initialize_config(self):
