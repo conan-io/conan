@@ -82,7 +82,7 @@ class PremakeGeneratorTest(unittest.TestCase):
         self.conanfile = ConanFile(TestBufferConanOutput(), None)
         self.conanfile.initialize(Settings({}), EnvValues())
         ref = ConanFileReference.loads("MyPkg1/0.1@lasote/stables")
-        cpp_info = CppInfo(self.tmp_folder1)
+        cpp_info = CppInfo(ref.name, self.tmp_folder1)
         cpp_info.defines = ["MYDEFINE1"]
         cpp_info.includedirs = ['include1']
         cpp_info.libdirs = ['lib1']
@@ -94,9 +94,9 @@ class PremakeGeneratorTest(unittest.TestCase):
         cpp_info.cxxflags = ['-fPIE']
         cpp_info.sharedlinkflags = ['-framework Cocoa']
         cpp_info.exelinkflags = ['-framework QuartzCore']
-        self.conanfile.deps_cpp_info.update(cpp_info, ref.name)
+        self.conanfile.deps_cpp_info.add(ref.name, cpp_info)
         ref = ConanFileReference.loads("MyPkg2/3.2.3@lasote/stables")
-        cpp_info = CppInfo(self.tmp_folder2)
+        cpp_info = CppInfo(ref.name, self.tmp_folder2)
         cpp_info.defines = ["MYDEFINE2"]
         cpp_info.includedirs = ['include2']
         cpp_info.libdirs = ['lib2']
@@ -108,7 +108,7 @@ class PremakeGeneratorTest(unittest.TestCase):
         cpp_info.cxxflags = ['-march=native']
         cpp_info.sharedlinkflags = ['-framework AudioFoundation', '-framework "Some Spaced Framework"']
         cpp_info.exelinkflags = ['-framework VideoToolbox', '-framework "Other Spaced Framework"']
-        self.conanfile.deps_cpp_info.update(cpp_info, ref.name)
+        self.conanfile.deps_cpp_info.add(ref.name, cpp_info)
 
     def test_variables_content(self):
         generator = PremakeGenerator(self.conanfile)

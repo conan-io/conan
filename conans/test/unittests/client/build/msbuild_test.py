@@ -338,3 +338,16 @@ class MSBuildTest(unittest.TestCase):
         msbuild.build("project_file.sln", arch="x86", property_file_name=props_file_path)
         self.assertIn("vcvarsall.bat\" x86", conanfile.command)
         self.assertIn("/p:Platform=\"x86\"", conanfile.command)
+
+    def test_intel(self):
+        settings = MockSettings({"build_type": "Debug",
+                                 "compiler": "intel",
+                                 "compiler.version": "19.1",
+                                 "compiler.base": "Visual Studio",
+                                 "compiler.base.version": "15",
+                                 "arch": "x86_64"})
+        expected_toolset = "Intel C++ Compiler 19.1"
+        conanfile = MockConanfile(settings)
+        msbuild = MSBuild(conanfile)
+        command = msbuild.get_command("project_should_flags_test_file.sln")
+        self.assertIn('/p:PlatformToolset="%s"' % expected_toolset, command)

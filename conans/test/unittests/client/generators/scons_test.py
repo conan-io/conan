@@ -15,15 +15,15 @@ class SConsGeneratorTest(unittest.TestCase):
         conanfile = ConanFile(TestBufferConanOutput(), None)
         conanfile.initialize(Settings({}), EnvValues())
         ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
-        cpp_info = CppInfo("")
+        cpp_info = CppInfo(ref.name, "")
         cpp_info.defines = ["MYDEFINE1"]
         cpp_info.version = "0.1"
-        conanfile.deps_cpp_info.update(cpp_info, ref.name)
+        conanfile.deps_cpp_info.add(ref.name, cpp_info)
         ref = ConanFileReference.loads("MyPkg2/3.2.3@lasote/stables")
-        cpp_info = CppInfo("")
+        cpp_info = CppInfo(ref.name, "")
         cpp_info.defines = ["MYDEFINE2"]
         cpp_info.version = "3.2.3"
-        conanfile.deps_cpp_info.update(cpp_info, ref.name)
+        conanfile.deps_cpp_info.add(ref.name, cpp_info)
         generator = SConsGenerator(conanfile)
         content = generator.content
         scons_lines = content.splitlines()

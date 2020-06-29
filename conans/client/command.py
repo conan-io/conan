@@ -173,7 +173,7 @@ class Command(object):
                             help='Create the minimum package recipe, without build() method. '
                             'Useful in combination with "export-pkg" command')
         parser.add_argument("-m", "--template",
-                            help='Use the given template from the local cache for conanfile.py')
+                            help='Use the given template to generate a conan project')
         parser.add_argument("-cis", "--ci-shared", action='store_true',
                             default=False,
                             help='Package will have a "shared" option to be used in CI')
@@ -737,9 +737,11 @@ class Command(object):
 
             if args.graph:
                 if args.graph.endswith(".html"):
-                    template = self._conan.app.cache.get_template(templates.INFO_GRAPH_HTML)
+                    template = self._conan.app.cache.get_template(templates.INFO_GRAPH_HTML,
+                                                                  user_overrides=True)
                 else:
-                    template = self._conan.app.cache.get_template(templates.INFO_GRAPH_DOT)
+                    template = self._conan.app.cache.get_template(templates.INFO_GRAPH_DOT,
+                                                                  user_overrides=True)
                 self._outputer.info_graph(args.graph, deps_graph, get_cwd(), template=template)
             if args.json:
                 json_arg = True if args.json == "1" else args.json
@@ -1325,7 +1327,8 @@ class Command(object):
                                                    remote_name=args.remote,
                                                    outdated=args.outdated)
                 # search is done for one reference
-                template = self._conan.app.cache.get_template(templates.SEARCH_TABLE_HTML)
+                template = self._conan.app.cache.get_template(templates.SEARCH_TABLE_HTML,
+                                                              user_overrides=True)
                 self._outputer.print_search_packages(info["results"], ref, args.query,
                                                      args.table, args.raw, outdated=args.outdated,
                                                      template=template)
