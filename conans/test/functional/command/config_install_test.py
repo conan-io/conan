@@ -554,6 +554,10 @@ class Pkg(ConanFile):
         self.client.run("config install --list", assert_error=True)
         self.assertIn("There is no config data. Need to install config first.", self.client.out)
 
+    def test_remove_empty_config(self):
+        self.client.run("config install --remove=0", assert_error=True)
+        self.assertIn("There is no config data. Need to install config first.", self.client.out)
+
     def test_overwrite_read_only_file(self):
         source_folder = self._create_profile_folder()
         self.client.run('config install "%s"' % source_folder)
