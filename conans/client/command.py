@@ -575,7 +575,8 @@ class Command(object):
         install_subparser.add_argument("-l", "--list", default=False, action='store_true',
                                        help='List stored configuration origins')
         install_subparser.add_argument("-r", "--remove", type=int,
-                                       help='Remove configuration origin')
+                                       help='Remove configuration origin by index in list (index '
+                                            'provided by --list argument)')
         rm_subparser.add_argument("item", help="Item to remove")
         set_subparser.add_argument("item", help="'item=value' to set")
         init_subparser.add_argument('-f', '--force', default=False, action='store_true',
