@@ -264,11 +264,6 @@ class MesonX(object):
         options = dict()
         if self._conanfile.package_folder:
             options['prefix'] = self._conanfile.package_folder
-        options['libdir'] = DEFAULT_LIB
-        options['bindir'] = DEFAULT_BIN
-        options['sbindir'] = DEFAULT_BIN
-        options['libexecdir'] = DEFAULT_BIN
-        options['includedir'] = DEFAULT_INCLUDE
 
         cppstd = cppstd_from_settings(self._conanfile.settings)
         if cppstd != None:
@@ -283,7 +278,7 @@ class MesonX(object):
             self._conanfile.output.warn("Toolchain: Ignoring fPIC option defined for Windows")
         else:
             fpic = self._so('fPIC')
-            if fpic != None:
+            if fpic is not None:
                 shared = self._so('shared')
                 options['b_staticpic'] = fpic or shared
 
