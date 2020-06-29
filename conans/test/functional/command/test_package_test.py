@@ -148,12 +148,10 @@ class TestPackageTest(unittest.TestCase):
             class Pkg(ConanFile):
                 def build(self):
                     info = self.deps_cpp_info["hello"]
-                    self.output.info("BUILD HELLO %s VERSION %s" % (info.get_name('txt'),
-                                                                    info.version))
+                    self.output.info("BUILD HELLO %s VERSION %s" % (info.name, info.version))
                 def test(self):
                     info = self.deps_cpp_info["hello"]
-                    self.output.info("TEST HELLO %s VERSION %s" % (info.get_name('txt'),
-                                                                   info.version))
+                    self.output.info("TEST HELLO %s VERSION %s" % (info.name, info.version))
             """)
         client.save({"conanfile.py": conanfile,
                      "test_package/conanfile.py": test_conanfile})
