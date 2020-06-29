@@ -634,7 +634,7 @@ class MyTest(ConanFile):
         client.run("info Pkg/0.2@lasote/testing --graph file.html")
         html_content = client.load("file.html")
         self.assertIn("<h3>Pkg/0.2@lasote/testing</h3>", html_content)
-        self.assertIn("<li><b>topics</b>: (&#34;foo&#34;, &#34;bar&#34;, &#34;qux&#34;)</li>", html_content)
+        self.assertIn("<li><b>topics</b>: foo, bar, qux</li>", html_content)
 
         # Topics as a string
         conanfile = conanfile.replace("(\"foo\", \"bar\", \"qux\")", "\"foo\"")

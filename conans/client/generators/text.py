@@ -190,7 +190,7 @@ class TXTGenerator(Generator):
         sections.append(all_flags)
 
         for config, cpp_info in self.deps_build_info.configs.items():
-            deps = DepsCppTXT(cpp_info)
+            deps = DepCppTXT(cpp_info)
             all_flags = template.format(dep="", deps=deps, config=":" + config)
             sections.append(all_flags)
 
