@@ -127,7 +127,8 @@ class Command(object):
     """
 
     def __init__(self, conan_api):
-        assert isinstance(conan_api, Conan), "Expected 'Conan' type, got '{}'".format(type(conan_api))
+        assert isinstance(conan_api, Conan), "Expected 'Conan' type, got '{}'".format(
+            type(conan_api))
         self._conan = conan_api
         self._out = conan_api.out
         self._groups = defaultdict(list)
@@ -214,7 +215,8 @@ class Command(object):
                     self.help_message()
                     return False
 
-                self._out.writeln("'%s' is not a Conan command. See 'conan --help'." % command_argument)
+                self._out.writeln(
+                    "'%s' is not a Conan command. See 'conan --help'." % command_argument)
                 self._out.writeln("")
                 self._print_similar(command_argument)
                 raise ConanException("Unknown command %s" % str(exc))
