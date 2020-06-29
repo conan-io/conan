@@ -28,7 +28,7 @@ class MakeGeneratorTest(unittest.TestCase):
         conanfile = ConanFile(TestBufferConanOutput(), None)
         conanfile.initialize(Settings({}), EnvValues())
         ref = ConanFileReference.loads("MyPkg1/0.1@lasote/stables")
-        cpp_info = CppInfo(tmp_folder1)
+        cpp_info = CppInfo(ref.name, tmp_folder1)
         cpp_info.defines = ["MYDEFINE1"]
         cpp_info.includedirs = ['include1']
         cpp_info.libdirs = ['lib1']
@@ -42,9 +42,9 @@ class MakeGeneratorTest(unittest.TestCase):
         cpp_info.frameworks = ['AudioUnit']
         cpp_info.frameworkdirs = ['SystemFrameworks']
         cpp_info.system_libs = ["system_lib1"]
-        conanfile.deps_cpp_info.update(cpp_info, ref.name)
+        conanfile.deps_cpp_info.add(ref.name, cpp_info)
         ref = ConanFileReference.loads("MyPkg2/3.2.3@lasote/stables")
-        cpp_info = CppInfo(tmp_folder2)
+        cpp_info = CppInfo(ref.name, tmp_folder2)
         cpp_info.defines = ["MYDEFINE2"]
         cpp_info.includedirs = ['include2']
         cpp_info.libdirs = ['lib2']
@@ -56,7 +56,7 @@ class MakeGeneratorTest(unittest.TestCase):
         cpp_info.sharedlinkflags = ['-framework AudioFoundation']
         cpp_info.exelinkflags = ['-framework VideoToolbox']
         cpp_info.system_libs = ["system_lib2"]
-        conanfile.deps_cpp_info.update(cpp_info, ref.name)
+        conanfile.deps_cpp_info.add(ref.name, cpp_info)
         generator = MakeGenerator(conanfile)
         content = generator.content
 
