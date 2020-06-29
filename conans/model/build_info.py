@@ -275,13 +275,15 @@ class CppInfo(_CppInfo):
                         print(f"            --- adding it baby, COMPONENT_SCOPE={COMPONENT_SCOPE}")
                         comp_requires.add(
                             comp_require[:comp_require.find(COMPONENT_SCOPE)])
+            print(f"MARIO here is pkg_requires={package_requires.values()}")
             pkg_requires = [require.ref.name for require in package_requires.values()]
             # Raise on components requires without package requires
             for pkg_require in pkg_requires:
                 if pkg_require not in comp_requires:
                     all = '\n'.join(str(c) for c in comp_requires)
                     all2 = '\n'.join(str(c) for c in pkg_requires)
-                    raise ConanException(f"Package require '{pkg_require}' not used in components requires: comp_requires: {all}\npkg_requires: {all2}")
+                    raise ConanException(f"Package require '{pkg_require}' not used in components requires\n"
+                        f"   comp_requires: {all}\npkg_requires: {all2}")
             # Raise on components requires requiring inexistent package requires
             for comp_require in comp_requires:
                 print(f"MARIO checking {comp_require} in {comp_requires}, to see if it is in {pkg_requires}...")

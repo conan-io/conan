@@ -263,7 +263,7 @@ class CMakeFindPackageGenerator(Generator):
     def _find_for_dep(self, pkg_name, pkg_findname, pkg_filename, cpp_info):
         # return the content of the FindXXX.cmake file for the package "pkg_name"
         pkg_version = cpp_info.version
-        pkg_public_deps = [self._get_name(self.deps_build_info[public_dep]) for public_dep in
+        pkg_public_deps = [self._get_filename(self.deps_build_info[public_dep]) for public_dep in
                            cpp_info.public_deps]
         pkg_public_deps_names = ";".join(["{n}::{n}".format(n=n) for n in pkg_public_deps])
         if cpp_info.components:
@@ -272,13 +272,15 @@ class CMakeFindPackageGenerator(Generator):
             pkg_components = " ".join(["{p}::{c}".format(p=pkg_findname, c=comp_findname) for
                                        comp_findname, _ in reversed(components)])
             pkg_info = DepsCppCmake(cpp_info)
-            global_target_variables = target_template.format(name=pkg_findname, deps=pkg_info,
+            global_target_variables = target_template.format(name=pkg_filename, deps=pkg_info,
                                                              build_type_suffix="",
                                                              deps_names=pkg_public_deps_names)
             print(f"""MARIO rendering tpl: pkg_name={pkg_findname},
                 pkg_filename={pkg_filename},
                 pkg_version={pkg_version},
-                pkg_components={pkg_components}""")
+                pkg_components={pkg_components}
+                global_target_variables={global_target_variables},
+                pkg_public_deps={pkg_public_deps}""")
             return self.find_components_tpl.render(
                 pkg_name=pkg_findname,
                 pkg_filename=pkg_filename,
@@ -306,7 +308,7 @@ class CMakeFindPackageGenerator(Generator):
 
             # The find_libraries_block, all variables for the package, and creation of targets
             deps = DepsCppCmake(dep_cpp_info)
-            find_libraries_block = target_template.format(name=pkg_findname, deps=deps,
+            find_libraries_block = target_template.format(name=pkg_filename, deps=deps,
                                                           build_type_suffix="",
                                                           deps_names=pkg_public_deps_names)
 
