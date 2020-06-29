@@ -159,18 +159,9 @@ class MesonX(object):
         args = args or []
         targets = targets or []
 
-        # FIXME: remove this check and the block below once <https://github.com/mesonbuild/meson/issues/6740> is merged.
-        # Update version if necessary
-        if targets:
-            raise ConanException('Targets are not supported by `meson compile` yet')
-
-        # minimum_version = '0.55.0' if targets else '0.54.0'
-        # if self._version >= minimum_version:
-        #     self._run_meson_command(subcommand='compile', args=targets + args)
-
-        minimum_version = '0.54.0'
+        minimum_version = '0.55.0' if targets else '0.54.0'
         if self._version >= minimum_version:
-            self._run_meson_command(subcommand='compile', args=args)
+            self._run_meson_command(subcommand='compile', args=args + targets)
         else:
             self._validate_ninja_usage_and_warn_agnostic_method_unavailable(minimum_version)
             meson_target = next( (t for t in targets if ':' in t), None)
@@ -178,7 +169,7 @@ class MesonX(object):
                 raise ConanException('Your targets contain meson syntax which is not supported by ninja: `{}`'.format(meson_target))
             self._run_ninja_targets(targets=targets,
                                     args=self._filter_non_ninja_args(args=args,
-                                                                     ninja_args=['-j*', '-l*']))
+                                                                     ninja_args=['-j*', '-l*', '--verbose']))
 
     def install(self, args=None):
         if not self._conanfile.should_install:
@@ -257,7 +248,7 @@ class MesonX(object):
 
         build_dir = self._conanfile.build_folder
         if self._build_subdir:
-            build_dir = str(Path(self._conanfile.build_folder) / _build_subdir)
+            build_dir = str(Path(self._conanfile.build_folder) / self._build_subdir)
         return (source_dir, build_dir)
 
     def _get_default_options(self):
