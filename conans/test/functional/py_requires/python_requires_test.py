@@ -1,3 +1,4 @@
+import json
 import os
 import textwrap
 import time
@@ -290,6 +291,52 @@ class PyRequiresExtendTest(unittest.TestCase):
         self.assertIn('scm = {"revision":', client.out)
         self.assertIn('"type": "git",', client.out)
         self.assertIn('"url": "somerepo"', client.out)
+
+    def reuse_scm_multiple_conandata_test(self):
+        # https://github.com/conan-io/conan/issues/7236
+        # This only works when using conandata.yml, conanfile.py replace is broken
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class SomeBase(object):
+                scm = {"type" : "git",
+                       "url" : "remote1",
+                       "revision" : "auto"}
+
+            class MyConanfileBase(SomeBase, ConanFile):
+                pass
+            """)
+        _, base_rev = create_local_git_repo({"conanfile.py": conanfile}, branch="my_release",
+                                            folder=os.path.join(client.current_folder, "base"))
+        client.run("config set general.scm_to_conandata=1")
+        client.run("export base base/1.1@user/testing")
+
+        reuse = textwrap.dedent("""
+            from conans import ConanFile
+            class PkgTest(ConanFile):
+                name = "%s"
+                python_requires = "base/1.1@user/testing"
+                python_requires_extend = "base.SomeBase"
+            """)
+        _, reuse1_rev = create_local_git_repo({"conanfile.py": reuse % "reuse1"}, branch="release",
+                                              folder=os.path.join(client.current_folder, "reuse1"))
+        _, reuse2_rev = create_local_git_repo({"conanfile.py": reuse % "reuse2"}, branch="release",
+                                              folder=os.path.join(client.current_folder, "reuse2"))
+        client.run("export reuse1 reuse1/1.1@user/testing")
+        client.run("export reuse2 reuse2/1.1@user/testing")
+
+        client.run("inspect base/1.1@user/testing -a=scm --json=base.json")
+        base_json = json.loads(client.load("base.json"))
+        client.run("inspect reuse1/1.1@user/testing -a=scm --json=reuse1.json")
+        reuse1_json = json.loads(client.load("reuse1.json"))
+        client.run("inspect reuse2/1.1@user/testing -a=scm --json=reuse2.json")
+        reuse2_json = json.loads(client.load("reuse2.json"))
+        self.assertEqual(base_json["scm"]["revision"], base_rev)
+        self.assertEqual(reuse1_json["scm"]["revision"], reuse1_rev)
+        self.assertEqual(reuse2_json["scm"]["revision"], reuse2_rev)
+        self.assertNotEqual(base_rev, reuse1_rev)
+        self.assertNotEqual(base_rev, reuse2_rev)
+        self.assertNotEqual(reuse2_rev, reuse1_rev)
 
     def reuse_class_members_test(self):
         client = TestClient()
