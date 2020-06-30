@@ -42,7 +42,7 @@ class ApplyEditableLayoutTest(unittest.TestCase):
     def test_require_no_namespace(self):
         content = base_content.format(namespace="", path_prefix="")
         save(self.layout_filepath, content)
-        cpp_info = CppInfo(None)
+        cpp_info = CppInfo(self.ref.name, None)
         self.editable_cpp_info.apply_to(self.ref, cpp_info, settings=None, options=None)
         self.assertListEqual(cpp_info.includedirs, ['dirs/includedirs'])
         self.assertListEqual(cpp_info.libdirs, ['dirs/libdirs'])
@@ -56,7 +56,7 @@ class ApplyEditableLayoutTest(unittest.TestCase):
             base_content.format(namespace="libA/0.1@user/channel:", path_prefix="libA/")
             ])
         save(self.layout_filepath, content)
-        cpp_info = CppInfo(None)
+        cpp_info = CppInfo("", None)
         self.editable_cpp_info.apply_to(self.ref, cpp_info, settings=None, options=None)
         self.assertListEqual(cpp_info.includedirs, ['libA/dirs/includedirs'])
         self.assertListEqual(cpp_info.libdirs, ['libA/dirs/libdirs'])
@@ -64,7 +64,7 @@ class ApplyEditableLayoutTest(unittest.TestCase):
         # The default defined by package_info() is respected
         self.assertListEqual(cpp_info.bindirs, ['bin'])
 
-        cpp_info = CppInfo(None)
+        cpp_info = CppInfo("", None)
         other = ConanFileReference.loads("other/0.1@user/channel")
         self.editable_cpp_info.apply_to(other, cpp_info, settings=None, options=None)
         self.assertListEqual(cpp_info.includedirs, ['dirs/includedirs'])

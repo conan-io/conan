@@ -543,9 +543,9 @@ def get_gnu_triplet(os_, arch, compiler=None):
                  "Darwin": "apple-darwin",
                  "Android": "linux-android",
                  "Macos": "apple-darwin",
-                 "iOS": "apple-darwin",
-                 "watchOS": "apple-darwin",
-                 "tvOS": "apple-darwin",
+                 "iOS": "apple-ios",
+                 "watchOS": "apple-watchos",
+                 "tvOS": "apple-tvos",
                  # NOTE: it technically must be "asmjs-unknown-emscripten" or
                  # "wasm32-unknown-emscripten", but it's not recognized by old config.sub versions
                  "Emscripten": "local-emscripten",

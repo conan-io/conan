@@ -34,11 +34,11 @@ class VisualStudioMultiGeneratorTest(unittest.TestCase):
             conanfile.initialize(Settings({}), EnvValues())
 
             ref = ConanFileReference.loads("MyPkg/0.1@user/testing")
-            cpp_info = CppInfo("dummy_root_folder1")
-            conanfile.deps_cpp_info.update(cpp_info, ref.name)
+            cpp_info = CppInfo(ref.name, "dummy_root_folder1")
+            conanfile.deps_cpp_info.add(ref.name, cpp_info)
             ref = ConanFileReference.loads("My.Fancy-Pkg_2/0.1@user/testing")
-            cpp_info = CppInfo("dummy_root_folder2")
-            conanfile.deps_cpp_info.update(cpp_info, ref.name)
+            cpp_info = CppInfo(ref.name, "dummy_root_folder2")
+            conanfile.deps_cpp_info.add(ref.name, cpp_info)
 
             settings.arch = "x86"
             settings.build_type = "Debug"
@@ -96,9 +96,9 @@ class VisualStudioMultiGeneratorTest(unittest.TestCase):
                 conanfile.initialize(Settings({}), EnvValues())
 
                 ref = ConanFileReference.loads("MyPkg/0.1@user/testing")
-                cpp_info = CppInfo("dummy_root_folder1")
+                cpp_info = CppInfo(ref.name, "dummy_root_folder1")
                 cpp_info.libs = [libname]
-                conanfile.deps_cpp_info.update(cpp_info, ref.name)
+                conanfile.deps_cpp_info.add(ref.name, cpp_info)
 
                 settings = Settings.loads(get_default_settings_yml())
                 settings.os = "Windows"

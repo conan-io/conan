@@ -87,7 +87,8 @@ class ConfigInstallTest(unittest.TestCase):
         save(os.path.join(self.client.cache.profiles_path, "default"), "#default profile empty")
         save(os.path.join(self.client.cache.profiles_path, "linux"), "#empty linux profile")
 
-    def _create_profile_folder(self, folder=None):
+    @staticmethod
+    def _create_profile_folder(folder=None):
         folder = folder or temp_folder(path_with_spaces=False)
         save_files(folder, {"settings.yml": settings_yml,
                             "remotes.txt": remotes,
@@ -288,7 +289,8 @@ class Pkg(ConanFile):
         folder = temp_folder()
         save_files(folder, {"remotes.json": ""})
         self.client.run('config install "%s"' % folder, assert_error=True)
-        self.assertIn("ERROR: remotes.json install is not supported yet. Use 'remotes.txt'",
+        self.assertIn("ERROR: Failed conan config install: "
+                      "remotes.json install is not supported yet. Use 'remotes.txt'",
                       self.client.out)
 
     def test_without_profile_folder(self):
@@ -331,14 +333,15 @@ class Pkg(ConanFile):
         """ should install from a git repo
         """
         self.client.run('config install notexistingrepo.git', assert_error=True)
-        self.assertIn("ERROR: Can't clone repo", self.client.out)
+        self.assertIn("ERROR: Failed conan config install: Can't clone repo", self.client.out)
 
     def failed_install_http_test(self):
         """ should install from a http zip
         """
         self.client.run("config set general.retry_wait=0")
         self.client.run('config install httpnonexisting', assert_error=True)
-        self.assertIn("ERROR: Error while installing config from httpnonexisting", self.client.out)
+        self.assertIn("ERROR: Failed conan config install: "
+                      "Error while installing config from httpnonexisting", self.client.out)
 
     def install_repo_test(self):
         """ should install from a git repo
@@ -526,6 +529,34 @@ class Pkg(ConanFile):
         self.client.run("config install http://localhost:%s/myconfig.zip" % http_server.port)
         self.assertIn("Unzipping", self.client.out)
         http_server.stop()
+
+    def test_error_missing_origin(self):
+        path = self._create_zip()
+        self.client.run('config install "%s"' % path)
+        os.remove(path)
+        self.client.run('config install', assert_error=True)
+        self.assertIn("ERROR: Failed conan config install", self.client.out)
+
+    def test_list_remove(self):
+        path = self._create_zip()
+        self.client.run('config install "%s"' % path)
+        configs = json.loads(load(os.path.join(self.client.cache_folder, "config_install.json")))
+        self.assertIn("myconfig.zip", configs[0]["uri"])
+        self.client.run("config install --list")
+        self.assertIn("myconfig.zip", self.client.out)
+        self.client.run("config install --remove=0")
+        configs = json.loads(load(os.path.join(self.client.cache_folder, "config_install.json")))
+        self.assertEqual(0, len(configs))
+        self.client.run("config install --list")
+        self.assertNotIn("myconfig.zip", self.client.out)
+
+    def test_list_empty_config(self):
+        self.client.run("config install --list")
+        self.assertEqual("", self.client.out)
+
+    def test_remove_empty_config(self):
+        self.client.run("config install --remove=0", assert_error=True)
+        self.assertIn("There is no config data. Need to install config first.", self.client.out)
 
     def test_overwrite_read_only_file(self):
         source_folder = self._create_profile_folder()
