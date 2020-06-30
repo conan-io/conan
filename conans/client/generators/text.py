@@ -132,11 +132,11 @@ class TXTGenerator(Generator):
 
             # Build the data structures
             def _populate_cpp_info(_cpp_info, _data, _rootpath):
-                for it, value in _data.items():
-                    if it.endswith('dirs'):
+                for key, value in _data.items():
+                    if key.endswith('dirs'):
                         value = [os.path.relpath(it, _rootpath) for it in value]
                         value = ['' if it == '.' else it for it in value]
-                    setattr(_cpp_info, it, value)
+                    setattr(_cpp_info, key, value)
 
             if None in data:
                 del data[None]
