@@ -2,7 +2,7 @@ import textwrap
 import unittest
 
 from conans.client.generators.text import TXTGenerator
-from conans.model.build_info import CppInfo
+from conans.model.build_info import CppInfo, DepCppInfo
 from conans.model.conan_file import ConanFile
 from conans.model.env_info import EnvValues
 from conans.model.ref import ConanFileReference
@@ -73,6 +73,23 @@ class TextGeneratorTest(unittest.TestCase):
         self.assertListEqual(list(deps_cpp_info["requirement"].system_libs), ["requirement", ])
         self.assertListEqual(list(deps_cpp_info["requirement_other"].system_libs),
                              ["requirement_other", ])
+
+    def test_names_per_generator(self):
+        cpp_info = CppInfo("pkg_name", "root")
+        cpp_info.name = "name"
+        cpp_info.names["txt"] = "txt_name"
+        cpp_info.names["cmake_find_package"] = "cmake_find_package"
+        conanfile = ConanFile(TestBufferConanOutput(), None)
+        conanfile.initialize(Settings({}), EnvValues())
+        conanfile.deps_cpp_info.add("pkg_name", DepCppInfo(cpp_info))
+        content = TXTGenerator(conanfile).content
+        parsed_deps_cpp_info, _, _ = TXTGenerator.loads(content, filter_empty=False)
+
+        parsed_cpp_info = parsed_deps_cpp_info["pkg_name"]
+        #self.assertEqual(parsed_cpp_info.name, "name")
+        self.assertEqual(parsed_cpp_info.get_name("txt"), "txt_name")
+        self.assertEqual(parsed_cpp_info.get_name("cmake_find_package"), "cmake_find_package")
+        self.assertEqual(parsed_cpp_info.get_name("pkg_config"), "name")
 
     def test_read_write(self):
         conanfile = ConanFile(TestBufferConanOutput(), None)

@@ -5,7 +5,7 @@ from collections import defaultdict
 
 from conans.errors import ConanException
 from conans.model import Generator
-from conans.model.build_info import CppInfo, DepsCppInfo
+from conans.model.build_info import CppInfo, DepsCppInfo, DepCppInfo
 from conans.model.env_info import DepsEnvInfo
 from conans.model.user_info import DepsUserInfo
 from conans.paths import BUILD_INFO
@@ -157,7 +157,7 @@ class TXTGenerator(Generator):
                 # Add to the dependecy list
                 version = no_config_data.pop('version', [""])[0]
                 dep_cpp_info.version = version
-                deps_cpp_info.add(dep, dep_cpp_info)
+                deps_cpp_info.add(dep, DepCppInfo(dep_cpp_info))
 
             return deps_cpp_info
 
@@ -203,6 +203,8 @@ class TXTGenerator(Generator):
             dep = "_" + dep_name
             deps = DepCppTXT(dep_cpp_info)
             dep_flags = template_deps.format(dep=dep, deps=deps, config="")
+            #for gen, value in dep_cpp_info.names.items():
+            #    dep_flags += '[names{gen}{dep}]\n{value}\n\n'.format(gen=gen, dep=dep, value=value)
             sections.append(dep_flags)
 
             for config, cpp_info in dep_cpp_info.configs.items():
