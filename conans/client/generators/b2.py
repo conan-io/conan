@@ -77,7 +77,7 @@ class B2Generator(Generator):
         Generates a sub-project definition to match the package. Which is used later
         to define targets for the package libs.
         """
-        if not info:
+        if info is None:
             return []
         name = name.lower()
         # Create a b2 project for the package dependency.
@@ -89,7 +89,7 @@ class B2Generator(Generator):
         CppInfo conan data given for the package. If user variables map is also given
         those are also generated following the package variables.
         """
-        if not info:
+        if info is None:
             return []
         name = name.lower()
 
@@ -125,7 +125,7 @@ class B2Generator(Generator):
         Generates individual targets for the libraries in a package and a single "libs"
         collective alias target that refers to them.
         """
-        if not info:
+        if info is None:
             return []
         name = name.lower()
         result = []

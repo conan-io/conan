@@ -218,11 +218,13 @@ class CppInfo(_CppInfo):
 
     def __len__(self):
         # Avoid creating a '__len__' config
-        return super(CppInfo, self).__len__()
+        # TODO: Remove this method altogether
+        raise ConanException("Use 'if xxxx is None' to compare")
 
     def __getattr__(self, config):
         def _get_cpp_info():
             result = _CppInfo()
+            result.filter_empty = self.filter_empty
             result.rootpath = self.rootpath
             result.sysroot = self.sysroot
             result.includedirs.append(DEFAULT_INCLUDE)
@@ -530,7 +532,8 @@ class DepsCppInfo(_BaseDepsCppInfo):
 
     def __len__(self):
         # Avoid creating a '__len__' config
-        return super(DepsCppInfo, self).__len__()
+        # TODO: Remove this method altogether
+        raise ConanException("Use 'if xxxx is None' to compare")
 
     def __getattr__(self, config):
         return self._configs.setdefault(config, _BaseDepsCppInfo())
