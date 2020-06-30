@@ -161,10 +161,14 @@ def _generic_algorithm_sum(file_path, algorithm_name):
 
 
 def save_append(path, content, encoding="utf-8"):
-    try:
-        os.makedirs(os.path.dirname(path))
-    except Exception:
-        pass
+    if os.path.dirname(path) != '':
+        try:
+            mkdir(os.path.dirname(path))
+        except Exception as e:
+            # cannot import this at the top due to cyclic dependencies
+            from conans.errors import ConanException
+            raise ConanException("Couldn't create folder '{}': {}\n"
+                                 .format(os.path.dirname(path), str(e)))
 
     with open(path, "ab") as handle:
         handle.write(to_file_bytes(content, encoding=encoding))
@@ -179,10 +183,14 @@ def save(path, content, only_if_modified=False, encoding="utf-8"):
         only_if_modified: file won't be modified if the content hasn't changed
         encoding: target file text encoding
     """
-    try:
-        os.makedirs(os.path.dirname(path))
-    except Exception:
-        pass
+    if os.path.dirname(path) != '':
+        try:
+            mkdir(os.path.dirname(path))
+        except Exception as e:
+            # cannot import this at the top due to cyclic dependencies
+            from conans.errors import ConanException
+            raise ConanException("Couldn't create folder '{}': {}\n"
+                                 .format(os.path.dirname(path), str(e)))
 
     new_content = to_file_bytes(content, encoding)
 
