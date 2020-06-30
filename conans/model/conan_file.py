@@ -164,7 +164,7 @@ class ConanFile(object):
 
         # user declared variables
         self.user_info = None
-        # Keys are the package names, and the values a dict with the vars
+        # Keys are the package names (only 'host' if different contexts)
         self.deps_user_info = DepsUserInfo()
 
         # user specified env variables
