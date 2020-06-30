@@ -86,10 +86,10 @@ class TextGeneratorTest(unittest.TestCase):
         parsed_deps_cpp_info, _, _ = TXTGenerator.loads(content, filter_empty=False)
 
         parsed_cpp_info = parsed_deps_cpp_info["pkg_name"]
-        #self.assertEqual(parsed_cpp_info.name, "name")
+        # FIXME: Conan v2: Remove 'txt' generator or serialize all the names
         self.assertEqual(parsed_cpp_info.get_name("txt"), "txt_name")
-        self.assertEqual(parsed_cpp_info.get_name("cmake_find_package"), "cmake_find_package")
-        self.assertEqual(parsed_cpp_info.get_name("pkg_config"), "name")
+        self.assertEqual(parsed_cpp_info.get_name("cmake_find_package"), "pkg_name")
+        self.assertEqual(parsed_cpp_info.get_name("pkg_config"), "pkg_name")
 
     def test_read_write(self):
         conanfile = ConanFile(TestBufferConanOutput(), None)
