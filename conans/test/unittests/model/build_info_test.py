@@ -128,7 +128,7 @@ VAR2=23
     def configs_test(self):
         deps_cpp_info = DepsCppInfo()
         deps_cpp_info.filter_empty = False
-        child = CppInfo("Boost", "F:")
+        child = CppInfo("Boost", "F:/")
         child.filter_empty = False
         child.version = "<version>"
         child.includedirs.append("ChildrenPath")
