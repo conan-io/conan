@@ -3,6 +3,8 @@ import os
 import textwrap
 import unittest
 
+from parameterized import parameterized
+
 from conans.model.graph_lock import LOCKFILE
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.env_reader import get_env
@@ -32,12 +34,13 @@ conanfile = textwrap.dedent("""
 
 class GraphLockCITest(unittest.TestCase):
 
+    @parameterized.expand([("recipe_revision_mode",), ("package_revision_mode",)])
     @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
-    def test_revisions(self):
+    def test_revisions(self, package_id_mode):
         test_server = TestServer(users={"user": "mypass"})
         client = TestClient(servers={"default": test_server},
                             users={"default": [("user", "mypass")]})
-        client.run("config set general.default_package_id_mode=recipe_revision_mode")
+        client.run("config set general.default_package_id_mode=%s" % package_id_mode)
         client.save({"conanfile.py": conanfile.format(requires=""),
                      "myfile.txt": "HelloA"})
         client.run("create . PkgA/0.1@user/channel")
@@ -87,88 +90,9 @@ class GraphLockCITest(unittest.TestCase):
                 client.save({"new_lock/%s" % LOCKFILE: lock_fileaux})
                 client.run("lock update conan.lock new_lock/conan.lock")
 
-            client.run("lock build-order conan.lock")
+            client.run("lock build-order conan.lock --json=bo.json")
             lock_fileaux = client.load(LOCKFILE)
-            output = str(client.out).splitlines()[-1]
-            to_build = eval(output)
-
-        new_lockfile = client.load(LOCKFILE)
-        client.run("install PkgD/0.1@user/channel --lockfile=conan.lock")
-        self.assertIn("PkgC/0.1@user/channel: DEP FILE PkgB: ByeB World!!", client.out)
-        self.assertIn("PkgD/0.1@user/channel: DEP FILE PkgB: ByeB World!!", client.out)
-        client.run("upload * --all --confirm")
-
-        client.save({LOCKFILE: initial_lock_file})
-        client.run("remove * -f")
-        client.run("install PkgD/0.1@user/channel --lockfile=conan.lock")
-        self.assertIn("PkgC/0.1@user/channel: DEP FILE PkgB: HelloB", client.out)
-        self.assertIn("PkgD/0.1@user/channel: DEP FILE PkgB: HelloB", client.out)
-
-        client.save({LOCKFILE: new_lockfile})
-        client.run("remove * -f")
-        client.run("install PkgD/0.1@user/channel --lockfile=conan.lock")
-        self.assertIn("PkgC/0.1@user/channel: DEP FILE PkgB: ByeB World!!", client.out)
-        self.assertIn("PkgD/0.1@user/channel: DEP FILE PkgB: ByeB World!!", client.out)
-
-    @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
-    def test_package_revision_mode(self):
-        test_server = TestServer(users={"user": "mypass"})
-        client = TestClient(servers={"default": test_server},
-                            users={"default": [("user", "mypass")]})
-        client.run("config set general.default_package_id_mode=package_revision_mode")
-        client.save({"conanfile.py": conanfile.format(requires=""),
-                     "myfile.txt": "HelloA"})
-        client.run("create . PkgA/0.1@user/channel")
-        client.save({"conanfile.py": conanfile.format(
-            requires='requires = "PkgA/0.1@user/channel"'),
-                     "myfile.txt": "HelloB"})
-        client.run("create . PkgB/0.1@user/channel")
-        client.save({"conanfile.py": conanfile.format(
-            requires='requires = "PkgB/0.1@user/channel"'),
-                     "myfile.txt": "HelloC"})
-        client.run("create . PkgC/0.1@user/channel")
-        client.save({"conanfile.py": conanfile.format(
-            requires='requires = "PkgC/0.1@user/channel"'),
-                     "myfile.txt": "HelloD"})
-        client.run("create . PkgD/0.1@user/channel")
-        self.assertIn("PkgD/0.1@user/channel: SELF FILE: HelloD", client.out)
-        self.assertIn("PkgD/0.1@user/channel: DEP FILE PkgA: HelloA", client.out)
-        self.assertIn("PkgD/0.1@user/channel: DEP FILE PkgB: HelloB", client.out)
-        self.assertIn("PkgD/0.1@user/channel: DEP FILE PkgC: HelloC", client.out)
-
-        client.run("upload * --all --confirm")
-        client.run("lock create --reference=PkgD/0.1@user/channel")
-        initial_lock_file = client.load(LOCKFILE)
-
-        # Do a change in B
-        clientb = TestClient(cache_folder=client.cache_folder, servers={"default": test_server})
-        clientb.run("config set general.default_package_id_mode=package_revision_mode")
-        clientb.save({"conanfile.py": conanfile.format(requires='requires="PkgA/0.1@user/channel"'),
-                     "myfile.txt": "ByeB World!!"})
-        clientb.run("create . PkgB/0.1@user/channel")
-
-        # Go back to main orchestrator
-        client.run("lock create --reference=PkgD/0.1@user/channel --build=missing")
-        client.run("lock build-order conan.lock --json=build_order.json")
-        master_lockfile = client.load("conan.lock")
-
-        json_file = os.path.join(client.current_folder, "build_order.json")
-        to_build = json.loads(load(json_file))
-        lock_fileaux = master_lockfile
-        while to_build:
-            for _, ref in to_build[0]:
-                client_aux = TestClient(cache_folder=client.cache_folder,
-                                        servers={"default": test_server})
-                client_aux.save({LOCKFILE: lock_fileaux})
-                client_aux.run("install %s --build=%s --lockfile=conan.lock" % (ref, ref))
-                lock_fileaux = client_aux.load(LOCKFILE)
-                client.save({"new_lock/%s" % LOCKFILE: lock_fileaux})
-                client.run("lock update conan.lock new_lock/conan.lock")
-
-            client.run("lock build-order conan.lock")
-            lock_fileaux = client.load(LOCKFILE)
-            output = str(client.out).splitlines()[-1]
-            to_build = eval(output)
+            to_build = json.loads(client.load("bo.json"))
 
         new_lockfile = client.load(LOCKFILE)
         client.run("install PkgD/0.1@user/channel --lockfile=conan.lock")
@@ -228,17 +152,15 @@ class GraphLockCITest(unittest.TestCase):
         while to_build:
             for _, ref in to_build[0]:
                 client_aux = TestClient(cache_folder=client.cache_folder)
-                client_aux.run("config set general.default_package_id_mode=full_package_mode")
                 client_aux.save({LOCKFILE: lock_fileaux})
                 client_aux.run("install %s --build=%s --lockfile=conan.lock" % (ref, ref))
                 lock_fileaux = client_aux.load(LOCKFILE)
                 client.save({"new_lock/%s" % LOCKFILE: lock_fileaux})
                 client.run("lock update conan.lock new_lock/conan.lock")
 
-            client.run("lock build-order conan.lock")
+            client.run("lock build-order conan.lock --json=bo.json")
             lock_fileaux = client.load(LOCKFILE)
-            output = str(client.out).splitlines()[-1]
-            to_build = eval(output)
+            to_build = json.loads(client.load("bo.json"))
 
         new_lockfile = client.load(LOCKFILE)
         client.run("install PkgD/0.1@user/channel --lockfile=conan.lock")
@@ -254,6 +176,102 @@ class GraphLockCITest(unittest.TestCase):
         client.run("install PkgD/0.1@user/channel --lockfile=conan.lock")
         self.assertIn("PkgC/0.1@user/channel: DEP FILE PkgB: ByeB World!!", client.out)
         self.assertIn("PkgD/0.1@user/channel: DEP FILE PkgB: ByeB World!!", client.out)
+
+    def test_version_ranges_partial(self):
+        client = TestClient()
+        client.run("config set general.default_package_id_mode=full_package_mode")
+        client.save({"conanfile.py": conanfile.format(requires=""),
+                     "myfile.txt": "HelloA"})
+        client.run("create . PkgA/0.1@user/channel")
+        client.save({"conanfile.py": conanfile.format(requires='requires="PkgA/[*]@user/channel"'),
+                     "myfile.txt": "HelloB"})
+        client.run("create . PkgB/0.1@user/channel")
+        client.save({"conanfile.py": conanfile.format(requires='requires="PkgB/[*]@user/channel"'),
+                     "myfile.txt": "HelloC"})
+        client.run("create . PkgC/0.1@user/channel")
+        client.save({"conanfile.py": conanfile.format(requires='requires="PkgC/[*]@user/channel"'),
+                     "myfile.txt": "HelloD"})
+        client.run("create . PkgD/0.1@user/channel")
+        self.assertIn("PkgD/0.1@user/channel: SELF FILE: HelloD", client.out)
+        self.assertIn("PkgD/0.1@user/channel: DEP FILE PkgA: HelloA", client.out)
+        self.assertIn("PkgD/0.1@user/channel: DEP FILE PkgB: HelloB", client.out)
+        self.assertIn("PkgD/0.1@user/channel: DEP FILE PkgC: HelloC", client.out)
+        client.run("lock create --reference=PkgD/0.1@user/channel")
+        initial_lockfile = client.load("conan.lock")
+
+        # Do a change in B
+        clientb = TestClient(cache_folder=client.cache_folder)
+        clientb.save({"conanfile.py": conanfile.format(requires='requires="PkgA/[*]@user/channel"'),
+                      "myfile.txt": "ByeB World!!"})
+        clientb.run("lock create conanfile.py --name=PkgB --version=0.2 --user=user "
+                    "--channel=channel --build=missing --lockfile-out=buildb.lock")
+        self.assertIn("PkgA/0.1", clientb.out)
+        self.assertNotIn("PkgA/0.2", clientb.out)
+
+        # But A changes in between
+        client.save({"conanfile.py": conanfile.format(requires=""),
+                     "myfile.txt": "ByeA World!!"})
+        client.run("create . PkgA/0.2@user/channel")
+
+        # Package can be created with previous lock, keep PkgA/0.1
+        clientb.run("create . PkgB/0.2@user/channel --lockfile=buildb.lock")
+        self.assertIn("PkgB/0.2@user/channel: DEP FILE PkgA: HelloA", clientb.out)
+        self.assertNotIn("ByeA", clientb.out)
+        buildblock = clientb.load("buildb.lock")
+
+        # Go back to main orchestrator, buildb.lock can be used to lock PkgA/0.1 too
+        client.save({"buildb.lock": buildblock})
+        client.run("lock create --reference=PkgD/0.1@user/channel --lockfile=buildb.lock "
+                   "--build=missing --lockfile-out=productd.lock")
+        self.assertIn("PkgA/0.1", client.out)
+        self.assertNotIn("PkgA/0.2", client.out)
+        client.run("lock build-order productd.lock --json=build_order.json")
+        productd_lockfile = client.load("productd.lock")
+
+        # Iteratively build downstream
+        json_file = client.load("build_order.json")
+        to_build = json.loads(json_file)
+        lock_fileaux = productd_lockfile
+        while to_build:
+            for _, ref in to_build[0]:
+                client_aux = TestClient(cache_folder=client.cache_folder)
+                client_aux.save({"productd.lock": lock_fileaux})
+                client_aux.run("install %s --build=%s --lockfile=productd.lock" % (ref, ref))
+                lock_fileaux = client_aux.load("productd.lock")
+                client.save({"new_lock/productd.lock": lock_fileaux})
+                client.run("lock update productd.lock new_lock/productd.lock")
+
+            client.run("lock build-order productd.lock --json=bo.json")
+            lock_fileaux = client.load("productd.lock")
+            to_build = json.loads(client.load("bo.json"))
+
+        new_lockfile = client.load("productd.lock")
+        client.run("install PkgD/0.1@user/channel --lockfile=productd.lock")
+        self.assertIn("HelloA", client.out)
+        self.assertNotIn("ByeA", client.out)
+        self.assertIn("PkgC/0.1@user/channel: DEP FILE PkgB: ByeB World!!", client.out)
+        self.assertIn("PkgD/0.1@user/channel: DEP FILE PkgB: ByeB World!!", client.out)
+
+        client.save({LOCKFILE: initial_lockfile})
+        client.run("install PkgD/0.1@user/channel --lockfile=conan.lock")
+        self.assertIn("HelloA", client.out)
+        self.assertNotIn("ByeA", client.out)
+        self.assertIn("PkgC/0.1@user/channel: DEP FILE PkgB: HelloB", client.out)
+        self.assertIn("PkgD/0.1@user/channel: DEP FILE PkgB: HelloB", client.out)
+
+        client.save({LOCKFILE: new_lockfile})
+        client.run("install PkgD/0.1@user/channel --lockfile=conan.lock")
+        self.assertIn("HelloA", client.out)
+        self.assertNotIn("ByeA", client.out)
+        self.assertIn("PkgC/0.1@user/channel: DEP FILE PkgB: ByeB World!!", client.out)
+        self.assertIn("PkgD/0.1@user/channel: DEP FILE PkgB: ByeB World!!", client.out)
+
+        # Not locked will retrieve newer versions
+        client.run("install PkgD/0.1@user/channel", assert_error=True)
+        self.assertIn("PkgA/0.2@user/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache",
+                      client.out)
+        self.assertIn("PkgB/0.2@user/channel:11b376c6e7a22ec390c215a8584ef9237a6da32f - Missing",
+                      client.out)
 
     def test_version_ranges_diamond(self):
         client = TestClient()
@@ -328,8 +346,7 @@ class GraphLockCITest(unittest.TestCase):
 
     def test_options(self):
         conanfile = textwrap.dedent("""
-            from conans import ConanFile, load
-            import os
+            from conans import ConanFile
             class Pkg(ConanFile):
                 {requires}
                 options = {{"myoption": [1, 2, 3, 4, 5]}}

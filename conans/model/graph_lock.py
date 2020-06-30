@@ -455,7 +455,12 @@ class GraphLock(object):
         return [r.copy_clear_rev() for r in self._nodes[node_id].python_requires or []]
 
     def ref(self, node_id):
-        return self._nodes[node_id].ref
+        try:
+            return self._nodes[node_id].ref
+        except KeyError:
+            if self._relaxed:
+                return None
+            raise
 
     def get_node(self, ref):
         """ given a REF, return the Node of the package in the lockfile that correspond to that
