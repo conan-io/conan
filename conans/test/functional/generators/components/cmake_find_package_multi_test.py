@@ -102,6 +102,7 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
 
             include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
             conan_basic_setup(NO_OUTPUT_DIRS)
+            set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE})
 
             add_library(hello hello.cpp)
             add_library(bye bye.cpp)
@@ -142,6 +143,7 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
 
             include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
             conan_basic_setup(NO_OUTPUT_DIRS)
+            set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE})
 
             find_package(greetings)
 
@@ -229,6 +231,7 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
 
             include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
             conan_basic_setup(NO_OUTPUT_DIRS)
+            set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE})
 
             find_package(greetings COMPONENTS hello)
 
@@ -272,6 +275,7 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
 
             include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
             conan_basic_setup(NO_OUTPUT_DIRS)
+            set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE})
 
             find_package(world)
 
@@ -297,11 +301,6 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
         client.run("install fake_test_package -s build_type=%s" % build_type)
         client.run("build fake_test_package")
         print("Dirs in current folder:", os.listdir(client.current_folder))
-        if platform.system() == "Linux":
-            folder = ""
-        else:
-            folder = os.path.join(client.current_folder, build_type)
-        print(folder)
         with client.chdir(folder):
             client.run_command(".%sexample" % os.sep)
             if run_example2:
@@ -364,6 +363,7 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
 
             include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
             conan_basic_setup(NO_OUTPUT_DIRS)
+            set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE})
 
             find_package(Greetings)
 
@@ -379,6 +379,7 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
 
             include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
             conan_basic_setup(NO_OUTPUT_DIRS)
+            set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE})
 
             find_package(World)
 
@@ -433,6 +434,7 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
 
             include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
             conan_basic_setup(NO_OUTPUT_DIRS)
+            set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE})
 
             find_package(greetings COMPONENTS hello)
 
@@ -490,6 +492,7 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
 
             include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
             conan_basic_setup(NO_OUTPUT_DIRS)
+            set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE})
 
             find_package(greetings COMPONENTS hello)
 
