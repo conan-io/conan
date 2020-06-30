@@ -144,6 +144,7 @@ class TXTGenerator(Generator):
                 no_config_data = configs_cpp_info.pop(None)
                 rootpath = no_config_data.pop('rootpath')[0]
                 dep_cpp_info = CppInfo(dep, rootpath)
+                dep_cpp_info.filter_empty = filter_empty
                 dep_cpp_info.names[TXTGenerator.name] = no_config_data.pop('name')[0]
                 dep_cpp_info.sysroot = no_config_data.pop('sysroot', [""])[0]
                 _populate_cpp_info(dep_cpp_info, no_config_data, rootpath)
@@ -156,7 +157,6 @@ class TXTGenerator(Generator):
                 # Add to the dependecy list
                 version = no_config_data.pop('version', [""])[0]
                 dep_cpp_info.version = version
-                dep_cpp_info.filter_empty = filter_empty
                 deps_cpp_info.add(dep, dep_cpp_info)
 
             return deps_cpp_info
