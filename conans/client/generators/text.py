@@ -206,8 +206,6 @@ class TXTGenerator(Generator):
             dep = "_" + dep_name
             deps = DepCppTXT(dep_cpp_info)
             dep_flags = template_deps.format(dep=dep, deps=deps, config="")
-            #for gen, value in dep_cpp_info.names.items():
-            #    dep_flags += '[names{gen}{dep}]\n{value}\n\n'.format(gen=gen, dep=dep, value=value)
             sections.append(dep_flags)
 
             for config, cpp_info in dep_cpp_info.configs.items():
