@@ -1,7 +1,7 @@
 import os
 import re
 import traceback
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 
 from conans.errors import ConanException
 from conans.model import Generator
@@ -101,7 +101,7 @@ class TXTGenerator(Generator):
 
         try:
             # Parse the text
-            data = defaultdict(lambda: defaultdict(dict))
+            data = OrderedDict()
             for m in pattern.finditer(text):
                 var_name = m.group(1)
                 lines = []
@@ -127,6 +127,7 @@ class TXTGenerator(Generator):
                 dep = tokens[1] if len(tokens) == 2 else None
                 if field == "cppflags":
                     field = "cxxflags"
+                data.setdefault(dep, defaultdict(dict))
                 data[dep][config][field] = lines
 
             # Build the data structures
@@ -137,7 +138,9 @@ class TXTGenerator(Generator):
                         value = ['' if it == '.' else it for it in value]
                     setattr(_cpp_info, it, value)
 
-            _ = data.pop(None, {})  # This is the data for the root object
+            if None in data:
+                del data[None]
+
             deps_cpp_info = DepsCppInfo()
             for dep, configs_cpp_info in data.items():
                 # Data for the 'cpp_info' object (no configs)
