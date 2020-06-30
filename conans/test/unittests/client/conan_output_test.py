@@ -3,6 +3,7 @@
 import unittest
 from types import MethodType
 
+from parameterized import parameterized
 from six import StringIO
 
 from conans.client.output import ConanOutput, colorama_initialize
@@ -29,233 +30,46 @@ class ConanOutputTest(unittest.TestCase):
             sleep.assert_any_call(0.02)
         self.assertEqual("Hello world", stream.getvalue())
 
-    def test_output_color(self):
-        #########################################################
-        # Color control with CONAN_COLOR_DISPLAY/PYCHARM_HOSTED #
-        #########################################################
-
-        # Output is not a terminal, no overrides.
-        # Color generation disabled.
+    @parameterized.expand([(False, {}),
+                           (False, {"CONAN_COLOR_DISPLAY": "0"}),
+                           (True, {"CONAN_COLOR_DISPLAY": "0"}),
+                           (False, {"PYCHARM_HOSTED": "1"}),
+                           (True, {"PYCHARM_HOSTED": "1", "CONAN_COLOR_DISPLAY": "0"}),
+                           (True, {"NO_COLOR": ""}),
+                           (True, {"CLICOLOR": "0"}),
+                           (True, {"CLICOLOR": "0", "CONAN_COLOR_DISPLAY": "1"}),
+                           (False, {"CLICOLOR": "1"}),
+                           (False, {"CLICOLOR_FORCE": "0"}),
+                           (True,
+                            {"CLICOLOR": "1", "CLICOLOR_FORCE": "1", "CONAN_COLOR_DISPLAY": "1",
+                             "PYCHARM_HOSTED": "1", "NO_COLOR": "1"})])
+    def test_output_no_color(self, isatty, env):
         with mock.patch("colorama.init") as init:
-            isatty = False
-            env = {}
             with mock.patch("sys.stdout.isatty", return_value=isatty), \
                  mock.patch.dict("os.environ", env, clear=True):
                 assert not colorama_initialize()
                 init.assert_not_called()
 
-        # Output is a terminal, no overrides.
-        # Color generation enabled, colorama will not strip colors.
+    @parameterized.expand([(True, {}),
+                           (False, {"CONAN_COLOR_DISPLAY": "1"}),
+                           (True, {"CONAN_COLOR_DISPLAY": "1"}),
+                           (True, {"CLICOLOR": "1"}),
+                           (True, {"CLICOLOR_FORCE": "0"})])
+    def test_output_color(self, isatty, env):
         with mock.patch("colorama.init") as init:
-            isatty = True
-            env = {}
             with mock.patch("sys.stdout.isatty", return_value=isatty), \
                  mock.patch.dict("os.environ", env, clear=True):
                 assert colorama_initialize()
                 init.assert_called_once_with()
 
-        # Output is not a terminal, prevent color generation (CONAN_COLOR_DISPLAY=0).
-        # Color generation disabled.
+    @parameterized.expand([(False, {"PYCHARM_HOSTED": "1", "CONAN_COLOR_DISPLAY": "1"}),
+                           (True, {"PYCHARM_HOSTED": "1"}),
+                           (False, {"CLICOLOR_FORCE": "1"}),
+                           (True, {"CLICOLOR_FORCE": "1", "CLICOLOR": "0"}),
+                           (True, {"CLICOLOR_FORCE": "1", "CONAN_COLOR_DISPLAY": "0"})])
+    def test_output_color_prevent_strip(self, isatty, env):
         with mock.patch("colorama.init") as init:
-            isatty = False
-            env = {"CONAN_COLOR_DISPLAY": "0"}
-            with mock.patch("sys.stdout.isatty", return_value=isatty), \
-                 mock.patch.dict("os.environ", env, clear=True):
-                assert not colorama_initialize()
-                init.assert_not_called()
-
-        # Output is a terminal, prevent color generation (CONAN_COLOR_DISPLAY=0).
-        # Color generation disabled.
-        with mock.patch("colorama.init") as init:
-            isatty = True
-            env = {"CONAN_COLOR_DISPLAY": "0"}
-            with mock.patch("sys.stdout.isatty", return_value=isatty), \
-                 mock.patch.dict("os.environ", env, clear=True):
-                assert not colorama_initialize()
-                init.assert_not_called()
-
-        # Output is not a terminal, force color generation (CONAN_COLOR_DISPLAY=1).
-        # Color generation enabled, colorama will strip colors.
-        with mock.patch("colorama.init") as init:
-            isatty = False
-            env = {"CONAN_COLOR_DISPLAY": "1"}
-            with mock.patch("sys.stdout.isatty", return_value=isatty), \
-                 mock.patch.dict("os.environ", env, clear=True):
-                assert colorama_initialize()
-                init.assert_called_once_with()
-
-        # Output is a terminal, force color generation (CONAN_COLOR_DISPLAY=1).
-        # Color generation enabled, colorama will not strip colors.
-        with mock.patch("colorama.init") as init:
-            isatty = True
-            env = {"CONAN_COLOR_DISPLAY": "1"}
-            with mock.patch("sys.stdout.isatty", return_value=isatty), \
-                 mock.patch.dict("os.environ", env, clear=True):
-                assert colorama_initialize()
-                init.assert_called_once_with()
-
-        # Output is not a terminal, no forced color generation, prevent color stripping
-        # (PYCHARM_HOSTED=1).
-        # Color generation disabled.
-        with mock.patch("colorama.init") as init:
-            isatty = False
-            env = {"PYCHARM_HOSTED": "1"}
-            with mock.patch("sys.stdout.isatty", return_value=isatty), \
-                 mock.patch.dict("os.environ", env, clear=True):
-                assert not colorama_initialize()
-                init.assert_not_called()
-
-        # Output is not a terminal, force color generation (CONAN_COLOR_DISPLAY=1),
-        # prevent color stripping (PYCHARM_HOSTED=1).
-        # Color generation enabled, colorama will not strip colors (forced).
-        with mock.patch("colorama.init") as init:
-            isatty = False
-            env = {"PYCHARM_HOSTED": "1", "CONAN_COLOR_DISPLAY": "1"}
             with mock.patch("sys.stdout.isatty", return_value=isatty), \
                  mock.patch.dict("os.environ", env, clear=True):
                 assert colorama_initialize()
                 init.assert_called_once_with(convert=False, strip=False)
-
-        # Output is a terminal, prevent color generation (CONAN_COLOR_DISPLAY=0), prevent
-        # color stripping (PYCHARM_HOSTED=1).
-        # Color generation disabled.
-        with mock.patch("colorama.init") as init:
-            isatty = True
-            env = {"PYCHARM_HOSTED": "1", "CONAN_COLOR_DISPLAY": "0"}
-            with mock.patch("sys.stdout.isatty", return_value=isatty), \
-                 mock.patch.dict("os.environ", env, clear=True):
-                assert not colorama_initialize()
-                init.assert_not_called()
-
-        # Output is a terminal, prevent color stripping (PYCHARM_HOSTED=1).
-        # Color generation enabled, colorama will not strip colors.
-        with mock.patch("colorama.init") as init:
-            isatty = True
-            env = {"PYCHARM_HOSTED": "1"}
-            with mock.patch("sys.stdout.isatty", return_value=isatty), \
-                 mock.patch.dict("os.environ", env, clear=True):
-                assert colorama_initialize()
-                init.assert_called_once_with(convert=False, strip=False)
-
-        #######################################################
-        # Color control with CLICOLOR/CLICOLOR_FORCE/NO_COLOR #
-        #######################################################
-
-        # Output is a terminal, prevent color generation (NO_COLOR).
-        # Color generation disabled.
-        with mock.patch("colorama.init") as init:
-            isatty = True
-            env = {"NO_COLOR": ""}
-            with mock.patch("sys.stdout.isatty", return_value=isatty), \
-                 mock.patch.dict("os.environ", env, clear=True):
-                assert not colorama_initialize()
-                init.assert_not_called()
-
-        # Output is a terminal, prevent color generation (CLICOLOR=0).
-        # Color generation disabled.
-        with mock.patch("colorama.init") as init:
-            isatty = True
-            env = {"CLICOLOR": "0"}
-            with mock.patch("sys.stdout.isatty", return_value=isatty), \
-                 mock.patch.dict("os.environ", env, clear=True):
-                assert not colorama_initialize()
-                init.assert_not_called()
-
-        # Output is a terminal, prevent color generation (CLICOLOR=0), override
-        # CONAN_COLOR_DISPLAY=1.
-        # Color generation disabled.
-        with mock.patch("colorama.init") as init:
-            isatty = True
-            env = {"CLICOLOR": "0", "CONAN_COLOR_DISPLAY": "1"}
-            with mock.patch("sys.stdout.isatty", return_value=isatty), \
-                 mock.patch.dict("os.environ", env, clear=True):
-                assert not colorama_initialize()
-                init.assert_not_called()
-
-        # Output is a terminal, request color generation (CLICOLOR=1).
-        # Color generation enabled, colorama will not strip colors.
-        with mock.patch("colorama.init") as init:
-            isatty = True
-            env = {"CLICOLOR": "1"}
-            with mock.patch("sys.stdout.isatty", return_value=isatty), \
-                 mock.patch.dict("os.environ", env, clear=True):
-                assert colorama_initialize()
-                init.assert_called_once_with()
-
-        # Output is not a terminal, request color generation (CLICOLOR=1).
-        # Color generation disabled.
-        with mock.patch("colorama.init") as init:
-            isatty = False
-            env = {"CLICOLOR": "1"}
-            with mock.patch("sys.stdout.isatty", return_value=isatty), \
-                 mock.patch.dict("os.environ", env, clear=True):
-                assert not colorama_initialize()
-                init.assert_not_called()
-
-        # Output is not a terminal, force color generation (CLICOLOR_FORCE=1),
-        # prevent color stripping (CLICOLOR_FORCE=1).
-        # Color generation enabled, colorama will not strip colors (forced).
-        with mock.patch("colorama.init") as init:
-            isatty = False
-            env = {"CLICOLOR_FORCE": "1"}
-            with mock.patch("sys.stdout.isatty", return_value=isatty), \
-                 mock.patch.dict("os.environ", env, clear=True):
-                assert colorama_initialize()
-                init.assert_called_once_with(convert=False, strip=False)
-
-        # Output is a terminal, force enable color generation (CLICOLOR_FORCE=1),
-        # override CLICOLOR=0, prevent color stripping (CLICOLOR_FORCE=1).
-        # Color generation enabled, colorama will not strip colors.
-        with mock.patch("colorama.init") as init:
-            isatty = True
-            env = {"CLICOLOR_FORCE": "1", "CLICOLOR": "0"}
-            with mock.patch("sys.stdout.isatty", return_value=isatty), \
-                 mock.patch.dict("os.environ", env, clear=True):
-                assert colorama_initialize()
-                init.assert_called_once_with(convert=False, strip=False)
-
-        # Output is a terminal, force enable color generation (CLICOLOR_FORCE=1),
-        # override CONAN_COLOR_DISPLAY=0, prevent color stripping (CLICOLOR_FORCE=1).
-        # Color generation enabled, colorama will not strip colors.
-        with mock.patch("colorama.init") as init:
-            isatty = True
-            env = {"CLICOLOR_FORCE": "1", "CONAN_COLOR_DISPLAY": "0"}
-            with mock.patch("sys.stdout.isatty", return_value=isatty), \
-                 mock.patch.dict("os.environ", env, clear=True):
-                assert colorama_initialize()
-                init.assert_called_once_with(convert=False, strip=False)
-
-        # Output is not a terminal, disable forced color generation (CLICOLOR_FORCE=0).
-        # Color generation disabled.
-        with mock.patch("colorama.init") as init:
-            isatty = False
-            env = {"CLICOLOR_FORCE": "0"}
-            with mock.patch("sys.stdout.isatty", return_value=isatty), \
-                 mock.patch.dict("os.environ", env, clear=True):
-                assert not colorama_initialize()
-                init.assert_not_called()
-
-        # Output is a terminal, disable forced color generation (CLICOLOR_FORCE=0).
-        # Color generation enabled, colorama will not strip colors.
-        with mock.patch("colorama.init") as init:
-            isatty = True
-            env = {"CLICOLOR_FORCE": "0"}
-            with mock.patch("sys.stdout.isatty", return_value=isatty), \
-                 mock.patch.dict("os.environ", env, clear=True):
-                assert colorama_initialize()
-                init.assert_called_once_with()
-
-        # Output is a terminal, prevent color generation (NO_COLOR), overriding other
-        # controls.
-        # Color generation disabled.
-        with mock.patch("colorama.init") as init:
-            isatty = True
-            env = {
-                "CLICOLOR": "1", "CLICOLOR_FORCE": "1",
-                "CONAN_COLOR_DISPLAY": "1", "PYCHARM_HOSTED": "1",
-                "NO_COLOR": "1"
-            }
-            with mock.patch("sys.stdout.isatty", return_value=isatty), \
-                 mock.patch.dict("os.environ", env, clear=True):
-                assert not colorama_initialize()
-                init.assert_not_called()
