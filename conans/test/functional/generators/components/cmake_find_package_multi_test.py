@@ -1,4 +1,5 @@
 import os
+import platform
 import textwrap
 import unittest
 
@@ -296,7 +297,12 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
         client.run("install fake_test_package -s build_type=%s" % build_type)
         client.run("build fake_test_package")
         print("Dirs in current folder:", os.listdir(client.current_folder))
-        with client.chdir(os.path.join(client.current_folder, build_type)):
+        if platform.system() == "Linux":
+            folder = ""
+        else:
+            folder = os.path.join(client.current_folder, build_type)
+        print(folder)
+        with client.chdir(folder):
             client.run_command(".%sexample" % os.sep)
             if run_example2:
                 client.run_command(".%sexample2" % os.sep)
