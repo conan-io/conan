@@ -295,6 +295,7 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
     def _install_build_run_test_package(self, client, build_type, run_example2=False):
         client.run("install fake_test_package -s build_type=%s" % build_type)
         client.run("build fake_test_package")
+        print("Dirs in current folder:", os.listdir(client.current_folder))
         with client.chdir(os.path.join(client.current_folder, build_type)):
             client.run_command(".%sexample" % os.sep)
             if run_example2:
