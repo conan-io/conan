@@ -535,7 +535,6 @@ class BinaryInstaller(object):
 
         # Initialize some members if we are using different contexts
         if using_build_profile:
-            conan_file.user_info_host = DepsUserInfo()
             conan_file.user_info_build = DepsUserInfo()
 
         for n in node_order:
@@ -549,7 +548,6 @@ class BinaryInstaller(object):
             else:
                 if n in transitive or n in br_host:
                     conan_file.deps_user_info[n.ref.name] = n.conanfile.user_info
-                    conan_file.user_info_host[n.ref.name] = n.conanfile.user_info
                     conan_file.deps_cpp_info.add(n.ref.name, n.conanfile._conan_dep_cpp_info)
                 else:
                     conan_file.user_info_build[n.ref.name] = n.conanfile.user_info

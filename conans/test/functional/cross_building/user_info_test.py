@@ -54,10 +54,6 @@ class UserInfoTestCase(unittest.TestCase):
                 _info("[deps] library.DATA={}".format(self.deps_user_info["library"].DATA))
                 _info("[deps] br_host.DATA={}".format(self.deps_user_info["br_host"].DATA))
 
-                _info("[host] {}".format(', '.join(sorted(self.user_info_host.keys()))))
-                _info("[host] library.DATA={}".format(self.user_info_host["library"].DATA))
-                _info("[host] br_host.DATA={}".format(self.user_info_host["br_host"].DATA))
-
                 _info("[build] {}".format(', '.join(sorted(self.user_info_build.keys()))))
                 _info("[build] library.DATA={}".format(self.user_info_build["library"].DATA))
                 _info("[build] br_build.DATA={}".format(self.user_info_build["br_build"].DATA))
@@ -80,11 +76,6 @@ class UserInfoTestCase(unittest.TestCase):
         self.assertIn("app/1.0: [deps] br_host, library", t.out)
         self.assertIn("app/1.0: [deps] library.DATA=library-Windows", t.out)
         self.assertIn("app/1.0: [deps] br_host.DATA=br_host-Windows", t.out)
-
-        # Check information from the host context (using user_info_host attribute)
-        self.assertIn("app/1.0: [host] br_host, library", t.out)
-        self.assertIn("app/1.0: [host] library.DATA=library-Windows", t.out)
-        self.assertIn("app/1.0: [host] br_host.DATA=br_host-Windows", t.out)
 
         # Check information from the build context (using user_info_build attribute)
         self.assertIn("app/1.0: [build] br_build, library", t.out)
