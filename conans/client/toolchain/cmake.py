@@ -158,6 +158,18 @@ class CMakeToolchain(object):
         set(CMAKE_INSTALL_PREFIX {{install_prefix}} CACHE STRING "" FORCE)
         {% endif %}
 
+        # Variables scoped to a configuration
+        {%- for it, values in configuration_types_definitions.items() -%}
+            {%- set genexpr = namespace(str='') %}
+            {%- for conf, value in values -%}
+                {%- set genexpr.str = genexpr.str +
+                                      '$<IF:$<CONFIG:' + conf + '>,"' + value|string + '",' %}
+                {%- if loop.last %}{% set genexpr.str = genexpr.str + '""' %}{% endif %}
+            {%- endfor -%}
+            {% for i in range(values|count) %}{%- set genexpr.str = genexpr.str + '>' %}{% endfor %}
+        set({{ it }} {{ genexpr.str }})
+        {%- endfor %}
+
         set(CMAKE_CXX_FLAGS_INIT "${CONAN_CXX_FLAGS}" CACHE STRING "" FORCE)
         set(CMAKE_C_FLAGS_INIT "${CONAN_C_FLAGS}" CACHE STRING "" FORCE)
         set(CMAKE_SHARED_LINKER_FLAGS_INIT "${CONAN_SHARED_LINKER_FLAGS}" CACHE STRING "" FORCE)
@@ -176,17 +188,7 @@ class CMakeToolchain(object):
         {{ cmake_macros_and_functions }}
         ########### End of Utility macros and functions ###########
 
-        # Variables scoped to a configuration
-        {%- for it, values in configuration_types_definitions.items() -%}
-            {%- set genexpr = namespace(str='') %}
-            {%- for conf, value in values -%}
-                {%- set genexpr.str = genexpr.str +
-                                      '$<IF:$<CONFIG:' + conf + '>,"' + value|string + '",' %}
-                {%- if loop.last %}{% set genexpr.str = genexpr.str + '""' %}{% endif %}
-            {%- endfor -%}
-            {% for i in range(values|count) %}{%- set genexpr.str = genexpr.str + '>' %}{% endfor %}
-        set({{ it }} {{ genexpr.str }})
-        {%- endfor %}
+
 
         # Adjustments that depends on the build_type
         {% if vs_static_runtime %}
@@ -291,6 +293,7 @@ class CMakeToolchain(object):
             # FIXME: In the local flow, we don't know the package_folder
             install_prefix = None
         context = {
+            "configuration_types_definitions": self.definitions.configuration_types,
             "build_type": build_type,
             "generator_platform": self._generator_platform,
             "toolset": self._toolset,

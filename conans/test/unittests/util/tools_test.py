@@ -597,11 +597,17 @@ class HelloConan(ConanFile):
         ["Windows", "x86_64", "gcc", "x86_64-w64-mingw32"],
         ["Darwin", "x86_64", None, "x86_64-apple-darwin"],
         ["Macos", "x86", None, "i686-apple-darwin"],
-        ["iOS", "armv7", None, "arm-apple-darwin"],
-        ["watchOS", "armv7k", None, "arm-apple-darwin"],
-        ["watchOS", "armv8_32", None, "aarch64-apple-darwin"],
-        ["tvOS", "armv8", None, "aarch64-apple-darwin"],
-        ["tvOS", "armv8.3", None, "aarch64-apple-darwin"],
+        ["iOS", "armv7", None, "arm-apple-ios"],
+        ["iOS", "x86", None, "i686-apple-ios"],
+        ["iOS", "x86_64", None, "x86_64-apple-ios"],
+        ["watchOS", "armv7k", None, "arm-apple-watchos"],
+        ["watchOS", "armv8_32", None, "aarch64-apple-watchos"],
+        ["watchOS", "x86", None, "i686-apple-watchos"],
+        ["watchOS", "x86_64", None, "x86_64-apple-watchos"],
+        ["tvOS", "armv8", None, "aarch64-apple-tvos"],
+        ["tvOS", "armv8.3", None, "aarch64-apple-tvos"],
+        ["tvOS", "x86", None, "i686-apple-tvos"],
+        ["tvOS", "x86_64", None, "x86_64-apple-tvos"],
         ["Emscripten", "asm.js", None, "asmjs-local-emscripten"],
         ["Emscripten", "wasm", None, "wasm32-local-emscripten"],
         ["AIX", "ppc32", None, "rs6000-ibm-aix"],
@@ -874,7 +880,7 @@ class CollectLibTestCase(unittest.TestCase):
         conanfile.package_folder = temp_folder()
         mylib_path = os.path.join(conanfile.package_folder, "lib", "mylib.lib")
         save(mylib_path, "")
-        conanfile.cpp_info = CppInfo("")
+        conanfile.cpp_info = CppInfo("", "")
         result = tools.collect_libs(conanfile)
         self.assertEqual(["mylib"], result)
 
@@ -902,7 +908,7 @@ class CollectLibTestCase(unittest.TestCase):
         # Warn same lib different folders
         conanfile = ConanFileMock()
         conanfile.package_folder = temp_folder()
-        conanfile.cpp_info = CppInfo("")
+        conanfile.cpp_info = CppInfo(conanfile.name, "")
         custom_mylib_path = os.path.join(conanfile.package_folder, "custom_folder", "mylib.lib")
         lib_mylib_path = os.path.join(conanfile.package_folder, "lib", "mylib.lib")
         save(custom_mylib_path, "")
@@ -917,7 +923,7 @@ class CollectLibTestCase(unittest.TestCase):
         # Warn lib folder does not exist with correct result
         conanfile = ConanFileMock()
         conanfile.package_folder = temp_folder()
-        conanfile.cpp_info = CppInfo("")
+        conanfile.cpp_info = CppInfo(conanfile.name, "")
         lib_mylib_path = os.path.join(conanfile.package_folder, "lib", "mylib.lib")
         save(lib_mylib_path, "")
         no_folder_path = os.path.join(conanfile.package_folder, "no_folder")
@@ -940,7 +946,7 @@ class CollectLibTestCase(unittest.TestCase):
         conanfile.package_folder = temp_folder()
         mylib_path = os.path.join(conanfile.package_folder, "lib", "mylib.lib")
         save(mylib_path, "")
-        conanfile.cpp_info = CppInfo("")
+        conanfile.cpp_info = CppInfo("", "")
         result = conanfile.collect_libs()
         self.assertEqual(["mylib"], result)
 
@@ -968,7 +974,7 @@ class CollectLibTestCase(unittest.TestCase):
         # Warn same lib different folders
         conanfile = ConanFileMock()
         conanfile.package_folder = temp_folder()
-        conanfile.cpp_info = CppInfo("")
+        conanfile.cpp_info = CppInfo("", "")
         custom_mylib_path = os.path.join(conanfile.package_folder, "custom_folder", "mylib.lib")
         lib_mylib_path = os.path.join(conanfile.package_folder, "lib", "mylib.lib")
         save(custom_mylib_path, "")
@@ -983,7 +989,7 @@ class CollectLibTestCase(unittest.TestCase):
         # Warn lib folder does not exist with correct result
         conanfile = ConanFileMock()
         conanfile.package_folder = temp_folder()
-        conanfile.cpp_info = CppInfo("")
+        conanfile.cpp_info = CppInfo("", "")
         lib_mylib_path = os.path.join(conanfile.package_folder, "lib", "mylib.lib")
         save(lib_mylib_path, "")
         no_folder_path = os.path.join(conanfile.package_folder, "no_folder")
