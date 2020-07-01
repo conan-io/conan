@@ -1314,7 +1314,10 @@ class ConanAPIV1(object):
 
         print_graph(deps_graph, self.app.out)
         if lockfile:
-            graph_info.graph_lock = GraphLock(deps_graph, self.app.config.revisions_enabled)
+            new_graph_lock = GraphLock(deps_graph, self.app.config.revisions_enabled)
+            # check if the lockfile provided was used or not
+            new_graph_lock.check_contained(graph_info.graph_lock)
+            graph_info.graph_lock = new_graph_lock
         if base:
             graph_info.graph_lock.only_recipes()
 

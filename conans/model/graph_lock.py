@@ -389,6 +389,16 @@ class GraphLock(object):
                 result.append(id_)
         return result
 
+    def check_contained(self, other):
+        """ if lock create is provided a lockfile, it should be used, and it should contain it
+        otherwise, it was useless to pass it, and it is dangerous to continue, recommended to
+        create a fresh lockfile"""
+        other_ids = set(other._nodes.keys())
+        self_ids = set(self._nodes.keys())
+        if other_ids.difference(self_ids):
+            raise ConanException("The provided lockfile was not used, there is no overlap. You "
+                                 "might want to create a fresh lockfile")
+
     def pre_lock_node(self, node):
         if node.recipe == RECIPE_VIRTUAL:
             return
@@ -398,7 +408,7 @@ class GraphLock(object):
             if node.recipe == RECIPE_CONSUMER:
                 return
             if self._relaxed:
-                node_id = self.get_node(node.ref)
+                node_id = self.get_exact_node(node.ref)
                 if node_id:
                     locked_node = self._nodes[node_id]
                     node.id = node_id
@@ -462,11 +472,38 @@ class GraphLock(object):
                 return None
             raise
 
+    def get_exact_node(self, ref):
+        """ to use an existing lockfile to create a new one, the existing one should be engaged
+        at its root node, the topmost downstream consumer"""
+        assert self._relaxed
+        assert isinstance(ref, ConanFileReference)
+        # Compute the downstream root
+        total = []
+        for node in self._nodes.values():
+            total.extend(node.requires)
+            total.extend(node.build_requires)
+        roots = set(self._nodes).difference(total)
+        assert len(roots) == 1
+        root_id = roots.pop()
+        root_node = self._nodes[root_id]
+        root_ref = root_node.ref
+
+        # First search by exact ref (with RREV)
+        search_ref = repr(ref)
+        if root_ref and repr(root_ref) == search_ref:
+            return root_id
+
+        # First search by aprox ref (without RREV)
+        search_ref = str(ref)
+        if root_ref and repr(root_ref) == search_ref:
+            return root_id
+
     def get_node(self, ref):
         """ given a REF, return the Node of the package in the lockfile that correspond to that
         REF, or raise if it cannot find it.
         First, search with REF without revisions is done, then approximate search by just name
         """
+        assert (ref is None or isinstance(ref, ConanFileReference))
         # None reference
         if ref is None or ref.name is None:
             # Is a conanfile.txt consumer
@@ -492,10 +529,11 @@ class GraphLock(object):
         if len(ids) >= 1:
             return ids[0]
 
-        # Search by approximate name
+        # Search by approximate name, only for the end consumer with local path
         ids = []
         for id_, node in self._nodes.items():
             if node.ref and node.ref.name == ref.name:
+                # FIXME: Handle version ranges here
                 ids.append(id_)
         if ids:
             if len(ids) >= 1:

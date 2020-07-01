@@ -403,3 +403,156 @@ class GraphLockCITest(unittest.TestCase):
         self.assertIn("PkgC/0.1@user/channel: PACKAGE_INFO OPTION: 3!!", client2.out)
         self.assertIn("PkgB/0.1@user/channel: PACKAGE_INFO OPTION: 4!!", client2.out)
         self.assertIn("PkgA/0.1@user/channel: PACKAGE_INFO OPTION: 5!!", client2.out)
+
+
+class CIPythonRequiresTest(unittest.TestCase):
+    def test_version_ranges(self):
+        python_req = textwrap.dedent("""
+            from conans import ConanFile
+            def msg(conanfile):
+                conanfile.output.info("{}")
+            class Pkg(ConanFile):
+                pass
+            """)
+
+        consumer = textwrap.dedent("""
+            from conans import ConanFile, load
+            import os
+            class Pkg(ConanFile):
+                {requires}
+                python_requires = "pyreq/[*]@user/channel"
+                def package_info(self):
+                    self.python_requires["pyreq"].module.msg(self)
+                """)
+
+        client = TestClient()
+        client.save({"conanfile.py": python_req.format("HelloPyWorld")})
+        client.run("export . pyreq/0.1@user/channel")
+
+        client.save({"conanfile.py": consumer.format(requires="")})
+        client.run("create . PkgA/0.1@user/channel")
+        client.save({"conanfile.py": consumer.format(requires='requires="PkgA/0.1@user/channel"')})
+        client.run("create . PkgB/0.1@user/channel")
+        client.save({"conanfile.py": consumer.format(requires='requires="PkgB/0.1@user/channel"')})
+        client.run("create . PkgC/0.1@user/channel")
+        client.save({"conanfile.py": consumer.format(requires='requires="PkgC/0.1@user/channel"')})
+        client.run("create . PkgD/0.1@user/channel")
+        for pkg in ("PkgA", "PkgB", "PkgC", "PkgD"):
+            self.assertIn("{}/0.1@user/channel: HelloPyWorld".format(pkg), client.out)
+
+        client.run("lock create --reference=PkgD/0.1@user/channel")
+        initial_lockfile = client.load("conan.lock")
+        # Do a change in python_require
+        client.save({"conanfile.py": python_req.format("ByePyWorld")})
+        client.run("export . pyreq/0.2@user/channel")
+
+        # Go back to main orchestrator
+        client.run("lock create --reference=PkgD/0.1@user/channel --build=missing")
+        client.run("lock build-order conan.lock --json=build_order.json")
+        master_lockfile = client.load("conan.lock")
+        json_file = client.load("build_order.json")
+        to_build = json.loads(json_file)
+        lock_fileaux = master_lockfile
+        while to_build:
+            for _, ref in to_build[0]:
+                client_aux = TestClient(cache_folder=client.cache_folder)
+                client_aux.save({LOCKFILE: lock_fileaux})
+                client_aux.run("install %s --build=%s --lockfile=conan.lock" % (ref, ref))
+                lock_fileaux = client_aux.load(LOCKFILE)
+                client.save({"new_lock/%s" % LOCKFILE: lock_fileaux})
+                client.run("lock update conan.lock new_lock/conan.lock")
+
+            client.run("lock build-order conan.lock --json=bo.json")
+            lock_fileaux = client.load(LOCKFILE)
+            to_build = json.loads(client.load("bo.json"))
+
+        new_lockfile = client.load(LOCKFILE)
+        client.run("install PkgD/0.1@user/channel --lockfile=conan.lock")
+        for pkg in ("PkgA", "PkgB", "PkgC", "PkgD"):
+            self.assertIn("{}/0.1@user/channel: ByePyWorld".format(pkg), client.out)
+
+        client.save({LOCKFILE: initial_lockfile})
+        client.run("install PkgD/0.1@user/channel --lockfile=conan.lock")
+        for pkg in ("PkgA", "PkgB", "PkgC", "PkgD"):
+            self.assertIn("{}/0.1@user/channel: HelloPyWorld".format(pkg), client.out)
+
+        client.save({LOCKFILE: new_lockfile})
+        client.run("install PkgD/0.1@user/channel --lockfile=conan.lock")
+        for pkg in ("PkgA", "PkgB", "PkgC", "PkgD"):
+            self.assertIn("{}/0.1@user/channel: ByePyWorld".format(pkg), client.out)
+
+    def test_version_ranges_partial(self):
+        python_req = textwrap.dedent("""
+            from conans import ConanFile
+            def msg(conanfile):
+                conanfile.output.info("{}")
+            class Pkg(ConanFile):
+                pass
+            """)
+
+        consumer = textwrap.dedent("""
+            from conans import ConanFile, load
+            import os
+            class Pkg(ConanFile):
+                {requires}
+                python_requires = "pyreq/[*]@user/channel"
+                def package_info(self):
+                    self.python_requires["pyreq"].module.msg(self)
+                """)
+
+        client = TestClient()
+        client.run("config set general.default_package_id_mode=full_package_mode")
+        client.save({"conanfile.py": python_req.format("HelloPyWorld")})
+        client.run("export . pyreq/0.1@user/channel")
+
+        client.save({"conanfile.py": consumer.format(requires="")})
+        client.run("create . PkgA/0.1@user/channel")
+        client.save({"conanfile.py": consumer.format(requires='requires="PkgA/0.1@user/channel"')})
+        client.run("create . PkgB/0.1@user/channel")
+        client.save({"conanfile.py": consumer.format(requires='requires="PkgB/0.1@user/channel"')})
+        client.run("create . PkgC/0.1@user/channel")
+        client.save({"conanfile.py": consumer.format(requires='requires="PkgC/0.1@user/channel"')})
+        client.run("create . PkgD/0.1@user/channel")
+        for pkg in ("PkgA", "PkgB", "PkgC", "PkgD"):
+            self.assertIn("{}/0.1@user/channel: HelloPyWorld".format(pkg), client.out)
+
+        client.run("lock create --reference=PkgD/0.1@user/channel")
+        initial_lockfile = client.load("conan.lock")
+
+        # Do a change in B
+        client.save({"conanfile.py": consumer.format(requires='requires="PkgA/0.1@user/channel"')})
+        client.run("lock create conanfile.py --name=PkgB --version=0.2 --user=user "
+                   "--channel=channel --build=missing --lockfile-out=buildb.lock")
+
+        # Do a change in python_require
+        client.save({"conanfile.py": python_req.format("ByePyWorld")})
+        client.run("export . pyreq/0.2@user/channel")
+
+        client.save({"conanfile.py": consumer.format(requires='requires="PkgA/0.1@user/channel"')})
+        client.run("create . PkgB/0.2@user/channel --lockfile=buildb.lock")
+
+        # Go back to main orchestrator
+        # This should fail, as PkgB/0.2 is not involved in the new resolution
+        client.run("lock create --reference=PkgD/0.1@user/channel --build=missing "
+                   "--lockfile=buildb.lock", assert_error=True)
+        self.assertIn("ERROR: The provided lockfile was not used, there is no overlap",
+                      client.out)
+
+        client.run("lock build-order conan.lock --json=build_order.json")
+        master_lockfile = client.load("conan.lock")
+        json_file = client.load("build_order.json")
+        to_build = json.loads(json_file)
+        self.assertEqual(to_build, [])
+
+        new_lockfile = client.load(LOCKFILE)
+        client.run("install PkgD/0.1@user/channel --lockfile=conan.lock")
+
+        for pkg in ("PkgA", "PkgB", "PkgC", "PkgD"):
+            self.assertIn("{}/0.1@user/channel: HelloPyWorld".format(pkg), client.out)
+
+        client.run("install PkgD/0.1@user/channel", assert_error=True)
+        self.assertIn("ERROR: Missing prebuilt package", client.out)
+
+        client.run("install PkgD/0.1@user/channel --build=missing")
+        for pkg in ("PkgA", "PkgB", "PkgC", "PkgD"):
+            self.assertIn("{}/0.1@user/channel: ByePyWorld".format(pkg), client.out)
