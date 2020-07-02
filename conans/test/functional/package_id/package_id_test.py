@@ -93,9 +93,12 @@ class TestConan(ConanFile):
                         self.output.info("fpic is an option!!!")
                     if "other" not in self.info.options:
                         self.output.info("other is not an option!!!")
+                    if not self.info.options.whatever:
+                        self.output.info("whatever is not an option!!!")
             """)
         client = TestClient()
         client.save({"conanfile.py": conanfile})
         client.run("create . Pkg/0.1@user/testing")
         self.assertIn("fpic is an option!!!", client.out)
         self.assertIn("other is not an option!!!", client.out)
+        self.assertIn("whatever is not an option!!!", client.out)
