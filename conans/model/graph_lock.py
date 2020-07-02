@@ -417,20 +417,12 @@ class GraphLock(object):
         except KeyError:  # If the consumer node is not found, could be a test_package
             if node.recipe == RECIPE_CONSUMER:
                 return
-            if self._relaxed:
-                node_id = self._get_exact_node(node.ref)
-                if node_id:
-                    locked_node = self._nodes[node_id]
-                    node.id = node_id
-                else:
-                    node.conanfile.output.warn("Package can't be locked, not found in the lockfile")
-                    return
-            else:
+            if not self._relaxed:
                 raise ConanException("The node %s ID %s was not found in the lock"
                                      % (node.ref, node.id))
-
-        node.graph_lock_node = locked_node
-        node.conanfile.options.values = locked_node.options
+        else:
+            node.graph_lock_node = locked_node
+            node.conanfile.options.values = locked_node.options
 
     def lock_node(self, node, requires, build_requires=False):
         """ apply options and constraints on requirements of a node, given the information from
@@ -443,7 +435,6 @@ class GraphLock(object):
 
                     if locked_id:
                         locked_node = self._nodes[locked_id]
-                        print("RELAXED REQUIRED FOR ", require.ref, " resolved to ", locked_id, " REF ", locked_node.ref)
                         require.lock(locked_node.ref, locked_id)
             return
         locked_node = node.graph_lock_node
@@ -512,14 +503,13 @@ class GraphLock(object):
                 if result:
                     return root_id
         else:
-            if self._revisions_enabled:
+            search_ref = repr(ref)
+            if ref.revision:
                 # First search by exact ref (with RREV)
-                search_ref = repr(ref)
                 if root_ref and repr(root_ref) == search_ref:
                     return root_id
             else:
                 # Then search by aprox ref (without RREV)
-                search_ref = str(ref)
                 if root_ref and str(root_ref) == search_ref:
                     return root_id
 
