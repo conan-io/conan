@@ -336,3 +336,16 @@ class LibB(ConanFile):
             client.run("create . pkg/0.1@user/testing %s" % options)
             self.assertIn("liba/0.1@user/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache",
                           client.out)
+
+    def missing_shared_option_package_id_test(self):
+        client = TestClient()
+
+        consumer = textwrap.dedent("""
+            from conans import ConanFile
+            class Pkg(ConanFile):
+                def package_id(self):
+                    self.info.shared_library_package_id()
+            """)
+        client.save({"conanfile.py": consumer})
+        client.run("create . pkg/0.1@user/testing")
+        self.assertIn("pkg/0.1@user/testing: Created package ", client.out)
