@@ -13,6 +13,8 @@ class SConsGenerator(Generator):
                     '        "LIBPATH"     : {info.lib_paths},\n'
                     '        "BINPATH"     : {info.bin_paths},\n'
                     '        "LIBS"        : {libs},\n'
+                    '        "FRAMEWORKS"  : {info.frameworks},\n'
+                    '        "FRAMEWORKPATH"  : {info.framework_paths},\n'
                     '        "CPPDEFINES"  : {info.defines},\n'
                     '        "CXXFLAGS"    : {info.cxxflags},\n'
                     '        "CCFLAGS"     : {info.cflags},\n'

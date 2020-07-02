@@ -34,7 +34,7 @@ class SConsGeneratorTest(unittest.TestCase):
         self.assertIn('    "MyPkg_version" : "0.1",', scons_lines)
         self.assertIn('    "MyPkg2_version" : "3.2.3",', scons_lines)
 
-    def system_libs_test(self):
+    def system_frameworks_libs_test(self):
         # https://github.com/conan-io/conan/issues/7301
         conanfile = ConanFile(TestBufferConanOutput(), None)
         conanfile.initialize(Settings({}), EnvValues())
@@ -42,8 +42,13 @@ class SConsGeneratorTest(unittest.TestCase):
         cpp_info.version = "0.1"
         cpp_info.libs = ["mypkg"]
         cpp_info.system_libs = ["pthread"]
+        cpp_info.frameworks = ["cocoa"]
+        cpp_info.frameworkdirs = ["frameworks"]
+        cpp_info.filter_empty = False
         conanfile.deps_cpp_info.add("MyPkg", cpp_info)
         generator = SConsGenerator(conanfile)
         content = generator.content
         self.assertIn('"LIBS"        : [\'mypkg\', \'pthread\']', content)
+        self.assertIn('"FRAMEWORKS"  : [\'cocoa\']', content)
+        self.assertIn('"FRAMEWORKPATH"  : [\'frameworks\']', content)
         self.assertIn('"MyPkg_version" : "0.1"', content)
