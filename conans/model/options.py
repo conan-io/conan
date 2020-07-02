@@ -22,8 +22,8 @@ def option_not_exist_msg(option_name, existing_options):
     """ Someone is referencing an option that is not available in the current package
     options
     """
-    result = ["'options.%s' doesn't exist" % option_name]
-    result.append("Possible options are %s" % existing_options or "none")
+    result = ["'options.%s' doesn't exist" % option_name,
+              "Possible options are %s" % existing_options or "none"]
     return "\n".join(result)
 
 
@@ -212,6 +212,9 @@ class OptionsValues(object):
     def clear_unscoped_options(self):
         self._package_values.clear()
 
+    def __contains__(self, item):
+        return item in self._package_values
+
     def __getitem__(self, item):
         return self._reqs_options.setdefault(item, PackageOptionValues())
 
@@ -283,16 +286,14 @@ class OptionsValues(object):
 
     @property
     def sha(self):
-        result = []
-        result.append(self._package_values.sha)
+        result = [self._package_values.sha]
         for key in sorted(list(self._reqs_options.keys())):
             result.append(self._reqs_options[key].sha)
         return sha1('\n'.join(result).encode())
 
     def serialize(self):
-        ret = {}
-        ret["options"] = self._package_values.serialize()
-        ret["req_options"] = {}
+        ret = {"options": self._package_values.serialize(),
+               "req_options": {}}
         for name, values in self._reqs_options.items():
             ret["req_options"][name] = values.serialize()
         return ret
