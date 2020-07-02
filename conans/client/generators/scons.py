@@ -12,7 +12,7 @@ class SConsGenerator(Generator):
                     '        "CPPPATH"     : {info.include_paths},\n'
                     '        "LIBPATH"     : {info.lib_paths},\n'
                     '        "BINPATH"     : {info.bin_paths},\n'
-                    '        "LIBS"        : {info.libs},\n'
+                    '        "LIBS"        : {libs},\n'
                     '        "CPPDEFINES"  : {info.defines},\n'
                     '        "CXXFLAGS"    : {info.cxxflags},\n'
                     '        "CCFLAGS"     : {info.cflags},\n'
@@ -21,23 +21,26 @@ class SConsGenerator(Generator):
                     '    }},\n'
                     '    "{dep}_version" : "{info.version}",\n')
 
-        sections = []
-        sections.append("conan = {\n")
+        sections = ["conan = {\n"]
 
-        all_flags = template.format(dep="conan", info=self.deps_build_info)
+        libs = self.deps_build_info.libs + self.deps_build_info.system_libs
+        all_flags = template.format(dep="conan", info=self.deps_build_info, libs=libs)
         sections.append(all_flags)
 
         for config, cpp_info in self.deps_build_info.configs.items():
-            all_flags = template.format(dep="conan:" + config, info=cpp_info)
+            libs = cpp_info.libs + cpp_info.system_libs
+            all_flags = template.format(dep="conan:" + config, info=cpp_info, libs=libs)
             sections.append(all_flags)
 
         for dep_name, info in self.deps_build_info.dependencies:
             dep_name = dep_name.replace("-", "_")
-            dep_flags = template.format(dep=dep_name, info=info)
+            libs = info.libs + info.system_libs
+            dep_flags = template.format(dep=dep_name, info=info, libs=libs)
             sections.append(dep_flags)
 
             for config, cpp_info in info.configs.items():
-                all_flags = template.format(dep=dep_name + ":" + config, info=cpp_info)
+                libs = cpp_info.libs + cpp_info.system_libs
+                all_flags = template.format(dep=dep_name + ":" + config, info=cpp_info, libs=libs)
                 sections.append(all_flags)
 
         sections.append("}\n")

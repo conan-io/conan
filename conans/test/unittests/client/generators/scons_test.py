@@ -33,3 +33,17 @@ class SConsGeneratorTest(unittest.TestCase):
         self.assertIn('    "conan_version" : "None",', scons_lines)
         self.assertIn('    "MyPkg_version" : "0.1",', scons_lines)
         self.assertIn('    "MyPkg2_version" : "3.2.3",', scons_lines)
+
+    def system_libs_test(self):
+        # https://github.com/conan-io/conan/issues/7301
+        conanfile = ConanFile(TestBufferConanOutput(), None)
+        conanfile.initialize(Settings({}), EnvValues())
+        cpp_info = CppInfo("MyPkg", "")
+        cpp_info.version = "0.1"
+        cpp_info.libs = ["mypkg"]
+        cpp_info.system_libs = ["pthread"]
+        conanfile.deps_cpp_info.add("MyPkg", cpp_info)
+        generator = SConsGenerator(conanfile)
+        content = generator.content
+        self.assertIn('"LIBS"        : [\'mypkg\', \'pthread\']', content)
+        self.assertIn('"MyPkg_version" : "0.1"', content)
