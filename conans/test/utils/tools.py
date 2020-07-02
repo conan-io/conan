@@ -684,6 +684,7 @@ class TestClient(object):
             else:
                 server_users = default_server_user
                 users = {"default": list(default_server_user.items())}
+            # Allow write permissions to users
             server = TestServer(users=server_users, write_permissions=[("*/*@*/*", "*")])
             servers = {"default": server}
 
