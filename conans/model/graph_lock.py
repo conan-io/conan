@@ -5,6 +5,7 @@ from collections import OrderedDict
 from conans import DEFAULT_REVISION_V1
 from conans.client.graph.graph import RECIPE_VIRTUAL, RECIPE_CONSUMER
 from conans.client.graph.python_requires import PyRequires
+from conans.client.graph.range_resolver import satisfying
 from conans.client.profile_loader import _load_profile
 from conans.errors import ConanException
 from conans.model.info import PACKAGE_ID_UNKNOWN
@@ -223,6 +224,10 @@ class GraphLock(object):
                 self._upsert_node(graph_node)
 
     @property
+    def nodes(self):
+        return self._nodes
+
+    @property
     def relaxed(self):
         return self._relaxed
 
@@ -321,18 +326,24 @@ class GraphLock(object):
         # IDs are string, we need to compute the maximum integer
         return max(int(x) for x in self._nodes.keys())
 
-    def root_node_ref(self):
-        """ obtain the node in the graph that is not depended by anyone else,
-        i.e. the root or downstream consumer
-        Used by graph build-order command
-        """
+    def root_node_id(self):
+        # Compute the downstream root
         total = []
         for node in self._nodes.values():
             total.extend(node.requires)
             total.extend(node.build_requires)
         roots = set(self._nodes).difference(total)
         assert len(roots) == 1
-        root_node = self._nodes[roots.pop()]
+        root_id = roots.pop()
+        return root_id
+
+    def root_node_ref(self):
+        """ obtain the node in the graph that is not depended by anyone else,
+        i.e. the root or downstream consumer
+        Used by graph build-order command
+        """
+        root_id = self.root_node_id()
+        root_node = self._nodes[root_id]
         if root_node.path:
             return root_node.path
         return root_node.ref
@@ -367,7 +378,7 @@ class GraphLock(object):
         one and had some node re-built. Only nodes marked as modified (has
         been exported or re-built), will be processed and updated.
         """
-        for id_, node in new_lock._nodes.items():
+        for id_, node in new_lock.nodes.items():
             current = self._nodes[id_]
             if current.ref:
                 if node.ref.copy_clear_rev() != current.ref.copy_clear_rev():
@@ -393,9 +404,8 @@ class GraphLock(object):
         """ if lock create is provided a lockfile, it should be used, and it should contain it
         otherwise, it was useless to pass it, and it is dangerous to continue, recommended to
         create a fresh lockfile"""
-        other_ids = set(other._nodes.keys())
-        self_ids = set(self._nodes.keys())
-        if other_ids.difference(self_ids):
+        other_root_id = other.root_node_id()
+        if other_root_id not in self._nodes:
             raise ConanException("The provided lockfile was not used, there is no overlap. You "
                                  "might want to create a fresh lockfile")
 
@@ -408,7 +418,7 @@ class GraphLock(object):
             if node.recipe == RECIPE_CONSUMER:
                 return
             if self._relaxed:
-                node_id = self.get_exact_node(node.ref)
+                node_id = self._get_exact_node(node.ref)
                 if node_id:
                     locked_node = self._nodes[node_id]
                     node.id = node_id
@@ -427,6 +437,14 @@ class GraphLock(object):
         the lockfile. Requires remove their version ranges.
         """
         if not node.graph_lock_node:
+            if self._relaxed:
+                for require in requires:
+                    locked_id = self._get_exact_node(require.ref)
+
+                    if locked_id:
+                        locked_node = self._nodes[locked_id]
+                        print("RELAXED REQUIRED FOR ", require.ref, " resolved to ", locked_id, " REF ", locked_node.ref)
+                        require.lock(locked_node.ref, locked_id)
             return
         locked_node = node.graph_lock_node
         if build_requires:
@@ -472,31 +490,38 @@ class GraphLock(object):
                 return None
             raise
 
-    def get_exact_node(self, ref):
+    def _get_exact_node(self, ref):
         """ to use an existing lockfile to create a new one, the existing one should be engaged
         at its root node, the topmost downstream consumer"""
         assert self._relaxed
         assert isinstance(ref, ConanFileReference)
-        # Compute the downstream root
-        total = []
-        for node in self._nodes.values():
-            total.extend(node.requires)
-            total.extend(node.build_requires)
-        roots = set(self._nodes).difference(total)
-        assert len(roots) == 1
-        root_id = roots.pop()
+
+        version = ref.version
+        version_range = None
+        if version.startswith("[") and version.endswith("]"):
+            version_range = version[1:-1]
+
+        root_id = self.root_node_id()
         root_node = self._nodes[root_id]
         root_ref = root_node.ref
 
-        # First search by exact ref (with RREV)
-        search_ref = repr(ref)
-        if root_ref and repr(root_ref) == search_ref:
-            return root_id
-
-        # First search by aprox ref (without RREV)
-        search_ref = str(ref)
-        if root_ref and repr(root_ref) == search_ref:
-            return root_id
+        if version_range:
+            if ref.name == root_ref.name and ref.user == root_ref.user and ref.channel == root_ref.channel:
+                output = []
+                result = satisfying([str(root_ref.version)], version_range, output)
+                if result:
+                    return root_id
+        else:
+            if self._revisions_enabled:
+                # First search by exact ref (with RREV)
+                search_ref = repr(ref)
+                if root_ref and repr(root_ref) == search_ref:
+                    return root_id
+            else:
+                # Then search by aprox ref (without RREV)
+                search_ref = str(ref)
+                if root_ref and str(root_ref) == search_ref:
+                    return root_id
 
     def get_node(self, ref):
         """ given a REF, return the Node of the package in the lockfile that correspond to that
