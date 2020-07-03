@@ -50,5 +50,5 @@ class SConsGeneratorTest(unittest.TestCase):
         content = generator.content
         self.assertIn('"LIBS"        : [\'mypkg\', \'pthread\']', content)
         self.assertIn('"FRAMEWORKS"  : [\'cocoa\']', content)
-        self.assertIn('"FRAMEWORKPATH"  : [\'frameworks\']', content)
+        self.assertIn('"FRAMEWORKPATH"  : [\'/rootpath/frameworks\']', content)
         self.assertIn('"MyPkg_version" : "0.1"', content)
