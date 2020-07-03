@@ -238,6 +238,7 @@ class GraphLock(object):
             n.relaxed = value
 
     def build_order(self):
+        # First do a topological order by levels, the ids of the nodes are stored
         levels = []
         opened = list(self._nodes.keys())
         while opened:
@@ -257,6 +258,8 @@ class GraphLock(object):
             # now initialize new level
             opened = set(opened).difference(current_level)
 
+        # Now compute the list of list with prev=None, and prepare them with the right
+        # references to be used in cmd line
         result = []
         total_prefs = set()  # to remove duplicates, same pref shouldn't build twice
         for level in levels:
