@@ -38,7 +38,7 @@ class SConsGeneratorTest(unittest.TestCase):
         # https://github.com/conan-io/conan/issues/7301
         conanfile = ConanFile(TestBufferConanOutput(), None)
         conanfile.initialize(Settings({}), EnvValues())
-        cpp_info = CppInfo("MyPkg", "")
+        cpp_info = CppInfo("MyPkg", "/rootpath")
         cpp_info.version = "0.1"
         cpp_info.libs = ["mypkg"]
         cpp_info.system_libs = ["pthread"]
