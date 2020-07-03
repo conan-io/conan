@@ -178,7 +178,7 @@ class OSInfo(object):
 
     @property
     def with_apt(self):
-        apt_distros = ("debian", "ubuntu", "knoppix", "linuxmint", "raspbian", "neon", "pop")
+        apt_distros = ("debian", "ubuntu", "knoppix", "linuxmint", "raspbian", "neon", "pop", "elementary")
         return self.is_linux and self.linux_distro in apt_distros
 
     @property
