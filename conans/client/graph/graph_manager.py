@@ -200,7 +200,7 @@ class GraphManager(object):
         conanfile = self._loader.load_virtual([reference], profile)
         root_node = Node(ref=None, conanfile=conanfile, context=CONTEXT_HOST, recipe=RECIPE_VIRTUAL)
         if graph_lock:  # Find the Node ID in the lock of current root
-            node_id = graph_lock.get_node(reference)
+            node_id = graph_lock.get_node_by_req(reference)
             locked_ref = graph_lock.ref(node_id)
             conanfile.requires[reference.name].lock(locked_ref, node_id)
         return root_node

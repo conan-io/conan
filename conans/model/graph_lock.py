@@ -45,7 +45,7 @@ class GraphLockFile(object):
                 raise ConanException("This lockfile was created with an incompatible "
                                      "version. Please regenerate the lockfile")
             # Do something with it, migrate, raise...
-        profile_host = graph_json.get("profile_host") or graph_json.get("profile")
+        profile_host = graph_json.get("profile_host", None)
         profile_build = graph_json.get("profile_build", None)
         # FIXME: Reading private very ugly
         if profile_host:
@@ -57,21 +57,22 @@ class GraphLockFile(object):
         return graph_lock_file
 
     def save(self, path):
-        if not path.endswith(".lock"):
-            path = os.path.join(path, LOCKFILE)
         serialized_graph_str = self.dumps()
         save(path, serialized_graph_str)
 
     def dumps(self):
-        result = {"profile_host": self.profile_host.dumps(),
-                  "graph_lock": self.graph_lock.serialize(),
+        result = {"graph_lock": self.graph_lock.serialize(),
                   "version": LOCKFILE_VERSION}
+        if self.profile_host:
+            result["profile_host"] = self.profile_host.dumps()
         if self.profile_build:
             result["profile_build"] = self.profile_build.dumps()
-        if self.graph_lock.only_recipe:
-            result.pop("profile_host", None)
-            result.pop("profile_build", None)
         return json.dumps(result, indent=True)
+
+    def only_recipes(self):
+        self.graph_lock.only_recipes()
+        self.profile_host = None
+        self.profile_build = None
 
 
 class GraphLockNode(object):
@@ -215,7 +216,6 @@ class GraphLock(object):
         self._nodes = {}  # {id: GraphLockNode}
         self._revisions_enabled = revisions_enabled
         self._relaxed = False  # If True, the lock can be expanded with new Nodes
-        self.only_recipe = False
 
         if deps_graph is not None:
             for graph_node in deps_graph.nodes:
@@ -286,7 +286,6 @@ class GraphLock(object):
     def only_recipes(self):
         for node in self._nodes.values():
             node.only_recipe()
-        self.only_recipe = True
 
     def _upsert_node(self, graph_node):
         requires = []
@@ -500,7 +499,8 @@ class GraphLock(object):
         root_ref = root_node.ref
 
         if version_range:
-            if ref.name == root_ref.name and ref.user == root_ref.user and ref.channel == root_ref.channel:
+            if (ref.name == root_ref.name and ref.user == root_ref.user and
+                    ref.channel == root_ref.channel):
                 output = []
                 result = satisfying([str(root_ref.version)], version_range, output)
                 if result:
@@ -529,6 +529,8 @@ class GraphLock(object):
                 if not node.ref and node.path:
                     return id_
 
+        assert ref.revision is None
+
         # First search by exact ref (with RREV)
         ids = []
         search_ref = repr(ref)
@@ -538,7 +540,7 @@ class GraphLock(object):
         if len(ids) >= 1:
             return ids[0]
 
-        # First search by aprox ref (without RREV)
+        # Then search by aprox ref (without RREV)
         ids = []
         search_ref = str(ref)
         for id_, node in self._nodes.items():
@@ -551,9 +553,42 @@ class GraphLock(object):
         ids = []
         for id_, node in self._nodes.items():
             if node.ref and node.ref.name == ref.name:
-                # FIXME: Handle version ranges here
                 ids.append(id_)
         if ids:
+            if len(ids) >= 1:
+                return ids[0]
+
+        if not self._relaxed:
+            raise ConanException("Couldn't find '%s' in graph-lock" % ref.full_str())
+
+    def get_node_by_req(self, ref):
+        assert isinstance(ref, ConanFileReference)
+
+        version = ref.version
+        version_range = None
+        if version.startswith("[") and version.endswith("]"):
+            version_range = version[1:-1]
+
+        if version_range:
+            ids = []
+            for id_, node in self._nodes.items():
+                nref = node.ref
+                if (nref and nref.name == ref.name and nref.user == ref.user and
+                        nref.channel == ref.channel):
+                    output = []
+                    result = satisfying([str(nref.version)], version_range, output)
+                    if result:
+                        ids.append(id_)
+            if ids:
+                if len(ids) >= 1:
+                    return ids[0]
+        else:
+            # Match should be exact (with RREV)
+            ids = []
+            search_ref = repr(ref)
+            for id_, node in self._nodes.items():
+                if node.ref and repr(node.ref) == search_ref:
+                    ids.append(id_)
             if len(ids) >= 1:
                 return ids[0]
 

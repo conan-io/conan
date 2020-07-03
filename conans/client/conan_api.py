@@ -1299,8 +1299,7 @@ class ConanAPIV1(object):
             # reference = graph_info.graph_lock.root_node_ref()
 
         root_ref = ConanFileReference(name, version, user, channel, validate=False)
-        if phost:
-            phost.process_settings(self.app.cache)
+        phost.process_settings(self.app.cache)
         if pbuild:
             pbuild.process_settings(self.app.cache)
         graph_info = GraphInfo(profile_host=phost, profile_build=pbuild, root_ref=root_ref)
@@ -1311,18 +1310,22 @@ class ConanAPIV1(object):
         remotes = self.app.load_remotes(remote_name=remote_name, check_updates=update)
         deps_graph = self.app.graph_manager.load_graph(ref_or_path, None, graph_info, build, update,
                                                        False, remotes, recorder)
-
         print_graph(deps_graph, self.app.out)
+
+        # The computed graph-lock by the graph expansion
+        graph_lock = graph_info.graph_lock
+        # Pure graph_lock, no more graph_info mess
+        graph_lock_file = GraphLockFile(phost, pbuild, graph_lock)
         if lockfile:
             new_graph_lock = GraphLock(deps_graph, self.app.config.revisions_enabled)
             # check if the lockfile provided was used or not
-            new_graph_lock.check_contained(graph_info.graph_lock)
-            graph_info.graph_lock = new_graph_lock
+            new_graph_lock.check_contained(graph_lock)
+            graph_lock_file.graph_lock = new_graph_lock
         if base:
-            graph_info.graph_lock.only_recipes()
+            graph_lock_file.only_recipes()
 
         lockfile_out = _make_abs_path(lockfile_out or "conan.lock")
-        graph_info.save_lock(lockfile_out)
+        graph_lock_file.save(lockfile_out)
         self.app.out.info("Generated lockfile: %s" % lockfile_out)
 
 
