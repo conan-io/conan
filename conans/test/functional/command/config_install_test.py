@@ -640,3 +640,20 @@ class ConfigInstallSchedTest(unittest.TestCase):
         self.client.run('install .', assert_error=True)
         self.assertIn("ERROR: Incorrect definition of general.config_install_interval: 1s",
                       self.client.out)
+
+    def test_config_install_removed_git_repo(self):
+        """ config_install_interval breaks when remote git has been removed
+        """
+        with self.client.chdir(self.folder):
+            self.client.run_command('git init .')
+            self.client.run_command('git add .')
+            self.client.run_command('git config user.name myname')
+            self.client.run_command('git config user.email myname@mycompany.com')
+            self.client.run_command('git commit -m "mymsg"')
+        self.client.run('config install "%s/.git" --type git' % self.folder)
+        self.assertIn("Processing conan.conf", self.client.out)
+        self.assertIn("Repo cloned!", self.client.out)
+        shutil.rmtree(self.folder)
+        with patch("conans.client.command.is_config_install_scheduled", return_value=True):
+            self.client.run("config --help", assert_error=True)
+        self.assertIn("ERROR: Failed conan config install: Can't clone repo", self.client.out)
