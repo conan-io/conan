@@ -178,8 +178,9 @@ class OSInfo(object):
 
     @property
     def with_apt(self):
-        apt_distros = ("debian", "ubuntu", "knoppix", "linuxmint", "raspbian", "neon", "pop", "elementary")
-        return self.is_linux and self.linux_distro in apt_distros
+        apt_path = '/usr/bin/apt'
+        sys_has_apt = os.path.isfile(apt_path) and os.access(apt_path, os.X_OK)
+        return self.is_linux and sys_has_apt
 
     @property
     def with_yum(self):
