@@ -580,21 +580,24 @@ class BinaryInstaller(object):
         # package folder and artifacts
         conan_v2 = get_env(CONAN_V2_MODE_ENVVAR, False)
         with pythonpath(conanfile) if not conan_v2 else no_op():  # Minimal pythonpath, not the whole context, make it 50% slower
-            with tools.chdir(package_folder):
-                with conanfile_exception_formatter(str(conanfile), "package_info"):
-                    conanfile.package_folder = package_folder
-                    conanfile.source_folder = None
-                    conanfile.build_folder = None
-                    conanfile.install_folder = None
-                    self._hook_manager.execute("pre_package_info", conanfile=conanfile,
-                                               reference=ref)
-                    conanfile.package_info()
-                    if conanfile._conan_dep_cpp_info is None:
-                        try:
-                            conanfile.cpp_info._raise_incorrect_components_definition(
-                                conanfile.name, conanfile.requires)
-                        except ConanException as e:
-                            raise ConanException("%s package_info(): %s" % (str(conanfile), e))
-                        conanfile._conan_dep_cpp_info = DepCppInfo(conanfile.cpp_info)
-                    self._hook_manager.execute("post_package_info", conanfile=conanfile,
-                                               reference=ref)
+            if os.path.exists(package_folder):
+                with tools.chdir(package_folder):
+                    with conanfile_exception_formatter(str(conanfile), "package_info"):
+                        conanfile.package_folder = package_folder
+                        conanfile.source_folder = None
+                        conanfile.build_folder = None
+                        conanfile.install_folder = None
+                        self._hook_manager.execute("pre_package_info", conanfile=conanfile,
+                                                   reference=ref)
+                        conanfile.package_info()
+                        if conanfile._conan_dep_cpp_info is None:
+                            try:
+                                conanfile.cpp_info._raise_incorrect_components_definition(
+                                    conanfile.name, conanfile.requires)
+                            except ConanException as e:
+                                raise ConanException("%s package_info(): %s" % (str(conanfile), e))
+                            conanfile._conan_dep_cpp_info = DepCppInfo(conanfile.cpp_info)
+                        self._hook_manager.execute("post_package_info", conanfile=conanfile,
+                                                   reference=ref)
+            else:
+                conanfile._conan_dep_cpp_info = DepCppInfo(conanfile.cpp_info)

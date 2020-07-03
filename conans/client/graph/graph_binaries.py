@@ -295,9 +295,10 @@ class GraphBinariesAnalyzer(object):
             direct_reqs = []  # of PackageReference
             indirect_reqs = set()  # of PackageReference, avoid duplicates
             for neighbor in neighbors:
-                ref, nconan = neighbor.ref, neighbor.conanfile
                 direct_reqs.append(neighbor.pref)
-                indirect_reqs.update(nconan.info.requires.refs())
+                for n in neighbor.public_closure:
+                    pref = PackageReference(n.ref, n.package_id, n.prev, validate=False)
+                    indirect_reqs.add(pref)
             # Make sure not duplicated
             indirect_reqs.difference_update(direct_reqs)
         else:
