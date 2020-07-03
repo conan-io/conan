@@ -45,7 +45,7 @@ class SConsGeneratorTest(unittest.TestCase):
         cpp_info.frameworks = ["cocoa"]
         cpp_info.frameworkdirs = ["frameworks"]
         cpp_info.filter_empty = False
-        conanfile.deps_cpp_info.add("MyPkg", cpp_info)
+        conanfile.deps_cpp_info.add("MyPkg", DepCppInfo(cpp_info))
         generator = SConsGenerator(conanfile)
         content = generator.content
         self.assertIn('"LIBS"        : [\'mypkg\', \'pthread\']', content)
