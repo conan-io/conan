@@ -306,8 +306,6 @@ class GraphBinariesAnalyzer(object):
 
         # Make sure not duplicated
         indirect_reqs.difference_update(direct_reqs)
-        #else:
-        #    direct_reqs, indirect_reqs = self.package_id_transitive_reqs(node)
 
         python_requires = getattr(conanfile, "python_requires", None)
         if python_requires:
