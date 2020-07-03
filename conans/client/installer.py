@@ -519,7 +519,8 @@ class BinaryInstaller(object):
             # the node transitive information necessary to compute the package_id
             # as it will be used by reevaluate_node() when package_revision_mode is used and
             # PACKAGE_ID_UNKNOWN happens due to unknown revisions
-            self._binaries_analyzer.package_id_transitive_reqs(node)
+            #self._binaries_analyzer.package_id_transitive_reqs(node)
+            pass
         # Get deps_cpp_info from upstream nodes
         node_order = [n for n in node.public_closure if n.binary != BINARY_SKIP]
         # List sort is stable, will keep the original order of the closure, but prioritize levels

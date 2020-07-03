@@ -263,24 +263,6 @@ class GraphBinariesAnalyzer(object):
         conanfile.options.clear_unused(transitive_reqs)
         conanfile.options.freeze()
 
-    @staticmethod
-    def package_id_transitive_reqs(node):
-        """
-        accumulate the direct and transitive requirements prefs necessary to compute the
-        package_id
-        :return: set(prefs) of direct deps, set(prefs) of transitive deps
-        """
-        node.id_direct_prefs = set()  # of PackageReference
-        node.id_indirect_prefs = set()  # of PackageReference, avoid duplicates
-        neighbors = [d.dst for d in node.dependencies if not d.build_require]
-        for neighbor in neighbors:
-            node.id_direct_prefs.add(neighbor.pref)
-            node.id_indirect_prefs.update(neighbor.id_direct_prefs)
-            node.id_indirect_prefs.update(neighbor.id_indirect_prefs)
-        # Make sure not duplicated, totally necessary
-        node.id_indirect_prefs.difference_update(node.id_direct_prefs)
-        return node.id_direct_prefs, node.id_indirect_prefs
-
     def _compute_package_id(self, node, default_package_id_mode, default_python_requires_id_mode):
         """
         Compute the binary package ID of this node
@@ -291,18 +273,26 @@ class GraphBinariesAnalyzer(object):
         # A bit risky to be done now
         conanfile = node.conanfile
         neighbors = node.neighbors()
+
+        direct_reqs = []  # of PackageReference
+        indirect_reqs = set()  # of PackageReference, avoid duplicates
+        old_indirect = set()
+        for neighbor in neighbors:
+            direct_reqs.append(neighbor.pref)
+            old_indirect.update([(p.ref, p.id) for p in neighbor.conanfile.info.requires.refs()])
+            for n in neighbor.public_closure:
+                pref = PackageReference(n.ref, n.package_id, n.prev, validate=False)
+                indirect_reqs.add(pref)
+
+        # FIXME: Conan v2.0 This is introducing a bug for backwards compatibility, it will add
+        #   only the requirements available in the 'neighbour.info' object, not all the closure
         if not self._fixed_package_id:
-            direct_reqs = []  # of PackageReference
-            indirect_reqs = set()  # of PackageReference, avoid duplicates
-            for neighbor in neighbors:
-                direct_reqs.append(neighbor.pref)
-                for n in neighbor.public_closure:
-                    pref = PackageReference(n.ref, n.package_id, n.prev, validate=False)
-                    indirect_reqs.add(pref)
-            # Make sure not duplicated
-            indirect_reqs.difference_update(direct_reqs)
-        else:
-            direct_reqs, indirect_reqs = self.package_id_transitive_reqs(node)
+            indirect_reqs = set([p for p in indirect_reqs if (p.ref, p.id) in old_indirect])
+
+        # Make sure not duplicated
+        indirect_reqs.difference_update(direct_reqs)
+        #else:
+        #    direct_reqs, indirect_reqs = self.package_id_transitive_reqs(node)
 
         python_requires = getattr(conanfile, "python_requires", None)
         if python_requires:

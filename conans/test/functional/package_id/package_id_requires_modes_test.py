@@ -544,7 +544,7 @@ class PackageIDErrorTest(unittest.TestCase):
         self.assertIn("consumer/1.0@user/testing: PKGNAMES: ['dep1', 'dep2']", client.out)
         self.assertIn("consumer/1.0@user/testing: Created", client.out)
 
-    def transitive_multi_mode_build_requires_test(self):
+    def test_transitive_multi_mode_build_requires_test(self):
         # https://github.com/conan-io/conan/issues/6942
         client = TestClient()
         client.run("config set general.default_package_id_mode=package_revision_mode")
