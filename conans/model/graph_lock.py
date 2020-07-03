@@ -583,12 +583,18 @@ class GraphLock(object):
                 if len(ids) >= 1:
                     return ids[0]
         else:
-            # Match should be exact (with RREV)
+            # The ``create`` command uses this to install pkg/version --build=pkg
+            # removing the revision, but it still should match
             ids = []
             search_ref = repr(ref)
-            for id_, node in self._nodes.items():
-                if node.ref and repr(node.ref) == search_ref:
-                    ids.append(id_)
+            if ref.revision:  # Match should be exact (with RREV)
+                for id_, node in self._nodes.items():
+                    if node.ref and repr(node.ref) == search_ref:
+                        ids.append(id_)
+            else:
+                for id_, node in self._nodes.items():
+                    if node.ref and str(node.ref) == search_ref:
+                        ids.append(id_)
             if len(ids) >= 1:
                 return ids[0]
 
@@ -596,11 +602,8 @@ class GraphLock(object):
             raise ConanException("Couldn't find '%s' in graph-lock" % ref.full_str())
 
     def update_exported_ref(self, node_id, ref):
-        """ when the recipe is exported, it will change its reference, typically the RREV, and
-        the lockfile needs to be updated. The lockfile reference will lose PREV information and
-        be marked as modified
+        """ when the recipe is exported, it will complete the missing RREV, otherwise it should
+        match the existing RREV
         """
-        if node_id is None and self._relaxed:
-            return
         lock_node = self._nodes[node_id]
         lock_node.ref = ref
