@@ -275,12 +275,6 @@ class CMakeFindPackageGenerator(Generator):
             global_target_variables = target_template.format(name=pkg_filename, deps=pkg_info,
                                                              build_type_suffix="",
                                                              deps_names=pkg_public_deps_names)
-            print(f"""MARIO rendering tpl: pkg_name={pkg_findname},
-                pkg_filename={pkg_filename},
-                pkg_version={pkg_version},
-                pkg_components={pkg_components}
-                global_target_variables={global_target_variables},
-                pkg_public_deps={pkg_public_deps}""")
             return self.find_components_tpl.render(
                 pkg_name=pkg_findname,
                 pkg_filename=pkg_filename,

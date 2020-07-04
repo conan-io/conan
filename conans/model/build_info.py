@@ -269,27 +269,19 @@ class CppInfo(_CppInfo):
 
         if self.components:
             comp_requires = set()
-            print(f"MARIO components={self.components}")
             for comp_name, comp in self.components.items():
-                print(f"    MARIO comp_name={comp_name}")
                 for comp_require in comp.requires:
-                    print(f"        MARIO comp_require={comp_require}")
                     if COMPONENT_SCOPE in comp_require:
-                        print(f"            --- adding it baby, COMPONENT_SCOPE={COMPONENT_SCOPE}")
                         comp_requires.add(
                             comp_require[:comp_require.find(COMPONENT_SCOPE)])
-            print(f"MARIO here is pkg_requires={package_requires.values()}")
             pkg_requires = [require.ref.name for require in package_requires.values()]
             # Raise on components requires without package requires
             for pkg_require in pkg_requires:
                 if pkg_require not in comp_requires:
-                    all = '\n'.join(str(c) for c in comp_requires)
-                    all2 = '\n'.join(str(c) for c in pkg_requires)
-                    raise ConanException(f"Package require '{pkg_require}' not used in components requires\n"
-                        f"   comp_requires: {all}\npkg_requires: {all2}")
+                    raise ConanException("Package require '%s' not used in components requires"
+                                         % pkg_require)
             # Raise on components requires requiring inexistent package requires
             for comp_require in comp_requires:
-                print(f"MARIO checking {comp_require} in {comp_requires}, to see if it is in {pkg_requires}...")
                 if comp_require not in pkg_requires:
                     raise ConanException("Package require '%s' declared in components requires "
                                          "but not defined as a recipe requirement" % comp_require)

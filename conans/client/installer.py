@@ -591,7 +591,6 @@ class BinaryInstaller(object):
                     conanfile.package_info()
                     if conanfile._conan_dep_cpp_info is None:
                         try:
-                            print(f"MARIO conanfile={conanfile} conanfile.requires={conanfile.requires}")
                             conanfile.cpp_info._raise_incorrect_components_definition(
                                 conanfile.name, conanfile.requires)
                         except ConanException as e:
