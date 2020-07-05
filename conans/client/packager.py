@@ -4,6 +4,8 @@ from conans.client.file_copier import FileCopier, report_copied_files
 from conans.model.manifest import FileTreeManifest
 from conans.paths import CONANINFO
 from conans.util.files import mkdir, save
+from conans.errors import conanfile_exception_formatter
+from conans.model.conan_file import get_env_context_manager
 
 
 def export_pkg(conanfile, package_id, src_package_folder, package_folder, hook_manager,
@@ -50,3 +52,11 @@ def report_files_from_manifest(output, manifest):
         return
 
     report_copied_files(copied_files, output, message_suffix="Packaged")
+
+
+def call_package_install(conanfile, package_install_folder):
+    with get_env_context_manager(conanfile):
+        conanfile.output.highlight("Calling package_install()")
+        conanfile.package_install_folder = package_install_folder
+        with conanfile_exception_formatter(str(conanfile), "install"):
+            conanfile.package_install()

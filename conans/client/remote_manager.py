@@ -129,8 +129,8 @@ class RemoteManager(object):
     def get_package(self, pref, layout, remote, output, recorder):
 
         package_folder = layout.package(pref)
-        unzip_folder = package_folder if not self._cache.config.package_installs \
-            else layout.install(pref)
+        package_install_folder = self._cache.config.package_install_folder
+        unzip_folder = package_folder if not package_install_folder else layout.package_install(pref)
 
         conanfile_path = self._cache.package_layout(pref.ref).conanfile()
         self._hook_manager.execute("pre_download_package", conanfile_path=conanfile_path,
@@ -157,7 +157,9 @@ class RemoteManager(object):
 
             duration = time.time() - t1
             log_package_download(pref, duration, remote, zipped_files)
-            unzip_and_get_files(zipped_files, unzip_folder, PACKAGE_TGZ_NAME, output=self._output)
+            unzip_and_get_files(zipped_files, unzip_folder, PACKAGE_TGZ_NAME,
+                                output=self._output,
+                                remove_tgz=not bool(package_install_folder))
             # Issue #214 https://github.com/conan-io/conan/issues/214
             touch_folder(unzip_folder)
             if get_env("CONAN_READ_ONLY_CACHE", False):
@@ -283,7 +285,7 @@ def check_compressed_files(tgz_name, files):
                                  "Please upgrade conan client." % f)
 
 
-def unzip_and_get_files(files, destination_dir, tgz_name, output):
+def unzip_and_get_files(files, destination_dir, tgz_name, output, remove_tgz=True):
     """Moves all files from package_files, {relative_name: tmp_abs_path}
     to destination_dir, unzipping the "tgz_name" if found"""
 
@@ -291,7 +293,8 @@ def unzip_and_get_files(files, destination_dir, tgz_name, output):
     check_compressed_files(tgz_name, files)
     if tgz_file:
         uncompress_file(tgz_file, destination_dir, output=output)
-        os.remove(tgz_file)
+        if remove_tgz:
+            os.remove(tgz_file)
 
 
 def uncompress_file(src_path, dest_folder, output):

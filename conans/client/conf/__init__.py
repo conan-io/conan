@@ -481,9 +481,9 @@ class ConanClientConfigParser(ConfigParser, object):
             return None
 
     @property
-    def package_installs(self):
+    def package_install_folder(self):
         try:
-            fix_id = self.get_item("general.package_installs")
+            fix_id = self.get_item("general.package_install_folder")
             return fix_id.lower() in ("1", "true")
         except ConanException:
             return None

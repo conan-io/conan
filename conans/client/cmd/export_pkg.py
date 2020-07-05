@@ -4,6 +4,7 @@ from conans.client import packager
 from conans.client.conanfile.package import run_package_method
 from conans.client.graph.graph import BINARY_SKIP
 from conans.client.graph.graph_manager import load_deps_info
+from conans.client.packager import call_package_install
 from conans.errors import ConanException
 from conans.model.ref import PackageReference
 from conans.util.files import rmdir, set_dirty_context_manager
@@ -45,7 +46,8 @@ def export_pkg(app, recorder, full_ref, source_folder, build_folder, package_fol
     output.info("Packaging to %s" % package_id)
     pref = PackageReference(ref, package_id)
     layout = cache.package_layout(ref, short_paths=conanfile.short_paths)
-    dest_package_folder = layout.package(pref)
+    dest_package_folder = layout.package(pref) if not cache.config.package_install_folder\
+        else layout.package_install(pref)
 
     if os.path.exists(dest_package_folder):
         if force:
@@ -66,6 +68,8 @@ def export_pkg(app, recorder, full_ref, source_folder, build_folder, package_fol
                                       dest_package_folder, install_folder, hook_manager,
                                       conan_file_path, ref, local=True)
 
+    if cache.config.package_install_folder:
+        call_package_install(conanfile, dest_package_folder)
     packager.update_package_metadata(prev, layout, package_id, full_ref.revision)
     pref = PackageReference(pref.ref, pref.id, prev)
     if graph_info.graph_lock:
