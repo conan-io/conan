@@ -226,33 +226,34 @@ class TestFoldersAccess(unittest.TestCase):
 
 
 class RecipeFolderTest(unittest.TestCase):
+    recipe_conanfile = textwrap.dedent("""
+        from conans import ConanFile, load
+        import os
+        class Pkg(ConanFile):
+            exports = "file.txt"
+            def init(self):
+                r = load(os.path.join(self.recipe_folder, "file.txt"))
+                self.output.info("INIT: {}".format(r))
+            def set_name(self):
+                r = load(os.path.join(self.recipe_folder, "file.txt"))
+                self.output.info("SET_NAME: {}".format(r))
+            def configure(self):
+                r = load(os.path.join(self.recipe_folder, "file.txt"))
+                self.output.info("CONFIGURE: {}".format(r))
+            def requirements(self):
+                r = load(os.path.join(self.recipe_folder, "file.txt"))
+                self.output.info("REQUIREMENTS: {}".format(r))
+            def package(self):
+                r = load(os.path.join(self.recipe_folder, "file.txt"))
+                self.output.info("PACKAGE: {}".format(r))
+            def package_info(self):
+                r = load(os.path.join(self.recipe_folder, "file.txt"))
+                self.output.info("PACKAGE_INFO: {}".format(r))
+        """)
+
     def recipe_folder_test(self):
         client = TestClient()
-        recipe_conanfile = textwrap.dedent("""
-            from conans import ConanFile, load
-            import os
-            class Pkg(ConanFile):
-                exports = "file.txt"
-                def init(self):
-                    r = load(os.path.join(self.recipe_folder, "file.txt"))
-                    self.output.info("INIT: {}".format(r))
-                def set_name(self):
-                    r = load(os.path.join(self.recipe_folder, "file.txt"))
-                    self.output.info("SET_NAME: {}".format(r))
-                def configure(self):
-                    r = load(os.path.join(self.recipe_folder, "file.txt"))
-                    self.output.info("CONFIGURE: {}".format(r))
-                def requirements(self):
-                    r = load(os.path.join(self.recipe_folder, "file.txt"))
-                    self.output.info("REQUIREMENTS: {}".format(r))
-                def package(self):
-                    r = load(os.path.join(self.recipe_folder, "file.txt"))
-                    self.output.info("PACKAGE: {}".format(r))
-                def package_info(self):
-                    r = load(os.path.join(self.recipe_folder, "file.txt"))
-                    self.output.info("PACKAGE_INFO: {}".format(r))
-            """)
-        client.save({"conanfile.py": recipe_conanfile,
+        client.save({"conanfile.py": self.recipe_conanfile,
                      "file.txt": "MYFILE!"})
         client.run("export . pkg/0.1@user/testing")
         self.assertIn("INIT: MYFILE!", client.out)
@@ -265,3 +266,13 @@ class RecipeFolderTest(unittest.TestCase):
         self.assertIn("pkg/0.1@user/testing: REQUIREMENTS: MYFILE!", client.out)
         self.assertIn("pkg/0.1@user/testing: PACKAGE: MYFILE!", client.out)
         self.assertIn("pkg/0.1@user/testing: PACKAGE_INFO: MYFILE!", client.out)
+
+    def local_flow_test(self):
+        client = TestClient()
+        client.save({"conanfile.py": self.recipe_conanfile,
+                     "file.txt": "MYFILE!"})
+        client.run("install .")
+        self.assertIn("INIT: MYFILE!", client.out)
+        self.assertIn("SET_NAME: MYFILE!", client.out)
+        self.assertIn("conanfile.py: CONFIGURE: MYFILE!", client.out)
+        self.assertIn("conanfile.py: REQUIREMENTS: MYFILE!", client.out)
