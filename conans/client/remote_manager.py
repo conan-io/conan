@@ -180,7 +180,7 @@ class RemoteManager(object):
                 except OSError as e:
                     raise ConanException("%s\n\nCouldn't remove folder '%s', might be busy or open. "
                                          "Close any app using it, and retry" % (str(e), folder))
-                raise
+            raise
         self._hook_manager.execute("post_download_package", conanfile_path=conanfile_path,
                                    reference=pref.ref, package_id=pref.id, remote=remote)
 

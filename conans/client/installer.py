@@ -403,7 +403,8 @@ class BinaryInstaller(object):
             with layout.update_metadata() as metadata:
                 metadata.packages[pref.id].remote = node.binary_remote.name
             package_install_folder = layout.package_install(pref)
-            call_package_install(conanfile, package_install_folder)
+            if self._cache.config.package_install_folder:
+                call_package_install(conanfile, package_install_folder)
 
     def _build(self, nodes_by_level, keep_build, root_node, graph_info, remotes, build_mode, update):
         using_build_profile = bool(graph_info.profile_build)
@@ -503,10 +504,10 @@ class BinaryInstaller(object):
                     self._recorder.package_fetched_from_cache(pref)
 
                 if self._cache.config.package_install_folder:  # The opt-in
+                    package_folder = layout.package_install(pref)
                     if node.binary != BINARY_CACHE and hasattr(conanfile, "package_install"):
                         # If already in the cache the install method was called already
-                        package_install_folder = layout.package_install(pref)
-                        call_package_install(conanfile, package_install_folder)
+                        call_package_install(conanfile, package_folder)
 
             # Call the info method
             self._call_package_info(conanfile, package_folder, ref=pref.ref)
