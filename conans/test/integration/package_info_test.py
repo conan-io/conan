@@ -75,7 +75,7 @@ class HelloConan(ConanFile):
 
                 def build(self):
                     for dep_key, dep_value in self.deps_cpp_info.dependencies:
-                        self.output.info("%s name: %s" % (dep_key, dep_value.name))
+                        self.output.info("%s name: %s" % (dep_key, dep_value.get_name('txt')))
                 """)
 
         client = TestClient()
@@ -289,7 +289,7 @@ class HelloConan(ConanFile):
                 self.output.info("GLOBAL System libs: %s" % self.deps_cpp_info.system_libs)
                 # Deps values
                 for dep_key, dep_value in self.deps_cpp_info.dependencies:
-                    self.output.info("DEPS name: %s" % dep_value.name)
+                    self.output.info("DEPS name: %s" % dep_value.get_name('txt'))
                     self.output.info("DEPS Include paths: %s" % dep_value.include_paths)
                     self.output.info("DEPS Library paths: %s" % dep_value.lib_paths)
                     self.output.info("DEPS Binary paths: %s" % dep_value.bin_paths)

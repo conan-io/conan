@@ -29,11 +29,11 @@ Conan is a package manager for C and C++ developers:
 
 
 
-+------------------------+-------------------------+-------------------------+
-| **master**             | **develop**             |    **Code Climate**     |
-+========================+=========================+=========================+
-| |Build Status Master|  | |Build Status Develop|  |   |Develop climate|     |
-+------------------------+-------------------------+-------------------------+
++-------------------------+-------------------------+
+| **develop**             |    **Code Climate**     |
++=========================+=========================+
+| |Build Status Develop|  |   |Develop climate|     |
++-------------------------+-------------------------+
 
 
 Setup
@@ -212,9 +212,6 @@ License
 -------
 
 `MIT LICENSE <./LICENSE.md>`__
-
-.. |Build Status Master| image:: https://conan-ci.jfrog.info/buildStatus/icon?job=ConanTestSuite/master
-   :target: https://conan-ci.jfrog.info/job/ConanTestSuite/job/master
 
 .. |Build Status Develop| image:: https://conan-ci.jfrog.info/buildStatus/icon?job=ConanTestSuite/develop
    :target: https://conan-ci.jfrog.info/job/ConanTestSuite/job/develop

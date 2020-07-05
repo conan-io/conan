@@ -25,20 +25,22 @@ INSTALL_ERROR_BUILDING = "building"
 def _cpp_info_to_dict(cpp_info):
     doc = {}
     for it, value in vars(cpp_info).items():
-        if it.startswith("_") or not value:
-            continue
-
-        if it == "configs":
+        if it == "_configs":
             configs_data = {}
             for cfg_name, cfg_cpp_info in value.items():
                 configs_data[cfg_name] = _cpp_info_to_dict(cfg_cpp_info)
             doc["configs"] = configs_data
             continue
+
+        if it.startswith("_") or not value:
+            continue
+
         if it == "components":
             doc[it] = {comp_name: _cpp_info_to_dict(comp) for comp_name, comp in value.items()}
             continue
 
         doc[it] = value
+
     return doc
 
 
