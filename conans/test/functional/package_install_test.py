@@ -87,6 +87,18 @@ class PackageInstallTest(unittest.TestCase):
         self.assertNotIn("install_file.txt", os.listdir(self.install_folder))
         self.assertIn("install_file2.txt", os.listdir(self.install_folder))
 
+    def package_install_not_called_twice_test(self):
+        self.client.save({"conanfile.py": conanfile})
+        self.client.run("create . {}@".format(self.ref))
+        # Modify the installed file by hand to verify the changes are kept when reinstalling
+        with open(os.path.join(self.install_folder, "install_file.txt"), "w") as f:
+            f.write("MODIFIED")
+        self.client.run("install {}@".format(self.ref))
+        self.assertIn("Already installed!", self.client.out)
+        with open(os.path.join(self.install_folder, "install_file.txt"), "r") as f:
+            contents = f.read()
+            self.assertIn("MODIFIED", contents)
+
     def export_pkg_test(self):
         self.client.save({"conanfile.py": conanfile})
         self.client.run("install .")
