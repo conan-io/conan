@@ -1,4 +1,5 @@
 import os
+import textwrap
 import unittest
 
 from conans.test.utils.tools import TestClient
@@ -222,3 +223,45 @@ class TestFoldersAccess(unittest.TestCase):
                           "local_command": False}
         self.client.save({"conanfile.py": c1}, clean_first=True)
         self.client.run("create . conan/stable --build")
+
+
+class RecipeFolderTest(unittest.TestCase):
+    def recipe_folder_test(self):
+        client = TestClient()
+        recipe_conanfile = textwrap.dedent("""
+            from conans import ConanFile, load
+            import os
+            class Pkg(ConanFile):
+                exports = "file.txt"
+                def init(self):
+                    r = load(os.path.join(self.recipe_folder, "file.txt"))
+                    self.output.info("INIT: {}".format(r))
+                def set_name(self):
+                    r = load(os.path.join(self.recipe_folder, "file.txt"))
+                    self.output.info("SET_NAME: {}".format(r))
+                def configure(self):
+                    r = load(os.path.join(self.recipe_folder, "file.txt"))
+                    self.output.info("CONFIGURE: {}".format(r))
+                def requirements(self):
+                    r = load(os.path.join(self.recipe_folder, "file.txt"))
+                    self.output.info("REQUIREMENTS: {}".format(r))
+                def package(self):
+                    r = load(os.path.join(self.recipe_folder, "file.txt"))
+                    self.output.info("PACKAGE: {}".format(r))
+                def package_info(self):
+                    r = load(os.path.join(self.recipe_folder, "file.txt"))
+                    self.output.info("PACKAGE_INFO: {}".format(r))
+            """)
+        client.save({"conanfile.py": recipe_conanfile,
+                     "file.txt": "MYFILE!"})
+        client.run("export . pkg/0.1@user/testing")
+        self.assertIn("INIT: MYFILE!", client.out)
+        self.assertIn("SET_NAME: MYFILE!", client.out)
+        client.save({}, clean_first=True)
+        client.run("install pkg/0.1@user/testing --build")
+        self.assertIn("pkg/0.1@user/testing: INIT: MYFILE!", client.out)
+        self.assertNotIn("SET_NAME", client.out)
+        self.assertIn("pkg/0.1@user/testing: CONFIGURE: MYFILE!", client.out)
+        self.assertIn("pkg/0.1@user/testing: REQUIREMENTS: MYFILE!", client.out)
+        self.assertIn("pkg/0.1@user/testing: PACKAGE: MYFILE!", client.out)
+        self.assertIn("pkg/0.1@user/testing: PACKAGE_INFO: MYFILE!", client.out)
