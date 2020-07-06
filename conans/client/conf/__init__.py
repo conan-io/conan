@@ -480,6 +480,7 @@ class ConanClientConfigParser(ConfigParser, object):
         except ConanException:
             return None
 
+    @property
     def relax_lockfile(self):
         try:
             fix_id = self.get_item("general.relax_lockfile")

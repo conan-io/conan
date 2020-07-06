@@ -1,5 +1,6 @@
 import os
 import shutil
+import stat
 import textwrap
 import time
 from multiprocessing.pool import ThreadPool
@@ -8,7 +9,8 @@ from conans.client import tools
 from conans.client.conanfile.build import run_build_method
 from conans.client.conanfile.package import run_package_method
 from conans.client.file_copier import report_copied_files
-from conans.client.generators import TXTGenerator, write_generators, VirtualEnvGenerator
+from conans.client.generators import TXTGenerator, write_generators, VirtualEnvGenerator, \
+    VirtualRunEnvGenerator
 from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_EDITABLE, \
     BINARY_MISSING, BINARY_SKIP, BINARY_UPDATE, BINARY_UNKNOWN, CONTEXT_HOST
 from conans.client.importer import remove_imports, run_imports
@@ -607,14 +609,21 @@ class BinaryInstaller(object):
             return
 
         # Create wrappers for the executables
-        conanfile.output.highlight("Create executable wrappers()")
         wrappers_folder = os.path.join(package_folder, '.wrappers')
+        conanfile.output.highlight("Create executable wrappers at '{}'".format(wrappers_folder))
         shutil.rmtree(wrappers_folder, ignore_errors=True)
         os.mkdir(wrappers_folder)
 
         # - I will need the environment
-        env = VirtualEnvGenerator(conanfile)
+        env = VirtualRunEnvGenerator(conanfile)
         env.output_path = wrappers_folder
+
+        # TODO: Need to add from teh consumer point of view
+        for it in conanfile.cpp_info.lib_paths:
+            env.env["DYLD_LIBRARY_PATH"].insert(0, it)
+            # FIXME: Watch out! It this same list object! env.env["LD_LIBRARY_PATH"].insert(0, it)
+        # TODO: Other environment variables
+
         for filename, content in env.content.items():
             with open(os.path.join(wrappers_folder, filename), 'w') as f:
                 f.write(content)
@@ -622,11 +631,17 @@ class BinaryInstaller(object):
         # - and the wrappers
         for exec in conanfile.cpp_info.exes:
             path_to_exec = os.path.join(package_folder, 'bin', exec)
-            with open(os.path.join(wrappers_folder, exec), 'w') as f:
+            exec_wrapper = os.path.join(wrappers_folder, exec)
+            with open(exec_wrapper, 'w') as f:
                 f.write('echo Calling {} wrapper\n'.format(exec))
-                f.write('source "{}"\n'.format(os.path.join(wrappers_folder, 'activate.sh')))
+                f.write('source "{}"\n'.format(os.path.join(wrappers_folder, 'activate_run.sh')))
+                f.write('pushd "{}"\n'.format(os.path.dirname(path_to_exec)))
                 f.write('"{}" "$@"\n'.format(path_to_exec))
-                f.write('source "{}"\n'.format(os.path.join(wrappers_folder, 'deactivate.sh')))
+                f.write('popd\n')
+                f.write('source "{}"\n'.format(os.path.join(wrappers_folder, 'deactivate_run.sh')))
+
+            st = os.stat(exec_wrapper)
+            os.chmod(exec_wrapper, st.st_mode | stat.S_IEXEC)
 
         # - Add this extra PATH to the environment
         conanfile.env_info.PATH.insert(0, wrappers_folder)
