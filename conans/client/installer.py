@@ -1,9 +1,8 @@
 import os
 import shutil
 import textwrap
-from multiprocessing.pool import ThreadPool
-
 import time
+from multiprocessing.pool import ThreadPool
 
 from conans.client import tools
 from conans.client.conanfile.build import run_build_method
@@ -13,7 +12,7 @@ from conans.client.generators import TXTGenerator, write_generators, VirtualEnvG
 from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_EDITABLE, \
     BINARY_MISSING, BINARY_SKIP, BINARY_UPDATE, BINARY_UNKNOWN, CONTEXT_HOST
 from conans.client.importer import remove_imports, run_imports
-from conans.client.packager import update_package_metadata, call_package_install
+from conans.client.packager import update_package_metadata
 from conans.client.recorder.action_recorder import INSTALL_ERROR_BUILDING, INSTALL_ERROR_MISSING, \
     INSTALL_ERROR_MISSING_BUILD_FOLDER
 from conans.client.source import complete_recipe_sources, config_source
@@ -23,7 +22,6 @@ from conans.client.tools.env import pythonpath
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
                            conanfile_exception_formatter)
 from conans.model.build_info import CppInfo, DepCppInfo
-from conans.model.conan_file import get_env_context_manager
 from conans.model.editable_layout import EditableLayout
 from conans.model.env_info import EnvInfo
 from conans.model.graph_info import GraphInfo
@@ -35,8 +33,7 @@ from conans.model.user_info import UserInfo
 from conans.paths import BUILD_INFO, CONANINFO, RUN_LOG_NAME
 from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
 from conans.util.env_reader import get_env
-from conans.util.files import (clean_dirty, is_dirty, make_read_only, mkdir, rmdir, save,
-                               set_dirty,
+from conans.util.files import (clean_dirty, is_dirty, make_read_only, mkdir, rmdir, save, set_dirty,
                                set_dirty_context_manager)
 from conans.util.log import logger
 from conans.util.tracer import log_package_built, log_package_got_from_local_cache
@@ -201,8 +198,6 @@ class _PackageBuilder(object):
         # BUILD & PACKAGE
         with package_layout.conanfile_read_lock(self._output):
             _remove_folder_raising(package_folder)
-            if self._cache.config.package_install_folder:
-                _remove_folder_raising(package_layout.package_install(pref))
             mkdir(build_folder)
             with tools.chdir(build_folder):
                 self._output.info('Building your package in %s' % build_folder)
@@ -223,11 +218,6 @@ class _PackageBuilder(object):
                     prev = self._package(conanfile, pref, package_layout, conanfile_path, build_folder, package_folder)
                     assert prev
                     node.prev = prev
-
-                    if self._cache.config.package_install_folder:
-                        # TODO: It is copying also conaninfo and conanmanifest, is it a problem?
-                        shutil.copytree(package_folder, package_layout.package_install(pref), symlinks=True)
-
                     log_file = os.path.join(build_folder, RUN_LOG_NAME)
                     log_file = log_file if os.path.exists(log_file) else None
                     log_package_built(pref, time.time() - t1, log_file)
@@ -398,13 +388,11 @@ class BinaryInstaller(object):
         package_folder = layout.package(pref)
         output = conanfile.output
         with set_dirty_context_manager(package_folder):
-            self._remote_manager.get_package(pref, layout, node.binary_remote, output, self._recorder)
+            self._remote_manager.get_package(pref, package_folder, node.binary_remote,
+                                             output, self._recorder)
             output.info("Downloaded package revision %s" % pref.revision)
             with layout.update_metadata() as metadata:
                 metadata.packages[pref.id].remote = node.binary_remote.name
-            package_install_folder = layout.package_install(pref)
-            if self._cache.config.package_install_folder:
-                call_package_install(conanfile, package_install_folder)
 
     def _build(self, nodes_by_level, keep_build, root_node, graph_info, remotes, build_mode, update):
         using_build_profile = bool(graph_info.profile_build)
@@ -502,12 +490,6 @@ class BinaryInstaller(object):
                     output.success('Already installed!')
                     log_package_got_from_local_cache(pref)
                     self._recorder.package_fetched_from_cache(pref)
-
-                if self._cache.config.package_install_folder:  # The opt-in
-                    package_folder = layout.package_install(pref)
-                    if node.binary != BINARY_CACHE and hasattr(conanfile, "package_install"):
-                        # If already in the cache the install method was called already
-                        call_package_install(conanfile, package_folder)
 
             # Call the info method
             self._call_package_info(conanfile, package_folder, ref=pref.ref)

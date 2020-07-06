@@ -52,11 +52,3 @@ def report_files_from_manifest(output, manifest):
         return
 
     report_copied_files(copied_files, output, message_suffix="Packaged")
-
-
-def call_package_install(conanfile, package_install_folder):
-    with get_env_context_manager(conanfile):
-        conanfile.output.highlight("Calling package_install()")
-        conanfile.package_install_folder = package_install_folder
-        with conanfile_exception_formatter(str(conanfile), "install"):
-            conanfile.package_install()

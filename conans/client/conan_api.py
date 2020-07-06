@@ -527,6 +527,7 @@ class ConanAPIV1(object):
                 generators = False
 
             install_folder = _make_abs_path(install_folder, cwd)
+
             mkdir(install_folder)
             remotes = self.app.load_remotes(remote_name=remote_name, update=update)
             deps_install(self.app, ref_or_path=reference, install_folder=install_folder,
@@ -563,6 +564,7 @@ class ConanAPIV1(object):
 
             install_folder = _make_abs_path(install_folder, cwd)
             conanfile_path = _get_conanfile_path(path, cwd, py=None)
+
             remotes = self.app.load_remotes(remote_name=remote_name, update=update)
             deps_install(app=self.app,
                          ref_or_path=conanfile_path,
