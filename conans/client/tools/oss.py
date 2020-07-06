@@ -178,9 +178,21 @@ class OSInfo(object):
 
     @property
     def with_apt(self):
-        apt_path = '/usr/bin/apt'
-        sys_has_apt = os.path.isfile(apt_path) and os.access(apt_path, os.X_OK)
-        return self.is_linux and sys_has_apt
+        if not self.is_linux:
+            return False
+
+        apt_location = which('apt')
+        if apt_location:
+            # Check if we actually have the official apt package. The '--help'
+            # argument ensures that we run apt-get successfully.
+            try:
+                output = subprocess.run([apt_location, '--help'], capture_output=True, check=True)
+            except subprocess.CalledProcessError:
+                return False
+            else:
+                return 'This APT has Super Cow Powers.' in str(output.stdout)
+        else:
+            return False
 
     @property
     def with_yum(self):
