@@ -9,7 +9,7 @@ from collections import namedtuple
 
 from conans.client.tools.env import environment_append
 from conans.client.tools.files import load, which
-from conans.errors import ConanException
+from conans.errors import CalledProcessErrorWithStderr, ConanException
 from conans.model.version import Version
 from conans.util.runners import check_output_runner
 
@@ -186,11 +186,11 @@ class OSInfo(object):
             # Check if we actually have the official apt package. The '--help'
             # argument ensures that we run apt-get successfully.
             try:
-                output = subprocess.run([apt_location, '--help'], capture_output=True, check=True)
-            except subprocess.CalledProcessError:
+                output = check_output_runner([apt_location, '--help'])
+            except CalledProcessErrorWithStderr:
                 return False
             else:
-                return 'This APT has Super Cow Powers.' in str(output.stdout)
+                return 'This APT has Super Cow Powers.' in output
         else:
             return False
 
