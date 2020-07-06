@@ -55,6 +55,7 @@ class _CppInfo(object):
         self.frameworkdirs = []
         self.rootpaths = []
         self.libs = []  # The libs to link against
+        self.exes = []
         self.defines = []  # preprocessor definitions
         self.cflags = []  # pure C flags
         self.cxxflags = []  # C++ compilation flags
@@ -240,6 +241,7 @@ class CppInfo(_CppInfo):
             self.builddirs != [DEFAULT_BUILD] or
             self.frameworkdirs != [DEFAULT_FRAMEWORK] or
             self.libs or
+            self.exes or
             self.system_libs or
             self.frameworks or
             self.defines or
@@ -297,6 +299,7 @@ class _BaseDepsCppInfo(_CppInfo):
         self.builddirs = merge_lists(self.builddirs, dep_cpp_info.build_paths)
         self.frameworkdirs = merge_lists(self.frameworkdirs, dep_cpp_info.framework_paths)
         self.libs = merge_lists(self.libs, dep_cpp_info.libs)
+        self.exes = merge_lists(self.exes, dep_cpp_info.exes)
         self.frameworks = merge_lists(self.frameworks, dep_cpp_info.frameworks)
         self.build_modules = merge_lists(self.build_modules, dep_cpp_info.build_modules_paths)
         self.rootpaths.append(dep_cpp_info.rootpath)
@@ -349,6 +352,7 @@ class DepCppInfo(object):
     def __init__(self, cpp_info):
         self._cpp_info = cpp_info
         self._libs = None
+        self._exes = None
         self._system_libs = None
         self._frameworks = None
         self._defines = None

@@ -486,7 +486,7 @@ class ConanClientConfigParser(ConfigParser, object):
             fix_id = self.get_item("general.package_install_folder")
             return fix_id.lower() in ("1", "true")
         except ConanException:
-            return None
+            return True
 
     @property
     def relax_lockfile(self):

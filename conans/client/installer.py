@@ -9,7 +9,7 @@ from conans.client import tools
 from conans.client.conanfile.build import run_build_method
 from conans.client.conanfile.package import run_package_method
 from conans.client.file_copier import report_copied_files
-from conans.client.generators import TXTGenerator, write_generators
+from conans.client.generators import TXTGenerator, write_generators, VirtualEnvGenerator
 from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_EDITABLE, \
     BINARY_MISSING, BINARY_SKIP, BINARY_UPDATE, BINARY_UNKNOWN, CONTEXT_HOST
 from conans.client.importer import remove_imports, run_imports
@@ -513,6 +513,9 @@ class BinaryInstaller(object):
             self._call_package_info(conanfile, package_folder, ref=pref.ref)
             self._recorder.package_cpp_info(pref, conanfile.cpp_info)
 
+            # Create the wrappers
+            self._create_the_wrappers(conanfile, package_folder)
+
     def _build_package(self, node, output, keep_build, remotes):
         conanfile = node.conanfile
         # It is necessary to complete the sources of python requires, which might be used
@@ -616,3 +619,32 @@ class BinaryInstaller(object):
                         conanfile._conan_dep_cpp_info = DepCppInfo(conanfile.cpp_info)
                     self._hook_manager.execute("post_package_info", conanfile=conanfile,
                                                reference=ref)
+
+    def _create_the_wrappers(self, conanfile, package_folder):
+        if not conanfile.cpp_info.exes:
+            return
+
+        # Create wrappers for the executables
+        conanfile.output.highlight("Create executable wrappers()")
+        wrappers_folder = os.path.join(package_folder, '.wrappers')
+        shutil.rmtree(wrappers_folder, ignore_errors=True)
+        os.mkdir(wrappers_folder)
+
+        # - I will need the environment
+        env = VirtualEnvGenerator(conanfile)
+        env.output_path = wrappers_folder
+        for filename, content in env.content.items():
+            with open(os.path.join(wrappers_folder, filename), 'w') as f:
+                f.write(content)
+
+        # - and the wrappers
+        for exec in conanfile.cpp_info.exes:
+            path_to_exec = os.path.join(package_folder, 'bin', exec)
+            with open(os.path.join(wrappers_folder, exec), 'w') as f:
+                f.write('echo Calling {} wrapper\n'.format(exec))
+                f.write('source "{}"\n'.format(os.path.join(wrappers_folder, 'activate.sh')))
+                f.write('"{}" "$@"\n'.format(path_to_exec))
+                f.write('source "{}"\n'.format(os.path.join(wrappers_folder, 'deactivate.sh')))
+
+        # - Add this extra PATH to the environment
+        conanfile.env_info.PATH.insert(0, wrappers_folder)

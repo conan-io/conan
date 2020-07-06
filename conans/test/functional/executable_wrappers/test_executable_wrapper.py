@@ -4,7 +4,7 @@ import textwrap
 from conans.test.utils.tools import TestClient
 
 
-class ExecutableWrapperGeneratorTestCase(unittest.TestCase):
+class ExecutableWrapperTestCase(unittest.TestCase):
     zlib = textwrap.dedent("""
         from conans import ConanFile
 
@@ -62,6 +62,6 @@ class ExecutableWrapperGeneratorTestCase(unittest.TestCase):
                 'app.py': self.conanfile})
         t.run("create zlib.py zlib/1.0@ --profile=default")
         t.run("create cmake.py cmake/1.0@ --profile=default")
-        t.run("install app.py --profile:host=default --profile:build=default -g virtualenv -g executable_wrapper")
+        t.run("create app.py app/1.0@ --profile:host=default --profile:build=default")
         print(t.out)
         self.fail("AAA")
