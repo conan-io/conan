@@ -181,7 +181,7 @@ class OSInfo(object):
         if not self.is_linux:
             return False
 
-        apt_location = which('apt')
+        apt_location = which('apt-get')
         if apt_location:
             # Check if we actually have the official apt package. The '--help'
             # argument ensures that we run apt-get successfully.
