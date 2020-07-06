@@ -22,9 +22,9 @@ class ExecutableWrapperGenerator(Generator):
         #   environment, executes the original program and restores the environment.
 
         # FIXME: I know there is a BR called 'cmake' and virtualenv generator is in place
-        return {'cmake.sh': textwrap.dedent("""
+        return {'cmake': textwrap.dedent("""
             source activate.sh
-            echo Calling CMake wrapper with 'cmake "@$"'
+            echo Calling CMake wrapper
             shift
             cmake "$@"
             source deactivate.sh

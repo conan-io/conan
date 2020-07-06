@@ -17,6 +17,7 @@ class ExecutableWrapperGeneratorTestCase(unittest.TestCase):
 
     build_requires = textwrap.dedent("""
         import os
+        import stat
         from conans import ConanFile
 
         class Recipe(ConanFile):
@@ -28,6 +29,8 @@ class ExecutableWrapperGeneratorTestCase(unittest.TestCase):
                     f.write("set -e\\n")
                     f.write("set -x\\n")
                     f.write("ls -la\\n")
+                st = os.stat('cmake')
+                os.chmod('cmake', st.st_mode | stat.S_IEXEC)
 
             def package(self):
                 self.copy("cmake", dst="bin")
