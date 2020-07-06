@@ -312,6 +312,42 @@ class PyRequiresExtendTest(unittest.TestCase):
         self.assertIn('"type": "git",', client.out)
         self.assertIn('"url": "somerepo"', client.out)
 
+    def reuse_customize_scm_test(self):
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class SomeBase(object):
+                base_repo = "somerepo"
+                scm = {"type" : "git",
+                       "url" : base_repo,
+                       "revision" : "auto"}
+
+            class MyConanfileBase(SomeBase, ConanFile):
+                pass
+            """)
+        create_local_git_repo({"conanfile.py": conanfile}, branch="my_release",
+                              folder=client.current_folder)
+        client.run("export . base/1.1@user/testing")
+        client.run("get base/1.1@user/testing")
+        self.assertIn('"url": "somerepo"', client.out)
+
+        reuse = textwrap.dedent("""
+            from conans import ConanFile
+            class PkgTest(ConanFile):
+                base_repo = "other_repo"
+                python_requires = "base/1.1@user/testing"
+                python_requires_extend = "base.SomeBase"
+                def init(self):
+                    self.scm["url"] = self.base_repo
+            """)
+        client.save({"conanfile.py": reuse})
+        client.run("export . Pkg/0.1@user/testing")
+        client.run("get Pkg/0.1@user/testing")
+        self.assertNotIn("scm = base.scm", client.out)
+        self.assertIn('scm = {"revision":', client.out)
+        self.assertIn('"type": "git",', client.out)
+        self.assertIn('"url": "other_repo"', client.out)
+
     def reuse_scm_multiple_conandata_test(self):
         # https://github.com/conan-io/conan/issues/7236
         # This only works when using conandata.yml, conanfile.py replace is broken
