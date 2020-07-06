@@ -1,9 +1,9 @@
 import json
 
 from conans.client.output import Color
-from conans.errors import ConanException
+from conans.errors import ConanException, NoRemoteAvailable
 from conans.cli.cli import OnceArgument, Extender
-from conans.cli.command import conan_command
+from conans.cli.command import conan_command, info_handler
 
 
 def output_search_cli(info, out):
@@ -17,8 +17,25 @@ def output_search_cli(info, out):
 
 
 def output_search_json(info, out):
-    myjson = json.dumps(info["results"], indent=4)
+    results = info["results"]
+    myjson = json.dumps(results, indent=4)
     out.writeln(myjson)
+
+
+@info_handler
+def apiv2_search_recipes(query, remote_patterns=None, local_cache=False):
+    remote = None
+    if remote_patterns is not None and len(remote_patterns) > 0:
+        remote = remote_patterns[0].replace("*", "remote")
+
+    if remote and "bad" in remote:
+        raise NoRemoteAvailable("Remote '%s' not found in remotes" % remote)
+
+    search_results = {"results": [{"remote": remote,
+                                   "items": [{"recipe": {"id": "app/1.0"}},
+                                             {"recipe": {"id": "liba/1.0"}}]}]}
+
+    return search_results
 
 
 @conan_command(group="Consumer commands", cli=output_search_cli, json=output_search_json)
@@ -37,24 +54,9 @@ def search(*args, conan_api, parser, **kwargs):
     exclusive_args.add_argument('-c', '--cache', action="store_true",
                                 help="Search in the local cache")
     parser.add_argument('-o', '--output', default="cli", action=OnceArgument,
-                        help="Select the output format: json, html,...")
+                        help="Select the output format: cli, json.")
     args = parser.parse_args(*args)
 
-    try:
-        def apiv2_search_recipes(query, remote_patterns=None, local_cache=False):
-            remote = None
-            if remote_patterns is not None and len(remote_patterns) > 0:
-                remote = remote_patterns[0].replace("*", "remote")
-
-            search_results = {"results": [{"remote": remote,
-                                           "items": [{"recipe": {"id": "app/1.0"}},
-                                                     {"recipe": {"id": "liba/1.0"}}]}]}
-            return search_results
-
-        remotes = args.remote or []
-        info = apiv2_search_recipes(args.query, remote_patterns=remotes, local_cache=args.cache)
-    except ConanException as exc:
-        info = exc.info
-        raise
-    finally:
-        return info, args.output
+    remotes = args.remote or []
+    info = apiv2_search_recipes(args.query, remote_patterns=remotes, local_cache=args.cache)
+    return info, args.output
