@@ -7,7 +7,11 @@ from conans.errors import ConanException
 class ConanCommand(object):
     def __init__(self, method, group=None, **kwargs):
         self._formatters = {}
+        self._allowed_formatters = ["cli", "json"]
         for kind, action in kwargs.items():
+            if kind not in self._allowed_formatters:
+                raise ConanException("Formatter '{}' not allowed. Allowed formatters: {}"
+                                     .format(kind, " ".join(self._allowed_formatters)))
             if callable(action):
                 self._formatters[kind] = action
         self._group = group or "Misc commands"
