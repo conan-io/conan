@@ -2,7 +2,8 @@ import json
 
 from conans.client.output import Color
 from conans.errors import ConanException
-from conans.cli.command import OnceArgument, Extender, conan_command
+from conans.cli.cli import OnceArgument, Extender
+from conans.cli.command import conan_command
 
 
 def output_search_cli(info, out):
