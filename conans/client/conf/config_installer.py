@@ -215,18 +215,22 @@ def _save_configs(configs_file, configs):
                                   indent=True))
 
 
+def _load_configs(configs_file):
+    try:
+        configs = json.loads(load(configs_file))
+    except Exception as e:
+        raise ConanException("Error loading configs-install file: %s\n%s"
+                             % (configs_file, str(e)))
+    return [_ConfigOrigin(config) for config in configs]
+
+
 def configuration_install(app, uri, verify_ssl, config_type=None,
                           args=None, source_folder=None, target_folder=None):
     cache, output, requester = app.cache, app.out, app.requester
     configs = []
     configs_file = cache.config_install_file
     if os.path.isfile(configs_file):
-        try:
-            configs = json.loads(load(configs_file))
-        except Exception as e:
-            raise ConanException("Error loading configs-install file: %s\n%s"
-                                 % (configs_file, str(e)))
-        configs = [_ConfigOrigin(config) for config in configs]
+        configs = _load_configs(configs_file)
     if uri is None:
         if config_type or args or not verify_ssl:  # Not the defaults
             if not configs:
@@ -262,6 +266,7 @@ def is_config_install_scheduled(api):
     """ Validate if the next config install is scheduled to occur now
 
         When config_install_interval is not configured, config install should not run
+        When configs file is empty, scheduled config install should not run
         When config_install_interval is configured, config install will respect the delta from:
             last conan install execution (sched file) + config_install_interval value < now
 
@@ -273,10 +278,14 @@ def is_config_install_scheduled(api):
     config_install_file = cache.config_install_file
     if interval is not None:
         if os.path.exists(config_install_file):
-            timestamp = os.path.getmtime(config_install_file)
-            sched = datetime.fromtimestamp(timestamp, tz=gettz())
-            sched += interval
-            now = datetime.now(gettz())
-            return now > sched
+            if _load_configs(config_install_file):
+                timestamp = os.path.getmtime(config_install_file)
+                sched = datetime.fromtimestamp(timestamp, tz=gettz())
+                sched += interval
+                now = datetime.now(gettz())
+                return now > sched
+            else:
+                api.out.warn("Skipping scheduled config install, "
+                             "no config listed in config_install file")
         else:
             raise ConanException("config_install_interval defined, but no config_install file")

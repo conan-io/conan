@@ -641,7 +641,7 @@ class ConfigInstallSchedTest(unittest.TestCase):
         self.assertIn("ERROR: Incorrect definition of general.config_install_interval: 1s",
                       self.client.out)
 
-    def test_config_install_removed_git_repo(self):
+    def test_config_install_remove_git_repo(self):
         """ config_install_interval breaks when remote git has been removed
         """
         with self.client.chdir(self.folder):
@@ -657,3 +657,29 @@ class ConfigInstallSchedTest(unittest.TestCase):
         with patch("conans.client.command.is_config_install_scheduled", return_value=True):
             self.client.run("config --help", assert_error=True)
         self.assertIn("ERROR: Failed conan config install: Can't clone repo", self.client.out)
+
+    def test_config_install_remove_config_repo(self):
+        """ config_install_interval should not run when config list is empty
+        """
+        with self.client.chdir(self.folder):
+            self.client.run_command('git init .')
+            self.client.run_command('git add .')
+            self.client.run_command('git config user.name myname')
+            self.client.run_command('git config user.email myname@mycompany.com')
+            self.client.run_command('git commit -m "mymsg"')
+        self.client.run('config install "%s/.git" --type git' % self.folder)
+        self.assertIn("Processing conan.conf", self.client.out)
+        self.assertIn("Repo cloned!", self.client.out)
+        with patch("conans.client.command.is_config_install_scheduled", return_value=True):
+            self.client.run("config --help")
+            self.assertIn("Repo cloned!", self.client.out)
+
+            self.client.run("config install --remove 0")
+            self.assertEqual("", self.client.out)
+
+            self.client.run("config install --list")
+            self.assertEqual("", self.client.out)
+
+        self.client.run("help")
+        self.assertIn("WARN: Skipping scheduled config install, "
+                      "no config listed in config_install file", self.client.out)
