@@ -149,7 +149,8 @@ class Cli(object):
         """
         version = sys.version_info
         if version.major == 2 or version.minor <= 4:
-            raise ConanException("Unsupported Python version. Minimum required version is Python 3.5")
+            raise ConanException(
+                "Unsupported Python version. Minimum required version is Python 3.5")
 
         ret_code = SUCCESS
         try:
@@ -218,7 +219,7 @@ def main(args):
         6: Invalid configuration (done)
     """
     try:
-        conan_api, _, _ = Conan.factory()
+        conan_api, _, _ = Conan.factory()  # FIXME: Conan factory will be removed in Conan 2.0
     except ConanMigrationError:  # Error migrating
         sys.exit(ERROR_MIGRATION)
     except ConanException as e:
