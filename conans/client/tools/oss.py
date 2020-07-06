@@ -9,7 +9,7 @@ from collections import namedtuple
 
 from conans.client.tools.env import environment_append
 from conans.client.tools.files import load, which
-from conans.errors import ConanException
+from conans.errors import CalledProcessErrorWithStderr, ConanException
 from conans.model.version import Version
 from conans.util.runners import check_output_runner
 
@@ -178,8 +178,21 @@ class OSInfo(object):
 
     @property
     def with_apt(self):
-        apt_distros = ("debian", "ubuntu", "knoppix", "linuxmint", "raspbian", "neon", "pop")
-        return self.is_linux and self.linux_distro in apt_distros
+        if not self.is_linux:
+            return False
+
+        apt_location = which('apt-get')
+        if apt_location:
+            # Check if we actually have the official apt package.
+            try:
+                output = check_output_runner([apt_location, 'moo'])
+            except CalledProcessErrorWithStderr:
+                return False
+            else:
+                # Yes, we have mooed today. :-) MOOOOOOOO.
+                return True
+        else:
+            return False
 
     @property
     def with_yum(self):
