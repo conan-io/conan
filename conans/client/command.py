@@ -2044,7 +2044,8 @@ class Command(object):
                 self._print_similar(command)
                 raise ConanException("Unknown command %s" % str(exc))
 
-            if (command != "config" or (command == "config" and args[0][1] != "install")) and \
+            if (command != "config" or
+               (command == "config" and len(args[0]) > 1 and args[0][1] != "install")) and \
                is_config_install_scheduled(self._conan):
                 self._conan.config_install(None, None)
 
