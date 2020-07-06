@@ -149,7 +149,7 @@ class Cli(object):
         """
         version = sys.version_info
         if version.major == 2 or version.minor <= 4:
-            raise ConanException("Unsupported Python version")
+            raise ConanException("Unsupported Python version. Minimum required version is Python 3.5")
 
         ret_code = SUCCESS
         try:
