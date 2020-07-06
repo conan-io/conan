@@ -30,6 +30,7 @@ def search(*args, conan_api, parser, **kwargs):
     parser.add_argument('query',
                         help="Search query to find package recipe reference, e.g., 'boost', 'lib*'")
 
+    # TODO: Discuss if --cache and --remote are exclusive
     exclusive_args = parser.add_mutually_exclusive_group()
     exclusive_args.add_argument('-r', '--remote', default=None, action=Extender, nargs='?',
                                 help="Remote to search. Accepts wildcards. To search in all remotes use *")
