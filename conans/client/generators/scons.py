@@ -35,24 +35,20 @@ class SConsGenerator(Generator):
 
         sections = ["conan = {\n"]
 
-        libs = self.deps_build_info.libs + self.deps_build_info.system_libs
-        all_flags = template.render(dep="conan", info=self.deps_build_info, libs=libs)
+        all_flags = template.render(dep="conan", info=self.deps_build_info)
         sections.append(all_flags)
 
         for config, cpp_info in self.deps_build_info.configs.items():
-            libs = cpp_info.libs + cpp_info.system_libs
-            all_flags = template.render(dep="conan:" + config, info=cpp_info, libs=libs)
+            all_flags = template.render(dep="conan:" + config, info=cpp_info)
             sections.append(all_flags)
 
         for dep_name, info in self.deps_build_info.dependencies:
             dep_name = dep_name.replace("-", "_")
-            libs = info.libs + info.system_libs
-            dep_flags = template.render(dep=dep_name, info=info, libs=libs)
+            dep_flags = template.render(dep=dep_name, info=info)
             sections.append(dep_flags)
 
             for config, cpp_info in info.configs.items():
-                libs = cpp_info.libs + cpp_info.system_libs
-                all_flags = template.render(dep=dep_name + ":" + config, info=cpp_info, libs=libs)
+                all_flags = template.render(dep=dep_name + ":" + config, info=cpp_info)
                 sections.append(all_flags)
 
         sections.append("}\n")
