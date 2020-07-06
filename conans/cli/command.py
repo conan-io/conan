@@ -1,6 +1,7 @@
 import argparse
 
 from conans.cli.cli import SmartFormatter
+from conans.errors import ConanException
 
 
 class ConanCommand(object):
@@ -12,7 +13,12 @@ class ConanCommand(object):
         self._group = group or "Misc commands"
         self._name = method.__name__.replace("_", "-")
         self._method = method
-        self._doc = method.__doc__ or "Empty description"
+        if method.__doc__:
+            self._doc = method.__doc__
+        else:
+            raise ConanException("No documentation string defined for command: '{}'. Conan "
+                                 "commands should provide a documentation string explaining "
+                                 "its use briefly.".format(self._name))
         self._parser = argparse.ArgumentParser(description=self._doc,
                                                prog="conan {}".format(self._name),
                                                formatter_class=SmartFormatter)
