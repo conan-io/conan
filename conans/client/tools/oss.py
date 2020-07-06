@@ -183,14 +183,14 @@ class OSInfo(object):
 
         apt_location = which('apt-get')
         if apt_location:
-            # Check if we actually have the official apt package. The '--help'
-            # argument ensures that we run apt-get successfully.
+            # Check if we actually have the official apt package.
             try:
-                output = check_output_runner([apt_location, '--help'])
+                output = check_output_runner([apt_location, 'moo'])
             except CalledProcessErrorWithStderr:
                 return False
             else:
-                return 'This APT has Super Cow Powers.' in output
+                # Yes, we have mooed today. :-) MOOOOOOOO.
+                return True
         else:
             return False
 
