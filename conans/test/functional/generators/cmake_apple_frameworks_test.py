@@ -1,11 +1,13 @@
+import os
 import platform
 import textwrap
 import unittest
 
+from parameterized import parameterized
+
 from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient
-from parameterized import parameterized
-import os
+
 
 @unittest.skipUnless(platform.system() == "Darwin", "Only for MacOS")
 class CMakeAppleFrameworksTestCase(unittest.TestCase):
