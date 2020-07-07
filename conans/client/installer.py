@@ -640,6 +640,7 @@ class BinaryInstaller(object):
         # - and the wrappers
         for executable in conanfile.cpp_info.exes:
             path_to_exec = os.path.join(package_folder, 'bin', executable)
+            path_to_exec = path_to_exec + ".exe" if platform.system() == "Windows" else path_to_exec  # TODO: Inspect the folder to get the full path
             exec_wrapper_ext = ".cmd" if platform.system() == "Windows" else ""
             exec_wrapper = os.path.join(wrappers_folder, executable + exec_wrapper_ext)
             with open(exec_wrapper, 'w') as f:

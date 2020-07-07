@@ -26,7 +26,8 @@ class ExecutableWrapperTestCase(unittest.TestCase):
             settings = "os"
 
             def build(self):
-                with open("cmake", "w") as f:
+                filename = "cmake.exe" if self.settings.os == "Windows" else "cmake"
+                with open(filename, "w") as f:
                     f.write("set -e\\n")
                     f.write("set -x\\n")
                     f.write("echo MY CMAKE!!!\\n")
@@ -34,11 +35,12 @@ class ExecutableWrapperTestCase(unittest.TestCase):
                         f.write("echo arguments: %*\\n")
                     else:
                         f.write("echo arguments: $@\\n")
-                st = os.stat('cmake')
-                os.chmod('cmake', st.st_mode | stat.S_IEXEC)
+                st = os.stat(filename)
+                os.chmod(filename, st.st_mode | stat.S_IEXEC)
 
             def package(self):
                 self.copy("cmake", dst="bin")
+                self.copy("cmake.exe", dst="bin")
 
             def package_info(self):
                 self.cpp_info.exes = ["cmake"]
