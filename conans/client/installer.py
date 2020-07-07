@@ -643,6 +643,8 @@ class BinaryInstaller(object):
             exec_wrapper_ext = ".cmd" if platform.system() == "Windows" else ""
             exec_wrapper = os.path.join(wrappers_folder, executable + exec_wrapper_ext)
             with open(exec_wrapper, 'w') as f:
+                if platform.system() != "Windows":
+                    f.write('#!/bin/bash\n')
                 f.write('echo Calling {} wrapper\n'.format(executable))
                 f.write('{}\n'.format(activate))
                 f.write('pushd "{}"\n'.format(os.path.dirname(path_to_exec)))
