@@ -648,7 +648,7 @@ class BinaryInstaller(object):
                 f.write('echo Calling {} wrapper\n'.format(executable))
                 f.write('{}\n'.format(activate))
                 f.write('pushd "{}"\n'.format(os.path.dirname(path_to_exec)))
-                f.write('"{}" "$@"\n'.format(path_to_exec))
+                f.write('{}"{}" "$@"\n'.format("call " if platform.system() == "Windows" else "", path_to_exec))
                 f.write('popd\n')
                 f.write('{}\n'.format(deactivate))
 
