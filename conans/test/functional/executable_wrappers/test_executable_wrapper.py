@@ -26,7 +26,7 @@ class ExecutableWrapperTestCase(unittest.TestCase):
             settings = "os"
 
             def build(self):
-                filename = "cmake.exe" if self.settings.os == "Windows" else "cmake"
+                filename = "cmake.cmd" if self.settings.os == "Windows" else "cmake"
                 with open(filename, "w") as f:
                     f.write("set -e\\n")
                     f.write("set -x\\n")
