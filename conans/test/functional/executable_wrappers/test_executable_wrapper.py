@@ -40,7 +40,7 @@ class ExecutableWrapperTestCase(unittest.TestCase):
 
             def package(self):
                 self.copy("cmake", dst="bin")
-                self.copy("cmake.exe", dst="bin")
+                self.copy("cmake.cmd", dst="bin")
 
             def package_info(self):
                 self.cpp_info.exes = ["cmake"]
