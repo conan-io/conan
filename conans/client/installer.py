@@ -638,12 +638,12 @@ class BinaryInstaller(object):
             deactivate = 'source "{}"\n'.format(os.path.join(wrappers_folder, 'deactivate_run.sh'))
 
         # - and the wrappers
-        for exec in conanfile.cpp_info.exes:
-            path_to_exec = os.path.join(package_folder, 'bin', exec)
+        for executable in conanfile.cpp_info.exes:
+            path_to_exec = os.path.join(package_folder, 'bin', executable)
             exec_wrapper_ext = ".cmd" if platform.system() == "Windows" else ""
-            exec_wrapper = os.path.join(wrappers_folder, exec + exec_wrapper_ext)
+            exec_wrapper = os.path.join(wrappers_folder, executable + exec_wrapper_ext)
             with open(exec_wrapper, 'w') as f:
-                f.write('echo Calling {} wrapper\n'.format(exec))
+                f.write('echo Calling {} wrapper\n'.format(executable))
                 f.write('{}\n'.format(activate))
                 f.write('pushd "{}"\n'.format(os.path.dirname(path_to_exec)))
                 f.write('"{}" "$@"\n'.format(path_to_exec))
