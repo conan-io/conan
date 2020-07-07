@@ -1284,7 +1284,7 @@ class ConanAPIV1(object):
             phost = graph_lock_file.profile_host
             pbuild = graph_lock_file.profile_build
             graph_lock = graph_lock_file.graph_lock
-            graph_lock.relaxed = True
+            graph_lock.relax()
 
         if not phost:
             phost = profile_from_args(profile_host.profiles, profile_host.settings,

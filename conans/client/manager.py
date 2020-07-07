@@ -76,6 +76,8 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
     installer.install(deps_graph, remotes, build_modes, update, keep_build=keep_build,
                       graph_info=graph_info)
 
+    graph_info.graph_lock.complete_matching_prevs()
+
     if manifest_folder:
         manifest_manager = ManifestManager(manifest_folder, user_io=user_io, cache=cache)
         for node in deps_graph.nodes:

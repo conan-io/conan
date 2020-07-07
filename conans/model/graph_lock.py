@@ -84,7 +84,10 @@ class GraphLockNode(object):
         self._prev = prev
         self.requires = requires
         self.build_requires = build_requires
-        self.python_requires = python_requires
+        if revisions_enabled:
+            self._python_requires = python_requires
+        else:
+            self._python_requires = [r.copy_clear_rev() for r in python_requires or []]
         self._options = options
         self._revisions_enabled = revisions_enabled
         self._relaxed = False
@@ -96,13 +99,8 @@ class GraphLockNode(object):
             if prev:
                 self._prev = DEFAULT_REVISION_V1
 
-    @property
-    def relaxed(self):
-        return self._relaxed
-
-    @relaxed.setter
-    def relaxed(self, value):
-        self._relaxed = value
+    def relax(self):
+        self._relaxed = True
 
     @property
     def path(self):
@@ -111,6 +109,10 @@ class GraphLockNode(object):
     @property
     def ref(self):
         return self._ref
+
+    @property
+    def python_requires(self):
+        return self._python_requires
 
     @ref.setter
     def ref(self, value):
@@ -217,27 +219,67 @@ class GraphLock(object):
         self._revisions_enabled = revisions_enabled
         self._relaxed = False  # If True, the lock can be expanded with new Nodes
 
-        if deps_graph is not None:
-            for graph_node in deps_graph.nodes:
-                if graph_node.recipe == RECIPE_VIRTUAL:
-                    continue
-                self._upsert_node(graph_node)
+        if deps_graph is None:
+            return
+
+        for graph_node in deps_graph.nodes:
+            if graph_node.recipe == RECIPE_VIRTUAL:
+                continue
+
+            # Creating a GraphLockNode from the existing DepsGraph node
+            requires = []
+            build_requires = []
+            for edge in graph_node.dependencies:
+                if edge.build_require:
+                    build_requires.append(edge.dst.id)
+                else:
+                    requires.append(edge.dst.id)
+            # It is necessary to lock the transitive python-requires too, for this node
+            python_reqs = None
+            reqs = getattr(graph_node.conanfile, "python_requires", {})
+            if isinstance(reqs, dict):  # Old python_requires
+                python_reqs = {}
+                while reqs:
+                    python_reqs.update(reqs)
+                    partial = {}
+                    for req in reqs.values():
+                        partial.update(getattr(req.conanfile, "python_requires", {}))
+                    reqs = partial
+
+                python_reqs = [r.ref for _, r in python_reqs.items()]
+            elif isinstance(reqs, PyRequires):
+                python_reqs = graph_node.conanfile.python_requires.all_refs()
+
+            ref = graph_node.ref if graph_node.ref and graph_node.ref.name else None
+            package_id = graph_node.package_id if ref and ref.revision else None
+            prev = graph_node.prev if ref and ref.revision else None
+            lock_node = GraphLockNode(ref, package_id, prev, python_reqs,
+                                      graph_node.conanfile.options.values, requires, build_requires,
+                                      graph_node.path, self._revisions_enabled)
+            graph_node.graph_lock_node = lock_node
+            self._nodes[graph_node.id] = lock_node
 
     @property
     def nodes(self):
         return self._nodes
 
-    @property
-    def relaxed(self):
-        return self._relaxed
-
-    @relaxed.setter
-    def relaxed(self, value):
-        self._relaxed = value
+    def relax(self):
+        """ A lockfile is strict in its topology. It cannot add new nodes, have non-locked
+        requirements or have unused locked requirements. This method is called only:
+        - With "conan lock create --lockfile=existing --lockfile-out=new
+        - for the "test_package" functionality, as test_package/conanfile.py can have requirements
+          and those will never exist in the lockfile
+        """
+        self._relaxed = True
         for n in self._nodes.values():
-            n.relaxed = value
+            n.relax()
 
     def build_order(self):
+        """ This build order uses empty PREVs to decide which packages need to be built
+
+        :return: An ordered list of lists, each inner element is a tuple with the node ID and the
+                 reference (as string), possibly including revision, of the node
+        """
         # First do a topological order by levels, the ids of the nodes are stored
         levels = []
         opened = list(self._nodes.keys())
@@ -283,48 +325,35 @@ class GraphLock(object):
 
         return result
 
+    def complete_matching_prevs(self):
+        groups = {}
+        for node in self._nodes.values():
+            groups.setdefault((node.ref, node.package_id), []).append(node)
+
+        for nodes in groups.values():
+            if len(nodes) > 1:
+                prevs = set(node.prev for node in nodes if node.prev)
+                if prevs:
+                    assert len(prevs) == 1, "packages in lockfile with different PREVs"
+                    prev = prevs.pop()
+                    for node in nodes:
+                        node.prev = prev
+
     def only_recipes(self):
+        """ call this method to remove the packages/binaries information from the lockfile, and
+        keep only the reference version and RREV. A lockfile with this stripped information can
+        be used for creating new lockfiles based on it
+        """
         for node in self._nodes.values():
             node.only_recipe()
 
-    def _upsert_node(self, graph_node):
-        requires = []
-        build_requires = []
-        for edge in graph_node.dependencies:
-            if edge.build_require:
-                build_requires.append(edge.dst.id)
-            else:
-                requires.append(edge.dst.id)
-        # It is necessary to lock the transitive python-requires too, for this node
-        python_reqs = None
-        reqs = getattr(graph_node.conanfile, "python_requires", {})
-        if isinstance(reqs, dict):  # Old python_requires
-            python_reqs = {}
-            while reqs:
-                python_reqs.update(reqs)
-                partial = {}
-                for req in reqs.values():
-                    partial.update(getattr(req.conanfile, "python_requires", {}))
-                reqs = partial
-
-            python_reqs = [r.ref for _, r in python_reqs.items()]
-        elif isinstance(reqs, PyRequires):
-            # If py_requires are defined, they overwrite old python_reqs
-            python_reqs = graph_node.conanfile.python_requires.all_refs()
-
-        previous = graph_node.graph_lock_node
-        modified = previous.modified if previous else None
-        ref = graph_node.ref if graph_node.ref and graph_node.ref.name else None
-        package_id = graph_node.package_id if ref and ref.revision else None
-        prev = graph_node.prev if ref and ref.revision else None
-        lock_node = GraphLockNode(ref, package_id, prev, python_reqs,
-                                  graph_node.conanfile.options.values, requires,
-                                  build_requires, graph_node.path, self._revisions_enabled, modified)
-        graph_node.graph_lock_node = lock_node
-        self._nodes[graph_node.id] = lock_node
-
     @property
     def initial_counter(self):
+        """ When a new, relaxed graph is being created based on this lockfile, it can add new
+        nodes. The IDs of those nodes need a base ID, to not collide with the existing ones
+
+        :return: the maximum ID of this lockfile, as integer
+        """
         # IDs are string, we need to compute the maximum integer
         return max(int(x) for x in self._nodes.keys())
 
@@ -377,8 +406,8 @@ class GraphLock(object):
 
     def update_lock(self, new_lock):
         """ update the lockfile with the contents of other one that was branched from this
-        one and had some node re-built. Only nodes marked as modified (has
-        been exported or re-built), will be processed and updated.
+        one and had some node re-built. Only missing package_id and PREV information will be
+        updated, the references must match or it will be an error. The nodes IDS must match too.
         """
         for id_, node in new_lock.nodes.items():
             current = self._nodes[id_]
@@ -389,18 +418,6 @@ class GraphLock(object):
                 current.package_id = node.package_id
             if current.prev is None:
                 current.prev = node.prev
-
-    def _inverse_neighbors(self, node_id):
-        """ return all the nodes that have an edge to the "node_id". Useful for computing
-        the set of nodes affected downstream by a change in one package
-        """
-        result = []
-        for id_, node in self._nodes.items():
-            if node_id in node.requires:
-                result.append(id_)
-            if node_id in node.build_requires:
-                result.append(id_)
-        return result
 
     def check_contained(self, other):
         """ if lock create is provided a lockfile, it should be used, and it should contain it
@@ -431,14 +448,17 @@ class GraphLock(object):
         the lockfile. Requires remove their version ranges.
         """
         if not node.graph_lock_node:
+            # This node is not locked yet, but if it is relaxed, one requirement might
+            # match the root node of the exising lockfile
             if self._relaxed:
                 for require in requires:
-                    locked_id = self._get_exact_node(require.ref)
-
+                    locked_id = self._match_relaxed_require(require.ref)
                     if locked_id:
                         locked_node = self._nodes[locked_id]
                         require.lock(locked_node.ref, locked_id)
+                        break  # No more than 1 require can match the root of existing lockfile
             return
+
         locked_node = node.graph_lock_node
         if build_requires:
             locked_requires = locked_node.build_requires or []
@@ -462,7 +482,7 @@ class GraphLock(object):
         # Check all refs are locked
         if not self._relaxed:
             declared_requires = set([r.ref.name for r in requires])
-            for require in locked_node.requires:
+            for require in locked_requires:
                 req_node = self._nodes[require]
                 if req_node.ref.name not in declared_requires:
                     raise ConanException("'%s' locked requirement '%s' not found"
@@ -471,9 +491,7 @@ class GraphLock(object):
     def python_requires(self, node_id):
         if node_id is None and self._relaxed:
             return None
-        if self._revisions_enabled:
-            return self._nodes[node_id].python_requires
-        return [r.copy_clear_rev() for r in self._nodes[node_id].python_requires or []]
+        return self._nodes[node_id].python_requires
 
     def ref(self, node_id):
         try:
@@ -483,7 +501,7 @@ class GraphLock(object):
                 return None
             raise
 
-    def _get_exact_node(self, ref):
+    def _match_relaxed_require(self, ref):
         """ to use an existing lockfile to create a new one, the existing one should be engaged
         at its root node, the topmost downstream consumer"""
         assert self._relaxed

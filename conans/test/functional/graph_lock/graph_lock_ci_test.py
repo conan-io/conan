@@ -572,48 +572,53 @@ class CIBuildRequiresTest(unittest.TestCase):
         self.assertIn("PkgD/0.1@user/channel: DEP FILE PkgA: HelloA", client.out)
         self.assertIn("PkgD/0.1@user/channel: DEP FILE PkgB: HelloB", client.out)
         self.assertIn("PkgD/0.1@user/channel: DEP FILE PkgC: HelloC", client.out)
-        client.run("lock create --reference=PkgD/0.1@user/channel")
-        initial_lockfile = client.load("conan.lock")
 
         # Go back to main orchestrator
         client.run("lock create --reference=PkgD/0.1@user/channel --build -pr=myprofile")
-        print(client.out)
-        print(client.load("conan.lock"))
 
         # Do a change in br
         client.run("create br br/0.2@user/channel")
 
         client.run("lock build-order conan.lock --json=build_order.json")
+        self.assertIn("br/0.1", client.out)
+        self.assertNotIn("br/0.2", client.out)
         master_lockfile = client.load("conan.lock")
 
         json_file = client.load("build_order.json")
         to_build = json.loads(json_file)
-        print(to_build)
+        if client.cache.config.revisions_enabled:
+            build_order = [[['5', 'br/0.1@user/channel#f3367e0e7d170aa12abccb175fee5f97']],
+                           [['4', 'PkgA/0.1@user/channel#189390ce059842ce984e0502c52cf736']],
+                           [['3', 'PkgB/0.1@user/channel#fa97c46bf83849a5db4564327b3cfada']],
+                           [['2', 'PkgC/0.1@user/channel#c6f95948619d28d9d96b0ae86c46a482']],
+                           [['1', 'PkgD/0.1@user/channel#fce78c934bc0de73eeb05eb4060fc2b7']]]
+        else:
+            build_order = [[['5', 'br/0.1@user/channel']],
+                           [['4', 'PkgA/0.1@user/channel']],
+                           [['3', 'PkgB/0.1@user/channel']],
+                           [['2', 'PkgC/0.1@user/channel']],
+                           [['1', 'PkgD/0.1@user/channel']]]
+        self.assertEqual(to_build, build_order)
         lock_fileaux = master_lockfile
         while to_build:
             for _, ref in to_build[0]:
                 client_aux = TestClient(cache_folder=client.cache_folder)
                 client_aux.save({LOCKFILE: lock_fileaux})
                 client_aux.run("install %s --build=%s --lockfile=conan.lock" % (ref, ref))
+                self.assertIn("br/0.1", client_aux.out)
+                self.assertNotIn("br/0.2", client_aux.out)
                 lock_fileaux = client_aux.load(LOCKFILE)
                 client.save({"new_lock/%s" % LOCKFILE: lock_fileaux})
                 client.run("lock update conan.lock new_lock/conan.lock")
 
-            client.run("lock build-order conan.lock --json=bo.json")
+            client.run("lock build-order conan.lock --json=build_order.json")
             lock_fileaux = client.load(LOCKFILE)
-            to_build = json.loads(client.load("bo.json"))
+            to_build = json.loads(client.load("build_order.json"))
 
-        new_lockfile = client.load(LOCKFILE)
         client.run("install PkgD/0.1@user/channel --lockfile=conan.lock")
-        self.assertIn("PkgC/0.1@user/channel: DEP FILE PkgB: ByeB World!!", client.out)
-        self.assertIn("PkgD/0.1@user/channel: DEP FILE PkgB: ByeB World!!", client.out)
+        # No build require at all
+        self.assertNotIn("br/0.", client.out)
 
-        client.save({LOCKFILE: initial_lockfile})
-        client.run("install PkgD/0.1@user/channel --lockfile=conan.lock")
-        self.assertIn("PkgC/0.1@user/channel: DEP FILE PkgB: HelloB", client.out)
-        self.assertIn("PkgD/0.1@user/channel: DEP FILE PkgB: HelloB", client.out)
-
-        client.save({LOCKFILE: new_lockfile})
-        client.run("install PkgD/0.1@user/channel --lockfile=conan.lock")
-        self.assertIn("PkgC/0.1@user/channel: DEP FILE PkgB: ByeB World!!", client.out)
-        self.assertIn("PkgD/0.1@user/channel: DEP FILE PkgB: ByeB World!!", client.out)
+        client.run("install PkgD/0.1@user/channel --build -pr=myprofile")
+        self.assertIn("br/0.2", client.out)
+        self.assertNotIn("br/0.1", client.out)

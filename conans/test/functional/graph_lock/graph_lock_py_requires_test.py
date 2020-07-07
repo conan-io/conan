@@ -30,8 +30,13 @@ class GraphLockPyRequiresTransitiveTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile})
         client.run("install . pkg/0.1@user/channel")
         lockfile = client.load("conan.lock")
-        self.assertIn("base/1.0@user/channel#f3367e0e7d170aa12abccb175fee5f97", lockfile)
-        self.assertIn("helper/1.0@user/channel#539219485c7a9e8e19561db523512b39", lockfile)
+        if client.cache.config.revisions_enabled:
+            self.assertIn("base/1.0@user/channel#f3367e0e7d170aa12abccb175fee5f97", lockfile)
+            self.assertIn("helper/1.0@user/channel#539219485c7a9e8e19561db523512b39", lockfile)
+        else:
+            self.assertIn("base/1.0@user/channel", lockfile)
+            self.assertIn("helper/1.0@user/channel", lockfile)
+
         client.run("source .")
         self.assertIn("conanfile.py (pkg/0.1@user/channel): Configuring sources in", client.out)
 
@@ -90,8 +95,11 @@ class GraphLockPyRequiresTest(unittest.TestCase):
         self.assertEqual(1, len(nodes))
         pkg = nodes["0"]
         self.assertEqual(pkg["ref"], ref_b)
-        self.assertEqual(pkg["python_requires"],
-                         ["Tool/0.1@user/channel#ac4036130c39cab7715b1402e8c211d3"])
+        if self.client.cache.config.revisions_enabled:
+            tool = "Tool/0.1@user/channel#ac4036130c39cab7715b1402e8c211d3"
+        else:
+            tool = "Tool/0.1@user/channel"
+        self.assertEqual(pkg["python_requires"], [tool])
         self.assertEqual(pkg.get("package_id"), pkg_id_b)
 
     def install_info_test(self):

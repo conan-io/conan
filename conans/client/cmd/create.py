@@ -54,7 +54,7 @@ def create(app, ref, graph_info, remotes, update, build_modes,
                          recorder=recorder)
             out.info("Executing test_package %s" % repr(ref))
             try:
-                graph_info.graph_lock.relaxed = True
+                graph_info.graph_lock.relax()
                 # FIXME: It needs to clear the cache, otherwise it fails
                 app.binaries_analyzer._evaluated = {}
                 # FIXME: Forcing now not building test dependencies, binaries should be there
