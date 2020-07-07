@@ -134,14 +134,17 @@ class BuildInfoCreator(object):
         reference = ConanFileReference.loads(ref)
         package_layout = self._conan_cache.package_layout(reference)
         metadata = package_layout.load_metadata()
-        name_format = "{} :: {{}}".format(self._get_package_reference(ref, pid)) if is_dependency else "{}"
-        if r.get("user") and r.get("channel"):
-            url = "{user}/{name}/{version}/{channel}/{rrev}/package/{pid}/{prev}".format(**r, pid=pid,
-                                                                                         prev=prev)
+        if is_dependency:
+            name_format = "{} :: {{}}".format(self._get_package_reference(ref, pid))
         else:
-            url = "_/{name}/{version}/_/{rrev}/package/{pid}/{prev}".format(**r, pid=pid, prev=prev)
-        arts = self._get_metadata_artifacts(metadata, url, name_format=name_format, use_id=is_dependency,
-                                            package_id=pid)
+            name_format = "{}"
+        if r.get("user") and r.get("channel"):
+            url = "{user}/{name}/{version}/{channel}/{rrev}/package/{pid}/{prev}"
+        else:
+            url = "_/{name}/{version}/_/{rrev}/package/{pid}/{prev}"
+        url = url.format(pid=pid, prev=prev, **r)
+        arts = self._get_metadata_artifacts(metadata, url, name_format=name_format,
+                                            use_id=is_dependency, package_id=pid)
         return arts
 
     def process_lockfile(self):
@@ -186,7 +189,8 @@ class BuildInfoCreator(object):
                 modules[recipe_key]["artifacts"].update(
                     self._get_recipe_artifacts(ref, is_dependency=False))
                 # TODO: what about `python_requires`?
-                # TODO: can we associate any properties to the recipe? Profile/options may be different per lockfile
+                # TODO: can we associate any properties to the recipe? Profile/options may
+                # TODO: be different per lockfile
 
                 # Create module for the package_id
                 package_key = self._get_package_reference(ref, pid)
