@@ -631,11 +631,11 @@ class BinaryInstaller(object):
 
         activate = deactivate = None
         if platform.system() == "Windows":
-            activate = os.path.join(wrappers_folder, 'activate_run.bat')
-            deactivate = os.path.join(wrappers_folder, 'deactivate_run.bat')
+            activate = '"{}"\n'.format(os.path.join(wrappers_folder, 'activate_run.bat'))
+            deactivate = '"{}"\n'.format(os.path.join(wrappers_folder, 'deactivate_run.bat'))
         else:
-            activate = 'source "{}"\n'.format(os.path.join(wrappers_folder, 'activate_run.sh'))
-            deactivate = 'source "{}"\n'.format(os.path.join(wrappers_folder, 'deactivate_run.sh'))
+            activate = 'source "{}"'.format(os.path.join(wrappers_folder, 'activate_run.sh'))
+            deactivate = 'source "{}"'.format(os.path.join(wrappers_folder, 'deactivate_run.sh'))
 
         # - and the wrappers
         for executable in conanfile.cpp_info.exes:
