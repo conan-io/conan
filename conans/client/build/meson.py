@@ -33,7 +33,7 @@ class Meson(object):
 
         self._compiler = self._ss("compiler")
         if not self._compiler:
-            conan_v2_behavior("Compiler setting should be defined.",
+            conan_v2_behavior("compiler setting should be defined.",
                               v1_behavior=self._conanfile.output.warn)
 
         self._compiler_version = self._ss("compiler.version")
@@ -63,7 +63,7 @@ class Meson(object):
             '17': 'c++17', 'gnu17': 'gnu++17',
             '20': 'c++1z', 'gnu20': 'gnu++1z'
         }
-        
+
         if cppstd:
             self.options['cpp_std'] = cppstd_conan2meson[cppstd]
 

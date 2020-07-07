@@ -243,7 +243,7 @@ class CMakeBuildHelper(object):
     def _run(self, command):
         compiler = self._settings.get_safe("compiler")
         if not compiler:
-            conan_v2_behavior("Compiler setting should be defined.",
+            conan_v2_behavior("compiler setting should be defined.",
                               v1_behavior=self._conanfile.output.warn)
         the_os = self._settings.get_safe("os")
         is_clangcl = the_os == "Windows" and compiler == "clang"
