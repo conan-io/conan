@@ -11,6 +11,7 @@ from conans.client.tools.oss import args_to_string
 from conans.errors import ConanException
 from conans.model.build_info import DEFAULT_BIN, DEFAULT_INCLUDE, DEFAULT_LIB
 from conans.model.version import Version
+from conans.util.conan_v2_mode import conan_v2_behavior
 from conans.util.files import decode_text, get_abs_path, mkdir
 from conans.util.runners import version_runner
 
@@ -29,9 +30,18 @@ class Meson(object):
         self._append_vcvars = append_vcvars
 
         self._os = self._ss("os")
+
         self._compiler = self._ss("compiler")
+        if not self._compiler:
+            conan_v2_behavior("Compiler setting should be defined.",
+                              v1_behavior=self._conanfile.output.warn)
+
         self._compiler_version = self._ss("compiler.version")
+
         self._build_type = self._ss("build_type")
+        if not self._build_type:
+            conan_v2_behavior("build_type setting should be defined.",
+                              v1_behavior=self._conanfile.output.warn)
 
         self.backend = backend or "ninja"  # Other backends are poorly supported, not default other.
 
