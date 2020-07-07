@@ -4,6 +4,7 @@ import stat
 import textwrap
 import time
 from multiprocessing.pool import ThreadPool
+import platform
 
 from conans.client import tools
 from conans.client.conanfile.build import run_build_method
@@ -621,27 +622,36 @@ class BinaryInstaller(object):
         # TODO: Need to add from teh consumer point of view
         for it in conanfile.cpp_info.lib_paths:
             env.env["DYLD_LIBRARY_PATH"].insert(0, it)
-            # FIXME: Watch out! It this same list object! env.env["LD_LIBRARY_PATH"].insert(0, it)
-        # TODO: Other environment variables
+            # FIXME: Watch out! It is this same list object! env.env["LD_LIBRARY_PATH"].insert(0, it)
+        # TODO: Other environment variables?
 
         for filename, content in env.content.items():
             with open(os.path.join(wrappers_folder, filename), 'w') as f:
                 f.write(content)
 
+        activate = deactivate = None
+        if platform.system() == "Windows":
+            activate = os.path.join(wrappers_folder, 'activate_run.bat')
+            deactivate = os.path.join(wrappers_folder, 'deactivate_run.bat')
+        else:
+            activate = 'source "{}"\n'.format(os.path.join(wrappers_folder, 'activate_run.sh'))
+            deactivate = 'source "{}"\n'.format(os.path.join(wrappers_folder, 'deactivate_run.sh'))
+
         # - and the wrappers
         for exec in conanfile.cpp_info.exes:
             path_to_exec = os.path.join(package_folder, 'bin', exec)
-            exec_wrapper = os.path.join(wrappers_folder, exec)
+            exec_wrapper_ext = ".cmd" if platform.system() == "Windows" else ""
+            exec_wrapper = os.path.join(wrappers_folder, exec + exec_wrapper_ext)
             with open(exec_wrapper, 'w') as f:
                 f.write('echo Calling {} wrapper\n'.format(exec))
-                f.write('source "{}"\n'.format(os.path.join(wrappers_folder, 'activate_run.sh')))
+                f.write('{}\n'.format(activate))
                 f.write('pushd "{}"\n'.format(os.path.dirname(path_to_exec)))
                 f.write('"{}" "$@"\n'.format(path_to_exec))
                 f.write('popd\n')
-                f.write('source "{}"\n'.format(os.path.join(wrappers_folder, 'deactivate_run.sh')))
+                f.write('{}\n'.format(deactivate))
 
             st = os.stat(exec_wrapper)
             os.chmod(exec_wrapper, st.st_mode | stat.S_IEXEC)
 
-        # - Add this extra PATH to the environment
+        # - Add this extra PATH to the environment (wrapper first!)
         conanfile.env_info.PATH.insert(0, wrappers_folder)

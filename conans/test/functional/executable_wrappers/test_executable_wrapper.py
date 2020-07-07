@@ -23,12 +23,17 @@ class ExecutableWrapperTestCase(unittest.TestCase):
         class Recipe(ConanFile):
             name = "cmake"
             requires = "zlib/1.0"
+            settings = "os"
 
             def build(self):
                 with open("cmake", "w") as f:
                     f.write("set -e\\n")
                     f.write("set -x\\n")
-                    f.write("ls -la\\n")
+                    f.write("echo MY CMAKE!!!\\n")
+                    if self.settings.os == "Windows":
+                        f.write("echo arguments: %*\\n")
+                    else:
+                        f.write("echo arguments: $@\\n")
                 st = os.stat('cmake')
                 os.chmod('cmake', st.st_mode | stat.S_IEXEC)
 
@@ -36,9 +41,8 @@ class ExecutableWrapperTestCase(unittest.TestCase):
                 self.copy("cmake", dst="bin")
 
             def package_info(self):
-                self.cpp_info.filter_empty = False
                 self.cpp_info.exes = ["cmake"]
-                self.env_info.PATH = [os.path.join(self.package_folder, "bin")]
+                #self.env_info.PATH = [os.path.join(self.package_folder, "bin")]
     """)
 
     conanfile = textwrap.dedent("""
@@ -50,13 +54,11 @@ class ExecutableWrapperTestCase(unittest.TestCase):
             build_requires = "cmake/1.0"
 
             def build(self):
-                self.run("cmake")
+                self.run("cmake --version")
     """)
 
     def test_basic(self):
         t = TestClient()
-        t.current_folder = '/private/var/folders/fc/6mvcrc952dqcjfhl4c7c11ph0000gn/T/tmpwqp1praeconans/path with spaces'
-        t.cache_folder = '/private/var/folders/fc/6mvcrc952dqcjfhl4c7c11ph0000gn/T/tmpib49nmlbconans/path with spaces'
         t.save({'zlib.py': self.zlib,
                 'cmake.py': self.build_requires,
                 'app.py': self.conanfile})
@@ -64,4 +66,5 @@ class ExecutableWrapperTestCase(unittest.TestCase):
         t.run("create cmake.py cmake/1.0@ --profile=default")
         t.run("create app.py app/1.0@ --profile:host=default --profile:build=default")
         print(t.out)
-        self.fail("AAA")
+        self.assertIn("MY CMAKE!!!", t.out)
+        self.assertIn("arguments: --version", t.out)
