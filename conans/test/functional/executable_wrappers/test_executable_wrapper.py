@@ -29,15 +29,17 @@ class ExecutableWrapperTestCase(unittest.TestCase):
                 filename = "cmake.cmd" if self.settings.os == "Windows" else "cmake"
                 with open(filename, "w") as f:
                     if self.settings.os == "Windows":
+                        f.write("@echo on\\n")
+                    else:
                         f.write("set -e\\n")
                         f.write("set -x\\n")
-                    else:
-                        f.write("@echo on\\n")
+
                     f.write("echo MY CMAKE!!!\\n")
                     if self.settings.os == "Windows":
                         f.write("echo arguments: %*\\n")
                     else:
                         f.write("echo arguments: $@\\n")
+
                 st = os.stat(filename)
                 os.chmod(filename, st.st_mode | stat.S_IEXEC)
 
