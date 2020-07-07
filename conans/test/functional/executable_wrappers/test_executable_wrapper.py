@@ -40,6 +40,8 @@ class ExecutableWrapperTestCase(unittest.TestCase):
                     else:
                         f.write("echo arguments: $@\\n")
 
+                self.output.info(open(filename).read())
+
                 st = os.stat(filename)
                 os.chmod(filename, st.st_mode | stat.S_IEXEC)
 
