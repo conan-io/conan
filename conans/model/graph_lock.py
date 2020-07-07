@@ -91,7 +91,7 @@ class GraphLockNode(object):
         self._options = options
         self._revisions_enabled = revisions_enabled
         self._relaxed = False
-        self.modified = modified  # variable
+        self._modified = modified  # Exclusively now for "conan_build_info" command
         self._path = path
         if not revisions_enabled:
             if ref:
@@ -154,6 +154,8 @@ class GraphLockNode(object):
             value = DEFAULT_REVISION_V1
         if not self._relaxed and self._prev is not None and self._prev != value:
             raise ConanException("A locked PREV of '%s' was already built" % repr(self._ref))
+        if self._prev != value:
+            self._modified = True
         self._prev = value
 
     @property
@@ -164,7 +166,7 @@ class GraphLockNode(object):
         self._package_id = None
         self._prev = None
         self._options = None
-        self.modified = None
+        self._modified = None
 
     @staticmethod
     def deserialize(data, revisions_enabled):
@@ -201,8 +203,8 @@ class GraphLockNode(object):
             result["prev"] = self._prev
         if self.python_requires:
             result["python_requires"] = [repr(r) for r in self.python_requires]
-        if self.modified:
-            result["modified"] = self.modified
+        if self._modified:
+            result["modified"] = self._modified
         if self.requires:
             result["requires"] = self.requires
         if self.build_requires:

@@ -250,8 +250,12 @@ class MyConanfileBase(source.SourceBuild, package.PackageInfo):
         client.save({"conanfile.py": conanfile})
         client.run("install . pkg/0.1@user/channel")
         lockfile = client.load("conan.lock")
-        self.assertIn("base/1.0@user/channel#e41727b922c6ae54b216a58442893f3a", lockfile)
-        self.assertIn("helper/1.0@user/channel#98457e1f8d9174ed053747634ce0ea1a", lockfile)
+        if client.cache.config.revisions_enabled:
+            self.assertIn("base/1.0@user/channel#e41727b922c6ae54b216a58442893f3a", lockfile)
+            self.assertIn("helper/1.0@user/channel#98457e1f8d9174ed053747634ce0ea1a", lockfile)
+        else:
+            self.assertIn("base/1.0@user/channel", lockfile)
+            self.assertIn("helper/1.0@user/channel", lockfile)
         client.run("source .")
         self.assertIn("conanfile.py (pkg/0.1@user/channel): Configuring sources in", client.out)
 
