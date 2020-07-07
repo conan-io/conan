@@ -320,7 +320,7 @@ def collect_libs(conanfile, folder=None):
 
 def which(filename):
     """ same affect as posix which command or shutil.which from python3 """
-
+    # FIXME: Replace with shutil.which in Conan 2.0
     def verify(file_abspath):
         return os.path.isfile(file_abspath) and os.access(file_abspath, os.X_OK)
 
