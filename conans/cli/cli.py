@@ -85,7 +85,16 @@ class Cli(object):
         self._conan_api = conan_api
         self._out = conan_api.out
         self._groups = defaultdict(list)
-        self._commands = None
+        self._commands = {}
+        conan_commands_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "commands")
+        for module in pkgutil.iter_modules([conan_commands_path]):
+            self._add_command("conans.cli.commands.{}".format(module.name), module.name)
+        if get_env("CONAN_USER_COMMANDS", default=False):
+            user_commands_path = os.path.join(self._conan_api.cache_folder, "commands")
+            sys.path.append(user_commands_path)
+            for module in pkgutil.iter_modules([user_commands_path]):
+                if module.name.startswith("cmd_"):
+                    self._add_command(module.name, module.name.replace("cmd_", ""))
 
     def _add_command(self, import_path, method_name):
         try:
@@ -103,18 +112,6 @@ class Cli(object):
 
     @property
     def commands(self):
-        if self._commands is None:
-            self._commands = {}
-            conan_commands_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                               "commands")
-            for module in pkgutil.iter_modules([conan_commands_path]):
-                self._add_command("conans.cli.commands.{}".format(module.name), module.name)
-            if get_env("CONAN_USER_COMMANDS", default=False):
-                user_commands_path = os.path.join(self._conan_api.cache_folder, "commands")
-                sys.path.append(user_commands_path)
-                for module in pkgutil.iter_modules([user_commands_path]):
-                    if module.name.startswith("cmd_"):
-                        self._add_command(module.name, module.name.replace("cmd_", ""))
         return self._commands
 
     @property
