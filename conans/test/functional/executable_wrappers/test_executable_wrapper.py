@@ -73,7 +73,7 @@ class ExecutableWrapperTestCase(unittest.TestCase):
                 'app.py': self.conanfile})
         t.run("create zlib.py zlib/1.0@ --profile=default")
         t.run("create cmake.py cmake/1.0@ --profile=default")
-        t.run("create app.py app/1.0@ --profile:host=default --profile:build=default")
         print(t.out)
+        t.run("create app.py app/1.0@ --profile:host=default --profile:build=default")
         self.assertIn("MY CMAKE!!!", t.out)
         self.assertIn("arguments: --version", t.out)
