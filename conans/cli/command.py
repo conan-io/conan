@@ -34,10 +34,9 @@ class ConanCommand(object):
         self._parser.add_argument('-o', '--output', default="cli", choices=formatters_list,
                                   action=OnceArgument, help=self._output_help_message)
 
-    def run(self, *args, **kwargs):
-        conan_api = kwargs["conan_api"]
+    def run(self, conan_api, *args, **kwargs):
         try:
-            info = self._method(*args, **kwargs)
+            info = self._method(*args, conan_api=conan_api, **kwargs)
             parser_args = self._parser.parse_args(*args)
             if info:
                 self._formatters[parser_args.output](info, conan_api.out)
