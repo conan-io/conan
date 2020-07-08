@@ -19,7 +19,7 @@ class GraphLockDynamicTest(unittest.TestCase):
 
         client.save({"conanfile.py": GenConanfile().with_require_plain("LibB/1.0")})
         client.run("create . LibC/1.0@ --lockfile=libb.lock", assert_error=True)
-        self.assertIn("Couldn't find 'LibC/1.0' in graph-lock", client.out)
+        self.assertIn("Couldn't find 'LibC/1.0' in lockfile", client.out)
 
         client.run("lock create conanfile.py --name=LibC --version=1.0 --lockfile=libb.lock "
                    "--lockfile-out=libc.lock")
@@ -32,7 +32,7 @@ class GraphLockDynamicTest(unittest.TestCase):
         # Two levels
         client.save({"conanfile.py": GenConanfile().with_require_plain("LibC/1.0")})
         client.run("create . LibD/1.0@ --lockfile=libb.lock", assert_error=True)
-        self.assertIn("Couldn't find 'LibD/1.0' in graph-lock", client.out)
+        self.assertIn("Couldn't find 'LibD/1.0' in lockfile", client.out)
 
         client.run("lock create conanfile.py --name=LibD --version=1.0 --lockfile=libb.lock "
                    "--lockfile-out=libd.lock")
@@ -59,7 +59,7 @@ class GraphLockDynamicTest(unittest.TestCase):
         client.save({"conanfile.py": GenConanfile().with_require_plain("LibB/1.0")
                                                    .with_require_plain("LibC/1.0")})
         client.run("create . LibD/1.0@ --lockfile=libb.lock", assert_error=True)
-        self.assertIn("Couldn't find 'LibD/1.0' in graph-lock", client.out)
+        self.assertIn("Couldn't find 'LibD/1.0' in lockfile", client.out)
 
         client.run("lock create conanfile.py --name=LibD --version=1.0 --lockfile=libb.lock "
                    "--lockfile-out=libd.lock")
@@ -88,7 +88,7 @@ class GraphLockDynamicTest(unittest.TestCase):
         client.save({"conanfile.py": GenConanfile().with_require_plain("LibA/[>=1.0]")})
 
         client.run("create . LibC/1.0@ --lockfile=libb.lock", assert_error=True)
-        self.assertIn("Couldn't find 'LibC/1.0' in graph-lock", client.out)
+        self.assertIn("Couldn't find 'LibC/1.0' in lockfile", client.out)
 
         client.run("lock create conanfile.py --name=LibC --version=1.0 --lockfile=libb.lock "
                    "--lockfile-out=libc.lock", assert_error=True)

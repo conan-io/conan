@@ -544,18 +544,18 @@ class GraphLock(object):
                         return id_
         else:
             search_ref = repr(ref)
-            if ref.revision:
-                # First search by exact ref (with RREV)
-                for id_, node in self._nodes.items():
-                    root_ref = node.ref
-                    if root_ref and repr(root_ref) == search_ref:
-                        return id_
-            else:
-                for id_, node in self._nodes.items():
-                    root_ref = node.ref
-                    # Then search by aprox ref (without RREV)
-                    if root_ref and str(root_ref) == search_ref:
-                        return id_
+            if ref.revision:  # Search by exact ref (with RREV)
+                node_id = self._find_first(lambda n: n.ref and repr(n.ref) == search_ref)
+            else:  # search by ref without RREV
+                node_id = self._find_first(lambda n: n.ref and str(n.ref) == search_ref)
+            if node_id:
+                return node_id
+
+    def _find_first(self, predicate):
+        """ find the first node in the graph matching the predicate"""
+        for id_, node in sorted(self._nodes.items()):
+            if predicate(node):
+                return id_
 
     def get_node(self, ref):
         """ given a REF, return the Node of the package in the lockfile that correspond to that
@@ -563,44 +563,29 @@ class GraphLock(object):
         First, search with REF without revisions is done, then approximate search by just name
         """
         assert (ref is None or isinstance(ref, ConanFileReference))
+
         # None reference
         if ref is None or ref.name is None:
             # Is a conanfile.txt consumer
-            for id_, node in self._nodes.items():
-                if not node.ref and node.path:
-                    return id_
+            node_id = self._find_first(lambda n: not n.ref and n.path)
+            if node_id:
+                return node_id
+        else:
+            assert ref.revision is None
 
-        assert ref.revision is None
-
-        # First search by exact ref (with RREV)
-        ids = []
-        search_ref = repr(ref)
-        for id_, node in self._nodes.items():
-            if node.ref and repr(node.ref) == search_ref:
-                ids.append(id_)
-        if len(ids) >= 1:
-            return ids[0]
-
-        # Then search by aprox ref (without RREV)
-        ids = []
-        search_ref = str(ref)
-        for id_, node in self._nodes.items():
-            if node.ref and str(node.ref) == search_ref:
-                ids.append(id_)
-        if len(ids) >= 1:
-            return ids[0]
-
-        # Search by approximate name, only for the end consumer with local path
-        ids = []
-        for id_, node in self._nodes.items():
-            if node.ref and node.ref.name == ref.name:
-                ids.append(id_)
-        if ids:
-            if len(ids) >= 1:
-                return ids[0]
+            repr_ref = repr(ref)
+            str_ref = str(ref)
+            node_id = (  # First search by exact ref with RREV
+                       self._find_first(lambda n: n.ref and repr(n.ref) == repr_ref) or
+                       # If not mathing, search by exact ref without RREV
+                       self._find_first(lambda n: n.ref and str(n.ref) == str_ref) or
+                       # Or it could be a local consumer (n.path defined), search only by name
+                       self._find_first(lambda n: n.ref and n.ref.name == ref.name and n.path))
+            if node_id:
+                return node_id
 
         if not self._relaxed:
-            raise ConanException("Couldn't find '%s' in graph-lock" % ref.full_str())
+            raise ConanException("Couldn't find '%s' in lockfile" % ref.full_str())
 
     def get_node_by_req(self, ref):
         assert isinstance(ref, ConanFileReference)
@@ -626,21 +611,16 @@ class GraphLock(object):
         else:
             # The ``create`` command uses this to install pkg/version --build=pkg
             # removing the revision, but it still should match
-            ids = []
             search_ref = repr(ref)
             if ref.revision:  # Match should be exact (with RREV)
-                for id_, node in self._nodes.items():
-                    if node.ref and repr(node.ref) == search_ref:
-                        ids.append(id_)
+                node_id = self._find_first(lambda n: n.ref and repr(n.ref) == search_ref)
             else:
-                for id_, node in self._nodes.items():
-                    if node.ref and str(node.ref) == search_ref:
-                        ids.append(id_)
-            if len(ids) >= 1:
-                return ids[0]
+                node_id = self._find_first(lambda n: n.ref and str(n.ref) == search_ref)
+            if node_id:
+                return node_id
 
         if not self._relaxed:
-            raise ConanException("Couldn't find '%s' in graph-lock" % ref.full_str())
+            raise ConanException("Couldn't find '%s' in lockfile" % ref.full_str())
 
     def update_exported_ref(self, node_id, ref):
         """ when the recipe is exported, it will complete the missing RREV, otherwise it should

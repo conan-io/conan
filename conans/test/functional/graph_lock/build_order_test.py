@@ -489,11 +489,7 @@ class GraphLockBuildRequireErrorTestCase(unittest.TestCase):
         self.assertEqual(expected, json.loads(bo0))
 
         client.run("create libA libA/2.0@ --lockfile=conan.lock", assert_error=True)
-        if client.cache.config.revisions_enabled:
-            self.assertIn("Attempt to modify locked libA/1.0#3fb401b4f9169fab06be253aa3fbcc1b "
-                          "to libA/2.0#3fb401b4f9169fab06be253aa3fbcc1b", client.out)
-        else:
-            self.assertIn("ERROR: Attempt to modify locked libA/1.0 to libA/2.0", client.out)
+        self.assertIn("ERROR: Couldn't find 'libA/2.0' in lockfile", client.out)
 
         # Instead we export it and create a new lock create
         client.run("export libA libA/2.0@")
