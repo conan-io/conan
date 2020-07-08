@@ -74,7 +74,7 @@ class GraphLockCITest(unittest.TestCase):
         clientb.run("create . PkgB/0.1@user/channel")
 
         # Go back to main orchestrator
-        client.run("lock create --reference=PkgD/0.1@user/channel --build=missing")
+        client.run("lock create --reference=PkgD/0.1@user/channel")
         client.run("lock build-order conan.lock --json=build_order.json")
         master_lockfile = client.load("conan.lock")
 
@@ -147,7 +147,7 @@ class GraphLockCITest(unittest.TestCase):
             client.run("create pkgb PkgB/0.2@user/channel")
 
             # Go back to main orchestrator
-            client.run("lock create --reference=PkgD/0.1@user/channel --build=missing "
+            client.run("lock create --reference=PkgD/0.1@user/channel "
                        "--lockfile-out=productd.lock")
 
             # Now it is locked, PkgA can change
@@ -157,7 +157,7 @@ class GraphLockCITest(unittest.TestCase):
             # Change in B
             client.save({"pkgb/myfile.txt": "ByeB World!!"})
             client.run("lock create pkgb/conanfile.py --name=PkgB --version=0.2 --user=user "
-                       "--channel=channel --build=missing --lockfile-out=buildb.lock")
+                       "--channel=channel --lockfile-out=buildb.lock")
             self.assertIn("PkgA/0.1", client.out)
             self.assertNotIn("PkgA/0.2", client.out)
 
@@ -176,7 +176,7 @@ class GraphLockCITest(unittest.TestCase):
             # Go back to main orchestrator, buildb.lock can be used to lock PkgA/0.1 too
             client.save({"buildb.lock": buildblock})
             client.run("lock create --reference=PkgD/0.1@user/channel --lockfile=buildb.lock "
-                       "--build=missing --lockfile-out=productd.lock")
+                       "--lockfile-out=productd.lock")
             self.assertIn("PkgA/0.1", client.out)
             self.assertNotIn("PkgA/0.2", client.out)
 
@@ -259,7 +259,7 @@ class GraphLockCITest(unittest.TestCase):
                      "myfile.txt": "ByeA World!!"})
         clientb.run("create . PkgA/0.2@user/channel")
 
-        client.run("lock create --reference=PkgD/0.1@user/channel --build=missing")
+        client.run("lock create --reference=PkgD/0.1@user/channel")
         client.run("lock build-order conan.lock --json=build_order.json")
         master_lockfile = client.load("conan.lock")
 
@@ -409,7 +409,7 @@ class CIPythonRequiresTest(unittest.TestCase):
         client.run("export . pyreq/0.2@user/channel")
 
         # Go back to main orchestrator
-        client.run("lock create --reference=PkgD/0.1@user/channel --build=missing")
+        client.run("lock create --reference=PkgD/0.1@user/channel")
         client.run("lock build-order conan.lock --json=build_order.json")
         master_lockfile = client.load("conan.lock")
         json_file = client.load("build_order.json")
@@ -449,7 +449,7 @@ class CIPythonRequiresTest(unittest.TestCase):
         # Do a change in B
         client.save({"conanfile.py": consumer.format(requires='requires="PkgA/0.1@user/channel"')})
         client.run("lock create conanfile.py --name=PkgB --version=1.0 --user=user "
-                   "--channel=channel --build=missing --lockfile-out=buildb.lock")
+                   "--channel=channel --lockfile-out=buildb.lock")
 
         # Do a change in python_require
         client.save({"conanfile.py": self.python_req.format("ByePyWorld")})
@@ -464,7 +464,7 @@ class CIPythonRequiresTest(unittest.TestCase):
 
         # Go back to main orchestrator
         # This should fail, as PkgB/0.2 is not involved in the new resolution
-        client.run("lock create --reference=PkgD/0.1@user/channel --build=missing "
+        client.run("lock create --reference=PkgD/0.1@user/channel "
                    "--lockfile=buildb.lock", assert_error=True)
         self.assertIn("ERROR: The provided lockfile was not used, there is no overlap",
                       client.out)
@@ -491,7 +491,7 @@ class CIPythonRequiresTest(unittest.TestCase):
         # Do a change in B
         client.save({"conanfile.py": consumer.format(requires='requires="PkgA/0.1@user/channel"')})
         client.run("lock create conanfile.py --name=PkgB --version=0.2 --user=user "
-                   "--channel=channel --build=missing --lockfile-out=buildb.lock")
+                   "--channel=channel --lockfile-out=buildb.lock")
 
         # Do a change in python_require
         client.save({"conanfile.py": self.python_req.format("ByePyWorld")})
@@ -505,7 +505,7 @@ class CIPythonRequiresTest(unittest.TestCase):
         self.assertNotIn("pyreq/0.2", client.out)
 
         # Go back to main orchestrator
-        client.run("lock create --reference=PkgD/0.1@user/channel --build=missing "
+        client.run("lock create --reference=PkgD/0.1@user/channel "
                    "--lockfile=buildb.lock")
 
         client.run("lock build-order conan.lock --json=build_order.json")
