@@ -20,9 +20,21 @@ LOCKFILE_VERSION = "0.4"
 class GraphLockFile(object):
 
     def __init__(self, profile_host, profile_build, graph_lock):
-        self.profile_host = profile_host
-        self.profile_build = profile_build
-        self.graph_lock = graph_lock
+        self._profile_host = profile_host
+        self._profile_build = profile_build
+        self._graph_lock = graph_lock
+
+    @property
+    def graph_lock(self):
+        return self._graph_lock
+
+    @property
+    def profile_host(self):
+        return self._profile_host
+
+    @property
+    def profile_build(self):
+        return self._profile_build
 
     @staticmethod
     def load(path, revisions_enabled):
@@ -32,12 +44,16 @@ class GraphLockFile(object):
             raise ConanException("Missing lockfile in: %s" % path)
         content = load(path)
         try:
-            return GraphLockFile.loads(content, revisions_enabled)
+            return GraphLockFile._loads(content, revisions_enabled)
         except Exception as e:
             raise ConanException("Error parsing lockfile '{}': {}".format(path, e))
 
+    def save(self, path):
+        serialized_graph_str = self._dumps()
+        save(path, serialized_graph_str)
+
     @staticmethod
-    def loads(text, revisions_enabled):
+    def _loads(text, revisions_enabled):
         graph_json = json.loads(text)
         version = graph_json.get("version")
         if version:
@@ -56,11 +72,7 @@ class GraphLockFile(object):
         graph_lock_file = GraphLockFile(profile_host, profile_build, graph_lock)
         return graph_lock_file
 
-    def save(self, path):
-        serialized_graph_str = self.dumps()
-        save(path, serialized_graph_str)
-
-    def dumps(self):
+    def _dumps(self):
         result = {"graph_lock": self.graph_lock.serialize(),
                   "version": LOCKFILE_VERSION}
         if self.profile_host:
@@ -71,8 +83,8 @@ class GraphLockFile(object):
 
     def only_recipes(self):
         self.graph_lock.only_recipes()
-        self.profile_host = None
-        self.profile_build = None
+        self._profile_host = None
+        self._profile_build = None
 
 
 class GraphLockNode(object):
@@ -82,8 +94,8 @@ class GraphLockNode(object):
         self._ref = ref if ref and ref.name else None  # includes rrev
         self._package_id = package_id
         self._prev = prev
-        self.requires = requires
-        self.build_requires = build_requires
+        self._requires = requires
+        self._build_requires = build_requires
         if revisions_enabled:
             self._python_requires = python_requires
         else:
@@ -98,6 +110,14 @@ class GraphLockNode(object):
                 self._ref = ref.copy_clear_rev()
             if prev:
                 self._prev = DEFAULT_REVISION_V1
+
+    @property
+    def requires(self):
+        return self._requires
+
+    @property
+    def build_requires(self):
+        return self._build_requires
 
     def relax(self):
         self._relaxed = True
@@ -208,10 +228,10 @@ class GraphLockNode(object):
             result["python_requires"] = [repr(r) for r in self.python_requires]
         if self._modified:
             result["modified"] = self._modified
-        if self.requires:
-            result["requires"] = self.requires
-        if self.build_requires:
-            result["build_requires"] = self.build_requires
+        if self._requires:
+            result["requires"] = self._requires
+        if self._build_requires:
+            result["build_requires"] = self._build_requires
         if self._path:
             result["path"] = self._path
         return result
@@ -335,6 +355,10 @@ class GraphLock(object):
         return result
 
     def complete_matching_prevs(self):
+        """ when a build_require that has the same ref and package_id is built, only one node
+        gets its PREV updated. This method fills the repeated nodes missing PREV to the same one.
+        The build-order only returned 1 node (matching ref:package_id).
+        """
         groups = {}
         for node in self._nodes.values():
             groups.setdefault((node.ref, node.package_id), []).append(node)
@@ -377,17 +401,6 @@ class GraphLock(object):
         assert len(roots) == 1
         root_id = roots.pop()
         return root_id
-
-    def root_node_ref(self):
-        """ obtain the node in the graph that is not depended by anyone else,
-        i.e. the root or downstream consumer
-        Used by graph build-order command
-        """
-        root_id = self.root_node_id()
-        root_node = self._nodes[root_id]
-        if root_node.path:
-            return root_node.path
-        return root_node.ref
 
     @staticmethod
     def deserialize(data, revisions_enabled):

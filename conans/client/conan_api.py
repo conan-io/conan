@@ -1305,9 +1305,6 @@ class ConanAPIV1(object):
             pbuild = profile_from_args(profile_build.profiles, profile_build.settings,
                                        profile_build.options, profile_build.env, cwd, self.app.cache)
 
-            # If given an input lockfile, then construct it from the root
-            # reference = graph_info.graph_lock.root_node_ref()
-
         root_ref = ConanFileReference(name, version, user, channel, validate=False)
         phost.process_settings(self.app.cache)
         if pbuild:
@@ -1330,7 +1327,7 @@ class ConanAPIV1(object):
             new_graph_lock = GraphLock(deps_graph, self.app.config.revisions_enabled)
             # check if the lockfile provided was used or not
             new_graph_lock.check_contained(graph_lock)
-            graph_lock_file.graph_lock = new_graph_lock
+            graph_lock_file = GraphLockFile(phost, pbuild, new_graph_lock)
         if base:
             graph_lock_file.only_recipes()
 
