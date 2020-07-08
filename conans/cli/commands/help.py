@@ -48,7 +48,7 @@ def help(*args, conan_api, parser, commands, groups, **kwargs):
     args = parser.parse_args(*args)
     if not args.command:
         output_help_cli(conan_api.out, commands, groups)
-        return None, None
+        return None
     try:
         commands[args.command].run(["--help"], parser=commands[args.command].parser,
                                    conan_api=conan_api)

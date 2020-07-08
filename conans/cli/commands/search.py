@@ -53,10 +53,8 @@ def search(*args, conan_api, parser, **kwargs):
                                 help="Remote to search. Accepts wildcards. To search in all remotes use *")
     exclusive_args.add_argument('-c', '--cache', action="store_true",
                                 help="Search in the local cache")
-    parser.add_argument('-o', '--output', default="cli", action=OnceArgument,
-                        help="Select the output format: cli, json.")
     args = parser.parse_args(*args)
 
     remotes = args.remote or []
     info = apiv2_search_recipes(args.query, remote_patterns=remotes, local_cache=args.cache)
-    return info, args.output
+    return info
