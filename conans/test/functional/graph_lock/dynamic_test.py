@@ -81,7 +81,11 @@ class GraphLockDynamicTest(unittest.TestCase):
         client.run("export . LibC/0.1@")
         client.save({"conanfile.py": GenConanfile().with_require_plain("LibC/0.1")})
         client.run("lock create conanfile.py --lockfile-out=new.lock")
+        # And use the lockfile to build it
+        client.run("install LibC/0.1@ --build=LibC --lockfile=new.lock")
+        client.run("lock clean-modified new.lock")
         new_lock = client.load("new.lock")
+        self.assertNotIn("modified", new_lock)
         new_lock_json = json.loads(new_lock)["graph_lock"]["nodes"]
         self.assertEqual(3, len(new_lock_json))
         libc = new_lock_json["1"]
@@ -93,13 +97,6 @@ class GraphLockDynamicTest(unittest.TestCase):
             self.assertEqual(liba["ref"], "LibA/0.1")
             self.assertEqual(libc["ref"], "LibC/0.1")
         self.assertEqual(libc["requires"], ["2"])
-
-        # It is also possible to use the existing one as base
-        if not client.cache.config.revisions_enabled:
-            # This only works if revisions disabled, otherwise, the revision is locked
-            client.run("lock create conanfile.py --lockfile=conan.lock --lockfile-out=updated.lock")
-            updated_lock = client.load("updated.lock")
-            self.assertEqual(new_lock, updated_lock)
 
     def add_dep_test(self):
         # https://github.com/conan-io/conan/issues/5807

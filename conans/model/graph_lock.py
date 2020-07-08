@@ -102,6 +102,9 @@ class GraphLockNode(object):
     def relax(self):
         self._relaxed = True
 
+    def clean_modified(self):
+        self._modified = None
+
     @property
     def path(self):
         return self._path
@@ -137,8 +140,8 @@ class GraphLockNode(object):
 
     @package_id.setter
     def package_id(self, value):
-        if (not self._relaxed and self._package_id is not None and
-                self._package_id != PACKAGE_ID_UNKNOWN and self._package_id != value):
+        if (self._package_id is not None and self._package_id != PACKAGE_ID_UNKNOWN and
+                self._package_id != value):
             raise ConanException("Attempt to change package_id of locked '%s'" % repr(self._ref))
         if value != self._package_id:  # When the package_id is being assigned, prev becomes invalid
             self._prev = None
@@ -152,10 +155,10 @@ class GraphLockNode(object):
     def prev(self, value):
         if not self._revisions_enabled and value is not None:
             value = DEFAULT_REVISION_V1
-        if not self._relaxed and self._prev is not None and self._prev != value:
-            raise ConanException("A locked PREV of '%s' was already built" % repr(self._ref))
+        if self._prev is not None:
+            raise ConanException("Trying to modify locked package {}".format(repr(self._ref)))
         if self._prev != value:
-            self._modified = True
+            self._modified = True  # Only for conan_build_info
         self._prev = value
 
     @property
@@ -276,6 +279,10 @@ class GraphLock(object):
         for n in self._nodes.values():
             n.relax()
 
+    def clean_modified(self):
+        for n in self._nodes.values():
+            n.clean_modified()
+
     def build_order(self):
         """ This build order uses empty PREVs to decide which packages need to be built
 
@@ -339,7 +346,8 @@ class GraphLock(object):
                     assert len(prevs) == 1, "packages in lockfile with different PREVs"
                     prev = prevs.pop()
                     for node in nodes:
-                        node.prev = prev
+                        if node.prev is None:
+                            node.prev = prev
 
     def only_recipes(self):
         """ call this method to remove the packages/binaries information from the lockfile, and

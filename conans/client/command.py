@@ -1849,6 +1849,9 @@ class Command(object):
         build_order_cmd.add_argument("--json", action=OnceArgument,
                                      help="generate output file in json format")
 
+        clean_modified_cmd = subparsers.add_parser('clean-modified', help='Clean modified flags')
+        clean_modified_cmd.add_argument('lockfile', help='lockfile file')
+
         create_cmd = subparsers.add_parser('create', help='create a lockfile')
         create_cmd.add_argument("path", nargs="?", help="Path to a conanfile")
         create_cmd.add_argument("--name", action=OnceArgument,
@@ -1874,20 +1877,22 @@ class Command(object):
         self._warn_python_version()
 
         if args.subcommand == "update":
-            self._conan.update_lock(args.old_lockfile, args.new_lockfile)
+            self._conan.lock_update(args.old_lockfile, args.new_lockfile)
         elif args.subcommand == "build-order":
-            build_order = self._conan.build_order(args.lockfile)
+            build_order = self._conan.lock_build_order(args.lockfile)
             self._out.writeln(build_order)
             if args.json:
                 json_file = _make_abs_path(args.json)
                 save(json_file, json.dumps(build_order, indent=True))
+        elif args.subcommand == "clean-modified":
+            self._conan.lock_clean_modified(args.lockfile)
         elif args.subcommand == "create":
             profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
                                         options=args.options_build, env=args.env_build)
             profile_host = ProfileData(profiles=args.profile_host, settings=args.settings_host,
                                        options=args.options_host, env=args.env_host)
 
-            self._conan.create_lock(path=args.path,
+            self._conan.lock_create(path=args.path,
                                     reference=args.reference,
                                     name=args.name,
                                     version=args.version,

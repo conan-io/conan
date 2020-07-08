@@ -1235,7 +1235,7 @@ class ConanAPIV1(object):
         return {str(k): v for k, v in self.app.cache.editable_packages.edited_refs.items()}
 
     @api_method
-    def update_lock(self, old_lockfile, new_lockfile, cwd=None):
+    def lock_update(self, old_lockfile, new_lockfile, cwd=None):
         cwd = cwd or os.getcwd()
         old_lockfile = _make_abs_path(old_lockfile, cwd)
         revisions_enabled = self.app.config.revisions_enabled
@@ -1250,7 +1250,7 @@ class ConanAPIV1(object):
         old_lock.save(old_lockfile)
 
     @api_method
-    def build_order(self, lockfile, cwd=None):
+    def lock_build_order(self, lockfile, cwd=None):
         cwd = cwd or os.getcwd()
         lockfile = _make_abs_path(lockfile, cwd)
 
@@ -1260,7 +1260,17 @@ class ConanAPIV1(object):
         return build_order
 
     @api_method
-    def create_lock(self, path, reference=None, name=None, version=None, user=None, channel=None,
+    def lock_clean_modified(self, lockfile, cwd=None):
+        cwd = cwd or os.getcwd()
+        lockfile = _make_abs_path(lockfile, cwd)
+
+        graph_lock_file = GraphLockFile.load(lockfile, self.app.cache.config.revisions_enabled)
+        graph_lock = graph_lock_file.graph_lock
+        graph_lock.clean_modified()
+        graph_lock_file.save(lockfile)
+
+    @api_method
+    def lock_create(self, path, reference=None, name=None, version=None, user=None, channel=None,
                     profile_host=None, profile_build=None, remote_name=None, update=None, build=None,
                     base=None, lockfile=None, lockfile_out=None):
         # profile_host is mandatory

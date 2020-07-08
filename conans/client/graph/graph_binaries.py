@@ -160,14 +160,13 @@ class GraphBinariesAnalyzer(object):
         locked = node.graph_lock_node
         if locked and locked.package_id:  # if package_id = None, nothing to lock here
             # First we update the package_id, just in case there are differences or something
-            locked.package_id = node.package_id
+            locked.package_id = node.package_id  # necessary for PACKAGE_ID_UNKNOWN
             pref = PackageReference(locked.ref, locked.package_id, locked.prev)  # Keep locked PREV
             self._process_node(node, pref, build_mode, update, remotes)
             if node.binary == BINARY_MISSING and build_mode.allowed(node.conanfile):
                 node.binary = BINARY_BUILD
             if node.binary == BINARY_BUILD and locked.prev:
                 raise ConanException("Trying to build '%s', but it is locked" % repr(node.ref))
-            locked.prev = node.prev
         else:
             assert node.prev is None, "Non locked node shouldn't have PREV in evaluate_node"
             assert node.binary is None, "Node.binary should be None if not locked"
