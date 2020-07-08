@@ -5,13 +5,9 @@ from conans.errors import ConanException
 
 
 class ConanCommand(object):
-    def __init__(self, method, group=None, **kwargs):
+    def __init__(self, method, group, formatters=None):
         self._formatters = {}
-        self._allowed_formatters = ["cli", "json"]
-        for kind, action in kwargs.items():
-            if kind not in self._allowed_formatters:
-                raise ConanException("Formatter '{}' not allowed. Allowed formatters: {}"
-                                     .format(kind, ", ".join(self._allowed_formatters)))
+        for kind, action in formatters.items():
             if callable(action):
                 self._formatters[kind] = action
             else:
@@ -69,9 +65,9 @@ class ConanCommand(object):
         return self._parser
 
 
-def conan_command(**kwargs):
+def conan_command(group, formatters=None):
     def decorator(f):
-        cmd = ConanCommand(f, **kwargs)
+        cmd = ConanCommand(f, group, formatters)
         return cmd
 
     return decorator
