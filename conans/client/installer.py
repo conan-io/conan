@@ -650,7 +650,7 @@ class BinaryInstaller(object):
                 f.write('{}\n'.format(activate))
                 f.write('pushd "{}"\n'.format(os.path.dirname(path_to_exec)))
                 if platform.system() == "Windows":
-                    f.write('call "{}" "%*"\n'.format(path_to_exec))
+                    f.write('call "{}" %*\n'.format(path_to_exec))
                 else:
                     f.write('"{}" "$@"\n'.format(path_to_exec))
                 f.write('popd\n')
