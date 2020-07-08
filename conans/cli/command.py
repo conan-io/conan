@@ -4,20 +4,6 @@ from conans.cli.cli import SmartFormatter, OnceArgument
 from conans.errors import ConanException
 
 
-def info_handler(func):
-    def decorator(*args, **kwargs):
-        ret = {"error": None, "data": None}
-        try:
-            ret["data"] = func(*args, **kwargs)
-        except Exception as exc:
-            ret["error"] = exc
-            raise
-        finally:
-            return ret
-
-    return decorator
-
-
 class ConanCommand(object):
     def __init__(self, method, group=None, **kwargs):
         self._formatters = {}
@@ -54,12 +40,13 @@ class ConanCommand(object):
 
     def run(self, *args, **kwargs):
         conan_api = kwargs["conan_api"]
-        info = self._method(*args, **kwargs)
-        parser_args = self._parser.parse_args(*args)
-        if not info["error"]:
-            self._formatters[parser_args.output](info["data"], conan_api.out)
-        else:
-            raise info["error"]
+        try:
+            info = self._method(*args, **kwargs)
+            parser_args = self._parser.parse_args(*args)
+            if info:
+                self._formatters[parser_args.output](info, conan_api.out)
+        except Exception:
+            raise
 
     @property
     def group(self):

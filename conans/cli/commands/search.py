@@ -1,9 +1,9 @@
 import json
 
 from conans.client.output import Color
-from conans.errors import ConanException, NoRemoteAvailable
-from conans.cli.cli import OnceArgument, Extender
-from conans.cli.command import conan_command, info_handler
+from conans.errors import NoRemoteAvailable
+from conans.cli.cli import Extender
+from conans.cli.command import conan_command
 
 
 def output_search_cli(info, out):
@@ -22,7 +22,6 @@ def output_search_json(info, out):
     out.writeln(myjson)
 
 
-@info_handler
 def apiv2_search_recipes(query, remote_patterns=None, local_cache=False):
     remote = None
     if remote_patterns is not None and len(remote_patterns) > 0:
