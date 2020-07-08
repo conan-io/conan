@@ -42,6 +42,58 @@ class GraphLockDynamicTest(unittest.TestCase):
         client.run("create . LibD/1.0@ --lockfile=libd.lock")
         self.assertIn("LibA/1.0 from local cache - Cache", client.out)
 
+    def partial_lock_conflict_test(self):
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . LibA/1.0@")
+        client.save({"conanfile.py": GenConanfile().with_require_plain("LibA/[>=1.0]")})
+        client.run("create . LibB/1.0@")
+        client.run("lock create --reference=LibB/1.0 --lockfile-out=libb.lock")
+
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . LibA/1.0.1@")
+
+        client.save({"conanfile.py": GenConanfile().with_require_plain("LibA/[>=1.0]")})
+        client.run("create . LibC/1.0@")
+
+        client.save({"conanfile.py": GenConanfile().with_require_plain("LibB/1.0")
+                                                   .with_require_plain("LibC/1.0")})
+        client.run("create . LibD/1.0@ --lockfile=libb.lock", assert_error=True)
+        self.assertIn("Couldn't find 'LibD/1.0' in graph-lock", client.out)
+
+        client.run("lock create conanfile.py --name=LibD --version=1.0 --lockfile=libb.lock "
+                   "--lockfile-out=libd.lock")
+        self.assertIn("LibA/1.0 from local cache - Cache", client.out)
+        self.assertNotIn("LibA/1.0.1", client.out)
+
+        client.run("create . LibD/1.0@")
+        self.assertIn("LibA/1.0.1 from local cache - Cache", client.out)
+        self.assertNotIn("LibA/1.0 from local", client.out)
+
+        client.run("create . LibD/1.0@ --lockfile=libd.lock")
+        self.assertIn("LibA/1.0 from local cache - Cache", client.out)
+        self.assertNotIn("LibA/1.0.1", client.out)
+
+    def partial_lock_root_unused_test(self):
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . LibA/1.0@")
+        client.save({"conanfile.py": GenConanfile().with_require_plain("LibA/[>=1.0]")})
+        client.run("create . LibB/1.0@")
+        client.run("lock create --reference=LibB/1.0 --lockfile-out=libb.lock")
+
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . LibA/1.0.1@")
+
+        client.save({"conanfile.py": GenConanfile().with_require_plain("LibA/[>=1.0]")})
+
+        client.run("create . LibC/1.0@ --lockfile=libb.lock", assert_error=True)
+        self.assertIn("Couldn't find 'LibC/1.0' in graph-lock", client.out)
+
+        client.run("lock create conanfile.py --name=LibC --version=1.0 --lockfile=libb.lock "
+                   "--lockfile-out=libc.lock", assert_error=True)
+        self.assertIn("ERROR: The provided lockfile was not used, there is no overlap.", client.out)
+
     def remove_dep_test(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})

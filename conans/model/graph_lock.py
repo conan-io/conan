@@ -512,8 +512,6 @@ class GraphLock(object):
             raise
 
     def _match_relaxed_require(self, ref):
-        """ to use an existing lockfile to create a new one, the existing one should be engaged
-        at its root node, the topmost downstream consumer"""
         assert self._relaxed
         assert isinstance(ref, ConanFileReference)
 
@@ -522,27 +520,29 @@ class GraphLock(object):
         if version.startswith("[") and version.endswith("]"):
             version_range = version[1:-1]
 
-        root_id = self.root_node_id()
-        root_node = self._nodes[root_id]
-        root_ref = root_node.ref
-
         if version_range:
-            if (ref.name == root_ref.name and ref.user == root_ref.user and
-                    ref.channel == root_ref.channel):
-                output = []
-                result = satisfying([str(root_ref.version)], version_range, output)
-                if result:
-                    return root_id
+            for id_, node in self._nodes.items():
+                root_ref = node.ref
+                if (ref.name == root_ref.name and ref.user == root_ref.user and
+                        ref.channel == root_ref.channel):
+                    output = []
+                    result = satisfying([str(root_ref.version)], version_range, output)
+                    if result:
+                        return id_
         else:
             search_ref = repr(ref)
             if ref.revision:
                 # First search by exact ref (with RREV)
-                if root_ref and repr(root_ref) == search_ref:
-                    return root_id
+                for id_, node in self._nodes.items():
+                    root_ref = node.ref
+                    if root_ref and repr(root_ref) == search_ref:
+                        return id_
             else:
-                # Then search by aprox ref (without RREV)
-                if root_ref and str(root_ref) == search_ref:
-                    return root_id
+                for id_, node in self._nodes.items():
+                    root_ref = node.ref
+                    # Then search by aprox ref (without RREV)
+                    if root_ref and str(root_ref) == search_ref:
+                        return id_
 
     def get_node(self, ref):
         """ given a REF, return the Node of the package in the lockfile that correspond to that
