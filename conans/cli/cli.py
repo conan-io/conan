@@ -149,56 +149,33 @@ class Cli(object):
             raise ConanException(
                 "Unsupported Python version. Minimum required version is Python 3.5")
 
-        ret_code = SUCCESS
         try:
-            try:
-                command_argument = args[0][0]
-            except IndexError:  # No parameters
+            command_argument = args[0][0]
+        except IndexError:  # No parameters
+            self.help_message()
+            return SUCCESS
+        try:
+            command = self.commands[command_argument]
+        except KeyError as exc:
+            if command_argument in ["-v", "--version"]:
+                self._out.success("Conan version %s" % client_version)
+                return SUCCESS
+
+            if command_argument in ["-h", "--help"]:
                 self.help_message()
-                return False
-            try:
-                command = self.commands[command_argument]
-            except KeyError as exc:
-                if command_argument in ["-v", "--version"]:
-                    self._out.success("Conan version %s" % client_version)
-                    return False
+                return SUCCESS
 
-                if command_argument in ["-h", "--help"]:
-                    self.help_message()
-                    return False
+            self._out.writeln(
+                "'%s' is not a Conan command. See 'conan --help'." % command_argument)
+            self._out.writeln("")
+            self._print_similar(command_argument)
+            raise ConanException("Unknown command %s" % str(exc))
 
-                self._out.writeln(
-                    "'%s' is not a Conan command. See 'conan --help'." % command_argument)
-                self._out.writeln("")
-                self._print_similar(command_argument)
-                raise ConanException("Unknown command %s" % str(exc))
+        command.run(args[0][1:], conan_api=self.conan_api,
+                    parser=self.commands[command_argument].parser,
+                    commands=self.commands, groups=self.groups)
 
-            command.run(args[0][1:], conan_api=self.conan_api,
-                        parser=self.commands[command_argument].parser,
-                        commands=self.commands, groups=self.groups)
-
-        except KeyboardInterrupt as exc:
-            logger.error(exc)
-            ret_code = SUCCESS
-        except SystemExit as exc:
-            if exc.code != 0:
-                logger.error(exc)
-                self._out.error("Exiting with code: %d" % exc.code)
-            ret_code = exc.code
-        except ConanInvalidConfiguration as exc:
-            ret_code = ERROR_INVALID_CONFIGURATION
-            self._out.error(exc)
-        except ConanException as exc:
-            ret_code = ERROR_GENERAL
-            self._out.error(exc)
-        except Exception as exc:
-            import traceback
-            print(traceback.format_exc())
-            ret_code = ERROR_GENERAL
-            msg = exception_message_safe(exc)
-            self._out.error(msg)
-
-        return ret_code
+        return SUCCESS
 
 
 def main(args):
@@ -242,5 +219,25 @@ def main(args):
         signal.signal(signal.SIGBREAK, ctrl_break_handler)
 
     cli = Cli(conan_api)
-    error = cli.run(args)
-    sys.exit(error)
+
+    try:
+        exit_error = cli.run(args)
+    except SystemExit as exc:
+        if exc.code != 0:
+            logger.error(exc)
+            conan_api.out.error("Exiting with code: %d" % exc.code)
+        exit_error = exc.code
+    except ConanInvalidConfiguration as exc:
+        exit_error = ERROR_INVALID_CONFIGURATION
+        conan_api.out.error(exc)
+    except ConanException as exc:
+        exit_error = ERROR_GENERAL
+        conan_api.out.error(exc)
+    except Exception as exc:
+        import traceback
+        print(traceback.format_exc())
+        exit_error = ERROR_GENERAL
+        msg = exception_message_safe(exc)
+        conan_api.out.error(msg)
+
+    sys.exit(exit_error)
