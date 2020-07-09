@@ -34,7 +34,7 @@ set(CONAN_SHARED_LINKER_FLAGS_{dep}{build_type}_LIST "{deps.sharedlinkflags_list
 set(CONAN_EXE_LINKER_FLAGS_{dep}{build_type}_LIST "{deps.exelinkflags_list}")
 
 # Apple Frameworks
-conan_find_apple_frameworks(CONAN_FRAMEWORKS_FOUND_{dep}{build_type} "${{CONAN_FRAMEWORKS_{dep}{build_type}}}" "_{dep}")
+conan_find_apple_frameworks(CONAN_FRAMEWORKS_FOUND_{dep}{build_type} "${{CONAN_FRAMEWORKS_{dep}{build_type}}}" "_{dep}" "{build_type}")
 # Append to aggregated values variable
 set(CONAN_LIBS_{dep}{build_type} ${{CONAN_PKG_LIBS_{dep}{build_type}}} ${{CONAN_SYSTEM_LIBS_{dep}{build_type}}} ${{CONAN_FRAMEWORKS_FOUND_{dep}{build_type}}})
 """
@@ -115,7 +115,7 @@ set(CONAN_EXE_LINKER_FLAGS{build_type} "{deps.exelinkflags} ${{CONAN_EXE_LINKER_
 set(CONAN_C_FLAGS{build_type} "{deps.cflags} ${{CONAN_C_FLAGS{build_type}}}")
 
 # Apple Frameworks
-conan_find_apple_frameworks(CONAN_FRAMEWORKS_FOUND{build_type} "${{CONAN_FRAMEWORKS{build_type}}}" "")
+conan_find_apple_frameworks(CONAN_FRAMEWORKS_FOUND{build_type} "${{CONAN_FRAMEWORKS{build_type}}}" "" "{build_type}")
 # Append to aggregated values variable: Use CONAN_LIBS instead of CONAN_PKG_LIBS to include user appended vars
 set(CONAN_LIBS{build_type} ${{CONAN_LIBS{build_type}}} ${{CONAN_SYSTEM_LIBS{build_type}}} ${{CONAN_FRAMEWORKS_FOUND{build_type}}})
 """
@@ -826,7 +826,7 @@ class CMakeCommonMacros:
     """)
 
     apple_frameworks_macro = textwrap.dedent("""
-        macro(conan_find_apple_frameworks FRAMEWORKS_FOUND FRAMEWORKS SUFFIX)
+        macro(conan_find_apple_frameworks FRAMEWORKS_FOUND FRAMEWORKS SUFFIX BUILD_TYPE)
             if(APPLE)
                 if(CMAKE_BUILD_TYPE)
                     if(${CMAKE_BUILD_TYPE} MATCHES "Debug")
@@ -839,6 +839,20 @@ class CMakeCommonMacros:
                         set(CONAN_FRAMEWORKS${SUFFIX} ${CONAN_FRAMEWORKS${SUFFIX}_RELWITHDEBINFO} ${CONAN_FRAMEWORKS${SUFFIX}})
                         set(CONAN_FRAMEWORK_DIRS${SUFFIX} ${CONAN_FRAMEWORK_DIRS${SUFFIX}_RELWITHDEBINFO} ${CONAN_FRAMEWORK_DIRS${SUFFIX}})
                     elseif(${CMAKE_BUILD_TYPE} MATCHES "MinSizeRel")
+                        set(CONAN_FRAMEWORKS${SUFFIX} ${CONAN_FRAMEWORKS${SUFFIX}_MINSIZEREL} ${CONAN_FRAMEWORKS${SUFFIX}})
+                        set(CONAN_FRAMEWORK_DIRS${SUFFIX} ${CONAN_FRAMEWORK_DIRS${SUFFIX}_MINSIZEREL} ${CONAN_FRAMEWORK_DIRS${SUFFIX}})
+                    endif()
+                elseif(NOT BUILD_TYPE STREQUAL "")
+                    if(${BUILD_TYPE} MATCHES "_DEBUG")
+                        set(CONAN_FRAMEWORKS${SUFFIX} ${CONAN_FRAMEWORKS${SUFFIX}_DEBUG} ${CONAN_FRAMEWORKS${SUFFIX}})
+                        set(CONAN_FRAMEWORK_DIRS${SUFFIX} ${CONAN_FRAMEWORK_DIRS${SUFFIX}_DEBUG} ${CONAN_FRAMEWORK_DIRS${SUFFIX}})
+                    elseif(${BUILD_TYPE} MATCHES "_RELEASE")
+                        set(CONAN_FRAMEWORKS${SUFFIX} ${CONAN_FRAMEWORKS${SUFFIX}_RELEASE} ${CONAN_FRAMEWORKS${SUFFIX}})
+                        set(CONAN_FRAMEWORK_DIRS${SUFFIX} ${CONAN_FRAMEWORK_DIRS${SUFFIX}_RELEASE} ${CONAN_FRAMEWORK_DIRS${SUFFIX}})
+                    elseif(${BUILD_TYPE} MATCHES "_RELWITHDEBINFO")
+                        set(CONAN_FRAMEWORKS${SUFFIX} ${CONAN_FRAMEWORKS${SUFFIX}_RELWITHDEBINFO} ${CONAN_FRAMEWORKS${SUFFIX}})
+                        set(CONAN_FRAMEWORK_DIRS${SUFFIX} ${CONAN_FRAMEWORK_DIRS${SUFFIX}_RELWITHDEBINFO} ${CONAN_FRAMEWORK_DIRS${SUFFIX}})
+                    elseif(${BUILD_TYPE} MATCHES "_MINSIZEREL")
                         set(CONAN_FRAMEWORKS${SUFFIX} ${CONAN_FRAMEWORKS${SUFFIX}_MINSIZEREL} ${CONAN_FRAMEWORKS${SUFFIX}})
                         set(CONAN_FRAMEWORK_DIRS${SUFFIX} ${CONAN_FRAMEWORK_DIRS${SUFFIX}_MINSIZEREL} ${CONAN_FRAMEWORK_DIRS${SUFFIX}})
                     endif()
