@@ -1,5 +1,6 @@
 import json
 import textwrap
+import time
 import unittest
 
 from conans.model.graph_lock import LOCKFILE, LOCKFILE_VERSION
@@ -223,6 +224,35 @@ class GraphLockRevisionTest(unittest.TestCase):
         client.run("export-pkg . PkgB/0.1@user/channel --lockfile=conan.lock")
         self._check_lock("PkgB/0.1@user/channel#%s" % self.pkg_b_revision,
                          self.pkg_b_package_revision)
+
+
+@unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
+class RevisionsUpdateTest(unittest.TestCase):
+
+    def test_revisions_update(self):
+        # https://github.com/conan-io/conan/issues/7333
+        client = TestClient(default_server_user=True)
+        client.save({"conanfile.py": GenConanfile("PkgA", "0.1")})
+        client.run("create . ")
+        self.assertIn("PkgA/0.1: Exported revision: fa090239f8ba41ad559f8e934494ee2", client.out)
+        client.run("upload * --all --confirm")
+        client.run("search PkgA/0.1@ --revisions -r=default")
+        self.assertIn("fa090239f8ba41ad559f8e934494ee2a", client.out)
+
+        client2 = TestClient(servers=client.servers, users=client.users)
+        client2.save({"conanfile.py": GenConanfile("PkgA", "0.1").with_build_msg("Building")})
+        time.sleep(1)
+        client2.run("create . ")
+        self.assertIn("PkgA/0.1: Exported revision: 7f1110e1ae8d852b6d55f7f121864de6", client2.out)
+        client2.run("upload * --all --confirm")
+        client2.run("search PkgA/0.1@ --revisions -r=default")
+        self.assertIn("fa090239f8ba41ad559f8e934494ee2a", client2.out)
+        self.assertIn("7f1110e1ae8d852b6d55f7f121864de6", client2.out)
+
+        client.save({"conanfile.py": GenConanfile("PkgB", "0.1").with_require_plain("PkgA/0.1")})
+        client.run("lock create conanfile.py --update")
+        lockfile = client.load("conan.lock")
+        self.assertIn("7f1110e1ae8d852b6d55f7f121864de6", lockfile)
 
 
 class LockFileOptionsTest(unittest.TestCase):

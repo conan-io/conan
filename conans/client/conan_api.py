@@ -1316,7 +1316,7 @@ class ConanAPIV1(object):
         # FIXME: Using update as check_update?
         remotes = self.app.load_remotes(remote_name=remote_name, check_updates=update)
         deps_graph = self.app.graph_manager.load_graph(ref_or_path, None, graph_info, build, update,
-                                                       False, remotes, recorder)
+                                                       update, remotes, recorder)
         print_graph(deps_graph, self.app.out)
 
         # The computed graph-lock by the graph expansion
