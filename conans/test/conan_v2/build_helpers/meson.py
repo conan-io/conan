@@ -15,6 +15,7 @@ class MesonBuildHelperTestCase(ConanV2ModeTestCase):
                 settings = "os", "arch", "compiler"
                 def build(self):
                      meson = Meson(self)
+                     meson.build()
         """)
         t.save({"conanfile.py": conanfile})
         t.run("create . pkg/0.1@user/testing", assert_error=True)
@@ -29,6 +30,7 @@ class MesonBuildHelperTestCase(ConanV2ModeTestCase):
                 settings = "os", "arch", "build_type"
                 def build(self):
                      meson = Meson(self)
+                     meson.build()
         """)
         t.save({"conanfile.py": conanfile})
         t.run("create . pkg/0.1@user/testing", assert_error=True)

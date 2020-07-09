@@ -43,9 +43,6 @@ class AutoToolsBuildEnvironment(object):
         self._os_target, self._arch_target = get_target_os_arch(conanfile)
 
         self._build_type = conanfile.settings.get_safe("build_type")
-        if not self._build_type:
-            conan_v2_behavior("build_type setting should be defined.",
-                              v1_behavior=self._conanfile.output.warn)
 
         self._compiler = conanfile.settings.get_safe("compiler")
         if not self._compiler:
@@ -233,6 +230,9 @@ class AutoToolsBuildEnvironment(object):
     def make(self, args="", make_program=None, target=None, vars=None):
         if not self._conanfile.should_build:
             return
+        if not self._build_type:
+            conan_v2_behavior("build_type setting should be defined.",
+                              v1_behavior=self._conanfile.output.warn)
         make_program = os.getenv("CONAN_MAKE_PROGRAM") or make_program or "make"
         with environment_append(vars or self.vars):
             str_args = args_to_string(args)

@@ -39,9 +39,6 @@ class Meson(object):
         self._compiler_version = self._ss("compiler.version")
 
         self._build_type = self._ss("build_type")
-        if not self._build_type:
-            conan_v2_behavior("build_type setting should be defined.",
-                              v1_behavior=self._conanfile.output.warn)
 
         self.backend = backend or "ninja"  # Other backends are poorly supported, not default other.
 
@@ -217,6 +214,9 @@ class Meson(object):
     def build(self, args=None, build_dir=None, targets=None):
         if not self._conanfile.should_build:
             return
+        if not self._build_type:
+            conan_v2_behavior("build_type setting should be defined.",
+                              v1_behavior=self._conanfile.output.warn)
         self._run_ninja_targets(args=args, build_dir=build_dir, targets=targets)
 
     def install(self, args=None, build_dir=None):

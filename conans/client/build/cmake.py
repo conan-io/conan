@@ -78,9 +78,6 @@ class CMakeBuildHelper(object):
         self._conanfile = conanfile
         self._settings = conanfile.settings
         self._build_type = build_type or conanfile.settings.get_safe("build_type")
-        if not self._build_type:
-            conan_v2_behavior("build_type setting should be defined.",
-                              v1_behavior=self._conanfile.output.warn)
         self._cmake_program = os.getenv("CONAN_CMAKE_PROGRAM") or cmake_program or "cmake"
 
         self.generator_platform = generator_platform
@@ -307,6 +304,9 @@ class CMakeBuildHelper(object):
     def build(self, args=None, build_dir=None, target=None):
         if not self._conanfile.should_build:
             return
+        if not self._build_type:
+            conan_v2_behavior("build_type setting should be defined.",
+                              v1_behavior=self._conanfile.output.warn)
         self._build(args, build_dir, target)
 
     def _build(self, args=None, build_dir=None, target=None):
