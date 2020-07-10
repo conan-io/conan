@@ -368,11 +368,11 @@ class GraphLockVersionRangeNoUserChannelTest(unittest.TestCase):
 class GraphLockBuildRequireVersionRangeTest(GraphLockVersionRangeTest):
     consumer = GenConanfile().with_name("PkgB").with_version("0.1")\
                              .with_build_require_plain("PkgA/[>=0.1]@user/channel")
-    pkg_b_revision = "b6f49e5ba6dd3d64af09a2f288e71330"
+    pkg_b_revision = "b7338f650cc61f8e0ad0285cd1b77b92"
     pkg_b_id = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
-    pkg_b_package_revision = "#33a5634bbd9ec26b369d3900d91ea9a0"
-    modified_pkg_b_revision = "62a38c702f14cb9de952bb22b40d6ecc"
-    modified_pkg_b_package_revision = "#b7850e289326d594fbc10088d55f5259"
+    pkg_b_package_revision = "#a903a10014693fc381c6bc8e6c91bf4a"
+    modified_pkg_b_revision = "d4adbdf5c7426cfa4cdca63bb96984b6"
+    modified_pkg_b_package_revision = "#fe05c10f59b44a0ae5de0269c5a4ca3e"
 
 
 class GraphLockVersionRangeInfoTest(GraphLockVersionRangeTest):
@@ -603,7 +603,7 @@ class GraphLockConsumerBuildOrderTest(unittest.TestCase):
                          ":5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", ca[1])
         level1 = jsonbo[1]
         cb = level1[0]
-        self.assertEqual("CB/1.0@user/channel#29352c82c9c6b7d1be85524ef607f77f"
+        self.assertEqual("CB/1.0@user/channel#5a90ed235bbda74b863e4045d41e5703"
                          ":5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", cb[1])
 
     def consumer_build_order_test(self):
@@ -705,7 +705,7 @@ class GraphLockBuildRequireErrorTestCase(unittest.TestCase):
 
         # Building the graphlock we get the message
         client.run("graph lock variant.py")
-        fmpe = "ffmpeg/1.0#5522e93e2abfbd455e6211fe4d0531a2:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
+        fmpe = "ffmpeg/1.0#917812a86b6c17f109d7537f3c5102e4:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
         font = "fontconfig/1.0#f3367e0e7d170aa12abccb175fee5f97:"\
                "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
         harf = "harfbuzz/1.0#3172f5e84120f235f75f8dd90fdef84f:"\
@@ -761,7 +761,7 @@ class GraphLockBuildRequireErrorTestCase(unittest.TestCase):
 
         # Building the graphlock we get the message
         client.run("graph lock variant.py --build")
-        fmpe = "ffmpeg/1.0#5522e93e2abfbd455e6211fe4d0531a2:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
+        fmpe = "ffmpeg/1.0#917812a86b6c17f109d7537f3c5102e4:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
         font = "fontconfig/1.0#f3367e0e7d170aa12abccb175fee5f97:"\
                "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
         harf = "harfbuzz/1.0#3172f5e84120f235f75f8dd90fdef84f:"\
