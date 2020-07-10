@@ -1,6 +1,3 @@
-import textwrap
-
-
 class GenConanfile(object):
     """
     USAGE:
@@ -204,8 +201,8 @@ class GenConanfile(object):
         lines = []
         for ref, force_host_context in self._build_requires:
             force_host = ", force_host_context=True" if force_host_context else ""
-            lines.append('    self.build_requires("{}"{})'.format(ref, force_host))
-        return "def build_requirements(self):\n" + textwrap.indent('\n'.join(lines), "    ") + "\n"
+            lines.append('        self.build_requires("{}"{})'.format(ref, force_host))
+        return "def build_requirements(self):\n{}\n".format("\n".join(lines))
 
     @property
     def _requires_line(self):
