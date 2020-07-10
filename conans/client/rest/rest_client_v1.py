@@ -307,7 +307,7 @@ class RestV1Methods(RestCommonMethods):
     @handle_return_deserializer()
     def remove_packages(self, ref, package_ids=None):
         """ Remove any packages specified by package_ids"""
-        pcks = self.search_packages(ref, query=None)
+        pcks = self.search_packages(ref.copy_clear_rev(), query=None)
         if pcks:
             self.check_credentials()
             payload = {"package_ids": package_ids}
