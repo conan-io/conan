@@ -82,7 +82,7 @@ class RemoteTest(unittest.TestCase):
 
     def list_raw_test(self):
         self.client.run("remote list --raw")
-        output = re.sub(r"http://fake.+\.com", "http://fake.com", str(self.client.out))
+        output = re.sub(r"http://fake.+.com", "http://fake.com", str(self.client.out))
         self.assertIn("remote0 http://fake.com True", output)
         self.assertIn("remote1 http://fake.com True", output)
         self.assertIn("remote2 http://fake.com True", output)
