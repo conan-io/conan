@@ -1,6 +1,7 @@
 import os
 import time
 import traceback
+from collections import namedtuple
 
 from six.moves.urllib.parse import parse_qs, urljoin, urlparse, urlsplit
 
@@ -306,10 +307,13 @@ class RestV1Methods(RestCommonMethods):
     @handle_return_deserializer()
     def remove_packages(self, ref, package_ids=None):
         """ Remove any packages specified by package_ids"""
-        self.check_credentials()
-        payload = {"package_ids": package_ids}
-        url = self.router.remove_packages(ref)
-        return self._post_json(url, payload)
+        pcks = self.search_packages(ref, query=None)
+        if pcks:
+            self.check_credentials()
+            payload = {"package_ids": package_ids}
+            url = self.router.remove_packages(ref)
+            return self._post_json(url, payload)
+        return namedtuple("_", ['status_code', 'content'])(200, b'')
 
     @handle_return_deserializer()
     def remove_conanfile(self, ref):
