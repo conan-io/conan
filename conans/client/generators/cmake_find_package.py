@@ -104,9 +104,9 @@ class CMakeFindPackageGenerator(Generator):
         set({{ pkg_name }}_{{ comp_name }}_BUILD_MODULES_PATHS {{ comp.build_modules_paths }})
         set({{ pkg_name }}_{{ comp_name }}_DEPENDENCIES {{ comp.public_deps }})
         set({{ pkg_name }}_{{ comp_name }}_LINKER_FLAGS_LIST
-                $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:{{ comp.sharedlinkflags_list }}>
-                $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:{{ comp.sharedlinkflags_list }}>
-                $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:{{ comp.exelinkflags_list }}>
+                "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:{{ comp.sharedlinkflags_list }}>"
+                "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:{{ comp.sharedlinkflags_list }}>"
+                "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:{{ comp.exelinkflags_list }}>"
         )
 
         {%- endfor %}
