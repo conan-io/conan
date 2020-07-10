@@ -73,6 +73,7 @@ class Printer(object):
             is_ref = it["is_ref"]
 
             self._out.writeln(it["display_name"], Color.BRIGHT_CYAN)
+            _print("provides", name="provides")
             _print("id", name="ID")
             _print("build_id", name="BuildID")
             if show_paths:
