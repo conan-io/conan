@@ -49,7 +49,7 @@ def search(*args, conan_api, parser, **kwargs):
 
     # TODO: Discuss if --cache and --remote are exclusive
     exclusive_args = parser.add_mutually_exclusive_group()
-    exclusive_args.add_argument('-r', '--remote', default=None, action=Extender, nargs='?',
+    exclusive_args.add_argument('-r', '--remote', default=None, action=Extender,
                                 help="Remote to search. Accepts wildcards. To search in all remotes use *")
     exclusive_args.add_argument('-c', '--cache', action="store_true",
                                 help="Search in the local cache")
