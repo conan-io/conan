@@ -246,13 +246,16 @@ class RestV2Methods(RestCommonMethods):
         for ref in refs:
             assert ref.revision is not None, "remove_packages needs RREV"
             if not package_ids:
-                url = self.router.remove_all_packages(ref)
-                response = self.requester.delete(url, auth=self.auth, headers=self.custom_headers,
-                                                 verify=self.verify_ssl)
-                if response.status_code != 200:  # Error message is text
-                    # To be able to access ret.text (ret.content are bytes)
-                    response.charset = "utf-8"
-                    raise get_exception_from_error(response.status_code)(response.text)
+                # Check there are packages to remove
+                package_search_url = self.router.search_packages(ref)
+                if self.get_json(package_search_url):
+                    url = self.router.remove_all_packages(ref)
+                    response = self.requester.delete(url, auth=self.auth, verify=self.verify_ssl,
+                                                     headers=self.custom_headers)
+                    if response.status_code != 200:  # Error message is text
+                        # To be able to access ret.text (ret.content are bytes)
+                        response.charset = "utf-8"
+                        raise get_exception_from_error(response.status_code)(response.text)
             else:
                 for pid in package_ids:
                     pref = PackageReference(ref, pid)
