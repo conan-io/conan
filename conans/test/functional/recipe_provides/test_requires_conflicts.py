@@ -31,7 +31,7 @@ class RequiresConflictsTestCase(unittest.TestCase):
         t.save({'top.py': GenConanfile("top", "v1").with_provides("libjpeg"),
                 'middle.py': self.header_only.render(requires=['top/v1', ]),
                 'app.py': GenConanfile().with_provides("libjpeg")
-               .with_require_plain("middle/v1")})
+                                        .with_require_plain("middle/v1")})
         t.run("export top.py")
         t.run("export middle.py middle/v1@")
         t.run("install app.py app/version@", assert_error=True)
