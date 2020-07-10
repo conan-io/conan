@@ -126,9 +126,6 @@ class ConanFileLoader(object):
                 raise ConanException("Package recipe with version %s!=%s"
                                      % (version, conanfile.version))
 
-        # Recipe provides its own name if nothing else is defined
-        conanfile.provides = make_tuple(conanfile.provides or conanfile.name)
-
         # Make sure this is nowhere else available
         del conanfile.recipe_folder
 

@@ -1,3 +1,6 @@
+import textwrap
+
+
 class GenConanfile(object):
     """
     USAGE:
@@ -20,6 +23,7 @@ class GenConanfile(object):
         self._options = {}
         self._generators = []
         self._default_options = {}
+        self._provides = []
         self._package_files = {}
         self._package_files_env = {}
         self._package_files_link = {}
@@ -39,6 +43,10 @@ class GenConanfile(object):
 
     def with_version(self, version):
         self._version = version
+        return self
+
+    def with_provides(self, provides):
+        self._provides.append(provides)
         return self
 
     def with_revision_mode(self, revision_mode):
@@ -67,11 +75,11 @@ class GenConanfile(object):
         self._requirements.append((ref_str, private, override))
         return self
 
-    def with_build_require(self, ref):
-        return self.with_build_require_plain(ref.full_str())
+    def with_build_require(self, ref, force_host_context=False):
+        return self.with_build_require_plain(ref.full_str(), force_host_context=force_host_context)
 
-    def with_build_require_plain(self, ref_str):
-        self._build_requires.append(ref_str)
+    def with_build_require_plain(self, ref_str, force_host_context=False):
+        self._build_requires.append((ref_str, force_host_context))
         return self
 
     def with_import(self, i):
@@ -138,6 +146,13 @@ class GenConanfile(object):
         return "version = '{}'".format(self._version)
 
     @property
+    def _provides_line(self):
+        if not self._provides:
+            return ""
+        line = ", ".join('"{}"'.format(provide) for provide in self._provides)
+        return "provides = {}".format(line)
+
+    @property
     def _scm_line(self):
         if not self._scm:
             return ""
@@ -182,12 +197,15 @@ class GenConanfile(object):
         return tmp
 
     @property
-    def _build_requires_line(self):
+    def _build_requirements_method(self):
         if not self._build_requires:
             return ""
-        line = ", ".join(['"{}"'.format(r) for r in self._build_requires])
-        tmp = "build_requires = %s" % line
-        return tmp
+
+        lines = []
+        for ref, force_host_context in self._build_requires:
+            force_host = ", force_host_context=True" if force_host_context else ""
+            lines.append('    self.build_requires("{}"{})'.format(ref, force_host))
+        return "def build_requirements(self):\n" + textwrap.indent('\n'.join(lines), "    ") + "\n"
 
     @property
     def _requires_line(self):
@@ -304,14 +322,16 @@ class GenConanfile(object):
             ret.append("    {}".format(self._name_line))
         if self._version_line:
             ret.append("    {}".format(self._version_line))
+        if self._provides_line:
+            ret.append("    {}".format(self._provides_line))
         if self._generators_line:
             ret.append("    {}".format(self._generators_line))
         if self._requires_line:
             ret.append("    {}".format(self._requires_line))
         if self._requirements_method:
             ret.append("    {}".format(self._requirements_method))
-        if self._build_requires_line:
-            ret.append("    {}".format(self._build_requires_line))
+        if self._build_requirements_method:
+            ret.append("    {}".format(self._build_requirements_method))
         if self._scm:
             ret.append("    {}".format(self._scm_line))
         if self._revision_mode_line:

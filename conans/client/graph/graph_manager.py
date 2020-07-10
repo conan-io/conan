@@ -1,6 +1,6 @@
 import fnmatch
 import os
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 
 from conans.client.conanfile.configure import run_configure_method
 from conans.client.generators.text import TXTGenerator
@@ -114,12 +114,12 @@ class GraphManager(object):
         """ main entry point to compute a full dependency graph
         """
         root_node = self._load_root_node(reference, create_reference, graph_info)
-
         deps_graph = self._resolve_graph(root_node, graph_info, build_mode, check_updates, update,
                                          remotes, recorder,
                                          apply_build_requires=apply_build_requires)
 
         # Run some validations once the graph is built
+        self._validate_graph_provides(deps_graph)
 
         return deps_graph
 
@@ -368,6 +368,28 @@ class GraphManager(object):
             node.public_closure.sort(key_fn=lambda n: inverse_levels[n])
 
         return graph
+
+    @staticmethod
+    def _validate_graph_provides(deps_graph):
+        # Check that two different nodes are not providing the same (ODR violation)
+        for node in deps_graph.nodes:
+            provides = defaultdict(list)
+            if node.conanfile.provides is not None:  # consumer conanfile doesn't initialize
+                for it in node.conanfile.provides:
+                    provides[it].append(node)
+
+            for item in filter(lambda u: u.context == CONTEXT_HOST, node.public_closure):
+                for it in item.conanfile.provides:
+                    provides[it].append(item)
+
+            # Check (and report) if any functionality is provided by several different recipes
+            conflicts = [it for it in provides.keys() if len(provides[it]) > 1]
+            if conflicts:
+                msg_lines = ["At least two recipes provides the same functionality:"]
+                for it in conflicts:
+                    nodes_str = "', '".join([n.conanfile.display_name for n in provides[it]])
+                    msg_lines.append(" - '{}' provided by '{}'".format(it, nodes_str))
+                raise ConanException('\n'.join(msg_lines))
 
 
 def load_deps_info(current_path, conanfile, required):
