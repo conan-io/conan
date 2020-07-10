@@ -136,7 +136,6 @@ class CommandOutputer(object):
             item_data["display_name"] = conanfile.display_name
             item_data["id"] = package_id
             item_data["build_id"] = build_id(conanfile)
-            item_data["provides"] = conanfile.provides
 
             # Paths
             if isinstance(ref, ConanFileReference) and grab_paths:

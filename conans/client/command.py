@@ -628,7 +628,7 @@ class Command(object):
         """
 
         info_only_options = ["id", "build_id", "remote", "url", "license", "requires", "update",
-                             "required", "date", "author", "description", "None", "provides"]
+                             "required", "date", "author", "description", "None"]
         path_only_options = ["export_folder", "build_folder", "package_folder", "source_folder"]
         str_path_only_options = ", ".join(['"%s"' % field for field in path_only_options])
         str_only_options = ", ".join(['"%s"' % field for field in info_only_options])

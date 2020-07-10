@@ -21,7 +21,6 @@ from conans.model.values import Values
 from conans.paths import DATA_YML
 from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
 from conans.util.files import load
-from conans.util.misc import make_tuple
 
 
 class ConanFileLoader(object):
@@ -125,7 +124,6 @@ class ConanFileLoader(object):
             if version and version != conanfile.version:
                 raise ConanException("Package recipe with version %s!=%s"
                                      % (version, conanfile.version))
-
         # Make sure this is nowhere else available
         del conanfile.recipe_folder
 
