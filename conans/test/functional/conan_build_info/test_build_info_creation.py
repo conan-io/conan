@@ -96,8 +96,10 @@ class MyBuildInfoCreation(unittest.TestCase):
             client.run("lock create --reference PkgD/0.1@{} --build=PkgC --build=PkgD -s os={}"
                        " --lockfile-out={}.lock".format(user_channel, profile, profile))
 
-            client.run("create PkgC PkgC/0.1@{} --lockfile={}.lock".format(user_channel, profile))
-            client.run("create PkgD PkgD/0.1@{} --lockfile={}.lock".format(user_channel, profile))
+            client.run("create PkgC PkgC/0.1@{0} --lockfile={1}.lock "
+                       "--lockfile-out={1}.lock".format(user_channel, profile))
+            client.run("create PkgD PkgD/0.1@{0} --lockfile={1}.lock "
+                       "--lockfile-out={1}.lock".format(user_channel, profile))
             client.run("upload * --all --confirm -r default")
 
         sys.argv = ["conan_build_info", "--v2", "start", "MyBuildName", "42"]
