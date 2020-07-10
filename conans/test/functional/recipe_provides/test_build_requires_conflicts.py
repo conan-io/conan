@@ -52,7 +52,6 @@ class BuildRequiresTestCase(unittest.TestCase):
             t.run("install app.py --build")
         else:
             t.run("install app.py --profile:host=default --profile:build=default --build")
-        self.assertIn(" - 'libjpeg' provided by 'app.py (app/v1)', 'br_lib/v1'", t.out)
 
     @parameterized.expand([(True,), (False,)])
     def test_build_require_branches(self, use_single_profile):
