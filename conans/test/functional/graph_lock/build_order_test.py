@@ -161,7 +161,8 @@ class BuildOrderTest(unittest.TestCase):
         client.run("install pkg/0.1@ --lockfile=conan.lock --build", assert_error=True)
         self.assertIn("Trying to build 'dep/0.1#f3367e0e7d170aa12abccb175fee5f97', but it is locked",
                       client.out)
-        client.run("install {0} --lockfile=conan.lock --build={0}".format(build_order[1][0][1]))
+        client.run("install {0} --lockfile=conan.lock --lockfile-out=conan.lock "
+                   "--build={0}".format(build_order[1][0][1]))
         self.assertIn("dep/0.1:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache", client.out)
         self.assertIn("pkg/0.1:0b3845ce7fd8c0b4e46566097797bd872cb5bcf6 - Build", client.out)
         locked = json.loads(client.load("conan.lock"))["graph_lock"]["nodes"]
@@ -179,7 +180,8 @@ class BuildOrderTest(unittest.TestCase):
         client.run("install app/0.1@ --lockfile=conan.lock --build", assert_error=True)
         self.assertIn("Trying to build 'dep/0.1#f3367e0e7d170aa12abccb175fee5f97', but it is locked",
                       client.out)
-        client.run("install {0} --lockfile=conan.lock --build={0}".format(build_order[2][0][1]))
+        client.run("install {0} --lockfile=conan.lock --lockfile-out=conan.lock "
+                   "--build={0}".format(build_order[2][0][1]))
         self.assertIn("dep/0.1:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache", client.out)
         self.assertIn("pkg/0.1:0b3845ce7fd8c0b4e46566097797bd872cb5bcf6 - Cache", client.out)
         self.assertIn("app/0.1:745ccd40fd696b66b0cb160fd5251a533563bbb4 - Build", client.out)
@@ -319,7 +321,8 @@ class BuildRequiresBuildOrderTest(unittest.TestCase):
         client.run("install pkg/0.1@ --lockfile=conan.lock --build", assert_error=True)
         self.assertIn("Trying to build 'dep/0.1#f3367e0e7d170aa12abccb175fee5f97', but it is locked",
                       client.out)
-        client.run("install {0} --lockfile=conan.lock --build={0}".format(build_order[1][0][1]))
+        client.run("install {0} --lockfile=conan.lock --lockfile-out=conan.lock "
+                   "--build={0}".format(build_order[1][0][1]))
         self.assertIn("dep/0.1:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache", client.out)
         self.assertIn("pkg/0.1:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Build", client.out)
         locked = json.loads(client.load("conan.lock"))["graph_lock"]["nodes"]
@@ -337,7 +340,8 @@ class BuildRequiresBuildOrderTest(unittest.TestCase):
         client.run("install app/0.1@ --lockfile=conan.lock --build", assert_error=True)
         self.assertIn("Trying to build 'pkg/0.1#1364f701b47130c7e38f04c5e5fab985', but it is locked",
                       client.out)
-        client.run("install {0} --lockfile=conan.lock --build={0}".format(build_order[2][0][1]))
+        client.run("install {0} --lockfile=conan.lock --lockfile-out=conan.lock "
+                   "--build={0}".format(build_order[2][0][1]))
         self.assertNotIn("dep/0.1", client.out)
         self.assertIn("pkg/0.1:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache", client.out)
         self.assertIn("app/0.1:a925a8281740e4cb4bcad9cf41ecc4c215210604 - Build", client.out)

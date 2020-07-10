@@ -123,9 +123,6 @@ class ReproducibleLockfiles(unittest.TestCase):
         lockfile2 = client.load(LOCKFILE)
         self.assertEqual(lockfile, lockfile2)
         # different commands still generate identical lock
-        client.run("info . --install-folder=info")
-        info_lock = client.load("info/conan.lock")
-        self.assertEqual(lockfile, info_lock)
         client.run("install . --install-folder=install")
         info_lock = client.load("install/conan.lock")
         self.assertEqual(lockfile, info_lock)

@@ -505,7 +505,8 @@ class Command(object):
                                            update=args.update, generators=args.generator,
                                            no_imports=args.no_imports,
                                            install_folder=args.install_folder,
-                                           lockfile=args.lockfile)
+                                           lockfile=args.lockfile,
+                                           lockfile_out=args.lockfile_out)
             else:
                 if args.reference:
                     raise ConanException("A full reference was provided as first argument, second "
@@ -526,7 +527,8 @@ class Command(object):
                                                      update=args.update,
                                                      generators=args.generator,
                                                      install_folder=args.install_folder,
-                                                     lockfile=args.lockfile)
+                                                     lockfile=args.lockfile,
+                                                     lockfile_out=args.lockfile_out)
 
         except ConanException as exc:
             info = exc.info

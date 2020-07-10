@@ -517,8 +517,9 @@ class ConanAPIV1(object):
                           remote_name=None, verify=None, manifests=None,
                           manifests_interactive=None, build=None, profile_names=None,
                           update=False, generators=None, install_folder=None, cwd=None,
-                          lockfile=None, profile_build=None):
-        profile_host = ProfileData(profiles=profile_names, settings=settings, options=options, env=env)
+                          lockfile=None, lockfile_out=None, profile_build=None):
+        profile_host = ProfileData(profiles=profile_names, settings=settings, options=options,
+                                   env=env)
         try:
             recorder = ActionRecorder()
             cwd = cwd or os.getcwd()
@@ -542,7 +543,13 @@ class ConanAPIV1(object):
                          update=update, manifest_folder=manifest_folder,
                          manifest_verify=manifest_verify,
                          manifest_interactive=manifest_interactive,
-                         generators=generators, lockfile=lockfile, recorder=recorder)
+                         generators=generators, recorder=recorder)
+
+            if lockfile_out:
+                lockfile_out = _make_abs_path(lockfile_out, cwd)
+                graph_lock_file = GraphLockFile(graph_info.profile_host, graph_info.profile_build,
+                                                graph_info.graph_lock)
+                graph_lock_file.save(lockfile_out)
             return recorder.get_info(self.app.config.revisions_enabled)
         except ConanException as exc:
             recorder.error = True
@@ -555,8 +562,9 @@ class ConanAPIV1(object):
                 remote_name=None, verify=None, manifests=None,
                 manifests_interactive=None, build=None, profile_names=None,
                 update=False, generators=None, no_imports=False, install_folder=None, cwd=None,
-                lockfile=None, profile_build=None):
-        profile_host = ProfileData(profiles=profile_names, settings=settings, options=options, env=env)
+                lockfile=None, lockfile_out=None, profile_build=None):
+        profile_host = ProfileData(profiles=profile_names, settings=settings, options=options,
+                                   env=env)
         try:
             recorder = ActionRecorder()
             cwd = cwd or os.getcwd()
@@ -586,6 +594,12 @@ class ConanAPIV1(object):
                          generators=generators,
                          no_imports=no_imports,
                          recorder=recorder)
+
+            if lockfile_out:
+                lockfile_out = _make_abs_path(lockfile_out, cwd)
+                graph_lock_file = GraphLockFile(graph_info.profile_host, graph_info.profile_build,
+                                                graph_info.graph_lock)
+                graph_lock_file.save(lockfile_out)
             return recorder.get_info(self.app.config.revisions_enabled)
         except ConanException as exc:
             recorder.error = True
@@ -1360,7 +1374,7 @@ def get_graph_info(profile_host, profile_build, cwd, install_folder, cache, outp
         lockfile = lockfile if os.path.isfile(lockfile) else os.path.join(lockfile, LOCKFILE)
         graph_lock_file = GraphLockFile.load(lockfile, cache.config.revisions_enabled)
         graph_info.profile_host = graph_lock_file.profile_host
-        if graph_lock_file.profile_host is not None:
+        if graph_info.profile_host is not None:
             graph_info.profile_host.process_settings(cache, preprocess=False)
         graph_info.graph_lock = graph_lock_file.graph_lock
         output.info("Using lockfile: '{}'".format(lockfile))
