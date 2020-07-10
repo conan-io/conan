@@ -375,7 +375,9 @@ class Command(object):
                                       args.manifests, args.manifests_interactive,
                                       args.remote, args.update,
                                       test_build_folder=args.test_build_folder,
-                                      lockfile=args.lockfile, ignore_dirty=args.ignore_dirty,
+                                      lockfile=args.lockfile,
+                                      lockfile_out=args.lockfile_out,
+                                      ignore_dirty=args.ignore_dirty,
                                       profile_build=profile_build)
         except ConanException as exc:
             info = exc.info
@@ -969,9 +971,10 @@ class Command(object):
         parser.add_argument("-j", "--json", default=None, action=OnceArgument,
                             help='Path to a json file where the install information will be '
                             'written')
-        parser.add_argument("-l", "--lockfile", action=OnceArgument, nargs='?', const=".",
-                            help="Path to a lockfile or folder containing 'conan.lock' file. "
-                            "Lockfile will be updated with the exported package")
+        parser.add_argument("-l", "--lockfile", action=OnceArgument,
+                            help="Path to a lockfile.")
+        parser.add_argument("--lockfile-out", action=OnceArgument,
+                            help="Filename of the updated lockfile")
         parser.add_argument("--ignore-dirty", default=False, action='store_true',
                             help='When using the "scm" feature with "auto" values, capture the'
                                  ' revision and url even if there are uncommitted changes')
@@ -1005,6 +1008,7 @@ class Command(object):
                                           user=user,
                                           channel=channel,
                                           lockfile=args.lockfile,
+                                          lockfile_out=args.lockfile_out,
                                           ignore_dirty=args.ignore_dirty)
         except ConanException as exc:
             info = exc.info
@@ -1031,8 +1035,9 @@ class Command(object):
         parser.add_argument('-k', '-ks', '--keep-source', default=False, action='store_true',
                             help=_KEEP_SOURCE_HELP)
         parser.add_argument("-l", "--lockfile", action=OnceArgument,
-                            help="Path to a lockfile or folder containing 'conan.lock' file. "
-                            "Lockfile will be updated with the exported package")
+                            help="Path to a lockfile file.")
+        parser.add_argument("--lockfile-out", action=OnceArgument,
+                            help="Filename of the updated lockfile")
         parser.add_argument("--ignore-dirty", default=False, action='store_true',
                             help='When using the "scm" feature with "auto" values, capture the'
                                  ' revision and url even if there are uncommitted changes')
@@ -1050,6 +1055,7 @@ class Command(object):
         return self._conan.export(path=args.path,
                                   name=name, version=version, user=user, channel=channel,
                                   keep_source=args.keep_source, lockfile=args.lockfile,
+                                  lockfile_out=args.lockfile_out,
                                   ignore_dirty=args.ignore_dirty)
 
     def remove(self, *args):
@@ -1869,7 +1875,7 @@ class Command(object):
         create_cmd.add_argument("--base", action="store_true",
                                 help="lock only recipe versions and revisions")
         create_cmd.add_argument("--lockfile-out", action=OnceArgument,
-                                help="Filename of the created lockfile, conan.lock if not specified")
+                                help="Filename of the created lockfile")
         _add_common_install_arguments(create_cmd, build_help="Packages to build from source",
                                       lockfile=False)
 
@@ -2116,8 +2122,9 @@ def _add_common_install_arguments(parser, build_help, lockfile=True):
                         help="Check updates exist from upstream remotes")
     if lockfile:
         parser.add_argument("-l", "--lockfile", action=OnceArgument,
-                            help="Path to a lockfile or folder containing 'conan.lock' file. "
-                            "Lockfile can be updated if packages change")
+                            help="Path to a lockfile")
+        parser.add_argument("--lockfile-out", action=OnceArgument,
+                            help="Filename of the updated lockfile")
     _add_profile_arguments(parser)
 
 

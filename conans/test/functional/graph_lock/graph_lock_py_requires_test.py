@@ -127,7 +127,7 @@ class GraphLockPyRequiresTest(unittest.TestCase):
 
     def create_test(self):
         client = self.client
-        client.run("create . Pkg/0.1@user/channel --lockfile=conan.lock")
+        client.run("create . Pkg/0.1@user/channel --lockfile=conan.lock --lockfile-out=conan.lock")
         self.assertIn("Pkg/0.1@user/channel: CONFIGURE VAR=42", client.out)
         self.assertIn("Pkg/0.1@user/channel: BUILD VAR=42", client.out)
         self.assertIn("Tool/0.1@user/channel", client.out)
@@ -136,7 +136,8 @@ class GraphLockPyRequiresTest(unittest.TestCase):
 
     def export_pkg_test(self):
         client = self.client
-        client.run("export-pkg . Pkg/0.1@user/channel --install-folder=.  --lockfile=conan.lock")
+        client.run("export-pkg . Pkg/0.1@user/channel --install-folder=. --lockfile=conan.lock "
+                   "--lockfile-out=conan.lock")
         self.assertIn("Pkg/0.1@user/channel: CONFIGURE VAR=42", client.out)
         self._check_lock(self.pkg_ref, self.pkg_id)
 

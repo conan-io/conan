@@ -329,7 +329,7 @@ class ConanAPIV1(object):
                keep_source=False, keep_build=False, verify=None,
                manifests=None, manifests_interactive=None,
                remote_name=None, update=False, cwd=None, test_build_folder=None,
-               lockfile=None, ignore_dirty=False, profile_build=None):
+               lockfile=None, lockfile_out=None, ignore_dirty=False, profile_build=None):
         """
         API method to create a conan package
 
@@ -375,8 +375,11 @@ class ConanAPIV1(object):
                    manifest_folder, manifest_verify, manifest_interactive, keep_build,
                    test_build_folder, test_folder, conanfile_path, recorder=recorder)
 
-            if lockfile:
-                graph_info.save_lock(lockfile)
+            if lockfile_out:
+                lockfile_out = _make_abs_path(lockfile_out, cwd)
+                graph_lock_file = GraphLockFile(graph_info.profile_host, graph_info.profile_build,
+                                                graph_info.graph_lock)
+                graph_lock_file.save(lockfile_out)
             return recorder.get_info(self.app.config.revisions_enabled)
 
         except ConanException as exc:
@@ -388,8 +391,9 @@ class ConanAPIV1(object):
     def export_pkg(self, conanfile_path, name, channel, source_folder=None, build_folder=None,
                    package_folder=None, install_folder=None, profile_names=None, settings=None,
                    options=None, env=None, force=False, user=None, version=None, cwd=None,
-                   lockfile=None, ignore_dirty=False, profile_build=None):
-        profile_host = ProfileData(profiles=profile_names, settings=settings, options=options, env=env)
+                   lockfile=None, lockfile_out=None, ignore_dirty=False, profile_build=None):
+        profile_host = ProfileData(profiles=profile_names, settings=settings, options=options,
+                                   env=env)
         remotes = self.app.load_remotes()
         cwd = cwd or get_cwd()
 
@@ -434,8 +438,11 @@ class ConanAPIV1(object):
                        build_folder=build_folder, package_folder=package_folder,
                        install_folder=install_folder, graph_info=graph_info, force=force,
                        remotes=remotes)
-            if lockfile:
-                graph_info.save_lock(lockfile)
+            if lockfile_out:
+                lockfile_out = _make_abs_path(lockfile_out, cwd)
+                graph_lock_file = GraphLockFile(graph_info.profile_host, graph_info.profile_build,
+                                                graph_info.graph_lock)
+                graph_lock_file.save(lockfile_out)
             return recorder.get_info(self.app.config.revisions_enabled)
         except ConanException as exc:
             recorder.error = True
@@ -790,7 +797,7 @@ class ConanAPIV1(object):
 
     @api_method
     def export(self, path, name, version, user, channel, keep_source=False, cwd=None,
-               lockfile=None, ignore_dirty=False):
+               lockfile=None, lockfile_out=None, ignore_dirty=False):
         conanfile_path = _get_conanfile_path(path, cwd, py=True)
         graph_lock = None
         if lockfile:
@@ -803,8 +810,9 @@ class ConanAPIV1(object):
         cmd_export(self.app, conanfile_path, name, version, user, channel, keep_source,
                    graph_lock=graph_lock, ignore_dirty=ignore_dirty)
 
-        if lockfile:
-            graph_lock_file.save(lockfile)
+        if lockfile_out:
+            lockfile_out = _make_abs_path(lockfile_out, cwd)
+            graph_lock_file.save(lockfile_out)
 
     @api_method
     def remove(self, pattern, query=None, packages=None, builds=None, src=False, force=False,

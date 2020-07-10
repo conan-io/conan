@@ -45,7 +45,7 @@ class BuildOrderTest(unittest.TestCase):
         client.run("lock build-order conan.lock --json=bo.json")
         jsonbo = json.loads(client.load("bo.json"))
         self.assertEqual(build_order, jsonbo)
-        client.run("install test4/0.1@ --lockfile=conan.lock --build")
+        client.run("install test4/0.1@ --lockfile=conan.lock --lockfile-out=conan.lock --build")
         self.assertIn("test4/0.1:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Build", client.out)
         locked = json.loads(client.load("conan.lock"))["graph_lock"]["nodes"]
         test4 = locked["1"]
@@ -143,7 +143,8 @@ class BuildOrderTest(unittest.TestCase):
             self.assertIn("Missing prebuilt package for 'app/0.1', 'dep/0.1', 'pkg/0.1'", client.out)
 
         # Build one by one
-        client.run("install {0} --lockfile=conan.lock --build={0}".format(build_order[0][0][1]))
+        client.run("install {0} --lockfile=conan.lock --lockfile-out=conan.lock"
+                   " --build={0}".format(build_order[0][0][1]))
         self.assertIn("dep/0.1:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Build", client.out)
         locked = json.loads(client.load("conan.lock"))["graph_lock"]["nodes"]
         node = locked["3"]
@@ -300,7 +301,8 @@ class BuildRequiresBuildOrderTest(unittest.TestCase):
             self.assertIn("Missing prebuilt package for 'app/0.1', 'pkg/0.1'", client.out)
 
         # Build one by one
-        client.run("install {0} --lockfile=conan.lock --build={0}".format(build_order[0][0][1]))
+        client.run("install {0} --lockfile=conan.lock --lockfile-out=conan.lock "
+                   "--build={0}".format(build_order[0][0][1]))
         self.assertIn("dep/0.1:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Build", client.out)
         locked = json.loads(client.load("conan.lock"))["graph_lock"]["nodes"]
         node = locked["3"]

@@ -129,13 +129,15 @@ class GraphLockVersionRangeTest(unittest.TestCase):
 
     def export_lock_test(self):
         # locking a version range at export
-        self.client.run("export . %s --lockfile=conan.lock" % self.user_channel)
+        self.client.run("export . %s --lockfile=conan.lock --lockfile-out=conan.lock"
+                        % self.user_channel)
         self._check_lock(self.rrev_b)
 
     def create_lock_test(self):
         # Create is also possible
         client = self.client
-        client.run("create . PkgB/0.1@%s --lockfile=conan.lock" % self.user_channel)
+        client.run("create . PkgB/0.1@%s --lockfile=conan.lock --lockfile-out=conan.lock"
+                   % self.user_channel)
         self.assertIn("PkgA/0.1", client.out)
         self.assertNotIn("PkgA/0.2", client.out)
         self._check_lock(self.rrev_b, self.prev_b, self.pkg_id_b)
@@ -144,7 +146,8 @@ class GraphLockVersionRangeTest(unittest.TestCase):
         # Create with test_package is also possible
         client = self.client
         client.save({"test_package/conanfile.py": GenConanfile().with_test("pass")})
-        client.run("create . PkgB/0.1@%s --lockfile=conan.lock" % self.user_channel)
+        client.run("create . PkgB/0.1@%s --lockfile=conan.lock  --lockfile-out=conan.lock"
+                   % self.user_channel)
         self.assertIn("(test package)", client.out)
         self.assertIn("PkgA/0.1", client.out)
         self.assertNotIn("PkgA/0.2", client.out)
@@ -152,13 +155,14 @@ class GraphLockVersionRangeTest(unittest.TestCase):
 
     def export_pkg_test(self):
         client = self.client
-        client.run("export-pkg . PkgB/0.1@%s --lockfile=conan.lock" % self.user_channel)
+        client.run("export-pkg . PkgB/0.1@%s --lockfile=conan.lock --lockfile-out=conan.lock"
+                   % self.user_channel)
         self._check_lock(self.rrev_b, self.prev_b, self.pkg_id_b)
 
         # Same, but modifying also PkgB Recipe
         client.save({"conanfile.py": str(self.consumer) + "\n#comment"})
         if get_env("TESTING_REVISIONS_ENABLED", False):
-            client.run("export-pkg . PkgB/0.1@%s --lockfile --force" % self.user_channel,
+            client.run("export-pkg . PkgB/0.1@%s --lockfile=conan.lock --force" % self.user_channel,
                        assert_error=True)
             self.assertIn("Attempt to modify locked PkgB/0.1", client.out)
         else:

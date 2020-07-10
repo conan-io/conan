@@ -57,10 +57,6 @@ class GraphInfo(object):
         graph_lock_file = GraphLockFile(self.profile_host, self.profile_build, self.graph_lock)
         graph_lock_file.save(os.path.join(folder, lockfile))
 
-    def save_lock(self, lockfile):
-        graph_lock_file = GraphLockFile(self.profile_host, self.profile_build, self.graph_lock)
-        graph_lock_file.save(lockfile)
-
     def _dumps(self):
         result = {}
         if self.options is not None:
