@@ -26,12 +26,12 @@ class ConanCommand(object):
         self._parser = argparse.ArgumentParser(description=self._doc,
                                                prog="conan {}".format(self._name),
                                                formatter_class=SmartFormatter)
-        formatters_list = list(self._formatters.keys())
         if self._formatters:
-            self._output_help_message = "Select the output format: {}"\
-                .format(", ".join(formatters_list))
-
-            self._parser.add_argument('-o', '--output', default="cli", choices=formatters_list,
+            formatters_list = list(self._formatters.keys())
+            default_output = "cli" if "cli" in formatters_list else formatters_list[0]
+            self._output_help_message = "Select the output format: {}. '{}' is the default output."\
+                .format(", ".join(formatters_list), default_output)
+            self._parser.add_argument('-o', '--output', default=default_output, choices=formatters_list,
                                       action=OnceArgument, help=self._output_help_message)
 
     def run(self, conan_api, *args, **kwargs):
