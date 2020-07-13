@@ -31,8 +31,8 @@ class ConanCommand(object):
             self._output_help_message = "Select the output format: {}"\
                 .format(", ".join(formatters_list))
 
-        self._parser.add_argument('-o', '--output', default="cli", choices=formatters_list,
-                                  action=OnceArgument, help=self._output_help_message)
+            self._parser.add_argument('-o', '--output', default="cli", choices=formatters_list,
+                                      action=OnceArgument, help=self._output_help_message)
 
     def run(self, conan_api, *args, **kwargs):
         try:
