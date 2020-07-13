@@ -28,16 +28,8 @@ from conans.util.files import exception_message_safe
 from conans.util.files import save
 from conans.util.log import logger
 from conans.assets import templates
-
-
-# Exit codes for conan command:
-SUCCESS = 0                         # 0: Success (done)
-ERROR_GENERAL = 1                   # 1: General ConanException error (done)
-ERROR_MIGRATION = 2                 # 2: Migration error
-USER_CTRL_C = 3                     # 3: Ctrl+C
-USER_CTRL_BREAK = 4                 # 4: Ctrl+Break
-ERROR_SIGTERM = 5                   # 5: SIGTERM
-ERROR_INVALID_CONFIGURATION = 6     # 6: Invalid configuration (done)
+from conans.cli.exit_codes import SUCCESS, ERROR_MIGRATION, ERROR_GENERAL, USER_CTRL_C, \
+    ERROR_SIGTERM, USER_CTRL_BREAK, ERROR_INVALID_CONFIGURATION
 
 
 class Extender(argparse.Action):

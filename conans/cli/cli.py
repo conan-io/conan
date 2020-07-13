@@ -9,20 +9,13 @@ import importlib
 import pkgutil
 
 from conans import __version__ as client_version
+from conans.cli.exit_codes import SUCCESS, ERROR_MIGRATION, ERROR_GENERAL, USER_CTRL_C, \
+    ERROR_SIGTERM, USER_CTRL_BREAK, ERROR_INVALID_CONFIGURATION
 from conans.util.env_reader import get_env
 from conans.client.conan_api import Conan
 from conans.errors import ConanException, ConanInvalidConfiguration, ConanMigrationError
 from conans.util.files import exception_message_safe
 from conans.util.log import logger
-
-# Exit codes for conan command:
-SUCCESS = 0  # 0: Success (done)
-ERROR_GENERAL = 1  # 1: General ConanException error (done)
-ERROR_MIGRATION = 2  # 2: Migration error
-USER_CTRL_C = 3  # 3: Ctrl+C
-USER_CTRL_BREAK = 4  # 4: Ctrl+Break
-ERROR_SIGTERM = 5  # 5: SIGTERM
-ERROR_INVALID_CONFIGURATION = 6  # 6: Invalid configuration (done)
 
 
 class Extender(argparse.Action):
