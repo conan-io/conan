@@ -383,7 +383,7 @@ class GraphManager(object):
                     provides[it].append(item)
 
             # Check (and report) if any functionality is provided by several different recipes
-            conflicts = [it for it in provides.keys() if len(provides[it]) > 1]
+            conflicts = [it for it, nodes in provides.items() if len(nodes) > 1]
             if conflicts:
                 msg_lines = ["At least two recipes provides the same functionality:"]
                 for it in conflicts:
