@@ -160,13 +160,17 @@ qmake
                 """)
         client = TestClient()
         client.save({"conanfile.py": conanfile})
+
         client.run('install . -s os=Windows -s compiler="Visual Studio" -s compiler.version=15'
                    ' -s compiler.runtime=MD')
         self.assertIn("conanfile.py: Generator msbuild created conan_deps.props", client.out)
         client.run("install . -s os=Linux -s compiler=gcc -s compiler.version=5.2 '"
                    "'-s compiler.libcxx=libstdc++")
         self.assertNotIn("msbuild", client.out)
-        client.run("create . pkg/0.1@ -s os=Windows")
+        # create
+        client.run('create . pkg/0.1@ -s os=Windows -s compiler="Visual Studio" '
+                   '-s compiler.version=15 -s compiler.runtime=MD')
         self.assertIn("pkg/0.1: Generator msbuild created conan_deps.props", client.out)
-        client.run("create . pkg/0.1@ -s os=Linux")
+        client.run("create . pkg/0.1@ -s os=Linux -s compiler=gcc -s compiler.version=5.2 "
+                   "-s compiler.libcxx=libstdc++")
         self.assertNotIn("msbuild", client.out)
