@@ -129,7 +129,7 @@ class TestPackageTest(unittest.TestCase):
             from conans import ConanFile
             class Dep(ConanFile):
                 def package_info(self):
-                    self.cpp_info.names["txt"] = "MyDep"
+                    self.cpp_info.name = "MyDep"
             """)
         client.save({CONANFILE: dep})
         client.run("create . dep/1.1@")
