@@ -17,6 +17,7 @@ from conans.client.tools.oss import OSInfo, args_to_string, cpu_count, cross_bui
 from conans.client.tools.win import unix_path
 from conans.errors import ConanException
 from conans.model.build_info import DEFAULT_BIN, DEFAULT_INCLUDE, DEFAULT_LIB, DEFAULT_SHARE
+from conans.util.conan_v2_mode import conan_v2_behavior
 from conans.util.files import get_abs_path
 
 
@@ -40,8 +41,14 @@ class AutoToolsBuildEnvironment(object):
         self._os = conanfile.settings.get_safe("os")
         self._arch = conanfile.settings.get_safe("arch")
         self._os_target, self._arch_target = get_target_os_arch(conanfile)
+
         self._build_type = conanfile.settings.get_safe("build_type")
+
         self._compiler = conanfile.settings.get_safe("compiler")
+        if not self._compiler:
+            conan_v2_behavior("compiler setting should be defined.",
+                              v1_behavior=self._conanfile.output.warn)
+
         self._compiler_version = conanfile.settings.get_safe("compiler.version")
         self._compiler_runtime = conanfile.settings.get_safe("compiler.runtime")
         self._libcxx = conanfile.settings.get_safe("compiler.libcxx")
@@ -223,6 +230,9 @@ class AutoToolsBuildEnvironment(object):
     def make(self, args="", make_program=None, target=None, vars=None):
         if not self._conanfile.should_build:
             return
+        if not self._build_type:
+            conan_v2_behavior("build_type setting should be defined.",
+                              v1_behavior=self._conanfile.output.warn)
         make_program = os.getenv("CONAN_MAKE_PROGRAM") or make_program or "make"
         with environment_append(vars or self.vars):
             str_args = args_to_string(args)

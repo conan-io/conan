@@ -707,7 +707,7 @@ class ConanClientConfigParser(ConfigParser, object):
                 return timedelta(hours=float(value))
             else:
                 return timedelta(days=float(value))
-        except Exception as e:
+        except Exception:
             raise ConanException("Incorrect definition of general.config_install_interval: %s"
                                  % interval)
 
