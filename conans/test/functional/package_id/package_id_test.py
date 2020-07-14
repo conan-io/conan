@@ -97,6 +97,15 @@ class TestConan(ConanFile):
                         self.output.info("other is not an option!!!")
                     if "other" not in self.info.options:
                         self.output.info("other is not an info.option!!!")
+                    try:
+                        self.options.whatever
+                    except Exception as e:
+                        self.output.error("OPTIONS: %s" % e)
+                    try:
+                        self.info.options.whatever
+                    except Exception as e:
+                        self.output.error("INFO: %s" % e)
+
             """)
         client = TestClient()
         client.save({"conanfile.py": conanfile})
@@ -105,3 +114,5 @@ class TestConan(ConanFile):
         self.assertIn("fpic is an info.option!!!", client.out)
         self.assertIn("other is not an option!!!", client.out)
         self.assertIn("other is not an info.option!!!", client.out)
+        self.assertIn("ERROR: OPTIONS: option 'whatever' doesn't exist", client.out)
+        self.assertIn("ERROR: INFO: option 'whatever' doesn't exist", client.out)

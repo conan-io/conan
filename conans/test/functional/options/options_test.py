@@ -15,11 +15,7 @@ class Pkg(ConanFile):
     def configure(self):
         self.output.info("BUILD SHARED: %s" % self.options.shared)
 """
-        test = """from conans import ConanFile
-class Pkg(ConanFile):
-    def test(self):
-        pass
-"""
+        test = GenConanfile().with_test("pass")
         client.save({"conanfile.py": conanfile})
         client.run("create . Pkg/0.1@user/testing -o *:shared=1")
         self.assertIn("Pkg/0.1@user/testing: BUILD SHARED: 1", client.out)
@@ -33,23 +29,19 @@ class Pkg(ConanFile):
         client.run("create . Pkg/0.1@user/testing -o Pkg:shared=2")
         self.assertIn("Pkg/0.1@user/testing: BUILD SHARED: 2", client.out)
         client.run("create . Pkg/0.1@user/testing -o shared=1", assert_error=True)
-        self.assertIn("'options.shared' doesn't exist", client.out)
+        self.assertIn("option 'shared' doesn't exist", client.out)
 
-        conanfile = """from conans import ConanFile
-class Pkg(ConanFile):
-    pass
-"""
-        client.save({"conanfile.py": conanfile}, clean_first=True)
+        client.save({"conanfile.py": GenConanfile()}, clean_first=True)
         client.run("create . Pkg/0.1@user/testing -o *:shared=True")
         self.assertIn("Pkg/0.1@user/testing: Calling build()", client.out)
         client.run("create . Pkg/0.1@user/testing -o shared=False", assert_error=True)
-        self.assertIn("'options.shared' doesn't exist", client.out)
+        self.assertIn("option 'shared' doesn't exist", client.out)
         # With test_package
         client.save({"conanfile.py": conanfile,
                      "test_package/conanfile.py": test})
-        client.run("create . Pkg/0.1@user/testing -o *:shared=True")
-        self.assertIn("Pkg/0.1@user/testing: Calling build()", client.out)
-        self.assertIn("Pkg/0.1@user/testing (test package): Calling build()", client.out)
+        client.run("create . Pkg/0.1@user/testing -o *:shared=True", assert_error=True)
+        self.assertIn("ERROR: Pkg/0.1@user/testing: 'True' is not a valid 'options.shared' value",
+                      client.out)
 
     def general_scope_priorities_test(self):
         client = TestClient()
@@ -59,12 +51,8 @@ class Pkg(ConanFile):
     def configure(self):
         self.output.info("BUILD SHARED: %s" % self.options.shared)
 """
-        test = """from conans import ConanFile
-class Pkg(ConanFile):
-    def test(self):
-        pass
-"""
-        client.save({"conanfile.py": conanfile})
+        test = GenConanfile().with_test("pass")
+        client.save({"conanfile.py": test})
         # Consumer has priority
         client.run("create . Pkg/0.1@user/testing -o *:shared=1 -o shared=2")
         self.assertIn("Pkg/0.1@user/testing: BUILD SHARED: 2", client.out)

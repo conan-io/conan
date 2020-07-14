@@ -22,7 +22,7 @@ def option_not_exist_msg(option_name, existing_options):
     """ Someone is referencing an option that is not available in the current package
     options
     """
-    result = ["'options.%s' doesn't exist" % option_name,
+    result = ["option '%s' doesn't exist" % option_name,
               "Possible options are %s" % existing_options or "none"]
     return "\n".join(result)
 
@@ -59,6 +59,7 @@ class PackageOptionValues(object):
     def __init__(self):
         self._dict = {}  # {option_name: PackageOptionValue}
         self._modified = {}
+        self._freeze = False
 
     def __bool__(self):
         return bool(self._dict)
@@ -71,7 +72,7 @@ class PackageOptionValues(object):
 
     def __getattr__(self, attr):
         if attr not in self._dict:
-            return None
+            raise ConanException(option_not_exist_msg(attr, list(self._dict.keys())))
         return self._dict[attr]
 
     def __delattr__(self, attr):
