@@ -307,13 +307,16 @@ class RestV1Methods(RestCommonMethods):
     @handle_return_deserializer()
     def remove_packages(self, ref, package_ids=None):
         """ Remove any packages specified by package_ids"""
-        pcks = self.search_packages(ref, query=None)
-        if pcks:
-            self.check_credentials()
-            payload = {"package_ids": package_ids}
-            url = self.router.remove_packages(ref)
-            return self._post_json(url, payload)
-        return namedtuple("_", ['status_code', 'content'])(200, b'')
+        self.check_credentials()
+        payload = {"package_ids": package_ids}
+        url = self.router.remove_packages(ref)
+        ret = self._post_json(url, payload)
+        if ret.status_code == 404:
+            # Check if it is a 404 because there are no packages
+            pcks = self.search_packages(ref, query=None)
+            if not pcks:
+                return namedtuple("_", ['status_code', 'content'])(200, b'')
+        return ret
 
     @handle_return_deserializer()
     def remove_conanfile(self, ref):
