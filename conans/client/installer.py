@@ -400,14 +400,13 @@ class BinaryInstaller(object):
         self._raise_missing(missing)
         processed_package_refs = set()
         self._download(downloads, processed_package_refs)
-        fix_package_id = self._cache.config.full_transitive_package_id
 
         for level in nodes_by_level:
             for node in level:
                 ref, conan_file = node.ref, node.conanfile
                 output = conan_file.output
 
-                self._propagate_info(node, using_build_profile, fix_package_id)
+                self._propagate_info(node, using_build_profile)
                 if node.binary == BINARY_EDITABLE:
                     self._handle_node_editable(node, graph_info)
                     # Need a temporary package revision for package_revision_mode
@@ -419,11 +418,13 @@ class BinaryInstaller(object):
                     assert ref.revision is not None, "Installer should receive RREV always"
                     if node.binary == BINARY_UNKNOWN:
                         self._binaries_analyzer.reevaluate_node(node, remotes, build_mode, update)
+                        if node.binary == BINARY_MISSING:
+                            self._raise_missing([node])
                     _handle_system_requirements(conan_file, node.pref, self._cache, output)
                     self._handle_node_cache(node, keep_build, processed_package_refs, remotes)
 
         # Finally, propagate information to root node (ref=None)
-        self._propagate_info(root_node, using_build_profile, fix_package_id)
+        self._propagate_info(root_node, using_build_profile)
 
     def _handle_node_editable(self, node, graph_info):
         # Get source of information
@@ -513,13 +514,12 @@ class BinaryInstaller(object):
             node.graph_lock_node.modified = GraphLockNode.MODIFIED_BUILT
         return pref
 
-    def _propagate_info(self, node, using_build_profile, fixed_package_id):
-        if fixed_package_id:
-            # if using config.full_transitive_package_id, it is necessary to recompute
-            # the node transitive information necessary to compute the package_id
-            # as it will be used by reevaluate_node() when package_revision_mode is used and
-            # PACKAGE_ID_UNKNOWN happens due to unknown revisions
-            self._binaries_analyzer.package_id_transitive_reqs(node)
+    def _propagate_info(self, node, using_build_profile):
+        # it is necessary to recompute
+        # the node transitive information necessary to compute the package_id
+        # as it will be used by reevaluate_node() when package_revision_mode is used and
+        # PACKAGE_ID_UNKNOWN happens due to unknown revisions
+        self._binaries_analyzer.package_id_transitive_reqs(node)
         # Get deps_cpp_info from upstream nodes
         node_order = [n for n in node.public_closure if n.binary != BINARY_SKIP]
         # List sort is stable, will keep the original order of the closure, but prioritize levels
