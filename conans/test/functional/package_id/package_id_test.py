@@ -89,16 +89,19 @@ class TestConan(ConanFile):
                 options = {"fpic": [True, False]}
                 default_options = {"fpic": True}
                 def package_id(self):
-                    if "fpic" in self.info.options:
+                    if "fpic" in self.options:
                         self.output.info("fpic is an option!!!")
-                    if "other" not in self.info.options:
+                    if "fpic" in self.info.options:
+                        self.output.info("fpic is an info.option!!!")
+                    if "other" not in self.options:
                         self.output.info("other is not an option!!!")
-                    if not self.info.options.whatever:
-                        self.output.info("whatever is not an option!!!")
+                    if "other" not in self.info.options:
+                        self.output.info("other is not an info.option!!!")
             """)
         client = TestClient()
         client.save({"conanfile.py": conanfile})
         client.run("create . Pkg/0.1@user/testing")
         self.assertIn("fpic is an option!!!", client.out)
+        self.assertIn("fpic is an info.option!!!", client.out)
         self.assertIn("other is not an option!!!", client.out)
-        self.assertIn("whatever is not an option!!!", client.out)
+        self.assertIn("other is not an info.option!!!", client.out)
