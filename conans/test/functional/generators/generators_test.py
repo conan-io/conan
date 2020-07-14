@@ -1,6 +1,7 @@
 import os
 import platform
 import re
+import textwrap
 import unittest
 
 from conans.model.graph_info import GRAPH_INFO_FILE
@@ -147,3 +148,23 @@ qmake
         self.assertIn("CONAN_LIBS_RELEASE += -lhellor", qmake)
         self.assertIn("CONAN_LIBS_DEBUG += -lhellod", qmake)
         self.assertIn("CONAN_LIBS += -lhello", qmake)
+
+    def test_conditional_generators(self):
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile, CMakeToolchain
+            class Pkg(ConanFile):
+                settings = "os", "compiler", "arch", "build_type"
+                def configure(self):
+                    if self.settings.os == "Windows":
+                        self.generators = ["msbuild"]
+                """)
+        client = TestClient()
+        client.save({"conanfile.py": conanfile})
+        client.run("install . -s os=Windows")
+        self.assertIn("conanfile.py: Generator msbuild created conan_deps.props", client.out)
+        client.run("install . -s os=Linux")
+        self.assertNotIn("msbuild", client.out)
+        client.run("create . pkg/0.1@ -s os=Windows")
+        self.assertIn("pkg/0.1: Generator msbuild created conan_deps.props", client.out)
+        client.run("create . pkg/0.1@ -s os=Linux")
+        self.assertNotIn("msbuild", client.out)
