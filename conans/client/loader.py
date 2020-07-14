@@ -7,9 +7,11 @@ import uuid
 
 import yaml
 
+from conans import __version__
 from conans.client.generators import registered_generators
 from conans.client.loader_txt import ConanFileTextLoader
 from conans.client.tools.files import chdir
+from conans.client.tools.version import Version
 from conans.errors import ConanException, NotFoundException, ConanInvalidConfiguration, \
     conanfile_exception_formatter
 from conans.model.conan_file import ConanFile
@@ -21,6 +23,8 @@ from conans.model.values import Values
 from conans.paths import DATA_YML
 from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
 from conans.util.files import load
+
+current_version = Version(__version__)
 
 
 class ConanFileLoader(object):
@@ -53,6 +57,13 @@ class ConanFileLoader(object):
             self._python_requires.valid = True
             module, conanfile = parse_conanfile(conanfile_path, self._python_requires)
             self._python_requires.valid = False
+
+            min_conan_version = getattr(conanfile, "min_conan_version", None)
+            if min_conan_version:
+                min_conan_version = Version(min_conan_version)
+                if min_conan_version > current_version:
+                    raise ConanException("minimum required Conan version: %s > %s"
+                                         % (min_conan_version, current_version))
 
             self._python_requires.locked_versions = None
 
