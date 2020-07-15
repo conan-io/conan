@@ -28,6 +28,7 @@ from conans.model.graph_info import GraphInfo
 from conans.model.graph_lock import GraphLockNode
 from conans.model.info import PACKAGE_ID_UNKNOWN
 from conans.model.ref import PackageReference
+from conans.model.user_info import DepsUserInfo
 from conans.model.user_info import UserInfo
 from conans.paths import BUILD_INFO, CONANINFO, RUN_LOG_NAME
 from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
@@ -532,6 +533,10 @@ class BinaryInstaller(object):
             if it.require.build_require_context == CONTEXT_HOST:
                 br_host.extend(it.dst.transitive_closure.values())
 
+        # Initialize some members if we are using different contexts
+        if using_build_profile:
+            conan_file.user_info_build = DepsUserInfo()
+
         for n in node_order:
             if n not in transitive:
                 conan_file.output.info("Applying build-requirement: %s" % str(n.ref))
@@ -542,8 +547,10 @@ class BinaryInstaller(object):
                 conan_file.deps_env_info.update(n.conanfile.env_info, n.ref.name)
             else:
                 if n in transitive or n in br_host:
+                    conan_file.deps_user_info[n.ref.name] = n.conanfile.user_info
                     conan_file.deps_cpp_info.add(n.ref.name, n.conanfile._conan_dep_cpp_info)
                 else:
+                    conan_file.user_info_build[n.ref.name] = n.conanfile.user_info
                     env_info = EnvInfo()
                     env_info._values_ = n.conanfile.env_info._values_.copy()
                     # Add cpp_info.bin_paths/lib_paths to env_info (it is needed for runtime)

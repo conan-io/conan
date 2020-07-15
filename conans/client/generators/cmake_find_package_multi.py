@@ -1,20 +1,25 @@
+from jinja2 import Template
 import textwrap
 
+from conans.client.generators import CMakeFindPackageGenerator
 from conans.client.generators.cmake import DepsCppCmake
 from conans.client.generators.cmake_find_package_common import (find_transitive_dependencies,
                                                                 target_template,
                                                                 CMakeFindPackageCommonMacros)
 from conans.client.generators.cmake_multi import extend
+from conans.errors import ConanException
 from conans.model import Generator
+from conans.model.build_info import COMPONENT_SCOPE
 
 
-class CMakeFindPackageMultiGenerator(Generator):
+class CMakeFindPackageMultiGenerator(CMakeFindPackageGenerator):
+    name = "cmake_find_package_multi"
     config_template = textwrap.dedent("""
         {macros_and_functions}
 
         # Requires CMake > 3.0
         if(${{CMAKE_VERSION}} VERSION_LESS "3.0")
-           message(FATAL_ERROR "The 'cmake_find_package_multi' generator only works with CMake > 3.0" )
+            message(FATAL_ERROR "The 'cmake_find_package_multi' generator only works with CMake > 3.0")
         endif()
 
         include(${{CMAKE_CURRENT_LIST_DIR}}/{name}Targets.cmake)
@@ -33,9 +38,8 @@ class CMakeFindPackageMultiGenerator(Generator):
         file(GLOB CONFIG_FILES "${{_DIR}}/{name}Target-*.cmake")
 
         foreach(f ${{CONFIG_FILES}})
-          include(${{f}})
+            include(${{f}})
         endforeach()
-
         """)
 
     target_properties = """
@@ -91,6 +95,169 @@ set_property(TARGET {name}::{name}
         endif()
         """)
 
+    components_target_build_type_tpl = Template(textwrap.dedent("""\
+        ########## MACROS ###########################################################################
+        #############################################################################################
+        {{ conan_message }}
+        {{ conan_find_apple_frameworks }}
+        {{ conan_package_library_targets }}
+
+        ########### VARIABLES #######################################################################
+        #############################################################################################
+
+        {{ global_target_variables }}
+        set({{ pkg_name }}_COMPONENTS_{{ build_type }} {{ pkg_components }})
+
+        {%- for comp_name, comp in components %}
+
+        ########### COMPONENT {{ comp_name }} VARIABLES #############################################
+
+        set({{ pkg_name }}_{{ comp_name }}_INCLUDE_DIRS_{{ build_type }} {{ comp.include_paths }})
+        set({{ pkg_name }}_{{ comp_name }}_INCLUDE_DIR_{{ build_type }} {{ comp.include_path }})
+        set({{ pkg_name }}_{{ comp_name }}_INCLUDES_{{ build_type }} {{ comp.include_paths }})
+        set({{ pkg_name }}_{{ comp_name }}_LIB_DIRS_{{ build_type }} {{ comp.lib_paths }})
+        set({{ pkg_name }}_{{ comp_name }}_RES_DIRS_{{ build_type }} {{ comp.res_paths }})
+        set({{ pkg_name }}_{{ comp_name }}_DEFINITIONS_{{ build_type }} {{ comp.defines }})
+        set({{ pkg_name }}_{{ comp_name }}_COMPILE_DEFINITIONS_{{ build_type }} {{ comp.compile_definitions }})
+        set({{ pkg_name }}_{{ comp_name }}_COMPILE_OPTIONS_LIST_{{ build_type }} "{{ comp.cxxflags_list }}" "{{ comp.cflags_list }}")
+        set({{ pkg_name }}_{{ comp_name }}_LIBS_{{ build_type }} {{ comp.libs }})
+        set({{ pkg_name }}_{{ comp_name }}_SYSTEM_LIBS_{{ build_type }} {{ comp.system_libs }})
+        set({{ pkg_name }}_{{ comp_name }}_FRAMEWORK_DIRS_{{ build_type }} {{ comp.framework_paths }})
+        set({{ pkg_name }}_{{ comp_name }}_FRAMEWORKS_{{ build_type }} {{ comp.frameworks }})
+        set({{ pkg_name }}_{{ comp_name }}_BUILD_MODULES_PATHS_{{ build_type }} {{ comp.build_modules_paths }})
+        set({{ pkg_name }}_{{ comp_name }}_DEPENDENCIES_{{ build_type }} {{ comp.public_deps }})
+        set({{ pkg_name }}_{{ comp_name }}_LINKER_FLAGS_LIST_{{ build_type }}
+                $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:{{ comp.sharedlinkflags_list }}>
+                $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:{{ comp.sharedlinkflags_list }}>
+                $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:{{ comp.exelinkflags_list }}>
+        )
+
+        ########## COMPONENT {{ comp_name }} FIND LIBRARIES & FRAMEWORKS / DYNAMIC VARS #############
+
+        set({{ pkg_name }}_{{ comp_name }}_FRAMEWORKS_FOUND_{{ build_type }} "")
+        conan_find_apple_frameworks({{ pkg_name }}_{{ comp_name }}_FRAMEWORKS_FOUND_{{ build_type }} "{{ '${'+pkg_name+'_'+comp_name+'_FRAMEWORKS}' }}" "{{ '${'+pkg_name+'_'+comp_name+'_FRAMEWORK_DIRS}' }}")
+
+        set({{ pkg_name }}_{{ comp_name }}_LIB_TARGETS_{{ build_type }} "")
+        set({{ pkg_name }}_{{ comp_name }}_NOT_USED_{{ build_type }} "")
+        set({{ pkg_name }}_{{ comp_name }}_LIBS_FRAMEWORKS_DEPS_{{ build_type }} {{ '${'+pkg_name+'_'+comp_name+'_FRAMEWORKS_FOUND_'+build_type+'}' }} {{ '${'+pkg_name+'_'+comp_name+'_SYSTEM_LIBS_'+build_type+'}' }} {{ '${'+pkg_name+'_'+comp_name+'_DEPENDENCIES_'+build_type+'}' }})
+        conan_package_library_targets("{{ '${'+pkg_name+'_'+comp_name+'_LIBS_'+build_type+'}' }}"
+                                      "{{ '${'+pkg_name+'_'+comp_name+'_LIB_DIRS_'+build_type+'}' }}"
+                                      "{{ '${'+pkg_name+'_'+comp_name+'_LIBS_FRAMEWORKS_DEPS_'+build_type+'}' }}"
+                                      {{ pkg_name }}_{{ comp_name }}_NOT_USED_{{ build_type }}
+                                      {{ pkg_name }}_{{ comp_name }}_LIB_TARGETS_{{ build_type }}
+                                      ""
+                                      "{{ pkg_name }}_{{ comp_name }}")
+
+        set({{ pkg_name }}_{{ comp_name }}_LINK_LIBS_{{ build_type }} {{ '${'+pkg_name+'_'+comp_name+'_LIB_TARGETS_'+build_type+'}' }} {{ '${'+pkg_name+'_'+comp_name+'_DEPENDENCIES_'+build_type+'}' }})
+
+        {%- endfor %}
+        """))
+
+    components_targets_tpl = Template(textwrap.dedent("""\
+        {%- for comp_name, comp in components %}
+
+        if(NOT TARGET {{ pkg_name }}::{{ comp_name }})
+            add_library({{ pkg_name }}::{{ comp_name }} INTERFACE IMPORTED)
+        endif()
+
+        {%- endfor %}
+
+        if(NOT TARGET {{ pkg_name }}::{{ pkg_name }})
+            add_library({{ pkg_name }}::{{ pkg_name }} INTERFACE IMPORTED)
+        endif()
+
+        # Load the debug and release library finders
+        get_filename_component(_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
+        file(GLOB CONFIG_FILES "${_DIR}/{{ pkg_name }}Target-*.cmake")
+
+        foreach(f ${CONFIG_FILES})
+            include(${f})
+        endforeach()
+
+        if({{ pkg_name }}_FIND_COMPONENTS)
+            foreach(_FIND_COMPONENT {{ '${'+pkg_name+'_FIND_COMPONENTS}' }})
+                list(FIND {{ pkg_name }}_COMPONENTS_{{ build_type }} "{{ pkg_name }}::${_FIND_COMPONENT}" _index)
+                if(${_index} EQUAL -1)
+                    conan_message(FATAL_ERROR "Conan: Component '${_FIND_COMPONENT}' NOT found in package '{{ pkg_name }}'")
+                else()
+                    conan_message(STATUS "Conan: Component '${_FIND_COMPONENT}' found in package '{{ pkg_name }}'")
+                endif()
+            endforeach()
+        endif()
+        """))
+
+    components_config_tpl = Template(textwrap.dedent("""\
+        ########## MACROS ###########################################################################
+        #############################################################################################
+        {{ conan_message }}
+        
+        # Requires CMake > 3.0
+        if(${CMAKE_VERSION} VERSION_LESS "3.0")
+            message(FATAL_ERROR "The 'cmake_find_package_multi' generator only works with CMake > 3.0")
+        endif()
+
+        include(${CMAKE_CURRENT_LIST_DIR}/{{ pkg_name }}Targets.cmake)
+
+        ########## FIND PACKAGE DEPENDENCY ##########################################################
+        #############################################################################################
+
+        include(CMakeFindDependencyMacro)
+
+        {%- for public_dep in pkg_public_deps %}
+
+        if(NOT {{ public_dep }}_FOUND)
+            if(${CMAKE_VERSION} VERSION_LESS "3.9.0")
+                find_package({{ public_dep }} REQUIRED NO_MODULE)
+            else()
+                find_dependency({{ public_dep }} REQUIRED NO_MODULE)
+            endif()
+        else()
+            message(STATUS "Dependency {{ public_dep }} already found")
+        endif()
+
+        {%- endfor %}
+
+        ########## TARGETS PROPERTIES ###############################################################
+        #############################################################################################
+
+        {%- for comp_name, comp in components %}
+        ########## COMPONENT {{ comp_name }} TARGET PROPERTIES ######################################
+
+        set_property(TARGET {{ pkg_name }}::{{ comp_name }} PROPERTY INTERFACE_LINK_LIBRARIES
+                         $<$<CONFIG:Release>:{{ '${'+pkg_name+'_'+comp_name+'_LINK_LIBS_RELEASE}' }} {{ '${'+pkg_name+'_'+comp_name+'_LINKER_FLAGS_LIST_RELEASE}' }}>
+                         $<$<CONFIG:RelWithDebInfo>:{{ '${'+pkg_name+'_'+comp_name+'_LINK_LIBS_RELWITHDEBINFO}' }} {{ '${'+pkg_name+'_'+comp_name+'_LINKER_FLAGS_LIST_RELWITHDEBINFO}' }}>
+                         $<$<CONFIG:MinSizeRel>:{{ '${'+pkg_name+'_'+comp_name+'_LINK_LIBS_MINSIZEREL}' }} {{ '${'+pkg_name+'_'+comp_name+'_LINKER_FLAGS_LIST_MINSIZEREL}' }}>
+                         $<$<CONFIG:Debug>:{{ '${'+pkg_name+'_'+comp_name+'_LINK_LIBS_DEBUG}' }} {{ '${'+pkg_name+'_'+comp_name+'_LINKER_FLAGS_LIST_DEBUG}' }}>)
+        set_property(TARGET {{ pkg_name }}::{{ comp_name }} PROPERTY INTERFACE_INCLUDE_DIRECTORIES
+                         $<$<CONFIG:Release>:{{ '${'+pkg_name+'_'+comp_name+'_INCLUDE_DIRS_RELEASE}' }}>
+                         $<$<CONFIG:RelWithDebInfo>:{{ '${'+pkg_name+'_'+comp_name+'_INCLUDE_DIRS_RELWITHDEBINFO}' }}>
+                         $<$<CONFIG:MinSizeRel>:{{ '${'+pkg_name+'_'+comp_name+'_INCLUDE_DIRS_MINSIZEREL}' }}>
+                         $<$<CONFIG:Debug>:{{ '${'+pkg_name+'_'+comp_name+'_INCLUDE_DIRS_DEBUG}' }}>)
+        set_property(TARGET {{ pkg_name }}::{{ comp_name }} PROPERTY INTERFACE_COMPILE_DEFINITIONS
+                         $<$<CONFIG:Release>:{{ '${'+pkg_name+'_'+comp_name+'_COMPILE_DEFINITIONS_RELEASE}' }}>
+                         $<$<CONFIG:RelWithDebInfo>:{{ '${'+pkg_name+'_'+comp_name+'_COMPILE_DEFINITIONS_RELWITHDEBINFO}' }}>
+                         $<$<CONFIG:MinSizeRel>:{{ '${'+pkg_name+'_'+comp_name+'_COMPILE_DEFINITIONS_MINSIZEREL}' }}>
+                         $<$<CONFIG:Debug>:{{ '${'+pkg_name+'_'+comp_name+'_COMPILE_DEFINITIONS_DEBUG}' }}>)
+        set_property(TARGET {{ pkg_name }}::{{ comp_name }} PROPERTY INTERFACE_COMPILE_OPTIONS
+                         $<$<CONFIG:Release>:{{ '${'+pkg_name+'_'+comp_name+'_COMPILE_OPTIONS_LIST_RELEASE}' }}>
+                         $<$<CONFIG:RelWithDebInfo>:{{ '${'+pkg_name+'_'+comp_name+'_COMPILE_OPTIONS_LIST_RELWITHDEBINFO}' }}>
+                         $<$<CONFIG:MinSizeRel>:{{ '${'+pkg_name+'_'+comp_name+'_COMPILE_OPTIONS_LIST_MINSIZEREL}' }}>
+                         $<$<CONFIG:Debug>:{{ '${'+pkg_name+'_'+comp_name+'_COMPILE_OPTIONS_LIST_DEBUG}' }}>)
+        set({{ pkg_name }}_{{ comp_name }}_TARGET_PROPERTIES TRUE)
+
+        {%- endfor %}
+
+        ########## GLOBAL TARGET PROPERTIES #########################################################
+
+        if(NOT {{ pkg_name }}_{{ pkg_name }}_TARGET_PROPERTIES)
+            set_property(TARGET {{ pkg_name }}::{{ pkg_name }} PROPERTY INTERFACE_LINK_LIBRARIES
+                             $<$<CONFIG:Release>:{{ '${'+pkg_name+'_COMPONENTS_RELEASE}' }}>
+                             $<$<CONFIG:RelWithDebInfo>:{{ '${'+pkg_name+'_COMPONENTS_RELWITHDEBINFO}' }}>
+                             $<$<CONFIG:MinSizeRel>:{{ '${'+pkg_name+'_COMPONENTS_MINSIZEREL}' }}>
+                             $<$<CONFIG:Debug>:{{ '${'+pkg_name+'_COMPONENTS_DEBUG}' }}>)
+        endif()
+        """))
+
     @property
     def filename(self):
         return None
@@ -98,26 +265,65 @@ set_property(TARGET {name}::{name}
     @property
     def content(self):
         ret = {}
-        build_type = str(self.conanfile.settings.build_type)
-        build_type_suffix = "_{}".format(build_type.upper()) if build_type else ""
-        for _, cpp_info in self.deps_build_info.dependencies:
-            depname = cpp_info.get_name("cmake_find_package_multi")
-            public_deps_names = [self.deps_build_info[dep].get_name("cmake_find_package_multi")
-                                 for dep in cpp_info.public_deps]
-            ret["{}Config.cmake".format(depname)] = self._config(depname, cpp_info.version,
-                                                                 public_deps_names)
-            ret["{}ConfigVersion.cmake".format(depname)] = self.config_version_template.\
-                format(version=cpp_info.version)
-            ret["{}Targets.cmake".format(depname)] = self.targets_template.format(name=depname)
+        build_type = str(self.conanfile.settings.build_type).upper()
+        build_type_suffix = "_{}".format(build_type) if build_type else ""
+        for pkg_name, cpp_info in self.deps_build_info.dependencies:
+            pkg_findname = self._get_name(cpp_info)
+            pkg_version = cpp_info.version
+            pkg_public_deps = [self._get_name(self.deps_build_info[public_dep]) for public_dep in
+                               cpp_info.public_deps]
+            ret["{}ConfigVersion.cmake".format(pkg_findname)] = self.config_version_template. \
+                format(version=pkg_version)
+            if not cpp_info.components:
+                public_deps_names = [self.deps_build_info[dep].get_name("cmake_find_package_multi")
+                                     for dep in cpp_info.public_deps]
+                ret["{}Config.cmake".format(pkg_findname)] = self._config(pkg_findname,
+                                                                          cpp_info.version,
+                                                                          public_deps_names)
+                ret["{}Targets.cmake".format(pkg_findname)] = self.targets_template.format(name=pkg_findname)
 
-            # If any config matches the build_type one, add it to the cpp_info
-            dep_cpp_info = extend(cpp_info, build_type.lower())
-            deps = DepsCppCmake(dep_cpp_info)
-            deps_names = ";".join(["{n}::{n}".format(n=n) for n in public_deps_names])
-            find_lib = target_template.format(name=depname, deps=deps,
-                                              build_type_suffix=build_type_suffix,
-                                              deps_names=deps_names)
-            ret["{}Target-{}.cmake".format(depname, build_type.lower())] = find_lib
+                # If any config matches the build_type one, add it to the cpp_info
+                dep_cpp_info = extend(cpp_info, build_type.lower())
+                deps = DepsCppCmake(dep_cpp_info)
+                deps_names = ";".join(["{n}::{n}".format(n=n) for n in public_deps_names])
+                find_lib = target_template.format(name=pkg_findname, deps=deps,
+                                                  build_type_suffix=build_type_suffix,
+                                                  deps_names=deps_names)
+                ret["{}Target-{}.cmake".format(pkg_findname, build_type.lower())] = find_lib
+            else:
+                cpp_info = extend(cpp_info, build_type.lower())
+                pkg_info = DepsCppCmake(cpp_info)
+                pkg_public_deps_names = ";".join(["{n}::{n}".format(n=n) for n in pkg_public_deps])
+                components = self._get_components(pkg_name, pkg_findname, cpp_info)
+                # Note these are in reversed order, from more dependent to less dependent
+                pkg_components = " ".join(["{p}::{c}".format(p=pkg_findname, c=comp_findname) for
+                                           comp_findname, _ in reversed(components)])
+                global_target_variables = target_template.format(name=pkg_findname, deps=pkg_info,
+                                                                 build_type_suffix=build_type_suffix,
+                                                                 deps_names=pkg_public_deps_names)
+                variables = self.components_target_build_type_tpl.render(
+                    pkg_name=pkg_findname,
+                    global_target_variables=global_target_variables,
+                    pkg_components=pkg_components,
+                    build_type=build_type,
+                    components=components,
+                    conan_find_apple_frameworks=CMakeFindPackageCommonMacros.apple_frameworks_macro,
+                    conan_package_library_targets=CMakeFindPackageCommonMacros.conan_package_library_targets
+                )
+                ret["{}Target-{}.cmake".format(pkg_findname, build_type.lower())] = variables
+                targets = self.components_targets_tpl.render(
+                    pkg_name=pkg_findname,
+                    components=components,
+                    build_type=build_type
+                )
+                ret["{}Targets.cmake".format(pkg_findname)] = targets
+                target_config = self.components_config_tpl.render(
+                    pkg_name=pkg_findname,
+                    components=components,
+                    pkg_public_deps=pkg_public_deps,
+                    conan_message=CMakeFindPackageCommonMacros.conan_message
+                )
+                ret["{}Config.cmake".format(pkg_findname)] = target_config
         return ret
 
     def _config(self, name, version, public_deps_names):

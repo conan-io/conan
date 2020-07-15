@@ -4,10 +4,10 @@ from conans.client import packager
 from conans.client.conanfile.package import run_package_method
 from conans.client.graph.graph import BINARY_SKIP
 from conans.client.graph.graph_manager import load_deps_info
+from conans.client.installer import add_env_conaninfo
 from conans.errors import ConanException
 from conans.model.ref import PackageReference
 from conans.util.files import rmdir, set_dirty_context_manager
-from conans.client.installer import add_env_conaninfo
 
 
 def export_pkg(app, recorder, full_ref, source_folder, build_folder, package_folder, install_folder,

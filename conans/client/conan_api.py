@@ -604,10 +604,14 @@ class ConanAPIV1(object):
 
     @api_method
     def config_install_list(self):
+        if not os.path.isfile(self.app.cache.config_install_file):
+            return []
         return json.loads(load(self.app.cache.config_install_file))
 
     @api_method
     def config_install_remove(self, index):
+        if not os.path.isfile(self.app.cache.config_install_file):
+            raise ConanException("There is no config data. Need to install config first.")
         configs = json.loads(load(self.app.cache.config_install_file))
         try:
             configs.pop(index)

@@ -17,6 +17,7 @@ from conans.client.tools.oss import OSInfo, args_to_string, cpu_count, cross_bui
 from conans.client.tools.win import unix_path
 from conans.errors import ConanException
 from conans.model.build_info import DEFAULT_BIN, DEFAULT_INCLUDE, DEFAULT_LIB, DEFAULT_SHARE
+from conans.util.conan_v2_mode import conan_v2_behavior
 from conans.util.files import get_abs_path
 
 
@@ -40,8 +41,14 @@ class AutoToolsBuildEnvironment(object):
         self._os = conanfile.settings.get_safe("os")
         self._arch = conanfile.settings.get_safe("arch")
         self._os_target, self._arch_target = get_target_os_arch(conanfile)
+
         self._build_type = conanfile.settings.get_safe("build_type")
+
         self._compiler = conanfile.settings.get_safe("compiler")
+        if not self._compiler:
+            conan_v2_behavior("compiler setting should be defined.",
+                              v1_behavior=self._conanfile.output.warn)
+
         self._compiler_version = conanfile.settings.get_safe("compiler.version")
         self._compiler_runtime = conanfile.settings.get_safe("compiler.runtime")
         self._libcxx = conanfile.settings.get_safe("compiler.libcxx")
@@ -49,10 +56,10 @@ class AutoToolsBuildEnvironment(object):
 
         # Set the generic objects before mapping to env vars to let the user
         # alter some value
-        self.libs = copy.copy(self._deps_cpp_info.libs)
-        self.libs.extend(copy.copy(self._deps_cpp_info.system_libs))
-        self.include_paths = copy.copy(self._deps_cpp_info.include_paths)
-        self.library_paths = copy.copy(self._deps_cpp_info.lib_paths)
+        self.libs = list(self._deps_cpp_info.libs)
+        self.libs.extend(list(self._deps_cpp_info.system_libs))
+        self.include_paths = list(self._deps_cpp_info.include_paths)
+        self.library_paths = list(self._deps_cpp_info.lib_paths)
 
         self.defines = self._configure_defines()
         # Will go to CFLAGS and CXXFLAGS ["-m64" "-m32", "-g", "-s"]
@@ -223,6 +230,9 @@ class AutoToolsBuildEnvironment(object):
     def make(self, args="", make_program=None, target=None, vars=None):
         if not self._conanfile.should_build:
             return
+        if not self._build_type:
+            conan_v2_behavior("build_type setting should be defined.",
+                              v1_behavior=self._conanfile.output.warn)
         make_program = os.getenv("CONAN_MAKE_PROGRAM") or make_program or "make"
         with environment_append(vars or self.vars):
             str_args = args_to_string(args)
@@ -239,8 +249,8 @@ class AutoToolsBuildEnvironment(object):
 
     def _configure_link_flags(self):
         """Not the -L"""
-        ret = copy.copy(self._deps_cpp_info.sharedlinkflags)
-        ret.extend(self._deps_cpp_info.exelinkflags)
+        ret = list(self._deps_cpp_info.sharedlinkflags)
+        ret.extend(list(self._deps_cpp_info.exelinkflags))
         ret.extend(format_frameworks(self._deps_cpp_info.frameworks, self._conanfile.settings))
         ret.extend(format_framework_paths(self._deps_cpp_info.framework_paths, self._conanfile.settings))
         arch_flag = architecture_flag(self._conanfile.settings)
@@ -262,7 +272,7 @@ class AutoToolsBuildEnvironment(object):
         return ret
 
     def _configure_flags(self):
-        ret = copy.copy(self._deps_cpp_info.cflags)
+        ret = list(self._deps_cpp_info.cflags)
         arch_flag = architecture_flag(self._conanfile.settings)
         if arch_flag:
             ret.append(arch_flag)
@@ -281,7 +291,7 @@ class AutoToolsBuildEnvironment(object):
         return ret
 
     def _configure_cxx_flags(self):
-        ret = copy.copy(self._deps_cpp_info.cxxflags)
+        ret = list(self._deps_cpp_info.cxxflags)
         cxxf = libcxx_flag(self._conanfile.settings)
         if cxxf:
             ret.append(cxxf)
@@ -289,7 +299,7 @@ class AutoToolsBuildEnvironment(object):
 
     def _configure_defines(self):
         # requires declared defines
-        ret = copy.copy(self._deps_cpp_info.defines)
+        ret = list(self._deps_cpp_info.defines)
 
         # Debug definition for GCC
         btf = build_type_define(build_type=self._build_type)

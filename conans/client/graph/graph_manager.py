@@ -66,18 +66,22 @@ class GraphManager(object):
             graph_lock = graph_lock_file.graph_lock
             self._output.info("Using lockfile: '{}/conan.lock'".format(info_folder))
             profile_host = graph_lock_file.profile_host
+            profile_build = graph_lock_file.profile_build
             self._output.info("Using cached profile from lockfile")
         except IOError:  # Only if file is missing
             graph_lock = None
             # This is very dirty, should be removed for Conan 2.0 (source() method only)
             profile_host = self._cache.default_profile
             profile_host.process_settings(self._cache)
+            profile_build = None
             name, version, user, channel = None, None, None, None
         else:
             name, version, user, channel, _ = graph_info.root
             profile_host.process_settings(self._cache, preprocess=False)
             # This is the hack of recovering the options from the graph_info
             profile_host.options.update(graph_info.options)
+            if profile_build:
+                profile_build.process_settings(self._cache, preprocess=False)
         if conanfile_path.endswith(".py"):
             lock_python_requires = None
             if graph_lock and not test:  # Only lock python requires if it is not test_package
@@ -88,13 +92,18 @@ class GraphManager(object):
                                                    name=name, version=version,
                                                    user=user, channel=channel,
                                                    lock_python_requires=lock_python_requires)
+
+            if profile_build:
+                conanfile.settings_build = profile_build.processed_settings.copy()
+                conanfile.settings_target = None
+
             if test:
                 conanfile.display_name = "%s (test package)" % str(test)
                 conanfile.output.scope = conanfile.display_name
 
             run_configure_method(conanfile, down_options=None, down_ref=None, ref=None)
         else:
-            conanfile = self._loader.load_conanfile_txt(conanfile_path, profile_host)
+            conanfile = self._loader.load_conanfile_txt(conanfile_path, profile_host=profile_host)
 
         load_deps_info(info_folder, conanfile, required=deps_info_required)
 

@@ -17,6 +17,7 @@ from conans.client.tools.env import environment_append, _environment_add
 from conans.client.tools.oss import cpu_count, args_to_string
 from conans.errors import ConanException
 from conans.model.version import Version
+from conans.util.conan_v2_mode import conan_v2_behavior
 from conans.util.config_parser import get_bool_from_text
 from conans.util.files import mkdir, get_abs_path, walk, decode_text
 from conans.util.runners import version_runner
@@ -238,6 +239,9 @@ class CMakeBuildHelper(object):
 
     def _run(self, command):
         compiler = self._settings.get_safe("compiler")
+        if not compiler:
+            conan_v2_behavior("compiler setting should be defined.",
+                              v1_behavior=self._conanfile.output.warn)
         the_os = self._settings.get_safe("os")
         is_clangcl = the_os == "Windows" and compiler == "clang"
         is_msvc = compiler == "Visual Studio"
@@ -300,6 +304,9 @@ class CMakeBuildHelper(object):
     def build(self, args=None, build_dir=None, target=None):
         if not self._conanfile.should_build:
             return
+        if not self._build_type:
+            conan_v2_behavior("build_type setting should be defined.",
+                              v1_behavior=self._conanfile.output.warn)
         self._build(args, build_dir, target)
 
     def _build(self, args=None, build_dir=None, target=None):
