@@ -42,6 +42,18 @@ class BasicMaxVersionTest(unittest.TestCase):
         self.assertEqual(result, "4.2.3-pre")
         result = satisfying(["4.2.2", "4.2.3-pre"], "~4.2.1", output)
         self.assertEqual(result, "4.2.2")
+        # https://github.com/conan-io/conan/issues/7343
+        result = satisfying(["1.0.0-pre"], "~1.0, include_prerelease=True", output)
+        self.assertIsNone(result)
+        result = satisfying(["1.2.0-pre"], "~1.0, include_prerelease=True", output)
+        self.assertIsNone(result)
+        # this matches, because it is equivalent to 1.0.X
+        result = satisfying(["1.1.0-pre"], "~1.0, include_prerelease=True", output)
+        self.assertEqual(result, "1.1.0-pre")
+        result = satisfying(["1.0.0-pre"], "<1.0, include_prerelease=True", output)
+        self.assertEqual(result, "1.0.0-pre")
+        result = satisfying(["1.0.1-pre"], "~1.0, include_prerelease=True", output)
+        self.assertEqual(result, "1.0.1-pre")
 
     def basic_test(self):
         output = []

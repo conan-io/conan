@@ -1,6 +1,7 @@
 import os
 import platform
 import re
+import textwrap
 import unittest
 
 from conans.model.graph_info import GRAPH_INFO_FILE
@@ -147,3 +148,35 @@ qmake
         self.assertIn("CONAN_LIBS_RELEASE += -lhellor", qmake)
         self.assertIn("CONAN_LIBS_DEBUG += -lhellod", qmake)
         self.assertIn("CONAN_LIBS += -lhello", qmake)
+
+    def test_conditional_generators(self):
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile, CMakeToolchain
+            class Pkg(ConanFile):
+                settings = "os", "compiler", "arch", "build_type"
+                def configure(self):
+                    if self.settings.os == "Windows":
+                        self.generators = ["msbuild"]
+                """)
+        client = TestClient()
+        client.save({"conanfile.py": conanfile})
+
+        client.run('install . -s os=Windows -s compiler="Visual Studio" -s compiler.version=15'
+                   ' -s compiler.runtime=MD')
+        self.assertIn("conanfile.py: Generator msbuild created conan_deps.props", client.out)
+        client.run("install . -s os=Linux -s compiler=gcc -s compiler.version=5.2 '"
+                   "'-s compiler.libcxx=libstdc++")
+        self.assertNotIn("msbuild", client.out)
+        # create
+        client.run('create . pkg/0.1@ -s os=Windows -s compiler="Visual Studio" '
+                   '-s compiler.version=15 -s compiler.runtime=MD')
+        self.assertIn("pkg/0.1: Generator msbuild created conan_deps.props", client.out)
+        client.run("create . pkg/0.1@ -s os=Linux -s compiler=gcc -s compiler.version=5.2 "
+                   "-s compiler.libcxx=libstdc++")
+        self.assertNotIn("msbuild", client.out)
+
+        # Test that command line generators append
+        client.run('install . -s os=Windows -s compiler="Visual Studio" -s compiler.version=15'
+                   ' -s compiler.runtime=MD -g cmake')
+        self.assertIn("conanfile.py: Generator msbuild created conan_deps.props", client.out)
+        self.assertIn("conanfile.py: Generator cmake created conanbuildinfo.cmake", client.out)
