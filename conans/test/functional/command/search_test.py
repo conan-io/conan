@@ -1255,7 +1255,22 @@ class SearchOrder(unittest.TestCase):
 
 @unittest.skipIf(get_env("TESTING_REVISIONS_ENABLED", False), "No sense with revs")
 class SearchOutdatedTest(unittest.TestCase):
-    def search_outdated_test(self):
+
+    def test_search_outdated(self):
+
+        def validate_outdated_table(expected):
+            client.run("search Test/0.1@lasote/testing --table=table.html")
+            html = ''.join([line.strip() for line in client.load("table.html").splitlines()])
+            self.assertIn("<h1>Test/0.1@lasote/testing</h1>", html)
+            self.assertIn("<th>remote</th>"
+                          "<th>package_id</th>"
+                          "<th>outdated</th>"
+                          , html)
+            self.assertIn("<td></td>"
+                          "<td>3475bd55b91ae904ac96fde0f106a136ab951a5e</td>"
+                          "<td>{}</td>".format(expected)
+                          , html)
+
         test_server = TestServer(users={"lasote": "password"})  # exported users and passwords
         servers = {"default": test_server}
         client = TestClient(servers=servers, users={"default": [("lasote", "password")]})
@@ -1268,6 +1283,7 @@ class Test(ConanFile):
         client.save({"conanfile.py": conanfile})
         client.run("export . lasote/testing")
         client.run("install Test/0.1@lasote/testing --build -s os=Windows")
+        validate_outdated_table(False)
         client.save({"conanfile.py": "# comment\n%s" % conanfile})
         client.run("export . lasote/testing")
         client.run("install Test/0.1@lasote/testing --build -s os=Linux")
@@ -1279,6 +1295,7 @@ class Test(ConanFile):
             client.run("search Test/0.1@lasote/testing  %s --outdated" % remote)
             self.assertIn("os: Windows", client.out)
             self.assertNotIn("os: Linux", client.out)
+            validate_outdated_table(True)
 
     def test_exception_client_without_revs(self):
         client = TestClient()
@@ -1287,6 +1304,8 @@ class Test(ConanFile):
 
         client.run("search lib/0.1@user/testing --revisions", assert_error=True)
         self.assertIn("ERROR: The client doesn't have the revisions feature enabled", client.out)
+
+
 
 
 @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False),
