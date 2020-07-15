@@ -1306,8 +1306,6 @@ class Test(ConanFile):
         self.assertIn("ERROR: The client doesn't have the revisions feature enabled", client.out)
 
 
-
-
 @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False),
                      "set TESTING_REVISIONS_ENABLED=1")
 class SearchRevisionsTest(unittest.TestCase):
