@@ -311,7 +311,7 @@ class RestV1Methods(RestCommonMethods):
         payload = {"package_ids": package_ids}
         url = self.router.remove_packages(ref)
         ret = self._post_json(url, payload)
-        if package_ids is None and ret.status_code == 404:
+        if package_ids is not None and ret.status_code == 404:
             # Check if it is a 404 because there are no packages
             pcks = self.search_packages(ref, query=None)
             if not pcks:
