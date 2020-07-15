@@ -1873,7 +1873,7 @@ class Command(object):
         create_cmd.add_argument("--reference", action=OnceArgument,
                                 help='Provide a package reference instead of a conanfile')
         create_cmd.add_argument("-l", "--lockfile", action=OnceArgument,
-                                help="Path to lockfile to be used as a base'")
+                                help="Path to lockfile to be used as a base")
         create_cmd.add_argument("--base", action="store_true",
                                 help="lock only recipe versions and revisions")
         create_cmd.add_argument("--lockfile-out", action=OnceArgument,
