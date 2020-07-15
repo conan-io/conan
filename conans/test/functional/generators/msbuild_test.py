@@ -479,32 +479,15 @@ class MSBuildGeneratorTest(unittest.TestCase):
     def install_reference_gcc_test(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
-        client.run("create . mypkg/0.1@ -s compiler=gcc")
-        client.run("install mypkg/0.1@ -s compiler=gcc -g msbuild", assert_error=True)
-        self.assertIn("The 'msbuild' generator only works with Visual Studio compiler", client.out)
-
-    def no_build_type_error_test(self):
-        client = TestClient()
-        client.save({"conanfile.py": GenConanfile()})
-        client.run("create . mypkg/0.1@")
-        client.run("install mypkg/0.1@ -g msbuild -s build_type=None", assert_error=True)
-        self.assertIn("ERROR: The 'msbuild' generator requires a 'build_type' setting value",
-                      client.out)
-
-
-class TestMSBuild(unittest.TestCase):
-    def test_generator_linux(self):
-        client = TestClient()
-        client.save({"conanfile.py": GenConanfile()})
         client.run("create . pkg/1.0@")
 
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
-            class Pkg(ConanFile):
-                settings = "os", "compiler", "arch", "build_type"
-                generators = "msbuild"
-                requires = "pkg/1.0"
-            """)
+                    from conans import ConanFile
+                    class Pkg(ConanFile):
+                        settings = "os", "compiler", "arch", "build_type"
+                        generators = "msbuild"
+                        requires = "pkg/1.0"
+                    """)
         client.save({"conanfile.py": conanfile})
 
         client.run('install . -s os=Windows -s compiler="Visual Studio" -s compiler.version=15'
@@ -520,3 +503,11 @@ class TestMSBuild(unittest.TestCase):
 
         pkg_props = client.load("conan_pkg.props")
         self.assertIn('Project="conan_pkg_release_x64.props"', pkg_props)
+
+    def no_build_type_error_test(self):
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . mypkg/0.1@")
+        client.run("install mypkg/0.1@ -g msbuild -s build_type=None", assert_error=True)
+        self.assertIn("ERROR: The 'msbuild' generator requires a 'build_type' setting value",
+                      client.out)
