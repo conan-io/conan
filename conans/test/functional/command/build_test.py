@@ -16,9 +16,11 @@ class AConan(ConanFile):
     generators = "cmake"
 
     def build(self):
-        self.output.info("INCLUDE PATH: %s" % self.deps_cpp_info.include_paths[0])
+        self.output.info("INCLUDE PATH: %s" %
+            self.deps_cpp_info.include_paths[0].replace('\\\\', '/'))
         self.output.info("HELLO ROOT PATH: %s" % self.deps_cpp_info["Hello"].rootpath)
-        self.output.info("HELLO INCLUDE PATHS: %s" % self.deps_cpp_info["Hello"].include_paths[0])
+        self.output.info("HELLO INCLUDE PATHS: %s" %
+            self.deps_cpp_info["Hello"].include_paths[0].replace('\\\\', '/'))
 """
 
 conanfile_dep = """
