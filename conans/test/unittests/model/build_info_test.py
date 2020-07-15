@@ -169,10 +169,9 @@ VAR2=23
         info.libdirs.append(abs_lib)
         info.bindirs.append(abs_bin)
         info.bindirs.append("local_bindir")
-        self.assertEqual(info.include_paths, [os.path.join(folder, "include"), abs_include])
-        self.assertEqual(info.lib_paths, [os.path.join(folder, "lib"), abs_lib])
-        self.assertEqual(info.bin_paths, [abs_bin,
-                                          os.path.join(folder, "local_bindir")])
+        self.assertListEqual(list(info.include_paths), [os.path.join(folder, "include"), abs_include])
+        self.assertListEqual(list(info.lib_paths), [os.path.join(folder, "lib"), abs_lib])
+        self.assertListEqual(list(info.bin_paths), [abs_bin, os.path.join(folder, "local_bindir")])
 
     def cpp_info_system_libs_test(self):
         info1 = CppInfo("dep1", "folder1")
@@ -182,9 +181,9 @@ VAR2=23
         deps_cpp_info = DepsCppInfo()
         deps_cpp_info.add("dep1", info1)
         deps_cpp_info.add("dep2", info2)
-        self.assertEqual(["sysdep1", "sysdep2", "sysdep3"], deps_cpp_info.system_libs)
-        self.assertEqual(["sysdep1"], deps_cpp_info["dep1"].system_libs)
-        self.assertEqual(["sysdep2", "sysdep3"], deps_cpp_info["dep2"].system_libs)
+        self.assertListEqual(["sysdep1", "sysdep2", "sysdep3"], list(deps_cpp_info.system_libs))
+        self.assertListEqual(["sysdep1"], list(deps_cpp_info["dep1"].system_libs))
+        self.assertListEqual(["sysdep2", "sysdep3"], list(deps_cpp_info["dep2"].system_libs))
 
     def cpp_info_name_test(self):
         folder = temp_folder()
@@ -204,9 +203,9 @@ VAR2=23
         deps_cpp_info = DepsCppInfo()
         deps_cpp_info.add("myname", info)
         self.assertListEqual([os.path.join(folder, "my_module.cmake")],
-                             deps_cpp_info["myname"].build_modules_paths)
+                             list(deps_cpp_info["myname"].build_modules_paths))
         self.assertListEqual([os.path.join(folder, "mod-release.cmake")],
-                             deps_cpp_info["myname"].debug.build_modules_paths)
+                             list(deps_cpp_info["myname"].debug.build_modules_paths))
 
     def cppinfo_public_interface_test(self):
         folder = temp_folder()
