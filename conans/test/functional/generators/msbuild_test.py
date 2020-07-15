@@ -479,9 +479,30 @@ class MSBuildGeneratorTest(unittest.TestCase):
     def install_reference_gcc_test(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
-        client.run("create . mypkg/0.1@ -s compiler=gcc")
-        client.run("install mypkg/0.1@ -s compiler=gcc -g msbuild", assert_error=True)
-        self.assertIn("The 'msbuild' generator only works with Visual Studio compiler", client.out)
+        client.run("create . pkg/1.0@")
+
+        conanfile = textwrap.dedent("""
+                    from conans import ConanFile
+                    class Pkg(ConanFile):
+                        settings = "os", "compiler", "arch", "build_type"
+                        generators = "msbuild"
+                        requires = "pkg/1.0"
+                    """)
+        client.save({"conanfile.py": conanfile})
+
+        client.run('install . -s os=Windows -s compiler="Visual Studio" -s compiler.version=15'
+                   ' -s compiler.runtime=MD')
+        self.assertIn("conanfile.py: Generator msbuild created conan_deps.props", client.out)
+        client.run("install . -s os=Linux -s compiler=gcc -s compiler.version=5.2 '"
+                   "'-s compiler.libcxx=libstdc++")
+
+        self.assertIn("conanfile.py: Generator msbuild created conan_deps.props", client.out)
+        self.assertIn("conanfile.py: Generator msbuild created conan_pkg.props", client.out)
+        self.assertIn("conanfile.py: Generator msbuild created conan_pkg_release_x64.props",
+                      client.out)
+
+        pkg_props = client.load("conan_pkg.props")
+        self.assertIn('Project="conan_pkg_release_x64.props"', pkg_props)
 
     def no_build_type_error_test(self):
         client = TestClient()

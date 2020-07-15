@@ -87,8 +87,8 @@ class MSBuildGenerator(Generator):
                                'x86_64': 'x64'}.get(settings.get_safe("arch"))),
                  ("PlatformToolset", toolset)]
 
-        name = "".join("_%s" % v for _, v in props)
-        condition = " And ".join("'$(%s)' == '%s'" % (k, v) for k, v in props)
+        name = "".join("_%s" % v for _, v in props if v is not None)
+        condition = " And ".join("'$(%s)' == '%s'" % (k, v) for k, v in props if v is not None)
         return name.lower(), condition
 
     def _general(self, name_general, deps):
@@ -192,8 +192,6 @@ class MSBuildGenerator(Generator):
     @property
     def content(self):
         print("*** The 'msbuild' generator is EXPERIMENTAL ***")
-        if self.conanfile.settings.compiler != "Visual Studio":
-            raise ConanException("The 'msbuild' generator only works with Visual Studio compiler")
         if not self.conanfile.settings.get_safe("build_type"):
             raise ConanException("The 'msbuild' generator requires a 'build_type' setting value")
         result = {}
