@@ -1,6 +1,10 @@
 import sys
+import os
 
-from conans.client.command import main
+if os.getenv("CONAN_V2_CLI"):
+    from conans.cli.cli import main
+else:
+    from conans.client.command import main
 
 
 def run():
