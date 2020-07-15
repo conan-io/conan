@@ -1,20 +1,19 @@
+import os
 import re
 import traceback
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 
 from conans.errors import ConanException
 from conans.model import Generator
-from conans.model.build_info import CppInfo, DepsCppInfo
+from conans.model.build_info import CppInfo, DepsCppInfo, DepCppInfo
 from conans.model.env_info import DepsEnvInfo
 from conans.model.user_info import DepsUserInfo
 from conans.paths import BUILD_INFO
 from conans.util.log import logger
 
 
-class DepsCppTXT(object):
+class RootCppTXT(object):
     def __init__(self, cpp_info):
-        self.version = cpp_info.version
-        self.name = cpp_info.get_name(TXTGenerator.name)
         self.include_paths = "\n".join(p.replace("\\", "/")
                                        for p in cpp_info.include_paths)
         self.lib_paths = "\n".join(p.replace("\\", "/")
@@ -32,11 +31,18 @@ class DepsCppTXT(object):
         self.exelinkflags = "\n".join(cpp_info.exelinkflags)
         self.bin_paths = "\n".join(p.replace("\\", "/")
                                    for p in cpp_info.bin_paths)
-        self.rootpath = "%s" % cpp_info.rootpath.replace("\\", "/")
         self.sysroot = "%s" % cpp_info.sysroot.replace("\\", "/") if cpp_info.sysroot else ""
         self.frameworks = "\n".join(cpp_info.frameworks)
         self.framework_paths = "\n".join(p.replace("\\", "/")
                                          for p in cpp_info.framework_paths)
+
+
+class DepCppTXT(RootCppTXT):
+    def __init__(self, cpp_info):
+        super(DepCppTXT, self).__init__(cpp_info)
+        self.version = cpp_info.version
+        self.name = cpp_info.get_name(TXTGenerator.name)
+        self.rootpath = "%s" % cpp_info.rootpath.replace("\\", "/")
 
 
 class TXTGenerator(Generator):
@@ -47,7 +53,7 @@ class TXTGenerator(Generator):
         return BUILD_INFO
 
     @staticmethod
-    def loads(text):
+    def loads(text, filter_empty=False):
         user_defines_index = text.find("[USER_")
         env_defines_index = text.find("[ENV_")
         if user_defines_index != -1:
@@ -68,7 +74,7 @@ class TXTGenerator(Generator):
 
             user_info_txt = ""
 
-        deps_cpp_info = TXTGenerator._loads_cpp_info(deps_cpp_info_txt)
+        deps_cpp_info = TXTGenerator._loads_cpp_info(deps_cpp_info_txt, filter_empty=filter_empty)
         deps_user_info = TXTGenerator._loads_deps_user_info(user_info_txt)
         deps_env_info = DepsEnvInfo.loads(deps_env_info_txt)
         return deps_cpp_info, deps_user_info, deps_env_info
@@ -90,12 +96,12 @@ class TXTGenerator(Generator):
         return ret
 
     @staticmethod
-    def _loads_cpp_info(text):
+    def _loads_cpp_info(text, filter_empty):
         pattern = re.compile(r"^\[([a-zA-Z0-9._:-]+)\]([^\[]+)", re.MULTILINE)
 
         try:
             # Parse the text
-            data = defaultdict(lambda: defaultdict(dict))
+            data = OrderedDict()
             for m in pattern.finditer(text):
                 var_name = m.group(1)
                 lines = []
@@ -121,23 +127,41 @@ class TXTGenerator(Generator):
                 dep = tokens[1] if len(tokens) == 2 else None
                 if field == "cppflags":
                     field = "cxxflags"
+                data.setdefault(dep, defaultdict(dict))
                 data[dep][config][field] = lines
 
             # Build the data structures
+            def _populate_cpp_info(_cpp_info, _data, _rootpath):
+                for key, value in _data.items():
+                    if key.endswith('dirs'):
+                        value = [os.path.relpath(it, _rootpath) for it in value]
+                        value = ['' if it == '.' else it for it in value]
+                    setattr(_cpp_info, key, value)
+
+            if None in data:
+                del data[None]
+
             deps_cpp_info = DepsCppInfo()
             for dep, configs_cpp_info in data.items():
-                if dep is None:
-                    cpp_info = deps_cpp_info
-                else:
-                    cpp_info = deps_cpp_info._dependencies.setdefault(dep, CppInfo(dep, root_folder=""))
+                # Data for the 'cpp_info' object (no configs)
+                no_config_data = configs_cpp_info.pop(None)
+                rootpath = no_config_data.pop('rootpath')[0]
+                dep_cpp_info = CppInfo(dep, rootpath)
+                dep_cpp_info.filter_empty = filter_empty
+                dep_cpp_info.names[TXTGenerator.name] = no_config_data.pop('name')[0]
+                dep_cpp_info.sysroot = no_config_data.pop('sysroot', [""])[0]
+                _populate_cpp_info(dep_cpp_info, no_config_data, rootpath)
 
-                for config, fields in configs_cpp_info.items():
-                    item_to_apply = cpp_info if not config else getattr(cpp_info, config)
+                # Now the configs
+                for config, config_data in configs_cpp_info.items():
+                    cpp_info_config = getattr(dep_cpp_info, config)
+                    _populate_cpp_info(cpp_info_config, config_data, rootpath)
 
-                    for key, value in fields.items():
-                        if key in ['rootpath', 'sysroot', 'version', 'name']:
-                            value = value[0]
-                        setattr(item_to_apply, key, value)
+                # Add to the dependecy list
+                version = no_config_data.pop('version', [""])[0]
+                dep_cpp_info.version = version
+                deps_cpp_info.add(dep, DepCppInfo(dep_cpp_info))
+
             return deps_cpp_info
 
         except Exception as e:
@@ -164,12 +188,12 @@ class TXTGenerator(Generator):
                     '[frameworkdirs{dep}{config}]\n{deps.framework_paths}\n\n')
 
         sections = []
-        deps = DepsCppTXT(self.deps_build_info)
+        deps = RootCppTXT(self.deps_build_info)
         all_flags = template.format(dep="", deps=deps, config="")
         sections.append(all_flags)
 
         for config, cpp_info in self.deps_build_info.configs.items():
-            deps = DepsCppTXT(cpp_info)
+            deps = DepCppTXT(cpp_info)
             all_flags = template.format(dep="", deps=deps, config=":" + config)
             sections.append(all_flags)
 
@@ -180,12 +204,12 @@ class TXTGenerator(Generator):
 
         for dep_name, dep_cpp_info in self.deps_build_info.dependencies:
             dep = "_" + dep_name
-            deps = DepsCppTXT(dep_cpp_info)
+            deps = DepCppTXT(dep_cpp_info)
             dep_flags = template_deps.format(dep=dep, deps=deps, config="")
             sections.append(dep_flags)
 
             for config, cpp_info in dep_cpp_info.configs.items():
-                deps = DepsCppTXT(cpp_info)
+                deps = DepCppTXT(cpp_info)
                 all_flags = template.format(dep=dep, deps=deps, config=":" + config)
                 sections.append(all_flags)
 
