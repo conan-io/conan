@@ -95,7 +95,7 @@ class TestConan(ConanFile):
                         self.output.info("fpic is an info.option!!!")
                     if "other" not in self.options:
                         self.output.info("other is not an option!!!")
-                    if "other" not in self.info.options:
+                    if "other" not in self.info.options:  # Not documented
                         self.output.info("other is not an info.option!!!")
                     try:
                         self.options.whatever
