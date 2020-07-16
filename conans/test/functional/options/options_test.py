@@ -9,12 +9,13 @@ class OptionsTest(unittest.TestCase):
 
     def general_scope_options_test_package_test(self):
         client = TestClient()
-        conanfile = """from conans import ConanFile
-class Pkg(ConanFile):
-    options = {"shared": ["1", "2"]}
-    def configure(self):
-        self.output.info("BUILD SHARED: %s" % self.options.shared)
-"""
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class Pkg(ConanFile):
+                options = {"shared": ["1", "2"]}
+                def configure(self):
+                    self.output.info("BUILD SHARED: %s" % self.options.shared)
+            """)
         test = GenConanfile().with_test("pass")
         client.save({"conanfile.py": conanfile})
         client.run("create . Pkg/0.1@user/testing -o *:shared=1")
@@ -31,17 +32,20 @@ class Pkg(ConanFile):
         client.run("create . Pkg/0.1@user/testing -o shared=1", assert_error=True)
         self.assertIn("option 'shared' doesn't exist", client.out)
 
-        client.save({"conanfile.py": GenConanfile()}, clean_first=True)
+    def general_scope_options_test_package_notdefined_test(self):
+        client = TestClient()
+        conanfile = GenConanfile()
+        client.save({"conanfile.py": conanfile})
         client.run("create . Pkg/0.1@user/testing -o *:shared=True")
         self.assertIn("Pkg/0.1@user/testing: Calling build()", client.out)
         client.run("create . Pkg/0.1@user/testing -o shared=False", assert_error=True)
         self.assertIn("option 'shared' doesn't exist", client.out)
         # With test_package
         client.save({"conanfile.py": conanfile,
-                     "test_package/conanfile.py": test})
-        client.run("create . Pkg/0.1@user/testing -o *:shared=True", assert_error=True)
-        self.assertIn("ERROR: Pkg/0.1@user/testing: 'True' is not a valid 'options.shared' value",
-                      client.out)
+                     "test_package/conanfile.py": GenConanfile().with_test("pass")})
+        client.run("create . Pkg/0.1@user/testing -o *:shared=True")
+        self.assertIn("Pkg/0.1@user/testing: Calling build()", client.out)
+        self.assertIn("Pkg/0.1@user/testing (test package): Calling build()", client.out)
 
     def general_scope_priorities_test(self):
         client = TestClient()
