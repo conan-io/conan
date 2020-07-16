@@ -135,6 +135,8 @@ class ReproducibleLockfiles(unittest.TestCase):
         client.run("install .")
         lockfile2 = client.load("conan.lock")
         self.assertEqual(lockfile, lockfile2)
+        # check that the path to local conanfile.txt is relative, reproducible in other machine
+        self.assertIn('"path": "conanfile.txt"', lockfile)
 
 
 @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")

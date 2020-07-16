@@ -49,7 +49,7 @@ class GraphLockFile(object):
             raise ConanException("Error parsing lockfile '{}': {}".format(path, e))
 
     def save(self, path):
-        serialized_graph_str = self._dumps()
+        serialized_graph_str = self._dumps(path)
         save(path, serialized_graph_str)
 
     @staticmethod
@@ -72,17 +72,25 @@ class GraphLockFile(object):
         graph_lock_file = GraphLockFile(profile_host, profile_build, graph_lock)
         return graph_lock_file
 
-    def _dumps(self):
-        result = {"graph_lock": self.graph_lock.serialize(),
+    def _dumps(self, path):
+        # Make the lockfile more reproducible by using a relative path in the node.path
+        # At the moment the node.path value is not really used, only its existence
+        path = os.path.dirname(path)
+        serial_lock = self._graph_lock.serialize()
+        for node in serial_lock["nodes"].values():
+            p = node.get("path")
+            if p:
+                node["path"] = os.path.relpath(p, path)
+        result = {"graph_lock": serial_lock,
                   "version": LOCKFILE_VERSION}
         if self.profile_host:
-            result["profile_host"] = self.profile_host.dumps()
+            result["profile_host"] = self._profile_host.dumps()
         if self.profile_build:
-            result["profile_build"] = self.profile_build.dumps()
+            result["profile_build"] = self._profile_build.dumps()
         return json.dumps(result, indent=True)
 
     def only_recipes(self):
-        self.graph_lock.only_recipes()
+        self._graph_lock.only_recipes()
         self._profile_host = None
         self._profile_build = None
 
