@@ -14,8 +14,11 @@ class MinVersionTest(unittest.TestCase):
         client = TestClient()
         conanfile = textwrap.dedent("""
             from conans import ConanFile
+
+            min_conan_version = "100.0"
+
             class Lib(ConanFile):
-                min_conan_version = "100.0"
+                pass
             """)
         client.save({"conanfile.py": conanfile})
         client.run("export . pkg/1.0@", assert_error=True)

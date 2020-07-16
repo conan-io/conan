@@ -58,13 +58,6 @@ class ConanFileLoader(object):
             module, conanfile = parse_conanfile(conanfile_path, self._python_requires)
             self._python_requires.valid = False
 
-            min_conan_version = getattr(conanfile, "min_conan_version", None)
-            if min_conan_version:
-                min_conan_version = Version(min_conan_version)
-                if min_conan_version > current_version:
-                    raise ConanException("minimum required Conan version: %s > %s"
-                                         % (min_conan_version, current_version))
-
             self._python_requires.locked_versions = None
 
             # This is the new py_requires feature, to supersede the old python_requires
@@ -366,6 +359,13 @@ def _parse_conanfile(conan_file_path):
             sys.dont_write_bytecode = True
             loaded = imp.load_source(module_id, conan_file_path)
             sys.dont_write_bytecode = False
+
+        min_conan_version = getattr(loaded, "min_conan_version", None)
+        if min_conan_version:
+            min_conan_version = Version(min_conan_version)
+            if min_conan_version > current_version:
+                raise ConanException("minimum required Conan version: %s > %s"
+                                     % (min_conan_version, current_version))
 
         # These lines are necessary, otherwise local conanfile imports with same name
         # collide, but no error, and overwrite other packages imports!!
