@@ -387,12 +387,14 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         html = ''.join([line.strip() for line in self.client.load("table.html").splitlines()])
         self.assertIn("<h1>Hello/1.4.10@myuser/testing</h1>", html)
         self.assertIn("<td>LinuxPackageSHA</td>"
+                      "<td>False</td>"
                       "<td>Linux</td>"
                       "<td>x86</td>"
                       "<td>gcc</td>"
                       "<td>libstdc++11</td>"
                       "<td>4.5</td>", html)
         self.assertIn("<td>WindowsPackageSHA</td>"
+                      "<td>True</td>"
                       "<td>Windows</td>"
                       "<td>x64</td>"
                       "<td>Visual Studio</td>"
@@ -411,6 +413,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         self.assertIn("<h1>Hello/1.4.10@myuser/testing</h1>", html)
         self.assertIn("<td>local</td>"
                       "<td>LinuxPackageSHA</td>"
+                      "<td>False</td>"
                       "<td>Linux</td>"
                       "<td>x86</td>"
                       "<td>gcc</td>"
@@ -418,6 +421,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                       "<td>4.5</td>", html)
         self.assertIn("<td>search_able</td>"
                       "<td>WindowsPackageSHA</td>"
+                      "<td>True</td>"
                       "<td>Windows</td>"
                       "<td>x64</td>"
                       "<td>Visual Studio</td>"
@@ -1287,6 +1291,42 @@ class Test(ConanFile):
 
         client.run("search lib/0.1@user/testing --revisions", assert_error=True)
         self.assertIn("ERROR: The client doesn't have the revisions feature enabled", client.out)
+
+    def test_outdated_html_table(self):
+        test_server = TestServer(users={"user": "password"})
+        servers = {"default": test_server}
+        client = TestClient(servers=servers, users={"default": [("user", "password")]})
+        conanfile = textwrap.dedent("""
+                from conans import ConanFile
+                class Test(ConanFile):
+                    name = "test"
+                    version = "0.1.0"
+                """)
+        client.save({"conanfile.py": conanfile})
+        client.run("create . user/testing")
+        client.run("upload test/0.1.0@user/testing --all")
+        client.run("search test/0.1.0@user/testing --table=table.html -r default")
+
+        html = ''.join([line.strip() for line in client.load("table.html").splitlines()])
+        self.assertIn("<h1>test/0.1.0@user/testing</h1>", html)
+        self.assertIn("<th>remote</th>"
+                      "<th>package_id</th>"
+                      "<th>outdated</th>"
+                      , html)
+        self.assertIn("<td>default</td>"
+                      "<td>5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9</td>"
+                      "<td>False</td>"
+                      , html)
+
+        client.save({"conanfile.py": "# comment\n%s" % conanfile})
+        client.run("create . user/testing")
+        client.run("upload test/0.1.0@user/testing")
+        client.run("search test/0.1.0@user/testing --table=table.html -r default")
+        html = ''.join([line.strip() for line in client.load("table.html").splitlines()])
+        self.assertIn("<td>default</td>"
+                      "<td>5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9</td>"
+                      "<td>True</td>"
+                      , html)
 
 
 @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False),

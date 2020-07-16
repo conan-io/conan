@@ -84,7 +84,7 @@ class DiamondTest(unittest.TestCase):
         content = content.replace("def build(self):",
                                   "def build(self):\n"
                                   "        self.output.info('INCLUDE %s' "
-                                  "% self.deps_cpp_info['Hello0'].include_paths)")
+                                  "% list(self.deps_cpp_info['Hello0'].include_paths))")
         files3[CONANFILE] = content
         self.client.save(files3)
 

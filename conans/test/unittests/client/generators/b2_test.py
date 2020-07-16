@@ -2,7 +2,7 @@ import unittest
 
 from conans.client.conf import get_default_settings_yml
 from conans.client.generators.b2 import B2Generator
-from conans.model.build_info import CppInfo
+from conans.model.build_info import CppInfo, DepsCppInfo
 from conans.model.conan_file import ConanFile
 from conans.model.env_info import EnvValues
 from conans.model.ref import ConanFileReference
@@ -43,9 +43,11 @@ class B2GeneratorTest(unittest.TestCase):
         cpp_info.sharedlinkflags = ["-sharedlinkflag"]
         cpp_info.cxxflags = ["-cxxflag"]
         cpp_info.public_deps = ["MyPkg"]
-        cpp_info.lib_paths.extend(["Path\\with\\slashes", "regular/path/to/dir"])
-        cpp_info.include_paths.extend(["other\\Path\\with\\slashes", "other/regular/path/to/dir"])
+        cpp_info.libdirs.extend(["Path\\with\\slashes", "regular/path/to/dir"])
+        cpp_info.includedirs.extend(["other\\Path\\with\\slashes", "other/regular/path/to/dir"])
+        cpp_info.filter_empty = False
         conanfile.deps_cpp_info.add(ref.name, cpp_info)
+
         generator = B2Generator(conanfile)
 
         content = {
@@ -189,13 +191,15 @@ constant-if rootpath(conan,32,x86,17,gnu,linux,gcc-6.3,release) :
     ;
 
 constant-if includedirs(conan,32,x86,17,gnu,linux,gcc-6.3,release) :
-    "other/Path/with/slashes"
-    "other/regular/path/to/dir"
+    "dummy_root_folder2/include"
+    "dummy_root_folder2/other/Path/with/slashes"
+    "dummy_root_folder2/other/regular/path/to/dir"
     ;
 
 constant-if libdirs(conan,32,x86,17,gnu,linux,gcc-6.3,release) :
-    "Path/with/slashes"
-    "regular/path/to/dir"
+    "dummy_root_folder2/lib"
+    "dummy_root_folder2/Path/with/slashes"
+    "dummy_root_folder2/regular/path/to/dir"
     ;
 
 constant-if defines(conan,32,x86,17,gnu,linux,gcc-6.3,release) :
@@ -274,13 +278,15 @@ constant-if rootpath(mypkg2,32,x86,17,gnu,linux,gcc-6.3,release) :
     ;
 
 constant-if includedirs(mypkg2,32,x86,17,gnu,linux,gcc-6.3,release) :
-    "other/Path/with/slashes"
-    "other/regular/path/to/dir"
+    "dummy_root_folder2/include"
+    "dummy_root_folder2/other/Path/with/slashes"
+    "dummy_root_folder2/other/regular/path/to/dir"
     ;
 
 constant-if libdirs(mypkg2,32,x86,17,gnu,linux,gcc-6.3,release) :
-    "Path/with/slashes"
-    "regular/path/to/dir"
+    "dummy_root_folder2/lib"
+    "dummy_root_folder2/Path/with/slashes"
+    "dummy_root_folder2/regular/path/to/dir"
     ;
 
 constant-if defines(mypkg2,32,x86,17,gnu,linux,gcc-6.3,release) :
