@@ -91,7 +91,7 @@ class TestConan(ConanFile):
                 def package_id(self):
                     if "fpic" in self.options:
                         self.output.info("fpic is an option!!!")
-                    if "fpic" in self.info.options:
+                    if "fpic" in self.info.options:  # Not documented
                         self.output.info("fpic is an info.option!!!")
                     if "other" not in self.options:
                         self.output.info("other is not an option!!!")
