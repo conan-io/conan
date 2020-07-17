@@ -26,5 +26,3 @@ class CliHelpTest(unittest.TestCase):
         self.assertIn('Shows help for a specific command', client.out)
 
         client.run("search --help")
-        print(client.out)
-        self.assertIn('Searches for package recipes whose name contain', client.out)
