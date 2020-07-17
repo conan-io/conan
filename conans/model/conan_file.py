@@ -1,8 +1,8 @@
 import os
 from contextlib import contextmanager
-from six import string_types
 
 import six
+from six import string_types
 
 from conans.client import tools
 from conans.client.output import ScopedOutput
@@ -18,7 +18,6 @@ from conans.paths import RUN_LOG_NAME
 from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
 from conans.util.conan_v2_mode import conan_v2_behavior
 from conans.util.env_reader import get_env
-from conans.util.misc import make_tuple
 
 
 def create_options(conanfile):
@@ -172,9 +171,6 @@ class ConanFile(object):
 
         # user specified env variables
         self._conan_env_values = env.copy()  # user specified -e
-
-        # Recipe provides its own name if nothing else is defined
-        self.provides = make_tuple(self.provides or self.name)
 
     @property
     def env(self):
