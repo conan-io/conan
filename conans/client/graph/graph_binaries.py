@@ -294,6 +294,8 @@ class GraphBinariesAnalyzer(object):
 
         direct_reqs, indirect_reqs = self.package_id_transitive_reqs(node)
 
+        # FIXME: Conan v2.0 This is introducing a bug for backwards compatibility, it will add
+        #   only the requirements available in the 'neighbour.info' object, not all the closure
         if not self._fixed_package_id:
             old_indirect = set()
             for neighbor in neighbors:
