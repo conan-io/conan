@@ -1,7 +1,6 @@
 import json
 
-from conans.client.output import Color
-from conans.cli.cli import Extender
+from conans.cli.cli import Extender, OnceArgument
 from conans.cli.command import conan_command
 
 
@@ -13,8 +12,10 @@ def output_user_list_json(info, out):
 
 def output_user_list_cli(info, out):
     results = info["results"]
-    output_str = "user: {} authenticated: {}".format(results["user"], results["authenticated"])
-    out.writeln(output_str)
+    for remote, user_info in results.items():
+        output_str = "user: {} authenticated: {}".format(user_info["user"],
+                                                         user_info["authenticated"])
+        out.writeln(output_str)
 
 
 list_formatters = {"cli": output_user_list_cli,
@@ -41,18 +42,56 @@ def user(*args, conan_api, parser, subparsers, **kwargs):
     """
     # list subcommand
     subparsers["list"].add_argument("-r", "--remotes", action=Extender, nargs="?",
-                                    help="Show the user for the selected remote")
+                                    help="Remotes to show the users from. Multiple remotes can be "
+                                         "specified: -r remote1 -r remote2. Also wildcards can be "
+                                         "used. -r '*' will show the users for all the remotes. "
+                                         "If no remote is specified it will show the users for all "
+                                         "the remotes")
 
     # add subcommand
     subparsers["add"].add_argument("name",
-                                   help="Username you want to use. If no name is provided it")
-    subparsers["add"].add_argument("-p", "--password", action=Extender, nargs="?",
+                                   help="Username you want to use.")
+    subparsers["add"].add_argument("-p", "--password", action=OnceArgument,
                                    help="User password. Use double quotes if password with "
                                         "spacing, and escape quotes if existing. If empty, the "
                                         "password is requested interactively (not exposed)")
+    subparsers["add"].add_argument("-s", "--skip-auth", action=OnceArgument,
+                                   help="Skips the authentication with the server if there are "
+                                        "local stored credentials. It doesn't check if the "
+                                        "current credentials are valid or not.")
+
+    # remove subcommand
+    subparsers["remove"].add_argument("-r", "--remotes", action=Extender, nargs="?", required=True,
+                                      help="Remotes to remove the users from. Multiple remotes can be "
+                                           "specified: -r remote1 -r remote2. Also wildcards can be "
+                                           "used. -r '*' will remove the users for all the remotes.")
+
+    # update subcommand
+    subparsers["update"].add_argument("-r", "--remotes", action=Extender, nargs="?", required=True,
+                                      help="Remotes to remove the users from. Multiple remotes can "
+                                           "be specified: -r remote1 -r remote2. Also wildcards can "
+                                           "be used. -r '*' will remove the users for all the "
+                                           "remotes.")
+    subparsers["update"].add_argument("-n", "--name", action=OnceArgument,
+                                      help="Name of the new user. If no name is specified the "
+                                           "command will update the current user.")
+    subparsers["update"].add_argument("-p", "--password", action=OnceArgument, required=True,
+                                      const="",
+                                      type=str,
+                                      help="Update user password. Use double quotes if password "
+                                           "with spacing, and escape quotes if existing. If "
+                                           "empty, the password is requested interactively "
+                                           "(not exposed)")
+
     args = parser.parse_args(*args)
     info = {}
     if args.subcommand == "list":
-        info = {"results": {"user": "someuser", "authenticated": True}}
+        if "*" in args.remotes:
+            info = {"results": {"remote1": {"user": "someuser1", "authenticated": True},
+                                "remote2": {"user": "someuser2", "authenticated": False},
+                                "remote3": {"user": "someuser3", "authenticated": False},
+                                "remote4": {"user": "someuser4", "authenticated": True}}}
+        else:
+            info = {"results": {"remote1": {"user": "someuser1", "authenticated": True}}}
 
     return info
