@@ -76,50 +76,6 @@ class GraphLockConanfileTXTTest(unittest.TestCase):
         self.assertNotIn("pkg/0.1", client2.out)
 
 
-class GraphLockCustomFilesTest(unittest.TestCase):
-
-    def _check_lock(self):
-        lock_file = self.client.load("custom.lock")
-        lock_file_json = json.loads(lock_file)
-        self.assertEqual(lock_file_json["version"], LOCKFILE_VERSION)
-        nodes = lock_file_json["graph_lock"]["nodes"]
-        self.assertEqual(2, len(nodes))
-        pkg_a = nodes["1"]
-        pkg_b = nodes["0"]
-        if self.client.cache.config.revisions_enabled:
-            self.assertEqual(pkg_a["ref"], "PkgA/0.1@user/channel#f3367e0e7d170aa12abccb175fee5f97")
-            self.assertEqual(pkg_a["prev"], "83c38d3b4e5f1b8450434436eec31b00")
-        else:
-            self.assertEqual(pkg_a["ref"], "PkgA/0.1@user/channel")
-            self.assertEqual(pkg_a["prev"], "0")
-
-        self.assertEqual(pkg_a["package_id"], "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
-        self.assertEqual(pkg_b["ref"], "PkgB/0.1")
-        self.assertIsNone(pkg_b.get("package_id"))
-        self.assertIsNone(pkg_b.get("prev"))
-
-    def test(self):
-        client = TestClient()
-        self.client = client
-        client.save({"conanfile.py": GenConanfile()})
-        client.run("create . PkgA/0.1@user/channel")
-
-        # Use a consumer with a version range
-        consumer = GenConanfile("PkgB", "0.1").with_require_plain("PkgA/[>=0.1]@user/channel")
-        client.save({"conanfile.py": consumer})
-        client.run("lock create conanfile.py --lockfile-out=custom.lock")
-        self.assertIn("PkgA/0.1@user/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache",
-                      client.out)
-        self._check_lock()
-
-        # If we create a new PkgA version
-        client.save({"conanfile.py": GenConanfile()})
-        client.run("create . PkgA/0.2@user/channel")
-        client.save({"conanfile.py": consumer})
-        client.run("install . --lockfile=custom.lock")
-        self._check_lock()
-
-
 class ReproducibleLockfiles(unittest.TestCase):
     def reproducible_lockfile_test(self):
         client = TestClient()
@@ -338,3 +294,36 @@ class GraphInstallArgumentsUpdated(unittest.TestCase):
                       "but it is locked", client.out)
         new_lock = client.load("somelib.lock")
         self.assertEqual(previous_lock, new_lock)
+
+
+class BuildLockedTest(unittest.TestCase):
+    def test_build_locked_node(self):
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . flac/1.0@")
+        client.run("lock create --reference=flac/1.0@ --lockfile-out=conan.lock --build")
+        lock = json.loads(client.load("conan.lock"))
+        flac = lock["graph_lock"]["nodes"]["1"]
+        if client.cache.config.revisions_enabled:
+            ref = "flac/1.0#f3367e0e7d170aa12abccb175fee5f97"
+            prev = "83c38d3b4e5f1b8450434436eec31b00"
+        else:
+            ref = "flac/1.0"
+            prev = "0"
+        self.assertEqual(flac["ref"], ref)
+        self.assertEqual(flac["package_id"], "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+        self.assertIsNone(flac.get("prev"))
+
+        client.run("install flac/1.0@ --lockfile=conan.lock --lockfile-out=output.lock")
+        lock = json.loads(client.load("output.lock"))
+        flac = lock["graph_lock"]["nodes"]["1"]
+        self.assertEqual(flac["ref"], ref)
+        self.assertEqual(flac["package_id"], "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+        self.assertIsNone(flac.get("prev"))
+
+        client.run("install flac/1.0@ --build=flac --lockfile=conan.lock --lockfile-out=output.lock")
+        lock = json.loads(client.load("output.lock"))
+        flac = lock["graph_lock"]["nodes"]["1"]
+        self.assertEqual(flac["ref"], ref)
+        self.assertEqual(flac["package_id"], "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+        self.assertEqual(flac["prev"], prev)

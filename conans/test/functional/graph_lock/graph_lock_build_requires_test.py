@@ -75,3 +75,36 @@ class GraphLockBuildRequireTestCase(unittest.TestCase):
         t.run("install protobuf/0.1@ --profile:build=default --profile:host=default "
               "--lockfile=conan.lock --build=protobuf")
         self.assertIn("protobuf/0.1: Created package revision", t.out)
+
+    def test_build_require_not_removed(self):
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . cmake/1.0@")
+        client.save({"conanfile.py": GenConanfile().with_build_require_plain("cmake/1.0@")})
+        client.run("create . flac/1.0@")
+        client.run("lock create --reference=flac/1.0@ --lockfile-out=conan.lock --build")
+        lock = json.loads(client.load("conan.lock"))
+        flac = lock["graph_lock"]["nodes"]["1"]
+        if client.cache.config.revisions_enabled:
+            ref = "flac/1.0#f3367e0e7d170aa12abccb175fee5f97"
+            prev = "83c38d3b4e5f1b8450434436eec31b00"
+        else:
+            ref = "flac/1.0"
+            prev = "0"
+        self.assertEqual(flac["ref"], ref)
+        self.assertEqual(flac["package_id"], "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+        self.assertIsNone(flac.get("prev"))
+
+        client.run("install flac/1.0@ --lockfile=conan.lock --lockfile-out=output.lock")
+        lock = json.loads(client.load("output.lock"))
+        flac = lock["graph_lock"]["nodes"]["1"]
+        self.assertEqual(flac["ref"], ref)
+        self.assertEqual(flac["package_id"], "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+        self.assertIsNone(flac.get("prev"))
+
+        client.run("install flac/1.0@ --build=flac --lockfile=conan.lock --lockfile-out=output.lock")
+        lock = json.loads(client.load("output.lock"))
+        flac = lock["graph_lock"]["nodes"]["1"]
+        self.assertEqual(flac["ref"], ref)
+        self.assertEqual(flac["package_id"], "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+        self.assertEqual(flac["prev"], prev)
