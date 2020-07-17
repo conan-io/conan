@@ -103,7 +103,7 @@ class GraphLockDynamicTest(unittest.TestCase):
                                                    .with_require_plain("LibB/0.1")})
         client.run("create . LibC/0.1@")
         client.save({"conanfile.py": GenConanfile().with_require_plain("LibC/0.1")})
-        client.run("lock create conanfile.py")
+        client.run("lock create conanfile.py --lockfile-out=conan.lock")
         lock = client.load("conan.lock")
         lock = json.loads(lock)["graph_lock"]["nodes"]
         self.assertEqual(4, len(lock))
@@ -157,7 +157,7 @@ class GraphLockDynamicTest(unittest.TestCase):
         client.run("create . zlib/1.0@")
 
         client.save({"conanfile.py": GenConanfile()})
-        client.run("lock create conanfile.py")
+        client.run("lock create conanfile.py --lockfile-out=conan.lock")
         client.save({"conanfile.py": GenConanfile().with_require_plain("zlib/1.0")})
         client.run("install . --lockfile=conan.lock", assert_error=True)
         self.assertIn("ERROR: Require 'zlib' cannot be found in lockfile", client.out)
@@ -192,7 +192,7 @@ class GraphLockDynamicTest(unittest.TestCase):
                      "profile": "[build_requires]\ntool/0.1\n"})
 
         client.run("export .")
-        client.run("lock create consumer.txt -pr=profile --build=missing")
+        client.run("lock create consumer.txt -pr=profile --build=missing --lockfile-out=conan.lock")
         lock1 = client.load("conan.lock")
         json_lock1 = json.loads(lock1)
         dep = json_lock1["graph_lock"]["nodes"]["1"]

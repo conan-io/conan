@@ -64,7 +64,7 @@ class GraphLockCITest(unittest.TestCase):
 
         client.run("upload * --all --confirm")
 
-        client.run("lock create --reference=PkgD/0.1@user/channel")
+        client.run("lock create --reference=PkgD/0.1@user/channel --lockfile-out=conan.lock")
         initial_lock_file = client.load(LOCKFILE)
 
         # Do a change in B, this will be a new revision
@@ -74,7 +74,7 @@ class GraphLockCITest(unittest.TestCase):
         clientb.run("create . PkgB/0.1@user/channel")
 
         # Go back to main orchestrator
-        client.run("lock create --reference=PkgD/0.1@user/channel")
+        client.run("lock create --reference=PkgD/0.1@user/channel --lockfile-out=conan.lock")
         client.run("lock build-order conan.lock --json=build_order.json")
         master_lockfile = client.load("conan.lock")
 
@@ -139,7 +139,7 @@ class GraphLockCITest(unittest.TestCase):
         self.assertIn("PkgD/0.1@user/channel: DEP FILE PkgB: HelloB", client.out)
         self.assertIn("PkgD/0.1@user/channel: DEP FILE PkgC: HelloC", client.out)
 
-        client.run("lock create --reference=PkgD/0.1@user/channel")
+        client.run("lock create --reference=PkgD/0.1@user/channel --lockfile-out=conan.lock")
         initial_lockfile = client.load("conan.lock")
 
         if not partial_lock:
@@ -251,7 +251,7 @@ class GraphLockCITest(unittest.TestCase):
         self.assertIn("PkgD/0.1@user/channel: DEP FILE PkgB: HelloB", client.out)
         self.assertIn("PkgD/0.1@user/channel: DEP FILE PkgC: HelloC", client.out)
 
-        client.run("lock create --reference=PkgD/0.1@user/channel")
+        client.run("lock create --reference=PkgD/0.1@user/channel --lockfile-out=conan.lock")
         lock_file = client.load(LOCKFILE)
         initial_lock_file = lock_file
 
@@ -262,7 +262,7 @@ class GraphLockCITest(unittest.TestCase):
                      "myfile.txt": "ByeA World!!"})
         clientb.run("create . PkgA/0.2@user/channel")
 
-        client.run("lock create --reference=PkgD/0.1@user/channel")
+        client.run("lock create --reference=PkgD/0.1@user/channel --lockfile-out=conan.lock")
         client.run("lock build-order conan.lock --json=build_order.json")
         master_lockfile = client.load("conan.lock")
 
@@ -330,7 +330,8 @@ class GraphLockCITest(unittest.TestCase):
 
         client.run("profile new myprofile")
         # To make sure we can provide a profile as input
-        client.run("lock create --reference=PkgD/0.1@user/channel -pr=myprofile")
+        client.run("lock create --reference=PkgD/0.1@user/channel -pr=myprofile "
+                   "--lockfile-out=conan.lock")
         lock_file = client.load(LOCKFILE)
 
         client2 = TestClient(cache_folder=client.cache_folder)
@@ -402,7 +403,7 @@ class CIPythonRequiresTest(unittest.TestCase):
         for pkg in ("PkgA", "PkgB", "PkgC", "PkgD"):
             self.assertIn("{}/0.1@user/channel: HelloPyWorld".format(pkg), client.out)
 
-        client.run("lock create --reference=PkgD/0.1@user/channel")
+        client.run("lock create --reference=PkgD/0.1@user/channel --lockfile-out=conan.lock")
         self.client = client
 
     def test_version_ranges(self):
@@ -413,7 +414,7 @@ class CIPythonRequiresTest(unittest.TestCase):
         client.run("export . pyreq/0.2@user/channel")
 
         # Go back to main orchestrator
-        client.run("lock create --reference=PkgD/0.1@user/channel")
+        client.run("lock create --reference=PkgD/0.1@user/channel --lockfile-out=conan.lock")
         client.run("lock build-order conan.lock --json=build_order.json")
         master_lockfile = client.load("conan.lock")
         json_file = client.load("build_order.json")
@@ -470,7 +471,7 @@ class CIPythonRequiresTest(unittest.TestCase):
         # Go back to main orchestrator
         # This should fail, as PkgB/0.2 is not involved in the new resolution
         client.run("lock create --reference=PkgD/0.1@user/channel "
-                   "--lockfile=buildb.lock", assert_error=True)
+                   "--lockfile=buildb.lock --lockfile-out=conan.lock", assert_error=True)
         self.assertIn("ERROR: The provided lockfile was not used, there is no overlap",
                       client.out)
 
@@ -511,7 +512,7 @@ class CIPythonRequiresTest(unittest.TestCase):
 
         # Go back to main orchestrator
         client.run("lock create --reference=PkgD/0.1@user/channel "
-                   "--lockfile=buildb.lock")
+                   "--lockfile=buildb.lock --lockfile-out=conan.lock")
 
         client.run("lock build-order conan.lock --json=build_order.json")
         json_file = client.load("build_order.json")
@@ -579,7 +580,8 @@ class CIBuildRequiresTest(unittest.TestCase):
         self.assertIn("PkgD/0.1@user/channel: DEP FILE PkgC: HelloC", client.out)
 
         # Go back to main orchestrator
-        client.run("lock create --reference=PkgD/0.1@user/channel --build -pr=myprofile")
+        client.run("lock create --reference=PkgD/0.1@user/channel --build -pr=myprofile "
+                   " --lockfile-out=conan.lock")
 
         # Do a change in br
         client.run("create br br/0.2@user/channel")

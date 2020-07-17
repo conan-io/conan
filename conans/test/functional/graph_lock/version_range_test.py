@@ -40,9 +40,10 @@ class GraphLockVersionRangeTest(unittest.TestCase):
         client.save({"conanfile.py": self.consumer})
         if self.user_channel:
             user, channel = self.user_channel.split("/")
-            client.run("lock create conanfile.py --user=%s --channel=%s" % (user, channel))
+            client.run("lock create conanfile.py  --lockfile-out=conan.lock "
+                       "--user=%s --channel=%s" % (user, channel))
         else:
-            client.run("lock create conanfile.py")
+            client.run("lock create conanfile.py --lockfile-out=conan.lock")
 
         self._check_lock()
 

@@ -20,7 +20,7 @@ class LockRecipeTest(unittest.TestCase):
                       client.out)
 
         client.save({"conanfile.py": GenConanfile().with_require_plain("pkg/0.1")})
-        client.run("lock create conanfile.py --base")
+        client.run("lock create conanfile.py --base --lockfile-out=conan.lock")
         lock = json.loads(client.load("conan.lock"))
         self.assertEqual(2, len(lock["graph_lock"]["nodes"]))
         pkg_node = lock["graph_lock"]["nodes"]["1"]
@@ -75,7 +75,7 @@ class LockRecipeTest(unittest.TestCase):
                         self.requires("linux/0.1")
             """)
         client.save({"conanfile.py": conanfile})
-        client.run("lock create conanfile.py --base -s os=Windows")
+        client.run("lock create conanfile.py --base -s os=Windows --lockfile-out=conan.lock")
         lock = json.loads(client.load("conan.lock"))
         self.assertEqual(3, len(lock["graph_lock"]["nodes"]))
         common = lock["graph_lock"]["nodes"]["1"]

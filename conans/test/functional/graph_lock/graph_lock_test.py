@@ -265,7 +265,7 @@ class RevisionsUpdateTest(unittest.TestCase):
         self.assertIn("7f1110e1ae8d852b6d55f7f121864de6", client2.out)
 
         client.save({"conanfile.py": GenConanfile("PkgB", "0.1").with_require_plain("PkgA/0.1")})
-        client.run("lock create conanfile.py --update")
+        client.run("lock create conanfile.py --update --lockfile-out=conan.lock")
         self.assertIn("PkgA/0.1: Downloaded recipe revision 7f1110e1ae8d852b6d55f7f121864de6",
                       client.out)
         lockfile = client.load("conan.lock")
@@ -314,7 +314,7 @@ class LockFileOptionsTest(unittest.TestCase):
         client.run("export ffmepg ffmpeg/1.0@")
         client.run("export variant nano/1.0@")
 
-        client.run("lock create --reference=nano/1.0@ --build")
+        client.run("lock create --reference=nano/1.0@ --build --lockfile-out=conan.lock")
         lockfile = client.load("conan.lock")
         self.assertIn('"options": "variation=nano"', lockfile)
         client.run("create ffmepg ffmpeg/1.0@ --build --lockfile=conan.lock")

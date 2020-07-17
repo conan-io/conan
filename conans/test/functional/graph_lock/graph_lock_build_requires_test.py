@@ -21,7 +21,7 @@ class GraphLockBuildRequireTestCase(unittest.TestCase):
         t.run("export bzip2/conanfile.py")
 
         # Create lock
-        t.run("lock create boost/conanfile.py --build")
+        t.run("lock create boost/conanfile.py --build --lockfile-out=conan.lock")
         lock_json = json.loads(t.load("conan.lock"))
         br = lock_json["graph_lock"]["nodes"]["3"]
         self.assertIn("br/0.1", br["ref"])
@@ -55,7 +55,8 @@ class GraphLockBuildRequireTestCase(unittest.TestCase):
         t.run("export app/conanfile.py")
 
         # Create lock
-        t.run("lock create app/conanfile.py --profile:build=default --profile:host=default --build")
+        t.run("lock create app/conanfile.py --profile:build=default --profile:host=default --build"
+              " --lockfile-out=conan.lock")
         lock_json = json.loads(t.load("conan.lock"))
         br = lock_json["graph_lock"]["nodes"]["3"]
         self.assertIn("protobuf/0.1", br["ref"])

@@ -13,7 +13,7 @@ class BuildOrderTest(unittest.TestCase):
         # https://github.com/conan-io/conan/issues/5727
         client = TestClient()
         client.save({"conanfile.py": GenConanfile("test4", "0.1")})
-        client.run("lock create conanfile.py --build")
+        client.run("lock create conanfile.py --build --lockfile-out=conan.lock")
         client.run("lock build-order conan.lock --json=bo.json")
         jsonbo = json.loads(client.load("bo.json"))
         self.assertEqual([], jsonbo)
@@ -25,10 +25,10 @@ class BuildOrderTest(unittest.TestCase):
         client.save({"conanfile.py": GenConanfile("test4", "0.1")})
         if export:
             client.run("export .")
-            client.run("lock create --reference=test4/0.1@")
+            client.run("lock create --reference=test4/0.1@ --lockfile-out=conan.lock")
         else:
             client.run("create .")
-            client.run("lock create --reference=test4/0.1@ --build=test4")
+            client.run("lock create --reference=test4/0.1@ --build=test4 --lockfile-out=conan.lock")
         if client.cache.config.revisions_enabled:
             ref = "test4/0.1#f876ec9ea0f44cb7adb1588e431b391a"
             prev = "92cf292e73488c3527dab5f5ba81b947"
@@ -62,7 +62,7 @@ class BuildOrderTest(unittest.TestCase):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile("test4", "0.1")})
         client.run("create .")
-        client.run("lock create --reference=test4/0.1@")
+        client.run("lock create --reference=test4/0.1@ --lockfile-out=conan.lock")
         locked = json.loads(client.load("conan.lock"))["graph_lock"]["nodes"]
         test4 = locked["1"]
         if client.cache.config.revisions_enabled:
@@ -93,12 +93,12 @@ class BuildOrderTest(unittest.TestCase):
             client.run("export dep dep/0.1@")
             client.run("export pkg pkg/0.1@")
             client.run("export app app/0.1@")
-            client.run("lock create --reference=app/0.1@")
+            client.run("lock create --reference=app/0.1@ --lockfile-out=conan.lock")
         else:
             client.run("create dep dep/0.1@")
             client.run("create pkg pkg/0.1@")
             client.run("create app app/0.1@")
-            client.run("lock create --reference=app/0.1@ --build")
+            client.run("lock create --reference=app/0.1@ --build --lockfile-out=conan.lock")
 
         locked = json.loads(client.load("conan.lock"))["graph_lock"]["nodes"]
         if client.cache.config.revisions_enabled:
@@ -213,7 +213,7 @@ class BuildOrderTest(unittest.TestCase):
                                                    .with_require_plain("libb/0.1")})
         client.run("export . app/0.1@")
 
-        client.run("lock create --reference=app/0.1@ --build=missing")
+        client.run("lock create --reference=app/0.1@ --build=missing --lockfile-out=conan.lock")
         self.assertIn("app/0.1:Package_ID_unknown - Unknown", client.out)
         self.assertIn("liba/0.1:Package_ID_unknown - Unknown", client.out)
         self.assertIn("libb/0.1:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Build", client.out)
@@ -252,12 +252,12 @@ class BuildRequiresBuildOrderTest(unittest.TestCase):
             client.run("export pkg pkg/0.1@")
             client.run("export app app/0.1@")
             # Necessary for build-requires
-            client.run("lock create --reference app/0.1@ --build=missing")
+            client.run("lock create --reference app/0.1@ --build=missing --lockfile-out=conan.lock")
         else:
             client.run("create dep dep/0.1@")
             client.run("create pkg pkg/0.1@")
             client.run("create app app/0.1@")
-            client.run("lock create --reference=app/0.1@ --build")
+            client.run("lock create --reference=app/0.1@ --build --lockfile-out=conan.lock")
 
         locked = json.loads(client.load("conan.lock"))["graph_lock"]["nodes"]
         if client.cache.config.revisions_enabled:
@@ -375,7 +375,7 @@ class GraphLockWarningsTestCase(unittest.TestCase):
         client.run("export meta.py")
 
         # Building the graphlock we get the message
-        client.run("lock create meta.py")
+        client.run("lock create meta.py --lockfile-out=conan.lock")
         self.assertIn("WARN: ffmpeg/1.0: requirement harfbuzz/[>=1.0] overridden by meta/1.0"
                       " to harfbuzz/1.0", client.out)
 
@@ -407,7 +407,8 @@ class GraphLockBuildRequireErrorTestCase(unittest.TestCase):
         client.run("export ffmpeg.py ffmpeg/1.0@")
 
         # Building the graphlock we get the message
-        client.run("lock create variant.py --build cascade --build outdated")
+        client.run("lock create variant.py --build cascade --build outdated "
+                   "--lockfile-out=conan.lock")
 
         if client.cache.config.revisions_enabled:
             fmpe = "ffmpeg/1.0#5522e93e2abfbd455e6211fe4d0531a2"
@@ -456,7 +457,7 @@ class GraphLockBuildRequireErrorTestCase(unittest.TestCase):
         client.run("create App app/1.0@")
 
         # Create the full lock create
-        client.run("lock create --reference=app/1.0@ --build")
+        client.run("lock create --reference=app/1.0@ --build --lockfile-out=conan.lock")
         lock = json.loads(client.load("conan.lock"))["graph_lock"]["nodes"]
         app = lock["1"]
         liba = lock["2"]
