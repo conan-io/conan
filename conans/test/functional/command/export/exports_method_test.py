@@ -215,6 +215,7 @@ class ExportsSourcesMethodTest(unittest.TestCase):
         client = TestClient(default_server_user=True)
         conanfile = textwrap.dedent("""
             from conans import ConanFile, load
+
             class MethodConan(ConanFile):
                 def export_sources(self):
                     self.copy("*")
