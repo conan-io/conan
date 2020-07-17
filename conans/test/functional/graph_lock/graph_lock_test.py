@@ -150,8 +150,7 @@ class ReproducibleLockfiles(unittest.TestCase):
         # check that the path to local conanfile.txt is relative, reproducible in other machine
         self.assertIn('"path": "conanfile.txt"', lockfile)
 
-import os
-os.environ["TESTING_REVISIONS_ENABLED"] = "1"
+
 @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
 class GraphLockRevisionTest(unittest.TestCase):
     rrev_b = "9b64caa2465f7660e6f613b7e87f0cd7"
