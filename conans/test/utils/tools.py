@@ -830,7 +830,12 @@ servers["r2"] = TestServer()
         """
         conan = self.get_conan_api(user_io)
         self.api = conan
-        command = Command(conan)
+        if os.getenv("CONAN_V2_CLI"):
+            from conans.cli.cli import Cli
+            command = Cli(conan)
+        else:
+            from conans.client.command import Command
+            command = Command(conan)
         args = shlex.split(command_line)
         current_dir = os.getcwd()
         os.chdir(self.current_folder)
