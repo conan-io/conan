@@ -6,8 +6,7 @@ from conans.test.utils.tools import TestClient
 class InfoOptionsTest(unittest.TestCase):
 
     def info_options_test(self):
-        """ packages with dash
-        """
+        # packages with dash
         client = TestClient()
         client.run('new My-Package/1.3@myuser/testing -t')
         # assert they are correct at least
@@ -23,9 +22,9 @@ class InfoOptionsTest(unittest.TestCase):
 
         # errors
         client.run("info . -o shared2=True", assert_error=True)
-        self.assertIn("'options.shared2' doesn't exist", client.out)
+        self.assertIn("option 'shared2' doesn't exist", client.out)
         client.run("info . -o My-Package:shared2=True", assert_error=True)
-        self.assertIn("'options.shared2' doesn't exist", client.out)
+        self.assertIn("option 'shared2' doesn't exist", client.out)
 
     def info_wrong_options_test(self):
         # https://github.com/conan-io/conan/issues/2202
