@@ -80,7 +80,10 @@ class GraphLockFile(object):
         for node in serial_lock["nodes"].values():
             p = node.get("path")
             if p:
-                node["path"] = os.path.relpath(p, path)
+                try:  # In Windows with different drives D: C: this fails
+                    node["path"] = os.path.relpath(p, path)
+                except ValueError:
+                    pass
         result = {"graph_lock": serial_lock,
                   "version": LOCKFILE_VERSION}
         if self.profile_host:
