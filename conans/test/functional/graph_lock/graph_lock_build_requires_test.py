@@ -87,7 +87,7 @@ class GraphLockBuildRequireTestCase(unittest.TestCase):
         flac = lock["graph_lock"]["nodes"]["1"]
         if client.cache.config.revisions_enabled:
             ref = "flac/1.0#98ed25e4bb9bc0fdc6d5266afa81f9cf"
-            prev = "83c38d3b4e5f1b8450434436eec31b00"
+            prev = "405174d701cf8c5478230a92bcc5cf75"
         else:
             ref = "flac/1.0"
             prev = "0"
