@@ -224,7 +224,7 @@ class MyBuildInfoCreation(unittest.TestCase):
 
         client.run("export .")
 
-        client.run("lock create conanfile.py")
+        client.run("lock create conanfile.py --lockfile-out=conan.lock")
 
         client.run("create . --lockfile=conan.lock")
         client.run("upload * --confirm -r default --force")
