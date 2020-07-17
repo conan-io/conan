@@ -1306,7 +1306,7 @@ class ConanAPIV1(object):
             ref_or_path = _make_abs_path(path, cwd)
             if not os.path.isfile(ref_or_path):
                 raise ConanException("Conanfile does not exist in %s" % ref_or_path)
-        else: # reference
+        else:  # reference
             ref_or_path = ConanFileReference.loads(reference)
 
         phost = pbuild = graph_lock = None
@@ -1367,6 +1367,9 @@ def get_graph_info(profile_host, profile_build, cwd, install_folder, cache, outp
         try:
             graph_info_folder = lockfile if os.path.isdir(lockfile) else os.path.dirname(lockfile)
             graph_info = GraphInfo.load(graph_info_folder)
+            if name or version or user or channel:
+                root_ref = ConanFileReference(name, version, user, channel, validate=False)
+                graph_info.root = root_ref
         except IOError:  # Only if file is missing
             graph_info = GraphInfo()
             root_ref = ConanFileReference(name, version, user, channel, validate=False)

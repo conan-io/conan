@@ -35,6 +35,18 @@ class GraphLockErrorsTest(unittest.TestCase):
         client.run("install . --lockfile=conan.lock", assert_error=True)
         self.assertIn("This lockfile was created with an incompatible version", client.out)
 
+    def error_no_find_test(self):
+        client = TestClient()
+        client.save({"consumer.txt": ""})
+        client.run("lock create consumer.txt --lockfile-out=output.lock")
+        client.run("install consumer.txt --lockfile=output.lock")
+
+        client.save({"consumer.py": GenConanfile()})
+        client.run("lock create consumer.py --lockfile-out=output.lock "
+                   "--name=name --version=version")
+        client.run("install consumer.py name/version@ --lockfile=output.lock")
+        self.assertIn("consumer.py (name/version): Generated graphinfo", client.out)
+
 
 class GraphLockConanfileTXTTest(unittest.TestCase):
     def conanfile_txt_test(self):
@@ -117,14 +129,14 @@ class ReproducibleLockfiles(unittest.TestCase):
         # Use a consumer with a version range
         client.save({"conanfile.py":
                      GenConanfile("PkgB", "0.1").with_require_plain("PkgA/[>=0.1]@user/channel")})
-        client.run("lock create conanfile.py")
-        lockfile = client.load(LOCKFILE)
-        client.run("lock create conanfile.py")
-        lockfile2 = client.load(LOCKFILE)
+        client.run("lock create conanfile.py --lockfile-out=lock1.lock")
+        lockfile = client.load("lock1.lock")
+        client.run("lock create conanfile.py --lockfile-out=lock2.lock")
+        lockfile2 = client.load("lock2.lock")
         self.assertEqual(lockfile, lockfile2)
         # different commands still generate identical lock
-        client.run("install . --install-folder=install")
-        info_lock = client.load("install/conan.lock")
+        client.run("install .")
+        info_lock = client.load("conan.lock")
         self.assertEqual(lockfile, info_lock)
 
     def reproducible_lockfile_txt_test(self):
@@ -138,12 +150,13 @@ class ReproducibleLockfiles(unittest.TestCase):
         # check that the path to local conanfile.txt is relative, reproducible in other machine
         self.assertIn('"path": "conanfile.txt"', lockfile)
 
-
+import os
+os.environ["TESTING_REVISIONS_ENABLED"] = "1"
 @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
 class GraphLockRevisionTest(unittest.TestCase):
-    pkg_b_revision = "9b64caa2465f7660e6f613b7e87f0cd7"
+    rrev_b = "9b64caa2465f7660e6f613b7e87f0cd7"
     pkg_b_id = "5bf1ba84b5ec8663764a406f08a7f9ae5d3d5fb5"
-    pkg_b_package_revision = "#2ec4fb334e1b4f3fd0a6f66605066ac7"
+    prev_b = "2ec4fb334e1b4f3fd0a6f66605066ac7"
 
     def setUp(self):
         client = TestClient(default_server_user=True)
@@ -168,7 +181,7 @@ class GraphLockRevisionTest(unittest.TestCase):
         client.save({"conanfile.py": str(consumer)})
         client.run("install . PkgB/0.1@user/channel")
 
-        self._check_lock("PkgB/0.1@")
+        self._check_lock("PkgB/0.1@user/channel")
 
         # If we create a new PkgA revision, for example adding info
         pkga = GenConanfile("PkgA", "0.1")
@@ -179,12 +192,16 @@ class GraphLockRevisionTest(unittest.TestCase):
         client.run("create . PkgA/0.1@user/channel")
         client.save({"conanfile.py": str(consumer)})
 
-    def _check_lock(self, ref_b, rev_b=""):
+    def _check_lock(self, ref_b, pkg_b_id=None, prev_b=None):
         lockfile = self.client.load(LOCKFILE)
         lock_file_json = json.loads(lockfile)
         self.assertEqual(2, len(lock_file_json["graph_lock"]["nodes"]))
         pkga = lock_file_json["graph_lock"]["nodes"]["1"]
         self.assertEqual(pkga["ref"], "PkgA/0.1@user/channel#fa090239f8ba41ad559f8e934494ee2a")
+        pkgb = lock_file_json["graph_lock"]["nodes"]["0"]
+        self.assertEqual(pkgb["ref"], ref_b)
+        self.assertEqual(pkgb.get("package_id"), pkg_b_id)
+        self.assertEqual(pkgb.get("prev"), prev_b)
 
     def install_info_lock_test(self):
         # Normal install will use it (use install-folder to not change graph-info)
@@ -195,8 +212,8 @@ class GraphLockRevisionTest(unittest.TestCase):
 
         # Locked install will use PkgA/0.1
         # This is a bit weird, that is necessary to force the --update the get the rigth revision
-        client.run("install . -g=cmake --lockfile=conan.lock --update")
-        self._check_lock("PkgB/0.1@")
+        client.run("install . -g=cmake --lockfile=conan.lock --lockfile-out=conan.lock --update")
+        self._check_lock("PkgB/0.1@user/channel")
         client.run("build .")
         self.assertIn("conanfile.py (PkgB/0.1@user/channel): BUILD DEP LIBS: !!", client.out)
 
@@ -206,23 +223,23 @@ class GraphLockRevisionTest(unittest.TestCase):
 
     def export_lock_test(self):
         # locking a version range at export
-        self.client.run("export . user/channel --lockfile=conan.lock")
-        self._check_lock("PkgB/0.1@user/channel#%s" % self.pkg_b_revision)
+        self.client.run("export . user/channel --lockfile=conan.lock --lockfile-out=conan.lock")
+        self._check_lock("PkgB/0.1@user/channel#%s" % self.rrev_b)
 
     def create_lock_test(self):
         # Create is also possible
         client = self.client
-        client.run("create . PkgB/0.1@user/channel --update --lockfile=conan.lock")
-        self._check_lock("PkgB/0.1@user/channel#%s" % self.pkg_b_revision,
-                         self.pkg_b_package_revision)
+        client.run("create . PkgB/0.1@user/channel --update --lockfile=conan.lock "
+                   "--lockfile-out=conan.lock")
+        self._check_lock("PkgB/0.1@user/channel#%s" % self.rrev_b, self.pkg_b_id, self.prev_b)
 
     def export_pkg_test(self):
         client = self.client
         # Necessary to clean previous revision
         client.run("remove * -f")
-        client.run("export-pkg . PkgB/0.1@user/channel --lockfile=conan.lock")
-        self._check_lock("PkgB/0.1@user/channel#%s" % self.pkg_b_revision,
-                         self.pkg_b_package_revision)
+        client.run("export-pkg . PkgB/0.1@user/channel --lockfile=conan.lock "
+                   "--lockfile-out=conan.lock")
+        self._check_lock("PkgB/0.1@user/channel#%s" % self.rrev_b, self.pkg_b_id, self.prev_b)
 
 
 @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
