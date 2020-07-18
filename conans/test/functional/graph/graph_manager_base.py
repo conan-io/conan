@@ -74,7 +74,7 @@ class GraphManagerTest(unittest.TestCase):
     def alias_cache(self, alias, target):
         ref = ConanFileReference.loads(alias)
         conanfile = textwrap.dedent("""
-            from conans import ConanFile   
+            from conans import ConanFile
             class Alias(ConanFile):
                 alias = "%s"
             """ % target)
@@ -166,6 +166,6 @@ class GraphManagerTest(unittest.TestCase):
         for n in closure:
             libs.append("mylib%s%slib" % (n.ref.name, n.ref.version))
             envs.append("myenv%s%senv" % (n.ref.name, n.ref.version))
-        self.assertEqual(conanfile.deps_cpp_info.libs, libs)
+        self.assertListEqual(list(conanfile.deps_cpp_info.libs), libs)
         env = {"MYENV": envs} if envs else {}
         self.assertEqual(conanfile.deps_env_info.vars, env)

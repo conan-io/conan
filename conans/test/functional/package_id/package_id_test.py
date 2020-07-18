@@ -1,3 +1,4 @@
+import textwrap
 import unittest
 
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
@@ -78,3 +79,40 @@ class TestConan(ConanFile):
         client.run("install test/0.1@danimtb/testing")
         client.run("search test/0.1@danimtb/testing")
         self.assertIn("compiler.version: kk=kk", client.out)
+
+    def option_in_test(self):
+        # https://github.com/conan-io/conan/issues/7299
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+
+            class TestConan(ConanFile):
+                options = {"fpic": [True, False]}
+                default_options = {"fpic": True}
+                def package_id(self):
+                    if "fpic" in self.options:
+                        self.output.info("fpic is an option!!!")
+                    if "fpic" in self.info.options:  # Not documented
+                        self.output.info("fpic is an info.option!!!")
+                    if "other" not in self.options:
+                        self.output.info("other is not an option!!!")
+                    if "other" not in self.info.options:  # Not documented
+                        self.output.info("other is not an info.option!!!")
+                    try:
+                        self.options.whatever
+                    except Exception as e:
+                        self.output.error("OPTIONS: %s" % e)
+                    try:
+                        self.info.options.whatever
+                    except Exception as e:
+                        self.output.error("INFO: %s" % e)
+
+            """)
+        client = TestClient()
+        client.save({"conanfile.py": conanfile})
+        client.run("create . Pkg/0.1@user/testing")
+        self.assertIn("fpic is an option!!!", client.out)
+        self.assertIn("fpic is an info.option!!!", client.out)
+        self.assertIn("other is not an option!!!", client.out)
+        self.assertIn("other is not an info.option!!!", client.out)
+        self.assertIn("ERROR: OPTIONS: option 'whatever' doesn't exist", client.out)
+        self.assertIn("ERROR: INFO: option 'whatever' doesn't exist", client.out)

@@ -9,6 +9,7 @@ from conans.client.tools.files import chdir
 from conans.client.tools.oss import cpu_count, args_to_string
 from conans.errors import ConanException
 from conans.model.version import Version
+from conans.util.conan_v2_mode import conan_v2_behavior
 from conans.util.files import mkdir
 
 
@@ -102,6 +103,9 @@ class CMakeToolchainBuildHelper(object):
                                          "single-config build systems")
 
         bt = build_type or self._conanfile.settings.get_safe("build_type")
+        if not bt:
+            conan_v2_behavior("build_type setting should be defined.",
+                              v1_behavior=self._conanfile.output.warn)
 
         if bt and self._is_multiconfiguration:
             build_config = "--config %s" % bt
