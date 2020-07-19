@@ -279,6 +279,7 @@ set_property(TARGET {namespace}::{name}
                 public_deps_names = [self.deps_build_info[dep].get_name("cmake_find_package_multi")
                                      for dep in cpp_info.public_deps]
                 ret["{}Config.cmake".format(pkg_findname)] = self._config(pkg_findname,
+                  namespace,
                                                                           cpp_info.version,
                                                                           public_deps_names)
                 ret["{}Targets.cmake".format(pkg_findname)] = self.targets_template.format(namespace=namespace, name=pkg_findname)
@@ -330,7 +331,7 @@ set_property(TARGET {namespace}::{name}
                 ret["{}Config.cmake".format(pkg_findname)] = target_config
         return ret
 
-    def _config(self, name, version, public_deps_names):
+    def _config(self, name, namespace, version, public_deps_names):
         # Builds the XXXConfig.cmake file for one package
 
         # The common macros
@@ -341,7 +342,8 @@ set_property(TARGET {namespace}::{name}
         ])
 
         # Define the targets properties
-        targets_props = self.target_properties.format(name=name)
+        targets_props = self.target_properties.format(
+          namespace=namespace, name=name)
 
         # The find_dependencies_block
         find_dependencies_block = ""
