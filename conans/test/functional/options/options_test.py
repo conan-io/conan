@@ -9,17 +9,14 @@ class OptionsTest(unittest.TestCase):
 
     def general_scope_options_test_package_test(self):
         client = TestClient()
-        conanfile = """from conans import ConanFile
-class Pkg(ConanFile):
-    options = {"shared": ["1", "2"]}
-    def configure(self):
-        self.output.info("BUILD SHARED: %s" % self.options.shared)
-"""
-        test = """from conans import ConanFile
-class Pkg(ConanFile):
-    def test(self):
-        pass
-"""
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class Pkg(ConanFile):
+                options = {"shared": ["1", "2"]}
+                def configure(self):
+                    self.output.info("BUILD SHARED: %s" % self.options.shared)
+            """)
+        test = GenConanfile().with_test("pass")
         client.save({"conanfile.py": conanfile})
         client.run("create . Pkg/0.1@user/testing -o *:shared=1")
         self.assertIn("Pkg/0.1@user/testing: BUILD SHARED: 1", client.out)
@@ -33,37 +30,32 @@ class Pkg(ConanFile):
         client.run("create . Pkg/0.1@user/testing -o Pkg:shared=2")
         self.assertIn("Pkg/0.1@user/testing: BUILD SHARED: 2", client.out)
         client.run("create . Pkg/0.1@user/testing -o shared=1", assert_error=True)
-        self.assertIn("'options.shared' doesn't exist", client.out)
+        self.assertIn("option 'shared' doesn't exist", client.out)
 
-        conanfile = """from conans import ConanFile
-class Pkg(ConanFile):
-    pass
-"""
-        client.save({"conanfile.py": conanfile}, clean_first=True)
+    def general_scope_options_test_package_notdefined_test(self):
+        client = TestClient()
+        conanfile = GenConanfile()
+        client.save({"conanfile.py": conanfile})
         client.run("create . Pkg/0.1@user/testing -o *:shared=True")
         self.assertIn("Pkg/0.1@user/testing: Calling build()", client.out)
         client.run("create . Pkg/0.1@user/testing -o shared=False", assert_error=True)
-        self.assertIn("'options.shared' doesn't exist", client.out)
+        self.assertIn("option 'shared' doesn't exist", client.out)
         # With test_package
         client.save({"conanfile.py": conanfile,
-                     "test_package/conanfile.py": test})
+                     "test_package/conanfile.py": GenConanfile().with_test("pass")})
         client.run("create . Pkg/0.1@user/testing -o *:shared=True")
         self.assertIn("Pkg/0.1@user/testing: Calling build()", client.out)
         self.assertIn("Pkg/0.1@user/testing (test package): Calling build()", client.out)
 
     def general_scope_priorities_test(self):
         client = TestClient()
-        conanfile = """from conans import ConanFile
-class Pkg(ConanFile):
-    options = {"shared": ["1", "2", "3"]}
-    def configure(self):
-        self.output.info("BUILD SHARED: %s" % self.options.shared)
-"""
-        test = """from conans import ConanFile
-class Pkg(ConanFile):
-    def test(self):
-        pass
-"""
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class Pkg(ConanFile):
+                options = {"shared": ["1", "2", "3"]}
+                def configure(self):
+                    self.output.info("BUILD SHARED: %s" % self.options.shared)
+            """)
         client.save({"conanfile.py": conanfile})
         # Consumer has priority
         client.run("create . Pkg/0.1@user/testing -o *:shared=1 -o shared=2")
@@ -73,7 +65,7 @@ class Pkg(ConanFile):
         self.assertIn("Pkg/0.1@user/testing: BUILD SHARED: 3", client.out)
         # With test_package
         client.save({"conanfile.py": conanfile,
-                     "test_package/conanfile.py": test})
+                     "test_package/conanfile.py": GenConanfile().with_test("pass")})
         # Sorted (longest, alphabetical) patterns, have priority
         client.run("create . Pkg/0.1@user/testing -o *:shared=1 -o Pkg:shared=2")
         self.assertIn("Pkg/0.1@user/testing: BUILD SHARED: 2", client.out)
@@ -205,32 +197,34 @@ class MyConanFile(ConanFile):
     def general_scope_options_test(self):
         # https://github.com/conan-io/conan/issues/2538
         client = TestClient()
-        conanfile_libA = """from conans import ConanFile
-class LibA(ConanFile):
-    options = {"shared": [True, False]}
+        conanfile_liba = textwrap.dedent("""
+            from conans import ConanFile
+            class LibA(ConanFile):
+                options = {"shared": [True, False]}
 
-    def configure(self):
-        self.output.info("shared=%s" % self.options.shared)
-    """
-        client.save({"conanfile.py": conanfile_libA})
+                def configure(self):
+                    self.output.info("shared=%s" % self.options.shared)
+                """)
+        client.save({"conanfile.py": conanfile_liba})
         client.run("create . libA/0.1@danimtb/testing -o *:shared=True")
         self.assertIn("libA/0.1@danimtb/testing: shared=True", client.out)
 
-        conanfile_libB = """from conans import ConanFile
-class LibB(ConanFile):
-    options = {"shared": [True, False]}
-    requires = "libA/0.1@danimtb/testing"
+        conanfile_libb = textwrap.dedent("""
+            from conans import ConanFile
+            class LibB(ConanFile):
+                options = {"shared": [True, False]}
+                requires = "libA/0.1@danimtb/testing"
 
-    def configure(self):
-        self.options["*"].shared = self.options.shared
-        self.output.info("shared=%s" % self.options.shared)
-    """
+                def configure(self):
+                    self.options["*"].shared = self.options.shared
+                    self.output.info("shared=%s" % self.options.shared)
+                """)
 
         for without_configure_line in [True, False]:
             if without_configure_line:
-                conanfile = conanfile_libB.replace(
-                    "        self.options[\"*\"].shared = self.options.shared", "")
-
+                conanfile = conanfile_libb.replace("self.options[", "#")
+            else:
+                conanfile = conanfile_libb
             client.save({"conanfile.py": conanfile})
 
             # Test info
@@ -336,3 +330,16 @@ class LibB(ConanFile):
             client.run("create . pkg/0.1@user/testing %s" % options)
             self.assertIn("liba/0.1@user/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache",
                           client.out)
+
+    def missing_shared_option_package_id_test(self):
+        client = TestClient()
+
+        consumer = textwrap.dedent("""
+            from conans import ConanFile
+            class Pkg(ConanFile):
+                def package_id(self):
+                    self.info.shared_library_package_id()
+            """)
+        client.save({"conanfile.py": consumer})
+        client.run("create . pkg/0.1@user/testing")
+        self.assertIn("pkg/0.1@user/testing: Created package ", client.out)
