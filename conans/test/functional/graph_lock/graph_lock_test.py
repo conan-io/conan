@@ -3,7 +3,7 @@ import textwrap
 import time
 import unittest
 
-from conans.model.graph_lock import LOCKFILE, LOCKFILE_VERSION
+from conans.model.graph_lock import LOCKFILE
 from conans.test.utils.tools import TestClient, GenConanfile
 from conans.util.env_reader import get_env
 
@@ -46,6 +46,22 @@ class GraphLockErrorsTest(unittest.TestCase):
                    "--name=name --version=version")
         client.run("install consumer.py name/version@ --lockfile=output.lock")
         self.assertIn("consumer.py (name/version): Generated graphinfo", client.out)
+
+    def commands_cannot_create_lockfile_test(self):
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile("PkgA", "0.1")})
+        client.run("export . --lockfile-out=conan.lock", assert_error=True)
+        self.assertIn("ERROR: lockfile_out cannot be specified if lockfile is not defined",
+                      client.out)
+        client.run("install . --lockfile-out=conan.lock", assert_error=True)
+        self.assertIn("ERROR: lockfile_out cannot be specified if lockfile is not defined",
+                      client.out)
+        client.run("info . --lockfile-out=conan.lock", assert_error=True)
+        self.assertIn("ERROR: lockfile_out cannot be specified if lockfile is not defined",
+                      client.out)
+        client.run("create . --lockfile-out=conan.lock", assert_error=True)
+        self.assertIn("ERROR: lockfile_out cannot be specified if lockfile is not defined",
+                      client.out)
 
 
 class GraphLockConanfileTXTTest(unittest.TestCase):

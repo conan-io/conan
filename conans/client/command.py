@@ -290,6 +290,9 @@ class Command(object):
         args = parser.parse_args(*args)
 
         self._warn_python_version()
+        if args.lockfile_out and not args.lockfile:
+            raise ConanException("lockfile_out cannot be specified if lockfile is not defined")
+
         profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
                                     options=args.options_build, env=args.env_build)
 
@@ -340,6 +343,8 @@ class Command(object):
 
         args = parser.parse_args(*args)
         self._warn_python_version()
+        if args.lockfile_out and not args.lockfile:
+            raise ConanException("lockfile_out cannot be specified if lockfile is not defined")
 
         name, version, user, channel, _ = get_reference_fields(args.reference,
                                                                user_channel_input=True)
@@ -472,6 +477,9 @@ class Command(object):
         _add_common_install_arguments(parser, build_help=_help_build_policies.format("never"))
 
         args = parser.parse_args(*args)
+        if args.lockfile_out and not args.lockfile:
+            raise ConanException("lockfile_out cannot be specified if lockfile is not defined")
+
         profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
                                     options=args.options_build, env=args.env_build)
 
@@ -667,6 +675,8 @@ class Command(object):
 
         _add_common_install_arguments(parser, build_help=build_help)
         args = parser.parse_args(*args)
+        if args.lockfile_out and not args.lockfile:
+            raise ConanException("lockfile_out cannot be specified if lockfile is not defined")
 
         profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
                                     options=args.options_build, env=args.env_build)
@@ -977,6 +987,9 @@ class Command(object):
         args = parser.parse_args(*args)
 
         self._warn_python_version()
+        if args.lockfile_out and not args.lockfile:
+            raise ConanException("lockfile_out cannot be specified if lockfile is not defined")
+
         name, version, user, channel, _ = get_reference_fields(args.reference,
                                                                user_channel_input=True)
         cwd = os.getcwd()
@@ -1038,6 +1051,9 @@ class Command(object):
 
         args = parser.parse_args(*args)
         self._warn_python_version()
+        if args.lockfile_out and not args.lockfile:
+            raise ConanException("lockfile_out cannot be specified if lockfile is not defined")
+
         name, version, user, channel, _ = get_reference_fields(args.reference,
                                                                user_channel_input=True)
 
@@ -1766,6 +1782,9 @@ class Command(object):
                                          " (default to current working directory)")
 
         args = parser.parse_args(*args)
+        if args.lockfile_out and not args.lockfile:
+            raise ConanException("lockfile_out cannot be specified if lockfile is not defined")
+
         profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
                                     options=args.options_build, env=args.env_build)
 
