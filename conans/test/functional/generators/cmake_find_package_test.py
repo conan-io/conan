@@ -556,12 +556,12 @@ class Conan(ConanFile):
         self.assertIn('Found hello_2: 1.0 (found version "1.0")', client.out)
         self.assertIn('Found hello_1: 1.0 (found version "1.0")', client.out)
         self.assertIn("Target libs (hello2): "
-                      "CONAN_LIB::MYHELLO_HELLO2_hello2;MYHELLO::HELLO1;"
+                      "CONAN_LIB::hello_2_HELLO2_hello2;MYHELLO::HELLO1;"
                       "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
                       "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
                       "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>",
                       client.out)
-        self.assertIn("Target libs (hello): CONAN_LIB::MYHELLO_HELLO1_hello;"
+        self.assertIn("Target libs (hello): CONAN_LIB::hello_1_HELLO1_hello;"
                       "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
                       "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
                       "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>",
