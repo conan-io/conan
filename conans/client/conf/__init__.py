@@ -104,6 +104,7 @@ _t_default_settings_yml = Template(textwrap.dedent("""
         qcc:
             version: ["4.4", "5.4"]
             libcxx: [cxx, gpp, cpp, cpp-ne, accp, acpp-ne, ecpp, ecpp-ne]
+            cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14]
 
     build_type: [None, Debug, Release, RelWithDebInfo, MinSizeRel]
 
