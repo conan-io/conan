@@ -220,7 +220,7 @@ class ExportsSourcesMethodTest(unittest.TestCase):
                 def export_sources(self):
                     self.copy("*")
                 def build(self):
-                    self.output.info("CONTENT: %s" % load("myfile.txt"))
+                    self.output.info("CONTENT: %s" % tools.load("myfile.txt"))
             """)
         client.save({"conanfile.py": conanfile,
                      "myfile.txt": "mycontent"})
