@@ -465,27 +465,28 @@ from conans import ConanFile, CMake
 class Conan(ConanFile):
     requires = "hello2/1.0"
     generators = "cmake_find_package_multi"
+    settings = "build_type"
     def build(self):
         cmake = CMake(self)
         cmake.configure()
         """
         client.save({"conanfile.py": conanfile, "CMakeLists.txt": cmakelists})
         client.run("install .")
-        client.run("build . -g cmake_find_package_multi")
+        client.run("build .")
 
         print('~' * 120)
         print(client.out)
         print('~' * 120)
 
-        self.assertIn('Found hello_2: 1.0 (found version "1.0")', client.out)
-        self.assertIn('Found hello_1: 1.0 (found version "1.0")', client.out)
+        self.assertIn('Library hello2 found', client.out)
+        self.assertIn('Library hello found', client.out)
         self.assertIn("Target libs (hello2): "
-                      "CONAN_LIB::hello_2_HELLO2_hello2;MYHELLO::HELLO1;"
+                      "$<$<CONFIG:Release>:CONAN_LIB::hello_2_HELLO2_hello2;MYHELLO::HELLO1;"
                       "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
                       "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
                       "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>",
                       client.out)
-        self.assertIn("Target libs (hello): CONAN_LIB::hello_1_HELLO1_hello;"
+        self.assertIn("Target libs (hello): $<$<CONFIG:Release>:CONAN_LIB::hello_1_HELLO1_hello;"
                       "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
                       "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
                       "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>",
