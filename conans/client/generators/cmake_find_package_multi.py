@@ -29,8 +29,8 @@ class CMakeFindPackageMultiGenerator(CMakeFindPackageGenerator):
         """)
 
     targets_template = textwrap.dedent("""
-        if(NOT TARGET {name}::{name})
-            add_library({name}::{name} INTERFACE IMPORTED)
+        if(NOT TARGET {namespace}::{name})
+            add_library({namespace}::{name} INTERFACE IMPORTED)
         endif()
 
         # Load the debug and release library finders
@@ -44,25 +44,25 @@ class CMakeFindPackageMultiGenerator(CMakeFindPackageGenerator):
 
     target_properties = """
 # Assign target properties
-set_property(TARGET {name}::{name}
+set_property(TARGET {namespace}::{name}
              PROPERTY INTERFACE_LINK_LIBRARIES
                  $<$<CONFIG:Release>:${{{name}_LIBRARIES_TARGETS_RELEASE}} ${{{name}_LINKER_FLAGS_RELEASE_LIST}}>
                  $<$<CONFIG:RelWithDebInfo>:${{{name}_LIBRARIES_TARGETS_RELWITHDEBINFO}} ${{{name}_LINKER_FLAGS_RELWITHDEBINFO_LIST}}>
                  $<$<CONFIG:MinSizeRel>:${{{name}_LIBRARIES_TARGETS_MINSIZEREL}} ${{{name}_LINKER_FLAGS_MINSIZEREL_LIST}}>
                  $<$<CONFIG:Debug>:${{{name}_LIBRARIES_TARGETS_DEBUG}} ${{{name}_LINKER_FLAGS_DEBUG_LIST}}>)
-set_property(TARGET {name}::{name}
+set_property(TARGET {namespace}::{name}
              PROPERTY INTERFACE_INCLUDE_DIRECTORIES
                  $<$<CONFIG:Release>:${{{name}_INCLUDE_DIRS_RELEASE}}>
                  $<$<CONFIG:RelWithDebInfo>:${{{name}_INCLUDE_DIRS_RELWITHDEBINFO}}>
                  $<$<CONFIG:MinSizeRel>:${{{name}_INCLUDE_DIRS_MINSIZEREL}}>
                  $<$<CONFIG:Debug>:${{{name}_INCLUDE_DIRS_DEBUG}}>)
-set_property(TARGET {name}::{name}
+set_property(TARGET {namespace}::{name}
              PROPERTY INTERFACE_COMPILE_DEFINITIONS
                  $<$<CONFIG:Release>:${{{name}_COMPILE_DEFINITIONS_RELEASE}}>
                  $<$<CONFIG:RelWithDebInfo>:${{{name}_COMPILE_DEFINITIONS_RELWITHDEBINFO}}>
                  $<$<CONFIG:MinSizeRel>:${{{name}_COMPILE_DEFINITIONS_MINSIZEREL}}>
                  $<$<CONFIG:Debug>:${{{name}_COMPILE_DEFINITIONS_DEBUG}}>)
-set_property(TARGET {name}::{name}
+set_property(TARGET {namespace}::{name}
              PROPERTY INTERFACE_COMPILE_OPTIONS
                  $<$<CONFIG:Release>:${{{name}_COMPILE_OPTIONS_RELEASE_LIST}}>
                  $<$<CONFIG:RelWithDebInfo>:${{{name}_COMPILE_OPTIONS_RELWITHDEBINFO_LIST}}>
@@ -156,14 +156,14 @@ set_property(TARGET {name}::{name}
     components_targets_tpl = Template(textwrap.dedent("""\
         {%- for comp_name, comp in components %}
 
-        if(NOT TARGET {{ pkg_name }}::{{ comp_name }})
-            add_library({{ pkg_name }}::{{ comp_name }} INTERFACE IMPORTED)
+        if(NOT TARGET {{ namespace }}::{{ comp_name }})
+            add_library({{ namespace }}::{{ comp_name }} INTERFACE IMPORTED)
         endif()
 
         {%- endfor %}
 
-        if(NOT TARGET {{ pkg_name }}::{{ pkg_name }})
-            add_library({{ pkg_name }}::{{ pkg_name }} INTERFACE IMPORTED)
+        if(NOT TARGET {{ namespace }}::{{ pkg_name }})
+            add_library({{ namespace }}::{{ pkg_name }} INTERFACE IMPORTED)
         endif()
 
         # Load the debug and release library finders
@@ -176,7 +176,7 @@ set_property(TARGET {name}::{name}
 
         if({{ pkg_name }}_FIND_COMPONENTS)
             foreach(_FIND_COMPONENT {{ '${'+pkg_name+'_FIND_COMPONENTS}' }})
-                list(FIND {{ pkg_name }}_COMPONENTS_{{ build_type }} "{{ pkg_name }}::${_FIND_COMPONENT}" _index)
+                list(FIND {{ pkg_name }}_COMPONENTS_{{ build_type }} "{{ namespace }}::${_FIND_COMPONENT}" _index)
                 if(${_index} EQUAL -1)
                     conan_message(FATAL_ERROR "Conan: Component '${_FIND_COMPONENT}' NOT found in package '{{ pkg_name }}'")
                 else()
@@ -190,7 +190,7 @@ set_property(TARGET {name}::{name}
         ########## MACROS ###########################################################################
         #############################################################################################
         {{ conan_message }}
-        
+
         # Requires CMake > 3.0
         if(${CMAKE_VERSION} VERSION_LESS "3.0")
             message(FATAL_ERROR "The 'cmake_find_package_multi' generator only works with CMake > 3.0")
@@ -223,22 +223,22 @@ set_property(TARGET {name}::{name}
         {%- for comp_name, comp in components %}
         ########## COMPONENT {{ comp_name }} TARGET PROPERTIES ######################################
 
-        set_property(TARGET {{ pkg_name }}::{{ comp_name }} PROPERTY INTERFACE_LINK_LIBRARIES
+        set_property(TARGET {{ namespace }}::{{ comp_name }} PROPERTY INTERFACE_LINK_LIBRARIES
                          $<$<CONFIG:Release>:{{ '${'+pkg_name+'_'+comp_name+'_LINK_LIBS_RELEASE}' }} {{ '${'+pkg_name+'_'+comp_name+'_LINKER_FLAGS_LIST_RELEASE}' }}>
                          $<$<CONFIG:RelWithDebInfo>:{{ '${'+pkg_name+'_'+comp_name+'_LINK_LIBS_RELWITHDEBINFO}' }} {{ '${'+pkg_name+'_'+comp_name+'_LINKER_FLAGS_LIST_RELWITHDEBINFO}' }}>
                          $<$<CONFIG:MinSizeRel>:{{ '${'+pkg_name+'_'+comp_name+'_LINK_LIBS_MINSIZEREL}' }} {{ '${'+pkg_name+'_'+comp_name+'_LINKER_FLAGS_LIST_MINSIZEREL}' }}>
                          $<$<CONFIG:Debug>:{{ '${'+pkg_name+'_'+comp_name+'_LINK_LIBS_DEBUG}' }} {{ '${'+pkg_name+'_'+comp_name+'_LINKER_FLAGS_LIST_DEBUG}' }}>)
-        set_property(TARGET {{ pkg_name }}::{{ comp_name }} PROPERTY INTERFACE_INCLUDE_DIRECTORIES
+        set_property(TARGET {{ namespace }}::{{ comp_name }} PROPERTY INTERFACE_INCLUDE_DIRECTORIES
                          $<$<CONFIG:Release>:{{ '${'+pkg_name+'_'+comp_name+'_INCLUDE_DIRS_RELEASE}' }}>
                          $<$<CONFIG:RelWithDebInfo>:{{ '${'+pkg_name+'_'+comp_name+'_INCLUDE_DIRS_RELWITHDEBINFO}' }}>
                          $<$<CONFIG:MinSizeRel>:{{ '${'+pkg_name+'_'+comp_name+'_INCLUDE_DIRS_MINSIZEREL}' }}>
                          $<$<CONFIG:Debug>:{{ '${'+pkg_name+'_'+comp_name+'_INCLUDE_DIRS_DEBUG}' }}>)
-        set_property(TARGET {{ pkg_name }}::{{ comp_name }} PROPERTY INTERFACE_COMPILE_DEFINITIONS
+        set_property(TARGET {{ namespace }}::{{ comp_name }} PROPERTY INTERFACE_COMPILE_DEFINITIONS
                          $<$<CONFIG:Release>:{{ '${'+pkg_name+'_'+comp_name+'_COMPILE_DEFINITIONS_RELEASE}' }}>
                          $<$<CONFIG:RelWithDebInfo>:{{ '${'+pkg_name+'_'+comp_name+'_COMPILE_DEFINITIONS_RELWITHDEBINFO}' }}>
                          $<$<CONFIG:MinSizeRel>:{{ '${'+pkg_name+'_'+comp_name+'_COMPILE_DEFINITIONS_MINSIZEREL}' }}>
                          $<$<CONFIG:Debug>:{{ '${'+pkg_name+'_'+comp_name+'_COMPILE_DEFINITIONS_DEBUG}' }}>)
-        set_property(TARGET {{ pkg_name }}::{{ comp_name }} PROPERTY INTERFACE_COMPILE_OPTIONS
+        set_property(TARGET {{ namespace }}::{{ comp_name }} PROPERTY INTERFACE_COMPILE_OPTIONS
                          $<$<CONFIG:Release>:{{ '${'+pkg_name+'_'+comp_name+'_COMPILE_OPTIONS_LIST_RELEASE}' }}>
                          $<$<CONFIG:RelWithDebInfo>:{{ '${'+pkg_name+'_'+comp_name+'_COMPILE_OPTIONS_LIST_RELWITHDEBINFO}' }}>
                          $<$<CONFIG:MinSizeRel>:{{ '${'+pkg_name+'_'+comp_name+'_COMPILE_OPTIONS_LIST_MINSIZEREL}' }}>
@@ -250,7 +250,7 @@ set_property(TARGET {name}::{name}
         ########## GLOBAL TARGET PROPERTIES #########################################################
 
         if(NOT {{ pkg_name }}_{{ pkg_name }}_TARGET_PROPERTIES)
-            set_property(TARGET {{ pkg_name }}::{{ pkg_name }} PROPERTY INTERFACE_LINK_LIBRARIES
+            set_property(TARGET {{ namespace }}::{{ pkg_name }} PROPERTY INTERFACE_LINK_LIBRARIES
                              $<$<CONFIG:Release>:{{ '${'+pkg_name+'_COMPONENTS_RELEASE}' }}>
                              $<$<CONFIG:RelWithDebInfo>:{{ '${'+pkg_name+'_COMPONENTS_RELWITHDEBINFO}' }}>
                              $<$<CONFIG:MinSizeRel>:{{ '${'+pkg_name+'_COMPONENTS_MINSIZEREL}' }}>
@@ -269,6 +269,7 @@ set_property(TARGET {name}::{name}
         build_type_suffix = "_{}".format(build_type) if build_type else ""
         for pkg_name, cpp_info in self.deps_build_info.dependencies:
             pkg_findname = self._get_name(cpp_info)
+            namespace = self._get_namespace(cpp_info)
             pkg_version = cpp_info.version
             pkg_public_deps = [self._get_name(self.deps_build_info[public_dep]) for public_dep in
                                cpp_info.public_deps]
@@ -280,7 +281,7 @@ set_property(TARGET {name}::{name}
                 ret["{}Config.cmake".format(pkg_findname)] = self._config(pkg_findname,
                                                                           cpp_info.version,
                                                                           public_deps_names)
-                ret["{}Targets.cmake".format(pkg_findname)] = self.targets_template.format(name=pkg_findname)
+                ret["{}Targets.cmake".format(pkg_findname)] = self.targets_template.format(namespace=namespace, name=pkg_findname)
 
                 # If any config matches the build_type one, add it to the cpp_info
                 dep_cpp_info = extend(cpp_info, build_type.lower())
@@ -303,6 +304,7 @@ set_property(TARGET {name}::{name}
                                                                  deps_names=pkg_public_deps_names)
                 variables = self.components_target_build_type_tpl.render(
                     pkg_name=pkg_findname,
+                    namespace=namespace,
                     global_target_variables=global_target_variables,
                     pkg_components=pkg_components,
                     build_type=build_type,
@@ -313,11 +315,13 @@ set_property(TARGET {name}::{name}
                 ret["{}Target-{}.cmake".format(pkg_findname, build_type.lower())] = variables
                 targets = self.components_targets_tpl.render(
                     pkg_name=pkg_findname,
+                    namespace=namespace,
                     components=components,
                     build_type=build_type
                 )
                 ret["{}Targets.cmake".format(pkg_findname)] = targets
                 target_config = self.components_config_tpl.render(
+                    namespace=namespace,
                     pkg_name=pkg_findname,
                     components=components,
                     pkg_public_deps=pkg_public_deps,
