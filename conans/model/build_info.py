@@ -44,6 +44,7 @@ class _CppInfo(object):
     def __init__(self):
         self._name = None
         self.names = {}
+        self.namespaces = {}
         self.system_libs = []  # Ordered list of system libraries
         self.includedirs = []  # Ordered list of include paths
         self.srcdirs = []  # Ordered list of source paths
@@ -144,6 +145,12 @@ class _CppInfo(object):
 
     def get_name(self, generator):
         return self.names.get(generator, self._name)
+
+    def get_namespace(self, generator):
+        result = self.namespaces.get(generator)
+        if result:
+            return result
+        return self.get_name(generator)
 
     # Compatibility for 'cppflags' (old style property to allow decoration)
     def get_cppflags(self):

@@ -31,17 +31,17 @@ class CMakeFindPackageGenerator(Generator):
         {find_libraries_block}
         if(NOT ${{CMAKE_VERSION}} VERSION_LESS "3.0")
             # Target approach
-            if(NOT TARGET {name}::{name})
-                add_library({name}::{name} INTERFACE IMPORTED)
+            if(NOT TARGET {namespace}::{name})
+                add_library({namespace}::{name} INTERFACE IMPORTED)
                 if({name}_INCLUDE_DIRS)
-                    set_target_properties({name}::{name} PROPERTIES INTERFACE_INCLUDE_DIRECTORIES
+                    set_target_properties({namespace}::{name} PROPERTIES INTERFACE_INCLUDE_DIRECTORIES
                                           "${{{name}_INCLUDE_DIRS}}")
                 endif()
-                set_property(TARGET {name}::{name} PROPERTY INTERFACE_LINK_LIBRARIES
-                             "${{{name}_LIBRARIES_TARGETS}};${{{name}_LINKER_FLAGS_LIST}}")
-                set_property(TARGET {name}::{name} PROPERTY INTERFACE_COMPILE_DEFINITIONS
+                set_property(TARGET {namespace}::{name} PROPERTY INTERFACE_LINK_LIBRARIES
+                             "${{{namespace}_LIBRARIES_TARGETS}};${{{name}_LINKER_FLAGS_LIST}}")
+                set_property(TARGET {namespace}::{name} PROPERTY INTERFACE_COMPILE_DEFINITIONS
                              ${{{name}_COMPILE_DEFINITIONS}})
-                set_property(TARGET {name}::{name} PROPERTY INTERFACE_COMPILE_OPTIONS
+                set_property(TARGET {namespace}::{name} PROPERTY INTERFACE_COMPILE_OPTIONS
                              "${{{name}_COMPILE_OPTIONS_LIST}}")
                 {find_dependencies_block}
             endif()
@@ -71,7 +71,7 @@ class CMakeFindPackageGenerator(Generator):
 
         if({{ pkg_name }}_FIND_COMPONENTS)
             foreach(_FIND_COMPONENT {{ '${'+pkg_name+'_FIND_COMPONENTS}' }})
-                list(FIND {{ pkg_name }}_COMPONENTS "{{ pkg_name }}::${_FIND_COMPONENT}" _index)
+                list(FIND {{ pkg_name }}_COMPONENTS "{{ namespace }}::${_FIND_COMPONENT}" _index)
                 if(${_index} EQUAL -1)
                     conan_message(FATAL_ERROR "Conan: Component '${_FIND_COMPONENT}' NOT found in package '{{ pkg_name }}'")
                 else()
@@ -170,17 +170,17 @@ class CMakeFindPackageGenerator(Generator):
 
         if(NOT ${CMAKE_VERSION} VERSION_LESS "3.0")
             # Target approach
-            if(NOT TARGET {{ pkg_name }}::{{ comp_name }})
-                add_library({{ pkg_name }}::{{ comp_name }} INTERFACE IMPORTED)
-                set_target_properties({{ pkg_name }}::{{ comp_name }} PROPERTIES INTERFACE_INCLUDE_DIRECTORIES
+            if(NOT TARGET {{ namespace }}::{{ comp_name }})
+                add_library({{ namespace }}::{{ comp_name }} INTERFACE IMPORTED)
+                set_target_properties({{ namespace }}::{{ comp_name }} PROPERTIES INTERFACE_INCLUDE_DIRECTORIES
                                       "{{ '${'+pkg_name+'_'+comp_name+'_INCLUDE_DIRS}' }}")
-                set_target_properties({{ pkg_name }}::{{ comp_name }} PROPERTIES INTERFACE_LINK_DIRECTORIES
+                set_target_properties({{ namespace }}::{{ comp_name }} PROPERTIES INTERFACE_LINK_DIRECTORIES
                                       "{{ '${'+pkg_name+'_'+comp_name+'_LIB_DIRS}' }}")
-                set_target_properties({{ pkg_name }}::{{ comp_name }} PROPERTIES INTERFACE_LINK_LIBRARIES
+                set_target_properties({{ namespace }}::{{ comp_name }} PROPERTIES INTERFACE_LINK_LIBRARIES
                                       "{{ '${'+pkg_name+'_'+comp_name+'_LINK_LIBS}' }};{{ '${'+pkg_name+'_'+comp_name+'_LINKER_FLAGS_LIST}' }}")
-                set_target_properties({{ pkg_name }}::{{ comp_name }} PROPERTIES INTERFACE_COMPILE_DEFINITIONS
+                set_target_properties({{ namespace }}::{{ comp_name }} PROPERTIES INTERFACE_COMPILE_DEFINITIONS
                                       "{{ '${'+pkg_name+'_'+comp_name+'_COMPILE_DEFINITIONS}' }}")
-                set_target_properties({{ pkg_name }}::{{ comp_name }} PROPERTIES INTERFACE_COMPILE_OPTIONS
+                set_target_properties({{ namespace }}::{{ comp_name }} PROPERTIES INTERFACE_COMPILE_OPTIONS
                                       "{{ '${'+pkg_name+'_'+comp_name+'_COMPILE_OPTIONS_LIST}' }}")
             endif()
         endif()
@@ -190,9 +190,9 @@ class CMakeFindPackageGenerator(Generator):
         ########## GLOBAL TARGET ####################################################################
 
         if(NOT ${CMAKE_VERSION} VERSION_LESS "3.0")
-            if(NOT TARGET {{ pkg_name }}::{{ pkg_name }})
-                add_library({{ pkg_name }}::{{ pkg_name }} INTERFACE IMPORTED)
-                set_target_properties({{ pkg_name }}::{{ pkg_name }} PROPERTIES INTERFACE_LINK_LIBRARIES
+            if(NOT TARGET {{ namespace }}::{{ pkg_name }})
+                add_library({{ namespace }}::{{ pkg_name }} INTERFACE IMPORTED)
+                set_target_properties({{ namespace }}::{{ pkg_name }} PROPERTIES INTERFACE_LINK_LIBRARIES
                                       "{{ '${'+pkg_name+'_COMPONENTS}' }}")
             endif()
         endif()
@@ -207,6 +207,11 @@ class CMakeFindPackageGenerator(Generator):
     def _get_name(cls, obj):
         get_name = getattr(obj, "get_name")
         return get_name(cls.name)
+
+    @classmethod
+    def _get_namespace(cls, obj):
+        get_namespace = getattr(obj, "get_namespace")
+        return get_namespace(cls.name)
 
     @property
     def content(self):
@@ -232,7 +237,7 @@ class CMakeFindPackageGenerator(Generator):
             if COMPONENT_SCOPE in require:
                 comp_require_pkg_name, comp_require_comp_name = require.split(COMPONENT_SCOPE)
                 comp_require_pkg = self.deps_build_info[comp_require_pkg_name]
-                comp_require_pkg_findname = self._get_name(comp_require_pkg)
+                comp_require_pkg_findname = self._get_namespace(comp_require_pkg)
                 if comp_require_comp_name == comp_require_pkg_name:
                     comp_require_comp_findname = comp_require_pkg_findname
                 elif comp_require_comp_name in self.deps_build_info[comp_require_pkg_name].components:
@@ -249,16 +254,22 @@ class CMakeFindPackageGenerator(Generator):
             comp_requires_findnames.append(f)
         return " ".join(comp_requires_findnames)
 
+    def _get_global_target_name(self, dep):
+        namespace = self._get_namespace(dep)
+        name = self._get_name(dep)
+        return '{ns}::{n}'.format(ns=namespace, n=name)
+
     def _find_for_dep(self, pkg_name, pkg_findname, cpp_info):
         # return the content of the FindXXX.cmake file for the package "pkg_name"
         pkg_version = cpp_info.version
+        namespace=self._get_namespace(cpp_info)
         pkg_public_deps = [self._get_name(self.deps_build_info[public_dep]) for public_dep in
                            cpp_info.public_deps]
-        pkg_public_deps_names = ";".join(["{n}::{n}".format(n=n) for n in pkg_public_deps])
+        pkg_public_deps_names = ";".join(self._get_global_target_name(self.deps_build_info[public_dep]) for public_dep in cpp_info.public_deps)
         if cpp_info.components:
             components = self._get_components(pkg_name, pkg_findname, cpp_info)
             # Note these are in reversed order, from more dependent to less dependent
-            pkg_components = " ".join(["{p}::{c}".format(p=pkg_findname, c=comp_findname) for
+            pkg_components = " ".join(["{ns}::{c}".format(ns=namespace, c=comp_findname) for
                                        comp_findname, _ in reversed(components)])
             pkg_info = DepsCppCmake(cpp_info)
             global_target_variables = target_template.format(name=pkg_findname, deps=pkg_info,
@@ -267,6 +278,7 @@ class CMakeFindPackageGenerator(Generator):
             return self.find_components_tpl.render(
                 pkg_name=pkg_findname,
                 pkg_version=pkg_version,
+                namespace=namespace,
                 pkg_components=pkg_components,
                 global_target_variables=global_target_variables,
                 pkg_public_deps=pkg_public_deps,
@@ -304,6 +316,7 @@ class CMakeFindPackageGenerator(Generator):
                                                   for line in f.splitlines(True))
 
             return self.find_template.format(name=pkg_findname, version=pkg_version,
+                                             namespace=self._get_namespace(dep_cpp_info),
                                              find_libraries_block=find_libraries_block,
                                              find_dependencies_block=find_dependencies_block,
                                              macros_and_functions=macros_and_functions)
