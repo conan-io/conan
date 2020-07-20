@@ -2,8 +2,7 @@ import json
 
 from conans.client.output import Color
 from conans.errors import NoRemoteAvailable
-from conans.cli.cli import Extender
-from conans.cli.command import conan_command
+from conans.cli.command import conan_command, Extender
 
 
 def output_search_cli(info, out):
