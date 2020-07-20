@@ -18,16 +18,16 @@ def output_user_list_cli(info, out):
 
 
 @conan_subcommand(formatters={"cli": output_user_list_cli, "json": output_user_list_json})
-def user_list(*args, conan_api, parser, **kwargs):
+def user_list(*args, conan_api, parser, subparser):
     """
     List users and remotes they are associated to.
     """
-    parser.add_argument("-r", "--remotes", action=Extender, nargs="?",
-                        help="Remotes to show the users from. Multiple remotes can be "
-                             "specified: -r remote1 -r remote2. Also wildcards can be "
-                             "used. -r '*' will show the users for all the remotes. "
-                             "If no remote is specified it will show the users for all "
-                             "the remotes")
+    subparser.add_argument("-r", "--remotes", action=Extender, nargs="?",
+                           help="Remotes to show the users from. Multiple remotes can be "
+                                "specified: -r remote1 -r remote2. Also wildcards can be "
+                                "used. -r '*' will show the users for all the remotes. "
+                                "If no remote is specified it will show the users for all "
+                                "the remotes")
     args = parser.parse_args(*args)
     if not args.remotes or "*" in args.remotes:
         info = {"results": {"remote1": {"user": "someuser1", "authenticated": True},
@@ -40,57 +40,57 @@ def user_list(*args, conan_api, parser, **kwargs):
 
 
 @conan_subcommand()
-def user_add(*args, conan_api, parser, **kwargs):
+def user_add(*args, conan_api, parser, subparser):
     """
     Add user authentication for a remote.
     """
-    parser.add_argument("name",
-                        help="Username")
-    parser.add_argument("-p", "--password", action=OnceArgument,
-                        help="User password. Use double quotes if password with "
-                             "spacing, and escape quotes if existing. If empty, the "
-                             "password is requested interactively (not exposed)")
-    parser.add_argument("-s", "--skip-auth", action=OnceArgument,
-                        help="Skips the authentication with the server if there are "
-                             "local stored credentials. It doesn't check if the "
-                             "current credentials are valid or not.")
+    subparser.add_argument("name",
+                           help="Username")
+    subparser.add_argument("-p", "--password", action=OnceArgument,
+                           help="User password. Use double quotes if password with "
+                                "spacing, and escape quotes if existing. If empty, the "
+                                "password is requested interactively (not exposed)")
+    subparser.add_argument("-s", "--skip-auth", action=OnceArgument,
+                           help="Skips the authentication with the server if there are "
+                                "local stored credentials. It doesn't check if the "
+                                "current credentials are valid or not.")
     args = parser.parse_args(*args)
     return {}
 
 
 @conan_subcommand()
-def user_remove(*args, conan_api, parser, **kwargs):
+def user_remove(*args, conan_api, parser, subparser):
     """
     Remove associated user from remote.
     """
-    parser.add_argument("-r", "--remotes", action=Extender, nargs="?", required=True,
-                        help="Remotes to remove the users from. Multiple remotes can be "
-                             "specified: -r remote1 -r remote2. Also wildcards can be "
-                             "used. -r '*' will remove the users for all the remotes.")
+    subparser.add_argument("-r", "--remotes", action=Extender, nargs="?", required=True,
+                           help="Remotes to remove the users from. Multiple remotes can be "
+                                "specified: -r remote1 -r remote2. Also wildcards can be "
+                                "used. -r '*' will remove the users for all the remotes.")
     args = parser.parse_args(*args)
     return {}
 
 
 @conan_subcommand()
-def user_update(*args, conan_api, parser, **kwargs):
+def user_update(*args, conan_api, parser, subparser):
     """
     Update the current user for a remote.
     """
-    parser.add_argument("-r", "--remotes", action=Extender, nargs="?", required=True,
-                        help="Remotes to remove the users from. Multiple remotes can "
-                             "be specified: -r remote1 -r remote2. Also wildcards can "
-                             "be used. -r '*' will remove the users for all the "
-                             "remotes.")
-    parser.add_argument("-n", "--name", action=OnceArgument,
-                        help="Name of the new user. If no name is specified the "
-                             "command will update the current user.")
-    parser.add_argument("-p", "--password", action=OnceArgument, required=True,
-                        const="",
-                        type=str,
-                        help="Update user password. Use double quotes if password "
-                             "with spacing, and escape quotes if existing. If "
-                             "empty, the password is requested interactively "
-                             "(not exposed)")
+    subparser.add_argument("-r", "--remotes", action=Extender, nargs="?", required=True,
+                           help="Remotes to remove the users from. Multiple remotes can "
+                                "be specified: -r remote1 -r remote2. Also wildcards can "
+                                "be used. -r '*' will remove the users for all the "
+                                "remotes.")
+    subparser.add_argument("-n", "--name", action=OnceArgument,
+                           help="Name of the new user. If no name is specified the "
+                                "command will update the current user.")
+    subparser.add_argument("-p", "--password", action=OnceArgument, required=True,
+                           const="",
+                           type=str,
+                           help="Update user password. Use double quotes if password "
+                                "with spacing, and escape quotes if existing. If "
+                                "empty, the password is requested interactively "
+                                "(not exposed)")
     args = parser.parse_args(*args)
     return {}
 

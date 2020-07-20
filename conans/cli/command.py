@@ -120,11 +120,18 @@ class ConanCommand(BaseConanCommand):
     def run(self, conan_api, *args, **kwargs):
         try:
             info = self._method(*args, conan_api=conan_api, **kwargs)
-            parser_args = self._parser.parse_args(*args)
-            if not self._subcommands and info:
-                self._formatters[parser_args.output](info, conan_api.out)
-            elif self._subcommands[parser_args.subcommand]:
-                self._subcommands[parser_args.subcommand].run(conan_api, *args, **kwargs)
+            if not self._subcommands:
+                parser_args = self._parser.parse_args(*args)
+                if info:
+                    self._formatters[parser_args.output](info, conan_api.out)
+            else:
+                arg_list, = args
+                subcommand = arg_list[0]
+                if subcommand in self._subcommands:
+                    self._subcommands[subcommand].run(conan_api, *args, **kwargs)
+                else:
+                    self._parser.parse_args(*args)
+
         except Exception:
             raise
 
@@ -142,7 +149,8 @@ class ConanSubCommand(BaseConanCommand):
 
     def run(self, conan_api, *args, **kwargs):
         try:
-            info = self._method(*args, conan_api=conan_api, **kwargs)
+            info = self._method(*args, conan_api=conan_api, parser=self._parent_parser,
+                                subparser=self._parser)
             parser_args = self._parent_parser.parse_args(*args)
             if info:
                 self._formatters[parser_args.output](info, conan_api.out)
