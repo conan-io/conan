@@ -52,11 +52,10 @@ class SmartFormatter(argparse.HelpFormatter):
         return ''.join(indent + line for line in text.splitlines(True))
 
 
-class ConanCommand(object):
-    def __init__(self, method, group, formatters=None):
+class BaseConanCommand(object):
+    def __init__(self, method, formatters=None):
         self._formatters = {}
-        self._subcommands = {}
-        self._subcommand_parser = None
+        self._method = method
         if formatters:
             for kind, action in formatters.items():
                 if callable(action):
@@ -64,19 +63,14 @@ class ConanCommand(object):
                 else:
                     raise ConanException("Invalid formatter for {}. The formatter must be"
                                          "a valid function".format(kind))
-
-        self._group = group or "Misc commands"
-        self._name = method.__name__.replace("_", "-")
-        self._method = method
         if method.__doc__:
             self._doc = method.__doc__
         else:
             raise ConanException("No documentation string defined for command: '{}'. Conan "
                                  "commands should provide a documentation string explaining "
                                  "its use briefly.".format(self._name))
-        self._parser = argparse.ArgumentParser(description=self._doc,
-                                               prog="conan {}".format(self._name),
-                                               formatter_class=SmartFormatter)
+
+    def _init_formatters(self):
         if self._formatters:
             formatters_list = list(self._formatters.keys())
             default_output = "cli" if "cli" in formatters_list else formatters_list[0]
@@ -85,6 +79,35 @@ class ConanCommand(object):
             self._parser.add_argument('-o', '--output', default=default_output,
                                       choices=formatters_list,
                                       action=OnceArgument, help=output_help_message)
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def method(self):
+        return self._method
+
+    @property
+    def doc(self):
+        return self._doc
+
+    @property
+    def parser(self):
+        return self._parser
+
+
+class ConanCommand(BaseConanCommand):
+    def __init__(self, method, group, formatters=None):
+        super().__init__(method, formatters=formatters)
+        self._subcommands = {}
+        self._subcommand_parser = None
+        self._group = group or "Misc commands"
+        self._name = method.__name__.replace("_", "-")
+        self._parser = argparse.ArgumentParser(description=self._doc,
+                                               prog="conan {}".format(self._name),
+                                               formatter_class=SmartFormatter)
+        self._init_formatters()
 
     def add_subcommand(self, subcommand):
         if not self._subcommand_parser:
@@ -109,85 +132,32 @@ class ConanCommand(object):
     def group(self):
         return self._group
 
-    @property
-    def name(self):
-        return self._name
 
-    @property
-    def method(self):
-        return self._method
-
-    @property
-    def doc(self):
-        return self._doc
-
-    @property
-    def parser(self):
-        return self._parser
-
-
-class ConanSubCommand(object):
+class ConanSubCommand(BaseConanCommand):
     def __init__(self, method, formatters=None):
+        super().__init__(method, formatters=formatters)
+        self._parent_parser = None
         self._parser = None
-        self._subparser = None
-        self._formatters = {}
-        if formatters:
-            for kind, action in formatters.items():
-                if callable(action):
-                    self._formatters[kind] = action
-                else:
-                    raise ConanException("Invalid formatter for {}. The formatter must be"
-                                         "a valid function".format(kind))
         self._name = "-".join(method.__name__.split("_")[1:])
-        self._method = method
-        if method.__doc__:
-            self._doc = method.__doc__
-        else:
-            raise ConanException("No documentation string defined for sub-command: '{}'. Conan "
-                                 "commands should provide a documentation string explaining "
-                                 "its use briefly.".format(self._name))
 
     def run(self, conan_api, *args, **kwargs):
         try:
             info = self._method(*args, conan_api=conan_api, **kwargs)
-            parser_args = self._parser.parse_args(*args)
+            parser_args = self._parent_parser.parse_args(*args)
             if info:
                 self._formatters[parser_args.output](info, conan_api.out)
         except Exception:
             raise
 
-    def set_parser(self, parser, subcommand_parser):
-        self._parser = parser
-        self._subparser = subcommand_parser.add_parser(self._name, help=self._doc)
-        if self._formatters:
-            formatters_list = list(self._formatters.keys())
-            default_output = "cli" if "cli" in formatters_list else formatters_list[0]
-            output_help_message = "Select the output format: {}. '{}' is the default output." \
-                .format(", ".join(formatters_list), default_output)
-            self._subparser.add_argument('-o', '--output', default=default_output,
-                                         choices=formatters_list,
-                                         action=OnceArgument, help=output_help_message)
-
-    @property
-    def name(self):
-        return self._name
-
-    @property
-    def method(self):
-        return self._method
-
-    @property
-    def doc(self):
-        return self._doc
-
-    @property
-    def parser(self):
-        return self._parser
+    def set_parser(self, parent_parser, subcommand_parser):
+        self._parser = subcommand_parser.add_parser(self._name, help=self._doc)
+        self._parent_parser = parent_parser
+        self._init_formatters()
 
 
 def conan_command(group, formatters=None):
     def decorator(f):
-        cmd = ConanCommand(f, group, formatters)
+        cmd = ConanCommand(f, group, formatters=formatters)
         return cmd
 
     return decorator
@@ -195,7 +165,7 @@ def conan_command(group, formatters=None):
 
 def conan_subcommand(formatters=None):
     def decorator(f):
-        cmd = ConanSubCommand(f, formatters)
+        cmd = ConanSubCommand(f, formatters=formatters)
         return cmd
 
     return decorator
