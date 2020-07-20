@@ -48,10 +48,14 @@ class Cli(object):
                 self._commands[command_wrapper.name] = command_wrapper
                 self._groups[command_wrapper.group].append(command_wrapper.name)
             for name, value in getmembers(importlib.import_module(import_path)):
-                if isinstance(value, ConanSubCommand) and name.startswith("{}_".format(method_name)):
-                    command_wrapper.add_subcommand(value)
-        except AttributeError as exc:
-            print(str(exc))
+                if isinstance(value, ConanSubCommand):
+                    if name.startswith("{}_".format(method_name)):
+                        command_wrapper.add_subcommand(value)
+                    else:
+                        raise ConanException("The name for the subcommand method should "
+                                             "begin with the main command name + '_'. "
+                                             "i.e. {}_<subcommand_name>".format(method_name))
+        except AttributeError:
             raise ConanException("There is no {} method defined in {}".format(method_name,
                                                                               import_path))
 
@@ -166,9 +170,8 @@ def main(args):
     if sys.platform == 'win32':
         signal.signal(signal.SIGBREAK, ctrl_break_handler)
 
-    cli = Cli(conan_api)
-
     try:
+        cli = Cli(conan_api)
         exit_error = cli.run(args)
     except SystemExit as exc:
         if exc.code != 0:
