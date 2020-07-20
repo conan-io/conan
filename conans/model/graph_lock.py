@@ -504,7 +504,6 @@ class GraphLock(object):
         for require in requires:
             try:
                 locked_ref, locked_id = refs[require.ref.name]
-                require.lock(locked_ref, locked_id)
             except KeyError:
                 t = "Build-require" if build_requires else "Require"
                 msg = "%s '%s' cannot be found in lockfile" % (t, require.ref.name)
@@ -512,6 +511,8 @@ class GraphLock(object):
                     node.conanfile.output.warn(msg)
                 else:
                     raise ConanException(msg)
+            else:
+                require.lock(locked_ref, locked_id)
 
         # Check all refs are locked
         if not self._relaxed:
@@ -527,7 +528,7 @@ class GraphLock(object):
             return None
         return self._nodes[node_id].python_requires
 
-    def ref(self, node_id):
+    def _ref(self, node_id):
         try:
             return self._nodes[node_id].ref
         except KeyError:
@@ -598,8 +599,26 @@ class GraphLock(object):
         if not self._relaxed:
             raise ConanException("Couldn't find '%s' in lockfile" % ref.full_str())
 
-    def get_node_by_req(self, ref):
-        assert isinstance(ref, ConanFileReference)
+    def find_require_and_lock(self, reference, conanfile):
+        node_id = self._get_node_by_req(reference)
+        locked_ref = self._ref(node_id)
+
+        if locked_ref is not None:
+            # It is necessary to force a context build switch
+            conanfile.requires[reference.name].lock(locked_ref, node_id)
+
+    def _get_node_by_req(self, ref):
+        """
+        looking for a pkg that will be depended from a "virtual" conanfile
+         - "conan install zlib/[>1.2]@"  Version-range
+         - "conan install zlib/1.2@ "    Exact dep
+
+        :param ref:
+        :return:
+        """
+
+        assert isinstance(ref, ConanFileReference), "ref '%s' is '%s'!=ConanFileReference" \
+                                                    % (ref, type(ref))
 
         version = ref.version
         version_range = None
@@ -607,7 +626,7 @@ class GraphLock(object):
             version_range = version[1:-1]
 
         if version_range:
-            ids = []
+            ids = {}
             for id_, node in self._nodes.items():
                 nref = node.ref
                 if (nref and nref.name == ref.name and nref.user == ref.user and
@@ -615,10 +634,13 @@ class GraphLock(object):
                     output = []
                     result = satisfying([str(nref.version)], version_range, output)
                     if result:
-                        ids.append(id_)
+                        ids.setdefault(nref, []).append(id_)
             if ids:
-                if len(ids) >= 1:
-                    return ids[0]
+                if len(ids) > 1:
+                    raise ConanException("Multiple matches in lockfile: %s\nNarrow your range"
+                                         % ", ".join(["'%s'" % str(k) for k in ids.keys()]))
+                else:
+                    return ids.popitem()[1][0]
         else:
             # The ``create`` command uses this to install pkg/version --build=pkg
             # removing the revision, but it still should match

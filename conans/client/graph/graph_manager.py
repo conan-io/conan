@@ -200,9 +200,7 @@ class GraphManager(object):
         conanfile = self._loader.load_virtual([reference], profile)
         root_node = Node(ref=None, conanfile=conanfile, context=CONTEXT_HOST, recipe=RECIPE_VIRTUAL)
         if graph_lock:  # Find the Node ID in the lock of current root
-            node_id = graph_lock.get_node_by_req(reference)
-            locked_ref = graph_lock.ref(node_id)
-            conanfile.requires[reference.name].lock(locked_ref, node_id)
+            graph_lock.find_require_and_lock(reference, conanfile)
         return root_node
 
     def _load_root_test_package(self, path, create_reference, graph_lock, profile):
@@ -227,9 +225,7 @@ class GraphManager(object):
                                  create_reference.user, create_reference.channel, validate=False)
         root_node = Node(ref, conanfile, recipe=RECIPE_CONSUMER, context=CONTEXT_HOST, path=path)
         if graph_lock:
-            node_id = graph_lock.get_node(create_reference)
-            locked_ref = graph_lock.ref(node_id)
-            conanfile.requires[create_reference.name].lock(locked_ref, node_id)
+            graph_lock.find_require_and_lock(create_reference, conanfile)
         return root_node
 
     def _resolve_graph(self, root_node, graph_info, build_mode, check_updates,

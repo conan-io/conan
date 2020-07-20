@@ -108,3 +108,20 @@ class GraphLockBuildRequireTestCase(unittest.TestCase):
         self.assertEqual(flac["ref"], ref)
         self.assertEqual(flac["package_id"], "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
         self.assertEqual(flac["prev"], prev)
+
+    def test_multiple_matching_build_require(self):
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . cmake/1.0@")
+        client.run("create . cmake/1.1@")
+        client.save({"conanfile.py": GenConanfile().with_build_require_plain("cmake/1.0")})
+        client.run("create . pkg1/1.0@")
+        client.save({"conanfile.py": GenConanfile().with_build_require_plain("cmake/1.1")
+                    .with_require_plain("pkg1/1.0")})
+        client.run("create . pkg2/1.0@")
+        client.run("lock create --reference=pkg2/1.0@ --build --lockfile-out=conan.lock")
+        client.run("install cmake/[>=1.0]@ --lockfile=conan.lock", assert_error=True)
+        self.assertIn("ERROR: Multiple matches in lockfile: 'cmake/1.0', 'cmake/1.1'",
+                      client.out)
+        client.run("install cmake/[>=1.1]@ --lockfile=conan.lock")
+        self.assertIn("cmake/1.1 from local cache - Cache", client.out)
