@@ -3,7 +3,7 @@ import os
 from collections import OrderedDict
 
 from conans import DEFAULT_REVISION_V1
-from conans.client.graph.graph import RECIPE_VIRTUAL, RECIPE_CONSUMER
+from conans.client.graph.graph import RECIPE_VIRTUAL, RECIPE_CONSUMER, CONTEXT_BUILD
 from conans.client.graph.python_requires import PyRequires
 from conans.client.graph.range_resolver import satisfying
 from conans.client.profile_loader import _load_profile
@@ -101,9 +101,10 @@ class GraphLockFile(object):
 class GraphLockNode(object):
 
     def __init__(self, ref, package_id, prev, python_requires, options, requires, build_requires,
-                 path, revisions_enabled, modified=None):
+                 path, revisions_enabled, context, modified=None):
         self._ref = ref if ref and ref.name else None  # includes rrev
         self._package_id = package_id
+        self._context = context
         self._prev = prev
         self._requires = requires
         self._build_requires = build_requires
@@ -121,6 +122,10 @@ class GraphLockNode(object):
                 self._ref = ref.copy_clear_rev()
             if prev:
                 self._prev = DEFAULT_REVISION_V1
+
+    @property
+    def context(self):
+        return self._context
 
     @property
     def requires(self):
@@ -216,11 +221,12 @@ class GraphLockNode(object):
                                for py_req in python_requires]
         options = OptionsValues.loads(data.get("options", ""))
         modified = data.get("modified")
+        context = data["context"]
         requires = data.get("requires", [])
         build_requires = data.get("build_requires", [])
         path = data.get("path")
         return GraphLockNode(ref, package_id, prev, python_requires, options, requires,
-                             build_requires, path, revisions_enabled, modified)
+                             build_requires, path, revisions_enabled, context, modified)
 
     def serialize(self):
         """ returns the object serialized as a dict of plain python types
@@ -245,6 +251,7 @@ class GraphLockNode(object):
             result["build_requires"] = self._build_requires
         if self._path:
             result["path"] = self._path
+        result["context"] = self._context
         return result
 
 
@@ -291,7 +298,7 @@ class GraphLock(object):
             prev = graph_node.prev if ref and ref.revision else None
             lock_node = GraphLockNode(ref, package_id, prev, python_reqs,
                                       graph_node.conanfile.options.values, requires, build_requires,
-                                      graph_node.path, self._revisions_enabled)
+                                      graph_node.path, self._revisions_enabled, graph_node.context)
             graph_node.graph_lock_node = lock_node
             self._nodes[graph_node.id] = lock_node
 
@@ -340,6 +347,8 @@ class GraphLock(object):
             # now initialize new level
             opened = set(opened).difference(current_level)
 
+        print(levels)
+
         # Now compute the list of list with prev=None, and prepare them with the right
         # references to be used in cmd line
         result = []
@@ -358,8 +367,8 @@ class GraphLock(object):
                         if "@" not in ref:
                             ref = ref.replace("#", "@#")
                     if ref not in total_prefs:
-                        new_level.append((n, ref))
-                        total_prefs.add(ref)
+                        new_level.append((ref, locked_node.context, n))
+                        total_prefs.add((ref, locked_node.context))
             if new_level:
                 result.append(new_level)
 
@@ -504,7 +513,6 @@ class GraphLock(object):
         for require in requires:
             try:
                 locked_ref, locked_id = refs[require.ref.name]
-                require.lock(locked_ref, locked_id)
             except KeyError:
                 t = "Build-require" if build_requires else "Require"
                 msg = "%s '%s' cannot be found in lockfile" % (t, require.ref.name)
@@ -512,6 +520,8 @@ class GraphLock(object):
                     node.conanfile.output.warn(msg)
                 else:
                     raise ConanException(msg)
+            else:
+                require.lock(locked_ref, locked_id)
 
         # Check all refs are locked
         if not self._relaxed:
@@ -527,13 +537,27 @@ class GraphLock(object):
             return None
         return self._nodes[node_id].python_requires
 
-    def ref(self, node_id):
+    def _ref(self, node_id):
         try:
             return self._nodes[node_id].ref
         except KeyError:
             if self._relaxed:
                 return None
             raise
+
+    def find_require_and_lock(self, reference, conanfile, node_id):
+        if node_id is None:
+            node_id = self._get_node_by_req(reference)
+            locked_ref = self._ref(node_id)
+        else:
+            locked_node = self._nodes[node_id]
+            locked_ref = locked_node.ref
+        if locked_ref is not None:
+            # It is necessary to force a context build switch
+            if locked_node.context == CONTEXT_BUILD:
+                conanfile.build_requires
+            else:
+                conanfile.requires[reference.name].lock(locked_ref, node_id)
 
     def _match_relaxed_require(self, ref):
         assert self._relaxed
@@ -598,8 +622,17 @@ class GraphLock(object):
         if not self._relaxed:
             raise ConanException("Couldn't find '%s' in lockfile" % ref.full_str())
 
-    def get_node_by_req(self, ref):
-        assert isinstance(ref, ConanFileReference)
+    def _get_node_by_req(self, ref):
+        """
+        looking for a pkg that will be depended from a "virtual" conanfile
+         - "conan install zlib/[>1.2]@"  Version-range
+         - "conan install zlib/1.2@ "    Exact dep
+
+        :param ref:
+        :return:
+        """
+        assert isinstance(ref, ConanFileReference), "ref '%s' is '%s'!=ConanFileReference" \
+                                                    % (ref, type(ref))
 
         version = ref.version
         version_range = None
@@ -607,7 +640,7 @@ class GraphLock(object):
             version_range = version[1:-1]
 
         if version_range:
-            ids = []
+            ids = {}
             for id_, node in self._nodes.items():
                 nref = node.ref
                 if (nref and nref.name == ref.name and nref.user == ref.user and
@@ -615,10 +648,13 @@ class GraphLock(object):
                     output = []
                     result = satisfying([str(nref.version)], version_range, output)
                     if result:
-                        ids.append(id_)
+                        ids.setdefault(nref, []).append(id_)
             if ids:
-                if len(ids) >= 1:
-                    return ids[0]
+                if len(ids) > 1:
+                    raise ConanException("Multiple matches in lockfile: %s\nNarrow your range"
+                                         % ", ".join(["'%s'" % str(k) for k in ids.keys()]))
+                else:
+                    return ids.popitem()[1][0]
         else:
             # The ``create`` command uses this to install pkg/version --build=pkg
             # removing the revision, but it still should match
@@ -629,7 +665,6 @@ class GraphLock(object):
                 node_id = self._find_first(lambda n: n.ref and str(n.ref) == search_ref)
             if node_id:
                 return node_id
-
         if not self._relaxed:
             raise ConanException("Couldn't find '%s' in lockfile" % ref.full_str())
 

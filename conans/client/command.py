@@ -528,6 +528,7 @@ class Command(object):
                                                      generators=args.generator,
                                                      install_folder=args.install_folder,
                                                      lockfile=args.lockfile,
+                                                     lockfile_id=args.lockfile_id,
                                                      lockfile_out=args.lockfile_out)
 
         except ConanException as exc:
@@ -2136,6 +2137,8 @@ def _add_common_install_arguments(parser, build_help, lockfile=True):
     if lockfile:
         parser.add_argument("-l", "--lockfile", action=OnceArgument,
                             help="Path to a lockfile")
+        parser.add_argument("--lockfile-id", action=OnceArgument,
+                            help="ID(index) of a package in the lockfile")
         parser.add_argument("--lockfile-out", action=OnceArgument,
                             help="Filename of the updated lockfile")
     _add_profile_arguments(parser)

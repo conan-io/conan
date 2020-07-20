@@ -76,6 +76,57 @@ class GraphLockBuildRequireTestCase(unittest.TestCase):
               "--lockfile=conan.lock --build=protobuf")
         self.assertIn("protobuf/0.1: Created package revision", t.out)
 
+    def test_package_different_id_both_contexts(self):
+        t = TestClient()
+        t.save({
+            'protobuf/conanfile.py': GenConanfile("protobuf", "0.1").with_setting("os"),
+            'lib/conanfile.py': GenConanfile("lib", "0.1").with_require_plain("protobuf/0.1")
+                                                          .with_build_require_plain("protobuf/0.1"),
+            'app/conanfile.py': GenConanfile("app", "0.1").with_require_plain("lib/0.1"),
+            'Windows': "[settings]\nos=Windows",
+            'Linux': "[settings]\nos=Linux"
+        })
+        t.run("export protobuf/conanfile.py")
+        t.run("export lib/conanfile.py")
+        t.run("export app/conanfile.py")
+
+        # Create lock
+        t.run("lock create app/conanfile.py --profile:build=Windows --profile:host=Linux --build"
+              " --lockfile-out=conan.lock")
+
+        lock_json = json.loads(t.load("conan.lock"))
+        protobuf_build = lock_json["graph_lock"]["nodes"]["3"]
+        self.assertIn("protobuf/0.1", protobuf_build["ref"])
+        self.assertEqual(protobuf_build["package_id"], "3475bd55b91ae904ac96fde0f106a136ab951a5e")
+        self.assertIsNone(protobuf_build.get("prev"))
+        protobuf_host = lock_json["graph_lock"]["nodes"]["2"]
+        self.assertIn("protobuf/0.1", protobuf_host["ref"])
+        self.assertEqual(protobuf_host["package_id"], "cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31")
+        self.assertIsNone(protobuf_host.get("prev"))
+
+        # Compute build order
+        t.run("lock build-order conan.lock --json=bo.json")
+        if t.cache.config.revisions_enabled:
+            expected = [[['protobuf/0.1@#a2f7b9ca9a4d2ebe512f9bc455802d34', 'host', '2'],
+                         ['protobuf/0.1@#a2f7b9ca9a4d2ebe512f9bc455802d34', 'build', '3']],
+                        [['lib/0.1@#fe41709ab1369302057c10371e86213c', 'host', '1']]]
+        else:
+            expected = [[['protobuf/0.1@', 'host', '2'], ['protobuf/0.1@', 'build', '3']],
+                        [['lib/0.1@', 'host', '1']]]
+        self.assertEqual(expected, json.loads(t.load("bo.json")))
+
+        # Create the first element of build order
+        t.run("install protobuf/0.1@ --profile:build=Windows --profile:host=Linux "
+              "--lockfile=conan.lock --lockfile-id=2 --build=protobuf")
+
+        self.assertIn("protobuf/0.1: Package 'cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31' created",
+                      t.out)
+        t.run("install protobuf/0.1@ --profile:build=Windows --profile:host=Linux "
+              "--lockfile=conan.lock --lockfile-id=2 --build=protobuf")
+        print(t.out)
+        self.assertIn("protobuf/0.1: Package '3475bd55b91ae904ac96fde0f106a136ab951a5e' created",
+                      t.out)
+
     def test_build_require_not_removed(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
@@ -108,3 +159,20 @@ class GraphLockBuildRequireTestCase(unittest.TestCase):
         self.assertEqual(flac["ref"], ref)
         self.assertEqual(flac["package_id"], "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
         self.assertEqual(flac["prev"], prev)
+
+    def test_multiple_matching_build_require(self):
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . cmake/1.0@")
+        client.run("create . cmake/1.1@")
+        client.save({"conanfile.py": GenConanfile().with_build_require_plain("cmake/1.0")})
+        client.run("create . pkg1/1.0@")
+        client.save({"conanfile.py": GenConanfile().with_build_require_plain("cmake/1.1")
+                                                   .with_require_plain("pkg1/1.0")})
+        client.run("create . pkg2/1.0@")
+        client.run("lock create --reference=pkg2/1.0@ --build --lockfile-out=conan.lock")
+        client.run("install cmake/[>=1.0]@ --lockfile=conan.lock", assert_error=True)
+        self.assertIn("ERROR: Multiple matches in lockfile: 'cmake/1.0', 'cmake/1.1'",
+                      client.out)
+        client.run("install cmake/[>=1.1]@ --lockfile=conan.lock")
+        self.assertIn("cmake/1.1 from local cache - Cache", client.out)
