@@ -569,8 +569,9 @@ class GraphLock(object):
             if predicate(node):
                 return id_
 
-    def get_node(self, ref):
-        """ given a REF, return the Node of the package in the lockfile that correspond to that
+    def get_consumer(self, ref):
+        """ given a REF of a conanfile.txt (None) or conanfile.py in user folder,
+        return the Node of the package in the lockfile that correspond to that
         REF, or raise if it cannot find it.
         First, search with REF without revisions is done, then approximate search by just name
         """

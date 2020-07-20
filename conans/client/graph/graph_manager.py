@@ -86,7 +86,7 @@ class GraphManager(object):
         if conanfile_path.endswith(".py"):
             lock_python_requires = None
             if graph_lock and not test:  # Only lock python requires if it is not test_package
-                node_id = graph_lock.get_node(graph_info.root)
+                node_id = graph_lock.get_consumer(graph_info.root)
                 lock_python_requires = graph_lock.python_requires(node_id)
             conanfile = self._loader.load_consumer(conanfile_path,
                                                    profile_host=profile_host,
@@ -164,7 +164,7 @@ class GraphManager(object):
                     ref = ConanFileReference(ref.name or conanfile.name,
                                              ref.version or conanfile.version,
                                              ref.user, ref.channel, validate=False)
-                node_id = graph_lock.get_node(ref)
+                node_id = graph_lock.get_consumer(ref)
                 lock_python_requires = graph_lock.python_requires(node_id)
 
             conanfile = self._loader.load_consumer(path, profile,
@@ -183,7 +183,7 @@ class GraphManager(object):
                              path=path)
 
         if graph_lock:  # Find the Node ID in the lock of current root
-            node_id = graph_lock.get_node(root_node.ref)
+            node_id = graph_lock.get_consumer(root_node.ref)
             root_node.id = node_id
 
         return root_node, ref
