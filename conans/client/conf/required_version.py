@@ -7,8 +7,8 @@ from conans.errors import ConanException
 def validate_conan_version(required_range):
     result = satisfies(client_version, required_range, loose=True)
     if not result:
-        raise ConanException("The current Conan version ({}) does not match to the required"
-                             " version ({}).".format(client_version, required_range))
+        raise ConanException("Current Conan version ({}) does not satisfy "
+                             "the defined one ({}).".format(client_version, required_range))
 
 
 def check_required_conan_version(cache_folder, out):

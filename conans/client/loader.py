@@ -203,8 +203,12 @@ class ConanFileLoader(object):
         """ load a conanfile with a full reference, name, version, user and channel are obtained
         from the reference, not evaluated. Main way to load from the cache
         """
-        conanfile, _ = self.load_basic_module(conanfile_path, lock_python_requires,
-                                              ref.user, ref.channel, str(ref))
+        try:
+            conanfile, _ = self.load_basic_module(conanfile_path, lock_python_requires,
+                                                  ref.user, ref.channel, str(ref))
+        except Exception as e:
+            raise ConanException("%s: Cannot load recipe.\n%s" % (str(ref), str(e)))
+
         conanfile.name = ref.name
         conanfile.version = str(ref.version) \
             if os.environ.get(CONAN_V2_MODE_ENVVAR, False) else ref.version

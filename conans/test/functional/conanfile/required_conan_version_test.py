@@ -21,15 +21,14 @@ class RequiredConanVersionTest(unittest.TestCase):
             """)
         client.save({"conanfile.py": conanfile})
         client.run("export . pkg/1.0@", assert_error=True)
-
-        self.assertIn("Conan version (%s) does not match to the required version (>=100.0)"
+        self.assertIn("Current Conan version (%s) does not satisfy the defined one (>=100.0)"
                       % __version__, client.out)
         client.run("inspect . ", assert_error=True)
-        self.assertIn("Conan version (%s) does not match to the required version (>=100.0)"
+        self.assertIn("Current Conan version (%s) does not satisfy the defined one (>=100.0)"
                       % __version__, client.out)
         with mock.patch("conans.client.conf.required_version.client_version", "101.0"):
             client.run("export . pkg/1.0@")
 
         client.run("install pkg/1.0@", assert_error=True)
-        self.assertIn("Conan version (%s) does not match to the required version (>=100.0)"
+        self.assertIn("Current Conan version (%s) does not satisfy the defined one (>=100.0)"
                       % __version__, client.out)
