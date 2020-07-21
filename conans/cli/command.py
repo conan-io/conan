@@ -11,7 +11,7 @@ class ConanCommand(object):
             if callable(action):
                 self._formatters[kind] = action
             else:
-                raise ConanException("Invalid formatter for {}. The formatter must be" 
+                raise ConanException("Invalid formatter for {}. The formatter must be"
                                      "a valid function".format(kind))
 
         self._group = group or "Misc commands"
