@@ -131,7 +131,8 @@ class Cli(object):
         self._out.writeln("")
 
     def help_message(self):
-        self.commands["help"].method(self.conan_api, self.commands, self.groups)
+        self.commands["help"].method(conan_api=self.conan_api, parser=self.commands["help"].parser,
+                                     commands=self.commands, groups=self.groups)
 
     def run(self, *args):
         """ Entry point for executing commands, dispatcher to class
@@ -164,7 +165,8 @@ class Cli(object):
             self._print_similar(command_argument)
             raise ConanException("Unknown command %s" % str(exc))
 
-        command.run(self.conan_api, args[0][1:], parser=self.commands[command_argument].parser,
+        command.run(args[0][1:], conan_api=self.conan_api,
+                    parser=self.commands[command_argument].parser,
                     commands=self.commands, groups=self.groups)
 
         return SUCCESS
