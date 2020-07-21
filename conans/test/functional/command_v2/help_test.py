@@ -1,10 +1,10 @@
 import unittest
 
-
-from conans.client.tools import environment_append, save
+from conans.client.tools import environment_append, save, six
 from conans.test.utils.tools import TestClient
 
 
+@unittest.skipIf(six.PY2, "Requires Python 2.7")
 class CliHelpTest(unittest.TestCase):
 
     def run(self, *args, **kwargs):
@@ -22,4 +22,3 @@ class CliHelpTest(unittest.TestCase):
 
         client.run("--help")
         self.assertIn("Shows help for a specific command", client.out)
-
