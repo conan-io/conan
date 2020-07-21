@@ -81,13 +81,14 @@ class Cli(object):
         self._commands = {}
         conan_commands_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "commands")
         for module in pkgutil.iter_modules([conan_commands_path]):
-            self._add_command("conans.cli.commands.{}".format(module.name), module.name)
-        if get_env("CONAN_USER_COMMANDS", default=False):
-            user_commands_path = os.path.join(self._conan_api.cache_folder, "commands")
-            sys.path.append(user_commands_path)
-            for module in pkgutil.iter_modules([user_commands_path]):
-                if module.name.startswith("cmd_"):
-                    self._add_command(module.name, module.name.replace("cmd_", ""))
+            module_name = module[1]
+            self._add_command("conans.cli.commands.{}".format(module_name), module_name)
+        user_commands_path = os.path.join(self._conan_api.cache_folder, "commands")
+        sys.path.append(user_commands_path)
+        for module in pkgutil.iter_modules([user_commands_path]):
+            module_name = module[1]
+            if module_name.startswith("cmd_"):
+                self._add_command(module_name, module_name.replace("cmd_", ""))
 
     def _add_command(self, import_path, method_name):
         try:
@@ -131,7 +132,8 @@ class Cli(object):
         self._out.writeln("")
 
     def help_message(self):
-        self.commands["help"].method(self.conan_api, self.commands, self.groups)
+        self.commands["help"].method(conan_api=self.conan_api, parser=self.commands["help"].parser,
+                                     commands=self.commands, groups=self.groups)
 
     def run(self, *args):
         """ Entry point for executing commands, dispatcher to class
@@ -164,7 +166,8 @@ class Cli(object):
             self._print_similar(command_argument)
             raise ConanException("Unknown command %s" % str(exc))
 
-        command.run(self.conan_api, args[0][1:], parser=self.commands[command_argument].parser,
+        command.run(args[0][1:], conan_api=self.conan_api,
+                    parser=self.commands[command_argument].parser,
                     commands=self.commands, groups=self.groups)
 
         return SUCCESS
