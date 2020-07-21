@@ -1310,8 +1310,8 @@ class ConanAPIV1(object):
         cwd = get_cwd()
 
         if path and reference:
-            raise ConanException("Both path and reference were provided")
-
+            raise ConanException("Both path and reference arguments were provided. Please provide "
+                                 "only one of them")
         if path:
             ref_or_path = _make_abs_path(path, cwd)
             if not os.path.isfile(ref_or_path):
