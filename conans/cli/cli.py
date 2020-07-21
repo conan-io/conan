@@ -83,13 +83,12 @@ class Cli(object):
         for module in pkgutil.iter_modules([conan_commands_path]):
             module_name = module[1]
             self._add_command("conans.cli.commands.{}".format(module_name), module_name)
-        if get_env("CONAN_USER_COMMANDS", default=False):
-            user_commands_path = os.path.join(self._conan_api.cache_folder, "commands")
-            sys.path.append(user_commands_path)
-            for module in pkgutil.iter_modules([user_commands_path]):
-                module_name = module[1]
-                if module_name.startswith("cmd_"):
-                    self._add_command(module_name, module_name.replace("cmd_", ""))
+        user_commands_path = os.path.join(self._conan_api.cache_folder, "commands")
+        sys.path.append(user_commands_path)
+        for module in pkgutil.iter_modules([user_commands_path]):
+            module_name = module[1]
+            if module_name.startswith("cmd_"):
+                self._add_command(module_name, module_name.replace("cmd_", ""))
 
     def _add_command(self, import_path, method_name):
         try:
