@@ -490,7 +490,6 @@ class GraphLock(object):
                     if locked_id:
                         locked_node = self._nodes[locked_id]
                         require.lock(locked_node.ref, locked_id)
-                        break  # No more than 1 require can match the root of existing lockfile
             return
 
         locked_node = node.graph_lock_node
