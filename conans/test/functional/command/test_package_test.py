@@ -45,7 +45,6 @@ class TestPackageTest(unittest.TestCase):
         client.save({CONANFILE: GenConanfile().with_name("Hello").with_version("0.1"),
                      "test_package/conanfile.py": test_conanfile})
         client.run("create . user/channel")
-        print(client.out)
         self.assertNotIn("Hello/0.2", client.out)
 
     def other_requirements_test(self):
@@ -139,19 +138,22 @@ class TestPackageTest(unittest.TestCase):
                 requires = "dep/1.1"
                 def build(self):
                     info = self.deps_cpp_info["dep"]
-                    self.output.info("BUILD Dep %s VERSION %s" % (info.name, info.version))
+                    self.output.info("BUILD Dep %s VERSION %s" %
+                        (info.get_name("txt"), info.version))
                 def package_info(self):
-                    self.cpp_info.name = "MyHello"
+                    self.cpp_info.names["txt"] = "MyHello"
             """)
         test_conanfile = textwrap.dedent("""
             from conans import ConanFile
             class Pkg(ConanFile):
                 def build(self):
                     info = self.deps_cpp_info["hello"]
-                    self.output.info("BUILD HELLO %s VERSION %s" % (info.name, info.version))
+                    self.output.info("BUILD HELLO %s VERSION %s" %
+                        (info.get_name("txt"), info.version))
                 def test(self):
                     info = self.deps_cpp_info["hello"]
-                    self.output.info("TEST HELLO %s VERSION %s" % (info.name, info.version))
+                    self.output.info("TEST HELLO %s VERSION %s" %
+                        (info.get_name("txt"), info.version))
             """)
         client.save({"conanfile.py": conanfile,
                      "test_package/conanfile.py": test_conanfile})

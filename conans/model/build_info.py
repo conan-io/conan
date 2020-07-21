@@ -219,6 +219,7 @@ class CppInfo(_CppInfo):
     def __getattr__(self, config):
         def _get_cpp_info():
             result = _CppInfo()
+            result.filter_empty = self.filter_empty
             result.rootpath = self.rootpath
             result.sysroot = self.sysroot
             result.includedirs.append(DEFAULT_INCLUDE)
