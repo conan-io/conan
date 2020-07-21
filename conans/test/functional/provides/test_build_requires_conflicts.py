@@ -27,8 +27,8 @@ class BuildRequiresTestCase(unittest.TestCase):
         t = TestClient()
         t.save({'br_lib.py': GenConanfile("br_lib", "v1").with_provides("libjpeg"),
                 'br.py': GenConanfile("br", "v1").with_require_plain("br_lib/v1"),
-                'app.py': GenConanfile("app", "v1").with_build_require_plain("br/v1",
-                                                                             force_host_context=True)
+                'app.py': GenConanfile("app", "v1").with_build_requirement_plain("br/v1",
+                                                                            force_host_context=True)
                                                    .with_provides("libjpeg")})
         t.run("create br_lib.py")
         t.run("create br.py")
@@ -42,8 +42,8 @@ class BuildRequiresTestCase(unittest.TestCase):
     def test_build_require_host_transitive(self, use_single_profile):
         t = TestClient()
         t.save({'br.py': GenConanfile("br", "v1").with_provides("libjpeg"),
-                'lib.py': GenConanfile("lib", "v1").with_build_require_plain("br/v1",
-                                                                             force_host_context=True),
+                'lib.py': GenConanfile("lib", "v1").with_build_requirement_plain("br/v1",
+                                                                            force_host_context=True),
                 'app.py': GenConanfile("app", "v1").with_require_plain("lib/v1")
                                                    .with_provides("libjpeg")})
         t.run("export br.py")
