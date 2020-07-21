@@ -27,7 +27,7 @@ class Pkg(ConanFile):
         client.current_folder = build_folder
         client.run("install ..")
         client.run("build ..", assert_error=True)
-        self.assertIn("ConanException: 'options.opt2' doesn't exist", client.out)
+        self.assertIn("ConanException: option 'opt2' doesn't exist", client.out)
         self.assertIn("Possible options are ['opt1']", client.out)
 
     def remove_setting_test(self):
