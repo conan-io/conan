@@ -25,7 +25,7 @@ def complete_recipe_sources(remote_manager, cache, conanfile, ref, remotes):
     if os.path.exists(sources_folder):
         return None
 
-    if conanfile.exports_sources is None:
+    if conanfile.exports_sources is None and not hasattr(conanfile, "export_sources"):
         mkdir(sources_folder)
         return None
 

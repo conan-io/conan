@@ -25,7 +25,7 @@ content = """
 
         <table id="results" class="table table-striped table-bordered" style="width:100%">
             <thead>
-                {%- set headers = results.get_headers(keys=['remote', 'package_id']) %}
+                {%- set headers = results.get_headers(keys=['remote', 'package_id', 'outdated']) %}
                 {%- set headers2rows = headers.row(n_rows=2) %}
                 <tr>
                     {%- for category, subheaders in headers2rows %}
