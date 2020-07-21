@@ -499,7 +499,6 @@ class GraphLock(object):
                     if locked_id:
                         locked_node = self._nodes[locked_id]
                         require.lock(locked_node.ref, locked_id)
-                        break  # No more than 1 require can match the root of existing lockfile
             return
 
         locked_node = node.graph_lock_node
@@ -545,20 +544,6 @@ class GraphLock(object):
                 return None
             raise
 
-    def find_require_and_lock(self, reference, conanfile, node_id):
-        if node_id is None:
-            node_id = self._get_node_by_req(reference)
-            locked_ref = self._ref(node_id)
-        else:
-            locked_node = self._nodes[node_id]
-            locked_ref = locked_node.ref
-        if locked_ref is not None:
-            # It is necessary to force a context build switch
-            if locked_node.context == CONTEXT_BUILD:
-                conanfile.build_requires
-            else:
-                conanfile.requires[reference.name].lock(locked_ref, node_id)
-
     def _match_relaxed_require(self, ref):
         assert self._relaxed
         assert isinstance(ref, ConanFileReference)
@@ -592,8 +577,9 @@ class GraphLock(object):
             if predicate(node):
                 return id_
 
-    def get_node(self, ref):
-        """ given a REF, return the Node of the package in the lockfile that correspond to that
+    def get_consumer(self, ref):
+        """ given a REF of a conanfile.txt (None) or conanfile.py in user folder,
+        return the Node of the package in the lockfile that correspond to that
         REF, or raise if it cannot find it.
         First, search with REF without revisions is done, then approximate search by just name
         """
@@ -621,6 +607,20 @@ class GraphLock(object):
 
         if not self._relaxed:
             raise ConanException("Couldn't find '%s' in lockfile" % ref.full_str())
+
+    def find_require_and_lock(self, reference, conanfile, node_id):
+        if node_id is None:
+            node_id = self._get_node_by_req(reference)
+            locked_ref = self._ref(node_id)
+        else:
+            locked_node = self._nodes[node_id]
+            locked_ref = locked_node.ref
+        if locked_ref is not None:
+            # It is necessary to force a context build switch
+            if locked_node.context == CONTEXT_BUILD:
+                conanfile.build_requires
+            else:
+                conanfile.requires[reference.name].lock(locked_ref, node_id)
 
     def _get_node_by_req(self, ref):
         """

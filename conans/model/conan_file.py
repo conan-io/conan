@@ -1,8 +1,8 @@
 import os
 from contextlib import contextmanager
-from six import string_types
 
 import six
+from six import string_types
 
 from conans.client import tools
 from conans.client.output import ScopedOutput
@@ -128,6 +128,8 @@ class ConanFile(object):
     settings = None
     options = None
     default_options = None
+
+    provides = None
 
     def __init__(self, output, runner, display_name="", user=None, channel=None):
         # an output stream (writeln, info, warn error)

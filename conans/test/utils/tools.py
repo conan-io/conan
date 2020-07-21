@@ -27,7 +27,6 @@ from webtest.app import TestApp
 from conans import load
 from conans.client.cache.cache import ClientCache
 from conans.client.cache.remote_registry import Remotes
-from conans.client.command import Command
 from conans.client.conan_api import Conan
 from conans.client.output import ConanOutput
 from conans.client.rest.file_uploader import IterableToFileAdapter
@@ -830,7 +829,12 @@ servers["r2"] = TestServer()
         """
         conan = self.get_conan_api(user_io)
         self.api = conan
-        command = Command(conan)
+        if os.getenv("CONAN_V2_CLI"):
+            from conans.cli.cli import Cli
+            command = Cli(conan)
+        else:
+            from conans.client.command import Command
+            command = Command(conan)
         args = shlex.split(command_line)
         current_dir = os.getcwd()
         os.chdir(self.current_folder)
