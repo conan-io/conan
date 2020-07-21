@@ -4,7 +4,7 @@ from conans.client.tools import environment_append, save, six
 from conans.test.utils.tools import TestClient
 
 
-@unittest.skipIf(six.PY2, "Requires Python 2.7")
+@unittest.skipIf(six.PY2, "v2.0: Only testing for Python 3")
 class CliHelpTest(unittest.TestCase):
 
     def run(self, *args, **kwargs):
