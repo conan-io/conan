@@ -209,3 +209,26 @@ class ExportsSourcesMethodTest(unittest.TestCase):
         client.run("export . pkg/0.1@", assert_error=True)
         self.assertIn("ERROR: conanfile 'exports_sources' shouldn't be a method, "
                       "use 'export_sources()' instead", client.out)
+
+    def test_exports_sources_upload_error(self):
+        # https://github.com/conan-io/conan/issues/7377
+        client = TestClient(default_server_user=True)
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile, tools
+
+            class MethodConan(ConanFile):
+                def export_sources(self):
+                    self.copy("*")
+                def build(self):
+                    self.output.info("CONTENT: %s" % tools.load("myfile.txt"))
+            """)
+        client.save({"conanfile.py": conanfile,
+                     "myfile.txt": "mycontent"})
+        client.run("export . pkg/0.1@")
+        self.assertIn("pkg/0.1 export_sources() method: Copied 1 '.txt' file: myfile.txt",
+                      client.out)
+        client.run("upload pkg/0.1@")
+        client.run("remove * -f")
+        client.run("install pkg/0.1@ --build")
+        self.assertIn("Downloading conan_sources.tgz", client.out)
+        self.assertIn("pkg/0.1: CONTENT: mycontent", client.out)
