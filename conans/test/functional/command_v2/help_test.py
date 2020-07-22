@@ -2,8 +2,10 @@ import unittest
 
 from conans.client.tools import environment_append, save, six
 from conans.test.utils.tools import TestClient
+from conans.util.env_reader import get_env
 
 
+@unittest.skipIf(get_env("TESTING_REVISIONS_ENABLED", False), "Until conan config is implemented")
 @unittest.skipIf(six.PY2, "v2.0: Only testing for Python 3")
 class CliHelpTest(unittest.TestCase):
 

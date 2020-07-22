@@ -537,14 +537,6 @@ class GraphLock(object):
             return None
         return self._nodes[node_id].python_requires
 
-    def _ref(self, node_id):
-        try:
-            return self._nodes[node_id].ref
-        except KeyError:
-            if self._relaxed:
-                return None
-            raise
-
     def _match_relaxed_require(self, ref):
         assert self._relaxed
         assert isinstance(ref, ConanFileReference)
@@ -611,14 +603,15 @@ class GraphLock(object):
 
     def find_require_and_lock(self, reference, conanfile, node_id):
         if node_id is None:
-            node_id = self._get_node_by_req(reference)
-        locked_node = self._nodes[node_id]
-        locked_ref = locked_node.ref
-        if locked_ref is not None:
-            # It is necessary to force a context build switch
-            conanfile.requires[reference.name].lock(locked_ref, node_id)
+            node_id = self._find_node_by_requirement(reference)
+        if node_id is None:  # relaxed and not found
+            return
 
-    def _get_node_by_req(self, ref):
+        locked_ref = self._nodes[node_id].ref
+        assert locked_ref is not None
+        conanfile.requires[reference.name].lock(locked_ref, node_id)
+
+    def _find_node_by_requirement(self, ref):
         """
         looking for a pkg that will be depended from a "virtual" conanfile
          - "conan install zlib/[>1.2]@"  Version-range
