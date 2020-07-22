@@ -242,7 +242,7 @@ class GraphLockDynamicTest(unittest.TestCase):
             self.assertEqual(dep["ref"], "dep/0.1")
             self.assertEqual(dep.get("prev"), None)
 
-        client.run("create . -pr=profile --lockfile=conan.lock --lockfile-out=conan.lock "
+        client.run("create . --lockfile=conan.lock --lockfile-out=conan.lock "
                    "--build=missing")
         self.assertIn("dep/0.1:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Build", client.out)
         self.assertIn("tool/0.1:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache", client.out)
