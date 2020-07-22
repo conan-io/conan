@@ -115,13 +115,13 @@ class GraphLockBuildRequireTestCase(unittest.TestCase):
         self.assertEqual(expected, json.loads(t.load("bo.json")))
 
         # Create the first element of build order
-        t.run("install protobuf/0.1@ --profile:build=Windows --profile:host=Linux "
-              "--lockfile=conan.lock --lockfile-id=2 --build=protobuf")
+        t.run("install protobuf/0.1@ --lockfile=conan.lock --lockfile-id=2 --build=protobuf "
+              "--lockfile-out=conan.lock")
+        print(t.load("conan.lock"))
 
         self.assertIn("protobuf/0.1: Package 'cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31' created",
                       t.out)
-        t.run("install protobuf/0.1@ --profile:build=Windows --profile:host=Linux "
-              "--lockfile=conan.lock --lockfile-id=2 --build=protobuf")
+        t.run("install protobuf/0.1@ --lockfile=conan.lock --lockfile-id=3 --build=protobuf")
         print(t.out)
         self.assertIn("protobuf/0.1: Package '3475bd55b91ae904ac96fde0f106a136ab951a5e' created",
                       t.out)

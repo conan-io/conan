@@ -251,7 +251,8 @@ class GraphLockNode(object):
             result["build_requires"] = self._build_requires
         if self._path:
             result["path"] = self._path
-        result["context"] = self._context
+        if self._context:
+            result["context"] = self._context
         return result
 
 
@@ -611,10 +612,8 @@ class GraphLock(object):
     def find_require_and_lock(self, reference, conanfile, node_id):
         if node_id is None:
             node_id = self._get_node_by_req(reference)
-            locked_ref = self._ref(node_id)
-        else:
-            locked_node = self._nodes[node_id]
-            locked_ref = locked_node.ref
+        locked_node = self._nodes[node_id]
+        locked_ref = locked_node.ref
         if locked_ref is not None:
             # It is necessary to force a context build switch
             conanfile.requires[reference.name].lock(locked_ref, node_id)
