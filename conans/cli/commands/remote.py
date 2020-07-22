@@ -78,6 +78,9 @@ def remote_update(*args, conan_api, parser, subparser):
     subparser.add_argument("-i", "--insert", action=OnceArgument,
                            help="Insert remote at specific index")
     args = parser.parse_args(*args)
+    if not (args.name or args.url or args.verify_ssl or args.insert):
+        subparser.error("Please add at least one remote field to update: """
+                        "name, url, verify_ssl, insert")
     return {}
 
 
