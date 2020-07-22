@@ -2,6 +2,7 @@ import os
 import textwrap
 import unittest
 
+from conans.test.utils.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 from conans.util.files import mkdir
 
@@ -276,3 +277,18 @@ class RecipeFolderTest(unittest.TestCase):
         self.assertIn("SET_NAME: MYFILE!", client.out)
         self.assertIn("conanfile.py: CONFIGURE: MYFILE!", client.out)
         self.assertIn("conanfile.py: REQUIREMENTS: MYFILE!", client.out)
+
+    def editable_test(self):
+        client = TestClient()
+        client.save({"pkg/conanfile.py": self.recipe_conanfile,
+                     "pkg/file.txt": "MYFILE!",
+                     "consumer/conanfile.py":
+                         GenConanfile().with_require_plain("pkg/0.1@user/stable")})
+        client.run("editable add pkg pkg/0.1@user/stable")
+
+        client.run("install consumer")
+        self.assertIn("pkg/0.1@user/stable: INIT: MYFILE!", client.out)
+        self.assertIn("pkg/0.1@user/stable: CONFIGURE: MYFILE!", client.out)
+        self.assertIn("pkg/0.1@user/stable: REQUIREMENTS: MYFILE!", client.out)
+        self.assertIn("pkg/0.1@user/stable from user folder - Editable", client.out)
+        self.assertIn("pkg/0.1@user/stable: PACKAGE_INFO: MYFILE!", client.out)
