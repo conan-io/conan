@@ -221,7 +221,7 @@ class GraphLockNode(object):
                                for py_req in python_requires]
         options = OptionsValues.loads(data.get("options", ""))
         modified = data.get("modified")
-        context = data["context"]
+        context = data.get("context")
         requires = data.get("requires", [])
         build_requires = data.get("build_requires", [])
         path = data.get("path")
@@ -617,10 +617,7 @@ class GraphLock(object):
             locked_ref = locked_node.ref
         if locked_ref is not None:
             # It is necessary to force a context build switch
-            if locked_node.context == CONTEXT_BUILD:
-                conanfile.build_requires
-            else:
-                conanfile.requires[reference.name].lock(locked_ref, node_id)
+            conanfile.requires[reference.name].lock(locked_ref, node_id)
 
     def _get_node_by_req(self, ref):
         """
