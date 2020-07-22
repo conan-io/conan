@@ -59,11 +59,6 @@ def user_add(*args, conan_api, parser, subparser):
                                 "password is requested interactively (not exposed)")
     subparser.add_argument("-f", "--force", action='store_true', default=False,
                            help="Force addition, will update if existing.")
-    # TODO: check if still necessary
-    subparser.add_argument("-s", "--skip-auth", action=OnceArgument,
-                           help="Skips the authentication with the server if there are "
-                                "local stored credentials. It doesn't check if the "
-                                "current credentials are valid or not.")
     args = parser.parse_args(*args)
     return {}
 
