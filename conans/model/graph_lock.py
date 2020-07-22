@@ -86,9 +86,9 @@ class GraphLockFile(object):
                     pass
         result = {"graph_lock": serial_lock,
                   "version": LOCKFILE_VERSION}
-        if self.profile_host:
+        if self._profile_host:
             result["profile_host"] = self._profile_host.dumps()
-        if self.profile_build:
+        if self._profile_build:
             result["profile_build"] = self._profile_build.dumps()
         return json.dumps(result, indent=True)
 
