@@ -21,6 +21,7 @@ class GenConanfile(object):
         self._generators = []
         self._default_options = {}
         self._provides = []
+        self._deprecated = None
         self._package_files = {}
         self._package_files_env = {}
         self._package_files_link = {}
@@ -45,6 +46,10 @@ class GenConanfile(object):
 
     def with_provides(self, provides):
         self._provides.append(provides)
+        return self
+
+    def with_deprecated(self, deprecated):
+        self._deprecated = deprecated
         return self
 
     def with_revision_mode(self, revision_mode):
@@ -156,6 +161,12 @@ class GenConanfile(object):
             return ""
         line = ", ".join('"{}"'.format(provide) for provide in self._provides)
         return "provides = {}".format(line)
+
+    @property
+    def _deprecated_line(self):
+        if not self._deprecated:
+            return ""
+        return "deprecated = {}".format(self._deprecated)
 
     @property
     def _scm_line(self):
@@ -337,6 +348,8 @@ class GenConanfile(object):
             ret.append("    {}".format(self._version_line))
         if self._provides_line:
             ret.append("    {}".format(self._provides_line))
+        if self._deprecated_line:
+            ret.append("    {}".format(self._deprecated_line))
         if self._generators_line:
             ret.append("    {}".format(self._generators_line))
         if self._requires_line:
