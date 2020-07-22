@@ -72,8 +72,7 @@ class GraphLockBuildRequireTestCase(unittest.TestCase):
         self.assertEqual(expected, json.loads(t.load("bo.json")))
 
         # Create the first element of build order
-        t.run("install protobuf/0.1@ --profile:build=default --profile:host=default "
-              "--lockfile=conan.lock --build=protobuf")
+        t.run("install protobuf/0.1@ --lockfile=conan.lock --build=protobuf")
         self.assertIn("protobuf/0.1: Created package revision", t.out)
 
     def test_build_require_not_removed(self):

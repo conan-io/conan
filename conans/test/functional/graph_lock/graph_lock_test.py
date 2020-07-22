@@ -25,6 +25,29 @@ class GraphLockErrorsTest(unittest.TestCase):
         self.assertIn("os=Windows", client.out)
         self.assertIn("os=Linux", client.out)
 
+    def try_to_pass_profile_test(self):
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile("PkgA", "0.1")})
+        client.run("lock create conanfile.py --lockfile-out=conan.lock")
+        client.run("install . --lockfile=conan.lock -s os=Windows", assert_error=True)
+        self.assertIn("ERROR: Cannot use profile, settings, options or env 'host' "
+                      "when using lockfile", client.out)
+        client.run("install . --lockfile=conan.lock -pr=default", assert_error=True)
+        self.assertIn("ERROR: Cannot use profile, settings, options or env 'host' "
+                      "when using lockfile", client.out)
+        client.run("install . --lockfile=conan.lock -o myoption=default", assert_error=True)
+        self.assertIn("ERROR: Cannot use profile, settings, options or env 'host' "
+                      "when using lockfile", client.out)
+        client.run("install . --lockfile=conan.lock -s:b os=Windows", assert_error=True)
+        self.assertIn("ERROR: Cannot use profile, settings, options or env 'build' "
+                      "when using lockfile", client.out)
+        client.run("install . --lockfile=conan.lock --profile:build=default", assert_error=True)
+        self.assertIn("ERROR: Cannot use profile, settings, options or env 'build' "
+                      "when using lockfile", client.out)
+        client.run("install . --lockfile=conan.lock -o:b myoption=default", assert_error=True)
+        self.assertIn("ERROR: Cannot use profile, settings, options or env 'build' "
+                      "when using lockfile", client.out)
+
     def error_old_format_test(self):
         client = TestClient()
         client.save({"conanfile.txt": ""})
