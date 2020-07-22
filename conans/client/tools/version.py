@@ -19,6 +19,9 @@ class Version(object):
         except ValueError:
             raise ConanException("Invalid version '{}'".format(value))
 
+    def __str__(self):
+        return str(self._semver)
+
     @property
     def major(self):
         return str(self._semver.major)

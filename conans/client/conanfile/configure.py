@@ -2,6 +2,7 @@ from conans.errors import (conanfile_exception_formatter, ConanInvalidConfigurat
 from conans.model.conan_file import get_env_context_manager
 from conans.util.conan_v2_mode import conan_v2_behavior, CONAN_V2_MODE_ENVVAR
 from conans.util.env_reader import get_env
+from conans.util.misc import make_tuple
 
 
 def run_configure_method(conanfile, down_options, down_ref, ref):
@@ -30,6 +31,8 @@ def run_configure_method(conanfile, down_options, down_ref, ref):
 
         conanfile.settings.validate()  # All has to be ok!
         conanfile.options.validate()
+        # Recipe provides its own name if nothing else is defined
+        conanfile.provides = make_tuple(conanfile.provides or conanfile.name)
 
         _validate_fpic(conanfile)
 

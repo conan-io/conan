@@ -323,18 +323,22 @@ endmacro()""", macro)
         settings.build_type = "Debug"
         conanfile = ConanFile(TestBufferConanOutput(), None)
         conanfile.initialize(Settings({}), EnvValues())
+        conanfile.settings = settings
+
         ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
         cpp_info = CppInfo(ref.name, "dummy_root_folder1")
-        cpp_info.framework_paths.extend(["path/to/Frameworks1", "path/to/Frameworks2"])
+        cpp_info.frameworkdirs.extend(["path/to/Frameworks1", "path/to/Frameworks2"])
         cpp_info.frameworks = ["OpenGL", "OpenCL"]
+        cpp_info.filter_empty = False
         conanfile.deps_cpp_info.add(ref.name, cpp_info)
-        conanfile.settings = settings
 
         generator = CMakeGenerator(conanfile)
         content = generator.content
         self.assertIn('find_library(CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND NAME ${_FRAMEWORK} PATHS'
                       ' ${CONAN_FRAMEWORK_DIRS${SUFFIX}})', content)
-        self.assertIn('set(CONAN_FRAMEWORK_DIRS "path/to/Frameworks1"\n\t\t\t"path/to/Frameworks2" '
+        self.assertIn('set(CONAN_FRAMEWORK_DIRS "dummy_root_folder1/Frameworks"\n'
+                      '\t\t\t"dummy_root_folder1/path/to/Frameworks1"\n'
+                      '\t\t\t"dummy_root_folder1/path/to/Frameworks2" '
                       '${CONAN_FRAMEWORK_DIRS})', content)
         self.assertIn('set(CONAN_LIBS ${CONAN_LIBS} ${CONAN_SYSTEM_LIBS} '
                       '${CONAN_FRAMEWORKS_FOUND})', content)
