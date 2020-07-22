@@ -1387,8 +1387,11 @@ def get_graph_info(profile_host, profile_build, cwd, install_folder, cache, outp
         lockfile = lockfile if os.path.isfile(lockfile) else os.path.join(lockfile, LOCKFILE)
         graph_lock_file = GraphLockFile.load(lockfile, cache.config.revisions_enabled)
         graph_info.profile_host = graph_lock_file.profile_host
+        graph_info.profile_build = graph_lock_file.profile_build
         if graph_info.profile_host is not None:
             graph_info.profile_host.process_settings(cache, preprocess=False)
+        if graph_info.profile_build is not None:
+            graph_info.profile_build.process_settings(cache, preprocess=False)
         graph_info.graph_lock = graph_lock_file.graph_lock
         output.info("Using lockfile: '{}'".format(lockfile))
         return graph_info
