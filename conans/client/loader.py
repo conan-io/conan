@@ -7,6 +7,7 @@ import uuid
 
 import yaml
 
+from conans.client.conf.required_version import validate_conan_version
 from conans.client.generators import registered_generators
 from conans.client.loader_txt import ConanFileTextLoader
 from conans.client.tools.files import chdir
@@ -202,8 +203,12 @@ class ConanFileLoader(object):
         """ load a conanfile with a full reference, name, version, user and channel are obtained
         from the reference, not evaluated. Main way to load from the cache
         """
-        conanfile, _ = self.load_basic_module(conanfile_path, lock_python_requires,
-                                              ref.user, ref.channel, str(ref))
+        try:
+            conanfile, _ = self.load_basic_module(conanfile_path, lock_python_requires,
+                                                  ref.user, ref.channel, str(ref))
+        except Exception as e:
+            raise ConanException("%s: Cannot load recipe.\n%s" % (str(ref), str(e)))
+
         conanfile.name = ref.name
         conanfile.version = str(ref.version) \
             if os.environ.get(CONAN_V2_MODE_ENVVAR, False) else ref.version
@@ -355,6 +360,10 @@ def _parse_conanfile(conan_file_path):
             sys.dont_write_bytecode = True
             loaded = imp.load_source(module_id, conan_file_path)
             sys.dont_write_bytecode = False
+
+        required_conan_version = getattr(loaded, "required_conan_version", None)
+        if required_conan_version:
+            validate_conan_version(required_conan_version)
 
         # These lines are necessary, otherwise local conanfile imports with same name
         # collide, but no error, and overwrite other packages imports!!
