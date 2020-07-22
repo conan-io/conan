@@ -79,12 +79,11 @@ def remote_update(*args, conan_api, parser, subparser):
                            help="Insert remote at specific index")
     args = parser.parse_args(*args)
     if not (args.name or args.url or args.verify_ssl or args.insert):
-        subparser.error("Please add at least one remote field to update: """
+        subparser.error("Please add at least one remote field to update: "
                         "name, url, verify_ssl, insert")
     return {}
 
 
-# to discuss: conan remote update --enable 1
 @conan_subcommand()
 def remote_enable(*args, conan_api, parser, subparser):
     """
@@ -95,7 +94,6 @@ def remote_enable(*args, conan_api, parser, subparser):
     return {}
 
 
-# to discuss: conan remote update --enable 0
 @conan_subcommand()
 def remote_disable(*args, conan_api, parser, subparser):
     """
@@ -104,29 +102,6 @@ def remote_disable(*args, conan_api, parser, subparser):
     subparser.add_argument("remote", help="Name of the remote to disable")
     args = parser.parse_args(*args)
     return {}
-
-
-# to discuss: conan remote update --enable 0
-@conan_subcommand()
-def remote_references(*args, conan_api, parser, subparser):
-    """
-    Update remote info
-    """
-    subparser.add_argument("remote", help="Name of the remote to disable")
-    args = parser.parse_args(*args)
-    return {}
-
-
-# remote references management --> move to new command?
-# list_ref            List the package recipes and its associated remotes
-# add_ref             Associate a recipe's reference to a remote
-# remove_ref          Dissociate a recipe's reference and its remote
-# update_ref          Update the remote associated with a package recipe
-# list_pref           List the package binaries and its associated remotes
-# add_pref            Associate a package reference to a remote
-# remove_pref         Dissociate a package's reference and its remote
-# update_pref         Update the remote associated with a binary package
-# clean               Clean the list of remotes and all recipe-remote
 
 
 @conan_command(group="Misc commands")
