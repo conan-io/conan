@@ -25,7 +25,7 @@ def user_list(*args, conan_api, parser, subparser):
     subparser.add_argument("-r", "--remote", action=Extender, nargs="?",
                            help="Remotes to show the users from. Multiple remotes can be "
                                 "specified: -r remote1 -r remote2. Also wildcards can be "
-                                "used. -r '*' will show the users for all the remotes. "
+                                "used. -r \"*\" will show the users for all the remotes. "
                                 "If no remote is specified it will show the users for all "
                                 "the remotes")
     args = parser.parse_args(*args)
@@ -70,7 +70,7 @@ def user_remove(*args, conan_api, parser, subparser):
     """
     subparser.add_argument("remote",
                            help="Remote name. Accepts 'fnmatch' style wildcards. "
-                                "To remove the user for all remotes use: conan remote remove '*'")
+                                "To remove the user for all remotes use: conan remote remove \"*\"")
     args = parser.parse_args(*args)
     return {}
 
