@@ -110,9 +110,7 @@ class PowerShellCommands(object):
 
     @property
     def skip(self):
-        # Change to this once support for PowreShell Core is in place.
-        # skip = not (os_info.is_windows or which("pwsh"))
-        return (not os_info.is_windows) or os_info.is_posix
+        return not (os_info.is_windows or which("pwsh"))
 
 
 class WindowsCmdCommands(object):
