@@ -280,6 +280,47 @@ class RevisionsUpdateTest(unittest.TestCase):
         self.assertIn("PkgA/0.1: Downloaded recipe revision 7f1110e1ae8d852b6d55f7f121864de6",
                       client.out)
 
+    def test_version_ranges_revisions_update(self):
+        # https://github.com/conan-io/conan/issues/7333
+        client = TestClient(default_server_user=True)
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . PkgA/0.1@")
+        self.assertIn("PkgA/0.1: Exported revision: f3367e0e7d170aa12abccb175fee5f97", client.out)
+        client.run("upload * --all --confirm")
+        client.run("search PkgA/0.1@ --revisions -r=default")
+        self.assertIn("f3367e0e7d170aa12abccb175fee5f97", client.out)
+
+        client2 = TestClient(servers=client.servers, users=client.users)
+        client2.save({"conanfile.py": GenConanfile("PkgA")})
+        client2.run("create . PkgA/0.2@")
+        client2.run("upload * --all --confirm")
+        client2.save({"conanfile.py": GenConanfile("PkgA", "0.2").with_build_msg("Building")})
+        time.sleep(1)
+        client2.run("create . ")
+        self.assertIn("PkgA/0.2: Exported revision: 5e8148093372278be4e8d8e831d8bdb6", client2.out)
+        client2.run("upload * --all --confirm")
+        client2.run("search PkgA/0.2@ --revisions -r=default")
+        self.assertIn("5e8148093372278be4e8d8e831d8bdb6", client2.out)
+        self.assertIn("8ec297bab84c88218d1db36ffea97d0e", client2.out)
+
+        client.save({"conanfile.py": GenConanfile("PkgB", "0.1").with_require_plain("PkgA/[>=0.1]")})
+        client.run("lock create conanfile.py --update --lockfile-out=conan.lock")
+        self.assertIn("PkgA/0.2: Downloaded recipe revision 5e8148093372278be4e8d8e831d8bdb6",
+                      client.out)
+        lockfile = client.load("conan.lock")
+        self.assertIn("5e8148093372278be4e8d8e831d8bdb6", lockfile)
+
+        # Put again the old revision locally
+        client.run("remove * -f")
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . PkgA/0.1@")
+        self.assertIn("PkgA/0.1: Exported revision: f3367e0e7d170aa12abccb175fee5f97", client.out)
+
+        client.save({"conanfile.py": GenConanfile("PkgB", "0.1").with_require_plain("PkgA/[>=0.1]")})
+        client.run("install . --lockfile=conan.lock")
+        self.assertIn("PkgA/0.2: Downloaded recipe revision 5e8148093372278be4e8d8e831d8bdb6",
+                      client.out)
+
 
 class LockFileOptionsTest(unittest.TestCase):
     def test_options(self):
