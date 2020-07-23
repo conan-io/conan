@@ -2,8 +2,7 @@ import json
 
 from conans.client.output import Color
 from conans.errors import NoRemoteAvailable
-from conans.cli.cli import Extender
-from conans.cli.command import conan_command
+from conans.cli.command import conan_command, Extender
 
 
 def output_search_cli(info, out):
@@ -37,7 +36,7 @@ def apiv2_search_recipes(query, remote_patterns=None, local_cache=False):
     return search_results
 
 
-@conan_command(group="Consumer commands", formatters={"cli": output_search_cli,
+@conan_command(group="Consumer", formatters={"cli": output_search_cli,
                                                       "json": output_search_json})
 def search(*args, conan_api, parser, **kwargs):
     """
