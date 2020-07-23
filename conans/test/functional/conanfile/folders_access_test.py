@@ -1,6 +1,8 @@
 import os
+import textwrap
 import unittest
 
+from conans.test.utils.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 from conans.util.files import mkdir
 
@@ -222,3 +224,71 @@ class TestFoldersAccess(unittest.TestCase):
                           "local_command": False}
         self.client.save({"conanfile.py": c1}, clean_first=True)
         self.client.run("create . conan/stable --build")
+
+
+class RecipeFolderTest(unittest.TestCase):
+    recipe_conanfile = textwrap.dedent("""
+        from conans import ConanFile, load
+        import os
+        class Pkg(ConanFile):
+            exports = "file.txt"
+            def init(self):
+                r = load(os.path.join(self.recipe_folder, "file.txt"))
+                self.output.info("INIT: {}".format(r))
+            def set_name(self):
+                r = load(os.path.join(self.recipe_folder, "file.txt"))
+                self.output.info("SET_NAME: {}".format(r))
+            def configure(self):
+                r = load(os.path.join(self.recipe_folder, "file.txt"))
+                self.output.info("CONFIGURE: {}".format(r))
+            def requirements(self):
+                r = load(os.path.join(self.recipe_folder, "file.txt"))
+                self.output.info("REQUIREMENTS: {}".format(r))
+            def package(self):
+                r = load(os.path.join(self.recipe_folder, "file.txt"))
+                self.output.info("PACKAGE: {}".format(r))
+            def package_info(self):
+                r = load(os.path.join(self.recipe_folder, "file.txt"))
+                self.output.info("PACKAGE_INFO: {}".format(r))
+        """)
+
+    def recipe_folder_test(self):
+        client = TestClient()
+        client.save({"conanfile.py": self.recipe_conanfile,
+                     "file.txt": "MYFILE!"})
+        client.run("export . pkg/0.1@user/testing")
+        self.assertIn("INIT: MYFILE!", client.out)
+        self.assertIn("SET_NAME: MYFILE!", client.out)
+        client.save({}, clean_first=True)
+        client.run("install pkg/0.1@user/testing --build")
+        self.assertIn("pkg/0.1@user/testing: INIT: MYFILE!", client.out)
+        self.assertNotIn("SET_NAME", client.out)
+        self.assertIn("pkg/0.1@user/testing: CONFIGURE: MYFILE!", client.out)
+        self.assertIn("pkg/0.1@user/testing: REQUIREMENTS: MYFILE!", client.out)
+        self.assertIn("pkg/0.1@user/testing: PACKAGE: MYFILE!", client.out)
+        self.assertIn("pkg/0.1@user/testing: PACKAGE_INFO: MYFILE!", client.out)
+
+    def local_flow_test(self):
+        client = TestClient()
+        client.save({"conanfile.py": self.recipe_conanfile,
+                     "file.txt": "MYFILE!"})
+        client.run("install .")
+        self.assertIn("INIT: MYFILE!", client.out)
+        self.assertIn("SET_NAME: MYFILE!", client.out)
+        self.assertIn("conanfile.py: CONFIGURE: MYFILE!", client.out)
+        self.assertIn("conanfile.py: REQUIREMENTS: MYFILE!", client.out)
+
+    def editable_test(self):
+        client = TestClient()
+        client.save({"pkg/conanfile.py": self.recipe_conanfile,
+                     "pkg/file.txt": "MYFILE!",
+                     "consumer/conanfile.py":
+                         GenConanfile().with_require_plain("pkg/0.1@user/stable")})
+        client.run("editable add pkg pkg/0.1@user/stable")
+
+        client.run("install consumer")
+        self.assertIn("pkg/0.1@user/stable: INIT: MYFILE!", client.out)
+        self.assertIn("pkg/0.1@user/stable: CONFIGURE: MYFILE!", client.out)
+        self.assertIn("pkg/0.1@user/stable: REQUIREMENTS: MYFILE!", client.out)
+        self.assertIn("pkg/0.1@user/stable from user folder - Editable", client.out)
+        self.assertIn("pkg/0.1@user/stable: PACKAGE_INFO: MYFILE!", client.out)
