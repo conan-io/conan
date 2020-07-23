@@ -3,6 +3,7 @@ import platform
 import subprocess
 import textwrap
 import unittest
+import shutil
 
 import six
 from parameterized.parameterized import parameterized_class
@@ -110,7 +111,7 @@ class PowerShellCommands(object):
 
     @property
     def skip(self):
-        return not (os_info.is_windows or which("pwsh"))
+        return not (os_info.is_windows or shutil.which("pwsh"))
 
 
 class WindowsCmdCommands(object):
