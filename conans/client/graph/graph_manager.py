@@ -1,6 +1,6 @@
 import fnmatch
 import os
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 
 from conans.client.conanfile.configure import run_configure_method
 from conans.client.generators.text import TXTGenerator
@@ -114,8 +114,14 @@ class GraphManager(object):
         """ main entry point to compute a full dependency graph
         """
         root_node = self._load_root_node(reference, create_reference, graph_info)
-        return self._resolve_graph(root_node, graph_info, build_mode, check_updates, update, remotes,
-                                   recorder, apply_build_requires=apply_build_requires)
+        deps_graph = self._resolve_graph(root_node, graph_info, build_mode, check_updates, update,
+                                         remotes, recorder,
+                                         apply_build_requires=apply_build_requires)
+
+        # Run some validations once the graph is built
+        self._validate_graph_provides(deps_graph)
+
+        return deps_graph
 
     def _load_root_node(self, reference, create_reference, graph_info):
         """ creates the first, root node of the graph, loading or creating a conanfile
@@ -294,15 +300,15 @@ class GraphManager(object):
                 continue
             # Packages with PACKAGE_ID_UNKNOWN might be built in the future, need build requires
             if (node.binary not in (BINARY_BUILD, BINARY_EDITABLE, BINARY_UNKNOWN)
-                    and node.recipe != RECIPE_CONSUMER):
+                and node.recipe != RECIPE_CONSUMER):
                 continue
             package_build_requires = self._get_recipe_build_requires(node.conanfile, default_context)
             str_ref = str(node.ref)
             new_profile_build_requires = []
             for pattern, build_requires in profile_build_requires.items():
                 if ((node.recipe == RECIPE_CONSUMER and pattern == "&") or
-                        (node.recipe != RECIPE_CONSUMER and pattern == "&!") or
-                        fnmatch.fnmatch(str_ref, pattern)):
+                    (node.recipe != RECIPE_CONSUMER and pattern == "&!") or
+                    fnmatch.fnmatch(str_ref, pattern)):
                     for build_require in build_requires:
                         br_key = (build_require.name, default_context)
                         if br_key in package_build_requires:  # Override defined
@@ -362,6 +368,28 @@ class GraphManager(object):
             node.public_closure.sort(key_fn=lambda n: inverse_levels[n])
 
         return graph
+
+    @staticmethod
+    def _validate_graph_provides(deps_graph):
+        # Check that two different nodes are not providing the same (ODR violation)
+        for node in deps_graph.nodes:
+            provides = defaultdict(list)
+            if node.conanfile.provides is not None:  # consumer conanfile doesn't initialize
+                for it in node.conanfile.provides:
+                    provides[it].append(node)
+
+            for item in filter(lambda u: u.context == CONTEXT_HOST, node.public_closure):
+                for it in item.conanfile.provides:
+                    provides[it].append(item)
+
+            # Check (and report) if any functionality is provided by several different recipes
+            conflicts = [it for it, nodes in provides.items() if len(nodes) > 1]
+            if conflicts:
+                msg_lines = ["At least two recipes provides the same functionality:"]
+                for it in conflicts:
+                    nodes_str = "', '".join([n.conanfile.display_name for n in provides[it]])
+                    msg_lines.append(" - '{}' provided by '{}'".format(it, nodes_str))
+                raise ConanException('\n'.join(msg_lines))
 
 
 def load_deps_info(current_path, conanfile, required):

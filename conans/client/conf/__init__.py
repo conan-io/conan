@@ -569,16 +569,33 @@ class ConanClientConfigParser(ConfigParser, object):
 
     @property
     def client_cert_path(self):
-        # TODO: Really parameterize the client cert location
-        folder = os.path.dirname(self.filename)
-        CLIENT_CERT = "client.crt"
-        return os.path.normpath(os.path.join(folder, CLIENT_CERT))
+        cache_folder = os.path.dirname(self.filename)
+        try:
+            path = self.get_item("general.client_cert_path")
+        except ConanException:
+            path = os.path.join(cache_folder, "client.crt")
+        else:
+            # For explicit cacert files, the file should already exist
+            path = os.path.join(cache_folder, path)
+            if not os.path.exists(path):
+                raise ConanException("Configured file for 'client_cert_path'"
+                                     " doesn't exists: '{}'".format(path))
+        return os.path.normpath(path)
 
     @property
     def client_cert_key_path(self):
-        CLIENT_KEY = "client.key"
-        folder = os.path.dirname(self.filename)
-        return os.path.normpath(os.path.join(folder, CLIENT_KEY))
+        cache_folder = os.path.dirname(self.filename)
+        try:
+            path = self.get_item("general.client_cert_key_path")
+        except ConanException:
+            path = os.path.join(cache_folder, "client.key")
+        else:
+            # For explicit cacert files, the file should already exist
+            path = os.path.join(cache_folder, path)
+            if not os.path.exists(path):
+                raise ConanException("Configured file for 'client_cert_key_path'"
+                                     " doesn't exists: '{}'".format(path))
+        return os.path.normpath(path)
 
     @property
     def hooks(self):

@@ -10,33 +10,40 @@ from conans import ConanFile
 class AConan(ConanFile):
     name = "basic"
     version = "0.1"
-    
+
     def package_info(self):
         self.cpp_info.defines = ["ACONAN"]
 """
 
 complete_hook = """
+import os
 from conans.model.ref import ConanFileReference
 
 
 def pre_export(output, conanfile, conanfile_path, reference, **kwargs):
     assert conanfile
+    assert conanfile.recipe_folder == os.path.dirname(conanfile_path)
     output.info("conanfile_path=%s" % conanfile_path)
     output.info("reference=%s" % reference.full_str())
 
 def post_export(output, conanfile, conanfile_path, reference, **kwargs):
     assert conanfile
+    # In this case the recipe folder is different than the final export folder
+    # TODO: If export_folder will be defined it should match
+    assert conanfile.recipe_folder != os.path.dirname(conanfile_path)
     output.info("conanfile_path=%s" % conanfile_path)
     output.info("reference=%s" % reference.full_str())
 
 def pre_source(output, conanfile, conanfile_path, **kwargs):
     assert conanfile
+    assert conanfile.recipe_folder == os.path.dirname(conanfile_path)
     output.info("conanfile_path=%s" % conanfile_path)
     if conanfile.in_local_cache:
         output.info("reference=%s" % kwargs["reference"].full_str())
 
 def post_source(output, conanfile, conanfile_path, **kwargs):
     assert conanfile
+    assert conanfile.recipe_folder == os.path.dirname(conanfile_path)
     output.info("conanfile_path=%s" % conanfile_path)
     if conanfile.in_local_cache:
         output.info("reference=%s" % kwargs["reference"].full_str())
@@ -59,6 +66,7 @@ def post_build(output, conanfile, **kwargs):
 
 def pre_package(output, conanfile, conanfile_path, **kwargs):
     assert conanfile
+    assert conanfile.recipe_folder == os.path.dirname(conanfile_path)
     output.info("conanfile_path=%s" % conanfile_path)
     if conanfile.in_local_cache:
         output.info("reference=%s" % kwargs["reference"].full_str())
@@ -66,6 +74,7 @@ def pre_package(output, conanfile, conanfile_path, **kwargs):
 
 def post_package(output, conanfile, conanfile_path, **kwargs):
     assert conanfile
+    assert conanfile.recipe_folder == os.path.dirname(conanfile_path)
     output.info("conanfile_path=%s" % conanfile_path)
     if conanfile.in_local_cache:
         output.info("reference=%s" % kwargs["reference"].full_str())
@@ -132,7 +141,7 @@ def post_download_package(output, conanfile_path, reference, package_id, remote,
     output.info("reference=%s" % reference.full_str())
     output.info("package_id=%s" % package_id)
     output.info("remote.name=%s" % remote.name)
-    
+
 def pre_package_info(output, conanfile, reference, **kwargs):
     output.info("reference=%s" % reference.full_str())
     output.info("conanfile.cpp_info.defines=%s" % conanfile.cpp_info.defines)

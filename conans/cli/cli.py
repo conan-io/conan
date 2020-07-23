@@ -1,17 +1,16 @@
+import importlib
 import os
+import pkgutil
 import signal
 import sys
 from collections import defaultdict
 from difflib import get_close_matches
-from inspect import getmembers, isclass
-import importlib
-import pkgutil
+from inspect import getmembers
 
 from conans import __version__ as client_version
 from conans.cli.command import ConanSubCommand
 from conans.cli.exit_codes import SUCCESS, ERROR_MIGRATION, ERROR_GENERAL, USER_CTRL_C, \
     ERROR_SIGTERM, USER_CTRL_BREAK, ERROR_INVALID_CONFIGURATION
-from conans.util.env_reader import get_env
 from conans.client.conan_api import Conan
 from conans.errors import ConanException, ConanInvalidConfiguration, ConanMigrationError
 from conans.util.files import exception_message_safe

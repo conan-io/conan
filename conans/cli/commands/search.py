@@ -36,7 +36,7 @@ def apiv2_search_recipes(query, remote_patterns=None, local_cache=False):
     return search_results
 
 
-@conan_command(group="Consumer commands", formatters={"cli": output_search_cli,
+@conan_command(group="Consumer", formatters={"cli": output_search_cli,
                                                       "json": output_search_json})
 def search(*args, conan_api, parser, **kwargs):
     """
