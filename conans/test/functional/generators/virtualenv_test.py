@@ -3,13 +3,12 @@ import platform
 import subprocess
 import textwrap
 import unittest
-import shutil
 
 import six
 from parameterized.parameterized import parameterized_class
 
 from conans.client.generators.virtualenv import VirtualEnvGenerator
-from conans.client.tools import OSInfo
+from conans.client.tools import OSInfo, files as tools_files
 from conans.client.tools.env import environment_append
 from conans.model.ref import ConanFileReference
 from conans.test.functional.graph.graph_manager_base import GraphManagerTest
@@ -111,7 +110,7 @@ class PowerShellCommands(object):
 
     @property
     def skip(self):
-        return not (os_info.is_windows or shutil.which("pwsh"))
+        return not (os_info.is_windows or tools_files.which("pwsh"))
 
 
 class WindowsCmdCommands(object):
