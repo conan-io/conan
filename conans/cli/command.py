@@ -118,22 +118,18 @@ class ConanCommand(BaseConanCommand):
         self._subcommands[subcommand.name] = subcommand
 
     def run(self, *args, conan_api, **kwargs):
-        try:
-            info = self._method(*args, conan_api=conan_api, **kwargs)
-            if not self._subcommands:
-                parser_args = self._parser.parse_args(*args)
-                if info:
-                    self._formatters[parser_args.output](info, conan_api.out)
+        info = self._method(*args, conan_api=conan_api, **kwargs)
+        if not self._subcommands:
+            parser_args = self._parser.parse_args(*args)
+            if info:
+                self._formatters[parser_args.output](info, conan_api.out)
+        else:
+            arg_list, = args
+            subcommand = arg_list[0]
+            if subcommand in self._subcommands:
+                self._subcommands[subcommand].run(*args, conan_api=conan_api, **kwargs)
             else:
-                arg_list, = args
-                subcommand = arg_list[0]
-                if subcommand in self._subcommands:
-                    self._subcommands[subcommand].run(*args, conan_api=conan_api, **kwargs)
-                else:
-                    self._parser.parse_args(*args)
-
-        except Exception:
-            raise
+                self._parser.parse_args(*args)
 
     @property
     def group(self):
