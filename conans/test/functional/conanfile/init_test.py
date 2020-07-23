@@ -17,7 +17,7 @@ class InitTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile})
         client.run("inspect .", assert_error=True)
         self.assertIn("Error in init() method, line 5", client.out)
-        self.assertIn("NameError: name 'random_error' is not defined", client.out)
+        self.assertIn("name 'random_error' is not defined", client.out)
 
     def init_test(self):
         client = TestClient()
