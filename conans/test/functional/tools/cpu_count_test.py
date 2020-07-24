@@ -4,14 +4,14 @@ from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient
 
 conanfile = """
-from conans import ConanFile
+from conans import ConanFile, tools
 
 class AConan(ConanFile):
     name = "Hello0"
     version = "0.1"
 
     def build(self):
-        self.output.warn("CPU COUNT=> %s" % self.tools.cpu_count())
+        self.output.warn("CPU COUNT=> %s" % tools.cpu_count())
 
 """
 

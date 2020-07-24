@@ -29,6 +29,7 @@ from conans.util.files import _generic_algorithm_sum, load, md5, md5sum, mkdir, 
 from conans.util.log import logger
 from conans.client.tools.version import Version
 from conans.client.build.cppstd_flags import cppstd_flag_new as cppstd_flag  # pylint: disable=unused-import
+from conans.client.tools.settings import valid_min_cppstd, check_min_cppstd
 
 
 class Tools(object):
@@ -77,12 +78,9 @@ class Tools(object):
         self.get_cross_building_settings = tools_oss.get_cross_building_settings
         self.get_gnu_triplet = tools_oss.get_gnu_triplet
 
-        # Ready to use objects.
-        try:
-            self.os_info = self.OSInfo()
-        except Exception as exc:
-            logger.error(exc)
-            self.output.error("Error detecting os_info")
+        self.check_min_cppstd = check_min_cppstd
+        self.valid_min_cppstd = valid_min_cppstd
+        self.os_info = self.OSInfo()
 
 
 # This global variables are intended to store the configuration of the running Conan application
@@ -221,3 +219,11 @@ MSYS = tools_win.MSYS
 CYGWIN = tools_win.CYGWIN
 WSL = tools_win.WSL
 SFU = tools_win.SFU
+
+# Ready to use objects.
+try:
+    os_info = tools_oss.OSInfo()
+except Exception as exc:
+    logger.error(exc)
+    output = ConanOutput(sys.stdout, sys.stderr, True)
+    output.error("Error detecting os_info")

@@ -12,7 +12,7 @@ from conans.util.files import save, load
 from conans.tools import Tools
 
 base_conanfile = '''
-from conans import ConanFile
+from conans import ConanFile, tools
 import os
 
 class ConanFileToolsTest(ConanFile):
@@ -28,7 +28,7 @@ class ToolsFilesPatchTest(unittest.TestCase):
         if strip:
             file_content = base_conanfile + '''
     def build(self):
-        self.tools.patch(patch_file="file.patch", strip=%s)
+        tools.patch(patch_file="file.patch", strip=%s)
 ''' % strip
             patch_content = '''--- %s/text.txt\t2016-01-25 17:57:11.452848309 +0100
 +++ %s/text_new.txt\t2016-01-25 17:57:28.839869950 +0100
@@ -38,7 +38,7 @@ class ToolsFilesPatchTest(unittest.TestCase):
         else:
             file_content = base_conanfile + '''
     def build(self):
-        self.tools.patch(patch_file="file.patch")
+        tools.patch(patch_file="file.patch")
 '''
             patch_content = '''--- text.txt\t2016-01-25 17:57:11.452848309 +0100
 +++ text_new.txt\t2016-01-25 17:57:28.839869950 +0100
@@ -59,7 +59,7 @@ class ToolsFilesPatchTest(unittest.TestCase):
 @@ -1 +1 @@
 -ONE TWO THREE
 +ONE TWO DOH!\'''
-        self.tools.patch(patch_string=patch_content)
+        tools.patch(patch_string=patch_content)
 
 '''
         tmp_dir, file_path, text_file = self._save_files(file_content)
@@ -67,10 +67,10 @@ class ToolsFilesPatchTest(unittest.TestCase):
 
     def test_patch_strip_new(self):
         conanfile = dedent("""
-            from conans import ConanFile
+            from conans import ConanFile, tools
             class PatchConan(ConanFile):
                 def source(self):
-                    self.tools.patch(self.source_folder, "example.patch", strip=1)""")
+                    tools.patch(self.source_folder, "example.patch", strip=1)""")
         patch = dedent("""
             --- /dev/null
             +++ b/src/newfile
@@ -85,10 +85,10 @@ class ToolsFilesPatchTest(unittest.TestCase):
 
     def test_patch_strip_delete(self):
         conanfile = dedent("""
-            from conans import ConanFile
+            from conans import ConanFile, tools
             class PatchConan(ConanFile):
                 def source(self):
-                    self.tools.patch(self.source_folder, "example.patch", strip=1)""")
+                    tools.patch(self.source_folder, "example.patch", strip=1)""")
         patch = dedent("""
             --- a\src\oldfile
             +++ b/dev/null
@@ -105,10 +105,10 @@ class ToolsFilesPatchTest(unittest.TestCase):
 
     def test_patch_strip_delete_no_folder(self):
         conanfile = dedent("""
-            from conans import ConanFile
+            from conans import ConanFile, tools
             class PatchConan(ConanFile):
                 def source(self):
-                    self.tools.patch(self.source_folder, "example.patch", strip=1)""")
+                    tools.patch(self.source_folder, "example.patch", strip=1)""")
         patch = dedent("""
             --- a/oldfile
             +++ b/dev/null
@@ -126,7 +126,7 @@ class ToolsFilesPatchTest(unittest.TestCase):
     def test_patch_new_delete(self):
         conanfile = base_conanfile + '''
     def build(self):
-        self.tools.save("oldfile", "legacy code")
+        tools.save("oldfile", "legacy code")
         assert(os.path.exists("oldfile"))
         patch_content = """--- /dev/null
 +++ b/newfile
@@ -139,8 +139,8 @@ class ToolsFilesPatchTest(unittest.TestCase):
 @@ -0,1 +0,0 @@
 -legacy code
 """
-        self.tools.patch(patch_string=patch_content)
-        self.output.info("NEW FILE=%s" % self.tools.load("newfile"))
+        tools.patch(patch_string=patch_content)
+        self.output.info("NEW FILE=%s" % tools.load("newfile"))
         self.output.info("OLD FILE=%s" % os.path.exists("oldfile"))
 '''
         client = TestClient()
@@ -160,8 +160,8 @@ class ToolsFilesPatchTest(unittest.TestCase):
 +New file!
 +New file!
 """
-        self.tools.patch(patch_string=patch_content, strip=1)
-        self.output.info("NEW FILE=%s" % self.tools.load("newfile"))
+        tools.patch(patch_string=patch_content, strip=1)
+        self.output.info("NEW FILE=%s" % tools.load("newfile"))
 '''
         client = TestClient()
         client.save({"conanfile.py": conanfile})
@@ -173,7 +173,7 @@ class ToolsFilesPatchTest(unittest.TestCase):
         file_content = base_conanfile + '''
     def build(self):
         patch_content = "some corrupted patch"
-        self.tools.patch(patch_string=patch_content, output=self.output)
+        tools.patch(patch_string=patch_content, output=self.output)
 
 '''
         client = TestClient()
@@ -190,7 +190,7 @@ class ToolsFilesPatchTest(unittest.TestCase):
         """
 
         conanfile = dedent("""
-            from conans import ConanFile
+            from conans import ConanFile, tools
             import os
 
             class ConanFileToolsTest(ConanFile):
@@ -199,7 +199,7 @@ class ToolsFilesPatchTest(unittest.TestCase):
                 exports_sources = "*"
 
                 def build(self):
-                    self.tools.patch(patch_file="add_files.patch")
+                    tools.patch(patch_file="add_files.patch")
                     assert os.path.isfile("foo.txt")
                     assert os.path.isfile("bar.txt")
         """)
@@ -287,7 +287,7 @@ Just the wind that smells fresh before the storm."""), foo_content)
                 exports_sources = "*"
 
                 def build(self):
-                    self.tools.patch(patch_file="fuzzy.patch", fuzz=True)
+                    tools.patch(patch_file="fuzzy.patch", fuzz=True)
         """)
         source = dedent("""X
 Y

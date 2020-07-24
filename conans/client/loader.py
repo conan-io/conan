@@ -22,6 +22,7 @@ from conans.model.values import Values
 from conans.paths import DATA_YML
 from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
 from conans.util.files import load
+from conans.client.build.cmake import CMake
 
 
 class ConanFileLoader(object):
@@ -31,6 +32,9 @@ class ConanFileLoader(object):
         self._pyreq_loader = pyreq_loader
         self._python_requires = python_requires
         sys.modules["conans"].python_requires = python_requires
+        sys.modules["conans"].tools = tools
+        # Ugly, module injection, is there alternative way?
+        sys.modules["conans"].tools.CMake = CMake
         self._cached_conanfile_classes = {}
         self._tools = tools
 
@@ -63,7 +67,6 @@ class ConanFileLoader(object):
                 self._pyreq_loader.load_py_requires(conanfile, lock_python_requires, self)
 
             conanfile.recipe_folder = os.path.dirname(conanfile_path)
-            conanfile.tools = self._tools
 
             # If the scm is inherited, create my own instance
             if hasattr(conanfile, "scm") and "scm" not in conanfile.__class__.__dict__:
