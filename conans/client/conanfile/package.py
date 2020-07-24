@@ -9,7 +9,7 @@ from conans.errors import ConanException, ConanExceptionInUserConanfileMethod, \
 from conans.model.conan_file import get_env_context_manager
 from conans.model.manifest import FileTreeManifest
 from conans.paths import CONANINFO
-from conans.tools import chdir
+from conans.tools.files import chdir
 from conans.util.conan_v2_mode import conan_v2_property
 from conans.util.files import save, mkdir, rmdir
 from conans.util.log import logger

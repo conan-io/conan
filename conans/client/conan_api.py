@@ -61,7 +61,6 @@ from conans.model.workspace import Workspace
 from conans.paths import BUILD_INFO, CONANINFO, get_conan_user_home
 from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
 from conans.search.search import search_recipes
-from conans.tools import set_global_instances
 from conans.unicode import get_cwd
 from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
 from conans.util.env_reader import get_env
@@ -190,9 +189,6 @@ class ConanApp(object):
         # Handle remote connections
         self.remote_manager = RemoteManager(self.cache, auth_manager, self.out, self.hook_manager)
 
-        # Adjust global tool variables
-        set_global_instances(self.out, self.requester, self.config)
-
         self.runner = runner or ConanRunner(self.config.print_commands_to_output,
                                             self.config.generate_run_log_file,
                                             self.config.log_run_to_output,
@@ -202,7 +198,7 @@ class ConanApp(object):
         self.range_resolver = RangeResolver(self.cache, self.remote_manager)
         self.python_requires = ConanPythonRequire(self.proxy, self.range_resolver)
         self.pyreq_loader = PyRequireLoader(self.proxy, self.range_resolver)
-        self.loader = ConanFileLoader(self.runner, self.out, self.python_requires, self.pyreq_loader)
+        self.loader = ConanFileLoader(self.runner, self.out, self.python_requires, self.pyreq_loader, self.requester, self.config)
 
         self.binaries_analyzer = GraphBinariesAnalyzer(self.cache, self.out, self.remote_manager)
         self.graph_manager = GraphManager(self.out, self.cache, self.remote_manager, self.loader,

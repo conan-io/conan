@@ -25,13 +25,15 @@ from conans.util.files import load
 
 
 class ConanFileLoader(object):
-    def __init__(self, runner, output, python_requires, pyreq_loader=None):
+    def __init__(self, runner, output, python_requires, pyreq_loader=None, requester=None, config=None):
         self._runner = runner
         self._output = output
         self._pyreq_loader = pyreq_loader
         self._python_requires = python_requires
         sys.modules["conans"].python_requires = python_requires
         self._cached_conanfile_classes = {}
+        self._requester = requester
+        self._config = config
 
     def load_basic(self, conanfile_path, lock_python_requires=None, user=None, channel=None,
                    display=""):
@@ -62,6 +64,8 @@ class ConanFileLoader(object):
                 self._pyreq_loader.load_py_requires(conanfile, lock_python_requires, self)
 
             conanfile.recipe_folder = os.path.dirname(conanfile_path)
+            conanfile.requester = self._requester
+            conanfile.config = self._config
 
             # If the scm is inherited, create my own instance
             if hasattr(conanfile, "scm") and "scm" not in conanfile.__class__.__dict__:

@@ -52,7 +52,7 @@ def ftp_download(ip, filename, login='', password=''):
 
 
 def download(url, filename, verify=True, out=None, retry=None, retry_wait=None, overwrite=False,
-             auth=None, headers=None, requester=None, md5='', sha1='', sha256=''):
+             auth=None, headers=None, requester=None, config=None, md5='', sha1='', sha256=''):
     """Retrieves a file from a given URL into a file with a given filename.
        It uses certificates from a list of known verifiers for https downloads,
        but this can be optionally disabled.
@@ -79,7 +79,6 @@ def download(url, filename, verify=True, out=None, retry=None, retry_wait=None, 
     """
     out = default_output(out, 'conans.client.tools.net.download')
     requester = default_requester(requester, 'conans.client.tools.net.download')
-    from conans.tools import _global_config as config
 
     # It might be possible that users provide their own requester
     retry = retry if retry is not None else config.retry

@@ -12,7 +12,7 @@ from conans.client.tools.win import vcvars_command
 from conans.errors import ConanException
 from conans.model.conan_file import ConanFile
 from conans.model.version import Version
-from conans.tools import vcvars_command as tools_vcvars_command
+from conans.client.tools.win import vcvars_command as tools_vcvars_command
 from conans.util.env_reader import get_env
 from conans.util.files import decode_text, save
 from conans.util.runners import version_runner
