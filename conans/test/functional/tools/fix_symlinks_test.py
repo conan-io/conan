@@ -14,14 +14,14 @@ class FixSymlinksTestCase(unittest.TestCase):
     conanfile = textwrap.dedent("""
         import os
         import shutil
-        from conans import ConanFile, tools
+        from conans import ConanFile
 
         class Recipe(ConanFile):
             options = {"raise_if_error": [True, False]}
             default_options = {"raise_if_error": False}
 
             def build(self):
-                tools.save(os.path.join(self.build_folder, "build.txt"), "contents")
+                self.tools.save(os.path.join(self.build_folder, "build.txt"), "contents")
 
             def package(self):
                 os.symlink('/dev/null', os.path.join(self.package_folder, "black_hole"))
@@ -31,13 +31,13 @@ class FixSymlinksTestCase(unittest.TestCase):
                            os.path.join(self.package_folder, "outside_symlink.txt"))
 
                 # Files: A regular file with symlinks to it
-                tools.save(os.path.join(self.package_folder, "regular.txt"), "contents")
+                self.tools.save(os.path.join(self.package_folder, "regular.txt"), "contents")
                 os.symlink(os.path.join(self.package_folder, "regular.txt"),
                            os.path.join(self.package_folder, "absolute_symlink.txt"))
                 os.symlink("regular.txt", os.path.join(self.package_folder, "relative_symlink.txt"))
 
                 # Files: A broken symlink
-                tools.save(os.path.join(self.package_folder, "file.txt"), "contents")
+                self.tools.save(os.path.join(self.package_folder, "file.txt"), "contents")
                 os.symlink(os.path.join(self.package_folder, "file.txt"),
                            os.path.join(self.package_folder, "broken.txt"))
                 os.unlink(os.path.join(self.package_folder, "file.txt"))
@@ -46,13 +46,13 @@ class FixSymlinksTestCase(unittest.TestCase):
                 os.symlink(self.build_folder, os.path.join(self.package_folder, "outside_folder"))
 
                 # Folder: a regular folder and symlinks to it
-                tools.save(os.path.join(self.package_folder, "folder", "file.txt"), "contents")
+                self.tools.save(os.path.join(self.package_folder, "folder", "file.txt"), "contents")
                 os.symlink(os.path.join(self.package_folder, "folder"),
                            os.path.join(self.package_folder, "absolute"))
                 os.symlink("folder", os.path.join(self.package_folder, "relative"))
 
                 # Folder: broken symlink
-                tools.save(os.path.join(self.package_folder, "tmp", "file.txt"), "contents")
+                self.tools.save(os.path.join(self.package_folder, "tmp", "file.txt"), "contents")
                 os.symlink(os.path.join(self.package_folder, "tmp"),
                            os.path.join(self.package_folder, "broken_folder"))
                 shutil.rmtree(os.path.join(self.package_folder, "tmp"))
@@ -62,7 +62,7 @@ class FixSymlinksTestCase(unittest.TestCase):
                            os.path.join(self.package_folder, "abs_to_file_in_folder.txt"))
 
                 # --> Run the tool
-                tools.fix_symlinks(self, raise_if_error=self.options.raise_if_error)
+                self.tools.fix_symlinks(self, raise_if_error=self.options.raise_if_error)
     """)
 
     def test_error_reported(self):

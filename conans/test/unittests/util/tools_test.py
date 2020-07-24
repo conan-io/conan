@@ -16,6 +16,8 @@ from parameterized import parameterized
 from requests.models import Response
 
 from conans.client import tools
+from conans.client.graph.python_requires import ConanPythonRequire
+from conans.client.loader import _parse_conanfile, ConanFileLoader
 from conans.client.cache.cache import CONAN_CONF
 from conans.client.conan_api import ConanAPIV1
 from conans.client.conf import get_default_settings_yml, get_default_client_conf
@@ -29,7 +31,6 @@ from conans.model.settings import Settings
 from conans.test.utils.conanfile import ConanFileMock
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import StoppableThreadBottle, TestBufferConanOutput, TestClient
-from conans.tools import get_global_instances
 from conans.util.env_reader import get_env
 from conans.util.files import load, md5, mkdir, save
 from conans.util.runners import check_output_runner
@@ -238,37 +239,6 @@ class HelloConan(ConanFile):
         with tools.environment_append({"CONAN_RUN_TESTS": "1"}):
             client.run("install .")
             client.run("build .")
-
-    def test_global_tools_overrided(self):
-        client = TestClient()
-
-        conanfile = """
-from conans import ConanFile, tools
-
-class HelloConan(ConanFile):
-    name = "Hello"
-    version = "0.1"
-
-    def build(self):
-        assert(tools._global_requester != None)
-        assert(tools._global_output != None)
-        """
-        client.save({"conanfile.py": conanfile})
-
-        client.run("install .")
-        client.run("build .")
-
-        # Not test the real commmand get_command if it's setting the module global vars
-        tmp = temp_folder()
-        conf = get_default_client_conf().replace("\n[proxies]", "\n[proxies]\nhttp = http://myproxy.com")
-        os.mkdir(os.path.join(tmp, ".conan"))
-        save(os.path.join(tmp, ".conan", CONAN_CONF), conf)
-        with tools.environment_append({"CONAN_USER_HOME": tmp}):
-            conan_api, _, _ = ConanAPIV1.factory()
-        conan_api.remote_list()
-        global_output, global_requester = get_global_instances()
-        self.assertEqual(global_requester.proxies, {"http": "http://myproxy.com"})
-        self.assertIsNotNone(global_output.warn)
 
     def test_environment_nested(self):
         with tools.environment_append({"A": "1", "Z": "40"}):

@@ -10,7 +10,6 @@ class CppStdMinimumVersionTests(unittest.TestCase):
     CONANFILE = dedent("""
         import os
         from conans import ConanFile
-        from conans.tools import check_min_cppstd, valid_min_cppstd
 
         class Fake(ConanFile):
             name = "fake"
@@ -18,7 +17,7 @@ class CppStdMinimumVersionTests(unittest.TestCase):
             settings = "compiler"
 
             def configure(self):
-                check_min_cppstd(self, "17", False)
+                self.tools.check_min_cppstd(self, "17", False)
                 self.output.info("valid standard")
                 assert valid_min_cppstd(self, "17", False)
         """)
