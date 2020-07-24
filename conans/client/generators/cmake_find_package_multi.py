@@ -279,8 +279,13 @@ set_property(TARGET {name}::{name}
             ret["{}ConfigVersion.cmake".format(pkg_filename)] = self.config_version_template. \
                 format(version=pkg_version)
             if not cpp_info.components:
-                public_deps_names = [self.deps_build_info[dep].get_name("cmake_find_package_multi")
-                                     for dep in cpp_info.public_deps]
+                public_deps_names = [
+                    {
+                      "name": self.deps_build_info[dep].get_name("cmake_find_package_multi"),
+                      "filename": self.deps_build_info[dep].get_filename("cmake_find_package_multi")
+                    }
+                    for dep in cpp_info.public_deps
+                ]
                 ret["{}Config.cmake".format(pkg_filename)] = self._config(
                     filename=pkg_filename,
                     name=pkg_findname,
@@ -292,7 +297,7 @@ set_property(TARGET {name}::{name}
                 # If any config matches the build_type one, add it to the cpp_info
                 dep_cpp_info = extend(cpp_info, build_type.lower())
                 deps = DepsCppCmake(dep_cpp_info)
-                deps_names = ";".join(["{n}::{n}".format(n=n) for n in public_deps_names])
+                deps_names = ";".join(["{n}::{n}".format(n=n['name']) for n in public_deps_names])
                 find_lib = target_template.format(name=pkg_filename, deps=deps,
                                                   build_type_suffix=build_type_suffix,
                                                   deps_names=deps_names)

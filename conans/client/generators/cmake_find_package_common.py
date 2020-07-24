@@ -81,9 +81,9 @@ def find_transitive_dependencies(public_deps_names, find_modules):
     if find_modules:  # for cmake_find_package generator
         find = textwrap.dedent("""
             if(NOT {dep_name}_FOUND)
-                find_dependency({dep_name} REQUIRED)
+                find_dependency({dep_filename} REQUIRED)
             else()
-                message(STATUS "Dependency {dep_name} already found")
+                message(STATUS "Dependency {dep_filename} already found")
             endif()
             """)
     else:  # for cmake_find_package_multi generator
@@ -92,17 +92,18 @@ def find_transitive_dependencies(public_deps_names, find_modules):
         find = textwrap.dedent("""
             if(NOT {dep_name}_FOUND)
                 if(${{CMAKE_VERSION}} VERSION_LESS "3.9.0")
-                    find_package({dep_name} REQUIRED NO_MODULE)
+                    find_package({dep_filename} REQUIRED NO_MODULE)
                 else()
-                    find_dependency({dep_name} REQUIRED NO_MODULE)
+                    find_dependency({dep_filename} REQUIRED NO_MODULE)
                 endif()
             else()
-                message(STATUS "Dependency {dep_name} already found")
+                message(STATUS "Dependency {dep_filename} already found")
             endif()
             """)
     lines = ["", "# Library dependencies", "include(CMakeFindDependencyMacro)"]
     for dep_name in public_deps_names:
-        lines.append(find.format(dep_name=dep_name))
+        lines.append(find.format(dep_name=dep_name['name'],
+                                 dep_filename=dep_name['filename']))
     return "\n".join(lines)
 
 
