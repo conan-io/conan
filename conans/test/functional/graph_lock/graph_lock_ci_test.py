@@ -530,22 +530,14 @@ class CIPythonRequiresTest(unittest.TestCase):
         to_build = json.loads(json_file)
         if client.cache.config.revisions_enabled:
             build_order = [[['PkgC/0.1@user/channel#9e5471ca39a16a120b25ee5690539c71',
-   'bca7337f8d2fde6cdc9dd17cdc56bc0b0a0e352d',
-   'host',
-   '4']],
- [['PkgD/0.1@user/channel#068fd3ce2a88181dff0b44de344a93a4',
-   '63a3463d4dd4cc8d7bca7a9fe5140abe582f349a',
-   'host',
-   '3']]]
+                             'bca7337f8d2fde6cdc9dd17cdc56bc0b0a0e352d', 'host', '4']],
+                           [['PkgD/0.1@user/channel#068fd3ce2a88181dff0b44de344a93a4',
+                             '63a3463d4dd4cc8d7bca7a9fe5140abe582f349a', 'host', '3']]]
         else:
             build_order = [[['PkgC/0.1@user/channel',
-   'bca7337f8d2fde6cdc9dd17cdc56bc0b0a0e352d',
-   'host',
-   '4']],
- [['PkgD/0.1@user/channel',
-   '63a3463d4dd4cc8d7bca7a9fe5140abe582f349a',
-   'host',
-   '3']]]
+                             'bca7337f8d2fde6cdc9dd17cdc56bc0b0a0e352d', 'host', '4']],
+                           [['PkgD/0.1@user/channel',
+                             '63a3463d4dd4cc8d7bca7a9fe5140abe582f349a', 'host', '3']]]
         self.assertEqual(to_build, build_order)
 
         client.run("install PkgD/0.1@user/channel --lockfile=conan.lock --build=missing")
@@ -618,42 +610,26 @@ class CIBuildRequiresTest(unittest.TestCase):
         to_build = json.loads(json_file)
         if client.cache.config.revisions_enabled:
             build_order = [[['br/0.1@user/channel#f3367e0e7d170aa12abccb175fee5f97',
-   '5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9',
-   'host',
-   '5']],
- [['PkgA/0.1@user/channel#189390ce059842ce984e0502c52cf736',
-   '5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9',
-   'host',
-   '4']],
- [['PkgB/0.1@user/channel#fa97c46bf83849a5db4564327b3cfada',
-   '096f747d204735584fa0115bcbd7482d424094bc',
-   'host',
-   '3']],
- [['PkgC/0.1@user/channel#c6f95948619d28d9d96b0ae86c46a482',
-   'f6d5dbb6f309dbf8519278bae8d07d3b739b3dec',
-   'host',
-   '2']],
- [['PkgD/0.1@user/channel#fce78c934bc0de73eeb05eb4060fc2b7',
-   'de4467a3fa6ef01b09b7464e85553fb4be2d2096',
-   'host',
-   '1']]]
+                             '5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9', 'host', '5']],
+                           [['PkgA/0.1@user/channel#189390ce059842ce984e0502c52cf736',
+                             '5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9', 'host', '4']],
+                           [['PkgB/0.1@user/channel#fa97c46bf83849a5db4564327b3cfada',
+                             '096f747d204735584fa0115bcbd7482d424094bc', 'host', '3']],
+                           [['PkgC/0.1@user/channel#c6f95948619d28d9d96b0ae86c46a482',
+                             'f6d5dbb6f309dbf8519278bae8d07d3b739b3dec', 'host', '2']],
+                           [['PkgD/0.1@user/channel#fce78c934bc0de73eeb05eb4060fc2b7',
+                             'de4467a3fa6ef01b09b7464e85553fb4be2d2096', 'host', '1']]]
         else:
             build_order = [[['br/0.1@user/channel',
                              '5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9', 'host', '5']],
                            [['PkgA/0.1@user/channel',
-                           '5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9', 'host', '4']],
-                         [['PkgB/0.1@user/channel',
-                           '096f747d204735584fa0115bcbd7482d424094bc',
-                           'host',
-                           '3']],
-                         [['PkgC/0.1@user/channel',
-                           'f6d5dbb6f309dbf8519278bae8d07d3b739b3dec',
-                           'host',
-                           '2']],
-                         [['PkgD/0.1@user/channel',
-                           'de4467a3fa6ef01b09b7464e85553fb4be2d2096',
-                           'host',
-                           '1']]]
+                             '5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9', 'host', '4']],
+                           [['PkgB/0.1@user/channel',
+                             '096f747d204735584fa0115bcbd7482d424094bc', 'host', '3']],
+                           [['PkgC/0.1@user/channel',
+                             'f6d5dbb6f309dbf8519278bae8d07d3b739b3dec', 'host', '2']],
+                           [['PkgD/0.1@user/channel',
+                             'de4467a3fa6ef01b09b7464e85553fb4be2d2096', 'host', '1']]]
 
         self.assertEqual(to_build, build_order)
         lock_fileaux = master_lockfile
