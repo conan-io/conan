@@ -100,9 +100,9 @@ class PkgConfigGeneratorWithComponentsTest(unittest.TestCase):
         """)
         self._create_world(client, conanfile=conanfile)
         client.run("install world/0.0.1@ -g pkg_config")
-        world_pc = client.load(os.path.join(client.current_folder, "world.pc"))
-        worldall_pc = client.load(os.path.join(client.current_folder, "worldall.pc"))
-        helloworld_pc = client.load(os.path.join(client.current_folder, "helloworld.pc"))
+        world_pc = client.load(os.path.join(client.current_folder, "World.pc"))
+        worldall_pc = client.load(os.path.join(client.current_folder, "Worldall.pc"))
+        helloworld_pc = client.load(os.path.join(client.current_folder, "Helloworld.pc"))
         self.assertIn("Requires: Bye Helloworld", worldall_pc)
         self.assertIn("Requires: Hello", helloworld_pc)
         self.assertIn("Requires: Helloworld Worldall", world_pc)  #TODO reverse order?
