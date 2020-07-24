@@ -25,8 +25,8 @@ class VirtualEnvGenerator(Generator):
         if os_info.is_windows and not os_info.is_posix:
             result.update(env_files(self.env, self.append_with_spaces, BAT_FLAVOR, self.output_path,
                                     self.suffix, self.venv_name))
-            result.update(env_files(self.env, self.append_with_spaces, PS1_FLAVOR, self.output_path,
-                                    self.suffix, self.venv_name))
+        result.update(env_files(self.env, self.append_with_spaces, PS1_FLAVOR, self.output_path,
+                                self.suffix, self.venv_name))
         result.update(env_files(self.env, self.append_with_spaces, SH_FLAVOR, self.output_path,
                                 self.suffix, self.venv_name))
         return result
