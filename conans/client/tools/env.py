@@ -116,31 +116,64 @@ def remove_from_path(command):
 
 
 def env_diff(cmd, only_diff):
-    known_path_lists = ("include", "lib", "libpath", "path")
+    # TODO: figure out method to read enviroment variables with newlines in their values
+
+    known_path_lists = (
+        "INCLUDE",
+        "LIB",
+        "LIBPATH",
+        "PATH",
+        "CPATH",
+        "C_INCLUDE_PATH",
+        "CPLUS_INCLUDE_PATH",
+        "OBJC_INCLUDE_PATH",
+        "FPATH",
+        "MANPATH",
+        "PYTHONPATH",
+        "CLASSPATH",
+        "LD_LIBRARY_PATH",
+        "DYLD_LIBRARY_PATH",
+        "DYLD_FALLBACK_LIBRARY_PATH",
+        "DYLD_VERSIONED_LIBRARY_PATH",
+        "DYLD_FRAMEWORK_PATH",
+        "DYLD_FALLBACK_FRAMEWORK_PATH",
+        "DYLD_VERSIONED_FRAMEWORK_PATH",
+        "DYLD_ROOT_PATH",
+        "PERL5LIB",
+        "GCONV_PATH",
+        "LOCPATH",
+        "NIS_PATH,"
+        "NLSPATH",
+        "GOPATH"
+    )
+
     if platform.system() == "Windows":
         cmd += " && set"
     else:
-        cmd += " && export"
+        cmd += " && /usr/bin/env"
     ret = check_output_runner(cmd)
-    new_env = {}
-    for line in ret.splitlines():
-        line = line.strip()
 
-        if line == "\n" or not line:
-            continue
+    new_env = {}
+
+    # environment variables and paths are case-insensitive on Windows, case-sensitive otherwise
+    if platform.system() == "Windows":
+        def norm(x): return x.upper()
+    else:
+        def norm(x): return x
+
+    for line in ret.splitlines():
         try:
             name_var, value = line.split("=", 1)
-            name_var = str(name_var)
-            value = str(value)
-            new_value = value.split(os.pathsep) if name_var.lower() in known_path_lists else value
+            new_value = value.split(
+                os.pathsep) if norm(name_var) in known_path_lists else value
             # Return only new vars & changed ones, but only with the changed elements if the var is
             # a list
             if only_diff:
-                old_value = os.environ.get(name_var)
-                if name_var.lower() == "path":
-                    old_values_lower = [v.lower() for v in old_value.split(os.pathsep)]
+                old_value = os.environ.get(name_var, "")
+                if norm(name_var) in known_path_lists:
+                    norm_old_values = [norm(v) for v in old_value.split(os.pathsep)]
                     # Clean all repeated entries, not append if the element was already there
-                    new_env[name_var] = [v for v in new_value if v.lower() not in old_values_lower]
+                    new_env[name_var] = [v for v in new_value if norm(v) not in norm_old_values]
                 elif old_value and value.endswith(os.pathsep + old_value):
                     # The new value ends with separator and the old value, is a list,
                     # get only the new elements
