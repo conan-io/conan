@@ -29,6 +29,7 @@ from conans.util.files import _generic_algorithm_sum, load, md5, md5sum, mkdir, 
 from conans.util.log import logger
 from conans.client.tools.version import Version
 from conans.client.build.cppstd_flags import cppstd_flag_new as cppstd_flag  # pylint: disable=unused-import
+from conans.client.build.cmake import CMake
 
 
 class Tools(object):
@@ -73,17 +74,12 @@ class Tools(object):
         self.detected_architecture = tools_oss.detected_architecture
         self.detected_os = tools_oss.detected_os
         self.OSInfo = tools_oss.OSInfo
+        self.os_info = self.OSInfo()
         self.cross_building = tools_oss.cross_building
         self.get_cross_building_settings = tools_oss.get_cross_building_settings
         self.get_gnu_triplet = tools_oss.get_gnu_triplet
 
-        # Ready to use objects.
-        try:
-            self.os_info = self.OSInfo()
-        except Exception as exc:
-            logger.error(exc)
-            self.output.error("Error detecting os_info")
-
+        self.CMake = CMake
 
 # This global variables are intended to store the configuration of the running Conan application
 #_global_output = None
@@ -221,3 +217,12 @@ MSYS = tools_win.MSYS
 CYGWIN = tools_win.CYGWIN
 WSL = tools_win.WSL
 SFU = tools_win.SFU
+
+# Ready to use objects.
+try:
+    os_info = tools_oss.OSInfo()
+except Exception as exc:
+    logger.error(exc)
+    # no global access for output, fragile
+    output = ConanOutput(sys.stdout, sys.stderr, True)
+    output.error("Error detecting os_info")

@@ -7,7 +7,7 @@ from conans.test.utils.tools import TestClient, TestBufferConanOutput
 
 
 CONAN_RECIPE = """
-from conans import ConanFile, CMake
+from conans import ConanFile
 
 class FooConan(ConanFile):
     name = "foo"
@@ -16,7 +16,7 @@ class FooConan(ConanFile):
     generators = "cmake"
 
     def build(self):
-        cmake = CMake(self)
+        cmake = self.tools.CMake(self)
         cmake.configure()
 """
 
