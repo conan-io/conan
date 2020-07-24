@@ -520,7 +520,7 @@ class ConanAPIV1(object):
                           remote_name=None, verify=None, manifests=None,
                           manifests_interactive=None, build=None, profile_names=None,
                           update=False, generators=None, install_folder=None, cwd=None,
-                          lockfile=None, lockfile_id=None, lockfile_out=None, profile_build=None):
+                          lockfile=None, lockfile_out=None, profile_build=None):
         profile_host = ProfileData(profiles=profile_names, settings=settings, options=options,
                                    env=env)
         recorder = ActionRecorder()
@@ -545,7 +545,7 @@ class ConanAPIV1(object):
                          update=update, manifest_folder=manifest_folder,
                          manifest_verify=manifest_verify,
                          manifest_interactive=manifest_interactive,
-                         generators=generators, recorder=recorder, lockfile_id=lockfile_id)
+                         generators=generators, recorder=recorder)
 
             if lockfile_out:
                 lockfile_out = _make_abs_path(lockfile_out, cwd)
@@ -1304,7 +1304,7 @@ class ConanAPIV1(object):
     @api_method
     def lock_create(self, path, reference=None, name=None, version=None, user=None, channel=None,
                     profile_host=None, profile_build=None, remote_name=None, update=None, build=None,
-                    base=None, lockfile=None, lockfile_id=None, lockfile_out=None):
+                    base=None, lockfile=None, lockfile_out=None):
         # profile_host is mandatory
         profile_host = profile_host or ProfileData(None, None, None, None)
         cwd = get_cwd()
@@ -1348,7 +1348,7 @@ class ConanAPIV1(object):
         # FIXME: Using update as check_update?
         remotes = self.app.load_remotes(remote_name=remote_name, check_updates=update)
         deps_graph = self.app.graph_manager.load_graph(ref_or_path, None, graph_info, build, update,
-                                                       update, remotes, recorder, lockfile_id)
+                                                       update, remotes, recorder)
         print_graph(deps_graph, self.app.out)
 
         # The computed graph-lock by the graph expansion

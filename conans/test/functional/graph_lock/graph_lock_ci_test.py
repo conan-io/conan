@@ -142,21 +142,18 @@ class GraphLockCITest(unittest.TestCase):
         client.run("lock create --reference=PkgD/0.1@user/channel --lockfile-out=conan.lock")
         initial_lockfile = client.load("conan.lock")
 
+        # Do a change in B
+        client.save({"pkgb/myfile.txt": "ByeB World!!"})
         if not partial_lock:
-            # Do a change in B
-            client.save({"pkgb/myfile.txt": "ByeB World!!"})
-            client.run("create pkgb PkgB/0.2@user/channel")
+            client.run("export pkgb PkgB/0.2@user/channel")
 
             # Go back to main orchestrator
-            client.run("lock create --reference=PkgD/0.1@user/channel "
-                       "--lockfile-out=productd.lock")
+            client.run("lock create --reference=PkgD/0.1@user/channel --lockfile-out=productd.lock")
 
             # Now it is locked, PkgA can change
             client.save({"pkga/myfile.txt": "ByeA World!!"})
             client.run("create pkga PkgA/0.2@user/channel")
         else:
-            # Change in B
-            client.save({"pkgb/myfile.txt": "ByeB World!!"})
             client.run("lock create pkgb/conanfile.py --name=PkgB --version=0.2 --user=user "
                        "--channel=channel --lockfile-out=buildb.lock")
             self.assertIn("PkgA/0.1", client.out)
@@ -189,7 +186,7 @@ class GraphLockCITest(unittest.TestCase):
         to_build = json.loads(json_file)
         lock_fileaux = productd_lockfile
         while to_build:
-            for _, ref in to_build[0]:
+            for ref, _, _, _ in to_build[0]:
                 client_aux = TestClient(cache_folder=client.cache_folder)
                 client_aux.save({"productd.lock": lock_fileaux})
                 client_aux.run("install %s --build=%s --lockfile=productd.lock "
@@ -201,6 +198,20 @@ class GraphLockCITest(unittest.TestCase):
             client.run("lock build-order productd.lock --json=bo.json")
             lock_fileaux = client.load("productd.lock")
             to_build = json.loads(client.load("bo.json"))
+
+        # Make sure built packages are marked as modified
+        productd_lockfile = client.load("productd.lock")
+        productd_lockfile_json = json.loads(productd_lockfile)
+        nodes = productd_lockfile_json["graph_lock"]["nodes"]
+        pkgb = nodes["0"] if partial_lock else nodes["3"]
+        pkgc = nodes["4"] if partial_lock else nodes["2"]
+        pkgd = nodes["3"] if partial_lock else nodes["1"]
+        self.assertIn("PkgB/0.2", pkgb["ref"])
+        self.assertTrue(pkgb["modified"])
+        self.assertIn("PkgC/0.1", pkgc["ref"])
+        self.assertTrue(pkgc["modified"])
+        self.assertIn("PkgD/0.1", pkgd["ref"])
+        self.assertTrue(pkgd["modified"])
 
         new_lockfile = client.load("productd.lock")
         client.run("install PkgD/0.1@user/channel --lockfile=productd.lock")
@@ -270,7 +281,7 @@ class GraphLockCITest(unittest.TestCase):
         to_build = json.loads(load(json_file))
         lock_fileaux = master_lockfile
         while to_build:
-            _, ref = to_build[0].pop(0)
+            ref, _, _, _ = to_build[0].pop(0)
             client_aux = TestClient(cache_folder=client.cache_folder)
             client_aux.run("config set general.default_package_id_mode=full_package_mode")
             client_aux.save({LOCKFILE: lock_fileaux})
@@ -421,7 +432,7 @@ class CIPythonRequiresTest(unittest.TestCase):
         to_build = json.loads(json_file)
         lock_fileaux = master_lockfile
         while to_build:
-            for _, ref in to_build[0]:
+            for ref, _, _, _ in to_build[0]:
                 client_aux = TestClient(cache_folder=client.cache_folder)
                 client_aux.save({"conan.lock": lock_fileaux})
                 client_aux.run("install %s --build=%s --lockfile=conan.lock "
@@ -521,8 +532,14 @@ class CIPythonRequiresTest(unittest.TestCase):
             build_order = [[['4', 'PkgC/0.1@user/channel#9e5471ca39a16a120b25ee5690539c71']],
                            [['3', 'PkgD/0.1@user/channel#068fd3ce2a88181dff0b44de344a93a4']]]
         else:
-            build_order = [[['4', 'PkgC/0.1@user/channel']],
-                           [['3', 'PkgD/0.1@user/channel']]]
+            build_order = [[['PkgC/0.1@user/channel',
+   'bca7337f8d2fde6cdc9dd17cdc56bc0b0a0e352d',
+   'host',
+   '4']],
+ [['PkgD/0.1@user/channel',
+   '63a3463d4dd4cc8d7bca7a9fe5140abe582f349a',
+   'host',
+   '3']]]
         self.assertEqual(to_build, build_order)
 
         client.run("install PkgD/0.1@user/channel --lockfile=conan.lock --build=missing")
@@ -600,15 +617,27 @@ class CIBuildRequiresTest(unittest.TestCase):
                            [['2', 'PkgC/0.1@user/channel#c6f95948619d28d9d96b0ae86c46a482']],
                            [['1', 'PkgD/0.1@user/channel#fce78c934bc0de73eeb05eb4060fc2b7']]]
         else:
-            build_order = [[['5', 'br/0.1@user/channel']],
-                           [['4', 'PkgA/0.1@user/channel']],
-                           [['3', 'PkgB/0.1@user/channel']],
-                           [['2', 'PkgC/0.1@user/channel']],
-                           [['1', 'PkgD/0.1@user/channel']]]
+            build_order = [[['br/0.1@user/channel',
+                             '5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9', 'host', '5']],
+                           [['PkgA/0.1@user/channel',
+                           '5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9', 'host', '4']],
+                         [['PkgB/0.1@user/channel',
+                           '096f747d204735584fa0115bcbd7482d424094bc',
+                           'host',
+                           '3']],
+                         [['PkgC/0.1@user/channel',
+                           'f6d5dbb6f309dbf8519278bae8d07d3b739b3dec',
+                           'host',
+                           '2']],
+                         [['PkgD/0.1@user/channel',
+                           'de4467a3fa6ef01b09b7464e85553fb4be2d2096',
+                           'host',
+                           '1']]]
+
         self.assertEqual(to_build, build_order)
         lock_fileaux = master_lockfile
         while to_build:
-            for _, ref in to_build[0]:
+            for ref, _, _, _ in to_build[0]:
                 client_aux = TestClient(cache_folder=client.cache_folder)
                 client_aux.save({LOCKFILE: lock_fileaux})
                 client_aux.run("install %s --build=%s --lockfile=conan.lock "

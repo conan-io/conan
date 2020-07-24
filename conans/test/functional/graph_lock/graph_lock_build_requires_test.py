@@ -30,11 +30,16 @@ class GraphLockBuildRequireTestCase(unittest.TestCase):
         # Compute build order
         t.run("lock build-order conan.lock --json=bo.json")
         if t.cache.config.revisions_enabled:
-            expected = [[['3', 'br/0.1@#99b906c1d69c56560d0b12ff2b3d10c0']],
-                        [['1', 'zlib/0.1@#1ce889ac4d50e301d4817064b4e4b6ee'],
-                         ['2', 'bzip2/0.1@#ac5d76c1046b5effa212f7f69c409a0c']]]
+            expected = [[['br/0.1@#99b906c1d69c56560d0b12ff2b3d10c0',
+                          '5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9', 'host', '3']],
+                        [['zlib/0.1@#1ce889ac4d50e301d4817064b4e4b6ee',
+                          '5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9', 'host', '1'],
+                         ['bzip2/0.1@#ac5d76c1046b5effa212f7f69c409a0c',
+                          '5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9', 'host', '2']]]
         else:
-            expected = [[['3', 'br/0.1@']], [['1', 'zlib/0.1@'], ['2', 'bzip2/0.1@']]]
+            expected = [[['br/0.1@', '5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9', 'host', '3']],
+                        [['zlib/0.1@', '5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9', 'host', '1'],
+                         ['bzip2/0.1@', '5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9', 'host', '2']]]
         self.assertEqual(expected, json.loads(t.load("bo.json")))
 
         # Create the first element of build order
@@ -68,7 +73,9 @@ class GraphLockBuildRequireTestCase(unittest.TestCase):
             expected = [[['2', 'protobuf/0.1@#a2f7b9ca9a4d2ebe512f9bc455802d34']],
                         [['1', 'lib/0.1@#fe41709ab1369302057c10371e86213c']]]
         else:
-            expected = [[['2', 'protobuf/0.1@']], [['1', 'lib/0.1@']]]
+            expected = [[['protobuf/0.1@', '5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9', 'host', '2'],
+                          ['protobuf/0.1@', '5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9', 'build', '3']],
+                         [['lib/0.1@', '20bf540789ab45e970058c07c2360a66d6a77c55', 'host', '1']]]
         self.assertEqual(expected, json.loads(t.load("bo.json")))
 
         # Create the first element of build order
@@ -110,18 +117,19 @@ class GraphLockBuildRequireTestCase(unittest.TestCase):
                          ['protobuf/0.1@#a2f7b9ca9a4d2ebe512f9bc455802d34', 'build', '3']],
                         [['lib/0.1@#fe41709ab1369302057c10371e86213c', 'host', '1']]]
         else:
-            expected = [[['protobuf/0.1@', 'host', '2'], ['protobuf/0.1@', 'build', '3']],
-                        [['lib/0.1@', 'host', '1']]]
+            expected = [[['protobuf/0.1@', 'cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31', 'host', '2'],
+  ['protobuf/0.1@', '3475bd55b91ae904ac96fde0f106a136ab951a5e', 'build', '3']],
+ [['lib/0.1@', '20bf540789ab45e970058c07c2360a66d6a77c55', 'host', '1']]]
         self.assertEqual(expected, json.loads(t.load("bo.json")))
 
         # Create the first element of build order
-        t.run("install protobuf/0.1@ --lockfile=conan.lock --lockfile-id=2 --build=protobuf "
+        t.run("install protobuf/0.1@ --lockfile=conan.lock --build=protobuf "
               "--lockfile-out=conan.lock")
         print(t.load("conan.lock"))
 
         self.assertIn("protobuf/0.1: Package 'cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31' created",
                       t.out)
-        t.run("install protobuf/0.1@ --lockfile=conan.lock --lockfile-id=3 --build=protobuf")
+        t.run("install protobuf/0.1@ --lockfile=conan.lock --build=protobuf")
         print(t.out)
         self.assertIn("protobuf/0.1: Package '3475bd55b91ae904ac96fde0f106a136ab951a5e' created",
                       t.out)

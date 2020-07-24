@@ -132,6 +132,10 @@ class GraphLockNode(object):
         return self._requires
 
     @property
+    def modified(self):
+        return self._modified
+
+    @property
     def build_requires(self):
         return self._build_requires
 
@@ -297,9 +301,13 @@ class GraphLock(object):
             ref = graph_node.ref if graph_node.ref and graph_node.ref.name else None
             package_id = graph_node.package_id if ref and ref.revision else None
             prev = graph_node.prev if ref and ref.revision else None
+            # Make sure to inherit the modified flag in case it is a partial lock
+            modified = graph_node.graph_lock_node.modified if graph_node.graph_lock_node else None
             lock_node = GraphLockNode(ref, package_id, prev, python_reqs,
                                       graph_node.conanfile.options.values, requires, build_requires,
-                                      graph_node.path, self._revisions_enabled, graph_node.context)
+                                      graph_node.path, self._revisions_enabled, graph_node.context,
+                                      modified=modified)
+
             graph_node.graph_lock_node = lock_node
             self._nodes[graph_node.id] = lock_node
 
@@ -356,8 +364,8 @@ class GraphLock(object):
         total_prefs = set()  # to remove duplicates, same pref shouldn't build twice
         for level in levels:
             new_level = []
-            for n in level:
-                locked_node = self._nodes[n]
+            for id_ in level:
+                locked_node = self._nodes[id_]
                 if locked_node.prev is None and locked_node.package_id is not None:
                     # Manipulate the ref so it can be used directly in install command
                     ref = repr(locked_node.ref)
@@ -367,9 +375,9 @@ class GraphLock(object):
                     else:
                         if "@" not in ref:
                             ref = ref.replace("#", "@#")
-                    if ref not in total_prefs:
-                        new_level.append((ref, locked_node.context, n))
-                        total_prefs.add((ref, locked_node.context))
+                    if (ref, locked_node.package_id, locked_node.context) not in total_prefs:
+                        new_level.append((ref, locked_node.package_id, locked_node.context, id_))
+                        total_prefs.add((ref, locked_node.package_id, locked_node.context))
             if new_level:
                 result.append(new_level)
 
@@ -601,9 +609,8 @@ class GraphLock(object):
         if not self._relaxed:
             raise ConanException("Couldn't find '%s' in lockfile" % ref.full_str())
 
-    def find_require_and_lock(self, reference, conanfile, node_id):
-        if node_id is None:
-            node_id = self._find_node_by_requirement(reference)
+    def find_require_and_lock(self, reference, conanfile,):
+        node_id = self._find_node_by_requirement(reference)
         if node_id is None:  # relaxed and not found
             return
 
