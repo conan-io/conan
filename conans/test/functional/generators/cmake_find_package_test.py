@@ -520,7 +520,7 @@ class Conan(ConanFile):
         replace_in_file(os.path.join(client.current_folder, "conanfile.py"),
             search='self.cpp_info.libs = ["hello"]',
             replace=indent.join([
-                'self.cpp_info.name = "MYHELLO"',
+                'self.cpp_info.name = "MYHELLO2"',
                 'self.cpp_info.filenames["cmake_find_package"] = "hello_2"',
                 'self.cpp_info.components["2"].names["cmake_find_package"] = "HELLO2"',
                 'self.cpp_info.components["2"].libs = [ "hello2" ]',
@@ -540,7 +540,7 @@ project(consumer)
 cmake_minimum_required(VERSION 3.1)
 find_package(hello_2)
 
-get_target_property(tmp MYHELLO::HELLO2 INTERFACE_LINK_LIBRARIES)
+get_target_property(tmp MYHELLO2::HELLO2 INTERFACE_LINK_LIBRARIES)
 message("Target libs (hello2): ${tmp}")
 
 get_target_property(tmp MYHELLO::HELLO1 INTERFACE_LINK_LIBRARIES)
