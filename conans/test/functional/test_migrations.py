@@ -15,9 +15,22 @@ from conans.model.ref import ConanFileReference
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, GenConanfile
 from conans.util.files import load, save
+from conans.client import migrations_settings
+from conans.client.conf import get_default_settings_yml
 
 
 class TestMigrations(unittest.TestCase):
+
+    def test_migrations_matches_config(self):
+        # Check that the current settings matches what is stored in the migrations file
+        current_settings = get_default_settings_yml()
+        v = Version(__version__)
+        var_name = "settings_{}".format("_".join([v.major, v.minor, v.patch]))
+
+        self.assertTrue(hasattr(migrations_settings, var_name),
+                        "Migrations var '{}' not found".format(var_name))
+        migrations_settings_content = getattr(migrations_settings, var_name)
+        self.assertListEqual(current_settings.splitlines(), migrations_settings_content.splitlines())
 
     def is_there_var_for_settings_previous_version_test(self):
         from conans import __version__ as current_version

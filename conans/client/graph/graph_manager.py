@@ -1,6 +1,6 @@
 import fnmatch
 import os
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 
 from conans.client.conanfile.configure import run_configure_method
 from conans.client.generators.text import TXTGenerator
@@ -66,18 +66,22 @@ class GraphManager(object):
             graph_lock = graph_lock_file.graph_lock
             self._output.info("Using lockfile: '{}/conan.lock'".format(info_folder))
             profile_host = graph_lock_file.profile_host
+            profile_build = graph_lock_file.profile_build
             self._output.info("Using cached profile from lockfile")
         except IOError:  # Only if file is missing
             graph_lock = None
             # This is very dirty, should be removed for Conan 2.0 (source() method only)
             profile_host = self._cache.default_profile
             profile_host.process_settings(self._cache)
+            profile_build = None
             name, version, user, channel = None, None, None, None
         else:
             name, version, user, channel, _ = graph_info.root
             profile_host.process_settings(self._cache, preprocess=False)
             # This is the hack of recovering the options from the graph_info
             profile_host.options.update(graph_info.options)
+            if profile_build:
+                profile_build.process_settings(self._cache, preprocess=False)
         if conanfile_path.endswith(".py"):
             lock_python_requires = None
             if graph_lock and not test:  # Only lock python requires if it is not test_package
@@ -88,13 +92,18 @@ class GraphManager(object):
                                                    name=name, version=version,
                                                    user=user, channel=channel,
                                                    lock_python_requires=lock_python_requires)
+
+            if profile_build:
+                conanfile.settings_build = profile_build.processed_settings.copy()
+                conanfile.settings_target = None
+
             if test:
                 conanfile.display_name = "%s (test package)" % str(test)
                 conanfile.output.scope = conanfile.display_name
 
             run_configure_method(conanfile, down_options=None, down_ref=None, ref=None)
         else:
-            conanfile = self._loader.load_conanfile_txt(conanfile_path, profile_host)
+            conanfile = self._loader.load_conanfile_txt(conanfile_path, profile_host=profile_host)
 
         load_deps_info(info_folder, conanfile, required=deps_info_required)
 
@@ -105,8 +114,14 @@ class GraphManager(object):
         """ main entry point to compute a full dependency graph
         """
         root_node = self._load_root_node(reference, create_reference, graph_info)
-        return self._resolve_graph(root_node, graph_info, build_mode, check_updates, update, remotes,
-                                   recorder, apply_build_requires=apply_build_requires)
+        deps_graph = self._resolve_graph(root_node, graph_info, build_mode, check_updates, update,
+                                         remotes, recorder,
+                                         apply_build_requires=apply_build_requires)
+
+        # Run some validations once the graph is built
+        self._validate_graph_provides(deps_graph)
+
+        return deps_graph
 
     def _load_root_node(self, reference, create_reference, graph_info):
         """ creates the first, root node of the graph, loading or creating a conanfile
@@ -285,16 +300,15 @@ class GraphManager(object):
                 continue
             # Packages with PACKAGE_ID_UNKNOWN might be built in the future, need build requires
             if (node.binary not in (BINARY_BUILD, BINARY_EDITABLE, BINARY_UNKNOWN)
-                    and node.recipe != RECIPE_CONSUMER):
+                and node.recipe != RECIPE_CONSUMER):
                 continue
             package_build_requires = self._get_recipe_build_requires(node.conanfile, default_context)
             str_ref = str(node.ref)
             new_profile_build_requires = []
-            profile_build_requires = profile_build_requires or {}
             for pattern, build_requires in profile_build_requires.items():
                 if ((node.recipe == RECIPE_CONSUMER and pattern == "&") or
-                        (node.recipe != RECIPE_CONSUMER and pattern == "&!") or
-                        fnmatch.fnmatch(str_ref, pattern)):
+                    (node.recipe != RECIPE_CONSUMER and pattern == "&!") or
+                    fnmatch.fnmatch(str_ref, pattern)):
                     for build_require in build_requires:
                         br_key = (build_require.name, default_context)
                         if br_key in package_build_requires:  # Override defined
@@ -312,10 +326,11 @@ class GraphManager(object):
                                                          br_list,
                                                          check_updates, update, remotes,
                                                          profile_host, profile_build, graph_lock)
-
+                build_requires = profile_build.build_requires if default_context == CONTEXT_BUILD \
+                    else profile_build_requires
                 self._recurse_build_requires(graph, builder,
                                              check_updates, update, build_mode,
-                                             remotes, profile_build_requires, recorder,
+                                             remotes, build_requires, recorder,
                                              profile_host, profile_build, graph_lock,
                                              nodes_subset=nodessub, root=node)
 
@@ -353,6 +368,28 @@ class GraphManager(object):
             node.public_closure.sort(key_fn=lambda n: inverse_levels[n])
 
         return graph
+
+    @staticmethod
+    def _validate_graph_provides(deps_graph):
+        # Check that two different nodes are not providing the same (ODR violation)
+        for node in deps_graph.nodes:
+            provides = defaultdict(list)
+            if node.conanfile.provides is not None:  # consumer conanfile doesn't initialize
+                for it in node.conanfile.provides:
+                    provides[it].append(node)
+
+            for item in filter(lambda u: u.context == CONTEXT_HOST, node.public_closure):
+                for it in item.conanfile.provides:
+                    provides[it].append(item)
+
+            # Check (and report) if any functionality is provided by several different recipes
+            conflicts = [it for it, nodes in provides.items() if len(nodes) > 1]
+            if conflicts:
+                msg_lines = ["At least two recipes provides the same functionality:"]
+                for it in conflicts:
+                    nodes_str = "', '".join([n.conanfile.display_name for n in provides[it]])
+                    msg_lines.append(" - '{}' provided by '{}'".format(it, nodes_str))
+                raise ConanException('\n'.join(msg_lines))
 
 
 def load_deps_info(current_path, conanfile, required):

@@ -28,16 +28,8 @@ from conans.util.files import exception_message_safe
 from conans.util.files import save
 from conans.util.log import logger
 from conans.assets import templates
-
-
-# Exit codes for conan command:
-SUCCESS = 0                         # 0: Success (done)
-ERROR_GENERAL = 1                   # 1: General ConanException error (done)
-ERROR_MIGRATION = 2                 # 2: Migration error
-USER_CTRL_C = 3                     # 3: Ctrl+C
-USER_CTRL_BREAK = 4                 # 4: Ctrl+Break
-ERROR_SIGTERM = 5                   # 5: SIGTERM
-ERROR_INVALID_CONFIGURATION = 6     # 6: Invalid configuration (done)
+from conans.cli.exit_codes import SUCCESS, ERROR_MIGRATION, ERROR_GENERAL, USER_CTRL_C, \
+    ERROR_SIGTERM, USER_CTRL_BREAK, ERROR_INVALID_CONFIGURATION
 
 
 class Extender(argparse.Action):
@@ -173,7 +165,7 @@ class Command(object):
                             help='Create the minimum package recipe, without build() method. '
                             'Useful in combination with "export-pkg" command')
         parser.add_argument("-m", "--template",
-                            help='Use the given template from the local cache for conanfile.py')
+                            help='Use the given template to generate a conan project')
         parser.add_argument("-cis", "--ci-shared", action='store_true',
                             default=False,
                             help='Package will have a "shared" option to be used in CI')
@@ -572,6 +564,11 @@ class Command(object):
                                        'specified origin')
         install_subparser.add_argument("-tf", "--target-folder",
                                        help='Install to that path in the conan cache')
+        install_subparser.add_argument("-l", "--list", default=False, action='store_true',
+                                       help='List stored configuration origins')
+        install_subparser.add_argument("-r", "--remove", type=int,
+                                       help='Remove configuration origin by index in list (index '
+                                            'provided by --list argument)')
         rm_subparser.add_argument("item", help="Item to remove")
         set_subparser.add_argument("item", help="'item=value' to set")
         init_subparser.add_argument('-f', '--force', default=False, action='store_true',
@@ -599,6 +596,14 @@ class Command(object):
                 self._outputer.json_output({"home": conan_home}, args.json, os.getcwd())
             return conan_home
         elif args.subcommand == "install":
+            if args.list:
+                configs = self._conan.config_install_list()
+                for index, config in enumerate(configs):
+                    self._out.writeln("%s: %s" % (index, config))
+                return
+            elif args.remove is not None:
+                self._conan.config_install_remove(index=args.remove)
+                return
             verify_ssl = get_bool_from_text(args.verify_ssl)
             return self._conan.config_install(args.item, verify_ssl, args.type, args.args,
                                               source_folder=args.source_folder,
@@ -740,9 +745,11 @@ class Command(object):
 
             if args.graph:
                 if args.graph.endswith(".html"):
-                    template = self._conan.app.cache.get_template(templates.INFO_GRAPH_HTML)
+                    template = self._conan.app.cache.get_template(templates.INFO_GRAPH_HTML,
+                                                                  user_overrides=True)
                 else:
-                    template = self._conan.app.cache.get_template(templates.INFO_GRAPH_DOT)
+                    template = self._conan.app.cache.get_template(templates.INFO_GRAPH_DOT,
+                                                                  user_overrides=True)
                 self._outputer.info_graph(args.graph, deps_graph, get_cwd(), template=template)
             if args.json:
                 json_arg = True if args.json == "1" else args.json
@@ -1328,7 +1335,8 @@ class Command(object):
                                                    remote_name=args.remote,
                                                    outdated=args.outdated)
                 # search is done for one reference
-                template = self._conan.app.cache.get_template(templates.SEARCH_TABLE_HTML)
+                template = self._conan.app.cache.get_template(templates.SEARCH_TABLE_HTML,
+                                                              user_overrides=True)
                 self._outputer.print_search_packages(info["results"], ref, args.query,
                                                      args.table, args.raw, outdated=args.outdated,
                                                      template=template)
@@ -2031,8 +2039,9 @@ class Command(object):
                 self._print_similar(command)
                 raise ConanException("Unknown command %s" % str(exc))
 
-            if is_config_install_scheduled(self._conan) and \
-               (command != "config" or (command == "config" and args[0] != "install")):
+            if (command != "config" or
+               (command == "config" and len(args[0]) > 1 and args[0][1] != "install")) and \
+               is_config_install_scheduled(self._conan):
                 self._conan.config_install(None, None)
 
             method(args[0][1:])

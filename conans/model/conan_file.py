@@ -1,8 +1,8 @@
 import os
 from contextlib import contextmanager
-from six import string_types
 
 import six
+from six import string_types
 
 from conans.client import tools
 from conans.client.output import ScopedOutput
@@ -129,6 +129,9 @@ class ConanFile(object):
     options = None
     default_options = None
 
+    provides = None
+    deprecated = None
+
     def __init__(self, output, runner, display_name="", user=None, channel=None):
         # an output stream (writeln, info, warn error)
         self.output = ScopedOutput(display_name, output)
@@ -164,7 +167,7 @@ class ConanFile(object):
 
         # user declared variables
         self.user_info = None
-        # Keys are the package names, and the values a dict with the vars
+        # Keys are the package names (only 'host' if different contexts)
         self.deps_user_info = DepsUserInfo()
 
         # user specified env variables

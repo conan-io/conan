@@ -17,23 +17,39 @@ from conans.client.tools.env import environment_append, _environment_add
 from conans.client.tools.oss import cpu_count, args_to_string
 from conans.errors import ConanException
 from conans.model.version import Version
+from conans.util.conan_v2_mode import conan_v2_behavior
 from conans.util.config_parser import get_bool_from_text
 from conans.util.files import mkdir, get_abs_path, walk, decode_text
 from conans.util.runners import version_runner
 
 
-def CMake(conanfile, *args, **kwargs):
-    from conans import ConanFile
-    if not isinstance(conanfile, ConanFile):
-        raise ConanException("First argument of CMake() has to be ConanFile. Use CMake(self)")
+class CMake(object):
+    def __new__(cls, conanfile, *args, **kwargs):
+        """ Inject the proper CMake base class in the hierarchy """
+        from conans import ConanFile
+        if not isinstance(conanfile, ConanFile):
+            raise ConanException("First argument of CMake() has to be ConanFile. Use CMake(self)")
 
-    # If there is a toolchain, then use the toolchain helper one
-    toolchain = getattr(conanfile, "toolchain", None)
-    if toolchain:
+        # If already injected, create and return
         from conans.client.build.cmake_toolchain_build_helper import CMakeToolchainBuildHelper
-        return CMakeToolchainBuildHelper(conanfile, *args, **kwargs)
-    else:
-        return CMakeBuildHelper(conanfile, *args, **kwargs)
+        if CMakeToolchainBuildHelper in cls.__bases__ or CMakeBuildHelper in cls.__bases__:
+            return super(CMake, cls).__new__(cls)
+
+        # If not, add the proper CMake implementation
+        if hasattr(conanfile, "toolchain"):
+            CustomCMakeClass = type("CustomCMakeClass", (cls, CMakeToolchainBuildHelper), {})
+        else:
+            CustomCMakeClass = type("CustomCMakeClass", (cls, CMakeBuildHelper), {})
+
+        return CustomCMakeClass.__new__(CustomCMakeClass, conanfile, *args, **kwargs)
+
+    def __init__(self, *args, **kwargs):
+        super(CMake, self).__init__(*args, **kwargs)
+
+    @staticmethod
+    def get_version():
+        # FIXME: Conan 2.0 This function is require for python2
+        return CMakeBuildHelper.get_version()
 
 
 class CMakeBuildHelper(object):
@@ -223,6 +239,9 @@ class CMakeBuildHelper(object):
 
     def _run(self, command):
         compiler = self._settings.get_safe("compiler")
+        if not compiler:
+            conan_v2_behavior("compiler setting should be defined.",
+                              v1_behavior=self._conanfile.output.warn)
         the_os = self._settings.get_safe("os")
         is_clangcl = the_os == "Windows" and compiler == "clang"
         is_msvc = compiler == "Visual Studio"
@@ -285,6 +304,9 @@ class CMakeBuildHelper(object):
     def build(self, args=None, build_dir=None, target=None):
         if not self._conanfile.should_build:
             return
+        if not self._build_type:
+            conan_v2_behavior("build_type setting should be defined.",
+                              v1_behavior=self._conanfile.output.warn)
         self._build(args, build_dir, target)
 
     def _build(self, args=None, build_dir=None, target=None):
@@ -446,6 +468,3 @@ class CMakeBuildHelper(object):
             return Version(version_str)
         except Exception as e:
             raise ConanException("Error retrieving CMake version: '{}'".format(e))
-
-
-CMake.get_version = CMakeBuildHelper.get_version

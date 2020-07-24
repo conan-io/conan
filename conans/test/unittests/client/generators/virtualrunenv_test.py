@@ -27,10 +27,10 @@ class VirtualRunEnvGeneratorTest(unittest.TestCase):
         cls.result = cls.generator.content
 
     def test_output(self):
-        keys = ["deactivate_run.sh", "activate_run.sh", self.environment_sh_env]
+        keys = ["deactivate_run.sh", "activate_run.sh", self.environment_sh_env,
+                "activate_run.ps1", "deactivate_run.ps1", self.environment_ps1_env]
         if platform.system() == "Windows":
-            keys += ["activate_run.bat", "deactivate_run.bat", self.environment_bat_env,
-                     "activate_run.ps1", "deactivate_run.ps1", self.environment_ps1_env]
+            keys += ["activate_run.bat", "deactivate_run.bat", self.environment_bat_env]
 
         self.assertListEqual(sorted(keys), sorted(self.result.keys()))
 

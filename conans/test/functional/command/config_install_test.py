@@ -87,7 +87,8 @@ class ConfigInstallTest(unittest.TestCase):
         save(os.path.join(self.client.cache.profiles_path, "default"), "#default profile empty")
         save(os.path.join(self.client.cache.profiles_path, "linux"), "#empty linux profile")
 
-    def _create_profile_folder(self, folder=None):
+    @staticmethod
+    def _create_profile_folder(folder=None):
         folder = folder or temp_folder(path_with_spaces=False)
         save_files(folder, {"settings.yml": settings_yml,
                             "remotes.txt": remotes,
@@ -288,7 +289,8 @@ class Pkg(ConanFile):
         folder = temp_folder()
         save_files(folder, {"remotes.json": ""})
         self.client.run('config install "%s"' % folder, assert_error=True)
-        self.assertIn("ERROR: remotes.json install is not supported yet. Use 'remotes.txt'",
+        self.assertIn("ERROR: Failed conan config install: "
+                      "remotes.json install is not supported yet. Use 'remotes.txt'",
                       self.client.out)
 
     def test_without_profile_folder(self):
@@ -331,14 +333,15 @@ class Pkg(ConanFile):
         """ should install from a git repo
         """
         self.client.run('config install notexistingrepo.git', assert_error=True)
-        self.assertIn("ERROR: Can't clone repo", self.client.out)
+        self.assertIn("ERROR: Failed conan config install: Can't clone repo", self.client.out)
 
     def failed_install_http_test(self):
         """ should install from a http zip
         """
         self.client.run("config set general.retry_wait=0")
         self.client.run('config install httpnonexisting', assert_error=True)
-        self.assertIn("ERROR: Error while installing config from httpnonexisting", self.client.out)
+        self.assertIn("ERROR: Failed conan config install: "
+                      "Error while installing config from httpnonexisting", self.client.out)
 
     def install_repo_test(self):
         """ should install from a git repo
@@ -527,6 +530,34 @@ class Pkg(ConanFile):
         self.assertIn("Unzipping", self.client.out)
         http_server.stop()
 
+    def test_error_missing_origin(self):
+        path = self._create_zip()
+        self.client.run('config install "%s"' % path)
+        os.remove(path)
+        self.client.run('config install', assert_error=True)
+        self.assertIn("ERROR: Failed conan config install", self.client.out)
+
+    def test_list_remove(self):
+        path = self._create_zip()
+        self.client.run('config install "%s"' % path)
+        configs = json.loads(load(os.path.join(self.client.cache_folder, "config_install.json")))
+        self.assertIn("myconfig.zip", configs[0]["uri"])
+        self.client.run("config install --list")
+        self.assertIn("myconfig.zip", self.client.out)
+        self.client.run("config install --remove=0")
+        configs = json.loads(load(os.path.join(self.client.cache_folder, "config_install.json")))
+        self.assertEqual(0, len(configs))
+        self.client.run("config install --list")
+        self.assertNotIn("myconfig.zip", self.client.out)
+
+    def test_list_empty_config(self):
+        self.client.run("config install --list")
+        self.assertEqual("", self.client.out)
+
+    def test_remove_empty_config(self):
+        self.client.run("config install --remove=0", assert_error=True)
+        self.assertIn("There is no config data. Need to install config first.", self.client.out)
+
     def test_overwrite_read_only_file(self):
         source_folder = self._create_profile_folder()
         self.client.run('config install "%s"' % source_folder)
@@ -609,3 +640,60 @@ class ConfigInstallSchedTest(unittest.TestCase):
         self.client.run('install .', assert_error=True)
         self.assertIn("ERROR: Incorrect definition of general.config_install_interval: 1s",
                       self.client.out)
+
+    def test_config_install_remove_git_repo(self):
+        """ config_install_interval must break when remote git has been removed
+        """
+        with self.client.chdir(self.folder):
+            self.client.run_command('git init .')
+            self.client.run_command('git add .')
+            self.client.run_command('git config user.name myname')
+            self.client.run_command('git config user.email myname@mycompany.com')
+            self.client.run_command('git commit -m "mymsg"')
+        self.client.run('config install "%s/.git" --type git' % self.folder)
+        self.assertIn("Processing conan.conf", self.client.out)
+        self.assertIn("Repo cloned!", self.client.out)  # git clone executed by scheduled task
+        folder_name = self.folder
+        new_name = self.folder + "_test"
+        os.rename(self.folder, new_name)
+        with patch("conans.client.command.is_config_install_scheduled", return_value=True):
+            self.client.run("config --help", assert_error=True)
+            # scheduled task has been executed. Without a remote, the user should fix the config
+            self.assertIn("ERROR: Failed conan config install: Can't clone repo", self.client.out)
+
+            # restore the remote
+            os.rename(new_name, folder_name)
+            self.client.run("config --help")
+            self.assertIn("Repo cloned!", self.client.out)
+
+    def test_config_install_remove_config_repo(self):
+        """ config_install_interval should not run when config list is empty
+        """
+        with self.client.chdir(self.folder):
+            self.client.run_command('git init .')
+            self.client.run_command('git add .')
+            self.client.run_command('git config user.name myname')
+            self.client.run_command('git config user.email myname@mycompany.com')
+            self.client.run_command('git commit -m "mymsg"')
+        self.client.run('config install "%s/.git" --type git' % self.folder)
+        self.assertIn("Processing conan.conf", self.client.out)
+        self.assertIn("Repo cloned!", self.client.out)
+        # force scheduled time for all commands
+        with patch("conans.client.conf.config_installer._is_scheduled_intervals", return_value=True):
+            self.client.run("config --help")
+            self.assertIn("Repo cloned!", self.client.out)  # git clone executed by scheduled task
+
+            # config install must not run scheduled config
+            self.client.run("config install --remove 0")
+            self.assertEqual("", self.client.out)
+            self.client.run("config install --list")
+            self.assertEqual("", self.client.out)
+
+            last_change = os.path.getmtime(self.client.cache.config_install_file)
+            # without a config in configs file, scheduler only emits a warning
+            self.client.run("help")
+            self.assertIn("WARN: Skipping scheduled config install, "
+                          "no config listed in config_install file", self.client.out)
+            self.assertNotIn("Repo cloned!", self.client.out)
+            # ... and updates the next schedule
+            self.assertGreater(os.path.getmtime(self.client.cache.config_install_file), last_change)

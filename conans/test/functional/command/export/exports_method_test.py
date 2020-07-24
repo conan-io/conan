@@ -118,27 +118,6 @@ class ExportsMethodTest(unittest.TestCase):
         layout = client.cache.package_layout(ConanFileReference.loads("pkg/0.1"))
         self.assertEqual("mycontent", load(os.path.join(layout.export(), "myfile.txt")))
 
-    def test_export_source_folders(self):
-        client = TestClient()
-        conanfile = textwrap.dedent("""
-           from conans import ConanFile
-           from conans.tools import save, load
-           import os
-
-           class MethodConan(ConanFile):
-               def export_sources(self):
-                   content = load(os.path.join(os.getcwd(), "data.txt"))
-                   save(os.path.join(self.export_sources_folder, "myfile.txt"), content)
-           """)
-        client.save({"recipe/conanfile.py": conanfile, "recipe/data.txt": "mycontent"})
-        client.run("export recipe pkg/0.1@")
-        layout = client.cache.package_layout(ConanFileReference.loads("pkg/0.1"))
-        self.assertEqual("mycontent", load(os.path.join(layout.export_sources(), "myfile.txt")))
-        client.current_folder = os.path.join(client.current_folder, "recipe")
-        client.run("export . pkg/0.1@")
-        layout = client.cache.package_layout(ConanFileReference.loads("pkg/0.1"))
-        self.assertEqual("mycontent", load(os.path.join(layout.export_sources(), "myfile.txt")))
-
     def test_export_attribute_error(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
@@ -186,6 +165,27 @@ class ExportsSourcesMethodTest(unittest.TestCase):
         self.assertIn("file.txt", exported_files)
         self.assertIn("LICENSE.md", exported_files)
 
+    def test_export_source_folders(self):
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+           from conans import ConanFile
+           from conans.tools import save, load
+           import os
+
+           class MethodConan(ConanFile):
+               def export_sources(self):
+                   content = load(os.path.join(os.getcwd(), "data.txt"))
+                   save(os.path.join(self.export_sources_folder, "myfile.txt"), content)
+           """)
+        client.save({"recipe/conanfile.py": conanfile, "recipe/data.txt": "mycontent"})
+        client.run("export recipe pkg/0.1@")
+        layout = client.cache.package_layout(ConanFileReference.loads("pkg/0.1"))
+        self.assertEqual("mycontent", load(os.path.join(layout.export_sources(), "myfile.txt")))
+        client.current_folder = os.path.join(client.current_folder, "recipe")
+        client.run("export . pkg/0.1@")
+        layout = client.cache.package_layout(ConanFileReference.loads("pkg/0.1"))
+        self.assertEqual("mycontent", load(os.path.join(layout.export_sources(), "myfile.txt")))
+
     def test_export_sources_attribute_error(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
@@ -209,3 +209,26 @@ class ExportsSourcesMethodTest(unittest.TestCase):
         client.run("export . pkg/0.1@", assert_error=True)
         self.assertIn("ERROR: conanfile 'exports_sources' shouldn't be a method, "
                       "use 'export_sources()' instead", client.out)
+
+    def test_exports_sources_upload_error(self):
+        # https://github.com/conan-io/conan/issues/7377
+        client = TestClient(default_server_user=True)
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile, tools
+
+            class MethodConan(ConanFile):
+                def export_sources(self):
+                    self.copy("*")
+                def build(self):
+                    self.output.info("CONTENT: %s" % tools.load("myfile.txt"))
+            """)
+        client.save({"conanfile.py": conanfile,
+                     "myfile.txt": "mycontent"})
+        client.run("export . pkg/0.1@")
+        self.assertIn("pkg/0.1 export_sources() method: Copied 1 '.txt' file: myfile.txt",
+                      client.out)
+        client.run("upload pkg/0.1@")
+        client.run("remove * -f")
+        client.run("install pkg/0.1@ --build")
+        self.assertIn("Downloading conan_sources.tgz", client.out)
+        self.assertIn("pkg/0.1: CONTENT: mycontent", client.out)

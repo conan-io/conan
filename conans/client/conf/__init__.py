@@ -177,6 +177,7 @@ _t_default_client_conf = Template(textwrap.dedent("""
     {% endif %}
 
     # config_install_interval = 1h
+    # required_conan_version = >=1.26
 
     [storage]
     # This is the default path, but you can write your own. It must be an absolute path or a
@@ -568,16 +569,33 @@ class ConanClientConfigParser(ConfigParser, object):
 
     @property
     def client_cert_path(self):
-        # TODO: Really parameterize the client cert location
-        folder = os.path.dirname(self.filename)
-        CLIENT_CERT = "client.crt"
-        return os.path.normpath(os.path.join(folder, CLIENT_CERT))
+        cache_folder = os.path.dirname(self.filename)
+        try:
+            path = self.get_item("general.client_cert_path")
+        except ConanException:
+            path = os.path.join(cache_folder, "client.crt")
+        else:
+            # For explicit cacert files, the file should already exist
+            path = os.path.join(cache_folder, path)
+            if not os.path.exists(path):
+                raise ConanException("Configured file for 'client_cert_path'"
+                                     " doesn't exists: '{}'".format(path))
+        return os.path.normpath(path)
 
     @property
     def client_cert_key_path(self):
-        CLIENT_KEY = "client.key"
-        folder = os.path.dirname(self.filename)
-        return os.path.normpath(os.path.join(folder, CLIENT_KEY))
+        cache_folder = os.path.dirname(self.filename)
+        try:
+            path = self.get_item("general.client_cert_key_path")
+        except ConanException:
+            path = os.path.join(cache_folder, "client.key")
+        else:
+            # For explicit cacert files, the file should already exist
+            path = os.path.join(cache_folder, path)
+            if not os.path.exists(path):
+                raise ConanException("Configured file for 'client_cert_key_path'"
+                                     " doesn't exists: '{}'".format(path))
+        return os.path.normpath(path)
 
     @property
     def hooks(self):
@@ -706,6 +724,13 @@ class ConanClientConfigParser(ConfigParser, object):
                 return timedelta(hours=float(value))
             else:
                 return timedelta(days=float(value))
-        except Exception as e:
+        except Exception:
             raise ConanException("Incorrect definition of general.config_install_interval: %s"
                                  % interval)
+
+    @property
+    def required_conan_version(self):
+        try:
+            return self.get_item("general.required_conan_version")
+        except ConanException:
+            return None

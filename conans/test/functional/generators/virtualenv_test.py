@@ -8,7 +8,7 @@ import six
 from parameterized.parameterized import parameterized_class
 
 from conans.client.generators.virtualenv import VirtualEnvGenerator
-from conans.client.tools import OSInfo
+from conans.client.tools import OSInfo, files as tools_files
 from conans.client.tools.env import environment_append
 from conans.model.ref import ConanFileReference
 from conans.test.functional.graph.graph_manager_base import GraphManagerTest
@@ -110,9 +110,7 @@ class PowerShellCommands(object):
 
     @property
     def skip(self):
-        # Change to this once support for PowreShell Core is in place.
-        # skip = not (os_info.is_windows or which("pwsh"))
-        return (not os_info.is_windows) or os_info.is_posix
+        return not (os_info.is_windows or tools_files.which("pwsh"))
 
 
 class WindowsCmdCommands(object):

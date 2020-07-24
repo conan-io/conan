@@ -79,8 +79,8 @@ class CMakeTest(unittest.TestCase):
         conanfile.deps_cpp_info = DepsCppInfo()
 
         ref = ConanFileReference.loads("MyPkg1/0.1@user/channel")
-        cpp_info = CppInfo(self.tempdir2)
-        conanfile.deps_cpp_info.update(cpp_info, ref.name)
+        cpp_info = CppInfo(ref.name, self.tempdir2)
+        conanfile.deps_cpp_info.add(ref.name, cpp_info)
         self.tempdir = temp_folder(path_with_spaces=False)
 
         self.assertEqual(list(conanfile.deps_cpp_info.deps), ['MyPkg1'])
@@ -1307,8 +1307,9 @@ build_type: [ Release]
                            ("iOS", "7.0",),
                            ("watchOS", "4.0",),
                            ("tvOS", "11.0",)])
-    @mock.patch('platform.system', return_value="Macos")
-    def test_cmake_system_version_osx(self, the_os, os_version, _):
+    @mock.patch("platform.system", return_value="Darwin")
+    @mock.patch("conans.client.tools.apple.XCRun.sdk_path", return_value='/opt')
+    def test_cmake_system_version_osx(self, the_os, os_version, _, __):
         settings = Settings.loads(get_default_settings_yml())
         settings.os = the_os
 

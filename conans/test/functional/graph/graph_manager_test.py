@@ -727,8 +727,8 @@ class TransitiveGraphTest(GraphManagerTest):
 
         self._check_node(cheetah, "cheetah/0.1@", deps=[gazelle], build_deps=[grass2],
                          dependents=[], closure=[gazelle, grass])
-        self.assertEqual(cheetah.conanfile.deps_cpp_info.libs,
-                         ['mylibgazelle0.1lib', 'mylibgrass0.1lib'])
+        self.assertListEqual(list(cheetah.conanfile.deps_cpp_info.libs),
+                             ['mylibgazelle0.1lib', 'mylibgrass0.1lib'])
 
     @parameterized.expand([(True, ), (False, )])
     def test_dont_skip_private(self, private_first):
