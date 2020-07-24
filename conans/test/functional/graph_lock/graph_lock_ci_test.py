@@ -142,21 +142,18 @@ class GraphLockCITest(unittest.TestCase):
         client.run("lock create --reference=PkgD/0.1@user/channel --lockfile-out=conan.lock")
         initial_lockfile = client.load("conan.lock")
 
+        # Do a change in B
+        client.save({"pkgb/myfile.txt": "ByeB World!!"})
         if not partial_lock:
-            # Do a change in B
-            client.save({"pkgb/myfile.txt": "ByeB World!!"})
-            client.run("create pkgb PkgB/0.2@user/channel")
+            client.run("export pkgb PkgB/0.2@user/channel")
 
             # Go back to main orchestrator
-            client.run("lock create --reference=PkgD/0.1@user/channel "
-                       "--lockfile-out=productd.lock")
+            client.run("lock create --reference=PkgD/0.1@user/channel --lockfile-out=productd.lock")
 
             # Now it is locked, PkgA can change
             client.save({"pkga/myfile.txt": "ByeA World!!"})
             client.run("create pkga PkgA/0.2@user/channel")
         else:
-            # Change in B
-            client.save({"pkgb/myfile.txt": "ByeB World!!"})
             client.run("lock create pkgb/conanfile.py --name=PkgB --version=0.2 --user=user "
                        "--channel=channel --lockfile-out=buildb.lock")
             self.assertIn("PkgA/0.1", client.out)
@@ -201,6 +198,20 @@ class GraphLockCITest(unittest.TestCase):
             client.run("lock build-order productd.lock --json=bo.json")
             lock_fileaux = client.load("productd.lock")
             to_build = json.loads(client.load("bo.json"))
+
+        # Make sure built packages are marked as modified
+        productd_lockfile = client.load("productd.lock")
+        productd_lockfile_json = json.loads(productd_lockfile)
+        nodes = productd_lockfile_json["graph_lock"]["nodes"]
+        pkgb = nodes["0"] if partial_lock else nodes["3"]
+        pkgc = nodes["4"] if partial_lock else nodes["2"]
+        pkgd = nodes["3"] if partial_lock else nodes["1"]
+        self.assertIn("PkgB/0.2", pkgb["ref"])
+        self.assertTrue(pkgb["modified"])
+        self.assertIn("PkgC/0.1", pkgc["ref"])
+        self.assertTrue(pkgc["modified"])
+        self.assertIn("PkgD/0.1", pkgd["ref"])
+        self.assertTrue(pkgd["modified"])
 
         new_lockfile = client.load("productd.lock")
         client.run("install PkgD/0.1@user/channel --lockfile=productd.lock")

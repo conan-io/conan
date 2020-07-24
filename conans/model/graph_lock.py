@@ -127,6 +127,10 @@ class GraphLockNode(object):
         return self._requires
 
     @property
+    def modified(self):
+        return self._modified
+
+    @property
     def build_requires(self):
         return self._build_requires
 
@@ -289,9 +293,11 @@ class GraphLock(object):
             ref = graph_node.ref if graph_node.ref and graph_node.ref.name else None
             package_id = graph_node.package_id if ref and ref.revision else None
             prev = graph_node.prev if ref and ref.revision else None
+            # Make sure to inherit the modified flag in case it is a partial lock
+            modified = graph_node.graph_lock_node.modified if graph_node.graph_lock_node else None
             lock_node = GraphLockNode(ref, package_id, prev, python_reqs,
                                       graph_node.conanfile.options.values, requires, build_requires,
-                                      graph_node.path, self._revisions_enabled)
+                                      graph_node.path, self._revisions_enabled, modified=modified)
             graph_node.graph_lock_node = lock_node
             self._nodes[graph_node.id] = lock_node
 
