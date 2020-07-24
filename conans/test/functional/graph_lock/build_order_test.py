@@ -230,10 +230,22 @@ class BuildOrderTest(unittest.TestCase):
         client.run("lock build-order conan.lock --json=bo.json")
         bo = client.load("bo.json")
         build_order = json.loads(bo)
-        expected = [[['libc/0.1@#f3367e0e7d170aa12abccb175fee5f97', 'host', '3'],
-                     ['libb/0.1@#f3367e0e7d170aa12abccb175fee5f97', 'host', '4']],
-                    [['liba/0.1@#7086607aa6efbad8e2527748e3ee8237', 'host', '2']],
-                    [['app/0.1@#7742ee9e2f19af4f9ed7619f231ca871', 'host', '1']]]
+        expected = [[['libc/0.1@#f3367e0e7d170aa12abccb175fee5f97',
+   '5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9',
+   'host',
+   '3'],
+  ['libb/0.1@#f3367e0e7d170aa12abccb175fee5f97',
+   '5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9',
+   'host',
+   '4']],
+ [['liba/0.1@#7086607aa6efbad8e2527748e3ee8237',
+   'Package_ID_unknown',
+   'host',
+   '2']],
+ [['app/0.1@#7742ee9e2f19af4f9ed7619f231ca871',
+   'Package_ID_unknown',
+   'host',
+   '1']]]
         self.assertEqual(build_order, expected)
 
 
