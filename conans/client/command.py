@@ -661,7 +661,10 @@ class Command(object):
         build_help = ("Given a build policy, return an ordered list of packages that would be built"
                       " from sources during the install command")
 
-        _add_common_install_arguments(parser, build_help=build_help)
+        update_help = "Will check if updates of the dependencies exist in the remotes " \
+                      "(a new version that satisfies a version range, a new revision or a newer " \
+                      "recipe if not using revisions)."
+        _add_common_install_arguments(parser, update_help=update_help, build_help=build_help)
         args = parser.parse_args(*args)
 
         profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
@@ -2082,14 +2085,22 @@ def _add_manifests_arguments(parser):
                         action=OnceArgument)
 
 
-def _add_common_install_arguments(parser, build_help, lockfile=True):
+def _add_common_install_arguments(parser, build_help, update_help=None, lockfile=True):
     if build_help:
         parser.add_argument("-b", "--build", action=Extender, nargs="?", help=build_help)
 
     parser.add_argument("-r", "--remote", action=OnceArgument,
                         help='Look in the specified remote server')
+
+    if not update_help:
+        update_help = "Will check the remote and in case a newer version and/or revision of " \
+                      "the dependencies exists there, it will install those in the local cache. " \
+                      "When using version ranges, it will install the latest version that satisfies " \
+                      "the range. Also, if using revisions, it will update to the latest revision " \
+                      "for the resolved version range."
+
     parser.add_argument("-u", "--update", action='store_true', default=False,
-                        help="Check updates exist from upstream remotes")
+                        help=update_help)
     if lockfile:
         parser.add_argument("-l", "--lockfile", action=OnceArgument, nargs='?', const=".",
                             help="Path to a lockfile or folder containing 'conan.lock' file. "
