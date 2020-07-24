@@ -125,14 +125,14 @@ def _get_default_compiler(output):
         vs = ('Visual Studio', version) if version else None
 
     if v2_mode:
+        cc = _get_compiler_and_version(output, "cc")
+        gcc = _get_compiler_and_version(output, "gcc")
+        clang = _get_compiler_and_version(output, "clang")
+    else:
         gcc = _gcc_compiler(output)
         clang = _clang_compiler(output)
         if platform.system() == "SunOS":
             sun_cc = _sun_cc_compiler(output)
-    else:
-        cc = _get_compiler_and_version(output, "cc")
-        gcc = _get_compiler_and_version(output, "gcc")
-        clang = _get_compiler_and_version(output, "clang")
 
     if detected_os() == "Windows":
         return vs or cc or gcc or clang
