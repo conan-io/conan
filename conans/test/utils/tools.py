@@ -8,6 +8,7 @@ import stat
 import subprocess
 import sys
 import tempfile
+import textwrap
 import threading
 import time
 import unittest
@@ -48,6 +49,7 @@ from conans.test.utils.server_launcher import (TESTING_REMOTE_PRIVATE_PASS,
                                                TESTING_REMOTE_PRIVATE_USER,
                                                TestServerLauncher)
 from conans.test.utils.test_files import temp_folder
+from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
 from conans.util.env_reader import get_env
 from conans.util.files import mkdir, save_files
 from conans.util.runners import check_output_runner
@@ -488,7 +490,8 @@ class TestBufferConanOutput(ConanOutput):
         return value in self.__repr__()
 
 
-def create_local_git_repo(files=None, branch=None, submodules=None, folder=None, commits=1, tags=None):
+def create_local_git_repo(files=None, branch=None, submodules=None, folder=None, commits=1,
+                          tags=None):
     tmp = folder or temp_folder()
     tmp = get_cased_path(tmp)
     if files:
@@ -615,7 +618,6 @@ class LocalDBMock(object):
 
 
 class MockedUserIO(UserIO):
-
     """
     Mock for testing. If get_username or get_password is requested will raise
     an exception except we have a value to return.
@@ -658,6 +660,23 @@ class MockedUserIO(UserIO):
         return tmp
 
 
+def _copy_cache_folder(target_folder):
+    # Some variables affect to cache population (take a different default folder)
+    cache_key = hash(os.environ.get(CONAN_V2_MODE_ENVVAR, None))
+    master_folder = _copy_cache_folder.master.setdefault(cache_key, temp_folder(create_dir=False))
+    if not os.path.exists(master_folder):
+        # Create and populate the cache folder with the defaults
+        cache = ClientCache(master_folder, TestBufferConanOutput())
+        cache.initialize_config()
+        cache.registry.initialize_remotes()
+        cache.initialize_default_profile()
+        cache.initialize_settings()
+    shutil.copytree(master_folder, target_folder)
+
+
+_copy_cache_folder.master = dict()  # temp_folder(create_dir=False)
+
+
 class TestClient(object):
     """ Test wrap of the conans application to launch tests in the same way as
     in command line
@@ -665,7 +684,8 @@ class TestClient(object):
 
     def __init__(self, cache_folder=None, current_folder=None, servers=None, users=None,
                  requester_class=None, runner=None, path_with_spaces=True,
-                 revisions_enabled=None, cpu_count=1, default_server_user=None):
+                 revisions_enabled=None, cpu_count=1, default_server_user=None,
+                 cache_autopopulate=True):
         """
         current_folder: Current execution folder
         servers: dict of {remote_name: TestServer}
@@ -691,16 +711,23 @@ class TestClient(object):
         if self.users is None:
             self.users = {"default": [(TESTING_REMOTE_PRIVATE_USER, TESTING_REMOTE_PRIVATE_PASS)]}
 
-        self.cache_folder = cache_folder or temp_folder(path_with_spaces)
+        if cache_autopopulate and (not cache_folder or not os.path.exists(cache_folder)):
+            # Copy a cache folder already populated
+            self.cache_folder = cache_folder or temp_folder(path_with_spaces, create_dir=False)
+            _copy_cache_folder(self.cache_folder)
+        else:
+            self.cache_folder = cache_folder or temp_folder(path_with_spaces)
+
         self.requester_class = requester_class
         self.runner = runner
 
         if servers and len(servers) > 1 and not isinstance(servers, OrderedDict):
-            raise Exception("""Testing framework error: Servers should be an OrderedDict. e.g:
-servers = OrderedDict()
-servers["r1"] = server
-servers["r2"] = TestServer()
-""")
+            raise Exception(textwrap.dedent("""
+                Testing framework error: Servers should be an OrderedDict. e.g:
+                    servers = OrderedDict()
+                    servers["r1"] = server
+                    servers["r2"] = TestServer()
+            """))
 
         self.servers = servers or {}
         if servers is not False:  # Do not mess with registry remotes
@@ -766,7 +793,7 @@ servers["r2"] = TestServer()
     def tune_conan_conf(self, cache_folder, cpu_count, revisions_enabled):
         # Create the default
         cache = self.cache
-        cache.config
+        _ = cache.config
 
         if cpu_count:
             replace_in_file(cache.conan_conf_path,
@@ -870,7 +897,7 @@ servers["r2"] = TestServer()
             exc_message = "\n{header}\n{cmd}\n{output_header}\n{output}\n{output_footer}\n".format(
                 header='{:-^80}'.format(msg),
                 output_header='{:-^80}'.format(" Output: "),
-                output_footer='-'*80,
+                output_footer='-' * 80,
                 cmd=command,
                 output=self.out
             )
@@ -912,7 +939,6 @@ servers["r2"] = TestServer()
 
 
 class TurboTestClient(TestClient):
-
     tmp_json_name = ".tmp_json"
 
     def __init__(self, *args, **kwargs):
