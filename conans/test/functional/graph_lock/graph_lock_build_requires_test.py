@@ -135,17 +135,11 @@ class GraphLockBuildRequireTestCase(unittest.TestCase):
                           '20bf540789ab45e970058c07c2360a66d6a77c55', 'host', '1']]]
         self.assertEqual(expected, json.loads(t.load("bo.json")))
 
-        # Create the first element of build order
+        # This works at the moment, but we don't know which node it is building
         t.run("install protobuf/0.1@ --lockfile=conan.lock --build=protobuf "
               "--lockfile-out=conan.lock")
-        print(t.load("conan.lock"))
-
-        self.assertIn("protobuf/0.1: Package 'cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31' created",
-                      t.out)
-        t.run("install protobuf/0.1@ --lockfile=conan.lock --build=protobuf")
-        print(t.out)
-        self.assertIn("protobuf/0.1: Package '3475bd55b91ae904ac96fde0f106a136ab951a5e' created",
-                      t.out)
+        # FIXME: We need a way to speficy contexts or the ID of the node in the lockfile
+        # FIXME: plus maybe the context too, to dissambiguate nodes in both contexts
 
     def test_build_require_not_removed(self):
         client = TestClient()

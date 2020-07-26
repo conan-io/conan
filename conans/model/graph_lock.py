@@ -3,7 +3,7 @@ import os
 from collections import OrderedDict
 
 from conans import DEFAULT_REVISION_V1
-from conans.client.graph.graph import RECIPE_VIRTUAL, RECIPE_CONSUMER, CONTEXT_BUILD
+from conans.client.graph.graph import RECIPE_VIRTUAL, RECIPE_CONSUMER
 from conans.client.graph.python_requires import PyRequires
 from conans.client.graph.range_resolver import satisfying
 from conans.client.profile_loader import _load_profile
@@ -355,8 +355,6 @@ class GraphLock(object):
             levels.append(current_level)
             # now initialize new level
             opened = set(opened).difference(current_level)
-
-        print(levels)
 
         # Now compute the list of list with prev=None, and prepare them with the right
         # references to be used in cmd line
