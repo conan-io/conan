@@ -11,8 +11,7 @@ from conans.client.tools.oss import OSInfo
 from conans.client.tools.system_pm import ChocolateyTool, SystemPackageTool, AptTool
 from conans.errors import ConanException
 from conans.test.unittests.util.tools_test import RunnerMock
-from conans.test.utils.mocks.conanfile import MockSettings, MockConanfile
-from conans.test.utils.tools import TestBufferConanOutput
+from conans.test.utils.mocks import MockSettings, MockConanfile, TestBufferConanOutput
 
 
 class SystemPackageToolTest(unittest.TestCase):
@@ -527,3 +526,4 @@ class SystemPackageToolTest(unittest.TestCase):
                 spt.update()
         else:
             spt.update()  # Won't raise anything because won't do anything
+          

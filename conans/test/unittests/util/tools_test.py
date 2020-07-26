@@ -26,9 +26,9 @@ from conans.client.tools.win import vswhere
 from conans.errors import ConanException, AuthenticationException
 from conans.model.build_info import CppInfo
 from conans.model.settings import Settings
-from conans.test.utils.mocks.conanfile import ConanFileMock
+from conans.test.utils.mocks import ConanFileMock, TestBufferConanOutput
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import StoppableThreadBottle, TestBufferConanOutput, TestClient
+from conans.test.utils.tools import StoppableThreadBottle, TestClient
 from conans.tools import get_global_instances
 from conans.util.env_reader import get_env
 from conans.util.files import load, md5, mkdir, save

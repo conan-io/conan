@@ -12,7 +12,7 @@ from conans.model.ref import ConanFileReference
 from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
 from conans.test.utils.test_files import temp_folder
 from conans.errors import ConanException
-from conans.test.utils.tools import TestBufferConanOutput
+from conans.test.utils.mocks import TestBufferConanOutput
 
 
 class UpdateRevisionInMetadataTests(unittest.TestCase):

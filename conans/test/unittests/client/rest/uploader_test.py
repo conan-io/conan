@@ -6,7 +6,7 @@ import six
 
 from conans.client.rest.file_uploader import FileUploader
 from conans.errors import AuthenticationException, ForbiddenException, InternalErrorException
-from conans.test.utils.tools import TestBufferConanOutput
+from conans.test.utils.mocks import TestBufferConanOutput
 from conans.util.files import save
 
 

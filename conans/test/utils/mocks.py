@@ -1,13 +1,16 @@
 import os
 import sys
 from collections import Counter, defaultdict, namedtuple
+from io import StringIO
+
+import six
 
 from conans import ConanFile, Options
+from conans.client.output import ConanOutput
 from conans.client.userio import UserIO
 from conans.model.env_info import DepsEnvInfo, EnvInfo, EnvValues
 from conans.model.options import PackageOptions
 from conans.model.user_info import DepsUserInfo
-from conans.test.utils.tools import TestBufferConanOutput
 
 
 class LocalDBMock(object):
@@ -176,3 +179,31 @@ class ConanFileMock(ConanFile):
 
 
 MockOptions = MockSettings
+
+
+class TestBufferConanOutput(ConanOutput):
+    """ wraps the normal output of the application, captures it into an stream
+    and gives it operators similar to string, so it can be compared in tests
+    """
+
+    def __init__(self):
+        ConanOutput.__init__(self, StringIO(), color=False)
+
+    def __repr__(self):
+        # FIXME: I'm sure there is a better approach. Look at six docs.
+        if six.PY2:
+            return str(self._stream.getvalue().encode("ascii", "ignore"))
+        else:
+            return self._stream.getvalue()
+
+    def __str__(self, *args, **kwargs):
+        return self.__repr__()
+
+    def __eq__(self, value):
+        return self.__repr__() == value
+
+    def __ne__(self, value):
+        return not self.__eq__(value)
+
+    def __contains__(self, value):
+        return value in self.__repr__()
