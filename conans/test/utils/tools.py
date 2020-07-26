@@ -13,7 +13,7 @@ import threading
 import time
 import unittest
 import uuid
-from collections import Counter, OrderedDict
+from collections import OrderedDict
 from contextlib import contextmanager
 
 import bottle
@@ -37,7 +37,6 @@ from conans.client.tools.files import chdir
 from conans.client.tools.files import replace_in_file
 from conans.client.tools.scm import Git, SVN
 from conans.client.tools.win import get_cased_path
-from conans.client.userio import UserIO
 from conans.errors import NotFoundException, RecipeNotFoundException, PackageNotFoundException
 from conans.model.manifest import FileTreeManifest
 from conans.model.profile import Profile
@@ -45,6 +44,7 @@ from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.settings import Settings
 from conans.server.revision_list import _RevisionEntry
 from conans.test.utils.genconanfile import GenConanfile
+from conans.test.utils.mocks import MockedUserIO
 from conans.test.utils.server_launcher import (TESTING_REMOTE_PRIVATE_PASS,
                                                TESTING_REMOTE_PRIVATE_USER,
                                                TestServerLauncher)
@@ -596,68 +596,6 @@ class SVNLocalRepoTestCase(unittest.TestCase):
             super(SVNLocalRepoTestCase, self).run(*args, **kwargs)
         finally:
             shutil.rmtree(tmp_folder, ignore_errors=False, onerror=try_remove_readonly)
-
-
-class LocalDBMock(object):
-
-    def __init__(self, user=None, access_token=None, refresh_token=None):
-        self.user = user
-        self.access_token = access_token
-        self.refresh_token = refresh_token
-
-    def get_login(self, _):
-        return self.user, self.access_token, self.refresh_token
-
-    def get_username(self, _):
-        return self.user
-
-    def store(self, user, access_token, refresh_token, _):
-        self.user = user
-        self.access_token = access_token
-        self.refresh_token = refresh_token
-
-
-class MockedUserIO(UserIO):
-    """
-    Mock for testing. If get_username or get_password is requested will raise
-    an exception except we have a value to return.
-    """
-
-    def __init__(self, logins, ins=sys.stdin, out=None):
-        """
-        logins is a dict of {remote: list(user, password)}
-        will return sequentially
-        """
-        assert isinstance(logins, dict)
-        self.logins = logins
-        self.login_index = Counter()
-        UserIO.__init__(self, ins, out)
-
-    def get_username(self, remote_name):
-        username_env = self._get_env_username(remote_name)
-        if username_env:
-            return username_env
-
-        self._raise_if_non_interactive()
-        sub_dict = self.logins[remote_name]
-        index = self.login_index[remote_name]
-        if len(sub_dict) - 1 < index:
-            raise Exception("Bad user/password in testing framework, "
-                            "provide more tuples or input the right ones")
-        return sub_dict[index][0]
-
-    def get_password(self, remote_name):
-        """Overridable for testing purpose"""
-        password_env = self._get_env_password(remote_name)
-        if password_env:
-            return password_env
-
-        self._raise_if_non_interactive()
-        sub_dict = self.logins[remote_name]
-        index = self.login_index[remote_name]
-        tmp = sub_dict[index][1]
-        self.login_index.update([remote_name])
-        return tmp
 
 
 def _copy_cache_folder(target_folder):
