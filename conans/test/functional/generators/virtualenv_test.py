@@ -12,7 +12,7 @@ from conans.client.tools import OSInfo, files as tools_files
 from conans.client.tools.env import environment_append
 from conans.model.ref import ConanFileReference
 from conans.test.functional.graph.graph_manager_base import GraphManagerTest
-from conans.test.utils.conanfile import ConanFileMock
+from conans.test.utils.mocks import ConanFileMock
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import GenConanfile
 from conans.util.files import decode_text, load, save_files, to_file_bytes
@@ -253,7 +253,7 @@ class VirtualEnvIntegrationTestCase(unittest.TestCase):
         generator.env = {"PATH": [self.env_path], }
 
         stdout, environment = self._run_virtualenv(generator)
-        
+
         cpaths = dict(l.split("=", 1) for l in reversed(stdout.splitlines()) if l.startswith("__conan_"))
         self.assertEqual(cpaths["__conan_pre_path__"], cpaths["__conan_post_path__"])
         self.assertEqual(cpaths["__conan_env_path__"], cpaths["__conan_post_path__"])

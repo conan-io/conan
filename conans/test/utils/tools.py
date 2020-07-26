@@ -661,6 +661,7 @@ class MockedUserIO(UserIO):
 
 
 def _copy_cache_folder(target_folder):
+    _copy_cache_folder.master = dict()  # temp_folder(create_dir=False)
     # Some variables affect to cache population (take a different default folder)
     cache_key = hash(os.environ.get(CONAN_V2_MODE_ENVVAR, None))
     master_folder = _copy_cache_folder.master.setdefault(cache_key, temp_folder(create_dir=False))
@@ -672,9 +673,6 @@ def _copy_cache_folder(target_folder):
         cache.initialize_default_profile()
         cache.initialize_settings()
     shutil.copytree(master_folder, target_folder)
-
-
-_copy_cache_folder.master = dict()  # temp_folder(create_dir=False)
 
 
 class TestClient(object):

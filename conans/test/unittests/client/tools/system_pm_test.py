@@ -11,7 +11,7 @@ from conans.client.tools.oss import OSInfo
 from conans.client.tools.system_pm import ChocolateyTool, SystemPackageTool, AptTool
 from conans.errors import ConanException
 from conans.test.unittests.util.tools_test import RunnerMock
-from conans.test.utils.conanfile import MockSettings, MockConanfile
+from conans.test.utils.mocks.conanfile import MockSettings, MockConanfile
 from conans.test.utils.tools import TestBufferConanOutput
 
 
@@ -462,7 +462,7 @@ class SystemPackageToolTest(unittest.TestCase):
         }):
             packages = ["verify_package", "verify_another_package", "verify_yet_another_package"]
             runner = RunnerMultipleMock(["sudo -A apt-get update"])
-            spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out), output=self.out, 
+            spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out), output=self.out,
                                     default_mode="verify")
             with self.assertRaises(ConanException) as exc:
                 spt.install(packages)

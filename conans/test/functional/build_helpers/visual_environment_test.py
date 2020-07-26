@@ -2,7 +2,7 @@ import unittest
 
 from conans.client import tools
 from conans.client.build.visual_environment import VisualStudioBuildEnvironment
-from conans.test.utils.conanfile import MockConanfile, MockSettings
+from conans.test.utils.mocks import MockSettings, MockConanfile
 from conans.test.utils.tools import TestClient
 
 

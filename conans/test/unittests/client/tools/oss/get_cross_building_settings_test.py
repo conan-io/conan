@@ -7,7 +7,7 @@ from collections import namedtuple
 from mock import mock
 
 from conans.client.tools.oss import get_cross_building_settings, OSInfo
-from conans.test.utils.conanfile import MockSettings
+from conans.test.utils.mocks import MockSettings
 
 # TODO: Add tests using settings_host and settings_build
 

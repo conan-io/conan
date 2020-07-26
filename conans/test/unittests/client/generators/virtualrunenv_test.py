@@ -4,7 +4,7 @@ import platform
 import unittest
 
 from conans.client.generators.virtualrunenv import VirtualRunEnvGenerator
-from conans.test.utils.conanfile import ConanFileMock
+from conans.test.utils.mocks import ConanFileMock
 
 
 class VirtualRunEnvGeneratorTest(unittest.TestCase):

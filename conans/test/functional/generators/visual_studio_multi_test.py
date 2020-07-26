@@ -9,7 +9,7 @@ from parameterized import parameterized
 
 from conans import MSBuild, tools
 from conans.client.runner import ConanRunner
-from conans.test.utils.conanfile import MockConanfile, MockSettings
+from conans.test.utils.mocks import MockSettings, MockConanfile
 from conans.test.utils.tools import TestClient, TestBufferConanOutput
 from conans.test.utils.visual_project_files import get_vs_project_files
 
