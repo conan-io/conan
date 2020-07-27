@@ -5,11 +5,13 @@ import unittest
 
 from nose.plugins.attrib import attr
 
+from conans.client.tools import which, PkgConfig, environment_append
 from conans.model.ref import ConanFileReference
 from conans.test.utils.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
 
+@unittest.skipUnless(which("pkg-config"), "Requires pkgconfig executable")
 class PkgConfigGeneratorWithComponentsTest(unittest.TestCase):
 
     @staticmethod
@@ -66,6 +68,13 @@ class PkgConfigGeneratorWithComponentsTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile or _conanfile_world})
         client.run("create .")
 
+    @staticmethod
+    def _get_libs_from_pkg_config(library, folder):
+        with environment_append({"PKG_CONFIG_PATH": folder}):
+            pconfig = PkgConfig(library)
+            libs = pconfig.libs_only_l
+        return libs
+
     def basic_test(self):
         client = TestClient()
         self._create_greetings(client)
@@ -75,6 +84,8 @@ class PkgConfigGeneratorWithComponentsTest(unittest.TestCase):
         self.assertNotIn("Requires:", client.load(os.path.join(client.current_folder, "bye.pc")))
         self.assertIn("Requires: bye hello",
                       client.load(os.path.join(client.current_folder, "greetings.pc")))
+        libs = self._get_libs_from_pkg_config("greetings", client.current_folder)
+        self.assertListEqual(["-lbye", "-lhello"], libs)
 
     def pkg_config_general_test(self):
         client = TestClient()
@@ -100,12 +111,12 @@ class PkgConfigGeneratorWithComponentsTest(unittest.TestCase):
         """)
         self._create_world(client, conanfile=conanfile)
         client.run("install world/0.0.1@ -g pkg_config")
-        world_pc = client.load(os.path.join(client.current_folder, "World.pc"))
-        worldall_pc = client.load(os.path.join(client.current_folder, "Worldall.pc"))
-        helloworld_pc = client.load(os.path.join(client.current_folder, "Helloworld.pc"))
-        self.assertIn("Requires: Bye Helloworld", worldall_pc)
-        self.assertIn("Requires: Hello", helloworld_pc)
-        self.assertIn("Requires: Helloworld Worldall", world_pc)  #TODO reverse order?
+        libs = self._get_libs_from_pkg_config("Worldall", client.current_folder)
+        self.assertListEqual(["-lWorldall", "-lbye", "-lHelloworld", "-lhello"], libs)
+        libs = self._get_libs_from_pkg_config("Helloworld", client.current_folder)
+        self.assertListEqual(["-lHelloworld", "-lhello"], libs)
+        libs = self._get_libs_from_pkg_config("World", client.current_folder)
+        self.assertListEqual(["-lWorldall", "-lbye", "-lHelloworld", "-lhello"], libs)
 
     def pkg_config_components_test(self):
         client = TestClient()
@@ -127,12 +138,14 @@ class PkgConfigGeneratorWithComponentsTest(unittest.TestCase):
         """)
         self._create_world(client, conanfile=conanfile2)
         client.run("install world/0.0.1@ -g pkg_config")
+        libs = self._get_libs_from_pkg_config("helloworld", client.current_folder)
+        self.assertListEqual(["-lhelloworld", "-lhello"], libs)
+        libs = self._get_libs_from_pkg_config("worldall", client.current_folder)
+        self.assertListEqual(["-lworldall", "-lhelloworld", "-lhello", "-lbye"], libs)
         world_pc = client.load(os.path.join(client.current_folder, "world.pc"))
-        worldall_pc = client.load(os.path.join(client.current_folder, "worldall.pc"))
-        helloworld_pc = client.load(os.path.join(client.current_folder, "helloworld.pc"))
-        self.assertIn("Requires: helloworld bye", worldall_pc)
-        self.assertIn("Requires: hello", helloworld_pc)
-        self.assertIn("Requires: helloworld worldall", world_pc)  #TODO: reverse order?
+        self.assertIn("Requires: helloworld worldall", world_pc)
+        libs = self._get_libs_from_pkg_config("world", client.current_folder)
+        self.assertListEqual(["-lworldall", "-lhelloworld", "-lhello", "-lbye"], libs)
 
     def recipe_with_components_requiring_recipe_without_components_test(self):
         client = TestClient()
@@ -160,16 +173,14 @@ class PkgConfigGeneratorWithComponentsTest(unittest.TestCase):
         self.assertFalse(os.path.isfile(os.path.join(client.current_folder, "bye.pc")))
         greetings_pc = client.load(os.path.join(client.current_folder, "greetings.pc"))
         self.assertNotIn("Requires:", greetings_pc)
-        self.assertIn("Libs: -L${libdir} -lhello  -lbye", greetings_pc)
-        world_pc = client.load(os.path.join(client.current_folder, "world.pc"))
-        self.assertIn("Requires: helloworld worldall", world_pc)
-        self.assertNotIn("Libs:", world_pc)
-        worldall_pc = client.load(os.path.join(client.current_folder, "worldall.pc"))
-        self.assertIn("Requires: helloworld greetings", worldall_pc)
-        self.assertIn("Libs: -L${libdir} -lworldall", worldall_pc)
-        helloworld_pc = client.load(os.path.join(client.current_folder, "helloworld.pc"))
-        self.assertIn("Requires: greetings", helloworld_pc)
-        self.assertIn("Libs: -L${libdir} -lhelloworld", helloworld_pc)
+        libs = self._get_libs_from_pkg_config("greetings", client.current_folder)
+        self.assertListEqual(["-lhello", "-lbye"], libs)
+        libs = self._get_libs_from_pkg_config("world", client.current_folder)
+        self.assertListEqual(["-lworldall", "-lhelloworld", "-lhello", "-lbye"], libs)
+        libs = self._get_libs_from_pkg_config("helloworld", client.current_folder)
+        self.assertListEqual(["-lhelloworld", "-lhello", "-lbye"], libs)
+        libs = self._get_libs_from_pkg_config("worldall", client.current_folder)
+        self.assertListEqual(["-lworldall", "-lhelloworld", "-lhello", "-lbye"], libs)
 
     def same_names_test(self):
         client = TestClient()
