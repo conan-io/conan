@@ -173,7 +173,6 @@ class CMakeDefinitionsBuilder(object):
         return definitions
 
     def _cmake_cross_build_defines(self):
-
         os_ = self._ss("os")
         arch = self._ss("arch")
         os_ver_str = "os.api_level" if os_ == "Android" else "os.version"

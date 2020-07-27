@@ -38,7 +38,7 @@ def output_help_cli(out, commands, groups):
     out.writeln('Conan commands. Type "conan <command> -h" for help', Color.BRIGHT_YELLOW)
 
 
-@conan_command(group="Misc commands", formatters={"cli": output_help_cli})
+@conan_command(group="Misc", formatters={"cli": output_help_cli})
 def help(*args, conan_api, parser, commands, groups, **kwargs):
     """
     Shows help for a specific command.

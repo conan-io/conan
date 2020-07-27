@@ -33,10 +33,10 @@ class VirtualEnvGeneratorTest(unittest.TestCase):
         cls.result = cls.generator.content
 
     def test_output(self):
-        keys = ["deactivate.sh", "activate.sh", 'environment.sh.env']
+        keys = ["deactivate.sh", "activate.sh", "environment.sh.env",
+                "activate.ps1", "deactivate.ps1", "environment.ps1.env"]
         if platform.system() == "Windows":
-            keys += ["activate.bat", "deactivate.bat", "environment.bat.env",
-                     "activate.ps1", "deactivate.ps1", "environment.ps1.env"]
+            keys += ["activate.bat", "deactivate.bat", "environment.bat.env"]
 
         self.assertListEqual(sorted(keys), sorted(self.result.keys()))
 

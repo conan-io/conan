@@ -130,6 +130,7 @@ class ConanFile(object):
     default_options = None
 
     provides = None
+    deprecated = None
 
     def __init__(self, output, runner, display_name="", user=None, channel=None):
         # an output stream (writeln, info, warn error)

@@ -1,69 +1,20 @@
-import argparse
+import importlib
 import os
+import pkgutil
 import signal
 import sys
-import textwrap
 from collections import defaultdict
 from difflib import get_close_matches
-import importlib
-import pkgutil
+from inspect import getmembers
 
 from conans import __version__ as client_version
+from conans.cli.command import ConanSubCommand
 from conans.cli.exit_codes import SUCCESS, ERROR_MIGRATION, ERROR_GENERAL, USER_CTRL_C, \
     ERROR_SIGTERM, USER_CTRL_BREAK, ERROR_INVALID_CONFIGURATION
-from conans.util.env_reader import get_env
 from conans.client.conan_api import Conan
 from conans.errors import ConanException, ConanInvalidConfiguration, ConanMigrationError
 from conans.util.files import exception_message_safe
 from conans.util.log import logger
-
-
-class Extender(argparse.Action):
-    """Allows using the same flag several times in command and creates a list with the values.
-    For example:
-        conan install MyPackage/1.2@user/channel -o qt:value -o mode:2 -s cucumber:true
-      It creates:
-          options = ['qt:value', 'mode:2']
-          settings = ['cucumber:true']
-    """
-
-    def __call__(self, parser, namespace, values, option_strings=None):  # @UnusedVariable
-        # Need None here incase `argparse.SUPPRESS` was supplied for `dest`
-        dest = getattr(namespace, self.dest, None)
-        if not hasattr(dest, 'extend') or dest == self.default:
-            dest = []
-            setattr(namespace, self.dest, dest)
-            # if default isn't set to None, this method might be called
-            # with the default as `values` for other arguments which
-            # share this destination.
-            parser.set_defaults(**{self.dest: None})
-
-        if isinstance(values, str):
-            dest.append(values)
-        elif values:
-            try:
-                dest.extend(values)
-            except ValueError:
-                dest.append(values)
-
-
-class OnceArgument(argparse.Action):
-    """Allows declaring a parameter that can have only one value, by default argparse takes the
-    latest declared and it's very confusing.
-    """
-
-    def __call__(self, parser, namespace, values, option_string=None):
-        if getattr(namespace, self.dest) is not None and self.default is None:
-            msg = '{o} can only be specified once'.format(o=option_string)
-            raise argparse.ArgumentError(None, msg)
-        setattr(namespace, self.dest, values)
-
-
-class SmartFormatter(argparse.HelpFormatter):
-
-    def _fill_text(self, text, width, indent):
-        text = textwrap.dedent(text)
-        return ''.join(indent + line for line in text.splitlines(True))
 
 
 class Cli(object):
@@ -96,6 +47,14 @@ class Cli(object):
             if command_wrapper.doc:
                 self._commands[command_wrapper.name] = command_wrapper
                 self._groups[command_wrapper.group].append(command_wrapper.name)
+            for name, value in getmembers(importlib.import_module(import_path)):
+                if isinstance(value, ConanSubCommand):
+                    if name.startswith("{}_".format(method_name)):
+                        command_wrapper.add_subcommand(value)
+                    else:
+                        raise ConanException("The name for the subcommand method should "
+                                             "begin with the main command name + '_'. "
+                                             "i.e. {}_<subcommand_name>".format(method_name))
         except AttributeError:
             raise ConanException("There is no {} method defined in {}".format(method_name,
                                                                               import_path))
@@ -213,9 +172,8 @@ def main(args):
     if sys.platform == 'win32':
         signal.signal(signal.SIGBREAK, ctrl_break_handler)
 
-    cli = Cli(conan_api)
-
     try:
+        cli = Cli(conan_api)
         exit_error = cli.run(args)
     except SystemExit as exc:
         if exc.code != 0:

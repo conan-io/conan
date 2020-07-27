@@ -24,10 +24,10 @@ class VirtualBuildEnvGeneratorGCCTest(unittest.TestCase):
         cls.result = cls.generator.content
 
     def test_output(self):
-        keys = ["deactivate_build.sh", "activate_build.sh", "environment_build.sh.env"]
+        keys = ["deactivate_build.sh", "activate_build.sh", "environment_build.sh.env",
+                "activate_build.ps1", "deactivate_build.ps1", "environment_build.ps1.env"]
         if platform.system() == "Windows":
-            keys += ["activate_build.bat", "deactivate_build.bat", "environment_build.bat.env",
-                     "activate_build.ps1", "deactivate_build.ps1", "environment_build.ps1.env"]
+            keys += ["activate_build.bat", "deactivate_build.bat", "environment_build.bat.env"]
 
         self.assertListEqual(sorted(keys), sorted(self.result.keys()))
 
