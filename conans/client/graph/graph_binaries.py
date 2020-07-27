@@ -291,17 +291,17 @@ class GraphBinariesAnalyzer(object):
         # A bit risky to be done now
         conanfile = node.conanfile
         neighbors = node.neighbors()
+
+        direct_reqs, indirect_reqs = self.package_id_transitive_reqs(node)
+
+        # FIXME: Conan v2.0 This is introducing a bug for backwards compatibility, it will add
+        #   only the requirements available in the 'neighbour.info' object, not all the closure
         if not self._fixed_package_id:
-            direct_reqs = []  # of PackageReference
-            indirect_reqs = set()  # of PackageReference, avoid duplicates
+            old_indirect = set()
             for neighbor in neighbors:
-                ref, nconan = neighbor.ref, neighbor.conanfile
-                direct_reqs.append(neighbor.pref)
-                indirect_reqs.update(nconan.info.requires.refs())
-            # Make sure not duplicated
+                old_indirect.update((p.ref, p.id) for p in neighbor.conanfile.info.requires.refs())
+            indirect_reqs = set(p for p in indirect_reqs if (p.ref, p.id) in old_indirect)
             indirect_reqs.difference_update(direct_reqs)
-        else:
-            direct_reqs, indirect_reqs = self.package_id_transitive_reqs(node)
 
         python_requires = getattr(conanfile, "python_requires", None)
         if python_requires:
