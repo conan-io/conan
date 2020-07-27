@@ -4,15 +4,13 @@ from conans.cli.command import conan_command, conan_subcommand, Extender, OnceAr
 
 
 def output_remote_list_json(info, out):
-    results = info["results"]
-    myjson = json.dumps(results, indent=4)
+    myjson = json.dumps(info, indent=4)
     out.writeln(myjson)
 
 
 def output_remote_list_cli(info, out):
-    results = info["results"]
-    for remote_name, remote_info in results.items():
-        output_str = "{}: {} [Verify SSL: {}, Enabled: {}]".format(remote_name,
+    for remote_info in info:
+        output_str = "{}: {} [Verify SSL: {}, Enabled: {}]".format(remote_info["name"],
                                                                    remote_info["url"],
                                                                    remote_info["verify"],
                                                                    remote_info.get(
@@ -26,11 +24,10 @@ def remote_list(*args, conan_api, parser, subparser):
     List current remotes
     """
     args = parser.parse_args(*args)
-    info = {"results": {"remote1": {"url": "https://someurl1", "verify": True},
-                        "remote2": {"url": "https://someurl2", "verify": False,
-                                    "disabled": True},
-                        "remote3": {"url": "https://someurl3", "verify": False},
-                        "remote4": {"url": "https://someurl4", "verify": True}}}
+    info = [{"name": "remote1", "url": "https://someurl1", "verify": True},
+            {"name": "remote2", "url": "https://someurl2", "verify": False},
+            {"name": "remote3", "url": "https://someurl3", "verify": True},
+            {"name": "remote4", "url": "https://someurl4", "verify": False}]
     return info
 
 
