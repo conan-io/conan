@@ -46,7 +46,7 @@ def export_pkg(app, recorder, full_ref, source_folder, build_folder, package_fol
     output.info("Packaging to %s" % package_id)
     pref = PackageReference(ref, package_id)
     layout = cache.package_layout(ref, short_paths=conanfile.short_paths)
-    dest_package_folder = layout.package(pref) if not cache.config.package_install_folder\
+    dest_package_folder = layout.package(pref) if not cache.config.use_package_install_folder\
         else layout.package_install(pref)
 
     if os.path.exists(dest_package_folder):
@@ -68,7 +68,7 @@ def export_pkg(app, recorder, full_ref, source_folder, build_folder, package_fol
                                       dest_package_folder, install_folder, hook_manager,
                                       conan_file_path, ref, local=True)
 
-    if cache.config.package_install_folder:
+    if cache.config.use_package_install_folder:
         call_package_install(conanfile, dest_package_folder)
     packager.update_package_metadata(prev, layout, package_id, full_ref.revision)
     pref = PackageReference(pref.ref, pref.id, prev)

@@ -129,7 +129,7 @@ class RemoteManager(object):
     def get_package(self, pref, layout, remote, output, recorder):
 
         package_folder = layout.package(pref)
-        package_install_folder = self._cache.config.package_install_folder
+        package_install_folder = self._cache.config.use_package_install_folder
         unzip_folder = package_folder if not package_install_folder else layout.package_install(pref)
 
         conanfile_path = self._cache.package_layout(pref.ref).conanfile()
@@ -171,12 +171,10 @@ class RemoteManager(object):
         except BaseException as e:
             output.error("Exception while getting package: %s" % str(pref.id))
             output.error("Exception: %s %s" % (type(e), str(e)))
-            for folder in package_folder, unzip_folder:
+            for folder in set(package_folder, unzip_folder):
                 try:
                     output.warn("Trying to remove package folder: %s" % folder)
                     rmdir(folder)
-                    if package_folder == unzip_folder:
-                        break
                 except OSError as e:
                     raise ConanException("%s\n\nCouldn't remove folder '%s', might be busy or open. "
                                          "Close any app using it, and retry" % (str(e), folder))

@@ -7,21 +7,15 @@ from conans.test.utils.tools import TestServer, TestClient, NO_SETTINGS_PACKAGE_
 
 conanfile = """
 import os
-from conans import ConanFile
+from conans import ConanFile, tools
 class Pkg(ConanFile):
 
-    def build(self):
-        with open(os.path.join(self.build_folder, "build_file.txt"), "w") as f:
-            f.write("Build file")
-
     def package(self):
-        with open(os.path.join(self.package_folder, "package_file.txt"), "w") as f:
-            f.write("Packaged file")
+        tools.save(os.path.join(self.package_folder, "package_file.txt"), "Package file")
 
     def package_install(self):
         self.output.warn("PACKAGE INSTALL CALL:{}".format(self.package_install_folder))
-        with open(os.path.join(self.package_install_folder, "install_file.txt"), "w") as f:
-            f.write("Installed file")
+        tools.save("install_file.txt", "Installed file")
 
 """
 
@@ -31,7 +25,7 @@ class PackageInstallTest(unittest.TestCase):
     def setUp(self):
         self.server = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")])
         self.client = TestClient(servers={"default": self.server})
-        self.client.run("config set general.package_install_folder=1")
+        self.client.run("config set general.use_package_install_folder=1")
         self.ref = ConanFileReference.loads("lib/1.0@")
         pid = PackageReference(self.ref, NO_SETTINGS_PACKAGE_ID)
         self.install_folder = self.client.cache.package_layout(self.ref).package_install(pid)
@@ -78,7 +72,7 @@ class PackageInstallTest(unittest.TestCase):
         self.assertNotIn("package_file.txt", os.listdir(self.package_folder))
         self.assertNotIn("install_file.txt", os.listdir(self.package_folder))
         self.assertIn("package_file2.txt", os.listdir(self.package_folder))
-        self.assertNotIn("install_file.txt", os.listdir(self.package_folder))
+        self.assertNotIn("install_file2.txt", os.listdir(self.package_folder))
 
         self.assertNotIn("conan_package.tgz", os.listdir(self.install_folder))
         self.assertNotIn("package_file.txt", os.listdir(self.install_folder))
@@ -111,7 +105,7 @@ class PackageInstallTest(unittest.TestCase):
         self.client.run('remove "*" -f')
         # It copies the files from current dir without calling package()
         self.client.run("export-pkg . {}@ --package-folder=.".format(self.ref))
-        # TODO: Confirm! Should it call package_install when copying package directly??
+        # It has to call package_install when copying package directly
         self.assertNotIn("package_file.txt", os.listdir(self.install_folder))
         self.assertIn("install_file.txt", os.listdir(self.install_folder))
 

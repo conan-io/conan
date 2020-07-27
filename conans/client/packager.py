@@ -1,11 +1,12 @@
 import os
 
+from conans.client import tools
 from conans.client.file_copier import FileCopier, report_copied_files
+from conans.errors import conanfile_exception_formatter
+from conans.model.conan_file import get_env_context_manager
 from conans.model.manifest import FileTreeManifest
 from conans.paths import CONANINFO
 from conans.util.files import mkdir, save
-from conans.errors import conanfile_exception_formatter
-from conans.model.conan_file import get_env_context_manager
 
 
 def export_pkg(conanfile, package_id, src_package_folder, package_folder, hook_manager,
@@ -58,5 +59,10 @@ def call_package_install(conanfile, package_install_folder):
     with get_env_context_manager(conanfile):
         conanfile.output.highlight("Calling package_install()")
         conanfile.package_install_folder = package_install_folder
-        with conanfile_exception_formatter(str(conanfile), "install"):
-            conanfile.package_install()
+        conanfile.source_folder = None
+        conanfile.build_folder = None
+        conanfile.package_folder = None
+        conanfile.install_folder = None
+        with tools.chdir(package_install_folder):
+            with conanfile_exception_formatter(str(conanfile), "install"):
+                conanfile.package_install()

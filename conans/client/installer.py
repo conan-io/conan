@@ -23,7 +23,6 @@ from conans.client.tools.env import pythonpath
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
                            conanfile_exception_formatter)
 from conans.model.build_info import CppInfo, DepCppInfo
-from conans.model.conan_file import get_env_context_manager
 from conans.model.editable_layout import EditableLayout
 from conans.model.env_info import EnvInfo
 from conans.model.graph_info import GraphInfo
@@ -201,7 +200,7 @@ class _PackageBuilder(object):
         # BUILD & PACKAGE
         with package_layout.conanfile_read_lock(self._output):
             _remove_folder_raising(package_folder)
-            if self._cache.config.package_install_folder:
+            if self._cache.config.use_package_install_folder:
                 _remove_folder_raising(package_layout.package_install(pref))
             mkdir(build_folder)
             with tools.chdir(build_folder):
@@ -224,7 +223,7 @@ class _PackageBuilder(object):
                     assert prev
                     node.prev = prev
 
-                    if self._cache.config.package_install_folder:
+                    if self._cache.config.use_package_install_folder:
                         # TODO: It is copying also conaninfo and conanmanifest, is it a problem?
                         shutil.copytree(package_folder, package_layout.package_install(pref), symlinks=True)
 
@@ -403,7 +402,7 @@ class BinaryInstaller(object):
             with layout.update_metadata() as metadata:
                 metadata.packages[pref.id].remote = node.binary_remote.name
             package_install_folder = layout.package_install(pref)
-            if self._cache.config.package_install_folder:
+            if self._cache.config.use_package_install_folder:
                 call_package_install(conanfile, package_install_folder)
 
     def _build(self, nodes_by_level, keep_build, root_node, graph_info, remotes, build_mode, update):
@@ -503,7 +502,7 @@ class BinaryInstaller(object):
                     log_package_got_from_local_cache(pref)
                     self._recorder.package_fetched_from_cache(pref)
 
-                if self._cache.config.package_install_folder:  # The opt-in
+                if self._cache.config.use_package_install_folder:  # The opt-in
                     package_folder = layout.package_install(pref)
                     if node.binary != BINARY_CACHE and hasattr(conanfile, "package_install"):
                         # If already in the cache the install method was called already

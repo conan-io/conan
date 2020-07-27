@@ -106,6 +106,14 @@ class AConan(ConanFile):
 
     def deploy(self):
         assert(self.install_folder == os.getcwd())
+
+    def package_install(self):
+        assert(self.package_install_folder == os.getcwd())
+
+        assert(self.source_folder is None)
+        assert(self.build_folder is None)
+        assert(self.package_folder is None)
+        assert(self.install_folder is None)
 """
 
 
@@ -203,6 +211,8 @@ class TestFoldersAccess(unittest.TestCase):
         self.client.run("install lib/1.0@user/testing")  # Checks deploy
 
     def full_install_test(self):
+        self.client.run("config set general.use_package_install_folder=1")
+
         c1 = conanfile % {"no_copy_source": False, "source_with_infos": False,
                           "local_command": False}
         self.client.save({"conanfile.py": c1}, clean_first=True)
@@ -222,3 +232,4 @@ class TestFoldersAccess(unittest.TestCase):
                           "local_command": False}
         self.client.save({"conanfile.py": c1}, clean_first=True)
         self.client.run("create . conan/stable --build")
+
