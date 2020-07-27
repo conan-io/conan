@@ -1856,9 +1856,14 @@ class Command(object):
         subparsers.required = True
 
         # create the parser for the "a" command
-        update_cmd = subparsers.add_parser('update', help='update a lockfile with another lockfile')
-        update_cmd.add_argument('old_lockfile', help='path to previous lockfile')
-        update_cmd.add_argument('new_lockfile', help='path to modified lockfile')
+        update_help = ("Complete missing information in the first lockfile with information "
+                       "defined in the second lockfile. Both lockfiles must represent the same "
+                       "graph, and have the same topology with the same identifiers, i.e. the "
+                       "second lockfile must be an evolution based on the first one")
+        update_cmd = subparsers.add_parser('update', help=update_help)
+        update_cmd.add_argument('old_lockfile', help='path to lockfile to be updated')
+        update_cmd.add_argument('new_lockfile', help='path to lockfile containing the new '
+                                'information that is going to be updated into the first lockfile')
 
         build_order_cmd = subparsers.add_parser('build-order', help='Returns build-order')
         build_order_cmd.add_argument('lockfile', help='lockfile file')
@@ -2143,11 +2148,11 @@ def _add_common_install_arguments(parser, build_help, update_help=None, lockfile
                         help='Look in the specified remote server')
 
     if not update_help:
-        update_help = "Will check the remote and in case a newer version and/or revision of " \
-                      "the dependencies exists there, it will install those in the local cache. " \
-                      "When using version ranges, it will install the latest version that satisfies " \
-                      "the range. Also, if using revisions, it will update to the latest revision " \
-                      "for the resolved version range."
+        update_help = ("Will check the remote and in case a newer version and/or revision of "
+                       "the dependencies exists there, it will install those in the local cache. "
+                       "When using version ranges, it will install the latest version that "
+                       "satisfies the range. Also, if using revisions, it will update to the "
+                       "latest revision for the resolved version range.")
 
     parser.add_argument("-u", "--update", action='store_true', default=False,
                         help=update_help)
