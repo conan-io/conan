@@ -11,7 +11,6 @@ from conans.test.utils.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
 
-@unittest.skipUnless(which("pkg-config"), "Requires pkgconfig executable")
 class PkgConfigGeneratorWithComponentsTest(unittest.TestCase):
 
     @staticmethod
