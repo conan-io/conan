@@ -1861,8 +1861,8 @@ class Command(object):
                        "graph, and have the same topology with the same identifiers, i.e. the "
                        "second lockfile must be an evolution based on the first one")
         update_cmd = subparsers.add_parser('update', help=update_help)
-        update_cmd.add_argument('old_lockfile', help='path to lockfile to be updated')
-        update_cmd.add_argument('new_lockfile', help='path to lockfile containing the new '
+        update_cmd.add_argument('old_lockfile', help='Path to lockfile to be updated')
+        update_cmd.add_argument('new_lockfile', help='Path to lockfile containing the new '
                                 'information that is going to be updated into the first lockfile')
 
         build_order_cmd = subparsers.add_parser('build-order', help='Returns build-order')
