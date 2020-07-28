@@ -297,7 +297,7 @@ set_property(TARGET {name}::{name}
                 dep_cpp_info = extend(cpp_info, build_type.lower())
                 deps = DepsCppCmake(dep_cpp_info)
                 deps_names = ";".join(["{n}::{n}".format(n=n['name']) for n in public_deps_names])
-                find_lib = target_template.format(name=pkg_name, deps=deps,
+                find_lib = target_template.format(name=pkg_findname, deps=deps,
                                                   build_type_suffix=build_type_suffix,
                                                   deps_names=deps_names)
                 ret["{}Target-{}.cmake".format(pkg_filename, build_type.lower())] = find_lib
