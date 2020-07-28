@@ -1871,7 +1871,7 @@ class Command(object):
                                      help="generate output file in json format")
 
         clean_modified_cmd = subparsers.add_parser('clean-modified', help='Clean modified flags')
-        clean_modified_cmd.add_argument('lockfile', help='lockfile file')
+        clean_modified_cmd.add_argument('lockfile', help='Path to the lockfile')
 
         create_cmd = subparsers.add_parser('create',
                                            help='Create a lockfile from a conanfile or a reference')
