@@ -80,7 +80,7 @@ endforeach()
 def find_transitive_dependencies(public_deps_names, find_modules):
     if find_modules:  # for cmake_find_package generator
         find = textwrap.dedent("""
-            if(NOT {dep_name}_FOUND)
+            if(NOT {dep_filename}_FOUND)
                 find_dependency({dep_filename} REQUIRED)
             else()
                 message(STATUS "Dependency {dep_filename} already found")
@@ -90,7 +90,7 @@ def find_transitive_dependencies(public_deps_names, find_modules):
         # https://github.com/conan-io/conan/issues/4994
         # https://github.com/conan-io/conan/issues/5040
         find = textwrap.dedent("""
-            if(NOT {dep_name}_FOUND)
+            if(NOT {dep_filename}_FOUND)
                 if(${{CMAKE_VERSION}} VERSION_LESS "3.9.0")
                     find_package({dep_filename} REQUIRED NO_MODULE)
                 else()
