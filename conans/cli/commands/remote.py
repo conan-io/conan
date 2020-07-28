@@ -37,8 +37,7 @@ def remote_add(*args, conan_api, parser, subparser):
     Add a remote
     """
     subparser.add_argument("remote", help="Name of the remote to add")
-    subparser.add_argument("-u", "--url", action=OnceArgument, required=True,
-                           help="New url for the rempote")
+    subparser.add_argument("url", help="Url for the rempote")
     subparser.add_argument("-v", "--verify_ssl", action=OnceArgument, default="True",
                            help="Verify SSL certificated")
     subparser.add_argument("-i", "--insert", action=OnceArgument,
