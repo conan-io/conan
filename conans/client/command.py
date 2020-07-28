@@ -1889,7 +1889,7 @@ class Command(object):
         create_cmd.add_argument("-l", "--lockfile", action=OnceArgument,
                                 help="Path to lockfile to be used as a base")
         create_cmd.add_argument("--base", action="store_true",
-                                help="lock only recipe versions and revisions")
+                                help="Lock only recipe versions and revisions")
         create_cmd.add_argument("--lockfile-out", action=OnceArgument, default="conan.lock",
                                 help="Filename of the created lockfile")
         _add_common_install_arguments(create_cmd, build_help="Packages to build from source",
