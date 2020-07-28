@@ -319,25 +319,6 @@ class DepsGraph(object):
 
         return result
 
-    def new_build_order(self):
-        """ returns an ordered list of lists, with tuples (node_id, pref)
-        of the nodes of the graph to be built. Duplicates of pref will be ommitted
-        It will return all the nodes with BINARY_BUILD status, i.e. those that have
-        been processed according to rules like --build=missing and really need re-building
-        """
-        levels = self.inverse_levels()
-        result = []
-        total_prefs = set()  # to remove duplicates, same pref shouldn't build twice
-        for level in reversed(levels):
-            new_level = []
-            for n in level:
-                if n.binary in (BINARY_UNKNOWN, BINARY_BUILD) and n.pref not in total_prefs:
-                    new_level.append((n.id, n.pref.copy_clear_prev()))
-                    total_prefs.add(n.pref)
-            if new_level:
-                result.append(new_level)
-        return result
-
     def build_order(self, references):
         new_graph = self.collapse_graph()
         levels = new_graph.inverse_levels()

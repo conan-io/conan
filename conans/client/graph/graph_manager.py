@@ -62,7 +62,8 @@ class GraphManager(object):
         """
         try:
             graph_info = GraphInfo.load(info_folder)
-            graph_lock_file = GraphLockFile.load(info_folder, self._cache.config.revisions_enabled)
+            lock_path = os.path.join(info_folder, "conan.lock")
+            graph_lock_file = GraphLockFile.load(lock_path, self._cache.config.revisions_enabled)
             graph_lock = graph_lock_file.graph_lock
             self._output.info("Using lockfile: '{}/conan.lock'".format(info_folder))
             profile_host = graph_lock_file.profile_host
@@ -85,7 +86,7 @@ class GraphManager(object):
         if conanfile_path.endswith(".py"):
             lock_python_requires = None
             if graph_lock and not test:  # Only lock python requires if it is not test_package
-                node_id = graph_lock.get_node(graph_info.root)
+                node_id = graph_lock.get_consumer(graph_info.root)
                 lock_python_requires = graph_lock.python_requires(node_id)
             conanfile = self._loader.load_consumer(conanfile_path,
                                                    profile_host=profile_host,
@@ -169,7 +170,7 @@ class GraphManager(object):
                     ref = ConanFileReference(ref.name or conanfile.name,
                                              ref.version or conanfile.version,
                                              ref.user, ref.channel, validate=False)
-                node_id = graph_lock.get_node(ref)
+                node_id = graph_lock.get_consumer(ref)
                 lock_python_requires = graph_lock.python_requires(node_id)
 
             conanfile = self._loader.load_consumer(path, profile,
@@ -188,7 +189,7 @@ class GraphManager(object):
                              path=path)
 
         if graph_lock:  # Find the Node ID in the lock of current root
-            node_id = graph_lock.get_node(root_node.ref)
+            node_id = graph_lock.get_consumer(root_node.ref)
             root_node.id = node_id
 
         return root_node, ref
@@ -205,9 +206,7 @@ class GraphManager(object):
         conanfile = self._loader.load_virtual([reference], profile)
         root_node = Node(ref=None, conanfile=conanfile, context=CONTEXT_HOST, recipe=RECIPE_VIRTUAL)
         if graph_lock:  # Find the Node ID in the lock of current root
-            node_id = graph_lock.get_node(reference)
-            locked_ref = graph_lock.pref(node_id).ref
-            conanfile.requires[reference.name].lock(locked_ref, node_id)
+            graph_lock.find_require_and_lock(reference, conanfile)
         return root_node
 
     def _load_root_test_package(self, path, create_reference, graph_lock, profile):
@@ -232,9 +231,7 @@ class GraphManager(object):
                                  create_reference.user, create_reference.channel, validate=False)
         root_node = Node(ref, conanfile, recipe=RECIPE_CONSUMER, context=CONTEXT_HOST, path=path)
         if graph_lock:
-            node_id = graph_lock.get_node(create_reference)
-            locked_ref = graph_lock.pref(node_id).ref
-            conanfile.requires[create_reference.name].lock(locked_ref, node_id)
+            graph_lock.find_require_and_lock(create_reference, conanfile)
         return root_node
 
     def _resolve_graph(self, root_node, graph_info, build_mode, check_updates,
@@ -255,10 +252,9 @@ class GraphManager(object):
         graph_info.options = root_node.conanfile.options.values
         if root_node.ref:
             graph_info.root = root_node.ref
+
         if graph_info.graph_lock is None:
-            graph_info.graph_lock = GraphLock(deps_graph)
-        else:
-            graph_info.graph_lock.update_check_graph(deps_graph, self._output)
+            graph_info.graph_lock = GraphLock(deps_graph, self._cache.config.revisions_enabled)
 
         version_ranges_output = self._resolver.output
         if version_ranges_output:

@@ -1,6 +1,5 @@
 import json
 import os
-import shutil
 import sys
 import textwrap
 import unittest
@@ -47,8 +46,8 @@ class MyBuildInfoCreation(unittest.TestCase):
         if kwargs.get("auth", None) and (
                 kwargs["auth"][0] != "user" or kwargs["auth"][1] != "password"):
             mock_resp.status_code = 401
-        elif kwargs["headers"].get("X-JFrog-Art-Api", None) and kwargs["headers"][
-            "X-JFrog-Art-Api"] != "apikey":
+        elif (kwargs["headers"].get("X-JFrog-Art-Api", None) and
+                kwargs["headers"]["X-JFrog-Art-Api"] != "apikey"):
             mock_resp.status_code = 401
         buildinfo = json.load(data)
         if not buildinfo["name"] == "MyBuildInfo" or not buildinfo["number"] == "42":
@@ -68,6 +67,7 @@ class MyBuildInfoCreation(unittest.TestCase):
             from conans import ConanFile, load
             import os
             class Pkg(ConanFile):
+                settings = "os"
                 {requires}
                 exports_sources = "myfile.txt"
                 keep_imports = True
@@ -77,65 +77,67 @@ class MyBuildInfoCreation(unittest.TestCase):
                     self.copy("*myfile.txt")
                 """)
         client.save({"PkgA/conanfile.py": conanfile.format(requires=""),
-                     "PkgA/myfile.txt": "HelloA"})
-        client.run("create PkgA PkgA/0.1@{}".format(user_channel))
+                     "PkgA/myfile.txt": "HelloA",
+                     "PkgB/conanfile.py": conanfile.format(
+                         requires='requires = "PkgA/0.1@{}"'.format(user_channel)),
+                     "PkgB/myfile.txt": "HelloB",
+                     "PkgC/conanfile.py": conanfile.format(
+                         requires='requires = "PkgA/0.1@{}"'.format(user_channel)),
+                     "PkgC/myfile.txt": "HelloC",
+                     "PkgD/conanfile.py": conanfile.format(
+                         requires='requires = "PkgC/0.1@{0}", "PkgB/0.1@{0}"'.format(user_channel)),
+                     "PkgD/myfile.txt": "HelloD"
+                     })
+        for profile in ("Windows", "Linux"):
+            client.run("create PkgA PkgA/0.1@{} -s os={}".format(user_channel, profile))
+            client.run("create PkgB PkgB/0.1@{} -s os={}".format(user_channel, profile))
+            client.run("create PkgC PkgC/0.1@{} -s os={}".format(user_channel, profile))
+            client.run("create PkgD PkgD/0.1@{} -s os={}".format(user_channel, profile))
+            client.run("lock create --reference PkgD/0.1@{} --build=PkgC --build=PkgD -s os={}"
+                       " --lockfile-out={}.lock".format(user_channel, profile, profile))
 
-        client.save({"PkgB/conanfile.py": conanfile.format(
-            requires='requires = "PkgA/0.1@{}"'.format(user_channel)),
-            "PkgB/myfile.txt": "HelloB"})
-        client.run("create PkgB PkgB/0.1@{}".format(user_channel))
-
-        client.save({"PkgC/conanfile.py": conanfile.format(
-            requires='requires = "PkgA/0.1@{}"'.format(user_channel)),
-            "PkgC/myfile.txt": "HelloC"})
-        client.run("create PkgC PkgC/0.1@{}".format(user_channel))
-
-        client.save({"PkgD/conanfile.py": conanfile.format(
-            requires='requires = "PkgC/0.1@{0}", "PkgB/0.1@{0}"'.format(user_channel)),
-            "PkgD/myfile.txt": "HelloD"})
-
-        client.run("create PkgD PkgD/0.1@{}".format(user_channel))
-        client.run("graph lock PkgD/0.1@{}".format(user_channel))
-
-        client.run("create PkgA PkgA/0.2@{} --lockfile".format(user_channel))
-
-        shutil.copy(os.path.join(client.current_folder, "conan.lock"),
-                    os.path.join(client.current_folder, "temp.lock"))
-
-        client.run("create PkgB PkgB/0.1@{} --lockfile --build missing".format(user_channel))
-        client.run("upload * --all --confirm -r default")
+            client.run("create PkgC PkgC/0.1@{0} --lockfile={1}.lock "
+                       "--lockfile-out={1}.lock".format(user_channel, profile))
+            client.run("create PkgD PkgD/0.1@{0} --lockfile={1}.lock "
+                       "--lockfile-out={1}.lock".format(user_channel, profile))
+            client.run("upload * --all --confirm -r default")
 
         sys.argv = ["conan_build_info", "--v2", "start", "MyBuildName", "42"]
         run()
         sys.argv = ["conan_build_info", "--v2", "create",
-                    os.path.join(client.current_folder, "buildinfo1.json"), "--lockfile",
-                    os.path.join(client.current_folder, LOCKFILE)]
+                    os.path.join(client.current_folder, "buildinfowin.json"), "--lockfile",
+                    os.path.join(client.current_folder, "Windows.lock")]
         run()
 
-        shutil.copy(os.path.join(client.current_folder, "temp.lock"),
-                    os.path.join(client.current_folder, "conan.lock"))
-
-        client.run("create PkgC PkgC/0.1@{} --lockfile --build missing".format(user_channel))
-        client.run("upload * --all --confirm -r default")
-
         sys.argv = ["conan_build_info", "--v2", "create",
-                    os.path.join(client.current_folder, "buildinfo2.json"), "--lockfile",
-                    os.path.join(client.current_folder, LOCKFILE)]
+                    os.path.join(client.current_folder, "buildinfolinux.json"), "--lockfile",
+                    os.path.join(client.current_folder, "Linux.lock")]
         run()
 
         user_channel = "@" + user_channel if len(user_channel) > 2 else user_channel
-        f = client.load("buildinfo1.json")
-        buildinfo = json.loads(f)
+        buildinfo = json.loads(client.load("buildinfowin.json"))
         self.assertEqual(buildinfo["name"], "MyBuildName")
         self.assertEqual(buildinfo["number"], "42")
         ids_list = [item["id"] for item in buildinfo["modules"]]
-        self.assertTrue("PkgB/0.1{}".format(user_channel) in ids_list)
-        self.assertTrue("PkgB/0.1{}:09f152eb7b3e0a6e15a2a3f464245864ae8f8644".format(
-            user_channel) in ids_list)
+        expected = ["PkgC/0.1{}".format(user_channel),
+                    "PkgD/0.1{}".format(user_channel),
+                    "PkgC/0.1{}:3374c4fa6b7e865cfc3a1903ae014cf77a6938ec".format(user_channel),
+                    "PkgD/0.1{}:6cd742f1b907e693abf6da9f767aab3ee7fde606".format(user_channel)]
+        self.assertEqual(set(expected), set(ids_list))
+
+        buildinfo = json.loads(client.load("buildinfolinux.json"))
+        self.assertEqual(buildinfo["name"], "MyBuildName")
+        self.assertEqual(buildinfo["number"], "42")
+        ids_list = [item["id"] for item in buildinfo["modules"]]
+        expected = ["PkgC/0.1{}".format(user_channel),
+                    "PkgD/0.1{}".format(user_channel),
+                    "PkgC/0.1{}:a1e39343af463cef4284c5550fde03912afd9852".format(user_channel),
+                    "PkgD/0.1{}:39af3f48fdee2bbc5f84e7da3a67ebab2a297acb".format(user_channel)]
+        self.assertEqual(set(expected), set(ids_list))
 
         sys.argv = ["conan_build_info", "--v2", "update",
-                    os.path.join(client.current_folder, "buildinfo1.json"),
-                    os.path.join(client.current_folder, "buildinfo2.json"),
+                    os.path.join(client.current_folder, "buildinfowin.json"),
+                    os.path.join(client.current_folder, "buildinfolinux.json"),
                     "--output-file", os.path.join(client.current_folder, "mergedbuildinfo.json")]
         run()
 
@@ -144,12 +146,14 @@ class MyBuildInfoCreation(unittest.TestCase):
         self.assertEqual(buildinfo["name"], "MyBuildName")
         self.assertEqual(buildinfo["number"], "42")
         ids_list = [item["id"] for item in buildinfo["modules"]]
-        self.assertTrue("PkgC/0.1{}".format(user_channel) in ids_list)
-        self.assertTrue("PkgB/0.1{}".format(user_channel) in ids_list)
-        self.assertTrue("PkgC/0.1{}:09f152eb7b3e0a6e15a2a3f464245864ae8f8644".format(
-            user_channel) in ids_list)
-        self.assertTrue("PkgB/0.1{}:09f152eb7b3e0a6e15a2a3f464245864ae8f8644".format(
-            user_channel) in ids_list)
+        expected = ["PkgC/0.1{}".format(user_channel),
+                    "PkgD/0.1{}".format(user_channel),
+                    "PkgC/0.1{}:3374c4fa6b7e865cfc3a1903ae014cf77a6938ec".format(user_channel),
+                    "PkgC/0.1{}:a1e39343af463cef4284c5550fde03912afd9852".format(user_channel),
+                    "PkgD/0.1{}:6cd742f1b907e693abf6da9f767aab3ee7fde606".format(user_channel),
+                    "PkgD/0.1{}:39af3f48fdee2bbc5f84e7da3a67ebab2a297acb".format(user_channel),
+                    ]
+        self.assertEqual(set(expected), set(ids_list))
 
         sys.argv = ["conan_build_info", "--v2", "publish",
                     os.path.join(client.current_folder, "mergedbuildinfo.json"), "--url",
@@ -202,7 +206,7 @@ class MyBuildInfoCreation(unittest.TestCase):
                 scm = {"type": "git",
                         "url": "auto",
                         "revision": "auto"}
-            
+
                 def imports(self):
                     self.copy("myfile.txt", folder=True)
                 def package(self):
@@ -220,9 +224,9 @@ class MyBuildInfoCreation(unittest.TestCase):
 
         client.run("export .")
 
-        client.run("graph lock .")
+        client.run("lock create conanfile.py --lockfile-out=conan.lock")
 
-        client.run("create . --lockfile")
+        client.run("create . --lockfile=conan.lock")
         client.run("upload * --confirm -r default --force")
 
         sys.argv = ["conan_build_info", "--v2", "start", "MyBuildName", "42"]
@@ -256,6 +260,6 @@ class MyBuildInfoCreation(unittest.TestCase):
             sys.stderr = result
             run()
             result = result.getvalue()
-            self.assertIn("This lockfile was created with a previous incompatible version", result)
+            self.assertIn("This lockfile was created with an incompatible version of Conan", result)
         finally:
             sys.stderr = old_stderr

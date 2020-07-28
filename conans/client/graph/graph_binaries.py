@@ -4,7 +4,8 @@ from conans.client.graph.build_mode import BuildMode
 from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_MISSING,
                                        BINARY_UPDATE, RECIPE_EDITABLE, BINARY_EDITABLE,
                                        RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP, BINARY_UNKNOWN)
-from conans.errors import NoRemoteAvailable, NotFoundException, conanfile_exception_formatter
+from conans.errors import NoRemoteAvailable, NotFoundException, conanfile_exception_formatter, \
+    ConanException
 from conans.model.info import ConanInfo, PACKAGE_ID_UNKNOWN
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference
@@ -156,13 +157,19 @@ class GraphBinariesAnalyzer(object):
 
         # If it has lock
         locked = node.graph_lock_node
-        if locked and locked.pref.id == node.package_id:
-            pref = locked.pref  # Keep the locked with PREV
+        if locked and locked.package_id:  # if package_id = None, nothing to lock here
+            # First we update the package_id, just in case there are differences or something
+            locked.package_id = node.package_id  # necessary for PACKAGE_ID_UNKNOWN
+            pref = PackageReference(locked.ref, locked.package_id, locked.prev)  # Keep locked PREV
             self._process_node(node, pref, build_mode, update, remotes)
             if node.binary == BINARY_MISSING and build_mode.allowed(node.conanfile):
                 node.binary = BINARY_BUILD
+            if node.binary == BINARY_BUILD and locked.prev:
+                raise ConanException("Cannot build '%s' because it is already locked in the input "
+                                     "lockfile" % repr(node.ref))
         else:
             assert node.prev is None, "Non locked node shouldn't have PREV in evaluate_node"
+            assert node.binary is None, "Node.binary should be None if not locked"
             pref = PackageReference(node.ref, node.package_id)
             self._process_node(node, pref, build_mode, update, remotes)
             if node.binary == BINARY_MISSING:
@@ -183,6 +190,7 @@ class GraphBinariesAnalyzer(object):
                             node.conanfile.output.info("Main binary package '%s' missing. Using "
                                                        "compatible package '%s'"
                                                        % (node.package_id, package_id))
+                            # Modifying package id under the hood, FIXME
                             node._package_id = package_id
                             # So they are available in package_info() method
                             node.conanfile.settings.values = compatible_package.settings
@@ -190,6 +198,10 @@ class GraphBinariesAnalyzer(object):
                             break
                 if node.binary == BINARY_MISSING and build_mode.allowed(node.conanfile):
                     node.binary = BINARY_BUILD
+
+            if locked:
+                locked.package_id = node.package_id
+                locked.prev = node.prev
 
     def _process_node(self, node, pref, build_mode, update, remotes):
         # Check that this same reference hasn't already been checked
