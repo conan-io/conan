@@ -42,7 +42,6 @@ class CMakeFindPackageMultiGenerator(CMakeFindPackageGenerator):
         endforeach()
         """)
 
-    #TODO: pretty sure {name}_ below will need to be the filename, but not sure
     target_properties = """
 # Assign target properties
 set_property(TARGET {name}::{name}
@@ -175,9 +174,9 @@ set_property(TARGET {name}::{name}
             include(${f})
         endforeach()
 
-        if({{ pkg_filename }}_FIND_COMPONENTS)
-            foreach(_FIND_COMPONENT {{ '${'+pkg_filename+'_FIND_COMPONENTS}' }})
-                list(FIND {{ pkg_filename }}_COMPONENTS_{{ build_type }} "{{ pkg_name }}::${_FIND_COMPONENT}" _index)
+        if({{ pkg_name }}_FIND_COMPONENTS)
+            foreach(_FIND_COMPONENT {{ '${'+pkg_name+'_FIND_COMPONENTS}' }})
+                list(FIND {{ pkg_name }}_COMPONENTS_{{ build_type }} "{{ pkg_name }}::${_FIND_COMPONENT}" _index)
                 if(${_index} EQUAL -1)
                     conan_message(FATAL_ERROR "Conan: Component '${_FIND_COMPONENT}' NOT found in package '{{ pkg_name }}'")
                 else()
@@ -298,7 +297,7 @@ set_property(TARGET {name}::{name}
                 dep_cpp_info = extend(cpp_info, build_type.lower())
                 deps = DepsCppCmake(dep_cpp_info)
                 deps_names = ";".join(["{n}::{n}".format(n=n['name']) for n in public_deps_names])
-                find_lib = target_template.format(name=pkg_filename, deps=deps,
+                find_lib = target_template.format(name=pkg_name, deps=deps,
                                                   build_type_suffix=build_type_suffix,
                                                   deps_names=deps_names)
                 ret["{}Target-{}.cmake".format(pkg_filename, build_type.lower())] = find_lib
@@ -310,7 +309,7 @@ set_property(TARGET {name}::{name}
                 # Note these are in reversed order, from more dependent to less dependent
                 pkg_components = " ".join(["{p}::{c}".format(p=pkg_findname, c=comp_findname) for
                                            comp_findname, _ in reversed(components)])
-                global_target_variables = target_template.format(name=pkg_filename, deps=pkg_info,
+                global_target_variables = target_template.format(name=pkg_findname, deps=pkg_info,
                                                                  build_type_suffix=build_type_suffix,
                                                                  deps_names=pkg_public_deps_names)
                 variables = self.components_target_build_type_tpl.render(
