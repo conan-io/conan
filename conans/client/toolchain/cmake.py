@@ -1,5 +1,5 @@
 # coding=utf-8
-
+import os
 import textwrap
 from collections import OrderedDict, defaultdict
 
@@ -273,7 +273,8 @@ class CMakeToolchain(object):
         return False
 
     def write_toolchain_files(self):
-        conan_project_include_cmake = "conan_project_include.cmake"
+        # Make it absolute, wrt to current folder, set by the caller
+        conan_project_include_cmake = os.path.abspath("conan_project_include.cmake")
         conan_project_include_cmake = conan_project_include_cmake.replace("\\", "/")
         t = Template(self._template_project_include)
         content = t.render(configuration_types_definitions=self.definitions.configuration_types,
