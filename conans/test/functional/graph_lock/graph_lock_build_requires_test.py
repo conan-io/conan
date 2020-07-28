@@ -186,7 +186,7 @@ class GraphLockBuildRequireTestCase(unittest.TestCase):
         client.run("create . pkg2/1.0@")
         client.run("lock create --reference=pkg2/1.0@ --build --lockfile-out=conan.lock")
         client.run("install cmake/[>=1.0]@ --lockfile=conan.lock", assert_error=True)
-        self.assertIn("ERROR: Multiple matches in lockfile: 'cmake/1.0', 'cmake/1.1'",
+        self.assertIn("Version ranges not allowed in 'cmake/[>=1.0]' when using lockfiles",
                       client.out)
-        client.run("install cmake/[>=1.1]@ --lockfile=conan.lock")
+        client.run("install cmake/1.1@ --lockfile=conan.lock")
         self.assertIn("cmake/1.1 from local cache - Cache", client.out)

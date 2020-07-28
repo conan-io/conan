@@ -120,10 +120,13 @@ class GraphLockVersionRangeTest(unittest.TestCase):
         # Range locked one, outside of range, should raise
         client.run("install PkgA/[>=0.3]@%s --lockfile=conan.lock" % self.user_channel,
                    assert_error=True)
-        self.assertIn("ERROR: Couldn't find 'PkgA/[>=0.3]", client.out)
+        self.assertIn("ERROR: Version ranges not allowed in 'PkgA/[>=0.3]", client.out)
+        client.run("install PkgA/0.3@%s --lockfile=conan.lock" % self.user_channel,
+                   assert_error=True)
+        self.assertIn("Couldn't find 'PkgA/0.3", client.out)
 
         # inside range should be possible to find it
-        client.run("install PkgA/[>=0.1]@%s --lockfile=conan.lock" % self.user_channel)
+        client.run("install PkgA/0.1@%s --lockfile=conan.lock" % self.user_channel)
         self.assertIn("PkgA/0.1%s: Already installed!" % user_channel, client.out)
         self.assertNotIn("PkgA/0.2", client.out)
         self._check_lock()

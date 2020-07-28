@@ -619,7 +619,7 @@ class GraphLock(object):
     def _find_node_by_requirement(self, ref):
         """
         looking for a pkg that will be depended from a "virtual" conanfile
-         - "conan install zlib/[>1.2]@"  Version-range
+         - "conan install zlib/[>1.2]@"  Version-range NOT allowed
          - "conan install zlib/1.2@ "    Exact dep
 
         :param ref:
@@ -629,36 +629,20 @@ class GraphLock(object):
                                                     % (ref, type(ref))
 
         version = ref.version
-        version_range = None
         if version.startswith("[") and version.endswith("]"):
-            version_range = version[1:-1]
+            raise ConanException("Version ranges not allowed in '%s' when using lockfiles"
+                                 % str(ref))
 
-        if version_range:
-            ids = {}
-            for id_, node in self._nodes.items():
-                nref = node.ref
-                if (nref and nref.name == ref.name and nref.user == ref.user and
-                        nref.channel == ref.channel):
-                    output = []
-                    result = satisfying([str(nref.version)], version_range, output)
-                    if result:
-                        ids.setdefault(nref, []).append(id_)
-            if ids:
-                if len(ids) > 1:
-                    raise ConanException("Multiple matches in lockfile: %s\nNarrow your range"
-                                         % ", ".join(["'%s'" % str(k) for k in ids.keys()]))
-                else:
-                    return ids.popitem()[1][0]
+        # The ``create`` command uses this to install pkg/version --build=pkg
+        # removing the revision, but it still should match
+        search_ref = repr(ref)
+        if ref.revision:  # Match should be exact (with RREV)
+            node_id = self._find_first(lambda n: n.ref and repr(n.ref) == search_ref)
         else:
-            # The ``create`` command uses this to install pkg/version --build=pkg
-            # removing the revision, but it still should match
-            search_ref = repr(ref)
-            if ref.revision:  # Match should be exact (with RREV)
-                node_id = self._find_first(lambda n: n.ref and repr(n.ref) == search_ref)
-            else:
-                node_id = self._find_first(lambda n: n.ref and str(n.ref) == search_ref)
-            if node_id:
-                return node_id
+            node_id = self._find_first(lambda n: n.ref and str(n.ref) == search_ref)
+        if node_id:
+            return node_id
+
         if not self._relaxed:
             raise ConanException("Couldn't find '%s' in lockfile" % ref.full_str())
 
