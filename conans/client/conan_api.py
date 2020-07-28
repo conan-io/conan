@@ -1302,9 +1302,10 @@ class ConanAPIV1(object):
         graph_lock_file.save(lockfile)
 
     @api_method
-    def lock_create(self, path, reference=None, name=None, version=None, user=None, channel=None,
+    def lock_create(self, path, lockfile_out,
+                    reference=None, name=None, version=None, user=None, channel=None,
                     profile_host=None, profile_build=None, remote_name=None, update=None, build=None,
-                    base=None, lockfile=None, lockfile_out=None):
+                    base=None, lockfile=None):
         # profile_host is mandatory
         profile_host = profile_host or ProfileData(None, None, None, None)
         cwd = get_cwd()

@@ -129,6 +129,10 @@ class ReproducibleLockfiles(unittest.TestCase):
         client.run("lock create conanfile.py --lockfile-out=lock2.lock")
         lockfile2 = client.load("lock2.lock")
         self.assertEqual(lockfile, lockfile2)
+        # the default lockfile-out is conan.lock
+        client.run("lock create conanfile.py")
+        conanlock = client.load("conan.lock")
+        self.assertEqual(lockfile, conanlock)
         # different commands still generate identical lock
         client.run("install .")
         info_lock = client.load("conan.lock")
@@ -370,8 +374,8 @@ class GraphInstallArgumentsUpdated(unittest.TestCase):
         previous_lock = client.load("somelib.lock")
         # This should fail, because somelib is locked
         client.run("install somelib/1.0@ --lockfile=somelib.lock --build somelib", assert_error=True)
-        self.assertIn("Trying to build 'somelib/1.0#f3367e0e7d170aa12abccb175fee5f97', "
-                      "but it is locked", client.out)
+        self.assertIn("Cannot build 'somelib/1.0#f3367e0e7d170aa12abccb175fee5f97' because it "
+                      "is already locked in the input lockfile", client.out)
         new_lock = client.load("somelib.lock")
         self.assertEqual(previous_lock, new_lock)
 

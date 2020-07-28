@@ -1873,7 +1873,8 @@ class Command(object):
         clean_modified_cmd = subparsers.add_parser('clean-modified', help='Clean modified flags')
         clean_modified_cmd.add_argument('lockfile', help='lockfile file')
 
-        create_cmd = subparsers.add_parser('create', help='create a lockfile')
+        create_cmd = subparsers.add_parser('create',
+                                           help='Create a lockfile from a conanfile or a reference')
         create_cmd.add_argument("path", nargs="?", help="Path to a conanfile")
         create_cmd.add_argument("--name", action=OnceArgument,
                                 help='Provide a package name if not specified in conanfile')
@@ -1889,7 +1890,7 @@ class Command(object):
                                 help="Path to lockfile to be used as a base")
         create_cmd.add_argument("--base", action="store_true",
                                 help="lock only recipe versions and revisions")
-        create_cmd.add_argument("--lockfile-out", action=OnceArgument, required=True,
+        create_cmd.add_argument("--lockfile-out", action=OnceArgument, default="conan.lock",
                                 help="Filename of the created lockfile")
         _add_common_install_arguments(create_cmd, build_help="Packages to build from source",
                                       lockfile=False)
