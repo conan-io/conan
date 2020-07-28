@@ -22,12 +22,14 @@ class Base(unittest.TestCase):
             generators = "cmake_find_package_multi"
             options = {"shared": [True, False], "fPIC": [True, False]}
             default_options = {"shared": False, "fPIC": True}
+
             def toolchain(self):
                 tc = CMakeToolchain(self)
                 tc.definitions["DEFINITIONS_BOTH"] = True
                 tc.definitions.debug["DEFINITIONS_CONFIG"] = "Debug"
                 tc.definitions.release["DEFINITIONS_CONFIG"] = "Release"
-                return tc
+                tc.write_toolchain_files()
+
             def build(self):
                 cmake = CMake(self)
                 cmake.configure()
@@ -362,7 +364,8 @@ class CMakeInstallTest(unittest.TestCase):
                 settings = "os", "arch", "compiler", "build_type"
                 exports_sources = "CMakeLists.txt", "header.h"
                 def toolchain(self):
-                    return CMakeToolchain(self)
+                    tc = CMakeToolchain(self)
+                    tc.write_toolchain_files()
                 def build(self):
                     cmake = CMake(self)
                     cmake.configure()
