@@ -1,8 +1,10 @@
 import os
 from collections import OrderedDict, defaultdict
+from datetime import datetime
 
 from conans.model.ref import PackageReference
 from conans.util.files import save
+from conans import __version__ as client_version
 
 
 class RowResult(object):
@@ -151,5 +153,6 @@ def html_binary_graph(search_info, reference, table_filename, template):
 
     # Render and save
     template_folder = os.path.dirname(template.filename)
-    content = template.render(search=search, results=results, base_template_path=template_folder)
+    content = template.render(search=search, results=results, base_template_path=template_folder,
+                              version=client_version, year=datetime.today().year)
     save(table_filename, content)

@@ -4,6 +4,7 @@ import shutil
 import textwrap
 import time
 import unittest
+from datetime import datetime
 from collections import OrderedDict
 
 from mock import patch
@@ -19,6 +20,8 @@ from conans.util.dates import iso8601_to_str, from_timestamp_to_iso8601
 from conans.util.env_reader import get_env
 from conans.util.files import list_folder_subdirs, load
 from conans.util.files import save
+from conans import __version__ as client_version
+
 
 conan_vars1 = '''
 [settings]
@@ -400,6 +403,8 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                       "<td>Visual Studio</td>"
                       "<td></td>"
                       "<td>8.1</td>", html)
+        self.assertIn("Conan <b>v{}</b> © {} JFrog LTD. <a>https://conan.io</a>"
+                      .format(client_version, datetime.today().year), html)
 
     def search_html_table_all_test(self):
         os.rmdir(self.servers["local"].server_store.store)

@@ -99,5 +99,14 @@ content = """
         </script>
     </div>
     </body>
+    <footer>
+        <div class="container-fluid">
+            <div class="info">
+                <p>
+                      Conan <b>v{{ version  }}</b> © {{ year }} JFrog LTD. <a>https://conan.io</a>
+                </p>
+            </div>
+        </div>
+    </footer>
 </html>
 """
