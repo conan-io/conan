@@ -273,7 +273,7 @@ class CMakeToolchain(object):
             return True
         return False
 
-    def dump(self, install_folder):
+    def create_toolchain_files(self, install_folder):
         conan_project_include_cmake = os.path.join(install_folder, "conan_project_include.cmake")
         conan_project_include_cmake = conan_project_include_cmake.replace("\\", "/")
         t = Template(self._template_project_include)
