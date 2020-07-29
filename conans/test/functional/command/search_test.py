@@ -403,7 +403,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                       "<td>Visual Studio</td>"
                       "<td></td>"
                       "<td>8.1</td>", html)
-        self.assertIn("Conan <b>v{}</b> © <script>document.write(new Date().getFullYear())</script> JFrog LTD. <a>https://conan.io</a>"
+        self.assertIn("Conan <b>v{}</b> <script>document.write(new Date().getFullYear())</script> JFrog LTD. <a>https://conan.io</a>"
                       .format(client_version), html)
 
     def search_html_table_all_test(self):

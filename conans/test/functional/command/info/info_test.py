@@ -1,4 +1,3 @@
-# coding=utf-8
 import json
 import os
 import re
@@ -202,7 +201,7 @@ class InfoTest(unittest.TestCase):
         self.assertIn("<body>", html)
         self.assertIn("{ from: 0, to: 1 }", html)
         self.assertIn("id: 0,\n                        label: 'Hello0/0.1',", html)
-        self.assertIn("Conan <b>v{}</b> © <script>document.write(new Date().getFullYear())</script> JFrog LTD. <a>https://conan.io</a>"
+        self.assertIn("Conan <b>v{}</b> <script>document.write(new Date().getFullYear())</script> JFrog LTD. <a>https://conan.io</a>"
                       .format(client_version, datetime.today().year), html)
 
     def graph_html_embedded_visj_test(self):

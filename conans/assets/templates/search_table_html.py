@@ -1,5 +1,3 @@
-# coding=utf-8
-
 content = """
 <!DOCTYPE html>
 <html lang="en">
@@ -104,7 +102,7 @@ content = """
         <div class="container-fluid">
             <div class="info">
                 <p>
-                      Conan <b>v{{ version  }}</b> © <script>document.write(new Date().getFullYear())</script> JFrog LTD. <a>https://conan.io</a>
+                      Conan <b>v{{ version  }}</b> <script>document.write(new Date().getFullYear())</script> JFrog LTD. <a>https://conan.io</a>
                 </p>
             </div>
         </div>
