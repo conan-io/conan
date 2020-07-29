@@ -117,12 +117,12 @@ class CMakeFindPackageGenerator(Generator):
 
         include(CMakeFindDependencyMacro)
 
-        {%- for public_dep in pkg_public_deps %}
+        {%- for pkg_public_dep_filename in pkg_public_deps_filenames %}
 
-        if(NOT {{ public_dep }}_FOUND)
-            find_dependency({{ public_dep }} REQUIRED)
+        if(NOT {{ pkg_public_dep_filename }}_FOUND)
+            find_dependency({{ pkg_public_dep_filename }} REQUIRED)
         else()
-            conan_message(STATUS "Conan: Dependency {{ public_dep }} already found")
+            conan_message(STATUS "Conan: Dependency {{ pkg_public_dep_filename }} already found")
         endif()
 
         {%- endfor %}
@@ -283,7 +283,7 @@ class CMakeFindPackageGenerator(Generator):
                 pkg_version=pkg_version,
                 pkg_components=pkg_components,
                 global_target_variables=global_target_variables,
-                pkg_public_deps=pkg_public_deps_filenames,
+                pkg_public_deps_filenames=pkg_public_deps_filenames,
                 components=components,
                 conan_message=CMakeFindPackageCommonMacros.conan_message,
                 conan_find_apple_frameworks=CMakeFindPackageCommonMacros.apple_frameworks_macro,
@@ -312,7 +312,7 @@ class CMakeFindPackageGenerator(Generator):
             find_dependencies_block = ""
             if dep_cpp_info.public_deps:
                 # Here we are generating FindXXX, so find_modules=True
-                f = find_transitive_dependencies(pkg_public_deps, find_modules=True)
+                f = find_transitive_dependencies(pkg_public_deps_filenames, find_modules=True)
                 # proper indentation
                 find_dependencies_block = ''.join("        " + line if line.strip() else line
                                                   for line in f.splitlines(True))
