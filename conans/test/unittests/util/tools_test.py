@@ -42,14 +42,17 @@ class ConfigMock:
 
 
 class RunnerMock(object):
-    def __init__(self, return_ok=True):
+    def __init__(self, return_ok=True, output=None):
         self.command_called = None
         self.return_ok = return_ok
+        self.output = output
 
     def __call__(self, command, output, win_bash=False, subsystem=None):  # @UnusedVariable
         self.command_called = command
         self.win_bash = win_bash
         self.subsystem = subsystem
+        if self.output and output and hasattr(output, "write"):
+            output.write(self.output)
         return 0 if self.return_ok else 1
 
 

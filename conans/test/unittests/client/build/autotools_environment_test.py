@@ -23,6 +23,7 @@ class MockConanfileWithOutput(MockConanfile):
 class RunnerMockWithHelp(RunnerMock):
 
     def __init__(self, return_ok=True, available_args=None):
+        self.output = None
         self.command_called = None
         self.return_ok = return_ok
         self.available_args = available_args or []
