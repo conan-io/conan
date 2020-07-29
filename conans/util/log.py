@@ -33,7 +33,6 @@ def configure_logger(logging_level=logging.CRITICAL, logging_file=None):
         logger.removeHandler(hand)
     logger.addHandler(hdlr)
     logger.setLevel(logging_level)
-    return logger
 
 # CRITICAL = 50
 # FATAL = CRITICAL

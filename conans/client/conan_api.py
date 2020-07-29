@@ -1,6 +1,7 @@
 import json
 import os
 import sys
+import logging
 from collections import OrderedDict
 from collections import namedtuple
 
@@ -172,9 +173,11 @@ class ConanApp(object):
             self.user_io.disable_input()
 
         # Adjust CONAN_LOGGING_LEVEL with the env readed
-        conans.util.log.logger = configure_logger(self.config.logging_level,
-                                                  self.config.logging_file)
-        conans.util.log.logger.debug("INIT: Using config '%s'" % self.cache.conan_conf_path)
+        configure_logger(self.config.logging_level,
+                         self.config.logging_file)
+
+        logger = logging.getLogger("conans")
+        logger.debug("INIT: Using config '%s'" % self.cache.conan_conf_path)
 
         self.hook_manager = HookManager(self.cache.hooks_path, self.config.hooks, self.out)
         # Wraps an http_requester to inject proxies, certs, etc
