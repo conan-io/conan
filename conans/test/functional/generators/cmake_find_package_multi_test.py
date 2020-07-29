@@ -7,7 +7,6 @@ from nose.plugins.attrib import attr
 from parameterized import parameterized
 
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.test.utils.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID, replace_in_file
 from conans.util.files import load
 

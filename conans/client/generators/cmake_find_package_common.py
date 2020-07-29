@@ -159,7 +159,7 @@ class CMakeFindPackageCommonMacros:
             endforeach()
 
             if(NOT ${CMAKE_VERSION} VERSION_LESS "3.0")
-                # Add all dependencies to allcpp_info_filenames_test targets
+                # Add all dependencies to all targets
                 string(REPLACE " " ";" deps_list "${deps}")
                 foreach(_CONAN_ACTUAL_TARGET ${_CONAN_ACTUAL_TARGETS})
                     set_property(TARGET ${_CONAN_ACTUAL_TARGET} PROPERTY INTERFACE_LINK_LIBRARIES "${_CONAN_FOUND_SYSTEM_LIBS};${deps_list}")
