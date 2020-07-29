@@ -119,7 +119,7 @@ class CMakeFindPackageGenerator(Generator):
 
         {%- for public_dep in pkg_public_deps %}
 
-        if(NOT {{ public_dep["filename"] }}_FOUND)
+        if(NOT {{ public_dep }}_FOUND)
             find_dependency({{ public_dep }} REQUIRED)
         else()
             conan_message(STATUS "Conan: Dependency {{ public_dep }} already found")
