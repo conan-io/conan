@@ -4,6 +4,7 @@ import json
 import os
 import signal
 import sys
+import logging
 from argparse import ArgumentError
 from difflib import get_close_matches
 
@@ -26,10 +27,11 @@ from conans.unicode import get_cwd
 from conans.util.config_parser import get_bool_from_text
 from conans.util.files import exception_message_safe
 from conans.util.files import save
-from conans.util.log import logger
 from conans.assets import templates
 from conans.cli.exit_codes import SUCCESS, ERROR_MIGRATION, ERROR_GENERAL, USER_CTRL_C, \
     ERROR_SIGTERM, USER_CTRL_BREAK, ERROR_INVALID_CONFIGURATION
+
+logger = logging.getLogger("conans")
 
 
 class Extender(argparse.Action):

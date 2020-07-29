@@ -1,10 +1,12 @@
 import os
 import time
+import logging
 
 import fasteners
 
 from conans.util.files import load, save
-from conans.util.log import logger
+
+logger = logging.getLogger("conans")
 
 
 class NoLock(object):

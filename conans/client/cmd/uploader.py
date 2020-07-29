@@ -3,6 +3,7 @@ import stat
 import tarfile
 import time
 import traceback
+import logging
 from collections import defaultdict
 from multiprocessing.pool import ThreadPool
 
@@ -19,9 +20,10 @@ from conans.paths import (CONAN_MANIFEST, CONANFILE, EXPORT_SOURCES_TGZ_NAME,
 from conans.search.search import search_packages, search_recipes
 from conans.util.files import (load, clean_dirty, is_dirty,
                                gzopen_without_timestamps, set_dirty_context_manager)
-from conans.util.log import logger
 from conans.util.tracer import (log_recipe_upload, log_compressed_files,
                                 log_package_upload)
+
+logger = logging.getLogger("conans")
 
 
 UPLOAD_POLICY_FORCE = "force-upload"

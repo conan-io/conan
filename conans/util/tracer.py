@@ -2,6 +2,7 @@ import copy
 import json
 import os
 import time
+import logging
 from os.path import isdir
 
 import fasteners
@@ -9,7 +10,8 @@ import fasteners
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.util.files import md5sum, sha1sum
-from conans.util.log import logger
+
+logger = logging.getLogger("conans")
 
 
 # FIXME: Conan 2.0 the traces should have all the revisions information also.

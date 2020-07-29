@@ -1,5 +1,6 @@
 import os
 import re
+import logging
 from collections import OrderedDict
 from fnmatch import translate
 
@@ -9,7 +10,8 @@ from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANINFO
 from conans.search.query_parse import evaluate_postfix, infix_to_postfix
 from conans.util.files import list_folder_subdirs, load
-from conans.util.log import logger
+
+logger = logging.getLogger("conans")
 
 
 def filter_outdated(packages_infos, recipe_hash):

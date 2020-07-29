@@ -1,4 +1,5 @@
 import time
+import logging
 
 from conans.client.conanfile.configure import run_configure_method
 from conans.client.graph.graph import DepsGraph, Node, RECIPE_EDITABLE, CONTEXT_HOST, CONTEXT_BUILD
@@ -7,7 +8,8 @@ from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
 from conans.model.conan_file import get_env_context_manager
 from conans.model.ref import ConanFileReference
 from conans.model.requires import Requirements, Requirement
-from conans.util.log import logger
+
+logger = logging.getLogger("conans")
 
 
 class DepsGraphBuilder(object):

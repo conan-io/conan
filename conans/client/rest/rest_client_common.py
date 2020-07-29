@@ -1,4 +1,5 @@
 import json
+import logging
 
 from requests.auth import AuthBase, HTTPBasicAuth
 
@@ -8,7 +9,8 @@ from conans.errors import (EXCEPTION_CODE_MAPPING, ConanException,
                            PackageNotFoundException)
 from conans.model.ref import ConanFileReference
 from conans.util.files import decode_text
-from conans.util.log import logger
+
+logger = logging.getLogger("conans")
 
 
 class JWTAuth(AuthBase):

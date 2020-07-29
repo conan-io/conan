@@ -3,6 +3,7 @@
 import os
 import platform
 import threading
+import logging
 from contextlib import contextmanager
 
 import fasteners
@@ -19,7 +20,8 @@ from conans.paths import CONANFILE, SYSTEM_REQS, EXPORT_FOLDER, EXPORT_SRC_FOLDE
     BUILD_FOLDER, PACKAGES_FOLDER, SYSTEM_REQS_FOLDER, PACKAGE_METADATA, SCM_SRC_FOLDER
 from conans.util.files import load, save, rmdir
 from conans.util.locks import Lock, NoLock, ReadLock, SimpleLock, WriteLock
-from conans.util.log import logger
+
+logger = logging.getLogger("conans")
 
 
 def short_path(func):

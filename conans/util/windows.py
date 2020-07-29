@@ -1,14 +1,17 @@
 import os
 import subprocess
 import tempfile
+import logging
 
 from conans.client.tools.oss import OSInfo
 from conans.errors import ConanException
 from conans.util.env_reader import get_env
 from conans.util.files import decode_text
 from conans.util.files import load, mkdir, rmdir, save
-from conans.util.log import logger
 from conans.util.sha import sha256
+
+
+logger = logging.getLogger("conans")
 
 CONAN_LINK = ".conan_link"
 CONAN_REAL_PATH = "real_path.txt"

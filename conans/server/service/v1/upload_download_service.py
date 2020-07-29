@@ -1,10 +1,12 @@
 import os
+import logging
 
 import jwt
 
 from conans.errors import NotFoundException, RequestErrorException
-from conans.util.log import logger
 from conans.util.files import mkdir
+
+logger = logging.getLogger("conans")
 
 
 class FileUploadDownloadService(object):

@@ -1,7 +1,10 @@
+import logging
+
 from conans.client.build.cppstd_flags import cppstd_flag
 from conans.errors import ConanException
 from conans.util.conan_v2_mode import conan_v2_behavior
-from conans.util.log import logger
+
+logger = logging.getLogger("conans")
 
 
 def preprocess(settings):

@@ -1,10 +1,11 @@
 import inspect
+import logging
 from abc import ABCMeta, abstractmethod
 
 import six
 from bottle import PluginError, request
 
-from conans.util.log import logger
+logger = logging.getLogger("conans")
 
 
 @six.add_metaclass(ABCMeta)

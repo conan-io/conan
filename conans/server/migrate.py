@@ -1,8 +1,11 @@
+import logging
+
 from conans import __version__ as SERVER_VERSION
 from conans.model.version import Version
 from conans.server.conf import ConanServerConfigParser
 from conans.server.migrations import ServerMigrator
-from conans.util.log import logger
+
+logger = logging.getLogger("conans")
 
 
 def migrate_and_get_server_config(base_folder, force_migration=False):

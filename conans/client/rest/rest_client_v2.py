@@ -1,6 +1,7 @@
 import os
 import time
 import traceback
+import logging
 
 from conans import DEFAULT_REVISION_V1
 from conans.client.remote_manager import check_compressed_files
@@ -16,7 +17,8 @@ from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference
 from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
 from conans.util.files import decode_text
-from conans.util.log import logger
+
+logger = logging.getLogger("conans")
 
 
 class RestV2Methods(RestCommonMethods):

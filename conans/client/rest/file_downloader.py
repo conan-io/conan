@@ -2,6 +2,7 @@ import os
 import re
 import time
 import traceback
+import logging
 
 import six
 
@@ -10,8 +11,9 @@ from conans.errors import AuthenticationException, ConanConnectionError, ConanEx
     NotFoundException, ForbiddenException, RequestErrorException
 from conans.util import progress_bar
 from conans.util.files import mkdir
-from conans.util.log import logger
 from conans.util.tracer import log_download
+
+logger = logging.getLogger("conans")
 
 
 class FileDownloader(object):

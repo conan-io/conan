@@ -1,6 +1,7 @@
 import os
 import re
 import traceback
+import logging
 from collections import defaultdict, OrderedDict
 
 from conans.errors import ConanException
@@ -9,8 +10,8 @@ from conans.model.build_info import CppInfo, DepsCppInfo, DepCppInfo
 from conans.model.env_info import DepsEnvInfo
 from conans.model.user_info import DepsUserInfo
 from conans.paths import BUILD_INFO
-from conans.util.log import logger
 
+logger = logging.getLogger("conans")
 
 class RootCppTXT(object):
     def __init__(self, cpp_info):

@@ -1,5 +1,6 @@
 import os
 import shutil
+import logging
 
 from conans import DEFAULT_REVISION_V1
 from conans.migrations import Migrator
@@ -8,7 +9,8 @@ from conans.paths import PACKAGES_FOLDER
 from conans.server.revision_list import RevisionList
 from conans.server.store.server_store import REVISIONS_FILE
 from conans.util.files import list_folder_subdirs, mkdir, rmdir, save
-from conans.util.log import logger
+
+logger = logging.getLogger("conans")
 
 
 class ServerMigrator(Migrator):

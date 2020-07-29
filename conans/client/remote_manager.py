@@ -2,6 +2,7 @@ import os
 import shutil
 import time
 import traceback
+import logging
 
 from requests.exceptions import ConnectionError
 
@@ -16,11 +17,12 @@ from conans.util import progress_bar
 from conans.util.env_reader import get_env
 from conans.util.files import make_read_only, mkdir, rmdir, tar_extract, touch_folder, \
     merge_directories, md5sum, sha1sum
-from conans.util.log import logger
 # FIXME: Eventually, when all output is done, tracer functions should be moved to the recorder class
 from conans.util.tracer import (log_package_download,
                                 log_recipe_download, log_recipe_sources_download,
                                 log_uncompressed_file)
+
+logger = logging.getLogger("conans")
 
 
 class RemoteManager(object):

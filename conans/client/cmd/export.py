@@ -2,6 +2,7 @@ import ast
 import os
 import shutil
 import sys
+import logging
 
 import six
 import yaml
@@ -18,7 +19,8 @@ from conans.paths import CONANFILE, DATA_YML
 from conans.search.search import search_recipes, search_packages
 from conans.util.files import is_dirty, load, rmdir, save, set_dirty, remove, mkdir, \
     merge_directories
-from conans.util.log import logger
+
+logger = logging.getLogger("conans")
 
 isPY38 = bool(sys.version_info.major == 3 and sys.version_info.minor == 8)
 

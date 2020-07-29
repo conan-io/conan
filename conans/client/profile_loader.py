@@ -1,4 +1,5 @@
 import os
+import logging
 from collections import OrderedDict, defaultdict
 
 from conans.errors import ConanException, ConanV2Exception
@@ -9,7 +10,8 @@ from conans.model.ref import ConanFileReference
 from conans.util.conan_v2_mode import conan_v2_behavior
 from conans.util.config_parser import ConfigParser
 from conans.util.files import load, mkdir
-from conans.util.log import logger
+
+logger = logging.getLogger("conans")
 
 
 class ProfileParser(object):

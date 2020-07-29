@@ -1,5 +1,6 @@
 import os
 import shutil
+import logging
 
 from conans.client.file_copier import FileCopier
 from conans.client.output import ScopedOutput
@@ -12,8 +13,8 @@ from conans.paths import CONANINFO
 from conans.tools import chdir
 from conans.util.conan_v2_mode import conan_v2_property
 from conans.util.files import save, mkdir, rmdir
-from conans.util.log import logger
 
+logger = logging.getLogger("conans")
 
 def run_package_method(conanfile, package_id, source_folder, build_folder, package_folder,
                        install_folder, hook_manager, conanfile_path, ref, local=False,

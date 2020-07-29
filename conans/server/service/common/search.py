@@ -1,5 +1,6 @@
 import os
 import re
+import logging
 from fnmatch import translate
 
 from conans import load
@@ -10,7 +11,8 @@ from conans.model.ref import PackageReference, ConanFileReference
 from conans.paths import CONANINFO
 from conans.search.search import filter_packages, _partial_match
 from conans.util.files import list_folder_subdirs
-from conans.util.log import logger
+
+logger = logging.getLogger("conans")
 
 
 def _get_local_infos_min(server_store, ref, look_in_all_rrevs):

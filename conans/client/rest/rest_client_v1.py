@@ -1,6 +1,7 @@
 import os
 import time
 import traceback
+import logging
 from collections import namedtuple
 
 from six.moves.urllib.parse import parse_qs, urljoin, urlparse, urlsplit
@@ -18,7 +19,8 @@ from conans.model.manifest import FileTreeManifest
 from conans.paths import CONANINFO, CONAN_MANIFEST, EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, \
     PACKAGE_TGZ_NAME
 from conans.util.files import decode_text
-from conans.util.log import logger
+
+logger = logging.getLogger("conans")
 
 
 def complete_url(base_url, url):

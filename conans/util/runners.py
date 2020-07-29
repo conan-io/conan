@@ -2,13 +2,15 @@ import os
 import subprocess
 import sys
 import tempfile
+import logging
 from contextlib import contextmanager
 
 import six
 
 from conans.client.tools.files import load
 from conans.errors import CalledProcessErrorWithStderr
-from conans.util.log import logger
+
+logger = logging.getLogger("conans")
 
 
 if getattr(sys, 'frozen', False) and 'LD_LIBRARY_PATH' in os.environ:

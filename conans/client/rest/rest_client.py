@@ -1,9 +1,12 @@
+import logging
+
 from conans import CHECKSUM_DEPLOY, REVISIONS, ONLY_V2, OAUTH_TOKEN, MATRIX_PARAMS
 from conans.client.rest.rest_client_v1 import RestV1Methods
 from conans.client.rest.rest_client_v2 import RestV2Methods
 from conans.errors import OnlyV2Available, AuthenticationException
 from conans.search.search import filter_packages
-from conans.util.log import logger
+
+logger = logging.getLogger("conans")
 
 
 class RestApiClientFactory(object):

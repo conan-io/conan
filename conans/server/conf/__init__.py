@@ -5,6 +5,7 @@ Server's configuration variables
 import os
 import random
 import string
+import logging
 from datetime import timedelta
 
 import six
@@ -18,7 +19,8 @@ from conans.server.store.disk_adapter import ServerDiskAdapter
 from conans.server.store.server_store import ServerStore
 from conans.util.env_reader import get_env
 from conans.util.files import mkdir, save
-from conans.util.log import logger
+
+logger = logging.getLogger("conans")
 
 MIN_CLIENT_COMPATIBLE_VERSION = '0.25.0'
 

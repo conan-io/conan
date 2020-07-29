@@ -2,6 +2,7 @@ import os
 import shutil
 import textwrap
 import time
+import logging
 from multiprocessing.pool import ThreadPool
 
 from conans.client import tools
@@ -35,8 +36,9 @@ from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
 from conans.util.env_reader import get_env
 from conans.util.files import (clean_dirty, is_dirty, make_read_only, mkdir, rmdir, save, set_dirty,
                                set_dirty_context_manager)
-from conans.util.log import logger
 from conans.util.tracer import log_package_built, log_package_got_from_local_cache
+
+logger = logging.getLogger("conans")
 
 
 def build_id(conan_file):

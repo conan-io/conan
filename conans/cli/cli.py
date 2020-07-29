@@ -3,6 +3,7 @@ import os
 import pkgutil
 import signal
 import sys
+import logging
 from collections import defaultdict
 from difflib import get_close_matches
 from inspect import getmembers
@@ -14,7 +15,8 @@ from conans.cli.exit_codes import SUCCESS, ERROR_MIGRATION, ERROR_GENERAL, USER_
 from conans.client.conan_api import Conan
 from conans.errors import ConanException, ConanInvalidConfiguration, ConanMigrationError
 from conans.util.files import exception_message_safe
-from conans.util.log import logger
+
+logger = logging.getLogger("conans")
 
 
 class Cli(object):

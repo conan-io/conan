@@ -35,9 +35,6 @@ def configure_logger(logging_level=logging.CRITICAL, logging_file=None):
     logger.setLevel(logging_level)
     return logger
 
-
-logger = configure_logger()
-
 # CRITICAL = 50
 # FATAL = CRITICAL
 # ERROR = 40

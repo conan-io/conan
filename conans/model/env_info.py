@@ -1,9 +1,11 @@
 import copy
 import re
+import logging
 from collections import OrderedDict, defaultdict
 
 from conans.errors import ConanException
-from conans.util.log import logger
+
+logger = logging.getLogger("conans")
 
 
 def unquote(text):

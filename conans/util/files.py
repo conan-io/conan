@@ -8,14 +8,14 @@ import stat
 import sys
 import tarfile
 import tempfile
-
+import logging
 
 from os.path import abspath, join as joinpath, realpath
 from contextlib import contextmanager
 
 import six
 
-from conans.util.log import logger
+logger = logging.getLogger("conans")
 
 
 def walk(top, **kwargs):

@@ -1,5 +1,6 @@
 import os
 import platform
+import logging
 from collections import OrderedDict
 
 from conans.client import tools
@@ -11,7 +12,8 @@ from conans.client.tools.oss import get_cross_building_settings
 from conans.errors import ConanException
 from conans.model.build_info import DEFAULT_BIN, DEFAULT_INCLUDE, DEFAULT_LIB, DEFAULT_SHARE
 from conans.util.env_reader import get_env
-from conans.util.log import logger
+
+logger = logging.getLogger("conans")
 
 verbose_definition_name = "CMAKE_VERBOSE_MAKEFILE"
 cmake_install_prefix_var_name = "CMAKE_INSTALL_PREFIX"

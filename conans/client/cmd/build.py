@@ -1,11 +1,14 @@
 import os
+import logging
 
 from conans.client.conanfile.build import run_build_method
 from conans.errors import (ConanException, NotFoundException, conanfile_exception_formatter)
 from conans.model.conan_file import get_env_context_manager
 from conans.paths import CONANFILE, CONANFILE_TXT
 from conans.util.files import mkdir
-from conans.util.log import logger
+
+
+logger = logging.getLogger("conans")
 
 
 def cmd_build(app, conanfile_path, source_folder, build_folder, package_folder, install_folder,

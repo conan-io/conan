@@ -12,11 +12,13 @@ Flow:
 """
 
 import hashlib
+import logging
 from uuid import getnode as get_mac
 
 from conans.client.cmd.user import update_localdb
 from conans.errors import AuthenticationException, ConanException, ForbiddenException
-from conans.util.log import logger
+
+logger = logging.getLogger("conans")
 
 LOGIN_RETRIES = 3
 

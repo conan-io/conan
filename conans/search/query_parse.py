@@ -1,4 +1,6 @@
-from conans.util.log import logger
+import logging
+
+logger = logging.getLogger("conans")
 
 
 def is_operator(el):

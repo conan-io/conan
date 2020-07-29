@@ -10,6 +10,8 @@
     the currification.
 """
 
+import logging
+
 import requests
 
 from conans.client.output import ConanOutput
@@ -26,10 +28,11 @@ from conans.client.tools.android import *
 from conans.util.env_reader import get_env
 from conans.util.files import _generic_algorithm_sum, load, md5, md5sum, mkdir, relative_dirs, \
     rmdir, save as files_save, save_append, sha1sum, sha256sum, to_file_bytes, touch
-from conans.util.log import logger
 from conans.client.tools.version import Version
 from conans.client.build.cppstd_flags import cppstd_flag_new as cppstd_flag  # pylint: disable=unused-import
 
+
+logger = logging.getLogger("conans")
 
 # This global variables are intended to store the configuration of the running Conan application
 _global_output = None
