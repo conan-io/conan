@@ -655,7 +655,7 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
 
                 def package(self):
                     tools.save(os.path.join(self.package_folder, "lib", "hello.lib"), "")
-                    tools.save(os.path.join(self.package_folder, "lib", "hello.a"), "")
+                    tools.save(os.path.join(self.package_folder, "lib", "libhello.a"), "")
 
                 def package_info(self):
                     self.cpp_info.names["cmake_find_package"] = "MYHELLO"
@@ -678,7 +678,7 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
 
                 def package(self):
                     tools.save(os.path.join(self.package_folder, "lib", "hello2.lib"), "")
-                    tools.save(os.path.join(self.package_folder, "lib", "hello2.a"), "")
+                    tools.save(os.path.join(self.package_folder, "lib", "libhello2.a"), "")
 
                 def package_info(self):
                     self.cpp_info.names["cmake_find_package"] = "MYHELLO"
