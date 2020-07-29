@@ -526,4 +526,3 @@ class SystemPackageToolTest(unittest.TestCase):
                 spt.update()
         else:
             spt.update()  # Won't raise anything because won't do anything
-          
