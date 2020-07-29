@@ -1,4 +1,3 @@
-
 content = """
 <html lang="en">
     <head>
@@ -126,5 +125,14 @@ content = """
             });
         </script>
     </body>
+    <footer>
+        <div class="container-fluid">
+            <div class="info">
+                <p>
+                      Conan <b>v{{ version  }}</b> <script>document.write(new Date().getFullYear())</script> JFrog LTD. <a>https://conan.io</a>
+                </p>
+            </div>
+        </div>
+    </footer>
 </html>
 """
