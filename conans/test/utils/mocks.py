@@ -1,9 +1,10 @@
 import os
 import sys
 from collections import Counter, defaultdict, namedtuple
-from io import StringIO
+
 
 import six
+from six import StringIO
 
 from conans import ConanFile, Options
 from conans.client.output import ConanOutput
