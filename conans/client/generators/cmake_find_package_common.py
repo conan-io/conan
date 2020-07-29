@@ -77,7 +77,7 @@ endforeach()
 """
 
 
-def find_transitive_dependencies(public_deps_names, find_modules):
+def find_transitive_dependencies(public_deps_filenames, find_modules):
     if find_modules:  # for cmake_find_package generator
         find = textwrap.dedent("""
             if(NOT {dep_filename}_FOUND)
@@ -101,9 +101,8 @@ def find_transitive_dependencies(public_deps_names, find_modules):
             endif()
             """)
     lines = ["", "# Library dependencies", "include(CMakeFindDependencyMacro)"]
-    for dep_name in public_deps_names:
-        lines.append(find.format(dep_name=dep_name['name'],
-                                 dep_filename=dep_name['filename']))
+    for dep_filename in public_deps_filenames:
+        lines.append(find.format(dep_filename=dep_filename))
     return "\n".join(lines)
 
 

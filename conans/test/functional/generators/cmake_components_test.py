@@ -641,3 +641,91 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
         client.run("create final.py")
         client.run("install consumer.py", assert_error=True)
         self.assertIn("Component 'mypkg::zlib' not found in 'mypkg' package requirement", client.out)
+
+    def filenames_test(self):
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            import os
+            from conans import ConanFile, tools
+
+            class HelloConan(ConanFile):
+                name = "hello"
+                version = "1.0"
+                settings = "os", "compiler", "build_type", "arch"
+
+                def package(self):
+                    tools.save(os.path.join(self.package_folder, "lib", "hello.lib"), "")
+                    tools.save(os.path.join(self.package_folder, "lib", "libhello.a"), "")
+
+                def package_info(self):
+                    self.cpp_info.names["cmake_find_package"] = "MYHELLO"
+                    self.cpp_info.filenames["cmake_find_package"] = "hello_1"
+                    self.cpp_info.components["1"].names["cmake_find_package"] = "HELLO1"
+                    self.cpp_info.components["1"].libs = ["hello"]
+        """)
+        client.save({"conanfile.py": conanfile})
+        client.run("create .")
+
+        conanfile = textwrap.dedent("""
+            import os
+            from conans import ConanFile, tools
+
+            class HelloConan(ConanFile):
+                name = "hello2"
+                version = "1.0"
+                settings = "os", "compiler", "build_type", "arch"
+                requires = "hello/1.0"
+
+                def package(self):
+                    tools.save(os.path.join(self.package_folder, "lib", "hello2.lib"), "")
+                    tools.save(os.path.join(self.package_folder, "lib", "libhello2.a"), "")
+
+                def package_info(self):
+                    self.cpp_info.names["cmake_find_package"] = "MYHELLO"
+                    self.cpp_info.filenames["cmake_find_package"] = "hello_2"
+                    self.cpp_info.components["1"].names["cmake_find_package"] = "HELLO2"
+                    self.cpp_info.components["1"].libs = ["hello2"]
+                    self.cpp_info.components["1"].requires = ["hello::1"]
+        """)
+        client.save({"conanfile.py": conanfile})
+        client.run("create .")
+
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile, CMake
+
+            class Conan(ConanFile):
+                requires = "hello2/1.0"
+                generators = "cmake_find_package"
+                settings = "os", "compiler", "build_type", "arch"
+
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+            """)
+        cmakelists = textwrap.dedent("""
+            project(consumer)
+            cmake_minimum_required(VERSION 3.1)
+            find_package(hello_2)
+            get_target_property(tmp MYHELLO::HELLO2 INTERFACE_LINK_LIBRARIES)
+            message("Target libs (hello2): ${tmp}")
+            get_target_property(tmp MYHELLO::HELLO1 INTERFACE_LINK_LIBRARIES)
+            message("Target libs (hello): ${tmp}")
+            """)
+        client.save({"conanfile.py": conanfile, "CMakeLists.txt": cmakelists})
+        client.run("install .")
+        client.run("build .")
+
+        self.assertIn('Library hello2 found', client.out)
+        self.assertIn('Library hello found', client.out)
+        self.assertIn("Target libs (hello2): "
+                      "CONAN_LIB::MYHELLO_HELLO2_hello2;MYHELLO::HELLO1;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>",
+                      client.out)
+        self.assertIn("Target libs (hello): "
+                      "CONAN_LIB::MYHELLO_HELLO1_hello;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>",
+                      client.out)
