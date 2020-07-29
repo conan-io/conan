@@ -1,10 +1,10 @@
+# coding=utf-8
 import json
 import os
 import shutil
 import textwrap
 import time
 import unittest
-from datetime import datetime
 from collections import OrderedDict
 
 from mock import patch
@@ -385,7 +385,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         self.client.run("search Hello/1.4.10@myuser/testing --raw")
         self.assertNotIn("Existing packages for recipe", self.client.out)
 
-    def search_html_table_test(self):
+    def test_search_html_table_test(self):
         self.client.run("search Hello/1.4.10@myuser/testing --table=table.html")
         html = ''.join([line.strip() for line in self.client.load("table.html").splitlines()])
         self.assertIn("<h1>Hello/1.4.10@myuser/testing</h1>", html)
@@ -403,8 +403,8 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                       "<td>Visual Studio</td>"
                       "<td></td>"
                       "<td>8.1</td>", html)
-        self.assertIn("Conan <b>v{}</b> © {} JFrog LTD. <a>https://conan.io</a>"
-                      .format(client_version, datetime.today().year), html)
+        self.assertIn("Conan <b>v{}</b> © <script>document.write(new Date().getFullYear())</script> JFrog LTD. <a>https://conan.io</a>"
+                      .format(client_version), html)
 
     def search_html_table_all_test(self):
         os.rmdir(self.servers["local"].server_store.store)

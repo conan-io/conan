@@ -1,6 +1,5 @@
 import os
 from collections import OrderedDict, defaultdict
-from datetime import datetime
 
 from conans.model.ref import PackageReference
 from conans.util.files import save
@@ -154,5 +153,5 @@ def html_binary_graph(search_info, reference, table_filename, template):
     # Render and save
     template_folder = os.path.dirname(template.filename)
     content = template.render(search=search, results=results, base_template_path=template_folder,
-                              version=client_version, year=datetime.today().year)
+                              version=client_version)
     save(table_filename, content)

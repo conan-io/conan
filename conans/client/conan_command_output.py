@@ -1,6 +1,5 @@
 import json
 import os
-from datetime import datetime
 from collections import OrderedDict
 
 from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL
@@ -234,7 +233,7 @@ class CommandOutputer(object):
         template_folder = os.path.dirname(template.filename)
         save(graph_filename,
              template.render(graph=graph, assets=assets, base_template_path=template_folder,
-                             version=client_version, year=datetime.today().year))
+                             version=client_version))
 
     def json_info(self, deps_graph, json_output, cwd, show_paths):
         data = self._grab_info_data(deps_graph, grab_paths=show_paths)
