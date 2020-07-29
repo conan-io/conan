@@ -61,6 +61,7 @@ class _CppInfo(object):
         self.sharedlinkflags = []  # linker flags
         self.exelinkflags = []  # linker flags
         self.build_modules = []
+        self.filenames = {}  # name of filename to create for various generators
         self.rootpath = ""
         self.sysroot = ""
         self._build_modules_paths = None
@@ -144,6 +145,12 @@ class _CppInfo(object):
 
     def get_name(self, generator):
         return self.names.get(generator, self._name)
+
+    def get_filename(self, generator):
+        result = self.filenames.get(generator)
+        if result:
+            return result
+        return self.get_name(generator)
 
     # Compatibility for 'cppflags' (old style property to allow decoration)
     def get_cppflags(self):
