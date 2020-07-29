@@ -7,6 +7,7 @@ from nose.plugins.attrib import attr
 from parameterized import parameterized
 
 from conans.model.ref import ConanFileReference, PackageReference
+from conans.test.utils.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID, replace_in_file
 from conans.util.files import load
 
@@ -408,88 +409,3 @@ class Conan(ConanFile):
 
         self.assertIn('set(requirement_LIBRARY_LIST_RELEASE lib_both lib_release)', content_release)
         self.assertIn('set(requirement_LIBRARY_LIST_DEBUG lib_both lib_debug)', content_debug)
-
-    def cpp_info_filenames_test(self):
-        client = TestClient()
-        client.run("new hello/1.0 -s")
-        indent = '\n        '
-        replace_in_file(
-            os.path.join(client.current_folder, "conanfile.py"),
-            search='self.cpp_info.libs = ["hello"]',
-            replace=indent.join([
-                'self.cpp_info.name = "hello_1"',
-                'self.cpp_info.filenames["cmake_find_package_multi"] = "hello_1"',
-                'self.cpp_info.names["cmake_find_package_multi"] = "MYHELLO"',
-                'self.cpp_info.components["1"].names["cmake_find_package_multi"] = "HELLO1"',
-                'self.cpp_info.components["1"].libs = [ "hello" ]'
-            ]),
-            output=client.out
-        )
-        client.run("create .")
-
-        client.run("new hello2/1.0 -s")
-        replace_in_file(
-            os.path.join(client.current_folder, "src/CMakeLists.txt"),
-            search='add_library(hello hello.cpp)',
-            replace='add_library(hello2 hello.cpp)',
-            output=client.out
-        )
-        replace_in_file(os.path.join(client.current_folder, "conanfile.py"),
-            search='self.cpp_info.libs = ["hello"]',
-            replace=indent.join([
-                'self.cpp_info.name = "hello_2"',
-                'self.cpp_info.filenames["cmake_find_package_multi"] = "hello_2"',
-                'self.cpp_info.names["cmake_find_package_multi"] = "MYHELLO"',
-                'self.cpp_info.components["2"].names["cmake_find_package_multi"] = "HELLO2"',
-                'self.cpp_info.components["2"].libs = [ "hello2" ]',
-                'self.cpp_info.components["2"].requires = [ "hello::1"]',
-            ]),
-            output=client.out
-        )
-        replace_in_file(os.path.join(client.current_folder, "conanfile.py"),
-            search='exports_sources = "src/*"',
-            replace='exports_sources = "src/*"\n    requires = "hello/1.0"',
-            output=client.out
-        )
-        client.run("create .")
-
-        cmakelists = """
-project(consumer)
-cmake_minimum_required(VERSION 3.1)
-find_package(hello_2)
-get_target_property(tmp MYHELLO::HELLO2 INTERFACE_LINK_LIBRARIES)
-message("Target libs (hello2): ${tmp}")
-get_target_property(tmp MYHELLO::HELLO1 INTERFACE_LINK_LIBRARIES)
-message("Target libs (hello): ${tmp}")
-"""
-        conanfile = """
-from conans import ConanFile, CMake
-class Conan(ConanFile):
-    requires = "hello2/1.0"
-    generators = "cmake_find_package_multi"
-    settings = "build_type"
-    def build(self):
-        cmake = CMake(self)
-        cmake.configure()
-        """
-        client.save({"conanfile.py": conanfile, "CMakeLists.txt": cmakelists})
-        client.run("install .")
-        client.run("build .")
-
-        print('~' * 120)
-        print(client.out)
-        print('~' * 120)
-
-        self.assertIn('Library hello2 found', client.out)
-        self.assertIn('Library hello found', client.out)
-        self.assertIn("Target libs (hello2): "
-                      "$<$<CONFIG:Release>:CONAN_LIB::MYHELLO_HELLO2_hello2;MYHELLO::HELLO1;"
-                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
-                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
-                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>",
-                      client.out)
-        self.assertIn("Target libs (hello): $<$<CONFIG:Release>:CONAN_LIB::MYHELLO_HELLO1_hello;"
-                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
-                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
-                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>",
-                      client.out)

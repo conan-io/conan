@@ -271,10 +271,10 @@ set_property(TARGET {name}::{name}
             pkg_filename = self._get_filename(cpp_info)
             pkg_findname = self._get_name(cpp_info)
             pkg_version = cpp_info.version
-            pkg_public_deps = [self._get_name(self.deps_build_info[public_dep]) for public_dep in
-                               cpp_info.public_deps]
-            pkg_public_dep_files = [self._get_filename(self.deps_build_info[public_dep]) for public_dep in
-                               cpp_info.public_deps]
+            pkg_public_deps_names = [self._get_name(self.deps_build_info[public_dep])
+                                     for public_dep in cpp_info.public_deps]
+            pkg_public_deps_filenames = [self._get_filename(self.deps_build_info[public_dep])
+                                         for public_dep in cpp_info.public_deps]
             ret["{}ConfigVersion.cmake".format(pkg_filename)] = self.config_version_template. \
                 format(version=pkg_version)
             if not cpp_info.components:
@@ -289,7 +289,7 @@ set_property(TARGET {name}::{name}
                     filename=pkg_filename,
                     name=pkg_findname,
                     version=cpp_info.version,
-                    public_deps_names=public_deps_names
+                    public_deps_names=pkg_public_deps_filenames
                 )
                 ret["{}Targets.cmake".format(pkg_filename)] = self.targets_template.format(filename=pkg_filename, name=pkg_findname)
 
@@ -304,14 +304,14 @@ set_property(TARGET {name}::{name}
             else:
                 cpp_info = extend(cpp_info, build_type.lower())
                 pkg_info = DepsCppCmake(cpp_info)
-                pkg_public_deps_names = ";".join(["{n}::{n}".format(n=n) for n in pkg_public_deps])
+                deps_names = ";".join(["{n}::{n}".format(n=n) for n in pkg_public_deps_names])
                 components = self._get_components(pkg_name, pkg_findname, cpp_info)
                 # Note these are in reversed order, from more dependent to less dependent
                 pkg_components = " ".join(["{p}::{c}".format(p=pkg_findname, c=comp_findname) for
                                            comp_findname, _ in reversed(components)])
                 global_target_variables = target_template.format(name=pkg_findname, deps=pkg_info,
                                                                  build_type_suffix=build_type_suffix,
-                                                                 deps_names=pkg_public_deps_names)
+                                                                 deps_names=deps_names)
                 variables = self.components_target_build_type_tpl.render(
                     pkg_name=pkg_findname,
                     global_target_variables=global_target_variables,
@@ -333,7 +333,7 @@ set_property(TARGET {name}::{name}
                     pkg_name=pkg_findname,
                     pkg_filename=pkg_filename,
                     components=components,
-                    pkg_public_deps=pkg_public_dep_files,
+                    pkg_public_deps=pkg_public_deps_filenames,
                     conan_message=CMakeFindPackageCommonMacros.conan_message
                 )
                 ret["{}Config.cmake".format(pkg_filename)] = target_config
