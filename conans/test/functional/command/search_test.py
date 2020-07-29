@@ -385,7 +385,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         self.client.run("search Hello/1.4.10@myuser/testing --raw")
         self.assertNotIn("Existing packages for recipe", self.client.out)
 
-    def test_search_html_table_test(self):
+    def search_html_table_test(self):
         self.client.run("search Hello/1.4.10@myuser/testing --table=table.html")
         html = ''.join([line.strip() for line in self.client.load("table.html").splitlines()])
         self.assertIn("<h1>Hello/1.4.10@myuser/testing</h1>", html)
