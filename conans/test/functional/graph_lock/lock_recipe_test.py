@@ -6,6 +6,14 @@ from conans.test.utils.tools import TestClient, GenConanfile
 
 
 class LockRecipeTest(unittest.TestCase):
+    def error_pass_base_test(self):
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . pkg/0.1@")
+        client.save({"conanfile.py": GenConanfile().with_require_plain("pkg/0.1")})
+        client.run("lock create conanfile.py --base --lockfile-out=conan.lock")
+        client.run("install . --lockfile=conan.lock", assert_error=True)
+        print(client.out)
 
     def lock_recipe_test(self):
         client = TestClient()
