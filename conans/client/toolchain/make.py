@@ -158,7 +158,7 @@ class MakeToolchain(object):
             arch_build = detected_architecture() or platform.machine()
         return arch_build, os_build
 
-    def dump(self, install_folder):
+    def write_toolchain_files(self):
 
         defines = []
 
@@ -187,4 +187,4 @@ class MakeToolchain(object):
         t = Template(self._template_toolchain)
         content = t.render(**context)
         print(content)
-        save(os.path.join(install_folder, self.filename), content)
+        save(self.filename, content)

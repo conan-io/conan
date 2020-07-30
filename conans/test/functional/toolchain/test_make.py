@@ -24,8 +24,7 @@ class Base(unittest.TestCase):
             def toolchain(self):
                 tc = MakeToolchain(self)
                 tc.definitions["SOME_DEFINITION"] = "SomeValue"
-                return tc
-
+                tc.write_toolchain_files()
 
             def build(self):
                 self.run("make -C .. app")
