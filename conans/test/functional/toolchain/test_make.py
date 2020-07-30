@@ -70,18 +70,23 @@ class Base(unittest.TestCase):
             $(error >> Not using toolchain)
         endif
 
-        $(info >> CONAN_BUILD_TYPE: $(CONAN_BUILD_TYPE))
+        # These lines workaround deficiency in makefile generator
+        # plan to add function to that generator CONAN_BASIC_SETUP
+        # just like CONAN_TC_SETUP. Can remove two lines below after that.
+        CPPFLAGS += $(addprefix -D,$(CONAN_DEFINES))
+        CPPFLAGS += $(addprefix -I,$(CONAN_INCLUDE_DIRS))
+
+        $(info >> CONAN_TC_BUILD_TYPE: $(CONAN_TC_BUILD_TYPE))
         $(info >> CONAN_TC_CFLAGS: $(CONAN_TC_CFLAGS))
         $(info >> CONAN_TC_CXXFLAGS: $(CONAN_TC_CXXFLAGS))
-        $(info >> CONAN_TC_DEFINES: $(CONAN_TC_DEFINES))
-        $(info >> CONAN_TC_LDFLAGS: $(CONAN_TC_LDFLAGS))
+        $(info >> CONAN_TC_CPPFLAGS: $(CONAN_TC_CPPFLAGS))
 
-
-        CFLAGS += $(CONAN_TC_CFLAGS)
-        CXXFLAGS += $(CONAN_TC_CXXFLAGS)
-        LDFLAGS += $(CONAN_TC_LDFLAGS)
-        CPPFLAGS += $(addprefix -D,$(CONAN_TC_DEFINES))
-        CPPFLAGS += $(addprefix -I,$(CONAN_INCLUDE_DIRS))
+        $(call CONAN_TC_SETUP)
+        
+        # The above function should append CONAN_TC flags to standard flags
+        $(info >> CFLAGS: $(CFLAGS))
+        $(info >> CXXFLAGS: $(CXXFLAGS))
+        $(info >> CPPFLAGS: $(CPPFLAGS))
 
         .PHONY               : app
 
