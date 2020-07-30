@@ -73,8 +73,18 @@ class MakeToolchain(object):
                 CONAN_TC_CXXFLAGS += -fPIC
                 CONAN_TC_SHARED_LINKER_FLAGS += -fPIC
             endif
-
         endif
+
+        CONAN_TC_CPPFLAGS += $(addprefix -D,$(CONAN_TC_DEFINES))
+
+        # Call this function in your Makefile to have Conan variables added to the standard variables
+        # Example:  $(call CONAN_TC_SETUP)
+
+        CONAN_TOOLCHAIN_SETUP =  \
+            $(eval CFLAGS += $(CONAN_TC_CFLAGS)) ; \
+            $(eval CXXFLAGS += $(CONAN_TC_CXXFLAGS)) ; \
+            $(eval CPPFLAGS += $(CONAN_TC_CPPFLAGS)) ; \
+        )
 
     """)
 
