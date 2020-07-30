@@ -159,6 +159,9 @@ class GraphBinariesAnalyzer(object):
         locked = node.graph_lock_node
         if locked and locked.package_id:  # if package_id = None, nothing to lock here
             # First we update the package_id, just in case there are differences or something
+            if locked.package_id != node.package_id and locked.package_id != PACKAGE_ID_UNKNOWN:
+                raise ConanException("'%s' package-id '%s' doesn't match the locked one '%s'"
+                                     % (repr(locked.ref), node.package_id, locked.package_id))
             locked.package_id = node.package_id  # necessary for PACKAGE_ID_UNKNOWN
             pref = PackageReference(locked.ref, locked.package_id, locked.prev)  # Keep locked PREV
             self._process_node(node, pref, build_mode, update, remotes)

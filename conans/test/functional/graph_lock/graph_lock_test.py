@@ -86,6 +86,18 @@ class GraphLockErrorsTest(unittest.TestCase):
         self.assertIn("ERROR: lockfile_out cannot be specified if lockfile is not defined",
                       client.out)
 
+    def cannot_create_twice_test(self):
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile("PkgA", "0.1")})
+        client.run("lock create conanfile.py --lockfile-out=conan.lock")
+        client.run("create . --lockfile=conan.lock --lockfile-out=conan.lock")
+        client.run("install PkgA/0.1@ --build=PkgA --lockfile=conan.lock --lockfile-out=conan.lock",
+                   assert_error=True)
+        self.assertIn("Cannot build 'PkgA/0.1#fa090239f8ba41ad559f8e934494ee2a' because it is "
+                      "already locked", client.out)
+        client.run("create . --lockfile=conan.lock --lockfile-out=conan.lock", assert_error=True)
+        self.assertIn("ERROR: Attempt to modify locked PkgA/0.1", client.out)
+
 
 class GraphLockConanfileTXTTest(unittest.TestCase):
     def conanfile_txt_test(self):
