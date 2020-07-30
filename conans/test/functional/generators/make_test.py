@@ -1,6 +1,7 @@
 import os
 import platform
 import unittest
+import textwrap
 
 from nose.plugins.attrib import attr
 
@@ -21,115 +22,109 @@ class MakeGeneratorTest(unittest.TestCase):
         replace_in_file(conanfile_path, "{\"shared\": False}", "{\"shared\": False, \"fPIC\": True}",
                         output=client.out)
         client.run("create . danimtb/testing")
-        hellowrapper_include = """
-#pragma once
+        hellowrapper_include = textwrap.dedent("""
+            #pragma once
 
-void hellowrapper();
-"""
-        hellowrapper_impl = """
-#include "hello.h"
+            void hellowrapper();
+            """)
 
-#include "hellowrapper.h"
+        hellowrapper_impl = textwrap.dedent("""
+            #include "hello.h"
 
-void hellowrapper(){
-    hello();
-}
-"""
-        makefile = """
-include conanbuildinfo.mak
+            #include "hellowrapper.h"
 
-#----------------------------------------
-#     Make variables for a sample App
-#----------------------------------------
+            void hellowrapper(){
+                hello();
+            }
+            """)
 
-INCLUDE_DIRS = \
-./include
+        makefile = textwrap.dedent("""
+            include conanbuildinfo.mak
 
-CXX_SRCS = \
-src/hellowrapper.cpp
+            #----------------------------------------
+            #     Make variables for a sample App
+            #----------------------------------------
 
-CXX_OBJ_FILES = \
-hellowrapper.o
+            INCLUDE_DIRS        = ./include
+            CXX_SRCS            = src/hellowrapper.cpp
+            CXX_OBJ_FILES       = hellowrapper.o
+            STATIC_LIB_FILENAME = libhellowrapper.a
+            SHARED_LIB_FILENAME = libhellowrapper.so
+            CXXFLAGS           += -fPIC
 
-STATIC_LIB_FILENAME = \
-libhellowrapper.a
+            #----------------------------------------
+            #     Prepare flags from variables
+            #----------------------------------------
 
-SHARED_LIB_FILENAME = \
-libhellowrapper.so
+            CPPFLAGS            += $(addprefix -I, $(INCLUDE_DIRS))
+            SHAREDLINKFLAGS     += $(CONAN_SHAREDLINKFLAGS)
 
-CXXFLAGS += \
--fPIC
+            #----------------------------------------
+            #     Append CONAN_ variables to standards
+            #----------------------------------------
 
-#----------------------------------------
-#     Prepare flags from variables
-#----------------------------------------
+            $(call CONAN_TC_SETUP)
 
-CFLAGS              += $(CONAN_CFLAGS)
-CXXFLAGS            += $(CONAN_CXXFLAGS)
-CPPFLAGS            += $(addprefix -I, $(INCLUDE_DIRS) $(CONAN_INCLUDE_DIRS))
-CPPFLAGS            += $(addprefix -D, $(CONAN_DEFINES))
-LDFLAGS             += $(addprefix -L, $(CONAN_LIB_DIRS))
-LDLIBS              += $(addprefix -l, $(CONAN_LIBS))
-SHAREDLINKFLAGS     += $(CONAN_SHAREDLINKFLAGS)
+            #----------------------------------------
+            #     Make Commands
+            #----------------------------------------
 
-#----------------------------------------
-#     Make Commands
-#----------------------------------------
+            COMPILE_CXX_COMMAND         ?= \
+                g++ -c $(CPPFLAGS) $(CXXFLAGS) $< -o $@
 
-COMPILE_CXX_COMMAND         ?= \
-	g++ -c $(CPPFLAGS) $(CXXFLAGS) $< -o $@
+            CREATE_SHARED_LIB_COMMAND   ?= \
+                g++ -shared $(CXX_OBJ_FILES) \
+                $(CXXFLAGS) $(LDFLAGS) $(LDLIBS) $(SHAREDLINKFLAGS) \
+                -o $(SHARED_LIB_FILENAME)
 
-CREATE_SHARED_LIB_COMMAND   ?= \
-	g++ -shared $(CXX_OBJ_FILES) \
-	$(CXXFLAGS) $(LDFLAGS) $(LDLIBS) $(SHAREDLINKFLAGS) \
-	-o $(SHARED_LIB_FILENAME)
-
-CREATE_STATIC_LIB_COMMAND   ?= \
-	ar rcs $(STATIC_LIB_FILENAME) $(CXX_OBJ_FILES)
+            CREATE_STATIC_LIB_COMMAND   ?= \
+                ar rcs $(STATIC_LIB_FILENAME) $(CXX_OBJ_FILES)
 
 
-#----------------------------------------
-#     Make Rules
-#----------------------------------------
+            #----------------------------------------
+            #     Make Rules
+            #----------------------------------------
 
-.PHONY                  :   static shared
-static                  :   $(STATIC_LIB_FILENAME)
-shared                  :   $(SHARED_LIB_FILENAME)
+            .PHONY                  :   static shared
+            static                  :   $(STATIC_LIB_FILENAME)
+            shared                  :   $(SHARED_LIB_FILENAME)
 
-$(SHARED_LIB_FILENAME)  :   $(CXX_OBJ_FILES)
-	$(CREATE_SHARED_LIB_COMMAND)
+            $(SHARED_LIB_FILENAME)  :   $(CXX_OBJ_FILES)
+                $(CREATE_SHARED_LIB_COMMAND)
 
-$(STATIC_LIB_FILENAME)  :   $(CXX_OBJ_FILES)
-	$(CREATE_STATIC_LIB_COMMAND)
+            $(STATIC_LIB_FILENAME)  :   $(CXX_OBJ_FILES)
+                $(CREATE_STATIC_LIB_COMMAND)
 
-$(CXX_OBJ_FILES)        :   $(CXX_SRCS)
-	$(COMPILE_CXX_COMMAND)
-"""
-        conanfile = """
-from conans import ConanFile
+            $(CXX_OBJ_FILES)        :   $(CXX_SRCS)
+                $(COMPILE_CXX_COMMAND)
+            """)
 
-class HelloWrapper(ConanFile):
-    name = "hellowrapper"
-    version = "1.0"
-    settings = "os", "compiler", "build_type", "arch"
-    requires = "myhello/1.0.0@danimtb/testing"
-    generators = "make"
-    exports_sources = "include/hellowrapper.h", "src/hellowrapper.cpp", "Makefile"
-    options = {"shared": [True, False]}
-    default_options = {"shared": False}
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
 
-    def build(self):
-        make_command = "make shared" if self.options.shared else "make static"
-        self.run(make_command)
+            class HelloWrapper(ConanFile):
+                name = "hellowrapper"
+                version = "1.0"
+                settings = "os", "compiler", "build_type", "arch"
+                requires = "myhello/1.0.0@danimtb/testing"
+                generators = "make"
+                exports_sources = "include/hellowrapper.h", "src/hellowrapper.cpp", "Makefile"
+                options = {"shared": [True, False]}
+                default_options = {"shared": False}
 
-    def package(self):
-        self.copy("*.h", dst="include", src="include")
-        self.copy("*.so", dst="lib", keep_path=False)
-        self.copy("*.a", dst="lib", keep_path=False)
+                def build(self):
+                    make_command = "make shared" if self.options.shared else "make static"
+                    self.run(make_command)
 
-    def package_info(self):
-        self.cpp_info.libs = ["hellowrapper"]
-"""
+                def package(self):
+                    self.copy("*.h", dst="include", src="include")
+                    self.copy("*.so", dst="lib", keep_path=False)
+                    self.copy("*.a", dst="lib", keep_path=False)
+
+                def package_info(self):
+                    self.cpp_info.libs = ["hellowrapper"]
+            """)
+
         client.save({"include/hellowrapper.h": hellowrapper_include,
                      "src/hellowrapper.cpp": hellowrapper_impl,
                      "Makefile": makefile,
@@ -138,81 +133,76 @@ class HelloWrapper(ConanFile):
         # Test also shared
         client.run("create . danimtb/testing -o hellowrapper:shared=True")
 
-        main = """
-#include "hellowrapper.h"
-int main()
-{
-     hellowrapper();
-     return 0;
-}
-"""
-        makefile = """
-include conanbuildinfo.mak
+        main = textwrap.dedent("""
+            #include "hellowrapper.h"
+            int main()
+            {
+                 hellowrapper();
+                 return 0;
+            }
+            """)
 
-#----------------------------------------
-#     Make variables for a sample App
-#----------------------------------------
+        makefile = textwrap.dedent("""
+            include conanbuildinfo.mak
 
-CXX_SRCS = \
-src/main.cpp
+            #----------------------------------------
+            #     Make variables for a sample App
+            #----------------------------------------
 
-CXX_OBJ_FILES = \
-main.o
+            CXX_SRCS        = src/main.cpp
+            CXX_OBJ_FILES   = main.o
+            EXE_FILENAME    = main
+            CXXFLAGS       += -fPIC
+            EXELINKFLAGS   += -fPIE
 
-EXE_FILENAME = \
-main
+            #----------------------------------------
+            #     Prepare flags from variables
+            #----------------------------------------
 
-CXXFLAGS += \
--fPIC
+            EXELINKFLAGS        += $(CONAN_EXELINKFLAGS)
 
-EXELINKFLAGS += \
--fPIE
+            #----------------------------------------
+            #     Append CONAN_ variables to standards
+            #----------------------------------------
 
-#----------------------------------------
-#     Prepare flags from variables
-#----------------------------------------
-
-CFLAGS              += $(CONAN_CFLAGS)
-CXXFLAGS            += $(CONAN_CXXFLAGS)
-CPPFLAGS            += $(addprefix -I, $(CONAN_INCLUDE_DIRS))
-CPPFLAGS            += $(addprefix -D, $(CONAN_DEFINES))
-LDFLAGS             += $(addprefix -L, $(CONAN_LIB_DIRS))
-LDLIBS              += $(addprefix -l, $(CONAN_LIBS))
-EXELINKFLAGS        += $(CONAN_EXELINKFLAGS)
-
-#----------------------------------------
-#     Make Commands
-#----------------------------------------
-
-COMPILE_CXX_COMMAND         ?= \
-	g++ -c $(CPPFLAGS) $(CXXFLAGS) $< -o $@
-
-CREATE_EXE_COMMAND          ?= \
-	g++ $(CXX_OBJ_FILES) \
-	$(CXXFLAGS) $(LDFLAGS) $(LDLIBS) $(EXELINKFLAGS) \
-	-o $(EXE_FILENAME)
+            $(call CONAN_TC_SETUP)
 
 
-#----------------------------------------
-#     Make Rules
-#----------------------------------------
+            #----------------------------------------
+            #     Make Commands
+            #----------------------------------------
 
-.PHONY                  :   exe
-exe                     :   $(EXE_FILENAME)
+            COMPILE_CXX_COMMAND         ?= \
+                g++ -c $(CPPFLAGS) $(CXXFLAGS) $< -o $@
 
-$(EXE_FILENAME)         :   $(CXX_OBJ_FILES)
-	$(CREATE_EXE_COMMAND)
+            CREATE_EXE_COMMAND          ?= \
+                g++ $(CXX_OBJ_FILES) \
+                $(CXXFLAGS) $(LDFLAGS) $(LDLIBS) $(EXELINKFLAGS) \
+                -o $(EXE_FILENAME)
 
-$(CXX_OBJ_FILES)        :   $(CXX_SRCS)
-	$(COMPILE_CXX_COMMAND)
-"""
-        conanfile_txt = """
-[requires]
-hellowrapper/1.0@danimtb/testing
 
-[generators]
-make
-"""
+            #----------------------------------------
+            #     Make Rules
+            #----------------------------------------
+
+            .PHONY                  :   exe
+            exe                     :   $(EXE_FILENAME)
+
+            $(EXE_FILENAME)         :   $(CXX_OBJ_FILES)
+                $(CREATE_EXE_COMMAND)
+
+            $(CXX_OBJ_FILES)        :   $(CXX_SRCS)
+                $(COMPILE_CXX_COMMAND)
+            """)
+
+        conanfile_txt = textwrap.dedent("""
+            [requires]
+            hellowrapper/1.0@danimtb/testing
+
+            [generators]
+            make
+            """)
+        
         client.save({"src/main.cpp": main,
                      "Makefile": makefile,
                      "conanfile.txt": conanfile_txt},

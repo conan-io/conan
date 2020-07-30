@@ -1,3 +1,5 @@
+import textwrap
+
 from conans.model import Generator
 from conans.paths import BUILD_INFO_MAKE
 
@@ -25,9 +27,30 @@ class MakeGenerator(Generator):
             "",
         ]
 
+        additional_content = textwrap.dedent("""
+            CONAN_CPPFLAGS      += $(addprefix -I,$(CONAN_INCLUDE_DIRS))
+            CONAN_CPPFLAGS      += $(addprefix -D,$(CONAN_DEFINES))
+            CONAN_LDFLAGS       += $(addprefix -L,$(CONAN_LIB_DIRS))
+            CONAN_LDLIBS        += $(addprefix -l,$(CONAN_LIBS))
+            CONAN_LDLIBS        += $(addprefix -l,$(CONAN_SYSTEM_LIBS))
+
+            # Call this function in your Makefile to have Conan variables added to standard variables
+            # Example:  $(call CONAN_TC_SETUP)
+
+            CONAN_BASIC_SETUP =  \
+                $(eval CFLAGS   += $(CONAN_CFLAGS)) ; \
+                $(eval CXXFLAGS += $(CONAN_CXXFLAGS)) ; \
+                $(eval CPPFLAGS += $(CONAN_CPPFLAGS)) ; \
+                $(eval LDFLAGS  += $(CONAN_LDFLAGS)) ; \
+                $(eval LDLIBS   += $(CONAN_LDLIBS)) ;
+        """)
+
         for line_as_list in self.create_deps_content():
             content.append("".join(line_as_list))
 
+        content.append(self.makefile_newline)
+        content.append(additional_content)
+        content.append(self.makefile_newline)
         content.append("#-------------------------------------------------------------------#")
         content.append(self.makefile_newline)
         return self.makefile_newline.join(content)
