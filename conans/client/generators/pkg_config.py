@@ -2,7 +2,9 @@ import os
 
 from conans.client.build.compiler_flags import rpath_flags, format_frameworks, format_framework_paths
 from conans.client.tools.oss import get_build_os_arch
+from conans.errors import ConanException
 from conans.model import Generator
+from conans.model.build_info import COMPONENT_SCOPE
 
 """
 PC FILE EXAMPLE:
@@ -33,15 +35,60 @@ class PkgConfigGenerator(Generator):
     def compiler(self):
         return self.conanfile.settings.get_safe("compiler")
 
+    @classmethod
+    def _get_name(cls, obj):
+        get_name = getattr(obj, "get_name")
+        return get_name(cls.name)
+
+    def _get_components(self, pkg_name, cpp_info):
+        generator_components = []
+        for comp_name, comp in self.sorted_components(cpp_info).items():
+            comp_genname = self._get_name(cpp_info.components[comp_name])
+            comp.public_deps = self._get_component_requires(pkg_name, comp)
+            generator_components.append((comp_genname, comp))
+        generator_components.reverse()  # From the less dependent to most one
+        return generator_components
+
+    def _get_component_requires(self, pkg_name, comp):
+        comp_requires_gennames = []
+        for require in comp.requires:
+            if COMPONENT_SCOPE in require:
+                comp_require_pkg_name, comp_require_comp_name = require.split(COMPONENT_SCOPE)
+                comp_require_pkg = self.deps_build_info[comp_require_pkg_name]
+                comp_require_pkg_genname = self._get_name(comp_require_pkg)
+                if comp_require_comp_name == comp_require_pkg_name:
+                    comp_require_comp_genname = comp_require_pkg_genname
+                elif comp_require_comp_name in self.deps_build_info[comp_require_pkg_name].components:
+                    comp_require_comp = comp_require_pkg.components[comp_require_comp_name]
+                    comp_require_comp_genname = self._get_name(comp_require_comp)
+                else:
+                    raise ConanException("Component '%s' not found in '%s' package requirement"
+                                         % (require, comp_require_pkg_name))
+            else:
+                comp_require_comp = self.deps_build_info[pkg_name].components[require]
+                comp_require_comp_genname = self._get_name(comp_require_comp)
+            comp_requires_gennames.append(comp_require_comp_genname)
+        return comp_requires_gennames
+
     @property
     def content(self):
         ret = {}
         for depname, cpp_info in self.deps_build_info.dependencies:
-            name = cpp_info.get_name(PkgConfigGenerator.name)
-            ret["%s.pc" % name] = self.single_pc_file_contents(name, cpp_info)
+            pkg_genname = cpp_info.get_name(PkgConfigGenerator.name)
+            if not cpp_info.components:
+                ret["%s.pc" % pkg_genname] = self.single_pc_file_contents(pkg_genname, cpp_info)
+            else:
+                components = self._get_components(depname, cpp_info)
+                for comp_genname, comp in components:
+                    ret["%s.pc" % comp_genname] = self.single_pc_file_contents(
+                        "%s-%s" % (pkg_genname, comp_genname), comp, is_component=True)
+                comp_gennames = [comp_genname for comp_genname, _ in components]
+                if pkg_genname not in comp_gennames:
+                    cpp_info.public_deps = comp_gennames
+                    ret["%s.pc" % pkg_genname] = self.global_pc_file_contents(pkg_genname, cpp_info)
         return ret
 
-    def single_pc_file_contents(self, name, cpp_info):
+    def single_pc_file_contents(self, name, cpp_info, is_component=False):
         prefix_path = cpp_info.rootpath.replace("\\", "/")
         lines = ['prefix=%s' % prefix_path]
 
@@ -89,11 +136,26 @@ class PkgConfigGenerator(Generator):
              ["-D%s" % d for d in cpp_info.defines]]))
 
         if cpp_info.public_deps:
-            pkg_config_names = []
-            for public_dep in cpp_info.public_deps:
-                name = self.deps_build_info[public_dep].get_name(PkgConfigGenerator.name)
-                pkg_config_names.append(name)
+            if is_component:
+                pkg_config_names = cpp_info.public_deps
+            else:
+                pkg_config_names = []
+                for public_dep in cpp_info.public_deps:
+                    name = self.deps_build_info[public_dep].get_name(PkgConfigGenerator.name)
+                    pkg_config_names.append(name)
             public_deps = " ".join(pkg_config_names)
+            lines.append("Requires: %s" % public_deps)
+        return "\n".join(lines) + "\n"
+
+    @staticmethod
+    def global_pc_file_contents(name, cpp_info):
+        lines = ["Name: %s" % name]
+        description = cpp_info.description or "Conan package: %s" % name
+        lines.append("Description: %s" % description)
+        lines.append("Version: %s" % cpp_info.version)
+
+        if cpp_info.public_deps:
+            public_deps = " ".join(cpp_info.public_deps)
             lines.append("Requires: %s" % public_deps)
         return "\n".join(lines) + "\n"
 

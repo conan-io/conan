@@ -15,7 +15,8 @@ class BasicTest(unittest.TestCase):
             from conans import ConanFile, CMakeToolchain
             class Pkg(ConanFile):
                 def toolchain(self):
-                    return CMakeToolchain(self)
+                    tc = CMakeToolchain(self)
+                    tc.write_toolchain_files()
                 """)
         client = TestClient()
         client.save({"conanfile.py": conanfile})

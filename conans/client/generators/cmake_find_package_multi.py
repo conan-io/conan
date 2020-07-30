@@ -22,7 +22,7 @@ class CMakeFindPackageMultiGenerator(CMakeFindPackageGenerator):
             message(FATAL_ERROR "The 'cmake_find_package_multi' generator only works with CMake > 3.0")
         endif()
 
-        include(${{CMAKE_CURRENT_LIST_DIR}}/{name}Targets.cmake)
+        include(${{CMAKE_CURRENT_LIST_DIR}}/{filename}Targets.cmake)
 
         {target_props_block}
         {find_dependencies_block}
@@ -35,7 +35,7 @@ class CMakeFindPackageMultiGenerator(CMakeFindPackageGenerator):
 
         # Load the debug and release library finders
         get_filename_component(_DIR "${{CMAKE_CURRENT_LIST_FILE}}" PATH)
-        file(GLOB CONFIG_FILES "${{_DIR}}/{name}Target-*.cmake")
+        file(GLOB CONFIG_FILES "${{_DIR}}/{filename}Target-*.cmake")
 
         foreach(f ${{CONFIG_FILES}})
             include(${{f}})
@@ -168,7 +168,7 @@ set_property(TARGET {name}::{name}
 
         # Load the debug and release library finders
         get_filename_component(_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
-        file(GLOB CONFIG_FILES "${_DIR}/{{ pkg_name }}Target-*.cmake")
+        file(GLOB CONFIG_FILES "${_DIR}/{{ pkg_filename }}Target-*.cmake")
 
         foreach(f ${CONFIG_FILES})
             include(${f})
@@ -190,13 +190,13 @@ set_property(TARGET {name}::{name}
         ########## MACROS ###########################################################################
         #############################################################################################
         {{ conan_message }}
-        
+
         # Requires CMake > 3.0
         if(${CMAKE_VERSION} VERSION_LESS "3.0")
             message(FATAL_ERROR "The 'cmake_find_package_multi' generator only works with CMake > 3.0")
         endif()
 
-        include(${CMAKE_CURRENT_LIST_DIR}/{{ pkg_name }}Targets.cmake)
+        include(${CMAKE_CURRENT_LIST_DIR}/{{ pkg_filename }}Targets.cmake)
 
         ########## FIND PACKAGE DEPENDENCY ##########################################################
         #############################################################################################
@@ -268,39 +268,50 @@ set_property(TARGET {name}::{name}
         build_type = str(self.conanfile.settings.build_type).upper()
         build_type_suffix = "_{}".format(build_type) if build_type else ""
         for pkg_name, cpp_info in self.deps_build_info.dependencies:
+            pkg_filename = self._get_filename(cpp_info)
             pkg_findname = self._get_name(cpp_info)
             pkg_version = cpp_info.version
-            pkg_public_deps = [self._get_name(self.deps_build_info[public_dep]) for public_dep in
-                               cpp_info.public_deps]
-            ret["{}ConfigVersion.cmake".format(pkg_findname)] = self.config_version_template. \
+            pkg_public_deps_names = [self._get_name(self.deps_build_info[public_dep])
+                                     for public_dep in cpp_info.public_deps]
+            pkg_public_deps_filenames = [self._get_filename(self.deps_build_info[public_dep])
+                                         for public_dep in cpp_info.public_deps]
+            ret["{}ConfigVersion.cmake".format(pkg_filename)] = self.config_version_template. \
                 format(version=pkg_version)
             if not cpp_info.components:
-                public_deps_names = [self.deps_build_info[dep].get_name("cmake_find_package_multi")
-                                     for dep in cpp_info.public_deps]
-                ret["{}Config.cmake".format(pkg_findname)] = self._config(pkg_findname,
-                                                                          cpp_info.version,
-                                                                          public_deps_names)
-                ret["{}Targets.cmake".format(pkg_findname)] = self.targets_template.format(name=pkg_findname)
+                public_deps_names = [
+                    {
+                      "name": self.deps_build_info[dep].get_name("cmake_find_package_multi"),
+                      "filename": self.deps_build_info[dep].get_filename("cmake_find_package_multi")
+                    }
+                    for dep in cpp_info.public_deps
+                ]
+                ret["{}Config.cmake".format(pkg_filename)] = self._config(
+                    filename=pkg_filename,
+                    name=pkg_findname,
+                    version=cpp_info.version,
+                    public_deps_names=pkg_public_deps_filenames
+                )
+                ret["{}Targets.cmake".format(pkg_filename)] = self.targets_template.format(filename=pkg_filename, name=pkg_findname)
 
                 # If any config matches the build_type one, add it to the cpp_info
                 dep_cpp_info = extend(cpp_info, build_type.lower())
                 deps = DepsCppCmake(dep_cpp_info)
-                deps_names = ";".join(["{n}::{n}".format(n=n) for n in public_deps_names])
+                deps_names = ";".join(["{n}::{n}".format(n=n['name']) for n in public_deps_names])
                 find_lib = target_template.format(name=pkg_findname, deps=deps,
                                                   build_type_suffix=build_type_suffix,
                                                   deps_names=deps_names)
-                ret["{}Target-{}.cmake".format(pkg_findname, build_type.lower())] = find_lib
+                ret["{}Target-{}.cmake".format(pkg_filename, build_type.lower())] = find_lib
             else:
                 cpp_info = extend(cpp_info, build_type.lower())
                 pkg_info = DepsCppCmake(cpp_info)
-                pkg_public_deps_names = ";".join(["{n}::{n}".format(n=n) for n in pkg_public_deps])
+                deps_names = ";".join(["{n}::{n}".format(n=n) for n in pkg_public_deps_names])
                 components = self._get_components(pkg_name, pkg_findname, cpp_info)
                 # Note these are in reversed order, from more dependent to less dependent
                 pkg_components = " ".join(["{p}::{c}".format(p=pkg_findname, c=comp_findname) for
                                            comp_findname, _ in reversed(components)])
                 global_target_variables = target_template.format(name=pkg_findname, deps=pkg_info,
                                                                  build_type_suffix=build_type_suffix,
-                                                                 deps_names=pkg_public_deps_names)
+                                                                 deps_names=deps_names)
                 variables = self.components_target_build_type_tpl.render(
                     pkg_name=pkg_findname,
                     global_target_variables=global_target_variables,
@@ -310,23 +321,25 @@ set_property(TARGET {name}::{name}
                     conan_find_apple_frameworks=CMakeFindPackageCommonMacros.apple_frameworks_macro,
                     conan_package_library_targets=CMakeFindPackageCommonMacros.conan_package_library_targets
                 )
-                ret["{}Target-{}.cmake".format(pkg_findname, build_type.lower())] = variables
+                ret["{}Target-{}.cmake".format(pkg_filename, build_type.lower())] = variables
                 targets = self.components_targets_tpl.render(
                     pkg_name=pkg_findname,
+                    pkg_filename=pkg_filename,
                     components=components,
                     build_type=build_type
                 )
-                ret["{}Targets.cmake".format(pkg_findname)] = targets
+                ret["{}Targets.cmake".format(pkg_filename)] = targets
                 target_config = self.components_config_tpl.render(
                     pkg_name=pkg_findname,
+                    pkg_filename=pkg_filename,
                     components=components,
-                    pkg_public_deps=pkg_public_deps,
+                    pkg_public_deps=pkg_public_deps_filenames,
                     conan_message=CMakeFindPackageCommonMacros.conan_message
                 )
-                ret["{}Config.cmake".format(pkg_findname)] = target_config
+                ret["{}Config.cmake".format(pkg_filename)] = target_config
         return ret
 
-    def _config(self, name, version, public_deps_names):
+    def _config(self, filename, name, version, public_deps_names):
         # Builds the XXXConfig.cmake file for one package
 
         # The common macros
@@ -347,6 +360,7 @@ set_property(TARGET {name}::{name}
                                                                    find_modules=False)
 
         tmp = self.config_template.format(name=name, version=version,
+                                          filename=filename,
                                           target_props_block=targets_props,
                                           find_dependencies_block=find_dependencies_block,
                                           macros_and_functions=macros_and_functions)
