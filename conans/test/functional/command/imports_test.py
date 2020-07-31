@@ -249,6 +249,23 @@ class SymbolicImportsTest(unittest.TestCase):
         self.consumer = TestClient(cache_folder=self.client.cache_folder)
         self.consumer.save({"conanfile.py": consumer}, clean_first=True)
 
+    def text_consumer_test(self):
+        self.client.run("create . pkg/0.1@")
+        conanfile_txt = textwrap.dedent("""
+            [requires]
+            pkg/0.1
+            [imports]
+            @bindirs, *.bin -> bin/Release @
+        """)
+        self.consumer.save({"conanfile.txt": conanfile_txt}, clean_first=True)
+        build_folder = os.path.join(self.consumer.current_folder, "build")
+        mkdir(build_folder)
+        self.consumer.current_folder = build_folder
+        self.consumer.run("install ..")
+        self.assertEqual(["myfile.bin"],  os.listdir(os.path.join(build_folder, "bin", "Release")))
+        self.consumer.run("imports ..")
+        self.assertEqual(["myfile.bin"], os.listdir(os.path.join(build_folder, "bin", "Release")))
+
     def imports_symbolic_names_test(self):
         self.client.run("create . pkg/0.1@")
         self.consumer.run("install .")
