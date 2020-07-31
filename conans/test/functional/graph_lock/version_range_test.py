@@ -165,13 +165,9 @@ class GraphLockVersionRangeTest(unittest.TestCase):
 
         # Same, but modifying also PkgB Recipe
         client.save({"conanfile.py": str(self.consumer) + "\n#comment"})
-        if get_env("TESTING_REVISIONS_ENABLED", False):
-            client.run("export-pkg . PkgB/0.1@%s --lockfile=conan.lock --force" % self.user_channel,
-                       assert_error=True)
-            self.assertIn("Attempt to modify locked PkgB/0.1", client.out)
-        else:
-            client.run("export-pkg . PkgB/0.1@%s --lockfile=conan.lock --force" % self.user_channel)
-            self._check_lock("0", "0", self.pkg_id_b)
+        client.run("export-pkg . PkgB/0.1@%s --lockfile=conan.lock --force" % self.user_channel,
+                   assert_error=True)
+        self.assertIn("Attempt to modify locked PkgB/0.1", client.out)
 
 
 class GraphLockVersionRangeUploadTest(GraphLockVersionRangeTest):

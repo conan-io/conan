@@ -161,10 +161,7 @@ class GraphLockDynamicTest(unittest.TestCase):
         client.save({"conanfile.py": GenConanfile().with_require_plain("LibA/0.1")})
         # If the graph is modified, a create should fail
         client.run("create . LibC/0.1@ --lockfile=conan.lock", assert_error=True)
-        if client.cache.config.revisions_enabled:
-            self.assertIn("Attempt to modify locked LibC/0.1", client.out)
-        else:
-            self.assertIn("'LibC/0.1' locked requirement 'LibB/0.1' not found", client.out)
+        self.assertIn("Attempt to modify locked LibC/0.1", client.out)
 
         # It is possible to obtain a new lockfile
         client.run("export . LibC/0.1@")

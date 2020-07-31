@@ -164,14 +164,13 @@ class GraphLockNode(object):
             value = value.copy_clear_rev()
         if self._ref:
             if (self._ref.copy_clear_rev() != value.copy_clear_rev() or
-                    (self._ref.revision and self._ref.revision != value.revision)):
+                    (self._ref.revision and self._ref.revision != value.revision) or
+                    self._prev):
                 raise ConanException("Attempt to modify locked %s to %s"
                                      % (repr(self._ref), repr(value)))
 
-        # Just in case
         self._ref = value
-        self._package_id = None
-        self._prev = None
+        # Just in case
         self._path = None
 
     @property
