@@ -30,8 +30,8 @@ class LockRecipeTest(unittest.TestCase):
                       client.out)
 
         client.save({"conanfile.py": GenConanfile().with_require_plain("pkg/0.1")})
-        client.run("lock create conanfile.py --base --lockfile-out=conan.lock")
-        lock = json.loads(client.load("conan.lock"))
+        client.run("lock create conanfile.py --base --lockfile-out=base.lock")
+        lock = json.loads(client.load("base.lock"))
         self.assertEqual(2, len(lock["graph_lock"]["nodes"]))
         pkg_node = lock["graph_lock"]["nodes"]["1"]
         if client.cache.config.revisions_enabled:
@@ -39,7 +39,7 @@ class LockRecipeTest(unittest.TestCase):
         else:
             self.assertEqual(pkg_node["ref"], "pkg/0.1")
         client.run("lock create conanfile.py -s os=Linux "
-                   "--lockfile-out=linux.lock --lockfile=conan.lock")
+                   "--lockfile-out=linux.lock --lockfile=base.lock")
         lock = json.loads(client.load("linux.lock"))
         pkg_node = lock["graph_lock"]["nodes"]["1"]
         if client.cache.config.revisions_enabled:
@@ -53,7 +53,7 @@ class LockRecipeTest(unittest.TestCase):
         self.assertEqual(pkg_node["options"], "")
 
         client.run("lock create conanfile.py -s os=Windows "
-                   "--lockfile-out=windows.lock --lockfile=conan.lock")
+                   "--lockfile-out=windows.lock --lockfile=base.lock")
         lock = json.loads(client.load("windows.lock"))
         pkg_node = lock["graph_lock"]["nodes"]["1"]
         if client.cache.config.revisions_enabled:
@@ -65,6 +65,15 @@ class LockRecipeTest(unittest.TestCase):
             self.assertEqual(pkg_node["package_id"], "3475bd55b91ae904ac96fde0f106a136ab951a5e")
             self.assertEqual(pkg_node["prev"], "0")
         self.assertEqual(pkg_node["options"], "")
+
+        # Now it is possible to obtain the base one again from the full ones
+        client.run("lock create conanfile.py --base "
+                   "--lockfile-out=windows_base.lock --lockfile=windows.lock")
+        self.assertEqual(client.load("windows_base.lock"), client.load("base.lock"))
+        # Now it is possible to obtain the base one again from the full ones?
+        client.run("lock create conanfile.py --base "
+                   "--lockfile-out=linux_base.lock --lockfile=linux.lock")
+        self.assertEqual(client.load("linux_base.lock"), client.load("base.lock"))
 
     def lock_recipe_from_partial_test(self):
         client = TestClient()

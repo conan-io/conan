@@ -112,78 +112,6 @@ class GraphLockDynamicTest(unittest.TestCase):
         self.assertIn("LibA/1.0 from local cache - Cache", client.out)
         self.assertNotIn("LibA/1.0.1", client.out)
 
-    def partial_lock_option_command_line_test(self):
-        # The option saved in the libb.lock is applied to all graph, overriding LibC
-        client = TestClient()
-        client.run("config set general.default_package_id_mode=full_package_mode")
-        client.save({"conanfile.py": GenConanfile().with_option("myoption", [True, False])})
-        client.run("create . LibA/1.0@ -o LibA:myoption=True")
-        self.assertIn("LibA/1.0:d2560ba1787c188a1d7fabeb5f8e012ac53301bb - Build", client.out)
-        client.run("create . LibA/1.0@ -o LibA:myoption=False")
-        self.assertIn("LibA/1.0:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Build", client.out)
-
-        client.save({"conanfile.py": GenConanfile().with_require_plain("LibA/[>=1.0]")})
-        client.run("create . LibB/1.0@ -o LibA:myoption=True")
-        client.run("lock create --reference=LibB/1.0 --lockfile-out=libb.lock -o LibA:myoption=True")
-
-        client.save({"conanfile.py": GenConanfile().with_require_plain("LibA/[>=1.0]")
-                                                   .with_default_option("LibA:myoption", False)})
-        client.run("create . LibC/1.0@")
-
-        client.save({"conanfile.py": GenConanfile().with_require_plain("LibB/1.0")
-                                                   .with_require_plain("LibC/1.0")})
-        client.run("lock create conanfile.py --name=LibD --version=1.0 --lockfile=libb.lock "
-                   "--lockfile-out=libd.lock")
-        self.assertIn("LibA/1.0:d2560ba1787c188a1d7fabeb5f8e012ac53301bb - Cache", client.out)
-        self.assertIn("LibB/1.0:777a7717c781c687b6d0fecc05d3818d0a031f92 - Cache", client.out)
-        self.assertIn("LibC/1.0:777a7717c781c687b6d0fecc05d3818d0a031f92 - Missing", client.out)
-
-        # Order of LibC, LibB doesn't matter
-        client.save({"conanfile.py": GenConanfile().with_require_plain("LibC/1.0")
-                                                   .with_require_plain("LibB/1.0")})
-        client.run("lock create conanfile.py --name=LibD --version=1.0 --lockfile=libb.lock "
-                   "--lockfile-out=libd.lock")
-        self.assertIn("LibA/1.0:d2560ba1787c188a1d7fabeb5f8e012ac53301bb - Cache", client.out)
-        self.assertIn("LibB/1.0:777a7717c781c687b6d0fecc05d3818d0a031f92 - Cache", client.out)
-        self.assertIn("LibC/1.0:777a7717c781c687b6d0fecc05d3818d0a031f92 - Missing", client.out)
-
-    def partial_lock_option_conanfile_test(self):
-        # when it is locked, it is used, even if other packages define it.
-        client = TestClient()
-        client.run("config set general.default_package_id_mode=full_package_mode")
-        client.save({"conanfile.py": GenConanfile().with_option("myoption", [True, False])})
-        client.run("create . LibA/1.0@ -o LibA:myoption=True")
-        self.assertIn("LibA/1.0:d2560ba1787c188a1d7fabeb5f8e012ac53301bb - Build", client.out)
-        client.run("create . LibA/1.0@ -o LibA:myoption=False")
-        self.assertIn("LibA/1.0:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Build", client.out)
-
-        client.save({"conanfile.py": GenConanfile().with_require_plain("LibA/[>=1.0]")
-                                                   .with_default_option("LibA:myoption", True)})
-        client.run("create . LibB/1.0@")
-        client.run("lock create --reference=LibB/1.0 --lockfile-out=libb.lock")
-
-        client.save({"conanfile.py": GenConanfile().with_require_plain("LibA/[>=1.0]")
-                                                   .with_default_option("LibA:myoption", False)})
-        client.run("create . LibC/1.0@")
-
-        client.save({"conanfile.py": GenConanfile().with_require_plain("LibB/1.0")
-                                                   .with_require_plain("LibC/1.0")})
-        client.run("lock create conanfile.py --name=LibD --version=1.0 --lockfile=libb.lock "
-                   "--lockfile-out=libd.lock")
-        self.assertIn("LibA/1.0:d2560ba1787c188a1d7fabeb5f8e012ac53301bb - Cache", client.out)
-        self.assertIn("LibB/1.0:777a7717c781c687b6d0fecc05d3818d0a031f92 - Cache", client.out)
-        self.assertIn("LibC/1.0:777a7717c781c687b6d0fecc05d3818d0a031f92 - Missing", client.out)
-
-        # Order of LibC, LibB doesn't matter
-        print("----------- order-------------")
-        client.save({"conanfile.py": GenConanfile().with_require_plain("LibC/1.0")
-                    .with_require_plain("LibB/1.0")})
-        client.run("lock create conanfile.py --name=LibD --version=1.0 --lockfile=libb.lock "
-                   "--lockfile-out=libd.lock")
-        self.assertIn("LibA/1.0:d2560ba1787c188a1d7fabeb5f8e012ac53301bb - Cache", client.out)
-        self.assertIn("LibB/1.0:777a7717c781c687b6d0fecc05d3818d0a031f92 - Cache", client.out)
-        self.assertIn("LibC/1.0:777a7717c781c687b6d0fecc05d3818d0a031f92 - Missing", client.out)
-
     def partial_lock_root_unused_test(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
@@ -327,3 +255,85 @@ class GraphLockDynamicTest(unittest.TestCase):
         else:
             self.assertEqual(dep["ref"], "dep/0.1")
             self.assertEqual(dep["prev"], "0")
+
+
+class PartialOptionsTest(unittest.TestCase):
+    def setUp(self):
+        client = TestClient()
+        client.run("config set general.default_package_id_mode=full_package_mode")
+        client.save({"conanfile.py": GenConanfile().with_option("myoption", [True, False])})
+        client.run("create . LibA/1.0@ -o LibA:myoption=True")
+        self.assertIn("LibA/1.0:d2560ba1787c188a1d7fabeb5f8e012ac53301bb - Build", client.out)
+        client.run("create . LibA/1.0@ -o LibA:myoption=False")
+        self.assertIn("LibA/1.0:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Build", client.out)
+        self.client = client
+
+    def partial_lock_option_command_line_test(self):
+        # The option saved in the libb.lock is applied to all graph, overriding LibC
+        client = self.client
+        client.save({"conanfile.py": GenConanfile().with_require_plain("LibA/[>=1.0]")})
+        client.run("create . LibB/1.0@ -o LibA:myoption=True")
+
+        client.run("lock create --reference=LibB/1.0 --lockfile-out=libb.lock -o LibA:myoption=True")
+
+        client.save({"conanfile.py": GenConanfile().with_require_plain("LibA/[>=1.0]")
+                                                   .with_default_option("LibA:myoption", False)})
+        client.run("create . LibC/1.0@")
+
+        self._check()
+
+    def partial_lock_option_conanfile_default_test(self):
+        client = self.client
+        client.save({"conanfile.py": GenConanfile().with_require_plain("LibA/[>=1.0]")
+                                                   .with_default_option("LibA:myoption", True)})
+        client.run("create . LibB/1.0@")
+
+        client.run("lock create --reference=LibB/1.0 --lockfile-out=libb.lock")
+
+        client.save({"conanfile.py": GenConanfile().with_require_plain("LibA/[>=1.0]")
+                                                   .with_default_option("LibA:myoption", False)})
+        client.run("create . LibC/1.0@")
+
+        self._check()
+
+    def partial_lock_option_conanfile_configure_test(self):
+        # when it is locked, it is used, even if other packages define it.
+        client = self.client
+
+        client.save({"conanfile.py": GenConanfile().with_require_plain("LibA/[>=1.0]")
+                                                   .with_default_option("LibA:myoption", True)})
+        client.run("create . LibB/1.0@")
+
+        client.run("lock create --reference=LibB/1.0 --lockfile-out=libb.lock")
+
+        libc = textwrap.dedent("""
+            from conans import ConanFile
+            class LibC(ConanFile):
+                requires = "LibA/[>=1.0]"
+                def configure(self):
+                    self.options["LibA"].myoption = False
+            """)
+        client.save({"conanfile.py": libc})
+        client.run("create . LibC/1.0@")
+        self.assertIn("LibA/1.0:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache", client.out)
+
+        self._check()
+
+    def _check(self):
+        client = self.client
+        client.save({"conanfile.py": GenConanfile().with_require_plain("LibB/1.0")
+                                                   .with_require_plain("LibC/1.0")})
+        client.run("lock create conanfile.py --name=LibD --version=1.0 --lockfile=libb.lock "
+                   "--lockfile-out=libd.lock")
+        self.assertIn("LibA/1.0:d2560ba1787c188a1d7fabeb5f8e012ac53301bb - Cache", client.out)
+        self.assertIn("LibB/1.0:777a7717c781c687b6d0fecc05d3818d0a031f92 - Cache", client.out)
+        self.assertIn("LibC/1.0:777a7717c781c687b6d0fecc05d3818d0a031f92 - Missing", client.out)
+
+        # Order of LibC, LibB doesn't matter
+        client.save({"conanfile.py": GenConanfile().with_require_plain("LibC/1.0")
+                                                   .with_require_plain("LibB/1.0")})
+        client.run("lock create conanfile.py --name=LibD --version=1.0 --lockfile=libb.lock "
+                   "--lockfile-out=libd.lock")
+        self.assertIn("LibA/1.0:d2560ba1787c188a1d7fabeb5f8e012ac53301bb - Cache", client.out)
+        self.assertIn("LibB/1.0:777a7717c781c687b6d0fecc05d3818d0a031f92 - Cache", client.out)
+        self.assertIn("LibC/1.0:777a7717c781c687b6d0fecc05d3818d0a031f92 - Missing", client.out)
