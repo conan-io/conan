@@ -196,5 +196,4 @@ class MakeToolchain(object):
         }
         t = Template(self._template_toolchain)
         content = t.render(**context)
-        print(content)
         save(self.filename, content)
