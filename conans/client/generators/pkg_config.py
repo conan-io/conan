@@ -76,7 +76,8 @@ class PkgConfigGenerator(Generator):
         for depname, cpp_info in self.deps_build_info.dependencies:
             pkg_genname = cpp_info.get_name(PkgConfigGenerator.name)
             if not cpp_info.components:
-                ret["%s.pc" % pkg_genname] = self.single_pc_file_contents(pkg_genname, cpp_info, None)
+                ret["%s.pc" % pkg_genname] = self.single_pc_file_contents(pkg_genname, cpp_info,
+                                                                          cpp_info.public_deps)
             else:
                 components = self._get_components(depname, cpp_info)
                 for comp_genname, comp, comp_requires_gennames in components:
