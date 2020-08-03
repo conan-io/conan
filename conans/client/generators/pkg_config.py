@@ -84,8 +84,8 @@ class PkgConfigGenerator(Generator):
                         "%s-%s" % (pkg_genname, comp_genname), comp, is_component=True)
                 comp_gennames = [comp_genname for comp_genname, _ in components]
                 if pkg_genname not in comp_gennames:
-                    cpp_info.public_deps = comp_gennames
-                    ret["%s.pc" % pkg_genname] = self.global_pc_file_contents(pkg_genname, cpp_info)
+                    ret["%s.pc" % pkg_genname] = self.global_pc_file_contents(pkg_genname, cpp_info,
+                                                                              comp_gennames)
         return ret
 
     def single_pc_file_contents(self, name, cpp_info, is_component=False):
@@ -148,14 +148,14 @@ class PkgConfigGenerator(Generator):
         return "\n".join(lines) + "\n"
 
     @staticmethod
-    def global_pc_file_contents(name, cpp_info):
+    def global_pc_file_contents(name, cpp_info, comp_gennames):
         lines = ["Name: %s" % name]
         description = cpp_info.description or "Conan package: %s" % name
         lines.append("Description: %s" % description)
         lines.append("Version: %s" % cpp_info.version)
 
-        if cpp_info.public_deps:
-            public_deps = " ".join(cpp_info.public_deps)
+        if comp_gennames:
+            public_deps = " ".join(comp_gennames)
             lines.append("Requires: %s" % public_deps)
         return "\n".join(lines) + "\n"
 
