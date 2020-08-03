@@ -190,8 +190,8 @@ class CppInfoComponentsTest(unittest.TestCase):
             for num, lib in enumerate(sorted_libs):
                 component_name = lib[-1]
                 for dep in info.components[component_name].requires:
-                    for lib in info.components[dep].libs:
-                        self.assertIn(lib, sorted_libs[num:])
+                    for comp_lib in info.components[dep].libs:
+                        self.assertIn(comp_lib, sorted_libs[num:])
 
         info = CppInfo("dep1", "")
         info.components["6"].libs = ["lib6"]
@@ -243,7 +243,7 @@ class CppInfoComponentsTest(unittest.TestCase):
         self.assertEqual(["libK", "libJ", "libG", "libH", "libL", "libF", "libI", "libC", "libD",
                           "libE", "libA", "libB"], dep_cpp_info.libs)
         deps_cpp_info.add("dep2", dep_cpp_info)
-        self.assertEqual(["lib6", "lib5", "lib4", "lib3", "lib1", "lib2","libK", "libJ", "libG",
+        self.assertEqual(["lib6", "lib5", "lib4", "lib3", "lib1", "lib2", "libK", "libJ", "libG",
                           "libH", "libL", "libF", "libI", "libC", "libD", "libE", "libA", "libB"],
                          list(deps_cpp_info.libs))
 
@@ -251,7 +251,7 @@ class CppInfoComponentsTest(unittest.TestCase):
         info = CppInfo("", None)
         info.components["LIB1"].requires = ["LIB2"]
         with six.assertRaisesRegex(self, ConanException, "Component 'LIB1' "
-                                                         "declares a missing dependency"):
+                                                         "missing dependencies: 'LIB2'"):
             _ = DepCppInfo(info).libs
         info.components["LIB1"].requires = ["::LIB2"]
         with six.assertRaisesRegex(self, ConanException, "Leading character '::' not allowed in "
@@ -388,7 +388,6 @@ class CppInfoComponentsTest(unittest.TestCase):
     def component_default_dirs_deps_cpp_info_test(self):
         folder = temp_folder()
         info = CppInfo("my_lib", folder)
-        info.components["Component"]
         info.components["Component"].filter_empty = False  # For testing purposes
         dep_info = DepCppInfo(info)
         deps_cpp_info = DepsCppInfo()
