@@ -421,8 +421,8 @@ class DepCppInfo(object):
             missing_deps = [require for require in self._filter_component_requires(comp.requires)
                             if require not in self._cpp_info.components]
             if missing_deps:
-                raise ConanException("Component '%s' missing dependencies: %s"
-                                     % (comp_name, ", ".join("'%s'" % d for d in missing_deps)))
+                raise ConanException("Component '%s' required components not found in this package: "
+                                     "%s" % (comp_name, ", ".join("'%s'" % d for d in missing_deps)))
             bad_requires = [r for r in comp.requires if r.startswith(COMPONENT_SCOPE)]
             if bad_requires:
                 msg = "Leading character '%s' not allowed in %s requires: %s. Omit it to require " \

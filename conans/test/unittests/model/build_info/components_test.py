@@ -250,8 +250,8 @@ class CppInfoComponentsTest(unittest.TestCase):
     def cppinfo_inexistent_component_dep_test(self):
         info = CppInfo("", None)
         info.components["LIB1"].requires = ["LIB2"]
-        with six.assertRaisesRegex(self, ConanException, "Component 'LIB1' "
-                                                         "missing dependencies: 'LIB2'"):
+        with six.assertRaisesRegex(self, ConanException, "Component 'LIB1' required components "
+                                                         "not found in this package: 'LIB2'"):
             _ = DepCppInfo(info).libs
         info.components["LIB1"].requires = ["::LIB2"]
         with six.assertRaisesRegex(self, ConanException, "Leading character '::' not allowed in "
