@@ -127,8 +127,10 @@ def _format_values(flavor, variables, append_with_spaces):
     :return:
     """
 
-    if flavor in [BAT_FLAVOR, PS1_FLAVOR]:
+    if flavor in [BAT_FLAVOR, PS1_FLAVOR] and platform.system() == "Windows":
         path_sep, quote_elements = ";", False
+    elif flavor == PS1_FLAVOR:
+        path_sep, quote_elements = ":", False
     else:
         path_sep, quote_elements = ":", True
 
