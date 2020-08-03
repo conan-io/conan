@@ -7,6 +7,16 @@ from conans.test.utils.tools import TestClient, GenConanfile
 
 class LockRecipeTest(unittest.TestCase):
 
+    def error_pass_base_test(self):
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . pkg/0.1@")
+        client.save({"conanfile.py": GenConanfile().with_require_plain("pkg/0.1")})
+        client.run("lock create conanfile.py --base --lockfile-out=conan.lock")
+        client.run("install . --lockfile=conan.lock", assert_error=True)
+        self.assertIn("Lockfiles with --base do not contain profile information, "
+                      "cannot be used. Create a full lockfile", client.out)
+
     def lock_recipe_test(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile().with_setting("os")})
@@ -55,6 +65,37 @@ class LockRecipeTest(unittest.TestCase):
             self.assertEqual(pkg_node["package_id"], "3475bd55b91ae904ac96fde0f106a136ab951a5e")
             self.assertEqual(pkg_node["prev"], "0")
         self.assertEqual(pkg_node["options"], "")
+
+    def lock_recipe_from_partial_test(self):
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . LibA/1.0@")
+        client.save({"conanfile.py": GenConanfile().with_require_plain("LibA/[>=1.0]")})
+        client.run("create . LibB/1.0@")
+        client.run("lock create --reference=LibB/1.0 --lockfile-out=base.lock --base")
+        client.run("lock create --reference=LibB/1.0 --lockfile=base.lock --lockfile-out=libb.lock")
+
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . LibA/1.0.1@")
+
+        client.save({"conanfile.py": GenConanfile().with_require_plain("LibB/1.0")})
+
+        for lock in ("base.lock", "libb.lock"):
+            client.run("lock create conanfile.py --name=LibC --version=1.0 --lockfile=%s "
+                       "--lockfile-out=full.lock --base" % lock)
+            self.assertIn("LibA/1.0 from local cache - Cache", client.out)
+
+            lock = json.loads(client.load("full.lock"))
+            for id_, ref, rrev in ("1", "LibB/1.0", "6e5c7369c3d3f7a7a5a60ddec16a941f"), \
+                                  ("2", "LibA/1.0", "f3367e0e7d170aa12abccb175fee5f97"):
+                pkg_node = lock["graph_lock"]["nodes"][id_]
+                if client.cache.config.revisions_enabled:
+                    self.assertEqual(pkg_node["ref"], "%s#%s" % (ref, rrev))
+                else:
+                    self.assertEqual(pkg_node["ref"], ref)
+                self.assertIsNone(pkg_node.get("package_id"))
+                self.assertIsNone(pkg_node.get("prev"))
+                self.assertIsNone(pkg_node.get("options"))
 
     def conditional_lock_recipe_test(self):
         client = TestClient()
