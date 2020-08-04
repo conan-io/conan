@@ -790,13 +790,13 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
         self.assertIn('Library hello2 found', client.out)
         self.assertIn('Library hello found', client.out)
         self.assertIn("Target libs (hello2): "
-                      "$<$<CONFIG:Release>:CONAN_LIB::MYHELLO_HELLO2_hello2;MYHELLO::HELLO1;"
+                      "$<$<CONFIG:Release>:CONAN_LIB::MYHELLO_HELLO2_hello2RELEASE;MYHELLO::HELLO1;"
                       "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
                       "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
                       "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>",
                       client.out)
         self.assertIn("Target libs (hello): "
-                      "$<$<CONFIG:Release>:CONAN_LIB::MYHELLO_HELLO1_hello;"
+                      "$<$<CONFIG:Release>:CONAN_LIB::MYHELLO_HELLO1_helloRELEASE;"
                       "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
                       "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
                       "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>",
