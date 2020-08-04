@@ -141,10 +141,6 @@ class ConanAPIV2(object):
 
     @api_method
     def user_list(self, remote_name=None):
-        self.out.warn("This is a warning.")
-        self.out.error("This is an error.")
-        self.out.highlight("This is a highlight")
-        self.out.success("This is a success")
         if not remote_name or "*" in remote_name:
             info = {"remote1": {"user": "someuser1"},
                     "remote2": {"user": "someuser2"},

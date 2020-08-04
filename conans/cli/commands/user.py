@@ -4,14 +4,12 @@ from conans.cli.command import conan_command, conan_subcommand, Extender, OnceAr
 
 
 def output_user_list_json(info, out):
-    results = info["results"]
-    myjson = json.dumps(results, indent=4)
+    myjson = json.dumps(info, indent=4)
     out.writeln(myjson)
 
 
 def output_user_list_cli(info, out):
-    results = info["results"]
-    for remote_name, user_info in results.items():
+    for remote_name, user_info in info.items():
         output_str = "remote: {} user: {}".format(remote_name,
                                                   user_info["user"])
         out.writeln(output_str)
@@ -29,13 +27,7 @@ def user_list(*args, conan_api, parser, subparser):
                                 "If no remote is specified it will show the users for all "
                                 "the remotes")
     args = parser.parse_args(*args)
-    if not args.remote or "*" in args.remote:
-        info = {"results": {"remote1": {"user": "someuser1"},
-                            "remote2": {"user": "someuser2"},
-                            "remote3": {"user": "someuser3"},
-                            "remote4": {"user": "someuser4"}}}
-    else:
-        info = {"results": {"remote1": {"user": "someuser1"}}}
+    info = conan_api.user_list(args.remote)
     return info
 
 
