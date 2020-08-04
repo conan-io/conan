@@ -5,14 +5,14 @@ from conans.cli.command import conan_command, conan_subcommand, Extender, OnceAr
 
 def output_user_list_json(info, out):
     myjson = json.dumps(info, indent=4)
-    out.writeln(myjson)
+    out.info(myjson)
 
 
 def output_user_list_cli(info, out):
     for remote_name, user_info in info.items():
         output_str = "remote: {} user: {}".format(remote_name,
                                                   user_info["user"])
-        out.writeln(output_str)
+        out.info(output_str)
 
 
 @conan_subcommand(formatters={"cli": output_user_list_cli, "json": output_user_list_json})

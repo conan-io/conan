@@ -13,7 +13,7 @@ from conans.client.graph.range_resolver import RangeResolver
 from conans.client.hook_manager import HookManager
 from conans.client.loader import ConanFileLoader
 from conans.client.migrations import ClientMigrator
-from conans.cli.output import ConanOutput, colorama_initialize
+from conans.cli.output import ConanOutput, should_color_output
 from conans.client.remote_manager import RemoteManager
 from conans.client.rest.auth_manager import ConanApiAuthManager
 from conans.client.rest.conan_requester import ConanRequester
@@ -121,8 +121,8 @@ class ConanApp(object):
 
 class ConanAPIV2(object):
     def __init__(self, cache_folder=None, output=None, user_io=None, http_requester=None, runner=None):
-        self.color = colorama_initialize()
-        self.out = output or ConanOutput(sys.stdout, sys.stderr, self.color)
+        use_color = should_color_output()
+        self.out = output or ConanOutput(sys.stderr, use_color)
         self.user_io = user_io or UserIO(out=self.out)
         self.cache_folder = cache_folder or os.path.join(get_conan_user_home(), ".conan")
         self.http_requester = http_requester

@@ -29,6 +29,7 @@ class Cli(object):
             type(conan_api))
         self._conan_api = conan_api
         self._out = conan_api.out
+        self._cli_out = ConanOutput(sys.stdout, self._out.color)
         self._groups = defaultdict(list)
         self._commands = {}
         conan_commands_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "commands")
@@ -82,14 +83,14 @@ class Cli(object):
             return
 
         if len(matches) > 1:
-            self._out.writeln("The most similar commands are")
+            self._out.info("The most similar commands are")
         else:
-            self._out.writeln("The most similar command is")
+            self._out.info("The most similar command is")
 
         for match in matches:
-            self._out.writeln("    %s" % match)
+            self._out.info("    %s" % match)
 
-        self._out.writeln("")
+        self._out.info("")
 
     def help_message(self):
         self.commands["help"].method(conan_api=self.conan_api, parser=self.commands["help"].parser,
@@ -113,20 +114,19 @@ class Cli(object):
             command = self.commands[command_argument]
         except KeyError as exc:
             if command_argument in ["-v", "--version"]:
-                self._out.success("Conan version %s" % client_version)
+                self._out.info("Conan version %s" % client_version)
                 return SUCCESS
 
             if command_argument in ["-h", "--help"]:
                 self.help_message()
                 return SUCCESS
 
-            self._out.writeln(
-                "'%s' is not a Conan command. See 'conan --help'." % command_argument)
-            self._out.writeln("")
+            self._out.info("'%s' is not a Conan command. See 'conan --help'." % command_argument)
+            self._out.info("")
             self._print_similar(command_argument)
             raise ConanException("Unknown command %s" % str(exc))
 
-        command.run(args[0][1:], conan_api=self.conan_api,
+        command.run(args[0][1:], conan_api=self.conan_api, out=self._cli_out,
                     parser=self.commands[command_argument].parser,
                     commands=self.commands, groups=self.groups)
 
