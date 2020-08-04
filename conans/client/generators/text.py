@@ -224,7 +224,7 @@ class TXTGenerator(Generator):
                 sections.append(all_flags)
 
         def append_user_info(prefix, user_info_data):
-            for dep, the_vars in user_info_data.items():
+            for dep, the_vars in sorted(user_info_data.items()):
                 sections.append("[{prefix}_{dep_name}]".format(prefix=prefix, dep_name=dep))
                 for name, value in sorted(the_vars.vars.items()):
                     sections.append("%s=%s" % (name, value))
