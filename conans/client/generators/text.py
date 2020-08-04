@@ -214,7 +214,7 @@ class TXTGenerator(Generator):
                 sections.append(all_flags)
 
         # Generate the user info variables as [USER_{DEP_NAME}] and then the values with key=value
-        for dep, the_vars in self._deps_user_info.items():
+        for dep, the_vars in sorted(self._deps_user_info.items()):
             sections.append("[USER_%s]" % dep)
             for name, value in sorted(the_vars.vars.items()):
                 sections.append("%s=%s" % (name, value))
