@@ -11,7 +11,8 @@ from conans import __version__ as client_version
 from conans.cli.command import ConanSubCommand
 from conans.cli.exit_codes import SUCCESS, ERROR_MIGRATION, ERROR_GENERAL, USER_CTRL_C, \
     ERROR_SIGTERM, USER_CTRL_BREAK, ERROR_INVALID_CONFIGURATION
-from conans.client.conan_api import Conan
+from conans.cli.output import ConanOutput
+from conans.client.api.conan_api import Conan
 from conans.errors import ConanException, ConanInvalidConfiguration, ConanMigrationError
 from conans.util.files import exception_message_safe
 from conans.util.log import logger
@@ -147,7 +148,7 @@ def main(args):
         6: Invalid configuration (done)
     """
     try:
-        conan_api, _, _ = Conan.factory()  # FIXME: Conan factory will be removed in Conan 2.0
+        conan_api = Conan()
     except ConanMigrationError:  # Error migrating
         sys.exit(ERROR_MIGRATION)
     except ConanException as e:
