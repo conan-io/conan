@@ -60,10 +60,11 @@ class TXTGenerator(Generator):
         deps_env_info_idx = text.find("[ENV_")
         user_info_build_idx = text.find("[{}_".format(TXTGenerator._USER_INFO_BUILD_PREFIX))
 
-        user_info_host_txt = deps_env_info_txt = user_info_build_txt = ""
+        user_info_host_txt = deps_env_info_txt = ""
 
         # Get chunk with deps_cpp_info: from the beginning to the first one of the others
-        last_idx = next((x for x in [user_info_host_idx, deps_env_info_idx, user_info_build_idx] if x != -1), None)
+        last_idx = next((x for x in [user_info_host_idx, deps_env_info_idx, user_info_build_idx]
+                         if x != -1), None)
         deps_cpp_info_txt = text[:last_idx]
 
         if user_info_host_idx != -1:
@@ -74,14 +75,16 @@ class TXTGenerator(Generator):
             last_idx = next((x for x in [user_info_build_idx] if x != -1), None)
             deps_env_info_txt = text[deps_env_info_idx:last_idx]
 
+        user_info_build = None
         if user_info_build_idx != -1:
             user_info_build_txt = text[user_info_build_idx:]
+            user_info_build = TXTGenerator._loads_user_info(user_info_build_txt,
+                                                            TXTGenerator._USER_INFO_BUILD_PREFIX)
 
         deps_cpp_info = TXTGenerator._loads_cpp_info(deps_cpp_info_txt, filter_empty=filter_empty)
         deps_user_info = TXTGenerator._loads_user_info(user_info_host_txt,
                                                        TXTGenerator._USER_INFO_HOST_PREFIX)
         deps_env_info = DepsEnvInfo.loads(deps_env_info_txt)
-        user_info_build = TXTGenerator._loads_user_info(user_info_build_txt, TXTGenerator._USER_INFO_BUILD_PREFIX) if user_info_build_txt else None
         return deps_cpp_info, deps_user_info, deps_env_info, user_info_build
 
     @staticmethod
