@@ -2,7 +2,8 @@ import textwrap
 import unittest
 
 from conans.test.utils.tools import TestClient
-
+from conans.client.tools import chdir
+import os
 
 class UserInfoTestCase(unittest.TestCase):
     """ When using several contexts (xbuild feature) the user information from each of the
@@ -81,3 +82,19 @@ class UserInfoTestCase(unittest.TestCase):
         self.assertIn("app/1.0: [build] br_build, library", t.out)
         self.assertIn("app/1.0: [build] library.DATA=library-Linux", t.out)
         self.assertIn("app/1.0: [build] br_build.DATA=br_build-Linux", t.out)
+
+    def test_user_info_local_workflow(self):
+        t = TestClient()
+        t.save({'library.py': self.library,
+                'build_requires.py': self.br,
+                'app.py': self.app,
+                'host': '[settings]\nos=Windows',
+                'build': '[settings]\nos=Linux', })
+        t.run("create library.py library/1.0@ --profile=host")
+        t.run("create library.py library/1.0@ --profile=build")
+        t.run("create build_requires.py br_host/1.0@ --profile=host")
+        t.run("create build_requires.py br_build/1.0@ --profile=build")
+        t.run("install app.py app/1.0@ --profile:host=host --profile:build=build")
+        t.run("build app.py")
+        print(t.out)
+        self.fail("AAA")
