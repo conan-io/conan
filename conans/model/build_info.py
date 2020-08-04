@@ -240,6 +240,8 @@ class CppInfo(_CppInfo):
         return self._configs.setdefault(config, _get_cpp_info())
 
     def _raise_incorrect_components_definition(self, package_name, package_requires):
+        if not self.components:
+            return
         # Raise if mixing components
         if (self.includedirs != [DEFAULT_INCLUDE] or
             self.libdirs != [DEFAULT_LIB] or
@@ -255,10 +257,10 @@ class CppInfo(_CppInfo):
             self.cxxflags or
             self.sharedlinkflags or
             self.exelinkflags or
-            self.build_modules) and self.components:
+            self.build_modules):
             raise ConanException("self.cpp_info.components cannot be used with self.cpp_info "
                                  "global values at the same time")
-        if self._configs and self.components:
+        if self._configs:
             raise ConanException("self.cpp_info.components cannot be used with self.cpp_info configs"
                                  " (release/debug/...) at the same time")
 
@@ -268,24 +270,24 @@ class CppInfo(_CppInfo):
                 raise ConanException("Component name cannot be the same as the package name: '%s'"
                                      % comp_name)
 
-        if self.components:
-            comp_requires = set()
-            for comp_name, comp in self.components.items():
-                for comp_require in comp.requires:
-                    if COMPONENT_SCOPE in comp_require:
-                        comp_requires.add(
-                            comp_require[:comp_require.find(COMPONENT_SCOPE)])
-            pkg_requires = [require.ref.name for require in package_requires.values()]
-            # Raise on components requires without package requires
-            for pkg_require in pkg_requires:
-                if pkg_require not in comp_requires:
-                    raise ConanException("Package require '%s' not used in components requires"
-                                         % pkg_require)
-            # Raise on components requires requiring inexistent package requires
-            for comp_require in comp_requires:
-                if comp_require not in pkg_requires:
-                    raise ConanException("Package require '%s' declared in components requires "
-                                         "but not defined as a recipe requirement" % comp_require)
+        # check that requires are used in components and check that components exists in requires
+        comp_requires = set()
+        for comp_name, comp in self.components.items():
+            for comp_require in comp.requires:
+                if COMPONENT_SCOPE in comp_require:
+                    comp_requires.add(
+                        comp_require[:comp_require.find(COMPONENT_SCOPE)])
+        pkg_requires = [require.ref.name for require in package_requires.values()]
+        # Raise on components requires without package requires
+        for pkg_require in pkg_requires:
+            if pkg_require not in comp_requires:
+                raise ConanException("Package require '%s' not used in components requires"
+                                     % pkg_require)
+        # Raise on components requires requiring inexistent package requires
+        for comp_require in comp_requires:
+            if comp_require not in pkg_requires:
+                raise ConanException("Package require '%s' declared in components requires "
+                                     "but not defined as a recipe requirement" % comp_require)
 
 
 class _BaseDepsCppInfo(_CppInfo):
@@ -418,9 +420,11 @@ class DepCppInfo(object):
 
     def _check_component_requires(self):
         for comp_name, comp in self._cpp_info.components.items():
-            if not all([require in self._cpp_info.components for require in
-                        self._filter_component_requires(comp.requires)]):
-                raise ConanException("Component '%s' declares a missing dependency" % comp_name)
+            missing_deps = [require for require in self._filter_component_requires(comp.requires)
+                            if require not in self._cpp_info.components]
+            if missing_deps:
+                raise ConanException("Component '%s' required components not found in this package: "
+                                     "%s" % (comp_name, ", ".join("'%s'" % d for d in missing_deps)))
             bad_requires = [r for r in comp.requires if r.startswith(COMPONENT_SCOPE)]
             if bad_requires:
                 msg = "Leading character '%s' not allowed in %s requires: %s. Omit it to require " \
