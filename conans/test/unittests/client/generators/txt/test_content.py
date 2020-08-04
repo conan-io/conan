@@ -7,7 +7,7 @@ from conans.model.conan_file import ConanFile
 from conans.model.env_info import EnvValues, EnvInfo
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
-from conans.model.user_info import UserInfo
+from conans.model.user_info import UserInfo, DepsUserInfo
 from conans.test.utils.tools import TestBufferConanOutput
 
 
@@ -89,4 +89,26 @@ class ConentGenerationTestCase(unittest.TestCase):
                     [USER_my_pkg]
                     VAR1=value1
                     [USER_other-pkg]
+                    VAR1=other-value1"""), txt_out)
+
+    def test_user_info_build(self):
+        conanfile = ConanFile(TestBufferConanOutput(), None)
+        conanfile.initialize(Settings({}), EnvValues())
+
+        conanfile.user_info_build = DepsUserInfo()
+        user_info = UserInfo()
+        user_info.VAR1 = "value1"
+        conanfile.user_info_build["build_pkg"] = user_info
+
+        user_info = UserInfo()
+        user_info.VAR1 = "other-value1"
+        conanfile.user_info_build["other-build-pkg"] = user_info
+
+        generator = TXTGenerator(conanfile)
+        txt_out = generator.content
+
+        self.assertIn(textwrap.dedent("""
+                    [USERBUILD_build_pkg]
+                    VAR1=value1
+                    [USERBUILD_other-build-pkg]
                     VAR1=other-value1"""), txt_out)
