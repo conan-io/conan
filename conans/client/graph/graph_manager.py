@@ -403,10 +403,13 @@ def load_deps_info(current_path, conanfile, required):
         return
     info_file_path = os.path.join(current_path, BUILD_INFO)
     try:
-        deps_cpp_info, deps_user_info, deps_env_info = TXTGenerator.loads(load(info_file_path))
+        deps_cpp_info, deps_user_info, deps_env_info, user_info_build = \
+            TXTGenerator.loads(load(info_file_path))
         conanfile.deps_cpp_info = deps_cpp_info
         conanfile.deps_user_info = deps_user_info
         conanfile.deps_env_info = deps_env_info
+        if user_info_build:
+            conanfile.user_info_build = user_info_build
     except IOError:
         if required:
             raise ConanException("%s file not found in %s\nIt is required for this command\n"

@@ -68,7 +68,7 @@ class TextGeneratorTest(unittest.TestCase):
             requirement_other
         """)
 
-        deps_cpp_info, _, _ = TXTGenerator.loads(content)
+        deps_cpp_info, _, _, _ = TXTGenerator.loads(content)
         self.assertListEqual(list(deps_cpp_info.system_libs), ["requirement", "requirement_other"])
         self.assertListEqual(list(deps_cpp_info["requirement"].system_libs), ["requirement", ])
         self.assertListEqual(list(deps_cpp_info["requirement_other"].system_libs),
@@ -83,7 +83,7 @@ class TextGeneratorTest(unittest.TestCase):
         conanfile.initialize(Settings({}), EnvValues())
         conanfile.deps_cpp_info.add("pkg_name", DepCppInfo(cpp_info))
         content = TXTGenerator(conanfile).content
-        parsed_deps_cpp_info, _, _ = TXTGenerator.loads(content, filter_empty=False)
+        parsed_deps_cpp_info, _, _, _ = TXTGenerator.loads(content, filter_empty=False)
 
         parsed_cpp_info = parsed_deps_cpp_info["pkg_name"]
         # FIXME: Conan v2: Remove 'txt' generator or serialize all the names
@@ -112,7 +112,7 @@ class TextGeneratorTest(unittest.TestCase):
         conanfile.deps_cpp_info.add(ref.name, cpp_info)
 
         master_content = TXTGenerator(conanfile).content
-        after_parse, _, _ = TXTGenerator.loads(master_content, filter_empty=False)
+        after_parse, _, _, _ = TXTGenerator.loads(master_content, filter_empty=False)
         conanfile.deps_cpp_info = after_parse
         after_content = TXTGenerator(conanfile).content
 
