@@ -218,7 +218,7 @@ class ClientCache(object):
         """Returns a list of generator paths inside the generators folder"""
         generators = []
         for path in os.listdir(self.generators_path):
-            if os.path.isfile(path) and path.endswith(".py"):
+            if os.path.isfile(os.path.join(self.generators_path, path)) and path.endswith(".py"):
                 generators.append(os.path.join(self.generators_path, path))
         return generators
 
