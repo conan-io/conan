@@ -3,7 +3,7 @@
 import unittest
 
 from conans.client.file_copier import report_copied_files
-from conans.test.utils.tools import TestBufferConanOutput
+from conans.test.utils.mocks import TestBufferConanOutput
 
 
 class ReportCopiedFilesTestCase(unittest.TestCase):

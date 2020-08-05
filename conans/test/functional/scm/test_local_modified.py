@@ -4,7 +4,8 @@ import textwrap
 import unittest
 
 from conans.model.ref import ConanFileReference
-from conans.test.utils.tools import TestClient, create_local_git_repo
+from conans.test.utils.tools import TestClient
+from conans.test.utils.scm import create_local_git_repo
 
 
 class SCMFolderObsoleteTest(unittest.TestCase):

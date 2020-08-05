@@ -8,7 +8,7 @@ from nose.plugins.attrib import attr
 from parameterized import parameterized
 
 from conans.client import tools
-from conans.test.utils.conanfile import MockSettings
+from conans.test.utils.mocks import MockSettings
 
 
 @attr('visual_studio')

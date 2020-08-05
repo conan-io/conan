@@ -11,8 +11,8 @@ from parameterized import parameterized
 from conans.client import tools
 from conans.client.tools.scm import Git
 from conans.errors import ConanException
-from conans.test.utils.tools import temp_folder, create_local_git_repo,\
-    TestClient
+from conans.test.utils.tools import temp_folder, TestClient
+from conans.test.utils.scm import create_local_git_repo
 from conans.util.files import save
 
 

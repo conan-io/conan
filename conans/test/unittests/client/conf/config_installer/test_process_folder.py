@@ -8,7 +8,8 @@ import mock
 
 from conans.client.conf.config_installer import _process_folder
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestBufferConanOutput, save_files
+from conans.test.utils.tools import save_files
+from conans.test.utils.mocks import TestBufferConanOutput
 
 
 class ProcessFolderTests(unittest.TestCase):

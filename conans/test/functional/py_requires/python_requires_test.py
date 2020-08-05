@@ -8,7 +8,8 @@ from parameterized import parameterized
 
 from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE
-from conans.test.utils.tools import TestClient, create_local_git_repo, GenConanfile
+from conans.test.utils.tools import TestClient, GenConanfile
+from conans.test.utils.scm import create_local_git_repo
 
 
 class PyRequiresExtendTest(unittest.TestCase):
