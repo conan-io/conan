@@ -1,11 +1,11 @@
 # coding=utf-8
 
-import os
 import platform
 import textwrap
 
 from jinja2 import Template
 
+from conans.client.build.compiler_flags import architecture_flag, build_type_flags
 from conans.client.build.cppstd_flags import cppstd_from_settings, cppstd_flag_new as cppstd_flag
 from conans.client.tools.oss import cross_building, \
     detected_architecture, detected_os, get_gnu_triplet, get_target_os_arch, get_build_os_arch
@@ -34,10 +34,24 @@ class MakeToolchain(object):
             CONAN_TC_COMPILER_VERSION = {{compiler_version}}
             CONAN_TC_COMPILER_RUNTIME = {{compiler_runtime}}
             CONAN_TC_LIBCXX = {{libcxx}}
+            CONAN_TC_FPIC = {{fpic}}
+            CONAN_TC_CPPSTD_FLAG = {{cppstd_flag}}
+            CONAN_TC_ARCH_FLAG = {{arch_flag}}
+            CONAN_TC_BUILD_TYPE_FLAGS = {{build_type_flags}}
             CONAN_TC_DEFINES = {{defines}}
 
             CONAN_TC_SET_LIBCXX = {{set_libcxx}}
+            CONAN_TC_SET_CPPSTD = {{set_cppstd}}
+            CONAN_TC_SET_ARCH = {{set_arch}}
             CONAN_TC_SET_FPIC = {{set_fpic}}
+            CONAN_TC_SET_SHARED = {{set_shared}}
+
+            CONAN_TC_CFLAGS += $(CONAN_TC_BUILD_TYPE_FLAGS)
+            CONAN_TC_CXXFLAGS += $(CONAN_TC_BUILD_TYPE_FLAGS)
+
+            ifeq ($(CONAN_TC_BUILD_TYPE),Release)
+                CONAN_TC_DEFINES += NDEBUG
+            endif
 
             ifeq ($(CONAN_TC_SET_LIBCXX),True)
                 CONAN_TC_CLANG_BASED := $(if $(filter $(CONAN_TC_COMPILER),clang apple-clang),true)
@@ -65,13 +79,26 @@ class MakeToolchain(object):
                     CONAN_TC_DEFINES += GLIBCXX_USE_CXX11_ABI=0
                 endif
             endif
-            ifeq ($(CONAN_TC_BUILD_TYPE),Release)
-                CONAN_TC_DEFINES += NDEBUG
+            ifeq ($(CONAN_TC_SET_CPPSTD),True)
+                CONAN_TC_CXXFLAGS += $(CONAN_TC_CPPSTD_FLAG)
+            endif
+            ifeq ($(CONAN_TC_SET_ARCH),True)
+                CONAN_TC_CFLAGS += $(CONAN_TC_ARCH_FLAG)
+                CONAN_TC_CXXFLAGS += $(CONAN_TC_ARCH_FLAG)
+                CONAN_TC_SHARED_LINKER_FLAGS += $(CONAN_TC_ARCH_FLAG)
+                CONAN_TC_EXE_LINKER_FLAGS += $(CONAN_TC_ARCH_FLAG)
             endif
             ifeq ($(CONAN_TC_SET_FPIC),True)
                 CONAN_TC_CFLAGS += -fPIC
                 CONAN_TC_CXXFLAGS += -fPIC
                 CONAN_TC_SHARED_LINKER_FLAGS += -fPIC
+                CONAN_TC_EXE_LINKER_FLAGS += -pie
+            endif
+            ifeq ($(CONAN_TC_SET_SHARED),True)
+                CONAN_TC_LDFLAGS += -shared
+                CONAN_TC_LDFLAGS += $(CONAN_TC_SHARED_LINKER_FLAGS)
+            else
+                CONAN_TC_LDFLAGS += $(CONAN_TC_EXE_LINKER_FLAGS)
             endif
         endif
 
@@ -80,10 +107,11 @@ class MakeToolchain(object):
         # Call this function in your Makefile to have Conan variables added to the standard variables
         # Example:  $(call CONAN_TC_SETUP)
 
-        CONAN_TOOLCHAIN_SETUP =  \
+        CONAN_TC_SETUP =  \
             $(eval CFLAGS += $(CONAN_TC_CFLAGS)) ; \
             $(eval CXXFLAGS += $(CONAN_TC_CXXFLAGS)) ; \
             $(eval CPPFLAGS += $(CONAN_TC_CPPFLAGS)) ; \
+            $(eval LDFLAGS += $(CONAN_TC_LDFLAGS)) ; \
         )
 
     """)
@@ -91,8 +119,11 @@ class MakeToolchain(object):
     def __init__(self, conanfile):
         self._conanfile = conanfile
 
-        self._set_fpic = self._deduce_fpic()
         self._set_libcxx = True
+        self._set_cppstd = True
+        self._set_arch = True
+        self._set_shared = True if conanfile.options.get_safe("shared") else False
+        self._set_fpic = True if conanfile.options.get_safe("fPIC") else False
 
         self._compiler = conanfile.settings.get_safe("compiler")
         self._compiler_version = conanfile.settings.get_safe("compiler.version")
@@ -101,32 +132,24 @@ class MakeToolchain(object):
 
         # cpp standard
         self._cppstd = cppstd_from_settings(conanfile.settings)
-        self.cppstd_flag = cppstd_flag(conanfile.settings)
+        self._cppstd_flag = cppstd_flag(conanfile.settings)
+
+        # arch_build in compiler flag format
+        self._arch_flag = architecture_flag(self._conanfile.settings)
+
+        # build_type information in compiler flag format
+        self._build_type_flags = " ".join(build_type_flags(self._conanfile.settings))
 
         self._os_host = conanfile.settings.get_safe("os")
         self._arch_host = conanfile.settings.get_safe("arch")
         self._os_target, self._arch_target = get_target_os_arch(conanfile)
         self._arch_build, self._os_build = self._get_build_os_arch()
         self._build_type = conanfile.settings.get_safe("build_type")
+
         # Precalculate build, host, target triplets
         self._trip_build, self._trip_host, self._trip_target = self._get_host_build_target_flags()
 
         self.definitions = {}
-
-    def _deduce_fpic(self):
-        fpic = self._conanfile.options.get_safe("fPIC")
-        if fpic is None:
-            return None
-        os_ = self._conanfile.settings.get_safe("os")
-        if os_ and "Windows" in os_:
-            self._conanfile.output.warn("Toolchain: Ignoring fPIC option defined for Windows")
-            return None
-        shared = self._conanfile.options.get_safe("shared")
-        if shared:
-            self._conanfile.output.warn("Toolchain: Ignoring fPIC option defined "
-                                        "for a shared library")
-            return None
-        return fpic
 
     def _get_host_build_target_flags(self):
         """Based on google search for build/host triplets, it could need a lot
@@ -190,8 +213,14 @@ class MakeToolchain(object):
             "compiler_version": self._compiler_version,
             "compiler_runtime": self._compiler_runtime,
             "libcxx": self._libcxx,
+            "cppstd_flag": self._cppstd_flag,
+            "arch_flag": self._arch_flag,
+            "build_type_flags": self._build_type_flags,
             "set_fpic": self._set_fpic,
             "set_libcxx": self._set_libcxx,
+            "set_cppstd": self._set_cppstd,
+            "set_arch": self._set_arch,
+            "set_shared": self._set_shared,
             "defines": " ".join(defines),
         }
         t = Template(self._template_toolchain)
