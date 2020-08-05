@@ -7,7 +7,8 @@ from conans.model.conan_file import ConanFile
 from conans.model.env_info import EnvValues, EnvInfo
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
-from conans.model.user_info import UserInfo, DepsUserInfo
+from conans.model.user_info import DepsUserInfo
+from conans.model.user_info import UserInfo
 from conans.test.utils.tools import TestBufferConanOutput
 
 

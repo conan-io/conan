@@ -36,5 +36,3 @@ class LoadContentTestCase(unittest.TestCase):
         self.assertListEqual(list(deps_cpp_info["requirement"].system_libs), ["requirement", ])
         self.assertListEqual(list(deps_cpp_info["requirement_other"].system_libs),
                              ["requirement_other", ])
-
-
