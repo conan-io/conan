@@ -1,6 +1,7 @@
 import logging
 import os
 import sys
+import time
 from io import StringIO
 
 from conans import __version__ as client_version
@@ -31,6 +32,7 @@ from conans.util.env_reader import get_env
 from conans.util.files import exception_message_safe
 from conans.util.log import configure_logger
 from conans.util.tracer import log_command, log_exception
+from tqdm import tqdm
 
 
 def api_method(f):
@@ -147,6 +149,9 @@ class ConanAPIV2(object):
         self.out.scope = ""
         self.out.error("error message")
         self.out.critical("critical message")
+        for _ in tqdm(range(10)):
+            time.sleep(.08)
+            self.out.info("doing something")
 
         if not remote_name or "*" in remote_name:
             info = {"remote1": {"user": "someuser1"},

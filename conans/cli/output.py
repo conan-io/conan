@@ -2,6 +2,7 @@ import logging
 import os
 import sys
 
+import tqdm
 from colorama import Fore, Style
 
 from conans.util.env_reader import get_env
@@ -86,6 +87,22 @@ except ImportError:
             self.lock = None
 
 
+class TqdmHandler(logging.StreamHandler):
+    def __init__(self, stream=None):
+        self._stream = stream
+        super(TqdmHandler, self).__init__(stream)
+
+    def emit(self, record):
+        try:
+            msg = self.format(record)
+            tqdm.tqdm.write(msg, file=self._stream)
+            self.flush()
+        except (KeyboardInterrupt, SystemExit):
+            raise
+        except:
+            self.handleError(record)
+
+
 class ConanOutput(object):
     def __init__(self, stream=None, color=False):
         self._logger_name = "conan.output"
@@ -95,15 +112,21 @@ class ConanOutput(object):
         if self._stream is None:
             logging.getLogger(self._logger_name).addHandler(NullHandler())
         else:
-            self._stream_handler = logging.StreamHandler(self._stream)
-            stream_formatter = logging.Formatter("%(message)s")
-            self._stream_handler.setFormatter(stream_formatter)
+            self._stream_handler = TqdmHandler(self._stream)
+            self._stream_handler.setFormatter(logging.Formatter("%(message)s"))
             logging.getLogger(self._logger_name).addHandler(self._stream_handler)
             logging.getLogger(self._logger_name).setLevel(logging.INFO)
+
             logging.captureWarnings(True)
+            logging.getLogger("py.warnings").setLevel(logging.INFO)
+            logging.getLogger("py.warnings").addHandler(self._stream_handler)
 
         self._color = color
         self._scope = None
+
+    @property
+    def stream(self):
+        return self._stream
 
     @property
     def color(self):
