@@ -80,6 +80,7 @@ class BuildRequiresContextHostFromProfile(unittest.TestCase):
         """)
     library_conanfile = textwrap.dedent("""
          from conans import ConanFile
+         import os
 
          class Recipe(ConanFile):
              name = "library"
@@ -87,6 +88,9 @@ class BuildRequiresContextHostFromProfile(unittest.TestCase):
 
              def build_requirements(self):
                 self.build_requires("gtest/1.0", force_host_context=True)
+
+             def build(self):
+                self.output.info("Building with: %s" % os.getenv("MYTOOLCHAIN_VAR"))
          """)
     profile_host = textwrap.dedent("""
         [build_requires]
@@ -106,3 +110,4 @@ class BuildRequiresContextHostFromProfile(unittest.TestCase):
 
         t.run("create library.py --profile:host=profile_host --profile:build=profile_build --build")
         self.assertIn("gtest/1.0: Building with: MYTOOLCHAIN_VALUE", t.out)
+        self.assertIn("library/version: Building with: MYTOOLCHAIN_VALUE", t.out)
