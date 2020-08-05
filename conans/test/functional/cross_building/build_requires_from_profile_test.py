@@ -54,3 +54,55 @@ class BuildRequiresFromProfile(unittest.TestCase):
         self.assertIn("br1/version: Applying build-requirement: br3/version", t.out)
         self.assertIn("library/version: Applying build-requirement: br2/version", t.out)
         self.assertIn("library/version: Applying build-requirement: br1/version", t.out)
+
+
+class BuildRequiresContextHostFromProfile(unittest.TestCase):
+    toolchain = textwrap.dedent("""
+        from conans import ConanFile
+
+        class Recipe(ConanFile):
+            name = "mytoolchain"
+            version = "1.0"
+
+            def package_info(self):
+                self.env_info.MYTOOLCHAIN_VAR = "MYTOOLCHAIN_VALUE"
+        """)
+    gtest = textwrap.dedent("""
+        from conans import ConanFile
+        import os
+
+        class Recipe(ConanFile):
+            name = "gtest"
+            version = "1.0"
+
+            def build(self):
+                self.output.info("Building with: %s" % os.getenv("MYTOOLCHAIN_VAR"))
+        """)
+    library_conanfile = textwrap.dedent("""
+         from conans import ConanFile
+
+         class Recipe(ConanFile):
+             name = "library"
+             version = "version"
+
+             def build_requirements(self):
+                self.build_requires("gtest/1.0", force_host_context=True)
+         """)
+    profile_host = textwrap.dedent("""
+        [build_requires]
+        mytoolchain/1.0
+        """)
+
+    def test_br_from_profile_host_and_profile_build(self):
+        t = TestClient()
+        t.save({'profile_host': self.profile_host,
+                'profile_build': "",
+                'library.py': self.library_conanfile,
+                'mytoolchain.py': self.toolchain,
+                "gtest.py": self.gtest})
+        t.run("create mytoolchain.py")
+        t.run("create gtest.py --profile=profile_host")
+        self.assertIn("gtest/1.0: Building with: MYTOOLCHAIN_VALUE", t.out)
+
+        t.run("create library.py --profile:host=profile_host --profile:build=profile_build --build")
+        self.assertIn("gtest/1.0: Building with: MYTOOLCHAIN_VALUE", t.out)

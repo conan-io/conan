@@ -317,18 +317,52 @@ class GraphManager(object):
                             new_profile_build_requires.append((build_require, default_context))
 
             if package_build_requires:
-                br_list = [(it, ctxt) for (_, ctxt), it in package_build_requires.items()]
-                nodessub = builder.extend_build_requires(graph, node,
-                                                         br_list,
-                                                         check_updates, update, remotes,
-                                                         profile_host, profile_build, graph_lock)
-                build_requires = profile_build.build_requires if default_context == CONTEXT_BUILD \
-                    else profile_build_requires
-                self._recurse_build_requires(graph, builder,
-                                             check_updates, update, build_mode,
-                                             remotes, build_requires, recorder,
-                                             profile_host, profile_build, graph_lock,
-                                             nodes_subset=nodessub, root=node)
+                if default_context == CONTEXT_BUILD:
+                    br_build, br_host = [], []
+                    for (_, ctxt), it in package_build_requires.items():
+                        if ctxt == CONTEXT_BUILD:
+                            br_build.append((it, ctxt))
+                        else:
+                            br_host.append((it, ctxt))
+                    if br_build:
+                        nodessub = builder.extend_build_requires(graph, node,
+                                                                 br_build,
+                                                                 check_updates, update, remotes,
+                                                                 profile_host, profile_build,
+                                                                 graph_lock)
+                        self._recurse_build_requires(graph, builder,
+                                                     check_updates, update, build_mode,
+                                                     remotes, profile_build.build_requires, recorder,
+                                                     profile_host, profile_build, graph_lock,
+                                                     nodes_subset=nodessub, root=node)
+                    if br_host:
+                        nodessub = builder.extend_build_requires(graph, node,
+                                                                 br_host,
+                                                                 check_updates, update, remotes,
+                                                                 profile_host, profile_build,
+                                                                 graph_lock)
+                        self._recurse_build_requires(graph, builder,
+                                                     check_updates, update, build_mode,
+                                                     remotes, profile_build_requires, recorder,
+                                                     profile_host, profile_build, graph_lock,
+                                                     nodes_subset=nodessub, root=node)
+                else:
+                    br_list = [(it, ctxt) for (_, ctxt), it in package_build_requires.items()]
+                    nodessub = builder.extend_build_requires(graph, node,
+                                                             br_list,
+                                                             check_updates,
+                                                             update, remotes,
+                                                             profile_host,
+                                                             profile_build,
+                                                             graph_lock)
+                    self._recurse_build_requires(graph, builder,
+                                                 check_updates,
+                                                 update, build_mode,
+                                                 remotes,
+                                                 profile_build_requires, recorder,
+                                                 profile_host,
+                                                 profile_build, graph_lock,
+                                                 nodes_subset=nodessub, root=node)
 
             if new_profile_build_requires:
                 nodessub = builder.extend_build_requires(graph, node, new_profile_build_requires,
