@@ -1,3 +1,4 @@
+import logging
 import os
 import sys
 
@@ -71,14 +72,36 @@ if get_env("CONAN_COLOR_DARK", 0):
     Color.BRIGHT_YELLOW = Fore.MAGENTA
     Color.BRIGHT_GREEN = Fore.GREEN
 
+try:
+    from logging import NullHandler
+except ImportError:
+    class NullHandler(logging.Handler):
+        def handle(self, record):
+            pass
+
+        def emit(self, record):
+            pass
+
+        def createLock(self):
+            self.lock = None
+
 
 class ConanOutput(object):
-    """ wraps an output stream, so it can be pretty colored,
-    and auxiliary info, success, warn methods for convenience.
-    """
-
-    def __init__(self, stream, color=False):
+    def __init__(self, stream=None, color=False):
+        self._logger_name = "conan.output"
         self._stream = stream
+        self._stream_handler = None
+
+        if self._stream is None:
+            logging.getLogger(self._logger_name).addHandler(NullHandler())
+        else:
+            self._stream_handler = logging.StreamHandler(self._stream)
+            stream_formatter = logging.Formatter("%(message)s")
+            self._stream_handler.setFormatter(stream_formatter)
+            logging.getLogger(self._logger_name).addHandler(self._stream_handler)
+            logging.getLogger(self._logger_name).setLevel(logging.INFO)
+            logging.captureWarnings(True)
+
         self._color = color
         self._scope = None
 
@@ -93,6 +116,57 @@ class ConanOutput(object):
     @scope.setter
     def scope(self, out_scope):
         self._scope = out_scope
+
+    @property
+    def is_terminal(self):
+        return hasattr(self._stream, "isatty") and self._stream.isatty()
+
+    def _write(self, msg, level=logging.INFO, fg=None, bg=None):
+        if self._scope:
+            msg = "{}: {}".format(self.scope, msg)
+        if self._color:
+            msg = "{}{}{}{}".format(fg or '', bg or '', msg, Style.RESET_ALL)
+        for _ in range(3):
+            try:
+                logging.getLogger(self._logger_name).log(level, msg)
+                break
+            except IOError:
+                import time
+                time.sleep(0.02)
+            except UnicodeError:
+                msg = msg.encode("utf8").decode("ascii", "ignore")
+
+        self.flush()
+
+    def debug(self, msg):
+        self._write(msg, logging.DEBUG)
+
+    def info(self, msg):
+        self._write(msg, logging.INFO)
+
+    def warning(self, msg):
+        self._write("WARNING: {}".format(msg), logging.WARNING, Color.YELLOW)
+
+    def error(self, msg):
+        self._write("ERROR: {}".format(msg), logging.ERROR, Color.RED)
+
+    def critical(self, msg):
+        self._write("ERROR: {}".format(msg), logging.CRITICAL, Color.BRIGHT_RED)
+
+    def flush(self):
+        if self._stream_handler:
+            self._stream_handler.flush()
+
+
+class CliOutput(object):
+    def __init__(self, stream, color=False):
+        self._stream = stream
+        self._color = color
+        self._scope = None
+
+    @property
+    def color(self):
+        return self._color
 
     @property
     def is_terminal(self):
@@ -119,21 +193,6 @@ class ConanOutput(object):
     def _write(self, message, newline=True):
         message = "{}\n".format(message) if newline else message
         self._stream.write(message)
-
-    def debug(self, data):
-        self.write(data)
-
-    def info(self, data):
-        self.write(data)
-
-    def warning(self, data):
-        self.write("WARNING: {}".format(data), Color.BRIGHT_YELLOW)
-
-    def error(self, data):
-        self.write("ERROR: {}".format(data), Color.BRIGHT_RED)
-
-    def critical(self, data):
-        self.write("ERROR: {}".format(data), Color.BRIGHT_RED)
 
     def flush(self):
         self._stream.flush()

@@ -8,15 +8,15 @@ from conans.cli.command import conan_command, Extender
 def output_search_cli(info, out):
     for remote_info in info:
         source = "cache" if remote_info["remote"] is None else str(remote_info["remote"])
-        out.info("{}:".format(source), Color.BRIGHT_WHITE)
+        out.write("{}:".format(source), Color.BRIGHT_WHITE)
         for conan_item in remote_info["items"]:
             reference = conan_item["recipe"]["id"]
-            out.info(" {}".format(reference))
+            out.write(" {}".format(reference))
 
 
 def output_search_json(info, out):
     myjson = json.dumps(info, indent=4)
-    out.info(myjson)
+    out.write(myjson)
 
 
 @conan_command(group="Consumer", formatters={"cli": output_search_cli,
