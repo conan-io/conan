@@ -6,6 +6,7 @@ from conans.model.conan_file import ConanFile
 from conans.model.env_info import EnvValues, EnvInfo
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
+from conans.model.user_info import DepsUserInfo
 from conans.model.user_info import UserInfo
 from conans.test.utils.tools import TestBufferConanOutput
 
@@ -21,7 +22,7 @@ class DumpLoadTestCase(unittest.TestCase):
         conanfile.initialize(Settings({}), EnvValues())
         conanfile.deps_cpp_info.add("pkg_name", DepCppInfo(cpp_info))
         content = TXTGenerator(conanfile).content
-        parsed_deps_cpp_info, _, _ = TXTGenerator.loads(content, filter_empty=False)
+        parsed_deps_cpp_info, _, _, _ = TXTGenerator.loads(content, filter_empty=False)
 
         parsed_cpp_info = parsed_deps_cpp_info["pkg_name"]
         # FIXME: Conan v2: Remove 'txt' generator or serialize all the names
@@ -71,15 +72,26 @@ class DumpLoadTestCase(unittest.TestCase):
         user_info.VAR1 = "other-value1"
         conanfile.deps_user_info["other-pkg"] = user_info
 
+        # Add user_info for BUILD
+        conanfile.user_info_build = DepsUserInfo()
+        user_info = UserInfo()
+        user_info.VAR1 = "value1"
+        conanfile.user_info_build["build_pkg"] = user_info
+
+        user_info = UserInfo()
+        user_info.VAR1 = "other-value1"
+        conanfile.user_info_build["other-build-pkg"] = user_info
+
         master_content = TXTGenerator(conanfile).content
-        after_cpp_info, after_user_info, after_env_info = TXTGenerator.loads(master_content,
-                                                                             filter_empty=False)
+        after_cpp_info, after_user_info, after_env_info, after_user_info_build = \
+            TXTGenerator.loads(master_content, filter_empty=False)
         # Assign them to a different conanfile
         other_conanfile = ConanFile(TestBufferConanOutput(), None)
         other_conanfile.initialize(Settings({}), EnvValues())
         other_conanfile.deps_cpp_info = after_cpp_info
         other_conanfile.deps_env_info = after_env_info
         other_conanfile.deps_user_info = after_user_info
+        other_conanfile.user_info_build = after_user_info_build
         after_content = TXTGenerator(other_conanfile).content
 
         self.assertListEqual(master_content.splitlines(), after_content.splitlines())

@@ -31,10 +31,8 @@ class LoadContentTestCase(unittest.TestCase):
             requirement_other
         """)
 
-        deps_cpp_info, _, _ = TXTGenerator.loads(content)
+        deps_cpp_info, _, _, _ = TXTGenerator.loads(content)
         self.assertListEqual(list(deps_cpp_info.system_libs), ["requirement", "requirement_other"])
         self.assertListEqual(list(deps_cpp_info["requirement"].system_libs), ["requirement", ])
         self.assertListEqual(list(deps_cpp_info["requirement_other"].system_libs),
                              ["requirement_other", ])
-
-
