@@ -164,8 +164,8 @@ class ConanOutput(object):
     def debug(self, msg):
         self._write(msg, logging.DEBUG)
 
-    def info(self, msg):
-        self._write(msg, logging.INFO)
+    def info(self, msg, fg=None, bg=None):
+        self._write(msg, logging.INFO, fg, bg)
 
     def warning(self, msg):
         self._write("WARNING: {}".format(msg), logging.WARNING, Color.YELLOW)
