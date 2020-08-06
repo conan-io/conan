@@ -295,7 +295,7 @@ class CMakeDefinitionsBuilder(object):
                                                  self._generator, self._output))
 
         # don't attempt to override variables set within toolchain
-        if tools.is_apple_os(os_) and "CONAN_CMAKE_TOOLCHAIN_FILE" not in os.environ:
+        if tools.is_apple_os(os_) and "CONAN_CMAKE_TOOLCHAIN_FILE" not in os.environ and "CMAKE_TOOLCHAIN_FILE" not in definitions:
             apple_arch = tools.to_apple_arch(arch)
             if apple_arch:
                 definitions["CMAKE_OSX_ARCHITECTURES"] = apple_arch
