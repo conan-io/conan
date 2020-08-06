@@ -47,7 +47,7 @@ class DiamondTest(unittest.TestCase):
         self.assertIn("set(CONAN_LIBS helloHello3 helloHello1 helloHello2 helloHello0",
                       cmakebuildinfo)
         self.assertIn("set(CONAN_DEPENDENCIES Hello3 Hello1 Hello2 Hello0)", cmakebuildinfo)
-        deps_cpp_info, _, _ = TXTGenerator.loads(content)
+        deps_cpp_info, _, _, _ = TXTGenerator.loads(content)
         self.assertEqual(len(deps_cpp_info.include_paths), 4)
         for dep in ("Hello3", "Hello2", "Hello1", "Hello0"):
             self.assertEqual(len(deps_cpp_info[dep].include_paths), 1)

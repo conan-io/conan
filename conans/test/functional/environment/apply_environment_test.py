@@ -818,7 +818,7 @@ class LibConan(ConanFile):
         self.assertEqual(info.env_values.env_dicts("PROJECT"), ({'GLOBAL': '99'},
                                                                  {'VAR3': ['newappend']}))
 
-        _, _, buildinfo = TXTGenerator.loads(client.load(BUILD_INFO))
+        _, _, buildinfo, _ = TXTGenerator.loads(client.load(BUILD_INFO))
         self.assertEqual(buildinfo["LIB_A"].VAR1, ["900"])
 
     def _export(self, client, name, requires, env_vars, env_vars_append=None):

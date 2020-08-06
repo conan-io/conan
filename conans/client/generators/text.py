@@ -47,6 +47,8 @@ class DepCppTXT(RootCppTXT):
 
 class TXTGenerator(Generator):
     name = "txt"
+    _USER_INFO_HOST_PREFIX = "USER"
+    _USER_INFO_BUILD_PREFIX = "USERBUILD"
 
     @property
     def filename(self):
@@ -54,42 +56,50 @@ class TXTGenerator(Generator):
 
     @staticmethod
     def loads(text, filter_empty=False):
-        user_defines_index = text.find("[USER_")
-        env_defines_index = text.find("[ENV_")
-        if user_defines_index != -1:
-            deps_cpp_info_txt = text[:user_defines_index]
-            if env_defines_index != -1:
-                user_info_txt = text[user_defines_index:env_defines_index]
-                deps_env_info_txt = text[env_defines_index:]
-            else:
-                user_info_txt = text[user_defines_index:]
-                deps_env_info_txt = ""
-        else:
-            if env_defines_index != -1:
-                deps_cpp_info_txt = text[:env_defines_index]
-                deps_env_info_txt = text[env_defines_index:]
-            else:
-                deps_cpp_info_txt = text
-                deps_env_info_txt = ""
+        user_info_host_idx = text.find("[{}_".format(TXTGenerator._USER_INFO_HOST_PREFIX))
+        deps_env_info_idx = text.find("[ENV_")
+        user_info_build_idx = text.find("[{}_".format(TXTGenerator._USER_INFO_BUILD_PREFIX))
 
-            user_info_txt = ""
+        user_info_host_txt = deps_env_info_txt = ""
+
+        # Get chunk with deps_cpp_info: from the beginning to the first one of the others
+        last_idx = next((x for x in [user_info_host_idx, deps_env_info_idx, user_info_build_idx]
+                         if x != -1), None)
+        deps_cpp_info_txt = text[:last_idx]
+
+        if user_info_host_idx != -1:
+            last_idx = next((x for x in [deps_env_info_idx, user_info_build_idx] if x != -1), None)
+            user_info_host_txt = text[user_info_host_idx:last_idx]
+
+        if deps_env_info_idx != -1:
+            last_idx = next((x for x in [user_info_build_idx] if x != -1), None)
+            deps_env_info_txt = text[deps_env_info_idx:last_idx]
+
+        user_info_build = None
+        if user_info_build_idx != -1:
+            user_info_build_txt = text[user_info_build_idx:]
+            user_info_build = TXTGenerator._loads_user_info(user_info_build_txt,
+                                                            TXTGenerator._USER_INFO_BUILD_PREFIX)
 
         deps_cpp_info = TXTGenerator._loads_cpp_info(deps_cpp_info_txt, filter_empty=filter_empty)
-        deps_user_info = TXTGenerator._loads_deps_user_info(user_info_txt)
+        deps_user_info = TXTGenerator._loads_user_info(user_info_host_txt,
+                                                       TXTGenerator._USER_INFO_HOST_PREFIX)
         deps_env_info = DepsEnvInfo.loads(deps_env_info_txt)
-        return deps_cpp_info, deps_user_info, deps_env_info
+        return deps_cpp_info, deps_user_info, deps_env_info, user_info_build
 
     @staticmethod
-    def _loads_deps_user_info(text):
+    def _loads_user_info(text, user_info_prefix):
+        _prefix_for_user_info_host = "[{}_".format(user_info_prefix)
+        _prefix_for_user_info_host_length = len(_prefix_for_user_info_host)
         ret = DepsUserInfo()
         lib_name = None
         for line in text.splitlines():
             if not line:
                 continue
-            if not lib_name and not line.startswith("[USER_"):
+            if not lib_name and not line.startswith(_prefix_for_user_info_host):
                 raise ConanException("Error, invalid file format reading user info variables")
-            elif line.startswith("[USER_"):
-                lib_name = line[6:-1]
+            elif line.startswith(_prefix_for_user_info_host):
+                lib_name = line[_prefix_for_user_info_host_length:-1]
             else:
                 var_name, value = line.split("=", 1)
                 setattr(ret[lib_name], var_name, value)
@@ -213,13 +223,20 @@ class TXTGenerator(Generator):
                 all_flags = template.format(dep=dep, deps=deps, config=":" + config)
                 sections.append(all_flags)
 
-        # Generate the user info variables as [USER_{DEP_NAME}] and then the values with key=value
-        for dep, the_vars in self._deps_user_info.items():
-            sections.append("[USER_%s]" % dep)
-            for name, value in sorted(the_vars.vars.items()):
-                sections.append("%s=%s" % (name, value))
+        def append_user_info(prefix, user_info_data):
+            for dep, the_vars in sorted(user_info_data.items()):
+                sections.append("[{prefix}_{dep_name}]".format(prefix=prefix, dep_name=dep))
+                for name, value in sorted(the_vars.vars.items()):
+                    sections.append("%s=%s" % (name, value))
+
+        # Generate the user_info variables for HOST as [USER_{DEP_NAME}] and values with key=value
+        append_user_info(self._USER_INFO_HOST_PREFIX, self._deps_user_info)
 
         # Generate the env info variables as [ENV_{DEP_NAME}] and then the values with key=value
         sections.append(self._deps_env_info.dumps())
+
+        # Generate the user_info variables for BUILD as [USERBUILD_{DEP_NAME}]
+        if self._user_info_build:
+            append_user_info(self._USER_INFO_BUILD_PREFIX, self._user_info_build)
 
         return "\n".join(sections)
