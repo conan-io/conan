@@ -258,6 +258,18 @@ class GraphLockDynamicTest(unittest.TestCase):
 
 
 class PartialOptionsTest(unittest.TestCase):
+    """
+    When an option is locked in an existing lockfile, and we are using that lockfile to
+    create a new one, and somehow the option is changed there are 2 options:
+    - Allow the non-locked packages to change the value, according to the dependency resolution
+      algorithm. That will produce a different package-id that will be detected and raise
+      as incompatible to the locked one
+    - Force the locked options, that will result in the same package-id. The package attempting
+      to change that option, will not have it set, and can fail later (build time, link time)
+
+    This test implements the 2nd approach, let the lockfile define the options values, not the
+    package recipes
+    """
     def setUp(self):
         client = TestClient()
         client.run("config set general.default_package_id_mode=full_package_mode")
@@ -269,11 +281,11 @@ class PartialOptionsTest(unittest.TestCase):
         self.client = client
 
     def partial_lock_option_command_line_test(self):
-        # The option saved in the libb.lock is applied to all graph, overriding LibC
+        # When in command line, the option value is saved in the libb.lock is applied to all
+        # graph, overriding LibC.
         client = self.client
         client.save({"conanfile.py": GenConanfile().with_require_plain("LibA/[>=1.0]")})
         client.run("create . LibB/1.0@ -o LibA:myoption=True")
-
         client.run("lock create --reference=LibB/1.0 --lockfile-out=libb.lock -o LibA:myoption=True")
 
         client.save({"conanfile.py": GenConanfile().with_require_plain("LibA/[>=1.0]")
@@ -287,7 +299,6 @@ class PartialOptionsTest(unittest.TestCase):
         client.save({"conanfile.py": GenConanfile().with_require_plain("LibA/[>=1.0]")
                                                    .with_default_option("LibA:myoption", True)})
         client.run("create . LibB/1.0@")
-
         client.run("lock create --reference=LibB/1.0 --lockfile-out=libb.lock")
 
         client.save({"conanfile.py": GenConanfile().with_require_plain("LibA/[>=1.0]")
@@ -299,11 +310,9 @@ class PartialOptionsTest(unittest.TestCase):
     def partial_lock_option_conanfile_configure_test(self):
         # when it is locked, it is used, even if other packages define it.
         client = self.client
-
         client.save({"conanfile.py": GenConanfile().with_require_plain("LibA/[>=1.0]")
                                                    .with_default_option("LibA:myoption", True)})
         client.run("create . LibB/1.0@")
-
         client.run("lock create --reference=LibB/1.0 --lockfile-out=libb.lock")
 
         libc = textwrap.dedent("""
