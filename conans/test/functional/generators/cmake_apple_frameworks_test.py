@@ -243,7 +243,10 @@ class CMakeAppleOwnFrameworksTestCase(unittest.TestCase):
         }
         """)
 
-    def test_apple_own_framework_cmake(self):
+    @parameterized.expand([('',),
+                           ('-s os=iOS -s os.version=10.0 -s arch=armv8',),
+                           ("-s os=tvOS -s os.version=11.0 -s arch=armv8",)])
+    def test_apple_own_framework_cmake(self, settings):
         client = TestClient()
 
         test_cmake = textwrap.dedent("""
@@ -256,15 +259,30 @@ class CMakeAppleOwnFrameworksTestCase(unittest.TestCase):
         """)
 
         test_conanfile = textwrap.dedent("""
-            from conans import ConanFile, CMake
+            from conans import ConanFile, CMake, tools
             class TestPkg(ConanFile):
                 generators = "cmake"
+                settings = "os", "arch", "compiler", "build_type"
                 def build(self):
                     cmake = CMake(self)
+                    cmake_system_name = {"Macos" : "Darwin",
+                                         "iOS" : "iOS",
+                                         "tvOS" : "tvOS"}[str(self.settings.os)]
+                    archs = {
+                        "Macos": "x86_64",
+                        "iOS": "arm64;x86_64",
+                        "tvOS": "arm64;x86_64",
+                        }[str(self.settings.os)]
+                    xcrun = tools.XCRun(self.settings)
+                    cmake.definitions.update({
+                        'CMAKE_OSX_SYSROOT': xcrun.sdk_path,
+                        'CMAKE_SYSTEM_NAME': cmake_system_name,
+                    })
                     cmake.configure()
                     cmake.build()
                 def test(self):
-                    self.run("bin/timer", run_environment=True)
+                    if not tools.cross_building(self):
+                        self.run("bin/timer", run_environment=True)
             """)
         client.save({'conanfile.py': self.conanfile,
                      "src/CMakeLists.txt": self.cmake,
@@ -274,8 +292,9 @@ class CMakeAppleOwnFrameworksTestCase(unittest.TestCase):
                      "test_package/conanfile.py": test_conanfile,
                      'test_package/CMakeLists.txt': test_cmake,
                      "test_package/timer.cpp": self.timer_cpp})
-        client.run("create .")
-        self.assertIn("Hello World Release!", client.out)
+        client.run("create . %s" % settings)
+        if not len(settings):
+            self.assertIn("Hello World Release!", client.out)
 
     def test_apple_own_framework_cmake_multi(self):
         client = TestClient()
