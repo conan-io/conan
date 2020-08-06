@@ -277,6 +277,9 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
             conan_basic_setup(NO_OUTPUT_DIRS)
             set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE})
 
+            set(CMAKE_MODULE_PATH ${CMAKE_BINARY_DIR} ${CMAKE_MODULE_PATH})
+            set(CMAKE_PREFIX_PATH ${CMAKE_BINARY_DIR} ${CMAKE_PREFIX_PATH})
+
             find_package(world)
 
             add_executable(example example.cpp)
@@ -321,6 +324,20 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
         self._install_build_run_test_package(client, "Debug", run_example2=True)
         self.assertIn("Hello World debug!", client.out)
         self.assertIn("Bye World debug!", client.out)
+
+        if platform.system() == "Windows":
+            with client.chdir("fake_test_package"):
+                client.run("install . -s build_type=Release")
+                client.run("install . -s build_type=Debug")
+                client.run_command('cmake . -G "Visual Studio 15 Win64"')
+                client.run_command("cmake --build . --config Release")
+                client.run_command("cmake --build . --config Debug")
+                client.run_command(r".\Debug\example.exe")
+                self.assertIn("Hello World debug!", client.out)
+                self.assertIn("Bye World debug!", client.out)
+                client.run_command(r".\Release\example.exe")
+                self.assertIn("Hello World release!", client.out)
+                self.assertIn("Bye World release!", client.out)
 
     def find_package_general_test(self):
         client = TestClient()
@@ -730,7 +747,7 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
                 version = "1.0"
                 settings = "os", "compiler", "build_type", "arch"
                 requires = "hello/1.0"
-                
+
                 def package(self):
                     tools.save(os.path.join(self.package_folder, "lib", "hello2.lib"), "")
                     tools.save(os.path.join(self.package_folder, "lib", "libhello2.a"), "")
@@ -773,13 +790,13 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
         self.assertIn('Library hello2 found', client.out)
         self.assertIn('Library hello found', client.out)
         self.assertIn("Target libs (hello2): "
-                      "$<$<CONFIG:Release>:CONAN_LIB::MYHELLO_HELLO2_hello2;MYHELLO::HELLO1;"
+                      "$<$<CONFIG:Release>:CONAN_LIB::MYHELLO_HELLO2_hello2RELEASE;MYHELLO::HELLO1;"
                       "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
                       "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
                       "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>",
                       client.out)
         self.assertIn("Target libs (hello): "
-                      "$<$<CONFIG:Release>:CONAN_LIB::MYHELLO_HELLO1_hello;"
+                      "$<$<CONFIG:Release>:CONAN_LIB::MYHELLO_HELLO1_helloRELEASE;"
                       "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
                       "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
                       "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>",

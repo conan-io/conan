@@ -37,10 +37,6 @@ class _RecipeBuildRequires(OrderedDict):
         context = CONTEXT_HOST if force_host_context else self._default_context
         self.add(build_require, context)
 
-    def update(self, build_requires):
-        for build_require in build_requires:
-            self.add(build_require)
-
     def __str__(self):
         items = ["{} ({})".format(br, ctxt) for (_, ctxt), br in self.items()]
         return ", ".join(items)
@@ -296,15 +292,18 @@ class GraphManager(object):
                 continue
             # Packages with PACKAGE_ID_UNKNOWN might be built in the future, need build requires
             if (node.binary not in (BINARY_BUILD, BINARY_EDITABLE, BINARY_UNKNOWN)
-                and node.recipe != RECIPE_CONSUMER):
+                    and node.recipe != RECIPE_CONSUMER):
                 continue
             package_build_requires = self._get_recipe_build_requires(node.conanfile, default_context)
             str_ref = str(node.ref)
+
+            #  Compute the update of the current recipe build_requires when updated with the
+            # downstream profile-defined build-requires
             new_profile_build_requires = []
             for pattern, build_requires in profile_build_requires.items():
                 if ((node.recipe == RECIPE_CONSUMER and pattern == "&") or
-                    (node.recipe != RECIPE_CONSUMER and pattern == "&!") or
-                    fnmatch.fnmatch(str_ref, pattern)):
+                        (node.recipe != RECIPE_CONSUMER and pattern == "&!") or
+                        fnmatch.fnmatch(str_ref, pattern)):
                     for build_require in build_requires:
                         br_key = (build_require.name, default_context)
                         if br_key in package_build_requires:  # Override defined
@@ -316,30 +315,33 @@ class GraphManager(object):
                         elif build_require.name != node.name or default_context != node.context:
                             new_profile_build_requires.append((build_require, default_context))
 
-            if package_build_requires:
-                br_list = [(it, ctxt) for (_, ctxt), it in package_build_requires.items()]
-                nodessub = builder.extend_build_requires(graph, node,
-                                                         br_list,
-                                                         check_updates, update, remotes,
-                                                         profile_host, profile_build, graph_lock)
-                build_requires = profile_build.build_requires if default_context == CONTEXT_BUILD \
-                    else profile_build_requires
-                self._recurse_build_requires(graph, builder,
-                                             check_updates, update, build_mode,
-                                             remotes, build_requires, recorder,
+            def _recurse_build_requires(br_list, transitive_build_requires):
+                nodessub = builder.extend_build_requires(graph, node, br_list, check_updates,
+                                                         update, remotes, profile_host,
+                                                         profile_build, graph_lock)
+                self._recurse_build_requires(graph, builder, check_updates, update, build_mode,
+                                             remotes, transitive_build_requires, recorder,
                                              profile_host, profile_build, graph_lock,
                                              nodes_subset=nodessub, root=node)
+
+            if package_build_requires:
+                if default_context == CONTEXT_BUILD:
+                    br_build, br_host = [], []
+                    for (_, ctxt), it in package_build_requires.items():
+                        if ctxt == CONTEXT_BUILD:
+                            br_build.append((it, ctxt))
+                        else:
+                            br_host.append((it, ctxt))
+                    if br_build:
+                        _recurse_build_requires(br_build, profile_build.build_requires)
+                    if br_host:
+                        _recurse_build_requires(br_host, profile_build_requires)
+                else:
+                    br_all = [(it, ctxt) for (_, ctxt), it in package_build_requires.items()]
+                    _recurse_build_requires(br_all, profile_build_requires)
 
             if new_profile_build_requires:
-                nodessub = builder.extend_build_requires(graph, node, new_profile_build_requires,
-                                                         check_updates, update, remotes,
-                                                         profile_host, profile_build, graph_lock)
-
-                self._recurse_build_requires(graph, builder,
-                                             check_updates, update, build_mode,
-                                             remotes, {}, recorder,
-                                             profile_host, profile_build, graph_lock,
-                                             nodes_subset=nodessub, root=node)
+                _recurse_build_requires(new_profile_build_requires, {})
 
     def _load_graph(self, root_node, check_updates, update, build_mode, remotes,
                     recorder, profile_host, profile_build, apply_build_requires,
@@ -403,10 +405,13 @@ def load_deps_info(current_path, conanfile, required):
         return
     info_file_path = os.path.join(current_path, BUILD_INFO)
     try:
-        deps_cpp_info, deps_user_info, deps_env_info = TXTGenerator.loads(load(info_file_path))
+        deps_cpp_info, deps_user_info, deps_env_info, user_info_build = \
+            TXTGenerator.loads(load(info_file_path))
         conanfile.deps_cpp_info = deps_cpp_info
         conanfile.deps_user_info = deps_user_info
         conanfile.deps_env_info = deps_env_info
+        if user_info_build:
+            conanfile.user_info_build = user_info_build
     except IOError:
         if required:
             raise ConanException("%s file not found in %s\nIt is required for this command\n"
