@@ -5,7 +5,7 @@ from parameterized import parameterized
 from conans.client.build.cmake import CMake
 from conans.client.conf import get_default_settings_yml
 from conans.model.settings import Settings
-from conans.test.utils.mocks import MockSettings, ConanFileMock
+from conans.test.utils.conanfile import MockSettings, ConanFileMock
 
 
 @unittest.skipUnless(platform.system() == "Darwin", "Only for MacOS")
