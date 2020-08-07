@@ -13,7 +13,7 @@ import six
 from conans.client.cmd.export import _replace_scm_data_in_conanfile
 from conans.client.graph.python_requires import ConanPythonRequire
 from conans.client.loader import parse_conanfile
-from conans.test.utils.tools import try_remove_readonly
+from conans.test.utils.scm import try_remove_readonly
 from conans.util.files import load
 
 

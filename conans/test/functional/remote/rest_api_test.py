@@ -21,7 +21,7 @@ from conans.paths import CONANFILE, CONANINFO, CONAN_MANIFEST
 from conans.test.utils.cpp_test_files import cpp_hello_source_files
 from conans.test.utils.server_launcher import TestServerLauncher
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestBufferConanOutput, LocalDBMock
+from conans.test.utils.mocks import LocalDBMock, TestBufferConanOutput
 from conans.util.env_reader import get_env
 from conans.util.files import md5, save
 

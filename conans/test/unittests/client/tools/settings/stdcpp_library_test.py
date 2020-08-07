@@ -3,7 +3,7 @@ import unittest
 from conans.client.tools.settings import stdcpp_library
 from conans.client.conf import get_default_settings_yml
 from conans.model.settings import Settings
-from conans.test.utils.conanfile import MockConanfile
+from conans.test.utils.mocks import MockConanfile
 
 
 class TestStdCppLibrary(unittest.TestCase):

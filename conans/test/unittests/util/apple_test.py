@@ -42,7 +42,6 @@ class AppleTest(unittest.TestCase):
         self.assertIsNone(tools.to_apple_arch('mips'))
 
     def test_apple_sdk_name(self):
-
         self.assertEqual(tools.apple_sdk_name(FakeSettings('Macos', 'x86')), 'macosx')
         self.assertEqual(tools.apple_sdk_name(FakeSettings('Macos', 'x86_64')), 'macosx')
         self.assertEqual(tools.apple_sdk_name(FakeSettings('iOS', 'x86_64')), 'iphonesimulator')
@@ -52,6 +51,13 @@ class AppleTest(unittest.TestCase):
         self.assertEqual(tools.apple_sdk_name(FakeSettings('tvOS', 'x86')), 'appletvsimulator')
         self.assertEqual(tools.apple_sdk_name(FakeSettings('tvOS', 'armv8')), 'appletvos')
         self.assertIsNone(tools.apple_sdk_name(FakeSettings('Windows', 'x86')))
+
+    def test_apple_sdk_name_custom_settings(self):
+        self.assertEqual(tools.apple_sdk_name(FakeSettings('Macos', 'ios_fat')), 'macosx')
+        self.assertEqual(tools.apple_sdk_name(FakeSettings('iOS', 'ios_fat')), 'iphoneos')
+        self.assertEqual(tools.apple_sdk_name(FakeSettings('watchOS', 'ios_fat')), 'watchos')
+        self.assertEqual(tools.apple_sdk_name(FakeSettings('tvOS', 'ios_fat')), 'appletvos')
+        self.assertIsNone(tools.apple_sdk_name(FakeSettings('ConanOS', 'ios_fat')))
 
     def test_deployment_target_env_name(self):
         self.assertEqual(tools.apple_deployment_target_env('Macos', "10.1"),

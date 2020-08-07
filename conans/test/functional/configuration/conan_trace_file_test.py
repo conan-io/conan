@@ -8,8 +8,8 @@ from conans.model.ref import ConanFileReference
 from conans.paths import RUN_LOG_NAME
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient, TestServer,\
-    TestBufferConanOutput
+from conans.test.utils.tools import TestClient, TestServer
+from conans.test.utils.mocks import TestBufferConanOutput
 from conans.util.files import load
 
 

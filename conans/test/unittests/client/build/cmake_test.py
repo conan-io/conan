@@ -18,7 +18,7 @@ from conans.errors import ConanException
 from conans.model.build_info import CppInfo, DepsCppInfo
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
-from conans.test.utils.conanfile import ConanFileMock, MockSettings
+from conans.test.utils.mocks import MockSettings, ConanFileMock
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import load, save
 

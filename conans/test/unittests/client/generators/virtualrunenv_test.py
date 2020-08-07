@@ -4,7 +4,7 @@ import platform
 import unittest
 
 from conans.client.generators.virtualrunenv import VirtualRunEnvGenerator
-from conans.test.utils.conanfile import ConanFileMock
+from conans.test.utils.mocks import ConanFileMock
 
 
 class VirtualRunEnvGeneratorTest(unittest.TestCase):
@@ -56,3 +56,8 @@ class VirtualRunEnvGeneratorTest(unittest.TestCase):
             self.assertIn('DYLD_LIBRARY_PATH=lib1;lib2;$env:DYLD_LIBRARY_PATH', content)
             self.assertIn('LD_LIBRARY_PATH=lib1;lib2;$env:LD_LIBRARY_PATH', content)
             self.assertIn('PATH=bin1;bin2;$env:PATH', content)
+        else:
+            content = self.result[self.environment_ps1_env]
+            self.assertIn('DYLD_LIBRARY_PATH=lib1:lib2:$env:DYLD_LIBRARY_PATH', content)
+            self.assertIn('LD_LIBRARY_PATH=lib1:lib2:$env:LD_LIBRARY_PATH', content)
+            self.assertIn('PATH=bin1:bin2:$env:PATH', content)

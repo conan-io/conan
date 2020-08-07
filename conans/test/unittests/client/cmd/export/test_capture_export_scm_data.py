@@ -10,7 +10,8 @@ from conans.client.cmd.export import _capture_scm_auto_fields
 from conans.client.tools.scm import Git
 from conans.model.ref import ConanFileReference
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import create_local_git_repo, TestBufferConanOutput
+from conans.test.utils.mocks import TestBufferConanOutput
+from conans.test.utils.scm import create_local_git_repo
 from conans.util.files import save
 from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
 

@@ -8,7 +8,7 @@ from parameterized.parameterized import parameterized
 from conans.client.build.compiler_flags import adjust_path, architecture_flag, build_type_define, \
     build_type_flags, format_defines, format_include_paths, format_libraries, \
     format_library_paths, libcxx_define, libcxx_flag, pic_flag, sysroot_flag
-from conans.test.utils.conanfile import MockSettings
+from conans.test.utils.mocks import MockSettings
 
 
 class CompilerFlagsTest(unittest.TestCase):
