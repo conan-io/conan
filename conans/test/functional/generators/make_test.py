@@ -15,7 +15,7 @@ class MakeGeneratorTest(unittest.TestCase):
 
     @unittest.skipUnless(platform.system() == "Linux", "Requires make")
     @parameterized.expand(["exe", "shared", "static"])
-    # @attr('slow')
+    @attr('slow')
     def complete_creation_reuse_test(self, target):
 
         # Create myhello to serve as a dependency. It must have fPIC.
