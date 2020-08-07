@@ -1,5 +1,8 @@
 import textwrap
 
+from jinja2 import Template
+
+from conans.client.build.compiler_flags import rpath_flags
 from conans.model import Generator
 from conans.paths import BUILD_INFO_MAKE
 
@@ -8,6 +11,7 @@ class MakeGenerator(Generator):
 
     def __init__(self, conanfile):
         Generator.__init__(self, conanfile)
+        self._conanfile = conanfile
         self.makefile_newline = "\n"
         self.makefile_line_continuation = " \\\n"
         self.assignment_if_absent = " ?= "
@@ -27,33 +31,48 @@ class MakeGenerator(Generator):
             "",
         ]
 
-        additional_content = textwrap.dedent("""
-            CONAN_CPPFLAGS      += $(addprefix -I,$(CONAN_INCLUDE_DIRS))
-            CONAN_CPPFLAGS      += $(addprefix -D,$(CONAN_DEFINES))
-            CONAN_LDFLAGS       += $(addprefix -L,$(CONAN_LIB_DIRS))
-            CONAN_LDLIBS        += $(addprefix -l,$(CONAN_LIBS))
-            CONAN_LDLIBS        += $(addprefix -l,$(CONAN_SYSTEM_LIBS))
-
-            # Call this function in your Makefile to have Conan variables added to standard variables
-            # Example:  $(call CONAN_TC_SETUP)
-
-            CONAN_BASIC_SETUP =  \
-                $(eval CFLAGS   += $(CONAN_CFLAGS)) ; \
-                $(eval CXXFLAGS += $(CONAN_CXXFLAGS)) ; \
-                $(eval CPPFLAGS += $(CONAN_CPPFLAGS)) ; \
-                $(eval LDFLAGS  += $(CONAN_LDFLAGS)) ; \
-                $(eval LDLIBS   += $(CONAN_LDLIBS)) ;
-        """)
-
         for line_as_list in self.create_deps_content():
             content.append("".join(line_as_list))
 
-        content.append(self.makefile_newline)
+        additional_content = self.create_additional_content()
+
         content.append(additional_content)
         content.append(self.makefile_newline)
         content.append("#-------------------------------------------------------------------#")
         content.append(self.makefile_newline)
         return self.makefile_newline.join(content)
+
+    def create_additional_content(self):
+        additional_content = textwrap.dedent("""
+            CONAN_CPPFLAGS      += $(addprefix -I,$(CONAN_INCLUDE_DIRS))
+            CONAN_CPPFLAGS      += $(addprefix -D,$(CONAN_DEFINES))
+            CONAN_LDFLAGS       += $(addprefix -L,$(CONAN_LIB_DIRS))
+            CONAN_LDFLAGS       += $(CONAN_RPATHFLAGS)
+            CONAN_LDLIBS        += $(addprefix -l,$(CONAN_SYSTEM_LIBS))
+            CONAN_LDLIBS        += $(addprefix -l,$(CONAN_LIBS))
+
+            CONAN_SET_SHARED = {{set_shared}}
+            ifeq ($(CONAN_SET_SHARED),True)
+                CONAN_LDFLAGS += $(CONAN_SHARED_LINKER_FLAGS)
+            else
+                CONAN_LDFLAGS += $(CONAN_EXE_LINKER_FLAGS)
+            endif
+
+            # Call this function in your Makefile to have Conan variables added to standard variables
+            # Example:  $(call CONAN_BASIC_SETUP)
+
+            CONAN_BASIC_SETUP = \\
+                $(eval CFLAGS   += $(CONAN_CFLAGS)) ; \\
+                $(eval CXXFLAGS += $(CONAN_CXXFLAGS)) ; \\
+                $(eval CPPFLAGS += $(CONAN_CPPFLAGS)) ; \\
+                $(eval LDFLAGS  += $(CONAN_LDFLAGS)) ; \\
+                $(eval LDLIBS   += $(CONAN_LDLIBS)) ;
+        """)
+        t = Template(additional_content)
+        context = {
+            "set_shared": True if self.conanfile.options.get_safe("shared") else False,
+        }
+        return t.render(context)
 
     def create_deps_content(self):
         deps_content = self.create_content_from_deps()
@@ -67,9 +86,11 @@ class MakeGenerator(Generator):
         return content
 
     def create_content_from_dep(self, pkg_name, cpp_info):
+        rpath_flags_ = rpath_flags(self._conanfile, cpp_info.lib_paths)
 
         vars_info = [("ROOT", self.assignment_if_absent, [cpp_info.rootpath]),
                      ("SYSROOT", self.assignment_if_absent, [cpp_info.sysroot]),
+                     ("RPATHFLAGS", self.assignment_append, rpath_flags_),
                      ("INCLUDE_DIRS", self.assignment_append, cpp_info.include_paths),
                      ("LIB_DIRS", self.assignment_append, cpp_info.lib_paths),
                      ("BIN_DIRS", self.assignment_append, cpp_info.bin_paths),
@@ -130,6 +151,6 @@ class MakeGenerator(Generator):
 
     @staticmethod
     def all_dep_vars():
-        return ["rootpath", "sysroot", "include_dirs", "lib_dirs", "bin_dirs", "build_dirs",
-                "res_dirs", "libs", "defines", "cflags", "cxxflags", "sharedlinkflags",
+        return ["rootpath", "sysroot", "rpathflags", "include_dirs", "lib_dirs", "bin_dirs",
+                "build_dirs", "res_dirs", "libs", "defines", "cflags", "cxxflags", "sharedlinkflags",
                 "exelinkflags", "frameworks", "framework_paths", "system_libs"]

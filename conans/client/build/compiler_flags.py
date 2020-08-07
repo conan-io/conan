@@ -11,7 +11,7 @@
 """
 
 from conans.client.tools.apple import is_apple_os
-from conans.client.tools.oss import cpu_count
+from conans.client.tools.oss import cpu_count, get_build_os_arch
 from conans.client.tools.win import unix_path
 
 
@@ -32,6 +32,14 @@ def rpath_flags(settings, os_build, lib_paths):
         return ['-Wl,-rpath%s"%s"' % (rpath_separator, x.replace("\\", "/"))
                 for x in lib_paths if x]
     return []
+
+
+def rpath_flags(conanfile, lib_paths):
+    os_build, _ = get_build_os_arch(conanfile)
+    if not hasattr(conanfile, 'settings_build'):
+        os_build = os_build or conanfile.settings.get_safe("os")
+    rpath_sep = "," if is_apple_os(os_build) else "="
+    return ['-Wl,-rpath%s"%s"' % (rpath_sep, path.replace("\\", "/")) for path in lib_paths if path]
 
 
 def architecture_flag(settings):
