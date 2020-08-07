@@ -595,6 +595,8 @@ class BinaryInstaller(object):
                     self._hook_manager.execute("pre_package_info", conanfile=conanfile,
                                                reference=ref)
                     conanfile.package_info()
+                    for comp_name in conanfile.cpp_info.components:
+                        conanfile.cpp_info.components[comp_name].version = conanfile.cpp_info.version
                     if conanfile._conan_dep_cpp_info is None:
                         try:
                             conanfile.cpp_info._raise_incorrect_components_definition(
