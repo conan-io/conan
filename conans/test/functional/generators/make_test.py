@@ -83,11 +83,6 @@ class MakeGeneratorTest(unittest.TestCase):
 
             $(call CONAN_BASIC_SETUP)
 
-            $(info >> CONAN_RPATHFLAGS: $(CONAN_RPATHFLAGS))
-            $(info >> CONAN_CXXFLAGS: $(CONAN_CXXFLAGS))
-            $(info >> CONAN_CPPFLAGS: $(CONAN_CPPFLAGS))
-            $(info >> CONAN_LDFLAGS: $(CONAN_LDFLAGS))
-            $(info >> CONAN_LDLIBS: $(CONAN_LDLIBS))
             #-------------------------------------------------
             #     Make Rules
             #-------------------------------------------------
