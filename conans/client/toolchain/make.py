@@ -34,7 +34,6 @@ class MakeToolchain(object):
             CONAN_TC_COMPILER_VERSION = {{compiler_version}}
             CONAN_TC_COMPILER_RUNTIME = {{compiler_runtime}}
             CONAN_TC_LIBCXX = {{libcxx}}
-            CONAN_TC_FPIC = {{fpic}}
             CONAN_TC_CPPSTD_FLAG = {{cppstd_flag}}
             CONAN_TC_ARCH_FLAG = {{arch_flag}}
             CONAN_TC_BUILD_TYPE_FLAGS = {{build_type_flags}}
@@ -107,13 +106,11 @@ class MakeToolchain(object):
         # Call this function in your Makefile to have Conan variables added to the standard variables
         # Example:  $(call CONAN_TC_SETUP)
 
-        CONAN_TC_SETUP =  \
-            $(eval CFLAGS += $(CONAN_TC_CFLAGS)) ; \
-            $(eval CXXFLAGS += $(CONAN_TC_CXXFLAGS)) ; \
-            $(eval CPPFLAGS += $(CONAN_TC_CPPFLAGS)) ; \
-            $(eval LDFLAGS += $(CONAN_TC_LDFLAGS)) ; \
-        )
-
+        CONAN_TC_SETUP =  \\
+            $(eval CFLAGS += $(CONAN_TC_CFLAGS)) ; \\
+            $(eval CXXFLAGS += $(CONAN_TC_CXXFLAGS)) ; \\
+            $(eval CPPFLAGS += $(CONAN_TC_CPPFLAGS)) ; \\
+            $(eval LDFLAGS += $(CONAN_TC_LDFLAGS)) ;
     """)
 
     def __init__(self, conanfile):
@@ -192,7 +189,10 @@ class MakeToolchain(object):
         return arch_build, os_build
 
     def write_toolchain_files(self):
+        save(self.filename, self.content)
 
+    @property
+    def content(self):
         defines = []
 
         for k, v in self.definitions.items():
@@ -225,4 +225,5 @@ class MakeToolchain(object):
         }
         t = Template(self._template_toolchain)
         content = t.render(**context)
-        save(self.filename, content)
+        return content
+
