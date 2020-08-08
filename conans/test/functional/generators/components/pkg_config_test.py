@@ -80,6 +80,8 @@ class PkgConfigGeneratorWithComponentsTest(unittest.TestCase):
         self.assertNotIn("Requires:", client.load(os.path.join(client.current_folder, "bye.pc")))
         self.assertIn("Requires: bye hello",
                       client.load(os.path.join(client.current_folder, "greetings.pc")))
+        for f in ["hello.pc", "bye.pc", "greetings.pc", "world.pc", "helloworld.pc", "worldall.pc"]:
+            self.assertIn("Version: 0.0.1", client.load(os.path.join(client.current_folder, f)))
         libs = self._get_libs_from_pkg_config("greetings", client.current_folder)
         self.assertListEqual(["-lbye", "-lhello"], libs)
 
@@ -113,6 +115,8 @@ class PkgConfigGeneratorWithComponentsTest(unittest.TestCase):
         self.assertListEqual(["-lHelloworld", "-lhello"], libs)
         libs = self._get_libs_from_pkg_config("World", client.current_folder)
         self.assertListEqual(["-lWorldall", "-lbye", "-lHelloworld", "-lhello"], libs)
+        for f in ["Hello.pc", "Bye.pc", "Greetings.pc", "World.pc", "Helloworld.pc", "Worldall.pc"]:
+            self.assertIn("Version: 0.0.1", client.load(os.path.join(client.current_folder, f)))
 
     def pkg_config_components_test(self):
         client = TestClient()
@@ -142,6 +146,8 @@ class PkgConfigGeneratorWithComponentsTest(unittest.TestCase):
         self.assertIn("Requires: helloworld worldall", world_pc)
         libs = self._get_libs_from_pkg_config("world", client.current_folder)
         self.assertListEqual(["-lworldall", "-lhelloworld", "-lhello", "-lbye"], libs)
+        for f in ["hello.pc", "bye.pc", "greetings.pc", "world.pc", "helloworld.pc", "worldall.pc"]:
+            self.assertIn("Version: 0.0.1", client.load(os.path.join(client.current_folder, f)))
 
     def recipe_with_components_requiring_recipe_without_components_test(self):
         client = TestClient()
@@ -177,6 +183,8 @@ class PkgConfigGeneratorWithComponentsTest(unittest.TestCase):
         self.assertListEqual(["-lhelloworld", "-lhello", "-lbye"], libs)
         libs = self._get_libs_from_pkg_config("worldall", client.current_folder)
         self.assertListEqual(["-lworldall", "-lhelloworld", "-lhello", "-lbye"], libs)
+        for f in ["greetings.pc", "world.pc", "helloworld.pc", "worldall.pc"]:
+            self.assertIn("Version: 0.0.1", client.load(os.path.join(client.current_folder, f)))
 
     def same_names_test(self):
         client = TestClient()
@@ -196,6 +204,7 @@ class PkgConfigGeneratorWithComponentsTest(unittest.TestCase):
         client.run("create .")
         client.run("install hello/0.0.1@ -g pkg_config")
         self.assertNotIn("Requires:", client.load(os.path.join(client.current_folder, "hello.pc")))
+        self.assertIn("Version: 0.0.1", client.load(os.path.join(client.current_folder, "hello.pc")))
 
     def component_not_found_same_name_as_pkg_require_test(self):
         zlib = GenConanfile("zlib", "0.1").with_setting("build_type")\
