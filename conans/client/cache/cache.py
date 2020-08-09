@@ -217,9 +217,11 @@ class ClientCache(object):
     def generators(self):
         """Returns a list of generator paths inside the generators folder"""
         generators = []
-        for path in os.listdir(self.generators_path):
-            if os.path.isfile(os.path.join(self.generators_path, path)) and path.endswith(".py"):
-                generators.append(os.path.join(self.generators_path, path))
+        if os.path.exists(self.generators_path):
+            for path in os.listdir(self.generators_path):
+                generator = os.path.join(self.generators_path, path)
+                if os.path.isfile(generator) and generator.endswith(".py"):
+                    generators.append(generator)
         return generators
 
     def delete_empty_dirs(self, deleted_refs):

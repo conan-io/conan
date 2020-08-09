@@ -86,6 +86,12 @@ class ConanFileLoader(object):
         except ConanException as e:
             raise ConanException("Error loading conanfile at '{}': {}".format(conanfile_path, e))
 
+    def load_generators(self, conanfile_path):
+        """ Load generator classes from a module. Any non-generator classes
+        will be ignored. python_requires is not processed.
+        """
+        _parse_generators(*_parse_conanfile(conanfile_path))
+
     @staticmethod
     def _load_data(conanfile_path):
         data_path = os.path.join(os.path.dirname(conanfile_path), DATA_YML)
@@ -294,6 +300,18 @@ class ConanFileLoader(object):
         return conanfile
 
 
+def _parse_generators(conanfile_module, module_id):
+    """ Parses a python in-memory module to process generator classes
+    @param conanfile_module: the module to be processed
+    """
+    for name, attr in conanfile_module.__dict__.items():
+        if (name.startswith("_") or not inspect.isclass(attr) or
+                attr.__dict__.get("__module__") != module_id):
+            continue
+        if issubclass(attr, Generator) and attr != Generator:
+            registered_generators.add(attr.__name__, attr, custom=True)
+
+
 def _parse_module(conanfile_module, module_id):
     """ Parses a python in-memory module, to extract the classes, mainly the main
     class defining the Recipe, but also process possible existing generators
@@ -311,11 +329,13 @@ def _parse_module(conanfile_module, module_id):
                 result = attr
             else:
                 raise ConanException("More than 1 conanfile in the file")
-        elif issubclass(attr, Generator) and attr != Generator:
-            registered_generators.add(attr.__name__, attr, custom=True)
 
     if result is None:
         raise ConanException("No subclass of ConanFile")
+
+    # Order is important here: Only look for generators after we know
+    # the module is well-formed.
+    _parse_generators(conanfile_module, module_id)
 
     return result
 
