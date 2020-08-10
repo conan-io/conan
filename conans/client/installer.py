@@ -572,7 +572,8 @@ class BinaryInstaller(object):
         add_env_conaninfo(conan_file, subtree_libnames)
 
     def _call_package_info(self, conanfile, package_folder, ref):
-        conanfile.cpp_info = CppInfo(conanfile.name, package_folder, conanfile.version)
+        conanfile.cpp_info = CppInfo(conanfile.name, package_folder)
+        conanfile.cpp_info.version = conanfile.version
         conanfile.cpp_info.description = conanfile.description
         conanfile.env_info = EnvInfo()
         conanfile.user_info = UserInfo()
