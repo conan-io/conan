@@ -29,6 +29,10 @@ class RemoveCredentialsTest(unittest.TestCase):
         self.assertEqual('ssh://git@github.com:2222/conan-io/conan.git',
                          SCMBase._remove_credentials_url(
                              'ssh://git@github.com:2222/conan-io/conan.git'))
+        # URL-like syntax with a password
+        self.assertEqual('ssh://git@github.com:2222/conan-io/conan.git',
+                         SCMBase._remove_credentials_url(
+                             'ssh://git:password@github.com:2222/conan-io/conan.git'))
         # scp-like syntax
         self.assertEqual('git@github.com:conan-io/conan.git',
                          SCMBase._remove_credentials_url(
