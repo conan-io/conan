@@ -572,8 +572,7 @@ class BinaryInstaller(object):
         add_env_conaninfo(conan_file, subtree_libnames)
 
     def _call_package_info(self, conanfile, package_folder, ref):
-        conanfile.cpp_info = CppInfo(conanfile.name, package_folder)
-        conanfile.cpp_info.version = conanfile.version
+        conanfile.cpp_info = CppInfo(conanfile.name, package_folder, conanfile.version)
         conanfile.cpp_info.description = conanfile.description
         conanfile.env_info = EnvInfo()
         conanfile.user_info = UserInfo()
@@ -595,8 +594,6 @@ class BinaryInstaller(object):
                     self._hook_manager.execute("pre_package_info", conanfile=conanfile,
                                                reference=ref)
                     conanfile.package_info()
-                    for comp_name in conanfile.cpp_info.components:
-                        conanfile.cpp_info.components[comp_name].version = conanfile.cpp_info.version
                     if conanfile._conan_dep_cpp_info is None:
                         try:
                             conanfile.cpp_info._raise_incorrect_components_definition(
