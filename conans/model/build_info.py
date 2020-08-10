@@ -166,7 +166,7 @@ class _CppInfo(object):
 
 class Component(_CppInfo):
 
-    def __init__(self, rootpath, version = None):
+    def __init__(self, rootpath, version):
         super(Component, self).__init__()
         self.rootpath = rootpath
         self.includedirs.append(DEFAULT_INCLUDE)
@@ -186,7 +186,7 @@ class CppInfo(_CppInfo):
     Defined in user CONANFILE, directories are relative at user definition time
     """
 
-    def __init__(self, ref_name, root_folder, version = None):
+    def __init__(self, ref_name, root_folder):
         super(CppInfo, self).__init__()
         self._ref_name = ref_name
         self._name = ref_name
@@ -197,7 +197,6 @@ class CppInfo(_CppInfo):
         self.resdirs.append(DEFAULT_RES)
         self.builddirs.append(DEFAULT_BUILD)
         self.frameworkdirs.append(DEFAULT_FRAMEWORK)
-        self.version = version
         self.components = DefaultOrderedDict(lambda: Component(self.rootpath, self.version))
         # public_deps is needed to accumulate list of deps for cmake targets
         self.public_deps = []
