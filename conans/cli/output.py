@@ -75,7 +75,7 @@ if get_env("CONAN_COLOR_DARK", 0):
 
 try:
     from logging import NullHandler
-except ImportError:
+except ImportError:  # TODO: Remove if Python > 3.1
     class NullHandler(logging.Handler):
         def handle(self, record):
             pass
