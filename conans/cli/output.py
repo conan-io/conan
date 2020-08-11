@@ -116,10 +116,12 @@ class ConanOutput(object):
             self._stream_handler.setFormatter(logging.Formatter("%(message)s"))
             logging.getLogger(self._logger_name).addHandler(self._stream_handler)
             logging.getLogger(self._logger_name).setLevel(logging.INFO)
+            logging.getLogger(self._logger_name).propagate = False
 
             logging.captureWarnings(True)
             logging.getLogger("py.warnings").setLevel(logging.INFO)
             logging.getLogger("py.warnings").addHandler(self._stream_handler)
+            logging.getLogger("py.warnings").propagate = False
 
         self._color = color
         self._scope = None
