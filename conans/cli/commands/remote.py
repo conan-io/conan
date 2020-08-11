@@ -1,6 +1,6 @@
 import json
 
-from conans.cli.command import conan_command, conan_subcommand, Extender, OnceArgument
+from conans.cli.command import conan_command, conan_subcommand, OnceArgument
 
 
 def output_remote_list_json(info, out):
@@ -13,8 +13,7 @@ def output_remote_list_cli(info, out):
         output_str = "{}: {} [Verify SSL: {}, Enabled: {}]".format(remote_info["name"],
                                                                    remote_info["url"],
                                                                    remote_info["verify"],
-                                                                   remote_info.get(
-                                                                       "disabled", False))
+                                                                   remote_info.get("enabled", True))
         out.writeln(output_str)
 
 
@@ -24,10 +23,10 @@ def remote_list(*args, conan_api, parser, subparser):
     List current remotes
     """
     args = parser.parse_args(*args)
-    info = [{"name": "remote1", "url": "https://someurl1", "verify": True},
+    info = [{"name": "remote1", "url": "https://someurl1", "verify": True, "enabled": False},
             {"name": "remote2", "url": "https://someurl2", "verify": False},
             {"name": "remote3", "url": "https://someurl3", "verify": True},
-            {"name": "remote4", "url": "https://someurl4", "verify": False}]
+            {"name": "remote4", "url": "https://someurl4", "verify": False, "enabled": False}]
     return info
 
 
@@ -45,7 +44,6 @@ def remote_add(*args, conan_api, parser, subparser):
     subparser.add_argument("-f", "--force", action='store_true', default=False,
                            help="Force addition, will update if existing")
     args = parser.parse_args(*args)
-    return {}
 
 
 @conan_subcommand()
@@ -56,7 +54,6 @@ def remote_remove(*args, conan_api, parser, subparser):
     subparser.add_argument("remote", help="Name of the remote to remove. "
                                           "Accepts 'fnmatch' style wildcards.")  # to discuss
     args = parser.parse_args(*args)
-    return {}
 
 
 @conan_subcommand()
@@ -77,7 +74,6 @@ def remote_update(*args, conan_api, parser, subparser):
     if not (args.name or args.url or args.verify_ssl or args.insert):
         subparser.error("Please add at least one remote field to update: "
                         "name, url, verify_ssl, insert")
-    return {}
 
 
 @conan_subcommand()
@@ -87,7 +83,6 @@ def remote_enable(*args, conan_api, parser, subparser):
     """
     subparser.add_argument("remote", help="Name of the remote to enable")
     args = parser.parse_args(*args)
-    return {}
 
 
 @conan_subcommand()
@@ -97,7 +92,6 @@ def remote_disable(*args, conan_api, parser, subparser):
     """
     subparser.add_argument("remote", help="Name of the remote to disable")
     args = parser.parse_args(*args)
-    return {}
 
 
 @conan_command(group="Misc commands")
@@ -105,4 +99,3 @@ def remote(*args, conan_api, parser, **kwargs):
     """
     Manages the remote list and the package recipes associated with a remote.
     """
-    return
