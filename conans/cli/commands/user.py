@@ -52,7 +52,6 @@ def user_add(*args, conan_api, parser, subparser):
     subparser.add_argument("-f", "--force", action='store_true', default=False,
                            help="Force addition, will update if existing.")
     args = parser.parse_args(*args)
-    return {}
 
 
 @conan_subcommand()
@@ -64,7 +63,6 @@ def user_remove(*args, conan_api, parser, subparser):
                            help="Remote name. Accepts 'fnmatch' style wildcards. "
                                 "To remove the user for all remotes use: conan remote remove \"*\"")
     args = parser.parse_args(*args)
-    return {}
 
 
 @conan_subcommand()
@@ -86,7 +84,6 @@ def user_update(*args, conan_api, parser, subparser):
                                 "empty, the password is requested interactively "
                                 "(not exposed)")
     args = parser.parse_args(*args)
-    return {}
 
 
 @conan_command(group="Misc")
@@ -99,4 +96,3 @@ def user(*args, conan_api, parser, **kwargs):
     Changing the user, or introducing the password is only necessary to
     perform changes in remote packages.
     """
-    return
