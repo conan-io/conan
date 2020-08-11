@@ -19,8 +19,8 @@ from conans.model.profile import Profile
 from conans.model.requires import Requirements
 from conans.model.settings import Settings
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import test_profile,\
-    TestBufferConanOutput
+from conans.test.utils.tools import test_profile
+from conans.test.utils.mocks import TestBufferConanOutput
 from conans.util.files import save
 
 

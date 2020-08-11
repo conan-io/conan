@@ -145,7 +145,7 @@ set_property(TARGET {name}::{name}
                                       "{{ '${'+pkg_name+'_'+comp_name+'_LIBS_FRAMEWORKS_DEPS_'+build_type+'}' }}"
                                       {{ pkg_name }}_{{ comp_name }}_NOT_USED_{{ build_type }}
                                       {{ pkg_name }}_{{ comp_name }}_LIB_TARGETS_{{ build_type }}
-                                      ""
+                                      "{{ build_type }}"
                                       "{{ pkg_name }}_{{ comp_name }}")
 
         set({{ pkg_name }}_{{ comp_name }}_LINK_LIBS_{{ build_type }} {{ '${'+pkg_name+'_'+comp_name+'_LIB_TARGETS_'+build_type+'}' }} {{ '${'+pkg_name+'_'+comp_name+'_DEPENDENCIES_'+build_type+'}' }})

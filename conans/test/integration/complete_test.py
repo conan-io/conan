@@ -16,26 +16,26 @@ class CompleteFlowTest(unittest.TestCase):
     def reuse_complete_urls_test(self):
         # This test can be removed in conan 2.0 when the complete_urls is removed
         test_server = TestServer(complete_urls=True)
-        self.servers = {"default": test_server}
-        self.client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
+        servers = {"default": test_server}
+        client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
 
         ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
         files = cpp_hello_conan_files("Hello0", "0.1", build=False)
-        self.client.save(files)
-        self.client.run("create . lasote/stable")
+        client.save(files)
+        client.run("create . lasote/stable")
         self.assertIn("Hello0/0.1@lasote/stable package(): Packaged 1 '.h' file: helloHello0.h",
-                      self.client.out)
+                      client.out)
 
         # Upload package
-        self.client.run("upload %s --all" % str(ref))
-        self.assertIn("Compressing package", str(self.client.out))
+        client.run("upload %s --all" % str(ref))
+        self.assertIn("Compressing package", client.out)
 
         # Not needed to tgz again
-        self.client.run("upload %s --all" % str(ref))
-        self.assertNotIn("Compressing package", str(self.client.out))
+        client.run("upload %s --all" % str(ref))
+        self.assertNotIn("Compressing package", client.out)
 
         # Now from other "computer" install the uploaded packages with same options
-        other_conan = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
+        other_conan = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
         other_conan.run("install %s" % str(ref))
 
         # Now install it but with other options
@@ -46,54 +46,54 @@ class CompleteFlowTest(unittest.TestCase):
 
     def reuse_test(self):
         test_server = TestServer()
-        self.servers = {"default": test_server}
-        self.client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
+        servers = {"default": test_server}
+        client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
 
         ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
         files = cpp_hello_conan_files("Hello0", "0.1", need_patch=True)
-        self.client.save(files)
-        self.client.run("create . lasote/stable")
+        client.save(files)
+        client.run("create . lasote/stable")
         self.assertIn("Hello0/0.1@lasote/stable package(): Packaged 1 '.h' file: helloHello0.h",
-                      self.client.out)
+                      client.out)
         # Check compilation ok
-        package_ids = self.client.cache.package_layout(ref).conan_packages()
+        package_ids = client.cache.package_layout(ref).conan_packages()
         self.assertEqual(len(package_ids), 1)
         pref = PackageReference(ref, package_ids[0])
-        self._assert_library_exists(pref, self.client.cache)
+        self._assert_library_exists(pref, client.cache)
 
         # Upload package
-        self.client.run("upload %s" % str(ref))
-        self.assertIn("Compressing recipe", str(self.client.out))
+        client.run("upload %s" % str(ref))
+        self.assertIn("Compressing recipe", client.out)
 
         # Not needed to tgz again
-        self.client.run("upload %s" % str(ref))
-        self.assertNotIn("Compressing exported", str(self.client.out))
+        client.run("upload %s" % str(ref))
+        self.assertNotIn("Compressing exported", client.out)
 
         # Check that recipe exists on server
-        server_paths = self.servers["default"].server_store
+        server_paths = servers["default"].server_store
         rev = server_paths.get_last_revision(ref).revision
         conan_path = server_paths.export(ref.copy_with_rev(rev))
         self.assertTrue(os.path.exists(conan_path))
 
         # Upload package
-        self.client.run("upload %s -p %s" % (str(ref), str(package_ids[0])))
-        self.assertIn("Compressing package", str(self.client.out))
+        client.run("upload %s -p %s" % (str(ref), str(package_ids[0])))
+        self.assertIn("Compressing package", client.out)
 
         # Not needed to tgz again
-        self.client.run("upload %s -p %s" % (str(ref), str(package_ids[0])))
-        self.assertNotIn("Compressing package", str(self.client.out))
+        client.run("upload %s -p %s" % (str(ref), str(package_ids[0])))
+        self.assertNotIn("Compressing package", client.out)
 
         # If we install the package again will be removed and re tgz
-        self.client.run("install %s" % str(ref))
+        client.run("install %s" % str(ref))
         # Upload package
-        self.client.run("upload %s -p %s" % (str(ref), str(package_ids[0])))
-        self.assertNotIn("Compressing package", str(self.client.out))
+        client.run("upload %s -p %s" % (str(ref), str(package_ids[0])))
+        self.assertNotIn("Compressing package", client.out)
 
         # Check library on server
         self._assert_library_exists_in_server(pref, server_paths)
 
         # Now from other "computer" install the uploaded conans with same options (nothing)
-        other_conan = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
+        other_conan = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
         other_conan.run("install %s" % str(ref))
         # Build should be empty
         build_path = other_conan.cache.package_layout(pref.ref).build(pref)
@@ -110,7 +110,7 @@ class CompleteFlowTest(unittest.TestCase):
             pref = PackageReference(ref, package_id)
             self._assert_library_exists(pref, other_conan.cache)
 
-        client3 = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
+        client3 = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
         files3 = cpp_hello_conan_files("Hello1", "0.1", ["Hello0/0.1@lasote/stable"])
         client3.save(files3)
         client3.run('install .')

@@ -14,7 +14,8 @@ from conans.client.tools import environment_append
 from conans.client.tools.files import replace_in_file, save
 from conans.errors import ConanException
 from conans.paths import CACERT_FILE
-from conans.test.utils.tools import TestBufferConanOutput, temp_folder
+from conans.test.utils.tools import temp_folder
+from conans.test.utils.mocks import TestBufferConanOutput
 from conans.util.files import normalize
 
 

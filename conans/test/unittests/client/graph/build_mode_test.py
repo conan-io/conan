@@ -5,8 +5,7 @@ import six
 from conans.client.graph.build_mode import BuildMode
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
-from conans.test.utils.conanfile import MockConanfile
-from conans.test.utils.tools import TestBufferConanOutput
+from conans.test.utils.mocks import MockConanfile, TestBufferConanOutput
 
 
 class BuildModeTest(unittest.TestCase):

@@ -11,7 +11,8 @@ from conans.client.cache.cache import ClientCache
 from conans.model.graph_lock import LOCKFILE
 from conans.build_info.command import run
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient, TestBufferConanOutput, TestServer
+from conans.test.utils.tools import TestClient, TestServer
+from conans.test.utils.mocks import TestBufferConanOutput
 
 
 class MyBuildInfoCreation(unittest.TestCase):

@@ -2,7 +2,6 @@ import os
 import textwrap
 import unittest
 
-from conans.errors import ConanException
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE, CONANFILE_TXT
 from conans.test.utils.genconanfile import GenConanfile

@@ -44,8 +44,8 @@ class PkgConfigGenerator(Generator):
         generator_components = []
         for comp_name, comp in self.sorted_components(cpp_info).items():
             comp_genname = self._get_name(cpp_info.components[comp_name])
-            comp.public_deps = self._get_component_requires(pkg_name, comp)
-            generator_components.append((comp_genname, comp))
+            comp_requires_gennames = self._get_component_requires(pkg_name, comp)
+            generator_components.append((comp_genname, comp, comp_requires_gennames))
         generator_components.reverse()  # From the less dependent to most one
         return generator_components
 
@@ -76,19 +76,23 @@ class PkgConfigGenerator(Generator):
         for depname, cpp_info in self.deps_build_info.dependencies:
             pkg_genname = cpp_info.get_name(PkgConfigGenerator.name)
             if not cpp_info.components:
-                ret["%s.pc" % pkg_genname] = self.single_pc_file_contents(pkg_genname, cpp_info)
+                ret["%s.pc" % pkg_genname] = self.single_pc_file_contents(pkg_genname, cpp_info,
+                                                                          cpp_info.public_deps)
             else:
                 components = self._get_components(depname, cpp_info)
-                for comp_genname, comp in components:
+                for comp_genname, comp, comp_requires_gennames in components:
                     ret["%s.pc" % comp_genname] = self.single_pc_file_contents(
-                        "%s-%s" % (pkg_genname, comp_genname), comp, is_component=True)
-                comp_gennames = [comp_genname for comp_genname, _ in components]
+                        "%s-%s" % (pkg_genname, comp_genname),
+                        comp,
+                        comp_requires_gennames,
+                        is_component=True)
+                comp_gennames = [comp_genname for comp_genname, _, _ in components]
                 if pkg_genname not in comp_gennames:
-                    cpp_info.public_deps = comp_gennames
-                    ret["%s.pc" % pkg_genname] = self.global_pc_file_contents(pkg_genname, cpp_info)
+                    ret["%s.pc" % pkg_genname] = self.global_pc_file_contents(pkg_genname, cpp_info,
+                                                                              comp_gennames)
         return ret
 
-    def single_pc_file_contents(self, name, cpp_info, is_component=False):
+    def single_pc_file_contents(self, name, cpp_info, comp_requires_gennames, is_component=False):
         prefix_path = cpp_info.rootpath.replace("\\", "/")
         lines = ['prefix=%s' % prefix_path]
 
@@ -135,9 +139,9 @@ class PkgConfigGenerator(Generator):
              cpp_info.cflags,
              ["-D%s" % d for d in cpp_info.defines]]))
 
-        if cpp_info.public_deps:
+        if comp_requires_gennames:
             if is_component:
-                pkg_config_names = cpp_info.public_deps
+                pkg_config_names = comp_requires_gennames
             else:
                 pkg_config_names = []
                 for public_dep in cpp_info.public_deps:
@@ -148,14 +152,14 @@ class PkgConfigGenerator(Generator):
         return "\n".join(lines) + "\n"
 
     @staticmethod
-    def global_pc_file_contents(name, cpp_info):
+    def global_pc_file_contents(name, cpp_info, comp_gennames):
         lines = ["Name: %s" % name]
         description = cpp_info.description or "Conan package: %s" % name
         lines.append("Description: %s" % description)
         lines.append("Version: %s" % cpp_info.version)
 
-        if cpp_info.public_deps:
-            public_deps = " ".join(cpp_info.public_deps)
+        if comp_gennames:
+            public_deps = " ".join(comp_gennames)
             lines.append("Requires: %s" % public_deps)
         return "\n".join(lines) + "\n"
 

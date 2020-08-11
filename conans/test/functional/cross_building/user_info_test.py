@@ -59,25 +59,36 @@ class UserInfoTestCase(unittest.TestCase):
                 _info("[build] br_build.DATA={}".format(self.user_info_build["br_build"].DATA))
     """)
 
-    def test_user_info_from_requirements(self):
-        t = TestClient()
-        t.save({'library.py': self.library,
-                'build_requires.py': self.br,
-                'app.py': self.app,
-                'host': '[settings]\nos=Windows',
-                'build': '[settings]\nos=Linux', })
-        t.run("create library.py library/1.0@ --profile=host")
-        t.run("create library.py library/1.0@ --profile=build")
-        t.run("create build_requires.py br_host/1.0@ --profile=host")
-        t.run("create build_requires.py br_build/1.0@ --profile=build")
-        t.run("create app.py app/1.0@ --profile:host=host --profile:build=build")
+    @classmethod
+    def setUpClass(cls):
+        super(UserInfoTestCase, cls).setUpClass()
+        cls.t = TestClient()
+        cls.t.save({'library.py': cls.library,
+                    'build_requires.py': cls.br,
+                    'app.py': cls.app,
+                    'host': '[settings]\nos=Windows',
+                    'build': '[settings]\nos=Linux', })
+        cls.t.run("create library.py library/1.0@ --profile=host")
+        cls.t.run("create library.py library/1.0@ --profile=build")
+        cls.t.run("create build_requires.py br_host/1.0@ --profile=host")
+        cls.t.run("create build_requires.py br_build/1.0@ --profile=build")
 
+    def _check_user_info_data(self, app_scope, output):
         # Check information from the host context (using deps_user_info attribute)
-        self.assertIn("app/1.0: [deps] br_host, library", t.out)
-        self.assertIn("app/1.0: [deps] library.DATA=library-Windows", t.out)
-        self.assertIn("app/1.0: [deps] br_host.DATA=br_host-Windows", t.out)
+        self.assertIn(app_scope + ": [deps] br_host, library", output)
+        self.assertIn(app_scope + ": [deps] library.DATA=library-Windows", output)
+        self.assertIn(app_scope + ": [deps] br_host.DATA=br_host-Windows", output)
 
         # Check information from the build context (using user_info_build attribute)
-        self.assertIn("app/1.0: [build] br_build, library", t.out)
-        self.assertIn("app/1.0: [build] library.DATA=library-Linux", t.out)
-        self.assertIn("app/1.0: [build] br_build.DATA=br_build-Linux", t.out)
+        self.assertIn(app_scope + ": [build] br_build, library", output)
+        self.assertIn(app_scope + ": [build] library.DATA=library-Linux", output)
+        self.assertIn(app_scope + ": [build] br_build.DATA=br_build-Linux", output)
+
+    def test_user_info_from_requirements(self):
+        self.t.run("create app.py app/1.0@ --profile:host=host --profile:build=build")
+        self._check_user_info_data("app/1.0", self.t.out)
+
+    def test_user_info_local_workflow(self):
+        self.t.run("install app.py app/1.0@ --profile:host=host --profile:build=build")
+        self.t.run("build app.py")
+        self._check_user_info_data("app.py (app/1.0)", self.t.out)

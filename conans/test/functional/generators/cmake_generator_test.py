@@ -3,8 +3,8 @@ import unittest
 
 from conans import tools
 from conans.client.runner import ConanRunner
-from conans.test.utils.tools import TestClient, TestBufferConanOutput
-
+from conans.test.utils.tools import TestClient
+from conans.test.utils.mocks import TestBufferConanOutput
 
 CONAN_RECIPE = """
 from conans import ConanFile, CMake

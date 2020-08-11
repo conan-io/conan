@@ -6,7 +6,8 @@ import unittest
 from conans.client import tools
 from conans.client.output import ConanOutput
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient, TestBufferConanOutput
+from conans.test.utils.tools import TestClient
+from conans.test.utils.mocks import TestBufferConanOutput
 from conans.util.files import load, save
 from conans.client.tools.files import replace_in_file
 

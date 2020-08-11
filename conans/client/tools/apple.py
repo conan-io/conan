@@ -32,13 +32,11 @@ def apple_sdk_name(settings):
                 'iOS': 'iphonesimulator',
                 'watchOS': 'watchsimulator',
                 'tvOS': 'appletvsimulator'}.get(str(os_))
-    elif str(arch).startswith('arm'):
-        return {'iOS': 'iphoneos',
-                'watchOS': 'watchos',
-                'tvOS': 'appletvos'}.get(str(os_))
     else:
-        return None
-
+        return {'Macos': 'macosx',
+                'iOS': 'iphoneos',
+                'watchOS': 'watchos',
+                'tvOS': 'appletvos'}.get(str(os_), None)
 
 def apple_deployment_target_env(os_, os_version):
     """environment variable name which controls deployment target"""

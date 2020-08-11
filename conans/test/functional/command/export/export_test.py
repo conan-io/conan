@@ -10,7 +10,7 @@ from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE, CONAN_MANIFEST
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import TestClient, GenConanfile
-from conans.test.utils.tools import create_local_git_repo
+from conans.test.utils.scm import create_local_git_repo
 from conans.util.files import load, save
 
 

@@ -4,7 +4,7 @@ import platform
 import unittest
 
 from conans.client.generators.virtualbuildenv import VirtualBuildEnvGenerator
-from conans.test.utils.conanfile import ConanFileMock, MockSettings
+from conans.test.utils.mocks import MockSettings, ConanFileMock
 
 
 class VirtualBuildEnvGeneratorGCCTest(unittest.TestCase):

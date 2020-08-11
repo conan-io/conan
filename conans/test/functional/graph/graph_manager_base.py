@@ -23,7 +23,8 @@ from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
 from conans.test.unittests.model.transitive_reqs_test import MockRemoteManager
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestBufferConanOutput, GenConanfile
+from conans.test.utils.tools import GenConanfile
+from conans.test.utils.mocks import TestBufferConanOutput
 from conans.util.files import save
 
 

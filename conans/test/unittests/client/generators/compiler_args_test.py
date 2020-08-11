@@ -7,7 +7,7 @@ from conans.model.build_info import CppInfo, DepsCppInfo
 from conans.model.env_info import DepsEnvInfo, EnvInfo
 from conans.model.settings import Settings
 from conans.model.user_info import DepsUserInfo
-from conans.test.utils.conanfile import ConanFileMock
+from conans.test.utils.mocks import ConanFileMock
 
 
 class CompilerArgsTest(unittest.TestCase):
