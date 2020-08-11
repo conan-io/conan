@@ -105,18 +105,18 @@ class TqdmHandler(logging.StreamHandler):
 
 class ConanOutput(object):
     def __init__(self, stream=None, color=False):
-        self._logger_name = "conan.output"
+        self._logger = logging.getLogger("conan.output")
         self._stream = stream
         self._stream_handler = None
 
         if self._stream is None:
-            logging.getLogger(self._logger_name).addHandler(NullHandler())
+            self._logger.addHandler(NullHandler())
         else:
             self._stream_handler = TqdmHandler(self._stream)
             self._stream_handler.setFormatter(logging.Formatter("%(message)s"))
-            logging.getLogger(self._logger_name).addHandler(self._stream_handler)
-            logging.getLogger(self._logger_name).setLevel(logging.INFO)
-            logging.getLogger(self._logger_name).propagate = False
+            self._logger.addHandler(self._stream_handler)
+            self._logger.setLevel(logging.INFO)
+            self._logger.propagate = False
 
             logging.captureWarnings(True)
             logging.getLogger("py.warnings").setLevel(logging.WARNING)
@@ -153,7 +153,7 @@ class ConanOutput(object):
             msg = "{}{}{}{}".format(fg or '', bg or '', msg, Style.RESET_ALL)
         for _ in range(3):
             try:
-                logging.getLogger(self._logger_name).log(level, msg)
+                self._logger.log(level, msg)
                 break
             except IOError:
                 import time
