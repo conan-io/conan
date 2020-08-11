@@ -37,22 +37,16 @@ from tqdm import tqdm
 
 def api_method(f):
     def wrapper(api, *args, **kwargs):
-        quiet = kwargs.pop("quiet", False)
         try:  # getcwd can fail if Conan runs on an unexisting folder
             old_curdir = os.getcwd()
         except EnvironmentError:
             old_curdir = None
-        old_output = api.user_io.out
-        quiet_output = ConanOutput(StringIO(), color=api.color) if quiet else None
         try:
-            api.create_app(quiet_output=quiet_output)
+            api.create_app()
             log_command(f.__name__, kwargs)
             with environment_append(api.app.cache.config.env_vars):
                 return f(api, *args, **kwargs)
         except Exception as exc:
-            if quiet_output:
-                old_output.write(quiet_output._stream.getvalue())
-                old_output.flush()
             msg = exception_message_safe(exc)
             try:
                 log_exception(exc, msg)
@@ -67,18 +61,14 @@ def api_method(f):
 
 
 class ConanApp(object):
-    def __init__(self, cache_folder, user_io, http_requester=None, runner=None, quiet_output=None):
+    def __init__(self, cache_folder, user_io, http_requester=None, runner=None):
         # User IO, interaction and logging
         self.user_io = user_io
         self.out = self.user_io.out
-        if quiet_output:
-            self.user_io.out = quiet_output
-            self.out = quiet_output
-
         self.cache_folder = cache_folder
         self.cache = ClientCache(self.cache_folder, self.out)
         self.config = self.cache.config
-        if self.config.non_interactive or quiet_output:
+        if self.config.non_interactive:
             self.user_io.disable_input()
 
         # Adjust CONAN_LOGGING_LEVEL with the env readed
@@ -136,9 +126,9 @@ class ConanAPIV2(object):
             # FIXME Remove in Conan 2.0
             sys.path.append(os.path.join(self.cache_folder, "python"))
 
-    def create_app(self, quiet_output=None):
+    def create_app(self):
         self.app = ConanApp(self.cache_folder, self.user_io, self.http_requester,
-                            self.runner, quiet_output=quiet_output)
+                            self.runner)
 
     @api_method
     def user_list(self, remote_name=None):
