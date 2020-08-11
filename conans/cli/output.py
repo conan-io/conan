@@ -119,7 +119,7 @@ class ConanOutput(object):
             logging.getLogger(self._logger_name).propagate = False
 
             logging.captureWarnings(True)
-            logging.getLogger("py.warnings").setLevel(logging.INFO)
+            logging.getLogger("py.warnings").setLevel(logging.WARNING)
             logging.getLogger("py.warnings").addHandler(self._stream_handler)
             logging.getLogger("py.warnings").propagate = False
 
