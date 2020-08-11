@@ -146,7 +146,7 @@ class ConanOutput(object):
     def is_terminal(self):
         return hasattr(self._stream, "isatty") and self._stream.isatty()
 
-    def _write(self, msg, level=logging.INFO, fg=None, bg=None):
+    def _write(self, msg, level, fg=None, bg=None):
         if self._scope:
             msg = "{}: {}".format(self.scope, msg)
         if self._color:
