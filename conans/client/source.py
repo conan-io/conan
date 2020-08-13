@@ -92,7 +92,6 @@ def config_source(export_folder, export_source_folder, scm_sources_folder,
     elif conanfile.build_policy_always:
         output.warn("Detected build_policy 'always', trying to remove source folder")
         remove_source()
-        clean_dirty(src_folder)
 
     if not os.path.exists(src_folder):  # No source folder, need to get it
         with set_dirty_context_manager(src_folder):
