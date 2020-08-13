@@ -1,4 +1,8 @@
 import six
+try:
+    from collections import Iterable
+except ImportError:
+    from collections.abc import Iterable
 
 
 def make_tuple(value):
@@ -12,7 +16,7 @@ def make_tuple(value):
     if isinstance(value, six.string_types):
         return value,
 
-    if isinstance(value, six.moves.collections_abc.Iterable):
+    if isinstance(value, Iterable):
         return tuple(value)
     else:
         return value,
