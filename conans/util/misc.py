@@ -1,8 +1,9 @@
 import six
+
 try:
-    from collections import Iterable
-except ImportError:
     from collections.abc import Iterable
+except ImportError:  # python2 fallback
+    from collections import Iterable
 
 
 def make_tuple(value):
