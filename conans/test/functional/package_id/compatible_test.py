@@ -193,7 +193,7 @@ class CompatibleIDsTest(unittest.TestCase):
                      "intel_profile": intel_profile,
                      "visual_profile": visual_profile})
         client.run("create . %s --profile visual_profile" % ref.full_str())
-        client.run("install %s -p intel_profile" % ref.full_str())
+        client.run("install %s -pr intel_profile" % ref.full_str())
         self.assertIn("Bye/0.1@us/ch: Main binary package '2ef6f6c768dd0f332dc252"
                       "b72c30dee116632302' missing. Using compatible package "
                       "'1151fe341e6b310f7645a76b4d3d524342835acc'",
@@ -259,7 +259,7 @@ class CompatibleIDsTest(unittest.TestCase):
                      "intel_profile": intel_profile,
                      "visual_profile": visual_profile})
         client.run("create . %s --profile intel_profile" % ref.full_str())
-        client.run("install %s -p visual_profile" % ref.full_str())
+        client.run("install %s -pr visual_profile" % ref.full_str())
         self.assertIn("Bye/0.1@us/ch: Main binary package "
                       "'1151fe341e6b310f7645a76b4d3d524342835acc' missing. Using compatible "
                       "package '2ef6f6c768dd0f332dc252b72c30dee116632302'",
@@ -330,7 +330,7 @@ class CompatibleIDsTest(unittest.TestCase):
                      "intel_profile": intel_profile,
                      "visual_profile": visual_profile})
         client.run("create . %s --profile intel_profile" % ref.full_str())
-        client.run("install %s -p visual_profile" % ref.full_str(), assert_error=True)
+        client.run("install %s -pr visual_profile" % ref.full_str(), assert_error=True)
         self.assertIn("Missing prebuilt package for 'Bye/0.1@us/ch'", client.out)
 
     def additional_id_mode_test(self):
@@ -463,5 +463,33 @@ class CompatibleIDsTest(unittest.TestCase):
         client.save({"conanfile.py": GenConanfile().with_require_plain("pkg/0.1@user/testing")})
         client.run("install . -s os=Windows --build=missing")
         self.assertIn("pkg/0.1@user/testing:cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31 - Cache",
+                      client.out)
+        self.assertIn("pkg/0.1@user/testing: Already installed!", client.out)
+
+    def compatible_package_python_requires_test(self):
+        # https://github.com/conan-io/conan/issues/6609
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("export . tool/0.1@")
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+
+            class Conan(ConanFile):
+                settings = "os"
+                python_requires = "tool/0.1"
+
+                def package_id(self):
+                   if self.settings.os == "Windows":
+                       compatible = self.info.clone()
+                       compatible.settings.os = "Linux"
+                       self.compatible_packages.append(compatible)
+                """)
+
+        client.save({"conanfile.py": conanfile})
+        client.run("create . pkg/0.1@user/testing -s os=Linux")
+
+        client.save({"conanfile.py": GenConanfile().with_require_plain("pkg/0.1@user/testing")})
+        client.run("install . -s os=Windows")
+        self.assertIn("pkg/0.1@user/testing:1ebf4db7209535776307f9cd06e00d5a8034bc84 - Cache",
                       client.out)
         self.assertIn("pkg/0.1@user/testing: Already installed!", client.out)

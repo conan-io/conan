@@ -10,6 +10,7 @@ from conans.errors import ConanException, ConanExceptionInUserConanfileMethod, \
 from conans.model.conan_file import get_env_context_manager
 from conans.model.scm import SCM, get_scm_data
 from conans.paths import CONANFILE, CONAN_MANIFEST, EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME
+from conans.util.conan_v2_mode import conan_v2_property
 from conans.util.files import (set_dirty, is_dirty, mkdir, rmdir, set_dirty_context_manager,
                                merge_directories)
 
@@ -24,7 +25,7 @@ def complete_recipe_sources(remote_manager, cache, conanfile, ref, remotes):
     if os.path.exists(sources_folder):
         return None
 
-    if conanfile.exports_sources is None:
+    if conanfile.exports_sources is None and not hasattr(conanfile, "export_sources"):
         mkdir(sources_folder)
         return None
 
@@ -134,7 +135,12 @@ def _run_source(conanfile, conanfile_path, src_folder, hook_manager, reference, 
                 if cache:
                     _clean_source_folder(src_folder)  # TODO: Why is it needed in cache?
                 with conanfile_exception_formatter(conanfile.display_name, "source"):
-                    conanfile.source()
+
+                    with conan_v2_property(conanfile, 'settings',
+                                           "'self.settings' access in source() method is deprecated"):
+                        with conan_v2_property(conanfile, 'options',
+                                               "'self.options' access in source() method is deprecated"):
+                            conanfile.source()
 
                 hook_manager.execute("post_source", conanfile=conanfile,
                                      conanfile_path=conanfile_path,
@@ -179,8 +185,11 @@ def _run_cache_scm(conanfile, scm_sources_folder, src_folder, output):
         merge_directories(scm_sources_folder, dest_dir)
     else:
         output.info("SCM: Getting sources from url: '%s'" % scm_data.url)
-        scm = SCM(scm_data, dest_dir, output)
-        scm.checkout()
+        try:
+            scm = SCM(scm_data, dest_dir, output)
+            scm.checkout()
+        except Exception as e:
+            raise ConanException("Couldn't checkout SCM: %s" % str(e))
         # This is a bit weird. Why after a SCM should we remove files.
         # Maybe check conan 2.0
         # TODO: Why removing in the cache? There is no danger.

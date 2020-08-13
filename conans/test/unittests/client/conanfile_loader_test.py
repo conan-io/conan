@@ -19,8 +19,8 @@ from conans.model.profile import Profile
 from conans.model.requires import Requirements
 from conans.model.settings import Settings
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import test_profile,\
-    TestBufferConanOutput
+from conans.test.utils.tools import test_profile
+from conans.test.utils.mocks import TestBufferConanOutput
 from conans.util.files import save
 
 
@@ -43,8 +43,7 @@ class BasePackage(ConanFile):
         conan_file = loader.load_basic(conanfile_path)
         self.assertEqual(conan_file.short_paths, True)
 
-        result = loader.load_consumer(conanfile_path,
-                                      profile_host=test_profile())
+        result = loader.load_consumer(conanfile_path, profile_host=test_profile())
         self.assertEqual(result.short_paths, True)
 
     def requires_init_test(self):
@@ -59,13 +58,50 @@ class MyTest(ConanFile):
 """
         for requires in ("''", "[]", "()", "None"):
             save(conanfile_path, conanfile.format(requires))
-            result = loader.load_consumer(conanfile_path,
-                                          profile_host=test_profile())
+            result = loader.load_consumer(conanfile_path, profile_host=test_profile())
             result.requirements()
             self.assertEqual("MyPkg/0.1@user/channel", str(result.requires))
 
+    def test_package_settings(self):
+        # CREATE A CONANFILE TO LOAD
+        tmp_dir = temp_folder()
+        conanfile_path = os.path.join(tmp_dir, "conanfile.py")
+        conanfile = """from conans import ConanFile
+class MyTest(ConanFile):
+    requires = {}
+    name = "MyPackage"
+    version = "1.0"
+    settings = "os"
+"""
+        save(conanfile_path, conanfile)
+
+        # Apply windows for MyPackage
+        profile = Profile()
+        profile.processed_settings = Settings({"os": ["Windows", "Linux"]})
+        profile.package_settings = {"MyPackage": OrderedDict([("os", "Windows")])}
+        loader = ConanFileLoader(None, TestBufferConanOutput(), ConanPythonRequire(None, None))
+
+        recipe = loader.load_consumer(conanfile_path, profile)
+        self.assertEqual(recipe.settings.os, "Windows")
+
+        # Apply Linux for MyPackage
+        profile = Profile()
+        profile.processed_settings = Settings({"os": ["Windows", "Linux"]})
+        profile.package_settings = {"MyPackage": OrderedDict([("os", "Linux")])}
+        recipe = loader.load_consumer(conanfile_path, profile)
+        self.assertEqual(recipe.settings.os, "Linux")
+
+        # If the package name is different from the conanfile one, it wont apply
+        profile = Profile()
+        profile.processed_settings = Settings({"os": ["Windows", "Linux"]})
+        profile.package_settings = {"OtherPACKAGE": OrderedDict([("os", "Linux")])}
+        recipe = loader.load_consumer(conanfile_path, profile)
+        self.assertIsNone(recipe.settings.os.value)
+
+
+class ConanLoaderTxtTest(unittest.TestCase):
     def conanfile_txt_errors_test(self):
-        # Valid content
+        # Invalid content
         file_content = '''[requires}
 OpenCV/2.4.10@phil/stable # My requirement for CV
 '''
@@ -144,8 +180,7 @@ OpenCV2:other_option=Cosa""")
         requirements = Requirements()
         requirements.add("OpenCV/2.4.10@phil/stable")
         requirements.add("OpenCV2/2.4.10@phil/stable")
-        build_requirements = []
-        build_requirements.append("MyPkg/1.0.0@phil/stable")
+        build_requirements = ["MyPkg/1.0.0@phil/stable"]
 
         self.assertEqual(ret.requires, requirements)
         self.assertEqual(ret.build_requires, build_requirements)
@@ -206,41 +241,19 @@ licenses, * -> ./licenses @ root_package=Pkg, folder=True, ignore_case=True, exc
                          False)]
         self.assertEqual(ret.copy.call_args_list, expected)
 
-    def test_package_settings(self):
-        # CREATE A CONANFILE TO LOAD
+    def load_options_error_test(self):
+        conanfile_txt = textwrap.dedent("""
+            [options]
+            myoption: myvalue
+        """)
         tmp_dir = temp_folder()
-        conanfile_path = os.path.join(tmp_dir, "conanfile.py")
-        conanfile = """from conans import ConanFile
-class MyTest(ConanFile):
-    requires = {}
-    name = "MyPackage"
-    version = "1.0"
-    settings = "os"
-"""
-        save(conanfile_path, conanfile)
-
-        # Apply windows for MyPackage
-        profile = Profile()
-        profile.processed_settings = Settings({"os": ["Windows", "Linux"]})
-        profile.package_settings = {"MyPackage": OrderedDict([("os", "Windows")])}
-        loader = ConanFileLoader(None, TestBufferConanOutput(), ConanPythonRequire(None, None))
-
-        recipe = loader.load_consumer(conanfile_path, profile)
-        self.assertEqual(recipe.settings.os, "Windows")
-
-        # Apply Linux for MyPackage
-        profile = Profile()
-        profile.processed_settings = Settings({"os": ["Windows", "Linux"]})
-        profile.package_settings = {"MyPackage": OrderedDict([("os", "Linux")])}
-        recipe = loader.load_consumer(conanfile_path, profile)
-        self.assertEqual(recipe.settings.os, "Linux")
-
-        # If the package name is different from the conanfile one, it wont apply
-        profile = Profile()
-        profile.processed_settings = Settings({"os": ["Windows", "Linux"]})
-        profile.package_settings = {"OtherPACKAGE": OrderedDict([("os", "Linux")])}
-        recipe = loader.load_consumer(conanfile_path, profile)
-        self.assertIsNone(recipe.settings.os.value)
+        file_path = os.path.join(tmp_dir, "file.txt")
+        save(file_path, conanfile_txt)
+        loader = ConanFileLoader(None, TestBufferConanOutput(), None)
+        with six.assertRaisesRegex(self, ConanException,
+                                   r"Error while parsing \[options\] in conanfile\n"
+                                   "Options should be specified as 'pkg:option=value'"):
+            loader.load_conanfile_txt(file_path, test_profile())
 
 
 class ImportModuleLoaderTest(unittest.TestCase):

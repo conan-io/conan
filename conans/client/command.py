@@ -1,16 +1,20 @@
+import argparse
 import inspect
 import json
 import os
+import signal
 import sys
-
-import argparse
 from argparse import ArgumentError
 from difflib import get_close_matches
 
+from six.moves import input as user_input
+
 from conans import __version__ as client_version
+from conans.client.cmd.frogarian import cmd_frogarian
 from conans.client.cmd.uploader import UPLOAD_POLICY_FORCE, \
     UPLOAD_POLICY_NO_OVERWRITE, UPLOAD_POLICY_NO_OVERWRITE_RECIPE, UPLOAD_POLICY_SKIP
-from conans.client.conan_api import (Conan, default_manifest_folder, _make_abs_path)
+from conans.client.conan_api import Conan, default_manifest_folder, _make_abs_path, ProfileData
+from conans.client.conf.config_installer import is_config_install_scheduled
 from conans.client.conan_command_output import CommandOutputer
 from conans.client.output import Color
 from conans.client.printer import Printer
@@ -23,15 +27,9 @@ from conans.util.config_parser import get_bool_from_text
 from conans.util.files import exception_message_safe
 from conans.util.files import save
 from conans.util.log import logger
-
-# Exit codes for conan command:
-SUCCESS = 0                         # 0: Success (done)
-ERROR_GENERAL = 1                   # 1: General ConanException error (done)
-ERROR_MIGRATION = 2                 # 2: Migration error
-USER_CTRL_C = 3                     # 3: Ctrl+C
-USER_CTRL_BREAK = 4                 # 4: Ctrl+Break
-ERROR_SIGTERM = 5                   # 5: SIGTERM
-ERROR_INVALID_CONFIGURATION = 6     # 6: Invalid configuration (done)
+from conans.assets import templates
+from conans.cli.exit_codes import SUCCESS, ERROR_MIGRATION, ERROR_GENERAL, USER_CTRL_C, \
+    ERROR_SIGTERM, USER_CTRL_BREAK, ERROR_INVALID_CONFIGURATION
 
 
 class Extender(argparse.Action):
@@ -90,8 +88,8 @@ _BUILD_FOLDER_HELP = ("Directory for the build process. Defaulted to the current
                       "relative path to the current directory can also be specified")
 _INSTALL_FOLDER_HELP = ("Directory containing the conaninfo.txt and conanbuildinfo.txt files "
                         "(from previous 'conan install'). Defaulted to --build-folder")
-_KEEP_SOURCE_HELP = ("Do not remove the source folder in the local cache, even if the recipe changed. "
-                     "Use this for testing purposes only")
+_KEEP_SOURCE_HELP = ("Do not remove the source folder in the local cache, "
+                     "even if the recipe changed. Use this for testing purposes only")
 _PATTERN_OR_REFERENCE_HELP = ("Pattern or package recipe reference, e.g., '%s', "
                               "'%s'" % (_PATTERN_EXAMPLE, _REFERENCE_EXAMPLE))
 _PATTERN_REF_OR_PREF_HELP = ("Pattern, recipe reference or package reference e.g., '%s', "
@@ -108,8 +106,8 @@ _SOURCE_FOLDER_HELP = ("Directory containing the sources. Defaulted to the conan
 
 class Command(object):
     """A single command of the conan application, with all the first level commands. Manages the
-    parsing of parameters and delegates functionality in collaborators. It can also show the help of the
-    tool.
+    parsing of parameters and delegates functionality in collaborators. It can also show the
+    help of the tool.
     """
     def __init__(self, conan_api):
         assert isinstance(conan_api, Conan)
@@ -149,8 +147,8 @@ class Command(object):
         parser = argparse.ArgumentParser(description=self.new.__doc__,
                                          prog="conan new",
                                          formatter_class=SmartFormatter)
-        parser.add_argument("name", help='Package name, e.g.: "Poco/1.7.3" or complete reference'
-                                         ' for CI scripts: "Poco/1.7.3@conan/stable"')
+        parser.add_argument("name", help='Package name, e.g.: "poco/1.9.4" or complete reference'
+                                         ' for CI scripts: "poco/1.9.4@user/channel"')
         parser.add_argument("-t", "--test", action='store_true', default=False,
                             help='Create test_package skeleton to test package')
         parser.add_argument("-i", "--header", action='store_true', default=False,
@@ -167,7 +165,7 @@ class Command(object):
                             help='Create the minimum package recipe, without build() method. '
                             'Useful in combination with "export-pkg" command')
         parser.add_argument("-m", "--template",
-                            help='Use the given template from the local cache for conanfile.py')
+                            help='Use the given template to generate a conan project')
         parser.add_argument("-cis", "--ci-shared", action='store_true',
                             default=False,
                             help='Package will have a "shared" option to be used in CI')
@@ -254,7 +252,13 @@ class Command(object):
         result = self._conan.inspect(args.path_or_reference, attributes, args.remote, quiet=quiet)
         Printer(self._out).print_inspect(result, raw=args.raw)
         if args.json:
-            json_output = json.dumps(result)
+
+            def dump_custom_types(obj):
+                if isinstance(obj, set):
+                    return sorted(list(obj))
+                raise TypeError
+
+            json_output = json.dumps(result, default=dump_custom_types)
             if not os.path.isabs(args.json):
                 json_output_file = os.path.join(get_cwd(), args.json)
             else:
@@ -284,11 +288,18 @@ class Command(object):
 
         _add_common_install_arguments(parser, build_help=_help_build_policies.format("never"))
         args = parser.parse_args(*args)
+
         self._warn_python_version()
-        return self._conan.test(args.path, args.reference, args.profile, args.settings,
-                                args.options, args.env, args.remote, args.update,
+        self._check_lockfile_args(args)
+
+        profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
+                                    options=args.options_build, env=args.env_build)
+
+        return self._conan.test(args.path, args.reference,
+                                args.profile_host, args.settings_host, args.options_host,
+                                args.env_host, remote_name=args.remote, update=args.update,
                                 build_modes=args.build, test_build_folder=args.test_build_folder,
-                                lockfile=args.lockfile)
+                                lockfile=args.lockfile, profile_build=profile_build)
 
     def create(self, *args):
         """
@@ -331,6 +342,7 @@ class Command(object):
 
         args = parser.parse_args(*args)
         self._warn_python_version()
+        self._check_lockfile_args(args)
 
         name, version, user, channel, _ = get_reference_fields(args.reference,
                                                                user_channel_input=True)
@@ -348,14 +360,20 @@ class Command(object):
 
         info = None
         try:
+            profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
+                                        options=args.options_build, env=args.env_build)
+
             info = self._conan.create(args.path, name, version, user, channel,
-                                      args.profile, args.settings, args.options,
-                                      args.env, args.test_folder, args.not_export,
+                                      args.profile_host, args.settings_host, args.options_host,
+                                      args.env_host, args.test_folder, args.not_export,
                                       args.build, args.keep_source, args.keep_build, args.verify,
                                       args.manifests, args.manifests_interactive,
                                       args.remote, args.update,
                                       test_build_folder=args.test_build_folder,
-                                      lockfile=args.lockfile, ignore_dirty=args.ignore_dirty)
+                                      lockfile=args.lockfile,
+                                      lockfile_out=args.lockfile_out,
+                                      ignore_dirty=args.ignore_dirty,
+                                      profile_build=profile_build)
         except ConanException as exc:
             info = exc.info
             raise
@@ -457,6 +475,11 @@ class Command(object):
         _add_common_install_arguments(parser, build_help=_help_build_policies.format("never"))
 
         args = parser.parse_args(*args)
+        self._check_lockfile_args(args)
+
+        profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
+                                    options=args.options_build, env=args.env_build)
+
         cwd = get_cwd()
 
         # We need @ otherwise it could be a path, so check strict
@@ -469,16 +492,18 @@ class Command(object):
                                                                        user_channel_input=True)
                 info = self._conan.install(path=args.path_or_reference,
                                            name=name, version=version, user=user, channel=channel,
-                                           settings=args.settings, options=args.options,
-                                           env=args.env,
+                                           settings=args.settings_host, options=args.options_host,
+                                           env=args.env_host, profile_names=args.profile_host,
+                                           profile_build=profile_build,
                                            remote_name=args.remote,
                                            verify=args.verify, manifests=args.manifests,
                                            manifests_interactive=args.manifests_interactive,
-                                           build=args.build, profile_names=args.profile,
+                                           build=args.build,
                                            update=args.update, generators=args.generator,
                                            no_imports=args.no_imports,
                                            install_folder=args.install_folder,
-                                           lockfile=args.lockfile)
+                                           lockfile=args.lockfile,
+                                           lockfile_out=args.lockfile_out)
             else:
                 if args.reference:
                     raise ConanException("A full reference was provided as first argument, second "
@@ -486,17 +511,21 @@ class Command(object):
 
                 ref = ConanFileReference.loads(args.path_or_reference, validate=False)
                 manifest_interactive = args.manifests_interactive
-                info = self._conan.install_reference(ref, settings=args.settings,
-                                                     options=args.options,
-                                                     env=args.env,
+                info = self._conan.install_reference(ref,
+                                                     settings=args.settings_host,
+                                                     options=args.options_host,
+                                                     env=args.env_host,
+                                                     profile_names=args.profile_host,
+                                                     profile_build=profile_build,
                                                      remote_name=args.remote,
                                                      verify=args.verify, manifests=args.manifests,
                                                      manifests_interactive=manifest_interactive,
-                                                     build=args.build, profile_names=args.profile,
+                                                     build=args.build,
                                                      update=args.update,
                                                      generators=args.generator,
                                                      install_folder=args.install_folder,
-                                                     lockfile=args.lockfile)
+                                                     lockfile=args.lockfile,
+                                                     lockfile_out=args.lockfile_out)
 
         except ConanException as exc:
             info = exc.info
@@ -524,6 +553,7 @@ class Command(object):
                                                                   'from a local or remote zip file')
         rm_subparser = subparsers.add_parser('rm', help='Remove an existing config element')
         set_subparser = subparsers.add_parser('set', help='Set a value for a configuration item')
+        init_subparser = subparsers.add_parser('init', help='Initializes Conan configuration files')
 
         get_subparser.add_argument("item", nargs="?", help="Item to print")
         home_subparser.add_argument("-j", "--json", default=None, action=OnceArgument,
@@ -543,8 +573,15 @@ class Command(object):
                                        'specified origin')
         install_subparser.add_argument("-tf", "--target-folder",
                                        help='Install to that path in the conan cache')
+        install_subparser.add_argument("-l", "--list", default=False, action='store_true',
+                                       help='List stored configuration origins')
+        install_subparser.add_argument("-r", "--remove", type=int,
+                                       help='Remove configuration origin by index in list (index '
+                                            'provided by --list argument)')
         rm_subparser.add_argument("item", help="Item to remove")
         set_subparser.add_argument("item", help="'item=value' to set")
+        init_subparser.add_argument('-f', '--force', default=False, action='store_true',
+                                    help='Overwrite existing Conan configuration files')
 
         args = parser.parse_args(*args)
 
@@ -568,10 +605,20 @@ class Command(object):
                 self._outputer.json_output({"home": conan_home}, args.json, os.getcwd())
             return conan_home
         elif args.subcommand == "install":
+            if args.list:
+                configs = self._conan.config_install_list()
+                for index, config in enumerate(configs):
+                    self._out.writeln("%s: %s" % (index, config))
+                return
+            elif args.remove is not None:
+                self._conan.config_install_remove(index=args.remove)
+                return
             verify_ssl = get_bool_from_text(args.verify_ssl)
             return self._conan.config_install(args.item, verify_ssl, args.type, args.args,
                                               source_folder=args.source_folder,
                                               target_folder=args.target_folder)
+        elif args.subcommand == 'init':
+            return self._conan.config_init(force=args.force)
 
     def info(self, *args):
         """
@@ -582,7 +629,7 @@ class Command(object):
         """
 
         info_only_options = ["id", "build_id", "remote", "url", "license", "requires", "update",
-                             "required", "date", "author", "None"]
+                             "required", "date", "author", "description", "None"]
         path_only_options = ["export_folder", "build_folder", "package_folder", "source_folder"]
         str_path_only_options = ", ".join(['"%s"' % field for field in path_only_options])
         str_only_options = ", ".join(['"%s"' % field for field in info_only_options])
@@ -623,27 +670,36 @@ class Command(object):
         build_help = ("Given a build policy, return an ordered list of packages that would be built"
                       " from sources during the install command")
 
-        _add_common_install_arguments(parser, build_help=build_help)
+        update_help = "Will check if updates of the dependencies exist in the remotes " \
+                      "(a new version that satisfies a version range, a new revision or a newer " \
+                      "recipe if not using revisions)."
+        _add_common_install_arguments(parser, update_help=update_help, build_help=build_help)
         args = parser.parse_args(*args)
+        self._check_lockfile_args(args)
+
+        profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
+                                    options=args.options_build, env=args.env_build)
 
         if args.build_order:
             self._out.warn("Usage of `--build-order` argument is deprecated and can return"
                            " wrong results. Use `conan graph build-order ...` instead.")
 
-        if args.install_folder and (args.profile or args.settings or args.options or args.env):
-            raise ArgumentError(None,
-                                "--install-folder cannot be used together with -s, -o, -e or -pr")
+        if args.install_folder and (args.profile_host or args.settings_host
+                                    or args.options_host or args.env_host):
+            raise ArgumentError(None, "--install-folder cannot be used together with a"
+                                      " host profile (-s, -o, -e or -pr)")
+
         if args.build_order and args.graph:
-            raise ArgumentError(None,
-                                "--build-order cannot be used together with --graph")
+            raise ArgumentError(None, "--build-order cannot be used together with --graph")
 
         # BUILD ORDER ONLY
         if args.build_order:
             ret = self._conan.info_build_order(args.path_or_reference,
-                                               settings=args.settings,
-                                               options=args.options,
-                                               env=args.env,
-                                               profile_names=args.profile,
+                                               settings=args.settings_host,
+                                               options=args.options_host,
+                                               env=args.env_host,
+                                               profile_names=args.profile_host,
+                                               profile_build=profile_build,
                                                remote_name=args.remote,
                                                build_order=args.build_order,
                                                check_updates=args.update,
@@ -658,10 +714,11 @@ class Command(object):
         elif args.build is not None:
             nodes, _ = self._conan.info_nodes_to_build(args.path_or_reference,
                                                        build_modes=args.build,
-                                                       settings=args.settings,
-                                                       options=args.options,
-                                                       env=args.env,
-                                                       profile_names=args.profile,
+                                                       settings=args.settings_host,
+                                                       options=args.options_host,
+                                                       env=args.env_host,
+                                                       profile_names=args.profile_host,
+                                                       profile_build=profile_build,
                                                        remote_name=args.remote,
                                                        check_updates=args.update,
                                                        install_folder=args.install_folder)
@@ -675,10 +732,11 @@ class Command(object):
         else:
             data = self._conan.info(args.path_or_reference,
                                     remote_name=args.remote,
-                                    settings=args.settings,
-                                    options=args.options,
-                                    env=args.env,
-                                    profile_names=args.profile,
+                                    settings=args.settings_host,
+                                    options=args.options_host,
+                                    env=args.env_host,
+                                    profile_names=args.profile_host,
+                                    profile_build=profile_build,
                                     update=args.update,
                                     install_folder=args.install_folder,
                                     build=args.dry_build,
@@ -696,7 +754,13 @@ class Command(object):
                                      % (only, str_only_options))
 
             if args.graph:
-                self._outputer.info_graph(args.graph, deps_graph, get_cwd())
+                if args.graph.endswith(".html"):
+                    template = self._conan.app.cache.get_template(templates.INFO_GRAPH_HTML,
+                                                                  user_overrides=True)
+                else:
+                    template = self._conan.app.cache.get_template(templates.INFO_GRAPH_DOT,
+                                                                  user_overrides=True)
+                self._outputer.info_graph(args.graph, deps_graph, get_cwd(), template=template)
             if args.json:
                 json_arg = True if args.json == "1" else args.json
                 self._outputer.json_info(deps_graph, json_arg, get_cwd(), show_paths=args.paths)
@@ -896,45 +960,42 @@ class Command(object):
                                  "conanfile.py)")
 
         parser.add_argument("-bf", "--build-folder", action=OnceArgument, help=_BUILD_FOLDER_HELP)
-        parser.add_argument("-e", "--env", nargs=1, action=Extender,
-                            help='Environment variables that will be set during the package build, '
-                                 '-e CXX=/usr/bin/clang++')
         parser.add_argument('-f', '--force', default=False, action='store_true',
                             help='Overwrite existing package if existing')
         parser.add_argument("-if", "--install-folder", action=OnceArgument,
                             help=_INSTALL_FOLDER_HELP + " If these files are found in the specified"
                             " folder and any of '-e', '-o', '-pr' or '-s' arguments are used, it "
                             "will raise an error.")
-        parser.add_argument("-o", "--options", nargs=1, action=Extender,
-                            help='Define options values, e.g., -o pkg:with_qt=True')
-        parser.add_argument("-pr", "--profile", action=Extender,
-                            help='Profile for this package')
         parser.add_argument("-pf", "--package-folder", action=OnceArgument,
                             help="folder containing a locally created package. If a value is given,"
                                  " it won't call the recipe 'package()' method, and will run a copy"
                                  " of the provided folder.")
-        parser.add_argument("-s", "--settings", nargs=1, action=Extender,
-                            help='Define settings values, e.g., -s compiler=gcc')
         parser.add_argument("-sf", "--source-folder", action=OnceArgument, help=_SOURCE_FOLDER_HELP)
         parser.add_argument("-j", "--json", default=None, action=OnceArgument,
                             help='Path to a json file where the install information will be '
                             'written')
-        parser.add_argument("-l", "--lockfile", action=OnceArgument, nargs='?', const=".",
-                            help="Path to a lockfile or folder containing 'conan.lock' file. "
-                            "Lockfile will be updated with the exported package")
+        parser.add_argument("-l", "--lockfile", action=OnceArgument,
+                            help="Path to a lockfile.")
+        parser.add_argument("--lockfile-out", action=OnceArgument,
+                            help="Filename of the updated lockfile")
         parser.add_argument("--ignore-dirty", default=False, action='store_true',
                             help='When using the "scm" feature with "auto" values, capture the'
                                  ' revision and url even if there are uncommitted changes')
+        _add_profile_arguments(parser)
 
         args = parser.parse_args(*args)
-
         self._warn_python_version()
+        self._check_lockfile_args(args)
+
         name, version, user, channel, _ = get_reference_fields(args.reference,
                                                                user_channel_input=True)
         cwd = os.getcwd()
         info = None
 
         try:
+            profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
+                                        options=args.options_build, env=args.env_build)
+
             info = self._conan.export_pkg(conanfile_path=args.path,
                                           name=name,
                                           version=version,
@@ -942,14 +1003,16 @@ class Command(object):
                                           build_folder=args.build_folder,
                                           package_folder=args.package_folder,
                                           install_folder=args.install_folder,
-                                          profile_names=args.profile,
-                                          env=args.env,
-                                          settings=args.settings,
-                                          options=args.options,
+                                          profile_names=args.profile_host,
+                                          env=args.env_host,
+                                          settings=args.settings_host,
+                                          options=args.options_host,
+                                          profile_build=profile_build,
                                           force=args.force,
                                           user=user,
                                           channel=channel,
                                           lockfile=args.lockfile,
+                                          lockfile_out=args.lockfile_out,
                                           ignore_dirty=args.ignore_dirty)
         except ConanException as exc:
             info = exc.info
@@ -975,15 +1038,19 @@ class Command(object):
                                  "and version are not declared in the conanfile.py")
         parser.add_argument('-k', '-ks', '--keep-source', default=False, action='store_true',
                             help=_KEEP_SOURCE_HELP)
-        parser.add_argument("-l", "--lockfile", action=OnceArgument, nargs='?', const=".",
-                            help="Path to a lockfile or folder containing 'conan.lock' file. "
-                            "Lockfile will be updated with the exported package")
+        parser.add_argument("-l", "--lockfile", action=OnceArgument,
+                            help="Path to a lockfile file.")
+        parser.add_argument("--lockfile-out", action=OnceArgument,
+                            help="Filename of the updated lockfile")
         parser.add_argument("--ignore-dirty", default=False, action='store_true',
                             help='When using the "scm" feature with "auto" values, capture the'
                                  ' revision and url even if there are uncommitted changes')
 
         args = parser.parse_args(*args)
         self._warn_python_version()
+        if args.lockfile_out and not args.lockfile:
+            raise ConanException("lockfile_out cannot be specified if lockfile is not defined")
+
         name, version, user, channel, _ = get_reference_fields(args.reference,
                                                                user_channel_input=True)
 
@@ -995,6 +1062,7 @@ class Command(object):
         return self._conan.export(path=args.path,
                                   name=name, version=version, user=user, channel=channel,
                                   keep_source=args.keep_source, lockfile=args.lockfile,
+                                  lockfile_out=args.lockfile_out,
                                   ignore_dirty=args.ignore_dirty)
 
     def remove(self, *args):
@@ -1285,8 +1353,11 @@ class Command(object):
                                                    remote_name=args.remote,
                                                    outdated=args.outdated)
                 # search is done for one reference
+                template = self._conan.app.cache.get_template(templates.SEARCH_TABLE_HTML,
+                                                              user_overrides=True)
                 self._outputer.print_search_packages(info["results"], ref, args.query,
-                                                     args.table, args.raw, outdated=args.outdated)
+                                                     args.table, args.raw, outdated=args.outdated,
+                                                     template=template)
             else:
                 if args.table:
                     raise ConanException("'--table' argument can only be used with a reference")
@@ -1334,7 +1405,9 @@ class Command(object):
         parser.add_argument("--skip-upload", action='store_true', default=False,
                             help='Do not upload anything, just run the checks and the compression')
         parser.add_argument("--force", action='store_true', default=False,
-                            help='Do not check conan recipe date, override remote with local')
+                            help='Ignore checks before uploading the recipe: it will bypass missing'
+                                 ' fields in the scm attribute and it will override remote recipe'
+                                 ' with local regardless of recipe date')
         parser.add_argument("--check", action='store_true', default=False,
                             help='Perform an integrity check, using the manifests, before upload')
         parser.add_argument('-c', '--confirm', default=False, action='store_true',
@@ -1699,17 +1772,24 @@ class Command(object):
         install_parser.add_argument('path', help='path to workspace definition file (it will look'
                                                  ' for a "conanws.yml" inside if a directory is'
                                                  ' given)')
-        _add_common_install_arguments(install_parser, build_help=_help_build_policies.format("never"))
+        _add_common_install_arguments(install_parser,
+                                      build_help=_help_build_policies.format("never"))
         install_parser.add_argument("-if", "--install-folder", action=OnceArgument,
                                     help="Folder where the workspace files will be created"
                                          " (default to current working directory)")
 
         args = parser.parse_args(*args)
+        if args.lockfile_out and not args.lockfile:
+            raise ConanException("lockfile_out cannot be specified if lockfile is not defined")
+
+        profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
+                                    options=args.options_build, env=args.env_build)
 
         if args.subcommand == "install":
-            self._conan.workspace_install(args.path, args.settings, args.options, args.env,
-                                          args.remote, args.build,
-                                          args.profile, args.update,
+            self._conan.workspace_install(args.path, args.settings_host, args.options_host,
+                                          args.env_host, args.remote, args.build,
+                                          args.profile_host, args.update,
+                                          profile_build=profile_build,
                                           install_folder=args.install_folder)
 
     def editable(self, *args):
@@ -1759,59 +1839,95 @@ class Command(object):
                 self._out.writeln("    Path: %s" % v["path"])
                 self._out.writeln("    Layout: %s" % v["layout"])
 
-    def graph(self, *args):
+    def frogarian(self, *args):
+        """
+        Conan The Frogarian
+        """
+        cmd_frogarian(self._out)
+
+    def lock(self, *args):
         """
         Generates and manipulates lock files.
         """
-        parser = argparse.ArgumentParser(description=self.graph.__doc__,
-                                         prog="conan graph",
+        parser = argparse.ArgumentParser(description=self.lock.__doc__,
+                                         prog="conan lock",
                                          formatter_class=SmartFormatter)
         subparsers = parser.add_subparsers(dest='subcommand', help='sub-command help')
         subparsers.required = True
 
         # create the parser for the "a" command
-        merge_cmd = subparsers.add_parser('update-lock', help='merge two lockfiles')
-        merge_cmd.add_argument('old_lockfile', help='path to previous lockfile')
-        merge_cmd.add_argument('new_lockfile', help='path to modified lockfile')
+        update_help = ("Complete missing information in the first lockfile with information "
+                       "defined in the second lockfile. Both lockfiles must represent the same "
+                       "graph, and have the same topology with the same identifiers, i.e. the "
+                       "second lockfile must be an evolution based on the first one")
+        update_cmd = subparsers.add_parser('update', help=update_help)
+        update_cmd.add_argument('old_lockfile', help='Path to lockfile to be updated')
+        update_cmd.add_argument('new_lockfile', help='Path to lockfile containing the new '
+                                'information that is going to be updated into the first lockfile')
 
         build_order_cmd = subparsers.add_parser('build-order', help='Returns build-order')
-        build_order_cmd.add_argument('lockfile', help='lockfile folder')
-        build_order_cmd.add_argument("-b", "--build", action=Extender, nargs="?",
-                                     help="nodes to build")
+        build_order_cmd.add_argument('lockfile', help='lockfile file')
         build_order_cmd.add_argument("--json", action=OnceArgument,
                                      help="generate output file in json format")
 
-        lock_cmd = subparsers.add_parser('lock', help='create a lockfile')
-        lock_cmd.add_argument("path_or_reference", help="Path to a folder containing a recipe"
-                              " (conanfile.py or conanfile.txt) or to a recipe file. e.g., "
-                              "./my_project/conanfile.txt. It could also be a reference")
-        lock_cmd.add_argument("-l", "--lockfile", action=OnceArgument,
-                              help="Path to lockfile to be created. If not specified 'conan.lock'"
-                              " will be created in current folder")
-        _add_common_install_arguments(lock_cmd, build_help="Packages to build from source",
+        clean_modified_cmd = subparsers.add_parser('clean-modified', help='Clean modified flags')
+        clean_modified_cmd.add_argument('lockfile', help='Path to the lockfile')
+
+        create_cmd = subparsers.add_parser('create',
+                                           help='Create a lockfile from a conanfile or a reference')
+        create_cmd.add_argument("path", nargs="?", help="Path to a conanfile")
+        create_cmd.add_argument("--name", action=OnceArgument,
+                                help='Provide a package name if not specified in conanfile')
+        create_cmd.add_argument("--version", action=OnceArgument,
+                                help='Provide a package version if not specified in conanfile')
+        create_cmd.add_argument("--user", action=OnceArgument,
+                                help='Provide a user')
+        create_cmd.add_argument("--channel", action=OnceArgument,
+                                help='Provide a channel')
+        create_cmd.add_argument("--reference", action=OnceArgument,
+                                help='Provide a package reference instead of a conanfile')
+        create_cmd.add_argument("-l", "--lockfile", action=OnceArgument,
+                                help="Path to lockfile to be used as a base")
+        create_cmd.add_argument("--base", action="store_true",
+                                help="Lock only recipe versions and revisions")
+        create_cmd.add_argument("--lockfile-out", action=OnceArgument, default="conan.lock",
+                                help="Filename of the created lockfile")
+        _add_common_install_arguments(create_cmd, build_help="Packages to build from source",
                                       lockfile=False)
 
         args = parser.parse_args(*args)
         self._warn_python_version()
 
-        if args.subcommand == "update-lock":
-            self._conan.update_lock(args.old_lockfile, args.new_lockfile)
+        if args.subcommand == "update":
+            self._conan.lock_update(args.old_lockfile, args.new_lockfile)
         elif args.subcommand == "build-order":
-            build_order = self._conan.build_order(args.lockfile, args.build)
+            build_order = self._conan.lock_build_order(args.lockfile)
             self._out.writeln(build_order)
             if args.json:
                 json_file = _make_abs_path(args.json)
                 save(json_file, json.dumps(build_order, indent=True))
-        elif args.subcommand == "lock":
-            self._conan.create_lock(args.path_or_reference,
+        elif args.subcommand == "clean-modified":
+            self._conan.lock_clean_modified(args.lockfile)
+        elif args.subcommand == "create":
+            profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
+                                        options=args.options_build, env=args.env_build)
+            profile_host = ProfileData(profiles=args.profile_host, settings=args.settings_host,
+                                       options=args.options_host, env=args.env_host)
+
+            self._conan.lock_create(path=args.path,
+                                    reference=args.reference,
+                                    name=args.name,
+                                    version=args.version,
+                                    user=args.user,
+                                    channel=args.channel,
+                                    profile_host=profile_host,
+                                    profile_build=profile_build,
                                     remote_name=args.remote,
-                                    settings=args.settings,
-                                    options=args.options,
-                                    env=args.env,
-                                    profile_names=args.profile,
                                     update=args.update,
+                                    build=args.build,
+                                    base=args.base,
                                     lockfile=args.lockfile,
-                                    build=args.build)
+                                    lockfile_out=args.lockfile_out)
 
     def _show_help(self):
         """
@@ -1822,7 +1938,7 @@ class Command(object):
                 ("Package development commands", ("source", "build", "package", "editable",
                                                   "workspace")),
                 ("Misc commands", ("profile", "remote", "user", "imports", "copy", "remove",
-                                   "alias", "download", "inspect", "help", "graph"))]
+                                   "alias", "download", "inspect", "help", "lock", "frogarian"))]
 
         def check_all_commands_listed():
             """Keep updated the main directory, raise if don't"""
@@ -1896,22 +2012,57 @@ class Command(object):
 
         self._out.writeln("")
 
+    @staticmethod
+    def _check_lockfile_args(args):
+        if args.lockfile and (args.profile_build or args.settings_build or args.options_build or
+                              args.env_build):
+            raise ConanException("Cannot use profile, settings, options or env 'build' when "
+                                 "using lockfile")
+        if args.lockfile and (args.profile_host or args.settings_host or args.options_host or
+                              args.env_host):
+            raise ConanException("Cannot use profile, settings, options or env 'host' when "
+                                 "using lockfile")
+        if args.lockfile_out and not args.lockfile:
+            raise ConanException("lockfile_out cannot be specified if lockfile is not defined")
+
     def _warn_python_version(self):
+        import textwrap
+
+        width = 70
         version = sys.version_info
         if version.major == 2:
-            self._out.writeln("*"*70, front=Color.BRIGHT_RED)
-            self._out.writeln("Python 2 will soon be deprecated. It is strongly "
-                              "recommended to use Python >= 3.5 with Conan:",
-                              front=Color.BRIGHT_RED)
-            self._out.writeln("https://docs.conan.io/en/latest/installation.html"
-                              "#python-2-deprecation-notice", front=Color.BRIGHT_RED)
-            self._out.writeln("*"*70, front=Color.BRIGHT_RED)
+            self._out.writeln("*"*width, front=Color.BRIGHT_RED)
+            msg = textwrap.fill("Python 2 is deprecated as of 01/01/2020 and Conan has"
+                                " stopped supporting it officially. We strongly recommend"
+                                " you to use Python >= 3.5. Conan will completely stop"
+                                " working with Python 2 in the following releases", width)
+            self._out.writeln(msg, front=Color.BRIGHT_RED)
+            self._out.writeln("*"*width, front=Color.BRIGHT_RED)
+            if os.environ.get('USE_UNSUPPORTED_CONAN_WITH_PYTHON_2', 0):
+                # IMPORTANT: This environment variable is not a silver buller. Python 2 is currently
+                # deprecated and some libraries we use as dependencies have stopped supporting it.
+                # Conan might fail to run and we are no longer fixing errors related to Python 2.
+                self._out.writeln(textwrap.fill("Python 2 deprecation notice has been bypassed"
+                                                " by envvar 'USE_UNSUPPORTED_CONAN_WITH_PYTHON_2'",
+                                                width))
+            else:
+                msg = textwrap.fill("If you really need to run Conan with Python 2 in your"
+                                    " CI without this interactive input, please contact us"
+                                    " at info@conan.io", width)
+                self._out.writeln(msg, front=Color.BRIGHT_RED)
+                self._out.writeln("*" * width, front=Color.BRIGHT_RED)
+                self._out.write(textwrap.fill("Understood the risk, keep going [y/N]: ", width,
+                                              drop_whitespace=False), front=Color.BRIGHT_RED)
+                ret = user_input().lower()
+                if ret not in ["yes", "ye", "y"]:
+                    self._out.writeln(textwrap.fill("Wise choice. Stopping here!", width))
+                    sys.exit(0)
         elif version.minor == 4:
-            self._out.writeln("*"*70, front=Color.BRIGHT_RED)
-            self._out.writeln("Python 3.4 support has been dropped. It is strongly "
-                              "recommended to use Python >= 3.5 with Conan",
+            self._out.writeln("*"*width, front=Color.BRIGHT_RED)
+            self._out.writeln(textwrap.fill("Python 3.4 support has been dropped. It is strongly "
+                                            "recommended to use Python >= 3.5 with Conan", width),
                               front=Color.BRIGHT_RED)
-            self._out.writeln("*"*70, front=Color.BRIGHT_RED)
+            self._out.writeln("*"*width, front=Color.BRIGHT_RED)
 
     def run(self, *args):
         """HIDDEN: entry point for executing commands, dispatcher to class
@@ -1943,6 +2094,11 @@ class Command(object):
                 self._out.writeln("")
                 self._print_similar(command)
                 raise ConanException("Unknown command %s" % str(exc))
+
+            if (command != "config" or
+               (command == "config" and len(args[0]) > 1 and args[0][1] != "install")) and \
+               is_config_install_scheduled(self._conan):
+                self._conan.config_install(None, None)
 
             method(args[0][1:])
         except KeyboardInterrupt as exc:
@@ -1985,47 +2141,89 @@ def _add_manifests_arguments(parser):
                         action=OnceArgument)
 
 
-def _add_common_install_arguments(parser, build_help, lockfile=True):
+def _add_common_install_arguments(parser, build_help, update_help=None, lockfile=True):
     if build_help:
         parser.add_argument("-b", "--build", action=Extender, nargs="?", help=build_help)
 
-    parser.add_argument("-e", "--env", nargs=1, action=Extender,
-                        help='Environment variables that will be set during the package build, '
-                             '-e CXX=/usr/bin/clang++')
-    parser.add_argument("-o", "--options", nargs=1, action=Extender,
-                        help='Define options values, e.g., -o Pkg:with_qt=True')
-    parser.add_argument("-pr", "--profile", default=None, action=Extender,
-                        help='Apply the specified profile to the install command')
     parser.add_argument("-r", "--remote", action=OnceArgument,
                         help='Look in the specified remote server')
-    parser.add_argument("-s", "--settings", nargs=1, action=Extender,
-                        help='Settings to build the package, overwriting the defaults. e.g., '
-                             '-s compiler=gcc')
+
+    if not update_help:
+        update_help = ("Will check the remote and in case a newer version and/or revision of "
+                       "the dependencies exists there, it will install those in the local cache. "
+                       "When using version ranges, it will install the latest version that "
+                       "satisfies the range. Also, if using revisions, it will update to the "
+                       "latest revision for the resolved version range.")
+
     parser.add_argument("-u", "--update", action='store_true', default=False,
-                        help="Check updates exist from upstream remotes")
+                        help=update_help)
     if lockfile:
-        parser.add_argument("-l", "--lockfile", action=OnceArgument, nargs='?', const=".",
-                            help="Path to a lockfile or folder containing 'conan.lock' file. "
-                            "Lockfile can be updated if packages change")
+        parser.add_argument("-l", "--lockfile", action=OnceArgument,
+                            help="Path to a lockfile")
+        parser.add_argument("--lockfile-out", action=OnceArgument,
+                            help="Filename of the updated lockfile")
+    _add_profile_arguments(parser)
 
 
-_help_build_policies = '''Optional, use it to choose if you want to build from sources:
+def _add_profile_arguments(parser):
+    # Arguments that can apply to the build or host machines (easily extend to target machine)
+    def environment_args(machine, short_suffix="", long_suffix=""):
+        parser.add_argument("-e{}".format(short_suffix),
+                            "--env{}".format(long_suffix),
+                            nargs=1, action=Extender,
+                            dest="env_{}".format(machine),
+                            help='Environment variables that will be set during the'
+                                 ' package build ({} machine).'
+                                 ' e.g.: -e{} CXX=/usr/bin/clang++'.format(machine, short_suffix))
 
-    --build            Build all from sources, do not use binary packages.
-    --build=never      Never build, use binary packages or fail if a binary package is not found.
-    --build=missing    Build from code if a binary package is not found.
-    --build=cascade    Will build from code all the nodes with some dependency being built
-                       (for any reason). Can be used together with any other build policy.
-                       Useful to make sure that any new change introduced in a dependency is
-                       incorporated by building again the package.
-    --build=outdated   Build from code if the binary is not built with the current recipe or
-                       when missing a binary package.
-    --build=[pattern]  Build always these packages from source, but never build the others.
-                       Allows multiple --build parameters. 'pattern' is a fnmatch file pattern
-                       of a package reference.
+    def options_args(machine, short_suffix="", long_suffix=""):
+        parser.add_argument("-o{}".format(short_suffix),
+                            "--options{}".format(long_suffix),
+                            nargs=1, action=Extender,
+                            dest="options_{}".format(machine),
+                            help='Define options values ({} machine), e.g.:'
+                                 ' -o{} Pkg:with_qt=true'.format(machine, short_suffix))
 
-    Default behavior: If you don't specify anything, it will be similar to '--build={}', but
-    package recipes can override it with their 'build_policy' attribute in the conanfile.py.
+    def profile_args(machine, short_suffix="", long_suffix=""):
+        parser.add_argument("-pr{}".format(short_suffix),
+                            "--profile{}".format(long_suffix),
+                            default=None, action=Extender,
+                            dest='profile_{}'.format(machine),
+                            help='Apply the specified profile to the {} machine'.format(machine))
+
+    def settings_args(machine, short_suffix="", long_suffix=""):
+        parser.add_argument("-s{}".format(short_suffix),
+                            "--settings{}".format(long_suffix),
+                            nargs=1, action=Extender,
+                            dest='settings_{}'.format(machine),
+                            help='Settings to build the package, overwriting the defaults'
+                                 ' ({} machine). e.g.: -s{} compiler=gcc'.format(machine,
+                                                                                 short_suffix))
+
+    for item_fn in [environment_args, options_args, profile_args, settings_args]:
+        item_fn("host", "", "")  # By default it is the HOST, the one we are building binaries for
+        item_fn("build", ":b", ":build")
+        item_fn("host", ":h", ":host")
+
+
+_help_build_policies = '''Optional, specify which packages to build from source. Combining multiple
+    '--build' options on one command line is allowed. For dependencies, the optional 'build_policy'
+    attribute in their conanfile.py takes precedence over the command line parameter.
+    Possible parameters:
+
+    --build            Force build for all packages, do not use binary packages.
+    --build=never      Disallow build for all packages, use binary packages or fail if a binary
+                       package is not found. Cannot be combined with other '--build' options.
+    --build=missing    Build packages from source whose binary package is not found.
+    --build=outdated   Build packages from source whose binary package was not generated from the
+                       latest recipe or is not found.
+    --build=cascade    Build packages from source that have at least one dependency being built from
+                       source.
+    --build=[pattern]  Build packages from source whose package reference matches the pattern. The
+                       pattern uses 'fnmatch' style wildcards.
+
+    Default behavior: If you omit the '--build' option, the 'build_policy' attribute in conanfile.py
+    will be used if it exists, otherwise the behavior is like '--build={}'.
 '''
 
 
@@ -2051,29 +2249,24 @@ def main(args):
         sys.stderr.write("Error in Conan initialization: {}".format(e))
         sys.exit(ERROR_GENERAL)
 
+    def ctrl_c_handler(_, __):
+        print('You pressed Ctrl+C!')
+        sys.exit(USER_CTRL_C)
+
+    def sigterm_handler(_, __):
+        print('Received SIGTERM!')
+        sys.exit(ERROR_SIGTERM)
+
+    def ctrl_break_handler(_, __):
+        print('You pressed Ctrl+Break!')
+        sys.exit(USER_CTRL_BREAK)
+
+    signal.signal(signal.SIGINT, ctrl_c_handler)
+    signal.signal(signal.SIGTERM, sigterm_handler)
+
+    if sys.platform == 'win32':
+        signal.signal(signal.SIGBREAK, ctrl_break_handler)
+
     command = Command(conan_api)
-    current_dir = get_cwd()
-    try:
-        import signal
-
-        def ctrl_c_handler(_, __):
-            print('You pressed Ctrl+C!')
-            sys.exit(USER_CTRL_C)
-
-        def sigterm_handler(_, __):
-            print('Received SIGTERM!')
-            sys.exit(ERROR_SIGTERM)
-
-        def ctrl_break_handler(_, __):
-            print('You pressed Ctrl+Break!')
-            sys.exit(USER_CTRL_BREAK)
-
-        signal.signal(signal.SIGINT, ctrl_c_handler)
-        signal.signal(signal.SIGTERM, sigterm_handler)
-
-        if sys.platform == 'win32':
-            signal.signal(signal.SIGBREAK, ctrl_break_handler)
-        error = command.run(args)
-    finally:
-        os.chdir(current_dir)
+    error = command.run(args)
     sys.exit(error)

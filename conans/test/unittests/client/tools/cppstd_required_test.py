@@ -2,7 +2,7 @@ import unittest
 from mock import mock
 from parameterized import parameterized
 
-from conans.test.utils.conanfile import MockConanfile, MockSettings
+from conans.test.utils.mocks import MockSettings, MockConanfile
 from conans.client.tools import OSInfo
 from conans.errors import ConanInvalidConfiguration, ConanException
 
@@ -89,6 +89,13 @@ class CheckMinCppStdTests(unittest.TestCase):
             check_min_cppstd(conanfile, "14", False)
         self.assertEqual("Could not obtain cppstd because there is no declared compiler in the "
                          "'settings' field of the recipe.", str(raises.exception))
+
+    def test_unknown_compiler_declared(self):
+        conanfile = self._create_conanfile("sun-cc", "5.13", "Linux", None, "libstdc++")
+        with self.assertRaises(ConanInvalidConfiguration) as raises:
+            check_min_cppstd(conanfile, "14", False)
+        self.assertEqual("Could not detect the current default cppstd for "
+                         "the compiler sun-cc-5.13.", str(raises.exception))
 
 
 class ValidMinCppstdTests(unittest.TestCase):

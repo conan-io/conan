@@ -8,10 +8,12 @@ class Generator(object):
 
     def __init__(self, conanfile):
         self.conanfile = conanfile
+        self.normalize = True
         self._deps_build_info = conanfile.deps_cpp_info
         self._deps_env_info = conanfile.deps_env_info
         self._env_info = conanfile.env_info
         self._deps_user_info = conanfile.deps_user_info
+        self._user_info_build = getattr(conanfile, 'user_info_build', None)
 
     @property
     def deps_build_info(self):
@@ -40,3 +42,6 @@ class Generator(object):
     @abstractproperty
     def filename(self):
         raise NotImplementedError()
+
+    def sorted_components(self, cpp_info):
+        return cpp_info._get_sorted_components()

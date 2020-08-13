@@ -1,12 +1,13 @@
 import os
 import platform
+import textwrap
 import unittest
 from textwrap import dedent
 
 from nose.plugins.attrib import attr
 from parameterized.parameterized import parameterized
 
-from conans.client.build.cmake import CMake
+from conans.client.build.cmake import CMakeBuildHelper
 from conans.model.version import Version
 from conans.test.utils.deprecation import catch_deprecation_warning
 from conans.test.utils.tools import TestClient
@@ -70,6 +71,29 @@ class CMakeFlagsTest(unittest.TestCase):
         self.assertNotIn("'", flags)
         self.assertNotIn('"', flags)
         return flags
+
+    @unittest.skipIf(platform.system() != "Windows", "Needs windows for vcvars")
+    def test_vcvars_priority(self):
+        # https://github.com/conan-io/conan/issues/5999
+        client = TestClient()
+        conanfile_vcvars = textwrap.dedent("""
+            import os
+            from conans import ConanFile, CMake
+
+            class HelloConan(ConanFile):
+                settings = "os", "compiler", "arch", "build_type"
+                def build(self):
+                    cmake = CMake(self, generator="Ninja", append_vcvars=True)
+                    cmake.configure()
+
+                # CAPTURING THE RUN METHOD
+                def run(self, cmd):
+                    self.output.info("PATH ENV VAR: %s" % os.getenv("PATH"))
+            """)
+
+        client.save({"conanfile.py": conanfile_vcvars})
+        client.run('create . pkg/1.0@ -e PATH="MyCustomPath"')
+        self.assertIn("pkg/1.0: PATH ENV VAR: MyCustomPath;", client.out)
 
     @parameterized.expand([(True, ), (False, )])
     def build_app_test(self, targets):
@@ -380,7 +404,7 @@ conan_set_std()
 
         def conan_set_std_branch():
             # Replicate logic from cmake_common definition of 'macro(conan_set_std)'
-            cmake_version = CMake.get_version()
+            cmake_version = CMakeBuildHelper.get_version()
             return cmake_version < Version("3.12")
 
         with catch_deprecation_warning(self):

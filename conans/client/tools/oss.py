@@ -1,19 +1,17 @@
+import math
 import multiprocessing
 import os
 import platform
 import subprocess
 import sys
-import tempfile
-from subprocess import PIPE
-
-import math
-import six
+import warnings
+from collections import namedtuple
 
 from conans.client.tools.env import environment_append
 from conans.client.tools.files import load, which
-from conans.errors import ConanException, CalledProcessErrorWithStderr
+from conans.errors import CalledProcessErrorWithStderr, ConanException
 from conans.model.version import Version
-from conans.util.log import logger
+from conans.util.runners import check_output_runner
 
 
 def args_to_string(args):
@@ -180,13 +178,27 @@ class OSInfo(object):
 
     @property
     def with_apt(self):
-        return self.is_linux and self.linux_distro in \
-                                 ("debian", "ubuntu", "knoppix", "linuxmint", "raspbian", "neon")
+        if not self.is_linux:
+            return False
+
+        apt_location = which('apt-get')
+        if apt_location:
+            # Check if we actually have the official apt package.
+            try:
+                output = check_output_runner([apt_location, 'moo'])
+            except CalledProcessErrorWithStderr:
+                return False
+            else:
+                # Yes, we have mooed today. :-) MOOOOOOOO.
+                return True
+        else:
+            return False
 
     @property
     def with_yum(self):
-        return self.is_linux and self.linux_distro in ("pidora", "fedora", "scientific", "centos", "redhat",
-                                                       "rhel", "xenserver", "amazon", "oracle")
+        return self.is_linux and self.linux_distro in ("pidora", "fedora", "scientific", "centos",
+                                                       "redhat", "rhel", "xenserver", "amazon",
+                                                       "oracle")
 
     @property
     def with_dnf(self):
@@ -197,7 +209,7 @@ class OSInfo(object):
         if self.is_linux:
             return self.linux_distro in ["arch", "manjaro"]
         elif self.is_windows and which('uname.exe'):
-            uname = check_output(['uname.exe', '-s'])
+            uname = check_output_runner(['uname.exe', '-s'])
             return uname.startswith('MSYS_NT') and which('pacman.exe')
         return False
 
@@ -346,7 +358,7 @@ class OSInfo(object):
     @staticmethod
     def get_aix_version():
         try:
-            ret = check_output("oslevel").strip()
+            ret = check_output_runner("oslevel").strip()
             return Version(ret)
         except Exception:
             return Version("%s.%s" % (platform.version(), platform.release()))
@@ -370,7 +382,7 @@ class OSInfo(object):
         try:
             # the uname executable is many times located in the same folder as bash.exe
             with environment_append({"PATH": [os.path.dirname(custom_bash_path)]}):
-                ret = check_output(command).strip().lower()
+                ret = check_output_runner(command).strip().lower()
                 return ret
         except Exception:
             return None
@@ -382,7 +394,7 @@ class OSInfo(object):
             raise ConanException("Command only for AIX operating system")
 
         try:
-            ret = check_output("getconf%s" % options).strip()
+            ret = check_output_runner("getconf%s" % options).strip()
             return ret
         except Exception:
             return None
@@ -420,8 +432,30 @@ class OSInfo(object):
             return None
 
 
-def cross_building(settings, self_os=None, self_arch=None, skip_x64_x86=False):
-    ret = get_cross_building_settings(settings, self_os, self_arch)
+def cross_building(conanfile=None, self_os=None, self_arch=None, skip_x64_x86=False, settings=None):
+    # Handle input arguments (backwards compatibility with 'settings' as first argument)
+    # TODO: This can be promoted to a decorator pattern for tools if we adopt 'conanfile' as the
+    #   first argument for all of them.
+    if conanfile and settings:
+        raise ConanException("Do not set both arguments, 'conanfile' and 'settings',"
+                             " to call cross_building function")
+
+    from conans.model.conan_file import ConanFile
+    if conanfile and not isinstance(conanfile, ConanFile):
+        return cross_building(settings=conanfile, self_os=self_os, self_arch=self_arch,
+                              skip_x64_x86=skip_x64_x86)
+
+    if settings:
+        warnings.warn("Argument 'settings' has been deprecated, use 'conanfile' instead")
+
+    if conanfile:
+        ret = get_cross_building_settings(conanfile, self_os, self_arch)
+    else:
+        # TODO: If Conan is using 'profile_build' here we don't have any information about it,
+        #   we are falling back to the old behavior (which is probably wrong here)
+        conanfile = namedtuple('_ConanFile', ['settings'])(settings)
+        ret = get_cross_building_settings(conanfile, self_os, self_arch)
+
     build_os, build_arch, host_os, host_arch = ret
 
     if skip_x64_x86 and host_os is not None and (build_os == host_os) and \
@@ -436,13 +470,17 @@ def cross_building(settings, self_os=None, self_arch=None, skip_x64_x86=False):
     return False
 
 
-def get_cross_building_settings(settings, self_os=None, self_arch=None):
-    build_os = self_os or settings.get_safe("os_build") or detected_os()
-    build_arch = self_arch or settings.get_safe("arch_build") or detected_architecture()
-    host_os = settings.get_safe("os")
-    host_arch = settings.get_safe("arch")
+def get_cross_building_settings(conanfile, self_os=None, self_arch=None):
+    os_build, arch_build = get_build_os_arch(conanfile)
+    if not hasattr(conanfile, 'settings_build'):
+        # Let it override from outside only if no 'profile_build' is used
+        os_build = self_os or os_build or detected_os()
+        arch_build = self_arch or arch_build or detected_architecture()
 
-    return build_os, build_arch, host_os, host_arch
+    os_host = conanfile.settings.get_safe("os")
+    arch_host = conanfile.settings.get_safe("arch")
+
+    return os_build, arch_build, os_host, arch_host
 
 
 def get_gnu_triplet(os_, arch, compiler=None):
@@ -518,9 +556,9 @@ def get_gnu_triplet(os_, arch, compiler=None):
                  "Darwin": "apple-darwin",
                  "Android": "linux-android",
                  "Macos": "apple-darwin",
-                 "iOS": "apple-darwin",
-                 "watchOS": "apple-darwin",
-                 "tvOS": "apple-darwin",
+                 "iOS": "apple-ios",
+                 "watchOS": "apple-watchos",
+                 "tvOS": "apple-tvos",
                  # NOTE: it technically must be "asmjs-unknown-emscripten" or
                  # "wasm32-unknown-emscripten", but it's not recognized by old config.sub versions
                  "Emscripten": "local-emscripten",
@@ -540,33 +578,20 @@ def get_gnu_triplet(os_, arch, compiler=None):
     return "%s-%s" % (machine, op_system)
 
 
-def check_output(cmd, folder=None, return_code=False, stderr=None):
-    tmp_file = tempfile.mktemp()
-    try:
-        # We don't want stderr to print warnings that will mess the pristine outputs
-        stderr = stderr or PIPE
-        cmd = cmd if isinstance(cmd, six.string_types) else subprocess.list2cmdline(cmd)
-        command = "{} > {}".format(cmd, tmp_file)
-        logger.info("Calling command: {}".format(command))
-        process = subprocess.Popen(command, shell=True, stderr=stderr, cwd=folder)
-        stdout, stderr = process.communicate()
-        logger.info("Return code: {}".format(int(process.returncode)))
+def get_build_os_arch(conanfile):
+    """ Returns the value for the 'os' and 'arch' settings for the build context """
+    if hasattr(conanfile, 'settings_build'):
+        return conanfile.settings_build.get_safe('os'), conanfile.settings_build.get_safe('arch')
+    else:
+        return conanfile.settings.get_safe('os_build'), conanfile.settings.get_safe('arch_build')
 
-        if return_code:
-            return process.returncode
 
-        if process.returncode:
-            # Only in case of error, we print also the stderr to know what happened
-            raise CalledProcessErrorWithStderr(process.returncode, cmd, output=stderr)
-
-        output = load(tmp_file)
-        try:
-            logger.info("Output: in file:{}\nstdout: {}\nstderr:{}".format(output, stdout, stderr))
-        except Exception as exc:
-            logger.error("Error logging command output: {}".format(exc))
-        return output
-    finally:
-        try:
-            os.unlink(tmp_file)
-        except Exception:
-            pass
+def get_target_os_arch(conanfile):
+    """ Returns the value for the 'os' and 'arch' settings for the target context """
+    if hasattr(conanfile, 'settings_target'):
+        settings_target = conanfile.settings_target
+        if settings_target is not None:
+            return settings_target.get_safe('os'), settings_target.get_safe('arch')
+        return None, None
+    else:
+        return conanfile.settings.get_safe('os_target'), conanfile.settings.get_safe('arch_target')

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 import os
 
-from conans.client.tools.oss import check_output
+from conans.util.runners import check_output_runner
 
 
 def is_apple_os(os_):
@@ -32,13 +32,11 @@ def apple_sdk_name(settings):
                 'iOS': 'iphonesimulator',
                 'watchOS': 'watchsimulator',
                 'tvOS': 'appletvsimulator'}.get(str(os_))
-    elif str(arch).startswith('arm'):
-        return {'iOS': 'iphoneos',
-                'watchOS': 'watchos',
-                'tvOS': 'appletvos'}.get(str(os_))
     else:
-        return None
-
+        return {'Macos': 'macosx',
+                'iOS': 'iphoneos',
+                'watchOS': 'watchos',
+                'tvOS': 'appletvos'}.get(str(os_), None)
 
 def apple_deployment_target_env(os_, os_version):
     """environment variable name which controls deployment target"""
@@ -73,7 +71,7 @@ class XCRun(object):
 
     def _invoke(self, args):
         def cmd_output(cmd):
-            return check_output(cmd).strip()
+            return check_output_runner(cmd).strip()
 
         command = ['xcrun', '-find']
         if self.sdk:

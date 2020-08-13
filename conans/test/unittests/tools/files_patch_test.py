@@ -7,7 +7,8 @@ from parameterized.parameterized import parameterized
 from conans.client.graph.python_requires import ConanPythonRequire
 from conans.client.loader import ConanFileLoader
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient, TestBufferConanOutput, test_profile
+from conans.test.utils.tools import TestClient, test_profile
+from conans.test.utils.mocks import TestBufferConanOutput
 from conans.util.files import save, load
 
 base_conanfile = '''
@@ -253,7 +254,7 @@ class ToolsFilesPatchTest(unittest.TestCase):
         foo_content = client.load("foo.txt")
         self.assertIn(dedent("""For us, there is no spring.
 Just the wind that smells fresh before the storm."""), foo_content)
-        self.assertIn("Running build()", client.out)
+        self.assertIn("Calling build()", client.out)
         self.assertNotIn("Warning", client.out)
 
     def _save_files(self, file_content):

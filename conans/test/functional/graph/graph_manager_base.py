@@ -23,7 +23,8 @@ from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
 from conans.test.unittests.model.transitive_reqs_test import MockRemoteManager
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestBufferConanOutput, GenConanfile
+from conans.test.utils.tools import GenConanfile
+from conans.test.utils.mocks import TestBufferConanOutput
 from conans.util.files import save
 
 
@@ -74,7 +75,7 @@ class GraphManagerTest(unittest.TestCase):
     def alias_cache(self, alias, target):
         ref = ConanFileReference.loads(alias)
         conanfile = textwrap.dedent("""
-            from conans import ConanFile   
+            from conans import ConanFile
             class Alias(ConanFile):
                 alias = "%s"
             """ % target)
@@ -128,7 +129,7 @@ class GraphManagerTest(unittest.TestCase):
         build_mode = []  # Means build all
         ref = ref or ConanFileReference(None, None, None, None, validate=False)
         options = OptionsValues()
-        graph_info = GraphInfo(profile, options, root_ref=ref)
+        graph_info = GraphInfo(profile, options=options, root_ref=ref)
         app = self._get_app()
         deps_graph = app.graph_manager.load_graph(path, create_ref, graph_info, build_mode,
                                                   check_updates, update, remotes, recorder)
@@ -160,12 +161,12 @@ class GraphManagerTest(unittest.TestCase):
         for dep in deps:
             self.assertEqual(conanfile.requires[dep.name].ref, dep.ref)
 
-        self.assertEqual(closure, node.public_closure)
+        self.assertEqual(closure, list(node.public_closure))
         libs = []
         envs = []
         for n in closure:
             libs.append("mylib%s%slib" % (n.ref.name, n.ref.version))
             envs.append("myenv%s%senv" % (n.ref.name, n.ref.version))
-        self.assertEqual(conanfile.deps_cpp_info.libs, libs)
+        self.assertListEqual(list(conanfile.deps_cpp_info.libs), libs)
         env = {"MYENV": envs} if envs else {}
         self.assertEqual(conanfile.deps_env_info.vars, env)

@@ -4,6 +4,7 @@ from collections import OrderedDict
 
 from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL
 from conans.client.graph.graph import RECIPE_EDITABLE
+from conans.client.graph.grapher import Grapher
 from conans.client.installer import build_id
 from conans.client.printer import Printer
 from conans.model.ref import ConanFileReference, PackageReference
@@ -12,6 +13,7 @@ from conans.unicode import get_cwd
 from conans.util.dates import iso8601_to_str
 from conans.util.env_reader import get_env
 from conans.util.files import save
+from conans import __version__ as client_version
 
 
 class CommandOutputer(object):
@@ -141,9 +143,8 @@ class CommandOutputer(object):
                 package_layout = self._cache.package_layout(ref, conanfile.short_paths)
                 item_data["export_folder"] = package_layout.export()
                 item_data["source_folder"] = package_layout.source()
-                # @todo: check if this is correct or if it must always be package_id
-                package_id = build_id(conanfile) or package_id
-                pref = PackageReference(ref, package_id)
+                pref_build_id = build_id(conanfile) or package_id
+                pref = PackageReference(ref, pref_build_id)
                 item_data["build_folder"] = package_layout.build(pref)
 
                 pref = PackageReference(ref, package_id)
@@ -170,6 +171,7 @@ class CommandOutputer(object):
             _add_if_exists("homepage")
             _add_if_exists("license", as_list=True)
             _add_if_exists("author")
+            _add_if_exists("description")
             _add_if_exists("topics", as_list=True)
 
             if isinstance(ref, ConanFileReference):
@@ -194,7 +196,7 @@ class CommandOutputer(object):
 
             depends = node.neighbors()
             requires = [d for d in depends if d not in build_time_nodes]
-            build_requires = [d for d in depends if d in build_time_nodes]
+            build_requires = [d for d in depends if d in build_time_nodes]  # TODO: May use build_require_context information
 
             if requires:
                 item_data["requires"] = [repr(d.ref.copy_clear_rev()) for d in requires]
@@ -213,18 +215,25 @@ class CommandOutputer(object):
                                          show_paths=show_paths,
                                          show_revisions=self._cache.config.revisions_enabled)
 
-    def info_graph(self, graph_filename, deps_graph, cwd):
-        if graph_filename.endswith(".html"):
-            from conans.client.graph.grapher import ConanHTMLGrapher
-            grapher = ConanHTMLGrapher(deps_graph, self._cache.cache_folder)
-        else:
-            from conans.client.graph.grapher import ConanGrapher
-            grapher = ConanGrapher(deps_graph)
-
-        cwd = os.path.abspath(cwd or get_cwd())
+    def info_graph(self, graph_filename, deps_graph, cwd, template):
+        graph = Grapher(deps_graph)
         if not os.path.isabs(graph_filename):
             graph_filename = os.path.join(cwd, graph_filename)
-        grapher.graph_file(graph_filename)
+
+        # FIXME: For backwards compatibility we should prefer here local files (and we are coupling
+        #   logic here with the templates).
+        assets = {}
+        vis_js = os.path.join(self._cache.cache_folder, "vis.min.js")
+        if os.path.exists(vis_js):
+            assets['vis_js'] = vis_js
+        vis_css = os.path.join(self._cache.cache_folder, "vis.min.css")
+        if os.path.exists(vis_css):
+            assets['vis_css'] = vis_css
+
+        template_folder = os.path.dirname(template.filename)
+        save(graph_filename,
+             template.render(graph=graph, assets=assets, base_template_path=template_folder,
+                             version=client_version))
 
     def json_info(self, deps_graph, json_output, cwd, show_paths):
         data = self._grab_info_data(deps_graph, grab_paths=show_paths)
@@ -235,9 +244,9 @@ class CommandOutputer(object):
         printer.print_search_recipes(search_info, pattern, raw, all_remotes_search)
 
     def print_search_packages(self, search_info, reference, packages_query, table, raw,
-                              outdated=False):
+                              template, outdated=False):
         if table:
-            html_binary_graph(search_info, reference, table)
+            html_binary_graph(search_info, reference, table, template)
         else:
             printer = Printer(self._output)
             printer.print_search_packages(search_info, reference, packages_query, raw,

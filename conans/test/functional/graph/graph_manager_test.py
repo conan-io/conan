@@ -37,13 +37,13 @@ class TransitiveGraphTest(GraphManagerTest):
         self.assertEqual(len(libb.dependencies), 0)
         self.assertEqual(len(libb.dependants), 1)
         self.assertEqual(libb.inverse_neighbors(), [app])
-        self.assertEqual(libb.ancestors, {app.ref.name})
+        self.assertEqual(list(libb.ancestors), [app])
         self.assertEqual(libb.recipe, RECIPE_INCACHE)
 
-        self.assertEqual(app.public_closure, [libb])
-        self.assertEqual(libb.public_closure, [])
-        self.assertEqual(app.public_deps, {"app": app, "libb": libb})
-        self.assertEqual(libb.public_deps, app.public_deps)
+        self.assertEqual(list(app.public_closure), [libb])
+        self.assertEqual(list(libb.public_closure), [])
+        self.assertEqual(list(app.public_deps), [app, libb])
+        self.assertEqual(list(libb.public_deps), list(app.public_deps))
 
     def test_transitive_two_levels(self):
         # app -> libb0.1 -> liba0.1
@@ -203,7 +203,10 @@ class TransitiveGraphTest(GraphManagerTest):
 
         consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "libc/0.1"])
 
-        with six.assertRaisesRegex(self, ConanException, "Requirement liba/0.2 conflicts"):
+        with six.assertRaisesRegex(self, ConanException, "Conflict in libc/0.1:\n"
+            "    'libc/0.1' requires 'liba/0.2' while 'libb/0.1' requires 'liba/0.1'.\n"
+            "    To fix this conflict you need to override the package 'liba' in your root "
+            "package."):
             self.build_consumer(consumer)
 
     def test_loop(self):
@@ -216,14 +219,14 @@ class TransitiveGraphTest(GraphManagerTest):
         consumer = self.recipe_consumer("app/0.1", ["libc/0.1"])
 
         with six.assertRaisesRegex(self, ConanException,
-                                   "Loop detected: 'liba/0.1' requires 'libc/0.1'"):
+                                   "Loop detected in context host: 'liba/0.1' requires 'libc/0.1'"):
             self.build_consumer(consumer)
 
     def test_self_loop(self):
         self.recipe_cache("liba/0.1")
         consumer = self.recipe_consumer("liba/0.2", ["liba/0.1"])
         with six.assertRaisesRegex(self, ConanException,
-                                   "Loop detected: 'liba/0.2' requires 'liba/0.1'"):
+                                   "Loop detected in context host: 'liba/0.2' requires 'liba/0.1'"):
             self.build_consumer(consumer)
 
     @parameterized.expand([("recipe", ), ("profile", )])
@@ -283,8 +286,9 @@ class TransitiveGraphTest(GraphManagerTest):
         self._cache_recipe(lib_ref, GenConanfile().with_name("lib").with_version("0.1")
                                                   .with_build_require(tool_ref))
 
-        with six.assertRaisesRegex(self, ConanException, "Loop detected: 'tool/0.1@user/testing' "
-                                   "requires 'lib/0.1@user/testing'"):
+        with six.assertRaisesRegex(self, ConanException, "Loop detected in context host:"
+                                                         " 'tool/0.1@user/testing' requires"
+                                                         " 'lib/0.1@user/testing'"):
             self.build_graph(GenConanfile().with_name("app").with_version("0.1")
                                            .with_require(lib_ref))
 
@@ -344,7 +348,11 @@ class TransitiveGraphTest(GraphManagerTest):
                                                   .with_build_require(gtest_ref))
 
         with six.assertRaisesRegex(self, ConanException,
-                                   "Requirement zlib/0.2@user/testing conflicts"):
+                                   "Conflict in gtest/0.1@user/testing:\n"
+                                   "    'gtest/0.1@user/testing' requires 'zlib/0.2@user/testing' "
+                                   "while 'lib/0.1@user/testing' requires 'zlib/0.1@user/testing'."
+                                   "\n    To fix this conflict you need to override the package "
+                                   "'zlib' in your root package."):
             self.build_graph(GenConanfile().with_name("app").with_version("0.1")
                                            .with_require(lib_ref))
 
@@ -593,7 +601,11 @@ class TransitiveGraphTest(GraphManagerTest):
         self._cache_recipe(libc_ref, GenConanfile().with_name("libc").with_version("0.1")
                                                    .with_require(liba_ref2))
         with six.assertRaisesRegex(self, ConanException,
-                                   "Requirement liba/0.2@user/testing conflicts"):
+                                   "Conflict in libc/0.1@user/testing:\n"
+                                   "    'libc/0.1@user/testing' requires 'liba/0.2@user/testing' "
+                                   "while 'libb/0.1@user/testing' requires 'liba/0.1@user/testing'."
+                                   "\n    To fix this conflict you need to override the package "
+                                   "'liba' in your root package."):
             self.build_graph(GenConanfile().with_name("app").with_version("0.1")
                                            .with_require(libb_ref, private=True)
                                            .with_require(libc_ref, private=True))
@@ -608,8 +620,9 @@ class TransitiveGraphTest(GraphManagerTest):
                                                    .with_require(lib_ref, private=True))
         self._cache_recipe(lib_ref, GenConanfile().with_name("lib").with_version("0.1")
                                                   .with_require(tool_ref, private=True))
-        with six.assertRaisesRegex(self, ConanException, "Loop detected: 'tool/0.1@user/testing' "
-                                   "requires 'lib/0.1@user/testing'"):
+        with six.assertRaisesRegex(self, ConanException, "Loop detected in context host:"
+                                                         " 'tool/0.1@user/testing'"
+                                                         " requires 'lib/0.1@user/testing'"):
             self.build_graph(GenConanfile().with_name("app").with_version("0.1")
                                            .with_require(lib_ref))
 
@@ -659,7 +672,11 @@ class TransitiveGraphTest(GraphManagerTest):
                                                       .with_require(grass01_ref))
 
         with six.assertRaisesRegex(self, ConanException,
-                                   "Requirement grass/0.2@user/testing conflicts"):
+                                   "Conflict in cheetah/0.1:\n"
+            "    'cheetah/0.1' requires 'grass/0.2@user/testing' while 'gazelle/0.1@user/testing'"
+            " requires 'grass/0.1@user/testing'.\n"
+            "    To fix this conflict you need to override the package 'grass' in your root"
+            " package."):
             self.build_graph(GenConanfile().with_name("cheetah").with_version("0.1")
                                            .with_require(gazelle_ref)
                                            .with_require(grass02_ref, private=True))
@@ -678,7 +695,11 @@ class TransitiveGraphTest(GraphManagerTest):
                                                       .with_require(grass01_ref))
 
         with six.assertRaisesRegex(self, ConanException,
-                                   "Requirement grass/0.2@user/testing conflicts"):
+                                   "Conflict in cheetah/0.1:\n"
+                                   "    'cheetah/0.1' requires 'grass/0.2@user/testing' while "
+                                   "'gazelle/0.1@user/testing' requires 'grass/0.1@user/testing'.\n"
+                                   "    To fix this conflict you need to override the package "
+                                   "'grass' in your root package."):
             self.build_graph(GenConanfile().with_name("cheetah").with_version("0.1")
                                            .with_require(gazelle_ref)
                                            .with_build_require(grass02_ref))
@@ -706,8 +727,8 @@ class TransitiveGraphTest(GraphManagerTest):
 
         self._check_node(cheetah, "cheetah/0.1@", deps=[gazelle], build_deps=[grass2],
                          dependents=[], closure=[gazelle, grass])
-        self.assertEqual(cheetah.conanfile.deps_cpp_info.libs,
-                         ['mylibgazelle0.1lib', 'mylibgrass0.1lib'])
+        self.assertListEqual(list(cheetah.conanfile.deps_cpp_info.libs),
+                             ['mylibgazelle0.1lib', 'mylibgrass0.1lib'])
 
     @parameterized.expand([(True, ), (False, )])
     def test_dont_skip_private(self, private_first):

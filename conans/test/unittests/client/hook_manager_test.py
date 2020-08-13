@@ -7,7 +7,7 @@ from conans import load
 from conans.client.hook_manager import HookManager
 from conans.errors import ConanException
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestBufferConanOutput
+from conans.test.utils.mocks import TestBufferConanOutput
 from conans.util.files import save
 
 my_hook = """

@@ -5,10 +5,10 @@ import textwrap
 import unittest
 
 from conans.client import tools
-from conans.client.tools.oss import check_output
 from conans.paths import CONANFILE
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import TestClient, TestServer
+from conans.util.runners import check_output_runner
 
 
 class RunEnvironmentTest(unittest.TestCase):
@@ -31,7 +31,7 @@ class RunEnvironmentTest(unittest.TestCase):
                 version = "0.1"
                 build_policy = "missing"
                 requires = "Hello0/0.1@lasote/stable"
-            
+
                 def build(self):
                     run_env = RunEnvironment(self)
                     with tools.environment_append(run_env.vars):
@@ -65,7 +65,7 @@ class RunEnvironmentSharedTest(unittest.TestCase):
             #else
               #define HELLO_EXPORT
             #endif
-            
+
             HELLO_EXPORT void hello();
         """)
 
@@ -92,7 +92,7 @@ class RunEnvironmentSharedTest(unittest.TestCase):
                     cmake = CMake(self)
                     cmake.configure()
                     cmake.build()
-            
+
                 def package(self):
                     self.copy("*say_hello.exe", dst="bin", keep_path=False)
                     self.copy("*say_hello", dst="bin", keep_path=False)
@@ -129,12 +129,46 @@ class RunEnvironmentSharedTest(unittest.TestCase):
         client.run("build .")
         self.assertIn("Hello Tool!", client.out)
 
+    @unittest.skipUnless(platform.system() == "Darwin", "Check SIP protection shell=False")
+    def test_command_as_list(self):
+        client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
+
+        reuse = textwrap.dedent("""
+            from conans import ConanFile
+            class HelloConan(ConanFile):
+                requires = "Pkg/0.1@lasote/testing"
+                options = {"cmd_list": [True, False]}
+                default_options = {"cmd_list": False}
+
+                def build(self):
+                    if self.options.cmd_list:
+                        self.run(["say_hello",], run_environment=True)
+                    else:
+                        self.run("say_hello", run_environment=True)
+        """)
+
+        client.save({"conanfile.py": reuse}, clean_first=True)
+        client.run("config set log.print_run_commands=1")
+
+        # Using a string, a new shell is expanded, DYLD_... paths has to be informed
+        client.run("install . -o cmd_list=False")
+        client.run("build .")
+        self.assertIn("> DYLD_LIBRARY_PATH=", client.out)
+        self.assertIn("Hello Tool!", client.out)
+
+        # Using a list, no new shell, DYLD_... are already in the environment
+        client.run("install . -o cmd_list=True")
+        client.run("build .")
+        self.assertNotIn("DYLD_LIBRARY_PATH", client.out)
+        self.assertIn("Hello Tool!", client.out)
+
     @unittest.skipIf(platform.system() == "Darwin", "SIP protection (read comment)")
     def test_with_tools_run_environment(self):
         # This test is excluded from OSX, because of the SIP protection. CMake helper will
         # launch a subprocess with shell=True, which CLEANS the DYLD_LIBRARY_PATH. Injecting its
         # value via run_environment=True doesn't work, because it prepends its value to:
-        # command = "cd [folder] && cmake [cmd]" => "DYLD_LIBRARY_PATH=[path] cd [folder] && cmake [cmd]"
+        # command = "cd [folder] && cmake [cmd]" =>
+        #                 "DYLD_LIBRARY_PATH=[path] cd [folder] && cmake [cmd]"
         # and then only applies to the change directory "cd"
         # If CMake binary is in user folder, it is not under SIP, and it can work. For cmake
         # installed in system folders, then no possible form of "DYLD_LIBRARY_PATH=[folders] cmake"
@@ -177,10 +211,10 @@ class RunEnvironmentSharedTest(unittest.TestCase):
                 command = "activate_run.bat && say_hello"
             else:
                 # It is not necessary to use the DYLD_LIBRARY_PATH in OSX because the activate_run.sh
-                # will work perfectly. It is inside the bash, so the loader will use DYLD_LIBRARY_PATH
+                # will work perfectly. It is inside bash, so the loader will use DYLD_LIBRARY_PATH
                 # values. It also works in command line with export DYLD_LIBRARY_PATH=[path] and then
                 # running, or in the same line "$ DYLD_LIBRARY_PATH=[path] say_hello"
                 command = "bash -c 'source activate_run.sh && say_hello'"
 
-            output = check_output(command)
+            output = check_output_runner(command)
             self.assertIn("Hello Tool!", output)

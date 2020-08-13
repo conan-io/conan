@@ -3,8 +3,8 @@ import unittest
 
 from conans import tools
 from conans.client.runner import ConanRunner
-from conans.test.utils.tools import TestClient, TestBufferConanOutput
-
+from conans.test.utils.tools import TestClient
+from conans.test.utils.mocks import TestBufferConanOutput
 
 CONAN_RECIPE = """
 from conans import ConanFile, CMake
@@ -51,7 +51,7 @@ class CMakeGeneratorTest(unittest.TestCase):
                      "dummy.cpp": CPP_CONTENT,
                      "my_profile": PROFILE.format(os_build=os_build)
                      })
-        client.run("install . -p my_profile")
+        client.run("install . -pr my_profile")
         client.run("build .")
 
         if generator:

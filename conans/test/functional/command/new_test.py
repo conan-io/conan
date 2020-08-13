@@ -2,13 +2,16 @@ import os
 import textwrap
 import unittest
 
+from parameterized import parameterized
+
+from conans import __version__ as client_version
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
 from conans.tools import save
 from conans.util.files import load
 
 
-class NewTest(unittest.TestCase):
+class NewCommandTest(unittest.TestCase):
 
     def template_test(self):
         client = TestClient()
@@ -16,6 +19,7 @@ class NewTest(unittest.TestCase):
             class {{package_name}}Conan(ConanFile):
                 name = "{{name}}"
                 version = "{{version}}"
+                conan_version = "{{conan_version}}"
         """)
         save(os.path.join(client.cache_folder, "templates/mytemplate.py"), template1)
         client.run("new hello/0.1 --template=mytemplate.py")
@@ -23,6 +27,39 @@ class NewTest(unittest.TestCase):
         self.assertIn("class HelloConan(ConanFile):", conanfile)
         self.assertIn('name = "hello"', conanfile)
         self.assertIn('version = "0.1"', conanfile)
+        self.assertIn('conan_version = "{}"'.format(client_version), conanfile)
+
+    def template_dir_test(self):
+        client = TestClient()
+        template_dir = "templates/command/new/t_dir"
+        template_recipe = textwrap.dedent("""
+            class {{package_name}}Conan(ConanFile):
+                name = "{{name}}"
+                version = "{{version}}"
+                conan_version = "{{conan_version}}"
+        """)
+        save(os.path.join(client.cache_folder, template_dir + "/conanfile.py"), template_recipe)
+
+        template_txt = textwrap.dedent("""
+            package_name={{package_name}}
+            name={{name}}
+            version={{version}}
+            conan_version={{conan_version}}
+        """)
+        save(os.path.join(client.cache_folder, template_dir + "/{{name}}/hello.txt"), template_txt)
+
+        client.run("new hello/0.1 --template=t_dir")
+        conanfile = client.load("conanfile.py")
+        self.assertIn("class HelloConan(ConanFile):", conanfile)
+        self.assertIn('name = "hello"', conanfile)
+        self.assertIn('version = "0.1"', conanfile)
+        self.assertIn('conan_version = "{}"'.format(client_version), conanfile)
+
+        hellotxt = client.load("hello/hello.txt")
+        self.assertIn("package_name=Hello", hellotxt)
+        self.assertIn("name=hello", hellotxt)
+        self.assertIn('version=0.1', hellotxt)
+        self.assertIn("conan_version={}".format(client_version), hellotxt)
 
     def template_test_package_test(self):
         client = TestClient()
@@ -55,8 +92,10 @@ class NewTest(unittest.TestCase):
         client = TestClient()
         client.run("new hello/0.1 -m=mytemplate.py", assert_error=True)
         self.assertIn("ERROR: Template doesn't exist", client.out)
+        client.run("new hello/0.1 -m=mytemplate", assert_error=True)
+        self.assertIn("ERROR: Template doesn't exist", client.out)
         client.run("new hello/0.1 --template=mytemplate.py --bare", assert_error=True)
-        self.assertIn("ERROR: 'template' argument incompatible", client.out)
+        self.assertIn("ERROR: 'template' is incompatible", client.out)
         client.run("new hello/0.1 --template", assert_error=True)
         self.assertIn("ERROR: Exiting with code: 2", client.out)
 
@@ -87,15 +126,21 @@ class NewTest(unittest.TestCase):
         self.assertIn("ERROR: Value provided for channel, 'u' (type str), is too short. Valid "
                       "names must contain at least 2 characters.", client.out)
 
-    def new_dash_test(self):
+    @parameterized.expand([("My-Package", "MyPackage"),
+                           ("my-package", "MyPackage"),
+                           ("my_package", "MyPackage"),
+                           ("my.Package", "MyPackage"),
+                           ("my+package", "MyPackage")])
+    def naming_test(self, package_name, python_class_name):
         """ packages with dash
         """
         client = TestClient()
-        client.run('new My-Package/1.3@myuser/testing -t')
+        client.run('new {}/1.3@myuser/testing -t'.format(package_name))
         root = client.current_folder
         self.assertTrue(os.path.exists(os.path.join(root, "conanfile.py")))
         content = load(os.path.join(root, "conanfile.py"))
-        self.assertIn('name = "My-Package"', content)
+        self.assertIn('class {}Conan(ConanFile):'.format(python_class_name), content)
+        self.assertIn('name = "{}"'.format(package_name), content)
         self.assertIn('version = "1.3"', content)
         self.assertTrue(os.path.exists(os.path.join(root, "test_package/conanfile.py")))
         self.assertTrue(os.path.exists(os.path.join(root, "test_package/CMakeLists.txt")))
@@ -103,7 +148,7 @@ class NewTest(unittest.TestCase):
         # assert they are correct at least
         client.run("export . myuser/testing")
         client.run("search")
-        self.assertIn("My-Package/1.3@myuser/testing", client.out)
+        self.assertIn("{}/1.3@myuser/testing".format(package_name), client.out)
 
     def new_header_test(self):
         client = TestClient()

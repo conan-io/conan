@@ -6,7 +6,7 @@ from conans.model.build_info import CppInfo
 from conans.model.conan_file import ConanFile
 from conans.model.env_info import EnvValues
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestBufferConanOutput
+from conans.test.utils.mocks import TestBufferConanOutput
 from conans.errors import ConanException
 
 
@@ -40,12 +40,11 @@ class CMakePathsGeneratorTest(unittest.TestCase):
         conanfile = ConanFile(TestBufferConanOutput(), None)
         conanfile.initialize(settings, EnvValues())
         tmp = temp_folder()
-        cpp_info = CppInfo(tmp)
-        cpp_info.name = "MyLib"
+        cpp_info = CppInfo("MyLib", tmp)
         custom_dir = os.path.join(tmp, "custom_build_dir")
         os.mkdir(custom_dir)
         cpp_info.builddirs.append(os.path.join(tmp, "custom_build_dir"))
-        conanfile.deps_cpp_info.update(cpp_info, "MyLib")
+        conanfile.deps_cpp_info.add("MyLib", cpp_info)
 
         generator = CMakePathsGenerator(conanfile)
         path = tmp.replace('\\', '/')
@@ -62,9 +61,9 @@ class CMakePathsGeneratorTest(unittest.TestCase):
         conanfile = ConanFile(TestBufferConanOutput(), None)
         conanfile.initialize(settings, EnvValues())
         tmp = temp_folder()
-        cpp_info = CppInfo(tmp)
+        cpp_info = CppInfo("pkg_reference_name", tmp)
         cpp_info.name = "PkgCMakeName"
-        conanfile.deps_cpp_info.update(cpp_info, "pkg_reference_name")
+        conanfile.deps_cpp_info.add("pkg_reference_name", cpp_info)
         generator = CMakePathsGenerator(conanfile)
         self.assertIn('set(CONAN_PKGCMAKENAME_ROOT', generator.content)
 
@@ -73,9 +72,9 @@ class CMakePathsGeneratorTest(unittest.TestCase):
         conanfile = ConanFile(TestBufferConanOutput(), None)
         conanfile.initialize(settings, EnvValues())
         tmp = temp_folder()
-        cpp_info = CppInfo(tmp)
+        cpp_info = CppInfo("pkg_reference_name", tmp)
         cpp_info.name = "PkgCMakeName"
         cpp_info.names["cmake_paths"] = "MyCMakePathsPkgName"
-        conanfile.deps_cpp_info.update(cpp_info, "pkg_reference_name")
+        conanfile.deps_cpp_info.add("pkg_reference_name", cpp_info)
         generator = CMakePathsGenerator(conanfile)
         self.assertIn('set(CONAN_MYCMAKEPATHSPKGNAME_ROOT', generator.content)

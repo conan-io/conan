@@ -3,7 +3,7 @@ import platform
 import unittest
 
 from conans.paths import CONANFILE
-from conans.test.utils.tools import TestClient
+from conans.test.utils.tools import TestClient, GenConanfile
 
 tool_conanfile = """
 import os
@@ -90,11 +90,8 @@ build_require/0.1@user/testing
 class Pkg(ConanFile):
     requires = "MyLib/0.1@user/testing"
 """
-        test_conanfile = """from conans import ConanFile
-class Pkg(ConanFile):
-    def test(self):
-        pass
-"""
+        test_conanfile = GenConanfile().with_test("pass")
+
         client.save({"conanfile.py": conanfile,
                      "test_package/conanfile.py": test_conanfile,
                      "myprofile": profile})
@@ -111,15 +108,11 @@ class Pkg(ConanFile):
 
     def recursive_build_requires_test(self):
         client = TestClient()
-        conanfile = """from conans import ConanFile
-class Pkg(ConanFile):
-    pass
-"""
         profile = """[build_requires]
 build1/0.1@user/testing
 build2/0.1@user/testing
 """
-        client.save({"conanfile.py": conanfile,
+        client.save({"conanfile.py": GenConanfile(),
                      "myprofile": profile})
         client.run("create . build1/0.1@user/testing")
         client.run("create . build2/0.1@user/testing")
@@ -186,11 +179,10 @@ build2/0.1@user/testing
                      "profile.txt": profile}, clean_first=True)
 
         client.run("install . --profile ./profile.txt", assert_error=True)
-        self.assertIn("ERROR: Missing prebuilt package for 'PythonTool/0.1@lasote/stable'",
-                      client.out)
+        self.assertIn("ERROR: Missing prebuilt package for "
+                      "'PythonTool/0.1@lasote/stable', 'Tool/0.1@lasote/stable'", client.out)
         client.run("install . --profile ./profile.txt --build=PythonTool", assert_error=True)
-        self.assertIn("ERROR: Missing prebuilt package for 'Tool/0.1@lasote/stable'",
-                      client.out)
+        self.assertIn("ERROR: Missing prebuilt package for 'Tool/0.1@lasote/stable'", client.out)
         client.run("install . --profile ./profile.txt --build=*Tool")
         self.assertIn("Tool/0.1@lasote/stable: Generated conaninfo.txt", client.out)
         self.assertIn("PythonTool/0.1@lasote/stable: Generated conaninfo.txt", client.out)
@@ -276,16 +268,9 @@ nonexistingpattern*: SomeTool/1.2@user/channel
 
     def build_requires_options_test(self):
         client = TestClient()
-        lib_conanfile = """
-from conans import ConanFile
-
-class MyTool(ConanFile):
-    name = "MyTool"
-    version = "0.1"
-"""
-
-        client.save({CONANFILE: lib_conanfile})
+        client.save({CONANFILE: GenConanfile("MyTool", "0.1")})
         client.run("export . lasote/stable")
+
         conanfile = """
 from conans import ConanFile, tools
 

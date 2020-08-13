@@ -17,6 +17,8 @@ from .deploy import DeployGenerator
 from .gcc import GCCGenerator
 from .json_generator import JsonGenerator
 from .make import MakeGenerator
+from .markdown import MarkdownGenerator
+from .msbuild import MSBuildGenerator
 from .premake import PremakeGenerator
 from .qbs import QbsGenerator
 from .qmake import QmakeGenerator
@@ -66,6 +68,7 @@ registered_generators.add("qmake", QmakeGenerator)
 registered_generators.add("qbs", QbsGenerator)
 registered_generators.add("scons", SConsGenerator)
 registered_generators.add("visual_studio", VisualStudioGenerator)
+registered_generators.add("msbuild", MSBuildGenerator)
 registered_generators.add("visual_studio_multi", VisualStudioMultiGenerator)
 registered_generators.add("visual_studio_legacy", VisualStudioLegacyGenerator)
 registered_generators.add("xcode", XCodeGenerator)
@@ -81,12 +84,13 @@ registered_generators.add("b2", B2Generator)
 registered_generators.add("premake", PremakeGenerator)
 registered_generators.add("make", MakeGenerator)
 registered_generators.add("deploy", DeployGenerator)
+registered_generators.add("markdown", MarkdownGenerator)
 
 
 def write_generators(conanfile, path, output):
     """ produces auxiliary files, required to build a project or a package.
     """
-    for generator_name in conanfile.generators:
+    for generator_name in set(conanfile.generators):
         try:
             generator_class = registered_generators[generator_name]
         except KeyError:
@@ -107,7 +111,8 @@ def write_generators(conanfile, path, output):
                     output.warn("Generator %s is multifile. Property 'filename' not used"
                                 % (generator_name,))
                 for k, v in content.items():
-                    v = normalize(v)
+                    if generator.normalize:  # To not break existing behavior, to be removed 2.0
+                        v = normalize(v)
                     output.info("Generator %s created %s" % (generator_name, k))
                     save(join(path, k), v, only_if_modified=True)
             else:

@@ -8,6 +8,22 @@ from conans.test.utils.tools import TestClient, TestServer, GenConanfile
 
 class ConanInspectTest(unittest.TestCase):
 
+    def test_inspect_quiet(self):
+        client = TestClient(default_server_user=True)
+        client.save({"conanfile.py": GenConanfile().with_name("name")})
+        client.run("export . name/version@user/channel")
+        client.run("upload name/version@user/channel --all")
+        client.run("remove * -f")
+
+        # If the recipe exists, it doesn't show extra output
+        client.run("inspect name/version@user/channel --raw name")
+        self.assertEqual(client.out, "name")
+
+        # If the recipe doesn't exist, the output is shown
+        client.run("inspect non-existing/version@user/channel --raw name", assert_error=True)
+        self.assertIn("ERROR: Unable to find 'non-existing/version@user/channel' in remotes",
+                      client.out)
+
     def python_requires_test(self):
         server = TestServer()
         client = TestClient(servers={"default": server}, users={"default": [("lasote", "mypass")]})
@@ -243,47 +259,49 @@ default_options:
 
     def test_default_options_list(self):
         client = TestClient()
-        conanfile = r"""from conans import ConanFile
-class OpenSSLConan(ConanFile):
-    name = "OpenSSL"
-    version = "1.0.2o"
-    settings = "os", "compiler", "arch", "build_type"
-    url = "http://github.com/lasote/conan-openssl"
-    license = "The current OpenSSL licence is an 'Apache style' license: https://www.openssl.org/source/license.html"
-    description = "OpenSSL is an open source project that provides a robust, commercial-grade, and full-featured " \
-                  "toolkit for the Transport Layer Security (TLS) and Secure Sockets Layer (SSL) protocols"
-    options = {"shared": [True, False],
-               "no_asm": [True, False],
-               "386": [True, False]}
-    default_options = "=False\n".join(options.keys()) + '=False'
-"""
+        conanfile = textwrap.dedent(r"""
+            from conans import ConanFile
+            class OpenSSLConan(ConanFile):
+                name = "OpenSSL"
+                version = "1.0.2o"
+                settings = "os", "compiler", "arch", "build_type"
+                url = "http://github.com/lasote/conan-openssl"
+                license = "The current OpenSSL licence is an 'Apache style' license"
+                description = "OpenSSL is an open source project that provides a robust, "\
+                              "commercial-grade"
+                options = {"shared": [True, False],
+                           "no_asm": [True, False],
+                           "386": [True, False]}
+                default_options = "=False\n".join(options.keys()) + '=False'
+            """)
         client.save({"conanfile.py": conanfile})
         client.run("inspect .")
-        self.assertEqual("""name: OpenSSL
-version: 1.0.2o
-url: http://github.com/lasote/conan-openssl
-homepage: None
-license: The current OpenSSL licence is an 'Apache style' license: https://www.openssl.org/source/license.html
-author: None
-description: OpenSSL is an open source project that provides a robust, commercial-grade, and full-featured toolkit for the Transport Layer Security (TLS) and Secure Sockets Layer (SSL) protocols
-topics: None
-generators: ['txt']
-exports: None
-exports_sources: None
-short_paths: False
-apply_env: True
-build_policy: None
-revision_mode: hash
-settings: ('os', 'compiler', 'arch', 'build_type')
-options:
-    386: [True, False]
-    no_asm: [True, False]
-    shared: [True, False]
-default_options:
-    386: False
-    no_asm: False
-    shared: False
-""", client.out)
+        self.assertEqual(textwrap.dedent("""\
+            name: OpenSSL
+            version: 1.0.2o
+            url: http://github.com/lasote/conan-openssl
+            homepage: None
+            license: The current OpenSSL licence is an 'Apache style' license
+            author: None
+            description: OpenSSL is an open source project that provides a robust, commercial-grade
+            topics: None
+            generators: ['txt']
+            exports: None
+            exports_sources: None
+            short_paths: False
+            apply_env: True
+            build_policy: None
+            revision_mode: hash
+            settings: ('os', 'compiler', 'arch', 'build_type')
+            options:
+                386: [True, False]
+                no_asm: [True, False]
+                shared: [True, False]
+            default_options:
+                386: False
+                no_asm: False
+                shared: False
+            """), client.out)
 
     def test_mixed_options_instances(self):
         client = TestClient()
@@ -362,7 +380,7 @@ default_options:
 class InspectRawTest(unittest.TestCase):
     conanfile = textwrap.dedent("""
         from conans import ConanFile
-        
+
         class Pkg(ConanFile):
             name = "MyPkg"
             version = "1.2.3"
@@ -371,7 +389,7 @@ class InspectRawTest(unittest.TestCase):
             settings = "os", "arch", "build_type", "compiler"
             options = {"foo": [True, False], "bar": [True, False]}
             default_options = "foo=True", "bar=True"
-            
+
             _private = "Nothing"
 
             def build(self):
@@ -431,10 +449,30 @@ class InspectRawTest(unittest.TestCase):
         client = TestClient()
         conanfile = textwrap.dedent("""
             from conans import ConanFile
-            
+
             class Lib(ConanFile):
                 default_options = {"dict": True, "list": False}
             """)
         client.save({"conanfile.py": conanfile})
         client.run("inspect . --raw=default_options")
         self.assertEqual("dict=True\nlist=False", client.out)
+
+    def test_initial_inspect_without_registry_test(self):
+        client = TestClient()
+        client.save({"conanfile.py": self.conanfile})
+        client.run("export . user/channel")
+        os.remove(client.cache.remotes_path)
+        client.run("inspect MyPkg/1.2.3@user/channel --raw=version")
+        self.assertEqual("1.2.3", client.out)
+
+    def test_inspect_settings_set(self):
+        client = TestClient()
+        client.save({"conanfile.py": textwrap.dedent("""
+            from conans import ConanFile
+
+            class Recipe(ConanFile):
+                settings = {"os", "compiler"}
+        """)})
+        client.run("inspect . --json=file.json")
+        contents = client.load("file.json")
+        self.assertIn('"settings": ["compiler", "os"]', contents)

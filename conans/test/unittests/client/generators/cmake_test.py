@@ -5,7 +5,7 @@ import unittest
 import six
 
 from conans.client.build.cmake_flags import CMakeDefinitionsBuilder
-from conans.client.conf import default_settings_yml
+from conans.client.conf import get_default_settings_yml
 from conans.client.generators import CMakeFindPackageGenerator, CMakeFindPackageMultiGenerator
 from conans.client.generators.cmake import CMakeGenerator
 from conans.client.generators.cmake_multi import CMakeMultiGenerator
@@ -16,7 +16,7 @@ from conans.model.env_info import EnvValues
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestBufferConanOutput
+from conans.test.utils.mocks import TestBufferConanOutput
 from conans.util.files import save
 
 
@@ -47,23 +47,22 @@ class _MockSettings(object):
 
 class CMakeGeneratorTest(unittest.TestCase):
 
-    def _extract_macro(self, name, text):
-        pattern = ".*(macro\(%s\).*?endmacro\(\)).*" % name
+    @staticmethod
+    def _extract_macro(name, text):
+        pattern = r".*(macro\(%s\).*?endmacro\(\)).*" % name
         return re.sub(pattern, r"\1", text, flags=re.DOTALL)
 
     def variables_setup_test(self):
         conanfile = ConanFile(TestBufferConanOutput(), None)
         conanfile.initialize(Settings({}), EnvValues())
         ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
-        cpp_info = CppInfo("dummy_root_folder1")
-        cpp_info.name = ref.name
+        cpp_info = CppInfo(ref.name, "dummy_root_folder1")
         cpp_info.defines = ["MYDEFINE1"]
-        conanfile.deps_cpp_info.update(cpp_info, ref.name)
+        conanfile.deps_cpp_info.add(ref.name, cpp_info)
         ref = ConanFileReference.loads("MyPkg2/0.1@lasote/stables")
-        cpp_info = CppInfo("dummy_root_folder2")
-        cpp_info.name = ref.name
+        cpp_info = CppInfo(ref.name, "dummy_root_folder2")
         cpp_info.defines = ["MYDEFINE2"]
-        conanfile.deps_cpp_info.update(cpp_info, ref.name)
+        conanfile.deps_cpp_info.add(ref.name, cpp_info)
         conanfile.deps_user_info["LIB1"].myvar = "myvalue"
         conanfile.deps_user_info["LIB1"].myvar2 = "myvalue2"
         conanfile.deps_user_info["lib2"].MYVAR2 = "myvalue4"
@@ -87,11 +86,10 @@ class CMakeGeneratorTest(unittest.TestCase):
         tmp_folder = temp_folder()
         save(os.path.join(tmp_folder, "lib", "mylib.lib"), "")
         save(os.path.join(tmp_folder, "include", "myheader.h"), "")
-        cpp_info = CppInfo(tmp_folder)
-        cpp_info.name = ref.name
+        cpp_info = CppInfo(ref.name, tmp_folder)
         cpp_info.release.libs = ["hello"]
         cpp_info.debug.libs = ["hello_D"]
-        conanfile.deps_cpp_info.update(cpp_info, ref.name)
+        conanfile.deps_cpp_info.add(ref.name, cpp_info)
         generator = CMakeMultiGenerator(conanfile)
         release = generator.content["conanbuildinfo_release.cmake"]
         release = release.replace(tmp_folder.replace("\\", "/"), "root_folder")
@@ -107,11 +105,10 @@ class CMakeGeneratorTest(unittest.TestCase):
         tmp_folder = temp_folder()
         save(os.path.join(tmp_folder, "lib", "mylib.lib"), "")
         save(os.path.join(tmp_folder, "include", "myheader.h"), "")
-        cpp_info = CppInfo(tmp_folder)
-        cpp_info.name = ref.name
+        cpp_info = CppInfo(ref.name, tmp_folder)
         cpp_info.release.libs = ["hello"]
         cpp_info.debug.libs = ["hello_D"]
-        conanfile.deps_cpp_info.update(cpp_info, ref.name)
+        conanfile.deps_cpp_info.add(ref.name, cpp_info)
         generator = CMakeGenerator(conanfile)
         content = generator.content
         content = content.replace(tmp_folder.replace("\\", "/"), "root_folder")
@@ -151,16 +148,14 @@ class CMakeGeneratorTest(unittest.TestCase):
         conanfile = ConanFile(TestBufferConanOutput(), None)
         conanfile.initialize(Settings({}), EnvValues())
         ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
-        cpp_info = CppInfo("dummy_root_folder1")
-        cpp_info.name = ref.name
+        cpp_info = CppInfo(ref.name, "dummy_root_folder1")
         cpp_info.includedirs.append("other_include_dir")
         cpp_info.cxxflags = ["-DGTEST_USE_OWN_TR1_TUPLE=1", "-DGTEST_LINKED_AS_SHARED_LIBRARY=1"]
-        conanfile.deps_cpp_info.update(cpp_info, ref.name)
+        conanfile.deps_cpp_info.add(ref.name, cpp_info)
         ref = ConanFileReference.loads("MyPkg2/0.1@lasote/stables")
-        cpp_info = CppInfo("dummy_root_folder2")
-        cpp_info.name = ref.name
+        cpp_info = CppInfo(ref.name, "dummy_root_folder2")
         cpp_info.cflags = ["-DSOMEFLAG=1"]
-        conanfile.deps_cpp_info.update(cpp_info, ref.name)
+        conanfile.deps_cpp_info.add(ref.name, cpp_info)
         generator = CMakeGenerator(conanfile)
         content = generator.content
         cmake_lines = content.splitlines()
@@ -175,13 +170,12 @@ class CMakeGeneratorTest(unittest.TestCase):
         conanfile = ConanFile(TestBufferConanOutput(), None)
         conanfile.initialize(Settings({}), EnvValues())
         ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
-        cpp_info = CppInfo("dummy_root_folder1")
-        cpp_info.name = ref.name
+        cpp_info = CppInfo(ref.name, "dummy_root_folder1")
         cpp_info.includedirs.append("other_include_dir")
         cpp_info.cxxflags = ["-load", r"C:\foo\bar.dll"]
         cpp_info.cflags = ["-load", r"C:\foo\bar2.dll"]
         cpp_info.defines = ['MY_DEF=My string', 'MY_DEF2=My other string']
-        conanfile.deps_cpp_info.update(cpp_info, ref.name)
+        conanfile.deps_cpp_info.add(ref.name, cpp_info)
         generator = CMakeGenerator(conanfile)
         content = generator.content
         cmake_lines = content.splitlines()
@@ -230,12 +224,10 @@ class CMakeGeneratorTest(unittest.TestCase):
 
     if(NOT ARGUMENTS_SKIP_RPATH AND NOT ARGUMENTS_KEEP_RPATHS)
         # Parameter has renamed, but we keep the compatibility with old SKIP_RPATH
-        conan_message(STATUS "Conan: Adjusting default RPATHs Conan policies")
         conan_set_rpath()
     endif()
 
     if(NOT ARGUMENTS_SKIP_STD)
-        conan_message(STATUS "Conan: Adjusting language standard")
         conan_set_std()
     endif()
 
@@ -287,7 +279,7 @@ endmacro()""", macro)
         self.assertIn('set(CONAN_PACKAGE_VERSION 1.1.0)', cmake_lines)
 
     def settings_are_generated_tests(self):
-        settings = Settings.loads(default_settings_yml)
+        settings = Settings.loads(get_default_settings_yml())
         settings.os = "Windows"
         settings.compiler = "Visual Studio"
         settings.compiler.version = "12"
@@ -308,8 +300,8 @@ endmacro()""", macro)
         self.assertIn('set(CONAN_SETTINGS_OS "Windows")', cmake_lines)
 
     def cmake_find_package_multi_definitions_test(self):
-        """ CMAKE_PREFIX_PATH and CMAKE_MODULE_PATH must be present in cmake_find_package_multi definitions
-        """
+        # CMAKE_PREFIX_PATH and CMAKE_MODULE_PATH must be in cmake_find_package_multi definitions
+
         settings_mock = _MockSettings(build_type="Release")
         conanfile = ConanFile(TestBufferConanOutput(), None)
         conanfile.initialize(settings_mock, EnvValues())
@@ -322,7 +314,7 @@ endmacro()""", macro)
         self.assertEqual(install_folder, definitions["CMAKE_MODULE_PATH"])
 
     def apple_frameworks_test(self):
-        settings = Settings.loads(default_settings_yml)
+        settings = Settings.loads(get_default_settings_yml())
         settings.os = "Macos"
         settings.compiler = "apple-clang"
         settings.compiler.version = "9.1"
@@ -331,28 +323,31 @@ endmacro()""", macro)
         settings.build_type = "Debug"
         conanfile = ConanFile(TestBufferConanOutput(), None)
         conanfile.initialize(Settings({}), EnvValues())
-        ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
-        cpp_info = CppInfo("dummy_root_folder1")
-        cpp_info.name = ref.name
-        cpp_info.framework_paths.extend(["path/to/Frameworks1", "path/to/Frameworks2"])
-        cpp_info.frameworks = ["OpenGL", "OpenCL"]
-        conanfile.deps_cpp_info.update(cpp_info, ref.name)
         conanfile.settings = settings
+
+        ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
+        cpp_info = CppInfo(ref.name, "dummy_root_folder1")
+        cpp_info.frameworkdirs.extend(["path/to/Frameworks1", "path/to/Frameworks2"])
+        cpp_info.frameworks = ["OpenGL", "OpenCL"]
+        cpp_info.filter_empty = False
+        conanfile.deps_cpp_info.add(ref.name, cpp_info)
 
         generator = CMakeGenerator(conanfile)
         content = generator.content
         self.assertIn('find_library(CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND NAME ${_FRAMEWORK} PATHS'
-                      ' ${CONAN_FRAMEWORK_DIRS})', content)
-        self.assertIn('set(CONAN_FRAMEWORK_DIRS "path/to/Frameworks1"\n\t\t\t"path/to/Frameworks2" '
+                      ' ${CONAN_FRAMEWORK_DIRS${SUFFIX}})', content)
+        self.assertIn('set(CONAN_FRAMEWORK_DIRS "dummy_root_folder1/Frameworks"\n'
+                      '\t\t\t"dummy_root_folder1/path/to/Frameworks1"\n'
+                      '\t\t\t"dummy_root_folder1/path/to/Frameworks2" '
                       '${CONAN_FRAMEWORK_DIRS})', content)
-        self.assertIn('set(CONAN_LIBS ${CONAN_PKG_LIBS} ${CONAN_SYSTEM_LIBS} '
+        self.assertIn('set(CONAN_LIBS ${CONAN_LIBS} ${CONAN_SYSTEM_LIBS} '
                       '${CONAN_FRAMEWORKS_FOUND})', content)
 
         generator = CMakeFindPackageGenerator(conanfile)
         content = generator.content
         content = content['FindMyPkg.cmake']
-        self.assertIn('find_library(CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND NAME ${_FRAMEWORK} PATHS'
-                      ' ${MyPkg_FRAMEWORK_DIRS})', content)
+        self.assertIn('conan_find_apple_frameworks(MyPkg_FRAMEWORKS_FOUND "${MyPkg_FRAMEWORKS}"'
+                      ' "${MyPkg_FRAMEWORK_DIRS}")', content)
 
 
 class CMakeCppInfoNameTest(unittest.TestCase):
@@ -366,14 +361,14 @@ class CMakeCppInfoNameTest(unittest.TestCase):
         settings.build_type = "Debug"
         self.conanfile.initialize(settings, EnvValues())
         ref = ConanFileReference.loads("my_pkg/0.1@lasote/stables")
-        cpp_info = CppInfo("dummy_root_folder1")
+        cpp_info = CppInfo(ref.name, "dummy_root_folder1")
         cpp_info.name = "MyPkG"
-        self.conanfile.deps_cpp_info.update(cpp_info, ref.name)
+        self.conanfile.deps_cpp_info.add(ref.name, cpp_info)
         ref = ConanFileReference.loads("my_pkg2/0.1@lasote/stables")
-        cpp_info = CppInfo("dummy_root_folder2")
+        cpp_info = CppInfo(ref.name, "dummy_root_folder2")
         cpp_info.name = "MyPkG2"
         cpp_info.public_deps = ["my_pkg"]
-        self.conanfile.deps_cpp_info.update(cpp_info, ref.name)
+        self.conanfile.deps_cpp_info.add(ref.name, cpp_info)
 
     def cmake_test(self):
         generator = CMakeGenerator(self.conanfile)
@@ -443,22 +438,22 @@ class CMakeCppInfoNamesTest(unittest.TestCase):
         settings.build_type = "Debug"
         self.conanfile.initialize(settings, EnvValues())
         ref = ConanFileReference.loads("my_pkg/0.1@lasote/stables")
-        cpp_info = CppInfo("dummy_root_folder1")
+        cpp_info = CppInfo(ref.name, "dummy_root_folder1")
         cpp_info.name = "MyPkG"
         cpp_info.names["cmake"] = "MyCMakeName"
         cpp_info.names["cmake_multi"] = "MyCMakeMultiName"
         cpp_info.names["cmake_find_package"] = "MyCMakeFindPackageName"
         cpp_info.names["cmake_find_package_multi"] = "MyCMakeFindPackageMultiName"
-        self.conanfile.deps_cpp_info.update(cpp_info, ref.name)
+        self.conanfile.deps_cpp_info.add(ref.name, cpp_info)
         ref = ConanFileReference.loads("my_pkg2/0.1@lasote/stables")
-        cpp_info = CppInfo("dummy_root_folder2")
+        cpp_info = CppInfo(ref.name, "dummy_root_folder2")
         cpp_info.name = "MyPkG2"
         cpp_info.names["cmake"] = "MyCMakeName2"
         cpp_info.names["cmake_multi"] = "MyCMakeMultiName2"
         cpp_info.names["cmake_find_package"] = "MyCMakeFindPackageName2"
         cpp_info.names["cmake_find_package_multi"] = "MyCMakeFindPackageMultiName2"
         cpp_info.public_deps = ["my_pkg"]
-        self.conanfile.deps_cpp_info.update(cpp_info, ref.name)
+        self.conanfile.deps_cpp_info.add(ref.name, cpp_info)
 
     def cmake_test(self):
         generator = CMakeGenerator(self.conanfile)
@@ -523,19 +518,18 @@ class CMakeBuildModulesTest(unittest.TestCase):
         self.conanfile = ConanFile(TestBufferConanOutput(), None)
         self.conanfile.initialize(settings_mock, EnvValues())
         ref = ConanFileReference.loads("my_pkg/0.1@lasote/stables")
-        cpp_info = CppInfo("dummy_root_folder1")
+        cpp_info = CppInfo(ref.name, "dummy_root_folder1")
         cpp_info.filter_empty = False  # For testing purposes only
         cpp_info.name = ref.name
         cpp_info.build_modules = ["my-module.cmake"]
-        self.conanfile.deps_cpp_info.update(cpp_info, ref.name)
+        self.conanfile.deps_cpp_info.add(ref.name, cpp_info)
         ref = ConanFileReference.loads("my_pkg2/0.1@lasote/stables")
-        cpp_info = CppInfo("dummy_root_folder2")
+        cpp_info = CppInfo(ref.name, "dummy_root_folder2")
         cpp_info.filter_empty = False  # For testing purposes only
         cpp_info.name = ref.name
         cpp_info.build_modules = ["other-mod.cmake", "not-a-cmake-module.pc"]
         cpp_info.release.build_modules = ["release-mod.cmake"]
-        cpp_info.release.filter_empty = False  # For testing purposes only
-        self.conanfile.deps_cpp_info.update(cpp_info, ref.name)
+        self.conanfile.deps_cpp_info.add(ref.name, cpp_info)
 
     def cmake_test(self):
         generator = CMakeGenerator(self.conanfile)
@@ -587,7 +581,8 @@ class CMakeBuildModulesTest(unittest.TestCase):
                       content["Findmy_pkg2.cmake"])
         self.assertIn('set(my_pkg_BUILD_MODULES_PATHS "dummy_root_folder1/my-module.cmake")',
                       content["Findmy_pkg.cmake"])
-        self.assertIn('set(my_pkg2_BUILD_MODULES_PATHS "dummy_root_folder2/other-mod.cmake")',
+        self.assertIn('set(my_pkg2_BUILD_MODULES_PATHS "dummy_root_folder2/other-mod.cmake"'
+                      '\n\t\t\t"dummy_root_folder2/release-mod.cmake")',
                       content["Findmy_pkg2.cmake"])
 
     def cmake_find_package_multi_test(self):
@@ -596,5 +591,6 @@ class CMakeBuildModulesTest(unittest.TestCase):
         self.assertNotIn("not-a-cmake-module.pc", content["my_pkg2Target-release.cmake"])
         self.assertIn('set(my_pkg_BUILD_MODULES_PATHS_RELEASE "dummy_root_folder1/my-module.cmake")',
                       content["my_pkgTarget-release.cmake"])
-        self.assertIn('set(my_pkg2_BUILD_MODULES_PATHS_RELEASE "dummy_root_folder2/other-mod.cmake")',
+        self.assertIn('set(my_pkg2_BUILD_MODULES_PATHS_RELEASE "dummy_root_folder2/other-mod.cmake"'
+                      '\n\t\t\t"dummy_root_folder2/release-mod.cmake")',
                       content["my_pkg2Target-release.cmake"])

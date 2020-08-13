@@ -8,7 +8,7 @@ Decentralized, open-source (MIT), C/C++ package manager.
 - Homepage: https://conan.io/
 - Github: https://github.com/conan-io/conan
 - Docs: https://docs.conan.io/en/latest/
-- Slack: https://cpplang.now.sh/ (#conan channel)
+- Slack: https://cpplang-inviter.cppalliance.org/ (#conan channel)
 - Twitter: https://twitter.com/conan_io
 
 
@@ -23,68 +23,38 @@ Conan is a package manager for C and C++ developers:
 - Integrates with any build system, including any proprietary and custom one. Provides tested support for major build systems
   (CMake, MSBuild, Makefiles, Meson, etc).
 - Extensible: Its python based recipes, together with extensions points allows for great power and flexibility.
-- Large and active community, especially in Github (https://github.com/conan-io/conan) and Slack (https://cpplang.now.sh/ #conan channel).
-  This community also creates and maintains packages in Conan-center and Bincrafters repositories in Bintray.
-- Stable. Used in production by many companies, since 1.0 there is a commitment not to break package recipes and documented behavior. 
+- Large and active community, especially in Github (https://github.com/conan-io/conan) and Slack (https://cpplang-inviter.cppalliance.org/ #conan channel).
+  This community also creates and maintains packages in ConanCenter and Bincrafters repositories in Bintray.
+- Stable. Used in production by many companies, since 1.0 there is a commitment not to break package recipes and documented behavior.
 
 
 
-+------------------------+-------------------------+-------------------------+-------------------------+
-| **master**             | **develop**             |  **Coverage**           |    **Code Climate**     |
-+========================+=========================+=========================+=========================+
-| |Build Status Master|  | |Build Status Develop|  |  |Develop coverage|     |   |Develop climate|     |
-+------------------------+-------------------------+-------------------------+-------------------------+
++-------------------------+-------------------------+
+| **develop**             |    **Code Climate**     |
++=========================+=========================+
+| |Build Status Develop|  |   |Develop climate|     |
++-------------------------+-------------------------+
 
 
 Setup
 =====
 
-Please read https://docs.conan.io/en/latest/installation.html
+Please read https://docs.conan.io/en/latest/installation.html to know how to
+install and start using Conan. TL;DR:
 
-From binaries
--------------
+.. code-block::
 
-We have installers for `most platforms here <http://conan.io>`__ but you
-can run **conan** from sources if you want.
-
-From pip
---------
-
-Conan is compatible with Python 2 and Python 3.
-
-- Install pip following `pip docs`_.
-- Install conan:
-
-    .. code-block:: bash
-
-        $ pip install conan
-
-You can also use `test.pypi.org <https://test.pypi.org/project/conan/#history>`_ repository to install development (non-stable) Conan versions:
+   $ pip install conan
 
 
-    .. code-block:: bash
+Install a development version
+-----------------------------
 
-        $ pip install --index-url https://test.pypi.org/simple/ conan
-
-
-From Homebrew (OSx)
--------------------
-
-- Install Homebrew following `brew homepage`_.
-
-  .. code-block:: bash
-
-      $ brew update
-      $ brew install conan
-
-From source
------------
-
-You can run **conan** client and server in Windows, MacOS, and Linux.
+You can run **Conan** client and server in Windows, MacOS, and Linux.
 
 - **Install pip following** `pip docs`_.
 
-- **Clone conan repository:**
+- **Clone Conan repository:**
 
   .. code-block:: bash
 
@@ -92,13 +62,13 @@ You can run **conan** client and server in Windows, MacOS, and Linux.
 
 - **Install in editable mode**
 
-    .. code-block:: bash
+  .. code-block:: bash
 
-        $ cd conan && sudo pip install -e .
+      $ cd conan && sudo pip install -e .
 
   If you are in Windows, using ``sudo`` is not required.
 
-- **You are ready, try to run conan:**
+- **You are ready, try to run Conan:**
 
   .. code-block::
 
@@ -147,14 +117,14 @@ Using tox
 
 .. code-block:: bash
 
-    $ tox
+    $ python -m tox
 
 It will install the needed requirements and launch `nose` skipping some heavy and slow tests.
 If you want to run the full test suite:
 
 .. code-block:: bash
 
-    $ tox -e full
+    $ python -m tox -e full
 
 Without tox
 -----------
@@ -163,17 +133,9 @@ Without tox
 
 .. code-block:: bash
 
-    $ pip install -r conans/requirements.txt
-    $ pip install -r conans/requirements_server.txt
-    $ pip install -r conans/requirements_dev.txt
-
-
-Only in OSX:
-
-.. code-block:: bash
-
-    $ pip install -r conans/requirements_osx.txt # You can omit this one if not running OSX
-
+    $ python -m pip install -r conans/requirements.txt
+    $ python -m pip install -r conans/requirements_server.txt
+    $ python -m pip install -r conans/requirements_dev.txt
 
 If you are not Windows and you are not using a python virtual environment, you will need to run these
 commands using `sudo`.
@@ -184,7 +146,7 @@ Before you can run the tests, you need to set a few environment variables first.
 
     $ export PYTHONPATH=$PYTHONPATH:$(pwd)
 
-On Windows it would be (while being in the conan root directory):
+On Windows it would be (while being in the Conan root directory):
 
 .. code-block:: bash
 
@@ -218,7 +180,7 @@ You can run the actual tests like this:
 
 .. code-block:: bash
 
-    $ nosetests .
+    $ python -m nose .
 
 
 There are a couple of test attributes defined, as ``slow`` that you can use
@@ -226,7 +188,7 @@ to filter the tests, and do not execute them:
 
 .. code-block:: bash
 
-    $ nosetests . -a !slow
+    $ python -m nose . -a !slow
 
 A few minutes later it should print ``OK``:
 
@@ -242,7 +204,7 @@ To run specific tests, you can specify the test name too, something like:
 
 .. code-block:: bash
 
-    $ nosetests conans.test.command.config_install_test:ConfigInstallTest.install_file_test --nocapture
+    $ python -m nose conans.test.command.config_install_test:ConfigInstallTest.install_file_test --nocapture
 
 The ``--nocapture`` argument can be useful to see some output that otherwise is captured by nosetests.
 
@@ -251,29 +213,14 @@ License
 
 `MIT LICENSE <./LICENSE.md>`__
 
-.. |Build Status Master| image:: https://conan-ci.jfrog.info/buildStatus/icon?job=ConanTestSuite/master
-   :target: https://conan-ci.jfrog.info/job/ConanTestSuite/job/master
-
 .. |Build Status Develop| image:: https://conan-ci.jfrog.info/buildStatus/icon?job=ConanTestSuite/develop
    :target: https://conan-ci.jfrog.info/job/ConanTestSuite/job/develop
 
-.. |Master coverage| image:: https://codecov.io/gh/conan-io/conan/branch/master/graph/badge.svg
-   :target: https://codecov.io/gh/conan-io/conan/branch/master
-
-.. |Develop coverage| image:: https://codecov.io/gh/conan-io/conan/branch/develop/graph/badge.svg
-   :target: https://codecov.io/gh/conan-io/conan/branch/develop
-
-.. |Coverage graph| image:: https://codecov.io/gh/conan-io/conan/branch/develop/graphs/tree.svg
-   :height: 50px
-   :width: 50 px
-   :alt: Conan develop coverage
-
 .. |Develop climate| image:: https://api.codeclimate.com/v1/badges/081b53e570d5220b34e4/maintainability.svg
    :target: https://codeclimate.com/github/conan-io/conan/maintainability
-   
+
 .. |Logo| image:: https://conan.io/img/jfrog_conan_logo.png
 
 
 .. _`pip docs`: https://pip.pypa.io/en/stable/installing/
 
-.. _`brew homepage`: http://brew.sh/

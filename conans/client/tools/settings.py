@@ -13,6 +13,7 @@ def check_min_cppstd(conanfile, cppstd, gnu_extensions=False):
            default from cppstd_default)
         3. If not settings.compiler is present (not declared in settings) will raise because it
            cannot compare.
+        4. If can not detect the default cppstd for settings.compiler, a exception will be raised.
 
     :param conanfile: ConanFile instance with cppstd to be compared
     :param cppstd: Minimal cppstd version required
@@ -46,7 +47,12 @@ def check_min_cppstd(conanfile, cppstd, gnu_extensions=False):
         if not compiler or not compiler_version:
             raise ConanException("Could not obtain cppstd because there is no declared "
                                  "compiler in the 'settings' field of the recipe.")
-        return cppstd_default(compiler, compiler_version)
+        cppstd = cppstd_default(conanfile.settings)
+        if cppstd is None:
+            raise ConanInvalidConfiguration("Could not detect the current default cppstd for "
+                                            "the compiler {}-{}.".format(compiler,
+                                                                         compiler_version))
+        return cppstd
 
     current_cppstd = deduced_cppstd()
     check_required_gnu_extension(current_cppstd)
@@ -69,3 +75,16 @@ def valid_min_cppstd(conanfile, cppstd, gnu_extensions=False):
     except ConanInvalidConfiguration:
         return False
     return True
+
+
+def stdcpp_library(conanfile):
+    libcxx = conanfile.settings.get_safe("compiler.libcxx")
+    if libcxx in ["libstdc++", "libstdc++11"]:
+        return "stdc++"
+    elif libcxx in ["libc++"]:
+        return "c++"
+    elif libcxx in ["c++_shared"]:
+        return "c++_shared"
+    elif libcxx in ["c++_static"]:
+        return "c++_static"
+    return None

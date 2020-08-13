@@ -1,18 +1,18 @@
 import os
 import platform
 import shutil
+import tarfile
 import tempfile
 
 import time
 from six import BytesIO
 
-from conans.client.tools.files import untargz, chdir
+from conans.client.tools.files import untargz
 from conans.client.tools.win import get_cased_path
 from conans.errors import ConanException
 from conans.paths import PACKAGE_TGZ_NAME
 from conans.test import CONAN_TEST_FOLDER
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files, cpp_hello_source_files
-from conans.util.files import mkdir_tmp
+from conans.util.files import gzopen_without_timestamps
 
 
 def wait_until_removed(folder):
@@ -28,7 +28,7 @@ def wait_until_removed(folder):
         raise Exception("Could remove folder %s: %s" % (folder, latest_exception))
 
 
-def temp_folder(path_with_spaces=True):
+def temp_folder(path_with_spaces=True, create_dir=True):
     t = tempfile.mkdtemp(suffix='conans', dir=CONAN_TEST_FOLDER)
     # Make sure that the temp folder is correctly cased, as tempfile return lowercase for Win
     t = get_cased_path(t)
@@ -41,7 +41,8 @@ def temp_folder(path_with_spaces=True):
     else:
         path = "path with spaces"
     nt = os.path.join(t, path)
-    os.makedirs(nt)
+    if create_dir:
+        os.makedirs(nt)
     return nt
 
 
@@ -72,42 +73,19 @@ def scan_folder(folder):
     return sorted(scanned_files)
 
 
-def hello_source_files(number=0, deps=None, lang='cpp'):
-    """
-    param number: integer, defining name of the conans Hello0, Hello1, HelloX
-    param deps: [] list of integers, defining which dependencies this conans
-                depends on
-    e.g. (3, [4, 7]) means that a Hello3 conans will be created, with message
-         "Hello 3", that depends both in Hello4 and Hello7.
-         The output of such a conans exe could be like: Hello 3, Hello 4, Hello7
-    """
-    if lang == 'cpp':
-        return cpp_hello_source_files(number, deps)
-
-
-def hello_conan_files(ref, number=0, deps=None, language=0, lang='cpp'):
-    """Generate hello_files, as described above, plus the necessary
-    CONANFILE to manage it
-    param number: integer, defining name of the conans Hello0, Hello1, HelloX
-    param deps: [] list of integers, defining which dependencies this conans
-                depends on
-    param language: 0 = English, 1 = Spanish
-    e.g. (3, [4, 7]) means that a Hello3 conans will be created, with message
-         "Hello 3", that depends both in Hello4 and Hello7.
-         The output of such a conans exe could be like: Hello 3, Hello 4, Hello7"""
-    if lang == 'cpp':
-        return cpp_hello_conan_files(ref, number, deps, language)
-
-
 def tgz_with_contents(files):
-    with chdir(mkdir_tmp()):
-        import tarfile
-        file_path = os.path.abspath("myfile.tar.gz")
-        tar_file = tarfile.open(file_path, "w:gz")
+    folder = temp_folder()
+    file_path = os.path.join(folder, "myfile.tar.gz")
+
+    with open(file_path, "wb") as tgz_handle:
+        tgz = gzopen_without_timestamps("myfile.tar.gz", mode="w", fileobj=tgz_handle)
+
         for name, content in files.items():
             info = tarfile.TarInfo(name=name)
             data = content.encode('utf-8')
             info.size = len(data)
-            tar_file.addfile(tarinfo=info, fileobj=BytesIO(data))
-            tar_file.close()
-        return file_path
+            tgz.addfile(tarinfo=info, fileobj=BytesIO(data))
+
+        tgz.close()
+
+    return file_path
