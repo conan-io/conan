@@ -2,7 +2,7 @@ import six
 
 try:
     from collections.abc import Iterable
-except ImportError:  # python2 fallback
+except ImportError:  # FIXME: Remove if Python2 support is removed
     from collections import Iterable
 
 
