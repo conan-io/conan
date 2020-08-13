@@ -1287,6 +1287,10 @@ class ConanAPIV1(object):
         lockfile = _make_abs_path(lockfile, cwd)
 
         graph_lock_file = GraphLockFile.load(lockfile, self.app.cache.config.revisions_enabled)
+        if graph_lock_file.profile_host is None:
+            raise ConanException("Lockfiles with --base do not contain profile information, "
+                                 "cannot be used. Create a full lockfile")
+
         graph_lock = graph_lock_file.graph_lock
         build_order = graph_lock.build_order()
         return build_order

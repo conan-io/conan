@@ -18,6 +18,14 @@ class BuildOrderTest(unittest.TestCase):
         jsonbo = json.loads(client.load("bo.json"))
         self.assertEqual([], jsonbo)
 
+    def test_base_graph(self):
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile("test4", "0.1")})
+        client.run("lock create conanfile.py --base --lockfile-out=conan.lock")
+        client.run("lock build-order conan.lock --json=bo.json", assert_error=True)
+        self.assertIn("Lockfiles with --base do not contain profile information, "
+                      "cannot be used. Create a full lockfile", client.out)
+
     @parameterized.expand([(True,), (False,)])
     def build_not_locked_test(self, export):
         # https://github.com/conan-io/conan/issues/5727
