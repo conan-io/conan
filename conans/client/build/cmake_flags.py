@@ -294,12 +294,18 @@ class CMakeDefinitionsBuilder(object):
         definitions.update(build_type_definition(self._forced_build_type, build_type,
                                                  self._generator, self._output))
 
-        if tools.is_apple_os(os_):
-            definitions["CMAKE_OSX_ARCHITECTURES"] = tools.to_apple_arch(arch)
+        # don't attempt to override variables set within toolchain
+        if tools.is_apple_os(os_) and "CONAN_CMAKE_TOOLCHAIN_FILE" not in os.environ and "CMAKE_TOOLCHAIN_FILE" not in definitions:
+            apple_arch = tools.to_apple_arch(arch)
+            if apple_arch:
+                definitions["CMAKE_OSX_ARCHITECTURES"] = apple_arch
             # xcrun is only available on macOS, otherwise it's cross-compiling and it needs to be
-            # set within CMake toolchain
-            if platform.system() == "Darwin":
-                definitions["CMAKE_OSX_SYSROOT"] = tools.XCRun(self._conanfile.settings).sdk_path
+            # set within CMake toolchain. also, if SDKROOT is set, CMake will use it, and it's not
+            # needed to run xcrun.
+            if platform.system() == "Darwin" and "SDKROOT" not in os.environ:
+                sdk_path = tools.XCRun(self._conanfile.settings).sdk_path
+                if sdk_path:
+                    definitions["CMAKE_OSX_SYSROOT"] = sdk_path
 
         definitions.update(self._cmake_cross_build_defines())
         definitions.update(self._get_cpp_standard_vars())

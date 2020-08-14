@@ -1,11 +1,8 @@
 import os
-import platform
 import textwrap
 import unittest
 
-from nose.plugins.attrib import attr
-
-from conans.client.tools import which, PkgConfig, environment_append
+from conans.client.tools import PkgConfig, environment_append
 from conans.model.ref import ConanFileReference
 from conans.test.utils.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
