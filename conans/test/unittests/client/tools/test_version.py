@@ -107,5 +107,11 @@ class ToolVersionExtraComponentsTests(unittest.TestCase):
 
         # Unknown release field, not fail (loose=True) and don't affect compare
         self.assertTrue(Version.loose)
-        self.assertTrue(Version("1.2.3.4") == Version("1.2.3"))
+
+        # node-semver for PY2 has only <= 0.7.0 version, 0.8.0 fixed 4-digit support
+        if six.PY2:
+            self.assertTrue(Version("1.2.3.4") == Version("1.2.3"))
+        else:
+            self.assertFalse(Version("1.2.3.4") == Version("1.2.3"))
+            self.assertTrue(Version("1.2.3.4") >= Version("1.2.3"))
 
