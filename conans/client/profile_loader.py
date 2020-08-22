@@ -1,7 +1,7 @@
 import os
 from collections import OrderedDict, defaultdict
 
-from conans.errors import ConanException, ConanV2Exception
+from conans.errors import ConanException, ConanV2Exception, ConanParsingError
 from conans.model.env_info import EnvValues, unquote
 from conans.model.options import OptionsValues
 from conans.model.profile import Profile
@@ -38,7 +38,10 @@ class ProfileParser(object):
                 include = include[:-1]
                 self.includes.append(include)
             else:
-                name, value = line.split("=", 1)
+                try:
+                    name, value = line.split("=", 1)
+                except ValueError as error:
+                    raise ConanParsingError("Error while parsing line %i: '%s'" % (counter, line))
                 name = name.strip()
                 if " " in name:
                     raise ConanException("The names of the variables cannot contain spaces")
