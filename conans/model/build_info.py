@@ -275,14 +275,27 @@ class CppInfo(_CppInfo):
             reqs = [it.split(COMPONENT_SCOPE)[0] for it in comp_requires if COMPONENT_SCOPE in it]
             # Raise on components requires without package requires
             for pkg_require in pkg_requires:
+                if package_requires[pkg_require].private or package_requires[pkg_require].override:
+                    # Not standard requires, skip
+                    continue
                 if pkg_require not in reqs:
                     raise ConanException("Package require '%s' not used in components requires"
                                          % pkg_require)
             # Raise on components requires requiring inexistent package requires
             for comp_require in reqs:
+                reason = None
                 if comp_require not in pkg_requires:
+                    reason = "not defined as a recipe requirement"
+                elif package_requires[comp_require].private and package_requires[comp_require].override:
+                    reason = "it was defined as an overridden private recipe requirement"
+                elif package_requires[comp_require].private:
+                    reason = "it was defined as a private recipe requirement"
+                elif package_requires[comp_require].override:
+                    reason = "it was defined as an overridden recipe requirement"
+
+                if reason is not None:
                     raise ConanException("Package require '%s' declared in components requires "
-                                         "but not defined as a recipe requirement" % comp_require)
+                                         "but %s" % (comp_require, reason))
 
         if self.components:
             # Raise on component name
