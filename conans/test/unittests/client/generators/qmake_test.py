@@ -1,4 +1,4 @@
-import platform
+import os
 import unittest
 
 from conans.client.generators.qmake import QmakeGenerator
@@ -25,3 +25,16 @@ class QmakeGeneratorTest(unittest.TestCase):
         self.assertIn('CONAN_LIBS += -lmypkg', qmake_lines)
         self.assertIn('CONAN_SYSTEMLIBS += -lpthread', qmake_lines)
 
+    def frameworks_test(self):
+        conanfile = ConanFile(TestBufferConanOutput(), None)
+        conanfile.initialize(Settings({}), EnvValues())
+        framework_path = os.getcwd()  # must exist, otherwise filtered by framework_paths
+        cpp_info = CppInfo("MyPkg", "/rootpath")
+        cpp_info.frameworks = ["HelloFramework"]
+        cpp_info.frameworkdirs = [framework_path]
+        conanfile.deps_cpp_info.add("MyPkg", DepCppInfo(cpp_info))
+        generator = QmakeGenerator(conanfile)
+        content = generator.content
+        qmake_lines = content.splitlines()
+        self.assertIn('CONAN_FRAMEWORKS += -framework HelloFramework', qmake_lines)
+        self.assertIn('CONAN_FRAMEWORK_PATHS += -F%s' % framework_path, qmake_lines)
