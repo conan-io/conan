@@ -456,3 +456,135 @@ class CMakeAppleOwnFrameworksTestCase(unittest.TestCase):
             # Check we are using the framework
             link_txt = t.load(os.path.join('CMakeFiles', 'test_package.dir', 'link.txt'))
             self.assertIn("-framework Foundation", link_txt)
+
+    def component_test(self):
+        conanfile_py = textwrap.dedent("""
+from conans import ConanFile, CMake, tools
+
+
+class HelloConan(ConanFile):
+    name = "hello"
+    description = "example"
+    topics = ("conan",)
+    url = "https://github.com/conan-io/conan-center-index"
+    homepage = "https://www.example.com"
+    license = "MIT"
+    exports_sources = ["hello.cpp", "hello.h", "CMakeLists.txt"]
+    generators = "cmake"
+    settings = "os", "arch", "compiler", "build_type"
+    _source_subfolder = "source_subfolder"
+    _build_subfolder = "build_subfolder"
+
+    _cmake = None
+
+    def source(self):
+        pass
+
+    def _configure_cmake(self):
+        if self._cmake:
+            return self._cmake
+        self._cmake = CMake(self)
+        self._cmake.configure(build_folder=self._build_subfolder)
+        return self._cmake
+
+    def build(self):
+        cmake = self._configure_cmake()
+        cmake.build()
+
+    def package(self):
+        cmake = self._configure_cmake()
+        cmake.install()
+
+    def package_info(self):
+        self.cpp_info.names["cmake_find_package"] = "HELLO"
+        self.cpp_info.names["cmake_find_package_multi"] = "HELLO"
+        self.cpp_info.components["libhello"].names["cmake_find_package"] = "libhello"
+        self.cpp_info.components["libhello"].names["cmake_find_package_multi"] = "libhello"
+
+        self.cpp_info.components["libhello"].libs = ["hello"]
+        self.cpp_info.components["libhello"].frameworks.extend(["CoreFoundation"])
+        """)
+        hello_cpp = textwrap.dedent("""
+#include <CoreFoundation/CoreFoundation.h>
+
+void hello_api()
+{
+    CFTypeRef keys[] = {CFSTR("key")};
+    CFTypeRef values[] = {CFSTR("value")};
+    CFDictionaryRef dict = CFDictionaryCreate(kCFAllocatorDefault, keys, values, sizeof(keys) / sizeof(keys[0]), &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
+    if (dict)
+        CFRelease(dict);
+}
+        """)
+        hello_h = textwrap.dedent("""
+void hello_api();
+        """)
+        cmakelists_txt = textwrap.dedent("""
+cmake_minimum_required(VERSION 2.8)
+
+project(hello)
+
+include(GNUInstallDirs)
+
+include(conanbuildinfo.cmake)
+conan_basic_setup()
+
+file(GLOB SOURCES *.cpp)
+file(GLOB HEADERS *.h)
+
+add_library(${PROJECT_NAME} ${SOURCES} ${HEADERS})
+
+set_target_properties(${PROJECT_NAME} PROPERTIES PUBLIC_HEADER ${HEADERS})
+install(TARGETS ${PROJECT_NAME}
+    RUNTIME DESTINATION bin
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+    PUBLIC_HEADER DESTINATION include)
+        """)
+        tp_conanfile_py = textwrap.dedent("""
+import os
+from conans import ConanFile, CMake, tools
+
+class TestPackageConan(ConanFile):
+    settings = "os", "compiler", "build_type", "arch"
+    generators = "cmake", "cmake_find_package_multi"
+
+    def build(self):
+        cmake = CMake(self)
+        cmake.configure()
+        cmake.build()
+
+    def test(self):
+        if not tools.cross_building(self.settings):
+            bin_path = os.path.join("bin", "test_package")
+            self.run(bin_path, run_environment=True)
+        """)
+        tp_test_package_cpp = textwrap.dedent("""
+#include "hello.h"
+
+int main()
+{
+    hello_api();
+}
+        """)
+        tp_cmakelists_txt = textwrap.dedent("""
+cmake_minimum_required(VERSION 2.8)
+project(test_package)
+
+include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+conan_basic_setup()
+
+find_package(HELLO REQUIRED CONFIG)
+
+add_executable(${PROJECT_NAME} test_package.cpp)
+target_link_libraries(${PROJECT_NAME} HELLO::libhello)
+        """)
+        t = TestClient()
+        t.save({'conanfile.py': conanfile_py,
+                'hello.cpp': hello_cpp,
+                'hello.h': hello_h,
+                'CMakeLists.txt': cmakelists_txt,
+                'test_package/conanfile.py': tp_conanfile_py,
+                'test_package/CMakeLists.txt': tp_cmakelists_txt,
+                'test_package/test_package.cpp': tp_test_package_cpp})
+        t.run("create . hello/1.0@")
