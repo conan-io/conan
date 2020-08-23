@@ -1,4 +1,3 @@
-import platform
 import unittest
 
 from conans.client.generators.qmake import QmakeGenerator
@@ -25,3 +24,20 @@ class QmakeGeneratorTest(unittest.TestCase):
         self.assertIn('CONAN_LIBS += -lmypkg', qmake_lines)
         self.assertIn('CONAN_SYSTEMLIBS += -lpthread', qmake_lines)
 
+    def frameworks_test(self):
+        # https://github.com/conan-io/conan/issues/7564
+        conanfile = ConanFile(TestBufferConanOutput(), None)
+        conanfile.initialize(Settings({}), EnvValues())
+        cpp_info = CppInfo("MyPkg", "/rootpath")
+        cpp_info.filter_empty = False
+        cpp_info.frameworks = ["myframework"]
+        cpp_info.frameworkdirs = ["my/framework/dir"]
+        conanfile.deps_cpp_info.add("MyPkg", DepCppInfo(cpp_info))
+        generator = QmakeGenerator(conanfile)
+        content = generator.content
+        self.assertIn("CONAN_FRAMEWORKS += -framework myframework", content)
+        self.assertIn("CONAN_FRAMEWORKSDIRS += -F/rootpath/my/framework/dir", content)
+        self.assertIn("CONAN_FRAMEWORKS_MYPKG += -framework myframework", content)
+        self.assertIn("CONAN_FRAMEWORKSDIRS_MYPKG += -F/rootpath/my/framework/dir", content)
+        self.assertIn("LIBS += $$CONAN_FRAMEWORKSDIRS_RELEASE", content)
+        self.assertIn("LIBS += $$CONAN_FRAMEWORKS_RELEASE", content)
