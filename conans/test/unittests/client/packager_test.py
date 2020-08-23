@@ -3,14 +3,14 @@ import shutil
 import unittest
 from mock import Mock
 
+from conans.client.conanfile.package import run_package_method
 from conans.client.graph.python_requires import ConanPythonRequire
 from conans.client.loader import ConanFileLoader
-from conans.client.packager import run_package_method
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE, CONANINFO
 from conans.test.utils.cpp_test_files import cpp_hello_source_files
-from conans.test.utils.tools import TestBufferConanOutput, TestClient, test_profile
-
+from conans.test.utils.tools import TestClient, test_profile
+from conans.test.utils.mocks import TestBufferConanOutput
 
 myconan1 = """
 from conans import ConanFile

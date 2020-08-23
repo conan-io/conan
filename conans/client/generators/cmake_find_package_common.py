@@ -8,7 +8,11 @@ set({name}_INCLUDE_DIR{build_type_suffix} {deps.include_path})
 set({name}_INCLUDES{build_type_suffix} {deps.include_paths})
 set({name}_RES_DIRS{build_type_suffix} {deps.res_paths})
 set({name}_DEFINITIONS{build_type_suffix} {deps.defines})
-set({name}_LINKER_FLAGS{build_type_suffix}_LIST "{deps.sharedlinkflags_list}" "{deps.exelinkflags_list}")
+set({name}_LINKER_FLAGS{build_type_suffix}_LIST
+        "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:{deps.sharedlinkflags_list}>"
+        "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:{deps.sharedlinkflags_list}>"
+        "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:{deps.exelinkflags_list}>"
+)
 set({name}_COMPILE_DEFINITIONS{build_type_suffix} {deps.compile_definitions})
 set({name}_COMPILE_OPTIONS{build_type_suffix}_LIST "{deps.cxxflags_list}" "{deps.cflags_list}")
 set({name}_LIBRARIES_TARGETS{build_type_suffix} "") # Will be filled later, if CMake 3
@@ -73,6 +77,35 @@ endforeach()
 """
 
 
+def find_transitive_dependencies(public_deps_filenames, find_modules):
+    if find_modules:  # for cmake_find_package generator
+        find = textwrap.dedent("""
+            if(NOT {dep_filename}_FOUND)
+                find_dependency({dep_filename} REQUIRED)
+            else()
+                message(STATUS "Dependency {dep_filename} already found")
+            endif()
+            """)
+    else:  # for cmake_find_package_multi generator
+        # https://github.com/conan-io/conan/issues/4994
+        # https://github.com/conan-io/conan/issues/5040
+        find = textwrap.dedent("""
+            if(NOT {dep_filename}_FOUND)
+                if(${{CMAKE_VERSION}} VERSION_LESS "3.9.0")
+                    find_package({dep_filename} REQUIRED NO_MODULE)
+                else()
+                    find_dependency({dep_filename} REQUIRED NO_MODULE)
+                endif()
+            else()
+                message(STATUS "Dependency {dep_filename} already found")
+            endif()
+            """)
+    lines = ["", "# Library dependencies", "include(CMakeFindDependencyMacro)"]
+    for dep_filename in public_deps_filenames:
+        lines.append(find.format(dep_filename=dep_filename))
+    return "\n".join(lines)
+
+
 class CMakeFindPackageCommonMacros:
     conan_message = CMakeCommonMacros.conan_message
 
@@ -124,7 +157,7 @@ class CMakeFindPackageCommonMacros:
                 endif()
                 unset(CONAN_FOUND_LIBRARY CACHE)
             endforeach()
-            
+
             if(NOT ${CMAKE_VERSION} VERSION_LESS "3.0")
                 # Add all dependencies to all targets
                 string(REPLACE " " ";" deps_list "${deps}")
@@ -132,7 +165,7 @@ class CMakeFindPackageCommonMacros:
                     set_property(TARGET ${_CONAN_ACTUAL_TARGET} PROPERTY INTERFACE_LINK_LIBRARIES "${_CONAN_FOUND_SYSTEM_LIBS};${deps_list}")
                 endforeach()
             endif()
-                
+
             set(${out_libraries} ${_out_libraries} PARENT_SCOPE)
             set(${out_libraries_target} ${_out_libraries_target} PARENT_SCOPE)
         endfunction()

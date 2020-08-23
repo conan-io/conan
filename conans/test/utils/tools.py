@@ -1,43 +1,31 @@
-import errno
 import json
 import os
 import random
 import shlex
 import shutil
-import stat
-import subprocess
 import sys
-import tempfile
+import textwrap
 import threading
 import time
-import unittest
 import uuid
-from collections import Counter, OrderedDict
+from collections import OrderedDict
 from contextlib import contextmanager
 
 import bottle
 import requests
-import six
 from mock import Mock
 from requests.exceptions import HTTPError
-from six import StringIO
-from six.moves.urllib.parse import quote, urlsplit, urlunsplit
+from six.moves.urllib.parse import urlsplit, urlunsplit
 from webtest.app import TestApp
 
 from conans import load
 from conans.client.cache.cache import ClientCache
 from conans.client.cache.remote_registry import Remotes
-from conans.client.command import Command
 from conans.client.conan_api import Conan
-from conans.client.output import ConanOutput
 from conans.client.rest.file_uploader import IterableToFileAdapter
 from conans.client.runner import ConanRunner
 from conans.client.tools import environment_append
-from conans.client.tools.files import chdir
 from conans.client.tools.files import replace_in_file
-from conans.client.tools.scm import Git, SVN
-from conans.client.tools.win import get_cased_path
-from conans.client.userio import UserIO
 from conans.errors import NotFoundException, RecipeNotFoundException, PackageNotFoundException
 from conans.model.manifest import FileTreeManifest
 from conans.model.profile import Profile
@@ -45,13 +33,16 @@ from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.settings import Settings
 from conans.server.revision_list import _RevisionEntry
 from conans.test.utils.genconanfile import GenConanfile
+from conans.test.utils.mocks import MockedUserIO, TestBufferConanOutput
+from conans.test.utils.scm import create_local_git_repo, create_local_svn_checkout, \
+    create_remote_svn_repo
 from conans.test.utils.server_launcher import (TESTING_REMOTE_PRIVATE_PASS,
                                                TESTING_REMOTE_PRIVATE_USER,
                                                TestServerLauncher)
 from conans.test.utils.test_files import temp_folder
+from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
 from conans.util.env_reader import get_env
 from conans.util.files import mkdir, save_files
-from conans.util.runners import check_output_runner
 
 NO_SETTINGS_PACKAGE_ID = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
 
@@ -461,202 +452,21 @@ if get_env("CONAN_TEST_WITH_ARTIFACTORY", False):
     TestServer = ArtifactoryServer
 
 
-class TestBufferConanOutput(ConanOutput):
-    """ wraps the normal output of the application, captures it into an stream
-    and gives it operators similar to string, so it can be compared in tests
-    """
-
-    def __init__(self):
-        ConanOutput.__init__(self, StringIO(), color=False)
-
-    def __repr__(self):
-        # FIXME: I'm sure there is a better approach. Look at six docs.
-        if six.PY2:
-            return str(self._stream.getvalue().encode("ascii", "ignore"))
-        else:
-            return self._stream.getvalue()
-
-    def __str__(self, *args, **kwargs):
-        return self.__repr__()
-
-    def __eq__(self, value):
-        return self.__repr__() == value
-
-    def __ne__(self, value):
-        return not self.__eq__(value)
-
-    def __contains__(self, value):
-        return value in self.__repr__()
+def _copy_cache_folder(target_folder):
+    # Some variables affect to cache population (take a different default folder)
+    cache_key = hash(os.environ.get(CONAN_V2_MODE_ENVVAR, None))
+    master_folder = _copy_cache_folder.master.setdefault(cache_key, temp_folder(create_dir=False))
+    if not os.path.exists(master_folder):
+        # Create and populate the cache folder with the defaults
+        cache = ClientCache(master_folder, TestBufferConanOutput())
+        cache.initialize_config()
+        cache.registry.initialize_remotes()
+        cache.initialize_default_profile()
+        cache.initialize_settings()
+    shutil.copytree(master_folder, target_folder)
 
 
-def create_local_git_repo(files=None, branch=None, submodules=None, folder=None, commits=1, tags=None):
-    tmp = folder or temp_folder()
-    tmp = get_cased_path(tmp)
-    if files:
-        save_files(tmp, files)
-    git = Git(tmp)
-    git.run("init .")
-    git.run('config user.email "you@example.com"')
-    git.run('config user.name "Your Name"')
-
-    if branch:
-        git.run("checkout -b %s" % branch)
-
-    git.run("add .")
-    for i in range(0, commits):
-        git.run('commit --allow-empty -m "commiting"')
-
-    tags = tags or []
-    for tag in tags:
-        git.run("tag %s" % tag)
-
-    if submodules:
-        for submodule in submodules:
-            git.run('submodule add "%s"' % submodule)
-        git.run('commit -m "add submodules"')
-
-    return tmp.replace("\\", "/"), git.get_revision()
-
-
-def create_local_svn_checkout(files, repo_url, rel_project_path=None,
-                              commit_msg='default commit message', delete_checkout=True,
-                              folder=None):
-    tmp_dir = folder or temp_folder()
-    try:
-        rel_project_path = rel_project_path or str(uuid.uuid4())
-        # Do not use SVN class as it is what we will be testing
-        subprocess.check_output('svn co "{url}" "{path}"'.format(url=repo_url,
-                                                                 path=tmp_dir),
-                                shell=True)
-        tmp_project_dir = os.path.join(tmp_dir, rel_project_path)
-        mkdir(tmp_project_dir)
-        save_files(tmp_project_dir, files)
-        with chdir(tmp_project_dir):
-            subprocess.check_output("svn add .", shell=True)
-            subprocess.check_output('svn commit -m "{}"'.format(commit_msg), shell=True)
-            if SVN.get_version() >= SVN.API_CHANGE_VERSION:
-                rev = check_output_runner("svn info --show-item revision").strip()
-            else:
-                import xml.etree.ElementTree as ET
-                output = check_output_runner("svn info --xml").strip()
-                root = ET.fromstring(output)
-                rev = root.findall("./entry")[0].get("revision")
-        project_url = repo_url + "/" + quote(rel_project_path.replace("\\", "/"))
-        return project_url, rev
-    finally:
-        if delete_checkout:
-            shutil.rmtree(tmp_dir, ignore_errors=False, onerror=try_remove_readonly)
-
-
-def create_remote_svn_repo(folder=None):
-    tmp_dir = folder or temp_folder()
-    subprocess.check_output('svnadmin create "{}"'.format(tmp_dir), shell=True)
-    return SVN.file_protocol + quote(tmp_dir.replace("\\", "/"), safe='/:')
-
-
-def try_remove_readonly(func, path, exc):  # TODO: May promote to conan tools?
-    # src: https://stackoverflow.com/questions/1213706/what-user-do-python-scripts-run-as-in-windows
-    excvalue = exc[1]
-    if func in (os.rmdir, os.remove, os.unlink) and excvalue.errno == errno.EACCES:
-        os.chmod(path, stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)  # 0777
-        func(path)
-    else:
-        raise OSError("Cannot make read-only %s" % path)
-
-
-class SVNLocalRepoTestCase(unittest.TestCase):
-    path_with_spaces = True
-
-    def _create_local_svn_repo(self):
-        folder = os.path.join(self._tmp_folder, 'repo_server')
-        return create_remote_svn_repo(folder)
-
-    def gimme_tmp(self, create=True):
-        tmp = os.path.join(self._tmp_folder, str(uuid.uuid4()))
-        if create:
-            os.makedirs(tmp)
-        return tmp
-
-    def create_project(self, files, rel_project_path=None, commit_msg='default commit message',
-                       delete_checkout=True):
-        tmp_dir = self.gimme_tmp()
-        return create_local_svn_checkout(files, self.repo_url, rel_project_path=rel_project_path,
-                                         commit_msg=commit_msg, delete_checkout=delete_checkout,
-                                         folder=tmp_dir)
-
-    def run(self, *args, **kwargs):
-        tmp_folder = tempfile.mkdtemp(suffix='_conans')
-        try:
-            self._tmp_folder = os.path.join(tmp_folder, 'path with spaces'
-                                            if self.path_with_spaces else 'pathwithoutspaces')
-            os.makedirs(self._tmp_folder)
-            self.repo_url = self._create_local_svn_repo()
-            super(SVNLocalRepoTestCase, self).run(*args, **kwargs)
-        finally:
-            shutil.rmtree(tmp_folder, ignore_errors=False, onerror=try_remove_readonly)
-
-
-class LocalDBMock(object):
-
-    def __init__(self, user=None, access_token=None, refresh_token=None):
-        self.user = user
-        self.access_token = access_token
-        self.refresh_token = refresh_token
-
-    def get_login(self, _):
-        return self.user, self.access_token, self.refresh_token
-
-    def get_username(self, _):
-        return self.user
-
-    def store(self, user, access_token, refresh_token, _):
-        self.user = user
-        self.access_token = access_token
-        self.refresh_token = refresh_token
-
-
-class MockedUserIO(UserIO):
-
-    """
-    Mock for testing. If get_username or get_password is requested will raise
-    an exception except we have a value to return.
-    """
-
-    def __init__(self, logins, ins=sys.stdin, out=None):
-        """
-        logins is a dict of {remote: list(user, password)}
-        will return sequentially
-        """
-        assert isinstance(logins, dict)
-        self.logins = logins
-        self.login_index = Counter()
-        UserIO.__init__(self, ins, out)
-
-    def get_username(self, remote_name):
-        username_env = self._get_env_username(remote_name)
-        if username_env:
-            return username_env
-
-        self._raise_if_non_interactive()
-        sub_dict = self.logins[remote_name]
-        index = self.login_index[remote_name]
-        if len(sub_dict) - 1 < index:
-            raise Exception("Bad user/password in testing framework, "
-                            "provide more tuples or input the right ones")
-        return sub_dict[index][0]
-
-    def get_password(self, remote_name):
-        """Overridable for testing purpose"""
-        password_env = self._get_env_password(remote_name)
-        if password_env:
-            return password_env
-
-        self._raise_if_non_interactive()
-        sub_dict = self.logins[remote_name]
-        index = self.login_index[remote_name]
-        tmp = sub_dict[index][1]
-        self.login_index.update([remote_name])
-        return tmp
+_copy_cache_folder.master = dict()  # temp_folder(create_dir=False)
 
 
 class TestClient(object):
@@ -666,7 +476,8 @@ class TestClient(object):
 
     def __init__(self, cache_folder=None, current_folder=None, servers=None, users=None,
                  requester_class=None, runner=None, path_with_spaces=True,
-                 revisions_enabled=None, cpu_count=1, default_server_user=None):
+                 revisions_enabled=None, cpu_count=1, default_server_user=None,
+                 cache_autopopulate=True):
         """
         current_folder: Current execution folder
         servers: dict of {remote_name: TestServer}
@@ -684,23 +495,31 @@ class TestClient(object):
             else:
                 server_users = default_server_user
                 users = {"default": list(default_server_user.items())}
-            server = TestServer(users=server_users)
+            # Allow write permissions to users
+            server = TestServer(users=server_users, write_permissions=[("*/*@*/*", "*")])
             servers = {"default": server}
 
         self.users = users
         if self.users is None:
             self.users = {"default": [(TESTING_REMOTE_PRIVATE_USER, TESTING_REMOTE_PRIVATE_PASS)]}
 
-        self.cache_folder = cache_folder or temp_folder(path_with_spaces)
+        if cache_autopopulate and (not cache_folder or not os.path.exists(cache_folder)):
+            # Copy a cache folder already populated
+            self.cache_folder = cache_folder or temp_folder(path_with_spaces, create_dir=False)
+            _copy_cache_folder(self.cache_folder)
+        else:
+            self.cache_folder = cache_folder or temp_folder(path_with_spaces)
+
         self.requester_class = requester_class
         self.runner = runner
 
         if servers and len(servers) > 1 and not isinstance(servers, OrderedDict):
-            raise Exception("""Testing framework error: Servers should be an OrderedDict. e.g:
-servers = OrderedDict()
-servers["r1"] = server
-servers["r2"] = TestServer()
-""")
+            raise Exception(textwrap.dedent("""
+                Testing framework error: Servers should be an OrderedDict. e.g:
+                    servers = OrderedDict()
+                    servers["r1"] = server
+                    servers["r2"] = TestServer()
+            """))
 
         self.servers = servers or {}
         if servers is not False:  # Do not mess with registry remotes
@@ -766,7 +585,7 @@ servers["r2"] = TestServer()
     def tune_conan_conf(self, cache_folder, cpu_count, revisions_enabled):
         # Create the default
         cache = self.cache
-        cache.config
+        _ = cache.config
 
         if cpu_count:
             replace_in_file(cache.conan_conf_path,
@@ -829,7 +648,12 @@ servers["r2"] = TestServer()
         """
         conan = self.get_conan_api(user_io)
         self.api = conan
-        command = Command(conan)
+        if os.getenv("CONAN_V2_CLI"):
+            from conans.cli.cli import Cli
+            command = Cli(conan)
+        else:
+            from conans.client.command import Command
+            command = Command(conan)
         args = shlex.split(command_line)
         current_dir = os.getcwd()
         os.chdir(self.current_folder)
@@ -865,7 +689,7 @@ servers["r2"] = TestServer()
             exc_message = "\n{header}\n{cmd}\n{output_header}\n{output}\n{output_footer}\n".format(
                 header='{:-^80}'.format(msg),
                 output_header='{:-^80}'.format(" Output: "),
-                output_footer='-'*80,
+                output_footer='-' * 80,
                 cmd=command,
                 output=self.out
             )
@@ -907,7 +731,6 @@ servers["r2"] = TestServer()
 
 
 class TurboTestClient(TestClient):
-
     tmp_json_name = ".tmp_json"
 
     def __init__(self, *args, **kwargs):

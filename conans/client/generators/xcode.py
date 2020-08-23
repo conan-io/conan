@@ -29,7 +29,7 @@ FRAMEWORK_SEARCH_PATHS = $(inherited) {rootpaths} {framework_paths}
         self.cxx_compiler_flags = " ".join(deps_cpp_info.cxxflags)
         self.linker_flags = " ".join(deps_cpp_info.sharedlinkflags)
         self.rootpaths = " ".join('"%s"' % d.replace("\\", "/") for d in deps_cpp_info.rootpaths)
-        self.frameworks = " ".join(format_frameworks(deps_cpp_info.frameworks, compiler="apple-clang"))
+        self.frameworks = " ".join(format_frameworks(deps_cpp_info.frameworks, self.conanfile.settings))
         self.framework_paths = " ".join(deps_cpp_info.framework_paths)
         self.system_libs = " ".join(['-l%s' % lib for lib in deps_cpp_info.system_libs])
 

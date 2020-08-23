@@ -97,6 +97,8 @@ which = tools_files.which
 unix2dos = tools_files.unix2dos
 dos2unix = tools_files.dos2unix
 rename = tools_files.rename
+fix_symlinks = tools_files.fix_symlinks
+
 
 def unzip(*args, **kwargs):
     return tools_files.unzip(output=_global_output, *args, **kwargs)
@@ -194,6 +196,7 @@ WSL = tools_win.WSL
 SFU = tools_win.SFU
 unix_path = tools_win.unix_path
 run_in_windows_bash = tools_win.run_in_windows_bash
+msvs_toolset = tools_win.msvs_toolset
 
 
 @contextmanager

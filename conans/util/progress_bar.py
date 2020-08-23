@@ -49,6 +49,10 @@ class Progress(object):
                                   file=self._output, unit="B", leave=False, dynamic_ncols=False,
                                   ascii=True, unit_scale=True, unit_divisor=1024)
 
+    def initial_value(self, value):
+        self._processed_size = value
+        self._pb_update(value)
+
     def _pb_update(self, chunk_size):
         if self._tqdm_bar is not None:
             self._tqdm_bar.update(chunk_size)

@@ -23,12 +23,12 @@ from conans.client.output import ConanOutput
 from conans.client.tools.files import replace_in_file, which
 from conans.client.tools.oss import OSInfo
 from conans.client.tools.win import vswhere
-from conans.errors import ConanException, NotFoundException, AuthenticationException
+from conans.errors import ConanException, AuthenticationException
 from conans.model.build_info import CppInfo
 from conans.model.settings import Settings
-from conans.test.utils.conanfile import ConanFileMock
+from conans.test.utils.mocks import ConanFileMock, TestBufferConanOutput
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import StoppableThreadBottle, TestBufferConanOutput, TestClient
+from conans.test.utils.tools import StoppableThreadBottle, TestClient
 from conans.tools import get_global_instances
 from conans.util.env_reader import get_env
 from conans.util.files import load, md5, mkdir, save
@@ -42,14 +42,17 @@ class ConfigMock:
 
 
 class RunnerMock(object):
-    def __init__(self, return_ok=True):
+    def __init__(self, return_ok=True, output=None):
         self.command_called = None
         self.return_ok = return_ok
+        self.output = output
 
     def __call__(self, command, output, win_bash=False, subsystem=None):  # @UnusedVariable
         self.command_called = command
         self.win_bash = win_bash
         self.subsystem = subsystem
+        if self.output and output and hasattr(output, "write"):
+            output.write(self.output)
         return 0 if self.return_ok else 1
 
 
@@ -298,7 +301,7 @@ class HelloConan(ConanFile):
             warnings.simplefilter("always")
             cmd = tools.msvc_build_command(settings, "project.sln", build_type="Debug",
                                            arch="x86", output=self.output)
-            self.assertEqual(len(w), 2)
+            self.assertEqual(len(w), 3)
             self.assertTrue(issubclass(w[0].category, DeprecationWarning))
         self.assertIn('msbuild "project.sln" /p:Configuration="Debug" '
                       '/p:UseEnv=false /p:Platform="x86"', cmd)
@@ -324,7 +327,7 @@ class HelloConan(ConanFile):
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
             cmd = tools.msvc_build_command(settings, "project.sln", output=self.output)
-            self.assertEqual(len(w), 2)
+            self.assertEqual(len(w), 3)
             self.assertTrue(issubclass(w[0].category, DeprecationWarning))
         self.assertIn('msbuild "project.sln" /p:Configuration="Debug" '
                       '/p:UseEnv=false /p:Platform="x86"', cmd)
@@ -597,11 +600,17 @@ class HelloConan(ConanFile):
         ["Windows", "x86_64", "gcc", "x86_64-w64-mingw32"],
         ["Darwin", "x86_64", None, "x86_64-apple-darwin"],
         ["Macos", "x86", None, "i686-apple-darwin"],
-        ["iOS", "armv7", None, "arm-apple-darwin"],
-        ["watchOS", "armv7k", None, "arm-apple-darwin"],
-        ["watchOS", "armv8_32", None, "aarch64-apple-darwin"],
-        ["tvOS", "armv8", None, "aarch64-apple-darwin"],
-        ["tvOS", "armv8.3", None, "aarch64-apple-darwin"],
+        ["iOS", "armv7", None, "arm-apple-ios"],
+        ["iOS", "x86", None, "i686-apple-ios"],
+        ["iOS", "x86_64", None, "x86_64-apple-ios"],
+        ["watchOS", "armv7k", None, "arm-apple-watchos"],
+        ["watchOS", "armv8_32", None, "aarch64-apple-watchos"],
+        ["watchOS", "x86", None, "i686-apple-watchos"],
+        ["watchOS", "x86_64", None, "x86_64-apple-watchos"],
+        ["tvOS", "armv8", None, "aarch64-apple-tvos"],
+        ["tvOS", "armv8.3", None, "aarch64-apple-tvos"],
+        ["tvOS", "x86", None, "i686-apple-tvos"],
+        ["tvOS", "x86_64", None, "x86_64-apple-tvos"],
         ["Emscripten", "asm.js", None, "asmjs-local-emscripten"],
         ["Emscripten", "wasm", None, "wasm32-local-emscripten"],
         ["AIX", "ppc32", None, "rs6000-ibm-aix"],
@@ -874,7 +883,7 @@ class CollectLibTestCase(unittest.TestCase):
         conanfile.package_folder = temp_folder()
         mylib_path = os.path.join(conanfile.package_folder, "lib", "mylib.lib")
         save(mylib_path, "")
-        conanfile.cpp_info = CppInfo("")
+        conanfile.cpp_info = CppInfo("", "")
         result = tools.collect_libs(conanfile)
         self.assertEqual(["mylib"], result)
 
@@ -902,7 +911,7 @@ class CollectLibTestCase(unittest.TestCase):
         # Warn same lib different folders
         conanfile = ConanFileMock()
         conanfile.package_folder = temp_folder()
-        conanfile.cpp_info = CppInfo("")
+        conanfile.cpp_info = CppInfo(conanfile.name, "")
         custom_mylib_path = os.path.join(conanfile.package_folder, "custom_folder", "mylib.lib")
         lib_mylib_path = os.path.join(conanfile.package_folder, "lib", "mylib.lib")
         save(custom_mylib_path, "")
@@ -917,7 +926,7 @@ class CollectLibTestCase(unittest.TestCase):
         # Warn lib folder does not exist with correct result
         conanfile = ConanFileMock()
         conanfile.package_folder = temp_folder()
-        conanfile.cpp_info = CppInfo("")
+        conanfile.cpp_info = CppInfo(conanfile.name, "")
         lib_mylib_path = os.path.join(conanfile.package_folder, "lib", "mylib.lib")
         save(lib_mylib_path, "")
         no_folder_path = os.path.join(conanfile.package_folder, "no_folder")
@@ -940,7 +949,7 @@ class CollectLibTestCase(unittest.TestCase):
         conanfile.package_folder = temp_folder()
         mylib_path = os.path.join(conanfile.package_folder, "lib", "mylib.lib")
         save(mylib_path, "")
-        conanfile.cpp_info = CppInfo("")
+        conanfile.cpp_info = CppInfo("", "")
         result = conanfile.collect_libs()
         self.assertEqual(["mylib"], result)
 
@@ -968,7 +977,7 @@ class CollectLibTestCase(unittest.TestCase):
         # Warn same lib different folders
         conanfile = ConanFileMock()
         conanfile.package_folder = temp_folder()
-        conanfile.cpp_info = CppInfo("")
+        conanfile.cpp_info = CppInfo("", "")
         custom_mylib_path = os.path.join(conanfile.package_folder, "custom_folder", "mylib.lib")
         lib_mylib_path = os.path.join(conanfile.package_folder, "lib", "mylib.lib")
         save(custom_mylib_path, "")
@@ -983,7 +992,7 @@ class CollectLibTestCase(unittest.TestCase):
         # Warn lib folder does not exist with correct result
         conanfile = ConanFileMock()
         conanfile.package_folder = temp_folder()
-        conanfile.cpp_info = CppInfo("")
+        conanfile.cpp_info = CppInfo("", "")
         lib_mylib_path = os.path.join(conanfile.package_folder, "lib", "mylib.lib")
         save(lib_mylib_path, "")
         no_folder_path = os.path.join(conanfile.package_folder, "no_folder")

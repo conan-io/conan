@@ -11,7 +11,7 @@ from conans.client.conf import get_default_settings_yml
 from conans.client.tools import args_to_string
 from conans.errors import ConanException
 from conans.model.settings import Settings
-from conans.test.utils.conanfile import ConanFileMock, MockDepsCppInfo
+from conans.test.utils.mocks import MockDepsCppInfo, ConanFileMock
 from conans.test.utils.test_files import temp_folder
 
 
@@ -74,8 +74,7 @@ class MesonTest(unittest.TestCase):
             'bindir': 'bin',
             'sbindir': 'bin',
             'libexecdir': 'bin',
-            'includedir': 'include',
-            'cpp_std': 'none'
+            'includedir': 'include'
         }
 
         meson.configure(source_dir=os.path.join(self.tempdir, "../subdir"),

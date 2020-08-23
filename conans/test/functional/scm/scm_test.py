@@ -11,8 +11,9 @@ from conans.client.tools.win import get_cased_path
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.scm import SCMData
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, SVNLocalRepoTestCase, TestClient, \
-    TestServer, create_local_git_repo, GenConanfile
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, \
+    TestServer, GenConanfile
+from conans.test.utils.scm import create_local_git_repo, SVNLocalRepoTestCase
 from conans.util.files import load, rmdir, save, to_file_bytes
 
 base = '''
@@ -127,8 +128,9 @@ class ConanLib(ConanFile):
         conanfile = base_git.format(directory="None", url=_quoted("auto"), revision="auto")
         self.client.save({"conanfile.py": conanfile, "myfile.txt": "My file is copied"})
         create_local_git_repo(folder=self.client.current_folder)
-        self.client.run("export . user/channel", assert_error=True)
-        self.assertIn("Repo origin cannot be deduced", self.client.out)
+        self.client.run("export . user/channel")
+        self.assertIn("WARN: Repo origin cannot be deduced, 'auto' fields won't be replaced",
+                      self.client.out)
 
         self.client.run_command('git remote add origin https://myrepo.com.git')
 
@@ -1031,9 +1033,63 @@ class SCMBlockUploadTest(unittest.TestCase):
                       "Use --ignore-dirty to force it.", client.out)
         # The upload has to fail, no "auto" fields are allowed
         client.run("upload lib/0.1@user/channel -r default", assert_error=True)
-        self.assertIn("ERROR: lib/0.1@user/channel: Upload recipe to 'default' failed: "
-                      "The recipe has 'scm.url' or 'scm.revision' with 'auto' values. "
-                      "Use '--force' to ignore", client.out)
+        self.assertIn("ERROR: lib/0.1@user/channel: Upload recipe to 'default' failed:"
+                      " The recipe contains invalid data in the 'scm' attribute (some 'auto'"
+                      " values or missing fields 'type', 'url' or 'revision'). Use '--force'"
+                      " to ignore", client.out)
         # The upload with --force should work
         client.run("upload lib/0.1@user/channel -r default --force")
         self.assertIn("Uploaded conan recipe", client.out)
+
+    def test_export_blocking_type_none(self):
+        client = TestClient(default_server_user=True)
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class ConanLib(ConanFile):
+                scm = {
+                    "type": None,
+                    "url": "some url",
+                    "revision": "some_rev",
+                }
+            """)
+        client.save({"conanfile.py": conanfile})
+        client.run("export . pkg/0.1@user/channel", assert_error=True)
+        self.assertIn("ERROR: SCM not supported: None", client.out)
+
+    def test_create_blocking_url_none(self):
+        # If URL is None, it cannot create locally, as it will try to clone it
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class ConanLib(ConanFile):
+                scm = {
+                    "type": "git",
+                    "url": None,
+                    "revision": "some_rev",
+                }
+            """)
+        client.save({"conanfile.py": conanfile})
+        client.run("create . pkg/0.1@user/channel", assert_error=True)
+        self.assertIn("Couldn't checkout SCM:", client.out)
+
+    def test_upload_blocking_url_none_revision_auto(self):
+        # if the revision is auto and the url is None, it can be created locally, but not uploaded
+        client = TestClient(default_server_user=True)
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class ConanLib(ConanFile):
+                scm = {
+                    "type": "git",
+                    "url": None,
+                    "revision": "auto",
+                }
+            """)
+        client.save({"conanfile.py": conanfile})
+        create_local_git_repo(folder=client.current_folder)
+        client.run("create . pkg/0.1@user/channel")
+        client.run("upload pkg/0.1@user/channel -r default", assert_error=True)
+        self.assertIn("ERROR: pkg/0.1@user/channel: Upload recipe to 'default' failed: The recipe"
+                      " contains invalid data in the 'scm' attribute (some 'auto' values or"
+                      " missing fields 'type', 'url' or 'revision'). Use '--force' to ignore",
+                      client.out)
+        client.run("upload pkg/0.1@user/channel -r default --force")

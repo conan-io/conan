@@ -14,7 +14,8 @@ from conans.client.output import ConanOutput
 from conans.client.runner import ConanRunner
 from conans.client.tools.win import vcvars_dict
 from conans.errors import ConanException
-from conans.test.utils.tools import TestBufferConanOutput, TestClient
+from conans.test.utils.tools import TestClient
+from conans.test.utils.mocks import TestBufferConanOutput
 
 
 class VCVarsTest(unittest.TestCase):
@@ -243,8 +244,7 @@ ProgramFiles(x86)=C:\Program Files (x86)
 
 """
 
-        def vcvars_command_mock(settings, arch, compiler_version, force, vcvars_ver, winsdk_version,
-                                output):  # @UnusedVariable
+        def vcvars_command_mock(*args, **kwargs):
             return "unused command"
 
         def subprocess_check_output_mock(cmd):

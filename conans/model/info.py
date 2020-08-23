@@ -189,6 +189,7 @@ class RequirementsInfo(object):
     def refs(self):
         """ used for updating downstream requirements with this
         """
+        # FIXME: This is a very bad name, it return prefs, not refs
         return list(self._data.keys())
 
     def _get_key(self, item):
@@ -616,10 +617,10 @@ class ConanInfo(object):
             self.settings.compiler.cppstd = self.full_settings.compiler.cppstd
 
     def shared_library_package_id(self):
-        if self.full_options.shared:
+        if "shared" in self.full_options and self.full_options.shared:
             for dep_name in self.requires.pkg_names:
                 dep_options = self.full_options[dep_name]
-                if "shared" not in dep_options or not self.full_options[dep_name].shared:
+                if "shared" not in dep_options or not dep_options.shared:
                     self.requires[dep_name].package_revision_mode()
 
     def parent_compatible(self, *_, **kwargs):

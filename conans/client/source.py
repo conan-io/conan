@@ -25,7 +25,7 @@ def complete_recipe_sources(remote_manager, cache, conanfile, ref, remotes):
     if os.path.exists(sources_folder):
         return None
 
-    if conanfile.exports_sources is None:
+    if conanfile.exports_sources is None and not hasattr(conanfile, "export_sources"):
         mkdir(sources_folder)
         return None
 
@@ -185,8 +185,11 @@ def _run_cache_scm(conanfile, scm_sources_folder, src_folder, output):
         merge_directories(scm_sources_folder, dest_dir)
     else:
         output.info("SCM: Getting sources from url: '%s'" % scm_data.url)
-        scm = SCM(scm_data, dest_dir, output)
-        scm.checkout()
+        try:
+            scm = SCM(scm_data, dest_dir, output)
+            scm.checkout()
+        except Exception as e:
+            raise ConanException("Couldn't checkout SCM: %s" % str(e))
         # This is a bit weird. Why after a SCM should we remove files.
         # Maybe check conan 2.0
         # TODO: Why removing in the cache? There is no danger.

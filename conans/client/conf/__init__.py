@@ -1,6 +1,8 @@
 import logging
 import os
+import re
 import textwrap
+from datetime import timedelta
 
 from jinja2 import Template
 from six.moves.configparser import ConfigParser, NoSectionError
@@ -61,10 +63,11 @@ _t_default_settings_yml = Template(textwrap.dedent("""
         gcc: &gcc
             version: ["4.1", "4.4", "4.5", "4.6", "4.7", "4.8", "4.9",
                       "5", "5.1", "5.2", "5.3", "5.4", "5.5",
-                      "6", "6.1", "6.2", "6.3", "6.4",
-                      "7", "7.1", "7.2", "7.3", "7.4",
-                      "8", "8.1", "8.2", "8.3",
-                      "9", "9.1", "9.2", "9.3"]
+                      "6", "6.1", "6.2", "6.3", "6.4", "6.5",
+                      "7", "7.1", "7.2", "7.3", "7.4", "7.5",
+                      "8", "8.1", "8.2", "8.3", "8.4",
+                      "9", "9.1", "9.2", "9.3",
+                      "10", "10.1"]
             libcxx: [libstdc++, libstdc++11]
             threads: [None, posix, win32] #  Windows MinGW
             exception: [None, dwarf2, sjlj, seh] # Windows MinGW
@@ -75,20 +78,22 @@ _t_default_settings_yml = Template(textwrap.dedent("""
             toolset: [None, v90, v100, v110, v110_xp, v120, v120_xp,
                       v140, v140_xp, v140_clang_c2, LLVM-vs2012, LLVM-vs2012_xp,
                       LLVM-vs2013, LLVM-vs2013_xp, LLVM-vs2014, LLVM-vs2014_xp,
-                      LLVM-vs2017, LLVM-vs2017_xp, v141, v141_xp, v141_clang_c2, v142]
+                      LLVM-vs2017, LLVM-vs2017_xp, v141, v141_xp, v141_clang_c2, v142,
+                      llvm, ClangCL]
             cppstd: [None, 14, 17, 20]
         clang:
             version: ["3.3", "3.4", "3.5", "3.6", "3.7", "3.8", "3.9", "4.0",
                       "5.0", "6.0", "7.0", "7.1",
                       "8", "9", "10"]
-            libcxx: [libstdc++, libstdc++11, libc++, c++_shared, c++_static]
+            libcxx: [None, libstdc++, libstdc++11, libc++, c++_shared, c++_static]
             cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
+            runtime: [None, MD, MT, MTd, MDd]
         apple-clang: &apple_clang
             version: ["5.0", "5.1", "6.0", "6.1", "7.0", "7.3", "8.0", "8.1", "9.0", "9.1", "10.0", "11.0"]
             libcxx: [libstdc++, libc++]
             cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
         intel:
-            version: ["11", "12", "13", "14", "15", "16", "17", "18", "19"]
+            version: ["11", "12", "13", "14", "15", "16", "17", "18", "19", "19.1"]
             base:
                 gcc:
                     <<: *gcc
@@ -99,8 +104,9 @@ _t_default_settings_yml = Template(textwrap.dedent("""
                 apple-clang:
                     <<: *apple_clang
         qcc:
-            version: ["4.4", "5.4"]
+            version: ["4.4", "5.4", "8.3"]
             libcxx: [cxx, gpp, cpp, cpp-ne, accp, acpp-ne, ecpp, ecpp-ne]
+            cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17]
 
     build_type: [None, Debug, Release, RelWithDebInfo, MinSizeRel]
 
@@ -172,6 +178,9 @@ _t_default_client_conf = Template(textwrap.dedent("""
     {% if conan_v2 %}
     revisions_enabled = 1
     {% endif %}
+
+    # config_install_interval = 1h
+    # required_conan_version = >=1.26
 
     [storage]
     # This is the default path, but you can write your own. It must be an absolute path or a
@@ -475,14 +484,6 @@ class ConanClientConfigParser(ConfigParser, object):
             return None
 
     @property
-    def relax_lockfile(self):
-        try:
-            fix_id = self.get_item("general.relax_lockfile")
-            return fix_id.lower() in ("1", "true")
-        except ConanException:
-            return None
-
-    @property
     def short_paths_home(self):
         short_paths_home = get_env("CONAN_USER_HOME_SHORT")
         if short_paths_home:
@@ -563,16 +564,33 @@ class ConanClientConfigParser(ConfigParser, object):
 
     @property
     def client_cert_path(self):
-        # TODO: Really parameterize the client cert location
-        folder = os.path.dirname(self.filename)
-        CLIENT_CERT = "client.crt"
-        return os.path.normpath(os.path.join(folder, CLIENT_CERT))
+        cache_folder = os.path.dirname(self.filename)
+        try:
+            path = self.get_item("general.client_cert_path")
+        except ConanException:
+            path = os.path.join(cache_folder, "client.crt")
+        else:
+            # For explicit cacert files, the file should already exist
+            path = os.path.join(cache_folder, path)
+            if not os.path.exists(path):
+                raise ConanException("Configured file for 'client_cert_path'"
+                                     " doesn't exists: '{}'".format(path))
+        return os.path.normpath(path)
 
     @property
     def client_cert_key_path(self):
-        CLIENT_KEY = "client.key"
-        folder = os.path.dirname(self.filename)
-        return os.path.normpath(os.path.join(folder, CLIENT_KEY))
+        cache_folder = os.path.dirname(self.filename)
+        try:
+            path = self.get_item("general.client_cert_key_path")
+        except ConanException:
+            path = os.path.join(cache_folder, "client.key")
+        else:
+            # For explicit cacert files, the file should already exist
+            path = os.path.join(cache_folder, path)
+            if not os.path.exists(path):
+                raise ConanException("Configured file for 'client_cert_key_path'"
+                                     " doesn't exists: '{}'".format(path))
+        return os.path.normpath(path)
 
     @property
     def hooks(self):
@@ -684,3 +702,30 @@ class ConanClientConfigParser(ConfigParser, object):
             "notset": logging.NOTSET
         }
         return levels.get(str(level_name).lower())
+
+    @property
+    def config_install_interval(self):
+        try:
+            interval = self.get_item("general.config_install_interval")
+        except ConanException:
+            return None
+
+        match = re.search(r"(\d+)([mhd])", interval)
+        try:
+            value, unit = match.group(1), match.group(2)
+            if unit == 'm':
+                return timedelta(minutes=float(value))
+            elif unit == 'h':
+                return timedelta(hours=float(value))
+            else:
+                return timedelta(days=float(value))
+        except Exception:
+            raise ConanException("Incorrect definition of general.config_install_interval: %s"
+                                 % interval)
+
+    @property
+    def required_conan_version(self):
+        try:
+            return self.get_item("general.required_conan_version")
+        except ConanException:
+            return None

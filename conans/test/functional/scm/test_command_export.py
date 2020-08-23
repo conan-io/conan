@@ -7,7 +7,8 @@ import unittest
 from parameterized import parameterized
 from nose.plugins.attrib import attr
 
-from conans.test.utils.tools import TestClient, create_local_git_repo
+from conans.test.utils.tools import TestClient
+from conans.test.utils.scm import create_local_git_repo
 
 
 @attr("svn")
@@ -58,6 +59,7 @@ class ExportCommandTestCase(unittest.TestCase):
                                                                     rev_value=rev_value)})
         self.client = TestClient()
         self.client.current_folder = self.path
-        self.client.run("export . lib/version@user/channel", assert_error=bool(auto_url))
+        self.client.run("export . lib/version@user/channel")
         if auto_url:
-            self.assertIn("ERROR: Repo origin cannot be deduced", self.client.out)
+            self.assertIn("WARN: Repo origin cannot be deduced, 'auto' fields won't be replaced.",
+                          self.client.out)

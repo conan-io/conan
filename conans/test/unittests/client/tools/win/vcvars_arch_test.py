@@ -11,7 +11,7 @@ from conans.client.conf import get_default_settings_yml
 from conans.client.tools.env import environment_append
 from conans.errors import ConanException
 from conans.model.settings import Settings
-from conans.test.utils.tools import TestBufferConanOutput
+from conans.test.utils.mocks import TestBufferConanOutput
 
 
 @attr('visual_studio')
@@ -23,7 +23,8 @@ class VCVarsArchTest(unittest.TestCase):
         output = output or self.output
         command = tools.vcvars_command(settings, output=output, **kwargs)
         command = command.replace('"', '').replace("'", "")
-        self.assertTrue(command.endswith('vcvarsall.bat %s' % expected))
+        self.assertTrue(command.endswith('vcvarsall.bat %s' % expected),
+                        msg="'{}' doesn't ends with 'vcvarsall.bat {}'".format(command, expected))
 
     def test_arch(self):
         settings = Settings.loads(get_default_settings_yml())

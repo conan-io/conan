@@ -5,7 +5,8 @@ import re
 from conans.client import tools
 from conans.client.build.visual_environment import (VisualStudioBuildEnvironment,
                                                     vs_build_type_flags, vs_std_cpp)
-from conans.client.tools.env import environment_append
+from conans.client.tools.env import environment_append, no_op
+from conans.client.tools.intel import compilervars
 from conans.client.tools.oss import cpu_count
 from conans.client.tools.win import vcvars_command
 from conans.errors import ConanException
@@ -83,7 +84,7 @@ class MSBuild(object):
             props_file_contents = self._get_props_file_contents(definitions)
             property_file_name = os.path.abspath(property_file_name)
             save(property_file_name, props_file_contents)
-            vcvars = vcvars_command(self._conanfile.settings, force=force_vcvars,
+            vcvars = vcvars_command(self._conanfile.settings, arch=arch, force=force_vcvars,
                                     vcvars_ver=vcvars_ver, winsdk_version=winsdk_version,
                                     output=self._output)
             command = self.get_command(project_file, property_file_name,
@@ -95,7 +96,12 @@ class MSBuild(object):
                                        verbosity=verbosity,
                                        user_property_file_name=user_property_file_name)
             command = "%s && %s" % (vcvars, command)
-            return self._conanfile.run(command)
+            context = no_op()
+            if self._conanfile.settings.get_safe("compiler") == "Intel" and \
+                self._conanfile.settings.get_safe("compiler.base") == "Visual Studio":
+                context = compilervars(self._conanfile.settings, arch)
+            with context:
+                return self._conanfile.run(command)
 
     def get_command(self, project_file, props_file_path=None, targets=None, upgrade_project=True,
                     build_type=None, arch=None, parallel=True, toolset=None, platforms=None,

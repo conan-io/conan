@@ -28,7 +28,7 @@ def wait_until_removed(folder):
         raise Exception("Could remove folder %s: %s" % (folder, latest_exception))
 
 
-def temp_folder(path_with_spaces=True):
+def temp_folder(path_with_spaces=True, create_dir=True):
     t = tempfile.mkdtemp(suffix='conans', dir=CONAN_TEST_FOLDER)
     # Make sure that the temp folder is correctly cased, as tempfile return lowercase for Win
     t = get_cased_path(t)
@@ -41,7 +41,8 @@ def temp_folder(path_with_spaces=True):
     else:
         path = "path with spaces"
     nt = os.path.join(t, path)
-    os.makedirs(nt)
+    if create_dir:
+        os.makedirs(nt)
     return nt
 
 

@@ -14,7 +14,7 @@ class ProtobufTest(CrossBuildingBaseTestCase):
 
     protobuf = textwrap.dedent("""
         from conans import ConanFile
-        
+
         class Protobuf(ConanFile):
             settings = "os"
             def requirements(self):
@@ -22,11 +22,11 @@ class ProtobufTest(CrossBuildingBaseTestCase):
                     self.requires("zlib/1.0@user/channel")
                 else:
                     self.requires("zlib/2.0@user/channel")
-            
+
             def build(self):
                 self.output.info(">> settings.os:".format(self.settings.os))
                 self.output.info("ZLIB: %s" % self.deps_cpp_info["zlib"].libs)
-                
+
             def package_info(self):
                 protobuf_str = "protobuf-host" if self.settings.os == "Host" else "protobuf-build"
 
@@ -34,19 +34,19 @@ class ProtobufTest(CrossBuildingBaseTestCase):
                 self.cpp_info.libdirs = [protobuf_str, ]
                 self.cpp_info.bindirs = [protobuf_str, ]
                 self.cpp_info.libs = [protobuf_str]
-                
+
                 self.env_info.PATH.append(protobuf_str)
                 self.env_info.OTHERVAR = protobuf_str
         """)
 
     app = textwrap.dedent("""
         from conans import ConanFile
-        
+
         class App(ConanFile):
             settings = "os"
             requires = "protobuf/testing@user/channel"
             build_requires = "protobuf/testing@user/channel"
-            
+
             def build(self):
                 self.output.info(">> settings.os:".format(self.settings.os))
                 self.output.info("ZLIB: %s" % self.deps_cpp_info["zlib"].libs)
@@ -112,7 +112,7 @@ class ProtobufTest(CrossBuildingBaseTestCase):
         self.assertEqual(protobuf_host_cpp_info.bindirs, ['protobuf-host'])
         protobuf_host_cpp_info = app.conanfile.deps_cpp_info["zlib"]
         self.assertEqual(protobuf_host_cpp_info.libs, ['zlib-host-1.0'])
-        self.assertEqual(app.conanfile.deps_cpp_info.libs, ['protobuf-host', 'zlib-host-1.0'])
+        self.assertListEqual(list(app.conanfile.deps_cpp_info.libs), ['protobuf-host', 'zlib-host-1.0'])
 
         #   - app::deps_env_info
         protobuf_env_info = app.conanfile.deps_env_info["protobuf"]
@@ -180,7 +180,7 @@ class ProtobufTest(CrossBuildingBaseTestCase):
         self.assertEqual(protobuf_host_cpp_info.bindirs, ['protobuf-host'])
         zlib_host_cpp_info = app.conanfile.deps_cpp_info["zlib"]
         self.assertEqual(zlib_host_cpp_info.libs, ['zlib-host-1.0'])
-        self.assertEqual(app.conanfile.deps_cpp_info.libs, ['protobuf-host', 'zlib-host-1.0'])
+        self.assertListEqual(list(app.conanfile.deps_cpp_info.libs), ['protobuf-host', 'zlib-host-1.0'])
 
         #   - app::deps_env_info
         protobuf_env_info = app.conanfile.deps_env_info["protobuf"]
@@ -200,7 +200,7 @@ class ProtobufTest(CrossBuildingBaseTestCase):
         #   - protobuf::deps_cpp_info
         zlib_cpp_info = protobuf_host.conanfile.deps_cpp_info["zlib"]
         self.assertEqual(zlib_cpp_info.libs, ['zlib-host-1.0'])
-        self.assertEqual(protobuf_host.conanfile.deps_cpp_info.libs, ['zlib-host-1.0'])
+        self.assertListEqual(list(protobuf_host.conanfile.deps_cpp_info.libs), ['zlib-host-1.0'])
 
         #   - protobuf::deps_env_info (no zlib)
         zlib_env_info = list(protobuf_host.conanfile.deps_env_info.deps)
@@ -212,7 +212,7 @@ class ProtobufTest(CrossBuildingBaseTestCase):
         self.assertEqual(zlib_host.conanfile.name, "zlib")
         self.assertEqual(zlib_host.context, CONTEXT_HOST)
         self.assertEqual(zlib_host.conanfile.settings.os, profile_host.settings['os'])
-        self.assertEqual(zlib_host.conanfile.deps_cpp_info.libs, [])
+        self.assertListEqual(list(zlib_host.conanfile.deps_cpp_info.libs), [])
         self.assertEqual(zlib_host.conanfile.deps_env_info.vars["PATH"], ['cmake_build', 'bzip-build-3.0'])
 
         # Check BUILD packages
@@ -224,8 +224,8 @@ class ProtobufTest(CrossBuildingBaseTestCase):
 
         #   - protobuf::deps_cpp_info
         zlib_cpp_info = protobuf_build.conanfile.deps_cpp_info["zlib"]
-        self.assertEqual(zlib_cpp_info.libs, ['zlib-build-2.0'])
-        self.assertEqual(protobuf_build.conanfile.deps_cpp_info.libs, ['zlib-build-2.0'])
+        self.assertListEqual(list(zlib_cpp_info.libs), ['zlib-build-2.0'])
+        self.assertListEqual(list(protobuf_build.conanfile.deps_cpp_info.libs), ['zlib-build-2.0'])
 
         #   - protobuf::deps_env_info (no zlib)
         zlib_env_info = list(protobuf_build.conanfile.deps_env_info.deps)

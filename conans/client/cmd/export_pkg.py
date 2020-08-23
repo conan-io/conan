@@ -1,12 +1,13 @@
 import os
 
 from conans.client import packager
+from conans.client.conanfile.package import run_package_method
 from conans.client.graph.graph import BINARY_SKIP
 from conans.client.graph.graph_manager import load_deps_info
+from conans.client.installer import add_env_conaninfo
 from conans.errors import ConanException
 from conans.model.ref import PackageReference
 from conans.util.files import rmdir, set_dirty_context_manager
-from conans.client.installer import add_env_conaninfo
 
 
 def export_pkg(app, recorder, full_ref, source_folder, build_folder, package_folder, install_folder,
@@ -61,14 +62,14 @@ def export_pkg(app, recorder, full_ref, source_folder, build_folder, package_fol
             prev = packager.export_pkg(conanfile, package_id, package_folder, dest_package_folder,
                                        hook_manager, conan_file_path, ref)
         else:
-            prev = packager.run_package_method(conanfile, package_id, source_folder, build_folder,
-                                               dest_package_folder, install_folder, hook_manager,
-                                               conan_file_path, ref, local=True)
+            prev = run_package_method(conanfile, package_id, source_folder, build_folder,
+                                      dest_package_folder, install_folder, hook_manager,
+                                      conan_file_path, ref, local=True)
 
     packager.update_package_metadata(prev, layout, package_id, full_ref.revision)
     pref = PackageReference(pref.ref, pref.id, prev)
-    if graph_info.graph_lock:
+    if pkg_node.graph_lock_node:
         # after the package has been created we need to update the node PREV
         pkg_node.prev = pref.revision
-        graph_info.graph_lock.update_check_graph(deps_graph, output)
+        pkg_node.graph_lock_node.prev = pref.revision
     recorder.package_exported(pref)

@@ -83,9 +83,11 @@ class Node(object):
         # on this node. It includes regular (not private and not build requires) dependencies
         self._transitive_closure = OrderedDict()
         self.inverse_closure = set()  # set of nodes that have this one in their public
-        self.ancestors = None  # set{ref.name}
+        self._ancestors = _NodeOrderedDict()  # set{ref.name}
         self._id = None  # Unique ID (uuid at the moment) of a node in the graph
         self.graph_lock_node = None  # the locking information can be None
+        self.id_direct_prefs = None
+        self.id_indirect_prefs = None
 
     @property
     def id(self):
@@ -124,6 +126,10 @@ class Node(object):
     @property
     def transitive_closure(self):
         return self._transitive_closure
+
+    @property
+    def ancestors(self):
+        return self._ancestors
 
     def partial_copy(self):
         # Used for collapse_graph
@@ -311,25 +317,6 @@ class DepsGraph(object):
                 dst = result_node
                 result.add_edge(src, dst, dep.require)
 
-        return result
-
-    def new_build_order(self):
-        """ returns an ordered list of lists, with tuples (node_id, pref)
-        of the nodes of the graph to be built. Duplicates of pref will be ommitted
-        It will return all the nodes with BINARY_BUILD status, i.e. those that have
-        been processed according to rules like --build=missing and really need re-building
-        """
-        levels = self.inverse_levels()
-        result = []
-        total_prefs = set()  # to remove duplicates, same pref shouldn't build twice
-        for level in reversed(levels):
-            new_level = []
-            for n in level:
-                if n.binary in (BINARY_UNKNOWN, BINARY_BUILD) and n.pref not in total_prefs:
-                    new_level.append((n.id, n.pref.copy_clear_prev()))
-                    total_prefs.add(n.pref)
-            if new_level:
-                result.append(new_level)
         return result
 
     def build_order(self, references):

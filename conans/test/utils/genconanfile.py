@@ -20,13 +20,17 @@ class GenConanfile(object):
         self._options = {}
         self._generators = []
         self._default_options = {}
+        self._provides = []
+        self._deprecated = None
         self._package_files = {}
         self._package_files_env = {}
+        self._package_files_link = {}
         self._build_messages = []
         self._scm = {}
         self._requires = []
         self._requirements = []
         self._build_requires = []
+        self._build_requirements = []
         self._revision_mode = None
         self._package_info = {}
         self._package_id_lines = []
@@ -38,6 +42,14 @@ class GenConanfile(object):
 
     def with_version(self, version):
         self._version = version
+        return self
+
+    def with_provides(self, provides):
+        self._provides.append(provides)
+        return self
+
+    def with_deprecated(self, deprecated):
+        self._deprecated = deprecated
         return self
 
     def with_revision_mode(self, revision_mode):
@@ -73,6 +85,13 @@ class GenConanfile(object):
         self._build_requires.append(ref_str)
         return self
 
+    def with_build_requirement(self, ref, force_host_context=False):
+        return self.with_build_requirement_plain(ref.full_str(),force_host_context=force_host_context)
+
+    def with_build_requirement_plain(self, ref_str, force_host_context=False):
+        self._build_requirements.append((ref_str, force_host_context))
+        return self
+
     def with_import(self, i):
         if i not in self._imports:
             self._imports.append(i)
@@ -90,13 +109,15 @@ class GenConanfile(object):
         self._default_options[option_name] = value
         return self
 
-    def with_package_file(self, file_name, contents=None, env_var=None):
+    def with_package_file(self, file_name, contents=None, env_var=None, link=None):
         if not contents and not env_var:
             raise Exception("Specify contents or env_var")
         self.with_import("import os")
         self.with_import("from conans import tools")
         if contents:
             self._package_files[file_name] = contents
+        if link:
+            self._package_files_link[file_name] = link
         if env_var:
             self._package_files_env[file_name] = env_var
         return self
@@ -133,6 +154,19 @@ class GenConanfile(object):
         if not self._version:
             return ""
         return "version = '{}'".format(self._version)
+
+    @property
+    def _provides_line(self):
+        if not self._provides:
+            return ""
+        line = ", ".join('"{}"'.format(provide) for provide in self._provides)
+        return "provides = {}".format(line)
+
+    @property
+    def _deprecated_line(self):
+        if not self._deprecated:
+            return ""
+        return "deprecated = {}".format(self._deprecated)
 
     @property
     def _scm_line(self):
@@ -177,6 +211,17 @@ class GenConanfile(object):
         line = ", ".join('"%s": %s' % (k, v) for k, v in self._default_options.items())
         tmp = "default_options = {%s}" % line
         return tmp
+
+    @property
+    def _build_requirements_method(self):
+        if not self._build_requirements:
+            return ""
+
+        lines = []
+        for ref, force_host_context in self._build_requirements:
+            force_host = ", force_host_context=True" if force_host_context else ""
+            lines.append('        self.build_requires("{}"{})'.format(ref, force_host))
+        return "def build_requirements(self):\n{}\n".format("\n".join(lines))
 
     @property
     def _build_requires_line(self):
@@ -229,6 +274,12 @@ class GenConanfile(object):
             lines.extend(['        tools.save(os.path.join(self.package_folder, "{}"), '
                           'os.getenv("{}"))'.format(key, value)
                           for key, value in self._package_files_env.items()])
+        if self._package_files_link:
+            lines.extend(['        with tools.chdir(os.path.dirname('
+                          'os.path.join(self.package_folder, "{}"))):\n'
+                          '            os.symlink(os.path.basename("{}"), '
+                          'os.path.join(self.package_folder, "{}"))'.format(key, key, value)
+                          for key, value in self._package_files_link.items()])
 
         if not lines:
             return ""
@@ -254,7 +305,13 @@ class GenConanfile(object):
         lines = []
         if "cpp_info" in self._package_info:
             for k, v in self._package_info["cpp_info"].items():
-                lines.append('        self.cpp_info.{} = {}'.format(k, str(v)))
+                if k == "components":
+                    for comp_name, comp in v.items():
+                        for comp_attr_name, comp_attr_value in comp.items():
+                            lines.append('        self.cpp_info.components["{}"].{} = {}'.format(
+                                comp_name, comp_attr_name, str(comp_attr_value)))
+                else:
+                    lines.append('        self.cpp_info.{} = {}'.format(k, str(v)))
         if "env_info" in self._package_info:
             for k, v in self._package_info["env_info"].items():
                 lines.append('        self.env_info.{} = {}'.format(k, str(v)))
@@ -289,14 +346,20 @@ class GenConanfile(object):
             ret.append("    {}".format(self._name_line))
         if self._version_line:
             ret.append("    {}".format(self._version_line))
+        if self._provides_line:
+            ret.append("    {}".format(self._provides_line))
+        if self._deprecated_line:
+            ret.append("    {}".format(self._deprecated_line))
         if self._generators_line:
             ret.append("    {}".format(self._generators_line))
         if self._requires_line:
             ret.append("    {}".format(self._requires_line))
-        if self._requirements_method:
-            ret.append("    {}".format(self._requirements_method))
         if self._build_requires_line:
             ret.append("    {}".format(self._build_requires_line))
+        if self._requirements_method:
+            ret.append("    {}".format(self._requirements_method))
+        if self._build_requirements_method:
+            ret.append("    {}".format(self._build_requirements_method))
         if self._scm:
             ret.append("    {}".format(self._scm_line))
         if self._revision_mode_line:

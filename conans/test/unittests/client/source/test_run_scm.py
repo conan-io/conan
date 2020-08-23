@@ -9,7 +9,8 @@ from conans.client.source import _run_cache_scm, _run_local_scm
 from conans.client.tools.scm import Git
 from conans.model.scm import SCM
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import create_local_git_repo, TestBufferConanOutput
+from conans.test.utils.mocks import TestBufferConanOutput
+from conans.test.utils.scm import create_local_git_repo
 
 
 class RunSCMTest(unittest.TestCase):

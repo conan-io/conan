@@ -64,7 +64,10 @@ message("Compile options: ${tmp}")
         self.assertIn("Library fake_lib not found in package, might be system one", client.out)
         self.assertIn("Libraries to Link: fake_lib", client.out)
         self.assertIn("Version: 0.1", client.out)
-        self.assertIn("Target libs: fake_lib;;shared_link_flag;", client.out)
+        self.assertIn("Target libs: fake_lib;;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:shared_link_flag>;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:shared_link_flag>;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>", client.out)
         self.assertIn("Compile options: a_cxx_flag;a_flag", client.out)
 
     def cmake_lock_target_redefinition_test(self):
@@ -116,7 +119,7 @@ message("Target libs: ${tmp}")
                 generators = "cmake_find_package"
                 exports_sources = "CMakeLists.txt"
                 settings = "os", "arch", "compiler"
-    
+
                 def build(self):
                     cmake = CMake(self)
                     cmake.configure()
@@ -470,9 +473,111 @@ class Conan(ConanFile):
         client.run("build .")
         self.assertIn('Found MYHELLO2: 1.0 (found version "1.0")', client.out)
         self.assertIn('Found MYHELLO: 1.0 (found version "1.0")', client.out)
-        self.assertIn("Target libs (hello2): CONAN_LIB::MYHELLO2_hello;MYHELLO::MYHELLO;;",
+        self.assertIn("Target libs (hello2): "
+                      "CONAN_LIB::MYHELLO2_hello;MYHELLO::MYHELLO;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>",
                       client.out)
-        self.assertIn("Target libs (hello): CONAN_LIB::MYHELLO_hello;;;",
+        self.assertIn("Target libs (hello): CONAN_LIB::MYHELLO_hello;;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>",
+                      client.out)
+
+    def cpp_info_filename_test(self):
+        def add_to_conan_file(after, add_lines, spaces_to_indent):
+            indent = '\n' + (' ' * spaces_to_indent)
+            replace = indent.join([after] + add_lines)
+            replace_in_file(os.path.join(client.current_folder, "conanfile.py"),
+                            after,
+                            replace,
+                            output=client.out)
+
+        client = TestClient()
+        client.run("new hello/1.0 -s")
+        indent = '\n        '
+        replace_in_file(
+            os.path.join(client.current_folder, "conanfile.py"),
+            search='self.cpp_info.libs = ["hello"]',
+            replace=indent.join([
+                'self.cpp_info.name = "MYHELLO"',
+                'self.cpp_info.filenames["cmake_find_package"] = "hello_1"',
+                'self.cpp_info.components["1"].names["cmake_find_package"] = "HELLO1"',
+                'self.cpp_info.components["1"].libs = [ "hello" ]'
+            ]),
+            output=client.out
+        )
+        client.run("create .")
+
+        client.run("new hello2/1.0 -s")
+        replace_in_file(
+            os.path.join(client.current_folder, "src/CMakeLists.txt"),
+            search='add_library(hello hello.cpp)',
+            replace='add_library(hello2 hello.cpp)',
+            output=client.out
+        )
+        replace_in_file(os.path.join(client.current_folder, "conanfile.py"),
+            search='self.cpp_info.libs = ["hello"]',
+            replace=indent.join([
+                'self.cpp_info.name = "MYHELLO2"',
+                'self.cpp_info.filenames["cmake_find_package"] = "hello_2"',
+                'self.cpp_info.components["2"].names["cmake_find_package"] = "HELLO2"',
+                'self.cpp_info.components["2"].libs = [ "hello2" ]',
+                'self.cpp_info.components["2"].requires = [ "hello::1"]',
+            ]),
+            output=client.out
+        )
+        replace_in_file(os.path.join(client.current_folder, "conanfile.py"),
+            search='exports_sources = "src/*"',
+            replace='exports_sources = "src/*"\n    requires = "hello/1.0"',
+            output=client.out
+        )
+        client.run("create .")
+
+        cmakelists = """
+project(consumer)
+cmake_minimum_required(VERSION 3.1)
+find_package(hello_2)
+
+get_target_property(tmp MYHELLO2::HELLO2 INTERFACE_LINK_LIBRARIES)
+message("Target libs (hello2): ${tmp}")
+
+get_target_property(tmp MYHELLO::HELLO1 INTERFACE_LINK_LIBRARIES)
+message("Target libs (hello): ${tmp}")
+"""
+        conanfile = """
+from conans import ConanFile, CMake
+
+
+class Conan(ConanFile):
+    requires = "hello2/1.0"
+    generators = "cmake_find_package"
+
+    def build(self):
+        cmake = CMake(self)
+        cmake.configure()
+        """
+        client.save({"conanfile.py": conanfile, "CMakeLists.txt": cmakelists})
+        client.run("install .")
+        client.run("build .")
+
+        print('~' * 120)
+        print(client.out)
+        print('~' * 120)
+
+        self.assertIn('Found MYHELLO2: 1.0 (found version "1.0")', client.out)
+        self.assertIn('Found MYHELLO: 1.0 (found version "1.0")', client.out)
+        self.assertIn("Target libs (hello2): "
+                      "CONAN_LIB::MYHELLO2_HELLO2_hello2;MYHELLO::HELLO1;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>",
+                      client.out)
+        self.assertIn("Target libs (hello): CONAN_LIB::MYHELLO_HELLO1_hello;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>",
                       client.out)
 
     def cpp_info_config_test(self):

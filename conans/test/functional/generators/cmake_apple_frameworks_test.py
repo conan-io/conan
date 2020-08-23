@@ -1,7 +1,10 @@
+import os
 import platform
 import textwrap
 import unittest
 
+from parameterized import parameterized
+from conans.client.tools.env import environment_append
 from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient
 
@@ -23,7 +26,8 @@ class CMakeAppleFrameworksTestCase(unittest.TestCase):
         class App(ConanFile):
             requires = "{}"
             generators = "{{generator}}"
-            
+            settings = "build_type",  # cmake_multi doesn't work without build_type
+
             def build(self):
                 cmake = CMake(self)
                 cmake.configure()
@@ -45,7 +49,7 @@ class CMakeAppleFrameworksTestCase(unittest.TestCase):
 
             include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
             conan_basic_setup()
-            
+
             message(">>> CONAN_FRAMEWORKS_FOUND_LIB: ${CONAN_FRAMEWORKS_FOUND_LIB}")
         """)
 
@@ -55,12 +59,49 @@ class CMakeAppleFrameworksTestCase(unittest.TestCase):
         self.t.run("build .")
         self._check_frameworks_found(str(self.t.out))
 
+    def test_apple_framework_cmake_multi(self):
+        app_cmakelists = textwrap.dedent("""
+            project(Testing CXX)
+
+            include(${CMAKE_BINARY_DIR}/conanbuildinfo_multi.cmake)
+            conan_basic_setup()
+
+            message(">>> CONAN_FRAMEWORKS_FOUND_LIB_DEBUG: ${CONAN_FRAMEWORKS_FOUND_LIB_DEBUG}")
+            message(">>> CONAN_FRAMEWORKS_FOUND_LIB_RELEASE: ${CONAN_FRAMEWORKS_FOUND_LIB_RELEASE}")
+        """)
+
+        self.t.save({'conanfile.py': self.app_conanfile.format(generator="cmake_multi"),
+                     'CMakeLists.txt': app_cmakelists})
+        self.t.run("install . -s build_type=Release")
+        self.t.run("install . -s build_type=Debug")
+        self.t.run("build .")
+        self._check_frameworks_found(str(self.t.out))
+
+    def test_apple_framework_cmake_multi_xcode(self):
+        app_cmakelists = textwrap.dedent("""
+            project(Testing CXX)
+
+            include(${CMAKE_BINARY_DIR}/conanbuildinfo_multi.cmake)
+            conan_basic_setup()
+
+            message(">>> CONAN_FRAMEWORKS_FOUND_LIB_DEBUG: ${CONAN_FRAMEWORKS_FOUND_LIB_DEBUG}")
+            message(">>> CONAN_FRAMEWORKS_FOUND_LIB_RELEASE: ${CONAN_FRAMEWORKS_FOUND_LIB_RELEASE}")
+        """)
+
+        self.t.save({'conanfile.py': self.app_conanfile.format(generator="cmake_multi"),
+                     'CMakeLists.txt': app_cmakelists})
+        with environment_append({"CONAN_CMAKE_GENERATOR": "Xcode"}):
+            self.t.run("install . -s build_type=Release")
+            self.t.run("install . -s build_type=Debug")
+            self.t.run("build .")
+            self._check_frameworks_found(str(self.t.out))
+
     def test_apple_framework_cmake_find_package(self):
         app_cmakelists = textwrap.dedent("""
             project(Testing CXX)
 
             find_package(lib)
-            
+
             message(">>> CONAN_FRAMEWORKS_FOUND_LIB: ${lib_FRAMEWORKS_FOUND}")
         """)
 
@@ -236,6 +277,56 @@ class CMakeAppleOwnFrameworksTestCase(unittest.TestCase):
         client.run("create .")
         self.assertIn("Hello World Release!", client.out)
 
+    def test_apple_own_framework_cmake_multi(self):
+        client = TestClient()
+
+        test_cmake = textwrap.dedent("""
+            project(Testing CXX)
+            message(STATUS "CMAKE_BINARY_DIR ${CMAKE_BINARY_DIR}")
+            include(${CMAKE_BINARY_DIR}/../../conanbuildinfo_multi.cmake)
+            conan_basic_setup()
+            message(">>> CONAN_FRAMEWORKS_FOUND_MYLIBRARY_DEBUG: ${CONAN_FRAMEWORKS_FOUND_MYLIBRARY_DEBUG}")
+            message(">>> CONAN_FRAMEWORKS_FOUND_MYLIBRARY_RELEASE: ${CONAN_FRAMEWORKS_FOUND_MYLIBRARY_RELEASE}")
+            add_executable(timer timer.cpp)
+            target_link_libraries(timer debug ${CONAN_LIBS_DEBUG} optimized ${CONAN_LIBS_RELEASE})
+        """)
+
+        test_conanfile = textwrap.dedent("""
+            from conans import ConanFile, CMake
+            class TestPkg(ConanFile):
+                generators = "cmake_multi"
+                name = "app"
+                version = "1.0"
+                requires = "mylibrary/1.0"
+                exports_sources = "CMakeLists.txt", "timer.cpp"
+                settings = "build_type",  # cmake_multi doesn't work without build_type
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+                    cmake.build()
+                def test(self):
+                    self.run("%s/timer" % self.settings.build_type, run_environment=True)
+            """)
+        client.save({'conanfile.py': self.conanfile,
+                     "src/CMakeLists.txt": self.cmake,
+                     "src/hello.h": self.hello_h,
+                     "src/hello.cpp": self.hello_cpp,
+                     "src/Info.plist": self.infoplist})
+        client.run("export . mylibrary/1.0@")
+        client.run("create . mylibrary/1.0@ -s build_type=Debug")
+        client.run("create . mylibrary/1.0@ -s build_type=Release")
+
+        client.save({"conanfile.py": test_conanfile,
+                     'CMakeLists.txt': test_cmake,
+                     "timer.cpp": self.timer_cpp})
+        with environment_append({"CONAN_CMAKE_GENERATOR": "Xcode"}):
+            client.run("install . -s build_type=Debug")
+            client.run("install . -s build_type=Release")
+            client.run("test . mylibrary/1.0@")
+            self.assertIn("Hello World Release!", client.out)
+            client.run("test . mylibrary/1.0@ -s build_type=Debug")
+            self.assertIn("Hello World Debug!", client.out)
+
     def test_apple_own_framework_cmake_find_package_multi(self):
         client = TestClient()
 
@@ -272,3 +363,96 @@ class CMakeAppleOwnFrameworksTestCase(unittest.TestCase):
                      "test_package/timer.cpp": self.timer_cpp})
         client.run("create .")
         self.assertIn("Hello World Release!", client.out)
+
+    @parameterized.expand([('cmake', False),
+                           ('cmake_find_package', False), ('cmake_find_package', True), ])
+    def test_frameworks_exelinkflags(self, generator, use_components):
+        # FIXME: Conan 2.0. 'cpp_info' object has a 'frameworks' key
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+
+            class Recipe(ConanFile):
+                settings = "os", "arch", "compiler", "build_type"
+                options = {'use_components': [True, False]}
+                default_options = {'use_components': False}
+
+                def package_info(self):
+                    if not self.options.use_components:
+                        self.cpp_info.exelinkflags.extend(['-framework Foundation'])
+                        #self.cpp_info.frameworks.extend(['Foundation'])
+                    else:
+                        self.cpp_info.components["cmp"].exelinkflags.extend(['-framework Foundation'])
+                        #self.cpp_info.components["cmp"].frameworks.extend(['Foundation'])
+        """)
+        tp_cmakelists = textwrap.dedent("""
+            cmake_minimum_required(VERSION 3.0)
+            project(test_package)
+
+            include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+            conan_basic_setup(TARGETS)
+
+            if(USE_FIND_PACKAGE)
+                message(">> USE_FIND_PACKAGE")
+                find_package(name)
+                add_executable(${PROJECT_NAME} test_package.cpp)
+                if (USE_COMPONENTS)
+                    message(">> USE_COMPONENTS")
+                    target_link_libraries(${PROJECT_NAME} name::cmp)
+                else()
+                    message(">> not USE_COMPONENTS")
+                    target_link_libraries(${PROJECT_NAME} name::name)
+                endif()
+            else()
+                message(">> not USE_FIND_PACKAGE")
+                add_executable(${PROJECT_NAME} test_package.cpp)
+                target_link_libraries(${PROJECT_NAME} CONAN_PKG::name)
+            endif()
+        """)
+        tp_conanfile = textwrap.dedent("""
+            from conans import ConanFile, CMake
+
+            class TestPackage(ConanFile):
+                settings = "os", "arch", "compiler", "build_type"
+                generators = "cmake", "cmake_find_package"
+                options = {'use_find_package': [True, False]}
+                requires = "name/version"
+
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.definitions["USE_FIND_PACKAGE"] = self.options.use_find_package
+                    cmake.definitions["USE_COMPONENTS"] = self.options["name"].use_components
+                    cmake.configure()
+                    cmake.build()
+
+                def test(self):
+                    pass
+        """)
+        tp_main = textwrap.dedent("""
+            int main() {}
+        """)
+
+        t = TestClient()
+        t.save({'conanfile.py': conanfile,
+                'test_package/conanfile.py': tp_conanfile,
+                'test_package/CMakeLists.txt': tp_cmakelists,
+                'test_package/test_package.cpp': tp_main})
+        t.run("export conanfile.py name/version@")
+
+        with t.chdir('test_package/build'):
+            if generator == 'cmake':
+                assert not use_components
+                t.run("install .. --build=missing"
+                      " -o name:use_components=False -o use_find_package=False")
+                t.run("build ..")
+                self.assertIn(">> not USE_FIND_PACKAGE", t.out)
+            else:
+                assert generator == 'cmake_find_package'
+                t.run("install .. --build=missing"
+                      " -o name:use_components={} -o use_find_package=True".format(use_components))
+                t.run("build ..")
+                self.assertIn(">> USE_FIND_PACKAGE", t.out)
+                self.assertIn(">> {}USE_COMPONENTS".format("" if use_components else "not "), t.out)
+
+            # Check we are using the framework
+            link_txt = t.load(os.path.join('CMakeFiles', 'test_package.dir', 'link.txt'))
+            self.assertIn("-framework Foundation", link_txt)

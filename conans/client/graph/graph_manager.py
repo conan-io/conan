@@ -1,7 +1,8 @@
 import fnmatch
 import os
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 
+from conans.client.conanfile.configure import run_configure_method
 from conans.client.generators.text import TXTGenerator
 from conans.client.graph.build_mode import BuildMode
 from conans.client.graph.graph import BINARY_BUILD, Node, CONTEXT_HOST, CONTEXT_BUILD
@@ -36,10 +37,6 @@ class _RecipeBuildRequires(OrderedDict):
         context = CONTEXT_HOST if force_host_context else self._default_context
         self.add(build_require, context)
 
-    def update(self, build_requires):
-        for build_require in build_requires:
-            self.add(build_require)
-
     def __str__(self):
         items = ["{} ({})".format(br, ctxt) for (_, ctxt), br in self.items()]
         return ", ".join(items)
@@ -61,45 +58,49 @@ class GraphManager(object):
         """
         try:
             graph_info = GraphInfo.load(info_folder)
-            graph_lock_file = GraphLockFile.load(info_folder, self._cache.config.revisions_enabled)
+            lock_path = os.path.join(info_folder, "conan.lock")
+            graph_lock_file = GraphLockFile.load(lock_path, self._cache.config.revisions_enabled)
             graph_lock = graph_lock_file.graph_lock
             self._output.info("Using lockfile: '{}/conan.lock'".format(info_folder))
             profile_host = graph_lock_file.profile_host
+            profile_build = graph_lock_file.profile_build
             self._output.info("Using cached profile from lockfile")
         except IOError:  # Only if file is missing
             graph_lock = None
             # This is very dirty, should be removed for Conan 2.0 (source() method only)
             profile_host = self._cache.default_profile
             profile_host.process_settings(self._cache)
+            profile_build = None
             name, version, user, channel = None, None, None, None
         else:
             name, version, user, channel, _ = graph_info.root
             profile_host.process_settings(self._cache, preprocess=False)
             # This is the hack of recovering the options from the graph_info
             profile_host.options.update(graph_info.options)
+            if profile_build:
+                profile_build.process_settings(self._cache, preprocess=False)
         if conanfile_path.endswith(".py"):
             lock_python_requires = None
             if graph_lock and not test:  # Only lock python requires if it is not test_package
-                node_id = graph_lock.get_node(graph_info.root)
+                node_id = graph_lock.get_consumer(graph_info.root)
                 lock_python_requires = graph_lock.python_requires(node_id)
             conanfile = self._loader.load_consumer(conanfile_path,
                                                    profile_host=profile_host,
                                                    name=name, version=version,
                                                    user=user, channel=channel,
                                                    lock_python_requires=lock_python_requires)
+
+            if profile_build:
+                conanfile.settings_build = profile_build.processed_settings.copy()
+                conanfile.settings_target = None
+
             if test:
                 conanfile.display_name = "%s (test package)" % str(test)
                 conanfile.output.scope = conanfile.display_name
-            with get_env_context_manager(conanfile, without_python=True):
-                with conanfile_exception_formatter(str(conanfile), "config_options"):
-                    conanfile.config_options()
-                with conanfile_exception_formatter(str(conanfile), "configure"):
-                    conanfile.configure()
 
-                conanfile.settings.validate()  # All has to be ok!
-                conanfile.options.validate()
+            run_configure_method(conanfile, down_options=None, down_ref=None, ref=None)
         else:
-            conanfile = self._loader.load_conanfile_txt(conanfile_path, profile_host)
+            conanfile = self._loader.load_conanfile_txt(conanfile_path, profile_host=profile_host)
 
         load_deps_info(info_folder, conanfile, required=deps_info_required)
 
@@ -110,8 +111,14 @@ class GraphManager(object):
         """ main entry point to compute a full dependency graph
         """
         root_node = self._load_root_node(reference, create_reference, graph_info)
-        return self._resolve_graph(root_node, graph_info, build_mode, check_updates, update, remotes,
-                                   recorder, apply_build_requires=apply_build_requires)
+        deps_graph = self._resolve_graph(root_node, graph_info, build_mode, check_updates, update,
+                                         remotes, recorder,
+                                         apply_build_requires=apply_build_requires)
+
+        # Run some validations once the graph is built
+        self._validate_graph_provides(deps_graph)
+
+        return deps_graph
 
     def _load_root_node(self, reference, create_reference, graph_info):
         """ creates the first, root node of the graph, loading or creating a conanfile
@@ -159,7 +166,7 @@ class GraphManager(object):
                     ref = ConanFileReference(ref.name or conanfile.name,
                                              ref.version or conanfile.version,
                                              ref.user, ref.channel, validate=False)
-                node_id = graph_lock.get_node(ref)
+                node_id = graph_lock.get_consumer(ref)
                 lock_python_requires = graph_lock.python_requires(node_id)
 
             conanfile = self._loader.load_consumer(path, profile,
@@ -174,10 +181,11 @@ class GraphManager(object):
             root_node = Node(ref, conanfile, context=CONTEXT_HOST, recipe=RECIPE_CONSUMER, path=path)
         else:
             conanfile = self._loader.load_conanfile_txt(path, profile, ref=ref)
-            root_node = Node(None, conanfile, context=CONTEXT_HOST, recipe=RECIPE_CONSUMER, path=path)
+            root_node = Node(None, conanfile, context=CONTEXT_HOST, recipe=RECIPE_CONSUMER,
+                             path=path)
 
         if graph_lock:  # Find the Node ID in the lock of current root
-            node_id = graph_lock.get_node(root_node.ref)
+            node_id = graph_lock.get_consumer(root_node.ref)
             root_node.id = node_id
 
         return root_node, ref
@@ -194,9 +202,7 @@ class GraphManager(object):
         conanfile = self._loader.load_virtual([reference], profile)
         root_node = Node(ref=None, conanfile=conanfile, context=CONTEXT_HOST, recipe=RECIPE_VIRTUAL)
         if graph_lock:  # Find the Node ID in the lock of current root
-            node_id = graph_lock.get_node(reference)
-            locked_ref = graph_lock.pref(node_id).ref
-            conanfile.requires[reference.name].lock(locked_ref, node_id)
+            graph_lock.find_require_and_lock(reference, conanfile)
         return root_node
 
     def _load_root_test_package(self, path, create_reference, graph_lock, profile):
@@ -221,9 +227,7 @@ class GraphManager(object):
                                  create_reference.user, create_reference.channel, validate=False)
         root_node = Node(ref, conanfile, recipe=RECIPE_CONSUMER, context=CONTEXT_HOST, path=path)
         if graph_lock:
-            node_id = graph_lock.get_node(create_reference)
-            locked_ref = graph_lock.pref(node_id).ref
-            conanfile.requires[create_reference.name].lock(locked_ref, node_id)
+            graph_lock.find_require_and_lock(create_reference, conanfile)
         return root_node
 
     def _resolve_graph(self, root_node, graph_info, build_mode, check_updates,
@@ -244,10 +248,9 @@ class GraphManager(object):
         graph_info.options = root_node.conanfile.options.values
         if root_node.ref:
             graph_info.root = root_node.ref
+
         if graph_info.graph_lock is None:
-            graph_info.graph_lock = GraphLock(deps_graph)
-        else:
-            graph_info.graph_lock.update_check_graph(deps_graph, self._output)
+            graph_info.graph_lock = GraphLock(deps_graph, self._cache.config.revisions_enabled)
 
         version_ranges_output = self._resolver.output
         if version_ranges_output:
@@ -293,8 +296,10 @@ class GraphManager(object):
                 continue
             package_build_requires = self._get_recipe_build_requires(node.conanfile, default_context)
             str_ref = str(node.ref)
+
+            #  Compute the update of the current recipe build_requires when updated with the
+            # downstream profile-defined build-requires
             new_profile_build_requires = []
-            profile_build_requires = profile_build_requires or {}
             for pattern, build_requires in profile_build_requires.items():
                 if ((node.recipe == RECIPE_CONSUMER and pattern == "&") or
                         (node.recipe != RECIPE_CONSUMER and pattern == "&!") or
@@ -306,32 +311,37 @@ class GraphManager(object):
                             # (no conflicts)
                             # but the dict key is not used at all
                             package_build_requires[br_key] = build_require
-                        elif build_require.name != node.name:  # Profile one
+                        # Profile one or in different context
+                        elif build_require.name != node.name or default_context != node.context:
                             new_profile_build_requires.append((build_require, default_context))
 
-            if package_build_requires:
-                br_list = [(it, ctxt) for (_, ctxt), it in package_build_requires.items()]
-                nodessub = builder.extend_build_requires(graph, node,
-                                                         br_list,
-                                                         check_updates, update, remotes,
-                                                         profile_host, profile_build, graph_lock)
-
-                self._recurse_build_requires(graph, builder,
-                                             check_updates, update, build_mode,
-                                             remotes, profile_build_requires, recorder,
+            def _recurse_build_requires(br_list, transitive_build_requires):
+                nodessub = builder.extend_build_requires(graph, node, br_list, check_updates,
+                                                         update, remotes, profile_host,
+                                                         profile_build, graph_lock)
+                self._recurse_build_requires(graph, builder, check_updates, update, build_mode,
+                                             remotes, transitive_build_requires, recorder,
                                              profile_host, profile_build, graph_lock,
                                              nodes_subset=nodessub, root=node)
+
+            if package_build_requires:
+                if default_context == CONTEXT_BUILD:
+                    br_build, br_host = [], []
+                    for (_, ctxt), it in package_build_requires.items():
+                        if ctxt == CONTEXT_BUILD:
+                            br_build.append((it, ctxt))
+                        else:
+                            br_host.append((it, ctxt))
+                    if br_build:
+                        _recurse_build_requires(br_build, profile_build.build_requires)
+                    if br_host:
+                        _recurse_build_requires(br_host, profile_build_requires)
+                else:
+                    br_all = [(it, ctxt) for (_, ctxt), it in package_build_requires.items()]
+                    _recurse_build_requires(br_all, profile_build_requires)
 
             if new_profile_build_requires:
-                nodessub = builder.extend_build_requires(graph, node, new_profile_build_requires,
-                                                         check_updates, update, remotes,
-                                                         profile_host, profile_build, graph_lock)
-
-                self._recurse_build_requires(graph, builder,
-                                             check_updates, update, build_mode,
-                                             remotes, {}, recorder,
-                                             profile_host, profile_build, graph_lock,
-                                             nodes_subset=nodessub, root=node)
+                _recurse_build_requires(new_profile_build_requires, {})
 
     def _load_graph(self, root_node, check_updates, update, build_mode, remotes,
                     recorder, profile_host, profile_build, apply_build_requires,
@@ -357,14 +367,36 @@ class GraphManager(object):
 
         return graph
 
+    @staticmethod
+    def _validate_graph_provides(deps_graph):
+        # Check that two different nodes are not providing the same (ODR violation)
+        for node in deps_graph.nodes:
+            provides = defaultdict(list)
+            if node.conanfile.provides is not None:  # consumer conanfile doesn't initialize
+                for it in node.conanfile.provides:
+                    provides[it].append(node)
+
+            for item in filter(lambda u: u.context == CONTEXT_HOST, node.public_closure):
+                for it in item.conanfile.provides:
+                    provides[it].append(item)
+
+            # Check (and report) if any functionality is provided by several different recipes
+            conflicts = [it for it, nodes in provides.items() if len(nodes) > 1]
+            if conflicts:
+                msg_lines = ["At least two recipes provides the same functionality:"]
+                for it in conflicts:
+                    nodes_str = "', '".join([n.conanfile.display_name for n in provides[it]])
+                    msg_lines.append(" - '{}' provided by '{}'".format(it, nodes_str))
+                raise ConanException('\n'.join(msg_lines))
+
 
 def load_deps_info(current_path, conanfile, required):
-
     def get_forbidden_access_object(field_name):
         class InfoObjectNotDefined(object):
             def __getitem__(self, item):
                 raise ConanException("self.%s not defined. If you need it for a "
                                      "local command run 'conan install'" % field_name)
+
             __getattr__ = __getitem__
 
         return InfoObjectNotDefined()
@@ -373,10 +405,13 @@ def load_deps_info(current_path, conanfile, required):
         return
     info_file_path = os.path.join(current_path, BUILD_INFO)
     try:
-        deps_cpp_info, deps_user_info, deps_env_info = TXTGenerator.loads(load(info_file_path))
+        deps_cpp_info, deps_user_info, deps_env_info, user_info_build = \
+            TXTGenerator.loads(load(info_file_path))
         conanfile.deps_cpp_info = deps_cpp_info
         conanfile.deps_user_info = deps_user_info
         conanfile.deps_env_info = deps_env_info
+        if user_info_build:
+            conanfile.user_info_build = user_info_build
     except IOError:
         if required:
             raise ConanException("%s file not found in %s\nIt is required for this command\n"

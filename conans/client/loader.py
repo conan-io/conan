@@ -7,6 +7,7 @@ import uuid
 
 import yaml
 
+from conans.client.conf.required_version import validate_conan_version
 from conans.client.generators import registered_generators
 from conans.client.loader_txt import ConanFileTextLoader
 from conans.client.tools.files import chdir
@@ -19,6 +20,7 @@ from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
 from conans.model.values import Values
 from conans.paths import DATA_YML
+from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
 from conans.util.files import load
 
 
@@ -59,6 +61,13 @@ class ConanFileLoader(object):
             if self._pyreq_loader:
                 self._pyreq_loader.load_py_requires(conanfile, lock_python_requires, self)
 
+            conanfile.recipe_folder = os.path.dirname(conanfile_path)
+
+            # If the scm is inherited, create my own instance
+            if hasattr(conanfile, "scm") and "scm" not in conanfile.__class__.__dict__:
+                if isinstance(conanfile.scm, dict):
+                    conanfile.scm = conanfile.scm.copy()
+
             # Load and populate dynamic fields from the data file
             conan_data = self._load_data(conanfile_path)
             conanfile.conan_data = conan_data
@@ -67,10 +76,12 @@ class ConanFileLoader(object):
                 if scm_data:
                     conanfile.scm.update(scm_data)
 
-            self._cached_conanfile_classes[conanfile_path] = (conanfile, lock_python_requires, module)
+            self._cached_conanfile_classes[conanfile_path] = (conanfile, lock_python_requires,
+                                                              module)
             result = conanfile(self._output, self._runner, display, user, channel)
             if hasattr(result, "init") and callable(result.init):
-                result.init()
+                with conanfile_exception_formatter(str(result), "init"):
+                    result.init()
             return result, module
         except ConanException as e:
             raise ConanException("Error loading conanfile at '{}': {}".format(conanfile_path, e))
@@ -92,20 +103,6 @@ class ConanFileLoader(object):
         """ loads the basic conanfile object and evaluates its name and version
         """
         conanfile, _ = self.load_basic_module(conanfile_path, lock_python_requires, user, channel)
-        conanfile.recipe_folder = os.path.dirname(conanfile_path)
-
-        if hasattr(conanfile, "set_name"):
-            if conanfile.name:
-                raise ConanException("Conanfile defined package 'name', set_name() redundant")
-            with conanfile_exception_formatter("conanfile.py", "set_name"):
-                conanfile.set_name()
-        if hasattr(conanfile, "set_version"):
-            if conanfile.version:
-                raise ConanException("Conanfile defined package 'version', set_version() redundant")
-            with conanfile_exception_formatter("conanfile.py", "set_version"):
-                conanfile.set_version()
-        # Make sure this is nowhere else available
-        del conanfile.recipe_folder
 
         # Export does a check on existing name & version
         if name:
@@ -118,6 +115,19 @@ class ConanFileLoader(object):
                 raise ConanException("Package recipe with version %s!=%s"
                                      % (version, conanfile.version))
             conanfile.version = version
+
+        if hasattr(conanfile, "set_name"):
+            with conanfile_exception_formatter("conanfile.py", "set_name"):
+                conanfile.set_name()
+            if name and name != conanfile.name:
+                raise ConanException("Package recipe with name %s!=%s" % (name, conanfile.name))
+        if hasattr(conanfile, "set_version"):
+            with conanfile_exception_formatter("conanfile.py", "set_version"):
+                conanfile.set_version()
+            if version and version != conanfile.version:
+                raise ConanException("Package recipe with version %s!=%s"
+                                     % (version, conanfile.version))
+
         return conanfile
 
     def load_export(self, conanfile_path, name, version, user, channel, lock_python_requires=None):
@@ -129,6 +139,9 @@ class ConanFileLoader(object):
             raise ConanException("conanfile didn't specify name")
         if not conanfile.version:
             raise ConanException("conanfile didn't specify version")
+
+        if os.environ.get(CONAN_V2_MODE_ENVVAR, False):
+            conanfile.version = str(conanfile.version)
 
         ref = ConanFileReference(conanfile.name, conanfile.version, user, channel)
         conanfile.display_name = str(ref)
@@ -190,10 +203,15 @@ class ConanFileLoader(object):
         """ load a conanfile with a full reference, name, version, user and channel are obtained
         from the reference, not evaluated. Main way to load from the cache
         """
-        conanfile, _ = self.load_basic_module(conanfile_path, lock_python_requires,
-                                              ref.user, ref.channel, str(ref))
+        try:
+            conanfile, _ = self.load_basic_module(conanfile_path, lock_python_requires,
+                                                  ref.user, ref.channel, str(ref))
+        except Exception as e:
+            raise ConanException("%s: Cannot load recipe.\n%s" % (str(ref), str(e)))
+
         conanfile.name = ref.name
-        conanfile.version = ref.version
+        conanfile.version = str(ref.version) \
+            if os.environ.get(CONAN_V2_MODE_ENVVAR, False) else ref.version
 
         if profile.dev_reference and profile.dev_reference == ref:
             conanfile.develop = True
@@ -238,7 +256,11 @@ class ConanFileLoader(object):
 
         conanfile.generators = parser.generators
 
-        options = OptionsValues.loads(parser.options)
+        try:
+            options = OptionsValues.loads(parser.options)
+        except Exception:
+            raise ConanException("Error while parsing [options] in conanfile\n"
+                                 "Options should be specified as 'pkg:option=value'")
         conanfile.options.values = options
         conanfile.options.initialize_upstream(profile.user_options)
 
@@ -338,6 +360,10 @@ def _parse_conanfile(conan_file_path):
             sys.dont_write_bytecode = True
             loaded = imp.load_source(module_id, conan_file_path)
             sys.dont_write_bytecode = False
+
+        required_conan_version = getattr(loaded, "required_conan_version", None)
+        if required_conan_version:
+            validate_conan_version(required_conan_version)
 
         # These lines are necessary, otherwise local conanfile imports with same name
         # collide, but no error, and overwrite other packages imports!!
