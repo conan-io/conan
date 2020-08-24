@@ -136,10 +136,6 @@ class ConanConnectionError(ConanException):
     pass
 
 
-class ConanParsingError(ConanException):
-    pass
-
-
 class ConanOutdatedClient(ConanException):
     pass
 
