@@ -66,6 +66,17 @@ os=$OTHERVAR
 os=thing""")
 
 
+        txt = """
+includes(a/path/to\profile.txt)
+"""
+        with self.assertRaises(ConanException):
+            try:
+                ProfileParser(txt)
+            except Exception as error:
+                self.assertIn("Error while parsing line 1", error.args[0])
+                raise
+
+
 class ProfileTest(unittest.TestCase):
 
     def profile_loads_test(self):
