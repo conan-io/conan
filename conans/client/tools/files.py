@@ -1,6 +1,7 @@
 import logging
 import os
 import platform
+import subprocess
 import sys
 from contextlib import contextmanager
 from fnmatch import fnmatch
@@ -378,9 +379,10 @@ def rename(src, dst):
     if platform.system() == "Windows" and which("robocopy") and os.path.isdir(src):
         if os.path.exists(dst):
             raise ConanException("rename {} to {} failed, dst exists.".format(src, dst))
-        retcode = os.system("robocopy /move /e /ndl /nfl {} {}".format(src, dst))
-        if retcode != 1:
-            raise ConanException("rename {} to {} failed".format(src, dst))
+        completed = subprocess.run(["robocopy", "/move", "/e", "/ndl", "/nfl", src, dst],
+                                   stdout=subprocess.PIPE)
+        if completed.returncode != 1:
+            raise ConanException("rename {} to {} failed.".format(src, dst))
     else:
         os.rename(src, dst)
 
