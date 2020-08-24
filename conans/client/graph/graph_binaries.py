@@ -10,7 +10,7 @@ from conans.model.info import ConanInfo, PACKAGE_ID_UNKNOWN
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference
 from conans.util.conan_v2_mode import conan_v2_property
-from conans.util.files import is_dirty, rmdir
+from conans.util.files import is_dirty, rmdir, clean_dirty
 
 
 class GraphBinariesAnalyzer(object):
@@ -43,7 +43,7 @@ class GraphBinariesAnalyzer(object):
             for dep in node.dependencies:
                 dep_node = dep.dst
                 if (dep_node.binary == BINARY_BUILD or
-                        (dep_node.graph_lock_node and dep_node.graph_lock_node.modified)):
+                    (dep_node.graph_lock_node and dep_node.graph_lock_node.modified)):
                     with_deps_to_build = True
                     break
         if build_mode.forced(conanfile, ref, with_deps_to_build):
@@ -60,6 +60,7 @@ class GraphBinariesAnalyzer(object):
                 node.conanfile.output.warn("Package is corrupted, removing folder: %s"
                                            % package_folder)
                 rmdir(package_folder)  # Do not remove if it is EDITABLE
+                clean_dirty(package_folder)
                 return
 
             if self._cache.config.revisions_enabled:
@@ -69,6 +70,8 @@ class GraphBinariesAnalyzer(object):
                     node.conanfile.output.warn("The package {} doesn't belong to the installed "
                                                "recipe revision, removing folder".format(pref))
                     rmdir(package_folder)
+                    with package_layout.update_metadata() as metadata:
+                        metadata.clear_package(pref.id)
                 return metadata
 
     def _evaluate_cache_pkg(self, node, package_layout, pref, metadata, remote, remotes, update,
@@ -232,7 +235,7 @@ class GraphBinariesAnalyzer(object):
             remote = remotes.get(remote_name)
 
         if os.path.exists(package_folder):  # Binary already in cache, check for updates
-            self._evaluate_cache_pkg(node, package_layout, pref, metadata,  remote, remotes, update,
+            self._evaluate_cache_pkg(node, package_layout, pref, metadata, remote, remotes, update,
                                      package_folder)
             recipe_hash = None
         else:  # Binary does NOT exist locally
