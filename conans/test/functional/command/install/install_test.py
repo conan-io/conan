@@ -488,7 +488,7 @@ class Pkg(ConanFile):
         client.run("install . -pr=myotherprofile")
         self.assertIn("PKGOS=FreeBSD", client.out)
         client.run("install . -pr=./myotherprofile", assert_error=True)
-        self.assertIn("Error parsing the profile", client.out)
+        self.assertIn("Error while parsing line 0", client.out)
 
     def install_with_path_errors_test(self):
         client = TestClient()
