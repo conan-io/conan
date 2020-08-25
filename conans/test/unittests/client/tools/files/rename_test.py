@@ -61,3 +61,7 @@ class RenameTest(unittest.TestCase):
 
             rename("dst dir", "subdir")
             self.verify_dir(os.path.join(tmpdir, "subdir"))
+
+            rename(os.path.join("subdir", "1.txt"), "t.txt")
+            self.assertTrue(os.path.isfile(os.path.join(tmpdir, "t.txt")))
+            self.assertFalse(os.path.isfile(os.path.join(tmpdir, "subdir", "1.txt")))
