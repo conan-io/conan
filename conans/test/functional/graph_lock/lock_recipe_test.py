@@ -51,6 +51,7 @@ class LockRecipeTest(unittest.TestCase):
             self.assertEqual(pkg_node["package_id"], "cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31")
             self.assertEqual(pkg_node["prev"], "0")
         self.assertEqual(pkg_node["options"], "")
+        self.assertIsNone(pkg_node.get("modified"))
 
         client.run("lock create conanfile.py -s os=Windows "
                    "--lockfile-out=windows.lock --lockfile=conan.lock")
