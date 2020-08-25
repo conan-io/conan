@@ -393,8 +393,6 @@ def rename(src, dst):
             os.rename(src, dst)
         except Exception as err:
             raise ConanException("rename {} to {} failed: {}".format(src, dst, err))
-        except:
-            raise ConanException("rename {} to {} failed, unexpected error.".format(src, dst))
 
 
 def remove_files_by_mask(directory, pattern):
