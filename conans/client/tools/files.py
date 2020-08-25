@@ -376,9 +376,10 @@ def rename(src, dst):
     :param src: Source file or folder
     :param dst: Destination file or folder
     """
-    if platform.system() == "Windows" and which("robocopy") and os.path.isdir(src):
-        if os.path.exists(dst):
+    if os.path.exists(dst):
             raise ConanException("rename {} to {} failed, dst exists.".format(src, dst))
+
+    if platform.system() == "Windows" and which("robocopy") and os.path.isdir(src):
         # /move Moves files and directories, and deletes them from the source after they are copied.
         # /e Copies subdirectories. Note that this option includes empty directories.
         # /ndl Specifies that directory names are not to be logged.
@@ -388,7 +389,12 @@ def rename(src, dst):
         if completed.returncode != 1:
             raise ConanException("rename {} to {} failed.".format(src, dst))
     else:
-        os.rename(src, dst)
+        try:
+            os.rename(src, dst)
+        except Exception as err:
+            raise ConanException("rename {} to {} failed: {}".format(src, dst, err))
+        except:
+            raise ConanException("rename {} to {} failed, unexpected error.".format(src, dst))
 
 
 def remove_files_by_mask(directory, pattern):
