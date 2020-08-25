@@ -3,6 +3,7 @@ import textwrap
 import unittest
 
 from conans.test.utils.tools import TestClient, GenConanfile
+from conans.util.env_reader import get_env
 
 
 class LockRecipeTest(unittest.TestCase):
@@ -177,3 +178,25 @@ class LockRecipeTest(unittest.TestCase):
         self.assertEqual(common["options"], "")
         self.assertEqual(win["package_id"], "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
         self.assertEqual(win["options"], "")
+
+    @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
+    def lose_rrev_test(self):
+        # https://github.com/conan-io/conan/issues/7595
+        client = TestClient()
+        client.run("config set general.default_package_id_mode=full_package_mode")
+        files = {
+            "pkga/conanfile.py": GenConanfile(),
+            "pkgb/conanfile.py": GenConanfile().with_require_plain("liba/[*]"),
+        }
+        client.save(files)
+
+        client.run("create pkga liba/0.1@")
+
+        client.run("lock create pkgb/conanfile.py --name=libb --version=0.1 "
+                   "--lockfile-out=base.lock --base")
+
+        client.run("export pkgb libb/0.1@ --lockfile=base.lock --lockfile-out=libb_base.lock")
+        client.run("lock create --reference=libb/0.1@ --lockfile=libb_base.lock "
+                   "--lockfile-out=libb_release.lock --build=missing")
+        libb_release = client.load("libb_release.lock")
+        self.assertIn('"ref": "libb/0.1#c2a641589d4b617387124f011905a97b"', libb_release)
