@@ -400,8 +400,9 @@ class Pkg(ConanFile):
 
     def test_force_dir_type(self):
         client = TestClient()
-        # invalid directory is not an error
-        client.run('config install httpnonexisting --type=dir')
+        client.run('config install httpnonexisting --type=dir', assert_error=True)
+        self.assertIn("ERROR: Failed conan config install: No such directory: 'httpnonexisting'",
+                      client.out)
 
     def test_force_file_type(self):
         client = TestClient()
