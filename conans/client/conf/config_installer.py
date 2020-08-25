@@ -87,6 +87,8 @@ def _filecopy(src, filename, dst):
 
 
 def _process_folder(config, folder, cache, output):
+    if not os.path.isdir(folder):
+        raise ConanException("No such directory: '%s'" % str(folder))
     if config.source_folder:
         folder = os.path.join(folder, config.source_folder)
     for root, dirs, files in walk(folder):
