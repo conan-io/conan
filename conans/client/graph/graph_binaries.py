@@ -70,8 +70,6 @@ class GraphBinariesAnalyzer(object):
                     node.conanfile.output.warn("The package {} doesn't belong to the installed "
                                                "recipe revision, removing folder".format(pref))
                     rmdir(package_folder)
-                    with package_layout.update_metadata() as metadata:
-                        metadata.clear_package(pref.id)
                 return metadata
 
     def _evaluate_cache_pkg(self, node, package_layout, pref, metadata, remote, remotes, update,
