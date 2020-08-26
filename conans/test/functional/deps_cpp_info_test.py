@@ -26,5 +26,5 @@ class DepsCppInfoTest(unittest.TestCase):
         self.assertIn("pkg/0.1@user/testing: DEPS_CPP_INFO_BIN: []", client.out)
         client.run("install .")
         client.run("build .")
-        self.assertIn("pkg/0.1@user/testing: DEPS_CPP_INFO_BIN: []", client.out)
+        self.assertIn("conanfile.py: DEPS_CPP_INFO_BIN: []", client.out)
 
