@@ -200,3 +200,6 @@ class LockRecipeTest(unittest.TestCase):
                    "--lockfile-out=libb_release.lock --build=missing")
         libb_release = client.load("libb_release.lock")
         self.assertIn('"ref": "libb/0.1#c2a641589d4b617387124f011905a97b"', libb_release)
+
+        client.run("create pkgb libb/0.1@ --lockfile=libb_release.lock")
+        self.assertIn("libb/0.1: Created package", client.out)
