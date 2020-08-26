@@ -21,10 +21,9 @@ class DepsCppInfoTest(unittest.TestCase):
                 def build(self):
                     self.output.info("DEPS_CPP_INFO_BIN: %s" % self.deps_cpp_info["dep"].bin_paths)
             """)
-        client.save({"conanfile.py":conanfile})
+        client.save({"conanfile.py": conanfile})
         client.run("create . pkg/0.1@user/testing")
         self.assertIn("pkg/0.1@user/testing: DEPS_CPP_INFO_BIN: []", client.out)
         client.run("install .")
         client.run("build .")
         self.assertIn("conanfile.py: DEPS_CPP_INFO_BIN: []", client.out)
-
