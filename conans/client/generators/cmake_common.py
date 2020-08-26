@@ -200,11 +200,20 @@ _target_template = """
                                                                       $<$<CONFIG:RelWithDebInfo>:${{CONAN_COMPILE_DEFINITIONS_{uname}_RELWITHDEBINFO}}>
                                                                       $<$<CONFIG:MinSizeRel>:${{CONAN_COMPILE_DEFINITIONS_{uname}_MINSIZEREL}}>
                                                                       $<$<CONFIG:Debug>:${{CONAN_COMPILE_DEFINITIONS_{uname}_DEBUG}}>)
-    set_property(TARGET {name} PROPERTY INTERFACE_COMPILE_OPTIONS ${{CONAN_C_FLAGS_{uname}_LIST}} ${{CONAN_CXX_FLAGS_{uname}_LIST}}
-                                                                  $<$<CONFIG:Release>:${{CONAN_C_FLAGS_{uname}_RELEASE_LIST}} ${{CONAN_CXX_FLAGS_{uname}_RELEASE_LIST}}>
-                                                                  $<$<CONFIG:RelWithDebInfo>:${{CONAN_C_FLAGS_{uname}_RELWITHDEBINFO_LIST}} ${{CONAN_CXX_FLAGS_{uname}_RELWITHDEBINFO_LIST}}>
-                                                                  $<$<CONFIG:MinSizeRel>:${{CONAN_C_FLAGS_{uname}_MINSIZEREL_LIST}} ${{CONAN_CXX_FLAGS_{uname}_MINSIZEREL_LIST}}>
-                                                                  $<$<CONFIG:Debug>:${{CONAN_C_FLAGS_{uname}_DEBUG_LIST}}  ${{CONAN_CXX_FLAGS_{uname}_DEBUG_LIST}}>)
+    set_property(TARGET {name} PROPERTY INTERFACE_COMPILE_OPTIONS $<$<COMPILE_LANGUAGE:C>:${{CONAN_C_FLAGS_{uname}_LIST}}>
+                                                                  $<$<COMPILE_LANGUAGE:CXX>:${{CONAN_CXX_FLAGS_{uname}_LIST}}>
+                                                                  $<$<CONFIG:Release>:
+                                                                      $<$<COMPILE_LANGUAGE:C>:${{CONAN_C_FLAGS_{uname}_RELEASE_LIST}}>
+                                                                      $<$<COMPILE_LANGUAGE:CXX>:${{CONAN_CXX_FLAGS_{uname}_RELEASE_LIST}}>>
+                                                                  $<$<CONFIG:RelWithDebInfo>:
+                                                                      $<$<COMPILE_LANGUAGE:C>:${{CONAN_C_FLAGS_{uname}_RELWITHDEBINFO_LIST}}>
+                                                                      $<$<COMPILE_LANGUAGE:CXX>:${{CONAN_CXX_FLAGS_{uname}_RELWITHDEBINFO_LIST}}>>
+                                                                  $<$<CONFIG:MinSizeRel>:
+                                                                      $<$<COMPILE_LANGUAGE:C>:${{CONAN_C_FLAGS_{uname}_MINSIZEREL_LIST}}>
+                                                                      $<$<COMPILE_LANGUAGE:CXX>:${{CONAN_CXX_FLAGS_{uname}_MINSIZEREL_LIST}}>>
+                                                                  $<$<CONFIG:Debug>:
+                                                                      $<$<COMPILE_LANGUAGE:C>:${{CONAN_C_FLAGS_{uname}_DEBUG_LIST}}>
+                                                                      $<$<COMPILE_LANGUAGE:CXX>:${{CONAN_CXX_FLAGS_{uname}_DEBUG_LIST}}>>)
 """
 
 

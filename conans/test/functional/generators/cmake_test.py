@@ -380,3 +380,51 @@ class CMakeGeneratorTest(unittest.TestCase):
 
         client.run('create .')
         self.assertIn("POLICY CMP0054 IS OLD", client.out)
+
+    def test_cmake_compile_options(self):
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+
+            class ConanTest(ConanFile):
+                name = "flags"
+                version = "1.0"
+                generators = "cmake"
+                settings = "os", "compiler", "arch", "build_type"
+
+                def package_info(self):
+                    self.cpp_info.cflags = ["-fno-asm"]
+                    self.cpp_info.cxxflags = ["-fno-exceptions", "-fno-rtti"]
+                """)
+
+        client = TestClient()
+        client.save({"conanfile.py": conanfile})
+        client.run("create conanfile.py")
+
+        conanfile_consumer = textwrap.dedent("""
+                from conans import ConanFile, CMake
+
+                class ConanTest(ConanFile):
+                    name = "consumer"
+                    version = "1.0"
+                    generators = "cmake"
+                    settings = "os", "compiler", "arch", "build_type"
+                    requires = "flags/1.0"
+                    exports_sources = "CMakeLists.txt"
+
+                    def build(self):
+                        cmake = CMake(self)
+                        cmake.configure()
+                    """)
+        cmakelists = textwrap.dedent("""
+            cmake_minimum_required(VERSION 2.8)
+            PROJECT(consumer C CXX)
+            include(conanbuildinfo.cmake)
+            CONAN_BASIC_SETUP(TARGETS)
+            get_target_property(opts CONAN_PKG::flags INTERFACE_COMPILE_OPTIONS)
+            message("${opts}")
+            """)
+        client.save({"conanfile.py": conanfile_consumer,
+                     "CMakeLists.txt": cmakelists})
+        client.run('create .')
+        self.assertIn("$<$<COMPILE_LANGUAGE:C>:-fno-asm>;$<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions;-fno-rtti>;",
+                      client.out)
