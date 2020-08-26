@@ -13,7 +13,7 @@ def output_remote_list_cli(info, out):
         output_str = "{}: {} [Verify SSL: {}, Enabled: {}]".format(remote_info["name"],
                                                                    remote_info["url"],
                                                                    remote_info["verify"],
-                                                                   remote_info.get("enabled", True))
+                                                                   remote_info["enabled"])
         out.writeln(output_str)
 
 
@@ -24,8 +24,8 @@ def remote_list(*args, conan_api, parser, subparser):
     """
     args = parser.parse_args(*args)
     info = [{"name": "remote1", "url": "https://someurl1", "verify": True, "enabled": False},
-            {"name": "remote2", "url": "https://someurl2", "verify": False},
-            {"name": "remote3", "url": "https://someurl3", "verify": True},
+            {"name": "remote2", "url": "https://someurl2", "verify": False, "enabled": True},
+            {"name": "remote3", "url": "https://someurl3", "verify": True, "enabled": True},
             {"name": "remote4", "url": "https://someurl4", "verify": False, "enabled": False}]
     return info
 
