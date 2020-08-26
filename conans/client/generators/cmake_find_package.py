@@ -149,7 +149,7 @@ class CMakeFindPackageGenerator(Generator):
                                       ""
                                       "{{ pkg_name }}_{{ comp_name }}")
 
-        set({{ pkg_name }}_{{ comp_name }}_LINK_LIBS {{ '${'+pkg_name+'_'+comp_name+'_LIB_TARGETS}' }} {{ '${'+pkg_name+'_'+comp_name+'_DEPENDENCIES}' }})
+        set({{ pkg_name }}_{{ comp_name }}_LINK_LIBS {{ '${'+pkg_name+'_'+comp_name+'_LIB_TARGETS}' }} {{ '${'+pkg_name+'_'+comp_name+'_SYSTEM_LIBS}' }} {{ '${'+pkg_name+'_'+comp_name+'_DEPENDENCIES}' }})
 
         set(CMAKE_MODULE_PATH {{ comp.build_paths }} ${CMAKE_MODULE_PATH})
         set(CMAKE_PREFIX_PATH {{ comp.build_paths }} ${CMAKE_PREFIX_PATH})
