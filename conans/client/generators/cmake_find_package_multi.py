@@ -135,7 +135,7 @@ set_property(TARGET {name}::{name}
         ########## COMPONENT {{ comp_name }} FIND LIBRARIES & FRAMEWORKS / DYNAMIC VARS #############
 
         set({{ pkg_name }}_{{ comp_name }}_FRAMEWORKS_FOUND_{{ build_type }} "")
-        conan_find_apple_frameworks({{ pkg_name }}_{{ comp_name }}_FRAMEWORKS_FOUND_{{ build_type }} "{{ '${'+pkg_name+'_'+comp_name+'_FRAMEWORKS}' }}" "{{ '${'+pkg_name+'_'+comp_name+'_FRAMEWORK_DIRS}' }}")
+        conan_find_apple_frameworks({{ pkg_name }}_{{ comp_name }}_FRAMEWORKS_FOUND_{{ build_type }} "{{ '${'+pkg_name+'_'+comp_name+'_FRAMEWORKS_'+build_type+'}' }}" "{{ '${'+pkg_name+'_'+comp_name+'_FRAMEWORK_DIRS_'+build_type+'}' }}")
 
         set({{ pkg_name }}_{{ comp_name }}_LIB_TARGETS_{{ build_type }} "")
         set({{ pkg_name }}_{{ comp_name }}_NOT_USED_{{ build_type }} "")
