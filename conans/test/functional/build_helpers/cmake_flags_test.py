@@ -203,9 +203,12 @@ int main(){
         cmake_cxx_flags = self._get_line(client.out, "CMAKE_CXX_FLAGS")
         self.assertNotIn("My", cmake_cxx_flags)
         self.assertIn("CONAN_CXX_FLAGS=MyFlag1 MyFlag2", client.out)
-        self.assertIn("HELLO_CXX_FLAGS=-load;C:\some\path;MyFlag1;MyFlag2;"
-                      "$<$<CONFIG:Release>:;>;$<$<CONFIG:RelWithDebInfo>:;>;"
-                      "$<$<CONFIG:MinSizeRel>:;>;$<$<CONFIG:Debug>:;>", client.out)
+        self.assertIn("HELLO_CXX_FLAGS=$<$<COMPILE_LANGUAGE:C>:-load;C:\some\path>;$<$<COMPILE_LANGUAGE:CXX>:MyFlag1;MyFlag2>;"
+                      "$<$<CONFIG:Release>:;$<$<COMPILE_LANGUAGE:C>:>;$<$<COMPILE_LANGUAGE:CXX>:>>;"
+                      "$<$<CONFIG:RelWithDebInfo>:;$<$<COMPILE_LANGUAGE:C>:>;$<$<COMPILE_LANGUAGE:CXX>:>>;"
+                      "$<$<CONFIG:MinSizeRel>:;$<$<COMPILE_LANGUAGE:C>:>;$<$<COMPILE_LANGUAGE:CXX>:>>;"
+                      "$<$<CONFIG:Debug>:;$<$<COMPILE_LANGUAGE:C>:>;$<$<COMPILE_LANGUAGE:CXX>:>>",
+                      client.out)
         self.assertIn('HELLO_DEFINES=MY_DEF=My" \string;MY_DEF2=My${} other \string;', client.out)
 
     def targets_own_flags_test(self):
@@ -231,9 +234,12 @@ int main(){
         self.assertNotIn("My", cmake_cxx_flags)
         self.assertIn("CmdCXXFlag", cmake_cxx_flags)
         self.assertIn("CONAN_CXX_FLAGS=MyFlag1 MyFlag2 CmdCXXFlag", client.out)
-        self.assertIn("HELLO_CXX_FLAGS=-load;C:\some\path;MyFlag1;MyFlag2;"
-                      "$<$<CONFIG:Release>:;>;$<$<CONFIG:RelWithDebInfo>:;>;"
-                      "$<$<CONFIG:MinSizeRel>:;>;$<$<CONFIG:Debug>:;>", client.out)
+        self.assertIn("HELLO_CXX_FLAGS=$<$<COMPILE_LANGUAGE:C>:-load;C:\some\path>;$<$<COMPILE_LANGUAGE:CXX>:MyFlag1;MyFlag2>;"
+                      "$<$<CONFIG:Release>:;$<$<COMPILE_LANGUAGE:C>:>;$<$<COMPILE_LANGUAGE:CXX>:>>;"
+                      "$<$<CONFIG:RelWithDebInfo>:;$<$<COMPILE_LANGUAGE:C>:>;$<$<COMPILE_LANGUAGE:CXX>:>>;"
+                      "$<$<CONFIG:MinSizeRel>:;$<$<COMPILE_LANGUAGE:C>:>;$<$<COMPILE_LANGUAGE:CXX>:>>;"
+                      "$<$<CONFIG:Debug>:;$<$<COMPILE_LANGUAGE:C>:>;$<$<COMPILE_LANGUAGE:CXX>:>>",
+                      client.out)
         self.assertIn('HELLO_DEFINES=MY_DEF=My" \string;MY_DEF2=My${} other \string;', client.out)
 
     def transitive_targets_flags_test(self):
@@ -268,7 +274,7 @@ int main(){
                       "$<$<CONFIG:MinSizeRel>:;$<$<COMPILE_LANGUAGE:C>:>;$<$<COMPILE_LANGUAGE:CXX>:>>;"
                       "$<$<CONFIG:Debug>:;$<$<COMPILE_LANGUAGE:C>:>;$<$<COMPILE_LANGUAGE:CXX>:>>",
                       client.out)
-        self.assertIn("CHAT_CXX_FLAGS=$<$<COMPILE_LANGUAGE:C>:>;$<$<COMPILE_LANGUAGE:CXX>:MyChatFlag1;MyChatFlag2;>;"
+        self.assertIn("CHAT_CXX_FLAGS=$<$<COMPILE_LANGUAGE:C>:>;$<$<COMPILE_LANGUAGE:CXX>:MyChatFlag1;MyChatFlag2>;"
                       "$<$<CONFIG:Release>:;$<$<COMPILE_LANGUAGE:C>:>;$<$<COMPILE_LANGUAGE:CXX>:>>;"
                       "$<$<CONFIG:RelWithDebInfo>:;$<$<COMPILE_LANGUAGE:C>:>;$<$<COMPILE_LANGUAGE:CXX>:>>;"
                       "$<$<CONFIG:MinSizeRel>:;$<$<COMPILE_LANGUAGE:C>:>;$<$<COMPILE_LANGUAGE:CXX>:>>;"
