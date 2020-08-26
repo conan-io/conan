@@ -183,8 +183,8 @@ class CMakeFindPackageGenerator(Generator):
                 set_target_properties({{ pkg_name }}::{{ comp_name }} PROPERTIES INTERFACE_COMPILE_DEFINITIONS
                                       "{{ '${'+pkg_name+'_'+comp_name+'_COMPILE_DEFINITIONS}' }}")
                 set_target_properties({{ pkg_name }}::{{ comp_name }} PROPERTIES INTERFACE_COMPILE_OPTIONS
-                                      $<$<COMPILE_LANGUAGE:C>:{{ '${'+pkg_name+'_'+comp_name+'_COMPILE_OPTIONS_C}' }}>
-                                      $<$<COMPILE_LANGUAGE:CXX>:{{ '${'+pkg_name+'_'+comp_name+'_COMPILE_OPTIONS_CXX}' }}>)
+                                      "$<$<COMPILE_LANGUAGE:C>:{{ '${'+pkg_name+'_'+comp_name+'_COMPILE_OPTIONS_C}' }}>
+                                       $<$<COMPILE_LANGUAGE:CXX>:{{ '${'+pkg_name+'_'+comp_name+'_COMPILE_OPTIONS_CXX}' }}>")
             endif()
         endif()
 

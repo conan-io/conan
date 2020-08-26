@@ -487,14 +487,6 @@ class Conan(ConanFile):
                       client.out)
 
     def cpp_info_filename_test(self):
-        def add_to_conan_file(after, add_lines, spaces_to_indent):
-            indent = '\n' + (' ' * spaces_to_indent)
-            replace = indent.join([after] + add_lines)
-            replace_in_file(os.path.join(client.current_folder, "conanfile.py"),
-                            after,
-                            replace,
-                            output=client.out)
-
         client = TestClient()
         client.run("new hello/1.0 -s")
         indent = '\n        '
@@ -562,10 +554,6 @@ class Conan(ConanFile):
         client.save({"conanfile.py": conanfile, "CMakeLists.txt": cmakelists})
         client.run("install .")
         client.run("build .")
-
-        print('~' * 120)
-        print(client.out)
-        print('~' * 120)
 
         self.assertIn('Found MYHELLO2: 1.0 (found version "1.0")', client.out)
         self.assertIn('Found MYHELLO: 1.0 (found version "1.0")', client.out)
