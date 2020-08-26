@@ -42,7 +42,8 @@ class CMakeFindPackageGenerator(Generator):
                 set_property(TARGET {name}::{name} PROPERTY INTERFACE_COMPILE_DEFINITIONS
                              ${{{name}_COMPILE_DEFINITIONS}})
                 set_property(TARGET {name}::{name} PROPERTY INTERFACE_COMPILE_OPTIONS
-                             "${{{name}_COMPILE_OPTIONS_LIST}}")
+                             $<$<COMPILE_LANGUAGE:C>:${{{name}_COMPILE_OPTIONS_C}}>
+                             $<$<COMPILE_LANGUAGE:CXX>:${{{name}_COMPILE_OPTIONS_CXX}}>)
                 {find_dependencies_block}
             endif()
         endif()
@@ -96,7 +97,8 @@ class CMakeFindPackageGenerator(Generator):
         set({{ pkg_name }}_{{ comp_name }}_RES_DIRS {{ comp.res_paths }})
         set({{ pkg_name }}_{{ comp_name }}_DEFINITIONS {{ comp.defines }})
         set({{ pkg_name }}_{{ comp_name }}_COMPILE_DEFINITIONS {{ comp.compile_definitions }})
-        set({{ pkg_name }}_{{ comp_name }}_COMPILE_OPTIONS_LIST "{{ comp.cxxflags_list }}" "{{ comp.cflags_list }}")
+        set({{ pkg_name }}_{{ comp_name }}_COMPILE_OPTIONS_C {{ comp.cflags_list }})
+        set({{ pkg_name }}_{{ comp_name }}_COMPILE_OPTIONS_CPP {{ comp.cxxflags_list }})
         set({{ pkg_name }}_{{ comp_name }}_LIBS {{ comp.libs }})
         set({{ pkg_name }}_{{ comp_name }}_SYSTEM_LIBS {{ comp.system_libs }})
         set({{ pkg_name }}_{{ comp_name }}_FRAMEWORK_DIRS {{ comp.framework_paths }})
@@ -181,7 +183,8 @@ class CMakeFindPackageGenerator(Generator):
                 set_target_properties({{ pkg_name }}::{{ comp_name }} PROPERTIES INTERFACE_COMPILE_DEFINITIONS
                                       "{{ '${'+pkg_name+'_'+comp_name+'_COMPILE_DEFINITIONS}' }}")
                 set_target_properties({{ pkg_name }}::{{ comp_name }} PROPERTIES INTERFACE_COMPILE_OPTIONS
-                                      "{{ '${'+pkg_name+'_'+comp_name+'_COMPILE_OPTIONS_LIST}' }}")
+                                      $<$<COMPILE_LANGUAGE:C>:{{ '${'+pkg_name+'_'+comp_name+'_COMPILE_OPTIONS_C}' }}>
+                                      $<$<COMPILE_LANGUAGE:CXX>:{{ '${'+pkg_name+'_'+comp_name+'_COMPILE_OPTIONS_CXX}' }}>>)
             endif()
         endif()
 
@@ -266,7 +269,7 @@ class CMakeFindPackageGenerator(Generator):
         pkg_public_deps_filenames = [self._get_filename(self.deps_build_info[public_dep])
                                      for public_dep in cpp_info.public_deps]
         pkg_public_deps_names = [self._get_name(self.deps_build_info[public_dep])
-                                     for public_dep in cpp_info.public_deps]
+                                 for public_dep in cpp_info.public_deps]
         deps_names = ";".join(["{n}::{n}".format(n=n) for n in pkg_public_deps_names])
         if cpp_info.components:
             components = self._get_components(pkg_name, pkg_findname, cpp_info)

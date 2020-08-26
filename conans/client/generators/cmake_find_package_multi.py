@@ -64,10 +64,18 @@ set_property(TARGET {name}::{name}
                  $<$<CONFIG:Debug>:${{{name}_COMPILE_DEFINITIONS_DEBUG}}>)
 set_property(TARGET {name}::{name}
              PROPERTY INTERFACE_COMPILE_OPTIONS
-                 $<$<CONFIG:Release>:${{{name}_COMPILE_OPTIONS_RELEASE_LIST}}>
-                 $<$<CONFIG:RelWithDebInfo>:${{{name}_COMPILE_OPTIONS_RELWITHDEBINFO_LIST}}>
-                 $<$<CONFIG:MinSizeRel>:${{{name}_COMPILE_OPTIONS_MINSIZEREL_LIST}}>
-                 $<$<CONFIG:Debug>:${{{name}_COMPILE_OPTIONS_DEBUG_LIST}}>)
+                 $<$<CONFIG:Release>:
+                     $<$<COMPILE_LANGUAGE:C>:${{{name}_COMPILE_OPTIONS_C_RELEASE}}>
+                     $<$<COMPILE_LANGUAGE:CXX>:${{{name}_COMPILE_OPTIONS_CXX_RELEASE}}>>
+                 $<$<CONFIG:RelWithDebInfo>:
+                     $<$<COMPILE_LANGUAGE:C>:${{{name}_COMPILE_OPTIONS_C_RELWITHDEBINFO}}>
+                     $<$<COMPILE_LANGUAGE:CXX>:${{{name}_COMPILE_OPTIONS_CXX_RELWITHDEBINFO}}>>
+                 $<$<CONFIG:MinSizeRel>:
+                     $<$<COMPILE_LANGUAGE:C>:${{{name}_COMPILE_OPTIONS_C_MINSIZEREL}}>
+                     $<$<COMPILE_LANGUAGE:CXX>:${{{name}_COMPILE_OPTIONS_CXX_MINSIZEREL}}>>
+                 $<$<CONFIG:Debug>:
+                     $<$<COMPILE_LANGUAGE:C>:${{{name}_COMPILE_OPTIONS_C_DEBUG}}>
+                     $<$<COMPILE_LANGUAGE:CXX>:${{{name}_COMPILE_OPTIONS_CXX_DEBUG}}>>)
     """
 
     # https://gitlab.kitware.com/cmake/cmake/blob/master/Modules/BasicConfigVersion-SameMajorVersion.cmake.in
@@ -119,7 +127,8 @@ set_property(TARGET {name}::{name}
         set({{ pkg_name }}_{{ comp_name }}_RES_DIRS_{{ build_type }} {{ comp.res_paths }})
         set({{ pkg_name }}_{{ comp_name }}_DEFINITIONS_{{ build_type }} {{ comp.defines }})
         set({{ pkg_name }}_{{ comp_name }}_COMPILE_DEFINITIONS_{{ build_type }} {{ comp.compile_definitions }})
-        set({{ pkg_name }}_{{ comp_name }}_COMPILE_OPTIONS_LIST_{{ build_type }} "{{ comp.cxxflags_list }}" "{{ comp.cflags_list }}")
+        set({{ pkg_name }}_{{ comp_name }}_COMPILE_OPTIONS_C_{{ build_type }} "{{ comp.cflags_list }}")
+        set({{ pkg_name }}_{{ comp_name }}_COMPILE_OPTIONS_CXX_{{ build_type }} "{{ comp.cxxflags_list }}")
         set({{ pkg_name }}_{{ comp_name }}_LIBS_{{ build_type }} {{ comp.libs }})
         set({{ pkg_name }}_{{ comp_name }}_SYSTEM_LIBS_{{ build_type }} {{ comp.system_libs }})
         set({{ pkg_name }}_{{ comp_name }}_FRAMEWORK_DIRS_{{ build_type }} {{ comp.framework_paths }})
@@ -239,10 +248,18 @@ set_property(TARGET {name}::{name}
                          $<$<CONFIG:MinSizeRel>:{{ '${'+pkg_name+'_'+comp_name+'_COMPILE_DEFINITIONS_MINSIZEREL}' }}>
                          $<$<CONFIG:Debug>:{{ '${'+pkg_name+'_'+comp_name+'_COMPILE_DEFINITIONS_DEBUG}' }}>)
         set_property(TARGET {{ pkg_name }}::{{ comp_name }} PROPERTY INTERFACE_COMPILE_OPTIONS
-                         $<$<CONFIG:Release>:{{ '${'+pkg_name+'_'+comp_name+'_COMPILE_OPTIONS_LIST_RELEASE}' }}>
-                         $<$<CONFIG:RelWithDebInfo>:{{ '${'+pkg_name+'_'+comp_name+'_COMPILE_OPTIONS_LIST_RELWITHDEBINFO}' }}>
-                         $<$<CONFIG:MinSizeRel>:{{ '${'+pkg_name+'_'+comp_name+'_COMPILE_OPTIONS_LIST_MINSIZEREL}' }}>
-                         $<$<CONFIG:Debug>:{{ '${'+pkg_name+'_'+comp_name+'_COMPILE_OPTIONS_LIST_DEBUG}' }}>)
+                         $<$<CONFIG:Release>:
+                             $<$<COMPILE_LANGUAGE:C>:{{ '${'+pkg_name+'_'+comp_name+'_COMPILE_OPTIONS_C_RELEASE}' }}>
+                             $<$<COMPILE_LANGUAGE:CXX>:{{ '${'+pkg_name+'_'+comp_name+'_COMPILE_OPTIONS_CXX_RELEASE}' }}>>
+                         $<$<CONFIG:RelWithDebInfo>:
+                             $<$<COMPILE_LANGUAGE:C>:{{ '${'+pkg_name+'_'+comp_name+'_COMPILE_OPTIONS_C_RELWITHDEBINFO}' }}>
+                             $<$<COMPILE_LANGUAGE:CXX>:{{ '${'+pkg_name+'_'+comp_name+'_COMPILE_OPTIONS_CXX_RELWITHDEBINFO}' }}>>
+                         $<$<CONFIG:MinSizeRel>:
+                             $<$<COMPILE_LANGUAGE:C>:{{ '${'+pkg_name+'_'+comp_name+'_COMPILE_OPTIONS_C_MINSIZEREL}' }}>
+                             $<$<COMPILE_LANGUAGE:CXX>:{{ '${'+pkg_name+'_'+comp_name+'_COMPILE_OPTIONS_CXX_MINSIZEREL}' }}>>
+                         $<$<CONFIG:Debug>:
+                             $<$<COMPILE_LANGUAGE:C>:{{ '${'+pkg_name+'_'+comp_name+'_COMPILE_OPTIONS_C_DEBUG}' }}>
+                             $<$<COMPILE_LANGUAGE:CXX>:{{ '${'+pkg_name+'_'+comp_name+'_COMPILE_OPTIONS_CXX_DEBUG}' }}>>)
         set({{ pkg_name }}_{{ comp_name }}_TARGET_PROPERTIES TRUE)
 
         {%- endfor %}
