@@ -11,7 +11,7 @@ class LockRecipeTest(unittest.TestCase):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . pkg/0.1@")
-        client.save({"conanfile.py": GenConanfile().with_require_plain("pkg/0.1")})
+        client.save({"conanfile.py": GenConanfile().with_require("pkg/0.1")})
         client.run("lock create conanfile.py --base --lockfile-out=conan.lock")
         client.run("install . --lockfile=conan.lock", assert_error=True)
         self.assertIn("Lockfiles with --base do not contain profile information, "
@@ -29,7 +29,7 @@ class LockRecipeTest(unittest.TestCase):
         self.assertIn("pkg/0.1: Created package revision 9e99cfd92d0d7df79d687b01512ce844",
                       client.out)
 
-        client.save({"conanfile.py": GenConanfile().with_require_plain("pkg/0.1")})
+        client.save({"conanfile.py": GenConanfile().with_require("pkg/0.1")})
         client.run("lock create conanfile.py --base --lockfile-out=conan.lock")
         lock = json.loads(client.load("conan.lock"))
         self.assertEqual(2, len(lock["graph_lock"]["nodes"]))
@@ -70,7 +70,7 @@ class LockRecipeTest(unittest.TestCase):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . LibA/1.0@")
-        client.save({"conanfile.py": GenConanfile().with_require_plain("LibA/[>=1.0]")})
+        client.save({"conanfile.py": GenConanfile().with_require("LibA/[>=1.0]")})
         client.run("create . LibB/1.0@")
         client.run("lock create --reference=LibB/1.0 --lockfile-out=base.lock --base")
         client.run("lock create --reference=LibB/1.0 --lockfile=base.lock --lockfile-out=libb.lock")
@@ -78,7 +78,7 @@ class LockRecipeTest(unittest.TestCase):
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . LibA/1.0.1@")
 
-        client.save({"conanfile.py": GenConanfile().with_require_plain("LibB/1.0")})
+        client.save({"conanfile.py": GenConanfile().with_require("LibB/1.0")})
 
         for lock in ("base.lock", "libb.lock"):
             client.run("lock create conanfile.py --name=LibC --version=1.0 --lockfile=%s "

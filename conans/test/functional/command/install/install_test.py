@@ -533,7 +533,7 @@ class Pkg(ConanFile):
                 options = {"shared": [True, False]}
                 default_options = "shared=True"
             """)
-        conanfile = GenConanfile().with_require_plain("boost/0.1@conan/stable")
+        conanfile = GenConanfile().with_require("boost/0.1@conan/stable")
         client = TestClient()
         client.save({"conanfile.py": conanfile,
                      "conanfile_boost.py": conanfile_boost})

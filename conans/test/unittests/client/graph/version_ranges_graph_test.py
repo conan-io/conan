@@ -168,7 +168,7 @@ class HelloConan(ConanFile):
                            ])
     def transitive_test(self, version_range, solution, override, valid, is_vrange):
         hello_text = GenConanfile().with_name("Hello").with_version("1.2")\
-                                   .with_require_plain("Say/[>0.1, <1]@myuser/testing")
+                                   .with_require("Say/[>0.1, <1]@myuser/testing")
         hello_ref = ConanFileReference.loads("Hello/1.2@myuser/testing")
         self.retriever.save_recipe(hello_ref, hello_text)
 
