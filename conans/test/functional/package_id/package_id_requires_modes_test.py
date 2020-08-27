@@ -557,7 +557,7 @@ class PackageIDErrorTest(unittest.TestCase):
         pkg_revision_mode = "self.info.requires.full_version_mode()"
         package_id_print = "self.output.info('PkgNames: %s' % sorted(self.info.requires.pkg_names))"
         client.save({"conanfile.py": GenConanfile().with_require("dep1/1.0@user/testing")
-                    .with_build_require_plain("tool/1.0@user/testing")
+                    .with_build_requires("tool/1.0@user/testing")
                     .with_package_id(pkg_revision_mode)
                     .with_package_id(package_id_print)})
         client.run("export . dep2/1.0@user/testing")

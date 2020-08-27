@@ -72,9 +72,9 @@ class GenConanfile(object):
         self._requires.append((ref_str, private, override))
         return self
 
-    def with_requires(self, *args):
-        for arg in args:
-            self.with_require(arg)
+    def with_requires(self, *refs):
+        for ref in refs:
+            self.with_require(ref)
         return self
 
     def with_requirement(self, ref, private=False, override=False):
@@ -82,9 +82,10 @@ class GenConanfile(object):
         self._requirements.append((ref_str, private, override))
         return self
 
-    def with_build_require(self, ref):
-        ref_str = ref.full_str() if isinstance(ref, ConanFileReference) else ref
-        self._build_requires.append(ref_str)
+    def with_build_requires(self, *refs):
+        for ref in refs:
+            ref_str = ref.full_str() if isinstance(ref, ConanFileReference) else ref
+            self._build_requires.append(ref_str)
         return self
 
     def with_build_requirement(self, ref, force_host_context=False):

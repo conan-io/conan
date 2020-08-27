@@ -94,7 +94,7 @@ class GraphManagerTest(unittest.TestCase):
                 conanfile.with_require(r)
         if build_requires:
             for r in build_requires:
-                conanfile.with_build_require(r)
+                conanfile.with_build_requires(r)
         save(path, str(conanfile))
         return path
 

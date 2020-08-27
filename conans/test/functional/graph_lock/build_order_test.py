@@ -256,7 +256,7 @@ class BuildRequiresBuildOrderTest(unittest.TestCase):
         # https://github.com/conan-io/conan/issues/5727
         client = TestClient()
         client.save({"dep/conanfile.py": GenConanfile(),
-                     "pkg/conanfile.py": GenConanfile().with_build_require("dep/0.1"),
+                     "pkg/conanfile.py": GenConanfile().with_build_requires("dep/0.1"),
                      "app/conanfile.py": GenConanfile().with_require("pkg/0.1")})
         if export:
             client.run("export dep dep/0.1@")
@@ -375,10 +375,9 @@ class GraphLockWarningsTestCase(unittest.TestCase):
     def test_override(self):
         client = TestClient()
         client.save({"harfbuzz.py": GenConanfile("harfbuzz", "1.0"),
-                     "ffmpeg.py":
-                         GenConanfile("ffmpeg", "1.0").with_requirement_plain("harfbuzz/[>=1.0]"),
-                     "meta.py": GenConanfile("meta", "1.0").with_requirement_plain("ffmpeg/1.0")
-                                                           .with_requirement_plain("harfbuzz/1.0")
+                     "ffmpeg.py": GenConanfile("ffmpeg", "1.0").with_requirement("harfbuzz/[>=1.0]"),
+                     "meta.py": GenConanfile("meta", "1.0").with_requirement("ffmpeg/1.0")
+                                                           .with_requirement("harfbuzz/1.0")
                      })
         client.run("export harfbuzz.py")
         client.run("export ffmpeg.py")
@@ -404,12 +403,12 @@ class GraphLockBuildRequireErrorTestCase(unittest.TestCase):
         client.save({"zlib.py": GenConanfile(),
                      "harfbuzz.py": GenConanfile().with_require("fontconfig/1.0"),
                      "fontconfig.py": GenConanfile(),
-                     "ffmpeg.py": GenConanfile().with_build_require("fontconfig/1.0")
-                                                .with_build_require("harfbuzz/1.0"),
-                     "variant.py": GenConanfile().with_require("ffmpeg/1.0")
-                                                 .with_require("fontconfig/1.0")
-                                                 .with_require("harfbuzz/1.0")
-                                                 .with_require("zlib/1.0")
+                     "ffmpeg.py": GenConanfile().with_build_requires("fontconfig/1.0",
+                                                                     "harfbuzz/1.0"),
+                     "variant.py": GenConanfile().with_requires("ffmpeg/1.0",
+                                                                "fontconfig/1.0",
+                                                                "harfbuzz/1.0",
+                                                                "zlib/1.0")
                      })
         client.run("export zlib.py zlib/1.0@")
         client.run("export fontconfig.py fontconfig/1.0@")
@@ -469,7 +468,7 @@ class GraphLockBuildRequireErrorTestCase(unittest.TestCase):
     def test_build_requires_not_needed(self):
         client = TestClient()
         client.save({'tool/conanfile.py': GenConanfile(),
-                     'libA/conanfile.py': GenConanfile().with_build_require("tool/1.0"),
+                     'libA/conanfile.py': GenConanfile().with_build_requires("tool/1.0"),
                      'App/conanfile.py': GenConanfile().with_require("libA/1.0")})
         client.run("create tool tool/1.0@")
         client.run("create libA libA/1.0@")
