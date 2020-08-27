@@ -130,9 +130,9 @@ class TestConan(ConanFile):
                        del self.info.settings.compiler.runtime
             """)
         client.save({"conanfile.py": conanfile})
-        client.run('create . pkg/0.1@ -s compiler="Visual Studio" -s compiler.version=14 '
-                   '-s build_type=Release')
+        client.run('create . pkg/0.1@ -s os=Windows -s compiler="Visual Studio" '
+                   '-s compiler.version=14 -s build_type=Release')
         self.assertIn("pkg/0.1:e1f7c8ffe5f9342d04ab704810faf93060ae3d70 - Build", client.out)
-        client.run('install pkg/0.1@ -s compiler="Visual Studio" -s compiler.version=14 '
-                   '-s build_type=Debug')
+        client.run('install pkg/0.1@ -s os=Windows -s compiler="Visual Studio" '
+                   '-s compiler.version=14 -s build_type=Debug')
         self.assertIn("pkg/0.1:e1f7c8ffe5f9342d04ab704810faf93060ae3d70 - Cache", client.out)
