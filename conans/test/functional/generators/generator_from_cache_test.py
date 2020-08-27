@@ -87,10 +87,6 @@ class GeneratorFromCacheTest(unittest.TestCase):
             @property
             def content(self):
                 return "user_defined contents"
-
-        class UserDefinedConan(ConanFile):
-            name = "User Defined Generator"
-            version = "1.0"
         """)
         test_generator_filename = "user_defined_generator.py"
 
@@ -113,3 +109,48 @@ class GeneratorFromCacheTest(unittest.TestCase):
 
         data = client.load("userdefined.txt")
         self.assertEqual(data, "user_defined contents")
+
+
+    def create_conanfile_test(self):
+        """
+        Test the availability of user-defined generators in cache during a create
+        """
+        client = TestClient(cache_autopopulate=True)
+
+        # Set up generator
+        test_generator_contents = textwrap.dedent("""
+        from conans import ConanFile
+        from conans.model import Generator
+
+        class user_defined(Generator):
+            @property
+            def filename(self):
+                return "userdefined.txt"
+
+            @property
+            def content(self):
+                return "user_defined contents"
+        """)
+        test_generator_filename = "user_defined_generator.py"
+
+        # Save generator to cache_folder/generators
+        client.save({
+            os.path.join(client.cache_folder,
+                         GENERATORS_FOLDER,
+                         test_generator_filename): test_generator_contents})
+
+        conanfile_py = textwrap.dedent("""
+            from conans import ConanFile, tools
+
+            class HelloConan(ConanFile):
+                generators = "user_defined"
+
+                def package(self):
+                    self.output.info("create_conanfile_test: {}".format(tools.load("userdefined.txt")))
+                """)
+        client.save({"conanfile.py": conanfile_py})
+
+        # Test the install using a conanfile
+        client.run("create . Hello/0.1@lasote/testing")
+        self.assertIn("Generator user_defined created userdefined.txt", client.out)
+        self.assertIn("create_conanfile_test: user_defined contents", client.out)
