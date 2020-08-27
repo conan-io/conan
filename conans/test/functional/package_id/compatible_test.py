@@ -239,7 +239,7 @@ class CompatibleIDsTest(unittest.TestCase):
                    compatible_pkg = self.info.clone()
                    compatible_pkg.parent_compatible(compiler="intel", version=16)
                    self.compatible_packages.append(compatible_pkg)
-               
+
             """)
         visual_profile = textwrap.dedent("""
             [settings]
@@ -356,7 +356,7 @@ class CompatibleIDsTest(unittest.TestCase):
         # Recipe revision mode
         client.run("config set general.default_package_id_mode=recipe_revision_mode")
         tmp = """
-    
+
     def package_id(self):
         p = self.info.clone()
         p.requires.recipe_revision_mode()
