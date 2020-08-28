@@ -148,15 +148,7 @@ set_property(TARGET {name}::{name}
                                       "{{ build_type }}"
                                       "{{ pkg_name }}_{{ comp_name }}")
 
-        foreach(_FRAMEWORK {{ '${'+pkg_name+'_'+comp_name+'_FRAMEWORKS_FOUND_'+build_type+'}' }})
-            list(APPEND {{ pkg_name+'_'+comp_name+'_LIB_TARGETS_'+build_type }} ${_FRAMEWORK})
-        endforeach()
-
-        foreach(_SYSTEM_LIB {{ '${'+pkg_name+'_'+comp_name+'_SYSTEM_LIBS_'+build_type+'}' }})
-            list(APPEND {{ pkg_name+'_'+comp_name+'_LIB_TARGETS_'+build_type }} ${_SYSTEM_LIB})
-        endforeach()
-
-        set({{ pkg_name }}_{{ comp_name }}_LINK_LIBS_{{ build_type }} {{ '${'+pkg_name+'_'+comp_name+'_LIB_TARGETS_'+build_type+'}' }} {{ '${'+pkg_name+'_'+comp_name+'_DEPENDENCIES_'+build_type+'}' }})
+        set({{ pkg_name }}_{{ comp_name }}_LINK_LIBS_{{ build_type }} {{ '${'+pkg_name+'_'+comp_name+'_LIB_TARGETS_'+build_type+'}' }} {{ '${'+pkg_name+'_'+comp_name+'_LIBS_FRAMEWORKS_DEPS_'+build_type+'}' }})
 
         {%- endfor %}
         """))
