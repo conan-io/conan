@@ -68,7 +68,7 @@ message("Compile options: ${tmp}")
                       "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:shared_link_flag>;"
                       "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:shared_link_flag>;"
                       "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>", client.out)
-        self.assertIn("Compile options: $<$<COMPILE_LANGUAGE:C>:a_flag>;$<$<COMPILE_LANGUAGE:CXX>:a_cxx_flag>",
+        self.assertIn("Compile options: $<$<IN_LIST:C,ENABLED_LANGUAGES>:a_flag>;$<$<IN_LIST:CXX,ENABLED_LANGUAGES>:a_cxx_flag>",
                       client.out)
 
     def cmake_lock_target_redefinition_test(self):

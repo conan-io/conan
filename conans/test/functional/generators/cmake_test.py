@@ -422,9 +422,10 @@ class CMakeGeneratorTest(unittest.TestCase):
             CONAN_BASIC_SETUP(TARGETS)
             get_target_property(opts CONAN_PKG::flags INTERFACE_COMPILE_OPTIONS)
             message("${opts}")
+            message("${ENABLED_LANGUAGES}")
             """)
         client.save({"conanfile.py": conanfile_consumer,
                      "CMakeLists.txt": cmakelists})
         client.run('create .')
-        self.assertIn("$<$<COMPILE_LANGUAGE:C>:-fno-asm>;$<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions;-fno-rtti>;",
+        self.assertIn("$<$<IN_LIST:C,ENABLED_LANGUAGES>:-fno-asm>;$<$<IN_LIST:CXX,ENABLED_LANGUAGES>:-fno-exceptions;-fno-rtti>;",
                       client.out)
