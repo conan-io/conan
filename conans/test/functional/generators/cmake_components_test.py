@@ -644,88 +644,122 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
 
     def filenames_test(self):
         client = TestClient()
-        conanfile = textwrap.dedent("""
+        conanfile_tpl = textwrap.dedent("""
             import os
-            from conans import ConanFile, tools
+            from conans import ConanFile, tools, CMake
 
-            class HelloConan(ConanFile):
-                name = "hello"
+            class {name}(ConanFile):
+                name = "{name}"
                 version = "1.0"
                 settings = "os", "compiler", "build_type", "arch"
-
-                def package(self):
-                    tools.save(os.path.join(self.package_folder, "lib", "hello.lib"), "")
-                    tools.save(os.path.join(self.package_folder, "lib", "libhello.a"), "")
-
-                def package_info(self):
-                    self.cpp_info.names["cmake_find_package"] = "MYHELLO"
-                    self.cpp_info.filenames["cmake_find_package"] = "hello_1"
-                    self.cpp_info.components["1"].names["cmake_find_package"] = "HELLO1"
-                    self.cpp_info.components["1"].libs = ["hello"]
-        """)
-        client.save({"conanfile.py": conanfile})
-        client.run("create .")
-
-        conanfile = textwrap.dedent("""
-            import os
-            from conans import ConanFile, tools
-
-            class HelloConan(ConanFile):
-                name = "hello2"
-                version = "1.0"
-                settings = "os", "compiler", "build_type", "arch"
-                requires = "hello/1.0"
-
-                def package(self):
-                    tools.save(os.path.join(self.package_folder, "lib", "hello2.lib"), "")
-                    tools.save(os.path.join(self.package_folder, "lib", "libhello2.a"), "")
-
-                def package_info(self):
-                    self.cpp_info.names["cmake_find_package"] = "MYHELLO"
-                    self.cpp_info.filenames["cmake_find_package"] = "hello_2"
-                    self.cpp_info.components["1"].names["cmake_find_package"] = "HELLO2"
-                    self.cpp_info.components["1"].libs = ["hello2"]
-                    self.cpp_info.components["1"].requires = ["hello::1"]
-        """)
-        client.save({"conanfile.py": conanfile})
-        client.run("create .")
-
-        conanfile = textwrap.dedent("""
-            from conans import ConanFile, CMake
-
-            class Conan(ConanFile):
-                requires = "hello2/1.0"
-                generators = "cmake_find_package"
-                settings = "os", "compiler", "build_type", "arch"
+                generators = "cmake"
+                exports_sources = "src/*"
+                {requires}
 
                 def build(self):
                     cmake = CMake(self)
-                    cmake.configure()
+                    cmake.configure(source_folder="src")
+                    cmake.build()
+
+                def package(self):
+                    self.copy("*.h", dst="include", src="src")
+                    self.copy("*.lib", dst="lib", keep_path=False)
+                    self.copy("*.a", dst="lib", keep_path=False)
+
+                def package_info(self):
+                    self.cpp_info.names["cmake_find_package"] = "MYHELLO"
+                    self.cpp_info.filenames["cmake_find_package"] = "{name}"
+                    self.cpp_info.components["1"].names["cmake_find_package"] = "{name}_TARGET"
+                    self.cpp_info.components["1"].libs = ["{name}"]
+                    if self.name == "hello2":
+                        self.cpp_info.components["1"].requires = ["hello1::1"]
+        """)
+        hello_h_tpl = textwrap.dedent("""
+            #pragma once
+            #include <string>
+
+            void {name}(std::string noun);
+            """)
+
+        hello_cpp_tpl = textwrap.dedent("""
+            #include <iostream>
+            #include <string>
+
+            #include "{name}.h"
+
+            void {name}(std::string noun) {{
+                std::cout << "{name} " << noun << "!" << std::endl;
+            }}
+            """)
+        hello_cmakelists_tpl = textwrap.dedent("""
+            cmake_minimum_required(VERSION 3.0)
+            project({name} CXX)
+
+            include(${{CMAKE_BINARY_DIR}}/conanbuildinfo.cmake)
+            conan_basic_setup()
+
+            add_library({name} {name}.cpp)
+            """)
+        client.save({"conanfile.py": conanfile_tpl.format(name="hello1", requires=""),
+                     "src/CMakeLists.txt": hello_cmakelists_tpl.format(name="hello1"),
+                     "src/hello1.h": hello_h_tpl.format(name="hello1"),
+                     "src/hello1.cpp": hello_cpp_tpl.format(name="hello1")})
+        client.run("create .")
+
+        client.save({"conanfile.py": conanfile_tpl.format(name="hello2",
+                                                          requires="requires = 'hello1/1.0'"),
+                     "src/CMakeLists.txt": hello_cmakelists_tpl.format(name="hello2"),
+                     "src/hello2.h": hello_h_tpl.format(name="hello2"),
+                     "src/hello2.cpp": hello_cpp_tpl.format(name="hello2")}, clean_first=True)
+        client.run("create .")
+
+        conanfile = textwrap.dedent("""
+            import os
+            from conans import ConanFile, CMake
+
+            class Conan(ConanFile):
+                name = "consumer"
+                version = "1.0"
+                requires = "hello2/1.0"
+                generators = "cmake_find_package", "cmake"
+                settings = "os", "compiler", "build_type", "arch"
+                exports_sources = "src/*"
+
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure(source_folder="src")
+                    cmake.build()
+                    bin_path = os.path.join("bin", "main")
+                    self.run(bin_path, run_environment=True)
             """)
         cmakelists = textwrap.dedent("""
             project(consumer)
             cmake_minimum_required(VERSION 3.1)
-            find_package(hello_2)
-            get_target_property(tmp MYHELLO::HELLO2 INTERFACE_LINK_LIBRARIES)
-            message("Target libs (hello2): ${tmp}")
-            get_target_property(tmp MYHELLO::HELLO1 INTERFACE_LINK_LIBRARIES)
-            message("Target libs (hello): ${tmp}")
-            """)
-        client.save({"conanfile.py": conanfile, "CMakeLists.txt": cmakelists})
-        client.run("install .")
-        client.run("build .")
 
+            include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+            conan_basic_setup()
+
+            find_package(hello2)
+
+            add_executable(main main.cpp)
+            target_link_libraries(main MYHELLO::hello1_TARGET MYHELLO::hello2_TARGET)
+            """)
+        main_cpp = textwrap.dedent("""
+        #include "hello1.h"
+        #include "hello2.h"
+        
+        int main() {
+            hello1("world");
+            hello2("world");
+        }
+        """)
+        client.save({"conanfile.py": conanfile,
+                     "src/CMakeLists.txt": cmakelists,
+                     "src/main.cpp": main_cpp}, clean_first=True)
+        client.run("create .")
+        self.assertIn('Found hello1: 1.0 (found version "1.0")', client.out)
+        self.assertIn('Found hello2: 1.0 (found version "1.0")', client.out)
         self.assertIn('Library hello2 found', client.out)
-        self.assertIn('Library hello found', client.out)
-        self.assertIn("Target libs (hello2): "
-                      "CONAN_LIB::MYHELLO_HELLO2_hello2;MYHELLO::HELLO1;"
-                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
-                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
-                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>",
-                      client.out)
-        self.assertIn("Target libs (hello): "
-                      "CONAN_LIB::MYHELLO_HELLO1_hello;"
-                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
-                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
-                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>",
-                      client.out)
+        self.assertIn('Library hello1 found', client.out)
+        self.assertIn('hello1 world!', client.out)
+        self.assertIn('hello2 world!', client.out)

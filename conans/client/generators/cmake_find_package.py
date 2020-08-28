@@ -24,7 +24,7 @@ class CMakeFindPackageGenerator(Generator):
         set({filename}_FOUND 1)
         set({name}_VERSION "{version}")
 
-        find_package_handle_standard_args({name} REQUIRED_VARS
+        find_package_handle_standard_args({filename} REQUIRED_VARS
                                           {name}_VERSION VERSION_VAR {name}_VERSION)
         mark_as_advanced({filename}_FOUND {name}_VERSION)
 
@@ -65,7 +65,7 @@ class CMakeFindPackageGenerator(Generator):
         set({{ pkg_name }}_VERSION "{{ pkg_version }}")
         set({{ pkg_name }}_COMPONENTS {{ pkg_components }})
 
-        find_package_handle_standard_args({{ pkg_name }} REQUIRED_VARS
+        find_package_handle_standard_args({{ pkg_filename }} REQUIRED_VARS
                                           {{ pkg_name }}_VERSION VERSION_VAR {{ pkg_name }}_VERSION)
         mark_as_advanced({{ pkg_filename }}_FOUND {{ pkg_name }}_VERSION)
 
