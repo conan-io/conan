@@ -204,8 +204,6 @@ class LockRecipeTest(unittest.TestCase):
         client.run("create pkgb libb/0.1@ --lockfile=libb_release.lock")
         self.assertIn("libb/0.1: Created package", client.out)
 
-    import os
-    os.environ["TESTING_REVISIONS_ENABLED"] = "1"
     @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
     def missing_configuration_test(self):
         client = TestClient()
