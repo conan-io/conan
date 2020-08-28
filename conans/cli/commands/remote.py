@@ -37,7 +37,7 @@ def remote_add(*args, conan_api, parser, subparser):
     """
     subparser.add_argument("remote", help="Name of the remote to add")
     subparser.add_argument("url", help="Url for the rempote")
-    subparser.add_argument("-v", "--verify_ssl", action=OnceArgument, default="True",
+    subparser.add_argument("-v", "--verify-ssl", action=OnceArgument, default="True",
                            help="Verify SSL certificated")
     subparser.add_argument("-i", "--insert", action=OnceArgument,
                            help="Insert remote at specific index")
@@ -66,14 +66,14 @@ def remote_update(*args, conan_api, parser, subparser):
                            help="New name for the remote")
     subparser.add_argument("-u", "--url", action=OnceArgument,
                            help="New url for the rempote")
-    subparser.add_argument("-v", "--verify_ssl", action=OnceArgument,
+    subparser.add_argument("-v", "--verify-ssl", action=OnceArgument,
                            help="Verify SSL certificated")
     subparser.add_argument("-i", "--insert", action=OnceArgument,
                            help="Insert remote at specific index")
     args = parser.parse_args(*args)
     if not (args.name or args.url or args.verify_ssl or args.insert):
         subparser.error("Please add at least one remote field to update: "
-                        "name, url, verify_ssl, insert")
+                        "name, url, verify-ssl, insert")
 
 
 @conan_subcommand()
