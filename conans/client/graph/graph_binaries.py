@@ -355,6 +355,8 @@ class GraphBinariesAnalyzer(object):
             if node.package_id == PACKAGE_ID_UNKNOWN:
                 assert node.binary is None, "Node.binary should be None"
                 node.binary = BINARY_UNKNOWN
+                # annotate pattern, so unused patterns in --build are not displayed as errors
+                build_mode.forced(node.conanfile, node.ref)
                 continue
             self._evaluate_node(node, build_mode, update, remotes)
         deps_graph.mark_private_skippable(nodes_subset=nodes_subset, root=root)

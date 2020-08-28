@@ -203,3 +203,65 @@ class LockRecipeTest(unittest.TestCase):
 
         client.run("create pkgb libb/0.1@ --lockfile=libb_release.lock")
         self.assertIn("libb/0.1: Created package", client.out)
+
+    import os
+    os.environ["TESTING_REVISIONS_ENABLED"] = "1"
+    @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
+    def missing_configuration_test(self):
+        client = TestClient()
+        client.run("config set general.default_package_id_mode=package_revision_mode")
+        client.save({"conanfile.py": GenConanfile().with_setting("os")})
+        client.run("create . liba/0.1@ -s os=Windows")
+        self.assertIn("liba/0.1:3475bd55b91ae904ac96fde0f106a136ab951a5e - Build", client.out)
+        self.assertIn("liba/0.1: Created package revision d0f0357277b3417d3984b5a9a85bbab6",
+                      client.out)
+
+        client.save({"conanfile.py": GenConanfile().with_require_plain("liba/0.1")})
+        client.run("export . libb/0.1@")
+        client.run("lock create --reference=libb/0.1 --base --lockfile-out=conan.lock -s os=Windows")
+
+        client.run("lock create --reference=libb/0.1 -s os=Windows "
+                   "--lockfile-out=windows.lock --lockfile=conan.lock "
+                   "--build=libb/0.1 --build=missing")
+        self.assertIn("libb/0.1:d9a360017881eddb68099b9a3573a4c0d39f3df5 - Build", client.out)
+
+        client.run("lock create --reference=libb/0.1 -s os=Linux "
+                   "--lockfile-out=linux.lock --lockfile=conan.lock "
+                   "--build=libb/0.1 --build=missing")
+        self.assertIn("libb/0.1:Package_ID_unknown - Unknown", client.out)
+
+    @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
+    def missing_configuration_build_require_test(self):
+        client = TestClient()
+        client.run("config set general.default_package_id_mode=package_revision_mode")
+
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . cmake/1.0@")
+        client.save({"conanfile.py": GenConanfile().with_setting("os"),
+                     "myprofile": "[build_requires]\ncmake/1.0"})
+        client.run("create . liba/0.1@ -s os=Windows --profile=myprofile")
+        self.assertIn("liba/0.1:3475bd55b91ae904ac96fde0f106a136ab951a5e - Build", client.out)
+        self.assertIn("liba/0.1: Created package revision d0f0357277b3417d3984b5a9a85bbab6",
+                      client.out)
+
+        client.save({"conanfile.py": GenConanfile().with_require_plain("liba/0.1")})
+        client.run("lock create conanfile.py --name=libb --version=0.1 --base "
+                   "--lockfile-out=conan.lock --profile=myprofile -s os=Windows --build")
+
+        client.run("export . libb/0.1@ --lockfile=conan.lock --lockfile-out=conan.lock")
+
+        client.run("lock create --reference=libb/0.1 -s os=Windows "
+                   "--lockfile-out=windows.lock --lockfile=conan.lock "
+                   "--build=libb/0.1 --build=missing --profile=myprofile")
+        self.assertIn("liba/0.1:3475bd55b91ae904ac96fde0f106a136ab951a5e - Cache", client.out)
+        self.assertIn("libb/0.1:d9a360017881eddb68099b9a3573a4c0d39f3df5 - Build", client.out)
+        self.assertIn("cmake/1.0:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache", client.out)
+
+        client.run("lock create --reference=libb/0.1 -s os=Linux "
+                   "--lockfile-out=linux.lock --lockfile=conan.lock "
+                   "--build=libb/0.1 --build=missing --profile=myprofile")
+        self.assertNotIn("ERROR: No package matching 'libb/0.1' pattern", client.out)
+        self.assertIn("liba/0.1:cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31 - Build", client.out)
+        self.assertIn("libb/0.1:Package_ID_unknown - Unknown", client.out)
+        self.assertIn("cmake/1.0:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache", client.out)
+
