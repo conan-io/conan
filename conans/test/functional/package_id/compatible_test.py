@@ -239,7 +239,7 @@ class CompatibleIDsTest(unittest.TestCase):
                    compatible_pkg = self.info.clone()
                    compatible_pkg.parent_compatible(compiler="intel", version=16)
                    self.compatible_packages.append(compatible_pkg)
-               
+
             """)
         visual_profile = textwrap.dedent("""
             [settings]
@@ -300,17 +300,16 @@ class CompatibleIDsTest(unittest.TestCase):
         client = TestClient()
         ref = ConanFileReference.loads("Bye/0.1@us/ch")
         conanfile = textwrap.dedent("""
-        from conans import ConanFile
+            from conans import ConanFile
 
-        class Conan(ConanFile):
-            settings = "compiler"
+            class Conan(ConanFile):
+                settings = "compiler"
 
-            def package_id(self):
-               if self.settings.compiler == "Visual Studio":
-                   compatible_pkg = self.info.clone()
-                   compatible_pkg.parent_compatible(compiler="intel", version=16, FOO="BAR")
-                   self.compatible_packages.append(compatible_pkg)
-
+                def package_id(self):
+                   if self.settings.compiler == "Visual Studio":
+                       compatible_pkg = self.info.clone()
+                       compatible_pkg.parent_compatible(compiler="intel", version=16, FOO="BAR")
+                       self.compatible_packages.append(compatible_pkg)
             """)
         visual_profile = textwrap.dedent("""
             [settings]
@@ -356,7 +355,7 @@ class CompatibleIDsTest(unittest.TestCase):
         # Recipe revision mode
         client.run("config set general.default_package_id_mode=recipe_revision_mode")
         tmp = """
-    
+
     def package_id(self):
         p = self.info.clone()
         p.requires.recipe_revision_mode()
@@ -372,12 +371,12 @@ class CompatibleIDsTest(unittest.TestCase):
 
         client.save({"conanfile.py": c2})
         client.run("create .")
-        self.assertIn("Package '9fc42b36e70615fe97acca0afa27e1731868861c' created", client.out)
+        self.assertIn("Package 'ce6719c914d00372f1a2ae66543c0d135a684951' created", client.out)
 
         # Back to semver mode
         client.run("config set general.default_package_id_mode=semver_direct_mode")
         client.run("install BB/1.0@ --update")
-        self.assertIn("Using compatible package '9fc42b36e70615fe97acca0afa27e1731868861c'",
+        self.assertIn("Using compatible package 'ce6719c914d00372f1a2ae66543c0d135a684951'",
                       client.out)
 
     def package_id_consumers_test(self):

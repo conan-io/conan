@@ -850,7 +850,7 @@ class CMakeCommonMacros:
                 endif()
                 foreach(_FRAMEWORK ${FRAMEWORKS})
                     # https://cmake.org/pipermail/cmake-developers/2017-August/030199.html
-                    find_library(CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND NAME ${_FRAMEWORK} PATHS ${CONAN_FRAMEWORK_DIRS${SUFFIX}})
+                    find_library(CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND NAME ${_FRAMEWORK} PATHS ${CONAN_FRAMEWORK_DIRS${SUFFIX}} CMAKE_FIND_ROOT_PATH_BOTH)
                     if(CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND)
                         list(APPEND ${FRAMEWORKS_FOUND} ${CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND})
                     else()
