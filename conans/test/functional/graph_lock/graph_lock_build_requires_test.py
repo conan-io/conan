@@ -10,11 +10,11 @@ class GraphLockBuildRequireTestCase(unittest.TestCase):
         t = TestClient()
         t.save({
             'br/conanfile.py': GenConanfile("br", "0.1"),
-            'zlib/conanfile.py': GenConanfile("zlib", "0.1").with_build_require_plain("br/0.1"),
-            'bzip2/conanfile.py': GenConanfile("bzip2", "0.1").with_build_require_plain("br/0.1"),
-            'boost/conanfile.py': GenConanfile("boost", "0.1").with_require_plain("zlib/0.1")
-                                                              .with_require_plain("bzip2/0.1")
-                                                              .with_build_require_plain("br/0.1")
+            'zlib/conanfile.py': GenConanfile("zlib", "0.1").with_build_requires("br/0.1"),
+            'bzip2/conanfile.py': GenConanfile("bzip2", "0.1").with_build_requires("br/0.1"),
+            'boost/conanfile.py': GenConanfile("boost", "0.1").with_require("zlib/0.1")
+                                                              .with_require("bzip2/0.1")
+                                                              .with_build_requires("br/0.1")
             })
         t.run("export br/conanfile.py")
         t.run("export zlib/conanfile.py")
@@ -51,9 +51,9 @@ class GraphLockBuildRequireTestCase(unittest.TestCase):
         t = TestClient()
         t.save({
             'protobuf/conanfile.py': GenConanfile("protobuf", "0.1"),
-            'lib/conanfile.py': GenConanfile("lib", "0.1").with_require_plain("protobuf/0.1")
-                                                          .with_build_require_plain("protobuf/0.1"),
-            'app/conanfile.py': GenConanfile("app", "0.1").with_require_plain("lib/0.1")
+            'lib/conanfile.py': GenConanfile("lib", "0.1").with_require("protobuf/0.1")
+                                                          .with_build_requires("protobuf/0.1"),
+            'app/conanfile.py': GenConanfile("app", "0.1").with_require("lib/0.1")
         })
         t.run("export protobuf/conanfile.py")
         t.run("export lib/conanfile.py")
@@ -93,9 +93,9 @@ class GraphLockBuildRequireTestCase(unittest.TestCase):
         t = TestClient()
         t.save({
             'protobuf/conanfile.py': GenConanfile("protobuf", "0.1").with_setting("os"),
-            'lib/conanfile.py': GenConanfile("lib", "0.1").with_require_plain("protobuf/0.1")
-                                                          .with_build_require_plain("protobuf/0.1"),
-            'app/conanfile.py': GenConanfile("app", "0.1").with_require_plain("lib/0.1"),
+            'lib/conanfile.py': GenConanfile("lib", "0.1").with_require("protobuf/0.1")
+                                                          .with_build_requires("protobuf/0.1"),
+            'app/conanfile.py': GenConanfile("app", "0.1").with_require("lib/0.1"),
             'Windows': "[settings]\nos=Windows",
             'Linux': "[settings]\nos=Linux"
         })
@@ -145,7 +145,7 @@ class GraphLockBuildRequireTestCase(unittest.TestCase):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . cmake/1.0@")
-        client.save({"conanfile.py": GenConanfile().with_build_require_plain("cmake/1.0@")})
+        client.save({"conanfile.py": GenConanfile().with_build_requires("cmake/1.0@")})
         client.run("create . flac/1.0@")
         client.run("lock create --reference=flac/1.0@ --lockfile-out=conan.lock --build")
         lock = json.loads(client.load("conan.lock"))
@@ -179,10 +179,10 @@ class GraphLockBuildRequireTestCase(unittest.TestCase):
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . cmake/1.0@")
         client.run("create . cmake/1.1@")
-        client.save({"conanfile.py": GenConanfile().with_build_require_plain("cmake/1.0")})
+        client.save({"conanfile.py": GenConanfile().with_build_requires("cmake/1.0")})
         client.run("create . pkg1/1.0@")
-        client.save({"conanfile.py": GenConanfile().with_build_require_plain("cmake/1.1")
-                                                   .with_require_plain("pkg1/1.0")})
+        client.save({"conanfile.py": GenConanfile().with_build_requires("cmake/1.1")
+                                                   .with_require("pkg1/1.0")})
         client.run("create . pkg2/1.0@")
         client.run("lock create --reference=pkg2/1.0@ --build --lockfile-out=conan.lock")
         client.run("install cmake/[>=1.0]@ --lockfile=conan.lock", assert_error=True)

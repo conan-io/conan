@@ -15,7 +15,7 @@ class PerPackageSettingTest(unittest.TestCase):
             """)
         client.save({"conanfile.py": conanfile})
         client.run("create . pkg/0.1@user/testing -s os=Windows")
-        client.save({"conanfile.py": GenConanfile().with_require_plain("pkg/0.1@user/testing")})
+        client.save({"conanfile.py": GenConanfile().with_require("pkg/0.1@user/testing")})
         client.run("create . consumer/0.1@user/testing -s os=Linux -s pkg*:os=Windows")
         self.assertIn("consumer/0.1@user/testing: Created package", client.out)
 
@@ -28,7 +28,7 @@ class PerPackageSettingTest(unittest.TestCase):
             """)
         client.save({"conanfile.py": conanfile})
         client.run("create . pkg/0.1@ -s os=Windows")
-        client.save({"conanfile.py": GenConanfile().with_require_plain("pkg/0.1")})
+        client.save({"conanfile.py": GenConanfile().with_require("pkg/0.1")})
         client.run("create . consumer/0.1@ -s os=Linux -s pkg*:os=Windows")
         self.assertIn("consumer/0.1: Created package", client.out)
 
