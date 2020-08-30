@@ -49,6 +49,7 @@ from conans.client.runner import ConanRunner
 from conans.client.source import config_source_local
 from conans.client.store.localdb import LocalDB
 from conans.client.tools.env import environment_append
+from conans.client.tools.mytools import create_my_tools
 from conans.client.userio import UserIO
 from conans.errors import (ConanException, RecipeNotFoundException,
                            PackageNotFoundException, NoRestV2Available, NotFoundException)
@@ -192,6 +193,7 @@ class ConanApp(object):
 
         # Adjust global tool variables
         set_global_instances(self.out, self.requester, self.config)
+        create_my_tools(self.out, self.requester, self.config)
 
         self.runner = runner or ConanRunner(self.config.print_commands_to_output,
                                             self.config.generate_run_log_file,
