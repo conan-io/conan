@@ -408,3 +408,48 @@ class Conan(ConanFile):
 
         self.assertIn('set(requirement_LIBRARY_LIST_RELEASE lib_both lib_release)', content_release)
         self.assertIn('set(requirement_LIBRARY_LIST_DEBUG lib_both lib_debug)', content_debug)
+
+    def components_system_libs_test(self):
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+
+            class Requirement(ConanFile):
+                name = "requirement"
+                version = "system"
+
+                settings = "os", "arch", "compiler", "build_type"
+
+                def package_info(self):
+                    self.cpp_info.components["component"].system_libs = ["system_lib_component"]
+        """)
+        t = TestClient()
+        t.save({"conanfile.py": conanfile})
+        t.run("create .")
+
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile, tools, CMake
+            class Consumer(ConanFile):
+                name = "consumer"
+                version = "0.1"
+                requires = "requirement/system"
+                generators = "cmake_find_package_multi"
+                exports_sources = "CMakeLists.txt"
+                settings = "os", "arch", "compiler", "build_type"
+
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+        """)
+
+        cmakelists = textwrap.dedent("""
+            project(consumer)
+            cmake_minimum_required(VERSION 3.1)
+            find_package(requirement)
+            get_target_property(tmp requirement::component INTERFACE_LINK_LIBRARIES)
+            message("component libs: ${tmp}")
+        """)
+
+        t.save({"conanfile.py": conanfile, "CMakeLists.txt": cmakelists})
+        t.run("create . --build missing -s build_type=Release")
+
+        self.assertIn("component libs: $<$<CONFIG:Release>:system_lib_component", t.out)
