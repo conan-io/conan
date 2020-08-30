@@ -9,7 +9,10 @@ class DepsCppQbs(object):
                                             for p in cpp_info.include_paths)
         self.lib_paths = delimiter.join('"%s"' % p.replace("\\", "/")
                                         for p in cpp_info.lib_paths)
-        self.libs = delimiter.join('"%s"' % l for l in cpp_info.libs)
+        self.libs = delimiter.join('"%s"' % l for l in (cpp_info.libs + cpp_info.system_libs))
+        self.framework_paths = delimiter.join('"%s"' % p.replace("\\", "/")
+                                              for p in cpp_info.framework_paths)
+        self.frameworks = delimiter.join('"%s"' % f for f in cpp_info.frameworks)
         self.defines = delimiter.join('"%s"' % d for d in cpp_info.defines)
         self.cxxflags = delimiter.join('"%s"' % d
                                        for d in cpp_info.cxxflags)
@@ -39,6 +42,8 @@ class QbsGenerator(Generator):
                     '            cpp.libraryPaths: [{deps.lib_paths}]\n'
                     '            cpp.systemIncludePaths: [{deps.bin_paths}]\n'
                     '            cpp.dynamicLibraries: [{deps.libs}]\n'
+                    '            cpp.frameworkPaths: [{deps.framework_paths}]\n'
+                    '            cpp.frameworks: [{deps.frameworks}]\n'
                     '            cpp.defines: [{deps.defines}]\n'
                     '            cpp.cxxFlags: [{deps.cxxflags}]\n'
                     '            cpp.cFlags: [{deps.cflags}]\n'
