@@ -200,20 +200,11 @@ _target_template = """
                                                                       $<$<CONFIG:RelWithDebInfo>:${{CONAN_COMPILE_DEFINITIONS_{uname}_RELWITHDEBINFO}}>
                                                                       $<$<CONFIG:MinSizeRel>:${{CONAN_COMPILE_DEFINITIONS_{uname}_MINSIZEREL}}>
                                                                       $<$<CONFIG:Debug>:${{CONAN_COMPILE_DEFINITIONS_{uname}_DEBUG}}>)
-    set_property(TARGET {name} PROPERTY INTERFACE_COMPILE_OPTIONS $<$<IN_LIST:C,ENABLED_LANGUAGES>:${{CONAN_C_FLAGS_{uname}_LIST}}>
-                                                                  $<$<IN_LIST:CXX,ENABLED_LANGUAGES>:${{CONAN_CXX_FLAGS_{uname}_LIST}}>
-                                                                  $<$<CONFIG:Release>:
-                                                                      $<$<IN_LIST:C,ENABLED_LANGUAGES>:${{CONAN_C_FLAGS_{uname}_RELEASE_LIST}}>
-                                                                      $<$<IN_LIST:CXX,ENABLED_LANGUAGES>:${{CONAN_CXX_FLAGS_{uname}_RELEASE_LIST}}>>
-                                                                  $<$<CONFIG:RelWithDebInfo>:
-                                                                      $<$<IN_LIST:C,ENABLED_LANGUAGES>:${{CONAN_C_FLAGS_{uname}_RELWITHDEBINFO_LIST}}>
-                                                                      $<$<IN_LIST:CXX,ENABLED_LANGUAGES>:${{CONAN_CXX_FLAGS_{uname}_RELWITHDEBINFO_LIST}}>>
-                                                                  $<$<CONFIG:MinSizeRel>:
-                                                                      $<$<IN_LIST:C,ENABLED_LANGUAGES>:${{CONAN_C_FLAGS_{uname}_MINSIZEREL_LIST}}>
-                                                                      $<$<IN_LIST:CXX,ENABLED_LANGUAGES>:${{CONAN_CXX_FLAGS_{uname}_MINSIZEREL_LIST}}>>
-                                                                  $<$<CONFIG:Debug>:
-                                                                      $<$<IN_LIST:C,ENABLED_LANGUAGES>:${{CONAN_C_FLAGS_{uname}_DEBUG_LIST}}>
-                                                                      $<$<IN_LIST:CXX,ENABLED_LANGUAGES>:${{CONAN_CXX_FLAGS_{uname}_DEBUG_LIST}}>>)
+    set_property(TARGET {name} PROPERTY INTERFACE_COMPILE_OPTIONS ${{CONAN_C_FLAGS_{uname}_LIST}} ${{CONAN_CXX_FLAGS_{uname}_LIST}}
+                                                                  $<$<CONFIG:Release>:${{CONAN_C_FLAGS_{uname}_RELEASE_LIST}} ${{CONAN_CXX_FLAGS_{uname}_RELEASE_LIST}}>
+                                                                  $<$<CONFIG:RelWithDebInfo>:${{CONAN_C_FLAGS_{uname}_RELWITHDEBINFO_LIST}} ${{CONAN_CXX_FLAGS_{uname}_RELWITHDEBINFO_LIST}}>
+                                                                  $<$<CONFIG:MinSizeRel>:${{CONAN_C_FLAGS_{uname}_MINSIZEREL_LIST}} ${{CONAN_CXX_FLAGS_{uname}_MINSIZEREL_LIST}}>
+                                                                  $<$<CONFIG:Debug>:${{CONAN_C_FLAGS_{uname}_DEBUG_LIST}}  ${{CONAN_CXX_FLAGS_{uname}_DEBUG_LIST}}>)
 """
 
 
@@ -859,7 +850,7 @@ class CMakeCommonMacros:
                 endif()
                 foreach(_FRAMEWORK ${FRAMEWORKS})
                     # https://cmake.org/pipermail/cmake-developers/2017-August/030199.html
-                    find_library(CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND NAME ${_FRAMEWORK} PATHS ${CONAN_FRAMEWORK_DIRS${SUFFIX}})
+                    find_library(CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND NAME ${_FRAMEWORK} PATHS ${CONAN_FRAMEWORK_DIRS${SUFFIX}} CMAKE_FIND_ROOT_PATH_BOTH)
                     if(CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND)
                         list(APPEND ${FRAMEWORKS_FOUND} ${CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND})
                     else()
