@@ -37,11 +37,11 @@ def remote_add(*args, conan_api, parser, subparser):
     """
     subparser.add_argument("remote", help="Name of the remote to add")
     subparser.add_argument("url", help="Url for the rempote")
-    subparser.add_argument("-v", "--verify-ssl", action=OnceArgument, default="True",
+    subparser.add_argument("--verify-ssl", action=OnceArgument, default="True",
                            help="Verify SSL certificated")
-    subparser.add_argument("-i", "--insert", action=OnceArgument,
+    subparser.add_argument("--insert", action=OnceArgument,
                            help="Insert remote at specific index")
-    subparser.add_argument("-f", "--force", action='store_true', default=False,
+    subparser.add_argument("--force", action='store_true', default=False,
                            help="Force addition, will update if existing")
     args = parser.parse_args(*args)
 
@@ -62,13 +62,13 @@ def remote_update(*args, conan_api, parser, subparser):
     Update remote info
     """
     subparser.add_argument("remote", help="Name of the remote to update")
-    subparser.add_argument("-n", "--name", action=OnceArgument,
+    subparser.add_argument("--name", action=OnceArgument,
                            help="New name for the remote")
-    subparser.add_argument("-u", "--url", action=OnceArgument,
+    subparser.add_argument("--url", action=OnceArgument,
                            help="New url for the rempote")
-    subparser.add_argument("-v", "--verify-ssl", action=OnceArgument,
+    subparser.add_argument("--verify-ssl", action=OnceArgument,
                            help="Verify SSL certificated")
-    subparser.add_argument("-i", "--insert", action=OnceArgument,
+    subparser.add_argument("--insert", action=OnceArgument,
                            help="Insert remote at specific index")
     args = parser.parse_args(*args)
     if not (args.name or args.url or args.verify_ssl or args.insert):
