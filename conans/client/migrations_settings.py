@@ -1445,7 +1445,7 @@ os:
         board: ANY
     Emscripten:
     Neutrino:
-        version: ["6.4", "6.5", "6.6", "7.0"]
+        version: ["6.4", "6.5", "6.6", "7.0", "7.1"]
 arch: [x86, x86_64, ppc32be, ppc32, ppc64le, ppc64, armv4, armv4i, armv5el, armv5hf, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr, s390, s390x, asm.js, wasm, sh4le]
 compiler:
     sun-cc:
