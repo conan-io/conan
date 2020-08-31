@@ -10,10 +10,10 @@ def output_remote_list_json(info, out):
 
 def output_remote_list_cli(info, out):
     for remote_info in info:
-        output_str = "{}: {} [Verify SSL: {}, Enabled: {}]".format(remote_info["name"],
-                                                                   remote_info["url"],
-                                                                   remote_info["verify"],
-                                                                   remote_info["enabled"])
+        output_str = "{}: {} [SSL: {}, Enabled: {}]".format(remote_info["name"],
+                                                            remote_info["url"],
+                                                            remote_info["ssl"],
+                                                            remote_info["enabled"])
         out.writeln(output_str)
 
 
@@ -23,10 +23,10 @@ def remote_list(*args, conan_api, parser, subparser):
     List current remotes
     """
     args = parser.parse_args(*args)
-    info = [{"name": "remote1", "url": "https://someurl1", "verify": True, "enabled": False},
-            {"name": "remote2", "url": "https://someurl2", "verify": False, "enabled": True},
-            {"name": "remote3", "url": "https://someurl3", "verify": True, "enabled": True},
-            {"name": "remote4", "url": "https://someurl4", "verify": False, "enabled": False}]
+    info = [{"name": "remote1", "url": "https://someurl1", "ssl": True, "enabled": False},
+            {"name": "remote2", "url": "https://someurl2", "ssl": False, "enabled": True},
+            {"name": "remote3", "url": "https://someurl3", "ssl": True, "enabled": True},
+            {"name": "remote4", "url": "https://someurl4", "ssl": False, "enabled": False}]
     return info
 
 
@@ -37,9 +37,8 @@ def remote_add(*args, conan_api, parser, subparser):
     """
     subparser.add_argument("remote", help="Name of the remote to add")
     subparser.add_argument("url", help="Url for the rempote")
-    subparser.add_argument("--verify-ssl", action=OnceArgument, default="True",
-                           help="Verify SSL certificated")
-    subparser.add_argument("--insert", action=OnceArgument,
+    subparser.add_argument("--disable-ssl", dest="disable_ssl", action="store_true", default=False)
+    subparser.add_argument("--insert", action=OnceArgument, type=int,
                            help="Insert remote at specific index")
     subparser.add_argument("--force", action='store_true', default=False,
                            help="Force addition, will update if existing")
@@ -65,15 +64,15 @@ def remote_update(*args, conan_api, parser, subparser):
     subparser.add_argument("--name", action=OnceArgument,
                            help="New name for the remote")
     subparser.add_argument("--url", action=OnceArgument,
-                           help="New url for the rempote")
-    subparser.add_argument("--verify-ssl", action=OnceArgument,
-                           help="Verify SSL certificated")
-    subparser.add_argument("--insert", action=OnceArgument,
+                           help="New url for the remote")
+    subparser.add_argument("--ssl", dest="ssl", action=OnceArgument, type=bool,
+                           choices=[True, False])
+    subparser.add_argument("--insert", action=OnceArgument, type=int,
                            help="Insert remote at specific index")
     args = parser.parse_args(*args)
-    if not (args.name or args.url or args.verify_ssl or args.insert):
+    if not (args.name or args.url or args.ssl or args.insert):
         subparser.error("Please add at least one remote field to update: "
-                        "name, url, verify-ssl, insert")
+                        "name, url, disable-ssl, insert")
 
 
 @conan_subcommand()
