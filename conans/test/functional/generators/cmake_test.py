@@ -410,7 +410,7 @@ class CMakeGeneratorTest(unittest.TestCase):
                              "CMakeLists.txt": consumer_cmakelists})
                 client.run("create .")
 
-            if "find_package" in consumer_generator:
+            if consumer_generator in ["cmake_find_package", "cmake_find_package_multi"]:
                 if with_components:
                     cpp_info = {"components": {"comp": {"cflags": ["one", "two"],
                                                         "cxxflags": ["three", "four"]}}}
@@ -423,6 +423,13 @@ class CMakeGeneratorTest(unittest.TestCase):
                 if with_components:
                     self.assertIn("comp cflags: one;two", client.out)
                     self.assertIn("comp cxxflags: three;four", client.out)
+                    if consumer_generator == "cmake_find_package":
+                        self.assertIn("comp compile options: one;two;three;four", client.out)
+                    else:
+                        self.assertIn("$<$<CONFIG:Release>:;one;two;three;four>;"
+                                      "$<$<CONFIG:RelWithDebInfo>:;>;"
+                                      "$<$<CONFIG:MinSizeRel>:;>;"
+                                      "$<$<CONFIG:Debug>:;>", client.out)
             else:
                 generate_files({"cflags": ["one", "two"], "cxxflags": ["three", "four"]},
                                consumer_generator, consumer_cmakelists)
@@ -468,24 +475,29 @@ class CMakeGeneratorTest(unittest.TestCase):
             message("cxxflags: ${upstream_COMPILE_OPTIONS_CXX}")
             message("comp cflags: ${upstream_comp_COMPILE_OPTIONS_C}")
             message("comp cxxflags: ${upstream_comp_COMPILE_OPTIONS_CXX}")
+            get_target_property(tmp upstream::comp INTERFACE_COMPILE_OPTIONS)
+            message("comp compile options: ${tmp}")
             """)
         run_test("cmake_find_package", cmakelists)
+        print(client.out)
 
         # Test cmake_find_package generator without components
         run_test("cmake_find_package", cmakelists, with_components=False)
 
         # Test cmake_find_package_multi generator
         cmakelists = textwrap.dedent("""
-                    cmake_minimum_required(VERSION 2.8)
-                    set(CMAKE_CXX_COMPILER_WORKS 1)
-                    project(consumer)
-                    find_package(upstream)
-                    message("compile options: ${upstream_COMPILE_OPTIONS_RELEASE_LIST}")
-                    message("cflags: ${upstream_COMPILE_OPTIONS_C_RELEASE}")
-                    message("cxxflags: ${upstream_COMPILE_OPTIONS_CXX_RELEASE}")
-                    message("comp cflags: ${upstream_comp_COMPILE_OPTIONS_C_RELEASE}")
-                    message("comp cxxflags: ${upstream_comp_COMPILE_OPTIONS_CXX_RELEASE}")
-                    """)
+            cmake_minimum_required(VERSION 2.8)
+            set(CMAKE_CXX_COMPILER_WORKS 1)
+            project(consumer)
+            find_package(upstream)
+            message("compile options: ${upstream_COMPILE_OPTIONS_RELEASE_LIST}")
+            message("cflags: ${upstream_COMPILE_OPTIONS_C_RELEASE}")
+            message("cxxflags: ${upstream_COMPILE_OPTIONS_CXX_RELEASE}")
+            message("comp cflags: ${upstream_comp_COMPILE_OPTIONS_C_RELEASE}")
+            message("comp cxxflags: ${upstream_comp_COMPILE_OPTIONS_CXX_RELEASE}")
+            get_target_property(tmp upstream::comp INTERFACE_COMPILE_OPTIONS)
+            message("comp compile options: ${tmp}")
+            """)
         run_test("cmake_find_package_multi", cmakelists)
 
         # Test cmake_find_package_multi generator without components
