@@ -384,7 +384,7 @@ class CMakeGeneratorTest(unittest.TestCase):
     def do_not_mix_cflags_cxxflags_test(self):
         client = TestClient()
 
-        def run_test(consumer_generator, consumer_cmakelists):
+        def run_test(consumer_generator, consumer_cmakelists, with_components=True):
 
             def generate_files(upstream_cpp_info, consumer_generator, consumer_cmakelists):
                 upstream_conanfile = GenConanfile().with_name("upstream").with_version("1.0")\
@@ -411,14 +411,18 @@ class CMakeGeneratorTest(unittest.TestCase):
                 client.run("create .")
 
             if "find_package" in consumer_generator:
-                generate_files({"components": {"comp": {"cflags": ["one", "two"],
-                                                        "cxxflags": ["three", "four"]}}},
-                               consumer_generator, consumer_cmakelists)
+                if with_components:
+                    cpp_info = {"components": {"comp": {"cflags": ["one", "two"],
+                                                        "cxxflags": ["three", "four"]}}}
+                else:
+                    cpp_info = {"cflags": ["one", "two"], "cxxflags": ["three", "four"]}
+                generate_files(cpp_info, consumer_generator, consumer_cmakelists)
                 self.assertIn("compile options: three;four;one;two", client.out)
                 self.assertIn("cflags: one;two", client.out)
                 self.assertIn("cxxflags: three;four", client.out)
-                self.assertIn("comp cflags: one;two", client.out)
-                self.assertIn("comp cxxflags: three;four", client.out)
+                if with_components:
+                    self.assertIn("comp cflags: one;two", client.out)
+                    self.assertIn("comp cxxflags: three;four", client.out)
             else:
                 generate_files({"cflags": ["one", "two"], "cxxflags": ["three", "four"]},
                                consumer_generator, consumer_cmakelists)
@@ -467,6 +471,9 @@ class CMakeGeneratorTest(unittest.TestCase):
             """)
         run_test("cmake_find_package", cmakelists)
 
+        # Test cmake_find_package generator without components
+        run_test("cmake_find_package", cmakelists, with_components=False)
+
         # Test cmake_find_package_multi generator
         cmakelists = textwrap.dedent("""
                     cmake_minimum_required(VERSION 2.8)
@@ -480,3 +487,6 @@ class CMakeGeneratorTest(unittest.TestCase):
                     message("comp cxxflags: ${upstream_comp_COMPILE_OPTIONS_CXX_RELEASE}")
                     """)
         run_test("cmake_find_package_multi", cmakelists)
+
+        # Test cmake_find_package_multi generator without components
+        run_test("cmake_find_package_multi", cmakelists, with_components=False)
