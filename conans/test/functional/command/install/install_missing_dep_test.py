@@ -15,19 +15,19 @@ class InstallMissingDependency(unittest.TestCase):
         client.run("create . dep1/1.0@lasote/testing")
         client.run("create . dep1/2.0@lasote/testing")
 
-        dep2_conanfile = GenConanfile("dep2", "1.0").with_require_plain("dep1/1.0@lasote/testing")
+        dep2_conanfile = GenConanfile("dep2", "1.0").with_require("dep1/1.0@lasote/testing")
         client.save({"conanfile.py": dep2_conanfile}, clean_first=True)
         client.run("create . lasote/testing")
 
         # Create final package
-        conanfile = GenConanfile("foo", "1.0").with_require_plain("dep1/1.0@lasote/testing")\
-                                              .with_require_plain("dep2/1.0@lasote/testing")
+        conanfile = GenConanfile("foo", "1.0").with_require("dep1/1.0@lasote/testing")\
+                                              .with_require("dep2/1.0@lasote/testing")
         client.save({"conanfile.py": conanfile}, clean_first=True)
         client.run("create . lasote/testing")
 
         # Bump version of one dependency
-        conanfile = GenConanfile("foo", "1.0").with_require_plain("dep1/2.0@lasote/testing") \
-                                              .with_require_plain("dep2/1.0@lasote/testing")
+        conanfile = GenConanfile("foo", "1.0").with_require("dep1/2.0@lasote/testing") \
+                                              .with_require("dep2/1.0@lasote/testing")
         client.save({"conanfile.py": conanfile}, clean_first=True)
         client.run("create . lasote/testing", assert_error=True)
 
@@ -42,7 +42,7 @@ class InstallMissingDependency(unittest.TestCase):
         client.run("export . dep1/1.0@")
         client.run("export . dep2/1.0@")
 
-        conanfile = GenConanfile().with_require_plain("dep1/1.0").with_require_plain("dep2/1.0")
+        conanfile = GenConanfile().with_require("dep1/1.0").with_require("dep2/1.0")
         client.save({"conanfile.py": conanfile}, clean_first=True)
         client.run("create . pkg/1.0@", assert_error=True)
         self.assertIn("ERROR: Missing prebuilt package for 'dep1/1.0', 'dep2/1.0'", client.out)

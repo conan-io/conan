@@ -135,10 +135,10 @@ message("Target libs: ${tmp}")
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . PkgA/1.0@user/testing")
-        client.save({"conanfile.py": GenConanfile().with_require_plain("PkgA/1.0@user/testing")})
+        client.save({"conanfile.py": GenConanfile().with_require("PkgA/1.0@user/testing")})
         client.run("create . PkgB/1.0@user/testing")
-        client.save({"conanfile.py": GenConanfile().with_require_plain("PkgB/1.0@user/testing")
-                                                   .with_require_plain("PkgA/1.0@user/testing")})
+        client.save({"conanfile.py": GenConanfile().with_require("PkgB/1.0@user/testing")
+                                                   .with_require("PkgA/1.0@user/testing")})
         client.run("create . PkgC/1.0@user/testing")
         client.save({"conanfile.py": conanfile,
                      "CMakeLists.txt": cmakelists})
@@ -566,8 +566,8 @@ class Conan(ConanFile):
         print(client.out)
         print('~' * 120)
 
-        self.assertIn('Found MYHELLO2: 1.0 (found version "1.0")', client.out)
-        self.assertIn('Found MYHELLO: 1.0 (found version "1.0")', client.out)
+        self.assertIn('Found hello_2: 1.0 (found version "1.0")', client.out)
+        self.assertIn('Found hello_1: 1.0 (found version "1.0")', client.out)
         self.assertIn("Target libs (hello2): "
                       "CONAN_LIB::MYHELLO2_HELLO2_hello2;MYHELLO::HELLO1;"
                       "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"

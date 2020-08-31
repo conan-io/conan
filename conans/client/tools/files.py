@@ -377,16 +377,17 @@ def rename(src, dst):
     :param dst: Destination file or folder
     """
     if os.path.exists(dst):
-            raise ConanException("rename {} to {} failed, dst exists.".format(src, dst))
+        raise ConanException("rename {} to {} failed, dst exists.".format(src, dst))
 
     if platform.system() == "Windows" and which("robocopy") and os.path.isdir(src):
         # /move Moves files and directories, and deletes them from the source after they are copied.
         # /e Copies subdirectories. Note that this option includes empty directories.
         # /ndl Specifies that directory names are not to be logged.
         # /nfl Specifies that file names are not to be logged.
-        completed = subprocess.run(["robocopy", "/move", "/e", "/ndl", "/nfl", src, dst],
+        process = subprocess.Popen(["robocopy", "/move", "/e", "/ndl", "/nfl", src, dst],
                                    stdout=subprocess.PIPE)
-        if completed.returncode != 1:
+        process.communicate()
+        if process.returncode != 1:
             raise ConanException("rename {} to {} failed.".format(src, dst))
     else:
         try:

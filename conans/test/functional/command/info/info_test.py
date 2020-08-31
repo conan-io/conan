@@ -28,7 +28,7 @@ class InfoTest(unittest.TestCase):
 
     def failed_info_test(self):
         client = TestClient()
-        client.save({"conanfile.py": GenConanfile().with_require_plain("Pkg/1.0.x@user/testing")})
+        client.save({"conanfile.py": GenConanfile().with_require("Pkg/1.0.x@user/testing")})
         client.run("info .", assert_error=True)
         self.assertIn("Pkg/1.0.x@user/testing: Not found in local cache", client.out)
         client.run("search")
