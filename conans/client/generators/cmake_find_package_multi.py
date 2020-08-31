@@ -64,18 +64,10 @@ set_property(TARGET {name}::{name}
                  $<$<CONFIG:Debug>:${{{name}_COMPILE_DEFINITIONS_DEBUG}}>)
 set_property(TARGET {name}::{name}
              PROPERTY INTERFACE_COMPILE_OPTIONS
-                 $<$<CONFIG:Release>:
-                     $<$<IN_LIST:C,ENABLED_LANGUAGES>:${{{name}_COMPILE_OPTIONS_C_RELEASE}}>
-                     $<$<IN_LIST:CXX,ENABLED_LANGUAGES>:${{{name}_COMPILE_OPTIONS_CXX_RELEASE}}>>
-                 $<$<CONFIG:RelWithDebInfo>:
-                     $<$<IN_LIST:C,ENABLED_LANGUAGES>:${{{name}_COMPILE_OPTIONS_C_RELWITHDEBINFO}}>
-                     $<$<IN_LIST:CXX,ENABLED_LANGUAGES>:${{{name}_COMPILE_OPTIONS_CXX_RELWITHDEBINFO}}>>
-                 $<$<CONFIG:MinSizeRel>:
-                     $<$<IN_LIST:C,ENABLED_LANGUAGES>:${{{name}_COMPILE_OPTIONS_C_MINSIZEREL}}>
-                     $<$<IN_LIST:CXX,ENABLED_LANGUAGES>:${{{name}_COMPILE_OPTIONS_CXX_MINSIZEREL}}>>
-                 $<$<CONFIG:Debug>:
-                     $<$<IN_LIST:C,ENABLED_LANGUAGES>:${{{name}_COMPILE_OPTIONS_C_DEBUG}}>
-                     $<$<IN_LIST:CXX,ENABLED_LANGUAGES>:${{{name}_COMPILE_OPTIONS_CXX_DEBUG}}>>)
+                 $<$<CONFIG:Release>:${{{name}_COMPILE_OPTIONS_RELEASE_LIST}}>
+                 $<$<CONFIG:RelWithDebInfo>:${{{name}_COMPILE_OPTIONS_RELWITHDEBINFO_LIST}}>
+                 $<$<CONFIG:MinSizeRel>:${{{name}_COMPILE_OPTIONS_MINSIZEREL_LIST}}>
+                 $<$<CONFIG:Debug>:${{{name}_COMPILE_OPTIONS_DEBUG_LIST}}>)
     """
 
     # https://gitlab.kitware.com/cmake/cmake/blob/master/Modules/BasicConfigVersion-SameMajorVersion.cmake.in
@@ -248,18 +240,10 @@ set_property(TARGET {name}::{name}
                          $<$<CONFIG:MinSizeRel>:{{ '${'+pkg_name+'_'+comp_name+'_COMPILE_DEFINITIONS_MINSIZEREL}' }}>
                          $<$<CONFIG:Debug>:{{ '${'+pkg_name+'_'+comp_name+'_COMPILE_DEFINITIONS_DEBUG}' }}>)
         set_property(TARGET {{ pkg_name }}::{{ comp_name }} PROPERTY INTERFACE_COMPILE_OPTIONS
-                         $<$<CONFIG:Release>:
-                             $<$<IN_LIST:C,ENABLED_LANGUAGES>:{{ '${'+pkg_name+'_'+comp_name+'_COMPILE_OPTIONS_C_RELEASE}' }}>
-                             $<$<IN_LIST:CXX,ENABLED_LANGUAGES>:{{ '${'+pkg_name+'_'+comp_name+'_COMPILE_OPTIONS_CXX_RELEASE}' }}>>
-                         $<$<CONFIG:RelWithDebInfo>:
-                             $<$<IN_LIST:C,ENABLED_LANGUAGES>:{{ '${'+pkg_name+'_'+comp_name+'_COMPILE_OPTIONS_C_RELWITHDEBINFO}' }}>
-                             $<$<IN_LIST:CXX,ENABLED_LANGUAGES>:{{ '${'+pkg_name+'_'+comp_name+'_COMPILE_OPTIONS_CXX_RELWITHDEBINFO}' }}>>
-                         $<$<CONFIG:MinSizeRel>:
-                             $<$<IN_LIST:C,ENABLED_LANGUAGES>:{{ '${'+pkg_name+'_'+comp_name+'_COMPILE_OPTIONS_C_MINSIZEREL}' }}>
-                             $<$<IN_LIST:CXX,ENABLED_LANGUAGES>:{{ '${'+pkg_name+'_'+comp_name+'_COMPILE_OPTIONS_CXX_MINSIZEREL}' }}>>
-                         $<$<CONFIG:Debug>:
-                             $<$<IN_LIST:C,ENABLED_LANGUAGES>:{{ '${'+pkg_name+'_'+comp_name+'_COMPILE_OPTIONS_C_DEBUG}' }}>
-                             $<$<IN_LIST:CXX,ENABLED_LANGUAGES>:{{ '${'+pkg_name+'_'+comp_name+'_COMPILE_OPTIONS_CXX_DEBUG}' }}>>)
+                         $<$<CONFIG:Release>:{{ '${'+pkg_name+'_'+comp_name+'_COMPILE_OPTIONS_LIST_RELEASE}' }}>
+                         $<$<CONFIG:RelWithDebInfo>:{{ '${'+pkg_name+'_'+comp_name+'_COMPILE_OPTIONS_LIST_RELWITHDEBINFO}' }}>
+                         $<$<CONFIG:MinSizeRel>:{{ '${'+pkg_name+'_'+comp_name+'_COMPILE_OPTIONS_LIST_MINSIZEREL}' }}>
+                         $<$<CONFIG:Debug>:{{ '${'+pkg_name+'_'+comp_name+'_COMPILE_OPTIONS_LIST_DEBUG}' }}>)
         set({{ pkg_name }}_{{ comp_name }}_TARGET_PROPERTIES TRUE)
 
         {%- endfor %}

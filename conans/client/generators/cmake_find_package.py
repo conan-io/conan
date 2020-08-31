@@ -42,8 +42,7 @@ class CMakeFindPackageGenerator(Generator):
                 set_property(TARGET {name}::{name} PROPERTY INTERFACE_COMPILE_DEFINITIONS
                              ${{{name}_COMPILE_DEFINITIONS}})
                 set_property(TARGET {name}::{name} PROPERTY INTERFACE_COMPILE_OPTIONS
-                             $<$<IN_LIST:C,ENABLED_LANGUAGES>:${{{name}_COMPILE_OPTIONS_C}}>
-                             $<$<IN_LIST:CXX,ENABLED_LANGUAGES>:${{{name}_COMPILE_OPTIONS_CXX}}>)
+                             "${{{name}_COMPILE_OPTIONS_LIST}}")
                 {find_dependencies_block}
             endif()
         endif()
@@ -184,7 +183,7 @@ class CMakeFindPackageGenerator(Generator):
                 set_target_properties({{ pkg_name }}::{{ comp_name }} PROPERTIES INTERFACE_COMPILE_DEFINITIONS
                                       "{{ '${'+pkg_name+'_'+comp_name+'_COMPILE_DEFINITIONS}' }}")
                 set_target_properties({{ pkg_name }}::{{ comp_name }} PROPERTIES INTERFACE_COMPILE_OPTIONS
-                                      $<$<IN_LIST:C,ENABLED_LANGUAGES>:{{ '${'+pkg_name+'_'+comp_name+'_COMPILE_OPTIONS_C}' }}>$<$<IN_LIST:CXX,ENABLED_LANGUAGES>:{{ '${'+pkg_name+'_'+comp_name+'_COMPILE_OPTIONS_CXX}' }}>)
+                                      "{{ '${'+pkg_name+'_'+comp_name+'_COMPILE_OPTIONS_LIST}' }}")
             endif()
         endif()
 
