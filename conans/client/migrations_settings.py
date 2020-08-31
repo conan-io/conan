@@ -1405,3 +1405,4 @@ cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]  # Depreca
 """
 
 settings_1_28_1 = settings_1_28_0
+settings_1_28_2 = settings_1_28_1
