@@ -152,7 +152,7 @@ class _PackageBuilder(object):
                     exe_filepath = os.path.join(conanfile.build_folder, exe_filename)
                     st = os.stat(exe_filepath)
                     os.chmod(exe_filepath, st.st_mode | stat.S_IEXEC)
-        conanfile.env['PATH'].insert(0, conanfile.build_folder)  # TODO: Uhmmm, better place needed, for sure
+        conanfile.env.setdefault('PATH', []).insert(0, conanfile.build_folder)  # TODO: meh
 
         # Build step might need DLLs, binaries as protoc to generate source files
         # So execute imports() before build, storing the list of copied_files
@@ -614,8 +614,8 @@ class BinaryInstaller(object):
         # Once the node is build, execute package info, so it has access to the
         # package folder and artifacts
         conan_v2 = get_env(CONAN_V2_MODE_ENVVAR, False)
-        with pythonpath(
-            conanfile) if not conan_v2 else no_op():  # Minimal pythonpath, not the whole context, make it 50% slower
+        # Minimal pythonpath, not the whole context, make it 50% slower
+        with pythonpath(conanfile) if not conan_v2 else no_op():
             with tools.chdir(package_folder):
                 with conanfile_exception_formatter(str(conanfile), "package_info"):
                     conanfile.package_folder = package_folder
