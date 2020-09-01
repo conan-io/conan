@@ -1,64 +1,64 @@
-import platform
 import os
-import shutil
+import textwrap
 
-from conans.client.generators import VirtualRunEnvGenerator
+from jinja2 import Template
+
+from conans.client.envvars.environment import BAT_FLAVOR, SH_FLAVOR, env_files
+
+cmd_template = textwrap.dedent("""\
+    echo Calling {{ name }} wrapper
+    call "{{ activate_path }}"
+    pushd "{{ exe_path_dirname }}"
+    call "{{ exe_path }}" %*
+    popd
+    call "{{ deactivate_path }}"
+    """)
+
+sh_template = textwrap.dedent("""\
+    #!/bin/bash
+    echo Calling {{ name }} wrapper
+    source "{{ activate_path }}"
+    pushd "{{ exe_path_dirname }}" > /dev/null
+    "{{ exe_path }}" "$@"
+    popd > /dev/null
+    source "{{ deactivate_path }}"
+    """)
 
 
-def write_shims(conanfile, path, output):
-    print(conanfile)
-    if not conanfile.cpp_info or not conanfile.cpp_info.exes:
-        return
+def _envvariables(deps_cpp_info):
+    # TODO: Refactor, this code is duplicated
+    # TODO: Other environment variables should be considered too
+    lib_paths = deps_cpp_info.lib_paths
+    bin_paths = deps_cpp_info.bin_paths
+    framework_paths = deps_cpp_info.framework_paths
+    ret = {"DYLD_LIBRARY_PATH": lib_paths,
+           "LD_LIBRARY_PATH": lib_paths,
+           "PATH": bin_paths}
+    if framework_paths:
+        ret["DYLD_FRAMEWORK_PATH"] = framework_paths
+    return ret
 
-    # Create wrappers for the executables
-    wrappers_folder = os.path.join(path, '.wrappers')
-    output.highlight("Create executable wrappers at '{}'".format(wrappers_folder))
-    shutil.rmtree(wrappers_folder, ignore_errors=True)
-    os.mkdir(wrappers_folder)
 
-    # - I will need the environment
-    env = VirtualRunEnvGenerator(conanfile)
-    env.output_path = wrappers_folder
+def generate_shim(name, deps_cpp_info, settings_os, output_path):
+    # Use the environment generators we already have
+    suffix = "_{}".format(name)
+    environment = _envvariables(deps_cpp_info)
+    flavor = BAT_FLAVOR if settings_os == 'Windows' else SH_FLAVOR
+    shimfiles = env_files(environment, [], flavor, os.path.join(output_path, '.shims'), suffix, name)
+    shimfiles = {os.path.join('.shims', k): v for k, v in shimfiles.items()}
 
-    # TODO: Need to add from teh consumer point of view
-    for it in conanfile.cpp_info.lib_paths:
-        env.env["DYLD_LIBRARY_PATH"].insert(0, it)
-        # FIXME: Watch out! It is this same list object! env.env["LD_LIBRARY_PATH"].insert(0, it)
-    # TODO: Other environment variables?
-
-    for filename, content in env.content.items():
-        with open(os.path.join(wrappers_folder, filename), 'w') as f:
-            f.write(content)
-
-    activate = deactivate = None
-    if platform.system() == "Windows":
-        activate = 'call "{}"\n'.format(os.path.join(wrappers_folder, 'activate_run.bat'))
-        deactivate = 'call "{}"\n'.format(os.path.join(wrappers_folder, 'deactivate_run.bat'))
-    else:
-        activate = 'source "{}"'.format(os.path.join(wrappers_folder, 'activate_run.sh'))
-        deactivate = 'source "{}"'.format(os.path.join(wrappers_folder, 'deactivate_run.sh'))
-
-    # - and the wrappers
-    for executable in conanfile.cpp_info.exes:
-        path_to_exec = os.path.join(path, 'bin', executable)
-        path_to_exec = path_to_exec + ".cmd" if platform.system() == "Windows" else path_to_exec  # TODO: Inspect the folder to get the actual path
-        exec_wrapper_ext = ".cmd" if platform.system() == "Windows" else ""
-        exec_wrapper = os.path.join(wrappers_folder, executable + exec_wrapper_ext)
-        with open(exec_wrapper, 'w') as f:
-            if platform.system() != "Windows":
-                f.write('#!/bin/bash\n')
-            f.write('echo Calling {} wrapper\n'.format(executable))
-            f.write('{}\n'.format(activate))
-            f.write('pushd "{}"\n'.format(os.path.dirname(path_to_exec)))
-            if platform.system() == "Windows":
-                f.write('call "{}" %*\n'.format(path_to_exec))
-            else:
-                f.write('"{}" "$@"\n'.format(path_to_exec))
-            f.write('popd\n')
-            f.write('{}\n'.format(deactivate))
-
-        st = os.stat(exec_wrapper)
-        os.chmod(exec_wrapper, st.st_mode | os.stat.S_IEXEC)
-
-    # - Add this extra PATH to the environment (wrapper first!)
-    conanfile.env_info.PATH.insert(0, wrappers_folder)
+    # Create the wrapper for the given OS
+    executable = os.path.join(deps_cpp_info.bin_paths[0], name)  # TODO: More than one bin_path?
+    context = {
+        'name': name,
+        'activate_path': os.path.join(output_path, '.shims', "activate{}.{}".format(suffix, flavor)),
+        'exe_path_dirname': os.path.dirname(executable),
+        'exe_path': executable,
+        'deactivate_path': os.path.join(output_path, '.shims',
+                                        "deactivate{}.{}".format(suffix, flavor))
+    }
+    template = cmd_template if settings_os == 'Windows' else sh_template
+    content = Template(template).render(**context)
+    extension = '.cmd' if settings_os == 'Windows' else ""
+    shimfiles.update({'{}{}'.format(name, extension): content})
+    return shimfiles
