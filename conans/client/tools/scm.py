@@ -78,6 +78,8 @@ class SCMBase(object):
         netloc = parsed.hostname
         if parsed.port:
             netloc += ":{}".format(parsed.port)
+        if parsed.username and parsed.scheme == "ssh":
+            netloc = "{}@{}".format(parsed.username, netloc)
         replaced = parsed._replace(netloc=netloc)
         return replaced.geturl()
 

@@ -7,8 +7,8 @@ import unittest
 from nose.plugins.attrib import attr
 
 from conans.test.functional.scm.workflows.common import TestWorkflow
-from conans.test.utils.tools import SVNLocalRepoTestCase
-from conans.test.utils.tools import TestClient, create_local_git_repo
+from conans.test.utils.tools import TestClient
+from conans.test.utils.scm import create_local_git_repo, SVNLocalRepoTestCase
 
 
 class ConanfileInSubfolder(TestWorkflow):

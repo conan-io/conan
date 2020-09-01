@@ -277,6 +277,9 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
             conan_basic_setup(NO_OUTPUT_DIRS)
             set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE})
 
+            set(CMAKE_MODULE_PATH ${CMAKE_BINARY_DIR} ${CMAKE_MODULE_PATH})
+            set(CMAKE_PREFIX_PATH ${CMAKE_BINARY_DIR} ${CMAKE_PREFIX_PATH})
+
             find_package(world)
 
             add_executable(example example.cpp)
@@ -300,7 +303,6 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
     def _install_build_run_test_package(self, client, build_type, run_example2=False):
         client.run("install fake_test_package -s build_type=%s" % build_type)
         client.run("build fake_test_package")
-        print("Dirs in current folder:", os.listdir(client.current_folder))
         with client.chdir(os.path.join(client.current_folder, build_type)):
             client.run_command(".%sexample" % os.sep)
             if run_example2:
@@ -322,6 +324,20 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
         self._install_build_run_test_package(client, "Debug", run_example2=True)
         self.assertIn("Hello World debug!", client.out)
         self.assertIn("Bye World debug!", client.out)
+
+        if platform.system() == "Windows":
+            with client.chdir("fake_test_package"):
+                client.run("install . -s build_type=Release")
+                client.run("install . -s build_type=Debug")
+                client.run_command('cmake . -G "Visual Studio 15 Win64"')
+                client.run_command("cmake --build . --config Release")
+                client.run_command("cmake --build . --config Debug")
+                client.run_command(r".\Debug\example.exe")
+                self.assertIn("Hello World debug!", client.out)
+                self.assertIn("Bye World debug!", client.out)
+                client.run_command(r".\Release\example.exe")
+                self.assertIn("Hello World release!", client.out)
+                self.assertIn("Bye World release!", client.out)
 
     def find_package_general_test(self):
         client = TestClient()
@@ -698,3 +714,90 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
         client.run("install consumer.py", assert_error=True)
         self.assertIn("Component 'mypkg::zlib' not found in 'mypkg' package requirement", client.out)
 
+    def filenames_test(self):
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            import os
+            from conans import ConanFile, tools
+
+            class HelloConan(ConanFile):
+                name = "hello"
+                version = "1.0"
+                settings = "os", "compiler", "build_type", "arch"
+
+                def package(self):
+                    tools.save(os.path.join(self.package_folder, "lib", "hello.lib"), "")
+                    tools.save(os.path.join(self.package_folder, "lib", "libhello.a"), "")
+
+                def package_info(self):
+                    self.cpp_info.names["cmake_find_package_multi"] = "MYHELLO"
+                    self.cpp_info.filenames["cmake_find_package_multi"] = "hello_1"
+                    self.cpp_info.components["1"].names["cmake_find_package_multi"] = "HELLO1"
+                    self.cpp_info.components["1"].libs = ["hello"]
+        """)
+        client.save({"conanfile.py": conanfile})
+        client.run("create .")
+
+        conanfile = textwrap.dedent("""
+            import os
+            from conans import ConanFile, tools
+
+            class HelloConan(ConanFile):
+                name = "hello2"
+                version = "1.0"
+                settings = "os", "compiler", "build_type", "arch"
+                requires = "hello/1.0"
+
+                def package(self):
+                    tools.save(os.path.join(self.package_folder, "lib", "hello2.lib"), "")
+                    tools.save(os.path.join(self.package_folder, "lib", "libhello2.a"), "")
+
+                def package_info(self):
+                    self.cpp_info.names["cmake_find_package_multi"] = "MYHELLO"
+                    self.cpp_info.filenames["cmake_find_package_multi"] = "hello_2"
+                    self.cpp_info.components["1"].names["cmake_find_package_multi"] = "HELLO2"
+                    self.cpp_info.components["1"].libs = ["hello2"]
+                    self.cpp_info.components["1"].requires = ["hello::1"]
+        """)
+        client.save({"conanfile.py": conanfile})
+        client.run("create .")
+
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile, CMake
+
+            class Conan(ConanFile):
+                requires = "hello2/1.0"
+                generators = "cmake_find_package_multi"
+                settings = "os", "compiler", "build_type", "arch"
+
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+            """)
+        cmakelists = textwrap.dedent("""
+            project(consumer)
+            cmake_minimum_required(VERSION 3.1)
+            find_package(hello_2)
+            get_target_property(tmp MYHELLO::HELLO2 INTERFACE_LINK_LIBRARIES)
+            message("Target libs (hello2): ${tmp}")
+            get_target_property(tmp MYHELLO::HELLO1 INTERFACE_LINK_LIBRARIES)
+            message("Target libs (hello): ${tmp}")
+            """)
+        client.save({"conanfile.py": conanfile, "CMakeLists.txt": cmakelists})
+        client.run("install .")
+        client.run("build .")
+
+        self.assertIn('Library hello2 found', client.out)
+        self.assertIn('Library hello found', client.out)
+        self.assertIn("Target libs (hello2): "
+                      "$<$<CONFIG:Release>:CONAN_LIB::MYHELLO_HELLO2_hello2RELEASE;MYHELLO::HELLO1;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>",
+                      client.out)
+        self.assertIn("Target libs (hello): "
+                      "$<$<CONFIG:Release>:CONAN_LIB::MYHELLO_HELLO1_helloRELEASE;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>",
+                      client.out)

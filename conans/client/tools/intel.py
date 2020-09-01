@@ -36,9 +36,13 @@ def intel_installation_path(version, arch):
         else:
             raise ConanException("don't know how to find Intel compiler on %s" % arch)
         if is_win64():
-            base = r"SOFTWARE\WOW6432Node\Intel\Suites\{version}".format(version=version)
+            base = r"SOFTWARE\WOW6432Node"
         else:
-            base = r"SOFTWARE\Intel\Suites\{version}".format(version=version)
+            base = r"SOFTWARE"
+        intel_version = version if "." in version else version + ".0"
+        base = r"{base}\Intel\Suites\{intel_version}".format(
+            base=base, intel_version=intel_version
+        )
         from six.moves import winreg  # @UnresolvedImport
         path = base + r"\Defaults\C++\{arch}".format(arch=intel_arch)
         subkey = _system_registry_key(winreg.HKEY_LOCAL_MACHINE, path, "SubKey")

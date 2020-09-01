@@ -11,21 +11,21 @@ class VersionRangeOverrideTestCase(unittest.TestCase):
         self.t = TestClient()
         self.t.save({"libB/conanfile.py": GenConanfile(),
                      "libC/conanfile.py":
-                         GenConanfile().with_require_plain("libB/[<=2.0]@user/channel")})
+                         GenConanfile().with_require("libB/[<=2.0]@user/channel")})
         self.t.run("export libB libB/1.0@user/channel")
         self.t.run("export libB libB/2.0@user/channel")
         self.t.run("export libB libB/3.0@user/channel")
         self.t.run("export libC libC/1.0@user/channel")
 
         # Use the version range
-        self.t.save({"conanfile.py": GenConanfile().with_require_plain("libC/1.0@user/channel")})
+        self.t.save({"conanfile.py": GenConanfile().with_require("libC/1.0@user/channel")})
         self.t.run("info . --only requires")
         self.assertIn("libB/2.0@user/channel", self.t.out)
 
     def test_override_with_fixed_version(self):
         # Override upstream version range with a fixed version
-        self.t.save({"conanfile.py": GenConanfile().with_require_plain("libB/3.0@user/channel")
-                                                   .with_require_plain("libC/1.0@user/channel")})
+        self.t.save({"conanfile.py": GenConanfile().with_require("libB/3.0@user/channel")
+                                                   .with_require("libC/1.0@user/channel")})
         self.t.run("info . --only requires")
         self.assertIn("libB/3.0@user/channel", self.t.out)
         self.assertIn("WARN: libC/1.0@user/channel: requirement libB/[<=2.0]@user/channel overridden"
@@ -33,8 +33,8 @@ class VersionRangeOverrideTestCase(unittest.TestCase):
 
     def test_override_using_version_range(self):
         # Override upstream version range with a different (narrower) version range
-        self.t.save({"conanfile.py": GenConanfile().with_require_plain("libB/[<2.x]@user/channel")
-                                                   .with_require_plain("libC/1.0@user/channel")})
+        self.t.save({"conanfile.py": GenConanfile().with_require("libB/[<2.x]@user/channel")
+                                                   .with_require("libC/1.0@user/channel")})
         self.t.run("info . --only requires")
         self.assertIn("libB/1.0@user/channel", self.t.out)
         self.assertIn("WARN: libC/1.0@user/channel: requirement libB/[<=2.0]@user/channel overridden"
@@ -46,8 +46,8 @@ class VersionRangeOverrideTestCase(unittest.TestCase):
 
     def test_override_version_range_outside(self):
         # Override upstream version range with a different (non intersecting) version range
-        self.t.save({"conanfile.py": GenConanfile().with_require_plain("libB/[>2.x]@user/channel")
-                                                   .with_require_plain("libC/1.0@user/channel")})
+        self.t.save({"conanfile.py": GenConanfile().with_require("libB/[>2.x]@user/channel")
+                                                   .with_require("libC/1.0@user/channel")})
         self.t.run("info . --only requires", assert_error=True)
         self.assertIn("WARN: libC/1.0@user/channel: requirement libB/[<=2.0]@user/channel overridden"
                       " by your conanfile to libB/3.0@user/channel", self.t.out)

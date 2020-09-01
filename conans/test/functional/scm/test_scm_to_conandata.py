@@ -10,8 +10,9 @@ from conans.client.loader import ConanFileLoader
 from conans.client.tools.env import environment_append
 from conans.model.ref import ConanFileReference
 from conans.paths import DATA_YML
-from conans.test.utils.tools import TestBufferConanOutput, TestClient
-from conans.test.utils.tools import create_local_git_repo
+from conans.test.utils.tools import TestClient
+from conans.test.utils.mocks import TestBufferConanOutput
+from conans.test.utils.scm import create_local_git_repo
 from conans.util.files import load
 from conans.util.files import save_files
 

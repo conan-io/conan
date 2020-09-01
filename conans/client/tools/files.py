@@ -1,6 +1,7 @@
 import logging
 import os
 import platform
+import subprocess
 import sys
 from contextlib import contextmanager
 from fnmatch import fnmatch
@@ -320,18 +321,21 @@ def collect_libs(conanfile, folder=None):
 
 def which(filename):
     """ same affect as posix which command or shutil.which from python3 """
+    # FIXME: Replace with shutil.which in Conan 2.0
+    def verify(file_abspath):
+        return os.path.isfile(file_abspath) and os.access(file_abspath, os.X_OK)
 
-    def verify(filepath):
-        if os.path.isfile(filepath) and os.access(filepath, os.X_OK):
-            return os.path.join(path, filename)
-        return None
-
-    def _get_possible_filenames(filename):
-        extensions_win = (os.getenv("PATHEXT", ".COM;.EXE;.BAT;.CMD").split(";")
-                          if "." not in filename else [])
-        extensions = [".sh"] if platform.system() != "Windows" else extensions_win
-        extensions.insert(1, "")  # No extension
-        return ["%s%s" % (filename, entry.lower()) for entry in extensions]
+    def _get_possible_filenames(fname):
+        if platform.system() != "Windows":
+            extensions = [".sh", ""]
+        else:
+            if "." in filename:  # File comes with extension already
+                extensions = [""]
+            else:
+                pathext = os.getenv("PATHEXT", ".COM;.EXE;.BAT;.CMD").split(";")
+                extensions = [extension.lower() for extension in pathext]
+                extensions.insert(1, "")  # No extension
+        return ["%s%s" % (fname, extension) for extension in extensions]
 
     possible_names = _get_possible_filenames(filename)
     for path in os.environ["PATH"].split(os.pathsep):
@@ -364,6 +368,32 @@ def unix2dos(filepath):
 
 def dos2unix(filepath):
     _replace_with_separator(filepath, "\n")
+
+
+def rename(src, dst):
+    """
+    rename a file or folder to avoid "Access is denied" error on Windows
+    :param src: Source file or folder
+    :param dst: Destination file or folder
+    """
+    if os.path.exists(dst):
+        raise ConanException("rename {} to {} failed, dst exists.".format(src, dst))
+
+    if platform.system() == "Windows" and which("robocopy") and os.path.isdir(src):
+        # /move Moves files and directories, and deletes them from the source after they are copied.
+        # /e Copies subdirectories. Note that this option includes empty directories.
+        # /ndl Specifies that directory names are not to be logged.
+        # /nfl Specifies that file names are not to be logged.
+        process = subprocess.Popen(["robocopy", "/move", "/e", "/ndl", "/nfl", src, dst],
+                                   stdout=subprocess.PIPE)
+        process.communicate()
+        if process.returncode != 1:
+            raise ConanException("rename {} to {} failed.".format(src, dst))
+    else:
+        try:
+            os.rename(src, dst)
+        except Exception as err:
+            raise ConanException("rename {} to {} failed: {}".format(src, dst, err))
 
 
 def remove_files_by_mask(directory, pattern):

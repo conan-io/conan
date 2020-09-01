@@ -3,9 +3,10 @@ import re
 import unittest
 from collections import OrderedDict
 
+from conans.model.ref import ConanFileReference
+from conans.test.utils.genconanfile import GenConanfile
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
 from conans.util.files import load
-from conans.model.ref import ConanFileReference
 
 
 class RemoteTest(unittest.TestCase):
@@ -21,12 +22,7 @@ class RemoteTest(unittest.TestCase):
         self.client = TestClient(servers=self.servers, users=self.users)
 
     def test_removed_references(self):
-        conanfile = """
-from conans import ConanFile
-class HelloConan(ConanFile):
-    pass
-"""
-        self.client.save({"conanfile.py": conanfile})
+        self.client.save({"conanfile.py": GenConanfile()})
         self.client.run("create . lib/1.0@lasote/channel")
         self.client.run('upload "*" -c -r remote1')
         self.client.run('upload "*" -c -r remote2')
@@ -86,7 +82,7 @@ class HelloConan(ConanFile):
 
     def list_raw_test(self):
         self.client.run("remote list --raw")
-        output = re.sub(r"http:\/\/fake.+\.com", "http://fake.com", str(self.client.out))
+        output = re.sub(r"http://fake.+.com", "http://fake.com", str(self.client.out))
         self.assertIn("remote0 http://fake.com True", output)
         self.assertIn("remote1 http://fake.com True", output)
         self.assertIn("remote2 http://fake.com True", output)
@@ -342,12 +338,10 @@ class HelloConan(ConanFile):
         client = TestClient()
 
         client.run("remote disable invalid_remote", assert_error=True)
-        self.assertIn("ERROR: Remote 'invalid_remote' not found in remotes",
-                      client.out)
+        self.assertIn("ERROR: Remote 'invalid_remote' not found in remotes", client.out)
 
         client.run("remote enable invalid_remote", assert_error=True)
-        self.assertIn("ERROR: Remote 'invalid_remote' not found in remotes",
-                      client.out)
+        self.assertIn("ERROR: Remote 'invalid_remote' not found in remotes", client.out)
 
         client.run("remote disable invalid_wildcard_*")
 
@@ -390,12 +384,10 @@ class HelloConan(ConanFile):
         self.client.run("remote list")
         url = str(self.client.out).split()[1]
         self.client.run("remote add newname %s" % url, assert_error=True)
-        self.assertIn("Remote 'remote0' already exists with same URL",
-                      self.client.out)
+        self.assertIn("Remote 'remote0' already exists with same URL", self.client.out)
 
         self.client.run("remote update remote1 %s" % url, assert_error=True)
-        self.assertIn("Remote 'remote0' already exists with same URL",
-                      self.client.out)
+        self.assertIn("Remote 'remote0' already exists with same URL", self.client.out)
 
     def basic_refs_test(self):
         self.client.run("remote add_ref Hello/0.1@user/testing remote0")
@@ -468,9 +460,7 @@ class HelloConan(ConanFile):
         """
         Check that 'conan remote' commands work with editable packages
         """
-        self.client.save({"conanfile.py": """from conans import ConanFile
-class Conan(ConanFile):
-    pass"""})
+        self.client.save({"conanfile.py": GenConanfile()})
         self.client.run("create . pkg/1.1@lasote/stable")
         self.client.run("upload pkg/1.1@lasote/stable --all -c --remote remote1")
         self.client.run("remove -f pkg/1.1@lasote/stable")
@@ -503,3 +493,9 @@ class Conan(ConanFile):
         self.client.run("remote list")
         self.assertNotIn("remote1", self.client.out)
         self.assertNotIn("remote0", self.client.out)
+
+    def test_remove_package_empty(self):
+        self.client.save({"conanfile.py": GenConanfile("name", "version")})
+        self.client.run("export . name/version@lasote/stable")
+        self.client.run("upload name/version@lasote/stable --remote remote1")
+        self.client.run("remove -f -p -r remote1 name/version@lasote/stable")

@@ -2,13 +2,26 @@ import os
 import platform
 import re
 
+from conans.client.build.compiler_id import UNKNOWN_COMPILER, LLVM_GCC, detect_compiler_id
 from conans.client.output import Color
-from conans.client.tools import detected_os, OSInfo
+from conans.client.tools import detected_os, OSInfo, which
 from conans.client.tools.win import latest_visual_studio_version_installed
 from conans.model.version import Version
 from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
 from conans.util.env_reader import get_env
 from conans.util.runners import detect_runner
+
+
+def _get_compiler_and_version(output, compiler_exe):
+    compiler_id = detect_compiler_id(compiler_exe)
+    if compiler_id.name == LLVM_GCC:
+        output.error("%s detected as a frontend using apple-clang. "
+                     "Compiler not supported" % compiler_exe)
+        return None
+    if compiler_id != UNKNOWN_COMPILER:
+        output.success("Found %s %s" % (compiler_id.name, compiler_id.major_minor))
+        return compiler_id.name, compiler_id.major_minor
+    return None
 
 
 def _gcc_compiler(output, compiler_exe="gcc"):
@@ -69,52 +82,123 @@ def _sun_cc_compiler(output, compiler_exe="cc"):
         return None
 
 
+def _get_compiler_exe(exe):
+    # get real compiler executable from the alias like /usr/bin/cc (/usr/bin/c++)
+    compiler = which(exe)
+    if not compiler:
+        return None
+    # careful: avoid broken links and don't call readlink on Windows
+    if os.path.islink(compiler) and os.path.exists(compiler) and os.name == 'posix':
+        try:
+            compiler = os.readlink(compiler)
+        except IOError:
+            return None  # can't read link (e.g. due to the permissions)
+    return compiler
+
+
+def _choose_compiler_by_platform_priority(vs, cc, gcc, clang, sun_cc):
+    # historically, the compiler priority used to be different for platforms in conan
+    if detected_os() == "Windows":
+        return vs or cc or gcc or clang
+    elif platform.system() == "Darwin":
+        return clang or cc or gcc
+    elif platform.system() == "SunOS":
+        return sun_cc or cc or gcc or clang
+    else:
+        return cc or gcc or clang
+
+
+def _get_gcc_clang_suncc(output, command):
+    gcc = _gcc_compiler(output, command)
+    clang = _clang_compiler(output, command)
+    sun_cc = None
+    if platform.system() == "SunOS":
+        sun_cc = _sun_cc_compiler(output, command)
+    return gcc, clang, sun_cc
+
+
+def _get_compiler_from_command(output, command):
+    if "gcc" in command.lower() or ("g++" in command.lower() and not "clang" in command.lower()):
+        gcc = _gcc_compiler(output, command)
+        if platform.system() == "Darwin" and gcc is None:
+            output.error(
+                "%s detected as a frontend using apple-clang. Compiler not supported" % command
+            )
+        return gcc
+    if "clang" in command.lower():
+        return _clang_compiler(output, command)
+    if platform.system() == "SunOS" and command.lower() == "cc":
+        return _sun_cc_compiler(output, command)
+
+    # the compiler command doesn't contain an obvious name hint like "gcc" or "clang", so brute-force
+    gcc, clang, sun_cc = _get_gcc_clang_suncc(output, command)
+    return _choose_compiler_by_platform_priority(None, None, gcc, clang, sun_cc)
+
+
 def _get_default_compiler(output):
+    """
+    find the default compiler on the build machine
+    search order and priority:
+    1. CC and CXX environment variables are always top priority
+    2. Visual Studio detection (Windows only) via vswhere or registry or environment variables
+    3. Apple Clang (Mac only)
+    4. cc executable
+    5. gcc executable
+    6. clang executable
+    """
+    v2_mode = get_env(CONAN_V2_MODE_ENVVAR, False)
     cc = os.environ.get("CC", "")
     cxx = os.environ.get("CXX", "")
     if cc or cxx:  # Env defined, use them
         output.info("CC and CXX: %s, %s " % (cc or "None", cxx or "None"))
         command = cc or cxx
-        if "gcc" in command:
-            gcc = _gcc_compiler(output, command)
-            if platform.system() == "Darwin" and gcc is None:
-                output.error(
-                    "%s detected as a frontend using apple-clang. Compiler not supported" % command
-                )
-            return gcc
-        if "clang" in command.lower():
-            return _clang_compiler(output, command)
-        if platform.system() == "SunOS" and command.lower() == "cc":
-            return _sun_cc_compiler(output, command)
+        if v2_mode:
+            compiler = _get_compiler_and_version(output, command)
+        else:
+            compiler = _get_compiler_from_command(output, command)
+        if compiler:
+            return compiler
         # I am not able to find its version
         output.error("Not able to automatically detect '%s' version" % command)
         return None
 
+    vs = sun_cc = None
     if detected_os() == "Windows":
         version = latest_visual_studio_version_installed(output)
         vs = ('Visual Studio', version) if version else None
-    gcc = _gcc_compiler(output)
-    clang = _clang_compiler(output)
-    if platform.system() == "SunOS":
-        sun_cc = _sun_cc_compiler(output)
 
-    if detected_os() == "Windows":
-        return vs or gcc or clang
-    elif platform.system() == "Darwin":
-        return clang or gcc
-    elif platform.system() == "SunOS":
-        return sun_cc or gcc or clang
+    if v2_mode:
+        cc = _get_compiler_and_version(output, "cc")
+        gcc = _get_compiler_and_version(output, "gcc")
+        clang = _get_compiler_and_version(output, "clang")
     else:
-        return gcc or clang
+        cc = _get_compiler_exe("cc")
+        cxx = _get_compiler_exe("c++")
+        if cc or cxx:
+            output.info("cc and cxx: %s, %s " % (cc or "None", cxx or "None"))
+            command = cxx or cxx
+            compiler = _get_compiler_from_command(output, command)
+            if compiler:
+                return compiler
+        cc = None
+        gcc, clang, sun_cc = _get_gcc_clang_suncc(output, command=None)
+
+    return _choose_compiler_by_platform_priority(vs, cc, gcc, clang, sun_cc)
 
 
 def _get_profile_compiler_version(compiler, version, output):
-    major = version.split(".")[0]
+    tokens = version.split(".")
+    major = tokens[0]
+    minor = tokens[1] if len(tokens) > 1 else 0
     if compiler == "clang" and int(major) >= 8:
         output.info("clang>=8, using the major as version")
         return major
     elif compiler == "gcc" and int(major) >= 5:
         output.info("gcc>=5, using the major as version")
+        return major
+    elif compiler == "Visual Studio":
+        return major
+    elif compiler == "intel" and (int(major) < 19 or (int(major) == 19 and int(minor) == 0)):
         return major
     return version
 

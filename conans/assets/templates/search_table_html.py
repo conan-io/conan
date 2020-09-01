@@ -1,4 +1,3 @@
-
 content = """
 <!DOCTYPE html>
 <html lang="en">
@@ -25,7 +24,7 @@ content = """
 
         <table id="results" class="table table-striped table-bordered" style="width:100%">
             <thead>
-                {%- set headers = results.get_headers(keys=['remote', 'package_id']) %}
+                {%- set headers = results.get_headers(keys=['remote', 'package_id', 'outdated']) %}
                 {%- set headers2rows = headers.row(n_rows=2) %}
                 <tr>
                     {%- for category, subheaders in headers2rows %}
@@ -99,5 +98,14 @@ content = """
         </script>
     </div>
     </body>
+    <footer>
+        <div class="container-fluid">
+            <div class="info">
+                <p>
+                      Conan <b>v{{ version  }}</b> <script>document.write(new Date().getFullYear())</script> JFrog LTD. <a>https://conan.io</a>
+                </p>
+            </div>
+        </div>
+    </footer>
 </html>
 """

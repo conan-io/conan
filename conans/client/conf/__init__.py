@@ -41,7 +41,7 @@ _t_default_settings_yml = Template(textwrap.dedent("""
         Android:
             api_level: ANY
         iOS:
-            version: ["7.0", "7.1", "8.0", "8.1", "8.2", "8.3", "9.0", "9.1", "9.2", "9.3", "10.0", "10.1", "10.2", "10.3", "11.0", "11.1", "11.2", "11.3", "11.4", "12.0", "12.1", "12.2", "12.3", "12.4", "13.0", "13.1"]
+            version: ["7.0", "7.1", "8.0", "8.1", "8.2", "8.3", "9.0", "9.1", "9.2", "9.3", "10.0", "10.1", "10.2", "10.3", "11.0", "11.1", "11.2", "11.3", "11.4", "12.0", "12.1", "12.2", "12.3", "12.4", "13.0", "13.1", "13.2", "13.3", "13.4", "13.5", "13.6"]
         watchOS:
             version: ["4.0", "4.1", "4.2", "4.3", "5.0", "5.1", "5.2", "5.3", "6.0", "6.1"]
         tvOS:
@@ -53,7 +53,7 @@ _t_default_settings_yml = Template(textwrap.dedent("""
             board: ANY
         Emscripten:
         Neutrino:
-            version: ["6.4", "6.5", "6.6", "7.0"]
+            version: ["6.4", "6.5", "6.6", "7.0", "7.1"]
     arch: [x86, x86_64, ppc32be, ppc32, ppc64le, ppc64, armv4, armv4i, armv5el, armv5hf, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr, s390, s390x, asm.js, wasm, sh4le]
     compiler:
         sun-cc:
@@ -78,14 +78,16 @@ _t_default_settings_yml = Template(textwrap.dedent("""
             toolset: [None, v90, v100, v110, v110_xp, v120, v120_xp,
                       v140, v140_xp, v140_clang_c2, LLVM-vs2012, LLVM-vs2012_xp,
                       LLVM-vs2013, LLVM-vs2013_xp, LLVM-vs2014, LLVM-vs2014_xp,
-                      LLVM-vs2017, LLVM-vs2017_xp, v141, v141_xp, v141_clang_c2, v142]
+                      LLVM-vs2017, LLVM-vs2017_xp, v141, v141_xp, v141_clang_c2, v142,
+                      llvm, ClangCL]
             cppstd: [None, 14, 17, 20]
         clang:
             version: ["3.3", "3.4", "3.5", "3.6", "3.7", "3.8", "3.9", "4.0",
                       "5.0", "6.0", "7.0", "7.1",
                       "8", "9", "10"]
-            libcxx: [libstdc++, libstdc++11, libc++, c++_shared, c++_static]
+            libcxx: [None, libstdc++, libstdc++11, libc++, c++_shared, c++_static]
             cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
+            runtime: [None, MD, MT, MTd, MDd]
         apple-clang: &apple_clang
             version: ["5.0", "5.1", "6.0", "6.1", "7.0", "7.3", "8.0", "8.1", "9.0", "9.1", "10.0", "11.0"]
             libcxx: [libstdc++, libc++]
@@ -102,8 +104,9 @@ _t_default_settings_yml = Template(textwrap.dedent("""
                 apple-clang:
                     <<: *apple_clang
         qcc:
-            version: ["4.4", "5.4"]
+            version: ["4.4", "5.4", "8.3"]
             libcxx: [cxx, gpp, cpp, cpp-ne, accp, acpp-ne, ecpp, ecpp-ne]
+            cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17]
 
     build_type: [None, Debug, Release, RelWithDebInfo, MinSizeRel]
 
@@ -481,14 +484,6 @@ class ConanClientConfigParser(ConfigParser, object):
             return None
 
     @property
-    def relax_lockfile(self):
-        try:
-            fix_id = self.get_item("general.relax_lockfile")
-            return fix_id.lower() in ("1", "true")
-        except ConanException:
-            return None
-
-    @property
     def short_paths_home(self):
         short_paths_home = get_env("CONAN_USER_HOME_SHORT")
         if short_paths_home:
@@ -569,16 +564,33 @@ class ConanClientConfigParser(ConfigParser, object):
 
     @property
     def client_cert_path(self):
-        # TODO: Really parameterize the client cert location
-        folder = os.path.dirname(self.filename)
-        CLIENT_CERT = "client.crt"
-        return os.path.normpath(os.path.join(folder, CLIENT_CERT))
+        cache_folder = os.path.dirname(self.filename)
+        try:
+            path = self.get_item("general.client_cert_path")
+        except ConanException:
+            path = os.path.join(cache_folder, "client.crt")
+        else:
+            # For explicit cacert files, the file should already exist
+            path = os.path.join(cache_folder, path)
+            if not os.path.exists(path):
+                raise ConanException("Configured file for 'client_cert_path'"
+                                     " doesn't exists: '{}'".format(path))
+        return os.path.normpath(path)
 
     @property
     def client_cert_key_path(self):
-        CLIENT_KEY = "client.key"
-        folder = os.path.dirname(self.filename)
-        return os.path.normpath(os.path.join(folder, CLIENT_KEY))
+        cache_folder = os.path.dirname(self.filename)
+        try:
+            path = self.get_item("general.client_cert_key_path")
+        except ConanException:
+            path = os.path.join(cache_folder, "client.key")
+        else:
+            # For explicit cacert files, the file should already exist
+            path = os.path.join(cache_folder, path)
+            if not os.path.exists(path):
+                raise ConanException("Configured file for 'client_cert_key_path'"
+                                     " doesn't exists: '{}'".format(path))
+        return os.path.normpath(path)
 
     @property
     def hooks(self):
@@ -707,7 +719,7 @@ class ConanClientConfigParser(ConfigParser, object):
                 return timedelta(hours=float(value))
             else:
                 return timedelta(days=float(value))
-        except Exception as e:
+        except Exception:
             raise ConanException("Incorrect definition of general.config_install_interval: %s"
                                  % interval)
 

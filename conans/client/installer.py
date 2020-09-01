@@ -28,7 +28,7 @@ from conans.model.build_info import CppInfo, DepCppInfo
 from conans.model.editable_layout import EditableLayout
 from conans.model.env_info import EnvInfo
 from conans.model.graph_info import GraphInfo
-from conans.model.graph_lock import GraphLockNode
+from conans.model.graph_lock import GraphLockFile
 from conans.model.info import PACKAGE_ID_UNKNOWN
 from conans.model.ref import PackageReference
 from conans.model.user_info import DepsUserInfo
@@ -81,6 +81,7 @@ class _PackageBuilder(object):
         if is_dirty(build_folder):
             self._output.warn("Build folder is dirty, removing it: %s" % build_folder)
             rmdir(build_folder)
+            clean_dirty(build_folder)
 
         # Decide if the build folder should be kept
         skip_build = conanfile.develop and keep_build
@@ -218,7 +219,8 @@ class _PackageBuilder(object):
                         self._build(conanfile, pref)
                         clean_dirty(build_folder)
 
-                    prev = self._package(conanfile, pref, package_layout, conanfile_path, build_folder, package_folder)
+                    prev = self._package(conanfile, pref, package_layout, conanfile_path,
+                                         build_folder, package_folder)
                     assert prev
                     node.prev = prev
                     log_file = os.path.join(build_folder, RUN_LOG_NAME)
@@ -226,7 +228,8 @@ class _PackageBuilder(object):
                     log_package_built(pref, time.time() - t1, log_file)
                     recorder.package_built(pref)
                 except ConanException as exc:
-                    recorder.package_install_error(pref, INSTALL_ERROR_BUILDING, str(exc), remote_name=None)
+                    recorder.package_install_error(pref, INSTALL_ERROR_BUILDING, str(exc),
+                                                   remote_name=None)
                     raise exc
 
             return node.pref
@@ -403,14 +406,13 @@ class BinaryInstaller(object):
         self._raise_missing(missing)
         processed_package_refs = set()
         self._download(downloads, processed_package_refs)
-        fix_package_id = self._cache.config.full_transitive_package_id
 
         for level in nodes_by_level:
             for node in level:
                 ref, conan_file = node.ref, node.conanfile
                 output = conan_file.output
 
-                self._propagate_info(node, using_build_profile, fix_package_id)
+                self._propagate_info(node, using_build_profile)
                 if node.binary == BINARY_EDITABLE:
                     self._handle_node_editable(node, graph_info)
                     # Need a temporary package revision for package_revision_mode
@@ -422,11 +424,13 @@ class BinaryInstaller(object):
                     assert ref.revision is not None, "Installer should receive RREV always"
                     if node.binary == BINARY_UNKNOWN:
                         self._binaries_analyzer.reevaluate_node(node, remotes, build_mode, update)
+                        if node.binary == BINARY_MISSING:
+                            self._raise_missing([node])
                     _handle_system_requirements(conan_file, node.pref, self._cache, output)
                     self._handle_node_cache(node, keep_build, processed_package_refs, remotes)
 
         # Finally, propagate information to root node (ref=None)
-        self._propagate_info(root_node, using_build_profile, fix_package_id)
+        self._propagate_info(root_node, using_build_profile)
 
     def _handle_node_editable(self, node, graph_info):
         # Get source of information
@@ -458,6 +462,10 @@ class BinaryInstaller(object):
                 graph_info_node.graph_lock = graph_info.graph_lock
                 graph_info_node.save(build_folder)
                 output.info("Generated graphinfo")
+                graph_lock_file = GraphLockFile(graph_info.profile_host, graph_info.profile_build,
+                                                graph_info.graph_lock)
+                graph_lock_file.save(os.path.join(build_folder, "conan.lock"))
+
                 save(os.path.join(build_folder, BUILD_INFO), TXTGenerator(node.conanfile).content)
                 output.info("Generated %s" % BUILD_INFO)
                 # Build step might need DLLs, binaries as protoc to generate source files
@@ -516,16 +524,15 @@ class BinaryInstaller(object):
         builder = _PackageBuilder(self._cache, output, self._hook_manager, self._remote_manager)
         pref = builder.build_package(node, keep_build, self._recorder, remotes)
         if node.graph_lock_node:
-            node.graph_lock_node.modified = GraphLockNode.MODIFIED_BUILT
+            node.graph_lock_node.prev = pref.revision
         return pref
 
-    def _propagate_info(self, node, using_build_profile, fixed_package_id):
-        if fixed_package_id:
-            # if using config.full_transitive_package_id, it is necessary to recompute
-            # the node transitive information necessary to compute the package_id
-            # as it will be used by reevaluate_node() when package_revision_mode is used and
-            # PACKAGE_ID_UNKNOWN happens due to unknown revisions
-            self._binaries_analyzer.package_id_transitive_reqs(node)
+    def _propagate_info(self, node, using_build_profile):
+        # it is necessary to recompute
+        # the node transitive information necessary to compute the package_id
+        # as it will be used by reevaluate_node() when package_revision_mode is used and
+        # PACKAGE_ID_UNKNOWN happens due to unknown revisions
+        self._binaries_analyzer.package_id_transitive_reqs(node)
         # Get deps_cpp_info from upstream nodes
         node_order = [n for n in node.public_closure if n.binary != BINARY_SKIP]
         # List sort is stable, will keep the original order of the closure, but prioritize levels

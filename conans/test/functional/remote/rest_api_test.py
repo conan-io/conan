@@ -7,13 +7,13 @@ from mock import Mock
 from nose.plugins.attrib import attr
 
 from conans import DEFAULT_REVISION_V1
-from conans.client.userio import UserIO
-from conans.client.remote_manager import Remote
 from conans.client.conf import ConanClientConfigParser
+from conans.client.remote_manager import Remote
 from conans.client.rest.auth_manager import ConanApiAuthManager
 from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest.rest_client import RestApiClientFactory
 from conans.client.rest.rest_client_v1 import complete_url
+from conans.client.userio import UserIO
 from conans.model.info import ConanInfo
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference, PackageReference
@@ -21,7 +21,7 @@ from conans.paths import CONANFILE, CONANINFO, CONAN_MANIFEST
 from conans.test.utils.cpp_test_files import cpp_hello_source_files
 from conans.test.utils.server_launcher import TestServerLauncher
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestBufferConanOutput, LocalDBMock
+from conans.test.utils.mocks import LocalDBMock, TestBufferConanOutput
 from conans.util.env_reader import get_env
 from conans.util.files import md5, save
 
@@ -231,10 +231,13 @@ class RestApiTest(unittest.TestCase):
         for sha in ["1", "2", "3", "4", "5"]:
             # Upload an package
             pref = PackageReference(ref, sha, DEFAULT_REVISION_V1)
-            self._upload_package(pref)
+            self._upload_package(pref, {CONANINFO: ""})
             folder = self.server.server_store.package(pref)
             self.assertTrue(os.path.exists(folder))
             folders[sha] = folder
+
+        data = self.api.search_packages(ref, None)
+        self.assertEqual(len(data), 5)
 
         self.api.remove_packages(ref, ["1"])
         self.assertTrue(os.path.exists(self.server.server_store.base_folder(ref)))

@@ -290,7 +290,7 @@ class MyConan(ConanFile):
 
     def empty_package_folder_test(self):
         """ When the package folder is empty, then an warning should appear
-            and no files must be listed
+            and no files must be listed. Also, self.copy() return value should be empty.
         """
         conanfile = """from conans import ConanFile
 import os
@@ -304,6 +304,8 @@ class Pkg(ConanFile):
 
     def package(self):
         self.output.info("yet another conan package")
+        files = self.copy("kk*")
+        self.output.info("Files copied  %s" % files)
 """
         client = TestClient()
         client.save({"conanfile.py": conanfile})
@@ -312,3 +314,4 @@ class Pkg(ConanFile):
         self.assertIn("yet another conan package", client.out)
         self.assertIn("package(): WARN: No files in this package!", client.out)
         self.assertNotIn("package(): Packaged", client.out)
+        self.assertIn("Files copied  []", client.out)

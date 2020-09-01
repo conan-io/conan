@@ -7,7 +7,7 @@ from conans.client.cache.remote_registry import Remote
 from conans.client.rest.auth_manager import ConanApiAuthManager
 from conans.client.rest.rest_client import RestApiClientFactory
 from conans.model.ref import ConanFileReference
-from conans.test.utils.tools import TestBufferConanOutput, LocalDBMock
+from conans.test.utils.mocks import LocalDBMock, TestBufferConanOutput
 from conans.client.userio import UserIO
 
 

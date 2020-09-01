@@ -9,8 +9,8 @@ from conans.client.loader import ConanFileLoader
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE, CONANINFO
 from conans.test.utils.cpp_test_files import cpp_hello_source_files
-from conans.test.utils.tools import TestBufferConanOutput, TestClient, test_profile
-
+from conans.test.utils.tools import TestClient, test_profile
+from conans.test.utils.mocks import TestBufferConanOutput
 
 myconan1 = """
 from conans import ConanFile

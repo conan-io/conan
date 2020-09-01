@@ -25,13 +25,13 @@ class ProfileTest(unittest.TestCase):
         self.assertIn("conanfile.txt: Generated conaninfo.txt", client.out)
 
     def empty_test(self):
-        client = TestClient()
+        client = TestClient(cache_autopopulate=False)
         client.run("profile list")
         self.assertIn("No profiles defined", client.out)
 
     def list_test(self):
         client = TestClient()
-        profiles = ["profile1", "profile2", "profile3",
+        profiles = ["default", "profile1", "profile2", "profile3",
                     "nested" + os.path.sep + "profile4",
                     "nested" + os.path.sep + "two" + os.path.sep + "profile5",
                     "nested" + os.path.sep + "profile6"]

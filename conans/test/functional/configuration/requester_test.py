@@ -4,8 +4,9 @@ import os
 import unittest
 
 import six
-from mock import Mock
+from mock import Mock, MagicMock
 
+from conans import __version__
 from conans.client.cache.cache import ClientCache
 from conans.client.conf import get_default_client_conf, ConanClientConfigParser
 from conans.client.rest.conan_requester import ConanRequester
@@ -13,7 +14,8 @@ from conans.client.tools import environment_append
 from conans.client.tools.files import replace_in_file, save
 from conans.errors import ConanException
 from conans.paths import CACERT_FILE
-from conans.test.utils.tools import TestBufferConanOutput, temp_folder
+from conans.test.utils.tools import temp_folder
+from conans.test.utils.mocks import TestBufferConanOutput
 from conans.util.files import normalize
 
 
@@ -82,3 +84,18 @@ class ConanRequesterCacertPathTests(unittest.TestCase):
         requester.get(url="aaa", verify=True)
         self.assertEqual(mocked_requester.verify, cache.config.cacert_path)
         self.assertEqual(cache.config.cacert_path, default_cacert_path)
+
+
+class ConanRequesterHeadersTests(unittest.TestCase):
+    def user_agent_test(self):
+        cache_folder = temp_folder()
+        cache = ClientCache(cache_folder, TestBufferConanOutput())
+        mock_http_requester = MagicMock()
+        requester = ConanRequester(cache.config, mock_http_requester)
+        requester.get(url="aaa")
+        headers = mock_http_requester.get.call_args[1]["headers"]
+        self.assertIn("Conan/%s" % __version__, headers["User-Agent"])
+
+        requester.get(url="aaa", headers={"User-Agent": "MyUserAgent"})
+        headers = mock_http_requester.get.call_args[1]["headers"]
+        self.assertEqual("MyUserAgent", headers["User-Agent"])

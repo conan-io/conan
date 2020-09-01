@@ -205,21 +205,23 @@ class Pkg(ConanFile):
         self.client.run("create . Pkg/0.1@user/testing")
         self.assertIn("A is 3", self.client.out)
 
-    def install_file_test(self):
+    def test_install_file_test(self):
         """ should install from a file in current dir
         """
         zippath = self._create_zip()
-        self.client.run('config install "%s"' % zippath)
-        self._check("file, %s, True, None" % zippath)
-        self.assertTrue(os.path.exists(zippath))
+        for type in ["", "--type=file"]:
+            self.client.run('config install "%s" %s' % (zippath, type))
+            self._check("file, %s, True, None" % zippath)
+            self.assertTrue(os.path.exists(zippath))
 
-    def install_dir_test(self):
+    def test_install_dir_test(self):
         """ should install from a dir in current dir
         """
         folder = self._create_profile_folder()
         self.assertTrue(os.path.isdir(folder))
-        self.client.run('config install "%s"' % folder)
-        self._check("dir, %s, True, None" % folder)
+        for type in ["", "--type=dir"]:
+            self.client.run('config install "%s" %s' % (folder, type))
+            self._check("dir, %s, True, None" % folder)
 
     def install_source_target_folders_test(self):
         folder = temp_folder()
@@ -302,20 +304,21 @@ class Pkg(ConanFile):
         self.assertEqual(load(os.path.join(self.client.cache.profiles_path, "linux")).splitlines(),
                          linux_profile.splitlines())
 
-    def install_url_test(self):
+    def test_install_url(self):
         """ should install from a URL
         """
 
-        def my_download(obj, url, filename, **kwargs):  # @UnusedVariable
-            self._create_zip(filename)
+        for type in ["", "--type=url"]:
+            def my_download(obj, url, filename, **kwargs):  # @UnusedVariable
+                self._create_zip(filename)
 
-        with patch.object(FileDownloader, 'download', new=my_download):
-            self.client.run("config install http://myfakeurl.com/myconf.zip")
-            self._check("url, http://myfakeurl.com/myconf.zip, True, None")
+            with patch.object(FileDownloader, 'download', new=my_download):
+                self.client.run("config install http://myfakeurl.com/myconf.zip %s" % type)
+                self._check("url, http://myfakeurl.com/myconf.zip, True, None")
 
-            # repeat the process to check
-            self.client.run("config install http://myfakeurl.com/myconf.zip")
-            self._check("url, http://myfakeurl.com/myconf.zip, True, None")
+                # repeat the process to check
+                self.client.run("config install http://myfakeurl.com/myconf.zip %s" % type)
+                self._check("url, http://myfakeurl.com/myconf.zip, True, None")
 
     def install_change_only_verify_ssl_test(self):
         def my_download(obj, url, filename, **kwargs):  # @UnusedVariable
@@ -390,10 +393,27 @@ class Pkg(ConanFile):
         check_path = os.path.join(folder, ".git")
         self._check("git, %s, True, -c init.templateDir=value" % check_path)
 
-    def force_git_type_test(self):
+    def test_force_git_type(self):
         client = TestClient()
         client.run('config install httpnonexisting --type=git', assert_error=True)
         self.assertIn("Can't clone repo", client.out)
+
+    def test_force_dir_type(self):
+        client = TestClient()
+        client.run('config install httpnonexisting --type=dir', assert_error=True)
+        self.assertIn("ERROR: Failed conan config install: No such directory: 'httpnonexisting'",
+                      client.out)
+
+    def test_force_file_type(self):
+        client = TestClient()
+        client.run('config install httpnonexisting --type=file', assert_error=True)
+        self.assertIn("No such file or directory: 'httpnonexisting'", client.out)
+
+    def test_force_url_type(self):
+        client = TestClient()
+        client.run('config install httpnonexisting --type=url', assert_error=True)
+        self.assertIn("Error downloading file httpnonexisting: 'Invalid URL 'httpnonexisting'",
+                      client.out)
 
     def reinstall_error_test(self):
         """ should use configured URL in conan.conf
@@ -640,3 +660,60 @@ class ConfigInstallSchedTest(unittest.TestCase):
         self.client.run('install .', assert_error=True)
         self.assertIn("ERROR: Incorrect definition of general.config_install_interval: 1s",
                       self.client.out)
+
+    def test_config_install_remove_git_repo(self):
+        """ config_install_interval must break when remote git has been removed
+        """
+        with self.client.chdir(self.folder):
+            self.client.run_command('git init .')
+            self.client.run_command('git add .')
+            self.client.run_command('git config user.name myname')
+            self.client.run_command('git config user.email myname@mycompany.com')
+            self.client.run_command('git commit -m "mymsg"')
+        self.client.run('config install "%s/.git" --type git' % self.folder)
+        self.assertIn("Processing conan.conf", self.client.out)
+        self.assertIn("Repo cloned!", self.client.out)  # git clone executed by scheduled task
+        folder_name = self.folder
+        new_name = self.folder + "_test"
+        os.rename(self.folder, new_name)
+        with patch("conans.client.command.is_config_install_scheduled", return_value=True):
+            self.client.run("config --help", assert_error=True)
+            # scheduled task has been executed. Without a remote, the user should fix the config
+            self.assertIn("ERROR: Failed conan config install: Can't clone repo", self.client.out)
+
+            # restore the remote
+            os.rename(new_name, folder_name)
+            self.client.run("config --help")
+            self.assertIn("Repo cloned!", self.client.out)
+
+    def test_config_install_remove_config_repo(self):
+        """ config_install_interval should not run when config list is empty
+        """
+        with self.client.chdir(self.folder):
+            self.client.run_command('git init .')
+            self.client.run_command('git add .')
+            self.client.run_command('git config user.name myname')
+            self.client.run_command('git config user.email myname@mycompany.com')
+            self.client.run_command('git commit -m "mymsg"')
+        self.client.run('config install "%s/.git" --type git' % self.folder)
+        self.assertIn("Processing conan.conf", self.client.out)
+        self.assertIn("Repo cloned!", self.client.out)
+        # force scheduled time for all commands
+        with patch("conans.client.conf.config_installer._is_scheduled_intervals", return_value=True):
+            self.client.run("config --help")
+            self.assertIn("Repo cloned!", self.client.out)  # git clone executed by scheduled task
+
+            # config install must not run scheduled config
+            self.client.run("config install --remove 0")
+            self.assertEqual("", self.client.out)
+            self.client.run("config install --list")
+            self.assertEqual("", self.client.out)
+
+            last_change = os.path.getmtime(self.client.cache.config_install_file)
+            # without a config in configs file, scheduler only emits a warning
+            self.client.run("help")
+            self.assertIn("WARN: Skipping scheduled config install, "
+                          "no config listed in config_install file", self.client.out)
+            self.assertNotIn("Repo cloned!", self.client.out)
+            # ... and updates the next schedule
+            self.assertGreater(os.path.getmtime(self.client.cache.config_install_file), last_change)

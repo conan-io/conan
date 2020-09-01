@@ -2,7 +2,6 @@ import os
 import textwrap
 import unittest
 
-from conans.errors import ConanException
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE, CONANFILE_TXT
 from conans.test.utils.genconanfile import GenConanfile
@@ -113,9 +112,9 @@ class HelloConan(ConanFile):
                 requires = "intermediate/1.0@us/ch"
 
                 def build(self):
-                    self.output.info("System deps: %s" % self.deps_cpp_info.system_libs)
+                    self.output.info("System deps: %s" % list(self.deps_cpp_info.system_libs))
                     for dep_key, dep_value in self.deps_cpp_info.dependencies:
-                        self.output.info("%s system deps: %s" % (dep_key, dep_value.system_libs))
+                        self.output.info("%s system deps: %s" % (dep_key, list(dep_value.system_libs)))
                 """)
 
         client = TestClient()
@@ -174,13 +173,13 @@ class HelloConan(ConanFile):
                 requires = "intermediate/1.0@us/ch"
 
                 def build(self):
-                    self.output.info("deps_cpp_info.libs: %s" % self.deps_cpp_info.libs)
-                    self.output.info("deps_cpp_info.defines: %s" % self.deps_cpp_info.defines)
+                    self.output.info("deps_cpp_info.libs: %s" % list(self.deps_cpp_info.libs))
+                    self.output.info("deps_cpp_info.defines: %s" % list(self.deps_cpp_info.defines))
                     self.output.info("deps_cpp_info.include_paths: %s" %
                         [os.path.basename(value) for value in self.deps_cpp_info.include_paths])
                     for dep_key, dep_value in self.deps_cpp_info.dependencies:
-                        self.output.info("%s.libs: %s" % (dep_key, dep_value.libs))
-                        self.output.info("%s.defines: %s" % (dep_key, dep_value.defines))
+                        self.output.info("%s.libs: %s" % (dep_key, list(dep_value.libs)))
+                        self.output.info("%s.defines: %s" % (dep_key, list(dep_value.defines)))
                         self.output.info("%s.include_paths: %s" % (dep_key,
                                          [os.path.basename(value) for value in
                                          dep_value.include_paths]))
@@ -281,30 +280,29 @@ class HelloConan(ConanFile):
             requires = "dep/1.0@us/ch"
             def build(self):
                 # Global values
-                self.output.info("GLOBAL Include paths: %s" % self.deps_cpp_info.include_paths)
-                self.output.info("GLOBAL Library paths: %s" % self.deps_cpp_info.lib_paths)
-                self.output.info("GLOBAL Binary paths: %s" % self.deps_cpp_info.bin_paths)
-                self.output.info("GLOBAL Libs: %s" % self.deps_cpp_info.libs)
-                self.output.info("GLOBAL Exes: %s" % self.deps_cpp_info.exes)
-                self.output.info("GLOBAL System libs: %s" % self.deps_cpp_info.system_libs)
+                self.output.info("GLOBAL Include paths: %s" % list(self.deps_cpp_info.include_paths))
+                self.output.info("GLOBAL Library paths: %s" % list(self.deps_cpp_info.lib_paths))
+                self.output.info("GLOBAL Binary paths: %s" % list(self.deps_cpp_info.bin_paths))
+                self.output.info("GLOBAL Libs: %s" % list(self.deps_cpp_info.libs))
+                self.output.info("GLOBAL System libs: %s" % list(self.deps_cpp_info.system_libs))
                 # Deps values
                 for dep_key, dep_value in self.deps_cpp_info.dependencies:
                     self.output.info("DEPS name: %s" % dep_value.get_name('txt'))
-                    self.output.info("DEPS Include paths: %s" % dep_value.include_paths)
-                    self.output.info("DEPS Library paths: %s" % dep_value.lib_paths)
-                    self.output.info("DEPS Binary paths: %s" % dep_value.bin_paths)
-                    self.output.info("DEPS Libs: %s" % dep_value.libs)
-                    self.output.info("DEPS System libs: %s" % dep_value.system_libs)
+                    self.output.info("DEPS Include paths: %s" % list(dep_value.include_paths))
+                    self.output.info("DEPS Library paths: %s" % list(dep_value.lib_paths))
+                    self.output.info("DEPS Binary paths: %s" % list(dep_value.bin_paths))
+                    self.output.info("DEPS Libs: %s" % list(dep_value.libs))
+                    self.output.info("DEPS System libs: %s" % list(dep_value.system_libs))
                 # Components values
                 for dep_key, dep_value in self.deps_cpp_info.dependencies:
                     for comp_name, comp_value in dep_value.components.items():
                         self.output.info("COMP %s Include paths: %s" % (comp_name,
-                        comp_value.include_paths))
-                        self.output.info("COMP %s Library paths: %s" % (comp_name, comp_value.lib_paths))
-                        self.output.info("COMP %s Binary paths: %s" % (comp_name, comp_value.bin_paths))
-                        self.output.info("COMP %s Libs: %s" % (comp_name, comp_value.libs))
-                        self.output.info("COMP %s Requires: %s" % (comp_name, comp_value.requires))
-                        self.output.info("COMP %s System libs: %s" % (comp_name, comp_value.system_libs))
+                            list(comp_value.include_paths)))
+                        self.output.info("COMP %s Library paths: %s" % (comp_name, list(comp_value.lib_paths)))
+                        self.output.info("COMP %s Binary paths: %s" % (comp_name, list(comp_value.bin_paths)))
+                        self.output.info("COMP %s Libs: %s" % (comp_name, list(comp_value.libs)))
+                        self.output.info("COMP %s Requires: %s" % (comp_name, list(comp_value.requires)))
+                        self.output.info("COMP %s System libs: %s" % (comp_name, list(comp_value.system_libs)))
         """)
 
         client = TestClient()
@@ -354,25 +352,25 @@ class HelloConan(ConanFile):
         self.assertIn("DEPS Libs: ['libplanet', 'libiss', 'libstarlight']", client.out)
         self.assertIn("DEPS System libs: ['solar', 'magnetism', 'ground']", client.out)
 
-        self.assertIn("COMP Starlight Include paths: %s" % expected_comp_starlight_include_paths,
+        self.assertIn("COMP Starlight Include paths: %s" % list(expected_comp_starlight_include_paths),
                       client.out)
-        self.assertIn("COMP Planet Include paths: %s" % expected_comp_planet_include_paths,
+        self.assertIn("COMP Planet Include paths: %s" % list(expected_comp_planet_include_paths,),
                       client.out)
-        self.assertIn("COMP Launcher Include paths: %s" % expected_comp_launcher_include_paths,
+        self.assertIn("COMP Launcher Include paths: %s" % list(expected_comp_launcher_include_paths),
                       client.out)
-        self.assertIn("COMP ISS Include paths: %s" % expected_comp_iss_include_paths, client.out)
-        self.assertIn("COMP Starlight Library paths: %s" % expected_comp_starlight_library_paths,
+        self.assertIn("COMP ISS Include paths: %s" % list(expected_comp_iss_include_paths), client.out)
+        self.assertIn("COMP Starlight Library paths: %s" % list(expected_comp_starlight_library_paths),
                       client.out)
-        self.assertIn("COMP Planet Library paths: %s" % expected_comp_planet_library_paths,
+        self.assertIn("COMP Planet Library paths: %s" % list(expected_comp_planet_library_paths),
                       client.out)
-        self.assertIn("COMP Launcher Library paths: %s" % expected_comp_launcher_library_paths,
+        self.assertIn("COMP Launcher Library paths: %s" % list(expected_comp_launcher_library_paths),
                       client.out)
-        self.assertIn("COMP ISS Library paths: %s" % expected_comp_iss_library_paths, client.out)
-        self.assertIn("COMP Starlight Binary paths: %s" % expected_comp_iss_binary_paths, client.out)
-        self.assertIn("COMP Planet Binary paths: %s" % expected_comp_planet_binary_paths, client.out)
-        self.assertIn("COMP Launcher Binary paths: %s" % expected_comp_launcher_binary_paths,
+        self.assertIn("COMP ISS Library paths: %s" % list(expected_comp_iss_library_paths), client.out)
+        self.assertIn("COMP Starlight Binary paths: %s" % list(expected_comp_iss_binary_paths), client.out)
+        self.assertIn("COMP Planet Binary paths: %s" % list(expected_comp_planet_binary_paths), client.out)
+        self.assertIn("COMP Launcher Binary paths: %s" % list(expected_comp_launcher_binary_paths),
                       client.out)
-        self.assertIn("COMP ISS Binary paths: %s" % expected_comp_iss_binary_paths, client.out)
+        self.assertIn("COMP ISS Binary paths: %s" % list(expected_comp_iss_binary_paths), client.out)
         self.assertIn("COMP Starlight Libs: ['libstarlight']", client.out)
         self.assertIn("COMP Planet Libs: ['libplanet']", client.out)
         self.assertIn("COMP Launcher Libs: []", client.out)
@@ -394,8 +392,8 @@ class HelloConan(ConanFile):
         client.run("create conanfile2.py")
 
         conanfile = GenConanfile("consumer", "0.1") \
-            .with_requirement_plain("dep1/0.1") \
-            .with_requirement_plain("dep2/0.1") \
+            .with_requirement("dep1/0.1") \
+            .with_requirement("dep2/0.1") \
             .with_package_info(cpp_info={"components": {"kk": {"requires": []}}},
                                env_info={})
         client.save({"conanfile.py": conanfile})
@@ -404,8 +402,8 @@ class HelloConan(ConanFile):
                       "components requires", client.out)
 
         conanfile = GenConanfile("consumer", "0.1") \
-            .with_requirement_plain("dep1/0.1") \
-            .with_requirement_plain("dep2/0.1") \
+            .with_requirement("dep1/0.1") \
+            .with_requirement("dep2/0.1") \
             .with_package_info(cpp_info={"components": {"kk": {"requires": ["dep1::dep1"]}}},
                                env_info={})
         client.save({"conanfile.py": conanfile})
@@ -414,8 +412,8 @@ class HelloConan(ConanFile):
                       "requires", client.out)
 
         conanfile = GenConanfile("consumer", "0.1") \
-            .with_requirement_plain("dep1/0.1") \
-            .with_requirement_plain("dep2/0.1") \
+            .with_requirement("dep1/0.1") \
+            .with_requirement("dep2/0.1") \
             .with_package_info(cpp_info={"components": {"kk": {"requires": ["dep1::dep1"]},
                                                         "kkk": {"requires": ["kk"]}}},
                                env_info={})
@@ -425,8 +423,8 @@ class HelloConan(ConanFile):
                       "requires", client.out)
 
         conanfile = GenConanfile("consumer", "0.1") \
-            .with_requirement_plain("dep1/0.1") \
-            .with_requirement_plain("dep2/0.1") \
+            .with_requirement("dep1/0.1") \
+            .with_requirement("dep2/0.1") \
             .with_package_info(cpp_info={"components": {"kk": {"requires": []},
                                                         "kkk": {"requires": ["kk"]}}},
                                env_info={})
@@ -436,8 +434,8 @@ class HelloConan(ConanFile):
                       "requires", client.out)
 
         conanfile = GenConanfile("consumer", "0.1") \
-            .with_requirement_plain("dep1/0.1") \
-            .with_requirement_plain("dep2/0.1") \
+            .with_requirement("dep1/0.1") \
+            .with_requirement("dep2/0.1") \
             .with_package_info(cpp_info={"components": {"kk": {"requires": ["dep2::comp"]},
                                                         "kkk": {"requires": ["dep3::dep3"]}}},
                                env_info={})
@@ -447,7 +445,7 @@ class HelloConan(ConanFile):
                       "requires", client.out)
 
         conanfile = GenConanfile("consumer", "0.1") \
-            .with_requirement_plain("dep2/0.1") \
+            .with_requirement("dep2/0.1") \
             .with_package_info(cpp_info={"components": {"kk": {"requires": ["dep2::comp"]},
                                                         "kkk": {"requires": ["dep3::dep3"]}}},
                                env_info={})
@@ -465,8 +463,8 @@ class HelloConan(ConanFile):
                       "requires but not defined as a recipe requirement", client.out)
 
         conanfile = GenConanfile("consumer", "0.1") \
-            .with_requirement_plain("dep1/0.1") \
-            .with_requirement_plain("dep2/0.1") \
+            .with_requirement("dep1/0.1") \
+            .with_requirement("dep2/0.1") \
             .with_package_info(cpp_info={"components": {"kk": {"requires": ["dep2::comp"]},
                                                         "kkk": {"requires": ["dep1::dep1"]}}},
                                env_info={})

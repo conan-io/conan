@@ -1,3 +1,4 @@
+# coding=utf-8
 import json
 import os
 import shutil
@@ -19,6 +20,8 @@ from conans.util.dates import iso8601_to_str, from_timestamp_to_iso8601
 from conans.util.env_reader import get_env
 from conans.util.files import list_folder_subdirs, load
 from conans.util.files import save
+from conans import __version__ as client_version
+
 
 conan_vars1 = '''
 [settings]
@@ -387,17 +390,21 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         html = ''.join([line.strip() for line in self.client.load("table.html").splitlines()])
         self.assertIn("<h1>Hello/1.4.10@myuser/testing</h1>", html)
         self.assertIn("<td>LinuxPackageSHA</td>"
+                      "<td>False</td>"
                       "<td>Linux</td>"
                       "<td>x86</td>"
                       "<td>gcc</td>"
                       "<td>libstdc++11</td>"
                       "<td>4.5</td>", html)
         self.assertIn("<td>WindowsPackageSHA</td>"
+                      "<td>True</td>"
                       "<td>Windows</td>"
                       "<td>x64</td>"
                       "<td>Visual Studio</td>"
                       "<td></td>"
                       "<td>8.1</td>", html)
+        self.assertIn("Conan <b>v{}</b> <script>document.write(new Date().getFullYear())</script> JFrog LTD. <a>https://conan.io</a>"
+                      .format(client_version), html)
 
     def search_html_table_all_test(self):
         os.rmdir(self.servers["local"].server_store.store)
@@ -409,8 +416,12 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         html = ''.join([line.strip() for line in self.client.load("table.html").splitlines()])
 
         self.assertIn("<h1>Hello/1.4.10@myuser/testing</h1>", html)
+        self.assertIn("<th>remote</th>"
+                      "<th>package_id</th>"
+                      "<th>outdated</th>", html)
         self.assertIn("<td>local</td>"
                       "<td>LinuxPackageSHA</td>"
+                      "<td>False</td>"
                       "<td>Linux</td>"
                       "<td>x86</td>"
                       "<td>gcc</td>"
@@ -418,6 +429,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                       "<td>4.5</td>", html)
         self.assertIn("<td>search_able</td>"
                       "<td>WindowsPackageSHA</td>"
+                      "<td>True</td>"
                       "<td>Windows</td>"
                       "<td>x64</td>"
                       "<td>Visual Studio</td>"

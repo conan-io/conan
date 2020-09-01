@@ -75,7 +75,7 @@ class ExportDirtyTest(unittest.TestCase):
         self.client.run("export . lasote/stable")
         self.assertIn("Source folder is corrupted, forcing removal", self.client.out)
         self.client.run("install Hello0/0.1@lasote/stable --build")
-        self.assertIn("WARN: Trying to remove corrupted source folder", self.client.out)
+        self.assertNotIn("WARN: Trying to remove corrupted source folder", self.client.out)
 
     def test_install_remove(self):
         # install is also able to remove dirty source folders

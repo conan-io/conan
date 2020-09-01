@@ -9,12 +9,14 @@ set({name}_INCLUDES{build_type_suffix} {deps.include_paths})
 set({name}_RES_DIRS{build_type_suffix} {deps.res_paths})
 set({name}_DEFINITIONS{build_type_suffix} {deps.defines})
 set({name}_LINKER_FLAGS{build_type_suffix}_LIST
-        $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:{deps.sharedlinkflags_list}>
-        $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:{deps.sharedlinkflags_list}>
-        $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:{deps.exelinkflags_list}>
+        "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:{deps.sharedlinkflags_list}>"
+        "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:{deps.sharedlinkflags_list}>"
+        "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:{deps.exelinkflags_list}>"
 )
 set({name}_COMPILE_DEFINITIONS{build_type_suffix} {deps.compile_definitions})
 set({name}_COMPILE_OPTIONS{build_type_suffix}_LIST "{deps.cxxflags_list}" "{deps.cflags_list}")
+set({name}_COMPILE_OPTIONS_C{build_type_suffix} "{deps.cflags_list}")
+set({name}_COMPILE_OPTIONS_CXX{build_type_suffix} "{deps.cxxflags_list}")
 set({name}_LIBRARIES_TARGETS{build_type_suffix} "") # Will be filled later, if CMake 3
 set({name}_LIBRARIES{build_type_suffix} "") # Will be filled later
 set({name}_LIBS{build_type_suffix} "") # Same as {name}_LIBRARIES
@@ -77,32 +79,32 @@ endforeach()
 """
 
 
-def find_transitive_dependencies(public_deps_names, find_modules):
+def find_transitive_dependencies(public_deps_filenames, find_modules):
     if find_modules:  # for cmake_find_package generator
         find = textwrap.dedent("""
-            if(NOT {dep_name}_FOUND)
-                find_dependency({dep_name} REQUIRED)
+            if(NOT {dep_filename}_FOUND)
+                find_dependency({dep_filename} REQUIRED)
             else()
-                message(STATUS "Dependency {dep_name} already found")
+                message(STATUS "Dependency {dep_filename} already found")
             endif()
             """)
     else:  # for cmake_find_package_multi generator
         # https://github.com/conan-io/conan/issues/4994
         # https://github.com/conan-io/conan/issues/5040
         find = textwrap.dedent("""
-            if(NOT {dep_name}_FOUND)
+            if(NOT {dep_filename}_FOUND)
                 if(${{CMAKE_VERSION}} VERSION_LESS "3.9.0")
-                    find_package({dep_name} REQUIRED NO_MODULE)
+                    find_package({dep_filename} REQUIRED NO_MODULE)
                 else()
-                    find_dependency({dep_name} REQUIRED NO_MODULE)
+                    find_dependency({dep_filename} REQUIRED NO_MODULE)
                 endif()
             else()
-                message(STATUS "Dependency {dep_name} already found")
+                message(STATUS "Dependency {dep_filename} already found")
             endif()
             """)
     lines = ["", "# Library dependencies", "include(CMakeFindDependencyMacro)"]
-    for dep_name in public_deps_names:
-        lines.append(find.format(dep_name=dep_name))
+    for dep_filename in public_deps_filenames:
+        lines.append(find.format(dep_filename=dep_filename))
     return "\n".join(lines)
 
 
@@ -114,7 +116,7 @@ class CMakeFindPackageCommonMacros:
             if(APPLE)
                 foreach(_FRAMEWORK ${FRAMEWORKS})
                     # https://cmake.org/pipermail/cmake-developers/2017-August/030199.html
-                    find_library(CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND NAME ${_FRAMEWORK} PATHS ${FRAMEWORKS_DIRS})
+                    find_library(CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND NAME ${_FRAMEWORK} PATHS ${FRAMEWORKS_DIRS} CMAKE_FIND_ROOT_PATH_BOTH)
                     if(CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND)
                         list(APPEND ${FRAMEWORKS_FOUND} ${CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND})
                     else()

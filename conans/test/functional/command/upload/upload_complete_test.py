@@ -19,7 +19,8 @@ from conans.paths import CONANFILE, CONANINFO, CONAN_MANIFEST, EXPORT_TGZ_NAME
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files, cpp_hello_source_files
 from conans.test.utils.test_files import temp_folder, uncompress_packaged_files
 from conans.test.utils.tools import (NO_SETTINGS_PACKAGE_ID, TestClient, TestRequester, TestServer,
-                                     MockedUserIO, TestBufferConanOutput, GenConanfile)
+                                     GenConanfile)
+from conans.test.utils.mocks import MockedUserIO, TestBufferConanOutput
 from conans.util.files import load, mkdir, save
 
 

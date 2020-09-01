@@ -28,16 +28,8 @@ from conans.util.files import exception_message_safe
 from conans.util.files import save
 from conans.util.log import logger
 from conans.assets import templates
-
-
-# Exit codes for conan command:
-SUCCESS = 0                         # 0: Success (done)
-ERROR_GENERAL = 1                   # 1: General ConanException error (done)
-ERROR_MIGRATION = 2                 # 2: Migration error
-USER_CTRL_C = 3                     # 3: Ctrl+C
-USER_CTRL_BREAK = 4                 # 4: Ctrl+Break
-ERROR_SIGTERM = 5                   # 5: SIGTERM
-ERROR_INVALID_CONFIGURATION = 6     # 6: Invalid configuration (done)
+from conans.cli.exit_codes import SUCCESS, ERROR_MIGRATION, ERROR_GENERAL, USER_CTRL_C, \
+    ERROR_SIGTERM, USER_CTRL_BREAK, ERROR_INVALID_CONFIGURATION
 
 
 class Extender(argparse.Action):
@@ -298,6 +290,8 @@ class Command(object):
         args = parser.parse_args(*args)
 
         self._warn_python_version()
+        self._check_lockfile_args(args)
+
         profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
                                     options=args.options_build, env=args.env_build)
 
@@ -348,6 +342,7 @@ class Command(object):
 
         args = parser.parse_args(*args)
         self._warn_python_version()
+        self._check_lockfile_args(args)
 
         name, version, user, channel, _ = get_reference_fields(args.reference,
                                                                user_channel_input=True)
@@ -375,7 +370,9 @@ class Command(object):
                                       args.manifests, args.manifests_interactive,
                                       args.remote, args.update,
                                       test_build_folder=args.test_build_folder,
-                                      lockfile=args.lockfile, ignore_dirty=args.ignore_dirty,
+                                      lockfile=args.lockfile,
+                                      lockfile_out=args.lockfile_out,
+                                      ignore_dirty=args.ignore_dirty,
                                       profile_build=profile_build)
         except ConanException as exc:
             info = exc.info
@@ -478,6 +475,8 @@ class Command(object):
         _add_common_install_arguments(parser, build_help=_help_build_policies.format("never"))
 
         args = parser.parse_args(*args)
+        self._check_lockfile_args(args)
+
         profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
                                     options=args.options_build, env=args.env_build)
 
@@ -503,7 +502,8 @@ class Command(object):
                                            update=args.update, generators=args.generator,
                                            no_imports=args.no_imports,
                                            install_folder=args.install_folder,
-                                           lockfile=args.lockfile)
+                                           lockfile=args.lockfile,
+                                           lockfile_out=args.lockfile_out)
             else:
                 if args.reference:
                     raise ConanException("A full reference was provided as first argument, second "
@@ -524,7 +524,8 @@ class Command(object):
                                                      update=args.update,
                                                      generators=args.generator,
                                                      install_folder=args.install_folder,
-                                                     lockfile=args.lockfile)
+                                                     lockfile=args.lockfile,
+                                                     lockfile_out=args.lockfile_out)
 
         except ConanException as exc:
             info = exc.info
@@ -563,7 +564,7 @@ class Command(object):
 
         install_subparser.add_argument("--verify-ssl", nargs="?", default="True",
                                        help='Verify SSL connection when downloading file')
-        install_subparser.add_argument("--type", "-t", choices=["git"],
+        install_subparser.add_argument("--type", "-t", choices=["git", "dir", "file", "url"],
                                        help='Type of remote config')
         install_subparser.add_argument("--args", "-a",
                                        help='String with extra arguments for "git clone"')
@@ -643,7 +644,7 @@ class Command(object):
                             help='Show package paths in local cache')
         parser.add_argument("-bo", "--build-order",
                             help="given a modified reference, return an ordered list to build (CI)."
-                                 " [DEPRECATED: use 'conan graph build-order ...' instead]",
+                                 " [DEPRECATED: use 'conan lock build-order ...' instead]",
                             nargs=1, action=Extender)
         parser.add_argument("-g", "--graph", action=OnceArgument,
                             help='Creates file with project dependencies graph. It will generate '
@@ -669,15 +670,19 @@ class Command(object):
         build_help = ("Given a build policy, return an ordered list of packages that would be built"
                       " from sources during the install command")
 
-        _add_common_install_arguments(parser, build_help=build_help)
+        update_help = "Will check if updates of the dependencies exist in the remotes " \
+                      "(a new version that satisfies a version range, a new revision or a newer " \
+                      "recipe if not using revisions)."
+        _add_common_install_arguments(parser, update_help=update_help, build_help=build_help)
         args = parser.parse_args(*args)
+        self._check_lockfile_args(args)
 
         profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
                                     options=args.options_build, env=args.env_build)
 
         if args.build_order:
             self._out.warn("Usage of `--build-order` argument is deprecated and can return"
-                           " wrong results. Use `conan graph build-order ...` instead.")
+                           " wrong results. Use `conan lock build-order ...` instead.")
 
         if args.install_folder and (args.profile_host or args.settings_host
                                     or args.options_host or args.env_host):
@@ -969,17 +974,19 @@ class Command(object):
         parser.add_argument("-j", "--json", default=None, action=OnceArgument,
                             help='Path to a json file where the install information will be '
                             'written')
-        parser.add_argument("-l", "--lockfile", action=OnceArgument, nargs='?', const=".",
-                            help="Path to a lockfile or folder containing 'conan.lock' file. "
-                            "Lockfile will be updated with the exported package")
+        parser.add_argument("-l", "--lockfile", action=OnceArgument,
+                            help="Path to a lockfile.")
+        parser.add_argument("--lockfile-out", action=OnceArgument,
+                            help="Filename of the updated lockfile")
         parser.add_argument("--ignore-dirty", default=False, action='store_true',
                             help='When using the "scm" feature with "auto" values, capture the'
                                  ' revision and url even if there are uncommitted changes')
         _add_profile_arguments(parser)
 
         args = parser.parse_args(*args)
-
         self._warn_python_version()
+        self._check_lockfile_args(args)
+
         name, version, user, channel, _ = get_reference_fields(args.reference,
                                                                user_channel_input=True)
         cwd = os.getcwd()
@@ -1005,6 +1012,7 @@ class Command(object):
                                           user=user,
                                           channel=channel,
                                           lockfile=args.lockfile,
+                                          lockfile_out=args.lockfile_out,
                                           ignore_dirty=args.ignore_dirty)
         except ConanException as exc:
             info = exc.info
@@ -1030,15 +1038,19 @@ class Command(object):
                                  "and version are not declared in the conanfile.py")
         parser.add_argument('-k', '-ks', '--keep-source', default=False, action='store_true',
                             help=_KEEP_SOURCE_HELP)
-        parser.add_argument("-l", "--lockfile", action=OnceArgument, nargs='?', const=".",
-                            help="Path to a lockfile or folder containing 'conan.lock' file. "
-                            "Lockfile will be updated with the exported package")
+        parser.add_argument("-l", "--lockfile", action=OnceArgument,
+                            help="Path to a lockfile file.")
+        parser.add_argument("--lockfile-out", action=OnceArgument,
+                            help="Filename of the updated lockfile")
         parser.add_argument("--ignore-dirty", default=False, action='store_true',
                             help='When using the "scm" feature with "auto" values, capture the'
                                  ' revision and url even if there are uncommitted changes')
 
         args = parser.parse_args(*args)
         self._warn_python_version()
+        if args.lockfile_out and not args.lockfile:
+            raise ConanException("lockfile_out cannot be specified if lockfile is not defined")
+
         name, version, user, channel, _ = get_reference_fields(args.reference,
                                                                user_channel_input=True)
 
@@ -1050,6 +1062,7 @@ class Command(object):
         return self._conan.export(path=args.path,
                                   name=name, version=version, user=user, channel=channel,
                                   keep_source=args.keep_source, lockfile=args.lockfile,
+                                  lockfile_out=args.lockfile_out,
                                   ignore_dirty=args.ignore_dirty)
 
     def remove(self, *args):
@@ -1766,6 +1779,9 @@ class Command(object):
                                          " (default to current working directory)")
 
         args = parser.parse_args(*args)
+        if args.lockfile_out and not args.lockfile:
+            raise ConanException("lockfile_out cannot be specified if lockfile is not defined")
+
         profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
                                     options=args.options_build, env=args.env_build)
 
@@ -1829,67 +1845,89 @@ class Command(object):
         """
         cmd_frogarian(self._out)
 
-    def graph(self, *args):
+    def lock(self, *args):
         """
         Generates and manipulates lock files.
         """
-        parser = argparse.ArgumentParser(description=self.graph.__doc__,
-                                         prog="conan graph",
+        parser = argparse.ArgumentParser(description=self.lock.__doc__,
+                                         prog="conan lock",
                                          formatter_class=SmartFormatter)
         subparsers = parser.add_subparsers(dest='subcommand', help='sub-command help')
         subparsers.required = True
 
         # create the parser for the "a" command
-        merge_cmd = subparsers.add_parser('update-lock', help='merge two lockfiles')
-        merge_cmd.add_argument('old_lockfile', help='path to previous lockfile')
-        merge_cmd.add_argument('new_lockfile', help='path to modified lockfile')
+        update_help = ("Complete missing information in the first lockfile with information "
+                       "defined in the second lockfile. Both lockfiles must represent the same "
+                       "graph, and have the same topology with the same identifiers, i.e. the "
+                       "second lockfile must be an evolution based on the first one")
+        update_cmd = subparsers.add_parser('update', help=update_help)
+        update_cmd.add_argument('old_lockfile', help='Path to lockfile to be updated')
+        update_cmd.add_argument('new_lockfile', help='Path to lockfile containing the new '
+                                'information that is going to be updated into the first lockfile')
 
         build_order_cmd = subparsers.add_parser('build-order', help='Returns build-order')
-        build_order_cmd.add_argument('lockfile', help='lockfile folder')
-        build_order_cmd.add_argument("-b", "--build", action=Extender, nargs="?",
-                                     help=_help_build_policies.format("never"))
+        build_order_cmd.add_argument('lockfile', help='lockfile file')
         build_order_cmd.add_argument("--json", action=OnceArgument,
                                      help="generate output file in json format")
 
-        clean_cmd = subparsers.add_parser('clean-modified', help='Clean modified')
-        clean_cmd.add_argument('lockfile', help='lockfile folder')
+        clean_modified_cmd = subparsers.add_parser('clean-modified', help='Clean modified flags')
+        clean_modified_cmd.add_argument('lockfile', help='Path to the lockfile')
 
-        lock_cmd = subparsers.add_parser('lock', help='create a lockfile')
-        lock_cmd.add_argument("path_or_reference", help="Path to a folder containing a recipe"
-                              " (conanfile.py or conanfile.txt) or to a recipe file. e.g., "
-                              "./my_project/conanfile.txt. It could also be a reference")
-        lock_cmd.add_argument("-l", "--lockfile", action=OnceArgument,
-                              help="Path to lockfile to be created. If not specified 'conan.lock'"
-                              " will be created in current folder")
-        _add_common_install_arguments(lock_cmd, build_help="Packages to build from source",
+        create_cmd = subparsers.add_parser('create',
+                                           help='Create a lockfile from a conanfile or a reference')
+        create_cmd.add_argument("path", nargs="?", help="Path to a conanfile")
+        create_cmd.add_argument("--name", action=OnceArgument,
+                                help='Provide a package name if not specified in conanfile')
+        create_cmd.add_argument("--version", action=OnceArgument,
+                                help='Provide a package version if not specified in conanfile')
+        create_cmd.add_argument("--user", action=OnceArgument,
+                                help='Provide a user')
+        create_cmd.add_argument("--channel", action=OnceArgument,
+                                help='Provide a channel')
+        create_cmd.add_argument("--reference", action=OnceArgument,
+                                help='Provide a package reference instead of a conanfile')
+        create_cmd.add_argument("-l", "--lockfile", action=OnceArgument,
+                                help="Path to lockfile to be used as a base")
+        create_cmd.add_argument("--base", action="store_true",
+                                help="Lock only recipe versions and revisions")
+        create_cmd.add_argument("--lockfile-out", action=OnceArgument, default="conan.lock",
+                                help="Filename of the created lockfile")
+        _add_common_install_arguments(create_cmd, build_help="Packages to build from source",
                                       lockfile=False)
 
         args = parser.parse_args(*args)
         self._warn_python_version()
 
-        if args.subcommand == "update-lock":
-            self._conan.update_lock(args.old_lockfile, args.new_lockfile)
+        if args.subcommand == "update":
+            self._conan.lock_update(args.old_lockfile, args.new_lockfile)
         elif args.subcommand == "build-order":
-            build_order = self._conan.build_order(args.lockfile, args.build)
+            build_order = self._conan.lock_build_order(args.lockfile)
             self._out.writeln(build_order)
             if args.json:
                 json_file = _make_abs_path(args.json)
                 save(json_file, json.dumps(build_order, indent=True))
         elif args.subcommand == "clean-modified":
             self._conan.lock_clean_modified(args.lockfile)
-        elif args.subcommand == "lock":
+        elif args.subcommand == "create":
             profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
                                         options=args.options_build, env=args.env_build)
-            self._conan.create_lock(args.path_or_reference,
-                                    remote_name=args.remote,
-                                    settings=args.settings_host,
-                                    options=args.options_host,
-                                    env=args.env_host,
-                                    profile_names=args.profile_host,
+            profile_host = ProfileData(profiles=args.profile_host, settings=args.settings_host,
+                                       options=args.options_host, env=args.env_host)
+
+            self._conan.lock_create(path=args.path,
+                                    reference=args.reference,
+                                    name=args.name,
+                                    version=args.version,
+                                    user=args.user,
+                                    channel=args.channel,
+                                    profile_host=profile_host,
                                     profile_build=profile_build,
+                                    remote_name=args.remote,
                                     update=args.update,
+                                    build=args.build,
+                                    base=args.base,
                                     lockfile=args.lockfile,
-                                    build=args.build)
+                                    lockfile_out=args.lockfile_out)
 
     def _show_help(self):
         """
@@ -1900,7 +1938,7 @@ class Command(object):
                 ("Package development commands", ("source", "build", "package", "editable",
                                                   "workspace")),
                 ("Misc commands", ("profile", "remote", "user", "imports", "copy", "remove",
-                                   "alias", "download", "inspect", "help", "graph", "frogarian"))]
+                                   "alias", "download", "inspect", "help", "lock", "frogarian"))]
 
         def check_all_commands_listed():
             """Keep updated the main directory, raise if don't"""
@@ -1974,6 +2012,19 @@ class Command(object):
 
         self._out.writeln("")
 
+    @staticmethod
+    def _check_lockfile_args(args):
+        if args.lockfile and (args.profile_build or args.settings_build or args.options_build or
+                              args.env_build):
+            raise ConanException("Cannot use profile, settings, options or env 'build' when "
+                                 "using lockfile")
+        if args.lockfile and (args.profile_host or args.settings_host or args.options_host or
+                              args.env_host):
+            raise ConanException("Cannot use profile, settings, options or env 'host' when "
+                                 "using lockfile")
+        if args.lockfile_out and not args.lockfile:
+            raise ConanException("lockfile_out cannot be specified if lockfile is not defined")
+
     def _warn_python_version(self):
         import textwrap
 
@@ -2044,8 +2095,9 @@ class Command(object):
                 self._print_similar(command)
                 raise ConanException("Unknown command %s" % str(exc))
 
-            if is_config_install_scheduled(self._conan) and \
-               (command != "config" or (command == "config" and args[0] != "install")):
+            if (command != "config" or
+               (command == "config" and len(args[0]) > 1 and args[0][1] != "install")) and \
+               is_config_install_scheduled(self._conan):
                 self._conan.config_install(None, None)
 
             method(args[0][1:])
@@ -2089,18 +2141,27 @@ def _add_manifests_arguments(parser):
                         action=OnceArgument)
 
 
-def _add_common_install_arguments(parser, build_help, lockfile=True):
+def _add_common_install_arguments(parser, build_help, update_help=None, lockfile=True):
     if build_help:
         parser.add_argument("-b", "--build", action=Extender, nargs="?", help=build_help)
 
     parser.add_argument("-r", "--remote", action=OnceArgument,
                         help='Look in the specified remote server')
+
+    if not update_help:
+        update_help = ("Will check the remote and in case a newer version and/or revision of "
+                       "the dependencies exists there, it will install those in the local cache. "
+                       "When using version ranges, it will install the latest version that "
+                       "satisfies the range. Also, if using revisions, it will update to the "
+                       "latest revision for the resolved version range.")
+
     parser.add_argument("-u", "--update", action='store_true', default=False,
-                        help="Check updates exist from upstream remotes")
+                        help=update_help)
     if lockfile:
-        parser.add_argument("-l", "--lockfile", action=OnceArgument, nargs='?', const=".",
-                            help="Path to a lockfile or folder containing 'conan.lock' file. "
-                            "Lockfile can be updated if packages change")
+        parser.add_argument("-l", "--lockfile", action=OnceArgument,
+                            help="Path to a lockfile")
+        parser.add_argument("--lockfile-out", action=OnceArgument,
+                            help="Filename of the updated lockfile")
     _add_profile_arguments(parser)
 
 

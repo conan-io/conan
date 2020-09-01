@@ -82,9 +82,12 @@ class ConanRequester(object):
         if not kwargs.get("headers"):
             kwargs["headers"] = {}
 
-        user_agent = "Conan/%s (Python %s) %s" % (client_version, platform.python_version(),
-                                                  requests.utils.default_user_agent())
-        kwargs["headers"]["User-Agent"] = user_agent
+        # Only set User-Agent if none was provided
+        if not kwargs["headers"].get("User-Agent"):
+            user_agent = "Conan/%s (Python %s) %s" % (client_version, platform.python_version(),
+                                                      requests.utils.default_user_agent())
+            kwargs["headers"]["User-Agent"] = user_agent
+
         return kwargs
 
     def get(self, url, **kwargs):
