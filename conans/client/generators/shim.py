@@ -9,7 +9,6 @@ class ShimGenerator(Generator):
 
     def __init__(self, *args, **kwargs):
         super(ShimGenerator, self).__init__(*args, **kwargs)
-        self.output = print  # TODO: Do we have the output in the generators?
 
     @property
     def filename(self):
@@ -19,9 +18,9 @@ class ShimGenerator(Generator):
     def content(self):
         ret = {}
         for dep in self.conanfile.deps_cpp_info.deps:
-            self.output("Generate 'shims' for {}".format(dep))
+            print("Generate 'shims' for {}".format(dep))
             for exe in self.conanfile.deps_cpp_info[dep].exes:
-                self.output(" - {}".format(exe))
+                print(" - {}".format(exe))
                 os_build, _ = get_build_os_arch(self.conanfile)
                 files = generate_shim(exe, self.conanfile.deps_cpp_info[dep], os_build, self.output_path)
                 ret.update(files)
