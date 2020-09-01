@@ -1,17 +1,14 @@
 import os
 import shutil
-import stat
 import textwrap
 import time
 from multiprocessing.pool import ThreadPool
-import platform
 
 from conans.client import tools
 from conans.client.conanfile.build import run_build_method
 from conans.client.conanfile.package import run_package_method
 from conans.client.file_copier import report_copied_files
-from conans.client.generators import TXTGenerator, write_generators, VirtualEnvGenerator, \
-    VirtualRunEnvGenerator
+from conans.client.generators import TXTGenerator, write_generators
 from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_EDITABLE, \
     BINARY_MISSING, BINARY_SKIP, BINARY_UPDATE, BINARY_UNKNOWN, CONTEXT_HOST
 from conans.client.importer import remove_imports, run_imports
@@ -59,7 +56,7 @@ def add_env_conaninfo(conan_file, subtree_libnames):
     for package_name, env_vars in conan_file._conan_env_values.data.items():
         for name, value in env_vars.items():
             if not package_name or package_name in subtree_libnames or \
-                    package_name == conan_file.name:
+                package_name == conan_file.name:
                 conan_file.info.env_values.add(name, value, package_name)
 
 
@@ -283,6 +280,7 @@ class BinaryInstaller(object):
     """ main responsible of retrieving binary packages or building them from source
     locally in case they are not found in remotes
     """
+
     def __init__(self, app, recorder):
         self._cache = app.cache
         self._out = app.out
@@ -506,9 +504,6 @@ class BinaryInstaller(object):
             self._call_package_info(conanfile, package_folder, ref=pref.ref)
             self._recorder.package_cpp_info(pref, conanfile.cpp_info)
 
-            # Create the wrappers
-            self._create_the_wrappers(conanfile, package_folder)
-
     def _build_package(self, node, output, keep_build, remotes):
         conanfile = node.conanfile
         # It is necessary to complete the sources of python requires, which might be used
@@ -568,7 +563,8 @@ class BinaryInstaller(object):
                     env_info._values_ = n.conanfile.env_info._values_.copy()
                     # Add cpp_info.bin_paths/lib_paths to env_info (it is needed for runtime)
                     env_info.DYLD_LIBRARY_PATH.extend(n.conanfile._conan_dep_cpp_info.lib_paths)
-                    env_info.DYLD_LIBRARY_PATH.extend(n.conanfile._conan_dep_cpp_info.framework_paths)
+                    env_info.DYLD_LIBRARY_PATH.extend(
+                        n.conanfile._conan_dep_cpp_info.framework_paths)
                     env_info.LD_LIBRARY_PATH.extend(n.conanfile._conan_dep_cpp_info.lib_paths)
                     env_info.PATH.extend(n.conanfile._conan_dep_cpp_info.bin_paths)
                     conan_file.deps_env_info.update(env_info, n.ref.name)
@@ -592,7 +588,8 @@ class BinaryInstaller(object):
         # Once the node is build, execute package info, so it has access to the
         # package folder and artifacts
         conan_v2 = get_env(CONAN_V2_MODE_ENVVAR, False)
-        with pythonpath(conanfile) if not conan_v2 else no_op():  # Minimal pythonpath, not the whole context, make it 50% slower
+        with pythonpath(
+            conanfile) if not conan_v2 else no_op():  # Minimal pythonpath, not the whole context, make it 50% slower
             with tools.chdir(package_folder):
                 with conanfile_exception_formatter(str(conanfile), "package_info"):
                     conanfile.package_folder = package_folder
@@ -611,60 +608,3 @@ class BinaryInstaller(object):
                         conanfile._conan_dep_cpp_info = DepCppInfo(conanfile.cpp_info)
                     self._hook_manager.execute("post_package_info", conanfile=conanfile,
                                                reference=ref)
-
-    def _create_the_wrappers(self, conanfile, package_folder):
-        if not conanfile.cpp_info.exes:
-            return
-
-        # Create wrappers for the executables
-        wrappers_folder = os.path.join(package_folder, '.wrappers')
-        conanfile.output.highlight("Create executable wrappers at '{}'".format(wrappers_folder))
-        shutil.rmtree(wrappers_folder, ignore_errors=True)
-        os.mkdir(wrappers_folder)
-
-        # - I will need the environment
-        env = VirtualRunEnvGenerator(conanfile)
-        env.output_path = wrappers_folder
-
-        # TODO: Need to add from teh consumer point of view
-        for it in conanfile.cpp_info.lib_paths:
-            env.env["DYLD_LIBRARY_PATH"].insert(0, it)
-            # FIXME: Watch out! It is this same list object! env.env["LD_LIBRARY_PATH"].insert(0, it)
-        # TODO: Other environment variables?
-
-        for filename, content in env.content.items():
-            with open(os.path.join(wrappers_folder, filename), 'w') as f:
-                f.write(content)
-
-        activate = deactivate = None
-        if platform.system() == "Windows":
-            activate = 'call "{}"\n'.format(os.path.join(wrappers_folder, 'activate_run.bat'))
-            deactivate = 'call "{}"\n'.format(os.path.join(wrappers_folder, 'deactivate_run.bat'))
-        else:
-            activate = 'source "{}"'.format(os.path.join(wrappers_folder, 'activate_run.sh'))
-            deactivate = 'source "{}"'.format(os.path.join(wrappers_folder, 'deactivate_run.sh'))
-
-        # - and the wrappers
-        for executable in conanfile.cpp_info.exes:
-            path_to_exec = os.path.join(package_folder, 'bin', executable)
-            path_to_exec = path_to_exec + ".cmd" if platform.system() == "Windows" else path_to_exec  # TODO: Inspect the folder to get the actual path
-            exec_wrapper_ext = ".cmd" if platform.system() == "Windows" else ""
-            exec_wrapper = os.path.join(wrappers_folder, executable + exec_wrapper_ext)
-            with open(exec_wrapper, 'w') as f:
-                if platform.system() != "Windows":
-                    f.write('#!/bin/bash\n')
-                f.write('echo Calling {} wrapper\n'.format(executable))
-                f.write('{}\n'.format(activate))
-                f.write('pushd "{}"\n'.format(os.path.dirname(path_to_exec)))
-                if platform.system() == "Windows":
-                    f.write('call "{}" %*\n'.format(path_to_exec))
-                else:
-                    f.write('"{}" "$@"\n'.format(path_to_exec))
-                f.write('popd\n')
-                f.write('{}\n'.format(deactivate))
-
-            st = os.stat(exec_wrapper)
-            os.chmod(exec_wrapper, st.st_mode | stat.S_IEXEC)
-
-        # - Add this extra PATH to the environment (wrapper first!)
-        conanfile.env_info.PATH.insert(0, wrappers_folder)

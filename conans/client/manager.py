@@ -12,8 +12,8 @@ from conans.client.source import complete_recipe_sources
 from conans.client.toolchain.base import write_toolchain
 from conans.client.tools import cross_building, get_cross_building_settings
 from conans.errors import ConanException
-from conans.model.ref import ConanFileReference
 from conans.model.graph_lock import GraphLockFile
+from conans.model.ref import ConanFileReference
 from conans.paths import CONANINFO
 from conans.util.files import normalize, save
 

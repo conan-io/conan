@@ -33,6 +33,7 @@ from .visualstudio_multi import VisualStudioMultiGenerator
 from .visualstudiolegacy import VisualStudioLegacyGenerator
 from .xcode import XCodeGenerator
 from .ycm import YouCompleteMeGenerator
+from .shim import ShimGenerator
 
 
 class _GeneratorManager(object):
@@ -85,6 +86,7 @@ registered_generators.add("premake", PremakeGenerator)
 registered_generators.add("make", MakeGenerator)
 registered_generators.add("deploy", DeployGenerator)
 registered_generators.add("markdown", MarkdownGenerator)
+registered_generators.add("shim", ShimGenerator)
 
 
 def write_generators(conanfile, path, output):
