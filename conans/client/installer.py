@@ -1,5 +1,6 @@
 import os
 import shutil
+import stat
 import textwrap
 import time
 from multiprocessing.pool import ThreadPool
@@ -15,6 +16,7 @@ from conans.client.importer import remove_imports, run_imports
 from conans.client.packager import update_package_metadata
 from conans.client.recorder.action_recorder import INSTALL_ERROR_BUILDING, INSTALL_ERROR_MISSING, \
     INSTALL_ERROR_MISSING_BUILD_FOLDER
+from conans.client.shims.write_shims import generate_shim
 from conans.client.source import complete_recipe_sources, config_source
 from conans.client.toolchain.base import write_toolchain
 from conans.client.tools.env import no_op
@@ -34,7 +36,7 @@ from conans.paths import BUILD_INFO, CONANINFO, RUN_LOG_NAME
 from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
 from conans.util.env_reader import get_env
 from conans.util.files import (clean_dirty, is_dirty, make_read_only, mkdir, rmdir, save, set_dirty,
-                               set_dirty_context_manager)
+                               set_dirty_context_manager, save_files)
 from conans.util.log import logger
 from conans.util.tracer import log_package_built, log_package_got_from_local_cache
 
@@ -120,13 +122,37 @@ class _PackageBuilder(object):
             logger.debug("BUILD: Copied to %s", build_folder)
             logger.debug("BUILD: Files copied %s", ",".join(os.listdir(build_folder)))
 
-    def _build(self, conanfile, pref):
+    def _build(self, conanfile, pref, node):
         # Read generators from conanfile and generate the needed files
         logger.info("GENERATORS: Writing generators")
         write_generators(conanfile, conanfile.build_folder, self._output)
 
         logger.info("TOOLCHAIN: Writing toolchain")
         write_toolchain(conanfile, conanfile.build_folder, self._output)
+
+        # I need the shims for the executables in the build-requires (only two-profiles approach)
+        logger.info("SHIMS: Writing shims for build-requires")
+        transitive = [it for it in node.transitive_closure.values()]
+        br_host = []
+        for it in node.dependencies:
+            if it.require.build_require_context == CONTEXT_HOST:
+                br_host.extend(it.dst.transitive_closure.values())
+
+        node_order = [n for n in node.public_closure if n.binary != BINARY_SKIP]
+        for n in node_order:
+            if n not in transitive and n not in br_host:
+                # FIXME: I can't use the ShimGenerator because it expects the consumer of the conanfiles
+                self._output.info("Shims for {}".format(n.conanfile))
+                for exe in n.conanfile.cpp_info.exes:
+                    self._output.info(" - {}".format(exe))
+                    os_ = conanfile.settings_build.os
+                    files = generate_shim(exe, n.conanfile.cpp_info, os_, conanfile.build_folder)
+                    save_files(conanfile.build_folder, files)
+                    exe_filename = "{}{}".format(exe, ".cmd" if os_ == 'Windows' else '')
+                    exe_filepath = os.path.join(conanfile.build_folder, exe_filename)
+                    st = os.stat(exe_filepath)
+                    os.chmod(exe_filepath, st.st_mode | stat.S_IEXEC)
+        conanfile.env['PATH'].insert(0, conanfile.build_folder)  # TODO: Uhmmm, better place needed, for sure
 
         # Build step might need DLLs, binaries as protoc to generate source files
         # So execute imports() before build, storing the list of copied_files
@@ -213,7 +239,7 @@ class _PackageBuilder(object):
                         conanfile.package_folder = package_folder
                         # In local cache, install folder always is build_folder
                         conanfile.install_folder = build_folder
-                        self._build(conanfile, pref)
+                        self._build(conanfile, pref, node)
                         clean_dirty(build_folder)
 
                     prev = self._package(conanfile, pref, package_layout, conanfile_path,
