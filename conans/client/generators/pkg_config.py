@@ -2,9 +2,8 @@ import os
 
 from conans.client.build.compiler_flags import rpath_flags, format_frameworks, format_framework_paths
 from conans.client.tools.oss import get_build_os_arch
-from conans.errors import ConanException
 from conans.model import Generator
-from conans.model.build_info import COMPONENT_SCOPE
+from conans.model.conan_generator import GeneratorComponentsMixin
 
 """
 PC FILE EXAMPLE:
@@ -24,7 +23,7 @@ Requires.private: gthread-2.0 >= 2.40
 """
 
 
-class PkgConfigGenerator(Generator):
+class PkgConfigGenerator(GeneratorComponentsMixin, Generator):
     name = "pkg_config"
 
     @property
@@ -93,7 +92,8 @@ class PkgConfigGenerator(Generator):
         if not hasattr(self.conanfile, 'settings_build'):
             os_build = os_build or self.conanfile.settings.get_safe("os")
 
-        rpaths = rpath_flags(self.conanfile.settings, os_build, ["${%s}" % libdir for libdir in libdir_vars])
+        rpaths = rpath_flags(self.conanfile.settings, os_build,
+                             ["${%s}" % libdir for libdir in libdir_vars])
         frameworks = format_frameworks(cpp_info.frameworks, self.conanfile.settings)
         framework_paths = format_framework_paths(cpp_info.framework_paths, self.conanfile.settings)
 

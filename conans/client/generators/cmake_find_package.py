@@ -1,17 +1,17 @@
-from jinja2 import Template
 import textwrap
+
+from jinja2 import Template
 
 from conans.client.generators.cmake import DepsCppCmake
 from conans.client.generators.cmake_find_package_common import (target_template,
                                                                 CMakeFindPackageCommonMacros,
                                                                 find_transitive_dependencies)
 from conans.client.generators.cmake_multi import extend
-from conans.errors import ConanException
 from conans.model import Generator
-from conans.model.build_info import COMPONENT_SCOPE
+from conans.model.conan_generator import GeneratorComponentsMixin
 
 
-class CMakeFindPackageGenerator(Generator):
+class CMakeFindPackageGenerator(GeneratorComponentsMixin, Generator):
     name = "cmake_find_package"
 
     find_template = textwrap.dedent("""
@@ -224,11 +224,13 @@ class CMakeFindPackageGenerator(Generator):
         return ret
 
     def _get_components(self, pkg_name, cpp_info):
-        generator_components = super(CMakeFindPackageGenerator, self)._get_components(pkg_name, cpp_info)
+        generator_components = super(CMakeFindPackageGenerator, self)._get_components(pkg_name,
+                                                                                      cpp_info)
         ret = []
         for comp_genname, comp, comp_requires_gennames in generator_components:
             deps_cpp_cmake = DepsCppCmake(comp)
-            deps_cpp_cmake.public_deps = " ".join(["{}::{}".format(*it) for it in comp_requires_gennames])
+            deps_cpp_cmake.public_deps = " ".join(
+                ["{}::{}".format(*it) for it in comp_requires_gennames])
             ret.append((comp_genname, deps_cpp_cmake))
         return ret
 
@@ -266,7 +268,7 @@ class CMakeFindPackageGenerator(Generator):
                 CMakeFindPackageCommonMacros.conan_message,
                 CMakeFindPackageCommonMacros.apple_frameworks_macro,
                 CMakeFindPackageCommonMacros.conan_package_library_targets,
-                ])
+            ])
 
             # compose the cpp_info with its "debug" or "release" specific config
             dep_cpp_info = cpp_info
