@@ -46,6 +46,7 @@ class PkgConfigGenerator(GeneratorComponentsMixin, Generator):
         ret = {}
         for depname, cpp_info in self.deps_build_info.dependencies:
             pkg_genname = cpp_info.get_name(PkgConfigGenerator.name)
+            self._validate_components(cpp_info)
             if not cpp_info.components:
                 ret["%s.pc" % pkg_genname] = self.single_pc_file_contents(pkg_genname, cpp_info,
                                                                           cpp_info.public_deps)

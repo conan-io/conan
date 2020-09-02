@@ -91,8 +91,6 @@ class GeneratorComponentsMixin(object):
         return pkg_name, cmp_name
 
     def _get_components(self, pkg_name, cpp_info):
-        self._validate_components(cpp_info)  # TODO: Move it somewhere else, we need to validate root 'cpp_info.requires'
-
         ret = []
         for comp_name, comp in self.sorted_components(cpp_info).items():
             comp_genname = self._get_name(cpp_info.components[comp_name])
@@ -104,8 +102,12 @@ class GeneratorComponentsMixin(object):
         return ret
 
     def get_public_deps(self, cpp_info):
-        requires = cpp_info.requires or cpp_info.public_deps
         ret = []
-        for req in requires:
-            ret.append(self._get_require_name(req, req))
+        if cpp_info.requires:
+            for req in cpp_info.requires:
+                pkg, cmp = req.split(COMPONENT_SCOPE) if COMPONENT_SCOPE in req else (cpp_info.name, req)
+                ret.append((pkg, cmp))
+        else:
+            for req in cpp_info.public_deps:
+                ret.append((req, req))
         return ret
