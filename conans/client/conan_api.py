@@ -193,7 +193,7 @@ class ConanApp(object):
 
         # Adjust global tool variables
         set_global_instances(self.out, self.requester, self.config)
-        create_my_tools(self.out, self.requester, self.config)
+        create_my_tools(self.out, self.config, self.requester)
 
         self.runner = runner or ConanRunner(self.config.print_commands_to_output,
                                             self.config.generate_run_log_file,
