@@ -19,12 +19,20 @@ class Net(object):
 
 
 class MyCMake(object):
+    _output = None
+
     def __init__(self, conanfile):
         self._conanfile = conanfile
 
     def build(self):
         self._conanfile.output.info("SUCCESS MYCMAKE")
         self._output.info("OTHER_SUCCESS MYCMAKE")
+
+
+def cmake_factory(output):
+    my_cmake_class = MyCMake
+    my_cmake_class._output = output
+    return my_cmake_class
 
 
 def create_my_tools(output, config, requester):
@@ -35,8 +43,9 @@ def create_my_tools(output, config, requester):
     mytools.files = files
 
     build = types.ModuleType('MyBuildools', "Conan build related tools")
-    build.MyCMake = MyCMake
+    build.MyCMake = cmake_factory(output)
     mytools.build = build
 
     mytools.net = Net(output, config, requester)
-    sys.modules["conans"].mytools = mytools
+    sys.modules["conans.mytools"] = mytools
+    sys.modules["conans.mytools.build"] = build
