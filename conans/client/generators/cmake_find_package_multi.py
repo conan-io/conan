@@ -282,7 +282,7 @@ set_property(TARGET {name}::{name}
             pkg_version = cpp_info.version
 
             public_deps = self.get_public_deps(cpp_info)
-            deps_names = ';'.join(["{}::{}".format(*it) for it in public_deps])
+            deps_names = ';'.join(["{}::{}".format(*self._get_require_name(*it)) for it in public_deps if it[0] != cpp_info.name])
             pkg_public_deps_filenames = [self._get_filename(self.deps_build_info[it[0]]) for it in
                                          public_deps if it[0] != cpp_info.name]
             ret["{}ConfigVersion.cmake".format(pkg_filename)] = self.config_version_template. \

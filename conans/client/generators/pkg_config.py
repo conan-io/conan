@@ -49,19 +49,8 @@ class PkgConfigGenerator(GeneratorComponentsMixin, Generator):
             self._validate_components(cpp_info)
             if not cpp_info.components:
                 public_deps = self.get_public_deps(cpp_info)
-                requirements = []
-                for pkg, cmp in public_deps:
-                    if pkg == cpp_info.name:
-                        continue
-                    pkg_cpp_info = self.deps_build_info[pkg]
-                    if cmp in pkg_cpp_info.components:
-                        requirements.append(self._get_name(pkg_cpp_info.components[cmp]))
-                    else:
-                        assert pkg == cmp
-                        requirements.append(self._get_name(pkg_cpp_info))
-
-                ret["%s.pc" % pkg_genname] = self._single_pc_file_contents(pkg_genname, cpp_info,
-                                                                           requirements)
+                deps_names = [self._get_require_name(*it)[1] for it in public_deps if it[0] != cpp_info.name]
+                ret["%s.pc" % pkg_genname] = self._single_pc_file_contents(pkg_genname, cpp_info, deps_names)
             else:
                 components = self._get_components(depname, cpp_info)
                 for comp_genname, comp, comp_requires_gennames in components:

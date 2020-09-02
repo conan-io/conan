@@ -238,7 +238,8 @@ class CMakeFindPackageGenerator(GeneratorComponentsMixin, Generator):
         self._validate_components(cpp_info)
 
         public_deps = self.get_public_deps(cpp_info)
-        deps_names = ';'.join(["{}::{}".format(*it) for it in public_deps])
+
+        deps_names = ';'.join(["{}::{}".format(*self._get_require_name(*it)) for it in public_deps if it[0] != cpp_info.name])
         pkg_public_deps_filenames = [self._get_filename(self.deps_build_info[it[0]]) for it in public_deps]
 
         pkg_version = cpp_info.version
