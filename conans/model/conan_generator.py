@@ -70,9 +70,6 @@ class Generator(object):
             for cmp_require in comp.requires:
                 _check_component_in_requirements(cmp_require)
 
-        # for pkg_require in cpp_info.requires:
-        #     _check_component_in_requirements(pkg_require)
-
     def _get_components(self, pkg_name, cpp_info):
         self._validate_components(cpp_info)
 
