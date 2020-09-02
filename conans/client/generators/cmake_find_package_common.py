@@ -15,6 +15,8 @@ set({name}_LINKER_FLAGS{build_type_suffix}_LIST
 )
 set({name}_COMPILE_DEFINITIONS{build_type_suffix} {deps.compile_definitions})
 set({name}_COMPILE_OPTIONS{build_type_suffix}_LIST "{deps.cxxflags_list}" "{deps.cflags_list}")
+set({name}_COMPILE_OPTIONS_C{build_type_suffix} "{deps.cflags_list}")
+set({name}_COMPILE_OPTIONS_CXX{build_type_suffix} "{deps.cxxflags_list}")
 set({name}_LIBRARIES_TARGETS{build_type_suffix} "") # Will be filled later, if CMake 3
 set({name}_LIBRARIES{build_type_suffix} "") # Will be filled later
 set({name}_LIBS{build_type_suffix} "") # Same as {name}_LIBRARIES

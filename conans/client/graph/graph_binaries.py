@@ -204,8 +204,8 @@ class GraphBinariesAnalyzer(object):
                     node.binary = BINARY_BUILD
 
             if locked:
-                locked.package_id = node.package_id
-                locked.prev = node.prev
+                # package_id was not locked, this means a base lockfile that is being completed
+                locked.complete_base_node(node.package_id, node.prev)
 
     def _process_node(self, node, pref, build_mode, update, remotes):
         # Check that this same reference hasn't already been checked
@@ -355,6 +355,8 @@ class GraphBinariesAnalyzer(object):
             if node.package_id == PACKAGE_ID_UNKNOWN:
                 assert node.binary is None, "Node.binary should be None"
                 node.binary = BINARY_UNKNOWN
+                # annotate pattern, so unused patterns in --build are not displayed as errors
+                build_mode.forced(node.conanfile, node.ref)
                 continue
             self._evaluate_node(node, build_mode, update, remotes)
         deps_graph.mark_private_skippable(nodes_subset=nodes_subset, root=root)
