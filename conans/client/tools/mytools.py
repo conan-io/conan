@@ -47,5 +47,6 @@ def create_my_tools(output, config, requester):
     mytools.build = build
 
     mytools.net = Net(output, config, requester)
+    sys.modules["conans"].mytools = mytools  # This is not necessary in Py3
     sys.modules["conans.mytools"] = mytools
     sys.modules["conans.mytools.build"] = build
