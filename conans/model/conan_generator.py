@@ -74,29 +74,25 @@ class GeneratorComponentsMixin(object):
             for cmp_require in comp.requires:
                 _check_component_in_requirements(cmp_require)
 
+    def _get_require_name(self, pkg_name, req):
+        pkg, cmp = req.split(COMPONENT_SCOPE) if COMPONENT_SCOPE in req else (pkg_name, req)
+        pkg_build_info = self.deps_build_info[pkg]
+        pkg_name = self._get_name(pkg_build_info)
+        if cmp in pkg_build_info.components:
+            cmp_name = self._get_name(pkg_build_info.components[cmp])
+        else:
+            cmp_name = pkg_name
+        return pkg_name, cmp_name
+
     def _get_components(self, pkg_name, cpp_info):
         self._validate_components(cpp_info)
 
         ret = []
         for comp_name, comp in self.sorted_components(cpp_info).items():
             comp_genname = self._get_name(cpp_info.components[comp_name])
-            comp_requires_gennames = self._get_component_requires(pkg_name, comp)
+            comp_requires_gennames = []
+            for require in comp.requires:
+                comp_requires_gennames.append(self._get_require_name(pkg_name, require))
             ret.append((comp_genname, comp, comp_requires_gennames))
         ret.reverse()
         return ret
-
-    def _get_component_requires(self, pkg_name, comp):
-        comp_requires = []
-        for require in comp.requires:
-            comp_require_pkg_name, comp_require_comp_name = pkg_name, require
-            if COMPONENT_SCOPE in require:
-                comp_require_pkg_name, comp_require_comp_name = require.split(COMPONENT_SCOPE)
-
-            comp_require_pkg = self.deps_build_info[comp_require_pkg_name]
-            comp_require_pkg_findname = self._get_name(comp_require_pkg)
-            if comp_require_comp_name in comp_require_pkg.components:
-                comp_require_comp_findname = self._get_name(comp_require_pkg.components[comp_require_comp_name])
-            else:
-                comp_require_comp_findname = comp_require_pkg_findname
-            comp_requires.append((comp_require_pkg_findname, comp_require_comp_findname))
-        return comp_requires
