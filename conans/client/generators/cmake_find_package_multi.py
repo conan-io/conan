@@ -1,5 +1,6 @@
-from jinja2 import Template
 import textwrap
+
+from jinja2 import Template
 
 from conans.client.generators import CMakeFindPackageGenerator
 from conans.client.generators.cmake import DepsCppCmake
@@ -7,9 +8,6 @@ from conans.client.generators.cmake_find_package_common import (find_transitive_
                                                                 target_template,
                                                                 CMakeFindPackageCommonMacros)
 from conans.client.generators.cmake_multi import extend
-from conans.errors import ConanException
-from conans.model import Generator
-from conans.model.build_info import COMPONENT_SCOPE
 
 
 class CMakeFindPackageMultiGenerator(CMakeFindPackageGenerator):
@@ -314,7 +312,7 @@ set_property(TARGET {name}::{name}
                 cpp_info = extend(cpp_info, build_type.lower())
                 pkg_info = DepsCppCmake(cpp_info)
                 deps_names = ";".join(["{n}::{n}".format(n=n) for n in pkg_public_deps_names])
-                components = self._get_components(pkg_name, pkg_findname, cpp_info)
+                components = self._get_components(pkg_name, cpp_info)
                 # Note these are in reversed order, from more dependent to less dependent
                 pkg_components = " ".join(["{p}::{c}".format(p=pkg_findname, c=comp_findname) for
                                            comp_findname, _ in reversed(components)])

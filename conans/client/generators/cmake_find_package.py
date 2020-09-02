@@ -67,7 +67,7 @@ class CMakeFindPackageGenerator(Generator):
         find_package_handle_standard_args({{ pkg_filename }} REQUIRED_VARS
                                           {{ pkg_filename }}_VERSION VERSION_VAR {{ pkg_filename }}_VERSION)
         mark_as_advanced({{ pkg_filename }}_FOUND {{ pkg_filename }}_VERSION)
-        
+
         set({{ pkg_name }}_COMPONENTS {{ pkg_components }})
 
         if({{ pkg_name }}_FIND_COMPONENTS)
@@ -206,14 +206,8 @@ class CMakeFindPackageGenerator(Generator):
         return None
 
     @classmethod
-    def _get_name(cls, obj):
-        get_name = getattr(obj, "get_name")
-        return get_name(cls.name)
-
-    @classmethod
     def _get_filename(cls, obj):
-        get_filename = getattr(obj, "get_filename")
-        return get_filename(cls.name)
+        return obj.get_filename(cls.name)
 
     @property
     def content(self):
@@ -229,38 +223,14 @@ class CMakeFindPackageGenerator(Generator):
             )
         return ret
 
-    def _get_components(self, pkg_name, pkg_findname, cpp_info):
-        find_package_components = []
-        for comp_name, comp in self.sorted_components(cpp_info).items():
-            comp_findname = self._get_name(cpp_info.components[comp_name])
+    def _get_components(self, pkg_name, cpp_info):
+        generator_components = super(CMakeFindPackageGenerator, self)._get_components(pkg_name, cpp_info)
+        ret = []
+        for comp_genname, comp, comp_requires_gennames in generator_components:
             deps_cpp_cmake = DepsCppCmake(comp)
-            deps_cpp_cmake.public_deps = self._get_component_requires(pkg_name, pkg_findname, comp)
-            find_package_components.append((comp_findname, deps_cpp_cmake))
-        find_package_components.reverse()  # From the less dependent to most one
-        return find_package_components
-
-    def _get_component_requires(self, pkg_name, pkg_findname, comp):
-        comp_requires_findnames = []
-        for require in comp.requires:
-            if COMPONENT_SCOPE in require:
-                comp_require_pkg_name, comp_require_comp_name = require.split(COMPONENT_SCOPE)
-                comp_require_pkg = self.deps_build_info[comp_require_pkg_name]
-                comp_require_pkg_findname = self._get_name(comp_require_pkg)
-                if comp_require_comp_name == comp_require_pkg_name:
-                    comp_require_comp_findname = comp_require_pkg_findname
-                elif comp_require_comp_name in self.deps_build_info[comp_require_pkg_name].components:
-                    comp_require_comp = comp_require_pkg.components[comp_require_comp_name]
-                    comp_require_comp_findname = self._get_name(comp_require_comp)
-                else:
-                    raise ConanException("Component '%s' not found in '%s' package requirement"
-                                         % (require, comp_require_pkg_name))
-            else:
-                comp_require_pkg_findname = pkg_findname
-                comp_require_comp = self.deps_build_info[pkg_name].components[require]
-                comp_require_comp_findname = self._get_name(comp_require_comp)
-            f = "{}::{}".format(comp_require_pkg_findname, comp_require_comp_findname)
-            comp_requires_findnames.append(f)
-        return " ".join(comp_requires_findnames)
+            deps_cpp_cmake.public_deps = " ".join(["{}::{}".format(*it) for it in comp_requires_gennames])
+            ret.append((comp_genname, deps_cpp_cmake))
+        return ret
 
     def _find_for_dep(self, pkg_name, pkg_findname, pkg_filename, cpp_info):
         # return the content of the FindXXX.cmake file for the package "pkg_name"
@@ -271,7 +241,7 @@ class CMakeFindPackageGenerator(Generator):
                                  for public_dep in cpp_info.public_deps]
         deps_names = ";".join(["{n}::{n}".format(n=n) for n in pkg_public_deps_names])
         if cpp_info.components:
-            components = self._get_components(pkg_name, pkg_findname, cpp_info)
+            components = self._get_components(pkg_name, cpp_info)
             # Note these are in reversed order, from more dependent to less dependent
             pkg_components = " ".join(["{p}::{c}".format(p=pkg_findname, c=comp_findname) for
                                        comp_findname, _ in reversed(components)])
