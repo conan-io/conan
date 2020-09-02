@@ -48,23 +48,25 @@ class PkgConfigGenerator(GeneratorComponentsMixin, Generator):
             pkg_genname = cpp_info.get_name(PkgConfigGenerator.name)
             self._validate_components(cpp_info)
             if not cpp_info.components:
-                ret["%s.pc" % pkg_genname] = self.single_pc_file_contents(pkg_genname, cpp_info,
-                                                                          cpp_info.public_deps)
+                public_deps = self.get_public_deps(cpp_info)
+                requirements = [self._get_name(self.deps_build_info[it[0]].components[it[1]]) for it
+                                in public_deps if it[0] != cpp_info.name]
+                ret["%s.pc" % pkg_genname] = self._single_pc_file_contents(pkg_genname, cpp_info,
+                                                                           requirements)
             else:
                 components = self._get_components(depname, cpp_info)
                 for comp_genname, comp, comp_requires_gennames in components:
-                    ret["%s.pc" % comp_genname] = self.single_pc_file_contents(
+                    ret["%s.pc" % comp_genname] = self._single_pc_file_contents(
                         "%s-%s" % (pkg_genname, comp_genname),
                         comp,
-                        comp_requires_gennames,
-                        is_component=True)
+                        comp_requires_gennames)
                 comp_gennames = [comp_genname for comp_genname, _, _ in components]
                 if pkg_genname not in comp_gennames:
                     ret["%s.pc" % pkg_genname] = self.global_pc_file_contents(pkg_genname, cpp_info,
                                                                               comp_gennames)
         return ret
 
-    def single_pc_file_contents(self, name, cpp_info, comp_requires_gennames, is_component=False):
+    def _single_pc_file_contents(self, name, cpp_info, requires_gennames):
         prefix_path = cpp_info.rootpath.replace("\\", "/")
         lines = ['prefix=%s' % prefix_path]
 
@@ -112,15 +114,8 @@ class PkgConfigGenerator(GeneratorComponentsMixin, Generator):
              cpp_info.cflags,
              ["-D%s" % d for d in cpp_info.defines]]))
 
-        if comp_requires_gennames:
-            if is_component:
-                pkg_config_names = comp_requires_gennames
-            else:
-                pkg_config_names = []
-                for public_dep in cpp_info.public_deps:
-                    name = self.deps_build_info[public_dep].get_name(PkgConfigGenerator.name)
-                    pkg_config_names.append(name)
-            public_deps = " ".join(pkg_config_names)
+        if requires_gennames:
+            public_deps = " ".join(requires_gennames)
             lines.append("Requires: %s" % public_deps)
         return "\n".join(lines) + "\n"
 

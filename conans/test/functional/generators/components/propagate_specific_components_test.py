@@ -87,3 +87,4 @@ class PropagateSpecificComponents(unittest.TestCase):
         t = TestClient(cache_folder=self.cache_folder)
         t.run('install middle/version@ -g pkg_config')
         content = t.load('middle.pc')
+        self.assertIn('Requires: cmp1', content)
