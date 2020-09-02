@@ -138,6 +138,7 @@ class _PackageBuilder(object):
             if it.require.build_require_context == CONTEXT_HOST:
                 br_host.extend(it.dst.transitive_closure.values())
 
+        add_path = False
         node_order = [n for n in node.public_closure if n.binary != BINARY_SKIP]
         for n in node_order:
             if n not in transitive and n not in br_host:
@@ -152,7 +153,9 @@ class _PackageBuilder(object):
                     exe_filepath = os.path.join(conanfile.build_folder, exe_filename)
                     st = os.stat(exe_filepath)
                     os.chmod(exe_filepath, st.st_mode | stat.S_IEXEC)
-        conanfile.env.setdefault('PATH', []).insert(0, conanfile.build_folder)  # TODO: meh
+                    add_path = True
+        if add_path:
+            conanfile.env.setdefault('PATH', []).insert(0, conanfile.build_folder)  # TODO: meh
 
         # Build step might need DLLs, binaries as protoc to generate source files
         # So execute imports() before build, storing the list of copied_files
