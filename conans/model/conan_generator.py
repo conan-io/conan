@@ -51,6 +51,9 @@ class Generator(object):
     def filename(self):
         raise NotImplementedError()
 
+    def get_public_deps(self, cpp_info):
+        return cpp_info.public_deps
+
 
 class GeneratorComponentsMixin(object):
 
@@ -74,8 +77,8 @@ class GeneratorComponentsMixin(object):
             for cmp_require in comp.requires:
                 _check_component_in_requirements(cmp_require)
 
-        # for pkg_require in cpp_info.requires:
-        #     _check_component_in_requirements(pkg_require)
+        for pkg_require in cpp_info.requires:
+            _check_component_in_requirements(pkg_require)
 
     def _get_require_name(self, pkg_name, req):
         pkg, cmp = req.split(COMPONENT_SCOPE) if COMPONENT_SCOPE in req else (pkg_name, req)
@@ -88,7 +91,7 @@ class GeneratorComponentsMixin(object):
         return pkg_name, cmp_name
 
     def _get_components(self, pkg_name, cpp_info):
-        self._validate_components(cpp_info)
+        self._validate_components(cpp_info)  # TODO: Move it somewhere else, we need to validate root 'cpp_info.requires'
 
         ret = []
         for comp_name, comp in self.sorted_components(cpp_info).items():
@@ -98,4 +101,11 @@ class GeneratorComponentsMixin(object):
                 comp_requires_gennames.append(self._get_require_name(pkg_name, require))
             ret.append((comp_genname, comp, comp_requires_gennames))
         ret.reverse()
+        return ret
+
+    def get_public_deps(self, cpp_info):
+        requires = cpp_info.requires or cpp_info.public_deps
+        ret = []
+        for req in requires:
+            ret.append(self._get_require_name(req, req))
         return ret

@@ -236,6 +236,9 @@ class CMakeFindPackageGenerator(GeneratorComponentsMixin, Generator):
 
     def _find_for_dep(self, pkg_name, pkg_findname, pkg_filename, cpp_info):
         # return the content of the FindXXX.cmake file for the package "pkg_name"
+        # deps_names = ';'.join(["{}::{}".format(*it) for it in self.get_public_deps(cpp_info)])
+        # print(deps_names)
+
         pkg_version = cpp_info.version
         pkg_public_deps_filenames = [self._get_filename(self.deps_build_info[public_dep])
                                      for public_dep in cpp_info.public_deps]

@@ -64,6 +64,7 @@ class _CppInfo(object):
         self.filenames = {}  # name of filename to create for various generators
         self.rootpath = ""
         self.sysroot = ""
+        self.requires = []
         self._build_modules_paths = None
         self._include_paths = None
         self._lib_paths = None
@@ -258,7 +259,8 @@ class CppInfo(_CppInfo):
             self.cxxflags or
             self.sharedlinkflags or
             self.exelinkflags or
-            self.build_modules):
+            self.build_modules or
+            self.requires):
             raise ConanException("self.cpp_info.components cannot be used with self.cpp_info "
                                  "global values at the same time")
         if self._configs:
@@ -310,6 +312,7 @@ class _BaseDepsCppInfo(_CppInfo):
         self.libs = merge_lists(self.libs, dep_cpp_info.libs)
         self.frameworks = merge_lists(self.frameworks, dep_cpp_info.frameworks)
         self.build_modules = merge_lists(self.build_modules, dep_cpp_info.build_modules_paths)
+        self.requires = merge_lists(self.requires, dep_cpp_info.requires)
         self.rootpaths.append(dep_cpp_info.rootpath)
 
         # Note these are in reverse order
@@ -367,6 +370,7 @@ class DepCppInfo(object):
         self._cflags = None
         self._sharedlinkflags = None
         self._exelinkflags = None
+        self._requires = None
 
         self._include_paths = None
         self._lib_paths = None
@@ -523,6 +527,10 @@ class DepCppInfo(object):
     @property
     def exelinkflags(self):
         return self._aggregated_values("exelinkflags")
+
+    @property
+    def requires(self):
+        return self._aggregated_values("requires")
 
 
 class DepsCppInfo(_BaseDepsCppInfo):

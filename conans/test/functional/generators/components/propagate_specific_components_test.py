@@ -2,7 +2,7 @@ import unittest
 import textwrap
 from conans.test.utils.tools import TestClient
 
-@unittest.skip
+
 class PropagateSpecificComponents(unittest.TestCase):
     """
         Feature: recipes can declare the components they are consuming from their requirements,
@@ -46,7 +46,8 @@ class PropagateSpecificComponents(unittest.TestCase):
 
     def test_wrong_component(self):
         """ If the requirement doesn't provide the component, it fails """
-        t = TestClient(cache_folder=self.cache_folder)
+        cf = '/private/var/folders/fc/6mvcrc952dqcjfhl4c7c11ph0000gn/T/tmpa6tmtp3nconans/path with spaces'
+        t = TestClient(cache_folder=self.cache_folder, current_folder=cf)
         t.save({'conanfile.py': textwrap.dedent("""
             from conans import ConanFile
 
@@ -55,7 +56,8 @@ class PropagateSpecificComponents(unittest.TestCase):
                 def package_info(self):
                     self.cpp_info.requires = ["top::wrong"]
         """)})
-        t.run('', assert_error=True) # TODO: Anything that triggers component validation
+        t.run('create conanfile.py wrong/version@')
+        t.run('install wrong/version@ -g cmake_find_package')
         self.assertIn('TODO: Define message here', t.out)
 
     def test_cmake_find_package(self):
