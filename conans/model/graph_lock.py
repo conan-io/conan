@@ -196,9 +196,15 @@ class GraphLockNode(object):
             value = DEFAULT_REVISION_V1
         if self._prev is not None:
             raise ConanException("Trying to modify locked package {}".format(repr(self._ref)))
-        if self._prev != value:
+        if value is not None:
             self._modified = True  # Only for conan_build_info
         self._prev = value
+
+    def complete_base_node(self, package_id, prev):
+        # completing a node from a base lockfile shouldn't mark the node as modified
+        self.package_id = package_id
+        self.prev = prev
+        self._modified = None
 
     @property
     def options(self):
@@ -463,7 +469,7 @@ class GraphLock(object):
             if current.ref:
                 if node.ref.copy_clear_rev() != current.ref.copy_clear_rev():
                     raise ConanException("Incompatible reference")
-            if current.package_id is None:
+            if current.package_id is None or current.package_id == PACKAGE_ID_UNKNOWN:
                 current.package_id = node.package_id
             if current.prev is None:
                 current.prev = node.prev

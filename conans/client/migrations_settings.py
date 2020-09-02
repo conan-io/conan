@@ -1405,6 +1405,7 @@ cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]  # Depreca
 """
 
 settings_1_28_1 = settings_1_28_0
+settings_1_28_2 = settings_1_28_1
 
 settings_1_29_0 = """
 # Only for cross building, 'os_build/arch_build' is the system that runs Conan
@@ -1445,7 +1446,7 @@ os:
         board: ANY
     Emscripten:
     Neutrino:
-        version: ["6.4", "6.5", "6.6", "7.0"]
+        version: ["6.4", "6.5", "6.6", "7.0", "7.1"]
 arch: [x86, x86_64, ppc32be, ppc32, ppc64le, ppc64, armv4, armv4i, armv5el, armv5hf, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr, s390, s390x, asm.js, wasm, sh4le]
 compiler:
     sun-cc:
@@ -1505,3 +1506,5 @@ build_type: [None, Debug, Release, RelWithDebInfo, MinSizeRel]
 
 cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]  # Deprecated, use compiler.cppstd
 """
+
+settings_1_30_0 = settings_1_29_0

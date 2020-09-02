@@ -380,3 +380,125 @@ class CMakeGeneratorTest(unittest.TestCase):
 
         client.run('create .')
         self.assertIn("POLICY CMP0054 IS OLD", client.out)
+
+    def do_not_mix_cflags_cxxflags_test(self):
+        client = TestClient()
+
+        def run_test(consumer_generator, consumer_cmakelists, with_components=True):
+
+            def generate_files(upstream_cpp_info, consumer_generator, consumer_cmakelists):
+                upstream_conanfile = GenConanfile().with_name("upstream").with_version("1.0")\
+                    .with_package_info(cpp_info=upstream_cpp_info, env_info={})
+                client.save({"conanfile.py": upstream_conanfile}, clean_first=True)
+                client.run("create .")
+                consumer_conanfile = textwrap.dedent("""
+                    from conans import ConanFile, CMake
+        
+                    class Consumer(ConanFile):
+                        name = "consumer"
+                        version = "1.0"
+                        settings = "os", "compiler", "arch", "build_type"
+                        exports_sources = "CMakeLists.txt"
+                        requires = "upstream/1.0"
+                        generators = "{}"
+                        
+                        def build(self):
+                            cmake = CMake(self)
+                            cmake.configure()
+                    """)
+                client.save({"conanfile.py": consumer_conanfile.format(consumer_generator),
+                             "CMakeLists.txt": consumer_cmakelists})
+                client.run("create .")
+
+            if consumer_generator in ["cmake_find_package", "cmake_find_package_multi"]:
+                if with_components:
+                    cpp_info = {"components": {"comp": {"cflags": ["one", "two"],
+                                                        "cxxflags": ["three", "four"]}}}
+                else:
+                    cpp_info = {"cflags": ["one", "two"], "cxxflags": ["three", "four"]}
+                generate_files(cpp_info, consumer_generator, consumer_cmakelists)
+                self.assertIn("compile options: three;four;one;two", client.out)
+                self.assertIn("cflags: one;two", client.out)
+                self.assertIn("cxxflags: three;four", client.out)
+                if with_components:
+                    self.assertIn("comp cflags: one;two", client.out)
+                    self.assertIn("comp cxxflags: three;four", client.out)
+                    if consumer_generator == "cmake_find_package":
+                        self.assertIn("comp compile options: one;two;three;four", client.out)
+                    else:
+                        self.assertIn("$<$<CONFIG:Release>:;one;two;three;four>;"
+                                      "$<$<CONFIG:RelWithDebInfo>:;>;"
+                                      "$<$<CONFIG:MinSizeRel>:;>;"
+                                      "$<$<CONFIG:Debug>:;>", client.out)
+            else:
+                generate_files({"cflags": ["one", "two"], "cxxflags": ["three", "four"]},
+                               consumer_generator, consumer_cmakelists)
+                self.assertIn("global cflags: one two", client.out)
+                self.assertIn("global cxxflags: three four", client.out)
+                self.assertIn("upstream cflags: one two", client.out)
+                self.assertIn("upstream cxxflags: three four", client.out)
+
+        # Test cmake generator
+        cmakelists = textwrap.dedent("""
+            cmake_minimum_required(VERSION 2.8)
+            set(CMAKE_CXX_COMPILER_WORKS 1)
+            project(consumer)
+            include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+            message("global cflags: ${CONAN_C_FLAGS}")
+            message("global cxxflags: ${CONAN_CXX_FLAGS}")
+            message("upstream cflags: ${CONAN_C_FLAGS_UPSTREAM}")
+            message("upstream cxxflags: ${CONAN_CXX_FLAGS_UPSTREAM}")
+            """)
+        run_test("cmake", cmakelists)
+
+        # Test cmake_multi generator
+        cmakelists = textwrap.dedent("""
+            cmake_minimum_required(VERSION 2.8)
+            set(CMAKE_CXX_COMPILER_WORKS 1)
+            project(consumer)
+            include(${CMAKE_BINARY_DIR}/conanbuildinfo_multi.cmake)
+            message("global cflags: ${CONAN_C_FLAGS_RELEASE}")
+            message("global cxxflags: ${CONAN_CXX_FLAGS_RELEASE}")
+            message("upstream cflags: ${CONAN_C_FLAGS_UPSTREAM_RELEASE}")
+            message("upstream cxxflags: ${CONAN_CXX_FLAGS_UPSTREAM_RELEASE}")
+            """)
+        run_test("cmake_multi", cmakelists)
+
+        # Test cmake_find_package generator
+        cmakelists = textwrap.dedent("""
+            cmake_minimum_required(VERSION 2.8)
+            set(CMAKE_CXX_COMPILER_WORKS 1)
+            project(consumer)
+            find_package(upstream)
+            message("compile options: ${upstream_COMPILE_OPTIONS_LIST}")
+            message("cflags: ${upstream_COMPILE_OPTIONS_C}")
+            message("cxxflags: ${upstream_COMPILE_OPTIONS_CXX}")
+            message("comp cflags: ${upstream_comp_COMPILE_OPTIONS_C}")
+            message("comp cxxflags: ${upstream_comp_COMPILE_OPTIONS_CXX}")
+            get_target_property(tmp upstream::comp INTERFACE_COMPILE_OPTIONS)
+            message("comp compile options: ${tmp}")
+            """)
+        run_test("cmake_find_package", cmakelists)
+        print(client.out)
+
+        # Test cmake_find_package generator without components
+        run_test("cmake_find_package", cmakelists, with_components=False)
+
+        # Test cmake_find_package_multi generator
+        cmakelists = textwrap.dedent("""
+            cmake_minimum_required(VERSION 2.8)
+            set(CMAKE_CXX_COMPILER_WORKS 1)
+            project(consumer)
+            find_package(upstream)
+            message("compile options: ${upstream_COMPILE_OPTIONS_RELEASE_LIST}")
+            message("cflags: ${upstream_COMPILE_OPTIONS_C_RELEASE}")
+            message("cxxflags: ${upstream_COMPILE_OPTIONS_CXX_RELEASE}")
+            message("comp cflags: ${upstream_comp_COMPILE_OPTIONS_C_RELEASE}")
+            message("comp cxxflags: ${upstream_comp_COMPILE_OPTIONS_CXX_RELEASE}")
+            get_target_property(tmp upstream::comp INTERFACE_COMPILE_OPTIONS)
+            message("comp compile options: ${tmp}")
+            """)
+        run_test("cmake_find_package_multi", cmakelists)
+
+        # Test cmake_find_package_multi generator without components
+        run_test("cmake_find_package_multi", cmakelists, with_components=False)

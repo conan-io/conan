@@ -682,7 +682,7 @@ class Command(object):
 
         if args.build_order:
             self._out.warn("Usage of `--build-order` argument is deprecated and can return"
-                           " wrong results. Use `conan graph build-order ...` instead.")
+                           " wrong results. Use `conan lock build-order ...` instead.")
 
         if args.install_folder and (args.profile_host or args.settings_host
                                     or args.options_host or args.env_host):
