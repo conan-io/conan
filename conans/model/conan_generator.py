@@ -51,6 +51,10 @@ class Generator(object):
     def filename(self):
         raise NotImplementedError()
 
+
+class GeneratorComponentsMixin(object):
+
+    @classmethod
     def sorted_components(self, cpp_info):
         return cpp_info._get_sorted_components()
 
