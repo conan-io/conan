@@ -50,6 +50,7 @@ class RestV2Methods(RestCommonMethods):
     def _get_snapshot(self, url):
         try:
             data = self._get_file_list_json(url)
+            print("GET_SNAPSHOT data[files]", data)
             files_list = [os.path.normpath(filename) for filename in data["files"]]
         except NotFoundException:
             files_list = []
