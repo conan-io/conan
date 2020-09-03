@@ -414,7 +414,7 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
         self.assertIn("Hello World debug!", client.out)
         self.assertIn("Bye World debug!", client.out)
 
-    def test_find_package_components_test(self):
+    def find_package_components_test(self):
         client = TestClient()
         self._create_greetings(client)
         conanfile2 = textwrap.dedent("""
