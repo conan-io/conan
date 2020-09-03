@@ -45,23 +45,6 @@ class PropagateSpecificComponents(unittest.TestCase):
         client.run('create middle.py middle/version@')
         cls.cache_folder = client.cache_folder
 
-    def test_wrong_component(self):
-        """ If the requirement doesn't provide the component, it fails """
-        t = TestClient(cache_folder=self.cache_folder)
-        t.save({'conanfile.py': textwrap.dedent("""
-            from conans import ConanFile
-
-            class Recipe(ConanFile):
-                requires = "top/version"
-                def package_info(self):
-                    self.cpp_info.requires = ["top::not-existing"]
-        """)})
-        t.run('create conanfile.py wrong/version@')
-        for generator in ['pkg_config', 'cmake_find_package', 'cmake_find_package_multi']:
-            t.run('install wrong/version@ -g {}'.format(generator), assert_error=True)
-            self.assertIn("ERROR: Component 'top::not-existing' not found in 'top'"
-                          " package requirement", t.out)
-
     def test_cmake_find_package(self):
         t = TestClient(cache_folder=self.cache_folder)
         t.run('install middle/version@ -g cmake_find_package')
@@ -88,3 +71,80 @@ class PropagateSpecificComponents(unittest.TestCase):
         t.run('install middle/version@ -g pkg_config')
         content = t.load('middle.pc')
         self.assertIn('Requires: cmp1', content)
+
+
+class WrongComponentsTestCase(unittest.TestCase):
+    generators_using_components = ['pkg_config', 'cmake_find_package', 'cmake_find_package_multi']
+
+    top = textwrap.dedent("""
+        from conans import ConanFile
+
+        class Recipe(ConanFile):
+            name = "top"
+
+            def package_info(self):
+                self.cpp_info.components["cmp1"].libs = ["top_cmp1"]
+                self.cpp_info.components["cmp2"].libs = ["top_cmp2"]
+    """)
+
+    def test_wrong_component(self):
+        """ If the requirement doesn't provide the component, it fails.
+            We can only raise this error after the graph is fully resolved, it is when we
+            know the actual components that the requirement is going to provide.
+        """
+
+        consumer = textwrap.dedent("""
+            from conans import ConanFile
+
+            class Recipe(ConanFile):
+                requires = "top/version"
+                def package_info(self):
+                    self.cpp_info.requires = ["top::not-existing"]
+        """)
+        t = TestClient()
+        t.save({'top.py': self.top, 'consumer.py': consumer})
+        t.run('create top.py top/version@')
+        t.run('create consumer.py wrong/version@')
+
+        for generator in self.generators_using_components:
+            t.run('install wrong/version@ -g {}'.format(generator), assert_error=True)
+            self.assertIn("ERROR: Component 'top::not-existing' not found in 'top'"
+                          " package requirement", t.out)
+
+    def test_unused_requirement(self):
+        """ Requires should include all listed requirements
+            This error is known when creating the package if the requirement is consumed.
+        """
+        consumer = textwrap.dedent("""
+            from conans import ConanFile
+
+            class Recipe(ConanFile):
+                requires = "top/version"
+                def package_info(self):
+                    self.cpp_info.requires = ["other::other"]
+        """)
+        t = TestClient()
+        t.save({'top.py': self.top, 'consumer.py': consumer})
+        t.run('create top.py top/version@')
+        t.run('create consumer.py wrong/version@', assert_error=True)
+        self.assertIn("wrong/version package_info(): Package require 'top' not used"
+                      " in components requires", t.out)
+
+    def test_wrong_requirement(self):
+        """ If we require a wrong requirement, we get a meaninful error.
+            This error is known when creating the package if the requirement is not there.
+        """
+        consumer = textwrap.dedent("""
+            from conans import ConanFile
+
+            class Recipe(ConanFile):
+                requires = "top/version"
+                def package_info(self):
+                    self.cpp_info.requires = ["top::cmp1", "other::other"]
+        """)
+        t = TestClient()
+        t.save({'top.py': self.top, 'consumer.py': consumer})
+        t.run('create top.py top/version@')
+        t.run('create consumer.py wrong/version@', assert_error=True)
+        self.assertIn("wrong/version package_info(): Package require 'other' declared in"
+                      " components requires but not defined as a recipe requirement", t.out)
