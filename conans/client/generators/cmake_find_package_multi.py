@@ -282,7 +282,8 @@ set_property(TARGET {name}::{name}
             pkg_version = cpp_info.version
 
             public_deps = self.get_public_deps(cpp_info)
-            deps_names = ';'.join(["{}::{}".format(*self._get_require_name(*it)) for it in public_deps])
+            deps_names = ';'.join(
+                ["{}::{}".format(*self._get_require_name(*it)) for it in public_deps])
             pkg_public_deps_filenames = [self._get_filename(self.deps_build_info[it[0]]) for it in
                                          public_deps]
             ret["{}ConfigVersion.cmake".format(pkg_filename)] = self.config_version_template. \
@@ -294,7 +295,8 @@ set_property(TARGET {name}::{name}
                     version=cpp_info.version,
                     public_deps_names=pkg_public_deps_filenames
                 )
-                ret["{}Targets.cmake".format(pkg_filename)] = self.targets_template.format(filename=pkg_filename, name=pkg_findname)
+                ret["{}Targets.cmake".format(pkg_filename)] = self.targets_template.format(
+                    filename=pkg_filename, name=pkg_findname)
 
                 # If any config matches the build_type one, add it to the cpp_info
                 dep_cpp_info = extend(cpp_info, build_type.lower())
