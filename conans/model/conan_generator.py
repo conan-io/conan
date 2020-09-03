@@ -101,13 +101,10 @@ class GeneratorComponentsMixin(object):
         ret.reverse()
         return ret
 
-    def get_public_deps(self, cpp_info):
-        ret = []
+    @classmethod
+    def get_public_deps(cls, cpp_info):
         if cpp_info.requires:
-            for req in cpp_info.requires:
-                pkg, cmp = req.split(COMPONENT_SCOPE) if COMPONENT_SCOPE in req else (cpp_info.name, req)
-                ret.append((pkg, cmp))
+            deps = [it for it in cpp_info.requires if COMPONENT_SCOPE in it]
+            return [it.split(COMPONENT_SCOPE) for it in deps]
         else:
-            for req in cpp_info.public_deps:
-                ret.append((req, req))
-        return ret
+            return [(it, it) for it in cpp_info.public_deps]

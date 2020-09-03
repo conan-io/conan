@@ -49,12 +49,12 @@ class PkgConfigGenerator(GeneratorComponentsMixin, Generator):
             self._validate_components(cpp_info)
             if not cpp_info.components:
                 public_deps = self.get_public_deps(cpp_info)
-                deps_names = [self._get_require_name(*it)[1] for it in public_deps if it[0] != cpp_info.name]
-                ret["%s.pc" % pkg_genname] = self._single_pc_file_contents(pkg_genname, cpp_info, deps_names)
+                deps_names = [self._get_require_name(*it)[1] for it in public_deps]
+                ret["%s.pc" % pkg_genname] = self._pc_file_content(pkg_genname, cpp_info, deps_names)
             else:
                 components = self._get_components(depname, cpp_info)
                 for comp_genname, comp, comp_requires_gennames in components:
-                    ret["%s.pc" % comp_genname] = self._single_pc_file_contents(
+                    ret["%s.pc" % comp_genname] = self._pc_file_content(
                         "%s-%s" % (pkg_genname, comp_genname),
                         comp,
                         comp_requires_gennames)
@@ -64,7 +64,7 @@ class PkgConfigGenerator(GeneratorComponentsMixin, Generator):
                                                                               comp_gennames)
         return ret
 
-    def _single_pc_file_contents(self, name, cpp_info, requires_gennames):
+    def _pc_file_content(self, name, cpp_info, requires_gennames):
         prefix_path = cpp_info.rootpath.replace("\\", "/")
         lines = ['prefix=%s' % prefix_path]
 
