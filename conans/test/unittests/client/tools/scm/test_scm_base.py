@@ -25,6 +25,15 @@ class RemoveCredentialsTest(unittest.TestCase):
 
     def test_ssh(self):
         # Here, for ssh, we don't want to remove the user ('git' in this example)
+        # URL-like syntax
+        self.assertEqual('ssh://git@github.com:2222/conan-io/conan.git',
+                         SCMBase._remove_credentials_url(
+                             'ssh://git@github.com:2222/conan-io/conan.git'))
+        # URL-like syntax with a password
+        self.assertEqual('ssh://git@github.com:2222/conan-io/conan.git',
+                         SCMBase._remove_credentials_url(
+                             'ssh://git:password@github.com:2222/conan-io/conan.git'))
+        # scp-like syntax
         self.assertEqual('git@github.com:conan-io/conan.git',
                          SCMBase._remove_credentials_url(
                              'git@github.com:conan-io/conan.git'))

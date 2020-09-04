@@ -283,7 +283,7 @@ class RecipeFolderTest(unittest.TestCase):
         client.save({"pkg/conanfile.py": self.recipe_conanfile,
                      "pkg/file.txt": "MYFILE!",
                      "consumer/conanfile.py":
-                         GenConanfile().with_require_plain("pkg/0.1@user/stable")})
+                         GenConanfile().with_require("pkg/0.1@user/stable")})
         client.run("editable add pkg pkg/0.1@user/stable")
 
         client.run("install consumer")

@@ -3,6 +3,7 @@
 from conans.client.build.autotools_environment import AutoToolsBuildEnvironment
 from conans.client.build.cmake import CMake
 from conans.client.toolchain.cmake import CMakeToolchain
+from conans.client.toolchain.make import MakeToolchain
 from conans.client.build.meson import Meson
 from conans.client.build.msbuild import MSBuild
 from conans.client.build.visual_environment import VisualStudioBuildEnvironment
@@ -22,4 +23,4 @@ OAUTH_TOKEN = "oauth_token"
 SERVER_CAPABILITIES = [COMPLEX_SEARCH_CAPABILITY, REVISIONS]  # Server is always with revisions
 DEFAULT_REVISION_V1 = "0"
 
-__version__ = '1.29.0-dev'
+__version__ = '1.30.0-dev'

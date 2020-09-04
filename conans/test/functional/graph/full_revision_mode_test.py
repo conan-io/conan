@@ -163,13 +163,13 @@ class FullRevisionModeTest(unittest.TestCase):
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . liba/0.1@user/testing")
 
-        client.save({"conanfile.py": GenConanfile().with_require_plain('liba/0.1@user/testing')})
+        client.save({"conanfile.py": GenConanfile().with_require('liba/0.1@user/testing')})
         client.run("create . libb/0.1@user/testing")
 
-        client.save({"conanfile.py": GenConanfile().with_require_plain('libb/0.1@user/testing')})
+        client.save({"conanfile.py": GenConanfile().with_require('libb/0.1@user/testing')})
         client.run("create . libc/0.1@user/testing")
 
-        client.save({"conanfile.py": GenConanfile().with_require_plain('libc/0.1@user/testing')})
+        client.save({"conanfile.py": GenConanfile().with_require('libc/0.1@user/testing')})
         # Telling to build LibA doesn't change the final result of LibA, which has same ID and PREV
         client.run("install . libd/0.1@user/testing --build=liba")
         # So it is not necessary to build the downstream consumers of LibA
@@ -191,17 +191,17 @@ class FullRevisionModeTest(unittest.TestCase):
                       client.out)
         self.assertIn("liba/0.1@user/testing: Created package revision "
                       "83c38d3b4e5f1b8450434436eec31b00", client.out)
-        client.save({"conanfile.py": GenConanfile().with_require_plain('liba/0.1@user/testing')})
+        client.save({"conanfile.py": GenConanfile().with_require('liba/0.1@user/testing')})
         client.run("create . libb/0.1@user/testing")
         self.assertIn("libb/0.1@user/testing:830b7cbbb4fc193a756c82b19904df775dc92204 - Build",
                       client.out)
 
-        client.save({"conanfile.py": GenConanfile().with_require_plain('libb/0.1@user/testing')})
+        client.save({"conanfile.py": GenConanfile().with_require('libb/0.1@user/testing')})
         client.run("create . libc/0.1@user/testing")
         client.run("upload * --all -c")
         client.run("remove * -f")
 
-        client.save({"conanfile.py": GenConanfile().with_require_plain('libc/0.1@user/testing')})
+        client.save({"conanfile.py": GenConanfile().with_require('libc/0.1@user/testing')})
         # Telling to build LibA doesn't change the final result of LibA, which has same ID and PREV
         client.run("install . --build=liba")
         self.assertIn("liba/0.1@user/testing: Created package revision "

@@ -166,7 +166,7 @@ class _CppInfo(object):
 
 class Component(_CppInfo):
 
-    def __init__(self, rootpath):
+    def __init__(self, rootpath, version):
         super(Component, self).__init__()
         self.rootpath = rootpath
         self.includedirs.append(DEFAULT_INCLUDE)
@@ -176,6 +176,7 @@ class Component(_CppInfo):
         self.builddirs.append(DEFAULT_BUILD)
         self.frameworkdirs.append(DEFAULT_FRAMEWORK)
         self.requires = []
+        self.version = version
 
 
 class CppInfo(_CppInfo):
@@ -196,7 +197,7 @@ class CppInfo(_CppInfo):
         self.resdirs.append(DEFAULT_RES)
         self.builddirs.append(DEFAULT_BUILD)
         self.frameworkdirs.append(DEFAULT_FRAMEWORK)
-        self.components = DefaultOrderedDict(lambda: Component(self.rootpath))
+        self.components = DefaultOrderedDict(lambda: Component(self.rootpath, self.version))
         # public_deps is needed to accumulate list of deps for cmake targets
         self.public_deps = []
         self._configs = {}

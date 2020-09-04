@@ -21,7 +21,7 @@ class RequiresConflictsTestCase(unittest.TestCase):
         t = TestClient()
         t.save({'requires.py': GenConanfile("req", "v1").with_provides("libjpeg"),
                 'app.py': GenConanfile().with_provides("libjpeg")
-               .with_require_plain("req/v1")})
+               .with_require("req/v1")})
         t.run("export requires.py")
         t.run("install app.py app/version@", assert_error=True)
         self.assertIn(" - 'libjpeg' provided by 'app.py (app/version)', 'req/v1'", t.out)
@@ -31,7 +31,7 @@ class RequiresConflictsTestCase(unittest.TestCase):
         t.save({'top.py': GenConanfile("top", "v1").with_provides("libjpeg"),
                 'middle.py': self.header_only.render(requires=['top/v1', ]),
                 'app.py': GenConanfile().with_provides("libjpeg")
-                                        .with_require_plain("middle/v1")})
+                                        .with_require("middle/v1")})
         t.run("export top.py")
         t.run("export middle.py middle/v1@")
         t.run("install app.py app/version@", assert_error=True)
@@ -41,7 +41,7 @@ class RequiresConflictsTestCase(unittest.TestCase):
         t = TestClient()
         t.save({'lhs.py': GenConanfile("lhs", "v1").with_provides("libjpeg"),
                 'rhs.py': GenConanfile("rhs", "v1").with_provides("libjpeg"),
-                'app.py': GenConanfile().with_require_plain("lhs/v1").with_require_plain("rhs/v1")})
+                'app.py': GenConanfile().with_require("lhs/v1").with_require("rhs/v1")})
         t.run("export lhs.py")
         t.run("export rhs.py")
         t.run("install app.py app/version@", assert_error=True)

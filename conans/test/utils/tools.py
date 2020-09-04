@@ -454,7 +454,8 @@ if get_env("CONAN_TEST_WITH_ARTIFACTORY", False):
 
 def _copy_cache_folder(target_folder):
     # Some variables affect to cache population (take a different default folder)
-    cache_key = hash(os.environ.get(CONAN_V2_MODE_ENVVAR, None))
+    vars = [CONAN_V2_MODE_ENVVAR, 'CC', 'CXX', 'PATH']
+    cache_key = hash('|'.join(map(str, [os.environ.get(it, None) for it in vars])))
     master_folder = _copy_cache_folder.master.setdefault(cache_key, temp_folder(create_dir=False))
     if not os.path.exists(master_folder):
         # Create and populate the cache folder with the defaults

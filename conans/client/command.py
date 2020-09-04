@@ -564,7 +564,7 @@ class Command(object):
 
         install_subparser.add_argument("--verify-ssl", nargs="?", default="True",
                                        help='Verify SSL connection when downloading file')
-        install_subparser.add_argument("--type", "-t", choices=["git"],
+        install_subparser.add_argument("--type", "-t", choices=["git", "dir", "file", "url"],
                                        help='Type of remote config')
         install_subparser.add_argument("--args", "-a",
                                        help='String with extra arguments for "git clone"')
@@ -644,7 +644,7 @@ class Command(object):
                             help='Show package paths in local cache')
         parser.add_argument("-bo", "--build-order",
                             help="given a modified reference, return an ordered list to build (CI)."
-                                 " [DEPRECATED: use 'conan graph build-order ...' instead]",
+                                 " [DEPRECATED: use 'conan lock build-order ...' instead]",
                             nargs=1, action=Extender)
         parser.add_argument("-g", "--graph", action=OnceArgument,
                             help='Creates file with project dependencies graph. It will generate '
@@ -682,7 +682,7 @@ class Command(object):
 
         if args.build_order:
             self._out.warn("Usage of `--build-order` argument is deprecated and can return"
-                           " wrong results. Use `conan graph build-order ...` instead.")
+                           " wrong results. Use `conan lock build-order ...` instead.")
 
         if args.install_folder and (args.profile_host or args.settings_host
                                     or args.options_host or args.env_host):

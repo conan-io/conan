@@ -14,9 +14,9 @@ class RequireOverrideTest(unittest.TestCase):
         for req in requires:
             req2, override = req if isinstance(req, tuple) else (req, False)
             if not req_method:
-                conanfile.with_require_plain(req2, override=override)
+                conanfile.with_require(req2, override=override)
             else:
-                conanfile.with_requirement_plain(req2, override=override)
+                conanfile.with_requirement(req2, override=override)
         self.client.save({"conanfile.py": conanfile}, clean_first=True)
 
     def test_override(self):

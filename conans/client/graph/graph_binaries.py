@@ -10,7 +10,7 @@ from conans.model.info import ConanInfo, PACKAGE_ID_UNKNOWN
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference
 from conans.util.conan_v2_mode import conan_v2_property
-from conans.util.files import is_dirty, rmdir
+from conans.util.files import is_dirty, rmdir, clean_dirty
 
 
 class GraphBinariesAnalyzer(object):
@@ -43,7 +43,7 @@ class GraphBinariesAnalyzer(object):
             for dep in node.dependencies:
                 dep_node = dep.dst
                 if (dep_node.binary == BINARY_BUILD or
-                        (dep_node.graph_lock_node and dep_node.graph_lock_node.modified)):
+                    (dep_node.graph_lock_node and dep_node.graph_lock_node.modified)):
                     with_deps_to_build = True
                     break
         if build_mode.forced(conanfile, ref, with_deps_to_build):
@@ -60,6 +60,7 @@ class GraphBinariesAnalyzer(object):
                 node.conanfile.output.warn("Package is corrupted, removing folder: %s"
                                            % package_folder)
                 rmdir(package_folder)  # Do not remove if it is EDITABLE
+                clean_dirty(package_folder)
                 return
 
             if self._cache.config.revisions_enabled:
@@ -203,8 +204,8 @@ class GraphBinariesAnalyzer(object):
                     node.binary = BINARY_BUILD
 
             if locked:
-                locked.package_id = node.package_id
-                locked.prev = node.prev
+                # package_id was not locked, this means a base lockfile that is being completed
+                locked.complete_base_node(node.package_id, node.prev)
 
     def _process_node(self, node, pref, build_mode, update, remotes):
         # Check that this same reference hasn't already been checked
@@ -232,7 +233,7 @@ class GraphBinariesAnalyzer(object):
             remote = remotes.get(remote_name)
 
         if os.path.exists(package_folder):  # Binary already in cache, check for updates
-            self._evaluate_cache_pkg(node, package_layout, pref, metadata,  remote, remotes, update,
+            self._evaluate_cache_pkg(node, package_layout, pref, metadata, remote, remotes, update,
                                      package_folder)
             recipe_hash = None
         else:  # Binary does NOT exist locally
@@ -354,6 +355,8 @@ class GraphBinariesAnalyzer(object):
             if node.package_id == PACKAGE_ID_UNKNOWN:
                 assert node.binary is None, "Node.binary should be None"
                 node.binary = BINARY_UNKNOWN
+                # annotate pattern, so unused patterns in --build are not displayed as errors
+                build_mode.forced(node.conanfile, node.ref)
                 continue
             self._evaluate_node(node, build_mode, update, remotes)
         deps_graph.mark_private_skippable(nodes_subset=nodes_subset, root=root)
