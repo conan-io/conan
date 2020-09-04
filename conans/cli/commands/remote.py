@@ -37,7 +37,7 @@ def remote_add(*args, conan_api, parser, subparser):
     """
     subparser.add_argument("remote", help="Name of the remote to add")
     subparser.add_argument("url", help="Url for the rempote")
-    subparser.add_argument("--disable-ssl", dest="disable_ssl", action="store_true", default=False)
+    subparser.add_argument("--no-ssl", dest="no_ssl", action="store_true", default=False)
     subparser.add_argument("--insert", action=OnceArgument, type=int,
                            help="Insert remote at specific index")
     subparser.add_argument("--force", action='store_true', default=False,
@@ -65,12 +65,12 @@ def remote_update(*args, conan_api, parser, subparser):
                            help="New name for the remote")
     subparser.add_argument("--url", action=OnceArgument,
                            help="New url for the remote")
-    subparser.add_argument("--ssl", dest="ssl", action=OnceArgument, type=bool,
+    subparser.add_argument("--no-ssl", dest="no_ssl", action=OnceArgument, type=bool,
                            choices=[True, False])
     subparser.add_argument("--insert", action=OnceArgument, type=int,
                            help="Insert remote at specific index")
     args = parser.parse_args(*args)
-    if not (args.name or args.url or args.ssl or args.insert):
+    if not (args.name or args.url or args.no_ssl or args.insert):
         subparser.error("Please add at least one remote field to update: "
                         "name, url, disable-ssl, insert")
 
