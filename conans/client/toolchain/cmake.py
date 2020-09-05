@@ -42,37 +42,6 @@ class Definitions(OrderedDict):
 class CMakeToolchain(object):
     filename = "conan_toolchain.cmake"
 
-    _conan_set_libcxx = textwrap.dedent("""
-        macro(conan_set_libcxx)
-            if(DEFINED CONAN_LIBCXX)
-                conan_message(STATUS "Conan: C++ stdlib: ${CONAN_LIBCXX}")
-                if(CONAN_COMPILER STREQUAL "clang" OR CONAN_COMPILER STREQUAL "apple-clang")
-                    if(CONAN_LIBCXX STREQUAL "libstdc++" OR CONAN_LIBCXX STREQUAL "libstdc++11" )
-                        set(CONAN_CXX_FLAGS "${CONAN_CXX_FLAGS} -stdlib=libstdc++")
-                    elseif(CONAN_LIBCXX STREQUAL "libc++")
-                        set(CONAN_CXX_FLAGS "${CONAN_CXX_FLAGS} -stdlib=libc++")
-                    endif()
-                endif()
-                if(CONAN_COMPILER STREQUAL "sun-cc")
-                    if(CONAN_LIBCXX STREQUAL "libCstd")
-                        set(CONAN_CXX_FLAGS "${CONAN_CXX_FLAGS} -library=Cstd")
-                    elseif(CONAN_LIBCXX STREQUAL "libstdcxx")
-                        set(CONAN_CXX_FLAGS "${CONAN_CXX_FLAGS} -library=stdcxx4")
-                    elseif(CONAN_LIBCXX STREQUAL "libstlport")
-                        set(CONAN_CXX_FLAGS "${CONAN_CXX_FLAGS} -library=stlport4")
-                    elseif(CONAN_LIBCXX STREQUAL "libstdc++")
-                        set(CONAN_CXX_FLAGS "${CONAN_CXX_FLAGS} -library=stdcpp")
-                    endif()
-                endif()
-                if(CONAN_LIBCXX STREQUAL "libstdc++11")
-                    add_definitions(-D_GLIBCXX_USE_CXX11_ABI=1)
-                elseif(CONAN_LIBCXX STREQUAL "libstdc++")
-                    add_definitions(-D_GLIBCXX_USE_CXX11_ABI=0)
-                endif()
-            endif()
-        endmacro()
-    """)
-
     _template_toolchain = textwrap.dedent("""
         # Conan generated toolchain file
         cmake_minimum_required(VERSION 3.0)  # Needed for targets
@@ -152,7 +121,15 @@ class CMakeToolchain(object):
 
         {% if set_rpath %}conan_set_rpath(){% endif %}
         {% if set_std %}conan_set_std(){% endif %}
-        {% if set_libcxx %}conan_set_libcxx(){% endif %}
+
+        # C++ Standard Library
+        {%- if set_libcxx %}
+        set(CONAN_CXX_FLAGS "${CONAN_CXX_FLAGS} set_libcxx")
+        {%- endif %}
+        {%- if glibcxx %}
+        add_definitions(-D_GLIBCXX_USE_CXX11_ABI=glibcxx)
+        {%- endif %}
+
         {% if install_prefix %}
         set(CMAKE_INSTALL_PREFIX {{install_prefix}} CACHE STRING "" FORCE)
         {% endif %}
@@ -218,7 +195,6 @@ class CMakeToolchain(object):
 
         self._set_rpath = True
         self._set_std = True
-        self._set_libcxx = True
 
         # To find the generated cmake_find_package finders
         self._cmake_prefix_path = "${CMAKE_BINARY_DIR}"
@@ -272,6 +248,36 @@ class CMakeToolchain(object):
             return True
         return False
 
+    def _get_libcxx(self):
+        libcxx = self._conanfile.settings.get_safe("compiler.libcxx")
+        if not libcxx:
+            return None, None
+        compiler = self._conanfile.settings.compiler
+        lib = glib = None
+        if compiler == "apple-clang":
+            # In apple-clang 2 only values atm are "libc++" and "libstdc++"
+            lib = "-stdlib={}".format(libcxx)
+        elif compiler == "clang":
+            if libcxx == "libc++":
+                lib = "-stdlib=libc++"
+            elif libcxx == "libstdc++" or libcxx == "libstdc++11":
+                lib = "-stdlib=libstdc++"
+            # FIXME, something to do with the other values? Android c++_shared?
+        elif compiler == "sun-cc":
+            lib = {"libCstd": "Cstd",
+                   "libstdcxx": "stdcxx4",
+                   "libstlport": "stlport4",
+                   "libstdc++": "stdcpp"
+                   }.get(libcxx)
+            if lib:
+                lib = "-library={}".format(lib)
+        elif compiler == "gcc":
+            if libcxx == "libstdc++11":
+                glib = "1"
+            elif libcxx == "libstdc++":
+                glib = "0"
+        return lib, glib
+
     def write_toolchain_files(self):
         # Make it absolute, wrt to current folder, set by the caller
         conan_project_include_cmake = os.path.abspath("conan_project_include.cmake")
@@ -292,6 +298,9 @@ class CMakeToolchain(object):
         except AttributeError:
             # FIXME: In the local flow, we don't know the package_folder
             install_prefix = None
+
+        set_libcxx, glibcxx = self._get_libcxx()
+
         context = {
             "configuration_types_definitions": self.definitions.configuration_types,
             "build_type": build_type,
@@ -303,7 +312,8 @@ class CMakeToolchain(object):
             "fpic": self._fpic,
             "set_rpath": self._set_rpath,
             "set_std": self._set_std,
-            "set_libcxx": self._set_libcxx,
+            "set_libcxx": set_libcxx,
+            "glibcxx": glibcxx,
             "install_prefix": install_prefix
         }
         t = Template(self._template_toolchain)
@@ -313,7 +323,6 @@ class CMakeToolchain(object):
                                CMakeCommonMacros.conan_get_policy,
                                CMakeCommonMacros.conan_set_rpath,
                                CMakeCommonMacros.conan_set_std,
-                               self._conan_set_libcxx,
                            ]),
                            **context)
         save(self.filename, content)
