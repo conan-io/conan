@@ -124,10 +124,10 @@ class CMakeToolchain(object):
 
         # C++ Standard Library
         {%- if set_libcxx %}
-        set(CONAN_CXX_FLAGS "${CONAN_CXX_FLAGS} set_libcxx")
+        set(CONAN_CXX_FLAGS "${CONAN_CXX_FLAGS} {{ set_libcxx }}")
         {%- endif %}
         {%- if glibcxx %}
-        add_definitions(-D_GLIBCXX_USE_CXX11_ABI=glibcxx)
+        add_definitions(-D_GLIBCXX_USE_CXX11_ABI={{ glibcxx }})
         {%- endif %}
 
         {% if install_prefix %}
