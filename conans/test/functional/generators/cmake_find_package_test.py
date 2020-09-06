@@ -457,7 +457,7 @@ message("Target libs: ${tmp}")
             get_target_property(tmp MYHELLO::MYHELLO INTERFACE_LINK_LIBRARIES)
             message("Target libs (hello): ${tmp}")
             """)
-        conanfile = textwrap.dedent(""""
+        conanfile = textwrap.dedent("""
             from conans import ConanFile, CMake
 
             class Conan(ConanFile):
