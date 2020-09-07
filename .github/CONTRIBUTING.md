@@ -25,14 +25,14 @@ To contribute follow the next steps:
 3. Fork the [Conan main repository](https://github.com/conan-io/conan) and create a `feature/xxx` branch from the `develop` branch and develop
    your fix/feature as discussed in previous step.
 4. Try to keep your branch updated with the `develop` branch to avoid conflicts.
-5. Open a pull request, and select `develop` as the base branch. Never open a pull request to ``master`` or ``release/xxx`` branches.
+5. Open a pull request, and select `develop` as the base branch. Never open a pull request to ``release/xxx`` branches.
 6. Add the text (besides other comments): "fixes #IssueNumber" in the body of the PR, referring to the issue of step 1.
 7. Submit a PR to the Conan documentation about the changes done providing examples if needed.
 
 The ``conan-io`` organization maintainers will review and help with the coding of tests. Finally it will be assigned to milestone.
 
 Each milestone corresponds to a Conan release, a branch `release/xxx` will be opened from the `develop` branch.
-When the branch is ready, it will be merged into `master` branch and a tag corresponding to the version will be pushed.
+When the branch is ready, a tag corresponding to the version will be pushed and it will be merged into `develop` branch.
 
 The release plan is done monthly but dates are not fixed, the ``conan-io`` organization maintainers reserve the right of altering the issues
 of each milestone as well as the release dates.

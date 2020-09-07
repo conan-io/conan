@@ -1,7 +1,7 @@
 import unittest
 
 from conans.client.build.cppstd_flags import cppstd_default
-from conans.test.utils.conanfile import MockSettings
+from conans.test.utils.mocks import MockSettings
 from conans.tools import cppstd_flag
 
 

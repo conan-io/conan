@@ -23,7 +23,8 @@ from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
 from conans.test.unittests.model.transitive_reqs_test import MockRemoteManager
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestBufferConanOutput, GenConanfile
+from conans.test.utils.tools import GenConanfile
+from conans.test.utils.mocks import TestBufferConanOutput
 from conans.util.files import save
 
 
@@ -56,7 +57,7 @@ class GraphManagerTest(unittest.TestCase):
         conanfile = GenConanfile()
         if requires:
             for r in requires:
-                conanfile.with_require_plain(r)
+                conanfile.with_require(r)
         conanfile.with_package_info(
             cpp_info={"libs": ["mylib{}{}lib".format(ref.name, ref.version)]},
             env_info={"MYENV": ["myenv{}{}env".format(ref.name, ref.version)]})
@@ -90,10 +91,10 @@ class GraphManagerTest(unittest.TestCase):
             conanfile.with_name(ref.name).with_version(ref.version)
         if requires:
             for r in requires:
-                conanfile.with_require_plain(r)
+                conanfile.with_require(r)
         if build_requires:
             for r in build_requires:
-                conanfile.with_build_require_plain(r)
+                conanfile.with_build_requires(r)
         save(path, str(conanfile))
         return path
 

@@ -1,3 +1,6 @@
+from conans.model.ref import ConanFileReference
+
+
 class GenConanfile(object):
     """
     USAGE:
@@ -20,6 +23,8 @@ class GenConanfile(object):
         self._options = {}
         self._generators = []
         self._default_options = {}
+        self._provides = []
+        self._deprecated = None
         self._package_files = {}
         self._package_files_env = {}
         self._package_files_link = {}
@@ -28,6 +33,7 @@ class GenConanfile(object):
         self._requires = []
         self._requirements = []
         self._build_requires = []
+        self._build_requirements = []
         self._revision_mode = None
         self._package_info = {}
         self._package_id_lines = []
@@ -39,6 +45,14 @@ class GenConanfile(object):
 
     def with_version(self, version):
         self._version = version
+        return self
+
+    def with_provides(self, provides):
+        self._provides.append(provides)
+        return self
+
+    def with_deprecated(self, deprecated):
+        self._deprecated = deprecated
         return self
 
     def with_revision_mode(self, revision_mode):
@@ -54,24 +68,29 @@ class GenConanfile(object):
         return self
 
     def with_require(self, ref, private=False, override=False):
-        return self.with_require_plain(ref.full_str(), private, override)
-
-    def with_require_plain(self, ref_str, private=False, override=False):
+        ref_str = ref.full_str() if isinstance(ref, ConanFileReference) else ref
         self._requires.append((ref_str, private, override))
         return self
 
-    def with_requirement(self, ref, private=False, override=False):
-        return self.with_requirement_plain(ref.full_str(), private, override)
+    def with_requires(self, *refs):
+        for ref in refs:
+            self.with_require(ref)
+        return self
 
-    def with_requirement_plain(self, ref_str, private=False, override=False):
+    def with_requirement(self, ref, private=False, override=False):
+        ref_str = ref.full_str() if isinstance(ref, ConanFileReference) else ref
         self._requirements.append((ref_str, private, override))
         return self
 
-    def with_build_require(self, ref):
-        return self.with_build_require_plain(ref.full_str())
+    def with_build_requires(self, *refs):
+        for ref in refs:
+            ref_str = ref.full_str() if isinstance(ref, ConanFileReference) else ref
+            self._build_requires.append(ref_str)
+        return self
 
-    def with_build_require_plain(self, ref_str):
-        self._build_requires.append(ref_str)
+    def with_build_requirement(self, ref, force_host_context=False):
+        ref_str = ref.full_str() if isinstance(ref, ConanFileReference) else ref
+        self._build_requirements.append((ref_str, force_host_context))
         return self
 
     def with_import(self, i):
@@ -138,6 +157,19 @@ class GenConanfile(object):
         return "version = '{}'".format(self._version)
 
     @property
+    def _provides_line(self):
+        if not self._provides:
+            return ""
+        line = ", ".join('"{}"'.format(provide) for provide in self._provides)
+        return "provides = {}".format(line)
+
+    @property
+    def _deprecated_line(self):
+        if not self._deprecated:
+            return ""
+        return "deprecated = {}".format(self._deprecated)
+
+    @property
     def _scm_line(self):
         if not self._scm:
             return ""
@@ -180,6 +212,17 @@ class GenConanfile(object):
         line = ", ".join('"%s": %s' % (k, v) for k, v in self._default_options.items())
         tmp = "default_options = {%s}" % line
         return tmp
+
+    @property
+    def _build_requirements_method(self):
+        if not self._build_requirements:
+            return ""
+
+        lines = []
+        for ref, force_host_context in self._build_requirements:
+            force_host = ", force_host_context=True" if force_host_context else ""
+            lines.append('        self.build_requires("{}"{})'.format(ref, force_host))
+        return "def build_requirements(self):\n{}\n".format("\n".join(lines))
 
     @property
     def _build_requires_line(self):
@@ -304,14 +347,20 @@ class GenConanfile(object):
             ret.append("    {}".format(self._name_line))
         if self._version_line:
             ret.append("    {}".format(self._version_line))
+        if self._provides_line:
+            ret.append("    {}".format(self._provides_line))
+        if self._deprecated_line:
+            ret.append("    {}".format(self._deprecated_line))
         if self._generators_line:
             ret.append("    {}".format(self._generators_line))
         if self._requires_line:
             ret.append("    {}".format(self._requires_line))
-        if self._requirements_method:
-            ret.append("    {}".format(self._requirements_method))
         if self._build_requires_line:
             ret.append("    {}".format(self._build_requires_line))
+        if self._requirements_method:
+            ret.append("    {}".format(self._requirements_method))
+        if self._build_requirements_method:
+            ret.append("    {}".format(self._build_requirements_method))
         if self._scm:
             ret.append("    {}".format(self._scm_line))
         if self._revision_mode_line:

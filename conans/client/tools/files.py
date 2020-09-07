@@ -1,6 +1,7 @@
 import logging
 import os
 import platform
+import subprocess
 import sys
 from contextlib import contextmanager
 from fnmatch import fnmatch
@@ -367,6 +368,32 @@ def unix2dos(filepath):
 
 def dos2unix(filepath):
     _replace_with_separator(filepath, "\n")
+
+
+def rename(src, dst):
+    """
+    rename a file or folder to avoid "Access is denied" error on Windows
+    :param src: Source file or folder
+    :param dst: Destination file or folder
+    """
+    if os.path.exists(dst):
+        raise ConanException("rename {} to {} failed, dst exists.".format(src, dst))
+
+    if platform.system() == "Windows" and which("robocopy") and os.path.isdir(src):
+        # /move Moves files and directories, and deletes them from the source after they are copied.
+        # /e Copies subdirectories. Note that this option includes empty directories.
+        # /ndl Specifies that directory names are not to be logged.
+        # /nfl Specifies that file names are not to be logged.
+        process = subprocess.Popen(["robocopy", "/move", "/e", "/ndl", "/nfl", src, dst],
+                                   stdout=subprocess.PIPE)
+        process.communicate()
+        if process.returncode != 1:
+            raise ConanException("rename {} to {} failed.".format(src, dst))
+    else:
+        try:
+            os.rename(src, dst)
+        except Exception as err:
+            raise ConanException("rename {} to {} failed: {}".format(src, dst, err))
 
 
 def remove_files_by_mask(directory, pattern):

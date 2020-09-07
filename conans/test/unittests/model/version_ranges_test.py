@@ -2,7 +2,7 @@ import unittest
 
 from conans.client.graph.range_resolver import satisfying
 from conans.errors import ConanException
-from conans.test.utils.tools import TestBufferConanOutput
+from conans.test.utils.mocks import TestBufferConanOutput
 
 
 class BasicMaxVersionTest(unittest.TestCase):

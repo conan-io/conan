@@ -23,12 +23,12 @@ from conans.client.output import ConanOutput
 from conans.client.tools.files import replace_in_file, which
 from conans.client.tools.oss import OSInfo
 from conans.client.tools.win import vswhere
-from conans.errors import ConanException, NotFoundException, AuthenticationException
+from conans.errors import ConanException, AuthenticationException
 from conans.model.build_info import CppInfo
 from conans.model.settings import Settings
-from conans.test.utils.conanfile import ConanFileMock
+from conans.test.utils.mocks import ConanFileMock, TestBufferConanOutput
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import StoppableThreadBottle, TestBufferConanOutput, TestClient
+from conans.test.utils.tools import StoppableThreadBottle, TestClient
 from conans.tools import get_global_instances
 from conans.util.env_reader import get_env
 from conans.util.files import load, md5, mkdir, save
@@ -42,14 +42,17 @@ class ConfigMock:
 
 
 class RunnerMock(object):
-    def __init__(self, return_ok=True):
+    def __init__(self, return_ok=True, output=None):
         self.command_called = None
         self.return_ok = return_ok
+        self.output = output
 
     def __call__(self, command, output, win_bash=False, subsystem=None):  # @UnusedVariable
         self.command_called = command
         self.win_bash = win_bash
         self.subsystem = subsystem
+        if self.output and output and hasattr(output, "write"):
+            output.write(self.output)
         return 0 if self.return_ok else 1
 
 

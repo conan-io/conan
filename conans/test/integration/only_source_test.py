@@ -32,7 +32,7 @@ class OnlySourceTest(unittest.TestCase):
         hello2conanfile = client.load(CONANFILE)
         client.save({CONANFILE: hello2conanfile})
 
-        conanfile = GenConanfile().with_test("pass").with_require_plain("Hello2/2.2@lasote/stable")
+        conanfile = GenConanfile().with_test("pass").with_require("Hello2/2.2@lasote/stable")
         client.save({"test/conanfile.py": conanfile})
 
         # Should recognize the hello package

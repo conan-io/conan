@@ -8,7 +8,7 @@ from conans.client.tools.oss import cpu_count
 from conans.errors import ConanException
 from conans.model.settings import Settings
 from conans.test.unittests.util.tools_test import RunnerMock
-from conans.test.utils.conanfile import MockConanfile, MockOptions, MockSettings, ConanFileMock
+from conans.test.utils.mocks import MockSettings, MockConanfile, ConanFileMock, MockOptions
 
 default_dirs_flags = ["--bindir", "--libdir", "--includedir", "--datarootdir", "--libdir",
                       "--sbindir", "--oldincludedir", "--libexecdir"]
@@ -23,6 +23,7 @@ class MockConanfileWithOutput(MockConanfile):
 class RunnerMockWithHelp(RunnerMock):
 
     def __init__(self, return_ok=True, available_args=None):
+        self.output = None
         self.command_called = None
         self.return_ok = return_ok
         self.available_args = available_args or []

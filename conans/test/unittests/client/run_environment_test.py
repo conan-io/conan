@@ -3,7 +3,7 @@
 import unittest
 
 from conans.client.run_environment import RunEnvironment
-from conans.test.utils.conanfile import ConanFileMock
+from conans.test.utils.mocks import ConanFileMock
 
 
 class RunEnvironmentTest(unittest.TestCase):

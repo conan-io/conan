@@ -6,7 +6,8 @@ import unittest
 from parameterized.parameterized import parameterized_class
 
 from conans.model.ref import ConanFileReference
-from conans.test.utils.tools import TestClient, create_local_git_repo
+from conans.test.utils.tools import TestClient
+from conans.test.utils.scm import create_local_git_repo
 from conans.util.files import load
 
 
