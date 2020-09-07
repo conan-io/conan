@@ -497,6 +497,7 @@ class GraphLock(object):
         else:
             node.graph_lock_node = locked_node
             node.conanfile.options.values = locked_node.options
+            node.conanfile.options.freeze()
 
     def lock_node(self, node, requires, build_requires=False):
         """ apply options and constraints on requirements of a node, given the information from
@@ -514,8 +515,6 @@ class GraphLock(object):
             return
 
         locked_node = node.graph_lock_node
-        # Reapply options, they might have been changed by evaluation of configure()
-        node.conanfile.options.values = locked_node.options
         if build_requires:
             locked_requires = locked_node.build_requires or []
         else:
