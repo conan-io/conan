@@ -331,6 +331,10 @@ class GraphLock(object):
         for n in self._nodes.values():
             n.relax()
 
+    @property
+    def relaxed(self):
+        return self._relaxed
+
     def clean_modified(self):
         for n in self._nodes.values():
             n.clean_modified()
