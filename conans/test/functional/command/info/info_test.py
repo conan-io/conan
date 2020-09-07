@@ -28,7 +28,7 @@ class InfoTest(unittest.TestCase):
 
     def failed_info_test(self):
         client = TestClient()
-        client.save({"conanfile.py": GenConanfile().with_require_plain("Pkg/1.0.x@user/testing")})
+        client.save({"conanfile.py": GenConanfile().with_require("Pkg/1.0.x@user/testing")})
         client.run("info .", assert_error=True)
         self.assertIn("Pkg/1.0.x@user/testing: Not found in local cache", client.out)
         client.run("search")
@@ -541,10 +541,10 @@ class AConan(ConanFile):
                       self.client.out)
         self.client.run("info . -bo=Dev1/0.1@lasote/stable")
         self.assertEqual("WARN: Usage of `--build-order` argument is deprecated and can return wrong"
-                         " results. Use `conan graph build-order ...` instead.\n\n", self.client.out)
+                         " results. Use `conan lock build-order ...` instead.\n\n", self.client.out)
         self.client.run("info . -bo=LibG/0.1@lasote/stable")
         self.assertEqual("WARN: Usage of `--build-order` argument is deprecated and can return wrong"
-                         " results. Use `conan graph build-order ...` instead.\n\n", self.client.out)
+                         " results. Use `conan lock build-order ...` instead.\n\n", self.client.out)
 
         self.client.run("info . --build-order=ALL")
         self.assertIn("[LibA/0.1@lasote/stable, LibE/0.1@lasote/stable, LibF/0.1@lasote/stable], "

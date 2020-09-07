@@ -8,7 +8,7 @@ from conans.util.env_reader import get_env
 
 class GraphLockVersionRangeTest(unittest.TestCase):
     user_channel = "user/channel"
-    consumer = GenConanfile("PkgB", "0.1").with_require_plain("PkgA/[>=0.1]@user/channel")
+    consumer = GenConanfile("PkgB", "0.1").with_require("PkgA/[>=0.1]@user/channel")
     upload = False
     if get_env("TESTING_REVISIONS_ENABLED", False):
         ref_a = "PkgA/0.1@user/channel#fa090239f8ba41ad559f8e934494ee2a"
@@ -178,7 +178,7 @@ class GraphLockVersionRangeNoUserChannelTest(GraphLockVersionRangeTest):
     # This is exactly the same as above, but not using user/channel in packages
     # https://github.com/conan-io/conan/issues/5873
     user_channel = ""
-    consumer = GenConanfile("PkgB", "0.1").with_require_plain("PkgA/[>=0.1]")
+    consumer = GenConanfile("PkgB", "0.1").with_require("PkgA/[>=0.1]")
     upload = False
     if get_env("TESTING_REVISIONS_ENABLED", False):
         ref_a = "PkgA/0.1#fa090239f8ba41ad559f8e934494ee2a"
@@ -204,7 +204,7 @@ class GraphLockVersionRangeNoUserChannelUploadTest(GraphLockVersionRangeNoUserCh
 
 class GraphLockBuildRequireVersionRangeTest(GraphLockVersionRangeTest):
     user_channel = "user/channel"
-    consumer = GenConanfile("PkgB", "0.1").with_build_require_plain("PkgA/[>=0.1]@user/channel")
+    consumer = GenConanfile("PkgB", "0.1").with_build_requires("PkgA/[>=0.1]@user/channel")
     upload = False
     if get_env("TESTING_REVISIONS_ENABLED", False):
         ref_a = "PkgA/0.1@user/channel#fa090239f8ba41ad559f8e934494ee2a"

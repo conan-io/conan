@@ -4,7 +4,7 @@ import platform
 import unittest
 
 from conans.client.generators.virtualbuildenv import VirtualBuildEnvGenerator
-from conans.test.utils.conanfile import ConanFileMock, MockSettings
+from conans.test.utils.mocks import MockSettings, ConanFileMock
 
 
 class VirtualBuildEnvGeneratorGCCTest(unittest.TestCase):
@@ -46,6 +46,13 @@ class VirtualBuildEnvGeneratorGCCTest(unittest.TestCase):
         self.assertIn('LDFLAGS="--sysroot=/path/to/sysroot ${LDFLAGS+ $LDFLAGS}"', content)
         self.assertIn('LIBS="${LIBS+ $LIBS}"', content)
 
+        content = self.result["environment_build.ps1.env"]
+        self.assertIn('CPPFLAGS=-DNDEBUG $env:CPPFLAGS', content)
+        self.assertIn('CXXFLAGS=-O3 -s --sysroot=/path/to/sysroot $env:CXXFLAGS', content)
+        self.assertIn('CFLAGS=-O3 -s --sysroot=/path/to/sysroot $env:CFLAGS', content)
+        self.assertIn('LDFLAGS=--sysroot=/path/to/sysroot $env:LDFLAGS', content)
+        self.assertIn('LIBS=$env:LIBS', content)
+
         if platform.system() == "Windows":
             content = self.result["environment_build.bat.env"]
             self.assertIn('CPPFLAGS=-DNDEBUG %CPPFLAGS%', content)
@@ -53,10 +60,3 @@ class VirtualBuildEnvGeneratorGCCTest(unittest.TestCase):
             self.assertIn('CFLAGS=-O3 -s --sysroot=/path/to/sysroot %CFLAGS%', content)
             self.assertIn('LDFLAGS=--sysroot=/path/to/sysroot %LDFLAGS%', content)
             self.assertIn('LIBS=%LIBS%', content)
-
-            content = self.result["environment_build.ps1.env"]
-            self.assertIn('CPPFLAGS=-DNDEBUG $env:CPPFLAGS', content)
-            self.assertIn('CXXFLAGS=-O3 -s --sysroot=/path/to/sysroot $env:CXXFLAGS', content)
-            self.assertIn('CFLAGS=-O3 -s --sysroot=/path/to/sysroot $env:CFLAGS', content)
-            self.assertIn('LDFLAGS=--sysroot=/path/to/sysroot $env:LDFLAGS', content)
-            self.assertIn('LIBS=$env:LIBS', content)

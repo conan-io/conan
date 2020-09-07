@@ -9,7 +9,7 @@ import unittest
 from conans.client.remote_manager import uncompress_file
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import EXPORT_SOURCES_TGZ_NAME
-from conans.test.utils.tools import TestBufferConanOutput
+from conans.test.utils.mocks import TestBufferConanOutput
 from conans.test.utils.tools import TestClient, TestServer
 
 
@@ -61,12 +61,12 @@ class TgzMacosDotFilesTest(unittest.TestCase):
 
         conanfile = textwrap.dedent("""\
             from conans import ConanFile
-            
+
             class Lib(ConanFile):
                 name = "lib"
                 version = "version"
                 exports_sources = "file.txt"
-                
+
                 def package(self):
                     self.copy("file.txt")
             """)

@@ -17,11 +17,11 @@ class ConanAliasTest(unittest.TestCase):
         client.save({"conanfile.py": GenConanfile()})
         client.run("export . PkgA/0.1@user/testing")
         client.run("alias PkgA/latest@user/testing PkgA/0.1@user/testing")
-        client.save({"conanfile.py": GenConanfile().with_require_plain("PkgA/latest@user/testing")})
+        client.save({"conanfile.py": GenConanfile().with_require("PkgA/latest@user/testing")})
         client.run("export . PkgB/0.1@user/testing")
         client.run("alias PkgB/latest@user/testing PkgB/0.1@user/testing")
-        client.save({"conanfile.py": GenConanfile().with_require_plain("PkgA/latest@user/testing")
-                                                   .with_require_plain("PkgB/latest@user/testing")})
+        client.save({"conanfile.py": GenConanfile().with_require("PkgA/latest@user/testing")
+                                                   .with_require("PkgB/latest@user/testing")})
         client.run("info .")
         self.assertNotIn("overridden", client.out)
 
@@ -366,12 +366,12 @@ class Pkg(ConanFile):
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . Pkg/0.1@user/testing")
         client.run("alias Pkg/latest@user/testing Pkg/0.1@user/testing")
-        client.save({"conanfile.py": GenConanfile().with_require_plain("Pkg/latest@user/testing")})
+        client.save({"conanfile.py": GenConanfile().with_require("Pkg/latest@user/testing")})
         client.run("create . Pkg1/0.1@user/testing")
         client.run("create . Pkg2/0.1@user/testing")
 
-        client.save({"conanfile.py": GenConanfile().with_require_plain("Pkg1/0.1@user/testing")
-                                                   .with_require_plain("Pkg2/0.1@user/testing")})
+        client.save({"conanfile.py": GenConanfile().with_requires("Pkg1/0.1@user/testing",
+                                                                  "Pkg2/0.1@user/testing")})
         client.run("create . PkgRoot/0.1@user/testing")
         self.assertNotIn("Pkg/latest@user/testing", client.out)
         self.assertIn("Pkg/0.1@user/testing: Already installed!", client.out)
@@ -387,7 +387,7 @@ class Pkg(ConanFile):
         client.run("alias Pkg/megalatest@user/testing Pkg/superlatest@user/testing")
 
         client.save({"conanfile.py":
-                     GenConanfile().with_require_plain("Pkg/megalatest@user/testing")})
+                     GenConanfile().with_require("Pkg/megalatest@user/testing")})
         client.run("create . Consumer/0.1@user/testing")
         self.assertIn("Pkg/0.1@user/testing: Already installed!", client.out)
         self.assertNotIn("latest@user", client.out)

@@ -14,7 +14,8 @@ from conans.client.output import ConanOutput
 from conans.client.runner import ConanRunner
 from conans.client.tools.win import vcvars_dict
 from conans.errors import ConanException
-from conans.test.utils.tools import TestBufferConanOutput, TestClient
+from conans.test.utils.tools import TestClient
+from conans.test.utils.mocks import TestBufferConanOutput
 
 
 class VCVarsTest(unittest.TestCase):

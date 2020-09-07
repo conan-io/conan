@@ -6,7 +6,7 @@ import unittest
 from conans import ConanFile, Settings
 from conans.client.generators.virtualenv import VirtualEnvGenerator
 from conans.model.env_info import EnvValues
-from conans.test.utils.tools import TestBufferConanOutput
+from conans.test.utils.mocks import TestBufferConanOutput
 
 
 class VirtualEnvGeneratorTest(unittest.TestCase):
@@ -49,15 +49,18 @@ class VirtualEnvGeneratorTest(unittest.TestCase):
 
         if platform.system() == "Windows":
             self.assertIn("PATH=another_path;%PATH%", self.result["environment.bat.env"])
-            self.assertIn('PATH2=p1;p2;$env:PATH2', self.result["environment.ps1.env"])
+            self.assertIn('PATH2=p1;p2;%PATH2%', self.result["environment.bat.env"])
 
-            self.assertIn("PATH=another_path;%PATH%", self.result["environment.bat.env"])
+            self.assertIn("PATH=another_path;$env:PATH", self.result["environment.ps1.env"])
             self.assertIn('PATH2=p1;p2;$env:PATH2', self.result["environment.ps1.env"])
+        else:
+            self.assertIn('PATH=another_path:$env:PATH', self.result["environment.ps1.env"])
+            self.assertIn('PATH2=p1:p2:$env:PATH2', self.result["environment.ps1.env"])
 
     def test_list_with_spaces(self):
         self.assertIn("CL", VirtualEnvGenerator.append_with_spaces)
         self.assertIn("CL=\"cl1 cl2 ${CL+ $CL}\"", self.result['environment.sh.env'])
-
+        self.assertIn('CL=cl1 cl2 $env:CL', self.result["environment.ps1.env"])
+        
         if platform.system() == "Windows":
             self.assertIn("CL=cl1 cl2 %CL%", self.result["environment.bat.env"])
-            self.assertIn('CL=cl1 cl2 $env:CL', self.result["environment.ps1.env"])

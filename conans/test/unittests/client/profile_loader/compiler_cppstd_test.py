@@ -13,7 +13,7 @@ from conans.client.profile_loader import profile_from_args
 from conans.errors import ConanException
 from conans.test.utils.deprecation import catch_deprecation_warning
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestBufferConanOutput
+from conans.test.utils.mocks import TestBufferConanOutput
 from conans.util.files import save
 
 

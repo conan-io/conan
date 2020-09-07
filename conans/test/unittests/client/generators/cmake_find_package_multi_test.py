@@ -6,7 +6,7 @@ from conans.model.conan_file import ConanFile
 from conans.model.env_info import EnvValues
 from conans.model.ref import ConanFileReference
 from conans.test.unittests.client.generators.cmake_test import _MockSettings
-from conans.test.utils.tools import TestBufferConanOutput
+from conans.test.utils.mocks import TestBufferConanOutput
 
 
 class CMakeFindPackageMultiTest(unittest.TestCase):

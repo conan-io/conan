@@ -8,7 +8,7 @@ from parameterized import parameterized
 from conans.client import tools
 from conans.client.conf.detect import detect_defaults_settings
 from conans.paths import DEFAULT_PROFILE_NAME
-from conans.test.utils.tools import TestBufferConanOutput
+from conans.test.utils.mocks import TestBufferConanOutput
 from conans.util.runners import check_output_runner
 
 

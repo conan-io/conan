@@ -4,7 +4,7 @@ import unittest
 
 from conans.client.rest.file_downloader import FileDownloader
 from conans.errors import ConanException
-from conans.test.utils.tools import TestBufferConanOutput
+from conans.test.utils.mocks import TestBufferConanOutput
 from conans.util.files import load
 
 

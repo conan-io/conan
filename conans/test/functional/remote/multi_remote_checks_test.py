@@ -158,6 +158,8 @@ class Pkg(ConanFile):
         client.run("remote list_pref Pkg/0.1@lasote/testing")
         self.assertIn("%s: server2" % pref, client.out)
 
+        # install --update will install a new recipe revision from server1
+        # and the binary from server2
         client.run('install Pkg/0.1@lasote/testing -s build_type=Debug --update')
         self.assertIn("Pkg/0.1@lasote/testing: Retrieving from remote 'server1'...", client.out)
         self.assertIn("Pkg/0.1@lasote/testing: Retrieving package "

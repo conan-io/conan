@@ -45,7 +45,7 @@ class DevelopTest(unittest.TestCase):
         client.run("install Pkg/0.1@user/testing --build")
         self.assertNotIn("Develop True", client.out)
 
-        client.save({"conanfile.py": GenConanfile().with_require_plain("Pkg/0.1@user/testing")})
+        client.save({"conanfile.py": GenConanfile().with_require("Pkg/0.1@user/testing")})
         client.run("create . Other/1.0@user/testing")
         self.assertNotIn("Develop True", client.out)
 
