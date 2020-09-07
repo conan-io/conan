@@ -35,6 +35,8 @@ class DepsCppCmake(object):
             """
             return '"%s"' % ";".join(p.replace('\\', '/').replace('$', '\\$') for p in values)
 
+        self.version = cpp_info.version
+
         self.include_paths = join_paths(cpp_info.include_paths)
         self.include_path = join_paths_single_var(cpp_info.include_paths)
         self.lib_paths = join_paths(cpp_info.lib_paths)
