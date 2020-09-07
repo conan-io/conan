@@ -31,7 +31,7 @@ class MSBuild2(object):
     def build(self, project_file, targets=None, upgrade_project=True, build_type=None, arch=None,
               parallel=True, force_vcvars=False, toolset=None, platforms=None, use_env=True,
               vcvars_ver=None, winsdk_version=None, properties=None, output_binary_log=None,
-              property_file_name=None, verbosity=None, definitions=None,
+              property_file_name=None, verbosity=None,
               user_property_file_name=None):
         """
         :param project_file: Path to the .sln file.
@@ -73,14 +73,10 @@ class MSBuild2(object):
         :param user_property_file_name: Specify a user provided .props file with custom definitions
         :return: status code of the MSBuild command invocation
         """
-        property_file_name = property_file_name or "conan_build.props"
         self.build_env.parallel = parallel
 
         with environment_append(self.build_env.vars):
             # Path for custom properties file
-            props_file_contents = self._get_props_file_contents(definitions)
-            property_file_name = os.path.abspath(property_file_name)
-            save(property_file_name, props_file_contents)
             vcvars = vcvars_command(self._conanfile.settings, arch=arch, force=force_vcvars,
                                     vcvars_ver=vcvars_ver, winsdk_version=winsdk_version,
                                     output=self._output)
@@ -111,11 +107,6 @@ class MSBuild2(object):
         properties = properties or {}
         command = []
 
-        if upgrade_project and not get_env("CONAN_SKIP_VS_PROJECTS_UPGRADE", False):
-            command.append('devenv "%s" /upgrade &&' % project_file)
-        else:
-            self._output.info("Skipped sln project upgrade")
-
         build_type = build_type or self._settings.get_safe("build_type")
         arch = arch or self._settings.get_safe("arch")
         if toolset is None:  # False value to skip adjusting
@@ -145,21 +136,6 @@ class MSBuild2(object):
             lines = [s.split("=")[0].strip() for s in lines]
         except Exception:
             pass  # TODO: !!! what are we catching here? tools.load? .group(1)? .splitlines?
-        else:
-            config = "%s|%s" % (build_type, msvc_arch)
-            if config not in "".join(lines):
-                self._output.warn("***** The configuration %s does not exist in this solution *****"
-                                  % config)
-                self._output.warn("Use 'platforms' argument to define your architectures")
-
-        if output_binary_log:
-            msbuild_version = MSBuild2.get_version(self._settings)
-            if msbuild_version >= "15.3":  # http://msbuildlog.com/
-                command.append('/bl' if isinstance(output_binary_log, bool)
-                               else '/bl:"%s"' % output_binary_log)
-            else:
-                raise ConanException("MSBuild version detected (%s) does not support "
-                                     "'output_binary_log' ('/bl')" % msbuild_version)
 
         if use_env:
             command.append('/p:UseEnv=true')
@@ -194,44 +170,3 @@ class MSBuild2(object):
             command.append('/p:%s="%s"' % (name, value))
 
         return " ".join(command)
-
-    def _get_props_file_contents(self, definitions=None):
-        # how to specify runtime in command line:
-        # https://stackoverflow.com/questions/38840332/msbuild-overrides-properties-while-building-vc-project
-
-        if self.build_env:
-            # Take the flags from the build env, the user was able to alter them if needed
-            flags = copy.copy(self.build_env.flags)
-            flags.append(self.build_env.std)
-        else:  # To be removed when build_sln_command is deprecated
-            flags = vs_build_type_flags(self._settings, with_flags=False)
-            flags.append(vs_std_cpp(self._settings))
-
-        flags_str = " ".join(list(filter(None, flags)))  # Removes empty and None elements
-        additional_node = "<AdditionalOptions>" \
-                          "{} %(AdditionalOptions)" \
-                          "</AdditionalOptions>".format(flags_str) if flags_str else ""
-
-        template = """<?xml version="1.0" encoding="utf-8"?>
-<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <ItemDefinitionGroup>
-    <ClCompile>
-      {additional_node}
-    </ClCompile>
-  </ItemDefinitionGroup>
-</Project>""".format(**{"additional_node": additional_node})
-        return template
-
-    @staticmethod
-    def get_version(settings):
-        msbuild_cmd = "msbuild -version"
-        vcvars = tools_vcvars_command(settings)
-        command = "%s && %s" % (vcvars, msbuild_cmd)
-        try:
-            out = version_runner(command, shell=True)
-            version_line = decode_text(out).split("\n")[-1]
-            prog = re.compile("(\d+\.){2,3}\d+")
-            result = prog.match(version_line).group()
-            return Version(result)
-        except Exception as e:
-            raise ConanException("Error retrieving MSBuild version: '{}'".format(e))

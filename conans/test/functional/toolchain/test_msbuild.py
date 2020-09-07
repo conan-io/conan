@@ -243,7 +243,7 @@ class Base(unittest.TestCase):
                     tc.definitions["DEFINITIONS_CONFIG"] = "Debug"
                 else:
                     tc.definitions["DEFINITIONS_CONFIG"] = "Release"
-                return tc
+                tc.write_toolchain_files()
             def build(self):
                 msbuild = MSBuild2(self)
                 msbuild.build("MyProject.sln")
@@ -285,17 +285,22 @@ class Base(unittest.TestCase):
                           "MyProject.sln": sln_file,
                           "MyApp/MyApp.vcxproj": myapp_vcxproj,
                           "MyApp/MyApp.cpp": self.app})
+        print(self.client.current_folder)
 
-    def _run_build(self, settings=None, options=None):
+    def _run_build(self, settings, options=None):
         # Build the profile according to the settings provided
-        settings = settings or {}
         settings = " ".join('-s %s="%s"' % (k, v) for k, v in settings.items() if v)
         options = " ".join("-o %s=%s" % (k, v) for k, v in options.items()) if options else ""
 
         # Run the configure corresponding to this test case
-        self.client.run("install . %s %s -if=conan" % (settings, options))
+        self.client.run("install . %s %s -s compiler.runtime=MT -s build_type=Release -if=conan"
+                        % (settings, options))
+        self.client.run("install . %s %s -s compiler.runtime=MTd -s build_type=Debug -if=conan"
+                        % (settings, options))
         install_out = self.client.out
+        print(install_out)
         self.client.run("build . -if=conan")
+        print(self.client.out)
         return install_out
 
     def _modify_code(self):
@@ -319,23 +324,22 @@ class Base(unittest.TestCase):
 
 @unittest.skipUnless(platform.system() == "Windows", "Only for windows")
 class WinTest(Base):
-    @parameterized.expand([("Debug", "MTd", "15", "14", "x86", "v140", True),
-                           ("Release", "MD", "15", "17", "x86_64", "", False)])
-    def test_toolchain_win(self, build_type, runtime, version, cppstd, arch, toolset, shared):
+    @parameterized.expand([("15", "14", "x86", "v140", True),
+                           ("15", "17", "x86_64", "", False)])
+    def test_toolchain_win(self, version, cppstd, arch, toolset, shared):
         settings = {"compiler": "Visual Studio",
                     "compiler.version": version,
                     "compiler.toolset": toolset,
-                    "compiler.runtime": runtime,
                     "compiler.cppstd": cppstd,
                     "arch": arch,
-                    "build_type": build_type,
                     }
         options = {"shared": shared}
         install_out = self._run_build(settings, options)
 
         # FIXME: Hardcoded VS version and partial toolset check
         self.assertIn("Microsoft Visual Studio 2017", self.client.out)
-        self._run_app(build_type)
+        self._run_app("Debug")
+        return
 
         opposite_build_type = "Release" if build_type == "Debug" else "Debug"
         settings["build_type"] = opposite_build_type
