@@ -311,6 +311,7 @@ class PartialOptionsTest(unittest.TestCase):
         self.assertIn("LibC/1.0:777a7717c781c687b6d0fecc05d3818d0a031f92 - Missing", client.out)
 
     def partial_lock_option_conanfile_default_test(self):
+        # when 'LibA:myoption' is locked, it is used, even if other packages define it.
         client = self.client
         client.save({"conanfile.py": GenConanfile().with_require("LibA/1.0")
                                                    .with_default_option("LibA:myoption", True)})
