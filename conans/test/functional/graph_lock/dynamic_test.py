@@ -281,7 +281,7 @@ class PartialOptionsTest(unittest.TestCase):
         self.client = client
 
     def partial_lock_option_command_line_test(self):
-        # When in command line, the option value is saved in the libb.lock is applied to all
+        # When 'LibA:myoption' is set in command line, the option value is saved in the libb.lock and it is applied to all
         # graph, overriding LibC.
         client = self.client
         client.save({"conanfile.py": GenConanfile().with_require("LibA/1.0")})
