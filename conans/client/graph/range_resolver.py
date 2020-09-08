@@ -150,11 +150,8 @@ class RangeResolver(object):
     def _search_remotes(self, search_ref, remotes):
         for remote in remotes.values():
             if not remotes.selected or remote == remotes.selected:
-                search_result = self._remote_manager.search_recipes(remote, search_ref.name,
+                search_result = self._remote_manager.search_recipes(remote, search_ref,
                                                                     ignorecase=False)
-                search_result = [ref for ref in search_result
-                                 if ref.user == search_ref.user and
-                                 ref.channel == search_ref.channel]
                 if search_result:
                     return search_result, remote.name
         return None, None
