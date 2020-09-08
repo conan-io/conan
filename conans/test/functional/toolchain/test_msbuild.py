@@ -307,11 +307,6 @@ class WinTest(unittest.TestCase):
                           "MyApp/MyApp.vcxproj": myapp_vcxproj,
                           "MyApp/MyApp.cpp": self.app})
 
-    def _modify_code(self):
-        content = self.client.load("app_lib.cpp")
-        content = content.replace("App:", "AppImproved:")
-        self.client.save({"app_lib.cpp": content})
-
     def _run_app(self, arch, build_type, msg="App"):
         if arch == "x64":
             command_str = "x64\\%s\\MyApp.exe" % build_type
@@ -347,7 +342,8 @@ class WinTest(unittest.TestCase):
         vs_path = vs_installation_path("15")
         vcvars_path = os.path.join(vs_path, "VC/Auxiliary/Build/vcvarsall.bat")
 
-        cmd = '"%s" x86 && msbuild "./MyProject.sln" /p:Configuration=Release' % vcvars_path
+        cmd = ('set "VSCMD_START_DIR=%%CD%%" && '
+               '"%s" x86 && msbuild "./MyProject.sln" /p:Configuration=Release' % vcvars_path)
         client.run_command(cmd)
         self.assertIn("Visual Studio 2017", client.out)
         self.assertIn("[vcvarsall.bat] Environment initialized for: 'x86'", client.out)
@@ -381,8 +377,10 @@ class WinTest(unittest.TestCase):
         vs_path = vs_installation_path("15")
         vcvars_path = os.path.join(vs_path, "VC/Auxiliary/Build/vcvarsall.bat")
 
-        cmd = ('"%s" x64 && msbuild "./MyProject.sln" /p:Configuration=Debug '
-               '/p:PlatformToolset="v140"' % vcvars_path)
+        cmd = ('set "VSCMD_START_DIR=%%CD%%" && '
+               '"%s" x64 && '
+               'msbuild "./MyProject.sln" /p:Configuration=Debug /p:PlatformToolset="v140"'
+               % vcvars_path)
         client.run_command(cmd)
         self.assertIn("Visual Studio 2017", client.out)
         self.assertIn("[vcvarsall.bat] Environment initialized for: 'x64'", client.out)
