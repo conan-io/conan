@@ -38,8 +38,7 @@ class MSBuildToolchain(object):
             return '%s="%s"' % (k, value) if value is not None else k
 
         runtime = self._conanfile.settings.get_safe("compiler.runtime")
-        toolset = self._conanfile.settings.get_safe("compiler.toolset")
-        print("RUNTIME ", self._conanfile.settings.values.dumps(), runtime)
+        cppstd = self._conanfile.settings.get_safe("compiler.cppstd")
         runtime_library = {"MT": "MultiThreaded",
                            "MTd": "MultiThreadedDebug",
                            "MD": "MultiThreadedDLL",
@@ -54,28 +53,28 @@ class MSBuildToolchain(object):
                      {};%(PreprocessorDefinitions)
                   </PreprocessorDefinitions>
                   <RuntimeLibrary>{}</RuntimeLibrary>
+                  <LanguageStandard>{}</LanguageStandard>
                 </ClCompile>
               </ItemDefinitionGroup>
-              <PropertyGroup>
-                <PlatformToolset>{}</PlatformToolset>
-              </PropertyGroup>
             </Project>
             """)
         definitions = ";".join([format_macro(k, v) for k, v in self.definitions.items()])
-        platform_toolset = toolset or ""
-        config_props = content.format(definitions, runtime_library, platform_toolset)
+        # It is useless to set PlatformToolset in the config file, because the conditional checks it
+        cppstd = "stdcpp%s" % cppstd if cppstd else ""
+        config_props = content.format(definitions, runtime_library, cppstd)
         config_filepath = os.path.abspath(config_filename)
+        self._conanfile.output.info("MSBuildToolchain created %s" % config_filename)
         save(config_filepath, config_props)
 
-    @staticmethod
-    def _write_main_toolchain(config_filename, condition):
+    def _write_main_toolchain(self, config_filename, condition):
         main_toolchain_path = os.path.abspath("conan_toolchain.props")
         if os.path.isfile(main_toolchain_path):
             content = load(main_toolchain_path)
         else:
             content = textwrap.dedent("""\
                 <?xml version="1.0" encoding="utf-8"?>
-                <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+                <Project ToolsVersion="4.0"
+                        xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
                     <ImportGroup Label="PropertySheets" >
                     </ImportGroup>
                 </Project>
@@ -96,31 +95,5 @@ class MSBuildToolchain(object):
 
         conan_toolchain = dom.toprettyxml()
         conan_toolchain = "\n".join(line for line in conan_toolchain.splitlines() if line.strip())
+        self._conanfile.output.info("MSBuildToolchain writing %s" % "conan_toolchain.props")
         save(main_toolchain_path, conan_toolchain)
-
-    def _get_props_file_contents(self, definitions=None):
-        # how to specify runtime in command line:
-        # https://stackoverflow.com/questions/38840332/msbuild-overrides-properties-while-building-vc-project
-
-        if self.build_env:
-            # Take the flags from the build env, the user was able to alter them if needed
-            flags = copy.copy(self.build_env.flags)
-            flags.append(self.build_env.std)
-        else:  # To be removed when build_sln_command is deprecated
-            flags = vs_build_type_flags(self._settings, with_flags=False)
-            flags.append(vs_std_cpp(self._settings))
-
-        flags_str = " ".join(list(filter(None, flags)))  # Removes empty and None elements
-        additional_node = "<AdditionalOptions>" \
-                          "{} %(AdditionalOptions)" \
-                          "</AdditionalOptions>".format(flags_str) if flags_str else ""
-
-        template = """<?xml version="1.0" encoding="utf-8"?>
-<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <ItemDefinitionGroup>
-    <ClCompile>
-      {additional_node}
-    </ClCompile>
-  </ItemDefinitionGroup>
-</Project>""".format(**{"additional_node": additional_node})
-        return template
