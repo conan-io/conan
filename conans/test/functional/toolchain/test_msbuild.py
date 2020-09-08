@@ -249,7 +249,7 @@ class WinTest(unittest.TestCase):
 
         int main() {
             auto number = 0b1111'1111 ;  // VS 2017 is C++14 by default
-            std::cout << "Hello: " << HELLO_MSG <<std::endl;
+            hello();
 
             #ifdef _M_X64
             std::cout << "AppArch x64!!!\\n";
@@ -285,55 +285,42 @@ class WinTest(unittest.TestCase):
         }
         """)
 
-    def setUp(self):
-        self.client = TestClient(path_with_spaces=False)
-        conanfile = textwrap.dedent("""
-            from conans import ConanFile
-            from conans.tools import save
-            import os
-            class Pkg(ConanFile):
-                settings = "build_type"
-                def package(self):
-                    save(os.path.join(self.package_folder, "include/hello.h"),
-                         '#define HELLO_MSG "%s"' % self.settings.build_type)
-            """)
-        self.client.save({"conanfile.py": conanfile})
-        self.client.run("create . hello/0.1@ -s build_type=Debug")
-        self.client.run("create . hello/0.1@ -s build_type=Release")
-
-        # Prepare the actual consumer package
-        self.client.save({"conanfile.py": self.conanfile,
-                          "MyProject.sln": sln_file,
-                          "MyApp/MyApp.vcxproj": myapp_vcxproj,
-                          "MyApp/MyApp.cpp": self.app})
-
-    def _run_app(self, arch, build_type, msg="App"):
-        if arch == "x64":
-            command_str = "x64\\%s\\MyApp.exe" % build_type
-        else:
-            command_str = "%s\\MyApp.exe" % build_type
-        self.client.run_command(command_str)
+    def _run_app(self, client, arch, build_type, msg="App"):
         if arch == "x86":
-            self.assertIn("AppArch x86!!!", self.client.out)
-        if arch == "x86_64":
-            self.assertIn("AppArch x64!!!", self.client.out)
-        self.assertIn("Hello: %s" % build_type, self.client.out)
-        self.assertIn("%s: %s!" % (msg, build_type), self.client.out)
-        self.assertIn("DEFINITIONS_BOTH: True", self.client.out)
-        self.assertIn("DEFINITIONS_CONFIG: %s" % build_type, self.client.out)
+            command_str = "%s\\MyApp.exe" % build_type
+        else:
+            command_str = "x64\\%s\\MyApp.exe" % build_type
+        client.run_command(command_str)
+        if arch == "x86":
+            self.assertIn("AppArch x86!!!", client.out)
+        else:
+            self.assertIn("AppArch x64!!!", client.out)
+        self.assertIn("Hello World %s" % build_type, client.out)
+        self.assertIn("%s: %s!" % (msg, build_type), client.out)
+        self.assertIn("DEFINITIONS_BOTH: True", client.out)
+        self.assertIn("DEFINITIONS_CONFIG: %s" % build_type, client.out)
 
     def test_toolchain_win(self):
-        client = self.client
+        client = TestClient(path_with_spaces=False)
         settings = {"compiler": "Visual Studio",
                     "compiler.version": "15",
                     "compiler.cppstd": "17",
                     "compiler.runtime": "MT",
                     "build_type": "Release",
-                    "arch": "x86",
-                    }
+                    "arch": "x86"}
 
         # Build the profile according to the settings provided
         settings = " ".join('-s %s="%s"' % (k, v) for k, v in settings.items() if v)
+
+        client.run("new hello/0.1 -s")
+        client.run("create . hello/0.1@ %s" % (settings, ))
+
+        # Prepare the actual consumer package
+        client.save({"conanfile.py": self.conanfile,
+                     "MyProject.sln": sln_file,
+                     "MyApp/MyApp.vcxproj": myapp_vcxproj,
+                     "MyApp/MyApp.cpp": self.app},
+                    clean_first=True)
 
         # Run the configure corresponding to this test case
         client.run("install . %s -if=conan" % (settings, ))
@@ -343,33 +330,42 @@ class WinTest(unittest.TestCase):
         vcvars_path = os.path.join(vs_path, "VC/Auxiliary/Build/vcvarsall.bat")
 
         cmd = ('set "VSCMD_START_DIR=%%CD%%" && '
-               '"%s" x86 && msbuild "./MyProject.sln" /p:Configuration=Release' % vcvars_path)
+               '"%s" x86 && msbuild "MyProject.sln" /p:Configuration=Release' % vcvars_path)
         client.run_command(cmd)
         self.assertIn("Visual Studio 2017", client.out)
         self.assertIn("[vcvarsall.bat] Environment initialized for: 'x86'", client.out)
-        self._run_app("x86", "Release")
+        self._run_app(client, "x86", "Release")
         self.assertIn("AppMSCVER 17!!", client.out)
         self.assertIn("AppCppStd 17!!!", client.out)
 
         cmd = ('set "VSCMD_START_DIR=%%CD%%" && '
-               '"%s" x64 && dumpbin /dependents "Release\\MyApp.exe"' % vcvars_path)
+               '"%s" x86 && dumpbin /dependents "Release\\MyApp.exe"' % vcvars_path)
         client.run_command(cmd)
         # No other DLLs dependencies rather than kernel, it was MT, statically linked
         self.assertIn("KERNEL32.dll", client.out)
         self.assertEqual(1, str(client.out).count(".dll"))
 
     def test_toolchain_win_debug(self):
-        client = self.client
+        client = TestClient(path_with_spaces=False)
         settings = {"compiler": "Visual Studio",
                     "compiler.version": "15",
                     "compiler.toolset": "v140",
                     "compiler.runtime": "MDd",
                     "build_type": "Debug",
-                    "arch": "x86_64",
-                    }
+                    "arch": "x86_64"}
 
         # Build the profile according to the settings provided
         settings = " ".join('-s %s="%s"' % (k, v) for k, v in settings.items() if v)
+
+        client.run("new hello/0.1 -s")
+        client.run("create . hello/0.1@ %s" % (settings,))
+
+        # Prepare the actual consumer package
+        client.save({"conanfile.py": self.conanfile,
+                     "MyProject.sln": sln_file,
+                     "MyApp/MyApp.vcxproj": myapp_vcxproj,
+                     "MyApp/MyApp.cpp": self.app},
+                    clean_first=True)
 
         # Run the configure corresponding to this test case
         client.run("install . %s -if=conan" % (settings, ))
@@ -380,12 +376,12 @@ class WinTest(unittest.TestCase):
 
         cmd = ('set "VSCMD_START_DIR=%%CD%%" && '
                '"%s" x64 && '
-               'msbuild "./MyProject.sln" /p:Configuration=Debug /p:PlatformToolset="v140"'
+               'msbuild "MyProject.sln" /p:Configuration=Debug /p:PlatformToolset="v140"'
                % vcvars_path)
         client.run_command(cmd)
         self.assertIn("Visual Studio 2017", client.out)
         self.assertIn("[vcvarsall.bat] Environment initialized for: 'x64'", client.out)
-        self._run_app("x64", "Debug")
+        self._run_app(client, "x64", "Debug")
         self.assertIn("AppMSCVER 15!!", client.out)
         self.assertIn("AppCppStd 14!!!", client.out)
 
@@ -394,3 +390,45 @@ class WinTest(unittest.TestCase):
         client.run_command(cmd)
         self.assertIn("MSVCP140D.dll", client.out)
         self.assertIn("VCRUNTIME140D.dll", client.out)
+
+    def test_toolchain_win_multi(self):
+        client = TestClient(path_with_spaces=False)
+        settings = {"compiler": "Visual Studio",
+                    "compiler.version": "15",
+                    "compiler.cppstd": "17"}
+        settings = " ".join('-s %s="%s"' % (k, v) for k, v in settings.items() if v)
+        client.run("new hello/0.1 -s")
+        configs = [("Release", "x86"), ("Release", "x86_64"), ("Debug", "x86"), ("Debug", "x86_64")]
+        for build_type, arch in configs:
+            # Build the profile according to the settings provided
+            runtime = "MT" if build_type == "Release" else "MTd"
+            client.run("create . hello/0.1@ %s -s build_type=%s -s arch=%s -s compiler.runtime=%s"
+                       % (settings, build_type, arch, runtime))
+
+        # Prepare the actual consumer package
+        client.save({"conanfile.py": self.conanfile,
+                     "MyProject.sln": sln_file,
+                     "MyApp/MyApp.vcxproj": myapp_vcxproj,
+                     "MyApp/MyApp.cpp": self.app},
+                    clean_first=True)
+
+        # Run the configure corresponding to this test case
+        for build_type, arch in configs:
+            runtime = "MT" if build_type == "Release" else "MTd"
+            client.run("install . %s -s build_type=%s -s arch=%s -s compiler.runtime=%s -if=conan"
+                       % (settings, build_type, arch, runtime))
+
+        vs_path = vs_installation_path("15")
+        vcvars_path = os.path.join(vs_path, "VC/Auxiliary/Build/vcvarsall.bat")
+
+        for build_type, arch in configs:
+            platform_arch = "x86" if arch == "x86" else "x64"
+            cmd = ('set "VSCMD_START_DIR=%%CD%%" && '
+                   '"%s" x64 && msbuild "MyProject.sln" /p:Configuration=%s '
+                   '/p:Platform=%s ' % (vcvars_path, build_type, platform_arch))
+            client.run_command(cmd)
+            self.assertIn("Visual Studio 2017", client.out)
+            self.assertIn("[vcvarsall.bat] Environment initialized for: 'x64'", client.out)
+            self._run_app(client, arch, build_type)
+            self.assertIn("AppMSCVER 17!!", client.out)
+            self.assertIn("AppCppStd 17!!!", client.out)
