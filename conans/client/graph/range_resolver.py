@@ -161,7 +161,7 @@ class RangeResolver(object):
         found_refs, remote_name = self._cached_remote_found.get(search_ref, (None, None))
         if found_refs is None:
             # Searching for just the name is much faster in remotes like Artifactory
-            found_refs, remote_name = self._search_remotes(search_ref, remotes)
+            found_refs, remote_name = self._search_remotes(str(search_ref), remotes)
             if found_refs:
                 self._result.append("%s versions found in '%s' remote" % (search_ref, remote_name))
             else:
