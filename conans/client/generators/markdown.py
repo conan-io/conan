@@ -9,9 +9,9 @@ import datetime
 
 
 render_cpp_info = textwrap.dedent("""
-    {% macro join_list_sources(items) %}
+    {% macro join_list_sources(items) -%}
     ``{{ "``, ``".join(items) }}``
-    {% endmacro %}
+    {%- endmacro %}
 
     {% macro render_cpp_info(cpp_info) -%}
     {%- if cpp_info.requires is iterable and cpp_info.requires %}
@@ -102,9 +102,9 @@ requirement_tpl = textwrap.dedent("""
     Graph of dependencies:
     {% if requires %}
     * ``{{ cpp_info.name }}`` requires:
-        {%- for dep_name, dep_cpp_info in requires %}
+        {% for dep_name, dep_cpp_info in requires -%}
         [{{ dep_name }}/{{ dep_cpp_info.version }}]({{ dep_name }}.md){% if not loop.last %}, {% endif %}
-        {%- endfor %}
+        {%- endfor -%}
     {%- endif %}
     {%- if required_by %}
     * ``{{ cpp_info.name }}`` is required by:
@@ -118,12 +118,11 @@ requirement_tpl = textwrap.dedent("""
 
     {%- if cpp_info.includedirs %}
     * Headers (see [below](#header-files))
-    {%- endif%}
-
+    {%- endif %}
     {% if cpp_info.components %}
     {% for cmp_name, cmp_cpp_info in cpp_info.components.items() %}
     * Component ``{{ cpp_info.name }}::{{ cmp_name }}``:
-    {{ render_cpp_info(cmp_cpp_info)|indent(width=1) }}
+    {{ render_cpp_info(cmp_cpp_info)|indent(width=2) }}
     {%- endfor %}
     {% else %}
     {{ render_cpp_info(cpp_info)|indent(width=0) }}
