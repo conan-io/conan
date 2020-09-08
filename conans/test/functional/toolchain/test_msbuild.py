@@ -351,7 +351,8 @@ class WinTest(unittest.TestCase):
         self.assertIn("AppMSCVER 17!!", client.out)
         self.assertIn("AppCppStd 17!!!", client.out)
 
-        cmd = ('"%s" x64 && dumpbin /dependents "Release\\MyApp.exe"' % vcvars_path)
+        cmd = ('set "VSCMD_START_DIR=%%CD%%" && '
+               '"%s" x64 && dumpbin /dependents "Release\\MyApp.exe"' % vcvars_path)
         client.run_command(cmd)
         # No other DLLs dependencies rather than kernel, it was MT, statically linked
         self.assertIn("KERNEL32.dll", client.out)
@@ -388,7 +389,8 @@ class WinTest(unittest.TestCase):
         self.assertIn("AppMSCVER 15!!", client.out)
         self.assertIn("AppCppStd 14!!!", client.out)
 
-        cmd = ('"%s" x64 && dumpbin /dependents "x64\\Debug\\MyApp.exe"' % vcvars_path)
+        cmd = ('set "VSCMD_START_DIR=%%CD%%" && '
+               '"%s" x64 && dumpbin /dependents "x64\\Debug\\MyApp.exe"' % vcvars_path)
         client.run_command(cmd)
         self.assertIn("MSVCP140D.dll", client.out)
         self.assertIn("VCRUNTIME140D.dll", client.out)
