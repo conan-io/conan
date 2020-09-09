@@ -4,6 +4,7 @@ import unittest
 
 import six
 from mock import Mock
+from nose.plugins.attrib import attr
 
 from conans import DEFAULT_REVISION_V1
 from conans.client.userio import UserIO
@@ -16,7 +17,7 @@ from conans.server.store.server_store import ServerStore
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, \
-    TestServer, GenConanfile
+    TestServer, GenConanfile, TurboTestClient
 from conans.test.utils.mocks import TestBufferConanOutput
 from conans.util.env_reader import get_env
 from conans.util.files import load
@@ -498,6 +499,18 @@ class RemoveTest(unittest.TestCase):
                             remote_folders={"H1": [1], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             build_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             src_folders={"H1": True, "H2": True, "B": True, "O": True})
+
+    @attr("artifactory_ready")
+    def test_remove_packages(self):
+        ref = ConanFileReference.loads("Hello/0.1@conan/testing")
+        client = TurboTestClient(servers={"default": TestServer()})
+        pref = client.create(ref, conanfile=GenConanfile().with_package_file("somefile", "foo"))
+        client.run("upload * --all --confirm")
+        package_folder = client.cache.package_layout(pref.ref).package(pref)
+        package_file_path = os.path.join(package_folder, "myfile.sh")
+        client.run("remove '*' -f --packages")
+        client.run("search 'Hello/0.1@conan/testing' -r default")
+        self.assertNotIn("There are no packages for reference 'Hello/0.1@conan/testing', but package recipe found.", self.client.out)
 
 
 class RemoveWithoutUserChannel(unittest.TestCase):
