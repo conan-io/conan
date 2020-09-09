@@ -150,3 +150,42 @@ class Lib(ConanFile):
         self.assertIn("ERROR: Error loading conanfile at", client.out)
         self.assertIn(": Invalid yml format at conandata.yml: while scanning a block scalar",
                       client.out)
+
+    def conan_data_development_flow_test(self):
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+
+            class Lib(ConanFile):
+            
+                def _assert_data(self):
+                    assert(self.conan_data["sources"]["all"]["url"] == "this url")
+                    assert(self.conan_data["sources"]["all"]["other"] == "field")
+                    self.output.info("My URL: {}".format(self.conan_data["sources"]["all"]["url"]))
+
+                def source(self):
+                    self._assert_data()
+
+                def build(self):
+                    self._assert_data()
+
+                def package(self):
+                    self._assert_data()
+            """)
+        conandata = textwrap.dedent("""
+            sources:
+              all:
+                url: "this url"
+                other: "field"
+        """)
+        client.save({"conanfile.py": conanfile,
+                     "conandata.yml": conandata})
+        client.run("source . -sf tmp/source")
+        self.assertIn("My URL: this url", client.out)
+        client.run("install . -if tmp/install")
+        client.run("build . -if tmp/install -bf tmp/build")
+        self.assertIn("My URL: this url", client.out)
+        client.run("package . -sf tmp/source -if tmp/install -bf tmp/build -pf tmp/package")
+        self.assertIn("My URL: this url", client.out)
+        client.run("export-pkg . name/version@ -sf tmp/source -if tmp/install -bf tmp/build")
+        self.assertIn("My URL: this url", client.out)

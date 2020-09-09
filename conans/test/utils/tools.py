@@ -454,7 +454,8 @@ if get_env("CONAN_TEST_WITH_ARTIFACTORY", False):
 
 def _copy_cache_folder(target_folder):
     # Some variables affect to cache population (take a different default folder)
-    cache_key = hash(os.environ.get(CONAN_V2_MODE_ENVVAR, None))
+    vars = [CONAN_V2_MODE_ENVVAR, 'CC', 'CXX', 'PATH']
+    cache_key = hash('|'.join(map(str, [os.environ.get(it, None) for it in vars])))
     master_folder = _copy_cache_folder.master.setdefault(cache_key, temp_folder(create_dir=False))
     if not os.path.exists(master_folder):
         # Create and populate the cache folder with the defaults
@@ -729,6 +730,15 @@ class TestClient(object):
         rrev = self.cache.package_layout(ref).recipe_revision()
         return ref.copy_with_rev(rrev)
 
+    def init_git_repo(self, files=None, branch=None, submodules=None, folder=None, origin_url=None):
+        if folder is not None:
+            folder = os.path.join(self.current_folder, folder)
+        else:
+            folder = self.current_folder
+        _, commit = create_local_git_repo(files, branch, submodules, folder=folder,
+                                          origin_url=origin_url)
+        return commit
+
 
 class TurboTestClient(TestClient):
     tmp_json_name = ".tmp_json"
@@ -827,12 +837,6 @@ class TurboTestClient(TestClient):
                         tmp.append(pref)
                 ret.append(tmp)
         return ret
-
-    def init_git_repo(self, files=None, branch=None, submodules=None, origin_url=None):
-        _, commit = create_local_git_repo(files, branch, submodules, self.current_folder)
-        if origin_url:
-            self.run_command('git remote add origin {}'.format(origin_url))
-        return commit
 
     def init_svn_repo(self, subpath, files=None, repo_url=None):
         if not repo_url:
