@@ -29,6 +29,9 @@ class CommonService(object):
     def remove_packages(self, ref, package_ids_filter):
         """If the revision is not specified it will remove the packages from all the recipes
         (v1 compatibility)"""
+        # https://github.com/conan-io/conan/pull/7687
+        if package_ids_filter is None:
+            package_ids_filter = []
         for package_id in package_ids_filter:
             pref = PackageReference(ref, package_id)
             self._authorizer.check_delete_package(self._auth_user, pref)
