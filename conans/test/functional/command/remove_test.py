@@ -500,15 +500,15 @@ class RemoveTest(unittest.TestCase):
                             build_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             src_folders={"H1": True, "H2": True, "B": True, "O": True})
 
+
+class ArtifactoryRemoveCase(unittest.TestCase):
     @attr("artifactory_ready")
     def test_remove_packages(self):
         ref = ConanFileReference.loads("Hello/0.1@conan/testing")
         client = TurboTestClient(servers={"default": TestServer()})
-        pref = client.create(ref, conanfile=GenConanfile().with_package_file("somefile", "foo"))
+        client.create(ref, conanfile=GenConanfile().with_package_file("somefile", "foo"))
         client.run("upload * --all --confirm")
-        package_folder = client.cache.package_layout(pref.ref).package(pref)
-        package_file_path = os.path.join(package_folder, "myfile.sh")
-        client.run("remove '*' -f --packages")
+        client.run("remove 'Hello/0.1@conan/testing' -f --packages")
         client.run("search 'Hello/0.1@conan/testing' -r default")
         self.assertNotIn("There are no packages for reference 'Hello/0.1@conan/testing', but package recipe found.", self.client.out)
 
