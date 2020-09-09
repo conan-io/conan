@@ -308,6 +308,7 @@ class RestV1Methods(RestCommonMethods):
     def remove_packages(self, ref, package_ids):
         """ Remove any packages specified by package_ids"""
         self.check_credentials()
+        package_ids = None if len(package_ids) == 0 else package_ids
         payload = {"package_ids": package_ids}
         url = self.router.remove_packages(ref)
         ret = self._post_json(url, payload)
