@@ -208,10 +208,10 @@ To run specific tests, you can specify the test name too, something like:
 
 The ``--nocapture`` argument can be useful to see some output that otherwise is captured by nosetests.
 
-Also you can run tests against an instance of Artifactory. Those test should add the attribute
-``artifactory_ready``. To run those tests locally some environment variables must be defined. For
-example for an Artifactory instance that is running on the localhost with default user and password
-configured the variables could take the values.
+Also, you can run tests against an instance of Artifactory. Those tests should add the attribute
+``artifactory_ready``. Some environment variables have to be defined to run them. For example, for an
+Artifactory instance that is running on the localhost with default user and password configured, the
+variables could take the values:
 
 .. code-block:: bash
 
@@ -220,8 +220,8 @@ configured the variables could take the values.
     $ ARTIFACTORY_DEFAULT_USER=admin
     $ ARTIFACTORY_DEFAULT_PASSWORD=password
 
-Please note that running those tests agains a real instance of Artifactory will manipulate the
-repositories of the server so please don't use a separate server for testing purpouses.
+Please note that running those tests against a real instance of Artifactory will manipulate the
+repositories of the server so please use a separate server for testing purposes.
 
 License
 -------
