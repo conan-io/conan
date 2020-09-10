@@ -213,12 +213,12 @@ Also you can run tests against an instance of Artifactory. Those test should add
 example for an Artifactory instance that is running on the localhost with default user and password
 configured the variables could take the values.
 
-```bash
-CONAN_TEST_WITH_ARTIFACTORY=1
-ARTIFACTORY_DEFAULT_URL=http://localhost:8081/artifactory
-ARTIFACTORY_DEFAULT_USER=admin
-ARTIFACTORY_DEFAULT_PASSWORD=password
-```
+.. code-block:: bash
+
+    $ CONAN_TEST_WITH_ARTIFACTORY=1
+    $ ARTIFACTORY_DEFAULT_URL=http://localhost:8081/artifactory
+    $ ARTIFACTORY_DEFAULT_USER=admin
+    $ ARTIFACTORY_DEFAULT_PASSWORD=password
 
 Please note that running those tests agains a real instance of Artifactory will manipulate the
 repositories of the server so please don't use a separate server for testing purpouses.
