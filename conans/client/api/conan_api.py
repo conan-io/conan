@@ -2,9 +2,11 @@ import logging
 import os
 import sys
 import time
-from io import StringIO
+
+from tqdm import tqdm
 
 from conans import __version__ as client_version
+from conans.cli.output import ConanOutput
 from conans.client.cache.cache import ClientCache
 from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
 from conans.client.graph.graph_manager import GraphManager
@@ -14,7 +16,6 @@ from conans.client.graph.range_resolver import RangeResolver
 from conans.client.hook_manager import HookManager
 from conans.client.loader import ConanFileLoader
 from conans.client.migrations import ClientMigrator
-from conans.cli.output import ConanOutput
 from conans.client.remote_manager import RemoteManager
 from conans.client.rest.auth_manager import ConanApiAuthManager
 from conans.client.rest.conan_requester import ConanRequester
@@ -32,7 +33,6 @@ from conans.util.env_reader import get_env
 from conans.util.files import exception_message_safe
 from conans.util.log import configure_logger
 from conans.util.tracer import log_command, log_exception
-from tqdm import tqdm
 
 
 def api_method(f):
