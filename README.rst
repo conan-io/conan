@@ -215,10 +215,10 @@ variables could take the values:
 
 .. code-block:: bash
 
-    $ CONAN_TEST_WITH_ARTIFACTORY=1
-    $ ARTIFACTORY_DEFAULT_URL=http://localhost:8081/artifactory
-    $ ARTIFACTORY_DEFAULT_USER=admin
-    $ ARTIFACTORY_DEFAULT_PASSWORD=password
+    $ export CONAN_TEST_WITH_ARTIFACTORY=1
+    $ export ARTIFACTORY_DEFAULT_URL=http://localhost:8081/artifactory
+    $ export ARTIFACTORY_DEFAULT_USER=admin
+    $ export ARTIFACTORY_DEFAULT_PASSWORD=password
 
 Please note that running those tests against a real instance of Artifactory will manipulate the
 repositories of the server so please use a separate server for testing purposes.
