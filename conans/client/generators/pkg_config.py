@@ -97,16 +97,19 @@ class PkgConfigGenerator(Generator):
         lines = ['prefix=%s' % prefix_path]
 
         libdir_vars = []
-        dir_lines, varnames = _generate_dir_lines(prefix_path, "libdir", cpp_info.libdirs)
-        if dir_lines:
-            libdir_vars = varnames
-            lines.extend(dir_lines)
+        if cpp_info.lib_paths:  # Make sure it is not empty
+            dir_lines, varnames = _generate_dir_lines(prefix_path, "libdir", cpp_info.libdirs)
+            if dir_lines:
+                libdir_vars = varnames
+                lines.extend(dir_lines)
 
         includedir_vars = []
-        dir_lines, varnames = _generate_dir_lines(prefix_path, "includedir", cpp_info.includedirs)
-        if dir_lines:
-            includedir_vars = varnames
-            lines.extend(dir_lines)
+        if cpp_info.include_paths:  # Make sure it is not empty
+            dir_lines, varnames = _generate_dir_lines(prefix_path, "includedir",
+                                                      cpp_info.includedirs)
+            if dir_lines:
+                includedir_vars = varnames
+                lines.extend(dir_lines)
 
         lines.append("")
         lines.append("Name: %s" % name)
@@ -121,7 +124,8 @@ class PkgConfigGenerator(Generator):
         if not hasattr(self.conanfile, 'settings_build'):
             os_build = os_build or self.conanfile.settings.get_safe("os")
 
-        rpaths = rpath_flags(self.conanfile.settings, os_build, ["${%s}" % libdir for libdir in libdir_vars])
+        rpaths = rpath_flags(self.conanfile.settings, os_build,
+                             ["${%s}" % libdir for libdir in libdir_vars])
         frameworks = format_frameworks(cpp_info.frameworks, self.conanfile.settings)
         framework_paths = format_framework_paths(cpp_info.framework_paths, self.conanfile.settings)
 

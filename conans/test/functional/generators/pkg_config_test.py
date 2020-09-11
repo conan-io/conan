@@ -3,6 +3,7 @@ import platform
 import textwrap
 import unittest
 
+from conans.test.utils.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 from conans.util.files import load
 
@@ -20,6 +21,7 @@ class PkgConfigConan(ConanFile):
     version = "0.1"
 
     def package_info(self):
+        self.cpp_info.filter_empty = False
         self.cpp_info.includedirs = []
         self.cpp_info.libdirs = []
         self.cpp_info.bindirs = []
@@ -146,6 +148,7 @@ class PkgConfigConan(ConanFile):
     version = "0.1"
 
     def package_info(self):
+        self.cpp_info.filter_empty = False
         self.cpp_info.libs = ["mylib1", "mylib2"]
         self.cpp_info.system_libs = ["system_lib1", "system_lib2"]
 """
@@ -165,6 +168,7 @@ class PkgConfigConan(ConanFile):
 
             class PkgConfigConan(ConanFile):
                 def package_info(self):
+                    self.cpp_info.filter_empty = False
                     self.cpp_info.includedirs = ["inc1", "inc2", "inc3/foo"]
                     self.cpp_info.libdirs = ["lib1", "lib2"]
             """)
@@ -181,3 +185,12 @@ class PkgConfigConan(ConanFile):
         self.assertIn("libdir2=${prefix}/lib2", pc_content)
         self.assertIn("Libs: -L${libdir} -L${libdir2}", pc_content)
         self.assertIn("Cflags: -I${includedir} -I${includedir2} -I${includedir3}", pc_content)
+
+    def empty_include_test(self):
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . pkg/0.1@")
+        client.run("install pkg/0.1@ -g=pkg_config")
+        pc = client.load("pkg.pc")
+        self.assertNotIn("libdir=${prefix}/lib", pc)
+        self.assertNotIn("includedir=${prefix}/include", pc)
