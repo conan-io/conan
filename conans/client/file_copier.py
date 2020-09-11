@@ -153,7 +153,7 @@ class FileCopier(object):
             filenames = {f.lower(): f for f in filenames}
             pattern = pattern.lower()
 
-        files_to_copy = fnmatch.filter(filenames, pattern)
+        files_to_copy = [n for n in filenames if fnmatch.fnmatchcase(n, pattern)]
         for exclude in excludes:
             files_to_copy = [f for f in files_to_copy if not fnmatch.fnmatch(f, exclude)]
 
