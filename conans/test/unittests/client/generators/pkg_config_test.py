@@ -17,6 +17,7 @@ class PkgGeneratorTest(unittest.TestCase):
         conanfile.initialize(Settings({}), EnvValues())
         ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
         cpp_info = CppInfo(ref.name, "dummy_root_folder1")
+        cpp_info.filter_empty = False
         cpp_info.name = "my_pkg"
         cpp_info.defines = ["MYDEFINE1"]
         cpp_info.cflags.append("-Flag1=23")
@@ -26,6 +27,7 @@ class PkgGeneratorTest(unittest.TestCase):
 
         ref = ConanFileReference.loads("MyPkg1/0.1@lasote/stables")
         cpp_info = CppInfo(ref.name, "dummy_root_folder1")
+        cpp_info.filter_empty = False
         cpp_info.name = "MYPKG1"
         cpp_info.defines = ["MYDEFINE11"]
         cpp_info.cflags.append("-Flag1=21")
@@ -36,6 +38,7 @@ class PkgGeneratorTest(unittest.TestCase):
 
         ref = ConanFileReference.loads("MyPkg2/0.1@lasote/stables")
         cpp_info = CppInfo(ref.name, "dummy_root_folder2")
+        cpp_info.filter_empty = False
         cpp_info.defines = ["MYDEFINE2"]
         cpp_info.version = "2.3"
         cpp_info.exelinkflags = ["-exelinkflag"]
@@ -87,6 +90,7 @@ Cflags: -I${includedir} -Flag1=23 -DMYDEFINE1
 
         ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
         cpp_info = CppInfo(ref.name, "dummy_root_folder1")
+        cpp_info.filter_empty = False
         cpp_info.name = "my_pkg"
         cpp_info.names["pkg_config"] = "my_pkg_custom_name"
         cpp_info.defines = ["MYDEFINE1"]
@@ -97,6 +101,7 @@ Cflags: -I${includedir} -Flag1=23 -DMYDEFINE1
 
         ref = ConanFileReference.loads("MyPkg1/0.1@lasote/stables")
         cpp_info = CppInfo(ref.name, "dummy_root_folder1")
+        cpp_info.filter_empty = False
         cpp_info.name = "MYPKG1"
         cpp_info.names["pkg_config"] = "my_pkg1_custom_name"
         cpp_info.defines = ["MYDEFINE11"]
@@ -107,6 +112,7 @@ Cflags: -I${includedir} -Flag1=23 -DMYDEFINE1
 
         ref = ConanFileReference.loads("MyPkg2/0.1@lasote/stables")
         cpp_info = CppInfo(ref.name, "dummy_root_folder2")
+        cpp_info.filter_empty = False
         cpp_info.names["pkg_config"] = "my_pkg2_custom_name"
         cpp_info.defines = ["MYDEFINE2"]
         cpp_info.version = "2.3"
@@ -118,6 +124,7 @@ Cflags: -I${includedir} -Flag1=23 -DMYDEFINE1
 
         ref = ConanFileReference.loads("zlib/1.2.11@lasote/stable")
         cpp_info = CppInfo(ref.name, "dummy_root_folder_zlib")
+        cpp_info.filter_empty = False
         cpp_info.name = "ZLIB"
         cpp_info.defines = ["MYZLIBDEFINE2"]
         cpp_info.version = "1.2.11"
@@ -125,6 +132,7 @@ Cflags: -I${includedir} -Flag1=23 -DMYDEFINE1
 
         ref = ConanFileReference.loads("bzip2/0.1@lasote/stables")
         cpp_info = CppInfo(ref.name, "dummy_root_folder2")
+        cpp_info.filter_empty = False
         cpp_info.name = "BZip2"
         cpp_info.names["pkg_config"] = "BZip2"
         cpp_info.defines = ["MYDEFINE2"]
@@ -189,6 +197,7 @@ Requires: my_pkg_custom_name my_pkg1_custom_name zlib
         conanfile.settings = settings
         ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
         cpp_info = CppInfo(ref.name, "dummy_root_folder1")
+        cpp_info.filter_empty = False
         cpp_info.frameworks = ['AudioUnit', 'AudioToolbox']
         cpp_info.version = "1.3"
         cpp_info.description = "My cool description"
@@ -204,6 +213,6 @@ includedir=${prefix}/include
 Name: MyPkg
 Description: My cool description
 Version: 1.3
-Libs: -L${libdir} -Wl,-rpath,"${libdir}" -framework AudioUnit -framework AudioToolbox
+Libs: -L${libdir} -Wl,-rpath,"${libdir}" -framework AudioUnit -framework AudioToolbox -F dummy_root_folder1/Frameworks
 Cflags: -I${includedir}
 """)

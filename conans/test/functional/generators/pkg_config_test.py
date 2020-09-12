@@ -25,6 +25,7 @@ class PkgConfigConan(ConanFile):
         self.cpp_info.includedirs = []
         self.cpp_info.libdirs = []
         self.cpp_info.bindirs = []
+        self.cpp_info.frameworkdirs = []
         self.cpp_info.libs = []
         libname = "mylib"
         fake_dir = os.path.join("/", "my_absoulte_path", "fake")
