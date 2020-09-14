@@ -15,30 +15,21 @@ class PkgGeneratorTest(unittest.TestCase):
         conanfile = """
 import os
 from conans import ConanFile
-from conans.tools import save
 
 class PkgConfigConan(ConanFile):
     name = "MyLib"
     version = "0.1"
 
-    def _dirs(self):
+    def package_info(self):
+        self.cpp_info.frameworkdirs = []
+        self.cpp_info.filter_empty = False
         libname = "mylib"
         fake_dir = os.path.join("/", "my_absoulte_path", "fake")
         include_dir = os.path.join(fake_dir, libname, "include")
         lib_dir = os.path.join(fake_dir, libname, "lib")
         lib_dir2 = os.path.join(self.package_folder, "lib2")
-        return include_dir, (lib_dir, lib_dir2)
-
-    def package(self):
-        include_dir, libdirs = self._dirs()
-        for p in [include_dir, *libdirs]:
-            save(os.path.join(self.package_folder, p, "file"), "")
-
-    def package_info(self):
-        self.cpp_info.frameworkdirs = []
-        include_dir, libdirs = self._dirs()
         self.cpp_info.includedirs = [include_dir]
-        self.cpp_info.libdirs = libdirs
+        self.cpp_info.libdirs = [lib_dir, lib_dir2]
 """
         client = TestClient()
         client.save({"conanfile.py": conanfile})
