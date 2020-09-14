@@ -97,19 +97,17 @@ class PkgConfigGenerator(Generator):
         lines = ['prefix=%s' % prefix_path]
 
         libdir_vars = []
-        if cpp_info.lib_paths:  # Make sure it is not empty
-            dir_lines, varnames = _generate_dir_lines(prefix_path, "libdir", cpp_info.libdirs)
-            if dir_lines:
-                libdir_vars = varnames
-                lines.extend(dir_lines)
+        dir_lines, varnames = self._generate_dir_lines(prefix_path, "libdir", cpp_info.lib_paths)
+        if dir_lines:
+            libdir_vars = varnames
+            lines.extend(dir_lines)
 
         includedir_vars = []
-        if cpp_info.include_paths:  # Make sure it is not empty
-            dir_lines, varnames = _generate_dir_lines(prefix_path, "includedir",
-                                                      cpp_info.includedirs)
-            if dir_lines:
-                includedir_vars = varnames
-                lines.extend(dir_lines)
+        dir_lines, varnames = self._generate_dir_lines(prefix_path, "includedir",
+                                                       cpp_info.include_paths)
+        if dir_lines:
+            includedir_vars = varnames
+            lines.extend(dir_lines)
 
         lines.append("")
         lines.append("Name: %s" % name)
@@ -167,23 +165,23 @@ class PkgConfigGenerator(Generator):
             lines.append("Requires: %s" % public_deps)
         return "\n".join(lines) + "\n"
 
+    @staticmethod
+    def _generate_dir_lines(prefix_path, varname, dirs):
+        lines = []
+        varnames = []
+        for i, directory in enumerate(dirs):
+            directory = os.path.normpath(directory).replace("\\", "/")
+            name = varname if i == 0 else "%s%d" % (varname, (i + 1))
+            prefix = ""
+            if not os.path.isabs(directory):
+                prefix = "${prefix}/"
+            elif directory.startswith(prefix_path):
+                prefix = "${prefix}/"
+                directory = os.path.relpath(directory, prefix_path).replace("\\", "/")
+            lines.append("%s=%s%s" % (name, prefix, directory))
+            varnames.append(name)
+        return lines, varnames
+
 
 def _concat_if_not_empty(groups):
     return " ".join([param for group in groups for param in group if param and param.strip()])
-
-
-def _generate_dir_lines(prefix_path, varname, dirs):
-    lines = []
-    varnames = []
-    for i, directory in enumerate(dirs):
-        directory = os.path.normpath(directory).replace("\\", "/")
-        name = varname if i == 0 else "%s%d" % (varname, (i + 1))
-        prefix = ""
-        if not os.path.isabs(directory):
-            prefix = "${prefix}/"
-        elif directory.startswith(prefix_path):
-            prefix = "${prefix}/"
-            directory = os.path.relpath(directory, prefix_path)
-        lines.append("%s=%s%s" % (name, prefix, directory))
-        varnames.append(name)
-    return lines, varnames
