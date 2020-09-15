@@ -730,6 +730,15 @@ class TestClient(object):
         rrev = self.cache.package_layout(ref).recipe_revision()
         return ref.copy_with_rev(rrev)
 
+    def init_git_repo(self, files=None, branch=None, submodules=None, folder=None, origin_url=None):
+        if folder is not None:
+            folder = os.path.join(self.current_folder, folder)
+        else:
+            folder = self.current_folder
+        _, commit = create_local_git_repo(files, branch, submodules, folder=folder,
+                                          origin_url=origin_url)
+        return commit
+
 
 class TurboTestClient(TestClient):
     tmp_json_name = ".tmp_json"
@@ -828,12 +837,6 @@ class TurboTestClient(TestClient):
                         tmp.append(pref)
                 ret.append(tmp)
         return ret
-
-    def init_git_repo(self, files=None, branch=None, submodules=None, origin_url=None):
-        _, commit = create_local_git_repo(files, branch, submodules, self.current_folder)
-        if origin_url:
-            self.run_command('git remote add origin {}'.format(origin_url))
-        return commit
 
     def init_svn_repo(self, subpath, files=None, repo_url=None):
         if not repo_url:

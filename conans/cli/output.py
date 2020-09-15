@@ -184,8 +184,8 @@ class ConanOutput(object):
 
 
 class CliOutput(object):
-    def __init__(self, stream, color=False):
-        self._stream = stream
+    def __init__(self, color=False):
+        self._stream = sys.stdout
         self._color = color
         self._scope = None
 

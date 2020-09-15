@@ -9,7 +9,6 @@ from parameterized import parameterized
 from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient, GenConanfile
-from conans.test.utils.scm import create_local_git_repo
 
 
 class PyRequiresExtendTest(unittest.TestCase):
@@ -295,8 +294,7 @@ class PyRequiresExtendTest(unittest.TestCase):
             class MyConanfileBase(SomeBase, ConanFile):
                 pass
             """)
-        create_local_git_repo({"conanfile.py": conanfile}, branch="my_release",
-                              folder=client.current_folder)
+        client.init_git_repo({"conanfile.py": conanfile}, branch="my_release")
         client.run("export . base/1.1@user/testing")
 
         reuse = textwrap.dedent("""
@@ -326,8 +324,7 @@ class PyRequiresExtendTest(unittest.TestCase):
             class MyConanfileBase(SomeBase, ConanFile):
                 pass
             """)
-        create_local_git_repo({"conanfile.py": conanfile}, branch="my_release",
-                              folder=client.current_folder)
+        client.init_git_repo({"conanfile.py": conanfile}, branch="my_release")
         client.run("export . base/1.1@user/testing")
         client.run("get base/1.1@user/testing")
         self.assertIn('"url": "somerepo"', client.out)
@@ -363,8 +360,8 @@ class PyRequiresExtendTest(unittest.TestCase):
             class MyConanfileBase(SomeBase, ConanFile):
                 pass
             """)
-        _, base_rev = create_local_git_repo({"conanfile.py": conanfile}, branch="my_release",
-                                            folder=os.path.join(client.current_folder, "base"))
+        base_rev = client.init_git_repo({"conanfile.py": conanfile}, branch="my_release",
+                                        folder="base")
         client.run("config set general.scm_to_conandata=1")
         client.run("export base base/1.1@user/testing")
 
@@ -375,10 +372,10 @@ class PyRequiresExtendTest(unittest.TestCase):
                 python_requires = "base/1.1@user/testing"
                 python_requires_extend = "base.SomeBase"
             """)
-        _, reuse1_rev = create_local_git_repo({"conanfile.py": reuse % "reuse1"}, branch="release",
-                                              folder=os.path.join(client.current_folder, "reuse1"))
-        _, reuse2_rev = create_local_git_repo({"conanfile.py": reuse % "reuse2"}, branch="release",
-                                              folder=os.path.join(client.current_folder, "reuse2"))
+        reuse1_rev = client.init_git_repo({"conanfile.py": reuse % "reuse1"}, branch="release",
+                                          folder="reuse1")
+        reuse2_rev = client.init_git_repo({"conanfile.py": reuse % "reuse2"}, branch="release",
+                                          folder="reuse2")
         client.run("export reuse1 reuse1/1.1@user/testing")
         client.run("export reuse2 reuse2/1.1@user/testing")
 
