@@ -97,13 +97,14 @@ class PkgConfigGenerator(Generator):
         lines = ['prefix=%s' % prefix_path]
 
         libdir_vars = []
-        dir_lines, varnames = _generate_dir_lines(prefix_path, "libdir", cpp_info.libdirs)
+        dir_lines, varnames = self._generate_dir_lines(prefix_path, "libdir", cpp_info.lib_paths)
         if dir_lines:
             libdir_vars = varnames
             lines.extend(dir_lines)
 
         includedir_vars = []
-        dir_lines, varnames = _generate_dir_lines(prefix_path, "includedir", cpp_info.includedirs)
+        dir_lines, varnames = self._generate_dir_lines(prefix_path, "includedir",
+                                                       cpp_info.include_paths)
         if dir_lines:
             includedir_vars = varnames
             lines.extend(dir_lines)
@@ -121,7 +122,8 @@ class PkgConfigGenerator(Generator):
         if not hasattr(self.conanfile, 'settings_build'):
             os_build = os_build or self.conanfile.settings.get_safe("os")
 
-        rpaths = rpath_flags(self.conanfile.settings, os_build, ["${%s}" % libdir for libdir in libdir_vars])
+        rpaths = rpath_flags(self.conanfile.settings, os_build,
+                             ["${%s}" % libdir for libdir in libdir_vars])
         frameworks = format_frameworks(cpp_info.frameworks, self.conanfile.settings)
         framework_paths = format_framework_paths(cpp_info.framework_paths, self.conanfile.settings)
 
@@ -163,23 +165,23 @@ class PkgConfigGenerator(Generator):
             lines.append("Requires: %s" % public_deps)
         return "\n".join(lines) + "\n"
 
+    @staticmethod
+    def _generate_dir_lines(prefix_path, varname, dirs):
+        lines = []
+        varnames = []
+        for i, directory in enumerate(dirs):
+            directory = os.path.normpath(directory).replace("\\", "/")
+            name = varname if i == 0 else "%s%d" % (varname, (i + 1))
+            prefix = ""
+            if not os.path.isabs(directory):
+                prefix = "${prefix}/"
+            elif directory.startswith(prefix_path):
+                prefix = "${prefix}/"
+                directory = os.path.relpath(directory, prefix_path).replace("\\", "/")
+            lines.append("%s=%s%s" % (name, prefix, directory))
+            varnames.append(name)
+        return lines, varnames
+
 
 def _concat_if_not_empty(groups):
     return " ".join([param for group in groups for param in group if param and param.strip()])
-
-
-def _generate_dir_lines(prefix_path, varname, dirs):
-    lines = []
-    varnames = []
-    for i, directory in enumerate(dirs):
-        directory = os.path.normpath(directory).replace("\\", "/")
-        name = varname if i == 0 else "%s%d" % (varname, (i + 1))
-        prefix = ""
-        if not os.path.isabs(directory):
-            prefix = "${prefix}/"
-        elif directory.startswith(prefix_path):
-            prefix = "${prefix}/"
-            directory = os.path.relpath(directory, prefix_path)
-        lines.append("%s=%s%s" % (name, prefix, directory))
-        varnames.append(name)
-    return lines, varnames
