@@ -126,7 +126,7 @@ class Cli(object):
             self._print_similar(command_argument)
             raise ConanException("Unknown command %s" % str(exc))
 
-        command.run(args[0][1:], conan_api=self.conan_api, out=self._cli_out,
+        command.run(args[0][1:], conan_api=self.conan_api, cli_out=self._cli_out,
                     parser=self.commands[command_argument].parser,
                     commands=self.commands, groups=self.groups)
 
