@@ -13,10 +13,10 @@ def output_help_cli(out, commands, groups):
     fmt = '  %-{}s'.format(max_len)
 
     for group_name, comm_names in groups.items():
-        out.write(group_name, Color.BRIGHT_MAGENTA)
+        out.info(group_name, Color.BRIGHT_MAGENTA)
         for name in comm_names:
             # future-proof way to ensure tabular formatting
-            out.write(fmt % name, Color.GREEN)
+            out.info(fmt % name, Color.GREEN)
 
             # Help will be all the lines up to the first empty one
             docstring_lines = commands[name].doc.split('\n')
@@ -32,10 +32,10 @@ def output_help_cli(out, commands, groups):
                 data.append(line)
 
             txt = textwrap.fill(' '.join(data), 80, subsequent_indent=" " * (max_len + 2))
-            out.write(txt)
+            out.info(txt)
 
-    out.write("")
-    out.write('Conan commands. Type "conan <command> -h" for help', Color.BRIGHT_YELLOW)
+    out.info("")
+    out.info('Conan commands. Type "conan <command> -h" for help', Color.BRIGHT_YELLOW)
 
 
 @conan_command(group="Misc", formatters={"cli": output_help_cli})
