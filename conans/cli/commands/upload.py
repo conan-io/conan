@@ -15,7 +15,7 @@ def output_upload_json(info, out):
     out.write(myjson)
 
 
-@conan_command(group="Consumer", formatters={"cli": output_upload_cli,
+@conan_command(group="Creator commands", formatters={"cli": output_upload_cli,
                                              "json": output_upload_json})
 def upload(*args, conan_api, parser, **kwargs):
     """
