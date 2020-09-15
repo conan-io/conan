@@ -1,7 +1,6 @@
 import json
 
 from conans.client.output import Color
-from conans.errors import NoRemoteAvailable
 from conans.cli.command import conan_command, Extender
 
 
