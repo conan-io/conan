@@ -15,7 +15,7 @@ def output_create_json(info, out):
 
 @conan_command(group="Creator commands", formatters={"cli": output_create_cli,
                                                      "json": output_create_json})
-def create(*args, conan_api, parser, **kwargs):
+def create(conan_api, parser, *args, **kwargs):
     """
     Builds a binary package for a recipe (conanfile.py).
 
