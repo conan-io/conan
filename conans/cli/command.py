@@ -124,8 +124,7 @@ class ConanCommand(BaseConanCommand):
             if info:
                 self._formatters[parser_args.output](info, cli_out)
         else:
-            arg_list, = args
-            subcommand = arg_list[0]
+            subcommand = args[0][0] if args[0] else None
             if subcommand in self._subcommands:
                 self._subcommands[subcommand].run(conan_api, cli_out, *args)
             else:
