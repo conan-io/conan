@@ -119,16 +119,19 @@ class ConanCommand(BaseConanCommand):
 
     def run(self, conan_api, cli_out, parser, *args, **kwargs):
         info = self._method(conan_api, parser, *args, **kwargs)
-        if not self._subcommands:
-            parser_args = self._parser.parse_args(*args)
-            if info:
-                self._formatters[parser_args.output](info, cli_out)
-        else:
-            subcommand = args[0][0] if args[0] else None
-            if subcommand in self._subcommands:
+        subcommand = args[0][0] if args[0] else None
+        if subcommand:
+            try:
                 self._subcommands[subcommand].run(conan_api, cli_out, *args)
-            else:
-                self._parser.parse_args(*args)
+            except KeyError:
+                parser_args = self._parser.parse_args(*args)
+                try:
+                    self._formatters[parser_args.output](info, cli_out)
+                except AttributeError:
+                    raise ConanException(
+                        "There is no formatter defined for command '{}'".format(self._name))
+        else:
+            self._parser.parse_args(*args)
 
     @property
     def group(self):
@@ -145,8 +148,10 @@ class ConanSubCommand(BaseConanCommand):
     def run(self, conan_api, cli_out, *args):
         info = self._method(conan_api, self._parent_parser, self._parser, *args)
         parser_args = self._parent_parser.parse_args(*args)
-        if info:
+        try:
             self._formatters[parser_args.output](info, cli_out)
+        except AttributeError:
+            raise ConanException("There is no formatter defined for command '{}'".format(self._name))
 
     def set_parser(self, parent_parser, subcommand_parser):
         self._parser = subcommand_parser.add_parser(self._name, help=self._doc)
