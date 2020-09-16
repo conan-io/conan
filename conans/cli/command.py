@@ -127,7 +127,7 @@ class ConanCommand(BaseConanCommand):
             arg_list, = args
             subcommand = arg_list[0]
             if subcommand in self._subcommands:
-                self._subcommands[subcommand].run(conan_api, cli_out, *args, **kwargs)
+                self._subcommands[subcommand].run(conan_api, cli_out, *args)
             else:
                 self._parser.parse_args(*args)
 
@@ -143,7 +143,7 @@ class ConanSubCommand(BaseConanCommand):
         self._parser = None
         self._name = "-".join(method.__name__.split("_")[1:])
 
-    def run(self, conan_api, cli_out, *args, **kwargs):
+    def run(self, conan_api, cli_out, *args):
         info = self._method(conan_api, self._parent_parser, self._parser, *args)
         parser_args = self._parent_parser.parse_args(*args)
         if info:
