@@ -34,16 +34,15 @@ class PropagateSpecificComponents(unittest.TestCase):
                 self.cpp_info.requires = ["top::cmp1"]
     """)
 
-    @classmethod
-    def setUpClass(cls):
+    def setUp(self):
         client = TestClient()
         client.save({
-            'top.py': cls.top,
-            'middle.py': cls.middle
+            'top.py': self.top,
+            'middle.py': self.middle
         })
         client.run('create top.py top/version@')
         client.run('create middle.py middle/version@')
-        cls.cache_folder = client.cache_folder
+        self.cache_folder = client.cache_folder
 
     def test_cmake_find_package(self):
         t = TestClient(cache_folder=self.cache_folder)
