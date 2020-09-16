@@ -16,7 +16,7 @@ def output_user_list_cli(info, out):
 
 
 @conan_subcommand(formatters={"cli": output_user_list_cli, "json": output_user_list_json})
-def user_list(*args, conan_api, parser, subparser):
+def user_list(conan_api, parser, subparser, *args):
     """
     List users and remotes they are associated to.
     """
@@ -33,7 +33,7 @@ def user_list(*args, conan_api, parser, subparser):
 
 # no user associated with remote yet
 @conan_subcommand()
-def user_add(*args, conan_api, parser, subparser):
+def user_add(conan_api, parser, subparser, *args):
     """
     Add user authentication for a remote.
     """
@@ -55,7 +55,7 @@ def user_add(*args, conan_api, parser, subparser):
 
 
 @conan_subcommand()
-def user_remove(*args, conan_api, parser, subparser):
+def user_remove(conan_api, parser, subparser, *args):
     """
     Remove associated user from remote.
     """
@@ -66,7 +66,7 @@ def user_remove(*args, conan_api, parser, subparser):
 
 
 @conan_subcommand()
-def user_update(*args, conan_api, parser, subparser):
+def user_update(conan_api, parser, subparser, *args):
     """
     Update the current user for a remote. If not 'user' and 'password' are passed it will ask
     for them interactively.
@@ -87,7 +87,7 @@ def user_update(*args, conan_api, parser, subparser):
 
 
 @conan_command(group="Misc")
-def user(*args, conan_api, parser, **kwargs):
+def user(conan_api, parser, *args, **kwargs):
     """
     Authenticates against a remote with user/pass, caching the auth token.
 

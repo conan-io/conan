@@ -39,18 +39,19 @@ def output_help_cli(out, commands, groups):
 
 
 @conan_command(group="Misc", formatters={"cli": output_help_cli})
-def help(*args, conan_api, parser, commands, groups, **kwargs):
+def help(conan_api, parser, *args, **kwargs):
     """
     Shows help for a specific command.
     """
 
     parser.add_argument("command", help='command', nargs="?")
     args = parser.parse_args(*args)
+    commands = kwargs["commands"]
+    groups = kwargs["groups"]
     if not args.command:
         output_help_cli(conan_api.out, commands, groups)
         return None
     try:
-        commands[args.command].run(["--help"], parser=commands[args.command].parser,
-                                   conan_api=conan_api)
+        commands[args.command].run(commands[args.command].parser, conan_api, ["--help"])
     except KeyError:
         raise ConanException("Unknown command '%s'" % args.command)
