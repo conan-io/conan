@@ -3,12 +3,14 @@ import os
 import re
 import textwrap
 import unittest
+from datetime import datetime
 
 from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import TestClient, GenConanfile
 from conans.util.files import load, save
+from conans import __version__ as client_version
 
 
 class InfoTest(unittest.TestCase):
@@ -26,7 +28,7 @@ class InfoTest(unittest.TestCase):
 
     def failed_info_test(self):
         client = TestClient()
-        client.save({"conanfile.py": GenConanfile().with_require_plain("Pkg/1.0.x@user/testing")})
+        client.save({"conanfile.py": GenConanfile().with_require("Pkg/1.0.x@user/testing")})
         client.run("info .", assert_error=True)
         self.assertIn("Pkg/1.0.x@user/testing: Not found in local cache", client.out)
         client.run("search")
@@ -199,6 +201,8 @@ class InfoTest(unittest.TestCase):
         self.assertIn("<body>", html)
         self.assertIn("{ from: 0, to: 1 }", html)
         self.assertIn("id: 0,\n                        label: 'Hello0/0.1',", html)
+        self.assertIn("Conan <b>v{}</b> <script>document.write(new Date().getFullYear())</script> JFrog LTD. <a>https://conan.io</a>"
+                      .format(client_version, datetime.today().year), html)
 
     def graph_html_embedded_visj_test(self):
         client = TestClient()
@@ -537,10 +541,10 @@ class AConan(ConanFile):
                       self.client.out)
         self.client.run("info . -bo=Dev1/0.1@lasote/stable")
         self.assertEqual("WARN: Usage of `--build-order` argument is deprecated and can return wrong"
-                         " results. Use `conan graph build-order ...` instead.\n\n", self.client.out)
+                         " results. Use `conan lock build-order ...` instead.\n\n", self.client.out)
         self.client.run("info . -bo=LibG/0.1@lasote/stable")
         self.assertEqual("WARN: Usage of `--build-order` argument is deprecated and can return wrong"
-                         " results. Use `conan graph build-order ...` instead.\n\n", self.client.out)
+                         " results. Use `conan lock build-order ...` instead.\n\n", self.client.out)
 
         self.client.run("info . --build-order=ALL")
         self.assertIn("[LibA/0.1@lasote/stable, LibE/0.1@lasote/stable, LibF/0.1@lasote/stable], "

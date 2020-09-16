@@ -7,7 +7,7 @@ from conans.client.conf import get_default_settings_yml
 from conans.client.tools.env import environment_append
 from conans.client.tools.intel import compilervars_command
 from conans.errors import ConanException
-from conans.test.utils.conanfile import MockConanfile
+from conans.test.utils.mocks import MockConanfile
 
 
 class CompilerVarsTest(unittest.TestCase):

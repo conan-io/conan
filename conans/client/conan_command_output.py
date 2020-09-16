@@ -13,6 +13,7 @@ from conans.unicode import get_cwd
 from conans.util.dates import iso8601_to_str
 from conans.util.env_reader import get_env
 from conans.util.files import save
+from conans import __version__ as client_version
 
 
 class CommandOutputer(object):
@@ -231,7 +232,8 @@ class CommandOutputer(object):
 
         template_folder = os.path.dirname(template.filename)
         save(graph_filename,
-             template.render(graph=graph, assets=assets, base_template_path=template_folder))
+             template.render(graph=graph, assets=assets, base_template_path=template_folder,
+                             version=client_version))
 
     def json_info(self, deps_graph, json_output, cwd, show_paths):
         data = self._grab_info_data(deps_graph, grab_paths=show_paths)

@@ -15,8 +15,9 @@ from conans.paths import BUILD_FOLDER, CONANFILE, CONANINFO, CONAN_MANIFEST, EXP
 from conans.server.store.server_store import ServerStore
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestBufferConanOutput, TestClient, \
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, \
     TestServer, GenConanfile
+from conans.test.utils.mocks import TestBufferConanOutput
 from conans.util.env_reader import get_env
 from conans.util.files import load
 

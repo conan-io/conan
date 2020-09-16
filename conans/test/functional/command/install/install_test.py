@@ -488,7 +488,7 @@ class Pkg(ConanFile):
         client.run("install . -pr=myotherprofile")
         self.assertIn("PKGOS=FreeBSD", client.out)
         client.run("install . -pr=./myotherprofile", assert_error=True)
-        self.assertIn("Error parsing the profile", client.out)
+        self.assertIn("Error while parsing line 0", client.out)
 
     def install_with_path_errors_test(self):
         client = TestClient()
@@ -533,7 +533,7 @@ class Pkg(ConanFile):
                 options = {"shared": [True, False]}
                 default_options = "shared=True"
             """)
-        conanfile = GenConanfile().with_require_plain("boost/0.1@conan/stable")
+        conanfile = GenConanfile().with_require("boost/0.1@conan/stable")
         client = TestClient()
         client.save({"conanfile.py": conanfile,
                      "conanfile_boost.py": conanfile_boost})

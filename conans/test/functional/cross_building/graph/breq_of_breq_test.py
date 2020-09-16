@@ -52,7 +52,8 @@ class BuildRequireOfBuildRequire(CrossBuildingBaseTestCase):
         profile_build.settings["os"] = "Build"
         profile_build.process_settings(self.cache)
 
-        deps_graph = self._build_graph(profile_host=profile_host, profile_build=profile_build, install=True)
+        deps_graph = self._build_graph(profile_host=profile_host, profile_build=profile_build,
+                                       install=True)
 
         # Check HOST packages
         #   - Application
@@ -87,7 +88,7 @@ class BuildRequireOfBuildRequire(CrossBuildingBaseTestCase):
             _ = application.conanfile.deps_env_info["gtest"]
 
         #   - GTest
-        gtest_host = application.dependencies[1].dst
+        gtest_host = application.dependencies[2].dst
         self.assertEqual(gtest_host.conanfile.name, "gtest")
         self.assertEqual(gtest_host.context, CONTEXT_HOST)
         self.assertEqual(gtest_host.conanfile.settings.os, profile_host.settings['os'])
@@ -109,7 +110,7 @@ class BuildRequireOfBuildRequire(CrossBuildingBaseTestCase):
         self.assertEqual(str(cmake_build.conanfile.settings.os), profile_build.settings['os'])
 
         #   - Protoc
-        protoc_build = application.dependencies[2].dst
+        protoc_build = application.dependencies[1].dst
         self.assertEqual(protoc_build.conanfile.name, "protoc")
         self.assertEqual(protoc_build.context, CONTEXT_BUILD)
         self.assertEqual(str(protoc_build.conanfile.settings.os), profile_build.settings['os'])

@@ -12,16 +12,16 @@ class TransitiveIdsTest(unittest.TestCase):
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . liba/1.0@")
         client.run("create . liba/1.1@")
-        client.save({"conanfile.py": GenConanfile().with_require_plain("liba/1.0")})
+        client.save({"conanfile.py": GenConanfile().with_require("liba/1.0")})
         client.run("create . libb/1.0@")
-        client.save({"conanfile.py": GenConanfile().with_require_plain("libb/1.0")})
+        client.save({"conanfile.py": GenConanfile().with_require("libb/1.0")})
         client.run("create . libc/1.0@")
-        client.save({"conanfile.py": GenConanfile().with_require_plain("libc/1.0")
-                                                   .with_require_plain("liba/1.0")})
+        client.save({"conanfile.py": GenConanfile().with_require("libc/1.0")
+                                                   .with_require("liba/1.0")})
         client.run("create . libd/1.0@")
         # The consumer forces to depend on liba/2, instead of liba/1
-        client.save({"conanfile.py": GenConanfile().with_require_plain("libc/1.0")
-                                                   .with_require_plain("liba/1.1")})
+        client.save({"conanfile.py": GenConanfile().with_require("libc/1.0")
+                                                   .with_require("liba/1.1")})
         client.run("create . libd/1.0@", assert_error=True)
         # both B and C require a new binary
         self.assertIn("liba/1.1:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache", client.out)
@@ -42,21 +42,21 @@ class TransitiveIdsTest(unittest.TestCase):
         client.run("create . liba/1.0@")
         client.run("create . liba/1.1@")
         # libB -> LibA
-        client.save({"conanfile.py": GenConanfile().with_require_plain("liba/1.0")})
+        client.save({"conanfile.py": GenConanfile().with_require("liba/1.0")})
         client.run("create . libb/1.0@")
         # libC -> libB
         major_mode = "self.info.requires.major_mode()"
-        client.save({"conanfile.py": GenConanfile().with_require_plain("libb/1.0")
+        client.save({"conanfile.py": GenConanfile().with_require("libb/1.0")
                                                    .with_package_id(major_mode)})
         client.run("create . libc/1.0@")
         # Check the LibC ref with RREV keeps the same
         self.assertIn("libc/1.0:3627c16569f55501cb7d6c5db2b4b00faec7caf6 - Build", client.out)
         # LibD -> LibC
-        client.save({"conanfile.py": GenConanfile().with_require_plain("libc/1.0")})
+        client.save({"conanfile.py": GenConanfile().with_require("libc/1.0")})
         client.run("create . libd/1.0@")
         # LibE -> LibD, LibA/2.0
-        client.save({"conanfile.py": GenConanfile().with_require_plain("libd/1.0")
-                                                   .with_require_plain("liba/1.1")})
+        client.save({"conanfile.py": GenConanfile().with_require("libd/1.0")
+                                                   .with_require("liba/1.1")})
         client.run("create . libe/1.0@", assert_error=True)
         self.assertIn("liba/1.1:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache", client.out)
         self.assertIn("libb/1.0:50b928d46d42051a461440161b017eb6d52e2dff - Missing", client.out)
@@ -75,19 +75,19 @@ class TransitiveIdsTest(unittest.TestCase):
         client.run("create . liba/1.0@")
         client.run("create . liba/2.0@")
         # libB -> LibA
-        client.save({"conanfile.py": GenConanfile().with_require_plain("liba/1.0")})
+        client.save({"conanfile.py": GenConanfile().with_require("liba/1.0")})
         client.run("create . libb/1.0@")
         # libC -> libB
         unrelated = "self.info.requires['libb'].unrelated_mode()"
-        client.save({"conanfile.py": GenConanfile().with_require_plain("libb/1.0")
+        client.save({"conanfile.py": GenConanfile().with_require("libb/1.0")
                     .with_package_id(unrelated)})
         client.run("create . libc/1.0@")
         # LibD -> LibC
-        client.save({"conanfile.py": GenConanfile().with_require_plain("libc/1.0")})
+        client.save({"conanfile.py": GenConanfile().with_require("libc/1.0")})
         client.run("create . libd/1.0@")
         # LibE -> LibD, LibA/2.0
-        client.save({"conanfile.py": GenConanfile().with_require_plain("libd/1.0")
-                    .with_require_plain("liba/2.0")})
+        client.save({"conanfile.py": GenConanfile().with_require("libd/1.0")
+                    .with_require("liba/2.0")})
         client.run("create . libe/1.0@", assert_error=True)
         self.assertIn("liba/2.0:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache", client.out)
         self.assertIn("libb/1.0:e71235a6f57633221a2b85f9b6aca14cda69e1fd - Missing", client.out)
@@ -103,22 +103,22 @@ class TransitiveIdsTest(unittest.TestCase):
         client.run("create . liba/1.0@")
         client.run("create . liba/2.0@")
         # libB -> LibA
-        client.save({"conanfile.py": GenConanfile().with_require_plain("liba/1.0")})
+        client.save({"conanfile.py": GenConanfile().with_require("liba/1.0")})
         client.run("create . libb/1.0@")
         # libC -> libB
 
         unrelated = "self.info.header_only()"
-        client.save({"conanfile.py": GenConanfile().with_require_plain("libb/1.0")
+        client.save({"conanfile.py": GenConanfile().with_require("libb/1.0")
                                                    .with_package_id(unrelated)})
         client.run("create . libc/1.0@")
         # LibD -> LibC
-        client.save({"conanfile.py": GenConanfile().with_require_plain("libc/1.0")})
+        client.save({"conanfile.py": GenConanfile().with_require("libc/1.0")})
         client.run("create . libd/1.0@")
         self.assertIn("libc/1.0:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache", client.out)
 
         # LibE -> LibD, LibA/2.0
-        client.save({"conanfile.py": GenConanfile().with_require_plain("libd/1.0")
-                                                   .with_require_plain("liba/2.0")})
+        client.save({"conanfile.py": GenConanfile().with_require("libd/1.0")
+                                                   .with_require("liba/2.0")})
         client.run("create . libe/1.0@", assert_error=True)  # LibD is NOT missing!
         self.assertIn("libd/1.0:119e0b2903330cef59977f8976cb82a665b510c1 - Cache", client.out)
         # USE THE NEW FIXED PACKAGE_ID
@@ -136,16 +136,16 @@ class TransitiveIdsTest(unittest.TestCase):
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . liba/1.0@")
         client.run("create . liba/2.0@")
-        client.save({"conanfile.py": GenConanfile().with_require_plain("liba/1.0")
+        client.save({"conanfile.py": GenConanfile().with_require("liba/1.0")
                                                    .with_package_id("self.info.header_only()")})
         client.run("create . libb/1.0@")
-        client.save({"conanfile.py": GenConanfile().with_require_plain("libb/1.0")})
+        client.save({"conanfile.py": GenConanfile().with_require("libb/1.0")})
         client.run("create . libc/1.0@")
-        client.save({"conanfile.py": GenConanfile().with_require_plain("libc/1.0")
-                                                   .with_require_plain("liba/1.0")})
+        client.save({"conanfile.py": GenConanfile().with_require("libc/1.0")
+                                                   .with_require("liba/1.0")})
         client.run("create . libd/1.0@")
-        client.save({"conanfile.py": GenConanfile().with_require_plain("libc/1.0")
-                                                   .with_require_plain("liba/2.0")})
+        client.save({"conanfile.py": GenConanfile().with_require("libc/1.0")
+                                                   .with_require("liba/2.0")})
 
         client.run("create . libd/1.0@")  # Doesn't complain it is missing a binary!
         self.assertIn(" libc/1.0:fd60a00caf13b07bfce8690315c9e953aafd664b - Cache", client.out)

@@ -47,19 +47,11 @@ class GraphInfo(object):
 
         return GraphInfo(options=options, root_ref=root_ref)
 
-    def save(self, folder, filename=None, lockfile=LOCKFILE):
+    def save(self, folder, filename=None):
         filename = filename or GRAPH_INFO_FILE
         p = os.path.join(folder, filename)
         serialized_graph_str = self._dumps()
         save(p, serialized_graph_str)
-
-        # A bit hacky, but to avoid repetition by now
-        graph_lock_file = GraphLockFile(self.profile_host, self.profile_build, self.graph_lock)
-        graph_lock_file.save(os.path.join(folder, lockfile))
-
-    def save_lock(self, lockfile):
-        graph_lock_file = GraphLockFile(self.profile_host, self.profile_build, self.graph_lock)
-        graph_lock_file.save(lockfile)
 
     def _dumps(self):
         result = {}

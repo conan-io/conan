@@ -37,10 +37,6 @@ class _RecipeBuildRequires(OrderedDict):
         context = CONTEXT_HOST if force_host_context else self._default_context
         self.add(build_require, context)
 
-    def update(self, build_requires):
-        for build_require in build_requires:
-            self.add(build_require)
-
     def __str__(self):
         items = ["{} ({})".format(br, ctxt) for (_, ctxt), br in self.items()]
         return ", ".join(items)
@@ -62,7 +58,8 @@ class GraphManager(object):
         """
         try:
             graph_info = GraphInfo.load(info_folder)
-            graph_lock_file = GraphLockFile.load(info_folder, self._cache.config.revisions_enabled)
+            lock_path = os.path.join(info_folder, "conan.lock")
+            graph_lock_file = GraphLockFile.load(lock_path, self._cache.config.revisions_enabled)
             graph_lock = graph_lock_file.graph_lock
             self._output.info("Using lockfile: '{}/conan.lock'".format(info_folder))
             profile_host = graph_lock_file.profile_host
@@ -85,7 +82,7 @@ class GraphManager(object):
         if conanfile_path.endswith(".py"):
             lock_python_requires = None
             if graph_lock and not test:  # Only lock python requires if it is not test_package
-                node_id = graph_lock.get_node(graph_info.root)
+                node_id = graph_lock.get_consumer(graph_info.root)
                 lock_python_requires = graph_lock.python_requires(node_id)
             conanfile = self._loader.load_consumer(conanfile_path,
                                                    profile_host=profile_host,
@@ -169,7 +166,7 @@ class GraphManager(object):
                     ref = ConanFileReference(ref.name or conanfile.name,
                                              ref.version or conanfile.version,
                                              ref.user, ref.channel, validate=False)
-                node_id = graph_lock.get_node(ref)
+                node_id = graph_lock.get_consumer(ref)
                 lock_python_requires = graph_lock.python_requires(node_id)
 
             conanfile = self._loader.load_consumer(path, profile,
@@ -188,7 +185,7 @@ class GraphManager(object):
                              path=path)
 
         if graph_lock:  # Find the Node ID in the lock of current root
-            node_id = graph_lock.get_node(root_node.ref)
+            node_id = graph_lock.get_consumer(root_node.ref)
             root_node.id = node_id
 
         return root_node, ref
@@ -205,9 +202,7 @@ class GraphManager(object):
         conanfile = self._loader.load_virtual([reference], profile)
         root_node = Node(ref=None, conanfile=conanfile, context=CONTEXT_HOST, recipe=RECIPE_VIRTUAL)
         if graph_lock:  # Find the Node ID in the lock of current root
-            node_id = graph_lock.get_node(reference)
-            locked_ref = graph_lock.pref(node_id).ref
-            conanfile.requires[reference.name].lock(locked_ref, node_id)
+            graph_lock.find_require_and_lock(reference, conanfile)
         return root_node
 
     def _load_root_test_package(self, path, create_reference, graph_lock, profile):
@@ -232,9 +227,7 @@ class GraphManager(object):
                                  create_reference.user, create_reference.channel, validate=False)
         root_node = Node(ref, conanfile, recipe=RECIPE_CONSUMER, context=CONTEXT_HOST, path=path)
         if graph_lock:
-            node_id = graph_lock.get_node(create_reference)
-            locked_ref = graph_lock.pref(node_id).ref
-            conanfile.requires[create_reference.name].lock(locked_ref, node_id)
+            graph_lock.find_require_and_lock(create_reference, conanfile)
         return root_node
 
     def _resolve_graph(self, root_node, graph_info, build_mode, check_updates,
@@ -255,10 +248,9 @@ class GraphManager(object):
         graph_info.options = root_node.conanfile.options.values
         if root_node.ref:
             graph_info.root = root_node.ref
+
         if graph_info.graph_lock is None:
-            graph_info.graph_lock = GraphLock(deps_graph)
-        else:
-            graph_info.graph_lock.update_check_graph(deps_graph, self._output)
+            graph_info.graph_lock = GraphLock(deps_graph, self._cache.config.revisions_enabled)
 
         version_ranges_output = self._resolver.output
         if version_ranges_output:
@@ -300,15 +292,18 @@ class GraphManager(object):
                 continue
             # Packages with PACKAGE_ID_UNKNOWN might be built in the future, need build requires
             if (node.binary not in (BINARY_BUILD, BINARY_EDITABLE, BINARY_UNKNOWN)
-                and node.recipe != RECIPE_CONSUMER):
+                    and node.recipe != RECIPE_CONSUMER):
                 continue
             package_build_requires = self._get_recipe_build_requires(node.conanfile, default_context)
             str_ref = str(node.ref)
+
+            #  Compute the update of the current recipe build_requires when updated with the
+            # downstream profile-defined build-requires
             new_profile_build_requires = []
             for pattern, build_requires in profile_build_requires.items():
                 if ((node.recipe == RECIPE_CONSUMER and pattern == "&") or
-                    (node.recipe != RECIPE_CONSUMER and pattern == "&!") or
-                    fnmatch.fnmatch(str_ref, pattern)):
+                        (node.recipe != RECIPE_CONSUMER and pattern == "&!") or
+                        fnmatch.fnmatch(str_ref, pattern)):
                     for build_require in build_requires:
                         br_key = (build_require.name, default_context)
                         if br_key in package_build_requires:  # Override defined
@@ -320,30 +315,33 @@ class GraphManager(object):
                         elif build_require.name != node.name or default_context != node.context:
                             new_profile_build_requires.append((build_require, default_context))
 
-            if package_build_requires:
-                br_list = [(it, ctxt) for (_, ctxt), it in package_build_requires.items()]
-                nodessub = builder.extend_build_requires(graph, node,
-                                                         br_list,
-                                                         check_updates, update, remotes,
-                                                         profile_host, profile_build, graph_lock)
-                build_requires = profile_build.build_requires if default_context == CONTEXT_BUILD \
-                    else profile_build_requires
-                self._recurse_build_requires(graph, builder,
-                                             check_updates, update, build_mode,
-                                             remotes, build_requires, recorder,
+            def _recurse_build_requires(br_list, transitive_build_requires):
+                nodessub = builder.extend_build_requires(graph, node, br_list, check_updates,
+                                                         update, remotes, profile_host,
+                                                         profile_build, graph_lock)
+                self._recurse_build_requires(graph, builder, check_updates, update, build_mode,
+                                             remotes, transitive_build_requires, recorder,
                                              profile_host, profile_build, graph_lock,
                                              nodes_subset=nodessub, root=node)
+
+            if package_build_requires:
+                if default_context == CONTEXT_BUILD:
+                    br_build, br_host = [], []
+                    for (_, ctxt), it in package_build_requires.items():
+                        if ctxt == CONTEXT_BUILD:
+                            br_build.append((it, ctxt))
+                        else:
+                            br_host.append((it, ctxt))
+                    if br_build:
+                        _recurse_build_requires(br_build, profile_build.build_requires)
+                    if br_host:
+                        _recurse_build_requires(br_host, profile_build_requires)
+                else:
+                    br_all = [(it, ctxt) for (_, ctxt), it in package_build_requires.items()]
+                    _recurse_build_requires(br_all, profile_build_requires)
 
             if new_profile_build_requires:
-                nodessub = builder.extend_build_requires(graph, node, new_profile_build_requires,
-                                                         check_updates, update, remotes,
-                                                         profile_host, profile_build, graph_lock)
-
-                self._recurse_build_requires(graph, builder,
-                                             check_updates, update, build_mode,
-                                             remotes, {}, recorder,
-                                             profile_host, profile_build, graph_lock,
-                                             nodes_subset=nodessub, root=node)
+                _recurse_build_requires(new_profile_build_requires, {})
 
     def _load_graph(self, root_node, check_updates, update, build_mode, remotes,
                     recorder, profile_host, profile_build, apply_build_requires,
@@ -407,10 +405,13 @@ def load_deps_info(current_path, conanfile, required):
         return
     info_file_path = os.path.join(current_path, BUILD_INFO)
     try:
-        deps_cpp_info, deps_user_info, deps_env_info = TXTGenerator.loads(load(info_file_path))
+        deps_cpp_info, deps_user_info, deps_env_info, user_info_build = \
+            TXTGenerator.loads(load(info_file_path), filter_empty=True)
         conanfile.deps_cpp_info = deps_cpp_info
         conanfile.deps_user_info = deps_user_info
         conanfile.deps_env_info = deps_env_info
+        if user_info_build:
+            conanfile.user_info_build = user_info_build
     except IOError:
         if required:
             raise ConanException("%s file not found in %s\nIt is required for this command\n"

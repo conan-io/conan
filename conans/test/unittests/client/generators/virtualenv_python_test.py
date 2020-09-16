@@ -4,7 +4,7 @@ from conans import ConanFile, Settings
 from conans.client.generators.virtualenv_python import VirtualEnvPythonGenerator
 from conans.model.env_info import DepsEnvInfo
 from conans.model.env_info import EnvValues
-from conans.test.utils.tools import TestBufferConanOutput
+from conans.test.utils.mocks import TestBufferConanOutput
 
 
 class VirtualEnvPythonGeneratorTest(unittest.TestCase):

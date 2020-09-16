@@ -2,7 +2,6 @@ import os
 import textwrap
 import unittest
 
-from conans.errors import ConanException
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE, CONANFILE_TXT
 from conans.test.utils.genconanfile import GenConanfile
@@ -393,8 +392,8 @@ class HelloConan(ConanFile):
         client.run("create conanfile2.py")
 
         conanfile = GenConanfile("consumer", "0.1") \
-            .with_requirement_plain("dep1/0.1") \
-            .with_requirement_plain("dep2/0.1") \
+            .with_requirement("dep1/0.1") \
+            .with_requirement("dep2/0.1") \
             .with_package_info(cpp_info={"components": {"kk": {"requires": []}}},
                                env_info={})
         client.save({"conanfile.py": conanfile})
@@ -403,8 +402,8 @@ class HelloConan(ConanFile):
                       "components requires", client.out)
 
         conanfile = GenConanfile("consumer", "0.1") \
-            .with_requirement_plain("dep1/0.1") \
-            .with_requirement_plain("dep2/0.1") \
+            .with_requirement("dep1/0.1") \
+            .with_requirement("dep2/0.1") \
             .with_package_info(cpp_info={"components": {"kk": {"requires": ["dep1::dep1"]}}},
                                env_info={})
         client.save({"conanfile.py": conanfile})
@@ -413,8 +412,8 @@ class HelloConan(ConanFile):
                       "requires", client.out)
 
         conanfile = GenConanfile("consumer", "0.1") \
-            .with_requirement_plain("dep1/0.1") \
-            .with_requirement_plain("dep2/0.1") \
+            .with_requirement("dep1/0.1") \
+            .with_requirement("dep2/0.1") \
             .with_package_info(cpp_info={"components": {"kk": {"requires": ["dep1::dep1"]},
                                                         "kkk": {"requires": ["kk"]}}},
                                env_info={})
@@ -424,8 +423,8 @@ class HelloConan(ConanFile):
                       "requires", client.out)
 
         conanfile = GenConanfile("consumer", "0.1") \
-            .with_requirement_plain("dep1/0.1") \
-            .with_requirement_plain("dep2/0.1") \
+            .with_requirement("dep1/0.1") \
+            .with_requirement("dep2/0.1") \
             .with_package_info(cpp_info={"components": {"kk": {"requires": []},
                                                         "kkk": {"requires": ["kk"]}}},
                                env_info={})
@@ -435,8 +434,8 @@ class HelloConan(ConanFile):
                       "requires", client.out)
 
         conanfile = GenConanfile("consumer", "0.1") \
-            .with_requirement_plain("dep1/0.1") \
-            .with_requirement_plain("dep2/0.1") \
+            .with_requirement("dep1/0.1") \
+            .with_requirement("dep2/0.1") \
             .with_package_info(cpp_info={"components": {"kk": {"requires": ["dep2::comp"]},
                                                         "kkk": {"requires": ["dep3::dep3"]}}},
                                env_info={})
@@ -446,7 +445,7 @@ class HelloConan(ConanFile):
                       "requires", client.out)
 
         conanfile = GenConanfile("consumer", "0.1") \
-            .with_requirement_plain("dep2/0.1") \
+            .with_requirement("dep2/0.1") \
             .with_package_info(cpp_info={"components": {"kk": {"requires": ["dep2::comp"]},
                                                         "kkk": {"requires": ["dep3::dep3"]}}},
                                env_info={})
@@ -464,8 +463,8 @@ class HelloConan(ConanFile):
                       "requires but not defined as a recipe requirement", client.out)
 
         conanfile = GenConanfile("consumer", "0.1") \
-            .with_requirement_plain("dep1/0.1") \
-            .with_requirement_plain("dep2/0.1") \
+            .with_requirement("dep1/0.1") \
+            .with_requirement("dep2/0.1") \
             .with_package_info(cpp_info={"components": {"kk": {"requires": ["dep2::comp"]},
                                                         "kkk": {"requires": ["dep1::dep1"]}}},
                                env_info={})

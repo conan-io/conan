@@ -501,16 +501,16 @@ class PackageIDErrorTest(unittest.TestCase):
         client.run("config set general.full_transitive_package_id=True")
         client.save({"conanfile.py": GenConanfile()})
         client.run("export . dep1/1.0@user/testing")
-        client.save({"conanfile.py": GenConanfile().with_require_plain("dep1/1.0@user/testing")})
+        client.save({"conanfile.py": GenConanfile().with_require("dep1/1.0@user/testing")})
         client.run("export . dep2/1.0@user/testing")
 
         pkg_revision_mode = "self.info.requires.package_revision_mode()"
-        client.save({"conanfile.py": GenConanfile().with_require_plain("dep1/1.0@user/testing")
+        client.save({"conanfile.py": GenConanfile().with_require("dep1/1.0@user/testing")
                                                    .with_package_id(pkg_revision_mode)})
         client.run("export . dep3/1.0@user/testing")
 
-        client.save({"conanfile.py": GenConanfile().with_require_plain("dep2/1.0@user/testing")
-                                                   .with_require_plain("dep3/1.0@user/testing")})
+        client.save({"conanfile.py": GenConanfile().with_require("dep2/1.0@user/testing")
+                                                   .with_require("dep3/1.0@user/testing")})
         client.run('create . consumer/1.0@user/testing --build')
         self.assertIn("consumer/1.0@user/testing: Created", client.out)
 
@@ -526,7 +526,7 @@ class PackageIDErrorTest(unittest.TestCase):
 
         pkg_revision_mode = "self.info.requires.full_version_mode()"
         package_id_print = "self.output.info('PkgNames: %s' % sorted(self.info.requires.pkg_names))"
-        client.save({"conanfile.py": GenConanfile().with_require_plain("dep1/1.0@user/testing")
+        client.save({"conanfile.py": GenConanfile().with_require("dep1/1.0@user/testing")
                     .with_package_id(pkg_revision_mode)
                     .with_package_id(package_id_print)})
         client.run("export . dep2/1.0@user/testing")
@@ -556,8 +556,8 @@ class PackageIDErrorTest(unittest.TestCase):
 
         pkg_revision_mode = "self.info.requires.full_version_mode()"
         package_id_print = "self.output.info('PkgNames: %s' % sorted(self.info.requires.pkg_names))"
-        client.save({"conanfile.py": GenConanfile().with_require_plain("dep1/1.0@user/testing")
-                    .with_build_require_plain("tool/1.0@user/testing")
+        client.save({"conanfile.py": GenConanfile().with_require("dep1/1.0@user/testing")
+                    .with_build_requires("tool/1.0@user/testing")
                     .with_package_id(pkg_revision_mode)
                     .with_package_id(package_id_print)})
         client.run("export . dep2/1.0@user/testing")
@@ -586,9 +586,41 @@ class PackageIDErrorTest(unittest.TestCase):
         client.run("editable add . dep1/1.0@user/testing")
 
         client2 = TestClient(cache_folder=client.cache_folder)
-        client2.save({"conanfile.py": GenConanfile().with_require_plain("dep1/1.0@user/testing")})
+        client2.save({"conanfile.py": GenConanfile().with_require("dep1/1.0@user/testing")})
         client2.run("export . dep2/1.0@user/testing")
 
-        client2.save({"conanfile.py": GenConanfile().with_require_plain("dep2/1.0@user/testing")})
+        client2.save({"conanfile.py": GenConanfile().with_require("dep2/1.0@user/testing")})
         client2.run('create . consumer/1.0@user/testing --build')
         self.assertIn("consumer/1.0@user/testing: Created", client2.out)
+
+
+class PackageRevisionModeTestCase(unittest.TestCase):
+
+    def test_transtive_package_revision_mode(self):
+        t = TestClient()
+        t.save({
+            'package1.py': GenConanfile("pkg1"),
+            'package2.py': GenConanfile("pkg2").with_require("pkg1/1.0"),
+            'package3.py': textwrap.dedent("""
+                from conans import ConanFile
+                class Recipe(ConanFile):
+                    requires = "pkg2/1.0"
+                    def package_id(self):
+                        self.info.requires["pkg1"].package_revision_mode()
+            """)
+        })
+        t.run("create package1.py pkg1/1.0@")
+        t.run("create package2.py pkg2/1.0@")
+
+        # If we only build pkg1, we get a new packageID for pkg3
+        t.run("create package3.py pkg3/1.0@ --build=pkg1", assert_error=True)
+        self.assertIn("pkg3/1.0:Package_ID_unknown - Unknown", t.out)
+        self.assertIn("pkg3/1.0: Updated ID: 283642385cc7b64ec7b5903f6895107e0848d238", t.out)
+        self.assertIn("ERROR: Missing binary: pkg3/1.0:283642385cc7b64ec7b5903f6895107e0848d238",
+                      t.out)
+
+        # If we build both, we get the new package
+        t.run("create package3.py pkg3/1.0@ --build=pkg1 --build=pkg3")
+        self.assertIn("pkg3/1.0:Package_ID_unknown - Unknown", t.out)
+        self.assertIn("pkg3/1.0: Updated ID: 283642385cc7b64ec7b5903f6895107e0848d238", t.out)
+        self.assertIn("pkg3/1.0: Package '283642385cc7b64ec7b5903f6895107e0848d238' created", t.out)

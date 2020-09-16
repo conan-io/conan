@@ -4,7 +4,7 @@ import mock
 from parameterized import parameterized
 
 from conans.client.conf.detect import _gcc_compiler
-from conans.test.utils.tools import TestBufferConanOutput
+from conans.test.utils.mocks import TestBufferConanOutput
 
 
 class GCCCompilerTestCase(unittest.TestCase):

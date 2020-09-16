@@ -5,7 +5,7 @@ from conans.errors import ConanException
 
 
 def validate_conan_version(required_range):
-    result = satisfies(client_version, required_range, loose=True)
+    result = satisfies(client_version, required_range, loose=True, include_prerelease=True)
     if not result:
         raise ConanException("Current Conan version ({}) does not satisfy "
                              "the defined one ({}).".format(client_version, required_range))

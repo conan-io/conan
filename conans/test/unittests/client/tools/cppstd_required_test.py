@@ -2,7 +2,7 @@ import unittest
 from mock import mock
 from parameterized import parameterized
 
-from conans.test.utils.conanfile import MockConanfile, MockSettings
+from conans.test.utils.mocks import MockSettings, MockConanfile
 from conans.client.tools import OSInfo
 from conans.errors import ConanInvalidConfiguration, ConanException
 
