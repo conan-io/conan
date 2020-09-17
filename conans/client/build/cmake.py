@@ -324,19 +324,21 @@ class CMakeBuildHelper(object):
                 if "--" not in args:
                     args.append("--")
                 args.append("-j%i" % cpu_count(self._conanfile.output))
-            elif "Visual Studio" in self.generator and \
-                    compiler_version and Version(compiler_version) >= "10":
-                if "--" not in args:
-                    args.append("--")
-                # Parallel for building projects in the solution
-                args.append("/m:%i" % cpu_count(output=self._conanfile.output))
+            elif "Visual Studio" in self.generator:
+                compiler_version = re.search("Visual Studio ([0-9]*)", self.generator).group(1)
+                if Version(compiler_version) >= "10":
+                    if "--" not in args:
+                        args.append("--")
+                    # Parallel for building projects in the solution
+                    args.append("/m:%i" % cpu_count(output=self._conanfile.output))
 
         if self.generator and self.msbuild_verbosity:
-            if "Visual Studio" in self.generator and \
-                    compiler_version and Version(compiler_version) >= "10":
-                if "--" not in args:
-                    args.append("--")
-                args.append("/verbosity:%s" % self.msbuild_verbosity)
+            if "Visual Studio" in self.generator:
+                compiler_version = re.search("Visual Studio ([0-9]*)", self.generator).group(1)
+                if Version(compiler_version) >= "10":
+                    if "--" not in args:
+                        args.append("--")
+                    args.append("/verbosity:%s" % self.msbuild_verbosity)
 
         arg_list = join_arguments([
             args_to_string([build_dir]),

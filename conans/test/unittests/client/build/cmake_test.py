@@ -259,6 +259,12 @@ class CMakeTest(unittest.TestCase):
 
         cmake = CMake(conanfile, generator="Visual Studio 16 2019")
         self.assertIn('-G "Visual Studio 16 2019" -A "x64"', cmake.command_line)
+        cmake.build()
+        self.assertIn("/verbosity:minimal", conanfile.command)
+        cmake = CMake(conanfile, generator="Visual Studio 9 2008")
+        self.assertIn('-G "Visual Studio 9 2008 Win64"', cmake.command_line)
+        cmake.build()
+        self.assertNotIn("verbosity", conanfile.command)
 
     def cmake_generator_platform_gcc_test(self):
         settings = Settings.loads(get_default_settings_yml())
