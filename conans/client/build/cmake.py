@@ -317,7 +317,6 @@ class CMakeBuildHelper(object):
         if target is not None:
             args = ["--target", target] + args
 
-        compiler_version = self._settings.get_safe("compiler.version")
         if self.generator and self.parallel:
             if ("Makefiles" in self.generator or "Ninja" in self.generator) and \
                     "NMake" not in self.generator:
