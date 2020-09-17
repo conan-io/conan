@@ -202,7 +202,7 @@ class CMakeTest(unittest.TestCase):
         conanfile.settings = settings
 
         cmake = CMake(conanfile)
-        self.assertIn('-G "Visual Studio 15 2017" -A "x64"', cmake.command_line)
+        self.assertIn('-G "Visual Studio 15 2017 Win64"', cmake.command_line)
         self.assertIn('-T "Intel C++ Compiler 19.0', cmake.command_line)
 
     def cmake_custom_generator_intel_test(self):
@@ -245,6 +245,26 @@ class CMakeTest(unittest.TestCase):
         with tools.environment_append({"CONAN_CMAKE_GENERATOR_PLATFORM": "Win64"}):
             cmake = CMake(conanfile)
             self.assertIn('-G "Visual Studio 15 2017" -A "Win64"', cmake.command_line)
+
+    def cmake_generator_argument_test(self):
+        settings = Settings.loads(get_default_settings_yml())
+        settings.os = "Windows"
+        settings.compiler = "Visual Studio"
+        settings.compiler.version = "15"
+        settings.compiler.toolset = "v141"
+        settings.arch = "x86_64"
+
+        conanfile = ConanFileMock()
+        conanfile.settings = settings
+
+        cmake = CMake(conanfile, generator="Visual Studio 16 2019")
+        self.assertIn('-G "Visual Studio 16 2019" -A "x64"', cmake.command_line)
+        cmake.build()
+        self.assertIn("/verbosity:minimal", conanfile.command)
+        cmake = CMake(conanfile, generator="Visual Studio 9 2008")
+        self.assertIn('-G "Visual Studio 9 2008 Win64"', cmake.command_line)
+        cmake.build()
+        self.assertNotIn("verbosity", conanfile.command)
 
     def cmake_generator_platform_gcc_test(self):
         settings = Settings.loads(get_default_settings_yml())
