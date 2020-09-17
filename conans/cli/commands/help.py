@@ -1,5 +1,6 @@
 import textwrap
 
+from conans.cli.output import CliOutput
 from conans.client.output import Color
 from conans.errors import ConanException
 from conans.cli.command import conan_command
@@ -50,7 +51,6 @@ def help(conan_api, parser, *args, commands, groups, **kwargs):
         output_help_cli(conan_api.out, commands, groups)
         return None
     try:
-        commands[args.command].run(parser=commands[args.command].parser, conan_api=conan_api,
-                                   args=["--help"])
+        commands[args.command].run(conan_api, CliOutput(), commands[args.command].parser, ["--help"])
     except KeyError:
         raise ConanException("Unknown command '%s'" % args.command)
