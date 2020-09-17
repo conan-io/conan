@@ -19,6 +19,7 @@ from six.moves.urllib.parse import urlsplit, urlunsplit
 from webtest.app import TestApp
 
 from conans import load
+from conans.client.api.conan_api import ConanAPIV2
 from conans.client.cache.cache import ClientCache
 from conans.client.cache.remote_registry import Remotes
 from conans.client.conan_api import Conan
@@ -634,12 +635,18 @@ class TestClient(object):
     def get_conan_api(self, user_io=None):
         if user_io:
             self.out = user_io.out
+
+        if os.getenv("CONAN_V2_CLI"):
+            from conans.cli.output import BufferConanOutput
+            self.out = BufferConanOutput()
+            user_io = user_io or MockedUserIO(self.users, out=self.out)
+            conan = ConanAPIV2(cache_folder=self.cache_folder, output=self.out, user_io=user_io,
+                               http_requester=self._http_requester, runner=self.runner)
         else:
             self.out = TestBufferConanOutput()
-        user_io = user_io or MockedUserIO(self.users, out=self.out)
-
-        conan = Conan(cache_folder=self.cache_folder, output=self.out, user_io=user_io,
-                      http_requester=self._http_requester, runner=self.runner)
+            user_io = user_io or MockedUserIO(self.users, out=self.out)
+            conan = Conan(cache_folder=self.cache_folder, output=self.out, user_io=user_io,
+                          http_requester=self._http_requester, runner=self.runner)
         return conan
 
     def run(self, command_line, user_io=None, assert_error=False):
