@@ -246,7 +246,7 @@ def _handle_system_requirements(conan_file, pref, cache, out):
 
     Used after remote package retrieving and before package building
     """
-    if "system_requirements" not in type(conan_file).__dict__:
+    if not hasattr(conan_file, "system_requirements"):
         return
 
     package_layout = cache.package_layout(pref.ref)

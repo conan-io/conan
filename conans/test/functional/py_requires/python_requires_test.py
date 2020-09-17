@@ -440,6 +440,27 @@ class PyRequiresExtendTest(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(client.cache.package_layout(ref).export(),
                                                     "other.txt")))
 
+    def reuse_system_requirements_test(self):
+        # https://github.com/conan-io/conan/issues/7718
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+           from conans import ConanFile
+           class MyConanfileBase(ConanFile):
+               def system_requirements(self):
+                   self.output.info("My system_requirements %s being called!" % self.name)
+           """)
+        client.save({"conanfile.py": conanfile})
+        client.run("export . base/1.1@user/testing")
+        reuse = textwrap.dedent("""
+            from conans import ConanFile
+            class PkgTest(ConanFile):
+                python_requires = "base/1.1@user/testing"
+                python_requires_extend = "base.MyConanfileBase"
+            """)
+        client.save({"conanfile.py": reuse}, clean_first=True)
+        client.run("create . Pkg/0.1@user/testing")
+        self.assertIn("Pkg/0.1@user/testing: My system_requirements Pkg being called!", client.out)
+
     def overwrite_class_members_test(self):
         client = TestClient()
         conanfile = textwrap.dedent("""

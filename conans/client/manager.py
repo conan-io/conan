@@ -111,7 +111,8 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
             graph_lock_file.save(os.path.join(install_folder, "conan.lock"))
         if not no_imports:
             run_imports(conanfile, install_folder)
-        call_system_requirements(conanfile, conanfile.output)
+        if hasattr(conanfile, "system_requirements"):
+            call_system_requirements(conanfile, conanfile.output)
 
         if not create_reference and isinstance(ref_or_path, ConanFileReference):
             # The conanfile loaded is a virtual one. The one w deploy is the first level one
