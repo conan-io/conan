@@ -23,12 +23,12 @@ def _base_compiler(settings):
 
 
 # FIXME : pass conanfile instead of settings and os_build
-def rpath_flags(settings, os_build, lib_paths):
+def rpath_flags(settings, os_host, lib_paths):
     compiler = _base_compiler(settings)
-    if not os_build:
+    if not os_host:
         return []
     if compiler in GCC_LIKE:
-        rpath_separator = "," if is_apple_os(os_build) else "="
+        rpath_separator = "," if is_apple_os(os_host) else "="
         return ['-Wl,-rpath%s"%s"' % (rpath_separator, x.replace("\\", "/"))
                 for x in lib_paths if x]
     return []

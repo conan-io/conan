@@ -88,11 +88,9 @@ class PkgConfigGenerator(GeneratorComponentsMixin, Generator):
         libnames_flags = ["-l%s " % name for name in (cpp_info.libs + cpp_info.system_libs)]
         shared_flags = cpp_info.sharedlinkflags + cpp_info.exelinkflags
 
-        os_build, _ = get_build_os_arch(self.conanfile)
-        if not hasattr(self.conanfile, 'settings_build'):
-            os_build = os_build or self.conanfile.settings.get_safe("os")
+        os_host = self.conanfile.settings.get_safe("os")
 
-        rpaths = rpath_flags(self.conanfile.settings, os_build,
+        rpaths = rpath_flags(self.conanfile.settings, os_host,
                              ["${%s}" % libdir for libdir in libdir_vars])
         frameworks = format_frameworks(cpp_info.frameworks, self.conanfile.settings)
         framework_paths = format_framework_paths(cpp_info.framework_paths, self.conanfile.settings)
