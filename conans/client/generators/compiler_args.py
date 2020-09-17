@@ -63,7 +63,11 @@ class CompilerArgsGenerator(Generator):
             # Necessary in the "cl" invocation before specify the rest of linker flags
             flags.append(visual_linker_option_separator)
 
-        flags.extend(rpath_flags(self._settings, self.conanfile.settings.get_safe("os"), self._deps_build_info.lib_paths))
+        os_build, _ = get_build_os_arch(self.conanfile)
+        if not hasattr(self.conanfile, 'settings_build'):
+            os_build = os_build or self.conanfile.settings.get_safe("os")
+
+        flags.extend(rpath_flags(self._settings, os_build, self._deps_build_info.lib_paths))
         flags.extend(format_library_paths(self._deps_build_info.lib_paths, self._settings))
         flags.extend(format_libraries(self._deps_build_info.libs, self._settings))
         flags.extend(format_libraries(self._deps_build_info.system_libs, self._settings))

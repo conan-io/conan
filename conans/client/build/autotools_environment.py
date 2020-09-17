@@ -264,7 +264,10 @@ class AutoToolsBuildEnvironment(object):
             ret.append(sysf)
 
         if self._include_rpath_flags:
-            ret.extend(rpath_flags(self._conanfile.settings, self._os, self._deps_cpp_info.lib_paths))
+            os_build, _ = get_build_os_arch(self._conanfile)
+            if not hasattr(self._conanfile, 'settings_build'):
+                os_build = os_build or self._os
+            ret.extend(rpath_flags(self._conanfile.settings, os_build, self._deps_cpp_info.lib_paths))
 
         return ret
 
