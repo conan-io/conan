@@ -209,7 +209,7 @@ def to_file_bytes(content, encoding="utf-8"):
 
 
 def save_files(path, files, only_if_modified=False, encoding="utf-8"):
-    for name, content in list(files.items()):
+    for name, content in files.items():
         save(os.path.join(path, name), content, only_if_modified=only_if_modified, encoding=encoding)
 
 
