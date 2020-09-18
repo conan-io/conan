@@ -125,7 +125,7 @@ class ConanOutput(object):
             logging.getLogger("py.warnings").propagate = False
 
         self._color = color
-        self._scope = None
+        self._scope = ""
 
     @property
     def stream(self):
