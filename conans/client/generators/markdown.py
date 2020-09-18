@@ -54,12 +54,13 @@ generator_cmake_tpl = textwrap.dedent("""
 generator_cmake_find_package_tpl = textwrap.dedent("""
     ### Generator ``cmake_find_package``
     {% set cmake_find_package_name = cpp_info.get_name("cmake_find_package") %}
-    Generates the file Find{{ cmake_find_package_name }}.cmake
+    {% set cmake_find_package_filename = cpp_info.get_filename("cmake_find_package") %}
+    Generates the file Find{{ cmake_find_package_filename }}.cmake
 
     Add these lines to your *CMakeLists.txt*:
 
     ```cmake
-    find_package({{ cmake_find_package_name }})
+    find_package({{ cmake_find_package_filename }})
 
     # Use the global target
     target_link_libraries(<library_name> {{ cmake_find_package_name }}::{{ cmake_find_package_name }})
