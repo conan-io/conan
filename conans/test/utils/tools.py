@@ -20,7 +20,7 @@ from webtest.app import TestApp
 
 from conans import load
 from conans.cli.cli import Cli
-from conans.cli.output import BufferConanOutput
+from conans.cli.output import BufferConanOutput, BufferCliOutput
 from conans.client.api.conan_api import ConanAPIV2
 from conans.client.cache.cache import ClientCache
 from conans.client.cache.remote_registry import Remotes
@@ -534,6 +534,7 @@ class TestClient(object):
         # Once the client is ready, modify the configuration
         mkdir(self.current_folder)
         self.tune_conan_conf(cache_folder, cpu_count, revisions_enabled)
+        self.cli_out = None
 
     def load(self, filename):
         return load(os.path.join(self.current_folder, filename))
@@ -669,7 +670,8 @@ class TestClient(object):
         conan = self.get_conan_api(user_io)
         self.api = conan
         if os.getenv("CONAN_V2_CLI"):
-            command = Cli(conan)
+            self.cli_out = BufferCliOutput()
+            command = Cli(conan, self.cli_out)
         else:
             command = Command(conan)
         args = shlex.split(command_line)

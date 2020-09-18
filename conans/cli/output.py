@@ -184,34 +184,9 @@ class ConanOutput(object):
             self._stream_handler.flush()
 
 
-# TODO: move to another place
-class BufferConanOutput(ConanOutput):
-    """ wraps the normal output of the application, captures it into an stream
-    and gives it operators similar to string, so it can be compared in tests
-    """
-
-    def __init__(self):
-        ConanOutput.__init__(self, StringIO(), color=False)
-
-    def __repr__(self):
-        return self._stream.getvalue()
-
-    def __str__(self, *args, **kwargs):
-        return self.__repr__()
-
-    def __eq__(self, value):
-        return self.__repr__() == value
-
-    def __ne__(self, value):
-        return not self.__eq__(value)
-
-    def __contains__(self, value):
-        return value in self.__repr__()
-
-
 class CliOutput(object):
-    def __init__(self, color=False):
-        self._stream = sys.stdout
+    def __init__(self, stream=sys.stdout, color=False):
+        self._stream = stream
         self._color = color
         self._scope = None
 
@@ -247,3 +222,53 @@ class CliOutput(object):
 
     def flush(self):
         self._stream.flush()
+
+
+# TODO: move to another place
+class BufferCliOutput(CliOutput):
+    """ wraps the normal output of the application, captures it into an stream
+    and gives it operators similar to string, so it can be compared in tests
+    """
+
+    def __init__(self):
+        CliOutput.__init__(self, StringIO(), color=False)
+
+    def __repr__(self):
+        return self._stream.getvalue()
+
+    def __str__(self, *args, **kwargs):
+        return self.__repr__()
+
+    def __eq__(self, value):
+        return self.__repr__() == value
+
+    def __ne__(self, value):
+        return not self.__eq__(value)
+
+    def __contains__(self, value):
+        return value in self.__repr__()
+
+
+# TODO: move to another place
+class BufferConanOutput(ConanOutput):
+    """ wraps the normal output of the application, captures it into an stream
+    and gives it operators similar to string, so it can be compared in tests
+    """
+
+    def __init__(self):
+        ConanOutput.__init__(self, StringIO(), color=False)
+
+    def __repr__(self):
+        return self._stream.getvalue()
+
+    def __str__(self, *args, **kwargs):
+        return self.__repr__()
+
+    def __eq__(self, value):
+        return self.__repr__() == value
+
+    def __ne__(self, value):
+        return not self.__eq__(value)
+
+    def __contains__(self, value):
+        return value in self.__repr__()

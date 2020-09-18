@@ -24,12 +24,12 @@ class Cli(object):
     help of the tool.
     """
 
-    def __init__(self, conan_api):
+    def __init__(self, conan_api, cli_out=None):
         assert isinstance(conan_api, Conan), "Expected 'Conan' type, got '{}'".format(
             type(conan_api))
         self._conan_api = conan_api
         self._out = conan_api.out
-        self._cli_out = CliOutput(self._out.color)
+        self._cli_out = cli_out or CliOutput(color=self._out.color)
         self._groups = defaultdict(list)
         self._commands = {}
         conan_commands_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "commands")
