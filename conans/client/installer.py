@@ -22,6 +22,7 @@ from conans.client.tools.env import pythonpath
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
                            conanfile_exception_formatter)
 from conans.model.build_info import CppInfo, DepCppInfo
+from conans.model.conan_file import ConanFile
 from conans.model.editable_layout import EditableLayout
 from conans.model.env_info import EnvInfo
 from conans.model.graph_info import GraphInfo
@@ -246,7 +247,9 @@ def _handle_system_requirements(conan_file, pref, cache, out):
 
     Used after remote package retrieving and before package building
     """
-    if not hasattr(conan_file, "system_requirements"):
+    # TODO: Check if this idiom should be generalize to all methods defined in base ConanFile
+    # Instead of calling empty methods
+    if type(conan_file).system_requirements == ConanFile.system_requirements:
         return
 
     package_layout = cache.package_layout(pref.ref)
