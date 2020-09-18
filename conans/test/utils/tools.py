@@ -19,8 +19,12 @@ from six.moves.urllib.parse import urlsplit, urlunsplit
 from webtest.app import TestApp
 
 from conans import load
+from conans.cli.cli import Cli
+from conans.cli.output import BufferConanOutput
+from conans.client.api.conan_api import ConanAPIV2
 from conans.client.cache.cache import ClientCache
 from conans.client.cache.remote_registry import Remotes
+from conans.client.command import Command
 from conans.client.conan_api import Conan
 from conans.client.rest.file_uploader import IterableToFileAdapter
 from conans.client.runner import ConanRunner
@@ -631,16 +635,31 @@ class TestClient(object):
         finally:
             self.current_folder = old_dir
 
-    def get_conan_api(self, user_io=None):
+    def get_conan_api_v2(self, user_io=None):
+        if user_io:
+            self.out = user_io.out
+        else:
+            self.out = BufferConanOutput()
+        user_io = user_io or MockedUserIO(self.users, out=self.out)
+        conan = ConanAPIV2(cache_folder=self.cache_folder, output=self.out, user_io=user_io,
+                           http_requester=self._http_requester, runner=self.runner)
+        return conan
+
+    def get_conan_api_v1(self, user_io=None):
         if user_io:
             self.out = user_io.out
         else:
             self.out = TestBufferConanOutput()
         user_io = user_io or MockedUserIO(self.users, out=self.out)
-
         conan = Conan(cache_folder=self.cache_folder, output=self.out, user_io=user_io,
                       http_requester=self._http_requester, runner=self.runner)
         return conan
+
+    def get_conan_api(self, user_io=None):
+        if os.getenv("CONAN_V2_CLI"):
+            return self.get_conan_api_v2(user_io)
+        else:
+            return self.get_conan_api_v1(user_io)
 
     def run(self, command_line, user_io=None, assert_error=False):
         """ run a single command as in the command line.
@@ -650,10 +669,8 @@ class TestClient(object):
         conan = self.get_conan_api(user_io)
         self.api = conan
         if os.getenv("CONAN_V2_CLI"):
-            from conans.cli.cli import Cli
             command = Cli(conan)
         else:
-            from conans.client.command import Command
             command = Command(conan)
         args = shlex.split(command_line)
         current_dir = os.getcwd()

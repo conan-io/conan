@@ -19,7 +19,7 @@ def output_search_json(info, out):
 
 
 @conan_command(group="Consumer", formatters={"cli": output_search_cli,
-                                                      "json": output_search_json})
+                                             "json": output_search_json})
 def search(conan_api, parser, *args, **kwargs):
     """
     Searches for package recipes whose name contain <query> in a remote or in the local cache

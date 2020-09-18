@@ -1,6 +1,7 @@
 import logging
 import os
 import sys
+from io import StringIO
 
 import tqdm
 from colorama import Fore, Style
@@ -181,6 +182,31 @@ class ConanOutput(object):
     def flush(self):
         if self._stream_handler:
             self._stream_handler.flush()
+
+
+# TODO: move to another place
+class BufferConanOutput(ConanOutput):
+    """ wraps the normal output of the application, captures it into an stream
+    and gives it operators similar to string, so it can be compared in tests
+    """
+
+    def __init__(self):
+        ConanOutput.__init__(self, StringIO(), color=False)
+
+    def __repr__(self):
+        return self._stream.getvalue()
+
+    def __str__(self, *args, **kwargs):
+        return self.__repr__()
+
+    def __eq__(self, value):
+        return self.__repr__() == value
+
+    def __ne__(self, value):
+        return not self.__eq__(value)
+
+    def __contains__(self, value):
+        return value in self.__repr__()
 
 
 class CliOutput(object):
