@@ -9,7 +9,7 @@ class DepsCppQbs(object):
                                             for p in cpp_info.include_paths)
         self.lib_paths = delimiter.join('"%s"' % p.replace("\\", "/")
                                         for p in cpp_info.lib_paths)
-        self.libs = delimiter.join('"%s"' % l for l in (cpp_info.libs + cpp_info.system_libs))
+        self.libs = delimiter.join('"%s"' % lib for lib in (cpp_info.libs + cpp_info.system_libs))
         self.framework_paths = delimiter.join('"%s"' % p.replace("\\", "/")
                                               for p in cpp_info.framework_paths)
         self.frameworks = delimiter.join('"%s"' % f for f in cpp_info.frameworks)
@@ -54,7 +54,7 @@ class QbsGenerator(Generator):
                     '        }}\n'
                     '    }}\n')
 
-        depends_template = ('            Depends {{ name: "{dep}" }}\n')
+        depends_template = '            Depends {{ name: "{dep}" }}\n'
 
         sections = []
         all_flags = template.format(dep="ConanBasicSetup", deps=deps, depends_items="")
