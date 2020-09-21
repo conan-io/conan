@@ -2,7 +2,9 @@
 
 def to_android_abi(arch):
     """converts conan-style architecture into Android-NDK ABI"""
-    return {'armv5': 'armeabi',
+    return {'armv5el': 'armeabi',
+            'armv5hf': 'armeabi',
+            'armv5': 'armeabi',
             'armv6': 'armeabi-v6',
             'armv7': 'armeabi-v7a',
             'armv7hf': 'armeabi-v7a',
