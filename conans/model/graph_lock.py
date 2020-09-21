@@ -534,8 +534,9 @@ class GraphLock(object):
             else:
                 require.lock(locked_ref, locked_id)
 
-        # Check all refs are locked
-        if not self._relaxed:
+        # Check all refs are locked (not checking build_requires atm, as they come from
+        # 2 sources (profile, recipe), can't be checked at once
+        if not self._relaxed and not build_requires:
             declared_requires = set([r.ref.name for r in requires])
             for require in locked_requires:
                 req_node = self._nodes[require]

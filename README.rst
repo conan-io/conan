@@ -208,6 +208,28 @@ To run specific tests, you can specify the test name too, something like:
 
 The ``--nocapture`` argument can be useful to see some output that otherwise is captured by nosetests.
 
+Also, you can run tests against an instance of Artifactory. Those tests should add the attribute
+``artifactory_ready``.
+
+.. code-block:: bash
+
+    $ python -m nose . -A artifactory_ready
+
+Some environment variables have to be defined to run them. For example, for an
+Artifactory instance that is running on the localhost with default user and password configured, the
+variables could take the values:
+
+.. code-block:: bash
+
+    $ export CONAN_TEST_WITH_ARTIFACTORY=1
+    $ export ARTIFACTORY_DEFAULT_URL=http://localhost:8081/artifactory
+    $ export ARTIFACTORY_DEFAULT_USER=admin
+    $ export ARTIFACTORY_DEFAULT_PASSWORD=password
+
+``ARTIFACTORY_DEFAULT_URL`` is the base url for the Artifactory repo, not one for an specific
+repository. Running the tests with a real Artifactory instance will create repos on the fly so please
+use a separate server for testing purposes.
+
 License
 -------
 
