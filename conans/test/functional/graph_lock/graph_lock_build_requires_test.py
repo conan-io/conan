@@ -190,3 +190,27 @@ class GraphLockBuildRequireTestCase(unittest.TestCase):
                       client.out)
         client.run("install cmake/1.1@ --lockfile=conan.lock")
         self.assertIn("cmake/1.1 from local cache - Cache", client.out)
+
+    def test_unused_build_requires(self):
+        client = TestClient()
+        # create build_requires tools
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . cmake/1.0@")
+        client.run("create . gtest/1.0@")
+        client.save({"conanfile.py": GenConanfile().with_build_requires("gtest/1.0"),
+                     "myprofile": "[build_requires]\ncmake/1.0\n"})
+        client.run("create . pkg1/1.0@ -pr=myprofile")
+        client.save({"conanfile.py": GenConanfile().with_build_requires("gtest/1.0")
+                                                   .with_require("pkg1/1.0")})
+        client.run("create . pkg2/1.0@ -pr=myprofile")
+
+        client.run("lock create --reference=pkg2/1.0@ --build --base --lockfile-out=base.lock "
+                   "-pr=myprofile")
+        client.run("lock create --reference=pkg2/1.0@ --build --lockfile=base.lock "
+                   "--lockfile-out=conan.lock -pr=myprofile")
+
+        client.run("install pkg2/1.0@ --build=pkg2/1.0 --lockfile=conan.lock")
+        self.assertIn("cmake/1.0 from local cache - Cache", client.out)
+        self.assertIn("gtest/1.0 from local cache - Cache", client.out)
+        self.assertIn("pkg2/1.0: Applying build-requirement: cmake/1.0", client.out)
+        self.assertIn("pkg2/1.0: Applying build-requirement: gtest/1.0", client.out)

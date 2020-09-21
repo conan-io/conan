@@ -16,7 +16,7 @@ from conans.util.runners import check_output_runner
 
 
 def create_local_git_repo(files=None, branch=None, submodules=None, folder=None, commits=1,
-                          tags=None):
+                          tags=None, origin_url=None):
     tmp = folder or temp_folder()
     tmp = get_cased_path(tmp)
     if files:
@@ -41,6 +41,9 @@ def create_local_git_repo(files=None, branch=None, submodules=None, folder=None,
         for submodule in submodules:
             git.run('submodule add "%s"' % submodule)
         git.run('commit -m "add submodules"')
+
+    if origin_url:
+        git.run('remote add origin {}'.format(origin_url))
 
     return tmp.replace("\\", "/"), git.get_revision()
 

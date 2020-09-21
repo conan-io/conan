@@ -127,7 +127,7 @@ class ConanLib(ConanFile):
         curdir = get_cased_path(self.client.current_folder).replace("\\", "/")
         conanfile = base_git.format(directory="None", url=_quoted("auto"), revision="auto")
         self.client.save({"conanfile.py": conanfile, "myfile.txt": "My file is copied"})
-        create_local_git_repo(folder=self.client.current_folder)
+        self.client.init_git_repo()
         self.client.run("export . user/channel")
         self.assertIn("WARN: Repo origin cannot be deduced, 'auto' fields won't be replaced",
                       self.client.out)
@@ -165,7 +165,7 @@ class ConanLib(ConanFile):
         conanfile = conanfile.replace("short_paths = True", "short_paths = False")
         conanfile = conanfile.format(directory="None", url=_quoted("auto"), revision="auto")
         self.client.save({"conanfile.py": conanfile, "myfile.txt": "My file is copied"})
-        create_local_git_repo(folder=self.client.current_folder)
+        self.client.init_git_repo()
         self.client.run_command('git remote add origin https://myrepo.com.git')
         self.client.run("create . user/channel")
 
@@ -195,7 +195,7 @@ class ConanLib(ConanFile):
                     assert os.path.exists(path)
         """)
         self.client.save({"test/main/conanfile.py": conanfile, "base_file.txt": "foo"})
-        create_local_git_repo(folder=self.client.current_folder)
+        self.client.init_git_repo()
         self.client.run_command('git remote add origin https://myrepo.com.git')
 
         # Introduce changes
@@ -225,7 +225,7 @@ class ConanLib(ConanFile):
         path, _ = create_local_git_repo({"myfile": "contents"}, branch="my_release")
         conanfile = base_git.format(url=_quoted("auto"), revision="auto")
         self.client.save({"conanfile.py": conanfile, "myfile.txt": "My file is copied"})
-        create_local_git_repo(folder=self.client.current_folder)
+        self.client.init_git_repo()
         self.client.run_command('git remote add origin "%s"' % path.replace("\\", "/"))
         self.client.run_command('git push origin master')
         self.client.run("export . user/channel")
@@ -245,23 +245,24 @@ class ConanLib(ConanFile):
         self.assertIn("SCM: Getting sources from url: '%s'" % path.replace("\\", "/"),
                       self.client.out)
 
-    def test_excluded_repo_fies(self):
+    def test_excluded_repo_files(self):
         conanfile = base_git.format(url=_quoted("auto"), revision="auto")
         conanfile = conanfile.replace("short_paths = True", "short_paths = False")
-        path, _ = create_local_git_repo({"myfile": "contents",
-                                         "ignored.pyc": "bin",
-                                         ".gitignore": """
-*.pyc
-my_excluded_folder
-other_folder/excluded_subfolder
-""",
-                                         "myfile.txt": "My file!",
-                                         "my_excluded_folder/some_file": "hey Apple!",
-                                         "other_folder/excluded_subfolder/some_file": "hey Apple!",
-                                         "other_folder/valid_file": "!",
-                                         "conanfile.py": conanfile}, branch="my_release")
-        self.client.current_folder = path
-        self.client.run_command('git remote add origin "%s"' % path.replace("\\", "/"))
+        gitignore = textwrap.dedent("""
+            *.pyc
+            my_excluded_folder
+            other_folder/excluded_subfolder
+            """)
+        self.client.init_git_repo({"myfile": "contents",
+                                   "ignored.pyc": "bin",
+                                   ".gitignore": gitignore,
+                                   "myfile.txt": "My file!",
+                                   "my_excluded_folder/some_file": "hey Apple!",
+                                   "other_folder/excluded_subfolder/some_file": "hey Apple!",
+                                   "other_folder/valid_file": "!",
+                                   "conanfile.py": conanfile},
+                                  branch="my_release")
+
         self.client.run("create . user/channel")
         self.assertIn("Copying sources to build folder", self.client.out)
         pref = PackageReference(ConanFileReference.loads("lib/0.1@user/channel"),
@@ -283,7 +284,7 @@ other_folder/excluded_subfolder
         self.output.warn("SOURCE METHOD CALLED")
 """
         self.client.save({"conanfile.py": conanfile, "myfile.txt": "My file is copied"})
-        create_local_git_repo(folder=self.client.current_folder)
+        self.client.init_git_repo()
         self.client.save({"aditional_file.txt": "contents"})
 
         self.client.run("source . --source-folder=./source")
@@ -304,7 +305,7 @@ other_folder/excluded_subfolder
 """
         self.client.save({"conanfile.py": conanfile,
                           "myfile2.txt": "My file is copied"})
-        create_local_git_repo(folder=self.client.current_folder)
+        self.client.init_git_repo()
         self.client.run("source . --source-folder=./source2")
         # myfile2 is no in the specified commit
         self.assertFalse(os.path.exists(os.path.join(curdir, "source2", "myfile2.txt")))
@@ -324,7 +325,7 @@ other_folder/excluded_subfolder
         self.output.warn("SOURCE METHOD CALLED")
 """
         self.client.save({"conanfile.py": conanfile, "myfile.txt": "My file is copied"})
-        create_local_git_repo(folder=self.client.current_folder)
+        self.client.init_git_repo()
 
         self.client.run("source . --source-folder=./source")
         self.assertFalse(os.path.exists(os.path.join(curdir, "source", "myfile.txt")))
@@ -371,7 +372,7 @@ class ConanLib(ConanFile):
         curdir = self.client.current_folder.replace("\\", "/")
         conanfile = base_git.format(url=_quoted("auto"), revision="auto")
         self.client.save({"conanfile.py": conanfile, "myfile.txt": "My file is copied"})
-        create_local_git_repo(folder=self.client.current_folder)
+        self.client.init_git_repo()
         cmd = 'git remote add origin "%s"' % curdir
         self.client.run_command(cmd)
         self.client.run("export . lasote/channel")
@@ -383,25 +384,23 @@ class ConanLib(ConanFile):
         self.assertIn("My file is copied", client2.out)
 
     def test_source_removed_in_local_cache(self):
-        conanfile = '''
-from conans import ConanFile, tools
+        conanfile = textwrap.dedent('''
+            from conans import ConanFile, tools
 
-class ConanLib(ConanFile):
-    scm = {
-        "type": "git",
-        "url": "auto",
-        "revision": "auto",
-    }
+            class ConanLib(ConanFile):
+                scm = {
+                    "type": "git",
+                    "url": "auto",
+                    "revision": "auto",
+                }
 
-    def build(self):
-        contents = tools.load("myfile")
-        self.output.warn("Contents: %s" % contents)
+                def build(self):
+                    contents = tools.load("myfile")
+                    self.output.warn("Contents: %s" % contents)
+            ''')
 
-'''
-        path, _ = create_local_git_repo({"myfile": "contents", "conanfile.py": conanfile},
-                                        branch="my_release")
-        self.client.current_folder = path
-        self.client.run_command('git remote add origin https://myrepo.com.git')
+        self.client.init_git_repo({"myfile": "contents", "conanfile.py": conanfile},
+                                  branch="my_release", origin_url="https://myrepo.com.git")
         self.client.run("create . lib/1.0@user/channel")
         self.assertIn("Contents: contents", self.client.out)
         self.client.save({"myfile": "Contents 2"})
@@ -565,32 +564,29 @@ class ConanLib(ConanFile):
         self.assertEqual(str(scm_data), expected_output)
 
     def test_git_delegated_function(self):
-        conanfile = """
-import os
-from conans import ConanFile
-from conans.client.tools.scm import Git
+        conanfile = textwrap.dedent("""
+            import os
+            from conans import ConanFile
+            from conans.client.tools.scm import Git
 
-def get_revision():
-    here = os.path.dirname(__file__)
-    git = Git(here)
-    return git.get_commit()
+            def get_revision():
+                here = os.path.dirname(__file__)
+                git = Git(here)
+                return git.get_commit()
 
-def get_url():
-    def nested_url():
-        here = os.path.dirname(__file__)
-        git = Git(here)
-        return git.get_remote_url()
-    return nested_url()
+            def get_url():
+                def nested_url():
+                    here = os.path.dirname(__file__)
+                    git = Git(here)
+                    return git.get_remote_url()
+                return nested_url()
 
-class MyLib(ConanFile):
-    name = "issue"
-    version = "3831"
-    scm = {'type': 'git', 'url': get_url(), 'revision': get_revision()}
-
-"""
-        self.client.save({"conanfile.py": conanfile})
-        path, commit = create_local_git_repo(folder=self.client.current_folder)
-        self.client.run_command('git remote add origin "%s"' % path.replace("\\", "/"))
+            class MyLib(ConanFile):
+                name = "issue"
+                version = "3831"
+                scm = {'type': 'git', 'url': get_url(), 'revision': get_revision()}
+            """)
+        commit = self.client.init_git_repo({"conanfile.py": conanfile})
 
         self.client.run("export . user/channel")
         ref = ConanFileReference.loads("issue/3831@user/channel")
@@ -600,35 +596,34 @@ class MyLib(ConanFile):
 
     def test_delegated_python_code(self):
         client = TestClient()
-        code_file = """
-from conans.tools import Git
-from conans import ConanFile
+        code_file = textwrap.dedent("""
+            from conans.tools import Git
+            from conans import ConanFile
 
-def get_commit(repo_path):
-    git = Git(repo_path)
-    return git.get_commit()
+            def get_commit(repo_path):
+                git = Git(repo_path)
+                return git.get_commit()
 
-class MyLib(ConanFile):
-    pass
-"""
+            class MyLib(ConanFile):
+                pass
+            """)
         client.save({"conanfile.py": code_file})
         client.run("export . tool/0.1@user/testing")
 
-        conanfile = """import os
-from conans import ConanFile, python_requires
-from conans.tools import load
-tool = python_requires("tool/0.1@user/testing")
+        conanfile = textwrap.dedent("""
+            import os
+            from conans import ConanFile, python_requires
+            from conans.tools import load
+            tool = python_requires("tool/0.1@user/testing")
 
-class MyLib(ConanFile):
-    scm = {'type': 'git', 'url': '%s', 'revision': tool.get_commit(os.path.dirname(__file__))}
-    def build(self):
-        self.output.info("File: {}".format(load("file.txt")))
-""" % client.current_folder.replace("\\", "/")
+            class MyLib(ConanFile):
+                scm = {'type': 'git', 'url': '%s',
+                       'revision': tool.get_commit(os.path.dirname(__file__))}
+                def build(self):
+                    self.output.info("File: {}".format(load("file.txt")))
+            """ % client.current_folder.replace("\\", "/"))
 
-        client.save({"conanfile.py": conanfile, "file.txt": "hello!"})
-        path, commit = create_local_git_repo(folder=client.current_folder)
-        client.run_command('git remote add origin "%s"' % path.replace("\\", "/"))
-
+        commit = client.init_git_repo({"conanfile.py": conanfile, "file.txt": "hello!"})
         client.run("export . pkg/0.1@user/channel")
         ref = ConanFileReference.loads("pkg/0.1@user/channel")
         exported_conanfile = client.cache.package_layout(ref).conanfile()
@@ -739,10 +734,7 @@ class ConanLib(ConanFile):
         self.assertFalse(os.path.exists(os.path.join(folder, "mysub", "conanfile.py")))
 
     def test_auto_conanfile_no_root(self):
-        """
-        Conanfile is not in the root of the repo: https://github.com/conan-io/conan/issues/3465
-        """
-        curdir = self.client.current_folder
+        #  Conanfile is not in the root of the repo: https://github.com/conan-io/conan/issues/3465
         conanfile = base_svn.format(url="get_svn_remote('..')", revision="auto")
         project_url, _ = self.create_project(files={"conan/conanfile.py": conanfile,
                                                     "myfile.txt": "My file is copied"})
@@ -936,7 +928,7 @@ class ConanLib(ConanFile):
     def test_non_commited_changes_export(self):
         conanfile = base_git.format(revision="auto", url='"auto"')
         self.client.save({"conanfile.py": conanfile, "myfile.txt": "My file is copied"})
-        create_local_git_repo(folder=self.client.current_folder)
+        self.client.init_git_repo()
         self.client.run_command('git remote add origin https://myrepo.com.git')
         # Dirty file
         self.client.save({"dirty": "you dirty contents"})
@@ -981,7 +973,7 @@ class ConanLib(ConanFile):
         self.output.warn("Bla? {}".format(contents))
         """
         self.client.save({"conanfile.py": conanfile, "myfile.txt": "My file is copied"})
-        create_local_git_repo(folder=self.client.current_folder)
+        self.client.init_git_repo()
         self.client.run_command('git remote add origin https://myrepo.com.git')
         #  modified blah.sh
         self.client.save({"bla.sh": "bla bla"})
