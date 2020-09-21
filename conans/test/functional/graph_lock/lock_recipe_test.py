@@ -72,7 +72,7 @@ class LockRecipeTest(unittest.TestCase):
         client.run("lock create conanfile.py --base "
                    "--lockfile-out=windows_base.lock --lockfile=windows.lock")
         self.assertEqual(client.load("windows_base.lock"), client.load("base.lock"))
-        # Now it is possible to obtain the base one again from the full ones?
+        # Now it is possible to obtain the base one again from the full ones
         client.run("lock create conanfile.py --base "
                    "--lockfile-out=linux_base.lock --lockfile=linux.lock")
         self.assertEqual(client.load("linux_base.lock"), client.load("base.lock"))
