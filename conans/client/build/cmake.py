@@ -1,5 +1,6 @@
 import os
 import platform
+import re
 from itertools import chain
 
 from six import StringIO  # Python 2 and 3 compatible
@@ -180,10 +181,11 @@ class CMakeBuildHelper(object):
         generator_platform = self.generator_platform
 
         if self.generator_platform and 'Visual Studio' in generator:
-            # FIXME: Conan 2.0 We are adding the platform to the generator instead of using the -A argument
-            #   to keep previous implementation, but any modern CMake will support (and recommend) passing the
-            #   platform in its own argument.
-            compiler_version = self._settings.get_safe("compiler.version")
+            # FIXME: Conan 2.0 We are adding the platform to the generator instead of using
+            #  the -A argument to keep previous implementation, but any modern CMake will support
+            #  (and recommend) passing the platform in its own argument.
+            # Get the version from the generator, as it could have been defined by user argument
+            compiler_version = re.search("Visual Studio ([0-9]*)", generator).group(1)
             if Version(compiler_version) < "16" and self._settings.get_safe("os") != "WindowsCE":
                 if self.generator_platform == "x64":
                     generator += " Win64" if not generator.endswith(" Win64") else ""
@@ -315,26 +317,27 @@ class CMakeBuildHelper(object):
         if target is not None:
             args = ["--target", target] + args
 
-        compiler_version = self._settings.get_safe("compiler.version")
         if self.generator and self.parallel:
             if ("Makefiles" in self.generator or "Ninja" in self.generator) and \
                     "NMake" not in self.generator:
                 if "--" not in args:
                     args.append("--")
                 args.append("-j%i" % cpu_count(self._conanfile.output))
-            elif "Visual Studio" in self.generator and \
-                    compiler_version and Version(compiler_version) >= "10":
-                if "--" not in args:
-                    args.append("--")
-                # Parallel for building projects in the solution
-                args.append("/m:%i" % cpu_count(output=self._conanfile.output))
+            elif "Visual Studio" in self.generator:
+                compiler_version = re.search("Visual Studio ([0-9]*)", self.generator).group(1)
+                if Version(compiler_version) >= "10":
+                    if "--" not in args:
+                        args.append("--")
+                    # Parallel for building projects in the solution
+                    args.append("/m:%i" % cpu_count(output=self._conanfile.output))
 
         if self.generator and self.msbuild_verbosity:
-            if "Visual Studio" in self.generator and \
-                    compiler_version and Version(compiler_version) >= "10":
-                if "--" not in args:
-                    args.append("--")
-                args.append("/verbosity:%s" % self.msbuild_verbosity)
+            if "Visual Studio" in self.generator:
+                compiler_version = re.search("Visual Studio ([0-9]*)", self.generator).group(1)
+                if Version(compiler_version) >= "10":
+                    if "--" not in args:
+                        args.append("--")
+                    args.append("/verbosity:%s" % self.msbuild_verbosity)
 
         arg_list = join_arguments([
             args_to_string([build_dir]),

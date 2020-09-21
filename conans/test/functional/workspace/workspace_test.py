@@ -1032,7 +1032,7 @@ class Pkg(ConanFile):
         client.save({"conanfile.py": GenConanfile().with_name("HelloB").with_version("0.1")},
                     path=os.path.join(client.current_folder, "B"))
         client.save({"conanfile.py": GenConanfile().with_name("HelloA").with_version(
-            "0.1").with_build_require_plain("Tool/0.1@user/testing").with_require_plain("HelloB/0.1")},
+            "0.1").with_build_requires("Tool/0.1@user/testing").with_require("HelloB/0.1")},
                     path=os.path.join(client.current_folder, "A"))
 
         project = dedent("""

@@ -12,7 +12,6 @@ from conans.model.ref import ConanFileReference
 from conans.paths import DATA_YML
 from conans.test.utils.tools import TestClient
 from conans.test.utils.mocks import TestBufferConanOutput
-from conans.test.utils.scm import create_local_git_repo
 from conans.util.files import load
 from conans.util.files import save_files
 
@@ -95,8 +94,7 @@ class SCMDataToConanDataTestCase(unittest.TestCase):
                 scm = {"type": "git", "url": "auto", "revision": "auto"}
         """)
         t = TestClient()
-        t.save({'conanfile.py': conanfile})
-        _, commit = create_local_git_repo(folder=t.current_folder)
+        commit = t.init_git_repo({'conanfile.py': conanfile})
         t.run_command('git remote add origin https://myrepo.com.git')
         t.run("config set general.scm_to_conandata=1")
         t.run("export . name/version@")

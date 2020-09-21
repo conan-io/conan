@@ -10,7 +10,6 @@ from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE, CONAN_MANIFEST
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import TestClient, GenConanfile
-from conans.test.utils.scm import create_local_git_repo
 from conans.util.files import load, save
 
 
@@ -18,15 +17,14 @@ class ExportSettingsTest(unittest.TestCase):
 
     def test_basic(self):
         client = TestClient()
-        conanfile = """
-from conans import ConanFile
-class TestConan(ConanFile):
-    name = "Hello"
-    version = "1.2"
-    settings = {"os": ["Linux"]}
-"""
-        files = {CONANFILE: conanfile}
-        client.save(files)
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class TestConan(ConanFile):
+                name = "Hello"
+                version = "1.2"
+                settings = {"os": ["Linux"]}
+            """)
+        client.save({"conanfile.py": conanfile})
         client.run("export . lasote/stable")
         self.assertIn("WARN: Conanfile doesn't have 'license'", client.out)
         client.run("install Hello/1.2@lasote/stable -s os=Windows", assert_error=True)
@@ -39,7 +37,7 @@ class TestConan(ConanFile):
         client.run("export . lasote/stable", assert_error=True)
         self.assertIn("conanfile didn't specify name", client.out)
 
-        client.save({"conanfile.py": GenConanfile().with_name("Lib")})
+        client.save({"conanfile.py": GenConanfile("Lib")})
         client.run("export . lasote/stable", assert_error=True)
         self.assertIn("conanfile didn't specify version", client.out)
 
@@ -406,15 +404,14 @@ class ExportMetadataTest(unittest.TestCase):
         self.assertEqual(meta.recipe.revision, self.summary_hash)
 
     def test_revision_mode_scm(self):
-        path, rev = create_local_git_repo(
-            files={'conanfile.py': self.conanfile.format(revision_mode="scm")})
-        t = TestClient(current_folder=path)
+        t = TestClient()
+        commit = t.init_git_repo({'conanfile.py': self.conanfile.format(revision_mode="scm")})
 
         ref = ConanFileReference.loads("name/version@user/channel")
         t.run("export . {}".format(ref))
 
         meta = t.cache.package_layout(ref, short_paths=False).load_metadata()
-        self.assertEqual(meta.recipe.revision, rev)
+        self.assertEqual(meta.recipe.revision, commit)
 
     def test_revision_mode_invalid(self):
         conanfile = self.conanfile.format(revision_mode="auto")

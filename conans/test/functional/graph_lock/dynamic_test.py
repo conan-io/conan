@@ -10,14 +10,14 @@ class GraphLockDynamicTest(unittest.TestCase):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . LibA/1.0@")
-        client.save({"conanfile.py": GenConanfile().with_require_plain("LibA/[>=1.0]")})
+        client.save({"conanfile.py": GenConanfile().with_require("LibA/[>=1.0]")})
         client.run("create . LibB/1.0@")
         client.run("lock create --reference=LibB/1.0 --lockfile-out=libb.lock")
 
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . LibA/1.0.1@")
 
-        client.save({"conanfile.py": GenConanfile().with_require_plain("LibB/1.0")})
+        client.save({"conanfile.py": GenConanfile().with_require("LibB/1.0")})
         client.run("create . LibC/1.0@ --lockfile=libb.lock", assert_error=True)
         self.assertIn("Couldn't find 'LibC/1.0' in lockfile", client.out)
 
@@ -30,7 +30,7 @@ class GraphLockDynamicTest(unittest.TestCase):
         self.assertIn("LibA/1.0 from local cache - Cache", client.out)
 
         # Two levels
-        client.save({"conanfile.py": GenConanfile().with_require_plain("LibC/1.0")})
+        client.save({"conanfile.py": GenConanfile().with_require("LibC/1.0")})
         client.run("create . LibD/1.0@ --lockfile=libb.lock", assert_error=True)
         self.assertIn("Couldn't find 'LibD/1.0' in lockfile", client.out)
 
@@ -46,15 +46,15 @@ class GraphLockDynamicTest(unittest.TestCase):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . LibA/1.0@")
-        client.save({"conanfile.py": GenConanfile().with_require_plain("LibA/[>=1.0]")})
+        client.save({"conanfile.py": GenConanfile().with_require("LibA/[>=1.0]")})
         client.run("create . LibB/1.0@")
         client.run("lock create --reference=LibB/1.0 --lockfile-out=libb.lock")
 
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . LibA/1.0.1@")
 
-        client.save({"conanfile.py": GenConanfile().with_require_plain("LibB/1.0")
-                                                   .with_require_plain("LibA/[>=1.0]")})
+        client.save({"conanfile.py": GenConanfile().with_require("LibB/1.0")
+                                                   .with_require("LibA/[>=1.0]")})
         client.run("create . LibC/1.0@ --lockfile=libb.lock", assert_error=True)
         self.assertIn("Couldn't find 'LibC/1.0' in lockfile", client.out)
 
@@ -67,7 +67,7 @@ class GraphLockDynamicTest(unittest.TestCase):
         self.assertIn("LibA/1.0 from local cache - Cache", client.out)
 
         # Two levels
-        client.save({"conanfile.py": GenConanfile().with_require_plain("LibC/1.0")})
+        client.save({"conanfile.py": GenConanfile().with_require("LibC/1.0")})
         client.run("create . LibD/1.0@ --lockfile=libb.lock", assert_error=True)
         self.assertIn("Couldn't find 'LibD/1.0' in lockfile", client.out)
 
@@ -83,18 +83,18 @@ class GraphLockDynamicTest(unittest.TestCase):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . LibA/1.0@")
-        client.save({"conanfile.py": GenConanfile().with_require_plain("LibA/[>=1.0]")})
+        client.save({"conanfile.py": GenConanfile().with_require("LibA/[>=1.0]")})
         client.run("create . LibB/1.0@")
         client.run("lock create --reference=LibB/1.0 --lockfile-out=libb.lock")
 
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . LibA/1.0.1@")
 
-        client.save({"conanfile.py": GenConanfile().with_require_plain("LibA/[>=1.0]")})
+        client.save({"conanfile.py": GenConanfile().with_require("LibA/[>=1.0]")})
         client.run("create . LibC/1.0@")
 
-        client.save({"conanfile.py": GenConanfile().with_require_plain("LibB/1.0")
-                                                   .with_require_plain("LibC/1.0")})
+        client.save({"conanfile.py": GenConanfile().with_require("LibB/1.0")
+                                                   .with_require("LibC/1.0")})
         client.run("create . LibD/1.0@ --lockfile=libb.lock", assert_error=True)
         self.assertIn("Couldn't find 'LibD/1.0' in lockfile", client.out)
 
@@ -115,14 +115,14 @@ class GraphLockDynamicTest(unittest.TestCase):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . LibA/1.0@")
-        client.save({"conanfile.py": GenConanfile().with_require_plain("LibA/[>=1.0]")})
+        client.save({"conanfile.py": GenConanfile().with_require("LibA/[>=1.0]")})
         client.run("create . LibB/1.0@")
         client.run("lock create --reference=LibB/1.0 --lockfile-out=libb.lock")
 
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . LibA/1.0.1@")
 
-        client.save({"conanfile.py": GenConanfile().with_require_plain("LibA/[>=1.0]")})
+        client.save({"conanfile.py": GenConanfile().with_require("LibA/[>=1.0]")})
 
         client.run("create . LibC/1.0@ --lockfile=libb.lock", assert_error=True)
         self.assertIn("Couldn't find 'LibC/1.0' in lockfile", client.out)
@@ -136,10 +136,10 @@ class GraphLockDynamicTest(unittest.TestCase):
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . LibA/0.1@")
         client.run("create . LibB/0.1@")
-        client.save({"conanfile.py": GenConanfile().with_require_plain("LibA/0.1")
-                                                   .with_require_plain("LibB/0.1")})
+        client.save({"conanfile.py": GenConanfile().with_require("LibA/0.1")
+                                                   .with_require("LibB/0.1")})
         client.run("create . LibC/0.1@")
-        client.save({"conanfile.py": GenConanfile().with_require_plain("LibC/0.1")})
+        client.save({"conanfile.py": GenConanfile().with_require("LibC/0.1")})
         client.run("lock create conanfile.py --lockfile-out=conan.lock")
         lock = client.load("conan.lock")
         lock = json.loads(lock)["graph_lock"]["nodes"]
@@ -158,14 +158,14 @@ class GraphLockDynamicTest(unittest.TestCase):
         self.assertEqual(libc["requires"], ["2", "3"])
 
         # Remove one dep (LibB) in LibC, will fail to create
-        client.save({"conanfile.py": GenConanfile().with_require_plain("LibA/0.1")})
+        client.save({"conanfile.py": GenConanfile().with_require("LibA/0.1")})
         # If the graph is modified, a create should fail
         client.run("create . LibC/0.1@ --lockfile=conan.lock", assert_error=True)
         self.assertIn("Attempt to modify locked LibC/0.1", client.out)
 
         # It is possible to obtain a new lockfile
         client.run("export . LibC/0.1@")
-        client.save({"conanfile.py": GenConanfile().with_require_plain("LibC/0.1")})
+        client.save({"conanfile.py": GenConanfile().with_require("LibC/0.1")})
         client.run("lock create conanfile.py --lockfile-out=new.lock")
         # And use the lockfile to build it
         client.run("install LibC/0.1@ --build=LibC --lockfile=new.lock")
@@ -192,7 +192,7 @@ class GraphLockDynamicTest(unittest.TestCase):
 
         client.save({"conanfile.py": GenConanfile()})
         client.run("lock create conanfile.py --lockfile-out=conan.lock")
-        client.save({"conanfile.py": GenConanfile().with_require_plain("zlib/1.0")})
+        client.save({"conanfile.py": GenConanfile().with_require("zlib/1.0")})
         client.run("install . --lockfile=conan.lock", assert_error=True)
         self.assertIn("ERROR: Require 'zlib' cannot be found in lockfile", client.out)
 

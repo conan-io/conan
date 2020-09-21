@@ -1,3 +1,6 @@
+from conans.model.ref import ConanFileReference
+
+
 class GenConanfile(object):
     """
     USAGE:
@@ -65,30 +68,28 @@ class GenConanfile(object):
         return self
 
     def with_require(self, ref, private=False, override=False):
-        return self.with_require_plain(ref.full_str(), private, override)
-
-    def with_require_plain(self, ref_str, private=False, override=False):
+        ref_str = ref.full_str() if isinstance(ref, ConanFileReference) else ref
         self._requires.append((ref_str, private, override))
         return self
 
-    def with_requirement(self, ref, private=False, override=False):
-        return self.with_requirement_plain(ref.full_str(), private, override)
+    def with_requires(self, *refs):
+        for ref in refs:
+            self.with_require(ref)
+        return self
 
-    def with_requirement_plain(self, ref_str, private=False, override=False):
+    def with_requirement(self, ref, private=False, override=False):
+        ref_str = ref.full_str() if isinstance(ref, ConanFileReference) else ref
         self._requirements.append((ref_str, private, override))
         return self
 
-    def with_build_require(self, ref):
-        return self.with_build_require_plain(ref.full_str())
-
-    def with_build_require_plain(self, ref_str):
-        self._build_requires.append(ref_str)
+    def with_build_requires(self, *refs):
+        for ref in refs:
+            ref_str = ref.full_str() if isinstance(ref, ConanFileReference) else ref
+            self._build_requires.append(ref_str)
         return self
 
     def with_build_requirement(self, ref, force_host_context=False):
-        return self.with_build_requirement_plain(ref.full_str(),force_host_context=force_host_context)
-
-    def with_build_requirement_plain(self, ref_str, force_host_context=False):
+        ref_str = ref.full_str() if isinstance(ref, ConanFileReference) else ref
         self._build_requirements.append((ref_str, force_host_context))
         return self
 

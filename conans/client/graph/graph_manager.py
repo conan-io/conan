@@ -406,7 +406,7 @@ def load_deps_info(current_path, conanfile, required):
     info_file_path = os.path.join(current_path, BUILD_INFO)
     try:
         deps_cpp_info, deps_user_info, deps_env_info, user_info_build = \
-            TXTGenerator.loads(load(info_file_path))
+            TXTGenerator.loads(load(info_file_path), filter_empty=True)
         conanfile.deps_cpp_info = deps_cpp_info
         conanfile.deps_user_info = deps_user_info
         conanfile.deps_env_info = deps_env_info

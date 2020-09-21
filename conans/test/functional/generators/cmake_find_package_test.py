@@ -135,10 +135,10 @@ message("Target libs: ${tmp}")
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . PkgA/1.0@user/testing")
-        client.save({"conanfile.py": GenConanfile().with_require_plain("PkgA/1.0@user/testing")})
+        client.save({"conanfile.py": GenConanfile().with_require("PkgA/1.0@user/testing")})
         client.run("create . PkgB/1.0@user/testing")
-        client.save({"conanfile.py": GenConanfile().with_require_plain("PkgB/1.0@user/testing")
-                                                   .with_require_plain("PkgA/1.0@user/testing")})
+        client.save({"conanfile.py": GenConanfile().with_require("PkgB/1.0@user/testing")
+                                                   .with_require("PkgA/1.0@user/testing")})
         client.run("create . PkgC/1.0@user/testing")
         client.save({"conanfile.py": conanfile,
                      "CMakeLists.txt": cmakelists})
@@ -445,29 +445,29 @@ message("Target libs: ${tmp}")
                         'exports_sources = "src/*"\n    requires = "hello/1.0"',
                         output=client.out)
         client.run("create .")
-        cmakelists = """
-project(consumer)
-cmake_minimum_required(VERSION 3.1)
-find_package(MYHELLO2)
+        cmakelists = textwrap.dedent("""
+            set(CMAKE_CXX_COMPILER_WORKS 1)
+            project(consumer CXX)
+            cmake_minimum_required(VERSION 3.1)
+            find_package(MYHELLO2)
 
-get_target_property(tmp MYHELLO2::MYHELLO2 INTERFACE_LINK_LIBRARIES)
-message("Target libs (hello2): ${tmp}")
+            get_target_property(tmp MYHELLO2::MYHELLO2 INTERFACE_LINK_LIBRARIES)
+            message("Target libs (hello2): ${tmp}")
 
-get_target_property(tmp MYHELLO::MYHELLO INTERFACE_LINK_LIBRARIES)
-message("Target libs (hello): ${tmp}")
-"""
-        conanfile = """
-from conans import ConanFile, CMake
+            get_target_property(tmp MYHELLO::MYHELLO INTERFACE_LINK_LIBRARIES)
+            message("Target libs (hello): ${tmp}")
+            """)
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile, CMake
 
+            class Conan(ConanFile):
+                requires = "hello2/1.0"
+                generators = "cmake_find_package"
 
-class Conan(ConanFile):
-    requires = "hello2/1.0"
-    generators = "cmake_find_package"
-
-    def build(self):
-        cmake = CMake(self)
-        cmake.configure()
-        """
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+            """)
         client.save({"conanfile.py": conanfile, "CMakeLists.txt": cmakelists})
         client.run("install .")
         client.run("build .")
@@ -486,14 +486,6 @@ class Conan(ConanFile):
                       client.out)
 
     def cpp_info_filename_test(self):
-        def add_to_conan_file(after, add_lines, spaces_to_indent):
-            indent = '\n' + (' ' * spaces_to_indent)
-            replace = indent.join([after] + add_lines)
-            replace_in_file(os.path.join(client.current_folder, "conanfile.py"),
-                            after,
-                            replace,
-                            output=client.out)
-
         client = TestClient()
         client.run("new hello/1.0 -s")
         indent = '\n        '
@@ -517,7 +509,8 @@ class Conan(ConanFile):
             replace='add_library(hello2 hello.cpp)',
             output=client.out
         )
-        replace_in_file(os.path.join(client.current_folder, "conanfile.py"),
+        replace_in_file(
+            os.path.join(client.current_folder, "conanfile.py"),
             search='self.cpp_info.libs = ["hello"]',
             replace=indent.join([
                 'self.cpp_info.name = "MYHELLO2"',
@@ -528,46 +521,43 @@ class Conan(ConanFile):
             ]),
             output=client.out
         )
-        replace_in_file(os.path.join(client.current_folder, "conanfile.py"),
+        replace_in_file(
+            os.path.join(client.current_folder, "conanfile.py"),
             search='exports_sources = "src/*"',
             replace='exports_sources = "src/*"\n    requires = "hello/1.0"',
             output=client.out
         )
         client.run("create .")
 
-        cmakelists = """
-project(consumer)
-cmake_minimum_required(VERSION 3.1)
-find_package(hello_2)
+        cmakelists = textwrap.dedent("""
+            set(CMAKE_CXX_COMPILER_WORKS 1)
+            project(consumer CXX)
+            cmake_minimum_required(VERSION 3.1)
+            find_package(hello_2)
 
-get_target_property(tmp MYHELLO2::HELLO2 INTERFACE_LINK_LIBRARIES)
-message("Target libs (hello2): ${tmp}")
+            get_target_property(tmp MYHELLO2::HELLO2 INTERFACE_LINK_LIBRARIES)
+            message("Target libs (hello2): ${tmp}")
 
-get_target_property(tmp MYHELLO::HELLO1 INTERFACE_LINK_LIBRARIES)
-message("Target libs (hello): ${tmp}")
-"""
-        conanfile = """
-from conans import ConanFile, CMake
+            get_target_property(tmp MYHELLO::HELLO1 INTERFACE_LINK_LIBRARIES)
+            message("Target libs (hello): ${tmp}")
+            """)
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile, CMake
 
+            class Conan(ConanFile):
+                requires = "hello2/1.0"
+                generators = "cmake_find_package"
 
-class Conan(ConanFile):
-    requires = "hello2/1.0"
-    generators = "cmake_find_package"
-
-    def build(self):
-        cmake = CMake(self)
-        cmake.configure()
-        """
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+            """)
         client.save({"conanfile.py": conanfile, "CMakeLists.txt": cmakelists})
         client.run("install .")
         client.run("build .")
 
-        print('~' * 120)
-        print(client.out)
-        print('~' * 120)
-
-        self.assertIn('Found MYHELLO2: 1.0 (found version "1.0")', client.out)
-        self.assertIn('Found MYHELLO: 1.0 (found version "1.0")', client.out)
+        self.assertIn('Found hello_2: 1.0 (found version "1.0")', client.out)
+        self.assertIn('Found hello_1: 1.0 (found version "1.0")', client.out)
         self.assertIn("Target libs (hello2): "
                       "CONAN_LIB::MYHELLO2_HELLO2_hello2;MYHELLO::HELLO1;"
                       "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
@@ -615,3 +605,48 @@ class Conan(ConanFile):
         content = t.load("Findrequirement.cmake")
         self.assertIn('set(requirement_COMPILE_OPTIONS_LIST "-req_both;-req_debug" "")', content)
         self.assertIn('set(requirement_LIBRARY_LIST lib_both lib_debug)', content)
+
+    def components_system_libs_test(self):
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+
+            class Requirement(ConanFile):
+                name = "requirement"
+                version = "system"
+
+                settings = "os", "arch", "compiler", "build_type"
+
+                def package_info(self):
+                    self.cpp_info.components["component"].system_libs = ["system_lib_component"]
+        """)
+        t = TestClient()
+        t.save({"conanfile.py": conanfile})
+        t.run("create .")
+
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile, tools, CMake
+            class Consumer(ConanFile):
+                name = "consumer"
+                version = "0.1"
+                requires = "requirement/system"
+                generators = "cmake_find_package"
+                exports_sources = "CMakeLists.txt"
+                settings = "os", "arch", "compiler"
+
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+        """)
+
+        cmakelists = textwrap.dedent("""
+            project(consumer)
+            cmake_minimum_required(VERSION 3.1)
+            find_package(requirement)
+            get_target_property(tmp requirement::component INTERFACE_LINK_LIBRARIES)
+            message("component libs: ${tmp}")
+        """)
+
+        t.save({"conanfile.py": conanfile, "CMakeLists.txt": cmakelists})
+        t.run("create . --build missing")
+
+        self.assertIn("component libs: system_lib_component;", t.out)
