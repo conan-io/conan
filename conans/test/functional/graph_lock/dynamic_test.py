@@ -129,7 +129,8 @@ class GraphLockDynamicTest(unittest.TestCase):
 
         client.run("lock create conanfile.py --name=LibC --version=1.0 --lockfile=libb.lock "
                    "--lockfile-out=libc.lock", assert_error=True)
-        self.assertIn("ERROR: The provided lockfile was not used, there is no overlap.", client.out)
+        self.assertIn("ERROR: The provided lockfile root package 'LibB/1.0' doesn't belong "
+                      "to the new graph.", client.out)
 
     def remove_dep_test(self):
         client = TestClient()
@@ -254,3 +255,35 @@ class GraphLockDynamicTest(unittest.TestCase):
         else:
             self.assertEqual(dep["ref"], "dep/0.1")
             self.assertEqual(dep["prev"], "0")
+
+    def partial_intermediate_package_lock_test(self):
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . LibA/1.0@")
+        client.save({"conanfile.py": GenConanfile().with_require("LibA/[>=1.0]")})
+        client.run("create . LibB/1.0@")
+        client.save({"conanfile.py": GenConanfile().with_require("LibB/[>=1.0]")})
+        client.run("create . LibC/1.0@")
+        client.run("lock create --reference=LibC/1.0 --lockfile-out=libc.lock")
+
+        # New version of LibA/1.0.1, that should never be used
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . LibA/1.0.1@")
+
+        # Go back to B, we want to develop but keep depending on LibA/1.0.0
+        client.save({"conanfile.py": GenConanfile().with_require("LibA/[>=1.0]")})
+        client.run("create . LibB/1.1@ --lockfile=libc.lock", assert_error=True)
+        self.assertIn("Couldn't find 'LibB/1.1' in lockfile", client.out)
+
+        client.run("lock create conanfile.py --name=LibB --version=1.1 --lockfile=libc.lock "
+                   "--lockfile-out=libb.lock --partial")
+        self.assertIn("LibA/1.0 from local cache", client.out)
+        self.assertNotIn("LibA/1.0.1", client.out)
+        libb_lock = client.load("libb.lock")
+        self.assertIn("LibA/1.0", libb_lock)
+        self.assertNotIn("LibA/1.0.1", libb_lock)
+
+        client.run("create . LibB/1.1@")
+        self.assertIn("LibA/1.0.1 from local cache - Cache", client.out)
+        client.run("create . LibB/1.1@ --lockfile=libb.lock")
+        self.assertIn("LibA/1.0 from local cache - Cache", client.out)

@@ -526,11 +526,11 @@ class CIPythonRequiresTest(unittest.TestCase):
         self.assertNotIn("pyreq/0.2", client.out)
 
         # Go back to main orchestrator
-        # This should fail, as PkgB/0.2 is not involved in the new resolution
+        # This should fail, as PkgB/1.0 is not involved in the new resolution
         client.run("lock create --reference=PkgD/0.1@user/channel "
                    "--lockfile=buildb.lock --lockfile-out=conan.lock", assert_error=True)
-        self.assertIn("ERROR: The provided lockfile was not used, there is no overlap",
-                      client.out)
+        self.assertIn("ERROR: The provided lockfile root package 'PkgB/1.0@user/channel' "
+                      "doesn't belong to the new graph", client.out)
 
         client.run("lock build-order conan.lock --json=build_order.json")
         json_file = client.load("build_order.json")

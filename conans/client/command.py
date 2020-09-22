@@ -1892,6 +1892,10 @@ class Command(object):
                                 help="Lock only recipe versions and revisions")
         create_cmd.add_argument("--lockfile-out", action=OnceArgument, default="conan.lock",
                                 help="Filename of the created lockfile")
+        create_cmd.add_argument("--partial", action="store_true",
+                                help='If a base lockfile is provided, by default, it '
+                                     'must be fully used in the new lockfile. Use --partial to use '
+                                     'only some of the locked packages')
         _add_common_install_arguments(create_cmd, build_help="Packages to build from source",
                                       lockfile=False)
 
@@ -1927,7 +1931,8 @@ class Command(object):
                                     build=args.build,
                                     base=args.base,
                                     lockfile=args.lockfile,
-                                    lockfile_out=args.lockfile_out)
+                                    lockfile_out=args.lockfile_out,
+                                    partial=args.partial)
 
     def _show_help(self):
         """
