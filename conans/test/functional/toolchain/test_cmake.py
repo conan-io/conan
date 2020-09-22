@@ -216,6 +216,7 @@ class WinTest(Base):
                 "BUILD_SHARED_LIBS": shared_str}
 
         def _verify_out(marker=">>"):
+            print(self.client.out)
             if shared:
                 self.assertIn("app_lib.dll", self.client.out)
             else:

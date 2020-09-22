@@ -1,13 +1,13 @@
-# coding=utf-8
 import os
 import textwrap
 from collections import OrderedDict, defaultdict
 
 from jinja2 import Template
 
-from conans.client.build.cmake_flags import get_generator, get_generator_platform, \
-    CMakeDefinitionsBuilder, get_toolset, is_multi_configuration
-from conans.client.generators.cmake_common import CMakeCommonMacros
+from conans.client.build.cmake_flags import get_generator, get_generator_platform,  get_toolset, \
+    is_multi_configuration
+from conans.client.tools import cpu_count
+from conans.errors import ConanException
 from conans.util.files import save
 
 
@@ -43,8 +43,8 @@ class CMakeToolchain(object):
     filename = "conan_toolchain.cmake"
 
     _template_toolchain = textwrap.dedent("""
-        # Conan generated toolchain file
-        cmake_minimum_required(VERSION 3.0)  # Needed for targets
+        # Conan automatically generated toolchain file
+        # DO NOT EDIT MANUALLY, it will be overwritten
 
         # Avoid including toolchain file several times (bad if appending to variables like
         #   CMAKE_CXX_FLAGS. See https://github.com/android/ndk/issues/323
@@ -119,8 +119,18 @@ class CMakeToolchain(object):
         set(CMAKE_POSITION_INDEPENDENT_CODE ON)
         {% endif %}
 
-        {% if set_rpath %}conan_set_rpath(){% endif %}
-        {% if set_std %}conan_set_std(){% endif %}
+        {% if skip_rpath %}
+        set(CMAKE_SKIP_RPATH 1 CACHE BOOL "rpaths" FORCE)
+        # Policy CMP0068
+        # We want the old behavior, in CMake >= 3.9 CMAKE_SKIP_RPATH won't affect install_name in OSX
+        set(CMAKE_INSTALL_NAME_DIR "")
+        {% endif %}
+
+        {%- if parallel %}
+        # Parallel builds
+        set(CONAN_CXX_FLAGS "${CONAN_CXX_FLAGS} {{ parallel }}")
+        set(CONAN_C_FLAGS "${CONAN_C_FLAGS} {{ parallel }}")
+        {%- endif %}
 
         # C++ Standard Library
         {%- if set_libcxx %}
@@ -128,6 +138,13 @@ class CMakeToolchain(object):
         {%- endif %}
         {%- if glibcxx %}
         add_definitions(-D_GLIBCXX_USE_CXX11_ABI={{ glibcxx }})
+        {%- endif %}
+
+        {%- if cppstd %}
+        # C++ Standard
+        message(STATUS "Conan C++ Standard {{ cppstd }} with extensions {{ cppstd_extensions }}}")
+        set(CMAKE_CXX_STANDARD {{ cppstd }})
+        set(CMAKE_CXX_EXTENSIONS {{ cppstd_extensions }})
         {%- endif %}
 
         {% if install_prefix %}
@@ -161,10 +178,15 @@ class CMakeToolchain(object):
         endif()
 
         ########### Utility macros and functions ###########
-        {{ cmake_macros_and_functions }}
+        function(conan_get_policy policy_id policy)
+            if(POLICY "${policy_id}")
+                cmake_policy(GET "${policy_id}" _policy)
+                set(${policy} "${_policy}" PARENT_SCOPE)
+            else()
+                set(${policy} "" PARENT_SCOPE)
+            endif()
+        endfunction()
         ########### End of Utility macros and functions ###########
-
-
 
         # Adjustments that depends on the build_type
         {% if vs_static_runtime %}
@@ -194,7 +216,7 @@ class CMakeToolchain(object):
         self._vs_static_runtime = self._deduce_vs_static_runtime()
 
         self._set_rpath = True
-        self._set_std = True
+        self._parallel = parallel
 
         # To find the generated cmake_find_package finders
         self._cmake_prefix_path = "${CMAKE_BINARY_DIR}"
@@ -207,24 +229,19 @@ class CMakeToolchain(object):
         self._toolset = toolset or get_toolset(self._conanfile.settings, self._generator)
         self._build_type = build_type or self._conanfile.settings.get_safe("build_type")
 
-        builder = CMakeDefinitionsBuilder(self._conanfile,
-                                          cmake_system_name=cmake_system_name,
-                                          make_program=make_program, parallel=parallel,
-                                          generator=self._generator,
-                                          set_cmake_flags=False,
-                                          output=self._conanfile.output)
         self.definitions = Definitions()
-        self.definitions.update(builder.get_definitions())
-        # FIXME: Removing too many things. We want to bring the new logic for the toolchain here
-        # so we don't mess with the common code.
-        self.definitions.pop("CMAKE_BUILD_TYPE", None)
-        self.definitions.pop("CONAN_IN_LOCAL_CACHE", None)
-        self.definitions.pop("CMAKE_PREFIX_PATH", None)
-        self.definitions.pop("CMAKE_MODULE_PATH", None)
-        self.definitions.pop("CONAN_LINK_RUNTIME", None)
-        for install in ("PREFIX", "BINDIR", "SBINDIR", "LIBEXECDIR", "LIBDIR", "INCLUDEDIR",
-                        "OLDINCLUDEDIR", "DATAROOTDIR"):
-            self.definitions.pop("CMAKE_INSTALL_%s" % install, None)
+        self.definitions.update(self._definitions())
+
+    def _definitions(self):
+        result = {}
+        # Shared library
+        try:
+            result["BUILD_SHARED_LIBS"] = "ON" if self._conanfile.options.shared else "OFF"
+        except ConanException:
+            pass
+        # Disable CMake export registry #3070 (CMake installing modules in user home's)
+        result["CMAKE_EXPORT_NO_PACKAGE_REGISTRY"] = "ON"
+        return result
 
     def _deduce_fpic(self):
         fpic = self._conanfile.options.get_safe("fPIC")
@@ -278,6 +295,18 @@ class CMakeToolchain(object):
                 glib = "0"
         return lib, glib
 
+    def _cppstd(self):
+        cppstd = cppstd_extensions = None
+        compiler_cppstd = self._conanfile.settings.get_safe("compiler.cppstd")
+        if compiler_cppstd:
+            if compiler_cppstd.startswith("gnu"):
+                cppstd = compiler_cppstd[3:]
+                cppstd_extensions = "ON"
+            else:
+                cppstd = compiler_cppstd
+                cppstd_extensions = "OFF"
+        return cppstd, cppstd_extensions
+
     def write_toolchain_files(self):
         # Make it absolute, wrt to current folder, set by the caller
         conan_project_include_cmake = os.path.abspath("conan_project_include.cmake")
@@ -300,6 +329,14 @@ class CMakeToolchain(object):
             install_prefix = None
 
         set_libcxx, glibcxx = self._get_libcxx()
+        parallel = None
+        if self._parallel:
+            if "Visual Studio" in self._generator:
+                parallel = "/MP%s" % cpu_count(output=self._conanfile.output)
+
+        cppstd, cppstd_extensions = self._cppstd()
+
+        skip_rpath = True if self._conanfile.settings.get_safe("os") == "MacOS" else False
 
         context = {
             "configuration_types_definitions": self.definitions.configuration_types,
@@ -310,19 +347,14 @@ class CMakeToolchain(object):
             "cmake_prefix_path": self._cmake_prefix_path,
             "cmake_module_path": self._cmake_module_path,
             "fpic": self._fpic,
-            "set_rpath": self._set_rpath,
-            "set_std": self._set_std,
+            "skip_rpath": skip_rpath,
             "set_libcxx": set_libcxx,
             "glibcxx": glibcxx,
-            "install_prefix": install_prefix
+            "install_prefix": install_prefix,
+            "parallel": parallel,
+            "cppstd": cppstd,
+            "cppstd_extensions": cppstd_extensions
         }
         t = Template(self._template_toolchain)
-        content = t.render(conan_project_include_cmake=conan_project_include_cmake,
-                           cmake_macros_and_functions="\n".join([
-                               CMakeCommonMacros.conan_message,
-                               CMakeCommonMacros.conan_get_policy,
-                               CMakeCommonMacros.conan_set_rpath,
-                               CMakeCommonMacros.conan_set_std,
-                           ]),
-                           **context)
+        content = t.render(conan_project_include_cmake=conan_project_include_cmake, **context)
         save(self.filename, content)
