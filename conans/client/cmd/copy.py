@@ -31,6 +31,10 @@ def cmd_copy(ref, user_channel, package_ids, cache, user_io, remote_manager, loa
 
 def package_copy(src_ref, user_channel, package_ids, cache, user_io, short_paths=False,
                  force=False):
+    ref = ConanFileReference.loads(user_channel)
+    if ref.name or ref.version:
+        raise ConanException("Destination must contain user/channel only.")
+
     dest_ref = ConanFileReference.loads("%s/%s@%s" % (src_ref.name,
                                                       src_ref.version,
                                                       user_channel))
