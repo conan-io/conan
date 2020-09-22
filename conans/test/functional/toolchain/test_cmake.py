@@ -277,7 +277,7 @@ class LinuxTest(Base):
                 "CMAKE_C_FLAGS_DEBUG": "-g",
                 "CMAKE_C_FLAGS_RELEASE": "-O3 -DNDEBUG",
                 "CMAKE_SHARED_LINKER_FLAGS": arch_str,
-                "CMAKE_EXE_LINKER_FLAGS": "",
+                "CMAKE_EXE_LINKER_FLAGS": arch_str,
                 "COMPILE_DEFINITIONS": "_GLIBCXX_USE_CXX11_ABI=%s" % cxx11_abi_str,
                 "CMAKE_POSITION_INDEPENDENT_CODE": pic_str
                 }

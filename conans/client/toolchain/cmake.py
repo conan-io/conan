@@ -129,6 +129,14 @@ class CMakeToolchain(object):
         set(CONAN_C_FLAGS "${CONAN_C_FLAGS} {{ parallel }}")
         {%- endif %}
 
+        # Architecture
+        {% if architecture -%}
+        set(CONAN_CXX_FLAGS "${CONAN_CXX_FLAGS} {{ architecture }}")
+        set(CONAN_C_FLAGS "${CONAN_C_FLAGS} {{ architecture }}")
+        set(CONAN_SHARED_LINKER_FLAGS "${CONAN_SHARED_LINKER_FLAGS} {{ architecture }}")
+        set(CONAN_EXE_LINKER_FLAGS "${CONAN_EXE_LINKER_FLAGS} {{ architecture }}")
+        {%- endif %}
+
         # C++ Standard Library
         {% if set_libcxx -%}
         set(CONAN_CXX_FLAGS "${CONAN_CXX_FLAGS} {{ set_libcxx }}")
@@ -249,6 +257,37 @@ class CMakeToolchain(object):
             return None
         return fpic
 
+    def _get_architecture(self):
+        """
+        returns flags specific to the target architecture and compiler
+        """
+        settings = self._conanfile.settings
+        compiler = settings.get_safe("compiler")
+        compiler_base = settings.get_safe("compiler.base")
+        arch = settings.get_safe("arch")
+        the_os = settings.get_safe("os")
+        if not compiler or not arch:
+            return
+
+        if str(compiler) in ['gcc', 'apple-clang', 'clang', 'sun-cc']:
+            if str(arch) in ['x86_64', 'sparcv9', 's390x']:
+                return '-m64'
+            elif str(arch) in ['x86', 'sparc']:
+                return '-m32'
+            elif str(arch) in ['s390']:
+                return '-m31'
+            elif str(the_os) == 'AIX':
+                if str(arch) in ['ppc32']:
+                    return '-maix32'
+                elif str(arch) in ['ppc64']:
+                    return '-maix64'
+        elif str(compiler) == "intel":
+            # https://software.intel.com/en-us/cpp-compiler-developer-guide-and-reference-m32-m64-qm32-qm64
+            if str(arch) == "x86":
+                return "/Qm32" if str(compiler_base) == "Visual Studio" else "-m32"
+            elif str(arch) == "x86_64":
+                return "/Qm64" if str(compiler_base) == "Visual Studio" else "-m64"
+
     def _deduce_vs_static_runtime(self):
         settings = self._conanfile.settings
         if (settings.get_safe("compiler") == "Visual Studio" and
@@ -328,6 +367,7 @@ class CMakeToolchain(object):
         cppstd, cppstd_extensions = self._cppstd()
 
         skip_rpath = True if self._conanfile.settings.get_safe("os") == "MacOS" else False
+        architecture = self._get_architecture()
 
         context = {
             "definitions": self.preprocessor_definitions,
@@ -345,7 +385,8 @@ class CMakeToolchain(object):
             "parallel": parallel,
             "cppstd": cppstd,
             "cppstd_extensions": cppstd_extensions,
-            "shared_libs": self._build_shared_libs
+            "shared_libs": self._build_shared_libs,
+            "architecture": architecture
         }
         t = Template(self._template_toolchain)
         content = t.render(conan_project_include_cmake=conan_project_include_cmake, **context)
