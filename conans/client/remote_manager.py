@@ -255,12 +255,10 @@ def calc_files_checksum(files):
 
 
 def is_package_snapshot_complete(snapshot):
-    integrity = True
     for keyword in ["conaninfo", "conanmanifest", "conan_package"]:
         if not any(keyword in key for key in snapshot):
-            integrity = False
-            break
-    return integrity
+            return False
+    return True
 
 
 def check_compressed_files(tgz_name, files):
