@@ -12,6 +12,7 @@ from conans.client.source import complete_recipe_sources
 from conans.client.toolchain.base import write_toolchain
 from conans.client.tools import cross_building, get_cross_building_settings
 from conans.errors import ConanException
+from conans.model.conan_file import ConanFile
 from conans.model.ref import ConanFileReference
 from conans.model.graph_lock import GraphLockFile
 from conans.paths import CONANINFO
@@ -111,7 +112,8 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
             graph_lock_file.save(os.path.join(install_folder, "conan.lock"))
         if not no_imports:
             run_imports(conanfile, install_folder)
-        call_system_requirements(conanfile, conanfile.output)
+        if type(conanfile).system_requirements != ConanFile.system_requirements:
+            call_system_requirements(conanfile, conanfile.output)
 
         if not create_reference and isinstance(ref_or_path, ConanFileReference):
             # The conanfile loaded is a virtual one. The one w deploy is the first level one
