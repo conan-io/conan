@@ -140,7 +140,6 @@ class Base(unittest.TestCase):
         build_directory = os.path.join(self.client.current_folder, "build").replace("\\", "/")
         with self.client.chdir(build_directory):
             self.client.run("install .. %s %s" % (settings, options))
-            print(self.client.load("conan_toolchain.cmake"))
             install_out = self.client.out
             self.client.run("build ..")
         return install_out
