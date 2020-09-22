@@ -16,16 +16,16 @@ from conans.util.files import save
 # https://github.com/microsoft/vcpkg/tree/master/scripts/buildsystems
 
 
-class Definitions(OrderedDict):
+class PreprocessorDefinitions(OrderedDict):
     _configuration_types = None  # Needed for py27 to avoid infinite recursion
 
     def __init__(self):
-        super(Definitions, self).__init__()
+        super(PreprocessorDefinitions, self).__init__()
         self._configuration_types = {}
 
     def __getattribute__(self, config):
         try:
-            return super(Definitions, self).__getattribute__(config)
+            return super(PreprocessorDefinitions, self).__getattribute__(config)
         except AttributeError:
             return self._configuration_types.setdefault(config, dict())
 
@@ -53,31 +53,18 @@ class CMakeToolchain(object):
         endif()
         set(CONAN_TOOLCHAIN_INCLUDED TRUE)
 
-        ########### Utility macros and functions ###########
-        {{ cmake_macros_and_functions }}
-        ########### End of Utility macros and functions ###########
-
         # Configure
-        {% if generator_platform %}
+        {%- if generator_platform %}
         set(CMAKE_GENERATOR_PLATFORM "{{ generator_platform }}" CACHE STRING "" FORCE)
-        {% endif %}
-        {% if toolset %}
+        {%- endif %}
+        {%- if toolset %}
         set(CMAKE_GENERATOR_TOOLSET "{{ toolset }}" CACHE STRING "" FORCE)
-        {% endif%}
+        {%- endif %}
 
         # build_type (Release, Debug, etc) is only defined for single-config generators
-        {% if build_type %}
+        {%- if build_type %}
         set(CMAKE_BUILD_TYPE "{{ build_type }}" CACHE STRING "Choose the type of build." FORCE)
-        {% endif %}
-
-        # --  - CMake.flags --> CMakeDefinitionsBuilder::get_definitions
-        {%- for it, value in definitions.items() %}
-        {%- if it.startswith('CONAN_') %}
-        set({{ it }} "{{ value }}")
-        {%- else %}
-        set({{ it }} "{{ value }}" CACHE STRING "Value assigned from the Conan toolchain" FORCE)
         {%- endif %}
-        {%- endfor %}
 
         get_property( _CMAKE_IN_TRY_COMPILE GLOBAL PROPERTY IN_TRY_COMPILE )
         if(_CMAKE_IN_TRY_COMPILE)
@@ -106,60 +93,76 @@ class CMakeToolchain(object):
 
         # We are going to adjust automagically many things as requested by Conan
         #   these are the things done by 'conan_basic_setup()'
-         # To support the cmake_find_package generators:
-        {% if cmake_module_path %}
-        set(CMAKE_MODULE_PATH {{ cmake_module_path }} ${CMAKE_MODULE_PATH})
-        {% endif%}
-        {% if cmake_prefix_path %}
-        set(CMAKE_PREFIX_PATH {{ cmake_prefix_path }} ${CMAKE_PREFIX_PATH})
-        {% endif%}
+        set(CMAKE_EXPORT_NO_PACKAGE_REGISTRY ON)
 
-        {% if fpic %}
+        # To support the cmake_find_package generators
+        {% if cmake_module_path -%}
+        set(CMAKE_MODULE_PATH {{ cmake_module_path }} ${CMAKE_MODULE_PATH})
+        {%- endif %}
+        {% if cmake_prefix_path -%}
+        set(CMAKE_PREFIX_PATH {{ cmake_prefix_path }} ${CMAKE_PREFIX_PATH})
+        {%- endif %}
+
+        # shared libs
+        {% if shared_libs -%}
+        message(STATUS "Conan toolchain: Setting BUILD_SHARED_LIBS= {{ shared_libs }}")
+        set(BUILD_SHARED_LIBS {{ shared_libs }})
+        {%- endif %}
+
+        # fPIC
+        {% if fpic -%}
         message(STATUS "Conan toolchain: Setting CMAKE_POSITION_INDEPENDENT_CODE=ON (options.fPIC)")
         set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-        {% endif %}
+        {%- endif %}
 
-        {% if skip_rpath %}
+        # SKIP_RPATH
+        {% if skip_rpath -%}
         set(CMAKE_SKIP_RPATH 1 CACHE BOOL "rpaths" FORCE)
         # Policy CMP0068
         # We want the old behavior, in CMake >= 3.9 CMAKE_SKIP_RPATH won't affect install_name in OSX
         set(CMAKE_INSTALL_NAME_DIR "")
-        {% endif %}
+        {% endif -%}
 
-        {%- if parallel %}
         # Parallel builds
+        {% if parallel -%}
         set(CONAN_CXX_FLAGS "${CONAN_CXX_FLAGS} {{ parallel }}")
         set(CONAN_C_FLAGS "${CONAN_C_FLAGS} {{ parallel }}")
         {%- endif %}
 
         # C++ Standard Library
-        {%- if set_libcxx %}
+        {% if set_libcxx -%}
         set(CONAN_CXX_FLAGS "${CONAN_CXX_FLAGS} {{ set_libcxx }}")
         {%- endif %}
-        {%- if glibcxx %}
+        {% if glibcxx -%}
         add_definitions(-D_GLIBCXX_USE_CXX11_ABI={{ glibcxx }})
         {%- endif %}
 
-        {%- if cppstd %}
         # C++ Standard
+        {% if cppstd -%}
         message(STATUS "Conan C++ Standard {{ cppstd }} with extensions {{ cppstd_extensions }}}")
         set(CMAKE_CXX_STANDARD {{ cppstd }})
         set(CMAKE_CXX_EXTENSIONS {{ cppstd_extensions }})
         {%- endif %}
 
-        {% if install_prefix %}
+        # Install prefix
+        {% if install_prefix -%}
         set(CMAKE_INSTALL_PREFIX {{install_prefix}} CACHE STRING "" FORCE)
-        {% endif %}
+        {%- endif %}
 
-        # Variables scoped to a configuration
-        {%- for it, values in configuration_types_definitions.items() -%}
+        # Preprocessor definitions
+        {% for it, value in definitions.items() -%}
+        set({{ it }} "{{ value }}")
+        {%- endfor %}
+        # Preprocessor definitions per configuration
+        {% for it, values in configuration_types_definitions.items() -%}
             {%- set genexpr = namespace(str='') %}
             {%- for conf, value in values -%}
                 {%- set genexpr.str = genexpr.str +
                                       '$<IF:$<CONFIG:' + conf + '>,"' + value|string + '",' %}
-                {%- if loop.last %}{% set genexpr.str = genexpr.str + '""' %}{% endif %}
+                {%- if loop.last %}{% set genexpr.str = genexpr.str + '""' -%}{%- endif -%}
             {%- endfor -%}
-            {% for i in range(values|count) %}{%- set genexpr.str = genexpr.str + '>' %}{% endfor %}
+            {% for i in range(values|count) %}{%- set genexpr.str = genexpr.str + '>' %}
+            {%- endfor -%}
         set({{ it }} {{ genexpr.str }})
         {%- endfor %}
 
@@ -207,15 +210,11 @@ class CMakeToolchain(object):
     """)
 
     def __init__(self, conanfile, generator=None, generator_platform=None, build_type=None,
-                 cmake_system_name=True, toolset=None, parallel=True, make_program=None,
-                 # cmake_program=None,  # TODO: cmake program should be considered in the environment
-                 ):
+                 toolset=None, parallel=True):
         self._conanfile = conanfile
 
         self._fpic = self._deduce_fpic()
         self._vs_static_runtime = self._deduce_vs_static_runtime()
-
-        self._set_rpath = True
         self._parallel = parallel
 
         # To find the generated cmake_find_package finders
@@ -229,19 +228,11 @@ class CMakeToolchain(object):
         self._toolset = toolset or get_toolset(self._conanfile.settings, self._generator)
         self._build_type = build_type or self._conanfile.settings.get_safe("build_type")
 
-        self.definitions = Definitions()
-        self.definitions.update(self._definitions())
-
-    def _definitions(self):
-        result = {}
-        # Shared library
+        self.preprocessor_definitions = PreprocessorDefinitions()
         try:
-            result["BUILD_SHARED_LIBS"] = "ON" if self._conanfile.options.shared else "OFF"
+            self._build_shared_libs = "ON" if self._conanfile.options.shared else "OFF"
         except ConanException:
             pass
-        # Disable CMake export registry #3070 (CMake installing modules in user home's)
-        result["CMAKE_EXPORT_NO_PACKAGE_REGISTRY"] = "ON"
-        return result
 
     def _deduce_fpic(self):
         fpic = self._conanfile.options.get_safe("fPIC")
@@ -312,8 +303,7 @@ class CMakeToolchain(object):
         conan_project_include_cmake = os.path.abspath("conan_project_include.cmake")
         conan_project_include_cmake = conan_project_include_cmake.replace("\\", "/")
         t = Template(self._template_project_include)
-        content = t.render(configuration_types_definitions=self.definitions.configuration_types,
-                           vs_static_runtime=self._vs_static_runtime)
+        content = t.render(vs_static_runtime=self._vs_static_runtime)
         save(conan_project_include_cmake, content)
 
         # TODO: I need the profile_host and profile_build here!
@@ -329,6 +319,7 @@ class CMakeToolchain(object):
             install_prefix = None
 
         set_libcxx, glibcxx = self._get_libcxx()
+
         parallel = None
         if self._parallel:
             if "Visual Studio" in self._generator:
@@ -339,11 +330,11 @@ class CMakeToolchain(object):
         skip_rpath = True if self._conanfile.settings.get_safe("os") == "MacOS" else False
 
         context = {
-            "configuration_types_definitions": self.definitions.configuration_types,
+            "definitions": self.preprocessor_definitions,
+            "configuration_types_definitions": self.preprocessor_definitions.configuration_types,
             "build_type": build_type,
             "generator_platform": self._generator_platform,
             "toolset": self._toolset,
-            "definitions": self.definitions,
             "cmake_prefix_path": self._cmake_prefix_path,
             "cmake_module_path": self._cmake_module_path,
             "fpic": self._fpic,
@@ -353,7 +344,8 @@ class CMakeToolchain(object):
             "install_prefix": install_prefix,
             "parallel": parallel,
             "cppstd": cppstd,
-            "cppstd_extensions": cppstd_extensions
+            "cppstd_extensions": cppstd_extensions,
+            "shared_libs": self._build_shared_libs
         }
         t = Template(self._template_toolchain)
         content = t.render(conan_project_include_cmake=conan_project_include_cmake, **context)

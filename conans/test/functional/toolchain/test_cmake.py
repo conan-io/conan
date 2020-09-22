@@ -25,9 +25,9 @@ class Base(unittest.TestCase):
 
             def toolchain(self):
                 tc = CMakeToolchain(self)
-                tc.definitions["DEFINITIONS_BOTH"] = True
-                tc.definitions.debug["DEFINITIONS_CONFIG"] = "Debug"
-                tc.definitions.release["DEFINITIONS_CONFIG"] = "Release"
+                tc.preprocessor_definitions["DEFINITIONS_BOTH"] = True
+                tc.preprocessor_definitions.debug["DEFINITIONS_CONFIG"] = "Debug"
+                tc.preprocessor_definitions.release["DEFINITIONS_CONFIG"] = "Release"
                 tc.write_toolchain_files()
 
             def build(self):
@@ -140,6 +140,7 @@ class Base(unittest.TestCase):
         build_directory = os.path.join(self.client.current_folder, "build").replace("\\", "/")
         with self.client.chdir(build_directory):
             self.client.run("install .. %s %s" % (settings, options))
+            print(self.client.load("conan_toolchain.cmake"))
             install_out = self.client.out
             self.client.run("build ..")
         return install_out
@@ -216,7 +217,6 @@ class WinTest(Base):
                 "BUILD_SHARED_LIBS": shared_str}
 
         def _verify_out(marker=">>"):
-            print(self.client.out)
             if shared:
                 self.assertIn("app_lib.dll", self.client.out)
             else:
