@@ -232,7 +232,7 @@ class CMakeToolchain(object):
         try:
             self._build_shared_libs = "ON" if self._conanfile.options.shared else "OFF"
         except ConanException:
-            pass
+            self._build_shared_libs = None
 
     def _deduce_fpic(self):
         fpic = self._conanfile.options.get_safe("fPIC")
@@ -322,7 +322,7 @@ class CMakeToolchain(object):
 
         parallel = None
         if self._parallel:
-            if "Visual Studio" in self._generator:
+            if self._generator and "Visual Studio" in self._generator:
                 parallel = "/MP%s" % cpu_count(output=self._conanfile.output)
 
         cppstd, cppstd_extensions = self._cppstd()
