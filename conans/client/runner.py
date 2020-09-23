@@ -108,7 +108,6 @@ class ConanRunner(object):
 
         if capture_output:
             get_stream_lines(proc.stdout)
-        # get_stream_lines(proc.stderr)
 
         proc.communicate()
         ret = proc.returncode
