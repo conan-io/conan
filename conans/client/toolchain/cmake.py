@@ -366,7 +366,7 @@ class CMakeToolchain(object):
 
         cppstd, cppstd_extensions = self._cppstd()
 
-        skip_rpath = True if self._conanfile.settings.get_safe("os") == "MacOS" else False
+        skip_rpath = True if self._conanfile.settings.get_safe("os") == "Macos" else False
         architecture = self._get_architecture()
 
         context = {
