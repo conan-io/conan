@@ -79,7 +79,6 @@ class ConanRunner(object):
             capture_output = False
             if log_handler or not self._log_run_to_output or (
                 stream_output and isinstance(stream_output._stream, six.StringIO)):
-
                 capture_output = True
                 proc = Popen(command, shell=isinstance(command, six.string_types), stdout=PIPE,
                              stderr=STDOUT, cwd=cwd)
