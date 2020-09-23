@@ -141,18 +141,15 @@ class MakeGeneratorTest(unittest.TestCase):
         if target == "exe":
             client.run("install . danimtb/testing")
             client.run_command("make exe")
-            print(client.out)
             client.run_command("./out/hellowrapper.bin")
             self.assertIn("Hello World Release!", client.out)
         elif target == "shared":
             client.run("install . danimtb/testing -o hellowrapper:shared=True")
             client.run_command("make shared")
-            print(client.out)
             client.run_command("nm -C out/libhellowrapper.so | grep 'hellowrapper()'")
             self.assertIn("hellowrapper()", client.out)
         elif target == "static":
             client.run("install . danimtb/testing -o hellowrapper:shared=False")
             client.run_command("make static")
-            print(client.out)
             client.run_command("nm -C out/libhellowrapper.a | grep 'hellowrapper()'")
             self.assertIn("hellowrapper()", client.out)
