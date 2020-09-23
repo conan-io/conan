@@ -3,6 +3,7 @@ import textwrap
 from xml.dom import minidom
 
 from conans.client.tools import msvs_toolset
+from conans.errors import ConanException
 from conans.util.files import save, load
 
 
@@ -10,7 +11,7 @@ class MSBuildToolchain(object):
 
     def __init__(self, conanfile):
         self._conanfile = conanfile
-        self.definitions = {}
+        self.preprocessor_definitions = {}
 
     @ staticmethod
     def _name_condition(settings):
@@ -58,10 +59,11 @@ class MSBuildToolchain(object):
               </ItemDefinitionGroup>
             </Project>
             """)
-        definitions = ";".join([format_macro(k, v) for k, v in self.definitions.items()])
+        preprocessor_definitions = ";".join([format_macro(k, v)
+                                             for k, v in self.preprocessor_definitions.items()])
         # It is useless to set PlatformToolset in the config file, because the conditional checks it
         cppstd = "stdcpp%s" % cppstd if cppstd else ""
-        config_props = content.format(definitions, runtime_library, cppstd)
+        config_props = content.format(preprocessor_definitions, runtime_library, cppstd)
         config_filepath = os.path.abspath(config_filename)
         self._conanfile.output.info("MSBuildToolchain created %s" % config_filename)
         save(config_filepath, config_props)
@@ -81,7 +83,10 @@ class MSBuildToolchain(object):
                 """)
 
         dom = minidom.parseString(content)
-        import_group = dom.getElementsByTagName('ImportGroup')[0]
+        try:
+            import_group = dom.getElementsByTagName('ImportGroup')[0]
+        except Exception:
+            raise ConanException("Broken conan_toolchain.props. Remove the file and try again")
         children = import_group.getElementsByTagName("Import")
         for node in children:
             if (config_filename == node.getAttribute("Project") and

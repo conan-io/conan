@@ -235,11 +235,11 @@ class WinTest(unittest.TestCase):
             default_options = {"shared": False}
             def toolchain(self):
                 tc = MSBuildToolchain(self)
-                tc.definitions["DEFINITIONS_BOTH"] = "True"
+                tc.preprocessor_definitions["DEFINITIONS_BOTH"] = "True"
                 if self.settings.build_type == "Debug":
-                    tc.definitions["DEFINITIONS_CONFIG"] = "Debug"
+                    tc.preprocessor_definitions["DEFINITIONS_CONFIG"] = "Debug"
                 else:
-                    tc.definitions["DEFINITIONS_CONFIG"] = "Release"
+                    tc.preprocessor_definitions["DEFINITIONS_CONFIG"] = "Release"
                 tc.write_toolchain_files()
         """)
 
