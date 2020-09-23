@@ -1,7 +1,7 @@
 import io
 import os
+import subprocess
 import sys
-
 from subprocess import PIPE, Popen, STDOUT
 
 import six
@@ -76,7 +76,14 @@ class ConanRunner(object):
             # piping both stdout, stderr and then later only reading one will hang the process
             # if the other fills the pip. So piping stdout, and redirecting stderr to stdout,
             # so both are merged and use just a single get_stream_lines() call
-            proc = Popen(command, shell=isinstance(command, six.string_types), stdout=PIPE, stderr=STDOUT, cwd=cwd)
+            capture_output = log_handler or not self._log_run_to_output or (
+                    stream_output and isinstance(stream_output._stream, six.StringIO))
+            if capture_output:
+                proc = Popen(command, shell=isinstance(command, six.string_types), stdout=PIPE,
+                             stderr=STDOUT, cwd=cwd)
+            else:
+                proc = Popen(command, shell=isinstance(command, six.string_types), cwd=cwd)
+
         except Exception as e:
             raise ConanException("Error while executing '%s'\n\t%s" % (command, str(e)))
 
@@ -99,8 +106,8 @@ class ConanRunner(object):
                     # tried to open the log_handler binary but same result.
                     log_handler.write(line if six.PY2 else decoded_line)
 
-        get_stream_lines(proc.stdout)
-        # get_stream_lines(proc.stderr)
+        if capture_output:
+            get_stream_lines(proc.stdout)
 
         proc.communicate()
         ret = proc.returncode
