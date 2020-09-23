@@ -2,6 +2,7 @@
 
 def to_android_abi(arch):
     """converts conan-style architecture into Android-NDK ABI"""
+    # https://cmake.org/cmake/help/latest/variable/CMAKE_ANDROID_ARCH_ABI.html
     return {'armv5el': 'armeabi',
             'armv5hf': 'armeabi',
             'armv5': 'armeabi',
