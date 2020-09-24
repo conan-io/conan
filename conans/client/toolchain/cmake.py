@@ -6,6 +6,7 @@ from jinja2 import Template
 
 from conans.client.build.cmake_flags import get_generator, get_generator_platform,  get_toolset, \
     is_multi_configuration
+from conans.client.build.compiler_flags import architecture_flag
 from conans.client.tools import cpu_count
 from conans.errors import ConanException
 from conans.util.files import save
@@ -258,35 +259,8 @@ class CMakeToolchain(object):
         return fpic
 
     def _get_architecture(self):
-        """
-        returns flags specific to the target architecture and compiler
-        """
-        settings = self._conanfile.settings
-        compiler = settings.get_safe("compiler")
-        compiler_base = settings.get_safe("compiler.base")
-        arch = settings.get_safe("arch")
-        the_os = settings.get_safe("os")
-        if not compiler or not arch:
-            return
-
-        if str(compiler) in ['gcc', 'apple-clang', 'clang', 'sun-cc']:
-            if str(arch) in ['x86_64', 'sparcv9', 's390x']:
-                return '-m64'
-            elif str(arch) in ['x86', 'sparc']:
-                return '-m32'
-            elif str(arch) in ['s390']:
-                return '-m31'
-            elif str(the_os) == 'AIX':
-                if str(arch) in ['ppc32']:
-                    return '-maix32'
-                elif str(arch) in ['ppc64']:
-                    return '-maix64'
-        elif str(compiler) == "intel":
-            # https://software.intel.com/en-us/cpp-compiler-developer-guide-and-reference-m32-m64-qm32-qm64
-            if str(arch) == "x86":
-                return "/Qm32" if str(compiler_base) == "Visual Studio" else "-m32"
-            elif str(arch) == "x86_64":
-                return "/Qm64" if str(compiler_base) == "Visual Studio" else "-m64"
+        # This should be factorized and make it toolchain-private
+        return architecture_flag(self._conanfile.settings)
 
     def _deduce_vs_static_runtime(self):
         settings = self._conanfile.settings
