@@ -25,9 +25,12 @@ class Base(unittest.TestCase):
 
             def toolchain(self):
                 tc = CMakeToolchain(self)
-                tc.preprocessor_definitions["DEFINITIONS_BOTH"] = True
-                tc.preprocessor_definitions.debug["DEFINITIONS_CONFIG"] = "Debug"
-                tc.preprocessor_definitions.release["DEFINITIONS_CONFIG"] = "Release"
+                tc.variables["MYVAR"] = "MYVAR_VALUE"
+                tc.variables.debug["MYVAR_CONFIG"] = "MYVAR_DEBUG"
+                tc.variables.release["MYVAR_CONFIG"] = "MYVAR_RELEASE"
+                tc.preprocessor_definitions["MYDEFINE"] = "MYDEF_VALUE"
+                tc.preprocessor_definitions.debug["MYDEFINE_CONFIG"] = "MYDEF_DEBUG"
+                tc.preprocessor_definitions.release["MYDEFINE_CONFIG"] = "MYDEF_RELEASE"
                 tc.write_toolchain_files()
 
             def build(self):
@@ -57,8 +60,10 @@ class Base(unittest.TestCase):
             #else
             std::cout << "App: Debug!" <<std::endl;
             #endif
-            std::cout << "DEFINITIONS_BOTH: " << DEFINITIONS_BOTH << "\\n";
-            std::cout << "DEFINITIONS_CONFIG: " << DEFINITIONS_CONFIG << "\\n";
+            std::cout << "MYVAR: " << MYVAR << "\\n";
+            std::cout << "MYVAR_CONFIG: " << MYVAR_CONFIG << "\\n";
+            std::cout << "MYDEFINE: " << MYDEFINE << "\\n";
+            std::cout << "MYDEFINE_CONFIG: " << MYDEFINE_CONFIG << "\\n";
         }
         """)
 
@@ -96,13 +101,12 @@ class Base(unittest.TestCase):
         message(">> CMAKE_MODULE_PATH: ${CMAKE_MODULE_PATH}")
         message(">> CMAKE_PREFIX_PATH: ${CMAKE_PREFIX_PATH}")
         message(">> BUILD_SHARED_LIBS: ${BUILD_SHARED_LIBS}")
-        get_directory_property(_COMPILE_DEFS DIRECTORY ${CMAKE_SOURCE_DIR} COMPILE_DEFINITIONS)
-        message(">> COMPILE_DEFINITIONS: ${_COMPILE_DEFS}")
+
         find_package(hello REQUIRED)
         add_library(app_lib app_lib.cpp)
         target_link_libraries(app_lib PRIVATE hello::hello)
-        target_compile_definitions(app_lib PRIVATE DEFINITIONS_BOTH="${DEFINITIONS_BOTH}")
-        target_compile_definitions(app_lib PRIVATE DEFINITIONS_CONFIG=${DEFINITIONS_CONFIG})
+        target_compile_definitions(app_lib PRIVATE MYVAR="${MYVAR}")
+        target_compile_definitions(app_lib PRIVATE MYVAR_CONFIG=${MYVAR_CONFIG})
         add_executable(app app.cpp)
         target_link_libraries(app PRIVATE app_lib)
         """)
@@ -168,8 +172,10 @@ class Base(unittest.TestCase):
         self.client.run_command(command_str)
         self.assertIn("Hello: %s" % build_type, self.client.out)
         self.assertIn("%s: %s!" % (msg, build_type), self.client.out)
-        self.assertIn("DEFINITIONS_BOTH: True", self.client.out)
-        self.assertIn("DEFINITIONS_CONFIG: %s" % build_type, self.client.out)
+        self.assertIn("MYVAR: MYVAR_VALUE", self.client.out)
+        self.assertIn("MYVAR_CONFIG: MYVAR_%s" % build_type.upper(), self.client.out)
+        self.assertIn("MYDEFINE: MYDEF_VALUE", self.client.out)
+        self.assertIn("MYDEFINE_CONFIG: MYDEF_%s" % build_type.upper(), self.client.out)
 
 
 @unittest.skipUnless(platform.system() == "Windows", "Only for windows")

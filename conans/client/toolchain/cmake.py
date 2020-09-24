@@ -17,16 +17,16 @@ from conans.util.files import save
 # https://github.com/microsoft/vcpkg/tree/master/scripts/buildsystems
 
 
-class PreprocessorDefinitions(OrderedDict):
+class Variables(OrderedDict):
     _configuration_types = None  # Needed for py27 to avoid infinite recursion
 
     def __init__(self):
-        super(PreprocessorDefinitions, self).__init__()
+        super(Variables, self).__init__()
         self._configuration_types = {}
 
     def __getattribute__(self, config):
         try:
-            return super(PreprocessorDefinitions, self).__getattribute__(config)
+            return super(Variables, self).__getattribute__(config)
         except AttributeError:
             return self._configuration_types.setdefault(config, dict())
 
@@ -158,12 +158,12 @@ class CMakeToolchain(object):
         set(CMAKE_INSTALL_PREFIX {{install_prefix}} CACHE STRING "" FORCE)
         {%- endif %}
 
-        # Preprocessor definitions
-        {% for it, value in definitions.items() -%}
+        # Variables
+        {% for it, value in variables.items() -%}
         set({{ it }} "{{ value }}")
         {%- endfor %}
-        # Preprocessor definitions per configuration
-        {% for it, values in configuration_types_definitions.items() -%}
+        # Variables  per configuration
+        {% for it, values in variables_config.items() -%}
             {%- set genexpr = namespace(str='') %}
             {%- for conf, value in values -%}
                 {%- set genexpr.str = genexpr.str +
@@ -174,6 +174,24 @@ class CMakeToolchain(object):
             {%- endfor -%}
         set({{ it }} {{ genexpr.str }})
         {%- endfor %}
+
+        # Preprocessor definitions
+        {% for it, value in preprocessor_definitions.items() -%}
+        add_compile_definitions({{ it }}="{{ value }}")
+        {%- endfor %}
+        # Preprocessor definitions per configuration
+        {% for it, values in preprocessor_definitions_config.items() -%}
+            {%- set genexpr = namespace(str='') %}
+            {%- for conf, value in values -%}
+                {%- set genexpr.str = genexpr.str +
+                                      '$<IF:$<CONFIG:' + conf + '>,"' + value|string + '",' %}
+                {%- if loop.last %}{% set genexpr.str = genexpr.str + '""' -%}{%- endif -%}
+            {%- endfor -%}
+            {% for i in range(values|count) %}{%- set genexpr.str = genexpr.str + '>' %}
+            {%- endfor -%}
+        add_compile_definitions({{ it }}={{ genexpr.str }})
+        {%- endfor %}
+
 
         set(CMAKE_CXX_FLAGS_INIT "${CONAN_CXX_FLAGS}" CACHE STRING "" FORCE)
         set(CMAKE_C_FLAGS_INIT "${CONAN_C_FLAGS}" CACHE STRING "" FORCE)
@@ -237,7 +255,8 @@ class CMakeToolchain(object):
         self._toolset = toolset or get_toolset(self._conanfile.settings, self._generator)
         self._build_type = build_type or self._conanfile.settings.get_safe("build_type")
 
-        self.preprocessor_definitions = PreprocessorDefinitions()
+        self.variables = Variables()
+        self.preprocessor_definitions = Variables()
         try:
             self._build_shared_libs = "ON" if self._conanfile.options.shared else "OFF"
         except ConanException:
@@ -344,8 +363,10 @@ class CMakeToolchain(object):
         architecture = self._get_architecture()
 
         context = {
-            "definitions": self.preprocessor_definitions,
-            "configuration_types_definitions": self.preprocessor_definitions.configuration_types,
+            "variables": self.variables,
+            "variables_config": self.variables.configuration_types,
+            "preprocessor_definitions": self.preprocessor_definitions,
+            "preprocessor_definitions_config": self.preprocessor_definitions.configuration_types,
             "build_type": build_type,
             "generator_platform": self._generator_platform,
             "toolset": self._toolset,
