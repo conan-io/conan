@@ -73,15 +73,18 @@ class MSBuildGenerator(Generator):
         </Project>
         """)
 
+    def __init__(self, conanfile):
+        super(MSBuildGenerator, self).__init__(conanfile)
+        self.configuration = conanfile.settings.build_type
+
     @property
     def filename(self):
         return None
 
-    @ staticmethod
-    def _name_condition(settings):
+    def _name_condition(self, settings):
         toolset = msvs_toolset(settings)
 
-        props = [("Configuration", settings.build_type),
+        props = [("Configuration",  self.configuration),
                  # FIXME: This probably requires mapping ARM architectures
                  ("Platform", {'x86': 'Win32',
                                'x86_64': 'x64'}.get(settings.get_safe("arch"))),

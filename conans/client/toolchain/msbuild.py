@@ -2,6 +2,7 @@ import os
 import textwrap
 from xml.dom import minidom
 
+from conans.client.generators import MSBuildGenerator
 from conans.client.tools import msvs_toolset
 from conans.errors import ConanException
 from conans.util.files import save, load
@@ -12,12 +13,13 @@ class MSBuildToolchain(object):
     def __init__(self, conanfile):
         self._conanfile = conanfile
         self.preprocessor_definitions = {}
+        self.generator = MSBuildGenerator(conanfile)
+        self.configuration = conanfile.settings.build_type
 
-    @ staticmethod
-    def _name_condition(settings):
+    def _name_condition(self, settings):
         toolset = msvs_toolset(settings)
 
-        props = [("Configuration", settings.build_type),
+        props = [("Configuration", self.configuration),
                  # FIXME: This probably requires mapping ARM architectures
                  ("Platform", {'x86': 'Win32',
                                'x86_64': 'x64'}.get(settings.get_safe("arch"))),
@@ -32,6 +34,11 @@ class MSBuildToolchain(object):
         config_filename = "conan_toolchain{}.props".format(name)
         self._write_config_toolchain(config_filename)
         self._write_main_toolchain(config_filename, condition)
+        self.generator.output_path = os.getcwd()
+        generator_files = self.generator.content
+        for generator_file, content in generator_files.items():
+            generator_file = os.path.abspath(generator_file)
+            save(generator_file, content)
 
     def _write_config_toolchain(self, config_filename):
 

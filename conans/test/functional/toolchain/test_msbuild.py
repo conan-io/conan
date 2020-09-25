@@ -1,12 +1,13 @@
 import os
 import platform
+import shutil
 import textwrap
 import unittest
 
 
-from conans.client.tools import vs_installation_path
+from conans.client.tools import vs_installation_path, chdir
 from conans.test.utils.tools import TestClient
-
+from conans.util.files import mkdir
 
 sln_file = r"""
 Microsoft Visual Studio Solution File, Format Version 12.00
@@ -21,16 +22,10 @@ Global
         Debug|x86 = Debug|x86
         Release|x64 = Release|x64
         Release|x86 = Release|x86
+        ReleaseShared|x64 = ReleaseShared|x64
+        ReleaseShared|x86 = ReleaseShared|x86
     EndGlobalSection
     GlobalSection(ProjectConfigurationPlatforms) = postSolution
-        {6F392A05-B151-490C-9505-B2A49720C4D9}.Debug|x64.ActiveCfg = Debug|x64
-        {6F392A05-B151-490C-9505-B2A49720C4D9}.Debug|x64.Build.0 = Debug|x64
-        {6F392A05-B151-490C-9505-B2A49720C4D9}.Debug|x86.ActiveCfg = Debug|Win32
-        {6F392A05-B151-490C-9505-B2A49720C4D9}.Debug|x86.Build.0 = Debug|Win32
-        {6F392A05-B151-490C-9505-B2A49720C4D9}.Release|x64.ActiveCfg = Release|x64
-        {6F392A05-B151-490C-9505-B2A49720C4D9}.Release|x64.Build.0 = Release|x64
-        {6F392A05-B151-490C-9505-B2A49720C4D9}.Release|x86.ActiveCfg = Release|Win32
-        {6F392A05-B151-490C-9505-B2A49720C4D9}.Release|x86.Build.0 = Release|Win32
         {B58316C0-C78A-4E9B-AE8F-5D6368CE3840}.Debug|x64.ActiveCfg = Debug|x64
         {B58316C0-C78A-4E9B-AE8F-5D6368CE3840}.Debug|x64.Build.0 = Debug|x64
         {B58316C0-C78A-4E9B-AE8F-5D6368CE3840}.Debug|x86.ActiveCfg = Debug|Win32
@@ -39,6 +34,10 @@ Global
         {B58316C0-C78A-4E9B-AE8F-5D6368CE3840}.Release|x64.Build.0 = Release|x64
         {B58316C0-C78A-4E9B-AE8F-5D6368CE3840}.Release|x86.ActiveCfg = Release|Win32
         {B58316C0-C78A-4E9B-AE8F-5D6368CE3840}.Release|x86.Build.0 = Release|Win32
+        {B58316C0-C78A-4E9B-AE8F-5D6368CE3840}.ReleaseShared|x64.ActiveCfg = ReleaseShared|x64
+        {B58316C0-C78A-4E9B-AE8F-5D6368CE3840}.ReleaseShared|x64.Build.0 = ReleaseShared|x64
+        {B58316C0-C78A-4E9B-AE8F-5D6368CE3840}.ReleaseShared|x86.ActiveCfg = ReleaseShared|Win32
+        {B58316C0-C78A-4E9B-AE8F-5D6368CE3840}.ReleaseShared|x86.Build.0 = ReleaseShared|Win32
     EndGlobalSection
     GlobalSection(SolutionProperties) = preSolution
         HideSolutionNode = FALSE
@@ -57,6 +56,14 @@ myapp_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
     <ProjectConfiguration Include="Debug|Win32">
       <Configuration>Debug</Configuration>
       <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="ReleaseShared|Win32">
+      <Configuration>ReleaseShared</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="ReleaseShared|x64">
+      <Configuration>ReleaseShared</Configuration>
+      <Platform>x64</Platform>
     </ProjectConfiguration>
     <ProjectConfiguration Include="Release|Win32">
       <Configuration>Release</Configuration>
@@ -78,6 +85,20 @@ myapp_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
     <RootNamespace>MyApp</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseShared|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseShared|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
@@ -123,6 +144,16 @@ myapp_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
     Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')"
     Label="LocalAppDataPlatform" />
   </ImportGroup>
+   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='ReleaseShared|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props"
+    Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')"
+    Label="LocalAppDataPlatform" />
+  </ImportGroup>
+   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='ReleaseShared|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props"
+    Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')"
+    Label="LocalAppDataPlatform" />
+  </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props"
     Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')"
@@ -146,6 +177,12 @@ myapp_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseShared|Win32'">
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseShared|x64'">
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
@@ -158,6 +195,43 @@ myapp_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseShared|Win32'">
+    <ClCompile>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)
+      </PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseShared|x64'">
+    <ClCompile>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
@@ -230,17 +304,24 @@ class WinTest(unittest.TestCase):
         class App(ConanFile):
             settings = "os", "arch", "compiler", "build_type"
             requires = "hello/0.1"
-            generators = "msbuild"
             options = {"shared": [True, False]}
             default_options = {"shared": False}
             def toolchain(self):
                 tc = MSBuildToolchain(self)
+                if self.options["hello"].shared and self.settings.build_type == "Release":
+                    tc.configuration = "ReleaseShared"
+                    tc.generator.configuration = "ReleaseShared"
+
                 tc.preprocessor_definitions["DEFINITIONS_BOTH"] = "True"
                 if self.settings.build_type == "Debug":
                     tc.preprocessor_definitions["DEFINITIONS_CONFIG"] = "Debug"
                 else:
                     tc.preprocessor_definitions["DEFINITIONS_CONFIG"] = "Release"
                 tc.write_toolchain_files()
+            def imports(self):
+                self.copy("*.dll", src="bin",
+                          dst="%s/%s" % (self.settings.arch, self.settings.build_type),
+                          keep_path=False)
         """)
 
     app = textwrap.dedent("""
@@ -285,12 +366,20 @@ class WinTest(unittest.TestCase):
         }
         """)
 
-    def _run_app(self, client, arch, build_type, msg="App"):
-        if arch == "x86":
-            command_str = "%s\\MyApp.exe" % build_type
+    def _run_app(self, client, arch, build_type, shared=None, msg="App"):
+        if build_type == "Release" and shared == "shared":
+            configuration = "ReleaseShared"
         else:
-            command_str = "x64\\%s\\MyApp.exe" % build_type
-        client.run_command(command_str)
+            configuration = build_type
+        if arch == "x86":
+            command_str = "%s\\MyApp.exe" % configuration
+        else:
+            command_str = "x64\\%s\\MyApp.exe" % configuration
+        new_cmd = "conan\\%s\\%s\\MyApp.exe" % (arch, build_type)
+        with chdir(client.current_folder):
+            mkdir(os.path.dirname(new_cmd))
+            shutil.copy(command_str, new_cmd)
+        client.run_command(new_cmd)
         if arch == "x86":
             self.assertIn("AppArch x86!!!", client.out)
         else:
@@ -398,12 +487,14 @@ class WinTest(unittest.TestCase):
                     "compiler.cppstd": "17"}
         settings = " ".join('-s %s="%s"' % (k, v) for k, v in settings.items() if v)
         client.run("new hello/0.1 -s")
-        configs = [("Release", "x86"), ("Release", "x86_64"), ("Debug", "x86"), ("Debug", "x86_64")]
-        for build_type, arch in configs:
+        configs = [("Release", "x86", "shared"), ("Release", "x86_64", "shared"),
+                   ("Debug", "x86", "static"), ("Debug", "x86_64", "static")]
+        for build_type, arch, shared in configs:
             # Build the profile according to the settings provided
             runtime = "MT" if build_type == "Release" else "MTd"
-            client.run("create . hello/0.1@ %s -s build_type=%s -s arch=%s -s compiler.runtime=%s"
-                       % (settings, build_type, arch, runtime))
+            shared = "True" if shared == "shared" else "False"
+            client.run("create . hello/0.1@ %s -s build_type=%s -s arch=%s -s compiler.runtime=%s "
+                       " -o hello:shared=%s" % (settings, build_type, arch, runtime, shared))
 
         # Prepare the actual consumer package
         client.save({"conanfile.py": self.conanfile,
@@ -413,22 +504,28 @@ class WinTest(unittest.TestCase):
                     clean_first=True)
 
         # Run the configure corresponding to this test case
-        for build_type, arch in configs:
+        for build_type, arch, shared in configs:
             runtime = "MT" if build_type == "Release" else "MTd"
+            shared = "True" if shared == "shared" else "False"
             client.run("install . %s -s build_type=%s -s arch=%s -s compiler.runtime=%s -if=conan"
-                       % (settings, build_type, arch, runtime))
+                       " -o hello:shared=%s" % (settings, build_type, arch, runtime, shared))
 
         vs_path = vs_installation_path("15")
         vcvars_path = os.path.join(vs_path, "VC/Auxiliary/Build/vcvarsall.bat")
 
-        for build_type, arch in configs:
+        for build_type, arch, shared in configs:
             platform_arch = "x86" if arch == "x86" else "x64"
+            if build_type == "Release" and shared == "shared":
+                configuration = "ReleaseShared"
+            else:
+                configuration = build_type
             cmd = ('set "VSCMD_START_DIR=%%CD%%" && '
                    '"%s" x64 && msbuild "MyProject.sln" /p:Configuration=%s '
-                   '/p:Platform=%s ' % (vcvars_path, build_type, platform_arch))
+                   '/p:Platform=%s ' % (vcvars_path, configuration, platform_arch))
             client.run_command(cmd)
             self.assertIn("Visual Studio 2017", client.out)
             self.assertIn("[vcvarsall.bat] Environment initialized for: 'x64'", client.out)
-            self._run_app(client, arch, build_type)
+
+            self._run_app(client, arch, build_type, shared)
             self.assertIn("AppMSCVER 17!!", client.out)
             self.assertIn("AppCppStd 17!!!", client.out)
