@@ -34,6 +34,7 @@ class MSBuildToolchain(object):
         config_filename = "conan_toolchain{}.props".format(name)
         self._write_config_toolchain(config_filename)
         self._write_main_toolchain(config_filename, condition)
+
         self.generator.output_path = os.getcwd()
         generator_files = self.generator.content
         for generator_file, content in generator_files.items():

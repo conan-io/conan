@@ -5,9 +5,11 @@ import textwrap
 import unittest
 
 
-from conans.client.tools import vs_installation_path, chdir
-from conans.test.utils.tools import TestClient
+from conans.client.tools import chdir
 from conans.util.files import mkdir
+from conans.client.tools import vs_installation_path
+from conans.test.utils.tools import TestClient
+
 
 sln_file = r"""
 Microsoft Visual Studio Solution File, Format Version 12.00
@@ -38,6 +40,7 @@ Global
         {B58316C0-C78A-4E9B-AE8F-5D6368CE3840}.ReleaseShared|x64.Build.0 = ReleaseShared|x64
         {B58316C0-C78A-4E9B-AE8F-5D6368CE3840}.ReleaseShared|x86.ActiveCfg = ReleaseShared|Win32
         {B58316C0-C78A-4E9B-AE8F-5D6368CE3840}.ReleaseShared|x86.Build.0 = ReleaseShared|Win32
+
     EndGlobalSection
     GlobalSection(SolutionProperties) = preSolution
         HideSolutionNode = FALSE
@@ -318,6 +321,7 @@ class WinTest(unittest.TestCase):
                 else:
                     tc.preprocessor_definitions["DEFINITIONS_CONFIG"] = "Release"
                 tc.write_toolchain_files()
+
             def imports(self):
                 self.copy("*.dll", src="bin",
                           dst="%s/%s" % (self.settings.arch, self.settings.build_type),
