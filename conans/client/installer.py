@@ -8,7 +8,7 @@ from conans.client import tools
 from conans.client.conanfile.build import run_build_method
 from conans.client.conanfile.package import run_package_method
 from conans.client.file_copier import report_copied_files
-from conans.client.generators import TXTGenerator, write_generators
+from conans.client.generators import TXTGenerator
 from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_EDITABLE, \
     BINARY_MISSING, BINARY_SKIP, BINARY_UPDATE, BINARY_UNKNOWN, CONTEXT_HOST
 from conans.client.importer import remove_imports, run_imports
@@ -62,11 +62,12 @@ def add_env_conaninfo(conan_file, subtree_libnames):
 
 
 class _PackageBuilder(object):
-    def __init__(self, cache, output, hook_manager, remote_manager):
+    def __init__(self, cache, output, hook_manager, remote_manager, generators):
         self._cache = cache
         self._output = output
         self._hook_manager = hook_manager
         self._remote_manager = remote_manager
+        self._generators = generators
 
     def _get_build_folder(self, conanfile, package_layout, pref, keep_build, recorder):
         # Build folder can use a different package_ID if build_id() is defined.
@@ -124,7 +125,7 @@ class _PackageBuilder(object):
     def _build(self, conanfile, pref):
         # Read generators from conanfile and generate the needed files
         logger.info("GENERATORS: Writing generators")
-        write_generators(conanfile, conanfile.build_folder, self._output)
+        self._generators.write_generators(conanfile, conanfile.build_folder, self._output)
 
         logger.info("TOOLCHAIN: Writing toolchain")
         write_toolchain(conanfile, conanfile.build_folder, self._output)
@@ -290,6 +291,7 @@ class BinaryInstaller(object):
         self._recorder = recorder
         self._binaries_analyzer = app.binaries_analyzer
         self._hook_manager = app.hook_manager
+        self._generators = app.generators
 
     def install(self, deps_graph, remotes, build_mode, update, keep_build=False, graph_info=None):
         # order by levels and separate the root node (ref=None) from the rest
@@ -453,7 +455,7 @@ class BinaryInstaller(object):
             if build_folder is not None:
                 build_folder = os.path.join(base_path, build_folder)
                 output = node.conanfile.output
-                write_generators(node.conanfile, build_folder, output)
+                self._generators.write_generators(node.conanfile, build_folder, output)
                 write_toolchain(node.conanfile, build_folder, output)
                 save(os.path.join(build_folder, CONANINFO), node.conanfile.info.dumps())
                 output.info("Generated %s" % CONANINFO)
@@ -518,7 +520,8 @@ class BinaryInstaller(object):
                 complete_recipe_sources(self._remote_manager, self._cache,
                                         python_require.conanfile, python_require.ref, remotes)
 
-        builder = _PackageBuilder(self._cache, output, self._hook_manager, self._remote_manager)
+        builder = _PackageBuilder(self._cache, output, self._hook_manager, self._remote_manager,
+                                  self._generators)
         pref = builder.build_package(node, keep_build, self._recorder, remotes)
         if node.graph_lock_node:
             node.graph_lock_node.prev = pref.revision

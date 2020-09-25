@@ -1,6 +1,5 @@
 import os
 
-from conans.client.generators import write_generators
 from conans.client.graph.build_mode import BuildMode
 from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL
 from conans.client.graph.printer import print_graph
@@ -98,7 +97,7 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
             tmp = list(conanfile.generators)  # Add the command line specified generators
             tmp.extend([g for g in generators if g not in tmp])
             conanfile.generators = tmp
-            write_generators(conanfile, install_folder, output)
+            app.generators.write_generators(conanfile, install_folder, output)
             write_toolchain(conanfile, install_folder, output)
         if not isinstance(ref_or_path, ConanFileReference):
             # Write conaninfo
