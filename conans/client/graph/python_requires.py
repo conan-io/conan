@@ -147,7 +147,8 @@ class PyRequireLoader(object):
 
 
 class ConanPythonRequire(object):
-    def __init__(self, proxy, range_resolver):
+    def __init__(self, proxy, range_resolver, generators=None):
+        self._generators = generators
         self._cached_requires = {}  # {reference: PythonRequire}
         self._proxy = proxy
         self._range_resolver = range_resolver
@@ -184,7 +185,8 @@ class ConanPythonRequire(object):
                                             remotes=self._remotes,
                                             recorder=ActionRecorder())
             path, _, _, new_ref = result
-            module, conanfile = parse_conanfile(conanfile_path=path, python_requires=self)
+            module, conanfile = parse_conanfile(conanfile_path=path, python_requires=self,
+                                                generators=self._generators)
 
             # Check for alias
             if getattr(conanfile, "alias", None):
