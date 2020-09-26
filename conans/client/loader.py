@@ -91,7 +91,7 @@ class ConanFileLoader(object):
         """ Load generator classes from a module. Any non-generator classes
         will be ignored. python_requires is not processed.
         """
-        _parse_generators(*_parse_conanfile(conanfile_path))
+        _parse_generators(*_parse_conanfile(conanfile_path), self._generators)
 
     @staticmethod
     def _load_data(conanfile_path):
