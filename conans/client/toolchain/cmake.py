@@ -177,8 +177,8 @@ class CMakeToolchain(object):
 
         # Preprocessor definitions
         {% for it, value in preprocessor_definitions.items() -%}
-        # This only works in cmake >= 3.12
-        add_compile_definitions({{ it }}="{{ value }}")
+        # add_compile_definitions only works in cmake >= 3.12
+        add_definitions(-D{{ it }}="{{ value }}")
         {%- endfor %}
         # Preprocessor definitions per configuration
         {% for it, values in preprocessor_definitions_config.items() -%}
@@ -190,7 +190,7 @@ class CMakeToolchain(object):
             {%- endfor -%}
             {% for i in range(values|count) %}{%- set genexpr.str = genexpr.str + '>' %}
             {%- endfor -%}
-        add_compile_definitions({{ it }}={{ genexpr.str }})
+        add_definitions(-D{{ it }}={{ genexpr.str }})
         {%- endfor %}
 
 
