@@ -101,6 +101,8 @@ class Base(unittest.TestCase):
         message(">> CMAKE_MODULE_PATH: ${CMAKE_MODULE_PATH}")
         message(">> CMAKE_PREFIX_PATH: ${CMAKE_PREFIX_PATH}")
         message(">> BUILD_SHARED_LIBS: ${BUILD_SHARED_LIBS}")
+        get_directory_property(_COMPILE_DEFS DIRECTORY ${CMAKE_SOURCE_DIR} COMPILE_DEFINITIONS)
+        message(">> COMPILE_DEFINITIONS: ${_COMPILE_DEFS}")
 
         find_package(hello REQUIRED)
         add_library(app_lib app_lib.cpp)

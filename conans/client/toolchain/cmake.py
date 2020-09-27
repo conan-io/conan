@@ -177,6 +177,7 @@ class CMakeToolchain(object):
 
         # Preprocessor definitions
         {% for it, value in preprocessor_definitions.items() -%}
+        # This only works in cmake >= 3.12
         add_compile_definitions({{ it }}="{{ value }}")
         {%- endfor %}
         # Preprocessor definitions per configuration
