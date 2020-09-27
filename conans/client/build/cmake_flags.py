@@ -205,7 +205,8 @@ class CMakeDefinitionsBuilder(object):
             if cross_building(self._conanfile):  # We are cross building
                 if os_ != os_build:
                     if os_:  # the_os is the host (regular setting)
-                        definitions["CMAKE_SYSTEM_NAME"] = {"iOS": "Darwin",
+                        definitions["CMAKE_SYSTEM_NAME"] = {"Macos": "Darwin",
+                                                            "iOS": "Darwin",
                                                             "tvOS": "Darwin",
                                                             "watchOS": "Darwin",
                                                             "Neutrino": "QNX"}.get(os_, os_)
