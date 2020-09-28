@@ -528,9 +528,11 @@ class CIPythonRequiresTest(unittest.TestCase):
         # Go back to main orchestrator
         # This should fail, as PkgB/1.0 is not involved in the new resolution
         client.run("lock create --reference=PkgD/0.1@user/channel "
-                   "--lockfile=buildb.lock --lockfile-out=conan.lock", assert_error=True)
-        self.assertIn("ERROR: The provided lockfile root package 'PkgB/1.0@user/channel' "
-                      "doesn't belong to the new graph", client.out)
+                   "--lockfile=buildb.lock --lockfile-out=error.lock")
+        # User can perfectly go and check the resulting lockfile and check if PkgB/0.1 is there
+        # We can probably help automate this with a "conan lock find" subcommand
+        error_lock = client.load("error.lock")
+        self.assertNotIn("PkgB/1.0@user/channel", error_lock)
 
         client.run("lock build-order conan.lock --json=build_order.json")
         json_file = client.load("build_order.json")

@@ -128,9 +128,10 @@ class GraphLockDynamicTest(unittest.TestCase):
         self.assertIn("Couldn't find 'LibC/1.0' in lockfile", client.out)
 
         client.run("lock create conanfile.py --name=LibC --version=1.0 --lockfile=libb.lock "
-                   "--lockfile-out=libc.lock", assert_error=True)
-        self.assertIn("ERROR: The provided lockfile root package 'LibB/1.0' doesn't belong "
-                      "to the new graph.", client.out)
+                   "--lockfile-out=libc.lock")
+        # Users can validate themselves if relevant package is in the lockfile or not
+        libc_lock = client.load("libc.lock")
+        self.assertNotIn("LibB/1.0", libc_lock)
 
     def remove_dep_test(self):
         client = TestClient()
@@ -276,7 +277,7 @@ class GraphLockDynamicTest(unittest.TestCase):
         self.assertIn("Couldn't find 'LibB/1.1' in lockfile", client.out)
 
         client.run("lock create conanfile.py --name=LibB --version=1.1 --lockfile=libc.lock "
-                   "--lockfile-out=libb.lock --partial")
+                   "--lockfile-out=libb.lock")
         self.assertIn("LibA/1.0 from local cache", client.out)
         self.assertNotIn("LibA/1.0.1", client.out)
         libb_lock = client.load("libb.lock")

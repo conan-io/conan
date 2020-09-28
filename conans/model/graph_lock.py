@@ -474,20 +474,6 @@ class GraphLock(object):
             if current.prev is None:
                 current.prev = node.prev
 
-    def check_overlap(self, other, partial):
-        """ if lock create is provided a lockfile, it should be used, and it should contain it
-        otherwise, it was useless to pass it, and it is dangerous to continue, recommended to
-        create a fresh lockfile"""
-        if partial:
-            overlap = set(self._nodes).intersection(other.nodes)
-        else:
-            other_root_id = other.root_node_id()
-            if other_root_id not in self._nodes:
-                root_node = other.nodes[other_root_id]
-                raise ConanException("The provided lockfile root package '%s' "
-                                     "doesn't belong to the new graph. You might want to create "
-                                     "a fresh lockfile or use --partial" % str(root_node.ref))
-
     def pre_lock_node(self, node):
         if node.recipe == RECIPE_VIRTUAL:
             return

@@ -1309,7 +1309,7 @@ class ConanAPIV1(object):
     def lock_create(self, path, lockfile_out,
                     reference=None, name=None, version=None, user=None, channel=None,
                     profile_host=None, profile_build=None, remote_name=None, update=None, build=None,
-                    base=None, lockfile=None, partial=None):
+                    base=None, lockfile=None):
         # profile_host is mandatory
         profile_host = profile_host or ProfileData(None, None, None, None)
         cwd = get_cwd()
@@ -1363,8 +1363,6 @@ class ConanAPIV1(object):
         graph_lock_file = GraphLockFile(phost, pbuild, graph_lock)
         if lockfile:
             new_graph_lock = GraphLock(deps_graph, self.app.config.revisions_enabled)
-            # check if the lockfile provided was used or not
-            new_graph_lock.check_overlap(graph_lock, partial)
             graph_lock_file = GraphLockFile(phost, pbuild, new_graph_lock)
         if base:
             graph_lock_file.only_recipes()
