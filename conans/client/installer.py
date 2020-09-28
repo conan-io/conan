@@ -22,6 +22,7 @@ from conans.client.tools.env import pythonpath
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
                            conanfile_exception_formatter)
 from conans.model.build_info import CppInfo, DepCppInfo
+from conans.model.conan_file import ConanFile
 from conans.model.editable_layout import EditableLayout
 from conans.model.env_info import EnvInfo
 from conans.model.graph_info import GraphInfo
@@ -78,6 +79,7 @@ class _PackageBuilder(object):
         if is_dirty(build_folder):
             self._output.warn("Build folder is dirty, removing it: %s" % build_folder)
             rmdir(build_folder)
+            clean_dirty(build_folder)
 
         # Decide if the build folder should be kept
         skip_build = conanfile.develop and keep_build
@@ -245,7 +247,9 @@ def _handle_system_requirements(conan_file, pref, cache, out):
 
     Used after remote package retrieving and before package building
     """
-    if "system_requirements" not in type(conan_file).__dict__:
+    # TODO: Check if this idiom should be generalize to all methods defined in base ConanFile
+    # Instead of calling empty methods
+    if type(conan_file).system_requirements == ConanFile.system_requirements:
         return
 
     package_layout = cache.package_layout(pref.ref)

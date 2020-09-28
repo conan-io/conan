@@ -6,8 +6,9 @@ import textwrap
 from nose.plugins.attrib import attr
 
 from conans.model.ref import ConanFileReference
-from conans.test.utils.tools import SVNLocalRepoTestCase, TestClient, \
+from conans.test.utils.tools import TestClient, \
     load
+from conans.test.utils.scm import SVNLocalRepoTestCase
 
 
 @attr('svn')

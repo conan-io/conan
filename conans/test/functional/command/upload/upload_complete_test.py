@@ -19,7 +19,8 @@ from conans.paths import CONANFILE, CONANINFO, CONAN_MANIFEST, EXPORT_TGZ_NAME
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files, cpp_hello_source_files
 from conans.test.utils.test_files import temp_folder, uncompress_packaged_files
 from conans.test.utils.tools import (NO_SETTINGS_PACKAGE_ID, TestClient, TestRequester, TestServer,
-                                     MockedUserIO, TestBufferConanOutput, GenConanfile)
+                                     GenConanfile)
+from conans.test.utils.mocks import MockedUserIO, TestBufferConanOutput
 from conans.util.files import load, mkdir, save
 
 
@@ -427,8 +428,8 @@ class UploadTest(unittest.TestCase):
         self.assertIn("Package is up to date", str(self.client.out))
 
     def upload_with_no_valid_settings_test(self):
-        '''Check if upload is still working even if the specified setting is not valid.
-        If this test fails, will fail in Linux/OSx'''
+        # Check if upload is still working even if the specified setting is not valid.
+        # If this test fails, will fail in Linux/OSx
         conanfile = """
 from conans import ConanFile
 class TestConan(ConanFile):
@@ -538,8 +539,8 @@ class TestConan(ConanFile):
         self.assertTrue(os.path.exists(server_pack_folder))
 
     def force_test(self):
-        '''Tries to upload a conans exported after than remote version.'''
-        # Upload all conans and packages
+        # Tries to upload a package exported after than remote version.
+        # Upload all recipes and packages
         self.client.run('upload %s --all' % str(self.ref))
 
         if self.client.cache.config.revisions_enabled:

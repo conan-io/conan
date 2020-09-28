@@ -18,6 +18,10 @@ class DepsCppQmake(object):
         self.build_paths = multiline(cpp_info.build_paths)
 
         self.libs = " ".join('-l%s' % lib for lib in cpp_info.libs)
+        self.system_libs = " ".join('-l%s' % lib for lib in cpp_info.system_libs)
+        self.frameworks = " ".join('-framework %s' % framework for framework in cpp_info.frameworks)
+        self.framework_paths = " ".join('-F%s' % framework_path for framework_path in
+                                        cpp_info.framework_paths)
         self.defines = " \\\n    ".join('"%s"' % d for d in cpp_info.defines)
         self.cxxflags = " ".join(cpp_info.cxxflags)
         self.cflags = " ".join(cpp_info.cflags)
@@ -38,6 +42,9 @@ class QmakeGenerator(Generator):
 
         template = ('CONAN_INCLUDEPATH{dep_name}{build_type} += {deps.include_paths}\n'
                     'CONAN_LIBS{dep_name}{build_type} += {deps.libs}\n'
+                    'CONAN_SYSTEMLIBS{dep_name}{build_type} += {deps.system_libs}\n'
+                    'CONAN_FRAMEWORKS{dep_name}{build_type} += {deps.frameworks}\n'
+                    'CONAN_FRAMEWORK_PATHS{dep_name}{build_type} += {deps.framework_paths}\n'
                     'CONAN_LIBDIRS{dep_name}{build_type} += {deps.lib_paths}\n'
                     'CONAN_BINDIRS{dep_name}{build_type} += {deps.bin_paths}\n'
                     'CONAN_RESDIRS{dep_name}{build_type} += {deps.res_paths}\n'
@@ -91,6 +98,21 @@ class QmakeGenerator(Generator):
         LIBS += $$CONAN_LIBDIRS_DEBUG
         BINDIRS += $$CONAN_BINDIRS_DEBUG
         DEFINES += $$CONAN_DEFINES_DEBUG
+    }
+    LIBS += $$CONAN_SYSTEMLIBS
+    CONFIG(release, debug|release) {
+        LIBS += $$CONAN_SYSTEMLIBS_RELEASE
+    } else {
+        LIBS += $$CONAN_SYSTEMLIBS_DEBUG
+    }
+    LIBS += $$CONAN_FRAMEWORKS
+    LIBS += $$CONAN_FRAMEWORK_PATHS
+    CONFIG(release, debug|release) {
+        LIBS += $$CONAN_FRAMEWORKS_RELEASE
+        LIBS += $$CONAN_FRAMEWORK_PATHS_RELEASE
+    } else {
+        LIBS += $$CONAN_FRAMEWORKS_DEBUG
+        LIBS += $$CONAN_FRAMEWORK_PATHS_DEBUG
     }
     QMAKE_CXXFLAGS += $$CONAN_QMAKE_CXXFLAGS
     QMAKE_CFLAGS += $$CONAN_QMAKE_CFLAGS

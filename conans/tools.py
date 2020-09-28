@@ -96,7 +96,9 @@ collect_libs = tools_files.collect_libs
 which = tools_files.which
 unix2dos = tools_files.unix2dos
 dos2unix = tools_files.dos2unix
+rename = tools_files.rename
 fix_symlinks = tools_files.fix_symlinks
+remove_files_by_mask = tools_files.remove_files_by_mask
 
 
 def unzip(*args, **kwargs):

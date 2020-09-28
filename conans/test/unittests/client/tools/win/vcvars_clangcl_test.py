@@ -11,7 +11,7 @@ from conans.client.conf import get_default_settings_yml
 from conans.client.tools.win import vcvars_command
 from conans.errors import ConanException
 from conans.model.settings import Settings
-from conans.test.utils.tools import TestBufferConanOutput
+from conans.test.utils.mocks import TestBufferConanOutput
 
 
 @attr('visual_studio')

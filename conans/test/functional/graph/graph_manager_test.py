@@ -236,7 +236,7 @@ class TransitiveGraphTest(GraphManagerTest):
         self._cache_recipe(tool_ref, GenConanfile().with_name("tool").with_version("0.1"))
         if build_require == "recipe":
             deps_graph = self.build_graph(GenConanfile().with_name("app").with_version("0.1")
-                                                        .with_build_require(tool_ref))
+                                                        .with_build_requires(tool_ref))
         else:
             profile_build_requires = {"*": [ConanFileReference.loads("tool/0.1@user/testing")]}
             deps_graph = self.build_graph(GenConanfile().with_name("app").with_version("0.1"),
@@ -259,7 +259,7 @@ class TransitiveGraphTest(GraphManagerTest):
 
         self._cache_recipe(tool_ref, GenConanfile().with_name("tool").with_version("0.1"))
         self._cache_recipe(lib_ref, GenConanfile().with_name("lib").with_version("0.1")
-                                                  .with_build_require(tool_ref))
+                                                  .with_build_requires(tool_ref))
         deps_graph = self.build_graph(GenConanfile().with_name("app").with_version("0.1")
                                                     .with_require(lib_ref))
 
@@ -284,7 +284,7 @@ class TransitiveGraphTest(GraphManagerTest):
         self._cache_recipe(tool_ref, GenConanfile().with_name("tool").with_version("0.1")
                                                    .with_require(lib_ref))
         self._cache_recipe(lib_ref, GenConanfile().with_name("lib").with_version("0.1")
-                                                  .with_build_require(tool_ref))
+                                                  .with_build_requires(tool_ref))
 
         with six.assertRaisesRegex(self, ConanException, "Loop detected in context host:"
                                                          " 'tool/0.1@user/testing' requires"
@@ -303,7 +303,7 @@ class TransitiveGraphTest(GraphManagerTest):
         self._cache_recipe(mingw_ref, GenConanfile().with_name("mingw").with_version("0.1"))
         self._cache_recipe(gtest_ref, GenConanfile().with_name("gtest").with_version("0.1"))
         self._cache_recipe(lib_ref, GenConanfile().with_name("lib").with_version("0.1")
-                                                  .with_build_require(gtest_ref))
+                                                  .with_build_requires(gtest_ref))
         profile_build_requires = {"*": [mingw_ref]}
         deps_graph = self.build_graph(GenConanfile().with_name("app").with_version("0.1")
                                                     .with_require(lib_ref),
@@ -345,7 +345,7 @@ class TransitiveGraphTest(GraphManagerTest):
                                                     .with_require(zlib_ref2))
         self._cache_recipe(lib_ref, GenConanfile().with_name("lib").with_version("0.1")
                                                   .with_require(zlib_ref)
-                                                  .with_build_require(gtest_ref))
+                                                  .with_build_requires(gtest_ref))
 
         with six.assertRaisesRegex(self, ConanException,
                                    "Conflict in gtest/0.1@user/testing:\n"
@@ -367,10 +367,10 @@ class TransitiveGraphTest(GraphManagerTest):
         self._cache_recipe(zlib_ref2, GenConanfile().with_name("zlib").with_version("0.2"))
 
         self._cache_recipe(gtest_ref, GenConanfile().with_name("gtest").with_version("0.1")
-                                                    .with_build_require(zlib_ref2))
+                                                    .with_build_requires(zlib_ref2))
         self._cache_recipe(lib_ref, GenConanfile().with_name("lib").with_version("0.1")
                                                   .with_require(zlib_ref)
-                                                  .with_build_require(gtest_ref))
+                                                  .with_build_requires(gtest_ref))
 
         graph = self.build_graph(GenConanfile().with_name("app").with_version("0.1")
                                                .with_require(lib_ref))
@@ -405,7 +405,7 @@ class TransitiveGraphTest(GraphManagerTest):
                                                     .with_default_option("zlib:shared", True))
         self._cache_recipe(lib_ref, GenConanfile().with_name("lib").with_version("0.1")
                                                   .with_require(zlib_ref)
-                                                  .with_build_require(gtest_ref))
+                                                  .with_build_requires(gtest_ref))
 
         graph = self.build_graph(GenConanfile().with_name("app").with_version("0.1")
                                                .with_require(lib_ref))
@@ -445,7 +445,7 @@ class TransitiveGraphTest(GraphManagerTest):
         self._cache_recipe(gtest_ref, gtest)
         self._cache_recipe(lib_ref, GenConanfile().with_name("lib").with_version("0.1")
                                                   .with_require(zlib_ref)
-                                                  .with_build_require(gtest_ref))
+                                                  .with_build_requires(gtest_ref))
 
         with six.assertRaisesRegex(self, ConanException,
                                    "tried to change zlib/0.1@user/testing option shared to True"):
@@ -468,14 +468,14 @@ class TransitiveGraphTest(GraphManagerTest):
                                                    .with_require(liba_ref))
         self._cache_recipe(libd_ref, GenConanfile().with_name("libd").with_version("0.1")
                                                    .with_require(libb_ref)
-                                                   .with_build_require(libc_ref))
+                                                   .with_build_requires(libc_ref))
         self._cache_recipe(libe_ref, GenConanfile().with_name("libe").with_version("0.1")
                                                    .with_require(libd_ref))
         self._cache_recipe(libf_ref, GenConanfile().with_name("libf").with_version("0.1")
                                                    .with_require(libd_ref))
         deps_graph = self.build_graph(GenConanfile().with_name("app").with_version("0.1")
                                                     .with_require(libe_ref)
-                                                    .with_build_require(libf_ref))
+                                                    .with_build_requires(libf_ref))
 
         self.assertEqual(7, len(deps_graph.nodes))
         app = deps_graph.root
@@ -569,7 +569,7 @@ class TransitiveGraphTest(GraphManagerTest):
         deps_graph = self.build_graph(GenConanfile().with_name("app").with_version("0.1")
                                                     .with_require(libb_ref)
                                                     .with_require(libc_ref)
-                                                    .with_build_require(libd_ref))
+                                                    .with_build_requires(libd_ref))
 
         self.assertEqual(5, len(deps_graph.nodes))
         app = deps_graph.root
@@ -636,7 +636,7 @@ class TransitiveGraphTest(GraphManagerTest):
         self._cache_recipe(tool_ref, GenConanfile().with_name("tool").with_version("0.1")
                                                    .with_require(zlib_ref, private=True))
         self._cache_recipe(lib_ref, GenConanfile().with_name("lib").with_version("0.1")
-                                                  .with_build_require(tool_ref))
+                                                  .with_build_requires(tool_ref))
         deps_graph = self.build_graph(GenConanfile().with_name("app").with_version("0.1")
                                                     .with_require(lib_ref))
 
@@ -702,7 +702,7 @@ class TransitiveGraphTest(GraphManagerTest):
                                    "'grass' in your root package."):
             self.build_graph(GenConanfile().with_name("cheetah").with_version("0.1")
                                            .with_require(gazelle_ref)
-                                           .with_build_require(grass02_ref))
+                                           .with_build_requires(grass02_ref))
 
     def test_build_require_link_order(self):
         # https://github.com/conan-io/conan/issues/4931
@@ -717,7 +717,7 @@ class TransitiveGraphTest(GraphManagerTest):
 
         deps_graph = self.build_graph(GenConanfile().with_name("cheetah").with_version("0.1")
                                                     .with_require(gazelle_ref)
-                                                    .with_build_require(grass01_ref))
+                                                    .with_build_requires(grass01_ref))
 
         self.assertEqual(3, len(deps_graph.nodes))
         cheetah = deps_graph.root

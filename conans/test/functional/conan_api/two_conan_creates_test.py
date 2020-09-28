@@ -9,7 +9,7 @@ from conans.client.tools.env import environment_append
 from conans.client.tools.files import chdir
 from conans.model.ref import PackageReference
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestBufferConanOutput
+from conans.test.utils.mocks import TestBufferConanOutput
 from conans.util.files import load, save
 
 

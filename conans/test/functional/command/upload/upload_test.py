@@ -100,7 +100,7 @@ class UploadTest(unittest.TestCase):
             # Owner with execute permissions
             self.assertTrue(os.stat(package_file_path).st_mode & stat.S_IXUSR)
 
-    def test_upload_not_existing(self):
+    def test_upload_binary_not_existing(self):
         client = TestClient(servers={"default": TestServer()},
                             users={"default": [("lasote", "mypass")]})
         client.save({"conanfile.py": GenConanfile()})

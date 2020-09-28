@@ -56,7 +56,7 @@ J:/
 [includedirs_My-Component-Tool]
 J:/my-component-tool
         """
-        deps_cpp_info, _, _ = TXTGenerator.loads(text)
+        deps_cpp_info, _, _, _ = TXTGenerator.loads(text)
 
         def assert_cpp(deps_cpp_info_test):
             self.assertEqual(deps_cpp_info_test.includedirs,
@@ -73,7 +73,7 @@ J:/my-component-tool
 [ENV_LIBA]
 VAR2=23
 """
-        deps_cpp_info, _, deps_env_info = TXTGenerator.loads(text2)
+        deps_cpp_info, _, deps_env_info, _ = TXTGenerator.loads(text2)
         assert_cpp(deps_cpp_info)
         self.assertEqual(deps_env_info["LIBA"].VAR2, "23")
 
@@ -82,7 +82,7 @@ VAR2=23
 [USER_LIBA]
 VAR2=23
 """
-        deps_cpp_info, deps_user_info, _ = TXTGenerator.loads(text3)
+        deps_cpp_info, deps_user_info, _, _ = TXTGenerator.loads(text3)
         assert_cpp(deps_cpp_info)
         self.assertEqual(deps_user_info["LIBA"].VAR2, "23")
 
@@ -94,7 +94,7 @@ VAR2=23
 [ENV_LIBA]
 VAR2=23
 """
-        deps_cpp_info, deps_user_info, deps_env_info = TXTGenerator.loads(text4)
+        deps_cpp_info, deps_user_info, deps_env_info, _ = TXTGenerator.loads(text4)
         assert_cpp(deps_cpp_info)
         self.assertEqual(deps_user_info["LIBA"].VAR2, "23")
         self.assertEqual(deps_env_info["LIBA"].VAR2, "23")
@@ -111,7 +111,7 @@ VAR2=23
 
         fakeconan = namedtuple("Conanfile", "deps_cpp_info cpp_info deps_env_info env_info user_info deps_user_info")
         output = TXTGenerator(fakeconan(deps_cpp_info, None, deps_env_info, None, {}, defaultdict(dict))).content
-        deps_cpp_info2, _, _ = TXTGenerator.loads(output)
+        deps_cpp_info2, _, _, _ = TXTGenerator.loads(output)
         self.assertEqual(deps_cpp_info.configs, deps_cpp_info2.configs)
         self.assertEqual(deps_cpp_info.includedirs, deps_cpp_info2.includedirs)
         self.assertEqual(deps_cpp_info.libdirs, deps_cpp_info2.libdirs)
@@ -151,7 +151,7 @@ VAR2=23
         fakeconan = namedtuple("Conanfile", "deps_cpp_info cpp_info deps_env_info env_info user_info deps_user_info")
         output = TXTGenerator(fakeconan(deps_cpp_info, None, deps_env_info, deps_user_info, {}, defaultdict(dict))).content
 
-        deps_cpp_info2, _, deps_env_info2 = TXTGenerator.loads(output, filter_empty=False)
+        deps_cpp_info2, _, deps_env_info2, _ = TXTGenerator.loads(output, filter_empty=False)
         self.assertEqual(deps_cpp_info.includedirs, deps_cpp_info2.includedirs)
         self.assertEqual(deps_cpp_info.libdirs, deps_cpp_info2.libdirs)
         self.assertEqual(deps_cpp_info.bindirs, deps_cpp_info2.bindirs)

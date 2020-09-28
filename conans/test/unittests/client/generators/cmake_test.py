@@ -16,7 +16,7 @@ from conans.model.env_info import EnvValues
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestBufferConanOutput
+from conans.test.utils.mocks import TestBufferConanOutput
 from conans.util.files import save
 
 
@@ -335,7 +335,7 @@ endmacro()""", macro)
         generator = CMakeGenerator(conanfile)
         content = generator.content
         self.assertIn('find_library(CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND NAME ${_FRAMEWORK} PATHS'
-                      ' ${CONAN_FRAMEWORK_DIRS${SUFFIX}})', content)
+                      ' ${CONAN_FRAMEWORK_DIRS${SUFFIX}} CMAKE_FIND_ROOT_PATH_BOTH)', content)
         self.assertIn('set(CONAN_FRAMEWORK_DIRS "dummy_root_folder1/Frameworks"\n'
                       '\t\t\t"dummy_root_folder1/path/to/Frameworks1"\n'
                       '\t\t\t"dummy_root_folder1/path/to/Frameworks2" '

@@ -22,8 +22,8 @@ from conans.model.requires import Requirements
 from conans.model.settings import Settings, bad_value_msg
 from conans.model.values import Values
 from conans.test.unittests.model.fake_retriever import Retriever
-from conans.test.utils.tools import (NO_SETTINGS_PACKAGE_ID, TestBufferConanOutput,
-                                     test_profile, GenConanfile)
+from conans.test.utils.tools import (NO_SETTINGS_PACKAGE_ID, test_profile, GenConanfile)
+from conans.test.utils.mocks import TestBufferConanOutput
 
 hello_ref = ConanFileReference.loads("Hello/1.2@user/testing")
 say_ref = ConanFileReference.loads("Say/0.1@user/testing")

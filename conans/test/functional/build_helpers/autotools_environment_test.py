@@ -6,7 +6,7 @@ from conans.client import tools
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE
 from conans.test.unittests.util.tools_test import RunnerMock
-from conans.test.utils.conanfile import MockConanfile
+from conans.test.utils.mocks import MockConanfile
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
 
 default_dirs_flags = ["--bindir", "--libdir", "--includedir", "--datarootdir", "--libdir",

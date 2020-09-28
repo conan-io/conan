@@ -237,16 +237,18 @@ test_package/build
 
 """
 
+
 def _render_template(text, name, version, package_name):
-    context = {'name': name, 
-               'version': version, 
+    context = {'name': name,
+               'version': version,
                'package_name': package_name,
                'conan_version': client_version}
     t = Template(text, keep_trailing_newline=True)
     return t.render(**context)
 
+
 def _get_files_from_template_dir(template_dir, name, version, package_name):
-    if (not os.path.isfile(os.path.join(template_dir, "conanfile.py")) 
+    if (not os.path.isfile(os.path.join(template_dir, "conanfile.py"))
         and not os.path.isfile(os.path.join(template_dir, "conanfile.txt"))):
         raise ConanException("Template is missing a recipe file: {}".format(template_dir))
 
@@ -261,10 +263,12 @@ def _get_files_from_template_dir(template_dir, name, version, package_name):
     for f in files:
         f_path = os.path.join(template_dir, f)
         rendered_path = _render_template(f, name=name, version=version, package_name=package_name)
-        rendered_file = _render_template(load(f_path), name=name, version=version, package_name=package_name)
+        rendered_file = _render_template(load(f_path), name=name, version=version,
+                                         package_name=package_name)
         out_files[rendered_path] = rendered_file
 
     return out_files
+
 
 def cmd_new(ref, header=False, pure_c=False, test=False, exports_sources=False, bare=False,
             visual_versions=None, linux_gcc_versions=None, linux_clang_versions=None,
@@ -319,9 +323,9 @@ def cmd_new(ref, header=False, pure_c=False, test=False, exports_sources=False, 
                 template = new_path if os.path.isfile(new_path) else old_path
             if not os.path.isfile(template):
                 raise ConanException("Template doesn't exist: %s" % template)
-            replaced = _render_template(load(template), 
-                                        name=name, 
-                                        version=version, 
+            replaced = _render_template(load(template),
+                                        name=name,
+                                        version=version,
                                         package_name=package_name)
             files = {"conanfile.py": replaced}
         else:
