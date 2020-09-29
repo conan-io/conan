@@ -67,7 +67,7 @@ class _PackageBuilder(object):
         self._output = output
         self._hook_manager = hook_manager
         self._remote_manager = remote_manager
-        self._generators = generators
+        self._generator_manager = generators
 
     def _get_build_folder(self, conanfile, package_layout, pref, keep_build, recorder):
         # Build folder can use a different package_ID if build_id() is defined.
@@ -125,7 +125,7 @@ class _PackageBuilder(object):
     def _build(self, conanfile, pref):
         # Read generators from conanfile and generate the needed files
         logger.info("GENERATORS: Writing generators")
-        self._generators.write_generators(conanfile, conanfile.build_folder, self._output)
+        self._generator_manager.write_generators(conanfile, conanfile.build_folder, self._output)
 
         logger.info("TOOLCHAIN: Writing toolchain")
         write_toolchain(conanfile, conanfile.build_folder, self._output)
@@ -291,7 +291,7 @@ class BinaryInstaller(object):
         self._recorder = recorder
         self._binaries_analyzer = app.binaries_analyzer
         self._hook_manager = app.hook_manager
-        self._generators = app.generators
+        self._generator_manager = app.generator_manager
 
     def install(self, deps_graph, remotes, build_mode, update, keep_build=False, graph_info=None):
         # order by levels and separate the root node (ref=None) from the rest
@@ -455,7 +455,7 @@ class BinaryInstaller(object):
             if build_folder is not None:
                 build_folder = os.path.join(base_path, build_folder)
                 output = node.conanfile.output
-                self._generators.write_generators(node.conanfile, build_folder, output)
+                self._generator_manager.write_generators(node.conanfile, build_folder, output)
                 write_toolchain(node.conanfile, build_folder, output)
                 save(os.path.join(build_folder, CONANINFO), node.conanfile.info.dumps())
                 output.info("Generated %s" % CONANINFO)
@@ -521,7 +521,7 @@ class BinaryInstaller(object):
                                         python_require.conanfile, python_require.ref, remotes)
 
         builder = _PackageBuilder(self._cache, output, self._hook_manager, self._remote_manager,
-                                  self._generators)
+                                  self._generator_manager)
         pref = builder.build_package(node, keep_build, self._recorder, remotes)
         if node.graph_lock_node:
             node.graph_lock_node.prev = pref.revision

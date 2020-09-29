@@ -59,7 +59,11 @@ class LibConan(ConanFile):
         try:
             # Check it is loadable by Conan machinery
             _, conanfile = parse_conanfile(conanfile, python_requires=self.python_requires,
+<<<<<<< HEAD
                                            generators=None)
+=======
+                                           generator_manager=None)
+>>>>>>> develop
         except Exception as e:
             self.fail("Invalid conanfile: {}".format(e))
         else:
