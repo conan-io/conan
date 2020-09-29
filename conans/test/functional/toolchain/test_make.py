@@ -161,12 +161,10 @@ class LinuxTest(unittest.TestCase):
 
         client.save(files_to_save, clean_first=True)
         client.run("install . hello/0.1@ %s %s" % (settings_str, options_str))
-        print(client.load("conan_toolchain.mak"))
 
         if target == "exe":
             client.run_command("make exe")
             client.run_command("./out/hello.bin")
-            self.assertIn("Hello World {}!".format(build_type), client.out)
             self.assertIn("Hello World {}!".format(build_type), client.out)
         elif target == "shared":
             client.run_command("make shared")
