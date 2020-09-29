@@ -50,7 +50,8 @@ class LinuxTest(unittest.TestCase):
                 {default_options}
                 def toolchain(self):
                     tc = MakeToolchain(self)
-                    tc.definitions["SOME_DEFINITION"] = "SomeValue"
+                    tc.variables["TEST_VAR"] = "TestVarValue"
+                    tc.preprocessor_definitions["TEST_DEFINITION"] = "TestPpdValue"
                     tc.write_toolchain_files()
 
                 def build(self):
@@ -80,7 +81,7 @@ class LinuxTest(unittest.TestCase):
                 #else
                 std::cout << "App: Debug!" << std::endl;
                 #endif
-                std::cout << "SOME_DEFINITION: " << SOME_DEFINITION << "\\n";
+                std::cout << "TEST_DEFINITION: " << TEST_DEFINITION << "\\n";
             }
             """)
 
@@ -124,6 +125,7 @@ class LinuxTest(unittest.TestCase):
             $(info >> CPPFLAGS: $(CPPFLAGS))
             $(info >> LDFLAGS: $(LDFLAGS))
             $(info >> LDLIBS: $(LDLIBS))
+            $(info >> TEST_VAR: $(TEST_VAR))
 
             #-------------------------------------------------
             #     Make Rules
@@ -159,10 +161,12 @@ class LinuxTest(unittest.TestCase):
 
         client.save(files_to_save, clean_first=True)
         client.run("install . hello/0.1@ %s %s" % (settings_str, options_str))
+        print(client.load("conan_toolchain.mak"))
 
         if target == "exe":
             client.run_command("make exe")
             client.run_command("./out/hello.bin")
+            self.assertIn("Hello World {}!".format(build_type), client.out)
             self.assertIn("Hello World {}!".format(build_type), client.out)
         elif target == "shared":
             client.run_command("make shared")
