@@ -99,7 +99,7 @@ class ConanFileLoader(object):
         conanfile_module, module_id = _parse_conanfile(conanfile_path)
         for name, attr in conanfile_module.__dict__.items():
             if (name.startswith("_") or not inspect.isclass(attr) or
-                attr.__dict__.get("__module__") != module_id):
+                    attr.__dict__.get("__module__") != module_id):
                 continue
             if issubclass(attr, Generator) and attr != Generator:
                 self._generator_manager.add(attr.__name__, attr, custom=True)

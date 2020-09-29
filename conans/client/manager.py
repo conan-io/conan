@@ -40,10 +40,6 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
     out, user_io, graph_manager, cache = app.out, app.user_io, app.graph_manager, app.cache
     remote_manager, hook_manager = app.remote_manager, app.hook_manager
     if generators is not False:
-        # Load custom generators from the client cache
-        for generator_path in app.cache.generators:
-            app.loader.load_generators(generator_path)
-
         generators = set(generators) if generators else set()
         generators.add("txt")  # Add txt generator by default
 
