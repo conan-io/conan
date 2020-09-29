@@ -526,3 +526,68 @@ class SystemPackageToolTest(unittest.TestCase):
                 spt.update()
         else:
             spt.update()  # Won't raise anything because won't do anything
+
+    def test_install_all_packages(self):
+        class RunnerMultipleMock(object):
+            def __init__(self, expected=None):
+                self.calls = 0
+                self.expected = expected
+
+            def __call__(self, command, output):  # @UnusedVariable
+                self.calls += 1
+                return 0 if command in self.expected else 1
+
+        # No packages installed
+        packages = ["a_package", "another_package", "yet_another_package"]
+        with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "True"}):
+            runner = RunnerMultipleMock(["sudo -A apt-get update",
+                                         "sudo -A apt-get install -y --no-install-recommends"
+                                         " a_package",
+                                         "sudo -A apt-get install -y --no-install-recommends"
+                                         " another_package",
+                                         "sudo -A apt-get install -y --no-install-recommends"
+                                         " yet_another_package",
+                                         ])
+            spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out), output=self.out)
+            spt.install(packages, all=True)
+            self.assertEqual(7, runner.calls)
+
+        # Only one package installed
+        packages = ["a_package", "another_package", "yet_another_package"]
+        with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "True"}):
+            runner = RunnerMultipleMock(['dpkg-query -W -f=\'${Status}\' a_package | '
+                                         'grep -q "ok installed"',
+                                         "sudo -A apt-get update",
+                                         "sudo -A apt-get install -y --no-install-recommends"
+                                         " a_package",
+                                         "sudo -A apt-get install -y --no-install-recommends"
+                                         " another_package",
+                                         "sudo -A apt-get install -y --no-install-recommends"
+                                         " yet_another_package",
+                                         ])
+            spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out), output=self.out)
+            spt.install(packages, all=True)
+            self.assertEqual(7, runner.calls)
+
+        # All packages installed
+        packages = ["a_package", "another_package", "yet_another_package"]
+        with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "True"}):
+            runner = RunnerMultipleMock(['dpkg-query -W -f=\'${Status}\' a_package | '
+                                         'grep -q "ok installed"',
+                                         'dpkg-query -W -f=\'${Status}\' another_package | '
+                                         'grep -q "ok installed"',
+                                         'dpkg-query -W -f=\'${Status}\' yet_another_package | '
+                                         'grep -q "ok installed"',
+                                         ])
+            spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out), output=self.out)
+            spt.install(packages, all=True)
+            self.assertEqual(3, runner.calls)
+
+            # Empty package list
+            packages = []
+            with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "True"}):
+                runner = RunnerMultipleMock()
+                spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out),
+                                        output=self.out)
+                spt.install(packages, all=True)
+                self.assertEqual(0, runner.calls)

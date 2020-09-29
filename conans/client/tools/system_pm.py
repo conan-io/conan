@@ -91,13 +91,14 @@ class SystemPackageTool(object):
         self._is_up_to_date = True
         self._tool.update()
 
-    def install(self, packages, update=True, force=False, arch_names=None):
+    def install(self, packages, update=True, force=False, arch_names=None, all=False):
         """ Get the system package tool install command.
 
         :param packages: String with all package to be installed e.g. "libusb-dev libfoobar-dev"
         :param update: Run update command before to install
         :param force: Force installing all packages
         :param arch_names: Package suffix/prefix name used by installer tool e.g. {"x86_64": "amd64"}
+        :param all: Install all packages listed
         :return: None
         """
         packages = [packages] if isinstance(packages, str) else list(packages)
@@ -118,13 +119,17 @@ class SystemPackageTool(object):
                 raise ConanException("Aborted due to CONAN_SYSREQUIRES_MODE=%s. "
                                      "Some system packages need to be installed" % mode)
 
-        if not force and self._installed(packages):
+        if not force and (not all and self._installed(packages)) or \
+                         (all and self._all_installed(packages)):
             return
 
         # From here system packages can be updated/modified
         if update and not self._is_up_to_date:
             self.update()
-        self._install_any(packages)
+        if all:
+            self._install_all(packages)
+        else:
+            self._install_any(packages)
 
     def _get_package_names(self, packages, arch_names):
         """ Parse package names according it architecture
@@ -147,6 +152,9 @@ class SystemPackageTool(object):
     def installed(self, package_name):
         return self._tool.installed(package_name)
 
+    def _all_installed(self, packages):
+        return all([self._installed([pkg]) for pkg in packages])
+
     def _installed(self, packages):
         if not packages:
             return True
@@ -156,6 +164,10 @@ class SystemPackageTool(object):
                 self._output.info("Package already installed: %s" % pkg)
                 return True
         return False
+
+    def _install_all(self, packages):
+        for pkg in packages:
+            self._tool.install(pkg)
 
     def _install_any(self, packages):
         if len(packages) == 1:
