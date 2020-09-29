@@ -5,8 +5,8 @@ import os
 import textwrap
 import unittest
 
-from conans.client.cache.cache import GENERATORS_FOLDER
 from conans.test.utils.tools import TestClient
+from conans.util.files import save
 
 
 class GeneratorFromCacheTest(unittest.TestCase):
@@ -24,26 +24,23 @@ class GeneratorFromCacheTest(unittest.TestCase):
 
         # Set up generator. This generator will interact with another package.
         test_generator_contents = textwrap.dedent("""
-        import json
+            import json
 
-        from conans.model import Generator
+            from conans.model import Generator
 
-        class user_defined(Generator):
-            @property
-            def filename(self):
-                return "userdefined.json"
+            class user_defined(Generator):
+                @property
+                def filename(self):
+                    return "userdefined.json"
 
-            @property
-            def content(self):
-                return json.dumps(self.deps_env_info.vars)
-        """)
-        test_generator_filename = "user_defined_generator.py"
+                @property
+                def content(self):
+                    return json.dumps(self.deps_env_info.vars)
+            """)
 
         # Save generator to cache_folder/generators.
-        client.save({
-            os.path.join(client.cache_folder,
-                         GENERATORS_FOLDER,
-                         test_generator_filename): test_generator_contents})
+        generator_path = os.path.join(client.cache.generators_path, "user_defined_generator.py")
+        save(generator_path, test_generator_contents)
 
         conanfile_py = textwrap.dedent("""
             from conans import ConanFile
@@ -72,35 +69,35 @@ class GeneratorFromCacheTest(unittest.TestCase):
         """
         Test the availability of user-defined generators from a conanfile
         """
-        client = TestClient(cache_autopopulate=True)
+        client = TestClient()
 
         # Set up generator
         test_generator_contents = textwrap.dedent("""
-        from conans import ConanFile
-        from conans.model import Generator
+            from conans import ConanFile
+            from conans.model import Generator
 
-        class user_defined(Generator):
-            @property
-            def filename(self):
-                return "userdefined.txt"
+            class user_defined(Generator):
+                @property
+                def filename(self):
+                    return "userdefined.txt"
 
-            @property
-            def content(self):
-                return "user_defined contents"
-        """)
-        test_generator_filename = "user_defined_generator.py"
-
-        # Save generator to cache_folder/generators
-        client.save({
-            os.path.join(client.cache_folder,
-                         GENERATORS_FOLDER,
-                         test_generator_filename): test_generator_contents})
+                @property
+                def content(self):
+                    return "user_defined contents"
+            """)
+        # Save generator to cache_folder/generators.
+        generator_path = os.path.join(client.cache.generators_path, "user_defined_generator.py")
+        save(generator_path, test_generator_contents)
 
         conanfile_py = textwrap.dedent("""
-            from conans import ConanFile
+            from conans import ConanFile, tools
 
             class HelloConan(ConanFile):
                 generators = "user_defined"
+
+                def package(self):
+                    self.output.info("create_conanfile_test: {}"
+                                      .format(tools.load("userdefined.txt")))
                 """)
         client.save({"conanfile.py": conanfile_py})
 
@@ -110,47 +107,9 @@ class GeneratorFromCacheTest(unittest.TestCase):
         data = client.load("userdefined.txt")
         self.assertEqual(data, "user_defined contents")
 
-
-    def create_conanfile_test(self):
-        """
-        Test the availability of user-defined generators in cache during a create
-        """
-        client = TestClient(cache_autopopulate=True)
-
-        # Set up generator
-        test_generator_contents = textwrap.dedent("""
-        from conans import ConanFile
-        from conans.model import Generator
-
-        class user_defined(Generator):
-            @property
-            def filename(self):
-                return "userdefined.txt"
-
-            @property
-            def content(self):
-                return "user_defined contents"
-        """)
-        test_generator_filename = "user_defined_generator.py"
-
-        # Save generator to cache_folder/generators
-        client.save({
-            os.path.join(client.cache_folder,
-                         GENERATORS_FOLDER,
-                         test_generator_filename): test_generator_contents})
-
-        conanfile_py = textwrap.dedent("""
-            from conans import ConanFile, tools
-
-            class HelloConan(ConanFile):
-                generators = "user_defined"
-
-                def package(self):
-                    self.output.info("create_conanfile_test: {}".format(tools.load("userdefined.txt")))
-                """)
-        client.save({"conanfile.py": conanfile_py})
-
         # Test the install using a conanfile
         client.run("create . Hello/0.1@lasote/testing")
         self.assertIn("Generator user_defined created userdefined.txt", client.out)
         self.assertIn("create_conanfile_test: user_defined contents", client.out)
+
+        client.run("install Hello/0.1@lasote/testing --build")
