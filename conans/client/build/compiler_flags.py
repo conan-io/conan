@@ -34,14 +34,6 @@ def rpath_flags(settings, os_build, lib_paths):
     return []
 
 
-def rpath_flags(conanfile, lib_paths):
-    os_build, _ = get_build_os_arch(conanfile)
-    if not hasattr(conanfile, 'settings_build'):
-        os_build = os_build or conanfile.settings.get_safe("os")
-    rpath_sep = "," if is_apple_os(os_build) else "="
-    return ['-Wl,-rpath%s"%s"' % (rpath_sep, path.replace("\\", "/")) for path in lib_paths if path]
-
-
 def architecture_flag(settings):
     """
     returns flags specific to the target architecture and compiler

@@ -1,8 +1,7 @@
 import textwrap
 
-from jinja2 import Template
-
 from conans.client.build.compiler_flags import rpath_flags
+from conans.client.tools.oss import get_build_os_arch
 from conans.model import Generator
 from conans.paths import BUILD_INFO_MAKE
 
@@ -81,7 +80,8 @@ class MakeGenerator(Generator):
         return content
 
     def create_content_from_dep(self, pkg_name, cpp_info):
-        rpath_flags_ = rpath_flags(self._conanfile, cpp_info.lib_paths)
+        os_host = self._conanfile.settings.get_safe("os")
+        rpath_flags_ = rpath_flags(self._conanfile.settings, os_host, cpp_info.lib_paths)
 
         vars_info = [("ROOT", self.assignment_if_absent, [cpp_info.rootpath]),
                      ("SYSROOT", self.assignment_if_absent, [cpp_info.sysroot]),
