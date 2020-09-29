@@ -46,12 +46,12 @@ class GraphManagerTest(unittest.TestCase):
         binaries = GraphBinariesAnalyzer(cache, self.output, self.remote_manager)
         self.manager = GraphManager(self.output, cache, self.remote_manager, self.loader, proxy,
                                     self.resolver, binaries)
-        generators = GeneratorManager()
+        generator_manager = GeneratorManager()
         hook_manager = Mock()
         app_type = namedtuple("ConanApp", "cache out remote_manager hook_manager graph_manager"
-                              " binaries_analyzer generators")
+                              " binaries_analyzer generator_manager")
         app = app_type(self.cache, self.output, self.remote_manager, hook_manager, self.manager,
-                       binaries, generators)
+                       binaries, generator_manager)
         return app
 
     def recipe_cache(self, reference, requires=None):

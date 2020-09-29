@@ -92,7 +92,8 @@ class ConanFileLoader(object):
         """ Load generator classes from a module. Any non-generator classes
         will be ignored. python_requires is not processed.
         """
-        _parse_generators(*_parse_conanfile(conanfile_path), generators=self._generators)
+        _parse_generators(*_parse_conanfile(conanfile_path),
+                          generator_manager=self._generator_manager)
 
     @staticmethod
     def _load_data(conanfile_path):
@@ -302,7 +303,7 @@ class ConanFileLoader(object):
         return conanfile
 
 
-def _parse_generators(conanfile_module, module_id, generators):
+def _parse_generators(conanfile_module, module_id, generator_manager):
     """ Parses a python in-memory module and adds any generators found
     to the provided generator list
     @param conanfile_module: the module to be processed
@@ -312,7 +313,7 @@ def _parse_generators(conanfile_module, module_id, generators):
                 attr.__dict__.get("__module__") != module_id):
             continue
         if issubclass(attr, Generator) and attr != Generator:
-            generators.add(attr.__name__, attr, custom=True)
+            generator_manager.add(attr.__name__, attr, custom=True)
 
 
 def _parse_module(conanfile_module, module_id, generator_manager):
