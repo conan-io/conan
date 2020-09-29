@@ -25,6 +25,7 @@ class MakeGenerator(Generator):
     def content(self):
 
         content = [
+            "",
             "#-------------------------------------------------------------------#",
             "#             Makefile variables from Conan Dependencies            #",
             "#-------------------------------------------------------------------#",
@@ -51,28 +52,22 @@ class MakeGenerator(Generator):
             CONAN_LDLIBS        += $(addprefix -l,$(CONAN_SYSTEM_LIBS))
             CONAN_LDLIBS        += $(addprefix -l,$(CONAN_LIBS))
 
-            CONAN_SET_SHARED = {{set_shared}}
-            ifeq ($(CONAN_SET_SHARED),True)
-                CONAN_LDFLAGS += $(CONAN_SHARED_LINKER_FLAGS)
-            else
-                CONAN_LDFLAGS += $(CONAN_EXE_LINKER_FLAGS)
-            endif
-
-            # Call this function in your Makefile to have Conan variables added to standard variables
-            # Example:  $(call CONAN_BASIC_SETUP)
+            # Call the following function to have Conan variables added to standard variables
+            # 1 optional parameter : type of target being built : EXE or SHARED
+            # Appends either CONAN_EXELINKFLAGS or CONAN_SHAREDLINKFLAGS to LDFLAGS
+            # Example 1:  $(call CONAN_BASIC_SETUP)
+            # Example 2:  $(call CONAN_BASIC_SETUP, EXE)
+            # Example 3:  $(call CONAN_BASIC_SETUP, SHARED)
 
             CONAN_BASIC_SETUP = \\
                 $(eval CFLAGS   += $(CONAN_CFLAGS)) ; \\
                 $(eval CXXFLAGS += $(CONAN_CXXFLAGS)) ; \\
                 $(eval CPPFLAGS += $(CONAN_CPPFLAGS)) ; \\
                 $(eval LDFLAGS  += $(CONAN_LDFLAGS)) ; \\
+                $(eval LDFLAGS  += $(CONAN_$(1)LINKFLAGS)) ; \\
                 $(eval LDLIBS   += $(CONAN_LDLIBS)) ;
         """)
-        t = Template(additional_content)
-        context = {
-            "set_shared": True if self.conanfile.options.get_safe("shared") else False,
-        }
-        return t.render(context)
+        return additional_content
 
     def create_deps_content(self):
         deps_content = self.create_content_from_deps()
