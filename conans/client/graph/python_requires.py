@@ -186,7 +186,7 @@ class ConanPythonRequire(object):
                                             recorder=ActionRecorder())
             path, _, _, new_ref = result
             module, conanfile = parse_conanfile(conanfile_path=path, python_requires=self,
-                                                generators=self._generator_manager)
+                                                generator_manager=self._generator_manager)
 
             # Check for alias
             if getattr(conanfile, "alias", None):
