@@ -2,32 +2,30 @@ import platform
 import textwrap
 import unittest
 
-from jinja2 import Template
 from parameterized.parameterized import parameterized
 
-from conans.client.build.compiler_flags import architecture_flag, build_type_flags
-from conans.client.build.cppstd_flags import cppstd_flag_new
 from conans.client.toolchain import MakeToolchain
 from conans.model.conan_file import ConanFile
 from conans.model.env_info import EnvValues
 from conans.test.utils.tools import TestBufferConanOutput
-from conans.client.tools.oss import detected_architecture
 
 
 class _MockSettings(object):
     build_type = None
     arch = None
-    compiler = "gcc"
+    compiler = None
     compiler_version = "9"
     compiler_cppstd = None
     compiler_libcxx = None
     fields = []
 
-    def __init__(self, build_type, arch, compiler_cppstd, compiler_libcxx):
+    def __init__(self, build_type, arch, comp, comp_ver, comp_cppstd, comp_libcxx):
         self.build_type = build_type
         self.arch = arch
-        self.compiler_cppstd = compiler_cppstd
-        self.compiler_libcxx = compiler_libcxx
+        self.compiler = comp
+        self.compiler_version = comp_ver
+        self.compiler_cppstd = comp_cppstd
+        self.compiler_libcxx = comp_libcxx
 
     def constraint(self, _):
         return self
@@ -41,133 +39,247 @@ class _MockSettings(object):
         return {}
 
 
+EXPECTED_OUT_1 = textwrap.dedent("""
+# Conan generated toolchain file
+ifndef CONAN_TOOLCHAIN_INCLUDED
+    CONAN_TOOLCHAIN_INCLUDED = TRUE
+
+    # Automatic Conan Toolchain Variables
+    CONAN_TC_BUILD_TYPE = Debug
+    CONAN_TC_ARCH_HOST = x86
+    CONAN_TC_OS_BUILD = Linux
+    CONAN_TC_ARCH_BUILD = x86_64
+    CONAN_TC_COMPILER = gcc
+    CONAN_TC_COMPILER_VERSION = 9
+
+    # Recipe-Defined Variables
+    TEST_VAR_01 = TEST_VAR_VAL_01
+    TEST_VAR_02 = TEST_VAR_VAL_02
+
+    # Automatic Conan pre-processor definition: build_type_define
+
+    # Automatic Conan pre-processor definition: glibcxx_define
+    CONAN_TC_CPPFLAGS += -D_GLIBCXX_USE_CXX11_ABI=0
+
+    # Recipe-Defined pre-processor definitions
+    CONAN_TC_CPPFLAGS = -DTEST_PPD_01 -DTEST_PPD_02
+
+    # C++ Standard Library compiler flag
+
+    # C++ Standard compiler flag
+    CONAN_TC_CXXFLAGS += -std=c++14
+
+    # Build Type compiler flag
+    CONAN_TC_CFLAGS += -g
+    CONAN_TC_CXXFLAGS += -g
+
+    # Architecture compiler flag
+    CONAN_TC_CFLAGS += -m32
+    CONAN_TC_CXXFLAGS += -m32
+
+    # Position-independent code
+
+endif
+
+# Call this function in your Makefile to have Conan variables added to the standard variables
+# Example:  $(call CONAN_TC_SETUP)
+
+CONAN_TC_SETUP =  \\
+    $(eval CFLAGS += $(CONAN_TC_CFLAGS)) ; \\
+    $(eval CXXFLAGS += $(CONAN_TC_CXXFLAGS)) ; \\
+    $(eval CPPFLAGS += $(CONAN_TC_CPPFLAGS)) ; \\
+    $(eval LDFLAGS += $(CONAN_TC_LDFLAGS)) ;
+""")
+
+EXPECTED_OUT_2 = textwrap.dedent("""
+# Conan generated toolchain file
+ifndef CONAN_TOOLCHAIN_INCLUDED
+    CONAN_TOOLCHAIN_INCLUDED = TRUE
+
+    # Automatic Conan Toolchain Variables
+    CONAN_TC_BUILD_TYPE = Release
+    CONAN_TC_ARCH_HOST = x86_64
+    CONAN_TC_OS_BUILD = Linux
+    CONAN_TC_ARCH_BUILD = x86_64
+    CONAN_TC_COMPILER = gcc
+    CONAN_TC_COMPILER_VERSION = 9
+
+    # Recipe-Defined Variables
+    TEST_VAR_01 = TEST_VAR_VAL_01
+    TEST_VAR_02 = TEST_VAR_VAL_02
+
+    # Automatic Conan pre-processor definition: build_type_define
+    CONAN_TC_CPPFLAGS += -DNDEBUG
+
+    # Automatic Conan pre-processor definition: glibcxx_define
+    CONAN_TC_CPPFLAGS += -D_GLIBCXX_USE_CXX11_ABI=0
+
+    # Recipe-Defined pre-processor definitions
+    CONAN_TC_CPPFLAGS = -DTEST_PPD_01 -DTEST_PPD_02
+
+    # C++ Standard Library compiler flag
+
+    # C++ Standard compiler flag
+    CONAN_TC_CXXFLAGS += -std=gnu++14
+
+    # Build Type compiler flag
+    CONAN_TC_CFLAGS += -O3 -s
+    CONAN_TC_CXXFLAGS += -O3 -s
+
+    # Architecture compiler flag
+    CONAN_TC_CFLAGS += -m64
+    CONAN_TC_CXXFLAGS += -m64
+
+    # Position-independent code
+
+endif
+
+# Call this function in your Makefile to have Conan variables added to the standard variables
+# Example:  $(call CONAN_TC_SETUP)
+
+CONAN_TC_SETUP =  \\
+    $(eval CFLAGS += $(CONAN_TC_CFLAGS)) ; \\
+    $(eval CXXFLAGS += $(CONAN_TC_CXXFLAGS)) ; \\
+    $(eval CPPFLAGS += $(CONAN_TC_CPPFLAGS)) ; \\
+    $(eval LDFLAGS += $(CONAN_TC_LDFLAGS)) ;
+""")
+
+EXPECTED_OUT_3 = textwrap.dedent("""
+# Conan generated toolchain file
+ifndef CONAN_TOOLCHAIN_INCLUDED
+    CONAN_TOOLCHAIN_INCLUDED = TRUE
+
+    # Automatic Conan Toolchain Variables
+    CONAN_TC_BUILD_TYPE = Release
+    CONAN_TC_ARCH_HOST = x86_64
+    CONAN_TC_OS_BUILD = Linux
+    CONAN_TC_ARCH_BUILD = x86_64
+    CONAN_TC_COMPILER = clang
+    CONAN_TC_COMPILER_VERSION = 8.0
+
+    # Recipe-Defined Variables
+    TEST_VAR_01 = TEST_VAR_VAL_01
+    TEST_VAR_02 = TEST_VAR_VAL_02
+
+    # Automatic Conan pre-processor definition: build_type_define
+    CONAN_TC_CPPFLAGS += -DNDEBUG
+
+    # Automatic Conan pre-processor definition: glibcxx_define
+
+    # Recipe-Defined pre-processor definitions
+    CONAN_TC_CPPFLAGS = -DTEST_PPD_01 -DTEST_PPD_02
+
+    # C++ Standard Library compiler flag
+    CONAN_TC_CXXFLAGS += -stdlib=libc++
+
+    # C++ Standard compiler flag
+    CONAN_TC_CXXFLAGS += -std=c++2a
+
+    # Build Type compiler flag
+    CONAN_TC_CFLAGS += -O3
+    CONAN_TC_CXXFLAGS += -O3
+
+    # Architecture compiler flag
+    CONAN_TC_CFLAGS += -m64
+    CONAN_TC_CXXFLAGS += -m64
+
+    # Position-independent code
+    CONAN_TC_CFLAGS += -fPIC
+    CONAN_TC_CXXFLAGS += -fPIC
+    CONAN_TC_SHARED_LINKER_FLAGS += -fPIC
+
+endif
+
+# Call this function in your Makefile to have Conan variables added to the standard variables
+# Example:  $(call CONAN_TC_SETUP)
+
+CONAN_TC_SETUP =  \\
+    $(eval CFLAGS += $(CONAN_TC_CFLAGS)) ; \\
+    $(eval CXXFLAGS += $(CONAN_TC_CXXFLAGS)) ; \\
+    $(eval CPPFLAGS += $(CONAN_TC_CPPFLAGS)) ; \\
+    $(eval LDFLAGS += $(CONAN_TC_LDFLAGS)) ;
+""")
+
+EXPECTED_OUT_4 = textwrap.dedent("""
+# Conan generated toolchain file
+ifndef CONAN_TOOLCHAIN_INCLUDED
+    CONAN_TOOLCHAIN_INCLUDED = TRUE
+
+    # Automatic Conan Toolchain Variables
+    CONAN_TC_BUILD_TYPE = Release
+    CONAN_TC_ARCH_HOST = x86_64
+    CONAN_TC_OS_BUILD = Linux
+    CONAN_TC_ARCH_BUILD = x86_64
+    CONAN_TC_COMPILER = clang
+    CONAN_TC_COMPILER_VERSION = 8.0
+
+    # Recipe-Defined Variables
+    TEST_VAR_01 = TEST_VAR_VAL_01
+    TEST_VAR_02 = TEST_VAR_VAL_02
+
+    # Automatic Conan pre-processor definition: build_type_define
+    CONAN_TC_CPPFLAGS += -DNDEBUG
+
+    # Automatic Conan pre-processor definition: glibcxx_define
+    CONAN_TC_CPPFLAGS += -D_GLIBCXX_USE_CXX11_ABI=1
+
+    # Recipe-Defined pre-processor definitions
+    CONAN_TC_CPPFLAGS = -DTEST_PPD_01 -DTEST_PPD_02
+
+    # C++ Standard Library compiler flag
+    CONAN_TC_CXXFLAGS += -stdlib=libstdc++
+
+    # C++ Standard compiler flag
+    CONAN_TC_CXXFLAGS += -std=c++2a
+
+    # Build Type compiler flag
+    CONAN_TC_CFLAGS += -O3
+    CONAN_TC_CXXFLAGS += -O3
+
+    # Architecture compiler flag
+    CONAN_TC_CFLAGS += -m64
+    CONAN_TC_CXXFLAGS += -m64
+
+    # Position-independent code
+    CONAN_TC_CFLAGS += -fPIC
+    CONAN_TC_CXXFLAGS += -fPIC
+    CONAN_TC_SHARED_LINKER_FLAGS += -fPIC
+
+endif
+
+# Call this function in your Makefile to have Conan variables added to the standard variables
+# Example:  $(call CONAN_TC_SETUP)
+
+CONAN_TC_SETUP =  \\
+    $(eval CFLAGS += $(CONAN_TC_CFLAGS)) ; \\
+    $(eval CXXFLAGS += $(CONAN_TC_CXXFLAGS)) ; \\
+    $(eval CPPFLAGS += $(CONAN_TC_CPPFLAGS)) ; \\
+    $(eval LDFLAGS += $(CONAN_TC_LDFLAGS)) ;
+""")
+
+
 @unittest.skipUnless(platform.system() == "Linux", "Only for Linux")
 class MakeToolchainTest(unittest.TestCase):
-    @parameterized.expand([("Debug", "x86", "14", "libstdc++", False, False),
-                           ("Release", "x86_64", "gnu14", "libstdc++11", True, False),
-                           ("Release", "x86_64", "20", "libstdc++11", True, True)])
-    def test_toolchain_linux(self, build_type, arch, cppstd, libcxx, shared, fpic):
-        settings_mock = _MockSettings(build_type, arch, cppstd, libcxx)
+    @parameterized.expand([
+        ("Debug", "x86", "gcc", "9", "14", "libstdc++", False, False, EXPECTED_OUT_1),
+        ("Release", "x86_64", "gcc", "9", "gnu14", "libstdc++", True, False, EXPECTED_OUT_2),
+        ("Release", "x86_64", "clang", "8.0", "20", "libc++", True, True, EXPECTED_OUT_3),
+        ("Release", "x86_64", "clang", "8.0", "20", "libstdc++11", True, True, EXPECTED_OUT_4),
+    ])
+    def test_toolchain_linux(self, build_type, arch, compiler, compiler_ver, compiler_cppstd,
+                             compiler_libcxx, shared, fpic, expected):
+
+        settings_mock = _MockSettings(build_type, arch, compiler, compiler_ver, compiler_cppstd,
+                                      compiler_libcxx)
         conanfile = ConanFile(TestBufferConanOutput(), None)
         conanfile.options = {"shared": [True, False], "fPIC": [True, False]}
         conanfile.default_options = {"shared": shared, "fPIC": fpic}
         conanfile.initialize(settings_mock, EnvValues())
         toolchain = MakeToolchain(conanfile)
+        toolchain.variables["TEST_VAR_01"] = "TEST_VAR_VAL_01"
+        toolchain.variables["TEST_VAR_02"] = "TEST_VAR_VAL_02"
+        toolchain.preprocessor_definitions["TEST_PPD_01"] = "TEST_PPD_VAL_01"
+        toolchain.preprocessor_definitions["TEST_PPD_02"] = "TEST_PPD_VAL_02"
         content = toolchain.content
-
-        expected_template = Template(textwrap.dedent("""
-            # Conan generated toolchain file
-            ifndef CONAN_TOOLCHAIN_INCLUDED
-                CONAN_TOOLCHAIN_INCLUDED = TRUE
-                CONAN_TC_BUILD_TYPE = {{build_type}}
-                CONAN_TC_OS_HOST = None
-                CONAN_TC_ARCH_HOST = {{arch_host}}
-                CONAN_TC_TRIPLET_HOST = False
-                CONAN_TC_OS_BUILD = Linux
-                CONAN_TC_ARCH_BUILD = {{arch_build}}
-                CONAN_TC_TRIPLET_BUILD = False
-                CONAN_TC_OS_TARGET = None
-                CONAN_TC_ARCH_TARGET = None
-                CONAN_TC_TRIPLET_TARGET = None
-                CONAN_TC_COMPILER = {{compiler}}
-                CONAN_TC_COMPILER_VERSION = {{compiler_version}}
-                CONAN_TC_COMPILER_RUNTIME = None
-                CONAN_TC_LIBCXX = {{libcxx}}
-                CONAN_TC_CPPSTD_FLAG = {{cppstd_flag}}
-                CONAN_TC_ARCH_FLAG = {{arch_flag}}
-                CONAN_TC_BUILD_TYPE_FLAGS = {{build_type_flags}}
-                CONAN_TC_DEFINES ={{preserved_space}}
-
-                CONAN_TC_SET_LIBCXX = True
-                CONAN_TC_SET_CPPSTD = True
-                CONAN_TC_SET_ARCH = True
-                CONAN_TC_SET_FPIC = {{set_fpic}}
-                CONAN_TC_SET_SHARED = {{set_shared}}
-
-                CONAN_TC_CFLAGS += $(CONAN_TC_BUILD_TYPE_FLAGS)
-                CONAN_TC_CXXFLAGS += $(CONAN_TC_BUILD_TYPE_FLAGS)
-
-                ifeq ($(CONAN_TC_BUILD_TYPE),Release)
-                    CONAN_TC_DEFINES += NDEBUG
-                endif
-
-                ifeq ($(CONAN_TC_SET_LIBCXX),True)
-                    CONAN_TC_CLANG_BASED := $(if $(filter $(CONAN_TC_COMPILER),clang apple-clang),true)
-                    ifeq ($(CONAN_TC_CLANG_BASED),True)
-                        CONAN_TC_LIBSTDCXX_BASED := $(if $(filter $(CONAN_TC_LIBCXX),libstdc++ libstdc++11),true)
-                        ifeq ($(CONAN_TC_LIBSTDCXX_BASED),True)
-                            CONAN_TC_CXXFLAGS += -stdlib=libstdc++
-                        else ifeq ($(CONAN_TC_LIBCXX),libc++)
-                            CONAN_TC_CXXFLAGS += -stdlib=libc++
-                        endif
-                    else ifeq ($(CONAN_TC_COMPILER),sun-cc)
-                        ifeq ($(CONAN_TC_LIBCXX),libCstd)
-                            CONAN_TC_CXXFLAGS += -library=Cstd++
-                        else ifeq ($(CONAN_TC_LIBCXX),libstdcxx)
-                            CONAN_TC_CXXFLAGS += -library=stdcxx4
-                        else ifeq ($(CONAN_TC_LIBCXX),libstlport)
-                            CONAN_TC_CXXFLAGS += -library=stlport4
-                        else ifeq ($(CONAN_TC_LIBCXX),libstdc++)
-                            CONAN_TC_CXXFLAGS += -library=stdcpp
-                        endif
-                    endif
-                    ifeq ($(CONAN_TC_LIBCXX),libstdc++11)
-                        CONAN_TC_DEFINES += GLIBCXX_USE_CXX11_ABI=1
-                    else ifeq ($(CONAN_TC_LIBCXX),libstdc++)
-                        CONAN_TC_DEFINES += GLIBCXX_USE_CXX11_ABI=0
-                    endif
-                endif
-                ifeq ($(CONAN_TC_SET_CPPSTD),True)
-                    CONAN_TC_CXXFLAGS += $(CONAN_TC_CPPSTD_FLAG)
-                endif
-                ifeq ($(CONAN_TC_SET_ARCH),True)
-                    CONAN_TC_CFLAGS += $(CONAN_TC_ARCH_FLAG)
-                    CONAN_TC_CXXFLAGS += $(CONAN_TC_ARCH_FLAG)
-                    CONAN_TC_SHARED_LINKER_FLAGS += $(CONAN_TC_ARCH_FLAG)
-                    CONAN_TC_EXE_LINKER_FLAGS += $(CONAN_TC_ARCH_FLAG)
-                endif
-                ifeq ($(CONAN_TC_SET_FPIC),True)
-                    CONAN_TC_CFLAGS += -fPIC
-                    CONAN_TC_CXXFLAGS += -fPIC
-                    CONAN_TC_SHARED_LINKER_FLAGS += -fPIC
-                    CONAN_TC_EXE_LINKER_FLAGS += -pie
-                endif
-                ifeq ($(CONAN_TC_SET_SHARED),True)
-                    CONAN_TC_LDFLAGS += -shared
-                    CONAN_TC_LDFLAGS += $(CONAN_TC_SHARED_LINKER_FLAGS)
-                else
-                    CONAN_TC_LDFLAGS += $(CONAN_TC_EXE_LINKER_FLAGS)
-                endif
-            endif
-
-            CONAN_TC_CPPFLAGS += $(addprefix -D,$(CONAN_TC_DEFINES))
-
-            # Call this function in your Makefile to have Conan variables added to the standard variables
-            # Example:  $(call CONAN_TC_SETUP)
-
-            CONAN_TC_SETUP =  \\
-                $(eval CFLAGS += $(CONAN_TC_CFLAGS)) ; \\
-                $(eval CXXFLAGS += $(CONAN_TC_CXXFLAGS)) ; \\
-                $(eval CPPFLAGS += $(CONAN_TC_CPPFLAGS)) ; \\
-                $(eval LDFLAGS += $(CONAN_TC_LDFLAGS)) ;
-        """))
-
-        context = {
-            "arch_host": conanfile.settings.get_safe("arch"),
-            "arch_build": detected_architecture(),
-            "compiler": conanfile.settings.get_safe("compiler"),
-            "compiler_version": conanfile.settings.get_safe("compiler.version"),
-            "arch_flag": architecture_flag(settings_mock),
-            "cppstd_flag": cppstd_flag_new(conanfile.settings),
-            "build_type_flags": " ".join(build_type_flags(conanfile.settings)),
-            "build_type": build_type,
-            "libcxx": libcxx,
-            "set_shared": shared,
-            "set_fpic": fpic,
-            "preserved_space": " ",
-        }
-        #
-        expected_content = expected_template.render(context)
-
         self.maxDiff = None
-        self.assertIn(expected_content, content)
+        self.assertIn(expected, content)

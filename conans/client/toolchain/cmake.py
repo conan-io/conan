@@ -241,20 +241,19 @@ class CMakeToolchain(object):
                  toolset=None, parallel=True):
         self._conanfile = conanfile
 
-        self._fpic = self._deduce_fpic()
-        self._vs_static_runtime = self._deduce_vs_static_runtime()
-        self._parallel = parallel
+        self.fpic = self._deduce_fpic()
+        self.vs_static_runtime = self._deduce_vs_static_runtime()
+        self.parallel = parallel
 
         # To find the generated cmake_find_package finders
-        self._cmake_prefix_path = "${CMAKE_BINARY_DIR}"
-        self._cmake_module_path = "${CMAKE_BINARY_DIR}"
+        self.cmake_prefix_path = "${CMAKE_BINARY_DIR}"
+        self.cmake_module_path = "${CMAKE_BINARY_DIR}"
 
-        self._generator = generator or get_generator(self._conanfile)
-        self._generator_platform = (generator_platform or
-                                    get_generator_platform(self._conanfile.settings,
-                                                           self._generator))
-        self._toolset = toolset or get_toolset(self._conanfile.settings, self._generator)
-        self._build_type = build_type or self._conanfile.settings.get_safe("build_type")
+        self.generator = generator or get_generator(self._conanfile)
+        self.generator_platform = (generator_platform or
+                                   get_generator_platform(self._conanfile.settings,
+                                                          self.generator))
+        self.toolset = toolset or get_toolset(self._conanfile.settings, self.generator)
 
         self.variables = Variables()
         self.preprocessor_definitions = Variables()
@@ -262,6 +261,28 @@ class CMakeToolchain(object):
             self._build_shared_libs = "ON" if self._conanfile.options.shared else "OFF"
         except ConanException:
             self._build_shared_libs = None
+
+        self.set_libcxx, self.glibcxx = self._get_libcxx()
+
+        self.parallel = None
+        if parallel:
+            if self.generator and "Visual Studio" in self.generator:
+                self.parallel = "/MP%s" % cpu_count(output=self._conanfile.output)
+
+        self.cppstd, self.cppstd_extensions = self._cppstd()
+
+        self.skip_rpath = True if self._conanfile.settings.get_safe("os") == "Macos" else False
+        self.architecture = self._get_architecture()
+
+        # TODO: I would want to have here the path to the compiler too
+        build_type = build_type or self._conanfile.settings.get_safe("build_type")
+        self.build_type = build_type if not is_multi_configuration(self.generator) else None
+        try:
+            # This is only defined in the cache, not in the local flow
+            self.install_prefix = self._conanfile.package_folder.replace("\\", "/")
+        except AttributeError:
+            # FIXME: In the local flow, we don't know the package_folder
+            self.install_prefix = None
 
     def _deduce_fpic(self):
         fpic = self._conanfile.options.get_safe("fPIC")
@@ -336,53 +357,33 @@ class CMakeToolchain(object):
         conan_project_include_cmake = os.path.abspath("conan_project_include.cmake")
         conan_project_include_cmake = conan_project_include_cmake.replace("\\", "/")
         t = Template(self._template_project_include)
-        content = t.render(vs_static_runtime=self._vs_static_runtime)
+        content = t.render(vs_static_runtime=self.vs_static_runtime)
         save(conan_project_include_cmake, content)
 
         # TODO: I need the profile_host and profile_build here!
         # TODO: What if the compiler is a build require?
         # TODO: Add all the stuff related to settings (ALL settings or just _MY_ settings?)
-        # TODO: I would want to have here the path to the compiler too
-        build_type = self._build_type if not is_multi_configuration(self._generator) else None
-        try:
-            # This is only defined in the cache, not in the local flow
-            install_prefix = self._conanfile.package_folder.replace("\\", "/")
-        except AttributeError:
-            # FIXME: In the local flow, we don't know the package_folder
-            install_prefix = None
-
-        set_libcxx, glibcxx = self._get_libcxx()
-
-        parallel = None
-        if self._parallel:
-            if self._generator and "Visual Studio" in self._generator:
-                parallel = "/MP%s" % cpu_count(output=self._conanfile.output)
-
-        cppstd, cppstd_extensions = self._cppstd()
-
-        skip_rpath = True if self._conanfile.settings.get_safe("os") == "Macos" else False
-        architecture = self._get_architecture()
 
         context = {
             "variables": self.variables,
             "variables_config": self.variables.configuration_types,
             "preprocessor_definitions": self.preprocessor_definitions,
             "preprocessor_definitions_config": self.preprocessor_definitions.configuration_types,
-            "build_type": build_type,
-            "generator_platform": self._generator_platform,
-            "toolset": self._toolset,
-            "cmake_prefix_path": self._cmake_prefix_path,
-            "cmake_module_path": self._cmake_module_path,
-            "fpic": self._fpic,
-            "skip_rpath": skip_rpath,
-            "set_libcxx": set_libcxx,
-            "glibcxx": glibcxx,
-            "install_prefix": install_prefix,
-            "parallel": parallel,
-            "cppstd": cppstd,
-            "cppstd_extensions": cppstd_extensions,
+            "build_type": self.build_type,
+            "generator_platform": self.generator_platform,
+            "toolset": self.toolset,
+            "cmake_prefix_path": self.cmake_prefix_path,
+            "cmake_module_path": self.cmake_module_path,
+            "fpic": self.fpic,
+            "skip_rpath": self.skip_rpath,
+            "set_libcxx": self.set_libcxx,
+            "glibcxx": self.glibcxx,
+            "install_prefix": self.install_prefix,
+            "parallel": self.parallel,
+            "cppstd": self.cppstd,
+            "cppstd_extensions": self.cppstd_extensions,
             "shared_libs": self._build_shared_libs,
-            "architecture": architecture
+            "architecture": self.architecture
         }
         t = Template(self._template_toolchain)
         content = t.render(conan_project_include_cmake=conan_project_include_cmake, **context)
