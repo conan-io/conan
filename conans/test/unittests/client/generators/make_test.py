@@ -230,7 +230,7 @@ CONAN_LDLIBS        += $(addprefix -l,$(CONAN_LIBS))
 # Appends either CONAN_EXELINKFLAGS or CONAN_SHAREDLINKFLAGS to LDFLAGS
 # Example 1:  $(call CONAN_BASIC_SETUP)
 # Example 2:  $(call CONAN_BASIC_SETUP, EXE)
-# Example 2:  $(call CONAN_BASIC_SETUP, SHARED)
+# Example 3:  $(call CONAN_BASIC_SETUP, SHARED)
 
 CONAN_BASIC_SETUP = \\
     $(eval CFLAGS   += $(CONAN_CFLAGS)) ; \\
@@ -431,10 +431,10 @@ CONAN_LDLIBS        += $(addprefix -l,$(CONAN_LIBS))
 
 # Call the following function to have Conan variables added to standard variables
 # 1 optional parameter : type of target being built : EXE or SHARED
-# Appends either CONAN_EXELINKFLAGS or CONAN_SHAREDINKFLAGS to LDFLAGS
+# Appends either CONAN_EXELINKFLAGS or CONAN_SHAREDLINKFLAGS to LDFLAGS
 # Example 1:  $(call CONAN_BASIC_SETUP)
 # Example 2:  $(call CONAN_BASIC_SETUP, EXE)
-# Example 2:  $(call CONAN_BASIC_SETUP, SHARED)
+# Example 3:  $(call CONAN_BASIC_SETUP, SHARED)
 
 CONAN_BASIC_SETUP = \\
     $(eval CFLAGS   += $(CONAN_CFLAGS)) ; \\
@@ -638,7 +638,7 @@ CONAN_LDLIBS        += $(addprefix -l,$(CONAN_LIBS))
 # Appends either CONAN_EXELINKFLAGS or CONAN_SHAREDLINKFLAGS to LDFLAGS
 # Example 1:  $(call CONAN_BASIC_SETUP)
 # Example 2:  $(call CONAN_BASIC_SETUP, EXE)
-# Example 2:  $(call CONAN_BASIC_SETUP, SHARED)
+# Example 3:  $(call CONAN_BASIC_SETUP, SHARED)
 
 CONAN_BASIC_SETUP = \\
     $(eval CFLAGS   += $(CONAN_CFLAGS)) ; \\
