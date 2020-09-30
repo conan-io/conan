@@ -478,15 +478,6 @@ class GraphLock(object):
             if current.prev is None:
                 current.prev = node.prev
 
-    def check_contained(self, other):
-        """ if lock create is provided a lockfile, it should be used, and it should contain it
-        otherwise, it was useless to pass it, and it is dangerous to continue, recommended to
-        create a fresh lockfile"""
-        other_root_id = other.root_node_id()
-        if other_root_id not in self._nodes:
-            raise ConanException("The provided lockfile was not used, there is no overlap. You "
-                                 "might want to create a fresh lockfile")
-
     def pre_lock_node(self, node):
         if node.recipe == RECIPE_VIRTUAL:
             return
