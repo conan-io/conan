@@ -201,12 +201,11 @@ class CmdUpload(object):
                                            all_packages, query)
 
         if parallel_upload:
-            self._upload_thread_pool = ThreadPool(8)
             self._user_io.disable_input()
-        else:
-            self._upload_thread_pool = ThreadPool(1)
 
         for remote, refs in refs_by_remote.items():
+            self._upload_thread_pool = ThreadPool(8 if parallel_upload else 1)
+
             self._output.info("Uploading to remote '{}':".format(remote.name))
 
             def upload_ref(ref_conanfile_prefs):

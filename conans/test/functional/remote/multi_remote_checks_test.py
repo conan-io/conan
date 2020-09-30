@@ -79,6 +79,22 @@ class Pkg(ConanFile):
         client.run("remote list_ref")
         self.assertIn("Pkg/0.1@lasote/testing: server3", client.out)
 
+    def test_multiple_remotes_single_upload(self):
+        servers = OrderedDict([("server1", TestServer()),
+                               ("server2", TestServer())])
+        client = TestClient(servers=servers, users={"server1": [("lasote", "mypass")],
+                                                    "server2": [("lasote", "mypass")]})
+        conanfile = """from conans import ConanFile
+class Pkg(ConanFile):
+    settings = "build_type"
+    """
+        client.save({"conanfile.py": conanfile})
+        client.run("create . Pkg/0.1@lasote/testing -s build_type=Release")
+        client.run("create . Pkg2/0.1@lasote/testing -s build_type=Release")
+        client.run("remote add_ref Pkg/0.1@lasote/testing server1")
+        client.run("remote add_ref Pkg2/0.1@lasote/testing server2")
+        client.run("upload Pkg* --all --confirm")
+
     def test_binary_packages_mixed(self):
         servers = OrderedDict([("server1", TestServer()),
                                ("server2", TestServer()),
