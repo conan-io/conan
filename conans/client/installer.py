@@ -292,6 +292,11 @@ class BinaryInstaller(object):
         self._binaries_analyzer = app.binaries_analyzer
         self._hook_manager = app.hook_manager
         self._generator_manager = app.generator_manager
+        # Load custom generators from the cache, generators are part of the binary
+        # build and install. Generators loaded here from the cache will have precedence
+        # and overwrite possible generators loaded from packages (requires)
+        for generator_path in app.cache.generators:
+            app.loader.load_generators(generator_path)
 
     def install(self, deps_graph, remotes, build_mode, update, keep_build=False, graph_info=None):
         # order by levels and separate the root node (ref=None) from the rest

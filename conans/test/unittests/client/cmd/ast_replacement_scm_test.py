@@ -153,4 +153,3 @@ class LibConan(ConanFile):
         # FIXME: We lost the multiline comment
         self.assertIn("    url=23", load(conanfile))
         # self.assertIn(comment, load(conanfile))
-
