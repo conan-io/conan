@@ -4,7 +4,7 @@ import re
 import tempfile
 import textwrap
 
-from conans.client.build.compiler_id import UNKNOWN_COMPILER, LLVM_GCC, detect_compiler_id
+from conans.client.conf.compiler_id import UNKNOWN_COMPILER, LLVM_GCC, detect_compiler_id
 from conans.client.output import Color
 from conans.client.tools import detected_os, OSInfo
 from conans.client.tools.win import latest_visual_studio_version_installed
@@ -110,9 +110,8 @@ def _get_default_compiler(output):
             if "gcc" in command:
                 gcc = _gcc_compiler(output, command)
                 if platform.system() == "Darwin" and gcc is None:
-                    output.error(
-                        "%s detected as a frontend using apple-clang. Compiler not supported" % command
-                    )
+                    output.error("%s detected as a frontend using apple-clang. "
+                                 "Compiler not supported" % command)
                 return gcc
             if "clang" in command.lower():
                 return _clang_compiler(output, command)
@@ -201,13 +200,16 @@ def _detect_gcc_libcxx(executable, version, output, profile_name, profile_path):
     old_path = os.getcwd()
     os.chdir(t)
     try:
-        error, output = detect_runner("%s main.cpp -std=c++11" % executable)
+        error, out_str = detect_runner("%s main.cpp -std=c++11" % executable)
         if error:
-            if "using libstdc++" in output:
+            if "using libstdc++" in out_str:
+                output.info("gcc C++ standard library: libstdc++")
                 return "libstdc++"
             # Other error, but can't know, lets keep libstdc++11
-            output.warn("compiler.libcxx check error: %s" % output)
+            output.warn("compiler.libcxx check error: %s" % out_str)
             output.warn("Couldn't deduce compiler.libcxx for gcc>=5.1, assuming libstdc++11")
+        else:
+            output.info("gcc C++ standard library: libstdc++11")
         return "libstdc++11"
     finally:
         os.chdir(old_path)
@@ -220,26 +222,28 @@ def _detect_compiler_version(result, output, profile_path):
         compiler, version = None, None
     if not compiler or not version:
         output.error("Unable to find a working compiler")
-    else:
-        result.append(("compiler", compiler))
-        result.append(("compiler.version",
-                       _get_profile_compiler_version(compiler, version, output)))
-        if compiler == "apple-clang":
+        return
+
+    result.append(("compiler", compiler))
+    result.append(("compiler.version", _get_profile_compiler_version(compiler, version, output)))
+
+    # Get compiler C++ stdlib
+    if compiler == "apple-clang":
+        result.append(("compiler.libcxx", "libc++"))
+    elif compiler == "gcc":
+        profile_name = os.path.basename(profile_path)
+        libcxx = _detect_gcc_libcxx("g++", version, output, profile_name, profile_path)
+        result.append(("compiler.libcxx", libcxx))
+    elif compiler == "cc":
+        if platform.system() == "SunOS":
+            result.append(("compiler.libstdcxx", "libstdcxx4"))
+    elif compiler == "clang":
+        if platform.system() == "FreeBSD":
             result.append(("compiler.libcxx", "libc++"))
-        elif compiler == "gcc":
-            profile_name = os.path.basename(profile_path)
-            libcxx = _detect_gcc_libcxx("g++", version, output, profile_name, profile_path)
-            result.append(("compiler.libcxx", libcxx))
-        elif compiler == "cc":
-            if platform.system() == "SunOS":
-                result.append(("compiler.libstdcxx", "libstdcxx4"))
-        elif compiler == "clang":
-            if platform.system() == "FreeBSD":
-                result.append(("compiler.libcxx", "libc++"))
-            else:
-                result.append(("compiler.libcxx", "libstdc++"))
-        elif compiler == "sun-cc":
-            result.append(("compiler.libcxx", "libCstd"))
+        else:
+            result.append(("compiler.libcxx", "libstdc++"))
+    elif compiler == "sun-cc":
+        result.append(("compiler.libcxx", "libCstd"))
 
 
 def _detect_os_arch(result, output):
