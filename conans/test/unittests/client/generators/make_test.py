@@ -1,4 +1,4 @@
-import re
+import platform
 import os
 import unittest
 import textwrap
@@ -656,6 +656,7 @@ CONAN_BASIC_SETUP = \\
 
 
 class MakeGeneratorTest(unittest.TestCase):
+    @unittest.skipUnless(platform.system() in ["Linux", "Macos"], "Requires make")
     @parameterized.expand([
         ("gcc", "Linux", False, EXPECTED_OUT_1),
         ("gcc", "Linux", True, EXPECTED_OUT_2),
