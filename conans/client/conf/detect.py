@@ -1,6 +1,8 @@
 import os
 import platform
 import re
+import tempfile
+import textwrap
 
 from conans.client.build.compiler_id import UNKNOWN_COMPILER, LLVM_GCC, detect_compiler_id
 from conans.client.output import Color
@@ -9,6 +11,7 @@ from conans.client.tools.win import latest_visual_studio_version_installed
 from conans.model.version import Version
 from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
 from conans.util.env_reader import get_env
+from conans.util.files import save
 from conans.util.runners import detect_runner
 
 
@@ -161,6 +164,55 @@ def _get_profile_compiler_version(compiler, version, output):
     return version
 
 
+def _detect_gcc_libcxx(executable, version, output, profile_name, profile_path):
+    # Assumes a working g++ executable
+    new_abi_available = Version(version) >= Version("5.1")
+    if not new_abi_available:
+        return "libstdc++"
+
+    if not get_env(CONAN_V2_MODE_ENVVAR, False):
+        msg = textwrap.dedent("""
+            Conan detected a GCC version > 5 but has adjusted the 'compiler.libcxx' setting to
+            'libstdc++' for backwards compatibility.
+            Your compiler is likely using the new CXX11 ABI by default (libstdc++11).
+
+            If you want Conan to use the new ABI for the {profile} profile, run:
+
+                $ conan profile update settings.compiler.libcxx=libstdc++11 {profile}
+
+            Or edit '{profile_path}' and set compiler.libcxx=libstdc++11
+            """.format(profile=profile_name, profile_path=profile_path))
+        output.writeln("\n************************* WARNING: GCC OLD ABI COMPATIBILITY "
+                       "***********************\n %s\n************************************"
+                       "************************************************\n\n\n" % msg,
+                       Color.BRIGHT_RED)
+        return "libstdc++"
+
+    main = textwrap.dedent("""
+        #include <string>
+
+        using namespace std;
+        static_assert(sizeof(std::string) != sizeof(void*), "using libstdc++");
+        int main(){}
+        """)
+    t = tempfile.mkdtemp()
+    filename = os.path.join(t, "main.cpp")
+    save(filename, main)
+    old_path = os.getcwd()
+    os.chdir(t)
+    try:
+        error, output = detect_runner("%s main.cpp -std=c++11" % executable)
+        if error:
+            if "using libstdc++" in output:
+                return "libstdc++"
+            # Other error, but can't know, lets keep libstdc++11
+            output.warn("compiler.libcxx check error: %s" % output)
+            output.warn("Couldn't deduce compiler.libcxx for gcc>=5.1, assuming libstdc++11")
+        return "libstdc++11"
+    finally:
+        os.chdir(old_path)
+
+
 def _detect_compiler_version(result, output, profile_path):
     try:
         compiler, version = _get_default_compiler(output)
@@ -175,27 +227,9 @@ def _detect_compiler_version(result, output, profile_path):
         if compiler == "apple-clang":
             result.append(("compiler.libcxx", "libc++"))
         elif compiler == "gcc":
-            new_abi_available = Version(version) >= Version("5.1")
-            libcxx, old_abi = ('libstdc++11', False) if new_abi_available and get_env(CONAN_V2_MODE_ENVVAR, False)\
-                else ('libstdc++', True)
+            profile_name = os.path.basename(profile_path)
+            libcxx = _detect_gcc_libcxx("g++", version, output, profile_name, profile_path)
             result.append(("compiler.libcxx", libcxx))
-            if old_abi and new_abi_available:
-                profile_name = os.path.basename(profile_path)
-                msg = """
-Conan detected a GCC version > 5 but has adjusted the 'compiler.libcxx' setting to
-'libstdc++' for backwards compatibility.
-Your compiler is likely using the new CXX11 ABI by default (libstdc++11).
-
-If you want Conan to use the new ABI for the {profile} profile, run:
-
-    $ conan profile update settings.compiler.libcxx=libstdc++11 {profile}
-
-Or edit '{profile_path}' and set compiler.libcxx=libstdc++11
-""".format(profile=profile_name, profile_path=profile_path)
-                output.writeln("\n************************* WARNING: GCC OLD ABI COMPATIBILITY "
-                               "***********************\n %s\n************************************"
-                               "************************************************\n\n\n" % msg,
-                               Color.BRIGHT_RED)
         elif compiler == "cc":
             if platform.system() == "SunOS":
                 result.append(("compiler.libstdcxx", "libstdcxx4"))
