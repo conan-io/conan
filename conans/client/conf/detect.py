@@ -228,7 +228,7 @@ def _detect_compiler_version(result, output, profile_path):
             result.append(("compiler.libcxx", "libc++"))
         elif compiler == "gcc":
             profile_name = os.path.basename(profile_path)
-            libcxx = _detect_gcc_libcxx("g++", version, profile_name, profile_path)
+            libcxx = _detect_gcc_libcxx("g++", version, output, profile_name, profile_path)
             result.append(("compiler.libcxx", libcxx))
         elif compiler == "cc":
             if platform.system() == "SunOS":
