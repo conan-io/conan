@@ -200,13 +200,13 @@ def _detect_gcc_libcxx(executable, version, output, profile_name, profile_path):
     old_path = os.getcwd()
     os.chdir(t)
     try:
-        error, output = detect_runner("%s main.cpp -std=c++11" % executable)
+        error, out_str = detect_runner("%s main.cpp -std=c++11" % executable)
         if error:
-            if "using libstdc++" in output:
+            if "using libstdc++" in out_str:
                 output.info("gcc C++ standard library: libstdc++")
                 return "libstdc++"
             # Other error, but can't know, lets keep libstdc++11
-            output.warn("compiler.libcxx check error: %s" % output)
+            output.warn("compiler.libcxx check error: %s" % out_str)
             output.warn("Couldn't deduce compiler.libcxx for gcc>=5.1, assuming libstdc++11")
         else:
             output.info("gcc C++ standard library: libstdc++11")
