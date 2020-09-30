@@ -353,7 +353,7 @@ class LinkOrderTest(unittest.TestCase):
             extra_build = "--config Release" if platform.system() == "Windows" else ""  # Windows VS
             t.run_command("cmake --build . {}".format(extra_build), assert_error=True)
             # Remove double spaces from output that appear in some platforms
-            str_out = line = ' '.join(str(t.out).split())
+            str_out = ' '.join(str(t.out).split())
             # Get the actual link order from the CMake call
             libs = self._get_link_order_from_cmake(str_out)
         return libs
