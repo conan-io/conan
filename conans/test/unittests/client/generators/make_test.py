@@ -48,25 +48,25 @@ EXPECTED_OUT_1 = textwrap.dedent("""
 #-------------------------------------------------------------------#
 
 CONAN_ROOT_MYPKG1 ?=  \\
-_/path with spaces
+/tmp1
 
 CONAN_SYSROOT_MYPKG1 ?=  \\
 
 
 CONAN_RPATHFLAGS_MYPKG1 +=  \\
--Wl,-rpath="_/path with spaces/lib1"
+-Wl,-rpath="/tmp1/lib1"
 
 CONAN_INCLUDE_DIRS_MYPKG1 +=  \\
-_/path with spaces/include1
+/tmp1/include1
 
 CONAN_LIB_DIRS_MYPKG1 +=  \\
-_/path with spaces/lib1
+/tmp1/lib1
 
 CONAN_BIN_DIRS_MYPKG1 +=  \\
-_/path with spaces/bin1
+/tmp1/bin1
 
 CONAN_BUILD_DIRS_MYPKG1 +=  \\
-_/path with spaces/
+/tmp1/
 
 CONAN_RES_DIRS_MYPKG1 +=  \\
 
@@ -96,28 +96,28 @@ CONAN_FRAMEWORKS_MYPKG1 +=  \\
 AudioUnit
 
 CONAN_FRAMEWORK_PATHS_MYPKG1 +=  \\
-_/path with spaces/SystemFrameworks
+/tmp1/SystemFrameworks
 
 CONAN_ROOT_MYPKG2 ?=  \\
-_/path with spaces
+/tmp2
 
 CONAN_SYSROOT_MYPKG2 ?=  \\
 
 
 CONAN_RPATHFLAGS_MYPKG2 +=  \\
--Wl,-rpath="_/path with spaces/lib2"
+-Wl,-rpath="/tmp2/lib2"
 
 CONAN_INCLUDE_DIRS_MYPKG2 +=  \\
-_/path with spaces/include2
+/tmp2/include2
 
 CONAN_LIB_DIRS_MYPKG2 +=  \\
-_/path with spaces/lib2
+/tmp2/lib2
 
 CONAN_BIN_DIRS_MYPKG2 +=  \\
-_/path with spaces/bin2
+/tmp2/bin2
 
 CONAN_BUILD_DIRS_MYPKG2 +=  \\
-_/path with spaces/
+/tmp2/
 
 CONAN_RES_DIRS_MYPKG2 +=  \\
 
@@ -252,25 +252,25 @@ EXPECTED_OUT_2 = textwrap.dedent("""
 #-------------------------------------------------------------------#
 
 CONAN_ROOT_MYPKG1 ?=  \\
-_/path with spaces
+/tmp1
 
 CONAN_SYSROOT_MYPKG1 ?=  \\
 
 
 CONAN_RPATHFLAGS_MYPKG1 +=  \\
--Wl,-rpath="_/path with spaces/lib1"
+-Wl,-rpath="/tmp1/lib1"
 
 CONAN_INCLUDE_DIRS_MYPKG1 +=  \\
-_/path with spaces/include1
+/tmp1/include1
 
 CONAN_LIB_DIRS_MYPKG1 +=  \\
-_/path with spaces/lib1
+/tmp1/lib1
 
 CONAN_BIN_DIRS_MYPKG1 +=  \\
-_/path with spaces/bin1
+/tmp1/bin1
 
 CONAN_BUILD_DIRS_MYPKG1 +=  \\
-_/path with spaces/
+/tmp1/
 
 CONAN_RES_DIRS_MYPKG1 +=  \\
 
@@ -300,28 +300,28 @@ CONAN_FRAMEWORKS_MYPKG1 +=  \\
 AudioUnit
 
 CONAN_FRAMEWORK_PATHS_MYPKG1 +=  \\
-_/path with spaces/SystemFrameworks
+/tmp1/SystemFrameworks
 
 CONAN_ROOT_MYPKG2 ?=  \\
-_/path with spaces
+/tmp2
 
 CONAN_SYSROOT_MYPKG2 ?=  \\
 
 
 CONAN_RPATHFLAGS_MYPKG2 +=  \\
--Wl,-rpath="_/path with spaces/lib2"
+-Wl,-rpath="/tmp2/lib2"
 
 CONAN_INCLUDE_DIRS_MYPKG2 +=  \\
-_/path with spaces/include2
+/tmp2/include2
 
 CONAN_LIB_DIRS_MYPKG2 +=  \\
-_/path with spaces/lib2
+/tmp2/lib2
 
 CONAN_BIN_DIRS_MYPKG2 +=  \\
-_/path with spaces/bin2
+/tmp2/bin2
 
 CONAN_BUILD_DIRS_MYPKG2 +=  \\
-_/path with spaces/
+/tmp2/
 
 CONAN_RES_DIRS_MYPKG2 +=  \\
 
@@ -456,25 +456,25 @@ EXPECTED_OUT_3 = textwrap.dedent("""
 #-------------------------------------------------------------------#
 
 CONAN_ROOT_MYPKG1 ?=  \\
-_/path with spaces
+/tmp1
 
 CONAN_SYSROOT_MYPKG1 ?=  \\
 
 
 CONAN_RPATHFLAGS_MYPKG1 +=  \\
--Wl,-rpath,"_/path with spaces/lib1"
+-Wl,-rpath,"/tmp1/lib1"
 
 CONAN_INCLUDE_DIRS_MYPKG1 +=  \\
-_/path with spaces/include1
+/tmp1/include1
 
 CONAN_LIB_DIRS_MYPKG1 +=  \\
-_/path with spaces/lib1
+/tmp1/lib1
 
 CONAN_BIN_DIRS_MYPKG1 +=  \\
-_/path with spaces/bin1
+/tmp1/bin1
 
 CONAN_BUILD_DIRS_MYPKG1 +=  \\
-_/path with spaces/
+/tmp1/
 
 CONAN_RES_DIRS_MYPKG1 +=  \\
 
@@ -504,28 +504,28 @@ CONAN_FRAMEWORKS_MYPKG1 +=  \\
 AudioUnit
 
 CONAN_FRAMEWORK_PATHS_MYPKG1 +=  \\
-_/path with spaces/SystemFrameworks
+/tmp1/SystemFrameworks
 
 CONAN_ROOT_MYPKG2 ?=  \\
-_/path with spaces
+/tmp2
 
 CONAN_SYSROOT_MYPKG2 ?=  \\
 
 
 CONAN_RPATHFLAGS_MYPKG2 +=  \\
--Wl,-rpath,"_/path with spaces/lib2"
+-Wl,-rpath,"/tmp2/lib2"
 
 CONAN_INCLUDE_DIRS_MYPKG2 +=  \\
-_/path with spaces/include2
+/tmp2/include2
 
 CONAN_LIB_DIRS_MYPKG2 +=  \\
-_/path with spaces/lib2
+/tmp2/lib2
 
 CONAN_BIN_DIRS_MYPKG2 +=  \\
-_/path with spaces/bin2
+/tmp2/bin2
 
 CONAN_BUILD_DIRS_MYPKG2 +=  \\
-_/path with spaces/
+/tmp2/
 
 CONAN_RES_DIRS_MYPKG2 +=  \\
 
@@ -710,5 +710,7 @@ class MakeGeneratorTest(unittest.TestCase):
         generator = MakeGenerator(conanfile)
         content = generator.content
         self.maxDiff = None
-        tmpdirpattern = re.compile(r"/tmp/[^/]*")
-        self.assertIn(re.sub(tmpdirpattern, "_", expected), re.sub(tmpdirpattern, "_", content))
+        sanitized_content = content\
+            .replace(tmp_folder1, "/tmp1")\
+            .replace(tmp_folder2, "/tmp2")
+        self.assertIn(expected, sanitized_content)

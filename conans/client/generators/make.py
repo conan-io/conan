@@ -1,7 +1,6 @@
 import textwrap
 
 from conans.client.build.compiler_flags import rpath_flags
-from conans.client.tools.oss import get_build_os_arch
 from conans.model import Generator
 from conans.paths import BUILD_INFO_MAKE
 
