@@ -232,8 +232,10 @@ class LinkOrderTest(unittest.TestCase):
         libs = []
         for it in content.splitlines():
             # This is for Linux and Mac
-            if 'main.cpp.o -o example' in it:
-                _, links = it.split("main.cpp.o -o example")
+            # Remove double spaces from output that appear in some platforms
+            line = ' '.join(it.split())
+            if 'main.cpp.o -o example' in line:
+                _, links = line.split("main.cpp.o -o example")
                 for it_lib in links.split():
                     if it_lib.startswith("-l"):
                         libs.append(it_lib[2:])
@@ -352,10 +354,8 @@ class LinkOrderTest(unittest.TestCase):
                           " -DCMAKE_BUILD_TYPE=Release".format(extra_cmake))
             extra_build = "--config Release" if platform.system() == "Windows" else ""  # Windows VS
             t.run_command("cmake --build . {}".format(extra_build), assert_error=True)
-            # Remove double spaces from output that appear in some platforms
-            str_out = ' '.join(str(t.out).split())
             # Get the actual link order from the CMake call
-            libs = self._get_link_order_from_cmake(str_out)
+            libs = self._get_link_order_from_cmake(str(t.out))
         return libs
 
     @parameterized.expand([(None,), ("Xcode",)])
