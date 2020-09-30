@@ -170,7 +170,7 @@ class Base(unittest.TestCase):
             build_directory = os.path.join(self.client.current_folder, "build").replace("\\", "/")
             command_str = 'DYLD_LIBRARY_PATH="%s" build/app' % build_directory
         else:
-            command_str = "build\\%s\\app.exe" % build_type if bin_folder else "build\\app"
+            command_str = "build/%s/app.exe" % build_type if bin_folder else "build/app"
             if platform.system() == "Windows":
                 command_str = command_str.replace("/", "\\")
         self.client.run_command(command_str)
