@@ -32,6 +32,7 @@ REMOTES = "remotes.json"
 PROFILES_FOLDER = "profiles"
 HOOKS_FOLDER = "hooks"
 TEMPLATES_FOLDER = "templates"
+GENERATORS_FOLDER = "generators"
 
 
 def is_case_insensitive_os():
@@ -168,6 +169,10 @@ class ClientCache(object):
         return join(self.cache_folder, CONAN_SETTINGS)
 
     @property
+    def generators_path(self):
+        return join(self.cache_folder, GENERATORS_FOLDER)
+
+    @property
     def default_profile_path(self):
         if os.path.isabs(self.config.default_profile):
             return self.config.default_profile
@@ -207,6 +212,17 @@ class ClientCache(object):
             if os.path.isfile(hook_name) and hook_name.endswith(".py"):
                 hooks.append(hook_name[:-3])
         return hooks
+
+    @property
+    def generators(self):
+        """Returns a list of generator paths inside the generators folder"""
+        generators = []
+        if os.path.exists(self.generators_path):
+            for path in os.listdir(self.generators_path):
+                generator = os.path.join(self.generators_path, path)
+                if os.path.isfile(generator) and generator.endswith(".py"):
+                    generators.append(generator)
+        return generators
 
     def delete_empty_dirs(self, deleted_refs):
         for ref in deleted_refs:

@@ -71,7 +71,9 @@ def compilervars_command(conanfile, arch=None, compiler_version=None, force=Fals
     cvars = "compilervars.bat" if system == "Windows" else "compilervars.sh"
     command = os.path.join(intel_installation_path(version=compiler_version, arch=arch), "bin", cvars)
     command = '"%s"' % command
-    if system != "Windows":
+    if system == "Windows":
+        command = "call " + command
+    else:
         command = ". " + command  # dot is more portable than source
     if arch == "x86_64":
         command += " -arch intel64"
