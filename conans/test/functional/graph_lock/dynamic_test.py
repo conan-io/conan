@@ -271,7 +271,7 @@ class GraphLockDynamicTest(unittest.TestCase):
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . LibA/1.0.1@")
 
-        # Go back to B, we want to develop but keep depending on LibA/1.0.0
+        # Go back to B, we want to develop but keep depending on LibA/1.0
         client.save({"conanfile.py": GenConanfile().with_require("LibA/[>=1.0]")})
         client.run("create . LibB/1.1@ --lockfile=libc.lock", assert_error=True)
         self.assertIn("Couldn't find 'LibB/1.1' in lockfile", client.out)
