@@ -331,6 +331,10 @@ class GraphLock(object):
         for n in self._nodes.values():
             n.relax()
 
+    @property
+    def relaxed(self):
+        return self._relaxed
+
     def clean_modified(self):
         for n in self._nodes.values():
             n.clean_modified()
@@ -474,15 +478,6 @@ class GraphLock(object):
             if current.prev is None:
                 current.prev = node.prev
 
-    def check_contained(self, other):
-        """ if lock create is provided a lockfile, it should be used, and it should contain it
-        otherwise, it was useless to pass it, and it is dangerous to continue, recommended to
-        create a fresh lockfile"""
-        other_root_id = other.root_node_id()
-        if other_root_id not in self._nodes:
-            raise ConanException("The provided lockfile was not used, there is no overlap. You "
-                                 "might want to create a fresh lockfile")
-
     def pre_lock_node(self, node):
         if node.recipe == RECIPE_VIRTUAL:
             return
@@ -497,6 +492,7 @@ class GraphLock(object):
         else:
             node.graph_lock_node = locked_node
             node.conanfile.options.values = locked_node.options
+            node.conanfile.options.freeze()
 
     def lock_node(self, node, requires, build_requires=False):
         """ apply options and constraints on requirements of a node, given the information from
