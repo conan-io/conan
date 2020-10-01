@@ -1424,7 +1424,9 @@ class Command(object):
                             help='json file path where the upload information will be written to')
         parser.add_argument("--parallel", action='store_true', default=False,
                             help='Upload files in parallel using multiple threads '
-                                 'The default number of launched threads is 8')
+                                 'The default number of launched threads is set to the value of ' 
+                                 'cpu_count and can be configured using the CONAN_CPU_COUNT '
+                                 'environment variable or defining cpu_count in conan.conf')
 
         args = parser.parse_args(*args)
 
