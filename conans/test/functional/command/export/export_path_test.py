@@ -34,7 +34,7 @@ class ExportPathTest(unittest.TestCase):
                          'CMakeLists.txt': '10d907c160c360b28f6991397a5aa9b4',
                          'conanfile.py': '355949fbf0b4fc32b8f1c5a338dfe1ae',
                          'executable': '68b329da9893e34099c7d8ad5cb9c940',
-                         'helloHello0.h': '9448df034392fc8781a47dd03ae71bdd'}
+                         'helloHello0.h': 'd0a6868b5df17a6ae6e61ebddb0c9eb3'}
         self.assertEqual(expected_sums, manif.file_sums)
 
     def test_rel_path(self):
@@ -62,7 +62,7 @@ class ExportPathTest(unittest.TestCase):
                          'CMakeLists.txt': '10d907c160c360b28f6991397a5aa9b4',
                          'conanfile.py': '355949fbf0b4fc32b8f1c5a338dfe1ae',
                          'executable': '68b329da9893e34099c7d8ad5cb9c940',
-                         'helloHello0.h': '9448df034392fc8781a47dd03ae71bdd'}
+                         'helloHello0.h': 'd0a6868b5df17a6ae6e61ebddb0c9eb3'}
         self.assertEqual(expected_sums, manif.file_sums)
 
     def test_path(self):
@@ -95,7 +95,7 @@ class ExportPathTest(unittest.TestCase):
                          'source/CMakeLists.txt': '10d907c160c360b28f6991397a5aa9b4',
                          'conanfile.py': '3ac566eb5b2e4df4417003f0e606e237',
                          'source/executable': '68b329da9893e34099c7d8ad5cb9c940',
-                         'source/helloHello0.h': '9448df034392fc8781a47dd03ae71bdd'}
+                         'source/helloHello0.h': 'd0a6868b5df17a6ae6e61ebddb0c9eb3'}
         self.assertEqual(expected_sums, manif.file_sums)
 
     def test_combined(self):
@@ -131,5 +131,5 @@ class ExportPathTest(unittest.TestCase):
                          'source/CMakeLists.txt': '10d907c160c360b28f6991397a5aa9b4',
                          'conanfile.py': '3ac566eb5b2e4df4417003f0e606e237',
                          'source/executable': '68b329da9893e34099c7d8ad5cb9c940',
-                         'source/helloHello0.h': '9448df034392fc8781a47dd03ae71bdd'}
+                         'source/helloHello0.h': 'd0a6868b5df17a6ae6e61ebddb0c9eb3'}
         self.assertEqual(expected_sums, manif.file_sums)
