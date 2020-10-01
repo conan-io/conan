@@ -145,7 +145,7 @@ class {name}Conan(ConanFile):
 
     def package(self):
         self.copy(pattern="*.h", dst="include", keep_path=False)
-        self.copy(pattern="*.lib", dst="lib", keep_path=False)
+        self.copy(pattern="*.lib", dst="lib", keep_path=False, excludes="*say*")
         self.copy(pattern="*lib*.a", dst="lib", keep_path=False)
         self.copy(pattern="*.dll", dst="bin", keep_path=False)
         self.copy(pattern="*.dylib", dst="lib", keep_path=False)
