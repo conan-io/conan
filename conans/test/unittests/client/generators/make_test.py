@@ -656,12 +656,12 @@ CONAN_BASIC_SETUP = \\
 
 
 class MakeGeneratorTest(unittest.TestCase):
-    @unittest.skipUnless(platform.system() in ["Linux", "Macos"], "Requires make")
     @parameterized.expand([
         ("gcc", "Linux", False, EXPECTED_OUT_1),
         ("gcc", "Linux", True, EXPECTED_OUT_2),
         ("gcc", "Macos", False, EXPECTED_OUT_3),
     ])
+    @unittest.skipUnless(platform.system() in ["Linux", "Macos"], "Requires make")
     def variables_setup_test(self, compiler_, os_, shared_, expected):
         tmp_folder1 = temp_folder()
         tmp_folder2 = temp_folder()
