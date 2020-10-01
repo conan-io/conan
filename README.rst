@@ -119,7 +119,7 @@ Using tox
 
     $ python -m tox
 
-It will install the needed requirements and launch `nose` skipping some heavy and slow tests.
+It will install the needed requirements and launch the `nose` skipping some heavy and slow tests.
 If you want to run the full test suite:
 
 .. code-block:: bash
@@ -226,7 +226,7 @@ variables could take the values:
     $ export ARTIFACTORY_DEFAULT_USER=admin
     $ export ARTIFACTORY_DEFAULT_PASSWORD=password
 
-``ARTIFACTORY_DEFAULT_URL`` is the base url for the Artifactory repo, not one for an specific
+``ARTIFACTORY_DEFAULT_URL`` is the base url for the Artifactory repo, not one for a specific
 repository. Running the tests with a real Artifactory instance will create repos on the fly so please
 use a separate server for testing purposes.
 
