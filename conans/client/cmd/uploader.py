@@ -217,7 +217,7 @@ class CmdUpload(object):
                                      integrity_check, policy, remote, upload_recorder, remotes)
                 except BaseException as base_exception:
                     base_trace = traceback.format_exc()
-                    self._exceptions_list.append((base_exception, _ref, base_trace))
+                    self._exceptions_list.append((base_exception, _ref, base_trace, remote))
 
             self._upload_thread_pool.map(upload_ref,
                                          [(ref, conanfile, prefs) for (ref, conanfile, prefs) in
@@ -227,7 +227,7 @@ class CmdUpload(object):
         self._upload_thread_pool.join()
 
         if len(self._exceptions_list) > 0:
-            for exc, ref, trace in self._exceptions_list:
+            for exc, ref, trace, remote in self._exceptions_list:
                 t = "recipe" if isinstance(ref, ConanFileReference) else "package"
                 msg = "%s: Upload %s to '%s' failed: %s\n" % (str(ref), t, remote.name, str(exc))
                 if get_env("CONAN_VERBOSE_TRACEBACK", False):
@@ -268,7 +268,7 @@ class CmdUpload(object):
                     upload_recorder.add_package(pref, p_remote.name, p_remote.url)
                 except BaseException as pkg_exc:
                     trace = traceback.format_exc()
-                    return pkg_exc, pref, trace
+                    return pkg_exc, pref, trace, p_remote
 
             def upload_package_callback(ret):
                 package_exceptions = [r for r in ret if r is not None]
