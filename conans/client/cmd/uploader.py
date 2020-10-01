@@ -223,16 +223,17 @@ class CmdUpload(object):
                                          [(ref, conanfile, prefs) for (ref, conanfile, prefs) in
                                           refs])
 
-            if len(self._exceptions_list) > 0:
-                for exc, ref, trace in self._exceptions_list:
-                    t = "recipe" if isinstance(ref, ConanFileReference) else "package"
-                    msg = "%s: Upload %s to '%s' failed: %s\n" % (str(ref), t, remote.name, str(exc))
-                    if get_env("CONAN_VERBOSE_TRACEBACK", False):
-                        msg += trace
-                    self._output.error(msg)
-                raise ConanException("Errors uploading some packages")
         self._upload_thread_pool.close()
         self._upload_thread_pool.join()
+
+        if len(self._exceptions_list) > 0:
+            for exc, ref, trace in self._exceptions_list:
+                t = "recipe" if isinstance(ref, ConanFileReference) else "package"
+                msg = "%s: Upload %s to '%s' failed: %s\n" % (str(ref), t, remote.name, str(exc))
+                if get_env("CONAN_VERBOSE_TRACEBACK", False):
+                    msg += trace
+                self._output.error(msg)
+            raise ConanException("Errors uploading some packages")
 
         logger.debug("UPLOAD: Time manager upload: %f" % (time.time() - t1))
 
