@@ -21,6 +21,7 @@ from conans.util.files import (load, clean_dirty, is_dirty,
                                gzopen_without_timestamps, set_dirty_context_manager)
 from conans.util.log import logger
 from conans.util.tracer import log_recipe_upload, log_compressed_files, log_package_upload
+from conans.tools import cpu_count
 
 
 UPLOAD_POLICY_FORCE = "force-upload"
@@ -201,12 +202,12 @@ class CmdUpload(object):
                                            all_packages, query)
 
         if parallel_upload:
-            self._upload_thread_pool = ThreadPool(8)
             self._user_io.disable_input()
-        else:
-            self._upload_thread_pool = ThreadPool(1)
+        self._upload_thread_pool = ThreadPool(
+            cpu_count() if parallel_upload else 1)
 
         for remote, refs in refs_by_remote.items():
+
             self._output.info("Uploading to remote '{}':".format(remote.name))
 
             def upload_ref(ref_conanfile_prefs):
@@ -221,17 +222,18 @@ class CmdUpload(object):
             self._upload_thread_pool.map(upload_ref,
                                          [(ref, conanfile, prefs) for (ref, conanfile, prefs) in
                                           refs])
-            self._upload_thread_pool.close()
-            self._upload_thread_pool.join()
 
-            if len(self._exceptions_list) > 0:
-                for exc, ref, trace in self._exceptions_list:
-                    t = "recipe" if isinstance(ref, ConanFileReference) else "package"
-                    msg = "%s: Upload %s to '%s' failed: %s\n" % (str(ref), t, remote.name, str(exc))
-                    if get_env("CONAN_VERBOSE_TRACEBACK", False):
-                        msg += trace
-                    self._output.error(msg)
-                raise ConanException("Errors uploading some packages")
+        self._upload_thread_pool.close()
+        self._upload_thread_pool.join()
+
+        if len(self._exceptions_list) > 0:
+            for exc, ref, trace in self._exceptions_list:
+                t = "recipe" if isinstance(ref, ConanFileReference) else "package"
+                msg = "%s: Upload %s to '%s' failed: %s\n" % (str(ref), t, remote.name, str(exc))
+                if get_env("CONAN_VERBOSE_TRACEBACK", False):
+                    msg += trace
+                self._output.error(msg)
+            raise ConanException("Errors uploading some packages")
 
         logger.debug("UPLOAD: Time manager upload: %f" % (time.time() - t1))
 
