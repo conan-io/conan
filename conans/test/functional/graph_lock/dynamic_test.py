@@ -2,6 +2,7 @@ import json
 import textwrap
 import unittest
 
+from conans.client.tools.env import environment_append
 from conans.test.utils.tools import TestClient, GenConanfile
 
 
@@ -257,6 +258,27 @@ class GraphLockDynamicTest(unittest.TestCase):
         else:
             self.assertEqual(dep["ref"], "dep/0.1")
             self.assertEqual(dep["prev"], "0")
+
+    def conditional_env_var_test(self):
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . dep/1.0@")
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            import os
+            class Pkg(ConanFile):
+                def requirements(self):
+                    if os.getenv("USE_DEP"):
+                        self.requires("dep/1.0")
+            """)
+        client.save({"conanfile.py": conanfile})
+        with environment_append({"USE_DEP": "1"}):
+            client.run("lock create conanfile.py --name=pkg --version=1.0")
+        lock = client.load("conan.lock")
+        self.assertIn("dep/1.0", lock)
+
+        client.run("create . pkg/1.0@ --lockfile=conan.lock", assert_error=True)
+        self.assertIn("ERROR: 'pkg/1.0' locked requirement 'dep/1.0' not found", client.out)
 
     def partial_intermediate_package_lock_test(self):
         client = TestClient()
