@@ -540,6 +540,22 @@ class GraphLock(object):
                     raise ConanException("'%s' locked requirement '%s' not found"
                                          % (str(node.ref), str(req_node.ref)))
 
+    def check_locked_build_requires(self, node, package_build_requires, profile_build_requires):
+        if self._relaxed:
+            return
+        locked_node = node.graph_lock_node
+        locked_requires = locked_node.build_requires
+        if not locked_requires:
+            return
+        package_br = [r for r, _ in package_build_requires]
+        profile_br = [r.name for r, _ in profile_build_requires]
+        declared_requires = set(package_br + profile_br)
+        for require in locked_requires:
+            req_node = self._nodes[require]
+            if req_node.ref.name not in declared_requires:
+                raise ConanException("'%s' locked requirement '%s' not found"
+                                     % (str(node.ref), str(req_node.ref)))
+
     def python_requires(self, node_id):
         if node_id is None and self._relaxed:
             return None
