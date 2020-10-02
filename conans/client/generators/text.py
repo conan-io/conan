@@ -142,7 +142,10 @@ class TXTGenerator(Generator):
 
             # Build the data structures
             def _relativize_path(p, _rootpath):
-                return p if os.path.isabs(p) else os.path.relpath(p, _rootpath)
+                try:
+                    return os.path.relpath(p, _rootpath)
+                except ValueError:
+                    return p
 
             def _populate_cpp_info(_cpp_info, _data, _rootpath):
                 for key, value in _data.items():
