@@ -14,7 +14,7 @@ from conans.util.runners import pyinstaller_bundle_env_cleaned
 
 class _UnbufferedWrite(object):
     def __init__(self, stream):
-        self._stream = stream._stream
+        self._stream = stream._stream if hasattr(stream, "_stream") else stream
 
     def write(self, *args, **kwargs):
         self._stream.write(*args, **kwargs)
