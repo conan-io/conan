@@ -24,8 +24,8 @@ class AbsPathsTestCase(unittest.TestCase):
 
         master_content = TXTGenerator(conanfile).content
         after_cpp_info, _, _, _ = TXTGenerator.loads(master_content, filter_empty=False)
-        self.assertListEqual(after_cpp_info[ref.name].includedirs, ["/an/absolute/dir"])
-        self.assertListEqual(after_cpp_info[ref.name].include_paths, ["/an/absolute/dir"])
+        self.assertListEqual(after_cpp_info[ref.name].includedirs, ["../an/absolute/dir"])
+        self.assertListEqual(after_cpp_info[ref.name].include_paths, ["/rootdir/../an/absolute/dir"])
 
     @unittest.skipUnless(platform.system() == "Windows", "Uses windows-like paths")
     def test_absolute_directory(self):
