@@ -141,10 +141,13 @@ class TXTGenerator(Generator):
                 data[dep][config][field] = lines
 
             # Build the data structures
+            def _relativize_path(p, _rootpath):
+                return p if os.path.isabs(p) else os.path.relpath(p, _rootpath)
+
             def _populate_cpp_info(_cpp_info, _data, _rootpath):
                 for key, value in _data.items():
                     if key.endswith('dirs'):
-                        value = [os.path.relpath(it, _rootpath) for it in value]
+                        value = [_relativize_path(it, _rootpath) for it in value]
                         value = ['' if it == '.' else it for it in value]
                     setattr(_cpp_info, key, value)
 
