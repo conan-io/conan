@@ -226,7 +226,7 @@ myapp_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
 class WinTest(unittest.TestCase):
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile, MSBuildToolchain
+        from conans import ConanFile, MSBuildToolchain, MSBuildCmd
         class App(ConanFile):
             settings = "os", "arch", "compiler", "build_type"
             requires = "hello/0.1"
@@ -241,6 +241,10 @@ class WinTest(unittest.TestCase):
                 else:
                     tc.preprocessor_definitions["DEFINITIONS_CONFIG"] = "Release"
                 tc.write_toolchain_files()
+
+            def build(self):
+                msbuild = MSBuildCmd(self, "MyProject.sln")
+                msbuild.build()
         """)
 
     app = textwrap.dedent("""
@@ -328,12 +332,17 @@ class WinTest(unittest.TestCase):
                       "conan_toolchain_release_win32_v141.props", client.out)
         vs_path = vs_installation_path("15")
         vcvars_path = os.path.join(vs_path, "VC/Auxiliary/Build/vcvarsall.bat")
+        print(vcvars_path)
+        msbuild_path = os.path.join(vs_path, "MSBuild/15.0/Bin")
 
         cmd = ('set "VSCMD_START_DIR=%%CD%%" && '
                '"%s" x86 && msbuild "MyProject.sln" /p:Configuration=Release' % vcvars_path)
+        cmd = ('"%s/msbuild" "MyProject.sln" /p:Configuration=Release /p:Platform=x86' % msbuild_path)
         client.run_command(cmd)
-        self.assertIn("Visual Studio 2017", client.out)
-        self.assertIn("[vcvarsall.bat] Environment initialized for: 'x86'", client.out)
+        self.assertIn("2017", client.out)
+        self.assertIn("x86", client.out)
+        #self.assertIn("Visual Studio 2017", client.out)
+        #self.assertIn("[vcvarsall.bat] Environment initialized for: 'x86'", client.out)
         self._run_app(client, "x86", "Release")
         self.assertIn("AppMSCVER 17!!", client.out)
         self.assertIn("AppCppStd 17!!!", client.out)
@@ -378,9 +387,15 @@ class WinTest(unittest.TestCase):
                '"%s" x64 && '
                'msbuild "MyProject.sln" /p:Configuration=Debug /p:PlatformToolset="v140"'
                % vcvars_path)
+        msbuild_path = os.path.join(vs_path, "MSBuild/15.0/Bin")
+        cmd = ('"%s/msbuild" "MyProject.sln" /p:Configuration=Debug /p:PlatformToolset="v140"'
+               % msbuild_path)
+
         client.run_command(cmd)
-        self.assertIn("Visual Studio 2017", client.out)
-        self.assertIn("[vcvarsall.bat] Environment initialized for: 'x64'", client.out)
+        self.assertIn("2017", client.out)
+        self.assertIn("x64", client.out)
+        # self.assertIn("Visual Studio 2017", client.out)
+        # self.assertIn("[vcvarsall.bat] Environment initialized for: 'x64'", client.out)
         self._run_app(client, "x64", "Debug")
         self.assertIn("AppMSCVER 15!!", client.out)
         self.assertIn("AppCppStd 14!!!", client.out)

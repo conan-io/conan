@@ -2,9 +2,32 @@ import os
 import textwrap
 from xml.dom import minidom
 
+from conans.client.toolchain.visual import vcvars_arch, vcvars_command
 from conans.client.tools import msvs_toolset
 from conans.errors import ConanException
 from conans.util.files import save, load
+
+
+class MSBuildCmd(object):
+    def __init__(self, conanfile, sln):
+        self._sln = sln
+        self._conanfile = conanfile
+        self.version = conanfile.settings.get_safe("compiler.version")
+        self.vcvars_arch = vcvars_arch(conanfile)
+        self.build_type = conanfile.settings.get_safe("build_type")
+
+    def command(self):
+        vcvars = vcvars_command(self.version, architecture=self.vcvars_arch,
+                                platform_type=None, winsdk_version=None,
+                                vcvars_ver=None)
+
+        cmd = ('%s && msbuild "%s" /p:Configuration=%s /p:Platform=%s '
+               % (vcvars, self._sln, self.build_type, platform_arch))
+        return cmd
+
+    def build(self):
+        cmd = self.command()
+        self._conanfile.run(cmd)
 
 
 class MSBuildToolchain(object):
