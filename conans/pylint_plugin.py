@@ -3,6 +3,8 @@ import astroid
 from astroid import MANAGER
 
 
+#happy coding
+
 def register(linter):
     """Declare package as plugin
 
