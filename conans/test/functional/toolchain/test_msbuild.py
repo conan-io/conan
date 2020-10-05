@@ -3,7 +3,7 @@ import platform
 import textwrap
 import unittest
 
-
+from conans.client.toolchain.visual import vcvars_command
 from conans.client.tools import vs_installation_path
 from conans.test.utils.tools import TestClient
 
@@ -330,25 +330,15 @@ class WinTest(unittest.TestCase):
         client.run("install . %s -if=conan" % (settings, ))
         self.assertIn("conanfile.py: MSBuildToolchain created "
                       "conan_toolchain_release_win32_v141.props", client.out)
-        vs_path = vs_installation_path("15")
-        vcvars_path = os.path.join(vs_path, "VC/Auxiliary/Build/vcvarsall.bat")
-        print(vcvars_path)
-        msbuild_path = os.path.join(vs_path, "MSBuild/15.0/Bin")
-
-        cmd = ('set "VSCMD_START_DIR=%%CD%%" && '
-               '"%s" x86 && msbuild "MyProject.sln" /p:Configuration=Release' % vcvars_path)
-        cmd = ('"%s/msbuild" "MyProject.sln" /p:Configuration=Release /p:Platform=x86' % msbuild_path)
-        client.run_command(cmd)
-        self.assertIn("2017", client.out)
-        self.assertIn("x86", client.out)
-        #self.assertIn("Visual Studio 2017", client.out)
-        #self.assertIn("[vcvarsall.bat] Environment initialized for: 'x86'", client.out)
+        client.run("build . -if=conan")
+        self.assertIn("Visual Studio 2017", client.out)
+        self.assertIn("[vcvarsall.bat] Environment initialized for: 'x86'", client.out)
         self._run_app(client, "x86", "Release")
         self.assertIn("AppMSCVER 17!!", client.out)
         self.assertIn("AppCppStd 17!!!", client.out)
 
-        cmd = ('set "VSCMD_START_DIR=%%CD%%" && '
-               '"%s" x86 && dumpbin /dependents "Release\\MyApp.exe"' % vcvars_path)
+        vcvars = vcvars_command(version="15", architecture="x86")
+        cmd = ('%s && dumpbin /dependents "Release\\MyApp.exe"' % vcvars)
         client.run_command(cmd)
         # No other DLLs dependencies rather than kernel, it was MT, statically linked
         self.assertIn("KERNEL32.dll", client.out)
@@ -378,30 +368,17 @@ class WinTest(unittest.TestCase):
 
         # Run the configure corresponding to this test case
         client.run("install . %s -if=conan" % (settings, ))
-        self.assertIn("conanfile.py: MSBuildToolchain created conan_toolchain_debug_x64_v140.props",
+        self.assertIn("conanfile.py: MSBuildToolchain created conan_toolchain_debug_x64.props",
                       client.out)
-        vs_path = vs_installation_path("15")
-        vcvars_path = os.path.join(vs_path, "VC/Auxiliary/Build/vcvarsall.bat")
-
-        cmd = ('set "VSCMD_START_DIR=%%CD%%" && '
-               '"%s" x64 && '
-               'msbuild "MyProject.sln" /p:Configuration=Debug /p:PlatformToolset="v140"'
-               % vcvars_path)
-        msbuild_path = os.path.join(vs_path, "MSBuild/15.0/Bin")
-        cmd = ('"%s/msbuild" "MyProject.sln" /p:Configuration=Debug /p:PlatformToolset="v140"'
-               % msbuild_path)
-
-        client.run_command(cmd)
-        self.assertIn("2017", client.out)
-        self.assertIn("x64", client.out)
-        # self.assertIn("Visual Studio 2017", client.out)
-        # self.assertIn("[vcvarsall.bat] Environment initialized for: 'x64'", client.out)
+        client.run("build . -if=conan")
+        self.assertIn("Visual Studio 2017", client.out)
+        self.assertIn("[vcvarsall.bat] Environment initialized for: 'x64'", client.out)
         self._run_app(client, "x64", "Debug")
         self.assertIn("AppMSCVER 15!!", client.out)
         self.assertIn("AppCppStd 14!!!", client.out)
 
-        cmd = ('set "VSCMD_START_DIR=%%CD%%" && '
-               '"%s" x64 && dumpbin /dependents "x64\\Debug\\MyApp.exe"' % vcvars_path)
+        vcvars = vcvars_command(version="15", architecture="x86_64")
+        cmd = ('%s && dumpbin /dependents "x64\\Debug\\MyApp.exe"' % vcvars)
         client.run_command(cmd)
         self.assertIn("MSVCP140D.dll", client.out)
         self.assertIn("VCRUNTIME140D.dll", client.out)

@@ -25,7 +25,8 @@ def vcvars_command(version, architecture=None, platform_type=None, winsdk_versio
     if start_dir_cd:
         cmd.append('set "VSCMD_START_DIR=%%CD%%" &&')
 
-    cmd.append('"%s" ' % vcvars_path(version))
+    # The "call" is useful in case it is called from another .bat script
+    cmd.append('call "%s" ' % vcvars_path(version))
     if architecture:
         cmd.append(architecture)
     if platform_type:
@@ -50,8 +51,8 @@ def vcvars_arch(conanfile):
     except AttributeError:
         settings_build = settings_host
 
-    arch_host = settings_host.arch
-    arch_build = settings_build.arch
+    arch_host = str(settings_host.arch)
+    arch_build = str(settings_build.arch)
 
     arch = None
     if arch_build == 'x86_64':
