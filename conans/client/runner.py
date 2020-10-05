@@ -14,7 +14,7 @@ from conans.util.runners import pyinstaller_bundle_env_cleaned
 
 class _UnbufferedWrite(object):
     def __init__(self, stream):
-        self._stream = stream
+        self._stream = stream._stream if hasattr(stream, "_stream") else stream
 
     def write(self, *args, **kwargs):
         self._stream.write(*args, **kwargs)
@@ -43,7 +43,7 @@ class ConanRunner(object):
                   "use six.StringIO() instead ***")
 
         stream_output = output if output and hasattr(output, "write") else self._output or sys.stdout
-        if hasattr(output, "flush"):
+        if hasattr(stream_output, "flush"):
             # We do not want output from different streams to get mixed (sys.stdout, os.system)
             stream_output = _UnbufferedWrite(stream_output)
 

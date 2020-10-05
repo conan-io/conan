@@ -1,4 +1,5 @@
 import os
+import textwrap
 import unittest
 
 import six
@@ -180,3 +181,15 @@ class ConanFileToolsTest(ConanFile):
         client.run("build .", assert_error=True)
         self.assertIn("Error while executing 'mkdir test_folder'", client.out)
         self.assertFalse(os.path.exists(test_folder))
+
+    def runner_capture_output_test(self):
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class Pkg(ConanFile):
+                def source(self):
+                    self.run("echo 'hello Conan!'")
+        """)
+        client = TestClient()
+        client.save({"conanfile.py": conanfile})
+        client.run("source .")
+        self.assertIn("hello Conan!", client.out)

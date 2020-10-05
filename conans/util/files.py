@@ -127,7 +127,10 @@ def normalize(text):
 
 
 def md5(content):
-    md5alg = hashlib.md5()
+    try:
+        md5alg = hashlib.md5()
+    except ValueError:  # FIPS error https://github.com/conan-io/conan/issues/7800
+        md5alg = hashlib.md5(usedforsecurity=False)
     if isinstance(content, bytes):
         tmp = content
     else:
@@ -151,7 +154,10 @@ def sha256sum(file_path):
 def _generic_algorithm_sum(file_path, algorithm_name):
 
     with open(file_path, 'rb') as fh:
-        m = hashlib.new(algorithm_name)
+        try:
+            m = hashlib.new(algorithm_name)
+        except ValueError:  # FIPS error https://github.com/conan-io/conan/issues/7800
+            m = hashlib.new(algorithm_name, usedforsecurity=False)
         while True:
             data = fh.read(8192)
             if not data:
