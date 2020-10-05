@@ -147,6 +147,7 @@ class DeployGeneratorSymbolicLinkTest(unittest.TestCase):
     def setUp(self):
         conanfile = GenConanfile()
         conanfile.with_package_file("include/header.h", "whatever", link="include/header.h.lnk")
+        conanfile.with_package_folder("one_folder", link="other_folder")
         self.ref = ConanFileReference("name", "version", "user", "channel")
 
         self.client = TurboTestClient()
@@ -166,6 +167,14 @@ class DeployGeneratorSymbolicLinkTest(unittest.TestCase):
         self.assertFalse(os.path.islink(header_path))
         linkto = os.path.join(os.path.dirname(link_path), os.readlink(link_path))
         self.assertEqual(linkto, header_path)
+
+        folder_path = os.path.join(base_path, "one_folder")
+        link_folder_path = os.path.join(base_path, "other_folder")
+        self.assertTrue(os.path.islink(link_folder_path))
+        self.assertFalse(os.path.islink(folder_path))
+        linkto_folder = os.path.join(os.path.dirname(link_folder_path),
+                                     os.readlink(link_folder_path))
+        self.assertEqual(linkto_folder, folder_path)
 
     def test_existing_link_symbolic_links(self):
         self.client.current_folder = temp_folder()
