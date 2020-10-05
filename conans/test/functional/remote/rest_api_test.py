@@ -117,7 +117,7 @@ class RestApiTest(unittest.TestCase):
 
         # Get the conans digest
         digest = self.api.get_recipe_manifest(ref)
-        self.assertEqual(digest.summary_hash, "e925757129f5c49ecb2e8c84ce17e294")
+        self.assertEqual(digest.summary_hash, "0acb2be9768f174f223c81568da74fbe")
         self.assertEqual(digest.time, 123123123)
 
     def get_package_test(self):
