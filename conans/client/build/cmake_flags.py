@@ -212,7 +212,7 @@ class CMakeDefinitionsBuilder(object):
                                                             "Neutrino": "QNX"}.get(os_, os_)
                     else:
                         definitions["CMAKE_SYSTEM_NAME"] = "Generic"
-                elif os_ == "Linux":
+                elif not os_:
                     # Host and build OS are the same. Difference is architecture. Only case
                     # that should set CMAKE_SYSTEM_NAME is Linux
                     definitions["CMAKE_SYSTEM_NAME"] = "Generic"
