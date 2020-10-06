@@ -104,14 +104,15 @@ myapp_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
+  <!-- Very IMPORTANT this should go BEFORE the Microsoft.Cpp.props -->
+  <ImportGroup Label="PropertySheets">
+    <Import Project="..\conan\conan_Hello.props" />
+    <Import Project="..\conan\conan_toolchain.props" />
+  </ImportGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
   </ImportGroup>
   <ImportGroup Label="Shared">
-  </ImportGroup>
-  <ImportGroup Label="PropertySheets">
-    <Import Project="..\conan\conan_Hello.props" />
-    <Import Project="..\conan\conan_toolchain.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props"
@@ -328,8 +329,8 @@ class WinTest(unittest.TestCase):
 
         # Run the configure corresponding to this test case
         client.run("install . %s -if=conan" % (settings, ))
-        self.assertIn("conanfile.py: MSBuildToolchain created "
-                      "conan_toolchain_release_win32_v141.props", client.out)
+        #self.assertIn("conanfile.py: MSBuildToolchain created "
+        #              "conan_toolchain_release_win32_v141.props", client.out)
         client.run("build . -if=conan")
         self.assertIn("Visual Studio 2017", client.out)
         self.assertIn("[vcvarsall.bat] Environment initialized for: 'x86'", client.out)
@@ -368,6 +369,7 @@ class WinTest(unittest.TestCase):
 
         # Run the configure corresponding to this test case
         client.run("install . %s -if=conan" % (settings, ))
+        print(client.current_folder)
         self.assertIn("conanfile.py: MSBuildToolchain created conan_toolchain_debug_x64.props",
                       client.out)
         client.run("build . -if=conan")
@@ -377,7 +379,7 @@ class WinTest(unittest.TestCase):
         self.assertIn("AppMSCVER 15!!", client.out)
         self.assertIn("AppCppStd 14!!!", client.out)
 
-        vcvars = vcvars_command(version="15", architecture="x86_64")
+        vcvars = vcvars_command(version="15", architecture="amd64")
         cmd = ('%s && dumpbin /dependents "x64\\Debug\\MyApp.exe"' % vcvars)
         client.run_command(cmd)
         self.assertIn("MSVCP140D.dll", client.out)

@@ -77,7 +77,7 @@ class MSBuildGenerator(Generator):
                  # FIXME: This probably requires mapping ARM architectures
                  ("Platform", {'x86': 'Win32',
                                'x86_64': 'x64'}.get(settings.get_safe("arch"))),
-                 ("PlatformToolset", toolset)]
+                 ("PlatformToolset", None)]
 
         name = "".join("_%s" % v for _, v in props if v is not None)
         condition = " And ".join("'$(%s)' == '%s'" % (k, v) for k, v in props if v is not None)
