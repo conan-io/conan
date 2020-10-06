@@ -57,7 +57,7 @@ def intel_installation_path(version, arch):
     return installation_path
 
 
-def compilervars_command(conanfile, arch=None, compiler_version=None, force=False):
+def intel_compilervars_command(conanfile, arch=None, compiler_version=None, force=False):
     """
     https://software.intel.com/en-us/intel-system-studio-cplusplus-compiler-user-and-reference-guide-using-compilervars-file
     :return:
@@ -103,13 +103,13 @@ def compilervars_command(conanfile, arch=None, compiler_version=None, force=Fals
     return command
 
 
-def compilervars_dict(conanfile, arch=None, compiler_version=None, force=False, only_diff=True):
-    cmd = compilervars_command(conanfile, arch, compiler_version, force)
+def intel_compilervars_dict(conanfile, arch=None, compiler_version=None, force=False, only_diff=True):
+    cmd = intel_compilervars_command(conanfile, arch, compiler_version, force)
     return env_diff(cmd, only_diff)
 
 
 @contextmanager
-def compilervars(*args, **kwargs):
-    new_env = compilervars_dict(*args, **kwargs)
+def intel_compilervars(*args, **kwargs):
+    new_env = intel_compilervars_dict(*args, **kwargs)
     with environment_append(new_env):
         yield
