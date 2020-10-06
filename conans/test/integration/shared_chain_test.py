@@ -17,8 +17,7 @@ class SharedChainTest(unittest.TestCase):
 
     def _export_upload(self, name, version=None, deps=None):
         conan = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
-        dll_export = conan.default_compiler_visual_studio
-        files = cpp_hello_conan_files(name, version, deps, static=False, dll_export=dll_export)
+        files = cpp_hello_conan_files(name, version, deps, static=False)
         conan.save(files)
 
         conan.run("create . lasote/stable")
