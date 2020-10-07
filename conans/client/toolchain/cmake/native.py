@@ -4,12 +4,13 @@ from collections import OrderedDict, defaultdict
 
 from jinja2 import Template
 
-from conans.client.build.cmake_flags import get_generator, get_generator_platform,  get_toolset, \
+from conans.client.build.cmake_flags import get_generator, get_generator_platform, get_toolset, \
     is_multi_configuration
 from conans.client.build.compiler_flags import architecture_flag
 from conans.client.tools import cpu_count
 from conans.errors import ConanException
 from conans.util.files import save
+from .base import CMakeToolchainBase
 
 
 # https://stackoverflow.com/questions/30503631/cmake-in-which-order-are-files-parsed-cache-toolchain-etc
@@ -40,9 +41,7 @@ class Variables(OrderedDict):
         return ret
 
 
-class CMakeToolchain(object):
-    filename = "conan_toolchain.cmake"
-
+class CMakeNativeToolchain(CMakeToolchainBase):
     _template_toolchain = textwrap.dedent("""
         # Conan automatically generated toolchain file
         # DO NOT EDIT MANUALLY, it will be overwritten
@@ -239,7 +238,7 @@ class CMakeToolchain(object):
 
     def __init__(self, conanfile, generator=None, generator_platform=None, build_type=None,
                  toolset=None, parallel=True):
-        self._conanfile = conanfile
+        super(CMakeNativeToolchain, self).__init__(conanfile)
 
         self.fpic = self._deduce_fpic()
         self.vs_static_runtime = self._deduce_vs_static_runtime()
@@ -306,7 +305,7 @@ class CMakeToolchain(object):
     def _deduce_vs_static_runtime(self):
         settings = self._conanfile.settings
         if (settings.get_safe("compiler") == "Visual Studio" and
-                "MT" in settings.get_safe("compiler.runtime")):
+            "MT" in settings.get_safe("compiler.runtime")):
             return True
         return False
 
