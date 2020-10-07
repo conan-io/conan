@@ -13,7 +13,7 @@ from conans.client import tools
 from conans.client.build.cmake import CMake
 from conans.client.build.cmake_flags import cmake_in_local_cache_var_name
 from conans.client.conf import get_default_settings_yml
-from conans.client.tools.oss import cpu_count
+from conans.client.tools.oss import cpu_count, detected_architecture
 from conans.errors import ConanException
 from conans.model.build_info import CppInfo, DepsCppInfo
 from conans.model.ref import ConanFileReference
@@ -461,8 +461,7 @@ class CMakeTest(unittest.TestCase):
         conanfile.build_folder = os.path.join(self.tempdir, "my_cache_build_folder")
         with tools.chdir(self.tempdir):
             linux_stuff = '-DCMAKE_SYSTEM_NAME="Linux" ' \
-                          '-DCMAKE_SYSROOT="/path/to/sysroot" ' \
-                          if platform.system() != "Linux" else ""
+                          '-DCMAKE_SYSROOT="/path/to/sysroot" '
             generator = "MinGW Makefiles" if platform.system() == "Windows" else "Unix Makefiles"
 
             flags = '{} -DCONAN_COMPILER="gcc" ' \
@@ -629,12 +628,13 @@ class CMakeTest(unittest.TestCase):
 
         def check(text, build_config, generator=None, set_cmake_flags=False):
             the_os = str(settings.os)
+            arch = str(settings.arch)
             os_ver = str(settings.os.version) if settings.get_safe('os.version') else None
             for cmake_system_name in (True, False):
                 cross_ver = ("-DCMAKE_SYSTEM_VERSION=\"%s\" " % os_ver) if os_ver else ""
                 cross = ("-DCMAKE_SYSTEM_NAME=\"%s\" %s-DCMAKE_SYSROOT=\"/path/to/sysroot\" "
                          % ({"Macos": "Darwin"}.get(the_os, the_os), cross_ver)
-                         if (platform.system() != the_os and cmake_system_name) else "")
+                         if ((platform.system() != the_os or arch != detected_architecture()) and cmake_system_name) else "")
                 cmake = CMake(conanfile, generator=generator, cmake_system_name=cmake_system_name,
                               set_cmake_flags=set_cmake_flags)
                 new_text = text.replace("-DCONAN_IN_LOCAL_CACHE", "%s-DCONAN_IN_LOCAL_CACHE" % cross)
@@ -643,7 +643,6 @@ class CMakeTest(unittest.TestCase):
                              '-DCONAN_C_FLAGS="/MP{0}" '.format(tools.cpu_count(conanfile.output)))
                     new_text = new_text.replace('-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON"',
                                                 '%s-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON"' % cores)
-
                 self.assertEqual(new_text, cmake.command_line)
                 self.assertEqual(build_config, cmake.build_config)
 
