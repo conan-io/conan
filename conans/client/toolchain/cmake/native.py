@@ -1,5 +1,4 @@
 import textwrap
-from collections import OrderedDict, defaultdict
 
 from conans.client.build.cmake_flags import get_generator, get_generator_platform, get_toolset, \
     is_multi_configuration
@@ -12,29 +11,6 @@ from .base import CMakeToolchainBase
 # https://stackoverflow.com/questions/30503631/cmake-in-which-order-are-files-parsed-cache-toolchain-etc
 # https://cmake.org/cmake/help/v3.6/manual/cmake-toolchains.7.html
 # https://github.com/microsoft/vcpkg/tree/master/scripts/buildsystems
-
-
-class Variables(OrderedDict):
-    _configuration_types = None  # Needed for py27 to avoid infinite recursion
-
-    def __init__(self):
-        super(Variables, self).__init__()
-        self._configuration_types = {}
-
-    def __getattribute__(self, config):
-        try:
-            return super(Variables, self).__getattribute__(config)
-        except AttributeError:
-            return self._configuration_types.setdefault(config, dict())
-
-    @property
-    def configuration_types(self):
-        # Reverse index for the configuration_types variables
-        ret = defaultdict(list)
-        for conf, definitions in self._configuration_types.items():
-            for k, v in definitions.items():
-                ret[k].append((conf, v))
-        return ret
 
 
 class CMakeNativeToolchain(CMakeToolchainBase):
@@ -240,22 +216,11 @@ class CMakeNativeToolchain(CMakeToolchainBase):
         self.vs_static_runtime = self._deduce_vs_static_runtime()
         self.parallel = parallel
 
-        # To find the generated cmake_find_package finders
-        self.cmake_prefix_path = "${CMAKE_BINARY_DIR}"
-        self.cmake_module_path = "${CMAKE_BINARY_DIR}"
-
         self.generator = generator or get_generator(self._conanfile)
         self.generator_platform = (generator_platform or
                                    get_generator_platform(self._conanfile.settings,
                                                           self.generator))
         self.toolset = toolset or get_toolset(self._conanfile.settings, self.generator)
-
-        self.variables = Variables()
-        self.preprocessor_definitions = Variables()
-        try:
-            self._build_shared_libs = "ON" if self._conanfile.options.shared else "OFF"
-        except ConanException:
-            self._build_shared_libs = None
 
         self.set_libcxx, self.glibcxx = self._get_libcxx()
 
@@ -272,12 +237,6 @@ class CMakeNativeToolchain(CMakeToolchainBase):
         # TODO: I would want to have here the path to the compiler too
         build_type = build_type or self._conanfile.settings.get_safe("build_type")
         self.build_type = build_type if not is_multi_configuration(self.generator) else None
-        try:
-            # This is only defined in the cache, not in the local flow
-            self.install_prefix = self._conanfile.package_folder.replace("\\", "/")
-        except AttributeError:
-            # FIXME: In the local flow, we don't know the package_folder
-            self.install_prefix = None
 
     def _deduce_fpic(self):
         fpic = self._conanfile.options.get_safe("fPIC")
@@ -351,24 +310,16 @@ class CMakeNativeToolchain(CMakeToolchainBase):
         tpl_toolchain_context, tpl_project_include_context = \
             super(CMakeNativeToolchain, self)._get_template_context_data()
         tpl_toolchain_context.update({
-            "variables": self.variables,
-            "variables_config": self.variables.configuration_types,
-            "preprocessor_definitions": self.preprocessor_definitions,
-            "preprocessor_definitions_config": self.preprocessor_definitions.configuration_types,
             "build_type": self.build_type,
             "generator_platform": self.generator_platform,
             "toolset": self.toolset,
-            "cmake_prefix_path": self.cmake_prefix_path,
-            "cmake_module_path": self.cmake_module_path,
             "fpic": self.fpic,
             "skip_rpath": self.skip_rpath,
             "set_libcxx": self.set_libcxx,
             "glibcxx": self.glibcxx,
-            "install_prefix": self.install_prefix,
             "parallel": self.parallel,
             "cppstd": self.cppstd,
             "cppstd_extensions": self.cppstd_extensions,
-            "shared_libs": self._build_shared_libs,
             "architecture": self.architecture
         })
         tpl_project_include_context.update({'vs_static_runtime': self.vs_static_runtime})

@@ -30,6 +30,8 @@ class SystemToolsTestCase(unittest.TestCase):
                     name = 'library'
                     settings = 'os', 'arch', 'compiler', 'build_type'
                     exports_sources = "CMakeLists.txt", "lib.h", "lib.cpp"
+                    options = {'shared': [True, False]}
+                    default_options = {'shared': False}
 
                     def toolchain(self):
                         tc = CMakeToolchain(self)
@@ -46,10 +48,11 @@ class SystemToolsTestCase(unittest.TestCase):
             'profile_host': textwrap.dedent("""
                 [settings]
                 os=Android
-                os.api_level=16
+                os.api_level=23
                 arch=x86_64
                 compiler=clang
                 compiler.version=9
+                compiler.libcxx=c++_shared
             """)
         })
 
@@ -64,7 +67,7 @@ class SystemToolsTestCase(unittest.TestCase):
         """
         self.t.run('install . library/version@ --profile:host=profile_host --profile:build=default')
         print(self.t.out)
-        print()
+        #print()
         self.t.run('create . library/version@ --profile:host=profile_host --profile:build=default')
         print(self.t.out)
         self.fail("AAA")
