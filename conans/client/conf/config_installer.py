@@ -210,8 +210,8 @@ def _process_config(config, cache, output, requester):
         elif config.type == "file":
             from zipfile import is_zipfile
             if is_zipfile(config.uri):
-                    with tmp_config_install_folder(cache) as tmp_folder:
-                        _process_zip_file(config, config.uri, cache, output, tmp_folder)
+                with tmp_config_install_folder(cache) as tmp_folder:
+                    _process_zip_file(config, config.uri, cache, output, tmp_folder)
             else:
                 dirname, filename = os.path.dirname(config.uri), os.path.basename(config.uri)
                 _process_file(dirname, filename, config, cache, output, dirname)
