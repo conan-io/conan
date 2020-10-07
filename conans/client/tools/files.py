@@ -101,41 +101,42 @@ def unzip(filename, destination=".", keep_permissions=False, pattern=None, outpu
         def print_progress(_, __):
             pass
 
-    with zipfile.ZipFile(filename, "r") as z:
-        if not pattern:
-            zip_info = z.infolist()
-        else:
-            zip_info = [zi for zi in z.infolist() if fnmatch(zi.filename, pattern)]
-        uncompress_size = sum((file_.file_size for file_ in zip_info))
-        if uncompress_size > 100000:
-            output.info("Unzipping %s, this can take a while" % human_size(uncompress_size))
-        else:
-            output.info("Unzipping %s" % human_size(uncompress_size))
-        extracted_size = 0
+    if zipfile.is_zipfile(filename):
+        with zipfile.ZipFile(filename, "r") as z:
+            if not pattern:
+                zip_info = z.infolist()
+            else:
+                zip_info = [zi for zi in z.infolist() if fnmatch(zi.filename, pattern)]
+            uncompress_size = sum((file_.file_size for file_ in zip_info))
+            if uncompress_size > 100000:
+                output.info("Unzipping %s, this can take a while" % human_size(uncompress_size))
+            else:
+                output.info("Unzipping %s" % human_size(uncompress_size))
+            extracted_size = 0
 
-        print_progress.last_size = -1
-        if platform.system() == "Windows":
-            for file_ in zip_info:
-                extracted_size += file_.file_size
-                print_progress(extracted_size, uncompress_size)
-                try:
-                    z.extract(file_, full_path)
-                except Exception as e:
-                    output.error("Error extract %s\n%s" % (file_.filename, str(e)))
-        else:  # duplicated for, to avoid a platform check for each zipped file
-            for file_ in zip_info:
-                extracted_size += file_.file_size
-                print_progress(extracted_size, uncompress_size)
-                try:
-                    z.extract(file_, full_path)
-                    if keep_permissions:
-                        # Could be dangerous if the ZIP has been created in a non nix system
-                        # https://bugs.python.org/issue15795
-                        perm = file_.external_attr >> 16 & 0xFFF
-                        os.chmod(os.path.join(full_path, file_.filename), perm)
-                except Exception as e:
-                    output.error("Error extract %s\n%s" % (file_.filename, str(e)))
-        output.writeln("")
+            print_progress.last_size = -1
+            if platform.system() == "Windows":
+                for file_ in zip_info:
+                    extracted_size += file_.file_size
+                    print_progress(extracted_size, uncompress_size)
+                    try:
+                        z.extract(file_, full_path)
+                    except Exception as e:
+                        output.error("Error extract %s\n%s" % (file_.filename, str(e)))
+            else:  # duplicated for, to avoid a platform check for each zipped file
+                for file_ in zip_info:
+                    extracted_size += file_.file_size
+                    print_progress(extracted_size, uncompress_size)
+                    try:
+                        z.extract(file_, full_path)
+                        if keep_permissions:
+                            # Could be dangerous if the ZIP has been created in a non nix system
+                            # https://bugs.python.org/issue15795
+                            perm = file_.external_attr >> 16 & 0xFFF
+                            os.chmod(os.path.join(full_path, file_.filename), perm)
+                    except Exception as e:
+                        output.error("Error extract %s\n%s" % (file_.filename, str(e)))
+            output.writeln("")
 
 
 def untargz(filename, destination=".", pattern=None):
