@@ -200,3 +200,22 @@ class FileCopierTest(unittest.TestCase):
             copier("*", src=os.path.join(src_folder, "sub"))
 
         self.assertEqual(copy2_mock.call_count, len(src_folders))
+
+    def test_ignore_case(self):
+        src_folder = temp_folder()
+        save(os.path.join(src_folder, "FooBar.txt"), "Hello")
+
+        dst_folder = temp_folder()
+        copier = FileCopier([src_folder], dst_folder)
+        copier("foobar.txt", ignore_case=False)
+        self.assertEqual([], os.listdir(dst_folder))
+
+        dst_folder = temp_folder()
+        copier = FileCopier([src_folder], dst_folder)
+        copier("FooBar.txt", ignore_case=False)
+        self.assertEqual(["FooBar.txt"], os.listdir(dst_folder))
+
+        dst_folder = temp_folder()
+        copier = FileCopier([src_folder], dst_folder)
+        copier("foobar.txt", ignore_case=True)
+        self.assertEqual(["FooBar.txt"], os.listdir(dst_folder))

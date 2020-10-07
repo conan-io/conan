@@ -22,6 +22,7 @@ from conans.client.cmd.uploader import CmdUpload
 from conans.client.cmd.user import user_set, users_clean, users_list, token_present
 from conans.client.conanfile.package import run_package_method
 from conans.client.conf.required_version import check_required_conan_version
+from conans.client.generators import GeneratorManager
 from conans.client.graph.graph import RECIPE_EDITABLE
 from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
 from conans.client.graph.graph_manager import GraphManager
@@ -200,9 +201,12 @@ class ConanApp(object):
 
         self.proxy = ConanProxy(self.cache, self.out, self.remote_manager)
         self.range_resolver = RangeResolver(self.cache, self.remote_manager)
-        self.python_requires = ConanPythonRequire(self.proxy, self.range_resolver)
+        self.generator_manager = GeneratorManager()
+        self.python_requires = ConanPythonRequire(self.proxy, self.range_resolver,
+                                                  self.generator_manager)
         self.pyreq_loader = PyRequireLoader(self.proxy, self.range_resolver)
-        self.loader = ConanFileLoader(self.runner, self.out, self.python_requires, self.pyreq_loader)
+        self.loader = ConanFileLoader(self.runner, self.out, self.python_requires,
+                                      self.generator_manager, self.pyreq_loader)
 
         self.binaries_analyzer = GraphBinariesAnalyzer(self.cache, self.out, self.remote_manager)
         self.graph_manager = GraphManager(self.out, self.cache, self.remote_manager, self.loader,
@@ -1323,6 +1327,7 @@ class ConanAPIV1(object):
         if path and reference:
             raise ConanException("Both path and reference arguments were provided. Please provide "
                                  "only one of them")
+
         if path:
             ref_or_path = _make_abs_path(path, cwd)
             if not os.path.isfile(ref_or_path):
@@ -1368,8 +1373,6 @@ class ConanAPIV1(object):
         graph_lock_file = GraphLockFile(phost, pbuild, graph_lock)
         if lockfile:
             new_graph_lock = GraphLock(deps_graph, self.app.config.revisions_enabled)
-            # check if the lockfile provided was used or not
-            new_graph_lock.check_contained(graph_lock)
             graph_lock_file = GraphLockFile(phost, pbuild, new_graph_lock)
         if base:
             graph_lock_file.only_recipes()
