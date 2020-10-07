@@ -632,9 +632,12 @@ class CMakeTest(unittest.TestCase):
             os_ver = str(settings.os.version) if settings.get_safe('os.version') else None
             for cmake_system_name in (True, False):
                 cross_ver = ("-DCMAKE_SYSTEM_VERSION=\"%s\" " % os_ver) if os_ver else ""
-                cross = ("-DCMAKE_SYSTEM_NAME=\"%s\" %s-DCMAKE_SYSROOT=\"/path/to/sysroot\" "
-                         % ({"Macos": "Darwin"}.get(the_os, the_os), cross_ver)
-                         if ((platform.system() != the_os or arch != detected_architecture()) and cmake_system_name) else "")
+                # FIXME: This test is complicated to maintain and see the logic, lets simplify it
+                cross = ""
+                if cmake_system_name and (platform.system() != the_os or
+                                          (arch != detected_architecture() and the_os != "Windows")):
+                    cross = ("-DCMAKE_SYSTEM_NAME=\"%s\" %s-DCMAKE_SYSROOT=\"/path/to/sysroot\" "
+                             % ({"Macos": "Darwin"}.get(the_os, the_os), cross_ver))
                 cmake = CMake(conanfile, generator=generator, cmake_system_name=cmake_system_name,
                               set_cmake_flags=set_cmake_flags)
                 new_text = text.replace("-DCONAN_IN_LOCAL_CACHE", "%s-DCONAN_IN_LOCAL_CACHE" % cross)
