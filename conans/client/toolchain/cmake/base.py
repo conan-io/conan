@@ -3,6 +3,7 @@ from collections import OrderedDict, defaultdict
 
 from jinja2 import Template
 
+from conans.client.build.cmake_flags import is_multi_configuration
 from conans.errors import ConanException
 from conans.util.files import save
 
@@ -37,7 +38,7 @@ class CMakeToolchainBase(object):
     _template_project_include = None
     _template_toolchain = None
 
-    def __init__(self, conanfile, *args, **kwargs):
+    def __init__(self, conanfile, **kwargs):
         self._conanfile = conanfile
         self.variables = Variables()
         self.preprocessor_definitions = Variables()
@@ -58,6 +59,8 @@ class CMakeToolchainBase(object):
         except ConanException:
             self._build_shared_libs = None
 
+        self.build_type = None
+
     def _get_template_context_data(self):
         """ Returns two dictionaries, the context for the '_template_toolchain' and
             the context for the '_template_project_include' templates.
@@ -71,6 +74,7 @@ class CMakeToolchainBase(object):
             "cmake_module_path": self.cmake_module_path,
             "install_prefix": self.install_prefix,
             "shared_libs": self._build_shared_libs,
+            "build_type": self.build_type,
         }
         return tpl_toolchain_context, {}
 

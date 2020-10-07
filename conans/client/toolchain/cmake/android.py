@@ -107,13 +107,16 @@ class CMakeAndroidToolchain(CMakeToolchainBase):
     # TODO: RPATH, cross-compiling to Android?
     # TODO: libcxx, only libc++ https://developer.android.com/ndk/guides/cpp-support
 
-    def __init__(self, *args, **kwargs):
-        super(CMakeAndroidToolchain, self).__init__(*args, **kwargs)
+    def __init__(self, build_type=None, **kwargs):
+        super(CMakeAndroidToolchain, self).__init__(build_type=build_type, **kwargs)
+        # TODO: Is this abuse of 'variables' attribute?
         self.variables['CMAKE_SYSTEM_NAME'] = 'Android'
         self.variables['CMAKE_SYSTEM_VERSION'] = self._conanfile.settings.os.api_level
         self.variables['CMAKE_ANDROID_ARCH_ABI'] = self._get_android_abi()
         self.variables['CMAKE_ANDROID_NDK'] = '/Users/jgsogo/Library/Android/sdk/ndk/21.0.6113669'  # TODO: ???
         self.variables['CMAKE_ANDROID_STL_TYPE'] = self._get_android_stl()
+
+        self.build_type = build_type or self._conanfile.settings.get_safe("build_type")
 
     def _get_android_abi(self):
         return {"x86": "x86",
@@ -124,10 +127,3 @@ class CMakeAndroidToolchain(CMakeToolchainBase):
     def _get_android_stl(self):
         libcxx_str = str(self._conanfile.settings.compiler.libcxx)
         return libcxx_str  # TODO: only 'c++_shared' y 'c++_static' supported?
-
-    def _get_template_context_data(self):
-        ctxt_toolchain, ctxt_project_include = super(CMakeAndroidToolchain, self)._get_template_context_data()
-        ctxt_toolchain.update({
-            "install_prefix": self.install_prefix,
-        })
-        return ctxt_toolchain, ctxt_project_include

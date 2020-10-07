@@ -310,7 +310,6 @@ class CMakeNativeToolchain(CMakeToolchainBase):
         tpl_toolchain_context, tpl_project_include_context = \
             super(CMakeNativeToolchain, self)._get_template_context_data()
         tpl_toolchain_context.update({
-            "build_type": self.build_type,
             "generator_platform": self.generator_platform,
             "toolset": self.toolset,
             "fpic": self.fpic,
