@@ -4,7 +4,6 @@ from conans.client.build.cmake_flags import get_generator, get_generator_platfor
     is_multi_configuration
 from conans.client.build.compiler_flags import architecture_flag
 from conans.client.tools import cpu_count
-from conans.errors import ConanException
 from .base import CMakeToolchainBase
 
 
@@ -13,7 +12,7 @@ from .base import CMakeToolchainBase
 # https://github.com/microsoft/vcpkg/tree/master/scripts/buildsystems
 
 
-class CMakeNativeToolchain(CMakeToolchainBase):
+class CMakeGenericToolchain(CMakeToolchainBase):
     _template_toolchain = textwrap.dedent("""
         # Conan automatically generated toolchain file
         # DO NOT EDIT MANUALLY, it will be overwritten
@@ -210,7 +209,7 @@ class CMakeNativeToolchain(CMakeToolchainBase):
 
     def __init__(self, conanfile, generator=None, generator_platform=None, build_type=None,
                  toolset=None, parallel=True):
-        super(CMakeNativeToolchain, self).__init__(conanfile)
+        super(CMakeGenericToolchain, self).__init__(conanfile)
 
         self.fpic = self._deduce_fpic()
         self.vs_static_runtime = self._deduce_vs_static_runtime()
@@ -308,7 +307,7 @@ class CMakeNativeToolchain(CMakeToolchainBase):
 
     def _get_template_context_data(self):
         tpl_toolchain_context, tpl_project_include_context = \
-            super(CMakeNativeToolchain, self)._get_template_context_data()
+            super(CMakeGenericToolchain, self)._get_template_context_data()
         tpl_toolchain_context.update({
             "generator_platform": self.generator_platform,
             "toolset": self.toolset,

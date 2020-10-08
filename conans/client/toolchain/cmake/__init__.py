@@ -1,16 +1,11 @@
-from conans.client.tools import cross_building
-from .native import CMakeNativeToolchain
 from .android import CMakeAndroidToolchain
+from .generic import CMakeGenericToolchain
 
 
 def CMakeToolchain(conanfile, **kwargs):
-    if not cross_building(conanfile):
-        return CMakeNativeToolchain(conanfile=conanfile, **kwargs)
+    os_ = conanfile.settings.get_safe('os')
+    if os_ == 'Android':
+        # assert cross_building(conanfile)  # FIXME: Conan v2.0, two-profiles approach by default
+        return CMakeAndroidToolchain(conanfile, **kwargs)
     else:
-        # Exceptions to cross-building scenarios
-        if conanfile.settings.os == 'Windows' and conanfile.settings_build.os == 'Windows':
-            return CMakeNativeToolchain(conanfile=conanfile, **kwargs)
-
-        # Actual cross-building
-        if conanfile.settings.os == 'Android':
-            return CMakeAndroidToolchain(conanfile=conanfile, **kwargs)
+        return CMakeGenericToolchain(conanfile, **kwargs)
