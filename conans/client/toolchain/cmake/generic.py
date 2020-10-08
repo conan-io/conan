@@ -1,15 +1,12 @@
-import os
 import textwrap
 from collections import OrderedDict, defaultdict
 
-from jinja2 import Template
-
-from conans.client.build.cmake_flags import get_generator, get_generator_platform,  get_toolset, \
+from conans.client.build.cmake_flags import get_generator, get_generator_platform, get_toolset, \
     is_multi_configuration
 from conans.client.build.compiler_flags import architecture_flag
 from conans.client.tools import cpu_count
 from conans.errors import ConanException
-from conans.util.files import save
+from .base import CMakeToolchainBase
 
 
 # https://stackoverflow.com/questions/30503631/cmake-in-which-order-are-files-parsed-cache-toolchain-etc
@@ -40,9 +37,7 @@ class Variables(OrderedDict):
         return ret
 
 
-class CMakeToolchain(object):
-    filename = "conan_toolchain.cmake"
-
+class CMakeGenericToolchain(CMakeToolchainBase):
     _template_toolchain = textwrap.dedent("""
         # Conan automatically generated toolchain file
         # DO NOT EDIT MANUALLY, it will be overwritten
@@ -239,7 +234,7 @@ class CMakeToolchain(object):
 
     def __init__(self, conanfile, generator=None, generator_platform=None, build_type=None,
                  toolset=None, parallel=True):
-        self._conanfile = conanfile
+        super(CMakeGenericToolchain, self).__init__(conanfile)
 
         self.fpic = self._deduce_fpic()
         self.vs_static_runtime = self._deduce_vs_static_runtime()
@@ -306,7 +301,7 @@ class CMakeToolchain(object):
     def _deduce_vs_static_runtime(self):
         settings = self._conanfile.settings
         if (settings.get_safe("compiler") == "Visual Studio" and
-                "MT" in settings.get_safe("compiler.runtime")):
+            "MT" in settings.get_safe("compiler.runtime")):
             return True
         return False
 
@@ -352,19 +347,10 @@ class CMakeToolchain(object):
                 cppstd_extensions = "OFF"
         return cppstd, cppstd_extensions
 
-    def write_toolchain_files(self):
-        # Make it absolute, wrt to current folder, set by the caller
-        conan_project_include_cmake = os.path.abspath("conan_project_include.cmake")
-        conan_project_include_cmake = conan_project_include_cmake.replace("\\", "/")
-        t = Template(self._template_project_include)
-        content = t.render(vs_static_runtime=self.vs_static_runtime)
-        save(conan_project_include_cmake, content)
-
-        # TODO: I need the profile_host and profile_build here!
-        # TODO: What if the compiler is a build require?
-        # TODO: Add all the stuff related to settings (ALL settings or just _MY_ settings?)
-
-        context = {
+    def _get_template_context_data(self):
+        tpl_toolchain_context, tpl_project_include_context = \
+            super(CMakeGenericToolchain, self)._get_template_context_data()
+        tpl_toolchain_context.update({
             "variables": self.variables,
             "variables_config": self.variables.configuration_types,
             "preprocessor_definitions": self.preprocessor_definitions,
@@ -384,7 +370,6 @@ class CMakeToolchain(object):
             "cppstd_extensions": self.cppstd_extensions,
             "shared_libs": self._build_shared_libs,
             "architecture": self.architecture
-        }
-        t = Template(self._template_toolchain)
-        content = t.render(conan_project_include_cmake=conan_project_include_cmake, **context)
-        save(self.filename, content)
+        })
+        tpl_project_include_context.update({'vs_static_runtime': self.vs_static_runtime})
+        return tpl_toolchain_context, tpl_project_include_context
