@@ -141,7 +141,6 @@ class TarCompressor(Compressor):
             f.close()
 
     def decompress(self, d):
-        import tarfile
         with tarfile.open(name='test' + self.ext, mode=self.read_mode) as f:
             f.extractall(path=d)
             f.close()
