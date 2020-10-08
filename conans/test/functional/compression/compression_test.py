@@ -84,7 +84,6 @@ class ZipCompressor(Compressor):
                     if os.name == 'posix':
                         permissions = zi.external_attr >> 16
                         os.chmod(os.path.join(d, zi.filename), permissions)
-            f.close()
 
 
 class TarCompressor(Compressor):
@@ -137,8 +136,6 @@ class TarCompressor(Compressor):
                         ti.size = 0
                         ti.mode = st.st_mode
                         f.addfile(tarinfo=ti)
-
-            f.close()
 
     def decompress(self, d):
         with tarfile.open(name='test' + self.ext, mode=self.read_mode) as f:
