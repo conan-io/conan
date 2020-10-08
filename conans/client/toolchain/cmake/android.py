@@ -113,7 +113,8 @@ class CMakeAndroidToolchain(CMakeToolchainBase):
         self.variables['CMAKE_SYSTEM_NAME'] = 'Android'
         self.variables['CMAKE_SYSTEM_VERSION'] = self._conanfile.settings.os.api_level
         self.variables['CMAKE_ANDROID_ARCH_ABI'] = self._get_android_abi()
-        self.variables['CMAKE_ANDROID_NDK'] = '/Users/jgsogo/Library/Android/sdk/ndk/21.0.6113669'  # TODO: ???
+        self.variables[
+            'CMAKE_ANDROID_NDK'] = '/Users/jgsogo/Library/Android/sdk/ndk/21.0.6113669'  # TODO: ???
         self.variables['CMAKE_ANDROID_STL_TYPE'] = self._get_android_stl()
 
         self.build_type = build_type or self._conanfile.settings.get_safe("build_type")

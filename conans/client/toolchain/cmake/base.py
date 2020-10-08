@@ -3,7 +3,6 @@ from collections import OrderedDict, defaultdict
 
 from jinja2 import Template
 
-from conans.client.build.cmake_flags import is_multi_configuration
 from conans.errors import ConanException
 from conans.util.files import save
 
