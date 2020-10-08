@@ -460,8 +460,9 @@ class CMakeTest(unittest.TestCase):
         conanfile.source_folder = os.path.join(self.tempdir, "my_cache_source_folder")
         conanfile.build_folder = os.path.join(self.tempdir, "my_cache_build_folder")
         with tools.chdir(self.tempdir):
-            linux_stuff = '-DCMAKE_SYSTEM_NAME="Linux" ' \
-                          '-DCMAKE_SYSROOT="/path/to/sysroot" '
+            linux_stuff = ""
+            if platform.system() != "Linux":
+                linux_stuff = '-DCMAKE_SYSTEM_NAME="Linux" -DCMAKE_SYSROOT="/path/to/sysroot" '
             generator = "MinGW Makefiles" if platform.system() == "Windows" else "Unix Makefiles"
 
             flags = '{} -DCONAN_COMPILER="gcc" ' \
@@ -634,8 +635,9 @@ class CMakeTest(unittest.TestCase):
                 cross_ver = ("-DCMAKE_SYSTEM_VERSION=\"%s\" " % os_ver) if os_ver else ""
                 # FIXME: This test is complicated to maintain and see the logic, lets simplify it
                 cross = ""
-                if cmake_system_name and (platform.system() != the_os or
-                                          (arch != detected_architecture() and the_os != "Windows")):
+                if cmake_system_name and (the_os != platform.system() or
+                                          (arch != detected_architecture()
+                                           and the_os not in ("Windows", "Linux"))):
                     cross = ("-DCMAKE_SYSTEM_NAME=\"%s\" %s-DCMAKE_SYSROOT=\"/path/to/sysroot\" "
                              % ({"Macos": "Darwin"}.get(the_os, the_os), cross_ver))
                 cmake = CMake(conanfile, generator=generator, cmake_system_name=cmake_system_name,
