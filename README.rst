@@ -11,7 +11,7 @@ Decentralized, open-source (MIT), C/C++ package manager.
 - Slack: https://cpplang-inviter.cppalliance.org/ (#conan channel)
 - Twitter: https://twitter.com/conan_io
 
-
+**What is Conan?**
 Conan is a package manager for C and C++ developers:
 
 - It is fully decentralized. Users can host their packages in their servers, privately. Integrates with Artifactory and Bintray.
