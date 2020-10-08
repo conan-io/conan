@@ -45,13 +45,14 @@ class CMakeToolchainBase(object):
                                           '$<IF:$<CONFIG:' + conf + '>,"' + value|string + '",' %}
                     {%- if loop.last %}{% set genexpr.str = genexpr.str + '""' -%}{%- endif -%}
                 {%- endfor -%}
-                {% for i in range(values|count) %}{%- set genexpr.str = genexpr.str + '>' %}{%- endfor -%}
+                {% for i in range(values|count) %}{%- set genexpr.str = genexpr.str + '>' %}
+                {%- endfor -%}
                 {% if action=='set' %}
                 set({{ it }} {{ genexpr.str }})
                 {% elif action=='add_definitions' %}
                 add_definitions(-D{{ it }}={{ genexpr.str }})
                 {% endif %}
-            {%- endfor %}
+            {% endfor %}
         {% endmacro %}
         """)
 
@@ -69,6 +70,11 @@ class CMakeToolchainBase(object):
         set(CONAN_TOOLCHAIN_INCLUDED TRUE)
 
         {% block before_try_compile %}
+        # build_type (Release, Debug, etc) is only defined for single-config generators
+        {%- if build_type %}
+        set(CMAKE_BUILD_TYPE "{{ build_type }}" CACHE STRING "Choose the type of build." FORCE)
+        {%- endif %}
+
         {% endblock %}
 
         get_property( _CMAKE_IN_TRY_COMPILE GLOBAL PROPERTY IN_TRY_COMPILE )
@@ -99,17 +105,29 @@ class CMakeToolchainBase(object):
         {% endif %}
 
         {% block main %}
+        # We are going to adjust automagically many things as requested by Conan
+        #   these are the things done by 'conan_basic_setup()'
+        set(CMAKE_EXPORT_NO_PACKAGE_REGISTRY ON)
+
+        # To support the cmake_find_package generators
+        {% if cmake_module_path -%}
+        set(CMAKE_MODULE_PATH {{ cmake_module_path }} ${CMAKE_MODULE_PATH})
+        {%- endif %}
+        {% if cmake_prefix_path -%}
+        set(CMAKE_PREFIX_PATH {{ cmake_prefix_path }} ${CMAKE_PREFIX_PATH})
+        {%- endif %}
+
         {% endblock %}
 
         # Install prefix
         {% if install_prefix -%}
-        set(CMAKE_INSTALL_PREFIX {{install_prefix}} CACHE STRING "" FORCE)
+        set(CMAKE_INSTALL_PREFIX "{{install_prefix}}" CACHE STRING "" FORCE)
         {%- endif %}
 
         # Variables
         {% for it, value in variables.items() -%}
         set({{ it }} "{{ value }}")
-        {%- endfor %}
+        {% endfor %}
         # Variables  per configuration
         {{ toolchain_macros.iterate_configs(variables_config, action='set') }}
 
@@ -117,7 +135,7 @@ class CMakeToolchainBase(object):
         {% for it, value in preprocessor_definitions.items() -%}
         # add_compile_definitions only works in cmake >= 3.12
         add_definitions(-D{{ it }}="{{ value }}")
-        {%- endfor %}
+        {% endfor %}
         # Preprocessor definitions per configuration
         {{ toolchain_macros.iterate_configs(preprocessor_definitions_config, action='add_definitions') }}
 

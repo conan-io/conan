@@ -21,26 +21,9 @@ class CMakeGenericToolchain(CMakeToolchainBase):
         {%- if toolset %}
         set(CMAKE_GENERATOR_TOOLSET "{{ toolset }}" CACHE STRING "" FORCE)
         {%- endif %}
-
-        # build_type (Release, Debug, etc) is only defined for single-config generators
-        {%- if build_type %}
-        set(CMAKE_BUILD_TYPE "{{ build_type }}" CACHE STRING "Choose the type of build." FORCE)
-        {%- endif %}
         """)
 
     _main_tpl = textwrap.dedent("""
-        # We are going to adjust automagically many things as requested by Conan
-        #   these are the things done by 'conan_basic_setup()'
-        set(CMAKE_EXPORT_NO_PACKAGE_REGISTRY ON)
-
-        # To support the cmake_find_package generators
-        {% if cmake_module_path -%}
-        set(CMAKE_MODULE_PATH {{ cmake_module_path }} ${CMAKE_MODULE_PATH})
-        {%- endif %}
-        {% if cmake_prefix_path -%}
-        set(CMAKE_PREFIX_PATH {{ cmake_prefix_path }} ${CMAKE_PREFIX_PATH})
-        {%- endif %}
-
         # shared libs
         {% if shared_libs -%}
         message(STATUS "Conan toolchain: Setting BUILD_SHARED_LIBS= {{ shared_libs }}")
@@ -95,14 +78,17 @@ class CMakeGenericToolchain(CMakeToolchainBase):
         {% extends 'base_toolchain' %}
 
         {% block before_try_compile %}
+        {{ super() }}
         {% include 'before_try_compile' %}
         {% endblock %}
 
         {% block main %}
+        {{ super() }}
         {% include 'main' %}
         {% endblock %}
 
         {% block footer %}
+        {{ super() }}
         set(CMAKE_CXX_FLAGS_INIT "${CONAN_CXX_FLAGS}" CACHE STRING "" FORCE)
         set(CMAKE_C_FLAGS_INIT "${CONAN_C_FLAGS}" CACHE STRING "" FORCE)
         set(CMAKE_SHARED_LINKER_FLAGS_INIT "${CONAN_SHARED_LINKER_FLAGS}" CACHE STRING "" FORCE)
