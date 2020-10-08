@@ -13,6 +13,7 @@ from conans.client import tools
 from conans.client.build.cmake import CMake
 from conans.client.build.cmake_flags import cmake_in_local_cache_var_name
 from conans.client.conf import get_default_settings_yml
+from conans.client.tools import cross_building
 from conans.client.tools.oss import cpu_count, detected_architecture
 from conans.errors import ConanException
 from conans.model.build_info import CppInfo, DepsCppInfo
@@ -635,9 +636,8 @@ class CMakeTest(unittest.TestCase):
                 cross_ver = ("-DCMAKE_SYSTEM_VERSION=\"%s\" " % os_ver) if os_ver else ""
                 # FIXME: This test is complicated to maintain and see the logic, lets simplify it
                 cross = ""
-                if cmake_system_name and (the_os != platform.system() or
-                                          (arch != detected_architecture()
-                                           and the_os not in ("Windows", "Linux"))):
+                skip_x64_x86 = the_os in ['Windows', 'Linux']
+                if cmake_system_name and cross_building(conanfile, skip_x64_x86=skip_x64_x86):
                     cross = ("-DCMAKE_SYSTEM_NAME=\"%s\" %s-DCMAKE_SYSROOT=\"/path/to/sysroot\" "
                              % ({"Macos": "Darwin"}.get(the_os, the_os), cross_ver))
                 cmake = CMake(conanfile, generator=generator, cmake_system_name=cmake_system_name,
@@ -693,6 +693,13 @@ class CMakeTest(unittest.TestCase):
               '-DCONAN_IN_LOCAL_CACHE="OFF" -DCONAN_COMPILER="gcc" '
               '-DCONAN_COMPILER_VERSION="4.8" -DCONAN_CXX_FLAGS="-m32" '
               '-DCONAN_SHARED_LINKER_FLAGS="-m32" -DCONAN_C_FLAGS="-m32" '
+              '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -DCONAN_EXPORTED="1" -Wno-dev' % cmakegen,
+              "")
+
+        settings.arch = "armv7"
+        check('-G "%s" -DCMAKE_BUILD_TYPE="Debug" '
+              '-DCONAN_IN_LOCAL_CACHE="OFF" -DCONAN_COMPILER="gcc" '
+              '-DCONAN_COMPILER_VERSION="4.8" '
               '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -DCONAN_EXPORTED="1" -Wno-dev' % cmakegen,
               "")
 
