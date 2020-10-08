@@ -13,17 +13,7 @@ from .base import CMakeToolchainBase
 
 
 class CMakeGenericToolchain(CMakeToolchainBase):
-    _template_toolchain = textwrap.dedent("""
-        # Conan automatically generated toolchain file
-        # DO NOT EDIT MANUALLY, it will be overwritten
-
-        # Avoid including toolchain file several times (bad if appending to variables like
-        #   CMAKE_CXX_FLAGS. See https://github.com/android/ndk/issues/323
-        if(CONAN_TOOLCHAIN_INCLUDED)
-          return()
-        endif()
-        set(CONAN_TOOLCHAIN_INCLUDED TRUE)
-
+    _before_try_compile_tpl = textwrap.dedent("""
         # Configure
         {%- if generator_platform %}
         set(CMAKE_GENERATOR_PLATFORM "{{ generator_platform }}" CACHE STRING "" FORCE)
@@ -36,32 +26,9 @@ class CMakeGenericToolchain(CMakeToolchainBase):
         {%- if build_type %}
         set(CMAKE_BUILD_TYPE "{{ build_type }}" CACHE STRING "Choose the type of build." FORCE)
         {%- endif %}
+        """)
 
-        get_property( _CMAKE_IN_TRY_COMPILE GLOBAL PROPERTY IN_TRY_COMPILE )
-        if(_CMAKE_IN_TRY_COMPILE)
-            message(STATUS "Running toolchain IN_TRY_COMPILE")
-            return()
-        endif()
-
-        message("Using Conan toolchain through ${CMAKE_TOOLCHAIN_FILE}.")
-
-        if(CMAKE_VERSION VERSION_LESS "3.15")
-            message(WARNING
-                " CMake version less than 3.15 doesn't support CMAKE_PROJECT_INCLUDE variable\\n"
-                " used by Conan toolchain to work. In order to get the same behavior you will\\n"
-                " need to manually include the generated file after your 'project()' call in the\\n"
-                " main CMakeLists.txt file:\\n"
-                " \\n"
-                "     project(YourProject C CXX)\\n"
-                "     include(\\"\\${CMAKE_BINARY_DIR}/conan_project_include.cmake\\")\\n"
-                " \\n"
-                " This file contains some definitions and extra adjustments that depend on\\n"
-                " the build_type and it cannot be done in the toolchain.")
-        else()
-            # Will be executed after the 'project()' command
-            set(CMAKE_PROJECT_INCLUDE "{{ conan_project_include_cmake }}")
-        endif()
-
+    _main_tpl = textwrap.dedent("""
         # We are going to adjust automagically many things as requested by Conan
         #   these are the things done by 'conan_basic_setup()'
         set(CMAKE_EXPORT_NO_PACKAGE_REGISTRY ON)
@@ -122,55 +89,28 @@ class CMakeGenericToolchain(CMakeToolchainBase):
         set(CMAKE_CXX_STANDARD {{ cppstd }})
         set(CMAKE_CXX_EXTENSIONS {{ cppstd_extensions }})
         {%- endif %}
+        """)
 
-        # Install prefix
-        {% if install_prefix -%}
-        set(CMAKE_INSTALL_PREFIX {{install_prefix}} CACHE STRING "" FORCE)
-        {%- endif %}
+    _toolchain_tpl = textwrap.dedent("""
+        {% extends 'base_toolchain' %}
 
-        # Variables
-        {% for it, value in variables.items() -%}
-        set({{ it }} "{{ value }}")
-        {%- endfor %}
-        # Variables  per configuration
-        {% for it, values in variables_config.items() -%}
-            {%- set genexpr = namespace(str='') %}
-            {%- for conf, value in values -%}
-                {%- set genexpr.str = genexpr.str +
-                                      '$<IF:$<CONFIG:' + conf + '>,"' + value|string + '",' %}
-                {%- if loop.last %}{% set genexpr.str = genexpr.str + '""' -%}{%- endif -%}
-            {%- endfor -%}
-            {% for i in range(values|count) %}{%- set genexpr.str = genexpr.str + '>' %}
-            {%- endfor -%}
-        set({{ it }} {{ genexpr.str }})
-        {%- endfor %}
+        {% block before_try_compile %}
+        {% include 'before_try_compile' %}
+        {% endblock %}
 
-        # Preprocessor definitions
-        {% for it, value in preprocessor_definitions.items() -%}
-        # add_compile_definitions only works in cmake >= 3.12
-        add_definitions(-D{{ it }}="{{ value }}")
-        {%- endfor %}
-        # Preprocessor definitions per configuration
-        {% for it, values in preprocessor_definitions_config.items() -%}
-            {%- set genexpr = namespace(str='') %}
-            {%- for conf, value in values -%}
-                {%- set genexpr.str = genexpr.str +
-                                      '$<IF:$<CONFIG:' + conf + '>,"' + value|string + '",' %}
-                {%- if loop.last %}{% set genexpr.str = genexpr.str + '""' -%}{%- endif -%}
-            {%- endfor -%}
-            {% for i in range(values|count) %}{%- set genexpr.str = genexpr.str + '>' %}
-            {%- endfor -%}
-        add_definitions(-D{{ it }}={{ genexpr.str }})
-        {%- endfor %}
+        {% block main %}
+        {% include 'main' %}
+        {% endblock %}
 
-
+        {% block footer %}
         set(CMAKE_CXX_FLAGS_INIT "${CONAN_CXX_FLAGS}" CACHE STRING "" FORCE)
         set(CMAKE_C_FLAGS_INIT "${CONAN_C_FLAGS}" CACHE STRING "" FORCE)
         set(CMAKE_SHARED_LINKER_FLAGS_INIT "${CONAN_SHARED_LINKER_FLAGS}" CACHE STRING "" FORCE)
         set(CMAKE_EXE_LINKER_FLAGS_INIT "${CONAN_EXE_LINKER_FLAGS}" CACHE STRING "" FORCE)
-    """)
+        {% endblock %}
+        """)
 
-    _template_project_include = textwrap.dedent("""
+    _project_include_filename_tpl = textwrap.dedent("""
         # When using a Conan toolchain, this file is included as the last step of `project()` calls.
         #  https://cmake.org/cmake/help/latest/variable/CMAKE_PROJECT_INCLUDE.html
 
@@ -205,7 +145,7 @@ class CMakeGenericToolchain(CMakeToolchainBase):
             endforeach()
         endif()
         {% endif %}
-    """)
+        """)
 
     def __init__(self, conanfile, generator=None, generator_platform=None, build_type=None,
                  toolset=None, parallel=True):
@@ -236,6 +176,16 @@ class CMakeGenericToolchain(CMakeToolchainBase):
         # TODO: I would want to have here the path to the compiler too
         build_type = build_type or self._conanfile.settings.get_safe("build_type")
         self.build_type = build_type if not is_multi_configuration(self.generator) else None
+
+    def _get_templates(self):
+        templates = super(CMakeGenericToolchain, self)._get_templates()
+        templates.update({
+            'before_try_compile': self._before_try_compile_tpl,
+            'main': self._main_tpl,
+            CMakeToolchainBase.filename: self._toolchain_tpl,
+            CMakeToolchainBase.project_include_filename: self._project_include_filename_tpl
+        })
+        return templates
 
     def _deduce_fpic(self):
         fpic = self._conanfile.options.get_safe("fPIC")
@@ -306,9 +256,9 @@ class CMakeGenericToolchain(CMakeToolchainBase):
         return cppstd, cppstd_extensions
 
     def _get_template_context_data(self):
-        tpl_toolchain_context, tpl_project_include_context = \
+        ctxt_toolchain, ctxt_project_include = \
             super(CMakeGenericToolchain, self)._get_template_context_data()
-        tpl_toolchain_context.update({
+        ctxt_toolchain.update({
             "generator_platform": self.generator_platform,
             "toolset": self.toolset,
             "fpic": self.fpic,
@@ -320,5 +270,5 @@ class CMakeGenericToolchain(CMakeToolchainBase):
             "cppstd_extensions": self.cppstd_extensions,
             "architecture": self.architecture
         })
-        tpl_project_include_context.update({'vs_static_runtime': self.vs_static_runtime})
-        return tpl_toolchain_context, tpl_project_include_context
+        ctxt_project_include.update({'vs_static_runtime': self.vs_static_runtime})
+        return ctxt_toolchain, ctxt_project_include
