@@ -126,13 +126,13 @@ class CMakeGenericToolchain(CMakeToolchainBase):
 
         # Install prefix
         {% if install_prefix -%}
-        set(CMAKE_INSTALL_PREFIX {{install_prefix}} CACHE STRING "" FORCE)
+        set(CMAKE_INSTALL_PREFIX "{{install_prefix}}" CACHE STRING "" FORCE)
         {%- endif %}
 
         # Variables
         {% for it, value in variables.items() -%}
         set({{ it }} "{{ value }}")
-        {%- endfor %}
+        {% endfor %}
         # Variables  per configuration
         {% for it, values in variables_config.items() -%}
             {%- set genexpr = namespace(str='') %}
@@ -144,13 +144,13 @@ class CMakeGenericToolchain(CMakeToolchainBase):
             {% for i in range(values|count) %}{%- set genexpr.str = genexpr.str + '>' %}
             {%- endfor -%}
         set({{ it }} {{ genexpr.str }})
-        {%- endfor %}
+        {% endfor %}
 
         # Preprocessor definitions
         {% for it, value in preprocessor_definitions.items() -%}
         # add_compile_definitions only works in cmake >= 3.12
         add_definitions(-D{{ it }}="{{ value }}")
-        {%- endfor %}
+        {% endfor %}
         # Preprocessor definitions per configuration
         {% for it, values in preprocessor_definitions_config.items() -%}
             {%- set genexpr = namespace(str='') %}
@@ -162,7 +162,7 @@ class CMakeGenericToolchain(CMakeToolchainBase):
             {% for i in range(values|count) %}{%- set genexpr.str = genexpr.str + '>' %}
             {%- endfor -%}
         add_definitions(-D{{ it }}={{ genexpr.str }})
-        {%- endfor %}
+        {% endfor %}
 
 
         set(CMAKE_CXX_FLAGS_INIT "${CONAN_CXX_FLAGS}" CACHE STRING "" FORCE)

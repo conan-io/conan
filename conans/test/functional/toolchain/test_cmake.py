@@ -26,8 +26,11 @@ class Base(unittest.TestCase):
             def toolchain(self):
                 tc = CMakeToolchain(self)
                 tc.variables["MYVAR"] = "MYVAR_VALUE"
+                tc.variables["MYVAR2"] = "MYVAR_VALUE2"
                 tc.variables.debug["MYVAR_CONFIG"] = "MYVAR_DEBUG"
                 tc.variables.release["MYVAR_CONFIG"] = "MYVAR_RELEASE"
+                tc.variables.debug["MYVAR2_CONFIG"] = "MYVAR2_DEBUG"
+                tc.variables.release["MYVAR2_CONFIG"] = "MYVAR2_RELEASE"
                 tc.preprocessor_definitions["MYDEFINE"] = "MYDEF_VALUE"
                 tc.preprocessor_definitions.debug["MYDEFINE_CONFIG"] = "MYDEF_DEBUG"
                 tc.preprocessor_definitions.release["MYDEFINE_CONFIG"] = "MYDEF_RELEASE"
