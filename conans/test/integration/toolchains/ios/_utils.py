@@ -52,6 +52,13 @@ cmakelists = textwrap.dedent("""
         cpp-wrapper.h
     )
     add_library (hello ${SOURCES} ${HEADERS})
+    set_target_properties(hello PROPERTIES PUBLIC_HEADER "${HEADERS}")
+    install(TARGETS hello
+        RUNTIME DESTINATION bin
+        LIBRARY DESTINATION lib
+        ARCHIVE DESTINATION lib
+        PUBLIC_HEADER DESTINATION include
+    )
 """)
 
 

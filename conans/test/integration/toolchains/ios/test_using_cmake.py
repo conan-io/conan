@@ -16,6 +16,7 @@ class ToolchainiOSTestCase(unittest.TestCase):
         self._conanfile = textwrap.dedent("""
             from conans import ConanFile, CMake, CMakeToolchain
 
+
             class Library(ConanFile):
                 name = 'hello'
                 version = '1.0'
@@ -23,24 +24,27 @@ class ToolchainiOSTestCase(unittest.TestCase):
                 exports_sources = 'hello.h', 'hello.cpp', 'cpp-wrapper.h', 'cpp-wrapper.mm', 'CMakeLists.txt'
                 options = {{'shared': [True, False]}}
                 default_options = {{'shared': False}}
+                _cmake = None
+
+                def _configure_cmake(self):
+                    if not self._cmake:
+                        self._cmake = CMake(self, generator={generator}, parallel=False)
+                        self._cmake.configure()
+                    return self._cmake
 
                 def toolchain(self):
                     tc = CMakeToolchain(self)
                     tc.write_toolchain_files()
 
                 def build(self):
-                    cmake = CMake(self, generator={generator})
+                    cmake = self._configure_cmake()
                     cmake.configure()
                     cmake.build()
-                    self.run("lipo -info Release-iphonesimulator/libhello.a")
+                    self.run("lipo -info Release-iphoneos/libhello.a")
 
                 def package(self):
-                    self.copy("*.h", dst="include", src="src")
-                    self.copy("*.dylib*", dst="lib", keep_path=False)
-                    self.copy("*.a", dst="lib", keep_path=False)
-
-                def package_info(self):
-                    self.cpp_info.libs = ["hello"]
+                    cmake = self._configure_cmake()
+                    cmake.install()
             """)
 
         self.t.save({
@@ -48,7 +52,7 @@ class ToolchainiOSTestCase(unittest.TestCase):
                 [settings]
                 os=iOS
                 os.version=12.0
-                arch=x86_64
+                arch=armv8
                 compiler=apple-clang
                 compiler.version=12.0
                 compiler.libcxx=libc++
@@ -64,12 +68,12 @@ class ToolchainiOSTestCase(unittest.TestCase):
 
         # Build in the cache
         self.t.run('create . --profile:build=default --profile:host=ios_profile')
-        self.assertIn("Non-fat file: Release-iphonesimulator/libhello.a is architecture: arm64",
+        self.assertIn("Non-fat file: Release-iphoneos/libhello.a is architecture: arm64",
                       self.t.out)
 
         # Build locally
         self.t.run('install . --profile:host=ios_profile --profile:build=default')
-        self.t.run_command('cmake . -DCMAKE_TOOLCHAIN_FILE={}'.format(CMakeToolchainBase.filename))
+        self.t.run_command('cmake . -G"Xcode" -DCMAKE_TOOLCHAIN_FILE={}'.format(CMakeToolchainBase.filename))
         self.t.run_command('cmake --build . --config Release')
 
     def test_unix_makefiles_generator(self):

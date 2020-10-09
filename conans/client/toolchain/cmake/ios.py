@@ -6,7 +6,6 @@ from .base import CMakeToolchainBase
 class CMakeiOSToolchain(CMakeToolchainBase):
     _template_project_include = ''
 
-    # TODO: Factorize with the native one
     _template_toolchain = textwrap.dedent("""
         # Conan automatically generated toolchain file
         # DO NOT EDIT MANUALLY, it will be overwritten
@@ -54,43 +53,47 @@ class CMakeiOSToolchain(CMakeToolchainBase):
         {%- endif %}
 
         # iOS stuff
-
-        set(CONAN_SETTINGS_HOST_ARCH "arm64")
-        set(CONAN_SETTINGS_HOST_OS "iOS") # CMAKE_SYSTEM_NAME
-        set(CONAN_SETTINGS_HOST_OS_VERSION "12.0") # SDK_VERSION
-
+        # conan vars
+        set(CONAN_SETTINGS_HOST_ARCH "{{host_architecture}}")
+        set(CONAN_SETTINGS_HOST_OS "{{host_os}}") # CMAKE_SYSTEM_NAME
+        set(CONAN_SETTINGS_HOST_OS_VERSION "{{host_os_version}}") # SDK_VERSION
+        set(CONAN_SDK_NAME "{{host_sdk_name}}")
         # TODO: add logic to calc the deployment target
-        set(CONAN_SETTINGS_HOST_MIN_OS_VERSION "9.0") # DEPLOYMENT TARGET
+        set(CONAN_SETTINGS_HOST_MIN_OS_VERSION "{{host_os_min_version}}") # DEPLOYMENT TARGET
 
+        # set cmake vars
         set(CMAKE_SYSTEM_NAME ${CONAN_SETTINGS_HOST_OS})
-
-        # calc sdk based on host_os
-        set(CONAN_SDK_NAME "iphonesimulator")
-
-        set(CONAN_SDK_VERSION ${CONAN_SETTINGS_HOST_OS_VERSION})
-
+        set(CMAKE_SYSTEM_VERSION ${CONAN_SETTINGS_HOST_OS_VERSION})
         set(DEPLOYMENT_TARGET ${CONAN_SETTINGS_HOST_MIN_OS_VERSION})
-
-
         # Set the architectures for which to build.
         set(CMAKE_OSX_ARCHITECTURES ${CONAN_SETTINGS_HOST_ARCH})
-        set(CMAKE_OSX_SYSROOT "${CONAN_SDK_NAME}")
-
         # Setting CMAKE_OSX_SYSROOT SDK, when using Xcode generator the name is enough
         # but full path is necessary for others
-        set(CMAKE_OSX_SYSROOT "${CONAN_SDK_NAME}" CACHE INTERNAL "")
+        set(CMAKE_OSX_SYSROOT "${CONAN_SDK_NAME}")
         if(NOT DEFINED CMAKE_XCODE_ATTRIBUTE_DEVELOPMENT_TEAM)
           set(CMAKE_XCODE_ATTRIBUTE_DEVELOPMENT_TEAM "123456789A" CACHE INTERNAL "")
         endif()
-
-
     """)
 
     def __init__(self, conanfile, build_type=None, **kwargs):
         super(CMakeiOSToolchain, self).__init__(conanfile, build_type=build_type, **kwargs)
         self.build_type = build_type or self._conanfile.settings.get_safe("build_type")
+        self.host_architecture = self._get_architecture()
+        self.host_os = self._conanfile.settings.get_safe("os")
+        self.host_os_version = self._conanfile.settings.get_safe("os.version")
+        self.host_sdk_name = self._get_sdk_name(self.host_architecture)
+        self.host_os_min_version = "9.0"
+        self.libcxx = "libc++"
+        self.cppstd = self._conanfile.settings.get_safe("compiler.cppstd")
 
-    def get_architecture(self):
+        try:
+            # This is only defined in the cache, not in the local flow
+            self.install_prefix = self._conanfile.package_folder.replace("\\", "/")
+        except AttributeError:
+            # FIXME: In the local flow, we don't know the package_folder
+            self.install_prefix = None
+
+    def _get_architecture(self):
         # check valid combinations of architecture - os ?
         # for iOS a FAT library valid for simulator and device
         # can be generated if multiple archs are specified:
@@ -102,9 +105,29 @@ class CMakeiOSToolchain(CMakeToolchainBase):
                 "armv8_32": "arm64_32"}.get(arch, arch)
         return None
 
-    def get_sdk_name(self):
+    def _get_sdk_name(self, architecture):
         os_name = self._conanfile.settings.get_safe("os")
-        return {"iOS": "iphoneos",
-                "watchOS": "appletvos",
-                "tvOS": "watchos"}.get(os_name)
+        if "arm" in architecture:
+            return {"iOS": "iphoneos",
+                    "watchOS": "appletvos",
+                    "tvOS": "watchos"}.get(os_name)
+        else:
+            return {"iOS": "iphonesimulator",
+                    "watchOS": "appletvsimulator",
+                    "tvOS": "watchsimulator"}.get(os_name)
         return None
+
+    def _get_template_context_data(self):
+        tpl_toolchain_context, tpl_project_include_context = \
+            super(CMakeiOSToolchain, self)._get_template_context_data()
+        tpl_toolchain_context.update({
+            "host_architecture": self.host_architecture,
+            "host_os": self.host_os,
+            "host_os_version": self.host_os_version,
+            "host_sdk_name": self.host_sdk_name,
+            "host_os_min_version": self.host_os_min_version,
+            "install_prefix": self.install_prefix,
+            "set_libcxx": self.libcxx,
+            "cppstd": self.cppstd
+        })
+        return tpl_toolchain_context, tpl_project_include_context
