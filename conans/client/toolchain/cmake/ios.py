@@ -4,7 +4,7 @@ from .base import CMakeToolchainBase
 
 
 class CMakeiOSToolchain(CMakeToolchainBase):
-    _template_project_include = ''  # TODO: This file is not useful to Android, there is no MSVC runtime MD/MT
+    _template_project_include = ''
 
     # TODO: Factorize with the native one
     _template_toolchain = textwrap.dedent("""
