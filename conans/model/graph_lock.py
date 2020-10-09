@@ -492,7 +492,8 @@ class GraphLock(object):
         else:
             node.graph_lock_node = locked_node
             node.conanfile.options.values = locked_node.options
-            node.conanfile.options.freeze()
+            if locked_node.package_id is not None:  # This was not a "base" one, but a partial one
+                node.conanfile.options.freeze()
 
     def lock_node(self, node, requires, build_requires=False):
         """ apply options and constraints on requirements of a node, given the information from
