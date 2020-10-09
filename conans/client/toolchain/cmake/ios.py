@@ -83,7 +83,7 @@ class CMakeiOSToolchain(CMakeToolchainBase):
         self.host_os_version = self._conanfile.settings.get_safe("os.version")
         self.host_sdk_name = self._get_sdk_name(self.host_architecture)
         self.host_os_min_version = "9.0"
-        self.libcxx = "libc++"
+        self.libcxx = self._conanfile.settings.get_safe("compiler.libcxx")
         self.cppstd = self._conanfile.settings.get_safe("compiler.cppstd")
 
         try:
