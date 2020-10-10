@@ -214,12 +214,16 @@ bin, *.dll ->  @ excludes=Foo/*.dll Baz/*.dll
         client.run("create . pkg/0.1@")
         consumer_conanfile = textwrap.dedent("""
             from conans import ConanFile
+            import platform
 
             class TestConan(ConanFile):
                 requires = "pkg/0.1"
 
                 def imports(self):
-                    self.copy("licenses\\LICENSE", dst="deps_licenses", root_package="pkg")
+                    if platform.system() == "Windows":
+                        self.copy("licenses\\LICENSE", dst="deps_licenses", root_package="pkg")
+                    else:
+                        self.copy("licenses/LICENSE", dst="deps_licenses", root_package="pkg")
                     self.copy("licenses/README", dst="deps_licenses", root_package="pkg")
             """)
         client.save({"conanfile.py": consumer_conanfile})
