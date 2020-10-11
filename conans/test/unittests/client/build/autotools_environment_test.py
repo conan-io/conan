@@ -671,3 +671,19 @@ class AutoToolsConfigureTest(unittest.TestCase):
         self.assertFalse(ab.fpic)
         ab.fpic = True
         self.assertIn("-fPIC", ab.vars["CXXFLAGS"])
+
+    def mac_version_min_test(self):
+        options = MockOptions({})
+        settings = MockSettings({"os": "Macos"})
+        conanfile = MockConanfile(settings, options)
+        be = AutoToolsBuildEnvironment(conanfile)
+        expected = be.vars["CXXFLAGS"]
+        self.assertEqual("", expected)
+
+        settings = MockSettings({"os": "Macos",
+                                 "os.version": "10.13",
+                                 "compiler.version": "12.0"})
+        conanfile = MockConanfile(settings, options)
+        be = AutoToolsBuildEnvironment(conanfile)
+        expected = be.vars["CXXFLAGS"]
+        self.assertIn("10.13", expected)

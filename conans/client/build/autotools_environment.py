@@ -11,6 +11,7 @@ from conans.client.build.compiler_flags import (architecture_flag, build_type_de
                                                 format_frameworks, format_framework_paths)
 from conans.client.build.cppstd_flags import cppstd_from_settings, \
     cppstd_flag_new as cppstd_flag
+from conans.client import tools
 from conans.client.tools.env import environment_append
 from conans.client.tools.oss import OSInfo, args_to_string, cpu_count, cross_building, \
     detected_architecture, detected_os, get_gnu_triplet, get_target_os_arch, get_build_os_arch
@@ -39,6 +40,7 @@ class AutoToolsBuildEnvironment(object):
         self.subsystem = OSInfo().detect_windows_subsystem() if self._win_bash else None
         self._deps_cpp_info = conanfile.deps_cpp_info
         self._os = conanfile.settings.get_safe("os")
+        self._os_version = conanfile.settings.get_safe("os.version")
         self._arch = conanfile.settings.get_safe("arch")
         self._os_target, self._arch_target = get_target_os_arch(conanfile)
 
@@ -339,6 +341,10 @@ class AutoToolsBuildEnvironment(object):
         tmp_compilation_flags = copy.copy(self.flags)
         if self.fpic:
             tmp_compilation_flags.append(pic_flag(self._conanfile.settings))
+        if tools.is_apple_os(self._os) and self._os_version:
+            flag = tools.apple_deployment_target_flag(self._os,
+                                                      self._os_version)
+            tmp_compilation_flags.append(flag)
 
         cxx_flags = append(tmp_compilation_flags, self.cxx_flags, self.cppstd_flag)
         c_flags = tmp_compilation_flags
