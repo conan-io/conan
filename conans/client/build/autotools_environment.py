@@ -341,10 +341,11 @@ class AutoToolsBuildEnvironment(object):
         tmp_compilation_flags = copy.copy(self.flags)
         if self.fpic:
             tmp_compilation_flags.append(pic_flag(self._conanfile.settings))
-        if tools.is_apple_os(self._os) and self._os_version:
-            flag = tools.apple_deployment_target_flag(self._os,
-                                                      self._os_version)
-            tmp_compilation_flags.append(flag)
+        if tools.is_apple_os(self._os):
+            concat = " ".join(tmp_compilation_flags)
+            if self._os_version and "-version-min" not in concat and "-target" not in concat:
+                tmp_compilation_flags.append(tools.apple_deployment_target_flag(self._os,
+                                                                                self._os_version))
 
         cxx_flags = append(tmp_compilation_flags, self.cxx_flags, self.cppstd_flag)
         c_flags = tmp_compilation_flags
