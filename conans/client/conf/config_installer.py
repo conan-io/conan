@@ -12,7 +12,7 @@ from conans import load
 from conans.client import tools
 from conans.client.cache.remote_registry import load_registry_txt, migrate_registry_file
 from conans.client.tools import Git
-from conans.client.tools.files import unzip
+from conans.client.tools.files import unzip, is_compressed_file
 from conans.errors import ConanException
 from conans.util.files import mkdir, rmdir, walk, save, touch, remove
 from conans.client.cache.cache import ClientCache
@@ -107,22 +107,20 @@ def _process_file(directory, filename, config, cache, output, folder):
     elif filename == "remotes.json":
         # Fix for Conan 2.0
         raise ConanException("remotes.json install is not supported yet. Use 'remotes.txt'")
-    # TODO : do we need this ? in which case we need to copy all the folder source
-    # TODO : into the conan configuration file ?
-    # else:
-    #     # This is ugly, should be removed in Conan 2.0
-    #     if filename in ("README.md", "LICENSE.txt"):
-    #         output.info("Skip %s" % filename)
-    #     else:
-    #         relpath = os.path.relpath(directory, folder)
-    #         if config.target_folder:
-    #             target_folder = os.path.join(cache.cache_folder, config.target_folder,
-    #                                          relpath)
-    #         else:
-    #             target_folder = os.path.join(cache.cache_folder, relpath)
-    #         mkdir(target_folder)
-    #         output.info("Copying file %s to %s" % (filename, target_folder))
-    #         _filecopy(directory, filename, target_folder)
+    else:
+        # This is ugly, should be removed in Conan 2.0
+        if filename in ("README.md", "LICENSE.txt"):
+            output.info("Skip %s" % filename)
+        else:
+            relpath = os.path.relpath(directory, folder)
+            if config.target_folder:
+                target_folder = os.path.join(cache.cache_folder, config.target_folder,
+                                             relpath)
+            else:
+                target_folder = os.path.join(cache.cache_folder, relpath)
+            mkdir(target_folder)
+            output.info("Copying file %s to %s" % (filename, target_folder))
+            _filecopy(directory, filename, target_folder)
 
 
 def _process_folder(config, folder, cache, output):
@@ -185,6 +183,8 @@ class _ConfigOrigin(object):
                 config.type = "git"
             elif os.path.isdir(uri):
                 config.type = "dir"
+            elif is_compressed_file(uri):
+                config.type = "compressed"
             elif os.path.isfile(uri):
                 config.type = "file"
             elif uri.startswith("http"):
@@ -207,14 +207,12 @@ def _process_config(config, cache, output, requester):
             _process_git_repo(config, cache, output)
         elif config.type == "dir":
             _process_folder(config, config.uri, cache, output)
+        elif config.type == "compressed":
+            with tmp_config_install_folder(cache) as tmp_folder:
+                _process_zip_file(config, config.uri, cache, output, tmp_folder)
         elif config.type == "file":
-            from zipfile import is_zipfile
-            if is_zipfile(config.uri):
-                with tmp_config_install_folder(cache) as tmp_folder:
-                    _process_zip_file(config, config.uri, cache, output, tmp_folder)
-            else:
-                dirname, filename = os.path.dirname(config.uri), os.path.basename(config.uri)
-                _process_file(dirname, filename, config, cache, output, dirname)
+            dirname, filename = os.path.dirname(config.uri), os.path.basename(config.uri)
+            _process_file(dirname, filename, config, cache, output, dirname)
         elif config.type == "url":
             _process_download(config, cache, output, requester=requester)
         else:
