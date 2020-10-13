@@ -183,8 +183,8 @@ class _ConfigOrigin(object):
                 config.type = "git"
             elif os.path.isdir(uri):
                 config.type = "dir"
-            elif is_compressed_file(uri):
-                config.type = "compressed"
+            # elif is_compressed_file(uri):
+            #     config.type = "compressed"
             elif os.path.isfile(uri):
                 config.type = "file"
             elif uri.startswith("http"):
@@ -207,12 +207,14 @@ def _process_config(config, cache, output, requester):
             _process_git_repo(config, cache, output)
         elif config.type == "dir":
             _process_folder(config, config.uri, cache, output)
-        elif config.type == "compressed":
-            with tmp_config_install_folder(cache) as tmp_folder:
-                _process_zip_file(config, config.uri, cache, output, tmp_folder)
+        # elif config.type == "compressed":
         elif config.type == "file":
-            dirname, filename = os.path.dirname(config.uri), os.path.basename(config.uri)
-            _process_file(dirname, filename, config, cache, output, dirname)
+            if is_compressed_file(config.uri):
+                with tmp_config_install_folder(cache) as tmp_folder:
+                    _process_zip_file(config, config.uri, cache, output, tmp_folder)
+            else:
+                dirname, filename = os.path.dirname(config.uri), os.path.basename(config.uri)
+                _process_file(dirname, filename, config, cache, output, dirname)
         elif config.type == "url":
             _process_download(config, cache, output, requester=requester)
         else:
