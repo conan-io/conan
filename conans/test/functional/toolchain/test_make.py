@@ -6,6 +6,7 @@ import unittest
 from nose.plugins.attrib import attr
 
 from conans.test.utils.tools import TestClient
+from conans.client.tools import which
 
 from parameterized.parameterized import parameterized
 
@@ -184,6 +185,7 @@ class MakeToolchainTest(unittest.TestCase):
         ("static", "Release"),
     ])
     @unittest.skipUnless(platform.system() in ["Windows"], "Requires mingw32-make")
+    @unittest.skipIf(which("mingw32-make") is None, "Needs mingw32-make")
     def test_toolchain_windows(self, target, build_type):
         client = TestClient(path_with_spaces=False)
 
