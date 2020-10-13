@@ -2,6 +2,7 @@ import os
 import textwrap
 from xml.dom import minidom
 
+from conans.client.tools import msvs_toolset
 from conans.errors import ConanException
 from conans.util.files import save, load
 
@@ -13,9 +14,8 @@ class MSBuildToolchain(object):
         self.preprocessor_definitions = {}
         self.configuration = conanfile.settings.build_type
 
-    @ staticmethod
-    def _name_condition(settings):
-        props = [("Configuration", settings.build_type),
+    def _name_condition(self, settings):
+        props = [("Configuration", self.configuration),
                  # FIXME: This probably requires mapping ARM architectures
                  ("Platform", {'x86': 'Win32',
                                'x86_64': 'x64'}.get(settings.get_safe("arch")))]
@@ -37,7 +37,7 @@ class MSBuildToolchain(object):
 
         runtime = self._conanfile.settings.get_safe("compiler.runtime")
         cppstd = self._conanfile.settings.get_safe("compiler.cppstd")
-        toolset = self._conanfile.settings.get_safe("compiler.toolsets")
+        toolset = msvs_toolset(self._conanfile.settings)
         runtime_library = {"MT": "MultiThreaded",
                            "MTd": "MultiThreadedDebug",
                            "MD": "MultiThreadedDLL",
@@ -64,6 +64,7 @@ class MSBuildToolchain(object):
                                              for k, v in self.preprocessor_definitions.items()])
         # It is useless to set PlatformToolset in the config file, because the conditional checks it
         cppstd = "stdcpp%s" % cppstd if cppstd else ""
+        toolset = toolset or ""
         config_props = content.format(preprocessor_definitions, runtime_library, cppstd, toolset)
         config_filepath = os.path.abspath(config_filename)
         self._conanfile.output.info("MSBuildToolchain created %s" % config_filename)

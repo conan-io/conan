@@ -128,14 +128,15 @@ myapp_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
+  <!-- Very IMPORTANT this should go BEFORE the Microsoft.Cpp.props -->
+  <ImportGroup Label="PropertySheets">
+    <Import Project="..\conan\conan_Hello.props" />
+    <Import Project="..\conan\conan_toolchain.props" />
+  </ImportGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
   </ImportGroup>
   <ImportGroup Label="Shared">
-  </ImportGroup>
-  <ImportGroup Label="PropertySheets">
-    <Import Project="..\conan\conan_Hello.props" />
-    <Import Project="..\conan\conan_toolchain.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props"
@@ -322,6 +323,7 @@ class WinTest(unittest.TestCase):
                     tc.preprocessor_definitions["DEFINITIONS_CONFIG"] = "Debug"
                 else:
                     tc.preprocessor_definitions["DEFINITIONS_CONFIG"] = "Release"
+
                 tc.write_toolchain_files()
                 gen.write_generator_files()
 
@@ -470,11 +472,9 @@ class WinTest(unittest.TestCase):
         vs_path = vs_installation_path("15")
         vcvars_path = os.path.join(vs_path, "VC/Auxiliary/Build/vcvarsall.bat")
 
-        # FIXME: This is cheating, pass the toolset on the command line, nothing that devs would do
+        # The default in this context is x64, no need to pass Platform=x64
         cmd = ('set "VSCMD_START_DIR=%%CD%%" && '
-               '"%s" x64 && '
-               'msbuild "MyProject.sln" /p:Configuration=Debug /p:PlatformToolset="v140"'
-               % vcvars_path)
+               '"%s" x64 && msbuild "MyProject.sln" /p:Configuration=Debug' % vcvars_path)
         client.run_command(cmd)
         self.assertIn("Visual Studio 2017", client.out)
         self.assertIn("[vcvarsall.bat] Environment initialized for: 'x64'", client.out)
@@ -504,8 +504,6 @@ class WinTest(unittest.TestCase):
             client.run("create . hello/0.1@ %s -s build_type=%s -s arch=%s -s compiler.runtime=%s "
                        " -o hello:shared=%s" % (settings, build_type, arch, runtime, shared))
 
-        print(client.current_folder)
-
         # Prepare the actual consumer package
         client.save({"conanfile.py": self.conanfile,
                      "MyProject.sln": sln_file,
@@ -524,7 +522,6 @@ class WinTest(unittest.TestCase):
         vcvars_path = os.path.join(vs_path, "VC/Auxiliary/Build/vcvarsall.bat")
 
         for build_type, arch, shared in configs:
-            print("BUILDING ", build_type, arch, shared)
             platform_arch = "x86" if arch == "x86" else "x64"
             if build_type == "Release" and shared == "shared":
                 configuration = "ReleaseShared"
