@@ -269,8 +269,10 @@ class DepsGraphBuilder(object):
 
             # Recursion is only necessary if the inputs conflict with the current "previous"
             # configuration of upstream versions and options
-            if not graph_lock and self._recurse(previous.public_closure, new_reqs, new_options,
-                                                previous.context):
+            # recursion can stop if there is a graph_lock not relaxed
+            lock_recurse = not (graph_lock and not graph_lock.relaxed)
+            if lock_recurse and self._recurse(previous.public_closure, new_reqs, new_options,
+                                              previous.context):
                 self._expand_node(previous, graph, new_reqs, node.ref, new_options, check_updates,
                                   update, remotes, profile_host, profile_build, graph_lock)
 

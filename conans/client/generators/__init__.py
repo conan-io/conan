@@ -35,9 +35,37 @@ from .xcode import XCodeGenerator
 from .ycm import YouCompleteMeGenerator
 
 
-class _GeneratorManager(object):
+class GeneratorManager(object):
     def __init__(self):
-        self._generators = {}
+        self._generators = {"txt": TXTGenerator,
+                            "gcc": GCCGenerator,
+                            "compiler_args": CompilerArgsGenerator,
+                            "cmake": CMakeGenerator,
+                            "cmake_multi": CMakeMultiGenerator,
+                            "cmake_paths": CMakePathsGenerator,
+                            "cmake_find_package": CMakeFindPackageGenerator,
+                            "cmake_find_package_multi": CMakeFindPackageMultiGenerator,
+                            "qmake": QmakeGenerator,
+                            "qbs": QbsGenerator,
+                            "scons": SConsGenerator,
+                            "visual_studio": VisualStudioGenerator,
+                            "msbuild": MSBuildGenerator,
+                            "visual_studio_multi": VisualStudioMultiGenerator,
+                            "visual_studio_legacy": VisualStudioLegacyGenerator,
+                            "xcode": XCodeGenerator,
+                            "ycm": YouCompleteMeGenerator,
+                            "virtualenv": VirtualEnvGenerator,
+                            "virtualenv_python": VirtualEnvPythonGenerator,
+                            "virtualbuildenv": VirtualBuildEnvGenerator,
+                            "virtualrunenv": VirtualRunEnvGenerator,
+                            "boost-build": BoostBuildGenerator,
+                            "pkg_config": PkgConfigGenerator,
+                            "json": JsonGenerator,
+                            "b2": B2Generator,
+                            "premake": PremakeGenerator,
+                            "make": MakeGenerator,
+                            "deploy": DeployGenerator,
+                            "markdown": MarkdownGenerator}
 
     def add(self, name, generator_class, custom=False):
         if name not in self._generators or custom:
@@ -53,75 +81,41 @@ class _GeneratorManager(object):
     def __getitem__(self, key):
         return self._generators[key]
 
+    def write_generators(self, conanfile, path, output):
+        """ produces auxiliary files, required to build a project or a package.
+        """
+        for generator_name in set(conanfile.generators):
+            try:
+                generator_class = self._generators[generator_name]
+            except KeyError:
+                raise ConanException("Invalid generator '%s'. Available types: %s" %
+                                     (generator_name, ", ".join(self.available)))
+            try:
+                generator = generator_class(conanfile)
+            except TypeError:
+                # To allow old-style generator packages to work (e.g. premake)
+                output.warn("Generator %s failed with new __init__(), trying old one")
+                generator = generator_class(conanfile.deps_cpp_info, conanfile.cpp_info)
 
-registered_generators = _GeneratorManager()
-
-registered_generators.add("txt", TXTGenerator)
-registered_generators.add("gcc", GCCGenerator)
-registered_generators.add("compiler_args", CompilerArgsGenerator)
-registered_generators.add("cmake", CMakeGenerator)
-registered_generators.add("cmake_multi", CMakeMultiGenerator)
-registered_generators.add("cmake_paths", CMakePathsGenerator)
-registered_generators.add("cmake_find_package", CMakeFindPackageGenerator)
-registered_generators.add("cmake_find_package_multi", CMakeFindPackageMultiGenerator)
-registered_generators.add("qmake", QmakeGenerator)
-registered_generators.add("qbs", QbsGenerator)
-registered_generators.add("scons", SConsGenerator)
-registered_generators.add("visual_studio", VisualStudioGenerator)
-registered_generators.add("msbuild", MSBuildGenerator)
-registered_generators.add("visual_studio_multi", VisualStudioMultiGenerator)
-registered_generators.add("visual_studio_legacy", VisualStudioLegacyGenerator)
-registered_generators.add("xcode", XCodeGenerator)
-registered_generators.add("ycm", YouCompleteMeGenerator)
-registered_generators.add("virtualenv", VirtualEnvGenerator)
-registered_generators.add("virtualenv_python", VirtualEnvPythonGenerator)
-registered_generators.add("virtualbuildenv", VirtualBuildEnvGenerator)
-registered_generators.add("virtualrunenv", VirtualRunEnvGenerator)
-registered_generators.add("boost-build", BoostBuildGenerator)
-registered_generators.add("pkg_config", PkgConfigGenerator)
-registered_generators.add("json", JsonGenerator)
-registered_generators.add("b2", B2Generator)
-registered_generators.add("premake", PremakeGenerator)
-registered_generators.add("make", MakeGenerator)
-registered_generators.add("deploy", DeployGenerator)
-registered_generators.add("markdown", MarkdownGenerator)
-
-
-def write_generators(conanfile, path, output):
-    """ produces auxiliary files, required to build a project or a package.
-    """
-    for generator_name in set(conanfile.generators):
-        try:
-            generator_class = registered_generators[generator_name]
-        except KeyError:
-            raise ConanException("Invalid generator '%s'. Available types: %s" %
-                                 (generator_name, ", ".join(registered_generators.available)))
-        try:
-            generator = generator_class(conanfile)
-        except TypeError:
-            # To allow old-style generator packages to work (e.g. premake)
-            output.warn("Generator %s failed with new __init__(), trying old one")
-            generator = generator_class(conanfile.deps_cpp_info, conanfile.cpp_info)
-
-        try:
-            generator.output_path = path
-            content = generator.content
-            if isinstance(content, dict):
-                if generator.filename:
-                    output.warn("Generator %s is multifile. Property 'filename' not used"
-                                % (generator_name,))
-                for k, v in content.items():
-                    if generator.normalize:  # To not break existing behavior, to be removed 2.0
-                        v = normalize(v)
-                    output.info("Generator %s created %s" % (generator_name, k))
-                    save(join(path, k), v, only_if_modified=True)
-            else:
-                content = normalize(content)
-                output.info("Generator %s created %s" % (generator_name, generator.filename))
-                save(join(path, generator.filename), content, only_if_modified=True)
-        except Exception as e:
-            if get_env("CONAN_VERBOSE_TRACEBACK", False):
-                output.error(traceback.format_exc())
-            output.error("Generator %s(file:%s) failed\n%s"
-                         % (generator_name, generator.filename, str(e)))
-            raise ConanException(e)
+            try:
+                generator.output_path = path
+                content = generator.content
+                if isinstance(content, dict):
+                    if generator.filename:
+                        output.warn("Generator %s is multifile. Property 'filename' not used"
+                                    % (generator_name,))
+                    for k, v in content.items():
+                        if generator.normalize:  # To not break existing behavior, to be removed 2.0
+                            v = normalize(v)
+                        output.info("Generator %s created %s" % (generator_name, k))
+                        save(join(path, k), v, only_if_modified=True)
+                else:
+                    content = normalize(content)
+                    output.info("Generator %s created %s" % (generator_name, generator.filename))
+                    save(join(path, generator.filename), content, only_if_modified=True)
+            except Exception as e:
+                if get_env("CONAN_VERBOSE_TRACEBACK", False):
+                    output.error(traceback.format_exc())
+                output.error("Generator %s(file:%s) failed\n%s"
+                             % (generator_name, generator.filename, str(e)))
+                raise ConanException(e)

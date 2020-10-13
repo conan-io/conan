@@ -614,11 +614,6 @@ class TestClient(object):
             else:
                 registry.add(name, server)
 
-    @property
-    def default_compiler_visual_studio(self):
-        settings = self.cache.default_profile.settings
-        return settings.get("compiler", None) == "Visual Studio"
-
     @contextmanager
     def chdir(self, newdir):
         old_dir = self.current_folder
