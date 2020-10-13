@@ -421,7 +421,7 @@ class WinTest(unittest.TestCase):
         # Run the configure corresponding to this test case
         client.run("install . %s -if=conan" % (settings, ))
         self.assertIn("conanfile.py: MSBuildToolchain created "
-                      "conan_toolchain_release_win32_v141.props", client.out)
+                      "conan_toolchain_release_win32.props", client.out)
         vs_path = vs_installation_path("15")
         vcvars_path = os.path.join(vs_path, "VC/Auxiliary/Build/vcvarsall.bat")
 
@@ -465,11 +465,12 @@ class WinTest(unittest.TestCase):
 
         # Run the configure corresponding to this test case
         client.run("install . %s -if=conan" % (settings, ))
-        self.assertIn("conanfile.py: MSBuildToolchain created conan_toolchain_debug_x64_v140.props",
+        self.assertIn("conanfile.py: MSBuildToolchain created conan_toolchain_debug_x64.props",
                       client.out)
         vs_path = vs_installation_path("15")
         vcvars_path = os.path.join(vs_path, "VC/Auxiliary/Build/vcvarsall.bat")
 
+        # FIXME: This is cheating, pass the toolset on the command line, nothing that devs would do
         cmd = ('set "VSCMD_START_DIR=%%CD%%" && '
                '"%s" x64 && '
                'msbuild "MyProject.sln" /p:Configuration=Debug /p:PlatformToolset="v140"'
@@ -503,6 +504,8 @@ class WinTest(unittest.TestCase):
             client.run("create . hello/0.1@ %s -s build_type=%s -s arch=%s -s compiler.runtime=%s "
                        " -o hello:shared=%s" % (settings, build_type, arch, runtime, shared))
 
+        print(client.current_folder)
+
         # Prepare the actual consumer package
         client.save({"conanfile.py": self.conanfile,
                      "MyProject.sln": sln_file,
@@ -521,6 +524,7 @@ class WinTest(unittest.TestCase):
         vcvars_path = os.path.join(vs_path, "VC/Auxiliary/Build/vcvarsall.bat")
 
         for build_type, arch, shared in configs:
+            print("BUILDING ", build_type, arch, shared)
             platform_arch = "x86" if arch == "x86" else "x64"
             if build_type == "Release" and shared == "shared":
                 configuration = "ReleaseShared"

@@ -2,7 +2,7 @@ import os
 import textwrap
 from xml.dom import minidom
 
-from conans.client.tools import msvs_toolset, VALID_LIB_EXTENSIONS
+from conans.client.tools import VALID_LIB_EXTENSIONS
 from conans.errors import ConanException
 from conans.model import Generator
 from conans.util.files import load, save
@@ -81,14 +81,12 @@ class MSBuildGenerator(Generator):
     def filename(self):
         return None
 
-    def _name_condition(self, settings):
-        toolset = msvs_toolset(settings)
-
-        props = [("Configuration",  self.configuration),
+    @ staticmethod
+    def _name_condition(settings):
+        props = [("Configuration", settings.build_type),
                  # FIXME: This probably requires mapping ARM architectures
                  ("Platform", {'x86': 'Win32',
-                               'x86_64': 'x64'}.get(settings.get_safe("arch"))),
-                 ("PlatformToolset", toolset)]
+                               'x86_64': 'x64'}.get(settings.get_safe("arch")))]
 
         name = "".join("_%s" % v for _, v in props if v is not None)
         condition = " And ".join("'$(%s)' == '%s'" % (k, v) for k, v in props if v is not None)
@@ -134,9 +132,9 @@ class MSBuildGenerator(Generator):
 
     def _pkg_config_props(self, name, cpp_info):
         # returns a .props file with the variables definition for one package for one configuration
-        def has_valid_ext(lib):
-            ext = os.path.splitext(lib)[1]
-            return ext in VALID_LIB_EXTENSIONS
+        def add_valid_ext(libname):
+            ext = os.path.splitext(libname)[1]
+            return '%s;' % libname if ext in VALID_LIB_EXTENSIONS else '%s.lib;' % libname
 
         fields = {
             'name': name,
@@ -144,10 +142,8 @@ class MSBuildGenerator(Generator):
             'res_dirs': "".join("%s;" % p for p in cpp_info.res_paths),
             'include_dirs': "".join("%s;" % p for p in cpp_info.include_paths),
             'lib_dirs': "".join("%s;" % p for p in cpp_info.lib_paths),
-            'libs': "".join(['%s.lib;' % lib if not has_valid_ext(lib)
-                             else '%s;' % lib for lib in cpp_info.libs]),
-            'system_libs': "".join(['%s.lib;' % sys_dep if not has_valid_ext(sys_dep)
-                                    else '%s;' % sys_dep for sys_dep in cpp_info.system_libs]),
+            'libs': "".join([add_valid_ext(lib) for lib in cpp_info.libs]),
+            'system_libs': "".join([add_valid_ext(sys_dep) for sys_dep in cpp_info.system_libs]),
             'definitions': "".join("%s;" % d for d in cpp_info.defines),
             'compiler_flags': " ".join(cpp_info.cxxflags + cpp_info.cflags),
             'linker_flags': " ".join(cpp_info.sharedlinkflags),
