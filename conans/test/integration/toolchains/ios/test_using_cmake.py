@@ -21,7 +21,7 @@ class ToolchainiOSTestCase(unittest.TestCase):
                 name = 'hello'
                 version = '1.0'
                 settings = 'os', 'arch', 'compiler', 'build_type'
-                exports_sources = 'hello.h', 'hello.cpp', 'cpp-wrapper.h', 'cpp-wrapper.mm', 'CMakeLists.txt'
+                exports_sources = 'hello.h', 'hello.cpp', 'CMakeLists.txt'
                 options = {{'shared': [True, False]}}
                 default_options = {{'shared': False}}
                 _cmake = None
