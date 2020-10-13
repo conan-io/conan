@@ -150,11 +150,11 @@ class TXTGenerator(Generator):
                     return p
 
             def _populate_cpp_info(_cpp_info, _data, _rootpath):
-                for key, value in _data.items():
+                for key, v in _data.items():
                     if key.endswith('dirs'):
-                        value = [_relativize_path(it, _rootpath) for it in value]
-                        value = ['' if it == '.' else it for it in value]
-                    setattr(_cpp_info, key, value)
+                        v = [_relativize_path(it, _rootpath) for it in v]
+                        v = ['' if it == '.' else it for it in v]
+                    setattr(_cpp_info, key, v)
 
             if None in data:
                 del data[None]
@@ -167,11 +167,11 @@ class TXTGenerator(Generator):
                 dep_cpp_info = CppInfo(dep, rootpath)
                 dep_cpp_info.filter_empty = filter_empty
                 dep_cpp_info.names[TXTGenerator.name] = no_config_data.pop('name')[0]
-                generatornames = no_config_data.pop("generatornames")
+                generatornames = no_config_data.pop("generatornames", [])  # can be empty
                 for n in generatornames:
                     gen, value = n.split(":")
                     dep_cpp_info.names[gen] = value
-                generatorfilenames = no_config_data.pop("generatorfilenames")
+                generatorfilenames = no_config_data.pop("generatorfilenames", [])  # can be empty
                 for n in generatorfilenames:
                     gen, value = n.split(":")
                     dep_cpp_info.filenames[gen] = value
