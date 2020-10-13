@@ -166,7 +166,9 @@ class TXTGenerator(Generator):
                 rootpath = no_config_data.pop('rootpath')[0]
                 dep_cpp_info = CppInfo(dep, rootpath)
                 dep_cpp_info.filter_empty = filter_empty
-                dep_cpp_info.names[TXTGenerator.name] = no_config_data.pop('name')[0]
+                _ = no_config_data.pop('name')[0]
+                version = no_config_data.pop('version', [""])[0]
+                dep_cpp_info.version = version
                 generatornames = no_config_data.pop("generatornames", [])  # can be empty
                 for n in generatornames:
                     gen, value = n.split(":")
@@ -184,8 +186,6 @@ class TXTGenerator(Generator):
                     _populate_cpp_info(cpp_info_config, config_data, rootpath)
 
                 # Add to the dependecy list
-                version = no_config_data.pop('version', [""])[0]
-                dep_cpp_info.version = version
                 deps_cpp_info.add(dep, DepCppInfo(dep_cpp_info))
 
             return deps_cpp_info
