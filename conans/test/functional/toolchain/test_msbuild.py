@@ -304,6 +304,7 @@ class WinTest(unittest.TestCase):
 
     conanfile = textwrap.dedent("""
         from conans import ConanFile, MSBuildToolchain
+        from conans.client.generators import MSBuildGenerator
         class App(ConanFile):
             settings = "os", "arch", "compiler", "build_type"
             requires = "hello/0.1"
@@ -311,9 +312,10 @@ class WinTest(unittest.TestCase):
             default_options = {"shared": False}
             def toolchain(self):
                 tc = MSBuildToolchain(self)
+                gen = MSBuildGenerator(self)
                 if self.options["hello"].shared and self.settings.build_type == "Release":
                     tc.configuration = "ReleaseShared"
-                    tc.generator.configuration = "ReleaseShared"
+                    gen.configuration = "ReleaseShared"
 
                 tc.preprocessor_definitions["DEFINITIONS_BOTH"] = "True"
                 if self.settings.build_type == "Debug":
@@ -321,6 +323,7 @@ class WinTest(unittest.TestCase):
                 else:
                     tc.preprocessor_definitions["DEFINITIONS_CONFIG"] = "Release"
                 tc.write_toolchain_files()
+                gen.write_generator_files()
 
             def imports(self):
                 self.copy("*.dll", src="bin",

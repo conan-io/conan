@@ -5,7 +5,7 @@ from xml.dom import minidom
 from conans.client.tools import msvs_toolset, VALID_LIB_EXTENSIONS
 from conans.errors import ConanException
 from conans.model import Generator
-from conans.util.files import load
+from conans.util.files import load, save
 
 
 class MSBuildGenerator(Generator):
@@ -68,6 +68,14 @@ class MSBuildGenerator(Generator):
     def __init__(self, conanfile):
         super(MSBuildGenerator, self).__init__(conanfile)
         self.configuration = conanfile.settings.build_type
+
+    def write_generator_files(self):
+        # FIXME: Ugly way to define the output path
+        self.output_path = os.getcwd()
+        generator_files = self.content
+        for generator_file, content in generator_files.items():
+            generator_file = os.path.abspath(generator_file)
+            save(generator_file, content)
 
     @property
     def filename(self):
