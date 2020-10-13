@@ -6,7 +6,8 @@ import unittest
 from conans.client import tools
 from conans.client.output import ConanOutput
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient, TestBufferConanOutput
+from conans.test.utils.tools import TestClient
+from conans.test.utils.mocks import TestBufferConanOutput
 from conans.util.files import load, save
 from conans.client.tools.files import replace_in_file
 
@@ -36,8 +37,7 @@ class Pkg(ConanFile):
         client.save({"conanfile.py": conanfile,
                      "myfile.txt": "World"})
         client.run("source .")
-        self.assertEqual("WorldHello",
-                         load(os.path.join(client.current_folder, "myfile.txt")))
+        self.assertEqual("WorldHello", client.load("myfile.txt"))
 
     def test_untar(self):
         tmp_dir = temp_folder()

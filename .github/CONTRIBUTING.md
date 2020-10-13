@@ -25,14 +25,14 @@ To contribute follow the next steps:
 3. Fork the [Conan main repository](https://github.com/conan-io/conan) and create a `feature/xxx` branch from the `develop` branch and develop
    your fix/feature as discussed in previous step.
 4. Try to keep your branch updated with the `develop` branch to avoid conflicts.
-5. Open a pull request, and select `develop` as the base branch. Never open a pull request to ``master`` or ``release/xxx`` branches.
+5. Open a pull request, and select `develop` as the base branch. Never open a pull request to ``release/xxx`` branches.
 6. Add the text (besides other comments): "fixes #IssueNumber" in the body of the PR, referring to the issue of step 1.
 7. Submit a PR to the Conan documentation about the changes done providing examples if needed.
 
 The ``conan-io`` organization maintainers will review and help with the coding of tests. Finally it will be assigned to milestone.
 
 Each milestone corresponds to a Conan release, a branch `release/xxx` will be opened from the `develop` branch.
-When the branch is ready, it will be merged into `master` branch and a tag corresponding to the version will be pushed.
+When the branch is ready, a tag corresponding to the version will be pushed and it will be merged into `develop` branch.
 
 The release plan is done monthly but dates are not fixed, the ``conan-io`` organization maintainers reserve the right of altering the issues
 of each milestone as well as the release dates.
@@ -76,7 +76,7 @@ Please keep in mind these points:
 - ``conan-io`` maintainers can tag/close/modify any opened issue and it should not be interpreted as a rude or disrespectful action. It
   **always** responds to organizational purposes. A closed issue can be perfectly reopened or further commented.
 - It is very hard to keep the project in good health in terms of technical debt, usability, serviceability, etc. If the proposed feature is
-  not clearly stated, enough information is not provided or it is not sure that would be a good feature for the future development of the project project, it won't be accepted. The community plays a very important role during this discussion so it strongly encouraged to
+  not clearly stated, enough information is not provided or it is not sure that would be a good feature for the future development of the project, it won't be accepted. The community plays a very important role during this discussion so it strongly encouraged to
   explain the value of a feature for the community, the needed documentation and its use cases.
   - Backwards compatibility and not breaking users' packages is very important and it won't be done unless there are very good reasons.
 - You should not get bothered if you feel unattended, Conan is an Open Source project, not a commercial product. Try to explain what you

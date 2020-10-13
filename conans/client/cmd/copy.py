@@ -9,21 +9,9 @@ from conans.util.files import rmdir
 
 def _prepare_sources(cache, ref, remote_manager, loader, remotes):
     conan_file_path = cache.package_layout(ref).conanfile()
-    conanfile = loader.load_class(conan_file_path)
+    conanfile = loader.load_basic(conan_file_path)
     complete_recipe_sources(remote_manager, cache, conanfile, ref, remotes)
     return conanfile.short_paths
-
-
-def _get_package_ids(cache, ref, package_ids):
-    if not package_ids:
-        return []
-    if package_ids is True:
-        packages = cache.package_layout(ref).packages()
-        if os.path.exists(packages):
-            package_ids = os.listdir(packages)
-        else:
-            package_ids = []
-    return package_ids
 
 
 def cmd_copy(ref, user_channel, package_ids, cache, user_io, remote_manager, loader, remotes,
@@ -37,15 +25,18 @@ def cmd_copy(ref, user_channel, package_ids, cache, user_io, remote_manager, loa
     src_metadata = layout.load_metadata()
     ref = ref.copy_with_rev(src_metadata.recipe.revision)
     short_paths = _prepare_sources(cache, ref, remote_manager, loader, remotes)
-    package_ids = _get_package_ids(cache, ref, package_ids)
+    package_ids = layout.packages_ids() if package_ids is True else (package_ids or [])
     package_copy(ref, user_channel, package_ids, cache, user_io, short_paths, force)
 
 
 def package_copy(src_ref, user_channel, package_ids, cache, user_io, short_paths=False,
                  force=False):
-    dest_ref = ConanFileReference.loads("%s/%s@%s" % (src_ref.name,
-                                                      src_ref.version,
-                                                      user_channel))
+
+    ref = "%s/%s@%s" % (src_ref.name, src_ref.version, user_channel)
+    if ref.count('@') > 1:
+        raise ConanException("Destination must contain user/channel only.")
+
+    dest_ref = ConanFileReference.loads(ref)
     # Generate metadata
     src_layout = cache.package_layout(src_ref, short_paths)
     src_metadata = src_layout.load_metadata()

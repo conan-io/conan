@@ -11,7 +11,8 @@ from conans.paths import CONANFILE
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.profiles import create_profile as _create_profile
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient, TestBufferConanOutput
+from conans.test.utils.tools import TestClient
+from conans.test.utils.mocks import TestBufferConanOutput
 from conans.util.files import load, save
 
 conanfile_scope_env = """
@@ -53,11 +54,11 @@ class ProfileTest(unittest.TestCase):
                        env=[("A_VAR", "A_VALUE"), ("PREPEND_VAR", ["new_path", "other_path"])],
                        package_env={"Hello0": [("OTHER_VAR", "2")]})
         self.client.run("install . -pr envs -g virtualenv")
-        content = load(os.path.join(self.client.current_folder, "activate.sh"))
+        content = self.client.load("environment.sh.env")
         self.assertIn(":".join(["PREPEND_VAR=\"new_path\"", "\"other_path\""]) +
                       "${PREPEND_VAR+:$PREPEND_VAR}", content)
         if platform.system() == "Windows":
-            content = load(os.path.join(self.client.current_folder, "activate.bat"))
+            content = self.client.load("environment.bat.env")
             self.assertIn(";".join(["PREPEND_VAR=new_path", "other_path", "%PREPEND_VAR%"]),
                           content)
 
@@ -213,13 +214,13 @@ class ProfileTest(unittest.TestCase):
         self.client.save(files)
         self.client.run("export . lasote/stable")
         self.client.run("install . --build missing -pr vs_12_86")
-        info = load(os.path.join(self.client.current_folder, "conaninfo.txt"))
+        info = self.client.load("conaninfo.txt")
         for setting, value in profile_settings.items():
             self.assertIn("%s=%s" % (setting, value), info)
 
         # Try to override some settings in install command
         self.client.run("install . --build missing -pr vs_12_86 -s compiler.version=14")
-        info = load(os.path.join(self.client.current_folder, "conaninfo.txt"))
+        info = self.client.load("conaninfo.txt")
         for setting, value in profile_settings.items():
             if setting != "compiler.version":
                 self.assertIn("%s=%s" % (setting, value), info)
@@ -237,7 +238,7 @@ class ProfileTest(unittest.TestCase):
                        package_settings=package_settings)
         # Try to override some settings in install command
         self.client.run("install . --build missing -pr vs_12_86_Hello0_gcc -s compiler.version=14")
-        info = load(os.path.join(self.client.current_folder, "conaninfo.txt"))
+        info = self.client.load("conaninfo.txt")
         self.assertIn("compiler=gcc", info)
         self.assertIn("compiler.libcxx=libstdc++11", info)
 
@@ -248,7 +249,7 @@ class ProfileTest(unittest.TestCase):
                        package_settings=package_settings)
         # Try to override some settings in install command
         self.client.run("install . --build missing -pr vs_12_86_Hello0_gcc -s compiler.version=14")
-        info = load(os.path.join(self.client.current_folder, "conaninfo.txt"))
+        info = self.client.load("conaninfo.txt")
         self.assertIn("compiler=Visual Studio", info)
         self.assertNotIn("compiler.libcxx", info)
 
@@ -260,7 +261,7 @@ class ProfileTest(unittest.TestCase):
         # Try to override some settings in install command
         self.client.run("install . --build missing -pr vs_12_86_Hello0_gcc"
                         " -s compiler.version=14 -s Hello0:compiler.libcxx=libstdc++")
-        info = load(os.path.join(self.client.current_folder, "conaninfo.txt"))
+        info = self.client.load("conaninfo.txt")
         self.assertIn("compiler=gcc", info)
         self.assertNotIn("compiler.libcxx=libstdc++11", info)
         self.assertIn("compiler.libcxx=libstdc++", info)
@@ -287,7 +288,7 @@ class ProfileTest(unittest.TestCase):
                         package_settings=package_settings)
         # Try to override some settings in install command
         self.client.run("install . lasote/testing -pr myprofile")
-        info = load(os.path.join(self.client.current_folder, "conaninfo.txt"))
+        info = self.client.load("conaninfo.txt")
         self.assertIn("compiler=gcc", info)
         self.assertIn("compiler.libcxx=libstdc++11", info)
         self.assertIn("compiler.version=4.8", info)
@@ -298,7 +299,7 @@ class ProfileTest(unittest.TestCase):
                         package_settings=package_settings)
         # Try to override some settings in install command
         self.client.run("install . lasote/testing -pr myprofile")
-        info = load(os.path.join(self.client.current_folder, "conaninfo.txt"))
+        info = self.client.load("conaninfo.txt")
         self.assertIn("compiler=Visual Studio", info)
         self.assertIn("compiler.runtime=MD", info)
         self.assertIn("compiler.version=12", info)
@@ -314,7 +315,7 @@ class ProfileTest(unittest.TestCase):
 
         self.client.save(files)
         self.client.run("install . --build missing -pr vs_12_86")
-        info = load(os.path.join(self.client.current_folder, "conaninfo.txt"))
+        info = self.client.load("conaninfo.txt")
         self.assertIn("language=1", info)
         self.assertIn("static=False", info)
 
@@ -518,7 +519,7 @@ class ProfileAggregationTest(unittest.TestCase):
     def test_create(self):
 
         # The latest declared profile has priority
-        self.client.run("create . lib/1.0@user/channel --profile profile1 -p profile2")
+        self.client.run("create . lib/1.0@user/channel --profile profile1 -pr profile2")
         self.assertIn(dedent("""
         [env]
         ENV1=foo2
@@ -531,7 +532,7 @@ class ProfileAggregationTest(unittest.TestCase):
     def test_info(self):
 
         # The latest declared profile has priority
-        self.client.run("create . lib/1.0@user/channel --profile profile1 -p profile2")
+        self.client.run("create . lib/1.0@user/channel --profile profile1 -pr profile2")
 
         self.client.save({CONANFILE: self.consumer})
         self.client.run("info . --profile profile1 --profile profile2")
@@ -545,7 +546,7 @@ class ProfileAggregationTest(unittest.TestCase):
     def test_install(self):
         self.client.run("export . lib/1.0@user/channel")
         # Install ref
-        self.client.run("install lib/1.0@user/channel -p profile1 -p profile2 --build missing")
+        self.client.run("install lib/1.0@user/channel -pr profile1 -pr profile2 --build missing")
         self.assertIn(dedent("""
                [env]
                ENV1=foo2
@@ -557,7 +558,7 @@ class ProfileAggregationTest(unittest.TestCase):
 
         # Install project
         self.client.save({CONANFILE: self.consumer})
-        self.client.run("install . -p profile1 -p profile2 --build")
+        self.client.run("install . -pr profile1 -pr profile2 --build")
         self.assertIn("arch=x86", self.client.out)
         self.assertIn(dedent("""
                        [env]
@@ -587,7 +588,7 @@ class ProfileAggregationTest(unittest.TestCase):
             """)
 
         self.client.save({"profile1": profile1, "profile2": profile2})
-        self.client.run("create . lib/1.0@user/channel --profile profile2 -p profile1")
+        self.client.run("create . lib/1.0@user/channel --profile profile2 -pr profile1")
         self.assertIn(dedent("""
                              Configuration:
                              [settings]

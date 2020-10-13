@@ -6,8 +6,9 @@ import textwrap
 from nose.plugins.attrib import attr
 
 from conans.model.ref import ConanFileReference
-from conans.test.utils.tools import SVNLocalRepoTestCase, TestClient, \
+from conans.test.utils.tools import TestClient, \
     load
+from conans.test.utils.scm import SVNLocalRepoTestCase
 
 
 @attr('svn')
@@ -55,8 +56,8 @@ class SVNTaggedComponentTest(SVNLocalRepoTestCase):
         self.assertNotIn("auto", exported_conanfile)
         self.assertIn('"revision": "3",', exported_conanfile)
         self.assertIn('tags/release-1.0/level1@3', exported_conanfile)
-        os.remove(package_layout.scm_folder())  # Just in case, avoid scm_folder optimization
+        t.run("remove {} -f -sf".format(ref))  # Remove sources caching
 
         # Compile (it will clone the repo)
         t.run("install {ref} --build=lib".format(ref=ref))
-        self.assertIn("lib/version@issue/testing: Getting sources from url:", t.out)
+        self.assertIn("lib/version@issue/testing: SCM: Getting sources from url:", t.out)

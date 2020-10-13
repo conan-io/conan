@@ -12,7 +12,8 @@ from conans.client.tools.files import chdir
 from conans.client.build.msbuild import MSBuild
 from conans.errors import ConanException
 from conans.model.version import Version
-from conans.test.utils.conanfile import MockConanfile, MockSettings
+from conans.test.utils.mocks import MockSettings, MockConanfile, ConanFileMock
+from conans.test.utils.test_files import temp_folder
 
 
 class MSBuildTest(unittest.TestCase):
@@ -37,6 +38,18 @@ class MSBuildTest(unittest.TestCase):
         self.assertNotIn("-Od", template)
         self.assertIn("-Zi", template)
         self.assertIn("<RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>", template)
+
+    def test_skip_only_none_definitions(self):
+        # https://github.com/conan-io/conan/issues/6728
+        settings = MockSettings({"build_type": "Debug",
+                                 "compiler": "Visual Studio",
+                                 "arch": "x86_64",
+                                 "compiler.runtime": "MDd"})
+        conanfile = MockConanfile(settings)
+        msbuild = MSBuild(conanfile)
+        template = msbuild._get_props_file_contents(definitions={"foo": 0, "bar": False})
+        self.assertIn("<PreprocessorDefinitions>foo=0;bar=False;%(PreprocessorDefinitions)",
+                      template)
 
     def without_runtime_test(self):
         settings = MockSettings({"build_type": "Debug",
@@ -124,6 +137,12 @@ class MSBuildTest(unittest.TestCase):
             msbuild.get_command("dummy.sln", output_binary_log=True)
         self.assertIn(except_text, str(exc.exception))
 
+    def error_targets_argument_Test(self):
+        conanfile = MockConanfile(MockSettings({}))
+        msbuild = MSBuild(conanfile)
+        with self.assertRaises(TypeError):
+            msbuild.get_command("dummy.sln", targets="sometarget")
+
     @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
     def get_version_test(self):
         settings = MockSettings({"build_type": "Debug",
@@ -132,7 +151,7 @@ class MSBuildTest(unittest.TestCase):
                                  "arch": "x86_64",
                                  "compiler.runtime": "MDd"})
         version = MSBuild.get_version(settings)
-        six.assertRegex(self, version, "(\d+\.){2,3}\d+")
+        six.assertRegex(self, version, r"(\d+\.){2,3}\d+")
         self.assertGreater(version, "15.1")
 
     @parameterized.expand([("16", "v142"),
@@ -299,3 +318,36 @@ class MSBuildTest(unittest.TestCase):
         msbuild = MSBuild(conanfile)
         command = msbuild.get_command("test.sln")
         self.assertIn('/p:Platform="YOUR PLATFORM SDK (ARMV4)"', command)
+
+    @unittest.skipUnless(platform.system() == "Windows", "Requires Visual Studio installation path")
+    def test_arch_override(self):
+        settings = MockSettings({"build_type": "Release",
+                                 "compiler": "Visual Studio",
+                                 "compiler.version": "15",
+                                 "compiler.runtime": "MDd",
+                                 "os": "Windows",
+                                 "arch": "x86_64"})
+        conanfile = ConanFileMock()
+        conanfile.settings = settings
+        props_file_path = os.path.join(temp_folder(), "conan_build.props")
+
+        msbuild = MSBuild(conanfile)
+        msbuild.build("project_file.sln", property_file_name=props_file_path)
+        self.assertIn("vcvarsall.bat\" amd64", conanfile.command)
+        self.assertIn("/p:Platform=\"x64\"", conanfile.command)
+        msbuild.build("project_file.sln", arch="x86", property_file_name=props_file_path)
+        self.assertIn("vcvarsall.bat\" x86", conanfile.command)
+        self.assertIn("/p:Platform=\"x86\"", conanfile.command)
+
+    def test_intel(self):
+        settings = MockSettings({"build_type": "Debug",
+                                 "compiler": "intel",
+                                 "compiler.version": "19.1",
+                                 "compiler.base": "Visual Studio",
+                                 "compiler.base.version": "15",
+                                 "arch": "x86_64"})
+        expected_toolset = "Intel C++ Compiler 19.1"
+        conanfile = MockConanfile(settings)
+        msbuild = MSBuild(conanfile)
+        command = msbuild.get_command("project_should_flags_test_file.sln")
+        self.assertIn('/p:PlatformToolset="%s"' % expected_toolset, command)

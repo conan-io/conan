@@ -30,9 +30,11 @@ class RequirementInfo(object):
         self._indirect = indirect
 
         try:
-            getattr(self, default_package_id_mode)()
+            func_package_id_mode = getattr(self, default_package_id_mode)
         except AttributeError:
             raise ConanException("'%s' is not a known package_id_mode" % default_package_id_mode)
+        else:
+            func_package_id_mode()
 
     def copy(self):
         # Useful for build_id()
@@ -141,8 +143,8 @@ class RequirementInfo(object):
         self.version = self.full_version
         self.user = self.full_user
         self.channel = self.full_channel
+        self.package_id = self.full_package_id
         self.recipe_revision = self.full_recipe_revision
-        self.package_id = None
         self.package_revision = None
 
     def package_revision_mode(self):
@@ -187,6 +189,7 @@ class RequirementsInfo(object):
     def refs(self):
         """ used for updating downstream requirements with this
         """
+        # FIXME: This is a very bad name, it return prefs, not refs
         return list(self._data.keys())
 
     def _get_key(self, item):
@@ -274,6 +277,135 @@ class RequirementsInfo(object):
             r.package_revision_mode()
 
 
+class PythonRequireInfo(object):
+
+    def __init__(self, ref, default_package_id_mode):
+        self._ref = ref
+        self._name = None
+        self._version = None
+        self._user = None
+        self._channel = None
+        self._revision = None
+
+        try:
+            func_package_id_mode = getattr(self, default_package_id_mode)
+        except AttributeError:
+            raise ConanException("'%s' is not a known package_id_mode" % default_package_id_mode)
+        else:
+            func_package_id_mode()
+
+    @property
+    def sha(self):
+        vals = [n for n in (self._name, self._version, self._user, self._channel, self._revision)
+                if n]
+        return "/".join(vals)
+
+    def semver_mode(self):
+        self._name = self._ref.name
+        self._version = self._ref.version.stable()
+        self._user = self._channel = None
+        self._revision = None
+
+    def full_version_mode(self):
+        self._name = self._ref.name
+        self._version = self._ref.version
+        self._user = self._channel = None
+        self._revision = None
+
+    def patch_mode(self):
+        self._name = self._ref.name
+        self._version = self._ref.version.patch()
+        self._user = self._channel = None
+        self._revision = None
+
+    def minor_mode(self):
+        self._name = self._ref.name
+        self._version = self._ref.version.minor()
+        self._user = self._channel = None
+        self._revision = None
+
+    def major_mode(self):
+        self._name = self._ref.name
+        self._version = self._ref.version.major()
+        self._user = self._channel = None
+        self._revision = None
+
+    def full_recipe_mode(self):
+        self._name = self._ref.name
+        self._version = self._ref.version
+        self._user = self._ref.user
+        self._channel = self._ref.channel
+        self._revision = None
+
+    def recipe_revision_mode(self):
+        self._name = self._ref.name
+        self._version = self._ref.version
+        self._user = self._ref.user
+        self._channel = self._ref.channel
+        self._revision = self._ref.revision
+
+
+class PythonRequiresInfo(object):
+
+    def __init__(self, refs, default_package_id_mode):
+        self._default_package_id_mode = default_package_id_mode
+        if refs:
+            self._refs = [PythonRequireInfo(r, default_package_id_mode=default_package_id_mode)
+                          for r in sorted(refs)]
+        else:
+            self._refs = None
+
+    def copy(self):
+        # For build_id() implementation
+        refs = [r._ref for r in self._refs] if self._refs else None
+        return PythonRequiresInfo(refs, self._default_package_id_mode)
+
+    def __bool__(self):
+        return bool(self._refs)
+
+    def __nonzero__(self):
+        return self.__bool__()
+
+    def clear(self):
+        self._refs = None
+
+    @property
+    def sha(self):
+        result = [r.sha for r in self._refs]
+        return sha1('\n'.join(result).encode())
+
+    def unrelated_mode(self):
+        self._refs = None
+
+    def semver_mode(self):
+        for r in self._refs:
+            r.semver_mode()
+
+    def patch_mode(self):
+        for r in self._refs:
+            r.patch_mode()
+
+    def minor_mode(self):
+        for r in self._refs:
+            r.minor_mode()
+
+    def major_mode(self):
+        for r in self._refs:
+            r.major_mode()
+
+    def full_version_mode(self):
+        for r in self._refs:
+            r.full_version_mode()
+
+    def full_recipe_mode(self):
+        for r in self._refs:
+            r.full_recipe_mode()
+
+    def recipe_revision_mode(self):
+        for r in self._refs:
+            r.recipe_revision_mode()
+
+
 class _PackageReferenceList(list):
     @staticmethod
     def loads(text):
@@ -296,10 +428,12 @@ class ConanInfo(object):
         result.settings = self.settings.copy()
         result.options = self.options.copy()
         result.requires = self.requires.copy()
+        result.python_requires = self.python_requires.copy()
         return result
 
     @staticmethod
-    def create(settings, options, prefs_direct, prefs_indirect, default_package_id_mode):
+    def create(settings, options, prefs_direct, prefs_indirect, default_package_id_mode,
+               python_requires, default_python_requires_id_mode):
         result = ConanInfo()
         result.full_settings = settings
         result.settings = settings.copy()
@@ -315,7 +449,7 @@ class ConanInfo(object):
         result.vs_toolset_compatible()
         result.discard_build_settings()
         result.default_std_matching()
-
+        result.python_requires = PythonRequiresInfo(python_requires, default_python_requires_id_mode)
         return result
 
     @staticmethod
@@ -365,6 +499,13 @@ class ConanInfo(object):
 
         return '\n'.join(result) + "\n"
 
+    def clone(self):
+        q = self.copy()
+        q.full_settings = self.full_settings.copy()
+        q.full_options = self.full_options.copy()
+        q.full_requires = _PackageReferenceList.loads(self.full_requires.dumps())
+        return q
+
     def __eq__(self, other):
         """ currently just for testing purposes
         """
@@ -393,8 +534,7 @@ class ConanInfo(object):
         """ The package_id of a conans is the sha1 of its specific requirements,
         options and settings
         """
-        result = []
-        result.append(self.settings.sha)
+        result = [self.settings.sha]
         # Only are valid requires for OPtions those Non-Dev who are still in requires
         self.options.filter_used(self.requires.pkg_names)
         result.append(self.options.sha)
@@ -402,7 +542,8 @@ class ConanInfo(object):
         if requires_sha is None:
             return PACKAGE_ID_UNKNOWN
         result.append(requires_sha)
-
+        if self.python_requires:
+            result.append(self.python_requires.sha)
         package_id = sha1('\n'.join(result).encode())
         return package_id
 
@@ -460,8 +601,7 @@ class ConanInfo(object):
 
         if (self.full_settings.compiler and
                 self.full_settings.compiler.version):
-            default = cppstd_default(str(self.full_settings.compiler),
-                                     str(self.full_settings.compiler.version))
+            default = cppstd_default(self.full_settings)
 
             if str(self.full_settings.cppstd) == default:
                 self.settings.cppstd = None
@@ -475,3 +615,42 @@ class ConanInfo(object):
 
         if self.full_settings.compiler.cppstd:
             self.settings.compiler.cppstd = self.full_settings.compiler.cppstd
+
+    def shared_library_package_id(self):
+        if "shared" in self.full_options and self.full_options.shared:
+            for dep_name in self.requires.pkg_names:
+                dep_options = self.full_options[dep_name]
+                if "shared" not in dep_options or not dep_options.shared:
+                    self.requires[dep_name].package_revision_mode()
+
+    def parent_compatible(self, *_, **kwargs):
+        """If a built package for Intel has to be compatible for a Visual/GCC compiler
+        (consumer). Transform the visual/gcc full_settings into an intel one"""
+
+        if "compiler" not in kwargs:
+            raise ConanException("Specify 'compiler' as a keywork argument. e.g: "
+                                 "'parent_compiler(compiler=\"intel\")' ")
+
+        self.settings.compiler = kwargs["compiler"]
+        # You have to use here a specific version or create more than one version of
+        # compatible packages
+        kwargs.pop("compiler")
+        for setting_name in kwargs:
+            # Won't fail even if the setting is not valid, there is no validation at info
+            setattr(self.settings.compiler, setting_name, kwargs[setting_name])
+        self.settings.compiler.base = self.full_settings.compiler
+        for field in self.full_settings.compiler.fields:
+            value = getattr(self.full_settings.compiler, field)
+            setattr(self.settings.compiler.base, field, value)
+
+    def base_compatible(self):
+        """If a built package for Visual/GCC has to be compatible for an Intel compiler
+          (consumer). Transform the Intel profile into an visual/gcc one"""
+        if not self.full_settings.compiler.base:
+            raise ConanException("The compiler '{}' has "
+                                 "no 'base' sub-setting".format(self.full_settings.compiler))
+
+        self.settings.compiler = self.full_settings.compiler.base
+        for field in self.full_settings.compiler.base.fields:
+            value = getattr(self.full_settings.compiler.base, field)
+            setattr(self.settings.compiler, field, value)

@@ -22,8 +22,8 @@ def option_not_exist_msg(option_name, existing_options):
     """ Someone is referencing an option that is not available in the current package
     options
     """
-    result = ["'options.%s' doesn't exist" % option_name]
-    result.append("Possible options are %s" % existing_options or "none")
+    result = ["option '%s' doesn't exist" % option_name,
+              "Possible options are %s" % existing_options or "none"]
     return "\n".join(result)
 
 
@@ -59,16 +59,20 @@ class PackageOptionValues(object):
     def __init__(self):
         self._dict = {}  # {option_name: PackageOptionValue}
         self._modified = {}
+        self._freeze = False
 
     def __bool__(self):
         return bool(self._dict)
+
+    def __contains__(self, key):
+        return key in self._dict
 
     def __nonzero__(self):
         return self.__bool__()
 
     def __getattr__(self, attr):
         if attr not in self._dict:
-            return None
+            raise ConanException(option_not_exist_msg(attr, list(self._dict.keys())))
         return self._dict[attr]
 
     def __delattr__(self, attr):
@@ -209,6 +213,9 @@ class OptionsValues(object):
     def clear_unscoped_options(self):
         self._package_values.clear()
 
+    def __contains__(self, item):
+        return item in self._package_values
+
     def __getitem__(self, item):
         return self._reqs_options.setdefault(item, PackageOptionValues())
 
@@ -280,16 +287,14 @@ class OptionsValues(object):
 
     @property
     def sha(self):
-        result = []
-        result.append(self._package_values.sha)
+        result = [self._package_values.sha]
         for key in sorted(list(self._reqs_options.keys())):
             result.append(self._reqs_options[key].sha)
         return sha1('\n'.join(result).encode())
 
     def serialize(self):
-        ret = {}
-        ret["options"] = self._package_values.serialize()
-        ret["req_options"] = {}
+        ret = {"options": self._package_values.serialize(),
+               "req_options": {}}
         for name, values in self._reqs_options.items():
             ret["req_options"][name] = values.serialize()
         return ret
@@ -307,6 +312,10 @@ class PackageOption(object):
             self._possible_values = "ANY"
         else:
             self._possible_values = sorted(str(v) for v in possible_values)
+
+    def copy(self):
+        result = PackageOption(self._possible_values, self._name)
+        return result
 
     def __bool__(self):
         if not self._value:
@@ -372,6 +381,11 @@ class PackageOptions(object):
         self._modified = {}
         self._freeze = False
 
+    def copy(self):
+        result = PackageOptions(None)
+        result._data = {k: v.copy() for k, v in self._data.items()}
+        return result
+
     def __contains__(self, option):
         return str(option) in self._data
 
@@ -379,8 +393,8 @@ class PackageOptions(object):
     def loads(text):
         return PackageOptions(yaml.safe_load(text) or {})
 
-    def get_safe(self, field):
-        return self._data.get(field)
+    def get_safe(self, field, default=None):
+        return self._data.get(field, default)
 
     def validate(self):
         for child in self._data.values():
@@ -503,6 +517,12 @@ class Options(object):
         # are not public, not overridable
         self._deps_package_values = {}  # {name("Boost": PackageOptionValues}
 
+    def copy(self):
+        """ deepcopy, same as Settings"""
+        result = Options(self._package_options.copy())
+        result._deps_package_values = {k: v.copy() for k, v in self._deps_package_values.items()}
+        return result
+
     def freeze(self):
         self._package_options.freeze()
         for v in self._deps_package_values.values():
@@ -610,10 +630,10 @@ class Options(object):
         for k, v in options._reqs_options.items():
             self._deps_package_values[k] = v.copy()
 
-    def clear_unused(self, references):
+    def clear_unused(self, prefs):
         """ remove all options not related to the passed references,
         that should be the upstream requirements
         """
-        existing_names = [r.ref.name for r in references]
+        existing_names = [pref.ref.name for pref in prefs]
         self._deps_package_values = {k: v for k, v in self._deps_package_values.items()
                                      if k in existing_names}

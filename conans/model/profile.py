@@ -41,6 +41,7 @@ class Profile(object):
         return self._package_settings_values
 
     def process_settings(self, cache, preprocess=True):
+        assert self.processed_settings is None, "processed settings must be None"
         self.processed_settings = cache.settings.copy()
         self.processed_settings.values = Values.from_list(list(self.settings.items()))
         if preprocess:

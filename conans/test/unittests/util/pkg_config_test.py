@@ -57,6 +57,8 @@ class PkgConfigTest(unittest.TestCase):
             self.assertEqual(frozenset(pkg_config.libs_only_other), frozenset(['-Wl,--whole-archive']))
 
             self.assertEqual(pkg_config.variables['prefix'], '/usr/local')
+
+            self.assertEqual(frozenset(pkg_config.version), frozenset(['6.6.6']))
         os.unlink(filename)
 
     def test_define_prefix(self):
@@ -81,6 +83,8 @@ class PkgConfigTest(unittest.TestCase):
             self.assertEqual(frozenset(pkg_config.libs_only_other), frozenset(['-Wl,--whole-archive']))
 
             self.assertEqual(pkg_config.variables['prefix'], '/home/conan')
+
+            self.assertEqual(frozenset(pkg_config.version), frozenset(['6.6.6']))
         os.unlink(filename)
 
     def rpaths_libs_test(self):

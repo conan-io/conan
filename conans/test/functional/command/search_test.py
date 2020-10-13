@@ -1,3 +1,4 @@
+# coding=utf-8
 import json
 import os
 import shutil
@@ -8,17 +9,19 @@ from collections import OrderedDict
 
 from mock import patch
 
-from conans import COMPLEX_SEARCH_CAPABILITY, DEFAULT_REVISION_V1
+from conans import DEFAULT_REVISION_V1
 from conans.model.manifest import FileTreeManifest
 from conans.model.package_metadata import PackageMetadata
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANINFO, EXPORT_FOLDER, PACKAGES_FOLDER
 from conans.server.revision_list import RevisionList
-from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID, TurboTestClient
+from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID, GenConanfile
 from conans.util.dates import iso8601_to_str, from_timestamp_to_iso8601
 from conans.util.env_reader import get_env
 from conans.util.files import list_folder_subdirs, load
 from conans.util.files import save
+from conans import __version__ as client_version
+
 
 conan_vars1 = '''
 [settings]
@@ -132,7 +135,7 @@ class SearchTest(unittest.TestCase):
     def setUp(self):
         self.servers = OrderedDict()
         self.servers["local"] = TestServer(server_capabilities=[])
-        self.servers["search_able"] = TestServer(server_capabilities=[COMPLEX_SEARCH_CAPABILITY])
+        self.servers["search_able"] = TestServer(server_capabilities=[])
 
         self.client = TestClient(servers=self.servers)
 
@@ -231,7 +234,7 @@ class SearchTest(unittest.TestCase):
     def test_search_with_none_user_channel(self):
         conanfile = textwrap.dedent("""
         from conans import ConanFile
-        
+
         class Test(ConanFile):
             name = "lib"
             version = "1.0"
@@ -246,6 +249,20 @@ class SearchTest(unittest.TestCase):
                         lib/1.0
                         lib/1.0@foo/bar
                         lib/1.0@user/channel"""), client.out)
+
+    def search_disabled_remote_test(self):
+        self.client.run("remote disable search_able")
+        self.client.run("search * -r search_able", assert_error=True)
+        self.assertIn("ERROR: Remote 'search_able' is disabled", self.client.out)
+
+    def search_skip_disabled_remote_test(self):
+        os.rmdir(self.servers["local"].server_store.store)
+        self._copy_to_server(self.client.cache, self.servers["local"].server_store)
+        os.rmdir(self.servers["search_able"].server_store.store)
+        self._copy_to_server(self.client.cache, self.servers["search_able"].server_store)
+        self.client.run("remote disable local")
+        self.client.run("search Hello* -r all")
+        self.assertNotIn("local", self.client.out)
 
     def recipe_search_all_test(self):
         os.rmdir(self.servers["local"].server_store.store)
@@ -272,30 +289,30 @@ helloTest/1.4.10@myuser/stable""".format(remote)
     def recipe_search_test(self):
         self.client.run("search Hello*")
         self.assertEqual("Existing package recipes:\n\n"
-                          "Hello/1.4.10@myuser/testing\n"
-                          "Hello/1.4.11@myuser/testing\n"
-                          "Hello/1.4.12@myuser/testing\n"
-                          "Hello/1.5.10@myuser/testing\n"
-                          "helloTest/1.4.10@myuser/stable\n", self.client.out)
+                         "Hello/1.4.10@myuser/testing\n"
+                         "Hello/1.4.11@myuser/testing\n"
+                         "Hello/1.4.12@myuser/testing\n"
+                         "Hello/1.5.10@myuser/testing\n"
+                         "helloTest/1.4.10@myuser/stable\n", self.client.out)
 
         self.client.run("search Hello* --case-sensitive")
         self.assertEqual("Existing package recipes:\n\n"
-                          "Hello/1.4.10@myuser/testing\n"
-                          "Hello/1.4.11@myuser/testing\n"
-                          "Hello/1.4.12@myuser/testing\n"
-                          "Hello/1.5.10@myuser/testing\n", self.client.out)
+                         "Hello/1.4.10@myuser/testing\n"
+                         "Hello/1.4.11@myuser/testing\n"
+                         "Hello/1.4.12@myuser/testing\n"
+                         "Hello/1.5.10@myuser/testing\n", self.client.out)
 
         self.client.run("search *myuser* --case-sensitive")
         self.assertEqual("Existing package recipes:\n\n"
-                          "Bye/0.14@myuser/testing\n"
-                          "Hello/1.4.10@myuser/testing\n"
-                          "Hello/1.4.11@myuser/testing\n"
-                          "Hello/1.4.12@myuser/testing\n"
-                          "Hello/1.5.10@myuser/testing\n"
-                          "MissFile/1.0.2@myuser/stable\n"
-                          "NodeInfo/1.0.2@myuser/stable\n"
-                          "Tool/1.0.0@myuser/testing\n"
-                          "helloTest/1.4.10@myuser/stable\n", self.client.out)
+                         "Bye/0.14@myuser/testing\n"
+                         "Hello/1.4.10@myuser/testing\n"
+                         "Hello/1.4.11@myuser/testing\n"
+                         "Hello/1.4.12@myuser/testing\n"
+                         "Hello/1.5.10@myuser/testing\n"
+                         "MissFile/1.0.2@myuser/stable\n"
+                         "NodeInfo/1.0.2@myuser/stable\n"
+                         "Tool/1.0.0@myuser/testing\n"
+                         "helloTest/1.4.10@myuser/stable\n", self.client.out)
 
         self.client.run("search Hello/*@myuser/testing")
         self.assertIn("Hello/1.4.10@myuser/testing\n"
@@ -365,13 +382,29 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                          "Hello/1.4.12@myuser/testing\n"
                          "Hello/1.5.10@myuser/testing\n"
                          "helloTest/1.4.10@myuser/stable\n", self.client.out)
+        self.client.run("search Hello/1.4.10@myuser/testing --raw")
+        self.assertNotIn("Existing packages for recipe", self.client.out)
 
     def search_html_table_test(self):
         self.client.run("search Hello/1.4.10@myuser/testing --table=table.html")
-        html = load(os.path.join(self.client.current_folder, "table.html"))
+        html = ''.join([line.strip() for line in self.client.load("table.html").splitlines()])
         self.assertIn("<h1>Hello/1.4.10@myuser/testing</h1>", html)
-        self.assertIn("<td>Linux gcc 4.5 (libstdc++11)</td>", html)
-        self.assertIn("<td>Windows Visual Studio 8.1</td>", html)
+        self.assertIn("<td>LinuxPackageSHA</td>"
+                      "<td>False</td>"
+                      "<td>Linux</td>"
+                      "<td>x86</td>"
+                      "<td>gcc</td>"
+                      "<td>libstdc++11</td>"
+                      "<td>4.5</td>", html)
+        self.assertIn("<td>WindowsPackageSHA</td>"
+                      "<td>True</td>"
+                      "<td>Windows</td>"
+                      "<td>x64</td>"
+                      "<td>Visual Studio</td>"
+                      "<td></td>"
+                      "<td>8.1</td>", html)
+        self.assertIn("Conan <b>v{}</b> <script>document.write(new Date().getFullYear())</script> JFrog LTD. <a>https://conan.io</a>"
+                      .format(client_version), html)
 
     def search_html_table_all_test(self):
         os.rmdir(self.servers["local"].server_store.store)
@@ -380,14 +413,28 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         self._copy_to_server(self.client.cache, self.servers["search_able"].server_store)
 
         self.client.run("search Hello/1.4.10@myuser/testing -r=all --table=table.html")
-        html = load(os.path.join(self.client.current_folder, "table.html"))
+        html = ''.join([line.strip() for line in self.client.load("table.html").splitlines()])
 
         self.assertIn("<h1>Hello/1.4.10@myuser/testing</h1>", html)
-        self.assertIn("<h2>'local':</h2>", html)
-        self.assertIn("<h2>'search_able':</h2>", html)
-
-        self.assertEqual(html.count("<td>Linux gcc 4.5 (libstdc++11)</td>"), 2)
-        self.assertEqual(html.count("<td>Windows Visual Studio 8.1</td>"), 2)
+        self.assertIn("<th>remote</th>"
+                      "<th>package_id</th>"
+                      "<th>outdated</th>", html)
+        self.assertIn("<td>local</td>"
+                      "<td>LinuxPackageSHA</td>"
+                      "<td>False</td>"
+                      "<td>Linux</td>"
+                      "<td>x86</td>"
+                      "<td>gcc</td>"
+                      "<td>libstdc++11</td>"
+                      "<td>4.5</td>", html)
+        self.assertIn("<td>search_able</td>"
+                      "<td>WindowsPackageSHA</td>"
+                      "<td>True</td>"
+                      "<td>Windows</td>"
+                      "<td>x64</td>"
+                      "<td>Visual Studio</td>"
+                      "<td></td>"
+                      "<td>8.1</td>", html)
 
     def search_html_table_with_no_reference_test(self):
         self.client.run("search Hello* --table=table.html", assert_error=True)
@@ -471,7 +518,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
 
         for pack_name in ["winx86", "winx64", "linx86", "linx64"]:
             self.assertEqual(pack_name in self.client.out,
-                              pack_name in packages_found, "%s fail" % pack_name)
+                             pack_name in packages_found, "%s fail" % pack_name)
 
     def package_search_complex_queries_test(self):
 
@@ -722,7 +769,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
     def search_with_no_registry_test(self):
         # https://github.com/conan-io/conan/issues/2589
         client = TestClient()
-        os.remove(client.cache.registry_path)
+        os.remove(client.cache.remotes_path)
         client.run("search nonexist/1.0@lasote/stable -r=myremote", assert_error=True)
         self.assertIn("WARN: Remotes registry file missing, creating default one", client.out)
         self.assertIn("ERROR: No remote 'myremote' defined in remotes", client.out)
@@ -1137,15 +1184,13 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         }
         self.assertEqual(expected_output, output)
 
-
-
     def search_packages_with_reference_not_exported_test(self):
         self.client.run("search my_pkg/1.0@conan/stable", assert_error=True)
         self.assertIn("ERROR: Recipe not found: 'my_pkg/1.0@conan/stable'", self.client.out)
 
     def initial_search_without_registry_test(self):
         client = TestClient()
-        os.remove(client.cache.registry_path)
+        os.remove(client.cache.remotes_path)
         client.run("search my_pkg")
         self.assertIn("WARN: Remotes registry file missing, creating default one", client.out)
         self.assertIn("There are no packages matching the 'my_pkg' pattern", client.out)
@@ -1190,6 +1235,34 @@ class Test(ConanFile):
         # This is by ref
         client.run("search lib/1.0@ -r default")
         self.assertIn("Package_ID: {}".format(NO_SETTINGS_PACKAGE_ID), client.out)
+
+
+class SearchOrder(unittest.TestCase):
+    def search_test(self):
+        client = TestClient(default_server_user=True)
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . pkg/1.1@user/testing")
+        client.run("create . pkg/1.2@user/testing")
+        client.run("create . pkg/1.11@user/testing")
+        client.run("create . pkg/1.21@user/testing")
+        client.run("create . pkg/1.21.3@user/testing")
+        client.run("create . pkg/1.21.34@user/testing")
+        client.run("create . pkg/1.21.4@user/testing")
+        client.run("search")
+        output = textwrap.dedent("""
+            pkg/1.1@user/testing
+            pkg/1.2@user/testing
+            pkg/1.11@user/testing
+            pkg/1.21@user/testing
+            pkg/1.21.3@user/testing
+            pkg/1.21.4@user/testing
+            pkg/1.21.34@user/testing""")
+        self.assertIn(output, client.out)
+
+        client.run("upload * -r=default -c --all")
+        # This is by pattern
+        client.run("search -r=default")
+        self.assertIn(output, client.out)
 
 
 @unittest.skipIf(get_env("TESTING_REVISIONS_ENABLED", False), "No sense with revs")
@@ -1303,6 +1376,10 @@ class Test(ConanFile):
         self.assertEqual(j[0]["revision"], "a94417fca6b55779c3b158f2ff50c40a")
         self.assertIsNotNone(j[0]["time"])
         self.assertEqual(len(j), 1)
+
+        # raw argument
+        client.run("search lib/1.0@user/testing --raw --revisions")
+        self.assertNotIn("Revisions for", client.out)
 
     def search_package_revisions_test(self):
         test_server = TestServer(users={"user": "password"})  # exported users and passwords

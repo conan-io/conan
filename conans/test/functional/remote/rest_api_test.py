@@ -3,20 +3,25 @@ import platform
 import unittest
 
 import requests
+from mock import Mock
 from nose.plugins.attrib import attr
 
 from conans import DEFAULT_REVISION_V1
 from conans.client.conf import ConanClientConfigParser
+from conans.client.remote_manager import Remote
+from conans.client.rest.auth_manager import ConanApiAuthManager
 from conans.client.rest.conan_requester import ConanRequester
-from conans.client.rest.rest_client import RestApiClient
+from conans.client.rest.rest_client import RestApiClientFactory
 from conans.client.rest.rest_client_v1 import complete_url
+from conans.client.userio import UserIO
 from conans.model.info import ConanInfo
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE, CONANINFO, CONAN_MANIFEST
+from conans.test.utils.cpp_test_files import cpp_hello_source_files
 from conans.test.utils.server_launcher import TestServerLauncher
-from conans.test.utils.test_files import hello_source_files, temp_folder
-from conans.test.utils.tools import TestBufferConanOutput
+from conans.test.utils.test_files import temp_folder
+from conans.test.utils.mocks import LocalDBMock, TestBufferConanOutput
 from conans.util.env_reader import get_env
 from conans.util.files import md5, save
 
@@ -67,13 +72,21 @@ class RestApiTest(unittest.TestCase):
             save(filename, "")
             config = ConanClientConfigParser(filename)
             requester = ConanRequester(config, requests)
-            cls.api = RestApiClient(TestBufferConanOutput(), requester=requester,
-                                    revisions_enabled=False)
-            cls.api.remote_url = "http://127.0.0.1:%s" % str(cls.server.port)
+            client_factory = RestApiClientFactory(TestBufferConanOutput(), requester=requester,
+                                                  config=config)
+            localdb = LocalDBMock()
 
-            # Authenticate user
-            token = cls.api.authenticate("private_user", "private_pass")
-            cls.api.token = token
+            mocked_user_io = UserIO(out=TestBufferConanOutput())
+            mocked_user_io.get_username = Mock(return_value="private_user")
+            mocked_user_io.get_password = Mock(return_value="private_pass")
+
+            cls.auth_manager = ConanApiAuthManager(client_factory, mocked_user_io, localdb)
+            cls.remote = Remote("myremote", "http://127.0.0.1:%s" % str(cls.server.port), True,
+                                True)
+            cls.auth_manager._authenticate(cls.remote, user="private_user",
+                                           password="private_pass")
+            cls.api = client_factory.new(cls.remote, localdb.access_token, localdb.refresh_token,
+                                         {})
 
     @classmethod
     def tearDownClass(cls):
@@ -82,8 +95,8 @@ class RestApiTest(unittest.TestCase):
     def tearDown(self):
         RestApiTest.server.clean()
 
-    def server_info_test(self):
-        _, _, capabilities = self.api.server_info()
+    def server_capabilities_test(self):
+        capabilities = self.api.server_capabilities()
         self.assertEqual(capabilities, ["ImCool", "TooCool"])
 
     def get_conan_test(self):
@@ -104,7 +117,7 @@ class RestApiTest(unittest.TestCase):
 
         # Get the conans digest
         digest = self.api.get_recipe_manifest(ref)
-        self.assertEqual(digest.summary_hash, "e925757129f5c49ecb2e8c84ce17e294")
+        self.assertEqual(digest.summary_hash, "0acb2be9768f174f223c81568da74fbe")
         self.assertEqual(digest.time, 123123123)
 
     def get_package_test(self):
@@ -205,7 +218,7 @@ class RestApiTest(unittest.TestCase):
         path1 = self.server.server_store.base_folder(ref)
         self.assertTrue(os.path.exists(path1))
         # Remove conans and packages
-        self.api.remove_conanfile(ref)
+        self.api.remove_recipe(ref)
         self.assertFalse(os.path.exists(path1))
 
     @unittest.skipIf(get_env("TESTING_REVISIONS_ENABLED", False), "Not prepared with revs")
@@ -218,10 +231,13 @@ class RestApiTest(unittest.TestCase):
         for sha in ["1", "2", "3", "4", "5"]:
             # Upload an package
             pref = PackageReference(ref, sha, DEFAULT_REVISION_V1)
-            self._upload_package(pref)
+            self._upload_package(pref, {CONANINFO: ""})
             folder = self.server.server_store.package(pref)
             self.assertTrue(os.path.exists(folder))
             folders[sha] = folder
+
+        data = self.api.search_packages(ref, None)
+        self.assertEqual(len(data), 5)
 
         self.api.remove_packages(ref, ["1"])
         self.assertTrue(os.path.exists(self.server.server_store.base_folder(ref)))
@@ -246,7 +262,7 @@ class RestApiTest(unittest.TestCase):
 
     def _upload_package(self, package_reference, base_files=None):
 
-        files = hello_source_files(3, [1, 12])
+        files = cpp_hello_source_files(3, [1, 12])
         if base_files:
             files.update(base_files)
 
@@ -261,7 +277,7 @@ class RestApiTest(unittest.TestCase):
 
     def _upload_recipe(self, ref, base_files=None, retry=1, retry_wait=0):
 
-        files = hello_source_files(3, [1, 12])
+        files = cpp_hello_source_files(3, [1, 12])
         if base_files:
             files.update(base_files)
         content = """

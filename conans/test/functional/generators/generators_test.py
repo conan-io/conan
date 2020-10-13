@@ -1,11 +1,11 @@
 import os
 import platform
 import re
+import textwrap
 import unittest
 
 from conans.model.graph_info import GRAPH_INFO_FILE
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
-from conans.util.files import load
 from conans.model.graph_lock import LOCKFILE
 
 
@@ -41,10 +41,10 @@ ycm
         client.save(files)
         client.run("install . --build")
 
-        venv_files = ["activate.sh", "deactivate.sh"]
+        venv_files = ["activate.sh", "deactivate.sh", "environment.sh.env",
+                      "activate.ps1", "deactivate.ps1", "environment.ps1.env"]
         if platform.system() == "Windows":
-            venv_files.extend(["activate.bat", "deactivate.bat", "activate.ps1",
-                               "deactivate.ps1"])
+            venv_files.extend(["activate.bat", "deactivate.bat", "environment.bat.env"])
 
         self.assertEqual(sorted(['conanfile.txt', 'conaninfo.txt', 'conanbuildinfo.cmake',
                                  'conanbuildinfo.gcc', 'conanbuildinfo.qbs', 'conanbuildinfo.pri',
@@ -70,7 +70,7 @@ class TestConan(ConanFile):
         client.run("create . mysrc/0.1@user/testing")
         client.run("install mysrc/0.1@user/testing -g cmake")
 
-        cmake = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
+        cmake = client.load("conanbuildinfo.cmake")
         src_dirs = re.search('set\(CONAN_SRC_DIRS_MYSRC "(.*)"\)', cmake).group(1)
         self.assertIn("mysrc/0.1/user/testing/package/%s/src" % NO_SETTINGS_PACKAGE_ID,
                       src_dirs)
@@ -102,7 +102,7 @@ qmake
         client.save({"conanfile.txt": base}, clean_first=True)
         client.run("install . --build")
 
-        qmake = load(os.path.join(client.current_folder, "conanbuildinfo.pri"))
+        qmake = client.load("conanbuildinfo.pri")
         self.assertIn("CONAN_RESDIRS += ", qmake)
         self.assertEqual(qmake.count("CONAN_LIBS += "), 1)
         self.assertIn("CONAN_LIBS_PKG_RELEASE += -lhellor", qmake)
@@ -139,7 +139,7 @@ qmake
         client.save({"conanfile.txt": base}, clean_first=True)
         client.run("install . --build")
 
-        qmake = load(os.path.join(client.current_folder, "conanbuildinfo.pri"))
+        qmake = client.load("conanbuildinfo.pri")
         self.assertIn("CONAN_RESDIRS += ", qmake)
         self.assertEqual(qmake.count("CONAN_LIBS += "), 1)
         self.assertIn("CONAN_LIBS_PKG_NAME_WORLD_RELEASE += -lhellor", qmake)
@@ -148,3 +148,35 @@ qmake
         self.assertIn("CONAN_LIBS_RELEASE += -lhellor", qmake)
         self.assertIn("CONAN_LIBS_DEBUG += -lhellod", qmake)
         self.assertIn("CONAN_LIBS += -lhello", qmake)
+
+    def test_conditional_generators(self):
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile, CMakeToolchain
+            class Pkg(ConanFile):
+                settings = "os", "compiler", "arch", "build_type"
+                def configure(self):
+                    if self.settings.os == "Windows":
+                        self.generators = ["msbuild"]
+                """)
+        client = TestClient()
+        client.save({"conanfile.py": conanfile})
+
+        client.run('install . -s os=Windows -s compiler="Visual Studio" -s compiler.version=15'
+                   ' -s compiler.runtime=MD')
+        self.assertIn("conanfile.py: Generator msbuild created conan_deps.props", client.out)
+        client.run("install . -s os=Linux -s compiler=gcc -s compiler.version=5.2 '"
+                   "'-s compiler.libcxx=libstdc++")
+        self.assertNotIn("msbuild", client.out)
+        # create
+        client.run('create . pkg/0.1@ -s os=Windows -s compiler="Visual Studio" '
+                   '-s compiler.version=15 -s compiler.runtime=MD')
+        self.assertIn("pkg/0.1: Generator msbuild created conan_deps.props", client.out)
+        client.run("create . pkg/0.1@ -s os=Linux -s compiler=gcc -s compiler.version=5.2 "
+                   "-s compiler.libcxx=libstdc++")
+        self.assertNotIn("msbuild", client.out)
+
+        # Test that command line generators append
+        client.run('install . -s os=Windows -s compiler="Visual Studio" -s compiler.version=15'
+                   ' -s compiler.runtime=MD -g cmake')
+        self.assertIn("conanfile.py: Generator msbuild created conan_deps.props", client.out)
+        self.assertIn("conanfile.py: Generator cmake created conanbuildinfo.cmake", client.out)

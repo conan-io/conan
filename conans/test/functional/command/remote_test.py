@@ -3,9 +3,10 @@ import re
 import unittest
 from collections import OrderedDict
 
+from conans.model.ref import ConanFileReference
+from conans.test.utils.genconanfile import GenConanfile
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
 from conans.util.files import load
-from conans.model.ref import ConanFileReference
 
 
 class RemoteTest(unittest.TestCase):
@@ -21,12 +22,7 @@ class RemoteTest(unittest.TestCase):
         self.client = TestClient(servers=self.servers, users=self.users)
 
     def test_removed_references(self):
-        conanfile = """
-from conans import ConanFile
-class HelloConan(ConanFile):
-    pass
-"""
-        self.client.save({"conanfile.py": conanfile})
+        self.client.save({"conanfile.py": GenConanfile()})
         self.client.run("create . lib/1.0@lasote/channel")
         self.client.run('upload "*" -c -r remote1')
         self.client.run('upload "*" -c -r remote2')
@@ -86,7 +82,7 @@ class HelloConan(ConanFile):
 
     def list_raw_test(self):
         self.client.run("remote list --raw")
-        output = re.sub("http:\/\/fake.+\.com", "http://fake.com", str(self.client.out))
+        output = re.sub(r"http://fake.+.com", "http://fake.com", str(self.client.out))
         self.assertIn("remote0 http://fake.com True", output)
         self.assertIn("remote1 http://fake.com True", output)
         self.assertIn("remote2 http://fake.com True", output)
@@ -131,7 +127,7 @@ class HelloConan(ConanFile):
         self.client.run("remote list_ref")
         self.assertNotIn("Hello2/0.1@user/testing", self.client.out)
         self.assertIn("Hello/0.1@user/testing", self.client.out)
-        registry = load(self.client.cache.registry_path)
+        registry = load(self.client.cache.remotes_path)
         self.assertNotIn("Hello2/0.1@user/testing", registry)
         ref = ConanFileReference.loads("Hello/0.1@user/testing")
         metadata = self.client.cache.package_layout(ref).load_metadata()
@@ -145,7 +141,7 @@ class HelloConan(ConanFile):
         self.client.run("remote list_ref")
         self.assertNotIn("Hello2/0.1@user/testing", self.client.out)
         self.assertNotIn("Hello/0.1@user/testing", self.client.out)
-        registry = load(self.client.cache.registry_path)
+        registry = load(self.client.cache.remotes_path)
         self.assertNotIn("Hello2/0.1@user/testing", registry)
         self.assertNotIn("Hello/0.1@user/testing", registry)
 
@@ -154,6 +150,22 @@ class HelloConan(ConanFile):
         self.client.run("remote clean")
         self.client.run("remote list")
         self.assertEqual("", self.client.out)
+        self.client.run("remote list_ref")
+        self.assertEqual("", self.client.out)
+
+    def clean_remote_no_user_test(self):
+        self.client.run("remote add_ref Hello/0.1 remote0")
+        self.client.run("remote clean")
+        self.client.run("remote list")
+        self.assertEqual("", self.client.out)
+        self.client.run("remote list_ref")
+        self.assertEqual("", self.client.out)
+
+    def remove_remote_no_user_test(self):
+        self.client.run("remote add_ref Hello/0.1 remote0")
+        self.client.run("remote remove remote0")
+        self.client.run("remote list")
+        self.assertNotIn("remote0", self.client.out)
         self.client.run("remote list_ref")
         self.assertEqual("", self.client.out)
 
@@ -275,7 +287,7 @@ class HelloConan(ConanFile):
         client.run("remote add my-remote2 http://someurl2 yes")
         client.run("remote add my-remote3 http://someurl3 FALse")
         client.run("remote add my-remote4 http://someurl4 No")
-        registry = load(client.cache.registry_path)
+        registry = load(client.cache.remotes_path)
         data = json.loads(registry)
         self.assertEqual(data["remotes"][0]["name"], "my-remote")
         self.assertEqual(data["remotes"][0]["url"], "http://someurl")
@@ -293,13 +305,66 @@ class HelloConan(ConanFile):
         self.assertEqual(data["remotes"][3]["url"], "http://someurl4")
         self.assertEqual(data["remotes"][3]["verify_ssl"], False)
 
+    def remote_disable_test(self):
+        client = TestClient()
+        client.run("remote add my-remote0 http://someurl0")
+        client.run("remote add my-remote1 http://someurl1")
+        client.run("remote add my-remote2 http://someurl2")
+        client.run("remote add my-remote3 http://someurl3")
+        client.run("remote disable my-remote0")
+        client.run("remote disable my-remote3")
+        registry = load(client.cache.remotes_path)
+        data = json.loads(registry)
+        self.assertEqual(data["remotes"][0]["name"], "my-remote0")
+        self.assertEqual(data["remotes"][0]["url"], "http://someurl0")
+        self.assertEqual(data["remotes"][0]["disabled"], True)
+        self.assertEqual(data["remotes"][3]["name"], "my-remote3")
+        self.assertEqual(data["remotes"][3]["url"], "http://someurl3")
+        self.assertEqual(data["remotes"][3]["disabled"], True)
+
+        client.run("remote disable *")
+        registry = load(client.cache.remotes_path)
+        data = json.loads(registry)
+        for remote in data["remotes"]:
+            self.assertEqual(remote["disabled"], True)
+
+        client.run("remote enable *")
+        registry = load(client.cache.remotes_path)
+        data = json.loads(registry)
+        for remote in data["remotes"]:
+            self.assertNotIn("disabled", remote)
+
+    def invalid_remote_disable_test(self):
+        client = TestClient()
+
+        client.run("remote disable invalid_remote", assert_error=True)
+        self.assertIn("ERROR: Remote 'invalid_remote' not found in remotes", client.out)
+
+        client.run("remote enable invalid_remote", assert_error=True)
+        self.assertIn("ERROR: Remote 'invalid_remote' not found in remotes", client.out)
+
+        client.run("remote disable invalid_wildcard_*")
+
+    def remote_disable_already_set_test(self):
+        """
+        Check that we don't raise an error if the remote is already in the required state
+        """
+        client = TestClient()
+
+        client.run("remote add my-remote0 http://someurl0")
+        client.run("remote enable my-remote0")
+        client.run("remote enable my-remote0")
+
+        client.run("remote disable my-remote0")
+        client.run("remote disable my-remote0")
+
     def verify_ssl_error_test(self):
         client = TestClient()
         client.run("remote add my-remote http://someurl some_invalid_option=foo", assert_error=True)
 
         self.assertIn("ERROR: Unrecognized boolean value 'some_invalid_option=foo'",
                       client.out)
-        data = json.loads(load(client.cache.registry_path))
+        data = json.loads(load(client.cache.remotes_path))
         self.assertEqual(data["remotes"], [])
 
     def errors_test(self):
@@ -319,12 +384,10 @@ class HelloConan(ConanFile):
         self.client.run("remote list")
         url = str(self.client.out).split()[1]
         self.client.run("remote add newname %s" % url, assert_error=True)
-        self.assertIn("Remote 'remote0' already exists with same URL",
-                      self.client.out)
+        self.assertIn("Remote 'remote0' already exists with same URL", self.client.out)
 
         self.client.run("remote update remote1 %s" % url, assert_error=True)
-        self.assertIn("Remote 'remote0' already exists with same URL",
-                      self.client.out)
+        self.assertIn("Remote 'remote0' already exists with same URL", self.client.out)
 
     def basic_refs_test(self):
         self.client.run("remote add_ref Hello/0.1@user/testing remote0")
@@ -397,9 +460,7 @@ class HelloConan(ConanFile):
         """
         Check that 'conan remote' commands work with editable packages
         """
-        self.client.save({"conanfile.py": """from conans import ConanFile
-class Conan(ConanFile):
-    pass"""})
+        self.client.save({"conanfile.py": GenConanfile()})
         self.client.run("create . pkg/1.1@lasote/stable")
         self.client.run("upload pkg/1.1@lasote/stable --all -c --remote remote1")
         self.client.run("remove -f pkg/1.1@lasote/stable")
@@ -432,3 +493,9 @@ class Conan(ConanFile):
         self.client.run("remote list")
         self.assertNotIn("remote1", self.client.out)
         self.assertNotIn("remote0", self.client.out)
+
+    def test_remove_package_empty(self):
+        self.client.save({"conanfile.py": GenConanfile("name", "version")})
+        self.client.run("export . name/version@lasote/stable")
+        self.client.run("upload name/version@lasote/stable --remote remote1")
+        self.client.run("remove -f -p -r remote1 name/version@lasote/stable")

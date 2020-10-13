@@ -91,9 +91,10 @@ class RangeResolver(object):
 
     @property
     def output(self):
-        result = self._result
+        return self._result
+
+    def clear_output(self):
         self._result = []
-        return result
 
     def resolve(self, require, base_conanref, update, remotes):
         version_range = require.version_range
@@ -140,19 +141,21 @@ class RangeResolver(object):
 
     def _resolve_local(self, search_ref, version_range):
         local_found = search_recipes(self._cache, search_ref)
+        local_found = [ref for ref in local_found
+                       if ref.user == search_ref.user and
+                       ref.channel == search_ref.channel]
         if local_found:
             return self._resolve_version(version_range, local_found)
 
-    def _search_remotes(self, pattern, remotes):
-        remote = remotes.selected
-        if remote:
-            search_result = self._remote_manager.search_recipes(remote, pattern, ignorecase=False)
-            return search_result, remote.name
-
+    def _search_remotes(self, search_ref, remotes):
+        pattern = str(search_ref)
         for remote in remotes.values():
-            search_result = self._remote_manager.search_recipes(remote, pattern, ignorecase=False)
-            if search_result:
-                return search_result, remote.name
+            if not remotes.selected or remote == remotes.selected:
+                result = self._remote_manager.search_recipes(remote, pattern, ignorecase=False)
+                result = [ref for ref in result
+                          if ref.user == search_ref.user and ref.channel == search_ref.channel]
+                if result:
+                    return result, remote.name
         return None, None
 
     def _resolve_remote(self, search_ref, version_range, remotes):
@@ -160,10 +163,7 @@ class RangeResolver(object):
         found_refs, remote_name = self._cached_remote_found.get(search_ref, (None, None))
         if found_refs is None:
             # Searching for just the name is much faster in remotes like Artifactory
-            found_refs, remote_name = self._search_remotes(search_ref.name, remotes)
-            if found_refs:
-                found_refs = [r for r in found_refs
-                              if r.user == search_ref.user and r.channel == search_ref.channel]
+            found_refs, remote_name = self._search_remotes(search_ref, remotes)
             if found_refs:
                 self._result.append("%s versions found in '%s' remote" % (search_ref, remote_name))
             else:

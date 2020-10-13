@@ -2,19 +2,16 @@ import mock
 import platform
 import six
 import unittest
-
 from six import StringIO
 
 from conans import tools
 from conans.client.output import ConanOutput
 from conans.client.tools.files import which
 from conans.client.tools.oss import OSInfo
-from conans.client.tools.system_pm import ChocolateyTool, SystemPackageTool,\
-    AptTool
+from conans.client.tools.system_pm import ChocolateyTool, SystemPackageTool, AptTool
 from conans.errors import ConanException
 from conans.test.unittests.util.tools_test import RunnerMock
-from conans.test.utils.tools import TestBufferConanOutput
-from conans.test.utils.conanfile import MockSettings, MockConanfile
+from conans.test.utils.mocks import MockSettings, MockConanfile, TestBufferConanOutput
 
 
 class SystemPackageToolTest(unittest.TestCase):
@@ -58,12 +55,16 @@ class SystemPackageToolTest(unittest.TestCase):
             self.assertIn('Not updating system_requirements. CONAN_SYSREQUIRES_MODE=verify',
                           self.out)
 
-    def add_repositories_exception_cases_test(self):
+    # We gotta mock the with_apt property, since it checks for the existence of apt.
+    @mock.patch('conans.client.tools.oss.OSInfo.with_apt', new_callable=mock.PropertyMock)
+    def add_repositories_exception_cases_test(self, patched_with_apt):
         os_info = OSInfo()
         os_info.is_macos = False
         os_info.is_linux = True
         os_info.is_windows = False
-        os_info.linux_distro = "fedora"  # Will instantiate YumTool
+        os_info.linux_distro = "fedora"  # Will instantiate DnfTool
+
+        patched_with_apt.return_value = False
 
         with six.assertRaisesRegex(self, ConanException, "add_repository not implemented"):
             new_out = StringIO()
@@ -71,7 +72,8 @@ class SystemPackageToolTest(unittest.TestCase):
             spt.add_repository(repository="deb http://repo/url/ saucy universe multiverse",
                                repo_key=None)
 
-    def add_repository_test(self):
+    @mock.patch('conans.client.tools.oss.OSInfo.with_apt', new_callable=mock.PropertyMock)
+    def add_repository_test(self, patched_with_apt):
         class RunnerOrderedMock:
             commands = []  # Command + return value
 
@@ -101,6 +103,8 @@ class SystemPackageToolTest(unittest.TestCase):
                 os_info.is_linux = True
                 os_info.is_windows = False
                 os_info.linux_distro = "debian"
+                patched_with_apt.return_value = True
+
                 new_out = StringIO()
                 spt = SystemPackageTool(runner=runner, os_info=os_info, output=ConanOutput(new_out))
 
@@ -120,7 +124,9 @@ class SystemPackageToolTest(unittest.TestCase):
         with mock.patch("sys.stdout.isatty", return_value=True):
             _run_add_repository_test(repository, gpg_key, sudo=True, isatty=True, update=True)
 
-    def system_package_tool_test(self):
+    # We gotta mock the with_apt property, since it checks for the existence of apt.
+    @mock.patch('conans.client.tools.oss.OSInfo.with_apt', new_callable=mock.PropertyMock)
+    def system_package_tool_test(self, patched_with_apt):
 
         with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "True"}):
             runner = RunnerMock()
@@ -129,6 +135,8 @@ class SystemPackageToolTest(unittest.TestCase):
             os_info.is_macos = False
             os_info.is_linux = True
             os_info.is_windows = False
+            patched_with_apt.return_value = True
+
             os_info.linux_distro = "debian"
 
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
@@ -150,6 +158,16 @@ class SystemPackageToolTest(unittest.TestCase):
             spt.update()
             self.assertEqual(runner.command_called, "sudo -A apt-get update")
 
+            # We'll be testing non-Ubuntu and non-Debian-based distros.
+            patched_with_apt.return_value = False
+
+            with mock.patch("conans.client.tools.oss.which", return_value=True):
+                os_info.linux_distro = "fedora"
+                spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
+                spt.update()
+                self.assertEqual(runner.command_called, "sudo -A dnf check-update -y")
+
+            # Without DNF in the path,
             os_info.linux_distro = "fedora"
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             spt.update()
@@ -178,6 +196,7 @@ class SystemPackageToolTest(unittest.TestCase):
             self.assertEqual(runner.command_called, "sudo -A yum install -y a_package.i?86")
 
             os_info.linux_distro = "debian"
+            patched_with_apt.return_value = True
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             with self.assertRaises(ConanException):
                 runner.return_ok = False
@@ -193,6 +212,7 @@ class SystemPackageToolTest(unittest.TestCase):
             os_info.is_macos = True
             os_info.is_linux = False
             os_info.is_windows = False
+            patched_with_apt.return_value = False
 
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             spt.update()
@@ -202,6 +222,7 @@ class SystemPackageToolTest(unittest.TestCase):
 
             os_info.is_freebsd = True
             os_info.is_macos = False
+            patched_with_apt.return_value = False
 
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             spt.update()
@@ -215,6 +236,7 @@ class SystemPackageToolTest(unittest.TestCase):
             if platform.system() == "Windows" and which("choco.exe"):
                 os_info.is_freebsd = False
                 os_info.is_windows = True
+                patched_with_apt.return_value = False
                 spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out,
                                         tool=ChocolateyTool(output=self.out))
                 spt.update()
@@ -231,6 +253,8 @@ class SystemPackageToolTest(unittest.TestCase):
             os_info = OSInfo()
             os_info.is_linux = True
             os_info.linux_distro = "redhat"
+            patched_with_apt.return_value = False
+
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             spt.install("a_package", force=True)
             self.assertEqual(runner.command_called, "yum install -y a_package")
@@ -238,6 +262,7 @@ class SystemPackageToolTest(unittest.TestCase):
             self.assertEqual(runner.command_called, "yum check-update -y")
 
             os_info.linux_distro = "ubuntu"
+            patched_with_apt.return_value = True
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             spt.install("a_package", force=True)
             self.assertEqual(runner.command_called,
@@ -275,6 +300,7 @@ class SystemPackageToolTest(unittest.TestCase):
             os_info.is_macos = True
             os_info.is_linux = False
             os_info.is_windows = False
+            patched_with_apt.return_value = False
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
 
             spt.update()
@@ -285,6 +311,7 @@ class SystemPackageToolTest(unittest.TestCase):
             os_info.is_freebsd = True
             os_info.is_macos = False
             os_info.is_windows = False
+            patched_with_apt.return_value = False
 
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             spt.update()
@@ -297,6 +324,7 @@ class SystemPackageToolTest(unittest.TestCase):
             os_info.is_solaris = True
             os_info.is_freebsd = False
             os_info.is_windows = False
+            patched_with_apt.return_value = False
 
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             spt.update()
@@ -310,6 +338,7 @@ class SystemPackageToolTest(unittest.TestCase):
             if platform.system() == "Windows" and which("choco.exe"):
                 os_info.is_solaris = False
                 os_info.is_windows = True
+                patched_with_apt.return_value = False
 
                 spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out,
                                         tool=ChocolateyTool(output=self.out))
@@ -424,6 +453,22 @@ class SystemPackageToolTest(unittest.TestCase):
             self.assertNotIn("CONAN_SYSREQUIRES_MODE", str(exc.exception))
             self.assertEqual(7, runner.calls)
 
+        # Check default_mode. The environment variable is not set and should behave like
+        # the default_mode
+        with tools.environment_append({
+            "CONAN_SYSREQUIRES_MODE": None,
+            "CONAN_SYSREQUIRES_SUDO": "True"
+        }):
+            packages = ["verify_package", "verify_another_package", "verify_yet_another_package"]
+            runner = RunnerMultipleMock(["sudo -A apt-get update"])
+            spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out), output=self.out,
+                                    default_mode="verify")
+            with self.assertRaises(ConanException) as exc:
+                spt.install(packages)
+            self.assertIn("Aborted due to CONAN_SYSREQUIRES_MODE=", str(exc.exception))
+            self.assertIn('\n'.join(packages), self.out)
+            self.assertEqual(3, runner.calls)
+
     def system_package_tool_installed_test(self):
         if (platform.system() != "Linux" and platform.system() != "Macos" and
                 platform.system() != "Windows"):
@@ -438,8 +483,10 @@ class SystemPackageToolTest(unittest.TestCase):
             expected_package = "chocolatey"
         # The expected should be installed on development/testing machines
         self.assertTrue(spt._tool.installed(expected_package))
+        self.assertTrue(spt.installed(expected_package))
         # This package hopefully doesn't exist
         self.assertFalse(spt._tool.installed("oidfjgesiouhrgioeurhgielurhgaeiorhgioearhgoaeirhg"))
+        self.assertFalse(spt.installed("oidfjgesiouhrgioeurhgielurhgaeiorhgioearhgoaeirhg"))
 
     def system_package_tool_fail_when_not_0_returned_test(self):
         def get_linux_error_message():
@@ -452,6 +499,8 @@ class SystemPackageToolTest(unittest.TestCase):
                 update_command = "sudo -A apt-get update"
             elif os_info.with_yum:
                 update_command = "sudo -A yum check-update -y"
+            elif os_info.with_dnf:
+                update_command = "sudo -A dnf check-update -y"
             elif os_info.with_zypper:
                 update_command = "sudo -A zypper --non-interactive ref"
             elif os_info.with_pacman:

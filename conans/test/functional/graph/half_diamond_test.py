@@ -20,7 +20,7 @@ class HalfDiamondTest(unittest.TestCase):
         if deps:
             for dep in deps:
                 ref = ConanFileReference.loads(dep)
-                conanfile = conanfile.with_requirement(ref)
+                conanfile = conanfile.with_require(ref)
 
         conanfile = str(conanfile) + """
     def config_options(self):
@@ -49,5 +49,5 @@ class HalfDiamondTest(unittest.TestCase):
         self.client.run("install . --build missing")
         self.assertIn("conanfile.py (Hello2/0.1): Generated conaninfo.txt",
                       self.client.out)
-        conaninfo = load(os.path.join(self.client.current_folder, "conaninfo.txt"))
+        conaninfo = self.client.load("conaninfo.txt")
         self.assertEqual(1, conaninfo.count("Hello0/0.1@lasote/stable"))

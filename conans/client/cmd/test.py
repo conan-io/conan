@@ -2,7 +2,7 @@ import hashlib
 import os
 import tempfile
 
-from conans.client.cmd.build import build
+from conans.client.cmd.build import cmd_build
 from conans.client.manager import deps_install
 from conans.util.env_reader import get_env
 from conans.util.files import rmdir
@@ -17,7 +17,7 @@ def install_build_and_test(app, conanfile_abs_path, reference, graph_info,
     and builds the test_package/conanfile.py running the test() method.
     """
     base_folder = os.path.dirname(conanfile_abs_path)
-    test_build_folder, delete_after_build = _build_folder(test_build_folder, graph_info.profile,
+    test_build_folder, delete_after_build = _build_folder(test_build_folder, graph_info.profile_host,
                                                           base_folder)
     rmdir(test_build_folder)
     if build_modes is None:
@@ -36,9 +36,8 @@ def install_build_and_test(app, conanfile_abs_path, reference, graph_info,
                      manifest_interactive=manifest_interactive,
                      keep_build=keep_build,
                      recorder=recorder)
-        # FIXME: This is ugly access to graph_manager and hook_manager. Will be cleaned in 2.0
-        build(app, conanfile_abs_path, base_folder, test_build_folder, package_folder=None,
-              install_folder=test_build_folder, test=reference)
+        cmd_build(app, conanfile_abs_path, base_folder, test_build_folder, package_folder=None,
+                  install_folder=test_build_folder, test=reference)
     finally:
         if delete_after_build:
             # Required for windows where deleting the cwd is not possible.

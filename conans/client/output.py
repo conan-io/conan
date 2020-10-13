@@ -8,12 +8,29 @@ from conans.util.files import decode_text
 
 
 def colorama_initialize():
+    if "NO_COLOR" in os.environ:
+        return False
+
+    clicolor_force = get_env("CLICOLOR_FORCE")
+    if clicolor_force is not None and clicolor_force != "0":
+        import colorama
+        colorama.init(convert=False, strip=False)
+        return True
+
+    isatty = hasattr(sys.stdout, "isatty") and sys.stdout.isatty()
+
+    clicolor = get_env("CLICOLOR")
+    if clicolor is not None:
+        if clicolor == "0" or not isatty:
+            return False
+        import colorama
+        colorama.init()
+        return True
+
     # Respect color env setting or check tty if unset
     color_set = "CONAN_COLOR_DISPLAY" in os.environ
     if ((color_set and get_env("CONAN_COLOR_DISPLAY", 1))
-            or (not color_set
-                and hasattr(sys.stdout, "isatty")
-                and sys.stdout.isatty())):
+            or (not color_set and isatty)):
         import colorama
         if get_env("PYCHARM_HOSTED"):  # in PyCharm disable convert/strip
             colorama.init(convert=False, strip=False)
@@ -73,6 +90,16 @@ class ConanOutput(object):
     def writeln(self, data, front=None, back=None, error=False):
         self.write(data, front, back, newline=True, error=error)
 
+    def _write(self, data, newline=False):
+        if newline:
+            data = "%s\n" % data
+        self._stream.write(data)
+
+    def _write_err(self, data, newline=False):
+        if newline:
+            data = "%s\n" % data
+        self._stream_err.write(data)
+
     def write(self, data, front=None, back=None, newline=False, error=False):
         if six.PY2:
             if isinstance(data, str):
@@ -80,17 +107,15 @@ class ConanOutput(object):
 
         if self._color and (front or back):
             data = "%s%s%s%s" % (front or '', back or '', data, Style.RESET_ALL)
-        if newline:
-            data = "%s\n" % data
 
         # https://github.com/conan-io/conan/issues/4277
         # Windows output locks produce IOErrors
         for _ in range(3):
             try:
                 if error:
-                    self._stream_err.write(data)
+                    self._write_err(data, newline)
                 else:
-                    self._stream.write(data)
+                    self._write(data, newline)
                 break
             except IOError:
                 import time

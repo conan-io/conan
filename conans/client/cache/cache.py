@@ -4,9 +4,13 @@ import shutil
 from collections import OrderedDict
 from os.path import join
 
+from jinja2 import Environment, select_autoescape, FileSystemLoader, ChoiceLoader
+
+from conans.assets.templates import dict_loader
 from conans.client.cache.editable import EditablePackages
 from conans.client.cache.remote_registry import RemoteRegistry
-from conans.client.conf import ConanClientConfigParser, default_client_conf, default_settings_yml
+from conans.client.conf import ConanClientConfigParser, get_default_client_conf, \
+    get_default_settings_yml
 from conans.client.conf.detect import detect_defaults_settings
 from conans.client.output import Color
 from conans.client.profile_loader import read_profile
@@ -14,13 +18,12 @@ from conans.errors import ConanException
 from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
-from conans.paths import PUT_HEADERS
+from conans.paths import ARTIFACTS_PROPERTIES_FILE
 from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
 from conans.paths.package_layouts.package_editable_layout import PackageEditableLayout
 from conans.unicode import get_cwd
-from conans.util.files import list_folder_subdirs, load, normalize, save
+from conans.util.files import list_folder_subdirs, load, normalize, save, remove
 from conans.util.locks import Lock
-
 
 CONAN_CONF = 'conan.conf'
 CONAN_SETTINGS = "settings.yml"
@@ -28,6 +31,8 @@ LOCALDB = ".conan.db"
 REMOTES = "remotes.json"
 PROFILES_FOLDER = "profiles"
 HOOKS_FOLDER = "hooks"
+TEMPLATES_FOLDER = "templates"
+GENERATORS_FOLDER = "generators"
 
 
 def is_case_insensitive_os():
@@ -72,18 +77,16 @@ class ClientCache(object):
         self.editable_packages = EditablePackages(self.cache_folder)
         # paths
         self._store_folder = self.config.storage_path or self.cache_folder
+        # Just call it to make it raise in case of short_paths misconfiguration
+        _ = self.config.short_paths_home
 
     def all_refs(self):
         subdirs = list_folder_subdirs(basedir=self._store_folder, level=4)
-        return [ConanFileReference(*folder.split("/")) for folder in subdirs]
+        return [ConanFileReference.load_dir_repr(folder) for folder in subdirs]
 
     @property
     def store(self):
         return self._store_folder
-
-    def package(self, pref, short_paths=False):
-        # TODO: This is deprecated, only used in testing
-        return self.package_layout(pref.ref, short_paths).package(pref)
 
     def installed_as_editable(self, ref):
         return isinstance(self.package_layout(ref), PackageEditableLayout)
@@ -92,13 +95,14 @@ class ClientCache(object):
     def config_install_file(self):
         return os.path.join(self.cache_folder, "config_install.json")
 
-    def package_layout(self, ref, short_paths=None, *args, **kwargs):
+    def package_layout(self, ref, short_paths=None):
         assert isinstance(ref, ConanFileReference), "It is a {}".format(type(ref))
         edited_ref = self.editable_packages.get(ref.copy_clear_rev())
         if edited_ref:
-            base_path = edited_ref["path"]
+            conanfile_path = edited_ref["path"]
             layout_file = edited_ref["layout"]
-            return PackageEditableLayout(base_path, layout_file, ref)
+            return PackageEditableLayout(os.path.dirname(conanfile_path), layout_file, ref,
+                                         conanfile_path)
         else:
             check_ref_case(ref, self.store)
             base_folder = os.path.normpath(os.path.join(self.store, ref.dir_repr()))
@@ -106,7 +110,7 @@ class ClientCache(object):
                                       short_paths=short_paths, no_lock=self._no_locks())
 
     @property
-    def registry_path(self):
+    def remotes_path(self):
         return join(self.cache_folder, REMOTES)
 
     @property
@@ -119,16 +123,16 @@ class ClientCache(object):
         return self._no_lock
 
     @property
-    def put_headers_path(self):
-        return join(self.cache_folder, PUT_HEADERS)
+    def artifacts_properties_path(self):
+        return join(self.cache_folder, ARTIFACTS_PROPERTIES_FILE)
 
-    def read_put_headers(self):
+    def read_artifacts_properties(self):
         ret = {}
-        if not os.path.exists(self.put_headers_path):
-            save(self.put_headers_path, "")
+        if not os.path.exists(self.artifacts_properties_path):
+            save(self.artifacts_properties_path, "")
             return ret
         try:
-            contents = load(self.put_headers_path)
+            contents = load(self.artifacts_properties_path)
             for line in contents.splitlines():
                 if line and not line.strip().startswith("#"):
                     tmp = line.split("=", 1)
@@ -139,14 +143,12 @@ class ClientCache(object):
                     ret[str(name)] = str(value)
             return ret
         except Exception:
-            raise ConanException("Invalid %s file!" % self.put_headers_path)
+            raise ConanException("Invalid %s file!" % self.artifacts_properties_path)
 
     @property
     def config(self):
         if not self._config:
-            if not os.path.exists(self.conan_conf_path):
-                save(self.conan_conf_path, normalize(default_client_conf))
-
+            self.initialize_config()
             self._config = ConanClientConfigParser(self.conan_conf_path)
         return self._config
 
@@ -167,12 +169,15 @@ class ClientCache(object):
         return join(self.cache_folder, CONAN_SETTINGS)
 
     @property
+    def generators_path(self):
+        return join(self.cache_folder, GENERATORS_FOLDER)
+
+    @property
     def default_profile_path(self):
         if os.path.isabs(self.config.default_profile):
             return self.config.default_profile
         else:
-            return join(self.cache_folder, PROFILES_FOLDER,
-                        self.config.default_profile)
+            return join(self.cache_folder, PROFILES_FOLDER, self.config.default_profile)
 
     @property
     def hooks_path(self):
@@ -183,28 +188,8 @@ class ClientCache(object):
 
     @property
     def default_profile(self):
-        if not os.path.exists(self.default_profile_path):
-            self._output.writeln("Auto detecting your dev setup to initialize the "
-                                 "default profile (%s)" % self.default_profile_path,
-                                 Color.BRIGHT_YELLOW)
-
-            default_settings = detect_defaults_settings(self._output,
-                                                        profile_path=self.default_profile_path)
-            self._output.writeln("Default settings", Color.BRIGHT_YELLOW)
-            self._output.writeln("\n".join(["\t%s=%s" % (k, v) for (k, v) in default_settings]),
-                                 Color.BRIGHT_YELLOW)
-            self._output.writeln("*** You can change them in %s ***" % self.default_profile_path,
-                                 Color.BRIGHT_MAGENTA)
-            self._output.writeln("*** Or override with -s compiler='other' -s ...s***\n\n",
-                                 Color.BRIGHT_MAGENTA)
-
-            default_profile = Profile()
-            tmp = OrderedDict(default_settings)
-            default_profile.update_settings(tmp)
-            save(self.default_profile_path, default_profile.dumps())
-        else:
-            default_profile, _ = read_profile(self.default_profile_path, get_cwd(),
-                                              self.profiles_path)
+        self.initialize_default_profile()
+        default_profile, _ = read_profile(self.default_profile_path, get_cwd(), self.profiles_path)
 
         # Mix profile settings with environment
         mixed_settings = _mix_settings_with_env(default_profile.settings)
@@ -215,15 +200,9 @@ class ClientCache(object):
     def settings(self):
         """Returns {setting: [value, ...]} defining all the possible
            settings without values"""
-
-        if not os.path.exists(self.settings_path):
-            save(self.settings_path, normalize(default_settings_yml))
-            settings = Settings.loads(default_settings_yml)
-        else:
-            content = load(self.settings_path)
-            settings = Settings.loads(content)
-
-        return settings
+        self.initialize_settings()
+        content = load(self.settings_path)
+        return Settings.loads(content)
 
     @property
     def hooks(self):
@@ -233,6 +212,17 @@ class ClientCache(object):
             if os.path.isfile(hook_name) and hook_name.endswith(".py"):
                 hooks.append(hook_name[:-3])
         return hooks
+
+    @property
+    def generators(self):
+        """Returns a list of generator paths inside the generators folder"""
+        generators = []
+        if os.path.exists(self.generators_path):
+            for path in os.listdir(self.generators_path):
+                generator = os.path.join(self.generators_path, path)
+                if os.path.isfile(generator) and generator.endswith(".py"):
+                    generators.append(generator)
+        return generators
 
     def delete_empty_dirs(self, deleted_refs):
         for ref in deleted_refs:
@@ -252,6 +242,59 @@ class ClientCache(object):
             Lock.clean(conan_folder)
             shutil.rmtree(os.path.join(conan_folder, "locks"), ignore_errors=True)
 
+    def get_template(self, template_name, user_overrides=False):
+        # TODO: It can be initialized only once together with the Conan app
+        loaders = [dict_loader]
+        if user_overrides:
+            loaders.insert(0, FileSystemLoader(os.path.join(self.cache_folder, 'templates')))
+        env = Environment(loader=ChoiceLoader(loaders),
+                          autoescape=select_autoescape(['html', 'xml']))
+        return env.get_template(template_name)
+
+    def initialize_config(self):
+        if not os.path.exists(self.conan_conf_path):
+            save(self.conan_conf_path, normalize(get_default_client_conf()))
+
+    def reset_config(self):
+        if os.path.exists(self.conan_conf_path):
+            remove(self.conan_conf_path)
+        self.initialize_config()
+
+    def initialize_default_profile(self):
+        if not os.path.exists(self.default_profile_path):
+            self._output.writeln("Auto detecting your dev setup to initialize the "
+                                 "default profile (%s)" % self.default_profile_path,
+                                 Color.BRIGHT_YELLOW)
+
+            default_settings = detect_defaults_settings(self._output,
+                                                        profile_path=self.default_profile_path)
+            self._output.writeln("Default settings", Color.BRIGHT_YELLOW)
+            self._output.writeln("\n".join(["\t%s=%s" % (k, v) for (k, v) in default_settings]),
+                                 Color.BRIGHT_YELLOW)
+            self._output.writeln("*** You can change them in %s ***" % self.default_profile_path,
+                                 Color.BRIGHT_MAGENTA)
+            self._output.writeln("*** Or override with -s compiler='other' -s ...s***\n\n",
+                                 Color.BRIGHT_MAGENTA)
+
+            default_profile = Profile()
+            tmp = OrderedDict(default_settings)
+            default_profile.update_settings(tmp)
+            save(self.default_profile_path, default_profile.dumps())
+
+    def reset_default_profile(self):
+        if os.path.exists(self.default_profile_path):
+            remove(self.default_profile_path)
+        self.initialize_default_profile()
+
+    def initialize_settings(self):
+        if not os.path.exists(self.settings_path):
+            save(self.settings_path, normalize(get_default_settings_yml()))
+
+    def reset_settings(self):
+        if os.path.exists(self.settings_path):
+            remove(self.settings_path)
+        self.initialize_settings()
+
 
 def _mix_settings_with_env(settings):
     """Reads CONAN_ENV_XXXX variables from environment
@@ -260,8 +303,8 @@ def _mix_settings_with_env(settings):
     need to specify all the subsettings, the file defaulted will be
     ignored"""
 
-    def get_env_value(name):
-        env_name = "CONAN_ENV_%s" % name.upper().replace(".", "_")
+    def get_env_value(name_):
+        env_name = "CONAN_ENV_%s" % name_.upper().replace(".", "_")
         return os.getenv(env_name, None)
 
     def get_setting_name(env_name):

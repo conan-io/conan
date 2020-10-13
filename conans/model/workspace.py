@@ -1,5 +1,4 @@
 import os
-
 from collections import OrderedDict
 
 import yaml
@@ -8,6 +7,7 @@ from conans.client.graph.graph import RECIPE_EDITABLE
 from conans.errors import ConanException
 from conans.model.editable_layout import get_editable_abs_path, EditableLayout
 from conans.model.ref import ConanFileReference
+from conans.paths import CONANFILE
 from conans.util.files import load, save
 
 
@@ -106,8 +106,13 @@ class Workspace(object):
             save(cmake_path, cmake)
 
     def get_editable_dict(self):
-        return {ref: {"path": ws_package.root_folder, "layout": ws_package.layout}
-                for ref, ws_package in self._workspace_packages.items()}
+        ret = {}
+        for ref, ws_package in self._workspace_packages.items():
+            path = ws_package.root_folder
+            if os.path.isdir(path):
+                path = os.path.join(path, CONANFILE)
+            ret[ref] = {"path": path, "layout": ws_package.layout}
+        return ret
 
     def __getitem__(self, ref):
         return self._workspace_packages.get(ref)

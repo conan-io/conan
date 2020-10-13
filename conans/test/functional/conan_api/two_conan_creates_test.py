@@ -9,7 +9,7 @@ from conans.client.tools.env import environment_append
 from conans.client.tools.files import chdir
 from conans.model.ref import PackageReference
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestBufferConanOutput
+from conans.test.utils.mocks import TestBufferConanOutput
 from conans.util.files import load, save
 
 
@@ -36,11 +36,13 @@ class ConanCreateTest(unittest.TestCase):
                     return load(os.path.join(folder, "conaninfo.txt"))
 
                 settings = ["compiler=Visual Studio", "compiler.version=15", "build_type=Release"]
-                info = api.create(".", user="conan", channel="stable", settings=settings)
+                info = api.create(".", name=None, version=None, user="conan", channel="stable",
+                                  settings=settings)
                 self.assertIn("compiler.runtime=MD", get_conaninfo(info))
 
                 settings = ["compiler=Visual Studio", "compiler.version=15", "build_type=Debug"]
-                info = api.create(".", user="conan", channel="stable", settings=settings)
+                info = api.create(".", name=None, version=None, user="conan", channel="stable",
+                                  settings=settings)
                 self.assertIn("compiler.runtime=MDd", get_conaninfo(info))
 
     def test_api_conanfile_loader_shouldnt_cache(self):

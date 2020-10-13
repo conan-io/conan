@@ -5,7 +5,7 @@ import unittest
 from conans.model.ref import PackageReference
 from conans.paths import BUILD_INFO, CONANFILE
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
-from conans.util.files import load, mkdir
+from conans.util.files import mkdir
 
 
 conanfile_scope_env = """
@@ -16,9 +16,11 @@ class AConan(ConanFile):
     generators = "cmake"
 
     def build(self):
-        self.output.info("INCLUDE PATH: %s" % self.deps_cpp_info.include_paths[0])
+        self.output.info("INCLUDE PATH: %s" %
+            self.deps_cpp_info.include_paths[0].replace('\\\\', '/'))
         self.output.info("HELLO ROOT PATH: %s" % self.deps_cpp_info["Hello"].rootpath)
-        self.output.info("HELLO INCLUDE PATHS: %s" % self.deps_cpp_info["Hello"].include_paths[0])
+        self.output.info("HELLO INCLUDE PATHS: %s" %
+            self.deps_cpp_info["Hello"].include_paths[0].replace('\\\\', '/'))
 """
 
 conanfile_dep = """
@@ -263,7 +265,7 @@ cmake_minimum_required(VERSION 2.8.12)
                      "header.h": "my header h!!"})
         client.run("install .")
         client.run("build .")  # Won't fail, by default the package_folder is build_folder/package
-        header = load(os.path.join(client.current_folder, "package/include/header.h"))
+        header = client.load("package/include/header.h")
         self.assertEqual(header, "my header h!!")
 
         client.save({CONANFILE: conanfile,
@@ -271,7 +273,7 @@ cmake_minimum_required(VERSION 2.8.12)
                      "header.h": "my header3 h!!"}, clean_first=True)
         client.run("install .")
         client.run("build -pf=mypkg ./conanfile.py")
-        header = load(os.path.join(client.current_folder, "mypkg/include/header.h"))
+        header = client.load("mypkg/include/header.h")
         self.assertEqual(header, "my header3 h!!")
 
         client.save({CONANFILE: conanfile,
@@ -280,7 +282,7 @@ cmake_minimum_required(VERSION 2.8.12)
         with client.chdir("build"):
             client.run("install ..")
         client.run("build . -pf=mypkg -bf=build")
-        header = load(os.path.join(client.current_folder, "mypkg/include/header.h"))
+        header = client.load("mypkg/include/header.h")
         self.assertEqual(header, "my header2 h!!")
 
     def build_with_deps_env_info_test(self):
