@@ -207,9 +207,8 @@ class PrivateDepsTest(unittest.TestCase):
 
     def _export_upload(self, name=0, version=None, deps=None, msg=None, static=True, build=True,
                        upload=True):
-        dll_export = self.client.default_compiler_visual_studio and not static
         files = cpp_hello_conan_files(name, version, deps, msg=msg, static=static,
-                                      private_includes=True, dll_export=dll_export, build=build,
+                                      private_includes=True, build=build,
                                       cmake_targets=False)
         ref = ConanFileReference(name, version, "lasote", "stable")
         self.client.save(files, clean_first=True)

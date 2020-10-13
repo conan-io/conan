@@ -13,7 +13,8 @@ from conans.client import tools
 from conans.client.build.cmake import CMake
 from conans.client.build.cmake_flags import cmake_in_local_cache_var_name
 from conans.client.conf import get_default_settings_yml
-from conans.client.tools.oss import cpu_count
+from conans.client.tools import cross_building
+from conans.client.tools.oss import cpu_count, detected_architecture
 from conans.errors import ConanException
 from conans.model.build_info import CppInfo, DepsCppInfo
 from conans.model.ref import ConanFileReference
@@ -460,9 +461,9 @@ class CMakeTest(unittest.TestCase):
         conanfile.source_folder = os.path.join(self.tempdir, "my_cache_source_folder")
         conanfile.build_folder = os.path.join(self.tempdir, "my_cache_build_folder")
         with tools.chdir(self.tempdir):
-            linux_stuff = '-DCMAKE_SYSTEM_NAME="Linux" ' \
-                          '-DCMAKE_SYSROOT="/path/to/sysroot" ' \
-                          if platform.system() != "Linux" else ""
+            linux_stuff = ""
+            if platform.system() != "Linux":
+                linux_stuff = '-DCMAKE_SYSTEM_NAME="Linux" -DCMAKE_SYSROOT="/path/to/sysroot" '
             generator = "MinGW Makefiles" if platform.system() == "Windows" else "Unix Makefiles"
 
             flags = '{} -DCONAN_COMPILER="gcc" ' \
@@ -629,12 +630,16 @@ class CMakeTest(unittest.TestCase):
 
         def check(text, build_config, generator=None, set_cmake_flags=False):
             the_os = str(settings.os)
+            arch = str(settings.arch)
             os_ver = str(settings.os.version) if settings.get_safe('os.version') else None
             for cmake_system_name in (True, False):
                 cross_ver = ("-DCMAKE_SYSTEM_VERSION=\"%s\" " % os_ver) if os_ver else ""
-                cross = ("-DCMAKE_SYSTEM_NAME=\"%s\" %s-DCMAKE_SYSROOT=\"/path/to/sysroot\" "
-                         % ({"Macos": "Darwin"}.get(the_os, the_os), cross_ver)
-                         if (platform.system() != the_os and cmake_system_name) else "")
+                # FIXME: This test is complicated to maintain and see the logic, lets simplify it
+                cross = ""
+                skip_x64_x86 = the_os in ['Windows', 'Linux']
+                if cmake_system_name and cross_building(conanfile, skip_x64_x86=skip_x64_x86):
+                    cross = ("-DCMAKE_SYSTEM_NAME=\"%s\" %s-DCMAKE_SYSROOT=\"/path/to/sysroot\" "
+                             % ({"Macos": "Darwin"}.get(the_os, the_os), cross_ver))
                 cmake = CMake(conanfile, generator=generator, cmake_system_name=cmake_system_name,
                               set_cmake_flags=set_cmake_flags)
                 new_text = text.replace("-DCONAN_IN_LOCAL_CACHE", "%s-DCONAN_IN_LOCAL_CACHE" % cross)
@@ -643,7 +648,6 @@ class CMakeTest(unittest.TestCase):
                              '-DCONAN_C_FLAGS="/MP{0}" '.format(tools.cpu_count(conanfile.output)))
                     new_text = new_text.replace('-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON"',
                                                 '%s-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON"' % cores)
-
                 self.assertEqual(new_text, cmake.command_line)
                 self.assertEqual(build_config, cmake.build_config)
 
@@ -689,6 +693,13 @@ class CMakeTest(unittest.TestCase):
               '-DCONAN_IN_LOCAL_CACHE="OFF" -DCONAN_COMPILER="gcc" '
               '-DCONAN_COMPILER_VERSION="4.8" -DCONAN_CXX_FLAGS="-m32" '
               '-DCONAN_SHARED_LINKER_FLAGS="-m32" -DCONAN_C_FLAGS="-m32" '
+              '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -DCONAN_EXPORTED="1" -Wno-dev' % cmakegen,
+              "")
+
+        settings.arch = "armv7"
+        check('-G "%s" -DCMAKE_BUILD_TYPE="Debug" '
+              '-DCONAN_IN_LOCAL_CACHE="OFF" -DCONAN_COMPILER="gcc" '
+              '-DCONAN_COMPILER_VERSION="4.8" '
               '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -DCONAN_EXPORTED="1" -Wno-dev' % cmakegen,
               "")
 
@@ -1408,7 +1419,7 @@ build_type: [ Release]
                            ('NMake Makefiles JOM',),
                            ('Unix Makefiles',),
                            ])
-    def test_compilervars_applied(self, generator):
+    def test_intel_compilervars_applied(self, generator):
         conanfile = ConanFileMock()
         settings = Settings.loads(get_default_settings_yml())
         settings.os = "Windows"
@@ -1419,17 +1430,17 @@ build_type: [ Release]
 
         cmake = CMake(conanfile, generator=generator)
 
-        with mock.patch("conans.client.tools.compilervars_dict") as cvars_mock:
+        with mock.patch("conans.client.tools.intel_compilervars_dict") as cvars_mock:
             cvars_mock.__enter__ = mock.MagicMock(return_value=(mock.MagicMock(), None))
             cvars_mock.__exit__ = mock.MagicMock(return_value=None)
             cmake.configure()
-            self.assertTrue(cvars_mock.called, "compilervars weren't called")
+            self.assertTrue(cvars_mock.called, "intel_compilervars weren't called")
 
-        with mock.patch("conans.client.tools.compilervars_dict") as cvars_mock:
+        with mock.patch("conans.client.tools.intel_compilervars_dict") as cvars_mock:
             cvars_mock.__enter__ = mock.MagicMock(return_value=(mock.MagicMock(), None))
             cvars_mock.__exit__ = mock.MagicMock(return_value=None)
             cmake.build()
-            self.assertTrue(cvars_mock.called, "compilervars weren't called")
+            self.assertTrue(cvars_mock.called, "intel_compilervars weren't called")
 
     def test_cmake_program(self):
         conanfile = ConanFileMock()

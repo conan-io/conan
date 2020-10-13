@@ -3,8 +3,7 @@ import re
 from fnmatch import translate
 
 from conans import load
-from conans.errors import NotFoundException, ConanException, ForbiddenException, \
-    RecipeNotFoundException
+from conans.errors import NotFoundException, ForbiddenException, RecipeNotFoundException
 from conans.model.info import ConanInfo
 from conans.model.ref import PackageReference, ConanFileReference
 from conans.paths import CONANINFO
@@ -80,29 +79,15 @@ class SearchService(object):
         return info
 
     def _search_recipes(self, pattern=None, ignorecase=True):
-
-        def get_ref(_pattern):
-            if not isinstance(_pattern, ConanFileReference):
-                try:
-                    ref_ = ConanFileReference.loads(_pattern)
-                except (ConanException, TypeError):
-                    ref_ = None
-            else:
-                ref_ = _pattern
-            return ref_
-
-        # Conan references in main storage
-        if pattern:
-            pattern = str(pattern)
-            b_pattern = translate(pattern)
-            b_pattern = re.compile(b_pattern, re.IGNORECASE) \
-                if ignorecase else re.compile(b_pattern)
-
         subdirs = list_folder_subdirs(basedir=self._server_store.store, level=5)
         if not pattern:
             return sorted([ConanFileReference(*folder.split("/")).copy_clear_rev()
                            for folder in subdirs])
         else:
+            # Conan references in main storage
+            pattern = str(pattern)
+            b_pattern = translate(pattern)
+            b_pattern = re.compile(b_pattern, re.IGNORECASE) if ignorecase else re.compile(b_pattern)
             ret = set()
             for subdir in subdirs:
                 new_ref = ConanFileReference(*subdir.split("/"))

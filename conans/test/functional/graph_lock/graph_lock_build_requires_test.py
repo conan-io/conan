@@ -1,6 +1,8 @@
 import json
+import textwrap
 import unittest
 
+from conans.client.tools.env import environment_append
 from conans.test.utils.tools import TestClient, GenConanfile
 
 
@@ -214,3 +216,27 @@ class GraphLockBuildRequireTestCase(unittest.TestCase):
         self.assertIn("gtest/1.0 from local cache - Cache", client.out)
         self.assertIn("pkg2/1.0: Applying build-requirement: cmake/1.0", client.out)
         self.assertIn("pkg2/1.0: Applying build-requirement: gtest/1.0", client.out)
+
+    def conditional_env_var_test(self):
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . dep_recipe/1.0@")
+        client.run("create . dep_profile/1.0@")
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            import os
+            class Pkg(ConanFile):
+                def build_requirements(self):
+                    if os.getenv("USE_DEP"):
+                        self.build_requires("dep_recipe/1.0")
+            """)
+        client.save({"conanfile.py": conanfile,
+                     "profile": "[build_requires]\ndep_profile/1.0"})
+        with environment_append({"USE_DEP": "1"}):
+            client.run("lock create conanfile.py --name=pkg --version=1.0 -pr=profile")
+        lock = client.load("conan.lock")
+        self.assertIn("dep_recipe/1.0", lock)
+        self.assertIn("dep_profile/1.0", lock)
+
+        client.run("create . pkg/1.0@ --lockfile=conan.lock", assert_error=True)
+        self.assertIn("ERROR: 'pkg/1.0' locked requirement 'dep_recipe/1.0' not found", client.out)

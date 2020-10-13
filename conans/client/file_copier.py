@@ -51,7 +51,7 @@ class FileCopier(object):
         return report_copied_files(self._copied, output)
 
     def __call__(self, pattern, dst="", src="", keep_path=True, links=False, symlinks=None,
-                 excludes=None, ignore_case=False):
+                 excludes=None, ignore_case=True):
         """
         param pattern: an fnmatch file pattern of the files that should be copied. Eg. *.dll
         param dst: the destination local folder, wrt to current conanfile dir, to which
@@ -62,6 +62,9 @@ class FileCopier(object):
                          src to dst folders, or just drop. False is useful if you want
                          to collect e.g. many *.libs among many dirs into a single
                          lib dir
+        param links: True to activate symlink copying
+        param excludes: Single pattern or a tuple of patterns to be excluded from the copy
+        param ignore_case: will do a case-insensitive pattern matching when True
         return: list of copied files
         """
         # TODO: Remove the old "links" arg for Conan 2.0
@@ -152,8 +155,11 @@ class FileCopier(object):
         if ignore_case:
             filenames = {f.lower(): f for f in filenames}
             pattern = pattern.lower()
+            files_to_copy = fnmatch.filter(filenames, pattern)
+        else:
+            files_to_copy = [n for n in filenames if fnmatch.fnmatchcase(os.path.normpath(n),
+                                                                         pattern)]
 
-        files_to_copy = fnmatch.filter(filenames, pattern)
         for exclude in excludes:
             files_to_copy = [f for f in files_to_copy if not fnmatch.fnmatch(f, exclude)]
 

@@ -51,6 +51,9 @@ class Generator(object):
     def filename(self):
         raise NotImplementedError()
 
+    def get_public_deps(self, cpp_info):
+        return cpp_info.public_deps
+
 
 class GeneratorComponentsMixin(object):
 
@@ -74,6 +77,9 @@ class GeneratorComponentsMixin(object):
             for cmp_require in comp.requires:
                 _check_component_in_requirements(cmp_require)
 
+        for pkg_require in cpp_info.requires:
+            _check_component_in_requirements(pkg_require)
+
     def _get_require_name(self, pkg_name, req):
         pkg, cmp = req.split(COMPONENT_SCOPE) if COMPONENT_SCOPE in req else (pkg_name, req)
         pkg_build_info = self.deps_build_info[pkg]
@@ -85,8 +91,6 @@ class GeneratorComponentsMixin(object):
         return pkg_name, cmp_name
 
     def _get_components(self, pkg_name, cpp_info):
-        self._validate_components(cpp_info)
-
         ret = []
         for comp_name, comp in self.sorted_components(cpp_info).items():
             comp_genname = self._get_name(cpp_info.components[comp_name])
@@ -96,3 +100,11 @@ class GeneratorComponentsMixin(object):
             ret.append((comp_genname, comp, comp_requires_gennames))
         ret.reverse()
         return ret
+
+    @classmethod
+    def get_public_deps(cls, cpp_info):
+        if cpp_info.requires:
+            deps = [it for it in cpp_info.requires if COMPONENT_SCOPE in it]
+            return [it.split(COMPONENT_SCOPE) for it in deps]
+        else:
+            return [(it, it) for it in cpp_info.public_deps]

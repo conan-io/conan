@@ -224,10 +224,9 @@ class CMakeFindPackageGenerator(GeneratorComponentsMixin, Generator):
         return ret
 
     def _get_components(self, pkg_name, cpp_info):
-        generator_components = super(CMakeFindPackageGenerator, self)._get_components(pkg_name,
-                                                                                      cpp_info)
+        components = super(CMakeFindPackageGenerator, self)._get_components(pkg_name, cpp_info)
         ret = []
-        for comp_genname, comp, comp_requires_gennames in generator_components:
+        for comp_genname, comp, comp_requires_gennames in components:
             deps_cpp_cmake = DepsCppCmake(comp)
             deps_cpp_cmake.public_deps = " ".join(
                 ["{}::{}".format(*it) for it in comp_requires_gennames])
@@ -236,12 +235,14 @@ class CMakeFindPackageGenerator(GeneratorComponentsMixin, Generator):
 
     def _find_for_dep(self, pkg_name, pkg_findname, pkg_filename, cpp_info):
         # return the content of the FindXXX.cmake file for the package "pkg_name"
+        self._validate_components(cpp_info)
+
+        public_deps = self.get_public_deps(cpp_info)
+        deps_names = ';'.join(["{}::{}".format(*self._get_require_name(*it)) for it in public_deps])
+        pkg_public_deps_filenames = [self._get_filename(self.deps_build_info[it[0]]) for it in
+                                     public_deps]
+
         pkg_version = cpp_info.version
-        pkg_public_deps_filenames = [self._get_filename(self.deps_build_info[public_dep])
-                                     for public_dep in cpp_info.public_deps]
-        pkg_public_deps_names = [self._get_name(self.deps_build_info[public_dep])
-                                 for public_dep in cpp_info.public_deps]
-        deps_names = ";".join(["{n}::{n}".format(n=n) for n in pkg_public_deps_names])
         if cpp_info.components:
             components = self._get_components(pkg_name, cpp_info)
             # Note these are in reversed order, from more dependent to less dependent
@@ -284,7 +285,7 @@ class CMakeFindPackageGenerator(GeneratorComponentsMixin, Generator):
 
             # The find_transitive_dependencies block
             find_dependencies_block = ""
-            if dep_cpp_info.public_deps:
+            if pkg_public_deps_filenames:
                 # Here we are generating FindXXX, so find_modules=True
                 f = find_transitive_dependencies(pkg_public_deps_filenames, find_modules=True)
                 # proper indentation

@@ -145,7 +145,7 @@ class {name}Conan(ConanFile):
 
     def package(self):
         self.copy(pattern="*.h", dst="include", keep_path=False)
-        self.copy(pattern="*.lib", dst="lib", keep_path=False)
+        self.copy(pattern="*.lib", dst="lib", keep_path=False, excludes="*say*")
         self.copy(pattern="*lib*.a", dst="lib", keep_path=False)
         self.copy(pattern="*.dll", dst="bin", keep_path=False)
         self.copy(pattern="*.dylib", dst="lib", keep_path=False)
@@ -238,7 +238,13 @@ void hello{name}(){{
 header = """
 #pragma once
 {includes}
-{export}void hello{name}();
+
+#ifdef _WIN32
+  #define HELLO_EXPORT __declspec(dllexport)
+#else
+  #define HELLO_EXPORT
+#endif
+HELLO_EXPORT void hello{name}();
 """
 
 main = """
@@ -255,7 +261,7 @@ executable = """
 
 
 def cpp_hello_source_files(name="Hello", deps=None, private_includes=False, msg=None,
-                           dll_export=False, need_patch=False, pure_c=False, cmake_targets=False,
+                           need_patch=False, pure_c=False, cmake_targets=False,
                            with_exe=False):
     """
     param number: integer, defining name of the conans Hello0, Hello1, HelloX
@@ -265,8 +271,6 @@ def cpp_hello_source_files(name="Hello", deps=None, private_includes=False, msg=
                             downstream consumers
     param msg: the message to append to Hello/Hola, will be equal the number
                by default
-    param dll_export: Adds __declspec(dllexport) to the .h declaration
-                      (to be exported to lib with a dll)
     param need_patch: It will generated wrong CMakeLists and main.cpp files,
                       so they will need to be fixed/patched in the source() method.
                       Such method just have to replace_in_file in those two files to have a
@@ -285,9 +289,7 @@ def cpp_hello_source_files(name="Hello", deps=None, private_includes=False, msg=
     ext = ".c" if pure_c else ".cpp"
     ret["main%s" % ext] = main.format(name=name)
     includes = "\n".join(['#include "hello%s.h"' % d for d in deps])
-    export = "__declspec(dllexport) " if dll_export else ""
     ret["hello%s.h" % name] = header.format(name=name,
-                                            export=export,
                                             includes=(includes if not private_includes else ""))
 
     other_calls = "\n".join(["hello%s();" % d for d in deps])
@@ -317,7 +319,7 @@ def cpp_hello_source_files(name="Hello", deps=None, private_includes=False, msg=
 
 
 def cpp_hello_conan_files(name="Hello", version="0.1", deps=None, language=0, static=True,
-                          private_includes=False, msg=None, dll_export=False, need_patch=False,
+                          private_includes=False, msg=None, need_patch=False,
                           pure_c=False, config=True, build=True,
                           use_cmake=True, cmake_targets=False, no_copy_source=False,
                           use_additional_infos=0, settings=None, with_exe=True):
@@ -327,8 +329,6 @@ def cpp_hello_conan_files(name="Hello", version="0.1", deps=None, language=0, st
     param version: string with the version of the current conans "0.1" by default
     param deps: [] list of string of the form "0/0.1@user/channel"
     param language: 0 = English, 1 = Spanish
-    param dll_export: Adds __declspec(dllexport) to the .h declaration
-                      (to be exported to lib with a dll)
 
     e.g. (3, [4, 7]) means that a Hello3 conans will be created, with message
          "Hello 3", that depends both in Hello4 and Hello7.
@@ -352,7 +352,7 @@ def cpp_hello_conan_files(name="Hello", version="0.1", deps=None, language=0, st
     requires = ", ".join(requires)
 
     base_files = cpp_hello_source_files(name, code_deps, private_includes, msg=msg,
-                                        dll_export=dll_export, need_patch=need_patch,
+                                        need_patch=need_patch,
                                         pure_c=pure_c, cmake_targets=cmake_targets,
                                         with_exe=with_exe)
     libcxx_remove = "del self.settings.compiler.libcxx" if pure_c else ""
