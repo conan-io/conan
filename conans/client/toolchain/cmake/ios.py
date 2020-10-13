@@ -58,8 +58,6 @@ class CMakeiOSToolchain(CMakeToolchainBase):
         set(CONAN_SETTINGS_HOST_OS "{{host_os}}") # CMAKE_SYSTEM_NAME
         set(CONAN_SETTINGS_HOST_OS_VERSION "{{host_os_version}}") # SDK_VERSION
         set(CONAN_SDK_NAME "{{host_sdk_name}}")
-        # TODO: add logic to calc the deployment target
-        set(CONAN_SETTINGS_HOST_MIN_OS_VERSION "{{host_os_min_version}}") # DEPLOYMENT TARGET
 
         # set cmake vars
         set(CMAKE_SYSTEM_NAME ${CONAN_SETTINGS_HOST_OS})
@@ -82,9 +80,12 @@ class CMakeiOSToolchain(CMakeToolchainBase):
         self.host_os = self._conanfile.settings.get_safe("os")
         self.host_os_version = self._conanfile.settings.get_safe("os.version")
         self.host_sdk_name = self._get_sdk_name(self.host_architecture)
-        self.host_os_min_version = "9.0"
         self.libcxx = self._conanfile.settings.get_safe("compiler.libcxx")
         self.cppstd = self._conanfile.settings.get_safe("compiler.cppstd")
+
+        #TODO: Discuss how to handle CMAKE_OSX_DEPLOYMENT_TARGET to set min-version
+        #add a setting? check an option and if not present set a default?
+        #default to os.version?
 
         try:
             # This is only defined in the cache, not in the local flow
@@ -125,7 +126,6 @@ class CMakeiOSToolchain(CMakeToolchainBase):
             "host_os": self.host_os,
             "host_os_version": self.host_os_version,
             "host_sdk_name": self.host_sdk_name,
-            "host_os_min_version": self.host_os_min_version,
             "install_prefix": self.install_prefix,
             "set_libcxx": self.libcxx,
             "cppstd": self.cppstd
