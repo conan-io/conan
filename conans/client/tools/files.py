@@ -57,15 +57,12 @@ def is_compressed_file(filename):
     import zipfile
     import tarfile
     import binascii
-    from os.path import isfile
-    if not isfile(filename):
-        return False
-    if zipfile.is_zipfile(filename) or tarfile.is_tarfile(filename):
-        return True
     # test gzip magic number
     with open(filename, 'rb') as fd:
         if binascii.hexlify(fd.read(2)) == b'1f8b':
             return True
+    if zipfile.is_zipfile(filename) or tarfile.is_tarfile(filename):
+        return True
     return False
 
 
