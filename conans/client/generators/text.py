@@ -43,8 +43,8 @@ class DepCppTXT(RootCppTXT):
         self.version = cpp_info.version
         self.name = cpp_info.get_name(TXTGenerator.name)
         self.rootpath = "%s" % cpp_info.rootpath.replace("\\", "/")
-        self.generatornames = "\n".join("%s:%s" % (k, v) for k, v in cpp_info.names.items())
-        self.generatorfilenames = "\n".join("%s:%s" % (k, v) for k, v in cpp_info.filenames.items())
+        self.generatornames = "\n".join("%s=%s" % (k, v) for k, v in cpp_info.names.items())
+        self.generatorfilenames = "\n".join("%s=%s" % (k, v) for k, v in cpp_info.filenames.items())
 
 
 class TXTGenerator(Generator):
@@ -171,11 +171,11 @@ class TXTGenerator(Generator):
                 dep_cpp_info.version = version
                 generatornames = no_config_data.pop("generatornames", [])  # can be empty
                 for n in generatornames:
-                    gen, value = n.split(":")
+                    gen, value = n.split("=", 1)
                     dep_cpp_info.names[gen] = value
                 generatorfilenames = no_config_data.pop("generatorfilenames", [])  # can be empty
                 for n in generatorfilenames:
-                    gen, value = n.split(":")
+                    gen, value = n.split("=", 1)
                     dep_cpp_info.filenames[gen] = value
                 dep_cpp_info.sysroot = no_config_data.pop('sysroot', [""])[0]
                 _populate_cpp_info(dep_cpp_info, no_config_data, rootpath)
