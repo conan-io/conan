@@ -58,7 +58,8 @@ class LibConan(ConanFile):
 
         try:
             # Check it is loadable by Conan machinery
-            _, conanfile = parse_conanfile(conanfile, python_requires=self.python_requires)
+            _, conanfile = parse_conanfile(conanfile, python_requires=self.python_requires,
+                                           generator_manager=None)
         except Exception as e:
             self.fail("Invalid conanfile: {}".format(e))
         else:
@@ -152,4 +153,3 @@ class LibConan(ConanFile):
         # FIXME: We lost the multiline comment
         self.assertIn("    url=23", load(conanfile))
         # self.assertIn(comment, load(conanfile))
-

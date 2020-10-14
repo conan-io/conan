@@ -37,7 +37,7 @@ _t_default_settings_yml = Template(textwrap.dedent("""
             version: ["5.0", "6.0", "7.0", "8.0"]
         Linux:
         Macos:
-            version: [None, "10.6", "10.7", "10.8", "10.9", "10.10", "10.11", "10.12", "10.13", "10.14", "10.15"]
+            version: [None, "10.6", "10.7", "10.8", "10.9", "10.10", "10.11", "10.12", "10.13", "10.14", "10.15", "11.0"]
         Android:
             api_level: ANY
         iOS:
@@ -89,7 +89,7 @@ _t_default_settings_yml = Template(textwrap.dedent("""
             cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
             runtime: [None, MD, MT, MTd, MDd]
         apple-clang: &apple_clang
-            version: ["5.0", "5.1", "6.0", "6.1", "7.0", "7.3", "8.0", "8.1", "9.0", "9.1", "10.0", "11.0"]
+            version: ["5.0", "5.1", "6.0", "6.1", "7.0", "7.3", "8.0", "8.1", "9.0", "9.1", "10.0", "11.0", "12.0"]
             libcxx: [libstdc++, libc++]
             cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
         intel:

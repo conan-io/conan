@@ -232,8 +232,10 @@ class LinkOrderTest(unittest.TestCase):
         libs = []
         for it in content.splitlines():
             # This is for Linux and Mac
-            if 'main.cpp.o  -o example' in it:
-                _, links = it.split("main.cpp.o  -o example")
+            # Remove double spaces from output that appear in some platforms
+            line = ' '.join(it.split())
+            if 'main.cpp.o -o example' in line:
+                _, links = line.split("main.cpp.o -o example")
                 for it_lib in links.split():
                     if it_lib.startswith("-l"):
                         libs.append(it_lib[2:])

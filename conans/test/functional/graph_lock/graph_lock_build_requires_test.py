@@ -1,6 +1,8 @@
 import json
+import textwrap
 import unittest
 
+from conans.client.tools.env import environment_append
 from conans.test.utils.tools import TestClient, GenConanfile
 
 
@@ -190,3 +192,51 @@ class GraphLockBuildRequireTestCase(unittest.TestCase):
                       client.out)
         client.run("install cmake/1.1@ --lockfile=conan.lock")
         self.assertIn("cmake/1.1 from local cache - Cache", client.out)
+
+    def test_unused_build_requires(self):
+        client = TestClient()
+        # create build_requires tools
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . cmake/1.0@")
+        client.run("create . gtest/1.0@")
+        client.save({"conanfile.py": GenConanfile().with_build_requires("gtest/1.0"),
+                     "myprofile": "[build_requires]\ncmake/1.0\n"})
+        client.run("create . pkg1/1.0@ -pr=myprofile")
+        client.save({"conanfile.py": GenConanfile().with_build_requires("gtest/1.0")
+                                                   .with_require("pkg1/1.0")})
+        client.run("create . pkg2/1.0@ -pr=myprofile")
+
+        client.run("lock create --reference=pkg2/1.0@ --build --base --lockfile-out=base.lock "
+                   "-pr=myprofile")
+        client.run("lock create --reference=pkg2/1.0@ --build --lockfile=base.lock "
+                   "--lockfile-out=conan.lock -pr=myprofile")
+
+        client.run("install pkg2/1.0@ --build=pkg2/1.0 --lockfile=conan.lock")
+        self.assertIn("cmake/1.0 from local cache - Cache", client.out)
+        self.assertIn("gtest/1.0 from local cache - Cache", client.out)
+        self.assertIn("pkg2/1.0: Applying build-requirement: cmake/1.0", client.out)
+        self.assertIn("pkg2/1.0: Applying build-requirement: gtest/1.0", client.out)
+
+    def conditional_env_var_test(self):
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . dep_recipe/1.0@")
+        client.run("create . dep_profile/1.0@")
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            import os
+            class Pkg(ConanFile):
+                def build_requirements(self):
+                    if os.getenv("USE_DEP"):
+                        self.build_requires("dep_recipe/1.0")
+            """)
+        client.save({"conanfile.py": conanfile,
+                     "profile": "[build_requires]\ndep_profile/1.0"})
+        with environment_append({"USE_DEP": "1"}):
+            client.run("lock create conanfile.py --name=pkg --version=1.0 -pr=profile")
+        lock = client.load("conan.lock")
+        self.assertIn("dep_recipe/1.0", lock)
+        self.assertIn("dep_profile/1.0", lock)
+
+        client.run("create . pkg/1.0@ --lockfile=conan.lock", assert_error=True)
+        self.assertIn("ERROR: 'pkg/1.0' locked requirement 'dep_recipe/1.0' not found", client.out)

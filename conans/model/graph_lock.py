@@ -331,6 +331,10 @@ class GraphLock(object):
         for n in self._nodes.values():
             n.relax()
 
+    @property
+    def relaxed(self):
+        return self._relaxed
+
     def clean_modified(self):
         for n in self._nodes.values():
             n.clean_modified()
@@ -474,15 +478,6 @@ class GraphLock(object):
             if current.prev is None:
                 current.prev = node.prev
 
-    def check_contained(self, other):
-        """ if lock create is provided a lockfile, it should be used, and it should contain it
-        otherwise, it was useless to pass it, and it is dangerous to continue, recommended to
-        create a fresh lockfile"""
-        other_root_id = other.root_node_id()
-        if other_root_id not in self._nodes:
-            raise ConanException("The provided lockfile was not used, there is no overlap. You "
-                                 "might want to create a fresh lockfile")
-
     def pre_lock_node(self, node):
         if node.recipe == RECIPE_VIRTUAL:
             return
@@ -497,6 +492,7 @@ class GraphLock(object):
         else:
             node.graph_lock_node = locked_node
             node.conanfile.options.values = locked_node.options
+            node.conanfile.options.freeze()
 
     def lock_node(self, node, requires, build_requires=False):
         """ apply options and constraints on requirements of a node, given the information from
@@ -534,14 +530,31 @@ class GraphLock(object):
             else:
                 require.lock(locked_ref, locked_id)
 
-        # Check all refs are locked
-        if not self._relaxed:
+        # Check all refs are locked (not checking build_requires atm, as they come from
+        # 2 sources (profile, recipe), can't be checked at once
+        if not self._relaxed and not build_requires:
             declared_requires = set([r.ref.name for r in requires])
             for require in locked_requires:
                 req_node = self._nodes[require]
                 if req_node.ref.name not in declared_requires:
                     raise ConanException("'%s' locked requirement '%s' not found"
                                          % (str(node.ref), str(req_node.ref)))
+
+    def check_locked_build_requires(self, node, package_build_requires, profile_build_requires):
+        if self._relaxed:
+            return
+        locked_node = node.graph_lock_node
+        locked_requires = locked_node.build_requires
+        if not locked_requires:
+            return
+        package_br = [r for r, _ in package_build_requires]
+        profile_br = [r.name for r, _ in profile_build_requires]
+        declared_requires = set(package_br + profile_br)
+        for require in locked_requires:
+            req_node = self._nodes[require]
+            if req_node.ref.name not in declared_requires:
+                raise ConanException("'%s' locked requirement '%s' not found"
+                                     % (str(node.ref), str(req_node.ref)))
 
     def python_requires(self, node_id):
         if node_id is None and self._relaxed:

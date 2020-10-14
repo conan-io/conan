@@ -1,7 +1,7 @@
 import unittest
 from parameterized import parameterized
 
-from conans.client.build.compiler_id import detect_compiler_id, CompilerId, UNKNOWN_COMPILER, \
+from conans.client.conf.compiler_id import detect_compiler_id, CompilerId, UNKNOWN_COMPILER, \
     GCC, LLVM_GCC, CLANG, APPLE_CLANG, SUNCC, MSVC, INTEL, QCC
 from conans.test.unittests.util.tools_test import RunnerMock
 

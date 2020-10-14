@@ -24,7 +24,7 @@ class BasicTest(unittest.TestCase):
 
         self.assertIn("conanfile.py: Generating toolchain files", client.out)
         toolchain = client.load("conan_toolchain.cmake")
-        self.assertIn("cmake_minimum_required", toolchain)
+        self.assertIn("Conan automatically generated toolchain file", toolchain)
 
     def test_declarative(self):
         conanfile = textwrap.dedent("""
@@ -38,7 +38,7 @@ class BasicTest(unittest.TestCase):
 
         self.assertIn("conanfile.py: Generating toolchain files", client.out)
         toolchain = client.load("conan_toolchain.cmake")
-        self.assertIn("cmake_minimum_required", toolchain)
+        self.assertIn("Conan automatically generated toolchain file", toolchain)
 
     def test_declarative_new_helper(self):
         conanfile = textwrap.dedent("""

@@ -10,7 +10,6 @@ from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE, CONAN_MANIFEST
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import TestClient, GenConanfile
-from conans.test.utils.scm import create_local_git_repo
 from conans.util.files import load, save
 
 
@@ -18,15 +17,14 @@ class ExportSettingsTest(unittest.TestCase):
 
     def test_basic(self):
         client = TestClient()
-        conanfile = """
-from conans import ConanFile
-class TestConan(ConanFile):
-    name = "Hello"
-    version = "1.2"
-    settings = {"os": ["Linux"]}
-"""
-        files = {CONANFILE: conanfile}
-        client.save(files)
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class TestConan(ConanFile):
+                name = "Hello"
+                version = "1.2"
+                settings = {"os": ["Linux"]}
+            """)
+        client.save({"conanfile.py": conanfile})
         client.run("export . lasote/stable")
         self.assertIn("WARN: Conanfile doesn't have 'license'", client.out)
         client.run("install Hello/1.2@lasote/stable -s os=Windows", assert_error=True)
@@ -39,7 +37,7 @@ class TestConan(ConanFile):
         client.run("export . lasote/stable", assert_error=True)
         self.assertIn("conanfile didn't specify name", client.out)
 
-        client.save({"conanfile.py": GenConanfile().with_name("Lib")})
+        client.save({"conanfile.py": GenConanfile("Lib")})
         client.run("export . lasote/stable", assert_error=True)
         self.assertIn("conanfile didn't specify version", client.out)
 
@@ -251,9 +249,9 @@ class ExportTest(unittest.TestCase):
         expected_sums = {'hello.cpp': '4f005274b2fdb25e6113b69774dac184',
                          'main.cpp': '0479f3c223c9a656a718f3148e044124',
                          'CMakeLists.txt': '10d907c160c360b28f6991397a5aa9b4',
-                         'conanfile.py': '355949fbf0b4fc32b8f1c5a338dfe1ae',
+                         'conanfile.py': '1ad1f4b995ae7ffdb00d53ff49e1366f',
                          'executable': '68b329da9893e34099c7d8ad5cb9c940',
-                         'helloHello0.h': '9448df034392fc8781a47dd03ae71bdd'}
+                         'helloHello0.h': 'd0a6868b5df17a6ae6e61ebddb0c9eb3'}
         self.assertEqual(expected_sums, manif.file_sums)
 
     def test_case_sensitive(self):
@@ -325,9 +323,9 @@ class OpenSSLConan(ConanFile):
         expected_sums = {'hello.cpp': '4f005274b2fdb25e6113b69774dac184',
                          'main.cpp': '0479f3c223c9a656a718f3148e044124',
                          'CMakeLists.txt': '10d907c160c360b28f6991397a5aa9b4',
-                         'conanfile.py': '355949fbf0b4fc32b8f1c5a338dfe1ae',
+                         'conanfile.py': '1ad1f4b995ae7ffdb00d53ff49e1366f',
                          'executable': '68b329da9893e34099c7d8ad5cb9c940',
-                         'helloHello0.h': '9448df034392fc8781a47dd03ae71bdd'}
+                         'helloHello0.h': 'd0a6868b5df17a6ae6e61ebddb0c9eb3'}
         self.assertEqual(expected_sums, digest2.file_sums)
 
         for f in file_list:
@@ -359,9 +357,9 @@ class OpenSSLConan(ConanFile):
         expected_sums = {'hello.cpp': '4f005274b2fdb25e6113b69774dac184',
                          'main.cpp': '0479f3c223c9a656a718f3148e044124',
                          'CMakeLists.txt': '10d907c160c360b28f6991397a5aa9b4',
-                         'conanfile.py': 'ad17cf00b3142728b03ac37782b9acd9',
+                         'conanfile.py': 'e309305959502e16f8a57439bb6a4107',
                          'executable': '68b329da9893e34099c7d8ad5cb9c940',
-                         'helloHello0.h': '9448df034392fc8781a47dd03ae71bdd'}
+                         'helloHello0.h': 'd0a6868b5df17a6ae6e61ebddb0c9eb3'}
         self.assertEqual(expected_sums, digest3.file_sums)
 
         # for f in file_list:
@@ -406,15 +404,14 @@ class ExportMetadataTest(unittest.TestCase):
         self.assertEqual(meta.recipe.revision, self.summary_hash)
 
     def test_revision_mode_scm(self):
-        path, rev = create_local_git_repo(
-            files={'conanfile.py': self.conanfile.format(revision_mode="scm")})
-        t = TestClient(current_folder=path)
+        t = TestClient()
+        commit = t.init_git_repo({'conanfile.py': self.conanfile.format(revision_mode="scm")})
 
         ref = ConanFileReference.loads("name/version@user/channel")
         t.run("export . {}".format(ref))
 
         meta = t.cache.package_layout(ref, short_paths=False).load_metadata()
-        self.assertEqual(meta.recipe.revision, rev)
+        self.assertEqual(meta.recipe.revision, commit)
 
     def test_revision_mode_invalid(self):
         conanfile = self.conanfile.format(revision_mode="auto")

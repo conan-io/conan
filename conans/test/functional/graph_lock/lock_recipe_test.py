@@ -31,8 +31,8 @@ class LockRecipeTest(unittest.TestCase):
                       client.out)
 
         client.save({"conanfile.py": GenConanfile().with_require("pkg/0.1")})
-        client.run("lock create conanfile.py --base --lockfile-out=conan.lock")
-        lock = json.loads(client.load("conan.lock"))
+        client.run("lock create conanfile.py --base --lockfile-out=base.lock")
+        lock = json.loads(client.load("base.lock"))
         self.assertEqual(2, len(lock["graph_lock"]["nodes"]))
         pkg_node = lock["graph_lock"]["nodes"]["1"]
         if client.cache.config.revisions_enabled:
@@ -40,7 +40,7 @@ class LockRecipeTest(unittest.TestCase):
         else:
             self.assertEqual(pkg_node["ref"], "pkg/0.1")
         client.run("lock create conanfile.py -s os=Linux "
-                   "--lockfile-out=linux.lock --lockfile=conan.lock")
+                   "--lockfile-out=linux.lock --lockfile=base.lock")
         lock = json.loads(client.load("linux.lock"))
         pkg_node = lock["graph_lock"]["nodes"]["1"]
         if client.cache.config.revisions_enabled:
@@ -55,7 +55,7 @@ class LockRecipeTest(unittest.TestCase):
         self.assertIsNone(pkg_node.get("modified"))
 
         client.run("lock create conanfile.py -s os=Windows "
-                   "--lockfile-out=windows.lock --lockfile=conan.lock")
+                   "--lockfile-out=windows.lock --lockfile=base.lock")
         lock = json.loads(client.load("windows.lock"))
         pkg_node = lock["graph_lock"]["nodes"]["1"]
         if client.cache.config.revisions_enabled:
@@ -67,6 +67,15 @@ class LockRecipeTest(unittest.TestCase):
             self.assertEqual(pkg_node["package_id"], "3475bd55b91ae904ac96fde0f106a136ab951a5e")
             self.assertEqual(pkg_node["prev"], "0")
         self.assertEqual(pkg_node["options"], "")
+
+        # Now it is possible to obtain the base one again from the full ones
+        client.run("lock create conanfile.py --base "
+                   "--lockfile-out=windows_base.lock --lockfile=windows.lock")
+        self.assertEqual(client.load("windows_base.lock"), client.load("base.lock"))
+        # Now it is possible to obtain the base one again from the full ones
+        client.run("lock create conanfile.py --base "
+                   "--lockfile-out=linux_base.lock --lockfile=linux.lock")
+        self.assertEqual(client.load("linux_base.lock"), client.load("base.lock"))
 
     def lock_recipe_from_partial_test(self):
         client = TestClient()
@@ -186,7 +195,7 @@ class LockRecipeTest(unittest.TestCase):
         client.run("config set general.default_package_id_mode=full_package_mode")
         files = {
             "pkga/conanfile.py": GenConanfile(),
-            "pkgb/conanfile.py": GenConanfile().with_require_plain("liba/[*]"),
+            "pkgb/conanfile.py": GenConanfile().with_require("liba/[*]"),
         }
         client.save(files)
 
@@ -214,7 +223,7 @@ class LockRecipeTest(unittest.TestCase):
         self.assertIn("liba/0.1: Created package revision d0f0357277b3417d3984b5a9a85bbab6",
                       client.out)
 
-        client.save({"conanfile.py": GenConanfile().with_require_plain("liba/0.1")})
+        client.save({"conanfile.py": GenConanfile().with_require("liba/0.1")})
         client.run("export . libb/0.1@")
         client.run("lock create --reference=libb/0.1 --base --lockfile-out=conan.lock -s os=Windows")
 
@@ -242,7 +251,7 @@ class LockRecipeTest(unittest.TestCase):
         self.assertIn("liba/0.1: Created package revision d0f0357277b3417d3984b5a9a85bbab6",
                       client.out)
 
-        client.save({"conanfile.py": GenConanfile().with_require_plain("liba/0.1")})
+        client.save({"conanfile.py": GenConanfile().with_require("liba/0.1")})
         client.run("lock create conanfile.py --name=libb --version=0.1 --base "
                    "--lockfile-out=conan.lock --profile=myprofile -s os=Windows --build")
 
@@ -262,4 +271,3 @@ class LockRecipeTest(unittest.TestCase):
         self.assertIn("liba/0.1:cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31 - Build", client.out)
         self.assertIn("libb/0.1:Package_ID_unknown - Unknown", client.out)
         self.assertIn("cmake/1.0:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache", client.out)
-

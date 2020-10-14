@@ -3,6 +3,7 @@ from collections import OrderedDict
 
 import time
 
+from conans.test.utils.genconanfile import GenConanfile
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, \
     inc_package_manifest_timestamp, inc_recipe_manifest_timestamp
 from conans.util.env_reader import get_env
@@ -78,6 +79,21 @@ class Pkg(ConanFile):
         self.assertIn("Pkg/0.1@lasote/testing: Server3!", client.out)
         client.run("remote list_ref")
         self.assertIn("Pkg/0.1@lasote/testing: server3", client.out)
+
+    def test_multiple_remotes_single_upload(self):
+        servers = OrderedDict([("server1", TestServer()),
+                               ("server2", TestServer())])
+        client = TestClient(servers=servers, users={"server1": [("lasote", "mypass")],
+                                                    "server2": [("lasote", "mypass")]})
+        conanfile = GenConanfile().with_setting("build_type")
+        client.save({"conanfile.py": conanfile})
+        client.run("create . Pkg/0.1@lasote/testing -s build_type=Release")
+        client.run("create . Pkg2/0.1@lasote/testing -s build_type=Release")
+        client.run("remote add_ref Pkg/0.1@lasote/testing server1")
+        client.run("remote add_ref Pkg2/0.1@lasote/testing server2")
+        client.run("upload Pkg* --all --confirm")
+        self.assertIn("Uploaded conan recipe 'Pkg/0.1@lasote/testing' to 'server1'", client.out)
+        self.assertIn("Uploaded conan recipe 'Pkg2/0.1@lasote/testing' to 'server2'", client.out)
 
     def test_binary_packages_mixed(self):
         servers = OrderedDict([("server1", TestServer()),
