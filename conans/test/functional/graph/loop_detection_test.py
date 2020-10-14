@@ -1,28 +1,31 @@
 import unittest
 
-from conans.test.utils.tools import TestClient
+from conans.test.utils.tools import TestClient, GenConanfile
 
 
-class LoopDectectionTest(unittest.TestCase):
+class LoopDetectionTest(unittest.TestCase):
 
-    def copy_error_test(self):
+    def test_transitive_loop(self):
         client = TestClient()
-        conanfile = '''
-from conans import ConanFile
+        client.save({
+            'pkg1.py': GenConanfile().with_require('pkg2/0.1@lasote/stable'),
+            'pkg2.py': GenConanfile().with_require('pkg3/0.1@lasote/stable'),
+            'pkg3.py': GenConanfile().with_require('pkg1/0.1@lasote/stable'),
+        })
+        client.run('export pkg1.py pkg1/0.1@lasote/stable')
+        client.run('export pkg2.py pkg2/0.1@lasote/stable')
+        client.run('export pkg3.py pkg3/0.1@lasote/stable')
 
-class Package{number}Conan(ConanFile):
-    name = "Package{number}"
-    version = "0.1"
-    requires = "Package{dep}/0.1@lasote/stable"
-'''
-        for package_number in [1, 2, 3]:
-            content = conanfile.format(number=package_number, dep=package_number % 3 + 1)
-            files = {"conanfile.py": content}
+        client.run("install pkg3/0.1@lasote/stable --build", assert_error=True)
+        self.assertIn("ERROR: Loop detected in context host: 'pkg2/0.1@lasote/stable' requires "
+                      "'pkg3/0.1@lasote/stable' which is an ancestor too",
+                      client.out)
 
-            client.save(files, clean_first=True)
-            client.run("export . lasote/stable")
-
-        client.run("install Package3/0.1@lasote/stable --build", assert_error=True)
-        self.assertIn("ERROR: Loop detected in context host: 'Package2/0.1@lasote/stable' requires "
-                      "'Package3/0.1@lasote/stable' which is an ancestor too",
+    def test_self_loop(self):
+        client = TestClient()
+        client.save({'pkg1.py': GenConanfile().with_require('pkg1/0.1@lasote/stable'), })
+        client.run('export pkg1.py pkg1/0.1@lasote/stable')
+        client.run("install pkg1/0.1@lasote/stable --build", assert_error=True)
+        self.assertIn("ERROR: Loop detected in context host: 'pkg1/0.1@lasote/stable' requires "
+                      "'pkg1/0.1@lasote/stable' which is an ancestor too",
                       client.out)

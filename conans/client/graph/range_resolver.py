@@ -148,12 +148,14 @@ class RangeResolver(object):
             return self._resolve_version(version_range, local_found)
 
     def _search_remotes(self, search_ref, remotes):
+        pattern = str(search_ref)
         for remote in remotes.values():
             if not remotes.selected or remote == remotes.selected:
-                search_result = self._remote_manager.search_recipes(remote, str(search_ref),
-                                                                    ignorecase=False)
-                if search_result:
-                    return search_result, remote.name
+                result = self._remote_manager.search_recipes(remote, pattern, ignorecase=False)
+                result = [ref for ref in result
+                          if ref.user == search_ref.user and ref.channel == search_ref.channel]
+                if result:
+                    return result, remote.name
         return None, None
 
     def _resolve_remote(self, search_ref, version_range, remotes):

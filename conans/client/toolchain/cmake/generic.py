@@ -1,15 +1,11 @@
-import os
 import textwrap
-from collections import OrderedDict, defaultdict
 
-from jinja2 import Template
-
-from conans.client.build.cmake_flags import get_generator, get_generator_platform,  get_toolset, \
+from conans.client.build.cmake_flags import get_generator, get_generator_platform, get_toolset, \
     is_multi_configuration
 from conans.client.build.compiler_flags import architecture_flag
 from conans.client.tools import cpu_count
 from conans.errors import ConanException
-from conans.util.files import save
+from .base import CMakeToolchainBase
 
 
 # https://stackoverflow.com/questions/30503631/cmake-in-which-order-are-files-parsed-cache-toolchain-etc
@@ -17,32 +13,7 @@ from conans.util.files import save
 # https://github.com/microsoft/vcpkg/tree/master/scripts/buildsystems
 
 
-class Variables(OrderedDict):
-    _configuration_types = None  # Needed for py27 to avoid infinite recursion
-
-    def __init__(self):
-        super(Variables, self).__init__()
-        self._configuration_types = {}
-
-    def __getattribute__(self, config):
-        try:
-            return super(Variables, self).__getattribute__(config)
-        except AttributeError:
-            return self._configuration_types.setdefault(config, dict())
-
-    @property
-    def configuration_types(self):
-        # Reverse index for the configuration_types variables
-        ret = defaultdict(list)
-        for conf, definitions in self._configuration_types.items():
-            for k, v in definitions.items():
-                ret[k].append((conf, v))
-        return ret
-
-
-class CMakeToolchain(object):
-    filename = "conan_toolchain.cmake"
-
+class CMakeGenericToolchain(CMakeToolchainBase):
     _template_toolchain = textwrap.dedent("""
         # Conan automatically generated toolchain file
         # DO NOT EDIT MANUALLY, it will be overwritten
@@ -155,13 +126,13 @@ class CMakeToolchain(object):
 
         # Install prefix
         {% if install_prefix -%}
-        set(CMAKE_INSTALL_PREFIX {{install_prefix}} CACHE STRING "" FORCE)
+        set(CMAKE_INSTALL_PREFIX "{{install_prefix}}" CACHE STRING "" FORCE)
         {%- endif %}
 
         # Variables
         {% for it, value in variables.items() -%}
         set({{ it }} "{{ value }}")
-        {%- endfor %}
+        {% endfor %}
         # Variables  per configuration
         {% for it, values in variables_config.items() -%}
             {%- set genexpr = namespace(str='') %}
@@ -173,13 +144,13 @@ class CMakeToolchain(object):
             {% for i in range(values|count) %}{%- set genexpr.str = genexpr.str + '>' %}
             {%- endfor -%}
         set({{ it }} {{ genexpr.str }})
-        {%- endfor %}
+        {% endfor %}
 
         # Preprocessor definitions
         {% for it, value in preprocessor_definitions.items() -%}
         # add_compile_definitions only works in cmake >= 3.12
         add_definitions(-D{{ it }}="{{ value }}")
-        {%- endfor %}
+        {% endfor %}
         # Preprocessor definitions per configuration
         {% for it, values in preprocessor_definitions_config.items() -%}
             {%- set genexpr = namespace(str='') %}
@@ -191,7 +162,7 @@ class CMakeToolchain(object):
             {% for i in range(values|count) %}{%- set genexpr.str = genexpr.str + '>' %}
             {%- endfor -%}
         add_definitions(-D{{ it }}={{ genexpr.str }})
-        {%- endfor %}
+        {% endfor %}
 
 
         set(CMAKE_CXX_FLAGS_INIT "${CONAN_CXX_FLAGS}" CACHE STRING "" FORCE)
@@ -239,7 +210,7 @@ class CMakeToolchain(object):
 
     def __init__(self, conanfile, generator=None, generator_platform=None, build_type=None,
                  toolset=None, parallel=True):
-        self._conanfile = conanfile
+        super(CMakeGenericToolchain, self).__init__(conanfile)
 
         self.fpic = self._deduce_fpic()
         self.vs_static_runtime = self._deduce_vs_static_runtime()
@@ -255,8 +226,6 @@ class CMakeToolchain(object):
                                                           self.generator))
         self.toolset = toolset or get_toolset(self._conanfile.settings, self.generator)
 
-        self.variables = Variables()
-        self.preprocessor_definitions = Variables()
         try:
             self._build_shared_libs = "ON" if self._conanfile.options.shared else "OFF"
         except ConanException:
@@ -277,12 +246,6 @@ class CMakeToolchain(object):
         # TODO: I would want to have here the path to the compiler too
         build_type = build_type or self._conanfile.settings.get_safe("build_type")
         self.build_type = build_type if not is_multi_configuration(self.generator) else None
-        try:
-            # This is only defined in the cache, not in the local flow
-            self.install_prefix = self._conanfile.package_folder.replace("\\", "/")
-        except AttributeError:
-            # FIXME: In the local flow, we don't know the package_folder
-            self.install_prefix = None
 
     def _deduce_fpic(self):
         fpic = self._conanfile.options.get_safe("fPIC")
@@ -306,7 +269,7 @@ class CMakeToolchain(object):
     def _deduce_vs_static_runtime(self):
         settings = self._conanfile.settings
         if (settings.get_safe("compiler") == "Visual Studio" and
-                "MT" in settings.get_safe("compiler.runtime")):
+            "MT" in settings.get_safe("compiler.runtime")):
             return True
         return False
 
@@ -352,23 +315,10 @@ class CMakeToolchain(object):
                 cppstd_extensions = "OFF"
         return cppstd, cppstd_extensions
 
-    def write_toolchain_files(self):
-        # Make it absolute, wrt to current folder, set by the caller
-        conan_project_include_cmake = os.path.abspath("conan_project_include.cmake")
-        conan_project_include_cmake = conan_project_include_cmake.replace("\\", "/")
-        t = Template(self._template_project_include)
-        content = t.render(vs_static_runtime=self.vs_static_runtime)
-        save(conan_project_include_cmake, content)
-
-        # TODO: I need the profile_host and profile_build here!
-        # TODO: What if the compiler is a build require?
-        # TODO: Add all the stuff related to settings (ALL settings or just _MY_ settings?)
-
-        context = {
-            "variables": self.variables,
-            "variables_config": self.variables.configuration_types,
-            "preprocessor_definitions": self.preprocessor_definitions,
-            "preprocessor_definitions_config": self.preprocessor_definitions.configuration_types,
+    def _get_template_context_data(self):
+        ctxt_toolchain, ctxt_project_include = \
+            super(CMakeGenericToolchain, self)._get_template_context_data()
+        ctxt_toolchain.update({
             "build_type": self.build_type,
             "generator_platform": self.generator_platform,
             "toolset": self.toolset,
@@ -378,13 +328,11 @@ class CMakeToolchain(object):
             "skip_rpath": self.skip_rpath,
             "set_libcxx": self.set_libcxx,
             "glibcxx": self.glibcxx,
-            "install_prefix": self.install_prefix,
             "parallel": self.parallel,
             "cppstd": self.cppstd,
             "cppstd_extensions": self.cppstd_extensions,
             "shared_libs": self._build_shared_libs,
             "architecture": self.architecture
-        }
-        t = Template(self._template_toolchain)
-        content = t.render(conan_project_include_cmake=conan_project_include_cmake, **context)
-        save(self.filename, content)
+        })
+        ctxt_project_include.update({'vs_static_runtime': self.vs_static_runtime})
+        return ctxt_toolchain, ctxt_project_include

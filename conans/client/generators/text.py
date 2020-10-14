@@ -43,6 +43,8 @@ class DepCppTXT(RootCppTXT):
         self.version = cpp_info.version
         self.name = cpp_info.get_name(TXTGenerator.name)
         self.rootpath = "%s" % cpp_info.rootpath.replace("\\", "/")
+        self.generatornames = "\n".join("%s=%s" % (k, v) for k, v in cpp_info.names.items())
+        self.generatorfilenames = "\n".join("%s=%s" % (k, v) for k, v in cpp_info.filenames.items())
 
 
 class TXTGenerator(Generator):
@@ -141,12 +143,18 @@ class TXTGenerator(Generator):
                 data[dep][config][field] = lines
 
             # Build the data structures
+            def _relativize_path(p, _rootpath):
+                try:
+                    return os.path.relpath(p, _rootpath)
+                except ValueError:
+                    return p
+
             def _populate_cpp_info(_cpp_info, _data, _rootpath):
-                for key, value in _data.items():
+                for key, v in _data.items():
                     if key.endswith('dirs'):
-                        value = [os.path.relpath(it, _rootpath) for it in value]
-                        value = ['' if it == '.' else it for it in value]
-                    setattr(_cpp_info, key, value)
+                        v = [_relativize_path(it, _rootpath) for it in v]
+                        v = ['' if it == '.' else it for it in v]
+                    setattr(_cpp_info, key, v)
 
             if None in data:
                 del data[None]
@@ -158,7 +166,17 @@ class TXTGenerator(Generator):
                 rootpath = no_config_data.pop('rootpath')[0]
                 dep_cpp_info = CppInfo(dep, rootpath)
                 dep_cpp_info.filter_empty = filter_empty
-                dep_cpp_info.names[TXTGenerator.name] = no_config_data.pop('name')[0]
+                _ = no_config_data.pop('name')[0]
+                version = no_config_data.pop('version', [""])[0]
+                dep_cpp_info.version = version
+                generatornames = no_config_data.pop("generatornames", [])  # can be empty
+                for n in generatornames:
+                    gen, value = n.split("=", 1)
+                    dep_cpp_info.names[gen] = value
+                generatorfilenames = no_config_data.pop("generatorfilenames", [])  # can be empty
+                for n in generatorfilenames:
+                    gen, value = n.split("=", 1)
+                    dep_cpp_info.filenames[gen] = value
                 dep_cpp_info.sysroot = no_config_data.pop('sysroot', [""])[0]
                 _populate_cpp_info(dep_cpp_info, no_config_data, rootpath)
 
@@ -168,8 +186,6 @@ class TXTGenerator(Generator):
                     _populate_cpp_info(cpp_info_config, config_data, rootpath)
 
                 # Add to the dependecy list
-                version = no_config_data.pop('version', [""])[0]
-                dep_cpp_info.version = version
                 deps_cpp_info.add(dep, DepCppInfo(dep_cpp_info))
 
             return deps_cpp_info
@@ -210,7 +226,9 @@ class TXTGenerator(Generator):
         # Makes no sense to have an accumulated rootpath
         template_deps = (template + '[rootpath{dep}]\n{deps.rootpath}\n\n' +
                          '[name{dep}]\n{deps.name}\n\n' +
-                         '[version{dep}]\n{deps.version}\n\n')
+                         '[version{dep}]\n{deps.version}\n\n' +
+                         '[generatornames{dep}]\n{deps.generatornames}\n\n' +
+                         '[generatorfilenames{dep}]\n{deps.generatorfilenames}\n\n')
 
         for dep_name, dep_cpp_info in self.deps_build_info.dependencies:
             dep = "_" + dep_name
