@@ -545,7 +545,7 @@ class SystemPackageToolTest(unittest.TestCase):
                                          " a_package another_package yet_another_package",
                                          ])
             spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out), output=self.out)
-            spt.install_all(packages)
+            spt.install_packages(packages)
             self.assertEqual(5, runner.calls)
 
         # Only one package installed
@@ -558,7 +558,7 @@ class SystemPackageToolTest(unittest.TestCase):
                                          " a_package another_package yet_another_package",
                                          ])
             spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out), output=self.out)
-            spt.install_all(packages)
+            spt.install_packages(packages)
             self.assertEqual(5, runner.calls)
 
         # All packages installed
@@ -572,7 +572,7 @@ class SystemPackageToolTest(unittest.TestCase):
                                          'grep -q "ok installed"',
                                          ])
             spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out), output=self.out)
-            spt.install_all(packages)
+            spt.install_packages(packages)
             self.assertEqual(3, runner.calls)
 
             # Empty package list
@@ -581,5 +581,5 @@ class SystemPackageToolTest(unittest.TestCase):
                 runner = RunnerMultipleMock()
                 spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out),
                                         output=self.out)
-                spt.install_all(packages)
+                spt.install_packages(packages)
                 self.assertEqual(0, runner.calls)

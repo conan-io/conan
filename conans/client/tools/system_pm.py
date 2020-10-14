@@ -126,7 +126,7 @@ class SystemPackageTool(object):
             self.update()
         self._install_any(packages)
 
-    def install_all(self, packages, update=True, force=False, arch_names=None):
+    def install_packages(self, packages, update=True, force=False, arch_names=None):
         """ Get the system package tool install command and install all packages.
 
         :param packages: String with all packages to be installed e.g. "libusb-dev libfoobar-dev"
