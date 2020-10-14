@@ -152,17 +152,7 @@ class ConanOutput(object):
             msg = "{}: {}".format(self.scope, msg)
         if self._color:
             msg = "{}{}{}{}".format(fg or '', bg or '', msg, Style.RESET_ALL)
-        for _ in range(3):
-            try:
-                self._logger.log(level, msg)
-                break
-            except IOError:
-                import time
-                time.sleep(0.02)
-            except UnicodeError:
-                msg = msg.encode("utf8").decode("ascii", "ignore")
-
-        self.flush()
+        self._logger.log(level, msg)
 
     def debug(self, msg):
         self._write(msg, logging.DEBUG)
