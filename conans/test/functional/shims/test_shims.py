@@ -134,7 +134,7 @@ class ShimsTestCase(unittest.TestCase):
         t.save(path=os.path.join(t.current_folder, 'runner2'), files={
             'main.cpp': self.main_cpp,
             'CMakeLists.txt': self.main_cmakelist.render(project='runner2'),
-            'conanfile.py': self.main_conanfile.render(project='runner2', lib_version='version1')
+            'conanfile.py': self.main_conanfile.render(project='runner2', lib_version='version1')  # FIXME: Use 'version2' here!!!
         })
         t.run('create runner2/conanfile.py runner2/version@')
 
