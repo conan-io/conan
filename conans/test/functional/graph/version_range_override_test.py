@@ -60,27 +60,24 @@ class VersionRangeOverrideFailTestCase(unittest.TestCase):
     def test(self):
         # https://github.com/conan-io/conan/issues/7864
         t = TestClient()
-        # t.run("config set general.revisions_enabled=True")
         t.save({"conanfile.py": GenConanfile()})
         t.run("create . gtest/1.8.0@PORT/stable")
-        print(t.out)
         t.run("create . gtest/1.8.1@bloomberg/stable")
-        print(t.out)
 
-        t.save({"conanfile.py": GenConanfile().with_require("gtest/1.8.1@bloomberg/stable")})
-        t.run("create . bde/1.0@PORT/stable")
+        t.save({"conanfile.py": GenConanfile().with_require("gtest/1.8.0@PORT/stable")})
+        t.run("create . intermediate/1.0@PORT/stable")
 
-        t.save({"conanfile.py": GenConanfile().with_build_requires("gtest/1.8.1@bloomberg/stable")})
+        t.save({"conanfile.py": GenConanfile().with_requires("intermediate/1.0@PORT/stable")
+                                              .with_build_requires("gtest/1.8.0@PORT/stable")})
         t.run("create . scubaclient/1.6@PORT/stable")
 
-        t.save({"conanfile.py": GenConanfile().with_require("gtest/[>=1.8.0]@PORT/stable")})
-        t.run("create . pal/2.15.0@PORT/stable")
+        # IMPORTANT: We need to override the private build-require in the profile too,
+        # otherwise it will conflict, as it will not be overriden by regular requires
+        t.save({"conanfile.py": GenConanfile().with_requires("gtest/1.8.1@bloomberg/stable",
+                                                             "scubaclient/1.6@PORT/stable"),
+                "myprofile": "[build_requires]\ngtest/1.8.1@bloomberg/stable"})
 
-        t.save({"conanfile.py": GenConanfile().with_requires("bde/1.0@PORT/stable",
-                                                             "gtest/1.8.1@bloomberg/stable",
-                                                             "pal/2.15.0@PORT/stable",
-                                                             "scubaclient/1.6@PORT/stable")})
-        t.run("lock create conanfile.py --build")
-        print(t.load("conan.lock"))
-        t.run("info . ")
-        print(t.out)
+        t.run("lock create conanfile.py --build -pr=myprofile")
+        lock = t.load("conan.lock")
+        self.assertIn("gtest/1.8.1@bloomberg/stable", lock)
+        self.assertNotIn("gtest/1.8.0@PORT/stable", lock)
