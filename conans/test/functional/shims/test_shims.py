@@ -110,8 +110,7 @@ class ShimsTestCase(unittest.TestCase):
     """))
 
     def test_shims(self):
-        t = TestClient(
-            current_folder='/private/var/folders/fc/6mvcrc952dqcjfhl4c7c11ph0000gn/T/tmpijey5_kuconans/path with spaces')
+        t = TestClient()
         t.run("config set log.print_run_commands=1")
         # Create two versions for the library
         t.save({

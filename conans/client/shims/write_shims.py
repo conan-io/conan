@@ -41,7 +41,7 @@ def _generate_shim(name, conanfile, settings_os, output_path):
 
     # Create the wrapper for the given OS
     bin_folder = conanfile.cpp_info.bin_paths[0]  # TODO: More than one bin_path?
-    executable = os.path.join(bin_folder, name)  # TODO: More than one bin_path?
+    executable = os.path.join(bin_folder, name)
     context = {
         'name': name,
         'activate_path': os.path.join(output_path, '.shims', "activate{}.{}".format(suffix, flavor)),
