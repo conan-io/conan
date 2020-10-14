@@ -185,81 +185,25 @@ class ConanOutput(object):
 
 
 class CliOutput(object):
-    def __init__(self, stream=sys.stdout, color=False):
-        self._stream = stream
-        self._color = color
-        self._scope = None
-
-    @property
-    def color(self):
-        return self._color
-
-    @property
-    def is_terminal(self):
-        return hasattr(self._stream, "isatty") and self._stream.isatty()
+    def __init__(self):
+        self._stream = sys.stdout
 
     def write(self, data, fg=None, bg=None, newline=True):
-        # https://github.com/conan-io/conan/issues/4277
-        # Windows output locks produce IOErrors
-        if self._scope:
-            data = "{}: {}".format(self.scope, data)
-        if self._color:
-            data = "{}{}{}{}".format(fg or '', bg or '', data, Style.RESET_ALL)
-        for _ in range(3):
-            try:
-                self._write(data, newline)
-                break
-            except IOError:
-                import time
-                time.sleep(0.02)
-            except UnicodeError:
-                data = data.encode("utf8").decode("ascii", "ignore")
-        self.flush()
+        data = "{}{}{}{}".format(fg or '', bg or '', data, Style.RESET_ALL)
+        self._write(data, newline)
 
     def _write(self, message, newline=True):
         message = "{}\n".format(message) if newline else message
         self._stream.write(message)
 
-    def flush(self):
-        self._stream.flush()
 
-
-# TODO: move to another place
-class BufferCliOutput(CliOutput):
-    """ wraps the normal output of the application, captures it into an stream
-    and gives it operators similar to string, so it can be compared in tests
-    """
-
+# TODO: move from here, to tools?
+class TestOutput(StringIO):
     def __init__(self):
-        CliOutput.__init__(self, StringIO(), color=False)
+        super(TestOutput, self).__init__()
 
     def __repr__(self):
-        return self._stream.getvalue()
-
-    def __str__(self, *args, **kwargs):
-        return self.__repr__()
-
-    def __eq__(self, value):
-        return self.__repr__() == value
-
-    def __ne__(self, value):
-        return not self.__eq__(value)
-
-    def __contains__(self, value):
-        return value in self.__repr__()
-
-
-# TODO: move to another place
-class BufferConanOutput(ConanOutput):
-    """ wraps the normal output of the application, captures it into an stream
-    and gives it operators similar to string, so it can be compared in tests
-    """
-
-    def __init__(self):
-        ConanOutput.__init__(self, StringIO(), color=False)
-
-    def __repr__(self):
-        return self._stream.getvalue()
+        return self.getvalue()
 
     def __str__(self, *args, **kwargs):
         return self.__repr__()

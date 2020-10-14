@@ -1,3 +1,5 @@
+import contextlib
+import io
 import unittest
 
 from conans.client.tools import environment_append, six
@@ -17,7 +19,7 @@ class CliUserTest(unittest.TestCase):
         client = TestClient()
 
         client.run("user list")
-        self.assertIn("remote: remote1 user: someuser1", client.cli_out)
-        self.assertIn("remote: remote2 user: someuser2", client.cli_out)
-        self.assertIn("remote: remote3 user: someuser3", client.cli_out)
-        self.assertIn("remote: remote4 user: someuser4", client.cli_out)
+        self.assertIn("remote: remote1 user: someuser1", client.out)
+        self.assertIn("remote: remote2 user: someuser2", client.out)
+        self.assertIn("remote: remote3 user: someuser3", client.out)
+        self.assertIn("remote: remote4 user: someuser4", client.out)
