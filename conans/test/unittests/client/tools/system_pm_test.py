@@ -351,7 +351,7 @@ class SystemPackageToolTest(unittest.TestCase):
                                  'choco search --local-only --exact a_package | '
                                  'findstr /c:"1 packages installed."')
 
-    def system_package_tool_try_multiple_test(self):
+    def test_system_package_tool_try_multiple_test(self):
         class RunnerMultipleMock(object):
             def __init__(self, expected=None):
                 self.calls = 0
@@ -542,15 +542,11 @@ class SystemPackageToolTest(unittest.TestCase):
         with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "True"}):
             runner = RunnerMultipleMock(["sudo -A apt-get update",
                                          "sudo -A apt-get install -y --no-install-recommends"
-                                         " a_package",
-                                         "sudo -A apt-get install -y --no-install-recommends"
-                                         " another_package",
-                                         "sudo -A apt-get install -y --no-install-recommends"
-                                         " yet_another_package",
+                                         " a_package another_package yet_another_package",
                                          ])
             spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out), output=self.out)
-            spt.install(packages, all=True)
-            self.assertEqual(7, runner.calls)
+            spt.install_all(packages)
+            self.assertEqual(5, runner.calls)
 
         # Only one package installed
         packages = ["a_package", "another_package", "yet_another_package"]
@@ -559,15 +555,11 @@ class SystemPackageToolTest(unittest.TestCase):
                                          'grep -q "ok installed"',
                                          "sudo -A apt-get update",
                                          "sudo -A apt-get install -y --no-install-recommends"
-                                         " a_package",
-                                         "sudo -A apt-get install -y --no-install-recommends"
-                                         " another_package",
-                                         "sudo -A apt-get install -y --no-install-recommends"
-                                         " yet_another_package",
+                                         " a_package another_package yet_another_package",
                                          ])
             spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out), output=self.out)
-            spt.install(packages, all=True)
-            self.assertEqual(7, runner.calls)
+            spt.install_all(packages)
+            self.assertEqual(5, runner.calls)
 
         # All packages installed
         packages = ["a_package", "another_package", "yet_another_package"]
@@ -580,7 +572,7 @@ class SystemPackageToolTest(unittest.TestCase):
                                          'grep -q "ok installed"',
                                          ])
             spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out), output=self.out)
-            spt.install(packages, all=True)
+            spt.install_all(packages)
             self.assertEqual(3, runner.calls)
 
             # Empty package list
@@ -589,5 +581,5 @@ class SystemPackageToolTest(unittest.TestCase):
                 runner = RunnerMultipleMock()
                 spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out),
                                         output=self.out)
-                spt.install(packages, all=True)
+                spt.install_all(packages)
                 self.assertEqual(0, runner.calls)

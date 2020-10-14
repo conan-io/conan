@@ -92,13 +92,12 @@ class SystemPackageTool(object):
         self._tool.update()
 
     def install(self, packages, update=True, force=False, arch_names=None, all=False):
-        """ Get the system package tool install command.
+        """ Get the system package tool install command and install one package
 
-        :param packages: String with all package to be installed e.g. "libusb-dev libfoobar-dev"
+        :param packages: String with a package to be installed or a list with its variants e.g. "libusb-dev libxusb-devel"
         :param update: Run update command before to install
         :param force: Force installing all packages
         :param arch_names: Package suffix/prefix name used by installer tool e.g. {"x86_64": "amd64"}
-        :param all: Install all packages listed
         :return: None
         """
         packages = [packages] if isinstance(packages, str) else list(packages)
@@ -119,17 +118,48 @@ class SystemPackageTool(object):
                 raise ConanException("Aborted due to CONAN_SYSREQUIRES_MODE=%s. "
                                      "Some system packages need to be installed" % mode)
 
-        if not force and (not all and self._installed(packages)) or \
-                         (all and self._all_installed(packages)):
+        if not force and self._installed(packages):
             return
 
         # From here system packages can be updated/modified
         if update and not self._is_up_to_date:
             self.update()
-        if all:
-            self._install_all(packages)
-        else:
-            self._install_any(packages)
+        self._install_any(packages)
+
+    def install_all(self, packages, update=True, force=False, arch_names=None):
+        """ Get the system package tool install command and install all packages.
+
+        :param packages: String with all packages to be installed e.g. "libusb-dev libfoobar-dev"
+        :param update: Run update command before to install
+        :param force: Force installing all packages
+        :param arch_names: Package suffix/prefix name used by installer tool e.g. {"x86_64": "amd64"}
+        :return: None
+        """
+        packages = [packages] if isinstance(packages, str) else list(packages)
+        packages = self._get_package_names(packages, arch_names)
+
+        mode = self._get_sysrequire_mode()
+
+        if mode in ("verify", "disabled"):
+            # Report to output packages need to be installed
+            if mode == "disabled":
+                self._output.info("The following packages need to be installed:\n %s"
+                                  % "\n".join(packages))
+                return
+
+            if mode == "verify" and not self._installed(packages):
+                self._output.error("The following packages need to be installed:\n %s"
+                                   % "\n".join(packages))
+                raise ConanException("Aborted due to CONAN_SYSREQUIRES_MODE=%s. "
+                                     "Some system packages need to be installed" % mode)
+
+        if not force and self._all_installed(packages):
+            return
+
+        # From here system packages can be updated/modified
+        if update and not self._is_up_to_date:
+            self.update()
+        self._install_all(packages)
 
     def _get_package_names(self, packages, arch_names):
         """ Parse package names according it architecture
@@ -166,8 +196,7 @@ class SystemPackageTool(object):
         return False
 
     def _install_all(self, packages):
-        for pkg in packages:
-            self._tool.install(pkg)
+        self._tool.install(" ".join(packages))
 
     def _install_any(self, packages):
         if len(packages) == 1:
