@@ -7,6 +7,7 @@ from mock import Mock
 
 from conans.client.cache.cache import ClientCache
 from conans.client.cache.remote_registry import Remotes
+from conans.client.generators import GeneratorManager
 from conans.client.graph.build_mode import BuildMode
 from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
 from conans.client.graph.graph_manager import GraphManager
@@ -45,11 +46,12 @@ class GraphManagerTest(unittest.TestCase):
         binaries = GraphBinariesAnalyzer(cache, self.output, self.remote_manager)
         self.manager = GraphManager(self.output, cache, self.remote_manager, self.loader, proxy,
                                     self.resolver, binaries)
+        generator_manager = GeneratorManager()
         hook_manager = Mock()
         app_type = namedtuple("ConanApp", "cache out remote_manager hook_manager graph_manager"
-                              " binaries_analyzer")
+                              " binaries_analyzer generator_manager")
         app = app_type(self.cache, self.output, self.remote_manager, hook_manager, self.manager,
-                       binaries)
+                       binaries, generator_manager)
         return app
 
     def recipe_cache(self, reference, requires=None):
