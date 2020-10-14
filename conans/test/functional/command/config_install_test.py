@@ -142,7 +142,7 @@ class ConfigInstallTest(unittest.TestCase):
     def _check(self, params):
         typ, uri, verify, args = [p.strip() for p in params.split(",")]
         configs = json.loads(load(self.client.cache.config_install_file))
-        config = _ConfigOrigin(configs[0])
+        config = _ConfigOrigin(configs[-1])
         self.assertEqual(config.type, typ)
         self.assertEqual(config.uri, uri)
         self.assertEqual(str(config.verify_ssl), verify)
@@ -213,6 +213,28 @@ class Pkg(ConanFile):
             self.client.run('config install "%s" %s' % (zippath, type))
             self._check("file, %s, True, None" % zippath)
             self.assertTrue(os.path.exists(zippath))
+
+    def test_install_config_file_test(self):
+        """ should install from a settings and remotes file in configuration directory
+        """
+        import tempfile
+        profile_folder = self._create_profile_folder()
+        self.assertTrue(os.path.isdir(profile_folder))
+        src_setting_file = os.path.join(profile_folder, "settings.yml")
+        src_remote_file = os.path.join(profile_folder, "remotes.txt")
+        # Install profile_folder without settings.yml + remotes.txt in order to install them manually
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            dest_setting_file = os.path.join(tmp_dir, "settings.yml")
+            dest_remote_file = os.path.join(tmp_dir, "remotes.txt")
+            shutil.move(src_setting_file, dest_setting_file)
+            shutil.move(src_remote_file, dest_remote_file)
+            self.client.run('config install "%s"' % profile_folder)
+            shutil.move(dest_setting_file, src_setting_file)
+            shutil.move(dest_remote_file, src_remote_file)
+        for cmd_option in ["", "--type=file"]:
+            self.client.run('config install "%s" %s' % (src_setting_file, cmd_option))
+            self.client.run('config install "%s" %s' % (src_remote_file, cmd_option))
+            self._check("file, %s, True, None" % src_remote_file)
 
     def test_install_dir_test(self):
         """ should install from a dir in current dir
