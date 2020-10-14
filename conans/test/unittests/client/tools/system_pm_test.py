@@ -351,7 +351,7 @@ class SystemPackageToolTest(unittest.TestCase):
                                  'choco search --local-only --exact a_package | '
                                  'findstr /c:"1 packages installed."')
 
-    def test_system_package_tool_try_multiple_test(self):
+    def test_system_package_tool_try_multiple(self):
         class RunnerMultipleMock(object):
             def __init__(self, expected=None):
                 self.calls = 0
