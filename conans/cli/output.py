@@ -178,13 +178,9 @@ class CliOutput(object):
     def __init__(self):
         self._stream = sys.stdout
 
-    def write(self, data, fg=None, bg=None, newline=True):
-        data = "{}{}{}{}".format(fg or '', bg or '', data, Style.RESET_ALL)
-        self._write(data, newline)
-
-    def _write(self, message, newline=True):
-        message = "{}\n".format(message) if newline else message
-        self._stream.write(message)
+    def write(self, data, fg=None, bg=None):
+        data = "{}{}{}{}\n".format(fg or '', bg or '', data, Style.RESET_ALL)
+        self._stream.write(data)
 
 
 # TODO: move from here, to tools?
