@@ -23,7 +23,6 @@ from .premake import PremakeGenerator
 from .qbs import QbsGenerator
 from .qmake import QmakeGenerator
 from .scons import SConsGenerator
-from .shim import ShimGenerator
 from .text import TXTGenerator
 from .virtualbuildenv import VirtualBuildEnvGenerator
 from .virtualenv import VirtualEnvGenerator

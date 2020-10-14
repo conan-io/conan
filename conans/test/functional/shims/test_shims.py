@@ -4,7 +4,7 @@ import textwrap
 from conans.test.utils.tools import TestClient
 
 
-class ExecutableWrapperTestCase(unittest.TestCase):
+class ShimsTestCase(unittest.TestCase):
     zlib = textwrap.dedent("""
         from conans import ConanFile
 

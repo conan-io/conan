@@ -1,9 +1,11 @@
 import os
+import stat
 import textwrap
 
 from jinja2 import Template
 
 from conans.client.envvars.environment import BAT_FLAVOR, SH_FLAVOR, env_files
+from conans.util.files import save_files
 
 cmd_template = textwrap.dedent("""\
     echo Calling {{ name }} wrapper
@@ -39,7 +41,7 @@ def _envvariables(deps_cpp_info):
     return ret
 
 
-def generate_shim(name, deps_cpp_info, settings_os, output_path):
+def _generate_shim(name, deps_cpp_info, settings_os, output_path):
     # Use the environment generators we already have
     suffix = "_{}".format(name)
     environment = _envvariables(deps_cpp_info)
@@ -62,3 +64,12 @@ def generate_shim(name, deps_cpp_info, settings_os, output_path):
     extension = '.cmd' if settings_os == 'Windows' else ""
     shimfiles.update({'{}{}'.format(name, extension): content})
     return shimfiles
+
+
+def write_shim(name, deps_cpp_info, settings_os, output_path):
+    files = _generate_shim(name, deps_cpp_info, settings_os, output_path)
+    save_files(output_path, files)
+    exe_filename = "{}{}".format(name, ".cmd" if settings_os == 'Windows' else '')
+    exe_filepath = os.path.join(output_path, exe_filename)
+    st = os.stat(exe_filepath)
+    os.chmod(exe_filepath, st.st_mode | stat.S_IEXEC)

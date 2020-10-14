@@ -1,6 +1,5 @@
 import os
 import shutil
-import stat
 import textwrap
 import time
 from multiprocessing.pool import ThreadPool
@@ -16,7 +15,7 @@ from conans.client.importer import remove_imports, run_imports
 from conans.client.packager import update_package_metadata
 from conans.client.recorder.action_recorder import INSTALL_ERROR_BUILDING, INSTALL_ERROR_MISSING, \
     INSTALL_ERROR_MISSING_BUILD_FOLDER
-from conans.client.shims.write_shims import generate_shim
+from conans.client.shims.write_shims import write_shim
 from conans.client.source import complete_recipe_sources, config_source
 from conans.client.toolchain.base import write_toolchain
 from conans.client.tools.env import no_op
@@ -37,7 +36,7 @@ from conans.paths import BUILD_INFO, CONANINFO, RUN_LOG_NAME
 from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
 from conans.util.env_reader import get_env
 from conans.util.files import (clean_dirty, is_dirty, make_read_only, mkdir, rmdir, save, set_dirty,
-                               set_dirty_context_manager, save_files)
+                               set_dirty_context_manager)
 from conans.util.log import logger
 from conans.util.tracer import log_package_built, log_package_got_from_local_cache
 
@@ -61,6 +60,26 @@ def add_env_conaninfo(conan_file, subtree_libnames):
             if not package_name or package_name in subtree_libnames or \
                 package_name == conan_file.name:
                 conan_file.info.env_values.add(name, value, package_name)
+
+
+def _classify_dependencies(node):
+    node_order = [n for n in node.public_closure if n.binary != BINARY_SKIP]
+    transitive = [it for it in node.transitive_closure.values()]
+
+    br_host = []
+    for it in node.dependencies:
+        if it.build_require and it.require.build_require_context == CONTEXT_HOST:
+            br_host.extend(it.dst.transitive_closure.values())
+
+    using_build_profile = node.conanfile._conan_using_build_profile
+    host_deps = []
+    build_deps = []
+    for n in node_order:
+        if not using_build_profile or n in transitive or n in br_host:
+            host_deps.append(n)
+        else:
+            build_deps.append(n)
+    return host_deps, br_host, build_deps
 
 
 class _PackageBuilder(object):
@@ -133,29 +152,17 @@ class _PackageBuilder(object):
         write_toolchain(conanfile, conanfile.build_folder, self._output)
 
         # I need the shims for the executables in the build-requires (only two-profiles approach)
+        # TODO: opt-in using config
         logger.info("SHIMS: Writing shims for build-requires")
-        transitive = [it for it in node.transitive_closure.values()]
-        br_host = []
-        for it in node.dependencies:
-            if it.require.build_require_context == CONTEXT_HOST:
-                br_host.extend(it.dst.transitive_closure.values())
-
+        _, _, build_deps = _classify_dependencies(node)
         add_path = False
-        node_order = [n for n in node.public_closure if n.binary != BINARY_SKIP]
-        for n in node_order:
-            if n not in transitive and n not in br_host:
-                # FIXME: I can't use the ShimGenerator because it expects the consumer of the conanfiles
-                self._output.info("Shims for {}".format(n.conanfile))
-                for exe in n.conanfile.cpp_info.exes:
-                    self._output.info(" - {}".format(exe))
-                    os_ = conanfile.settings_build.os
-                    files = generate_shim(exe, n.conanfile.cpp_info, os_, conanfile.build_folder)
-                    save_files(conanfile.build_folder, files)
-                    exe_filename = "{}{}".format(exe, ".cmd" if os_ == 'Windows' else '')
-                    exe_filepath = os.path.join(conanfile.build_folder, exe_filename)
-                    st = os.stat(exe_filepath)
-                    os.chmod(exe_filepath, st.st_mode | stat.S_IEXEC)
-                    add_path = True
+        for n in build_deps:
+            for exe in n.conanfile.cpp_info.exes:
+                self._output.info(" - {}".format(exe))
+                write_shim(exe, n.conanfile.cpp_info, conanfile.settings_build.os,
+                           conanfile.build_folder)
+                add_path = True
+
         if add_path:
             conanfile.env.setdefault('PATH', []).insert(0, conanfile.build_folder)  # TODO: meh
 
@@ -568,51 +575,43 @@ class BinaryInstaller(object):
         # as it will be used by reevaluate_node() when package_revision_mode is used and
         # PACKAGE_ID_UNKNOWN happens due to unknown revisions
         self._binaries_analyzer.package_id_transitive_reqs(node)
-        # Get deps_cpp_info from upstream nodes
-        node_order = [n for n in node.public_closure if n.binary != BINARY_SKIP]
+
         # List sort is stable, will keep the original order of the closure, but prioritize levels
-        conan_file = node.conanfile
+        conanfile = node.conanfile
+
         # FIXME: Not the best place to assign the _conan_using_build_profile
-        conan_file._conan_using_build_profile = using_build_profile
-        transitive = [it for it in node.transitive_closure.values()]
-
-        br_host = []
-        for it in node.dependencies:
-            if it.require.build_require_context == CONTEXT_HOST:
-                br_host.extend(it.dst.transitive_closure.values())
-
+        conanfile._conan_using_build_profile = using_build_profile
         # Initialize some members if we are using different contexts
         if using_build_profile:
-            conan_file.user_info_build = DepsUserInfo()
+            conanfile.user_info_build = DepsUserInfo()
 
-        for n in node_order:
-            if n not in transitive:
-                conan_file.output.info("Applying build-requirement: %s" % str(n.ref))
+        host_deps, host_br_deps, build_deps = _classify_dependencies(node)
+        for n in host_deps:
+            if n in host_br_deps:
+                conanfile.output.info("Applying build-requirement: %s" % str(n.ref))
+            conanfile.deps_user_info[n.ref.name] = n.conanfile.user_info
+            conanfile.deps_cpp_info.add(n.ref.name, n.conanfile._conan_dep_cpp_info)
+            if not using_build_profile:
+                conanfile.deps_env_info.update(n.conanfile.env_info, n.ref.name)
 
-            if not using_build_profile:  # Do not touch anything
-                conan_file.deps_user_info[n.ref.name] = n.conanfile.user_info
-                conan_file.deps_cpp_info.add(n.ref.name, n.conanfile._conan_dep_cpp_info)
-                conan_file.deps_env_info.update(n.conanfile.env_info, n.ref.name)
-            else:
-                if n in transitive or n in br_host:
-                    conan_file.deps_user_info[n.ref.name] = n.conanfile.user_info
-                    conan_file.deps_cpp_info.add(n.ref.name, n.conanfile._conan_dep_cpp_info)
-                else:
-                    conan_file.user_info_build[n.ref.name] = n.conanfile.user_info
-                    env_info = EnvInfo()
-                    env_info._values_ = n.conanfile.env_info._values_.copy()
-                    # Add cpp_info.bin_paths/lib_paths to env_info (it is needed for runtime)
-                    env_info.DYLD_LIBRARY_PATH.extend(n.conanfile._conan_dep_cpp_info.lib_paths)
-                    env_info.DYLD_LIBRARY_PATH.extend(
-                        n.conanfile._conan_dep_cpp_info.framework_paths)
-                    env_info.LD_LIBRARY_PATH.extend(n.conanfile._conan_dep_cpp_info.lib_paths)
-                    env_info.PATH.extend(n.conanfile._conan_dep_cpp_info.bin_paths)
-                    conan_file.deps_env_info.update(env_info, n.ref.name)
+        for n in build_deps:
+            conanfile.output.info("Applying build-requirement: %s" % str(n.ref))
+
+            conanfile.user_info_build[n.ref.name] = n.conanfile.user_info
+            env_info = EnvInfo()
+            env_info._values_ = n.conanfile.env_info._values_.copy()
+            # Add cpp_info.bin_paths/lib_paths to env_info (it is needed for runtime)
+            env_info.DYLD_LIBRARY_PATH.extend(n.conanfile._conan_dep_cpp_info.lib_paths)
+            env_info.DYLD_LIBRARY_PATH.extend(
+                n.conanfile._conan_dep_cpp_info.framework_paths)
+            env_info.LD_LIBRARY_PATH.extend(n.conanfile._conan_dep_cpp_info.lib_paths)
+            env_info.PATH.extend(n.conanfile._conan_dep_cpp_info.bin_paths)
+            conanfile.deps_env_info.update(env_info, n.ref.name)
 
         # Update the info but filtering the package values that not apply to the subtree
         # of this current node and its dependencies.
-        subtree_libnames = [node.ref.name for node in node_order]
-        add_env_conaninfo(conan_file, subtree_libnames)
+        subtree_libnames = [node.ref.name for node in host_deps]
+        add_env_conaninfo(conanfile, subtree_libnames)
 
     def _call_package_info(self, conanfile, package_folder, ref):
         conanfile.cpp_info = CppInfo(conanfile.name, package_folder)
