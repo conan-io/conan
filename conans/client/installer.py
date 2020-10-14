@@ -159,8 +159,7 @@ class _PackageBuilder(object):
         for n in build_deps:
             self._output.info("Write shims for '{}'".format(n.ref.name))
             for exe in n.conanfile.cpp_info.exes:
-                write_shim(exe, n.conanfile.cpp_info, conanfile.settings_build.os,
-                           conanfile.build_folder)
+                write_shim(exe, n.conanfile, conanfile.settings_build.os, conanfile.build_folder)
                 add_path = True
 
         if add_path:

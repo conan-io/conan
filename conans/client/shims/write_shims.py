@@ -5,6 +5,7 @@ import textwrap
 from jinja2 import Template
 
 from conans.client.envvars.environment import BAT_FLAVOR, SH_FLAVOR, env_files
+from conans.client.run_environment import RunEnvironment
 from conans.util.files import save_files
 
 cmd_template = textwrap.dedent("""\
@@ -27,30 +28,20 @@ sh_template = textwrap.dedent("""\
     """)
 
 
-def _envvariables(deps_cpp_info):
-    # TODO: Refactor, this code is duplicated
-    # TODO: Other environment variables should be considered too
-    lib_paths = deps_cpp_info.lib_paths
-    bin_paths = deps_cpp_info.bin_paths
-    framework_paths = deps_cpp_info.framework_paths
-    ret = {"DYLD_LIBRARY_PATH": lib_paths,
-           "LD_LIBRARY_PATH": lib_paths,
-           "PATH": bin_paths}
-    if framework_paths:
-        ret["DYLD_FRAMEWORK_PATH"] = framework_paths
-    return ret
-
-
-def _generate_shim(name, deps_cpp_info, settings_os, output_path):
+def _generate_shim(name, conanfile, settings_os, output_path):
     # Use the environment generators we already have
     suffix = "_{}".format(name)
-    environment = _envvariables(deps_cpp_info)
+    environment = RunEnvironment(conanfile).vars
+    for k, v in conanfile.env_info.vars.items():
+        environment[k] = v  # TODO: Append to known variables
+
     flavor = BAT_FLAVOR if settings_os == 'Windows' else SH_FLAVOR
     shimfiles = env_files(environment, [], flavor, os.path.join(output_path, '.shims'), suffix, name)
     shimfiles = {os.path.join('.shims', k): v for k, v in shimfiles.items()}
 
     # Create the wrapper for the given OS
-    executable = os.path.join(deps_cpp_info.bin_paths[0], name)  # TODO: More than one bin_path?
+    bin_folder = conanfile.cpp_info.bin_paths[0]  # TODO: More than one bin_path?
+    executable = os.path.join(bin_folder, name)  # TODO: More than one bin_path?
     context = {
         'name': name,
         'activate_path': os.path.join(output_path, '.shims', "activate{}.{}".format(suffix, flavor)),
@@ -66,8 +57,8 @@ def _generate_shim(name, deps_cpp_info, settings_os, output_path):
     return shimfiles
 
 
-def write_shim(name, deps_cpp_info, settings_os, output_path):
-    files = _generate_shim(name, deps_cpp_info, settings_os, output_path)
+def write_shim(name, conanfile, settings_os, output_path):
+    files = _generate_shim(name, conanfile, settings_os, output_path)
     save_files(output_path, files)
     exe_filename = "{}{}".format(name, ".cmd" if settings_os == 'Windows' else '')
     exe_filepath = os.path.join(output_path, exe_filename)
