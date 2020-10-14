@@ -222,15 +222,18 @@ class Pkg(ConanFile):
         self.assertTrue(os.path.isdir(profile_folder))
         src_setting_file = os.path.join(profile_folder, "settings.yml")
         src_remote_file = os.path.join(profile_folder, "remotes.txt")
+
         # Install profile_folder without settings.yml + remotes.txt in order to install them manually
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            dest_setting_file = os.path.join(tmp_dir, "settings.yml")
-            dest_remote_file = os.path.join(tmp_dir, "remotes.txt")
-            shutil.move(src_setting_file, dest_setting_file)
-            shutil.move(src_remote_file, dest_remote_file)
-            self.client.run('config install "%s"' % profile_folder)
-            shutil.move(dest_setting_file, src_setting_file)
-            shutil.move(dest_remote_file, src_remote_file)
+        tmp_dir = tempfile.mkdtemp()
+        dest_setting_file = os.path.join(tmp_dir, "settings.yml")
+        dest_remote_file = os.path.join(tmp_dir, "remotes.txt")
+        shutil.move(src_setting_file, dest_setting_file)
+        shutil.move(src_remote_file, dest_remote_file)
+        self.client.run('config install "%s"' % profile_folder)
+        shutil.move(dest_setting_file, src_setting_file)
+        shutil.move(dest_remote_file, src_remote_file)
+        shutil.rmtree(tmp_dir)
+
         for cmd_option in ["", "--type=file"]:
             self.client.run('config install "%s" %s' % (src_setting_file, cmd_option))
             self.client.run('config install "%s" %s' % (src_remote_file, cmd_option))
