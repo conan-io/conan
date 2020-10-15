@@ -405,15 +405,15 @@ class CmdUpload(object):
         files, symlinks = gather_files(export_folder)
         export_folder_tgz = export_folder + "_tgz"
         export_tgz = os.path.join(export_folder_tgz, EXPORT_TGZ_NAME)
-        export_sources_tgz = os.path.join(export_folder_tgz, EXPORT_SOURCES_TGZ_NAME)
         if os.path.isfile(export_tgz):
             files[EXPORT_TGZ_NAME] = export_tgz
-        if os.path.isfile(export_sources_tgz):
-            files[EXPORT_SOURCES_TGZ_NAME] = export_sources_tgz
         if CONANFILE not in files or CONAN_MANIFEST not in files:
             raise ConanException("Cannot upload corrupted recipe '%s'" % str(ref))
         export_src_folder = self._cache.package_layout(ref).export_sources()
         src_files, src_symlinks = gather_files(export_src_folder)
+        export_sources_tgz = os.path.join(export_folder_tgz, EXPORT_SOURCES_TGZ_NAME)
+        if os.path.isfile(export_sources_tgz):
+            files[EXPORT_SOURCES_TGZ_NAME] = export_sources_tgz
         the_files = _compress_recipe_files(files, symlinks, src_files, src_symlinks, export_folder,
                                            self._output)
 
@@ -436,6 +436,10 @@ class CmdUpload(object):
             clean_dirty(tgz_path)
         # Get all the files in that directory
         files, symlinks = gather_files(package_folder)
+        package_folder_tgz = package_folder + "_tgz"
+        package_tgz = os.path.join(package_folder_tgz, PACKAGE_TGZ_NAME)
+        if os.path.isfile(package_tgz):
+            files[PACKAGE_TGZ_NAME] = package_tgz
 
         if CONANINFO not in files or CONAN_MANIFEST not in files:
             logger.error("Missing info or manifest in uploading files: %s" % (str(files)))
