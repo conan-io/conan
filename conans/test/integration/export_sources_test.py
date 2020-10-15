@@ -7,7 +7,8 @@ from parameterized.parameterized import parameterized
 from conans.client import tools
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_SRC_FOLDER, EXPORT_TGZ_NAME
+from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_SRC_FOLDER, EXPORT_TGZ_NAME, \
+    PACKAGE_TGZ_NAME
 from conans.test.utils.test_files import scan_folder
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
 from conans.util.files import load, md5sum, save
@@ -94,7 +95,7 @@ class ExportsSourcesTest(unittest.TestCase):
         expected_sources = sorted(expected_sources)
         self.assertEqual(scan_folder(self.source_folder), expected_sources)
 
-    def _check_package_folder(self, mode):
+    def _check_package_folder(self, mode, conanpackage=False):
         """ Package folder must be always the same (might have tgz after upload)
         """
         if mode in ["exports", "exports_sources"]:
@@ -105,6 +106,8 @@ class ExportsSourcesTest(unittest.TestCase):
         if mode == "nested" or mode == "overlap":
             expected_package = ["conaninfo.txt", "conanmanifest.txt", "include/src/hello.h",
                                 "docs/src/data.txt"]
+        if conanpackage:
+            expected_package.append(PACKAGE_TGZ_NAME)
 
         self.assertEqual(scan_folder(self.package_folder), sorted(expected_package))
 
@@ -302,14 +305,14 @@ class ExportsSourcesTest(unittest.TestCase):
         self.client.run("install Hello/0.1@lasote/testing")
         self.assertFalse(os.path.exists(self.source_folder))
         self._check_export_installed_folder(mode)
-        self._check_package_folder(mode)
+        self._check_package_folder(mode, conanpackage=True)
 
         # Manifests must work too!
         self.client.run("install Hello/0.1@lasote/testing --manifests")
         self.assertFalse(os.path.exists(self.source_folder))
         # The manifests retrieve the normal state, as it retrieves sources
         self._check_export_folder(mode)
-        self._check_package_folder(mode)
+        self._check_package_folder(mode, conanpackage=True)
         self._check_manifest(mode)
 
         # lets try to verify
@@ -319,7 +322,7 @@ class ExportsSourcesTest(unittest.TestCase):
         self.assertFalse(os.path.exists(self.source_folder))
         # The manifests retrieve the normal state, as it retrieves sources
         self._check_export_folder(mode)
-        self._check_package_folder(mode)
+        self._check_package_folder(mode, conanpackage=True)
         self._check_manifest(mode)
 
     @parameterized.expand([("exports", ), ("exports_sources", ), ("both", ), ("nested", ),
