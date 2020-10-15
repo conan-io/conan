@@ -60,7 +60,8 @@ class MakeGenerator(Generator):
                      ("SHAREDLINKFLAGS", self.assignment_append, cpp_info.sharedlinkflags),
                      ("EXELINKFLAGS", self.assignment_append, cpp_info.exelinkflags),
                      ("FRAMEWORKS", self.assignment_append, cpp_info.frameworks),
-                     ("FRAMEWORK_PATHS", self.assignment_append, cpp_info.framework_paths)]
+                     ("FRAMEWORK_PATHS", self.assignment_append, cpp_info.framework_paths),
+                     ("VERSION", self.assignment_if_absent, cpp_info.version)]
 
         return [self.create_makefile_var_pkg(var_name, pkg_name, operator, info)
                 for var_name, operator, info in vars_info]

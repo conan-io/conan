@@ -109,6 +109,9 @@ AudioUnit
 CONAN_FRAMEWORK_PATHS_MYPKG1 +=  \\
 {conan_framework_dirs_mypkg1}
 
+CONAN_VERSION_MYPKG1 ?=  \\
+0.1
+
 CONAN_ROOT_MYPKG2 ?=  \\
 {conan_root_mypkg2}
 
