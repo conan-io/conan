@@ -9,7 +9,7 @@ from conans.client.run_environment import RunEnvironment
 from conans.util.files import save_files
 
 cmd_template = textwrap.dedent("""\
-    echo Calling {{ name }} wrapper
+    @echo off
     call "{{ activate_path }}"
     pushd "{{ exe_path_dirname }}"
     call "{{ exe_path }}" %*
@@ -19,7 +19,6 @@ cmd_template = textwrap.dedent("""\
 
 sh_template = textwrap.dedent("""\
     #!/bin/bash
-    echo Calling {{ name }} wrapper
     source "{{ activate_path }}"
     pushd "{{ exe_path_dirname }}" > /dev/null
     "{{ exe_path }}" "$@"
@@ -57,10 +56,11 @@ def _generate_shim(name, conanfile, settings_os, output_path):
     return shimfiles
 
 
-def write_shim(name, conanfile, settings_os, output_path):
-    files = _generate_shim(name, conanfile, settings_os, output_path)
-    save_files(output_path, files)
-    exe_filename = "{}{}".format(name, ".cmd" if settings_os == 'Windows' else '')
-    exe_filepath = os.path.join(output_path, exe_filename)
-    st = os.stat(exe_filepath)
-    os.chmod(exe_filepath, st.st_mode | stat.S_IEXEC)
+def write_shims(conanfile, settings_os, output_path):
+    for name in conanfile.cpp_info.exes:
+        files = _generate_shim(name, conanfile, settings_os, output_path)
+        save_files(output_path, files)
+        exe_filename = "{}{}".format(name, ".cmd" if settings_os == 'Windows' else '')
+        exe_filepath = os.path.join(output_path, exe_filename)
+        st = os.stat(exe_filepath)
+        os.chmod(exe_filepath, st.st_mode | stat.S_IEXEC)

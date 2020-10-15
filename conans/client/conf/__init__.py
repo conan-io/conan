@@ -181,6 +181,7 @@ _t_default_client_conf = Template(textwrap.dedent("""
 
     # config_install_interval = 1h
     # required_conan_version = >=1.26
+    # shims_enabled = 1
 
     [storage]
     # This is the default path, but you can write your own. It must be an absolute path or a
@@ -424,6 +425,14 @@ class ConanClientConfigParser(ConfigParser, object):
             return revisions_enabled.lower() in ("1", "true")
         except ConanException:
             return True if os.environ.get(CONAN_V2_MODE_ENVVAR, False) else False
+
+    @property
+    def shims_enabled(self):
+        try:
+            shims_enabled = self.get_item("general.shims_enabled")
+            return shims_enabled.lower() in ("1", "true")
+        except ConanException:
+            return False
 
     @property
     def parallel_download(self):

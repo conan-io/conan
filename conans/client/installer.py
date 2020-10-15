@@ -15,7 +15,7 @@ from conans.client.importer import remove_imports, run_imports
 from conans.client.packager import update_package_metadata
 from conans.client.recorder.action_recorder import INSTALL_ERROR_BUILDING, INSTALL_ERROR_MISSING, \
     INSTALL_ERROR_MISSING_BUILD_FOLDER
-from conans.client.shims.write_shims import write_shim
+from conans.client.shims.write_shims import write_shims
 from conans.client.source import complete_recipe_sources, config_source
 from conans.client.toolchain.base import write_toolchain
 from conans.client.tools.env import no_op
@@ -152,17 +152,12 @@ class _PackageBuilder(object):
         write_toolchain(conanfile, conanfile.build_folder, self._output)
 
         # I need the shims for the executables in the build-requires (only two-profiles approach)
-        # TODO: opt-in using config
-        logger.info("SHIMS: Writing shims for build-requires")
-        _, _, build_deps = _classify_dependencies(node)
-        add_path = False
-        for n in build_deps:
-            self._output.info("Write shims for '{}'".format(n.ref.name))
-            for exe in n.conanfile.cpp_info.exes:
-                write_shim(exe, n.conanfile, conanfile.settings_build.os, conanfile.build_folder)
-                add_path = True
-
-        if add_path:
+        if self._cache.config.shims_enabled:
+            logger.info("SHIMS: Writing shims for build-requires")
+            _, _, build_deps = _classify_dependencies(node)
+            for n in build_deps:
+                self._output.info("Write shims for '{}'".format(n.ref.name))
+                write_shims(n.conanfile, conanfile.settings_build.os, conanfile.build_folder)
             conanfile.env.setdefault('PATH', []).insert(0, conanfile.build_folder)  # TODO: meh
 
         # Build step might need DLLs, binaries as protoc to generate source files

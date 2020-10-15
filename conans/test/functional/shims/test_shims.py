@@ -51,6 +51,8 @@ class ShimsTestCase(unittest.TestCase):
 
     lib_cmakelists = textwrap.dedent("""
         cmake_minimum_required(VERSION 2.8.12)
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        set(CMAKE_CXX_ABI_COMPILED 1)
         project(library CXX)
 
         include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
@@ -78,6 +80,8 @@ class ShimsTestCase(unittest.TestCase):
 
     main_cmakelist = Template(textwrap.dedent("""
         cmake_minimum_required(VERSION 2.8.12)
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        set(CMAKE_CXX_ABI_COMPILED 1)
         project({{ project }} CXX)
 
         include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
@@ -106,12 +110,13 @@ class ShimsTestCase(unittest.TestCase):
             def package_info(self):
                 self.cpp_info.exes = ["{{ project }}"]
                 self.env_info.LIBRARY_ENVVAR = '{{ project }}-value'
-                #self.env_info.PATH = [os.path.join(self.package_folder, "bin")]
+                # self.env_info.PATH = [os.path.join(self.package_folder, "bin")]
     """))
 
     def test_shims(self):
         t = TestClient()
         t.run("config set log.print_run_commands=1")
+        t.run("config set general.shims_enabled=1")
         # Create two versions for the library
         t.save({
             'lib/library.cpp': self.lib_cpp,
@@ -120,7 +125,7 @@ class ShimsTestCase(unittest.TestCase):
             'lib/conanfile.py': self.lib_conanfile,
         })
         t.run('create lib/conanfile.py library/version1@')
-        t.run('create lib/conanfile.py library/version2@')
+        # t.run('create lib/conanfile.py library/version2@')  # FIXME: Conan v2.0: create and use 'version2'
 
         # Create Runner1 executable using library/version1
         t.save(path=os.path.join(t.current_folder, 'runner1'), files={
@@ -134,7 +139,8 @@ class ShimsTestCase(unittest.TestCase):
         t.save(path=os.path.join(t.current_folder, 'runner2'), files={
             'main.cpp': self.main_cpp,
             'CMakeLists.txt': self.main_cmakelist.render(project='runner2'),
-            'conanfile.py': self.main_conanfile.render(project='runner2', lib_version='version1')  # FIXME: Use 'version2' here!!!
+            'conanfile.py': self.main_conanfile.render(project='runner2', lib_version='version1')
+            # FIXME: Conan v2.0: use 'library/version2' in the conanfile
         })
         t.run('create runner2/conanfile.py runner2/version@')
 
@@ -147,9 +153,7 @@ class ShimsTestCase(unittest.TestCase):
                 generators = 'cmake'
 
                 def build(self):
-                    self.output.info("Execute runner1:")
                     self.run("runner1")
-                    self.output.info("Execute runner2:")
                     self.run("runner2")
             """)})
         t.run('create . consumer/version@ --profile:host=default --profile:build=default')
@@ -157,7 +161,6 @@ class ShimsTestCase(unittest.TestCase):
             ----Running------
             > runner1
             -----------------
-            Calling runner1 wrapper
             library-version: version1
             library-envvar: runner1-value
             """), t.out)
@@ -165,7 +168,6 @@ class ShimsTestCase(unittest.TestCase):
             ----Running------
             > runner2
             -----------------
-            Calling runner2 wrapper
             library-version: version1
             library-envvar: runner2-value
             """), t.out)
