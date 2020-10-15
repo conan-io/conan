@@ -7,7 +7,7 @@ from jinja2 import Template
 from conans.test.utils.tools import TestClient
 
 
-class ShimsTestCase(unittest.TestCase):
+class BaseShimsTestCase(unittest.TestCase):
     # Files related to a recipe for a library
     lib_cpp = textwrap.dedent("""
         #include "library.h"
@@ -144,38 +144,3 @@ class ShimsTestCase(unittest.TestCase):
             # FIXME: Conan v2.0: use 'library/version2' in the conanfile
         })
         cls.t.run('create runner2/conanfile.py runner2/version@')
-
-        # Create a recipe to consume everything provided by the previous recipes
-        cls.t.save({'conanfile.py': textwrap.dedent("""
-            from conans import ConanFile
-
-            class Recipe(ConanFile):
-                build_requires = 'runner1/version', 'runner2/version'
-                generators = 'cmake'
-
-                def build(self):
-                    self.run("runner1")
-                    self.run("runner2")
-            """)})
-
-    def test_cache_workflow(self):
-        self.t.run('create . consumer/cache@ --profile:host=default --profile:build=default')
-        self.assertIn(textwrap.dedent("""
-            ----Running------
-            > runner1
-            -----------------
-            library-version: version1
-            library-envvar: runner1-value
-            """), self.t.out)
-        self.assertIn(textwrap.dedent("""
-            ----Running------
-            > runner2
-            -----------------
-            library-version: version1
-            library-envvar: runner2-value
-            """), self.t.out)
-
-    def test_local_workflow(self):
-        self.t.run('install . consumer/local@ --profile:host=default --profile:build=default')
-        print(self.t.out)
-
