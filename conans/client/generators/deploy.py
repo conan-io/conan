@@ -9,7 +9,7 @@ from conans.paths import BUILD_INFO_DEPLOY
 from conans.util.files import mkdir, md5sum
 
 
-FILTERED_FILES = ["conaninfo.txt", "conanmanifest.txt", "conan_package.tgz"]
+FILTERED_FILES = ["conaninfo.txt", "conanmanifest.txt"]
 
 
 class DeployGenerator(Generator):
