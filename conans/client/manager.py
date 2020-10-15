@@ -4,9 +4,10 @@ from conans.client.graph.build_mode import BuildMode
 from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL
 from conans.client.graph.printer import print_graph
 from conans.client.importer import run_deploy, run_imports
-from conans.client.installer import BinaryInstaller, call_system_requirements
+from conans.client.installer import BinaryInstaller, call_system_requirements, _classify_dependencies
 from conans.client.manifest_manager import ManifestManager
 from conans.client.output import Color
+from conans.client.shims.write_shims import write_shims
 from conans.client.source import complete_recipe_sources
 from conans.client.toolchain.base import write_toolchain
 from conans.client.tools import cross_building, get_cross_building_settings
@@ -99,6 +100,16 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
             conanfile.generators = tmp
             app.generator_manager.write_generators(conanfile, install_folder, output)
             write_toolchain(conanfile, install_folder, output)
+
+            # I need the shims for the executables in the build-requires (only two-profiles approach)
+            if cache.config.shims_enabled:
+                _, _, build_deps = _classify_dependencies(root_node)
+                shims_path = os.path.join(install_folder, '.shims')
+                for n in build_deps:
+                    conanfile.output.info("Write shims for '{}'".format(n.ref.name))
+                    write_shims(n.conanfile, conanfile.settings_build.os, shims_path)
+                conanfile.env.setdefault('PATH', []).insert(0, shims_path)  # TODO: meh
+
         if not isinstance(ref_or_path, ConanFileReference):
             # Write conaninfo
             content = normalize(conanfile.info.dumps())

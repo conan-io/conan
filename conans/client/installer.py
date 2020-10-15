@@ -155,10 +155,11 @@ class _PackageBuilder(object):
         if self._cache.config.shims_enabled:
             logger.info("SHIMS: Writing shims for build-requires")
             _, _, build_deps = _classify_dependencies(node)
+            shims_path = os.path.join(conanfile.build_folder, '.shims')
             for n in build_deps:
                 self._output.info("Write shims for '{}'".format(n.ref.name))
-                write_shims(n.conanfile, conanfile.settings_build.os, conanfile.build_folder)
-            conanfile.env.setdefault('PATH', []).insert(0, conanfile.build_folder)  # TODO: meh
+                write_shims(n.conanfile, conanfile.settings_build.os, shims_path)
+            conanfile.env.setdefault('PATH', []).insert(0, shims_path)  # TODO: meh
 
         # Build step might need DLLs, binaries as protoc to generate source files
         # So execute imports() before build, storing the list of copied_files

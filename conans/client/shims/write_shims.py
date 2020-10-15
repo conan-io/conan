@@ -35,19 +35,17 @@ def _generate_shim(name, conanfile, settings_os, output_path):
         environment[k] = v  # TODO: Append to known variables
 
     flavor = BAT_FLAVOR if settings_os == 'Windows' else SH_FLAVOR
-    shimfiles = env_files(environment, [], flavor, os.path.join(output_path, '.shims'), suffix, name)
-    shimfiles = {os.path.join('.shims', k): v for k, v in shimfiles.items()}
+    shimfiles = env_files(environment, [], flavor, output_path, suffix, name)
 
     # Create the wrapper for the given OS
     bin_folder = conanfile.cpp_info.bin_paths[0]  # TODO: More than one bin_path?
     executable = os.path.join(bin_folder, name)
     context = {
         'name': name,
-        'activate_path': os.path.join(output_path, '.shims', "activate{}.{}".format(suffix, flavor)),
+        'activate_path': os.path.join(output_path, "activate{}.{}".format(suffix, flavor)),
         'exe_path_dirname': os.path.dirname(executable),
         'exe_path': executable,
-        'deactivate_path': os.path.join(output_path, '.shims',
-                                        "deactivate{}.{}".format(suffix, flavor))
+        'deactivate_path': os.path.join(output_path, "deactivate{}.{}".format(suffix, flavor))
     }
     template = cmd_template if settings_os == 'Windows' else sh_template
     content = Template(template).render(**context)
