@@ -436,7 +436,8 @@ class CmdUpload(object):
             clean_dirty(tgz_path)
         # Get all the files in that directory
         files, symlinks = gather_files(package_folder)
-        package_folder_tgz = package_folder + "_tgz"
+        base, pid = os.path.split(package_folder)
+        package_folder_tgz = os.path.join(base + "_tgz", pid)
         package_tgz = os.path.join(package_folder_tgz, PACKAGE_TGZ_NAME)
         if os.path.isfile(package_tgz):
             files[PACKAGE_TGZ_NAME] = package_tgz

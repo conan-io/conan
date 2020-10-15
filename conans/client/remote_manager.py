@@ -286,7 +286,11 @@ def unzip_and_get_files(files, destination_dir, tgz_name, output):
     if tgz_file:
         uncompress_file(tgz_file, destination_dir, output=output)
         # move the .tgz to another place
-        tgzdir = destination_dir + "_tgz"
+        if tgz_name == PACKAGE_TGZ_NAME:
+            base, pid = os.path.split(destination_dir)
+            tgzdir = os.path.join(base + "_tgz", pid)
+        else:
+            tgzdir = destination_dir + "_tgz"
         mkdir(tgzdir)
         shutil.move(tgz_file, os.path.join(tgzdir, tgz_name))
 
