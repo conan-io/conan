@@ -411,7 +411,8 @@ class CmdUpload(object):
             raise ConanException("Cannot upload corrupted recipe '%s'" % str(ref))
         export_src_folder = self._cache.package_layout(ref).export_sources()
         src_files, src_symlinks = gather_files(export_src_folder)
-        export_sources_tgz = os.path.join(export_folder_tgz, EXPORT_SOURCES_TGZ_NAME)
+        export_src_folder_tgz = export_src_folder + "_tgz"
+        export_sources_tgz = os.path.join(export_src_folder_tgz, EXPORT_SOURCES_TGZ_NAME)
         if os.path.isfile(export_sources_tgz):
             files[EXPORT_SOURCES_TGZ_NAME] = export_sources_tgz
         the_files = _compress_recipe_files(files, symlinks, src_files, src_symlinks, export_folder,
@@ -584,9 +585,10 @@ def _compress_recipe_files(files, symlinks, src_files, src_symlinks, dest_folder
         if tgz_path:
             result[tgz_name] = tgz_path
         elif tgz_files:
+            tgzdir = dest_folder + "_tgz"
             if output and not output.is_terminal:
                 output.writeln(msg)
-            tgz_path = compress_files(tgz_files, tgz_symlinks, tgz_name, dest_folder, output)
+            tgz_path = compress_files(tgz_files, tgz_symlinks, tgz_name, tgzdir, output)
             result[tgz_name] = tgz_path
 
     add_tgz(EXPORT_TGZ_NAME, export_tgz_path, files, symlinks, "Compressing recipe...")
@@ -599,10 +601,12 @@ def _compress_recipe_files(files, symlinks, src_files, src_symlinks, dest_folder
 def _compress_package_files(files, symlinks, dest_folder, output):
     tgz_path = files.get(PACKAGE_TGZ_NAME)
     if not tgz_path:
+        base, pid = os.path.split(dest_folder)
+        tgzdir = os.path.join(base + "_tgz", pid)
         if output and not output.is_terminal:
             output.writeln("Compressing package...")
         tgz_files = {f: path for f, path in files.items() if f not in [CONANINFO, CONAN_MANIFEST]}
-        tgz_path = compress_files(tgz_files, symlinks, PACKAGE_TGZ_NAME, dest_folder, output)
+        tgz_path = compress_files(tgz_files, symlinks, PACKAGE_TGZ_NAME, tgzdir, output)
 
     return {PACKAGE_TGZ_NAME: tgz_path,
             CONANINFO: files[CONANINFO],
