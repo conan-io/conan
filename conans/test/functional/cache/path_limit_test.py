@@ -111,7 +111,7 @@ class PathLengthLimitTest(unittest.TestCase):
             files = os.listdir(package_folder)
             self.assertIn("myfile.txt", files)
             self.assertIn("myfile2.txt", files)
-            self.assertIn("conan_package.tgz", files)
+            self.assertNotIn("conan_package.tgz", files)
 
     def export_source_test(self):
         client = TestClient()

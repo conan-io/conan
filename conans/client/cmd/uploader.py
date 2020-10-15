@@ -403,6 +403,13 @@ class CmdUpload(object):
                 clean_dirty(tgz_path)
 
         files, symlinks = gather_files(export_folder)
+        export_folder_tgz = export_folder + "_tgz"
+        export_tgz = os.path.join(export_folder_tgz, EXPORT_TGZ_NAME)
+        export_sources_tgz = os.path.join(export_folder_tgz, EXPORT_SOURCES_TGZ_NAME)
+        if os.path.isfile(export_tgz):
+            files[EXPORT_TGZ_NAME] = export_tgz
+        if os.path.isfile(export_sources_tgz):
+            files[EXPORT_SOURCES_TGZ_NAME] = export_sources_tgz
         if CONANFILE not in files or CONAN_MANIFEST not in files:
             raise ConanException("Cannot upload corrupted recipe '%s'" % str(ref))
         export_src_folder = self._cache.package_layout(ref).export_sources()

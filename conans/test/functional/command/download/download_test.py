@@ -3,7 +3,6 @@ import unittest
 from collections import OrderedDict
 
 from conans.model.ref import ConanFileReference
-from conans.paths import PACKAGE_TGZ_NAME
 from conans.test.utils.tools import (TestClient, TestServer, NO_SETTINGS_PACKAGE_ID, TurboTestClient,
                                      GenConanfile)
 from conans.util.files import load
@@ -181,9 +180,6 @@ class Pkg(ConanFile):
         self.assertTrue(os.path.exists(package_layout.conanfile()))
         # Check package folder created
         self.assertTrue(os.path.exists(package_folder))
-        # https://github.com/conan-io/conan/issues/7869
-        # Check conan_package.tgz has been downloaded
-        self.assertTrue(os.path.exists(os.path.join(package_folder, PACKAGE_TGZ_NAME)))
 
     def download_not_found_reference_test(self):
         server = TestServer()

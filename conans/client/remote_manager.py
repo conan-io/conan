@@ -285,9 +285,10 @@ def unzip_and_get_files(files, destination_dir, tgz_name, output):
     check_compressed_files(tgz_name, files)
     if tgz_file:
         uncompress_file(tgz_file, destination_dir, output=output)
-        # https://github.com/conan-io/conan/issues/7869
-        if os.path.basename(tgz_file) != "conan_package.tgz":
-            os.remove(tgz_file)
+        # move the .tgz to another place
+        tgzdir = destination_dir + "_tgz"
+        mkdir(tgzdir)
+        shutil.move(tgz_file, os.path.join(tgzdir, tgz_name))
 
 
 def uncompress_file(src_path, dest_folder, output):
