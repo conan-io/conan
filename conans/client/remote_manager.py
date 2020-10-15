@@ -285,7 +285,6 @@ def unzip_and_get_files(files, destination_dir, tgz_name, output):
     check_compressed_files(tgz_name, files)
     if tgz_file:
         uncompress_file(tgz_file, destination_dir, output=output)
-        os.remove(tgz_file)
 
 
 def uncompress_file(src_path, dest_folder, output):
