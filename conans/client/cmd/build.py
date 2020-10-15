@@ -45,7 +45,8 @@ def cmd_build(app, conanfile_path, source_folder, build_folder, package_folder, 
         conan_file.source_folder = source_folder
         conan_file.package_folder = package_folder
         conan_file.install_folder = install_folder
-        run_build_method(conan_file, app.hook_manager, conanfile_path=conanfile_path)
+        run_build_method(conan_file, hook_manager=app.hook_manager, config=app.config,
+                         conanfile_path=conanfile_path)
         if test:
             with get_env_context_manager(conan_file):
                 conan_file.output.highlight("Running test()")

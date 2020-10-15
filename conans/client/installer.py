@@ -159,14 +159,14 @@ class _PackageBuilder(object):
             for n in build_deps:
                 self._output.info("Write shims for '{}'".format(n.ref.name))
                 write_shims(n.conanfile, conanfile.settings_build.os, shims_path)
-            conanfile.env.setdefault('PATH', []).insert(0, shims_path)  # TODO: meh
 
         # Build step might need DLLs, binaries as protoc to generate source files
         # So execute imports() before build, storing the list of copied_files
         copied_files = run_imports(conanfile, conanfile.build_folder)
 
         try:
-            run_build_method(conanfile, self._hook_manager, reference=pref.ref, package_id=pref.id)
+            run_build_method(conanfile, hook_manager=self._hook_manager, config=self._cache.config,
+                             reference=pref.ref, package_id=pref.id)
             self._output.success("Package '%s' built" % pref.id)
             self._output.info("Build folder %s" % conanfile.build_folder)
         except Exception as exc:
@@ -595,12 +595,13 @@ class BinaryInstaller(object):
             conanfile.user_info_build[n.ref.name] = n.conanfile.user_info
             env_info = EnvInfo()
             env_info._values_ = n.conanfile.env_info._values_.copy()
-            # Add cpp_info.bin_paths/lib_paths to env_info (it is needed for runtime)
-            env_info.DYLD_LIBRARY_PATH.extend(n.conanfile._conan_dep_cpp_info.lib_paths)
-            env_info.DYLD_LIBRARY_PATH.extend(
-                n.conanfile._conan_dep_cpp_info.framework_paths)
-            env_info.LD_LIBRARY_PATH.extend(n.conanfile._conan_dep_cpp_info.lib_paths)
-            env_info.PATH.extend(n.conanfile._conan_dep_cpp_info.bin_paths)
+            if not self._cache.config.shims_enabled:
+                # Add cpp_info.bin_paths/lib_paths to env_info (it is needed for runtime)
+                env_info.DYLD_LIBRARY_PATH.extend(n.conanfile._conan_dep_cpp_info.lib_paths)
+                env_info.DYLD_LIBRARY_PATH.extend(
+                    n.conanfile._conan_dep_cpp_info.framework_paths)
+                env_info.LD_LIBRARY_PATH.extend(n.conanfile._conan_dep_cpp_info.lib_paths)
+                env_info.PATH.extend(n.conanfile._conan_dep_cpp_info.bin_paths)
             conanfile.deps_env_info.update(env_info, n.ref.name)
 
         # Update the info but filtering the package values that not apply to the subtree

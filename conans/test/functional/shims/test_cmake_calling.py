@@ -71,3 +71,4 @@ class CMakeCallingTestCase(BaseShimsTestCase):
             library-version: version1
             library-envvar: runner2-value
             """), self.t.out)
+

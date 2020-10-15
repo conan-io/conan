@@ -108,7 +108,7 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
                 for n in build_deps:
                     conanfile.output.info("Write shims for '{}'".format(n.ref.name))
                     write_shims(n.conanfile, conanfile.settings_build.os, shims_path)
-                conanfile.env.setdefault('PATH', []).insert(0, shims_path)  # TODO: meh
+                # conanfile.env.setdefault('PATH', []).insert(0, shims_path)  # TODO: Here I'm just running install, no need to add PATH
 
         if not isinstance(ref_or_path, ConanFileReference):
             # Write conaninfo
