@@ -113,39 +113,40 @@ class ShimsTestCase(unittest.TestCase):
                 # self.env_info.PATH = [os.path.join(self.package_folder, "bin")]
     """))
 
-    def test_shims(self):
-        t = TestClient()
-        t.run("config set log.print_run_commands=1")
-        t.run("config set general.shims_enabled=1")
+    @classmethod
+    def setUpClass(cls):
+        cls.t = TestClient()
+        cls.t.run("config set log.print_run_commands=1")
+        cls.t.run("config set general.shims_enabled=1")
         # Create two versions for the library
-        t.save({
-            'lib/library.cpp': self.lib_cpp,
-            'lib/library.h': self.lib_h,
-            'lib/CMakeLists.txt': self.lib_cmakelists,
-            'lib/conanfile.py': self.lib_conanfile,
+        cls.t.save({
+            'lib/library.cpp': cls.lib_cpp,
+            'lib/library.h': cls.lib_h,
+            'lib/CMakeLists.txt': cls.lib_cmakelists,
+            'lib/conanfile.py': cls.lib_conanfile,
         })
-        t.run('create lib/conanfile.py library/version1@')
+        cls.t.run('create lib/conanfile.py library/version1@')
         # t.run('create lib/conanfile.py library/version2@')  # FIXME: Conan v2.0: create and use 'version2'
 
         # Create Runner1 executable using library/version1
-        t.save(path=os.path.join(t.current_folder, 'runner1'), files={
-            'main.cpp': self.main_cpp,
-            'CMakeLists.txt': self.main_cmakelist.render(project='runner1'),
-            'conanfile.py': self.main_conanfile.render(project='runner1', lib_version='version1')
+        cls.t.save(path=os.path.join(cls.t.current_folder, 'runner1'), files={
+            'main.cpp': cls.main_cpp,
+            'CMakeLists.txt': cls.main_cmakelist.render(project='runner1'),
+            'conanfile.py': cls.main_conanfile.render(project='runner1', lib_version='version1')
         })
-        t.run('create runner1/conanfile.py runner1/version@')
+        cls.t.run('create runner1/conanfile.py runner1/version@')
 
         # Create Runner2 executable using library/version2
-        t.save(path=os.path.join(t.current_folder, 'runner2'), files={
-            'main.cpp': self.main_cpp,
-            'CMakeLists.txt': self.main_cmakelist.render(project='runner2'),
-            'conanfile.py': self.main_conanfile.render(project='runner2', lib_version='version1')
+        cls.t.save(path=os.path.join(cls.t.current_folder, 'runner2'), files={
+            'main.cpp': cls.main_cpp,
+            'CMakeLists.txt': cls.main_cmakelist.render(project='runner2'),
+            'conanfile.py': cls.main_conanfile.render(project='runner2', lib_version='version1')
             # FIXME: Conan v2.0: use 'library/version2' in the conanfile
         })
-        t.run('create runner2/conanfile.py runner2/version@')
+        cls.t.run('create runner2/conanfile.py runner2/version@')
 
         # Create a recipe to consume everything provided by the previous recipes
-        t.save({'conanfile.py': textwrap.dedent("""
+        cls.t.save({'conanfile.py': textwrap.dedent("""
             from conans import ConanFile
 
             class Recipe(ConanFile):
@@ -156,18 +157,25 @@ class ShimsTestCase(unittest.TestCase):
                     self.run("runner1")
                     self.run("runner2")
             """)})
-        t.run('create . consumer/version@ --profile:host=default --profile:build=default')
+
+    def test_cache_workflow(self):
+        self.t.run('create . consumer/cache@ --profile:host=default --profile:build=default')
         self.assertIn(textwrap.dedent("""
             ----Running------
             > runner1
             -----------------
             library-version: version1
             library-envvar: runner1-value
-            """), t.out)
+            """), self.t.out)
         self.assertIn(textwrap.dedent("""
             ----Running------
             > runner2
             -----------------
             library-version: version1
             library-envvar: runner2-value
-            """), t.out)
+            """), self.t.out)
+
+    def test_local_workflow(self):
+        self.t.run('install . consumer/local@ --profile:host=default --profile:build=default')
+        print(self.t.out)
+
