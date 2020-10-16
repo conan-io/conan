@@ -65,9 +65,9 @@ class DiskRemover(object):
         if not ids_filter:  # Remove all
             path = package_layout.packages()
             # Necessary for short_paths removal
-            for package_id in package_layout.package_ids():
-                self._remove(os.path.join(path, package_id), package_layout.ref,
-                             "package folder:%s" % package_id)
+            for package_id in package_layout.conan_packages():
+                pref = PackageReference(package_layout.ref, package_id)
+                package_layout.rm_package(pref)
             self._remove(path, package_layout.ref, "packages")
             self._remove_file(package_layout.system_reqs(), package_layout.ref, SYSTEM_REQS)
         else:
@@ -76,7 +76,7 @@ class DiskRemover(object):
                 if not package_layout.package_exists(pref):
                     raise PackageNotFoundException(pref)
                 pkg_folder = package_layout.package(pref)
-                self._remove(pkg_folder, package_layout.ref, "package:%s" % package_id)
+                package_layout.rm_package(pref)
                 self._remove_file(pkg_folder + ".dirty", package_layout.ref, "dirty flag")
                 self._remove_file(package_layout.system_reqs_package(pref), package_layout.ref,
                                   "%s/%s" % (package_id, SYSTEM_REQS))

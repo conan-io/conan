@@ -16,7 +16,7 @@ from conans.model.package_metadata import PackageMetadata
 from conans.model.ref import ConanFileReference
 from conans.model.ref import PackageReference
 from conans.paths import CONANFILE, SYSTEM_REQS, EXPORT_FOLDER, EXPORT_SRC_FOLDER, SRC_FOLDER, \
-    BUILD_FOLDER, PACKAGES_FOLDER, SYSTEM_REQS_FOLDER, PACKAGE_METADATA, SCM_SRC_FOLDER
+    BUILD_FOLDER, PACKAGES_FOLDER, SYSTEM_REQS_FOLDER, PACKAGE_METADATA, SCM_SRC_FOLDER, rm_conandir
 from conans.util.files import load, save, rmdir
 from conans.util.locks import Lock, NoLock, ReadLock, SimpleLock, WriteLock
 from conans.util.log import logger
@@ -109,6 +109,19 @@ class PackageCacheLayout(object):
         assert isinstance(pref, PackageReference)
         assert pref.ref == self._ref, "{!r} != {!r}".format(pref.ref, self._ref)
         return os.path.join(self._base_folder, PACKAGES_FOLDER, pref.id)
+
+    def rm_package(self, pref):
+        # Here we could validate and check we own a write lock over this package
+        assert isinstance(pref, PackageReference)
+        assert pref.ref == self._ref, "{!r} != {!r}".format(pref.ref, self._ref)
+        # This is NOT the short paths, but the standard cache one
+        pkg_folder = os.path.join(self._base_folder, PACKAGES_FOLDER, pref.id)
+        try:
+            rm_conandir(pkg_folder)  # This will remove the shortened path too if exists
+        except OSError as e:
+            raise ConanException("%s\n\nFolder: %s\n"
+                                 "Couldn't remove folder, might be busy or open\n"
+                                 "Close any app using it, and retry" % (pkg_folder, str(e)))
 
     def package_metadata(self):
         return os.path.join(self._base_folder, PACKAGE_METADATA)

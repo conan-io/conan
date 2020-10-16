@@ -200,7 +200,6 @@ class _PackageBuilder(object):
 
         # BUILD & PACKAGE
         with package_layout.conanfile_read_lock(self._output):
-            _remove_folder_raising(package_folder)
             mkdir(build_folder)
             with tools.chdir(build_folder):
                 self._output.info('Building your package in %s' % build_folder)
@@ -483,13 +482,14 @@ class BinaryInstaller(object):
         output = conanfile.output
 
         layout = self._cache.package_layout(pref.ref, conanfile.short_paths)
-        package_folder = layout.package(pref)
 
         with layout.package_lock(pref):
             if pref not in processed_package_references:
                 processed_package_references.add(pref)
                 if node.binary == BINARY_BUILD:
                     assert node.prev is None, "PREV for %s to be built should be None" % str(pref)
+                    layout.rm_package(pref)
+                    package_folder = layout.package(pref)
                     with set_dirty_context_manager(package_folder):
                         pref = self._build_package(node, output, keep_build, remotes)
                     assert node.prev, "Node PREV shouldn't be empty"
@@ -504,6 +504,7 @@ class BinaryInstaller(object):
                     log_package_got_from_local_cache(pref)
                     self._recorder.package_fetched_from_cache(pref)
 
+            package_folder = layout.package(pref)
             # Call the info method
             self._call_package_info(conanfile, package_folder, ref=pref.ref)
             self._recorder.package_cpp_info(pref, conanfile.cpp_info)

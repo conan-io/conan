@@ -15,9 +15,8 @@ class UploadCompressionTest(unittest.TestCase):
         self.client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
 
     def reuse_uploaded_tgz_test(self):
-        '''Download packages from a remote, then copy to another channel
-        and reupload them. Because they have not changed, the tgz is not created
-        again'''
+        # Download packages from a remote, then copy to another channel
+        # and reupload them. Because they have not changed, the tgz is not created again
 
         # UPLOAD A PACKAGE
         ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
@@ -37,8 +36,8 @@ class UploadCompressionTest(unittest.TestCase):
         self.assertNotIn("Compressing package", self.client.out)
 
     def reuse_downloaded_tgz_test(self):
-        '''Download packages from a remote, then copy to another channel
-        and reupload them. It needs to compress it again, not tgz is kept'''
+        # Download packages from a remote, then copy to another channel
+        # and reupload them. It needs to compress it again, not tgz is kept
 
         # UPLOAD A PACKAGE
         ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")

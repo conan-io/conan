@@ -10,7 +10,7 @@ from conans.model.info import ConanInfo, PACKAGE_ID_UNKNOWN
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference
 from conans.util.conan_v2_mode import conan_v2_property
-from conans.util.files import is_dirty, rmdir, clean_dirty
+from conans.util.files import is_dirty, clean_dirty
 
 
 class GraphBinariesAnalyzer(object):
@@ -59,7 +59,7 @@ class GraphBinariesAnalyzer(object):
             if is_dirty(package_folder):
                 node.conanfile.output.warn("Package is corrupted, removing folder: %s"
                                            % package_folder)
-                rmdir(package_folder)  # Do not remove if it is EDITABLE
+                package_layout.rm_package(pref)
                 clean_dirty(package_folder)
                 return
 
@@ -69,7 +69,7 @@ class GraphBinariesAnalyzer(object):
                 if rec_rev and rec_rev != node.ref.revision:
                     node.conanfile.output.warn("The package {} doesn't belong to the installed "
                                                "recipe revision, removing folder".format(pref))
-                    rmdir(package_folder)
+                    package_layout.rm_package(pref)
                 return metadata
 
     def _evaluate_cache_pkg(self, node, package_layout, pref, metadata, remote, remotes, update,

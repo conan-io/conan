@@ -225,6 +225,9 @@ class ClientCache(object):
         return generators
 
     def delete_empty_dirs(self, deleted_refs):
+        """ Method called by ConanRemover.remove() to clean up from the cache empty folders
+        :param deleted_refs: The recipe references that the remove() has been removed
+        """
         for ref in deleted_refs:
             ref_path = self.package_layout(ref).base_folder()
             for _ in range(4):

@@ -73,7 +73,7 @@ def package_copy(src_ref, user_channel, package_ids, cache, user_io, short_paths
             if not force and not user_io.request_boolean("Package '%s' already exist."
                                                          " Override?" % str(package_id)):
                 continue
-            rmdir(package_path_dest)
+            dst_layout.rm_package(pref_dest)
         package_revisions[package_id] = (src_metadata.packages[package_id].revision,
                                          src_metadata.recipe.revision)
         shutil.copytree(package_path_origin, package_path_dest, symlinks=True)

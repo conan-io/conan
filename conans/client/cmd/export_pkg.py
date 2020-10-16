@@ -49,7 +49,7 @@ def export_pkg(app, recorder, full_ref, source_folder, build_folder, package_fol
 
     if os.path.exists(dest_package_folder):
         if force:
-            rmdir(dest_package_folder)
+            layout.rm_package(pref)
         else:
             raise ConanException("Package already exists. Please use --force, -f to "
                                  "overwrite it")
