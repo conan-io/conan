@@ -158,6 +158,13 @@ class CommandOutputer(object):
             except Exception:
                 pass
 
+            try:
+                package_revision = self._cache.package_layout(ref).load_metadata().packages[package_id].revision
+                if package_revision:
+                    item_data["package_revision"] = package_revision
+            except Exception:
+                pass
+
             def _add_if_exists(attrib, as_list=False):
                 value = getattr(conanfile, attrib, None)
                 if value:
