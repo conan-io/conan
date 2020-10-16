@@ -130,12 +130,12 @@ class RemoteManager(object):
         conanfile_path = layout.conanfile()
         self._hook_manager.execute("pre_download_package", conanfile_path=conanfile_path,
                                    reference=pref.ref, package_id=pref.id, remote=remote)
+
         output.info("Retrieving package %s from remote '%s' " % (pref.id, remote.name))
-        with layout.package_lock(pref):
-            pkg_folder = layout.package(pref)
-            rm_conandir(pkg_folder)  # Remove first the destination folder
-            with set_dirty_context_manager(pkg_folder):
-                self._get_package(pref, pkg_folder, remote, output, recorder)
+        pkg_folder = layout.package(pref)
+        rm_conandir(pkg_folder)  # Remove first the destination folder
+        with set_dirty_context_manager(pkg_folder):
+            self._get_package(pref, pkg_folder, remote, output, recorder)
 
         self._hook_manager.execute("post_download_package", conanfile_path=conanfile_path,
                                    reference=pref.ref, package_id=pref.id, remote=remote)
