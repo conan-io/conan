@@ -209,7 +209,7 @@ class BuildIdTest(unittest.TestCase):
         def _check_builds():
             builds = client.cache.package_layout(ref).conan_builds()
             self.assertEqual(1, len(builds))
-            pkgs = client.cache.package_layout(ref).conan_packages()
+            pkgs = client.cache.package_layout(ref).package_ids()
             self.assertEqual(2, len(pkgs))
             self.assertNotIn(builds[0], pkgs)
             return builds[0], pkgs
@@ -220,8 +220,8 @@ class BuildIdTest(unittest.TestCase):
         client.run("remove Pkg/0.1@user/channel -b %s -f" % build)
         cache_builds = client.cache.package_layout(ref).conan_builds()
         self.assertEqual(0, len(cache_builds))
-        cache_packages = client.cache.package_layout(ref).conan_packages()
-        self.assertEqual(2, len(cache_packages))
+        package_ids = client.cache.package_layout(ref).package_ids()
+        self.assertEqual(2, len(package_ids))
 
     @parameterized.expand([(True, ), (False,)])
     def info_test(self, python_consumer):
