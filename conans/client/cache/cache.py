@@ -306,6 +306,8 @@ def _mix_settings_with_env(settings):
     need to specify all the subsettings, the file defaulted will be
     ignored"""
 
+    # FIXME: Conan 2.0. This should be removed, it only applies to default profile, not others
+
     def get_env_value(name_):
         env_name = "CONAN_ENV_%s" % name_.upper().replace(".", "_")
         return os.getenv(env_name, None)
