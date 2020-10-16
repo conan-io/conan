@@ -382,8 +382,7 @@ class BinaryInstaller(object):
         def _download(n):
             npref = n.pref
             layout = self._cache.package_layout(npref.ref, n.conanfile.short_paths)
-            with layout.package_lock(npref):
-                self._download_pkg(layout, npref, n)
+            self._download_pkg(layout, npref, n)
 
         parallel = self._cache.config.parallel_download
         if parallel is not None:
@@ -397,15 +396,8 @@ class BinaryInstaller(object):
                 _download(node)
 
     def _download_pkg(self, layout, pref, node):
-        conanfile = node.conanfile
-        package_folder = layout.package(pref)
-        output = conanfile.output
-        with set_dirty_context_manager(package_folder):
-            self._remote_manager.get_package(pref, package_folder, node.binary_remote,
-                                             output, self._recorder)
-            output.info("Downloaded package revision %s" % pref.revision)
-            with layout.update_metadata() as metadata:
-                metadata.packages[pref.id].remote = node.binary_remote.name
+        self._remote_manager.get_package(pref, layout, node.binary_remote,
+                                         node.conanfile.output, self._recorder)
 
     def _build(self, nodes_by_level, keep_build, root_node, graph_info, remotes, build_mode, update):
         using_build_profile = bool(graph_info.profile_build)
