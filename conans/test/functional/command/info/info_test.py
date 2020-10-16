@@ -183,10 +183,10 @@ class InfoTest(unittest.TestCase):
             "Hello1": [],
         }
 
-        def create_export(test_deps, name):
-            deps = test_deps[name]
+        def create_export(testdeps, name):
+            deps = testdeps[name]
             for dep in deps:
-                create_export(test_deps, dep)
+                create_export(testdeps, dep)
 
             expanded_deps = ["%s/0.1@lasote/stable" % dep for dep in deps]
             export = False if name == "Hello0" else True
@@ -201,7 +201,8 @@ class InfoTest(unittest.TestCase):
         self.assertIn("<body>", html)
         self.assertIn("{ from: 0, to: 1 }", html)
         self.assertIn("id: 0,\n                        label: 'Hello0/0.1',", html)
-        self.assertIn("Conan <b>v{}</b> <script>document.write(new Date().getFullYear())</script> JFrog LTD. <a>https://conan.io</a>"
+        self.assertIn("Conan <b>v{}</b> <script>document.write(new Date().getFullYear())</script>"
+                      " JFrog LTD. <a>https://conan.io</a>"
                       .format(client_version, datetime.today().year), html)
 
     def graph_html_embedded_visj_test(self):
@@ -220,14 +221,10 @@ class InfoTest(unittest.TestCase):
 
     def info_build_requires_test(self):
         client = TestClient()
-        conanfile = """from conans import ConanFile
-class AConan(ConanFile):
-    pass
-    """
-        client.save({"conanfile.py": conanfile})
+        client.save({"conanfile.py": GenConanfile()})
         client.run("create . tool/0.1@user/channel")
         client.run("create . dep/0.1@user/channel")
-        conanfile = conanfile + 'requires = "dep/0.1@user/channel"'
+        conanfile = GenConanfile().with_require("dep/0.1@user/channel")
         client.save({"conanfile.py": conanfile})
         client.run("export . Pkg/0.1@user/channel")
         client.run("export . Pkg2/0.1@user/channel")
@@ -279,25 +276,16 @@ class AConan(ConanFile):
         self.assertIn("with --path specified, allowed values:", self.client.out)
 
     def test_cwd(self):
-        self.client = TestClient()
-        conanfile = """from conans import ConanFile
-from conans.util.files import load, save
+        client = TestClient()
+        conanfile = GenConanfile("Pkg", "0.1").with_setting("build_type")
+        client.save({"subfolder/conanfile.py": conanfile})
+        client.run("export ./subfolder lasote/testing")
 
-class MyTest(ConanFile):
-    name = "Pkg"
-    version = "0.1"
-    settings = "build_type"
+        client.run("info ./subfolder")
+        self.assertIn("conanfile.py (Pkg/0.1)", client.out)
 
-"""
-        self.client.save({"subfolder/conanfile.py": conanfile})
-        self.client.run("export ./subfolder lasote/testing")
-
-        self.client.run("info ./subfolder")
-        self.assertIn("conanfile.py (Pkg/0.1)", self.client.out)
-
-        self.client.run("info ./subfolder --build-order "
-                        "Pkg/0.1@lasote/testing --json=jsonfile.txt")
-        path = os.path.join(self.client.current_folder, "jsonfile.txt")
+        client.run("info ./subfolder --build-order Pkg/0.1@lasote/testing --json=jsonfile.txt")
+        path = os.path.join(client.current_folder, "jsonfile.txt")
         self.assertTrue(os.path.exists(path))
 
     def info_virtual_test(self):
@@ -354,8 +342,8 @@ class MyTest(ConanFile):
                     Hello1/0.1@lasote/stable""")
 
         expected_output = expected_output % (
-                "\n    Revision: 4dfe7e755ac2ce2b39f1da54151c7636",
-                "\n    Revision: e003760cfa649c4ac4680fec3271b17a") \
+                "\n    Revision: 63865a1afa3a2666b2f75cbc7745e8a4",
+                "\n    Revision: b2600f68000fa492234c0452214e0bbc") \
             if self.client.cache.config.revisions_enabled else expected_output % ("", "")
 
         def clean_output(output):
@@ -475,10 +463,7 @@ class MyTest(ConanFile):
     def build_order_build_requires_test(self):
         # https://github.com/conan-io/conan/issues/3267
         client = TestClient()
-        conanfile = """from conans import ConanFile
-class AConan(ConanFile):
-    pass
-    """
+        conanfile = str(GenConanfile())
         client.save({"conanfile.py": conanfile})
         client.run("create . tool/0.1@user/channel")
         client.run("create . dep/0.1@user/channel")
@@ -495,17 +480,12 @@ class AConan(ConanFile):
     def build_order_privates_test(self):
         # https://github.com/conan-io/conan/issues/3267
         client = TestClient()
-        conanfile = """from conans import ConanFile
-class AConan(ConanFile):
-    pass
-    """
-        client.save({"conanfile.py": conanfile})
+        client.save({"conanfile.py": GenConanfile()})
         client.run("create . tool/0.1@user/channel")
-        conanfile_dep = conanfile + 'requires = "tool/0.1@user/channel"'
-        client.save({"conanfile.py": conanfile_dep})
+        client.save({"conanfile.py": GenConanfile().with_require("tool/0.1@user/channel")})
         client.run("create . dep/0.1@user/channel")
-        conanfile_pkg = conanfile + 'requires = ("dep/0.1@user/channel", "private"),'
-        client.save({"conanfile.py": conanfile_pkg})
+        client.save({"conanfile.py": GenConanfile().with_require("dep/0.1@user/channel",
+                                                                 private=True)})
         client.run("export . Pkg/0.1@user/channel")
         client.run("export . Pkg2/0.1@user/channel")
         client.save({"conanfile.txt": "[requires]\nPkg/0.1@user/channel\nPkg2/0.1@user/channel"},
@@ -569,29 +549,20 @@ class AConan(ConanFile):
         self.assertIn("ERROR: Conanfile not found", self.client.out)
 
     def test_common_attributes(self):
-        self.client = TestClient()
+        client = TestClient()
 
-        conanfile = """from conans import ConanFile
-from conans.util.files import load, save
+        conanfile = GenConanfile("Pkg", "0.1").with_setting("build_type")
+        client.save({"subfolder/conanfile.py": conanfile})
+        client.run("export ./subfolder lasote/testing")
 
-class MyTest(ConanFile):
-    name = "Pkg"
-    version = "0.1"
-    settings = "build_type"
+        client.run("info ./subfolder")
 
-"""
-
-        self.client.save({"subfolder/conanfile.py": conanfile})
-        self.client.run("export ./subfolder lasote/testing")
-
-        self.client.run("info ./subfolder")
-
-        self.assertIn("conanfile.py (Pkg/0.1)", self.client.out)
-        self.assertNotIn("License:", self.client.out)
-        self.assertNotIn("Author:", self.client.out)
-        self.assertNotIn("Topics:", self.client.out)
-        self.assertNotIn("Homepage:", self.client.out)
-        self.assertNotIn("URL:", self.client.out)
+        self.assertIn("conanfile.py (Pkg/0.1)", client.out)
+        self.assertNotIn("License:", client.out)
+        self.assertNotIn("Author:", client.out)
+        self.assertNotIn("Topics:", client.out)
+        self.assertNotIn("Homepage:", client.out)
+        self.assertNotIn("URL:", client.out)
 
     def test_full_attributes(self):
         client = TestClient()
