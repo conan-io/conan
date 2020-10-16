@@ -76,8 +76,7 @@ class ConanRunner(object):
             # piping both stdout, stderr and then later only reading one will hang the process
             # if the other fills the pip. So piping stdout, and redirecting stderr to stdout,
             # so both are merged and use just a single get_stream_lines() call
-            capture_output = log_handler or not self._log_run_to_output or (
-                    stream_output and isinstance(stream_output._stream, six.StringIO))
+            capture_output = log_handler or not self._log_run_to_output or stream_output
             if capture_output:
                 proc = Popen(command, shell=isinstance(command, six.string_types), stdout=PIPE,
                              stderr=STDOUT, cwd=cwd)
