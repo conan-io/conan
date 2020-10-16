@@ -79,6 +79,8 @@ class RemoteManager(object):
         self._hook_manager.execute("pre_download_recipe", reference=ref, remote=remote)
         dest_folder = self._cache.package_layout(ref).export()
         rmdir(dest_folder)
+        tgzdir = dest_folder + "_tgz"
+        rmdir(tgzdir)
 
         ref = self._resolve_latest_ref(ref, remote)
 

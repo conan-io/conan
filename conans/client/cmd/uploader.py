@@ -394,25 +394,24 @@ class CmdUpload(object):
 
     def _compress_recipe_files(self, ref):
         export_folder = self._cache.package_layout(ref).export()
+        recipe_tgz = self._cache.package_layout(ref).recipe_tgz()
 
         for f in (EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME):
-            tgz_path = os.path.join(export_folder, f)
+            tgz_path = os.path.join(recipe_tgz, f)
             if is_dirty(tgz_path):
                 self._output.warn("%s: Removing %s, marked as dirty" % (str(ref), f))
                 os.remove(tgz_path)
                 clean_dirty(tgz_path)
 
         files, symlinks = gather_files(export_folder)
-        export_folder_tgz = export_folder + "_tgz"
-        export_tgz = os.path.join(export_folder_tgz, EXPORT_TGZ_NAME)
+        export_tgz = os.path.join(recipe_tgz, EXPORT_TGZ_NAME)
         if os.path.isfile(export_tgz):
             files[EXPORT_TGZ_NAME] = export_tgz
         if CONANFILE not in files or CONAN_MANIFEST not in files:
             raise ConanException("Cannot upload corrupted recipe '%s'" % str(ref))
         export_src_folder = self._cache.package_layout(ref).export_sources()
         src_files, src_symlinks = gather_files(export_src_folder)
-        export_src_folder_tgz = export_src_folder + "_tgz"
-        export_sources_tgz = os.path.join(export_src_folder_tgz, EXPORT_SOURCES_TGZ_NAME)
+        export_sources_tgz = os.path.join(recipe_tgz, EXPORT_SOURCES_TGZ_NAME)
         if os.path.isfile(export_sources_tgz):
             files[EXPORT_SOURCES_TGZ_NAME] = export_sources_tgz
         the_files = _compress_recipe_files(files, symlinks, src_files, src_symlinks, export_folder,

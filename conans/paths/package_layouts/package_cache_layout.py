@@ -56,6 +56,9 @@ class PackageCacheLayout(object):
     def export(self):
         return os.path.join(self._base_folder, EXPORT_FOLDER)
 
+    def recipe_tgz(self):
+        return os.path.join(self._base_folder, EXPORT_FOLDER + "_tgz")
+
     def conanfile(self):
         export = self.export()
         return os.path.join(export, CONANFILE)

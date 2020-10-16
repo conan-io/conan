@@ -120,6 +120,7 @@ def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
         previous_manifest = None
     finally:
         _recreate_folders(package_layout.export())
+        rmdir(package_layout.recipe_tgz())
         _recreate_folders(package_layout.export_sources())
 
     # Copy sources to target folders
