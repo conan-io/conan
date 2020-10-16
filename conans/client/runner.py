@@ -42,7 +42,8 @@ class ConanRunner(object):
             print("*** WARN: Invalid output parameter of type io.StringIO(), "
                   "use six.StringIO() instead ***")
 
-        stream_output = output if output and hasattr(output, "write") else self._output or sys.stdout
+        user_output = output if output and hasattr(output, "write") else None
+        stream_output = user_output or self._output or sys.stdout
         if hasattr(stream_output, "flush"):
             # We do not want output from different streams to get mixed (sys.stdout, os.system)
             stream_output = _UnbufferedWrite(stream_output)
@@ -66,17 +67,17 @@ class ConanRunner(object):
                 with open(log_filepath, "a+") as log_handler:
                     if self._print_commands_to_output:
                         log_handler.write(call_message)
-                    return self._pipe_os_call(command, stream_output, log_handler, cwd)
+                    return self._pipe_os_call(command, stream_output, log_handler, cwd, user_output)
             else:
-                return self._pipe_os_call(command, stream_output, None, cwd)
+                return self._pipe_os_call(command, stream_output, None, cwd, user_output)
 
-    def _pipe_os_call(self, command, stream_output, log_handler, cwd):
+    def _pipe_os_call(self, command, stream_output, log_handler, cwd, user_output):
 
         try:
             # piping both stdout, stderr and then later only reading one will hang the process
             # if the other fills the pip. So piping stdout, and redirecting stderr to stdout,
             # so both are merged and use just a single get_stream_lines() call
-            capture_output = log_handler or not self._log_run_to_output or stream_output
+            capture_output = log_handler or not self._log_run_to_output or user_output
             if capture_output:
                 proc = Popen(command, shell=isinstance(command, six.string_types), stdout=PIPE,
                              stderr=STDOUT, cwd=cwd)
@@ -112,17 +113,9 @@ class ConanRunner(object):
         ret = proc.returncode
         return ret
 
-    def _simple_os_call(self, command, cwd):
-        if not cwd:
-            return subprocess.call(command, shell=isinstance(command, six.string_types))
-        else:
-            try:
-                old_dir = get_cwd()
-                os.chdir(cwd)
-                result = subprocess.call(command, shell=isinstance(command, six.string_types))
-            except Exception as e:
-                raise ConanException("Error while executing"
-                                     " '%s'\n\t%s" % (command, str(e)))
-            finally:
-                os.chdir(old_dir)
-            return result
+    @staticmethod
+    def _simple_os_call(command, cwd):
+        try:
+            return subprocess.call(command, cwd=cwd, shell=isinstance(command, six.string_types))
+        except Exception as e:
+            raise ConanException("Error while executing '%s'\n\t%s" % (command, str(e)))
