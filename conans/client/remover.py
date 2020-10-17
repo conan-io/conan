@@ -65,7 +65,7 @@ class DiskRemover(object):
         if not ids_filter:  # Remove all
             path = package_layout.packages()
             # Necessary for short_paths removal
-            for package_id in package_layout.conan_packages():
+            for package_id in package_layout.package_ids():
                 pref = PackageReference(package_layout.ref, package_id)
                 package_layout.rm_package(pref)
             self._remove(path, package_layout.ref, "packages")
