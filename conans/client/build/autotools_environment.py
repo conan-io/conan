@@ -345,6 +345,8 @@ class AutoToolsBuildEnvironment(object):
             concat = " ".join(tmp_compilation_flags)
             if os.environ.get("CFLAGS", None):
                 concat += " " + os.environ.get("CFLAGS", None)
+            if os.environ.get("CXXFLAGS", None):
+                concat += " " + os.environ.get("CXXFLAGS", None)
             if self._os_version and "-version-min" not in concat and "-target" not in concat:
                 tmp_compilation_flags.append(tools.apple_deployment_target_flag(self._os,
                                                                                 self._os_version))

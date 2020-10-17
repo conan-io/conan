@@ -693,3 +693,8 @@ class AutoToolsConfigureTest(unittest.TestCase):
             expected = be.vars["CFLAGS"]
             self.assertIn("10.9", expected)
             self.assertNotIn("10.13", expected)
+
+        with tools.environment_append({"CXXFLAGS": "-mmacosx-version-min=10.9"}):
+            be = AutoToolsBuildEnvironment(conanfile)
+            expected = be.vars["CFLAGS"]
+            self.assertNotIn("10.13", expected)
