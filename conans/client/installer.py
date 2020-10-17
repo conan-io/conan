@@ -34,8 +34,7 @@ from conans.model.user_info import UserInfo
 from conans.paths import BUILD_INFO, CONANINFO, RUN_LOG_NAME
 from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
 from conans.util.env_reader import get_env
-from conans.util.files import (clean_dirty, is_dirty, make_read_only, mkdir, rmdir, save, set_dirty,
-                               set_dirty_context_manager)
+from conans.util.files import clean_dirty, is_dirty, make_read_only, mkdir, rmdir, save, set_dirty
 from conans.util.log import logger
 from conans.util.tracer import log_package_built, log_package_got_from_local_cache
 
@@ -488,9 +487,8 @@ class BinaryInstaller(object):
                 processed_package_references.add(pref)
                 if node.binary == BINARY_BUILD:
                     assert node.prev is None, "PREV for %s to be built should be None" % str(pref)
-                    layout.rm_package(pref)
-                    package_folder = layout.package(pref)
-                    with set_dirty_context_manager(package_folder):
+                    layout.package_remove(pref)
+                    with layout.set_dirty_context_manager(pref):
                         pref = self._build_package(node, output, keep_build, remotes)
                     assert node.prev, "Node PREV shouldn't be empty"
                     assert node.pref.revision, "Node PREF revision shouldn't be empty"
