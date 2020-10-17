@@ -77,23 +77,23 @@ class RemoteManager(object):
         returns (dict relative_filepath:abs_path , remote_name)"""
 
         self._hook_manager.execute("pre_download_recipe", reference=ref, remote=remote)
-        dest_folder = self._cache.package_layout(ref).export()
-        rmdir(dest_folder)
+        export_folder = self._cache.package_layout(ref).export()
+        rmdir(export_folder)
 
         ref = self._resolve_latest_ref(ref, remote)
 
         t1 = time.time()
-        zipped_files = self._call_remote(remote, "get_recipe", ref, dest_folder)
+        zipped_files = self._call_remote(remote, "get_recipe", ref, export_folder)
         duration = time.time() - t1
         log_recipe_download(ref, duration, remote.name, zipped_files)
 
         recipe_checksums = calc_files_checksum(zipped_files)
 
-        unzip_and_get_files(zipped_files, dest_folder, EXPORT_TGZ_NAME, output=self._output)
+        unzip_and_get_files(zipped_files, export_folder, EXPORT_TGZ_NAME, output=self._output)
         # Make sure that the source dir is deleted
         package_layout = self._cache.package_layout(ref)
         rm_conandir(package_layout.source())
-        touch_folder(dest_folder)
+        touch_folder(export_folder)
         conanfile_path = package_layout.conanfile()
 
         with package_layout.update_metadata() as metadata:
