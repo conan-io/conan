@@ -79,8 +79,6 @@ class RemoteManager(object):
         self._hook_manager.execute("pre_download_recipe", reference=ref, remote=remote)
         dest_folder = self._cache.package_layout(ref).export()
         rmdir(dest_folder)
-        tgzdir = dest_folder + "_tgz"
-        rmdir(tgzdir)
 
         ref = self._resolve_latest_ref(ref, remote)
 
@@ -291,10 +289,10 @@ def unzip_and_get_files(files, destination_dir, tgz_name, output):
         if tgz_name == PACKAGE_TGZ_NAME:
             base, pid = os.path.split(destination_dir)
             tgzdir = os.path.join(base + "_tgz", pid)
+            mkdir(tgzdir)
+            shutil.move(tgz_file, os.path.join(tgzdir, tgz_name))
         else:
-            tgzdir = destination_dir + "_tgz"
-        mkdir(tgzdir)
-        shutil.move(tgz_file, os.path.join(tgzdir, tgz_name))
+            os.remove(tgz_file)
 
 
 def uncompress_file(src_path, dest_folder, output):
