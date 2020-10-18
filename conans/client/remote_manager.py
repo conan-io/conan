@@ -132,8 +132,8 @@ class RemoteManager(object):
                                    reference=pref.ref, package_id=pref.id, remote=remote)
 
         output.info("Retrieving package %s from remote '%s' " % (pref.id, remote.name))
-        pkg_folder = layout.package(pref)
         layout.package_remove(pref)  # Remove first the destination folder
+        pkg_folder = layout.package(pref)
         with layout.set_dirty_context_manager(pref):
             self._get_package(pref, pkg_folder, remote, output, recorder)
 

@@ -503,6 +503,7 @@ class BinaryInstaller(object):
                     self._recorder.package_fetched_from_cache(pref)
 
             package_folder = layout.package(pref)
+            assert os.path.isdir(package_folder), "Package folder must exist %s" % package_folder
             # Call the info method
             self._call_package_info(conanfile, package_folder, ref=pref.ref)
             self._recorder.package_cpp_info(pref, conanfile.cpp_info)
