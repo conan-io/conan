@@ -12,7 +12,7 @@ from conans import load
 from conans.client import tools
 from conans.client.cache.remote_registry import load_registry_txt, migrate_registry_file
 from conans.client.tools import Git
-from conans.client.tools.files import unzip
+from conans.client.tools.files import unzip, is_compressed_file
 from conans.errors import ConanException
 from conans.util.files import mkdir, rmdir, walk, save, touch, remove
 from conans.client.cache.cache import ClientCache
@@ -86,6 +86,43 @@ def _filecopy(src, filename, dst):
     shutil.copyfile(src, dst)
 
 
+def _process_file(directory, filename, config, cache, output, folder):
+    if filename == "settings.yml":
+        output.info("Installing settings.yml")
+        _filecopy(directory, filename, cache.cache_folder)
+    elif filename == "conan.conf":
+        output.info("Processing conan.conf")
+        _handle_conan_conf(cache.config, os.path.join(directory, filename))
+    elif filename == "remotes.txt":
+        output.info("Defining remotes from remotes.txt")
+        _handle_remotes(cache, os.path.join(directory, filename))
+    elif filename in ("registry.txt", "registry.json"):
+        try:
+            os.remove(cache.remotes_path)
+        except OSError:
+            pass
+        finally:
+            _filecopy(directory, filename, cache.cache_folder)
+            migrate_registry_file(cache, output)
+    elif filename == "remotes.json":
+        # Fix for Conan 2.0
+        raise ConanException("remotes.json install is not supported yet. Use 'remotes.txt'")
+    else:
+        # This is ugly, should be removed in Conan 2.0
+        if filename in ("README.md", "LICENSE.txt"):
+            output.info("Skip %s" % filename)
+        else:
+            relpath = os.path.relpath(directory, folder)
+            if config.target_folder:
+                target_folder = os.path.join(cache.cache_folder, config.target_folder,
+                                             relpath)
+            else:
+                target_folder = os.path.join(cache.cache_folder, relpath)
+            mkdir(target_folder)
+            output.info("Copying file %s to %s" % (filename, target_folder))
+            _filecopy(directory, filename, target_folder)
+
+
 def _process_folder(config, folder, cache, output):
     if not os.path.isdir(folder):
         raise ConanException("No such directory: '%s'" % str(folder))
@@ -96,40 +133,7 @@ def _process_folder(config, folder, cache, output):
         if ".git" in root:
             continue
         for f in files:
-            if f == "settings.yml":
-                output.info("Installing settings.yml")
-                _filecopy(root, f, cache.cache_folder)
-            elif f == "conan.conf":
-                output.info("Processing conan.conf")
-                _handle_conan_conf(cache.config, os.path.join(root, f))
-            elif f == "remotes.txt":
-                output.info("Defining remotes from remotes.txt")
-                _handle_remotes(cache, os.path.join(root, f))
-            elif f in ("registry.txt", "registry.json"):
-                try:
-                    os.remove(cache.remotes_path)
-                except OSError:
-                    pass
-                finally:
-                    _filecopy(root, f, cache.cache_folder)
-                    migrate_registry_file(cache, output)
-            elif f == "remotes.json":
-                # Fix for Conan 2.0
-                raise ConanException("remotes.json install is not supported yet. Use 'remotes.txt'")
-            else:
-                # This is ugly, should be removed in Conan 2.0
-                if root == folder and f in ("README.md", "LICENSE.txt"):
-                    output.info("Skip %s" % f)
-                    continue
-                relpath = os.path.relpath(root, folder)
-                if config.target_folder:
-                    target_folder = os.path.join(cache.cache_folder, config.target_folder,
-                                                 relpath)
-                else:
-                    target_folder = os.path.join(cache.cache_folder, relpath)
-                mkdir(target_folder)
-                output.info("Copying file %s to %s" % (f, target_folder))
-                _filecopy(root, f, target_folder)
+            _process_file(root, f, config, cache, output, folder)
 
 
 def _process_download(config, cache, output, requester):
@@ -202,8 +206,12 @@ def _process_config(config, cache, output, requester):
         elif config.type == "dir":
             _process_folder(config, config.uri, cache, output)
         elif config.type == "file":
-            with tmp_config_install_folder(cache) as tmp_folder:
-                _process_zip_file(config, config.uri, cache, output, tmp_folder)
+            if is_compressed_file(config.uri):
+                with tmp_config_install_folder(cache) as tmp_folder:
+                    _process_zip_file(config, config.uri, cache, output, tmp_folder)
+            else:
+                dirname, filename = os.path.dirname(config.uri), os.path.basename(config.uri)
+                _process_file(dirname, filename, config, cache, output, dirname)
         elif config.type == "url":
             _process_download(config, cache, output, requester=requester)
         else:
