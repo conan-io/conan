@@ -53,19 +53,6 @@ def human_size(size_bytes):
     return "%s%s" % (formatted_size, suffix)
 
 
-def is_compressed_file(filename):
-    import zipfile
-    import tarfile
-    import binascii
-    # test gzip magic number
-    with open(filename, 'rb') as fd:
-        if binascii.hexlify(fd.read(2)) == b'1f8b':
-            return True
-    if zipfile.is_zipfile(filename) or tarfile.is_tarfile(filename):
-        return True
-    return False
-
-
 def unzip(filename, destination=".", keep_permissions=False, pattern=None, output=None):
     """
     Unzip a zipped file
