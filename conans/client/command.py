@@ -1066,6 +1066,49 @@ class Command(object):
                                   lockfile_out=args.lockfile_out,
                                   ignore_dirty=args.ignore_dirty)
 
+    def export_all(self, *args):
+        """
+        Exports multiple recipes from a monorepo.
+
+        Each subdirectory of the given path will be considered a reciped folder.
+        """
+        parser = argparse.ArgumentParser(description=self.export.__doc__,
+                                         prog="conan export",
+                                         formatter_class=SmartFormatter)
+        parser.add_argument("path", help=_PATH_HELP)
+        parser.add_argument("reference", nargs='?', default=None,
+                            help="user/channel, Pkg/version@user/channel (if name "
+                                 "and version are not declared in the conanfile.py) "
+                                 "Pkg/version@ if user/channel is not relevant.")
+        parser.add_argument('-k', '-ks', '--keep-source', default=False, action='store_true',
+                            help=_KEEP_SOURCE_HELP)
+        parser.add_argument("-l", "--lockfile", action=OnceArgument,
+                            help="Path to a lockfile file.")
+        parser.add_argument("--lockfile-out", action=OnceArgument,
+                            help="Filename of the updated lockfile")
+        parser.add_argument("--ignore-dirty", default=False, action='store_true',
+                            help='When using the "scm" feature with "auto" values, capture the'
+                                 ' revision and url even if there are uncommitted changes')
+
+        args = parser.parse_args(*args)
+        self._warn_python_version()
+        if args.lockfile_out and not args.lockfile:
+            raise ConanException("lockfile_out cannot be specified if lockfile is not defined")
+
+        name, version, user, channel, _ = get_reference_fields(args.reference,
+                                                               user_channel_input=True)
+
+        if any([user, channel]) and not all([user, channel]):
+            # Or user/channel or nothing, but not partial
+            raise ConanException("Invalid parameter '%s', "
+                                 "specify the full reference or user/channel" % args.reference)
+
+        return self._conan.export_all(path=args.path,
+                                  name=name, version=version, user=user, channel=channel,
+                                  keep_source=args.keep_source, lockfile=args.lockfile,
+                                  lockfile_out=args.lockfile_out,
+                                  ignore_dirty=args.ignore_dirty)
+
     def remove(self, *args):
         """
         Removes packages or binaries matching pattern from local cache or remote.
@@ -1937,7 +1980,7 @@ class Command(object):
         Prints a summary of all commands.
         """
         grps = [("Consumer commands", ("install", "config", "get", "info", "search")),
-                ("Creator commands", ("new", "create", "upload", "export", "export-pkg", "test")),
+                ("Creator commands", ("new", "create", "upload", "export", "export-pkg", "export-all", "test")),
                 ("Package development commands", ("source", "build", "package", "editable",
                                                   "workspace")),
                 ("Misc commands", ("profile", "remote", "user", "imports", "copy", "remove",
@@ -1989,8 +2032,7 @@ class Command(object):
         for m in inspect.getmembers(self, predicate=inspect.ismethod):
             method_name = m[0]
             if not method_name.startswith('_'):
-                if "export_pkg" == method_name:
-                    method_name = "export-pkg"
+                method_name = method_name.replace("_", "-")
                 method = m[1]
                 if method.__doc__ and not method.__doc__.startswith('HIDDEN'):
                     result[method_name] = method

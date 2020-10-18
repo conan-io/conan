@@ -843,6 +843,37 @@ class ConanAPIV1(object):
             graph_lock_file.save(lockfile_out)
 
     @api_method
+    def export_all(self, path, name, version, user, channel, keep_source=False, cwd=None,
+                   lockfile=None, lockfile_out=None, ignore_dirty=False):
+        graph_lock, graph_lock_file = None, None
+        if lockfile:
+            lockfile = _make_abs_path(lockfile, cwd)
+            graph_lock_file = GraphLockFile.load(lockfile, self.app.config.revisions_enabled)
+            graph_lock = graph_lock_file.graph_lock
+            self.app.out.info("Using lockfile: '{}'".format(lockfile))
+
+        self.app.load_remotes()
+
+        from concurrent.futures import as_completed, ThreadPoolExecutor
+        from pathlib import Path
+
+        futures = []
+        path = Path(path)
+        conanfiles = [_get_conanfile_path(str(subdir.absolute()), cwd, py=True) for subdir in path.iterdir()]
+        with ThreadPoolExecutor(max_workers=8) as pool:
+            for cf in conanfiles:
+                ftr = pool.submit(cmd_export, self.app, cf, name, version, user, channel, keep_source,
+                                  graph_lock=graph_lock, ignore_dirty=ignore_dirty)
+                futures.append(ftr)
+
+        for ftr in as_completed(futures):
+            ftr.result()
+
+        if lockfile_out and graph_lock_file:
+            lockfile_out = _make_abs_path(lockfile_out, cwd)
+            graph_lock_file.save(lockfile_out)
+
+    @api_method
     def remove(self, pattern, query=None, packages=None, builds=None, src=False, force=False,
                remote_name=None, outdated=False):
         remotes = self.app.cache.registry.load_remotes()
