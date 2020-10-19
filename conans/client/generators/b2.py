@@ -13,6 +13,30 @@ from hashlib import md5
 from conans.model import Generator
 
 
+class DependencyProject(object):
+    @staticmethod
+    def collect_dependencies(conanfile):
+        result = []
+        for name, cpp_info in conanfile.deps_cpp_info.dependencies:
+            result.append(
+                DependencyProject(name, cpp_info, conanfile.deps_user_info[name], result))
+        return result
+
+    def __init__(self, package, cpp_info, user_info, all_projects):
+        self.package = package
+        self.name = (cpp_info.get_name("b2") or self.package).lower()
+        self.cpp_info = cpp_info
+        self.user_info = user_info
+        self._all_projects = all_projects
+
+    @property
+    def dependencies(self):
+        result = []
+        for dep in self.cpp_info.public_deps:
+            result.extend(p for p in self._all_projects if p.package == dep)
+        return result
+
+
 class B2Generator(Generator):
     _b2_variation_key = None
     _b2_variation_id = None
@@ -41,9 +65,12 @@ class B2Generator(Generator):
         cbi = [self.conanbuildinfo_header_text]
         # The prefix that does 1 & 2.
         cbi += [self.conanbuildinfo_prefix_text]
+
+        dependencies = DependencyProject.collect_dependencies(self.conanfile)
+
         # The sub-project definitions, i.e. 3.
-        for dep_name, dep_cpp_info in self.deps_build_info.dependencies:
-            cbi += self.b2_project_for_dep(dep_name, dep_cpp_info)
+        for dep in dependencies:
+            cbi += self.b2_project_for_dep(dep)
         # The postfix which does 4.
         cbi += [self.conanbuildinfo_postfix_text]
         # The combined text.
@@ -60,28 +87,26 @@ class B2Generator(Generator):
         cbiv += ["# global"]
         cbiv += self.b2_constants_for_dep('conan', self.deps_build_info)
         # Now the constants for individual packages, 1b.
-        for dep_name, dep_cpp_info in self.deps_build_info.dependencies:
-            cbiv += ["# %s" % (dep_name.lower())]
-            cbiv += self.b2_constants_for_dep(
-                dep_name, dep_cpp_info, self.deps_user_info[dep_name])
+        for dep in dependencies:
+            cbiv += ["# %s" % dep.name]
+            cbiv += self.b2_constants_for_dep(dep.name, dep.cpp_info, dep.user_info)
         # Second, 2, part are the targets for the packages.
-        for dep_name, dep_cpp_info in self.deps_build_info.dependencies:
-            cbiv += ["# %s" % (dep_name.lower())]
-            cbiv += self.b2_targets_for_dep(dep_name, dep_cpp_info)
+        for dep in dependencies:
+            cbiv += ["# %s" % dep.name]
+            cbiv += self.b2_targets_for_dep(dep)
         result[self.conanbuildinfo_variation_jam] = "\n".join(cbiv)
 
         return result
 
-    def b2_project_for_dep(self, name, info):
+    def b2_project_for_dep(self, dep):
         """
         Generates a sub-project definition to match the package. Which is used later
         to define targets for the package libs.
         """
-        if info is None:
+        if dep.cpp_info is None:
             return []
-        name = name.lower()
         # Create a b2 project for the package dependency.
-        return [self.conanbuildinfo_project_template.format(name=name)]
+        return [self.conanbuildinfo_project_template.format(name=dep.name)]
 
     def b2_constants_for_dep(self, name, info, user=None):
         """
@@ -91,7 +116,6 @@ class B2Generator(Generator):
         """
         if info is None:
             return []
-        name = name.lower()
 
         # Define the info specific variables. Note that the 'usage-requirements' one
         # needs to be last as it references the others.
@@ -120,23 +144,21 @@ class B2Generator(Generator):
 
         return result
 
-    def b2_targets_for_dep(self, name, info):
+    def b2_targets_for_dep(self, dep):
         """
         Generates individual targets for the libraries in a package and a single "libs"
         collective alias target that refers to them.
         """
-        if info is None:
+        if dep.cpp_info is None:
             return []
-        name = name.lower()
         result = []
-        deps = ['/%s//libs' % dep for dep in info.public_deps]
-        if info.libs:
-            for lib in info.libs:
-                result += [self.conanbuildinfo_variation_lib_template.format(
-                    name=name, lib=lib, deps=" ".join(deps), variation=self.b2_variation_id)]
-            deps.extend(info.libs)
+        deps = ['/%s//libs' % d.name for d in dep.dependencies]
+        for lib in dep.cpp_info.libs:
+            result += [self.conanbuildinfo_variation_lib_template.format(
+                name=dep.name, lib=lib, deps=" ".join(deps), variation=self.b2_variation_id)]
+        deps.extend(dep.cpp_info.libs)
         result += [self.conanbuildinfo_variation_alias_template.format(
-            name=name, libs=" ".join(deps), variation=self.b2_variation_id)]
+            name=dep.name, libs=" ".join(deps), variation=self.b2_variation_id)]
 
         return result
 

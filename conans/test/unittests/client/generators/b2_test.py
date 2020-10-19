@@ -31,9 +31,10 @@ class B2GeneratorTest(unittest.TestCase):
         cpp_info.cflags.append("-Flag1=23")
         cpp_info.version = "1.3"
         cpp_info.description = "My cool description"
-        cpp_info.libs = ["MyLib1"]
-
+        cpp_info.libs = ["MyLib1", "MyLib2"]
+        cpp_info.name = "BarPkg"
         conanfile.deps_cpp_info.add(ref.name, cpp_info)
+
         ref = ConanFileReference.loads("MyPkg2/0.1@lasote/stables")
         cpp_info = CppInfo(ref.name, "dummy_root_folder2")
         cpp_info.libs = ["MyLib2"]
@@ -46,6 +47,12 @@ class B2GeneratorTest(unittest.TestCase):
         cpp_info.libdirs.extend(["Path\\with\\slashes", "regular/path/to/dir"])
         cpp_info.includedirs.extend(["other\\Path\\with\\slashes", "other/regular/path/to/dir"])
         cpp_info.filter_empty = False
+        conanfile.deps_cpp_info.add(ref.name, cpp_info)
+
+        ref = ConanFileReference.loads("MyPkg3/0.1@lasote/stables")
+        cpp_info = CppInfo(ref.name, "dummy_root_folder3")
+        cpp_info.version = "1.1"
+        cpp_info.names["b2"] = "FooPkg"
         conanfile.deps_cpp_info.add(ref.name, cpp_info)
 
         generator = B2Generator(conanfile)
@@ -163,12 +170,16 @@ local __conanbuildinfo__ = [ GLOB $(__file__:D) : conanbuildinfo-*.jam : downcas
 }
 
 
-# mypkg
-project-define mypkg ;
+# barpkg
+project-define barpkg ;
 
 
 # mypkg2
 project-define mypkg2 ;
+
+
+# foopkg
+project-define foopkg ;
 
 {
     local __define_targets__ = yes ;
@@ -241,20 +252,20 @@ constant-if usage-requirements(conan,32,x86,17,gnu,linux,gcc-6.3,release) :
     <link>shared:<linkflags>$(sharedlinkflags(conan,32,x86,17,gnu,linux,gcc-6.3,release))
     ;
 
-# mypkg
-constant-if rootpath(mypkg,32,x86,17,gnu,linux,gcc-6.3,release) :
+# barpkg
+constant-if rootpath(barpkg,32,x86,17,gnu,linux,gcc-6.3,release) :
     "dummy_root_folder1"
     ;
 
-constant-if defines(mypkg,32,x86,17,gnu,linux,gcc-6.3,release) :
+constant-if defines(barpkg,32,x86,17,gnu,linux,gcc-6.3,release) :
     "MYDEFINE1"
     ;
 
-constant-if cflags(mypkg,32,x86,17,gnu,linux,gcc-6.3,release) :
+constant-if cflags(barpkg,32,x86,17,gnu,linux,gcc-6.3,release) :
     "-Flag1=23"
     ;
 
-constant-if requirements(mypkg,32,x86,17,gnu,linux,gcc-6.3,release) :
+constant-if requirements(barpkg,32,x86,17,gnu,linux,gcc-6.3,release) :
     <address-model>32
     <architecture>x86
     <cxxstd>17
@@ -264,12 +275,12 @@ constant-if requirements(mypkg,32,x86,17,gnu,linux,gcc-6.3,release) :
     <variant>release
     ;
 
-constant-if usage-requirements(mypkg,32,x86,17,gnu,linux,gcc-6.3,release) :
-    <include>$(includedirs(mypkg,32,x86,17,gnu,linux,gcc-6.3,release))
-    <define>$(defines(mypkg,32,x86,17,gnu,linux,gcc-6.3,release))
-    <cflags>$(cflags(mypkg,32,x86,17,gnu,linux,gcc-6.3,release))
-    <cxxflags>$(cppflags(mypkg,32,x86,17,gnu,linux,gcc-6.3,release))
-    <link>shared:<linkflags>$(sharedlinkflags(mypkg,32,x86,17,gnu,linux,gcc-6.3,release))
+constant-if usage-requirements(barpkg,32,x86,17,gnu,linux,gcc-6.3,release) :
+    <include>$(includedirs(barpkg,32,x86,17,gnu,linux,gcc-6.3,release))
+    <define>$(defines(barpkg,32,x86,17,gnu,linux,gcc-6.3,release))
+    <cflags>$(cflags(barpkg,32,x86,17,gnu,linux,gcc-6.3,release))
+    <cxxflags>$(cppflags(barpkg,32,x86,17,gnu,linux,gcc-6.3,release))
+    <link>shared:<linkflags>$(sharedlinkflags(barpkg,32,x86,17,gnu,linux,gcc-6.3,release))
     ;
 
 # mypkg2
@@ -323,27 +334,58 @@ constant-if usage-requirements(mypkg2,32,x86,17,gnu,linux,gcc-6.3,release) :
     <link>shared:<linkflags>$(sharedlinkflags(mypkg2,32,x86,17,gnu,linux,gcc-6.3,release))
     ;
 
-# mypkg
+# foopkg
+constant-if rootpath(foopkg,32,x86,17,gnu,linux,gcc-6.3,release) :
+    "dummy_root_folder3"
+    ;
+
+constant-if requirements(foopkg,32,x86,17,gnu,linux,gcc-6.3,release) :
+    <address-model>32
+    <architecture>x86
+    <cxxstd>17
+    <cxxstd:dialect>gnu
+    <target-os>linux
+    <toolset>gcc-6.3
+    <variant>release
+    ;
+
+constant-if usage-requirements(foopkg,32,x86,17,gnu,linux,gcc-6.3,release) :
+    <include>$(includedirs(foopkg,32,x86,17,gnu,linux,gcc-6.3,release))
+    <define>$(defines(foopkg,32,x86,17,gnu,linux,gcc-6.3,release))
+    <cflags>$(cflags(foopkg,32,x86,17,gnu,linux,gcc-6.3,release))
+    <cxxflags>$(cppflags(foopkg,32,x86,17,gnu,linux,gcc-6.3,release))
+    <link>shared:<linkflags>$(sharedlinkflags(foopkg,32,x86,17,gnu,linux,gcc-6.3,release))
+    ;
+
+# barpkg
 if $(__define_targets__) {
-    call-in-project $(mypkg-mod) : lib MyLib1
+    call-in-project $(barpkg-mod) : lib MyLib1
         : ''' + '''
-        : <name>MyLib1 <search>$(libdirs(mypkg,32,x86,17,gnu,linux,gcc-6.3,release)) $(requirements(mypkg,32,x86,17,gnu,linux,gcc-6.3,release))
+        : <name>MyLib1 <search>$(libdirs(barpkg,32,x86,17,gnu,linux,gcc-6.3,release)) $(requirements(barpkg,32,x86,17,gnu,linux,gcc-6.3,release))
         :
-        : $(usage-requirements(mypkg,32,x86,17,gnu,linux,gcc-6.3,release)) ;
-    call-in-project $(mypkg-mod) : explicit MyLib1 ; }
+        : $(usage-requirements(barpkg,32,x86,17,gnu,linux,gcc-6.3,release)) ;
+    call-in-project $(barpkg-mod) : explicit MyLib1 ; }
 
 if $(__define_targets__) {
-    call-in-project $(mypkg-mod) : alias libs
-        : MyLib1
-        : $(requirements(mypkg,32,x86,17,gnu,linux,gcc-6.3,release))
+    call-in-project $(barpkg-mod) : lib MyLib2
+        : ''' + '''
+        : <name>MyLib2 <search>$(libdirs(barpkg,32,x86,17,gnu,linux,gcc-6.3,release)) $(requirements(barpkg,32,x86,17,gnu,linux,gcc-6.3,release))
         :
-        : $(usage-requirements(mypkg,32,x86,17,gnu,linux,gcc-6.3,release)) ;
-    call-in-project $(mypkg-mod) : explicit libs ; }
+        : $(usage-requirements(barpkg,32,x86,17,gnu,linux,gcc-6.3,release)) ;
+    call-in-project $(barpkg-mod) : explicit MyLib2 ; }
+
+if $(__define_targets__) {
+    call-in-project $(barpkg-mod) : alias libs
+        : MyLib1 MyLib2
+        : $(requirements(barpkg,32,x86,17,gnu,linux,gcc-6.3,release))
+        :
+        : $(usage-requirements(barpkg,32,x86,17,gnu,linux,gcc-6.3,release)) ;
+    call-in-project $(barpkg-mod) : explicit libs ; }
 
 # mypkg2
 if $(__define_targets__) {
     call-in-project $(mypkg2-mod) : lib MyLib2
-        : /MyPkg//libs
+        : /barpkg//libs
         : <name>MyLib2 <search>$(libdirs(mypkg2,32,x86,17,gnu,linux,gcc-6.3,release)) $(requirements(mypkg2,32,x86,17,gnu,linux,gcc-6.3,release))
         :
         : $(usage-requirements(mypkg2,32,x86,17,gnu,linux,gcc-6.3,release)) ;
@@ -351,11 +393,20 @@ if $(__define_targets__) {
 
 if $(__define_targets__) {
     call-in-project $(mypkg2-mod) : alias libs
-        : /MyPkg//libs MyLib2
+        : /barpkg//libs MyLib2
         : $(requirements(mypkg2,32,x86,17,gnu,linux,gcc-6.3,release))
         :
         : $(usage-requirements(mypkg2,32,x86,17,gnu,linux,gcc-6.3,release)) ;
     call-in-project $(mypkg2-mod) : explicit libs ; }
+
+# foopkg
+if $(__define_targets__) {
+    call-in-project $(foopkg-mod) : alias libs
+        : ''' + '''
+        : $(requirements(foopkg,32,x86,17,gnu,linux,gcc-6.3,release))
+        :
+        : $(usage-requirements(foopkg,32,x86,17,gnu,linux,gcc-6.3,release)) ;
+    call-in-project $(foopkg-mod) : explicit libs ; }
 '''
 
 _main_buildinfo_empty = '''\
