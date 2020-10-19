@@ -362,7 +362,7 @@ class CmdUpload(object):
                                    remote=p_remote)
 
         t1 = time.time()
-        the_files = self._compress_package_files(pref, integrity_check)
+        the_files = self._compress_package_files(pkg_layout, pref, integrity_check)
 
         if policy == UPLOAD_POLICY_SKIP:
             return None
@@ -412,13 +412,13 @@ class CmdUpload(object):
 
         return the_files
 
-    def _compress_package_files(self, pref, integrity_check):
+    def _compress_package_files(self, layout, pref, integrity_check):
 
         t1 = time.time()
         # existing package, will use short paths if defined
         package_folder = self._cache.package_layout(pref.ref, short_paths=None).package(pref)
 
-        if is_dirty(package_folder):
+        if layout.package_is_dirty(pref):
             raise ConanException("Package %s is corrupted, aborting upload.\n"
                                  "Remove it with 'conan remove %s -p=%s'"
                                  % (pref, pref.ref, pref.id))

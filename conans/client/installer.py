@@ -34,8 +34,7 @@ from conans.model.user_info import UserInfo
 from conans.paths import BUILD_INFO, CONANINFO, RUN_LOG_NAME
 from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
 from conans.util.env_reader import get_env
-from conans.util.files import (clean_dirty, is_dirty, make_read_only, mkdir, rmdir, save, set_dirty,
-                               set_dirty_context_manager)
+from conans.util.files import clean_dirty, is_dirty, make_read_only, mkdir, rmdir, save, set_dirty
 from conans.util.log import logger
 from conans.util.tracer import log_package_built, log_package_got_from_local_cache
 
@@ -200,7 +199,6 @@ class _PackageBuilder(object):
 
         # BUILD & PACKAGE
         with package_layout.conanfile_read_lock(self._output):
-            _remove_folder_raising(package_folder)
             mkdir(build_folder)
             with tools.chdir(build_folder):
                 self._output.info('Building your package in %s' % build_folder)
@@ -483,14 +481,14 @@ class BinaryInstaller(object):
         output = conanfile.output
 
         layout = self._cache.package_layout(pref.ref, conanfile.short_paths)
-        package_folder = layout.package(pref)
 
         with layout.package_lock(pref):
             if pref not in processed_package_references:
                 processed_package_references.add(pref)
                 if node.binary == BINARY_BUILD:
                     assert node.prev is None, "PREV for %s to be built should be None" % str(pref)
-                    with set_dirty_context_manager(package_folder):
+                    layout.package_remove(pref)
+                    with layout.set_dirty_context_manager(pref):
                         pref = self._build_package(node, output, keep_build, remotes)
                     assert node.prev, "Node PREV shouldn't be empty"
                     assert node.pref.revision, "Node PREF revision shouldn't be empty"
@@ -504,6 +502,8 @@ class BinaryInstaller(object):
                     log_package_got_from_local_cache(pref)
                     self._recorder.package_fetched_from_cache(pref)
 
+            package_folder = layout.package(pref)
+            assert os.path.isdir(package_folder), "Package folder must exist %s" % package_folder
             # Call the info method
             self._call_package_info(conanfile, package_folder, ref=pref.ref)
             self._recorder.package_cpp_info(pref, conanfile.cpp_info)

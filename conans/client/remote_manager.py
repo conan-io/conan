@@ -77,23 +77,23 @@ class RemoteManager(object):
         returns (dict relative_filepath:abs_path , remote_name)"""
 
         self._hook_manager.execute("pre_download_recipe", reference=ref, remote=remote)
-        dest_folder = self._cache.package_layout(ref).export()
-        rmdir(dest_folder)
+        export_folder = self._cache.package_layout(ref).export()
+        rmdir(export_folder)
 
         ref = self._resolve_latest_ref(ref, remote)
 
         t1 = time.time()
-        zipped_files = self._call_remote(remote, "get_recipe", ref, dest_folder)
+        zipped_files = self._call_remote(remote, "get_recipe", ref, export_folder)
         duration = time.time() - t1
         log_recipe_download(ref, duration, remote.name, zipped_files)
 
         recipe_checksums = calc_files_checksum(zipped_files)
 
-        unzip_and_get_files(zipped_files, dest_folder, EXPORT_TGZ_NAME, output=self._output)
+        unzip_and_get_files(zipped_files, export_folder, EXPORT_TGZ_NAME, output=self._output)
         # Make sure that the source dir is deleted
         package_layout = self._cache.package_layout(ref)
         rm_conandir(package_layout.source())
-        touch_folder(dest_folder)
+        touch_folder(export_folder)
         conanfile_path = package_layout.conanfile()
 
         with package_layout.update_metadata() as metadata:
@@ -132,9 +132,9 @@ class RemoteManager(object):
                                    reference=pref.ref, package_id=pref.id, remote=remote)
 
         output.info("Retrieving package %s from remote '%s' " % (pref.id, remote.name))
+        layout.package_remove(pref)  # Remove first the destination folder
         pkg_folder = layout.package(pref)
-        rm_conandir(pkg_folder)  # Remove first the destination folder
-        with set_dirty_context_manager(pkg_folder):
+        with layout.set_dirty_context_manager(pref):
             self._get_package(pref, pkg_folder, remote, output, recorder)
 
         self._hook_manager.execute("post_download_package", conanfile_path=conanfile_path,
