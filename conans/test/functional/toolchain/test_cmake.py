@@ -265,27 +265,10 @@ class WinTest(Base):
                     "build_type": "Release",
                     }
         options = {"shared": "True"}
-        install_out = self._run_build(settings, options)
-        self.assertIn("WARN: Toolchain: Ignoring fPIC option defined for Windows", install_out)
-        print(install_out)
-        self._run_build(settings, options)
-
-    def test_toolchain_mingw(self):
-        profile = textwrap.dedent("""
-        [settings]
-        "compiler": "gcc",
-                    "compiler.version": "6",
-                    "compiler.libcxx": "libstdc++11",
-                    "compiler.threads": "win32",
-                    "compiler.exception": "seh",
-                    "arch": "x86_64",
-                    "build_type": "Release",
-                    }
-        options = {"shared": "True"}
-        install_out = self._run_build(settings, options)
-        self.assertIn("WARN: Toolchain: Ignoring fPIC option defined for Windows", install_out)
-        print(install_out)
-        self._run_build(settings, options)
+        out = self._run_build(settings, options)
+        self.assertIn("cmake -G \"MinGW Makefiles\" "
+                      "-DCMAKE_TOOLCHAIN_FILE=\"conan_toolchain.cmake\"", out)
+        self.assertIn("The C compiler identification is GNU", out)
 
 
 @unittest.skipUnless(platform.system() == "Linux", "Only for Linux")
