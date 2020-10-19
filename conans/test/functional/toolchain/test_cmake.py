@@ -148,7 +148,7 @@ class Base(unittest.TestCase):
             self.client.run("install .. %s %s" % (settings, options))
             install_out = self.client.out
             self.client.run("build ..")
-        return install_out
+        return self.client.out
 
     def _modify_code(self):
         content = self.client.load("app_lib.cpp")
@@ -182,8 +182,8 @@ class Base(unittest.TestCase):
 
 @unittest.skipUnless(platform.system() == "Windows", "Only for windows")
 class WinTest(Base):
-    @parameterized.expand([("Debug", "MTd", "15", "14", "x86", "v140", True),
-                           ("Release", "MD", "15", "17", "x86_64", "", False)])
+    @parameterized.expand([("Debug", "MTd", "16", "17", "x86", "", True),
+                           ("Release", "MD", "16", "17", "x86_64", "", False)])
     def test_toolchain_win(self, build_type, runtime, version, cppstd, arch, toolset, shared):
         settings = {"compiler": "Visual Studio",
                     "compiler.version": version,
@@ -198,7 +198,7 @@ class WinTest(Base):
         self.assertIn("WARN: Toolchain: Ignoring fPIC option defined for Windows", install_out)
 
         # FIXME: Hardcoded VS version and partial toolset check
-        self.assertIn('CMake command: cmake -G "Visual Studio 15 2017" '
+        self.assertIn('CMake command: cmake -G "Visual Studio 16 2019" '
                       '-DCMAKE_TOOLCHAIN_FILE="conan_toolchain.cmake"', self.client.out)
         if toolset == "v140":
             self.assertIn("Microsoft Visual Studio 14.0", self.client.out)
@@ -254,6 +254,38 @@ class WinTest(Base):
         self._run_app(build_type, bin_folder=True, msg="AppImproved")
         self._incremental_build(build_type=opposite_build_type)
         self._run_app(opposite_build_type, bin_folder=True, msg="AppImproved")
+
+    def test_toolchain_mingw(self):
+        settings = {"compiler": "gcc",
+                    "compiler.version": "6",
+                    "compiler.libcxx": "libstdc++11",
+                    "compiler.threads": "win32",
+                    "compiler.exception": "seh",
+                    "arch": "x86_64",
+                    "build_type": "Release",
+                    }
+        options = {"shared": "True"}
+        install_out = self._run_build(settings, options)
+        self.assertIn("WARN: Toolchain: Ignoring fPIC option defined for Windows", install_out)
+        print(install_out)
+        self._run_build(settings, options)
+
+    def test_toolchain_mingw(self):
+        profile = textwrap.dedent("""
+        [settings]
+        "compiler": "gcc",
+                    "compiler.version": "6",
+                    "compiler.libcxx": "libstdc++11",
+                    "compiler.threads": "win32",
+                    "compiler.exception": "seh",
+                    "arch": "x86_64",
+                    "build_type": "Release",
+                    }
+        options = {"shared": "True"}
+        install_out = self._run_build(settings, options)
+        self.assertIn("WARN: Toolchain: Ignoring fPIC option defined for Windows", install_out)
+        print(install_out)
+        self._run_build(settings, options)
 
 
 @unittest.skipUnless(platform.system() == "Linux", "Only for Linux")

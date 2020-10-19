@@ -54,6 +54,44 @@ class CMakeToolchain(object):
         endif()
         set(CONAN_TOOLCHAIN_INCLUDED TRUE)
 
+        # Compiler
+        set(CONAN_COMPILER "{{ compiler }}")
+        set(CONAN_COMPILER_VERSION "{{ compiler_version }}")
+
+        macro(conan_split_version VERSION_STRING MAJOR MINOR)
+            #make a list from the version string
+            string(REPLACE "." ";" VERSION_LIST "${VERSION_STRING}")
+
+            #write output values
+            list(LENGTH VERSION_LIST _version_len)
+            list(GET VERSION_LIST 0 ${MAJOR})
+            if(${_version_len} GREATER 1)
+                list(GET VERSION_LIST 1 ${MINOR})
+            endif()
+        endmacro()
+
+        message(STATUS "KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK")
+        message("CMake compiler version: ${CMAKE_CXX_COMPILER_VERSION}")
+        conan_split_version(${CMAKE_CXX_COMPILER_VERSION} VERSION_MAJOR VERSION_MINOR)
+
+        if(CONAN_COMPILER STREQUAL "gcc")
+            conan_split_version(${CONAN_COMPILER_VERSION} CONAN_COMPILER_MAJOR CONAN_COMPILER_MINOR)
+            set(_CHECK_VERSION ${VERSION_MAJOR}.${VERSION_MINOR})
+            set(_CONAN_VERSION ${CONAN_COMPILER_MAJOR}.${CONAN_COMPILER_MINOR})
+            if(NOT ${CONAN_COMPILER_VERSION} VERSION_LESS 5.0)
+                message(STATUS "Conan: Compiler GCC>=5, checking major version ${CONAN_COMPILER_VERSION}")
+                conan_split_version(${CONAN_COMPILER_VERSION} CONAN_COMPILER_MAJOR CONAN_COMPILER_MINOR)
+                if("${CONAN_COMPILER_MINOR}" STREQUAL "")
+                    set(_CHECK_VERSION ${VERSION_MAJOR})
+                    set(_CONAN_VERSION ${CONAN_COMPILER_MAJOR})
+                endif()
+            endif()
+            message(STATUS "Conan: Checking correct version: ${_CHECK_VERSION}")
+            if(NOT ${_CHECK_VERSION} VERSION_EQUAL ${_CONAN_VERSION})
+                conan_error_compiler_version()
+            endif()
+        endif()
+
         # Configure
         {%- if generator_platform %}
         set(CMAKE_GENERATOR_PLATFORM "{{ generator_platform }}" CACHE STRING "" FORCE)
@@ -254,6 +292,8 @@ class CMakeToolchain(object):
                                    get_generator_platform(self._conanfile.settings,
                                                           self.generator))
         self.toolset = toolset or get_toolset(self._conanfile.settings, self.generator)
+        self.compiler = self._conanfile.settings.get_safe("compiler")
+        self.compiler_version = self._conanfile.settings.get_safe("compiler.version")
 
         self.variables = Variables()
         self.preprocessor_definitions = Variables()
@@ -383,7 +423,9 @@ class CMakeToolchain(object):
             "cppstd": self.cppstd,
             "cppstd_extensions": self.cppstd_extensions,
             "shared_libs": self._build_shared_libs,
-            "architecture": self.architecture
+            "architecture": self.architecture,
+            "compiler": self.compiler,
+            "compiler_version": self.compiler_version
         }
         t = Template(self._template_toolchain)
         content = t.render(conan_project_include_cmake=conan_project_include_cmake, **context)
