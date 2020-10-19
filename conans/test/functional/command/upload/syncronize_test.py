@@ -5,7 +5,7 @@ from conans import DEFAULT_REVISION_V1
 from conans.client.tools.files import untargz
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.paths import EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
+from conans.paths import EXPORT_TGZ_NAME
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.test_files import temp_folder, uncompress_packaged_files
 from conans.test.utils.tools import TestClient, TestServer
@@ -93,10 +93,11 @@ class SynchronizeTest(unittest.TestCase):
         self.assertTrue(os.path.exists(package_server_path))
 
         # Add a new file to package (artificially), upload again and check
-        pack_path = client.cache.package_layout(pref.ref).package(pref)
+        layout = client.cache.package_layout(pref.ref)
+        pack_path = layout.package(pref)
         new_file_source_path = os.path.join(pack_path, "newlib.lib")
         save(new_file_source_path, "newlib")
-        os.unlink(os.path.join(pack_path, PACKAGE_TGZ_NAME))  # Force new tgz
+        os.unlink(layout.package_tgz(pref))  # Force new tgz
 
         self._create_manifest(client, pref)
         client.run("upload %s -p %s" % (str(ref), str(package_ids[0])))
@@ -117,7 +118,7 @@ class SynchronizeTest(unittest.TestCase):
         # Now delete the file and check again
         os.remove(new_file_source_path)
         self._create_manifest(client, pref)
-        os.unlink(os.path.join(pack_path, PACKAGE_TGZ_NAME))  # Force new tgz
+        os.unlink(layout.package_tgz(pref))  # Force new tgz
         client.run("upload %s -p %s" % (str(ref), str(package_ids[0])))
         folder = uncompress_packaged_files(remote_paths, pref)
         remote_file_path = os.path.join(folder, "newlib.lib")

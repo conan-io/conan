@@ -331,37 +331,6 @@ class UploadTest(unittest.TestCase):
         self.assertIn("ERROR: lib/1.0@user/channel: Upload recipe to 'default' failed:", client.out)
         self.assertIn("ERROR: Errors uploading some packages", client.out)
 
-    def package_upload_fail_on_generic_exception_test(self):
-        # Make the upload fail with a generic Exception
-        client = TestClient(default_server_user=True)
-        conanfile = textwrap.dedent("""
-            import os
-            from conans import ConanFile
-            class Pkg(ConanFile):
-                exports = "*"
-                def package(self):
-                    os.makedirs(os.path.join(self.package_folder, "conan_package.tgz"))
-                    self.copy("*")
-            """)
-        client.save({"conanfile.py": conanfile,
-                     "myheader.h": ""})
-        client.run('create . lib/1.0@user/channel')
-
-        client.run('upload lib* -c --all -r default', assert_error=True)
-        self.assertNotIn("os.remove(tgz_path)", client.out)
-        self.assertNotIn("Traceback", client.out)
-        self.assertIn("ERROR: lib/1.0@user/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9: "
-                      "Upload package to 'default' failed:", client.out)
-        self.assertIn("ERROR: Errors uploading some packages", client.out)
-
-        with environment_append({"CONAN_VERBOSE_TRACEBACK": "True"}):
-            client.run('upload lib* -c --all -r default', assert_error=True)
-            self.assertIn("os.remove(tgz_path)", client.out)
-            self.assertIn("Traceback", client.out)
-            self.assertIn("ERROR: lib/1.0@user/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9: "
-                          "Upload package to 'default' failed:", client.out)
-            self.assertIn("ERROR: Errors uploading some packages", client.out)
-
     def test_beat_character_long_upload(self):
         client = TestClient(default_server_user=True)
         slow_conanfile = textwrap.dedent("""

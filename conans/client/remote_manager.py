@@ -135,12 +135,12 @@ class RemoteManager(object):
         layout.package_remove(pref)  # Remove first the destination folder
         pkg_folder = layout.package(pref)
         with layout.set_dirty_context_manager(pref):
-            self._get_package(pref, pkg_folder, remote, output, recorder)
+            self._get_package(layout, pref, pkg_folder, remote, output, recorder)
 
         self._hook_manager.execute("post_download_package", conanfile_path=conanfile_path,
                                    reference=pref.ref, package_id=pref.id, remote=remote)
 
-    def _get_package(self, pref, dest_folder, remote, output, recorder):
+    def _get_package(self, layout, pref, dest_folder, remote, output, recorder):
         t1 = time.time()
         try:
             pref = self._resolve_latest_pref(pref, remote)
@@ -159,7 +159,13 @@ class RemoteManager(object):
 
             duration = time.time() - t1
             log_package_download(pref, duration, remote, zipped_files)
-            unzip_and_get_files(zipped_files, dest_folder, PACKAGE_TGZ_NAME, output=self._output)
+            tgz_file = unzip_and_get_files(zipped_files, dest_folder, PACKAGE_TGZ_NAME,
+                                           output=self._output)
+            if tgz_file:  # In practice, this file exist always
+                pkg_tgz = layout.package_tgz(pref)
+                mkdir(os.path.dirname(pkg_tgz))
+                shutil.move(tgz_file, pkg_tgz)
+
             # Issue #214 https://github.com/conan-io/conan/issues/214
             touch_folder(dest_folder)
             if get_env("CONAN_READ_ONLY_CACHE", False):
@@ -285,14 +291,9 @@ def unzip_and_get_files(files, destination_dir, tgz_name, output):
     check_compressed_files(tgz_name, files)
     if tgz_file:
         uncompress_file(tgz_file, destination_dir, output=output)
-        # move the .tgz to another place
-        if tgz_name == PACKAGE_TGZ_NAME:
-            base, pid = os.path.split(destination_dir)
-            tgzdir = os.path.join(base + "_tgz", pid)
-            mkdir(tgzdir)
-            shutil.move(tgz_file, os.path.join(tgzdir, tgz_name))
-        else:
+        if tgz_name != PACKAGE_TGZ_NAME:
             os.remove(tgz_file)
+    return tgz_file
 
 
 def uncompress_file(src_path, dest_folder, output):
