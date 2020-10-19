@@ -28,8 +28,6 @@ class GenConanfile(object):
         self._package_files = {}
         self._package_files_env = {}
         self._package_files_link = {}
-        self._package_folders = []
-        self._package_folders_link = {}
         self._build_messages = []
         self._scm = {}
         self._requires = []
@@ -123,14 +121,6 @@ class GenConanfile(object):
             self._package_files_link[file_name] = link
         if env_var:
             self._package_files_env[file_name] = env_var
-        return self
-
-    def with_package_folder(self, folder_name, link=None):
-        self.with_import("import os")
-        self.with_import("from conans import tools")
-        self._package_folders.append(folder_name)
-        if link:
-            self._package_folders_link[folder_name] = link
         return self
 
     def with_build_msg(self, msg):
@@ -277,9 +267,9 @@ class GenConanfile(object):
     def _package_method(self):
         lines = []
         if self._package_files:
-            lines.extend(['        tools.save(os.path.join(self.package_folder, "{}"), "{}")'
-                          ''.format(key, value)
-                          for key, value in self._package_files.items()])
+            lines = ['        tools.save(os.path.join(self.package_folder, "{}"), "{}")'
+                     ''.format(key, value)
+                     for key, value in self._package_files.items()]
 
         if self._package_files_env:
             lines.extend(['        tools.save(os.path.join(self.package_folder, "{}"), '
@@ -291,16 +281,6 @@ class GenConanfile(object):
                           '            os.symlink(os.path.basename("{}"), '
                           'os.path.join(self.package_folder, "{}"))'.format(key, key, value)
                           for key, value in self._package_files_link.items()])
-        if self._package_folders:
-            lines.extend(['        tools.mkdir(os.path.join(self.package_folder, "{}"))'
-                          ''.format(folder) for folder in self._package_folders])
-        if self._package_folders_link:
-            lines.extend(['        with tools.chdir(os.path.dirname('
-                          'os.path.join(self.package_folder, "{}"))):\n'
-                          '            os.symlink(os.path.basename("{}"), '
-                          'os.path.join(self.package_folder, "{}"))'
-                          ''.format(key, key, value)
-                          for key, value in self._package_folders_link.items()])
 
         if not lines:
             return ""
