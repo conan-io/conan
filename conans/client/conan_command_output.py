@@ -157,11 +157,6 @@ class CommandOutputer(object):
                 reg_remote = remotes.get(reg_remote)
                 if reg_remote:
                     item_data["remote"] = {"name": reg_remote.name, "url": reg_remote.url}
-
-                package_revision = package_metadata.packages[package_id].revision
-                if package_revision:
-                    item_data["package_revision"] = package_revision
-
             except Exception:
                 pass
 
@@ -184,8 +179,8 @@ class CommandOutputer(object):
             if isinstance(ref, ConanFileReference):
                 item_data["recipe"] = node.recipe
 
-                if get_env("CONAN_CLIENT_REVISIONS_ENABLED", False) and node.ref.revision:
-                    item_data["revision"] = node.ref.revision
+                item_data["revision"] = node.ref.revision
+                item_data["package_revision"] = node.prev
 
                 item_data["binary"] = node.binary
                 if node.binary_remote:
