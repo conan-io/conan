@@ -424,8 +424,10 @@ class InfoTest(unittest.TestCase):
         self.assertEqual(content[0]["reference"], "LibA/0.1@lasote/stable")
         self.assertEqual(content[0]["license"][0], "MIT")
         self.assertEqual(content[0]["description"], "blah")
+        self.assertNotIn("package_revision", content[0])
         self.assertEqual(content[1]["url"], "myurl")
         self.assertEqual(content[1]["required_by"][0], "conanfile.py (LibD/0.1)")
+        self.assertNotIn("package_revision", content[1])
 
     def build_order_test(self):
         self.client = TestClient()

@@ -120,7 +120,6 @@ class CommandOutputer(object):
         build_time_nodes = deps_graph.build_time_nodes()
         remotes = self._cache.registry.load_remotes()
         ret = []
-        package_metadata = ()
 
         for (ref, package_id), list_nodes in compact_nodes.items():
             node = list_nodes[0]
@@ -158,13 +157,11 @@ class CommandOutputer(object):
                 reg_remote = remotes.get(reg_remote)
                 if reg_remote:
                     item_data["remote"] = {"name": reg_remote.name, "url": reg_remote.url}
-            except Exception:
-                pass
 
-            try:
                 package_revision = package_metadata.packages[package_id].revision
                 if package_revision:
                     item_data["package_revision"] = package_revision
+
             except Exception:
                 pass
 
