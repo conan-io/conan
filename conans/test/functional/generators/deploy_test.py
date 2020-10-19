@@ -1,6 +1,7 @@
 import os
 import platform
 import stat
+import textwrap
 import unittest
 
 from conans import load
@@ -217,3 +218,37 @@ class DeployGeneratorSymbolicLinkTest(unittest.TestCase):
         self.assertFalse(os.path.islink(header_path))
         linkto = os.path.join(os.path.dirname(link_path), os.readlink(link_path))
         self.assertEqual(linkto, header_path)
+
+
+@unittest.skipIf(platform.system() == "Windows", "Permissions in NIX systems only")
+class DeployGeneratorSymbolicLinkFolderTest(unittest.TestCase):
+
+    def setUp(self):
+        conanfile = textwrap.dedent("""
+        import os
+        from conans import ConanFile, tools
+
+        class TestConan(ConanFile):
+
+            def package(self):
+                folder_path = os.path.join(self.package_folder, "one_folder")
+                tools.mkdir(folder_path)
+                link_folder_path = os.path.join(self.package_folder, "other_folder")
+                with tools.chdir(os.path.dirname(folder_path)):
+                    os.symlink(os.path.basename(folder_path), link_folder_path)
+        """)
+        self.ref = ConanFileReference("name", "version", "user", "channel")
+        self.client = TurboTestClient()
+        self.client.create(self.ref, conanfile)
+
+    def test_symbolic_links(self):
+        self.client.current_folder = temp_folder()
+        self.client.run("install %s -g deploy" % self.ref.full_str())
+        base_path = os.path.join(self.client.current_folder, "name")
+        folder_path = os.path.join(base_path, "one_folder")
+        link_folder_path = os.path.join(base_path, "other_folder")
+        self.assertTrue(os.path.islink(link_folder_path))
+        self.assertFalse(os.path.islink(folder_path))
+        linkto_folder = os.path.join(os.path.dirname(link_folder_path),
+                                     os.readlink(link_folder_path))
+        self.assertEqual(linkto_folder, folder_path)
