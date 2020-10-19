@@ -12,7 +12,7 @@ from conans import load
 from conans.client import tools
 from conans.client.cache.remote_registry import load_registry_txt, migrate_registry_file
 from conans.client.tools import Git
-from conans.client.tools.files import unzip, is_compressed_file
+from conans.client.tools.files import unzip
 from conans.errors import ConanException
 from conans.util.files import mkdir, rmdir, walk, save, touch, remove
 from conans.client.cache.cache import ClientCache
@@ -199,6 +199,19 @@ class _ConfigOrigin(object):
         return config
 
 
+def _is_compressed_file(filename):
+    open(filename, "r")  # Check if the file exist and can be opened
+    import zipfile
+    if zipfile.is_zipfile(filename):
+        return True
+    if (filename.endswith(".tar.gz") or filename.endswith(".tgz") or
+            filename.endswith(".tbz2") or filename.endswith(".tar.bz2") or
+            filename.endswith(".tar") or filename.endswith(".gz") or
+            filename.endswith(".tar.xz") or filename.endswith(".txz")):
+        return True
+    return False
+
+
 def _process_config(config, cache, output, requester):
     try:
         if config.type == "git":
@@ -206,11 +219,11 @@ def _process_config(config, cache, output, requester):
         elif config.type == "dir":
             _process_folder(config, config.uri, cache, output)
         elif config.type == "file":
-            if is_compressed_file(config.uri):
+            if _is_compressed_file(config.uri):
                 with tmp_config_install_folder(cache) as tmp_folder:
                     _process_zip_file(config, config.uri, cache, output, tmp_folder)
             else:
-                dirname, filename = os.path.dirname(config.uri), os.path.basename(config.uri)
+                dirname, filename = os.path.split(config.uri)
                 _process_file(dirname, filename, config, cache, output, dirname)
         elif config.type == "url":
             _process_download(config, cache, output, requester=requester)

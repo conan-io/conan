@@ -41,7 +41,7 @@ settings_yml = """os:
 arch: [x86, x86_64]
 """
 
-conan_conf = """
+cache_conan_conf = """
 [log]
 run_to_output = False       # environment CONAN_LOG_RUN_TO_OUTPUT
 level = 10                  # environment CONAN_LOGGING_LEVEL
@@ -99,7 +99,7 @@ class ConfigInstallTest(unittest.TestCase):
                             "hooks/custom/custom.py": "#hook custom",
                             ".git/hooks/foo": "foo",
                             "hooks/.git/hooks/before_push": "before_push",
-                            "config/conan.conf": conan_conf,
+                            "config/conan.conf": cache_conan_conf,
                             "pylintrc": "#Custom pylint",
                             "python/myfuncs.py": myfuncpy,
                             "python/__init__.py": ""
@@ -142,15 +142,15 @@ class ConfigInstallTest(unittest.TestCase):
     def _check(self, params):
         typ, uri, verify, args = [p.strip() for p in params.split(",")]
         configs = json.loads(load(self.client.cache.config_install_file))
-        config = _ConfigOrigin(configs[-1])
+        config = _ConfigOrigin(configs[-1])  # Check the last one
         self.assertEqual(config.type, typ)
         self.assertEqual(config.uri, uri)
         self.assertEqual(str(config.verify_ssl), verify)
         self.assertEqual(str(config.args), args)
         settings_path = self.client.cache.settings_path
         self.assertEqual(load(settings_path).splitlines(), settings_yml.splitlines())
-        remotes = self.client.cache.registry.load_remotes()
-        self.assertEqual(list(remotes.values()), [
+        cache_remotes = self.client.cache.registry.load_remotes()
+        self.assertEqual(list(cache_remotes.values()), [
             Remote("myrepo1", "https://myrepourl.net", False, False),
             Remote("my-repo-2", "https://myrepo2.com", True, False),
         ])
@@ -209,8 +209,8 @@ class Pkg(ConanFile):
         """ should install from a file in current dir
         """
         zippath = self._create_zip()
-        for type in ["", "--type=file"]:
-            self.client.run('config install "%s" %s' % (zippath, type))
+        for filetype in ["", "--type=file"]:
+            self.client.run('config install "%s" %s' % (zippath, filetype))
             self._check("file, %s, True, None" % zippath)
             self.assertTrue(os.path.exists(zippath))
 
@@ -244,8 +244,8 @@ class Pkg(ConanFile):
         """
         folder = self._create_profile_folder()
         self.assertTrue(os.path.isdir(folder))
-        for type in ["", "--type=dir"]:
-            self.client.run('config install "%s" %s' % (folder, type))
+        for dirtype in ["", "--type=dir"]:
+            self.client.run('config install "%s" %s' % (folder, dirtype))
             self._check("dir, %s, True, None" % folder)
 
     def install_source_target_folders_test(self):
@@ -333,16 +333,16 @@ class Pkg(ConanFile):
         """ should install from a URL
         """
 
-        for type in ["", "--type=url"]:
+        for origin in ["", "--type=url"]:
             def my_download(obj, url, filename, **kwargs):  # @UnusedVariable
                 self._create_zip(filename)
 
             with patch.object(FileDownloader, 'download', new=my_download):
-                self.client.run("config install http://myfakeurl.com/myconf.zip %s" % type)
+                self.client.run("config install http://myfakeurl.com/myconf.zip %s" % origin)
                 self._check("url, http://myfakeurl.com/myconf.zip, True, None")
 
                 # repeat the process to check
-                self.client.run("config install http://myfakeurl.com/myconf.zip %s" % type)
+                self.client.run("config install http://myfakeurl.com/myconf.zip %s" % origin)
                 self._check("url, http://myfakeurl.com/myconf.zip, True, None")
 
     def install_change_only_verify_ssl_test(self):
