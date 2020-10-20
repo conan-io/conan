@@ -225,17 +225,17 @@ class DeployGeneratorSymbolicLinkFolderTest(unittest.TestCase):
 
     def setUp(self):
         conanfile = textwrap.dedent("""
-        import os
-        from conans import ConanFile, tools
+            import os
+            from conans import ConanFile, tools
 
-        class TestConan(ConanFile):
+            class TestConan(ConanFile):
 
-            def package(self):
-                folder_path = os.path.join(self.package_folder, "one_folder")
-                tools.mkdir(folder_path)
-                link_folder_path = os.path.join(self.package_folder, "other_folder")
-                with tools.chdir(os.path.dirname(folder_path)):
-                    os.symlink(os.path.basename(folder_path), link_folder_path)
+                def package(self):
+                    folder_path = os.path.join(self.package_folder, "one_folder")
+                    tools.mkdir(folder_path)
+                    link_folder_path = os.path.join(self.package_folder, "other_folder")
+                    with tools.chdir(os.path.dirname(folder_path)):
+                        os.symlink(os.path.basename(folder_path), link_folder_path)
         """)
         self.ref = ConanFileReference("name", "version", "user", "channel")
         self.client = TurboTestClient()
