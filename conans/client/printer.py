@@ -106,6 +106,7 @@ class Printer(object):
             _print("recipe", name="Recipe", color=None)
             if show_revisions:
                 _print("revision", name="Revision", color=None)
+                _print("package_revision", name="Package revision", color=None)
             _print("binary", name="Binary", color=None)
 
             if show("binary_remote") and is_ref:
