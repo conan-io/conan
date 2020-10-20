@@ -422,3 +422,110 @@ class CMakeInstallTest(unittest.TestCase):
         package_id = layout.package_ids()[0]
         package_folder = layout.package(PackageReference(ref, package_id))
         self.assertTrue(os.path.exists(os.path.join(package_folder, "include", "header.h")))
+
+
+class CMakeMultiConfigurationTest(unittest.TestCase):
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile, CMake, CMakeToolchain
+        class App(ConanFile):
+            settings = "os", "arch", "compiler", "build_type"
+            requires = "hello/0.1"
+            generators = "cmake_find_package_multi"
+
+            def toolchain(self):
+                tc = CMakeToolchain(self)
+                if self.options["hello"].shared:
+                    tc.preprocessor_definitions["MYDEFINE"] = "MYDEF_SHARED_VALUE"
+                    tc.preprocessor_definitions.debug["MYDEFINE_CONFIG"] = "MYDEF_SHARED_DEBUG"
+                    tc.preprocessor_definitions.release["MYDEFINE_CONFIG"] = "MYDEF_SHARED_RELEASE"
+                else:
+                    tc.preprocessor_definitions["MYDEFINE"] = "MYDEF_VALUE"
+                    tc.preprocessor_definitions.debug["MYDEFINE_CONFIG"] = "MYDEF_DEBUG"
+                    tc.preprocessor_definitions.release["MYDEFINE_CONFIG"] = "MYDEF_RELEASE"
+                tc.write_toolchain_files()
+
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure()
+                cmake.build()
+
+            def imports(self):
+                self.copy("*.dll", src="bin",
+                          dst="%s/%s" % (self.settings.arch, self.settings.build_type),
+                          keep_path=False)
+        """)
+
+    app = textwrap.dedent("""
+        #include <iostream>
+        #include "hello.h"
+        int main() {
+            hello();
+            #ifdef NDEBUG
+            std::cout << "App: Release!" <<std::endl;
+            #else
+            std::cout << "App: Debug!" <<std::endl;
+            #endif
+            std::cout << "MYDEFINE: " << MYDEFINE << "\\n";
+            std::cout << "MYDEFINE_CONFIG: " << MYDEFINE_CONFIG << "\\n";
+        }
+        """)
+
+    cmakelist = textwrap.dedent("""
+        set(CMAKE_CONFIGURATION_TYPES Debug Release ReleaseShared CACHE STRING
+                "Available build-types: Debug, Release and ReleaseShared")
+        set(CMAKE_CXX_FLAGS_RELEASESHARED ${CMAKE_CXX_FLAGS_RELEASE})
+        set(CMAKE_C_FLAGS_RELEASESHARED ${CMAKE_C_FLAGS_RELEASE})
+
+        cmake_minimum_required(VERSION 2.8)
+        project(App C CXX)
+        if(CONAN_TOOLCHAIN_INCLUDED AND CMAKE_VERSION VERSION_LESS "3.15")
+            include("${CMAKE_BINARY_DIR}/conan_project_include.cmake")
+        endif()
+        if(NOT CMAKE_TOOLCHAIN_FILE)
+            message(FATAL ">> Not using toolchain")
+        endif()
+
+
+        find_package(hello REQUIRED)
+
+        add_executable(app app.cpp)
+        target_link_libraries(app PRIVATE hello::hello)
+        """)
+
+    def setUp(self):
+        self.client = TestClient(path_with_spaces=False)
+        self.client.run("new hello/0.1 -s")
+        self.client.run("create . hello/0.1@ -s build_type=Release -o hello:shared=True")
+        #self.client.run("create . hello/0.1@ -s build_type=Release")
+
+        # Prepare the actual consumer package
+        self.client.save({"conanfile.py": self.conanfile,
+                          "CMakeLists.txt": self.cmakelist,
+                          "app.cpp": self.app})
+
+    def test_toolchain_multi(self):
+        settings = {"compiler": "Visual Studio",
+                    "compiler.version": "15",
+                    "arch": "x86_64",
+                    "build_type": "Release",
+                    }
+
+        settings = " ".join('-s %s="%s"' % (k, v) for k, v in settings.items() if v)
+
+        # Run the configure corresponding to this test case
+        build_directory = os.path.join(self.client.current_folder, "build").replace("\\", "/")
+        print(self.client.current_folder)
+        with self.client.chdir(build_directory):
+            self.client.run("install .. %s -o hello:shared=True" % settings)
+            #self.client.run("install .. %s -o hello:shared=False" % settings)
+
+            self.client.run_command('cmake .. -G "Visual Studio 15" '
+                                    '-DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake')
+            #self.client.run_command('cmake --build . --config Release')
+            #self.client.run_command(r"Release\\app.exe")
+            #self.assertIn("App: Release!", self.client.out)
+            self.client.run_command('cmake --build . --config ReleaseShared')
+            self.client.run_command(r"ReleaseShared\\app.exe")
+            self.assertIn("App: Release!", self.client.out)
+
+
