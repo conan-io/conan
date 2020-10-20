@@ -133,9 +133,6 @@ class CMakeToolchainBase(object):
         {%- endfor %}
         # Preprocessor definitions per configuration
         {{ toolchain_macros.iterate_configs(preprocessor_definitions_config, action='add_definitions') }}
-
-        {% block footer %}
-        {% endblock %}
         """)
 
     def __init__(self, conanfile, **kwargs):
