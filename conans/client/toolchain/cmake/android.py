@@ -7,7 +7,19 @@ class CMakeAndroidToolchain(CMakeToolchainBase):
     _toolchain_tpl = textwrap.dedent("""
         {% extends 'base_toolchain' %}
 
+        {% block before_try_compile %}
+            {{ super() }}
+
+            set(CMAKE_SYSTEM_NAME {{ CMAKE_SYSTEM_NAME }})
+            set(CMAKE_SYSTEM_VERSION {{ CMAKE_SYSTEM_VERSION }})
+            set(CMAKE_ANDROID_ARCH_ABI {{ CMAKE_ANDROID_ARCH_ABI }})
+            set(CMAKE_ANDROID_STL_TYPE {{ CMAKE_ANDROID_STL_TYPE }})
+            set(CMAKE_ANDROID_NDK {{ CMAKE_ANDROID_NDK }})
+        {% endblock %}
+
         {% block main %}
+            {{ super() }}
+
             {% if shared_libs -%}
             message(STATUS "Conan toolchain: Setting BUILD_SHARED_LIBS= {{ shared_libs }}")
             set(BUILD_SHARED_LIBS {{ shared_libs }})
@@ -64,7 +76,7 @@ class CMakeAndroidToolchain(CMakeToolchainBase):
             'CMAKE_SYSTEM_NAME': 'Android',
             'CMAKE_SYSTEM_VERSION': self._conanfile.settings.os.api_level,
             'CMAKE_ANDROID_ARCH_ABI': self._get_android_abi(),
-            'CMAKE_ANDROID_STL_TYPE': self._get_android_stl()
+            'CMAKE_ANDROID_STL_TYPE': self._get_android_stl(),
             'CMAKE_ANDROID_NDK': '/Users/jgsogo/Library/Android/sdk/ndk/21.0.6113669',  # TODO: ???
 
         })
