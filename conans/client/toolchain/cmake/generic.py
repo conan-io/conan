@@ -18,18 +18,13 @@ class CMakeGenericToolchain(CMakeToolchainBase):
         {% extends 'base_toolchain' %}
 
         {% block before_try_compile %}
+            {{ super() }}
             {% if generator_platform %}set(CMAKE_GENERATOR_PLATFORM "{{ generator_platform }}" CACHE STRING "" FORCE){% endif %}
             {% if toolset %}set(CMAKE_GENERATOR_TOOLSET "{{ toolset }}" CACHE STRING "" FORCE){% endif %}
-            {# build_type (Release, Debug, etc) is only defined for single-config generators #}
-            {% if build_type %}set(CMAKE_BUILD_TYPE "{{ build_type }}" CACHE STRING "Choose the type of build." FORCE){% endif %}
         {% endblock %}
 
         {% block main %}
-            set(CMAKE_EXPORT_NO_PACKAGE_REGISTRY ON)
-
-            # To support the cmake_find_package generators
-            set(CMAKE_MODULE_PATH {{ cmake_module_path }} ${CMAKE_MODULE_PATH})
-            set(CMAKE_PREFIX_PATH {{ cmake_prefix_path }} ${CMAKE_PREFIX_PATH})
+            {{ super() }}
 
             {% if shared_libs -%}
                 message(STATUS "Conan toolchain: Setting BUILD_SHARED_LIBS= {{ shared_libs }}")
@@ -126,10 +121,6 @@ class CMakeGenericToolchain(CMakeToolchainBase):
         self.fpic = self._deduce_fpic()
         self.vs_static_runtime = self._deduce_vs_static_runtime()
         self.parallel = parallel
-
-        # To find the generated cmake_find_package finders
-        self.cmake_prefix_path = "${CMAKE_BINARY_DIR}"
-        self.cmake_module_path = "${CMAKE_BINARY_DIR}"
 
         self.generator = generator or get_generator(self._conanfile)
         self.generator_platform = (generator_platform or
@@ -238,11 +229,8 @@ class CMakeGenericToolchain(CMakeToolchainBase):
         ctxt_toolchain, ctxt_project_include = \
             super(CMakeGenericToolchain, self)._get_template_context_data()
         ctxt_toolchain.update({
-            "build_type": self.build_type,
             "generator_platform": self.generator_platform,
             "toolset": self.toolset,
-            "cmake_prefix_path": self.cmake_prefix_path,
-            "cmake_module_path": self.cmake_module_path,
             "fpic": self.fpic,
             "skip_rpath": self.skip_rpath,
             "set_libcxx": self.set_libcxx,

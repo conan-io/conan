@@ -4,6 +4,7 @@ from collections import OrderedDict, defaultdict
 
 from jinja2 import DictLoader, Environment
 
+from conans.errors import ConanException
 from conans.util.files import save
 
 
@@ -67,6 +68,10 @@ class CMakeToolchainBase(object):
         set(CONAN_TOOLCHAIN_INCLUDED TRUE)
 
         {% block before_try_compile %}
+            {# build_type (Release, Debug, etc) is only defined for single-config generators #}
+            {%- if build_type %}
+            set(CMAKE_BUILD_TYPE "{{ build_type }}" CACHE STRING "Choose the type of build." FORCE)
+            {%- endif %}
         {% endblock %}
 
         get_property( _CMAKE_IN_TRY_COMPILE GLOBAL PROPERTY IN_TRY_COMPILE )
@@ -97,6 +102,16 @@ class CMakeToolchainBase(object):
         {% endif %}
 
         {% block main %}
+            # We are going to adjust automagically many things as requested by Conan
+            #   these are the things done by 'conan_basic_setup()'
+            set(CMAKE_EXPORT_NO_PACKAGE_REGISTRY ON)
+            # To support the cmake_find_package generators
+            {% if cmake_module_path -%}
+            set(CMAKE_MODULE_PATH {{ cmake_module_path }} ${CMAKE_MODULE_PATH})
+            {%- endif %}
+            {% if cmake_prefix_path -%}
+            set(CMAKE_PREFIX_PATH {{ cmake_prefix_path }} ${CMAKE_PREFIX_PATH})
+            {%- endif %}
         {% endblock %}
 
         # Install prefix
@@ -123,16 +138,23 @@ class CMakeToolchainBase(object):
         {% endblock %}
         """)
 
-    def __init__(self, conanfile, *args, **kwargs):
+    def __init__(self, conanfile, **kwargs):
         self._conanfile = conanfile
         self.variables = Variables()
         self.preprocessor_definitions = Variables()
+
+        # To find the generated cmake_find_package finders
+        self.cmake_prefix_path = "${CMAKE_BINARY_DIR}"
+        self.cmake_module_path = "${CMAKE_BINARY_DIR}"
+
         try:
             # This is only defined in the cache, not in the local flow
             self.install_prefix = self._conanfile.package_folder.replace("\\", "/")
         except AttributeError:
             # FIXME: In the local flow, we don't know the package_folder
             self.install_prefix = None
+
+        self.build_type = None
 
     def _get_templates(self):
         return {
@@ -149,7 +171,10 @@ class CMakeToolchainBase(object):
             "variables_config": self.variables.configuration_types,
             "preprocessor_definitions": self.preprocessor_definitions,
             "preprocessor_definitions_config": self.preprocessor_definitions.configuration_types,
+            "cmake_prefix_path": self.cmake_prefix_path,
+            "cmake_module_path": self.cmake_module_path,
             "install_prefix": self.install_prefix,
+            "build_type": self.build_type,
         }
         return ctxt_toolchain, {}
 
