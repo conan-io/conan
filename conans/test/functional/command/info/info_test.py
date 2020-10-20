@@ -9,7 +9,7 @@ from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import TestClient, GenConanfile
-from conans.util.files import load, save
+from conans.util.files import save
 from conans import __version__ as client_version
 
 
@@ -342,8 +342,10 @@ class InfoTest(unittest.TestCase):
                     Hello1/0.1@lasote/stable""")
 
         expected_output = expected_output % (
-                "\n    Revision: 63865a1afa3a2666b2f75cbc7745e8a4",
-                "\n    Revision: b2600f68000fa492234c0452214e0bbc") \
+                "\n    Revision: 63865a1afa3a2666b2f75cbc7745e8a4"
+                "\n    Package revision: None",
+                "\n    Revision: b2600f68000fa492234c0452214e0bbc"
+                "\n    Package revision: None",) \
             if self.client.cache.config.revisions_enabled else expected_output % ("", "")
 
         def clean_output(output):
@@ -416,14 +418,15 @@ class InfoTest(unittest.TestCase):
         self._create("LibD", "0.1", ["LibB/0.1@lasote/stable", "LibC/0.1@lasote/stable"],
                      export=False)
 
-        json_file = os.path.join(self.client.current_folder, "output.json")
-        self.client.run("info . -u --json=\"{}\"".format(json_file))
+        self.client.run("info . -u --json=output.json")
 
         # Check a couple of values in the generated JSON
-        content = json.loads(load(json_file))
+        content = json.loads(self.client.load("output.json"))
         self.assertEqual(content[0]["reference"], "LibA/0.1@lasote/stable")
         self.assertEqual(content[0]["license"][0], "MIT")
         self.assertEqual(content[0]["description"], "blah")
+        self.assertEqual(content[0]["revision"], "22b1dc946e5566f5b2549e1b285d3fa7")
+        self.assertEqual(content[0]["package_revision"], None)
         self.assertEqual(content[1]["url"], "myurl")
         self.assertEqual(content[1]["required_by"][0], "conanfile.py (LibD/0.1)")
 

@@ -120,6 +120,7 @@ class CommandOutputer(object):
         build_time_nodes = deps_graph.build_time_nodes()
         remotes = self._cache.registry.load_remotes()
         ret = []
+
         for (ref, package_id), list_nodes in compact_nodes.items():
             node = list_nodes[0]
             if node.recipe == RECIPE_VIRTUAL:
@@ -151,7 +152,8 @@ class CommandOutputer(object):
                 item_data["package_folder"] = package_layout.package(pref)
 
             try:
-                reg_remote = self._cache.package_layout(ref).load_metadata().recipe.remote
+                package_metadata = self._cache.package_layout(ref).load_metadata()
+                reg_remote = package_metadata.recipe.remote
                 reg_remote = remotes.get(reg_remote)
                 if reg_remote:
                     item_data["remote"] = {"name": reg_remote.name, "url": reg_remote.url}
@@ -177,8 +179,8 @@ class CommandOutputer(object):
             if isinstance(ref, ConanFileReference):
                 item_data["recipe"] = node.recipe
 
-                if get_env("CONAN_CLIENT_REVISIONS_ENABLED", False) and node.ref.revision:
-                    item_data["revision"] = node.ref.revision
+                item_data["revision"] = node.ref.revision
+                item_data["package_revision"] = node.prev
 
                 item_data["binary"] = node.binary
                 if node.binary_remote:
