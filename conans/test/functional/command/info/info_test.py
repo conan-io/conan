@@ -5,12 +5,12 @@ import textwrap
 import unittest
 from datetime import datetime
 
+from conans import __version__ as client_version
 from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import TestClient, GenConanfile
 from conans.util.files import save
-from conans import __version__ as client_version
 
 
 class InfoTest(unittest.TestCase):
@@ -342,10 +342,10 @@ class InfoTest(unittest.TestCase):
                     Hello1/0.1@lasote/stable""")
 
         expected_output = expected_output % (
-                "\n    Revision: 63865a1afa3a2666b2f75cbc7745e8a4"
-                "\n    Package revision: None",
-                "\n    Revision: b2600f68000fa492234c0452214e0bbc"
-                "\n    Package revision: None",) \
+            "\n    Revision: 63865a1afa3a2666b2f75cbc7745e8a4"
+            "\n    Package revision: None",
+            "\n    Revision: b2600f68000fa492234c0452214e0bbc"
+            "\n    Package revision: None",) \
             if self.client.cache.config.revisions_enabled else expected_output % ("", "")
 
         def clean_output(output):
@@ -570,18 +570,21 @@ class InfoTest(unittest.TestCase):
     def test_full_attributes(self):
         client = TestClient()
 
-        conanfile = """from conans import ConanFile
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
 
-class MyTest(ConanFile):
-    name = "Pkg"
-    version = "0.2"
-    settings = "build_type"
-    author = "John Doe"
-    license = "MIT"
-    url = "https://foo.bar.baz"
-    homepage = "https://foo.bar.site"
-    topics = ("foo", "bar", "qux")
-"""
+            class MyTest(ConanFile):
+                name = "Pkg"
+                version = "0.2"
+                settings = "build_type"
+                author = "John Doe"
+                license = "MIT"
+                url = "https://foo.bar.baz"
+                homepage = "https://foo.bar.site"
+                topics = ("foo", "bar", "qux")
+                provides = ("libjpeg", "libjpg")
+                deprecated = "other-pkg"
+            """)
 
         client.save({"subfolder/conanfile.py": conanfile})
         client.run("export ./subfolder lasote/testing")
@@ -593,6 +596,19 @@ class MyTest(ConanFile):
         self.assertIn("Topics: foo, bar, qux", client.out)
         self.assertIn("URL: https://foo.bar.baz", client.out)
         self.assertIn("Homepage: https://foo.bar.site", client.out)
+        self.assertIn("Provides: libjpeg, libjpg", client.out)
+        self.assertIn("Deprecated: other-pkg", client.out)
+
+        client.run("info ./subfolder --json=output.json")
+        output = json.loads(client.load('output.json'))[0]
+        self.assertEquals(output['reference'], 'conanfile.py (Pkg/0.2)')
+        self.assertListEqual(output['license'], ['MIT', ])
+        self.assertEquals(output['author'], 'John Doe')
+        self.assertListEqual(output['topics'], ['foo', 'bar', 'qux'])
+        self.assertEquals(output['url'], 'https://foo.bar.baz')
+        self.assertEquals(output['homepage'], 'https://foo.bar.site')
+        self.assertListEqual(output['provides'], ['libjpeg', 'libjpg'])
+        self.assertEquals(output['deprecated'], 'other-pkg')
 
     def topics_graph_test(self):
 
@@ -646,8 +662,8 @@ class MyTest(ConanFile):
         client.save({"conanfile.py": GenConanfile().with_name("pkg").with_version("0.1")})
         client.run("create . user/testing")
         client.save({"conanfile.py": GenConanfile().with_name("other").with_version("0.1")
-                                                   .with_option("shared", [True, False])
-                                                   .with_default_option("shared", False)})
+                    .with_option("shared", [True, False])
+                    .with_default_option("shared", False)})
         client.run("install . -o shared=True")
         client.run("info pkg/0.1@user/testing")
         self.assertIn("pkg/0.1@user/testing", client.out)
