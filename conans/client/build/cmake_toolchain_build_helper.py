@@ -4,7 +4,7 @@ import platform
 from conans.client import tools
 from conans.client.build import join_arguments
 from conans.client.build.cmake_flags import is_multi_configuration, get_generator
-from conans.client.toolchain.cmake import CMakeToolchain
+from conans.client.toolchain.cmake.base import CMakeToolchainBase
 from conans.client.tools.files import chdir
 from conans.client.tools.oss import cpu_count, args_to_string
 from conans.errors import ConanException
@@ -75,7 +75,7 @@ class CMakeToolchainBuildHelper(object):
             build_folder = os.path.join(self._conanfile.build_folder, self._build_folder)
 
         mkdir(build_folder)
-        arg_list = '-DCMAKE_TOOLCHAIN_FILE="%s" %s' % (CMakeToolchain.filename, source)
+        arg_list = '-DCMAKE_TOOLCHAIN_FILE="%s" %s' % (CMakeToolchainBase.filename, source)
 
         generator = '-G "{}" '.format(self._generator) if self._generator else ""
         command = "%s %s%s" % (self._cmake_program, generator, arg_list)
