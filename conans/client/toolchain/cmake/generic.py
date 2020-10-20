@@ -67,9 +67,7 @@ class CMakeGenericToolchain(CMakeToolchainBase):
                 set(CMAKE_CXX_STANDARD {{ cppstd }})
                 set(CMAKE_CXX_EXTENSIONS {{ cppstd_extensions }})
             {%- endif %}
-        {% endblock %}
 
-        {% block footer %}
             set(CMAKE_CXX_FLAGS_INIT "${CONAN_CXX_FLAGS}" CACHE STRING "" FORCE)
             set(CMAKE_C_FLAGS_INIT "${CONAN_C_FLAGS}" CACHE STRING "" FORCE)
             set(CMAKE_SHARED_LINKER_FLAGS_INIT "${CONAN_SHARED_LINKER_FLAGS}" CACHE STRING "" FORCE)
