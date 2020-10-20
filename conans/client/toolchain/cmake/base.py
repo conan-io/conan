@@ -69,11 +69,10 @@ class CMakeToolchainBase(object):
         set(CONAN_TOOLCHAIN_INCLUDED TRUE)
 
         {% block before_try_compile %}
-        # build_type (Release, Debug, etc) is only defined for single-config generators
-        {%- if build_type %}
-        set(CMAKE_BUILD_TYPE "{{ build_type }}" CACHE STRING "Choose the type of build." FORCE)
-        {%- endif %}
-
+            {# build_type (Release, Debug, etc) is only defined for single-config generators #}
+            {%- if build_type %}
+            set(CMAKE_BUILD_TYPE "{{ build_type }}" CACHE STRING "Choose the type of build." FORCE)
+            {%- endif %}
         {% endblock %}
 
         get_property( _CMAKE_IN_TRY_COMPILE GLOBAL PROPERTY IN_TRY_COMPILE )
@@ -104,18 +103,16 @@ class CMakeToolchainBase(object):
         {% endif %}
 
         {% block main %}
-        # We are going to adjust automagically many things as requested by Conan
-        #   these are the things done by 'conan_basic_setup()'
-        set(CMAKE_EXPORT_NO_PACKAGE_REGISTRY ON)
-
-        # To support the cmake_find_package generators
-        {% if cmake_module_path -%}
-        set(CMAKE_MODULE_PATH {{ cmake_module_path }} ${CMAKE_MODULE_PATH})
-        {%- endif %}
-        {% if cmake_prefix_path -%}
-        set(CMAKE_PREFIX_PATH {{ cmake_prefix_path }} ${CMAKE_PREFIX_PATH})
-        {%- endif %}
-
+            # We are going to adjust automagically many things as requested by Conan
+            #   these are the things done by 'conan_basic_setup()'
+            set(CMAKE_EXPORT_NO_PACKAGE_REGISTRY ON)
+            # To support the cmake_find_package generators
+            {% if cmake_module_path -%}
+            set(CMAKE_MODULE_PATH {{ cmake_module_path }} ${CMAKE_MODULE_PATH})
+            {%- endif %}
+            {% if cmake_prefix_path -%}
+            set(CMAKE_PREFIX_PATH {{ cmake_prefix_path }} ${CMAKE_PREFIX_PATH})
+            {%- endif %}
         {% endblock %}
 
         # Install prefix
@@ -158,11 +155,6 @@ class CMakeToolchainBase(object):
             # FIXME: In the local flow, we don't know the package_folder
             self.install_prefix = None
 
-        try:
-            self._build_shared_libs = "ON" if self._conanfile.options.shared else "OFF"
-        except ConanException:
-            self._build_shared_libs = None
-
         self.build_type = None
 
     def _get_templates(self):
@@ -183,7 +175,6 @@ class CMakeToolchainBase(object):
             "cmake_prefix_path": self.cmake_prefix_path,
             "cmake_module_path": self.cmake_module_path,
             "install_prefix": self.install_prefix,
-            "shared_libs": self._build_shared_libs,
             "build_type": self.build_type,
         }
         return ctxt_toolchain, {}
