@@ -1,4 +1,5 @@
 import os
+import textwrap
 import unittest
 
 from conans.model.ref import ConanFileReference, PackageReference
@@ -195,3 +196,39 @@ bin, *.dll ->  @ excludes=Foo/*.dll Baz/*.dll
         client.run("install . --build=missing")
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "licenses")))
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "licenses/license.txt")))
+
+    def test_wrong_path_sep(self):
+        # https://github.com/conan-io/conan/issues/7856
+        pkg_conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            from conans.tools import save
+            import os
+
+            class TestConan(ConanFile):
+                def package(self):
+                    save(os.path.join(self.package_folder, "licenses/LICENSE"), "mylicense in file")
+                    save(os.path.join(self.package_folder, "licenses/README"), "myreadme in file")
+            """)
+        client = TestClient()
+        client.save({"conanfile.py": pkg_conanfile})
+        client.run("create . pkg/0.1@")
+        consumer_conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            import platform
+
+            class TestConan(ConanFile):
+                requires = "pkg/0.1"
+
+                def imports(self):
+                    if platform.system() == "Windows":
+                        self.copy("licenses\\LICENSE", dst="deps_licenses", root_package="pkg")
+                    else:
+                        self.copy("licenses/LICENSE", dst="deps_licenses", root_package="pkg")
+                    self.copy("licenses/README", dst="deps_licenses", root_package="pkg")
+            """)
+        client.save({"conanfile.py": consumer_conanfile})
+        client.run("install .")
+        pkg_license = client.load("deps_licenses/licenses/LICENSE")
+        self.assertEqual(pkg_license, "mylicense in file")
+        readme_license = client.load("deps_licenses/licenses/README")
+        self.assertEqual(readme_license, "myreadme in file")

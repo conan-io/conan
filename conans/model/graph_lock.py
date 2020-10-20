@@ -228,7 +228,8 @@ class GraphLockNode(object):
         if python_requires:
             python_requires = [ConanFileReference.loads(py_req, validate=False)
                                for py_req in python_requires]
-        options = OptionsValues.loads(data.get("options", ""))
+        options = data.get("options")
+        options = OptionsValues.loads(options) if options else None
         modified = data.get("modified")
         context = data.get("context")
         requires = data.get("requires", [])
@@ -491,8 +492,9 @@ class GraphLock(object):
                                      % (node.ref, node.id))
         else:
             node.graph_lock_node = locked_node
-            node.conanfile.options.values = locked_node.options
-            node.conanfile.options.freeze()
+            if locked_node.options is not None:  # This was a "partial" one, not a "base" one
+                node.conanfile.options.values = locked_node.options
+                node.conanfile.options.freeze()
 
     def lock_node(self, node, requires, build_requires=False):
         """ apply options and constraints on requirements of a node, given the information from
