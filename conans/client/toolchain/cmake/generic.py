@@ -63,7 +63,7 @@ class CMakeGenericToolchain(CMakeToolchainBase):
             {%- endif %}
 
             {% if cppstd -%}
-                message(STATUS "Conan C++ Standard {{ cppstd }} with extensions {{ cppstd_extensions }}}")
+                message(STATUS "Conan C++ Standard {{ cppstd }} with extensions {{ cppstd_extensions }}")
                 set(CMAKE_CXX_STANDARD {{ cppstd }})
                 set(CMAKE_CXX_EXTENSIONS {{ cppstd_extensions }})
             {%- endif %}
