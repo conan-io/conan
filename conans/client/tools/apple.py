@@ -38,6 +38,7 @@ def apple_sdk_name(settings):
                 'watchOS': 'watchos',
                 'tvOS': 'appletvos'}.get(str(os_), None)
 
+
 def apple_deployment_target_env(os_, os_version):
     """environment variable name which controls deployment target"""
     env_name = {'Macos': 'MACOSX_DEPLOYMENT_TARGET',

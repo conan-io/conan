@@ -208,7 +208,8 @@ class AutoToolsBuildEnvironment(object):
         from six import StringIO  # Python 2 and 3 compatible
         mybuf = StringIO()
         try:
-            self._conanfile.run("%s/configure --help" % configure_path, win_bash=self._win_bash, output=mybuf)
+            self._conanfile.run("%s/configure --help" % configure_path, win_bash=self._win_bash,
+                                output=mybuf)
         except ConanException as e:
             self._conanfile.output.warn("Error running `configure --help`: %s" % e)
             return ""
@@ -254,7 +255,8 @@ class AutoToolsBuildEnvironment(object):
         ret = list(self._deps_cpp_info.sharedlinkflags)
         ret.extend(list(self._deps_cpp_info.exelinkflags))
         ret.extend(format_frameworks(self._deps_cpp_info.frameworks, self._conanfile.settings))
-        ret.extend(format_framework_paths(self._deps_cpp_info.framework_paths, self._conanfile.settings))
+        ret.extend(format_framework_paths(self._deps_cpp_info.framework_paths,
+                                          self._conanfile.settings))
         arch_flag = architecture_flag(self._conanfile.settings)
         if arch_flag:
             ret.append(arch_flag)
@@ -269,7 +271,8 @@ class AutoToolsBuildEnvironment(object):
             os_build, _ = get_build_os_arch(self._conanfile)
             if not hasattr(self._conanfile, 'settings_build'):
                 os_build = os_build or self._os
-            ret.extend(rpath_flags(self._conanfile.settings, os_build, self._deps_cpp_info.lib_paths))
+            ret.extend(rpath_flags(self._conanfile.settings, os_build,
+                                   self._deps_cpp_info.lib_paths))
 
         return ret
 
