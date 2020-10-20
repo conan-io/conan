@@ -193,3 +193,25 @@ class ConanFileToolsTest(ConanFile):
         client.save({"conanfile.py": conanfile})
         client.run("source .")
         self.assertIn("hello Conan!", client.out)
+
+    def test_custom_stream_error(self):
+        # https://github.com/conan-io/conan/issues/7888
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class Pkg(ConanFile):
+                def source(self):
+                    class Buf:
+                        def __init__(self):
+                            self.buf = []
+
+                        def write(self, data):
+                            self.buf.append(data)
+
+                    my_buf = Buf()
+                    self.run('echo "Hello"', output=my_buf)
+                    self.output.info("Buffer got msgs {}".format(len(my_buf.buf)))
+            """)
+        client = TestClient()
+        client.save({"conanfile.py": conanfile})
+        client.run("source .")
+        self.assertIn("Buffer got msgs 1", client.out)

@@ -101,7 +101,7 @@ class CMakeToolchainBase(object):
 
         # Install prefix
         {% if install_prefix -%}
-        set(CMAKE_INSTALL_PREFIX {{install_prefix}} CACHE STRING "" FORCE)
+        set(CMAKE_INSTALL_PREFIX "{{install_prefix}}" CACHE STRING "" FORCE)
         {%- endif %}
 
         # Variables
