@@ -441,6 +441,7 @@ class CMakeMultiConfigurationTest(unittest.TestCase):
                     tc.preprocessor_definitions["MYDEFINE"] = "MYDEF_SHARED_VALUE"
                     tc.preprocessor_definitions.debug["MYDEFINE_CONFIG"] = "MYDEF_SHARED_DEBUG"
                     tc.preprocessor_definitions.release["MYDEFINE_CONFIG"] = "MYDEF_SHARED_RELEASE"
+                    tc.preprocessor_definitions.releaseshared["MYDEFINE_CONFIG"] = "MYDEF_SHARED_RELEASE"
                 else:
                     tc.preprocessor_definitions["MYDEFINE"] = "MYDEF_VALUE"
                     tc.preprocessor_definitions.debug["MYDEFINE_CONFIG"] = "MYDEF_DEBUG"
@@ -454,9 +455,10 @@ class CMakeMultiConfigurationTest(unittest.TestCase):
                 cmake.build()
 
             def imports(self):
-                self.copy("*.dll", src="bin",
-                          dst="%s/%s" % (self.settings.arch, self.settings.build_type),
-                          keep_path=False)
+                config = str(self.settings.build_type)
+                if self.options["hello"].shared:
+                    config = "ReleaseShared"
+                self.copy("*.dll", src="bin", dst=config, keep_path=False)
         """)
 
     app = textwrap.dedent("""
@@ -476,9 +478,7 @@ class CMakeMultiConfigurationTest(unittest.TestCase):
 
     cmakelist = textwrap.dedent("""
         set(CMAKE_CONFIGURATION_TYPES Debug Release ReleaseShared CACHE STRING
-                "Available build-types: Debug, Release and ReleaseShared")
-        set(CMAKE_CXX_FLAGS_RELEASESHARED ${CMAKE_CXX_FLAGS_RELEASE})
-        set(CMAKE_C_FLAGS_RELEASESHARED ${CMAKE_C_FLAGS_RELEASE})
+        "Available build-types: Debug, Release and ReleaseShared")
 
         cmake_minimum_required(VERSION 2.8)
         project(App C CXX)
@@ -489,6 +489,8 @@ class CMakeMultiConfigurationTest(unittest.TestCase):
             message(FATAL ">> Not using toolchain")
         endif()
 
+        set(CMAKE_CXX_FLAGS_RELEASESHARED ${CMAKE_CXX_FLAGS_RELEASE})
+        set(CMAKE_C_FLAGS_RELEASESHARED ${CMAKE_C_FLAGS_RELEASE})
 
         find_package(hello REQUIRED)
 
@@ -500,7 +502,7 @@ class CMakeMultiConfigurationTest(unittest.TestCase):
         self.client = TestClient(path_with_spaces=False)
         self.client.run("new hello/0.1 -s")
         self.client.run("create . hello/0.1@ -s build_type=Release -o hello:shared=True")
-        #self.client.run("create . hello/0.1@ -s build_type=Release")
+        self.client.run("create . hello/0.1@ -s build_type=Release")
 
         # Prepare the actual consumer package
         self.client.save({"conanfile.py": self.conanfile,
@@ -518,18 +520,15 @@ class CMakeMultiConfigurationTest(unittest.TestCase):
 
         # Run the configure corresponding to this test case
         build_directory = os.path.join(self.client.current_folder, "build").replace("\\", "/")
-        print(self.client.current_folder)
         with self.client.chdir(build_directory):
             self.client.run("install .. %s -o hello:shared=True" % settings)
-            #self.client.run("install .. %s -o hello:shared=False" % settings)
+            self.client.run("install .. %s -o hello:shared=False" % settings)
 
             self.client.run_command('cmake .. -G "Visual Studio 15" '
                                     '-DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake')
-            #self.client.run_command('cmake --build . --config Release')
-            #self.client.run_command(r"Release\\app.exe")
-            #self.assertIn("App: Release!", self.client.out)
+            self.client.run_command('cmake --build . --config Release')
+            self.client.run_command(r"Release\\app.exe")
+            self.assertIn("App: Release!", self.client.out)
             self.client.run_command('cmake --build . --config ReleaseShared')
             self.client.run_command(r"ReleaseShared\\app.exe")
             self.assertIn("App: Release!", self.client.out)
-
-
