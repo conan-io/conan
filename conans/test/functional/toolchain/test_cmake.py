@@ -427,14 +427,17 @@ class CMakeInstallTest(unittest.TestCase):
 class CMakeMultiConfigurationTest(unittest.TestCase):
     conanfile = textwrap.dedent("""
         from conans import ConanFile, CMake, CMakeToolchain
+        from conans.client.generators.cmake_find_package_multi import CMakeFindPackageMultiGenerator
         class App(ConanFile):
             settings = "os", "arch", "compiler", "build_type"
             requires = "hello/0.1"
-            generators = "cmake_find_package_multi"
 
             def toolchain(self):
+                generator = CMakeFindPackageMultiGenerator(self)
+                generator.configurations.append("ReleaseShared")
                 tc = CMakeToolchain(self)
                 if self.options["hello"].shared:
+                    generator.configuration = "ReleaseShared"
                     tc.preprocessor_definitions["MYDEFINE"] = "MYDEF_SHARED_VALUE"
                     tc.preprocessor_definitions.debug["MYDEFINE_CONFIG"] = "MYDEF_SHARED_DEBUG"
                     tc.preprocessor_definitions.release["MYDEFINE_CONFIG"] = "MYDEF_SHARED_RELEASE"
@@ -443,6 +446,7 @@ class CMakeMultiConfigurationTest(unittest.TestCase):
                     tc.preprocessor_definitions.debug["MYDEFINE_CONFIG"] = "MYDEF_DEBUG"
                     tc.preprocessor_definitions.release["MYDEFINE_CONFIG"] = "MYDEF_RELEASE"
                 tc.write_toolchain_files()
+                generator.write_generator_files()
 
             def build(self):
                 cmake = CMake(self)
