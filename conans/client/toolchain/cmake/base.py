@@ -105,7 +105,7 @@ class CMakeToolchainBase(object):
         {%- endif %}
 
         # Variables
-        {% for it, value in variables.items() -%}
+        {% for it, value in variables.items() %}
         set({{ it }} "{{ value }}")
         {%- endfor %}
         # Variables  per configuration
