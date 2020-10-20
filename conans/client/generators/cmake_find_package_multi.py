@@ -41,33 +41,29 @@ class CMakeFindPackageMultiGenerator(CMakeFindPackageGenerator):
         endforeach()
         """)
 
-    target_properties = """
+    target_properties = Template("""
 # Assign target properties
-set_property(TARGET {name}::{name}
+set_property(TARGET {{name}}::{{name}}
              PROPERTY INTERFACE_LINK_LIBRARIES
-                 $<$<CONFIG:Release>:${{{name}_LIBRARIES_TARGETS_RELEASE}} ${{{name}_LINKER_FLAGS_RELEASE_LIST}}>
-                 $<$<CONFIG:RelWithDebInfo>:${{{name}_LIBRARIES_TARGETS_RELWITHDEBINFO}} ${{{name}_LINKER_FLAGS_RELWITHDEBINFO_LIST}}>
-                 $<$<CONFIG:MinSizeRel>:${{{name}_LIBRARIES_TARGETS_MINSIZEREL}} ${{{name}_LINKER_FLAGS_MINSIZEREL_LIST}}>
-                 $<$<CONFIG:Debug>:${{{name}_LIBRARIES_TARGETS_DEBUG}} ${{{name}_LINKER_FLAGS_DEBUG_LIST}}>)
-set_property(TARGET {name}::{name}
+             {%- for config in configs %}
+             $<$<CONFIG:{{config}}>:${{'{'}}{{name}}_LIBRARIES_TARGETS_{{config.upper()}}} ${{'{'}}{{name}}_LINKER_FLAGS_{{config.upper()}}_LIST}>
+             {%- endfor %})
+set_property(TARGET {{name}}::{{name}}
              PROPERTY INTERFACE_INCLUDE_DIRECTORIES
-                 $<$<CONFIG:Release>:${{{name}_INCLUDE_DIRS_RELEASE}}>
-                 $<$<CONFIG:RelWithDebInfo>:${{{name}_INCLUDE_DIRS_RELWITHDEBINFO}}>
-                 $<$<CONFIG:MinSizeRel>:${{{name}_INCLUDE_DIRS_MINSIZEREL}}>
-                 $<$<CONFIG:Debug>:${{{name}_INCLUDE_DIRS_DEBUG}}>)
-set_property(TARGET {name}::{name}
+             {%- for config in configs %}
+             $<$<CONFIG:{{config}}>:${{'{'}}{{name}}_INCLUDE_DIRS_{{config.upper()}}}>
+             {%- endfor %})
+set_property(TARGET {{name}}::{{name}}
              PROPERTY INTERFACE_COMPILE_DEFINITIONS
-                 $<$<CONFIG:Release>:${{{name}_COMPILE_DEFINITIONS_RELEASE}}>
-                 $<$<CONFIG:RelWithDebInfo>:${{{name}_COMPILE_DEFINITIONS_RELWITHDEBINFO}}>
-                 $<$<CONFIG:MinSizeRel>:${{{name}_COMPILE_DEFINITIONS_MINSIZEREL}}>
-                 $<$<CONFIG:Debug>:${{{name}_COMPILE_DEFINITIONS_DEBUG}}>)
-set_property(TARGET {name}::{name}
+             {%- for config in configs %}
+             $<$<CONFIG:{{config}}>:${{'{'}}{{name}}_COMPILE_DEFINITIONS_{{config.upper()}}}>
+             {%- endfor %})
+set_property(TARGET {{name}}::{{name}}
              PROPERTY INTERFACE_COMPILE_OPTIONS
-                 $<$<CONFIG:Release>:${{{name}_COMPILE_OPTIONS_RELEASE_LIST}}>
-                 $<$<CONFIG:RelWithDebInfo>:${{{name}_COMPILE_OPTIONS_RELWITHDEBINFO_LIST}}>
-                 $<$<CONFIG:MinSizeRel>:${{{name}_COMPILE_OPTIONS_MINSIZEREL_LIST}}>
-                 $<$<CONFIG:Debug>:${{{name}_COMPILE_OPTIONS_DEBUG_LIST}}>)
-    """
+             {%- for config in configs %}
+             $<$<CONFIG:{{config}}>:${{'{'}}{{name}}_COMPILE_OPTIONS_{{config.upper()}}_LIST}>
+             {%- endfor %})
+    """)
 
     # https://gitlab.kitware.com/cmake/cmake/blob/master/Modules/BasicConfigVersion-SameMajorVersion.cmake.in
     config_version_template = textwrap.dedent("""
@@ -353,8 +349,8 @@ set_property(TARGET {name}::{name}
         ])
 
         # Define the targets properties
-        targets_props = self.target_properties.format(name=name)
-
+        configs = ["Release", "RelWithDebInfo", "MinSizeRel", "Debug"]
+        targets_props = self.target_properties.render(name=name, configs=configs)
         # The find_dependencies_block
         find_dependencies_block = ""
         if public_deps_names:
