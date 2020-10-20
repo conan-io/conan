@@ -33,7 +33,8 @@ class DeployGenerator(Generator):
 
         for dep_name in self.conanfile.deps_cpp_info.deps:
             rootpath = self.conanfile.deps_cpp_info[dep_name].rootpath
-            for root, _, files in os.walk(os.path.normpath(rootpath)):
+            for root, dirs, files in os.walk(os.path.normpath(rootpath)):
+                files += [d for d in dirs if os.path.islink(os.path.join(root, d))]
                 for f in files:
                     if f in FILTERED_FILES:
                         continue
@@ -52,5 +53,6 @@ class DeployGenerator(Generator):
                         os.symlink(linkto, dst)
                     else:
                         shutil.copy(src, dst)
-                    copied_files.append(dst)
+                    if f not in dirs:
+                        copied_files.append(dst)
         return self.deploy_manifest_content(copied_files)
