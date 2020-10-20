@@ -220,7 +220,7 @@ class DeployGeneratorSymbolicLinkTest(unittest.TestCase):
         self.assertEqual(linkto, header_path)
 
 
-@unittest.skipIf(platform.system() == "Windows", "Permissions in NIX systems only")
+@unittest.skipIf(platform.system() == "Windows", "Symlinks in NIX systems only")
 class DeployGeneratorSymbolicLinkFolderTest(unittest.TestCase):
 
     def setUp(self):
