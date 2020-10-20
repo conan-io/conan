@@ -424,6 +424,7 @@ class CMakeInstallTest(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(package_folder, "include", "header.h")))
 
 
+@unittest.skipUnless(platform.system() == "Windows", "Only for windows")
 class CMakeMultiConfigurationTest(unittest.TestCase):
     conanfile = textwrap.dedent("""
         from conans import ConanFile, CMake, CMakeToolchain
