@@ -4,6 +4,7 @@ from conans.client.build.cmake_flags import get_generator, get_generator_platfor
     is_multi_configuration
 from conans.client.build.compiler_flags import architecture_flag
 from conans.client.tools import cpu_count
+from conans.errors import ConanException
 from .base import CMakeToolchainBase
 
 
@@ -127,6 +128,11 @@ class CMakeGenericToolchain(CMakeToolchainBase):
                                                           self.generator))
         self.toolset = toolset or get_toolset(self._conanfile.settings, self.generator)
 
+        try:
+            self._build_shared_libs = "ON" if self._conanfile.options.shared else "OFF"
+        except ConanException:
+            self._build_shared_libs = None
+
         self.set_libcxx, self.glibcxx = self._get_libcxx()
 
         self.parallel = None
@@ -232,6 +238,7 @@ class CMakeGenericToolchain(CMakeToolchainBase):
             "parallel": self.parallel,
             "cppstd": self.cppstd,
             "cppstd_extensions": self.cppstd_extensions,
+            "shared_libs": self._build_shared_libs,
             "architecture": self.architecture
         })
         ctxt_project_include.update({'vs_static_runtime': self.vs_static_runtime})

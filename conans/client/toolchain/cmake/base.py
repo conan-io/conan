@@ -44,14 +44,13 @@ class CMakeToolchainBase(object):
                                           '$<IF:$<CONFIG:' + conf + '>,"' + value|string + '",' %}
                     {%- if loop.last %}{% set genexpr.str = genexpr.str + '""' -%}{%- endif -%}
                 {%- endfor -%}
-                {% for i in range(values|count) %}{%- set genexpr.str = genexpr.str + '>' %}
-                {%- endfor -%}
+                {% for i in range(values|count) %}{%- set genexpr.str = genexpr.str + '>' %}{%- endfor -%}
                 {% if action=='set' %}
                 set({{ it }} {{ genexpr.str }})
                 {% elif action=='add_definitions' %}
                 add_definitions(-D{{ it }}={{ genexpr.str }})
                 {% endif %}
-            {% endfor %}
+            {%- endfor %}
         {% endmacro %}
         """)
 
@@ -123,7 +122,7 @@ class CMakeToolchainBase(object):
         # Variables
         {% for it, value in variables.items() %}
         set({{ it }} "{{ value }}")
-        {% endfor %}
+        {%- endfor %}
         # Variables  per configuration
         {{ toolchain_macros.iterate_configs(variables_config, action='set') }}
 
@@ -131,7 +130,7 @@ class CMakeToolchainBase(object):
         {% for it, value in preprocessor_definitions.items() -%}
         # add_compile_definitions only works in cmake >= 3.12
         add_definitions(-D{{ it }}="{{ value }}")
-        {% endfor %}
+        {%- endfor %}
         # Preprocessor definitions per configuration
         {{ toolchain_macros.iterate_configs(preprocessor_definitions_config, action='add_definitions') }}
 
