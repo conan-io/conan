@@ -82,7 +82,7 @@ class SynchronizeTest(unittest.TestCase):
 
         client.run("install %s --build missing" % str(ref))
         # Upload package
-        package_ids = client.cache.package_layout(ref).conan_packages()
+        package_ids = client.cache.package_layout(ref).package_ids()
         client.run("upload %s -p %s" % (str(ref), str(package_ids[0])))
 
         # Check that package exists on server
