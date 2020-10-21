@@ -10,6 +10,8 @@ from conans.client.tools import which
 
 from parameterized.parameterized import parameterized
 
+from conans.util.files import mkdir
+
 
 @attr("slow")
 @attr("toolchain")
@@ -190,7 +192,7 @@ class MakeToolchainTest(unittest.TestCase):
         client = TestClient(path_with_spaces=False)
 
         settings = {
-            "arch": "x86",
+            "arch": "x86_64",
             "build_type": build_type,
             "compiler": "gcc",
             "compiler.version": "9",
@@ -332,6 +334,7 @@ class MakeToolchainTest(unittest.TestCase):
         client.save(files_to_save, clean_first=True)
         client.run("install . hello/0.1@ %s %s" % (settings_str, options_str))
 
+        mkdir(os.path.join(client.current_folder, "out"))
         if target == "exe":
             client.run_command("mingw32-make exe")
             client.run_command("out\\hello.bin")
