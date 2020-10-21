@@ -119,11 +119,10 @@ class MakeToolchain(object):
         # Call this function in your Makefile to have Conan variables added to the standard variables
         # Example:  $(call CONAN_TC_SETUP)
 
-        CONAN_TC_SETUP =  \\
-            $(eval CFLAGS += $(CONAN_TC_CFLAGS)) ; \\
-            $(eval CXXFLAGS += $(CONAN_TC_CXXFLAGS)) ; \\
-            $(eval CPPFLAGS += $(CONAN_TC_CPPFLAGS)) ; \\
-            $(eval LDFLAGS += $(CONAN_TC_LDFLAGS)) ;
+        CONAN_TC_SETUP = $(eval CFLAGS += $(CONAN_TC_CFLAGS)) ; \\
+                         $(eval CXXFLAGS += $(CONAN_TC_CXXFLAGS)) ; \\
+                         $(eval CPPFLAGS += $(CONAN_TC_CPPFLAGS)) ; \\
+                         $(eval LDFLAGS += $(CONAN_TC_LDFLAGS)) ;
 
     """)
 
