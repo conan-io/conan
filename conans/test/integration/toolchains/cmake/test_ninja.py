@@ -6,7 +6,6 @@ import os
 from conans.test.utils.tools import TestClient
 from conans.test.utils.test_files import temp_folder
 from conans.client.tools import environment_append
-from conans.client.toolchain.cmake.base import CMakeToolchainBase
 
 
 class CppProject(object):
@@ -61,14 +60,18 @@ class CMakeNinjaTestCase(unittest.TestCase):
 
             def toolchain(self):
                 tc = CMakeToolchain(self)
+                # tc.preprocessor_definitions["CMAKE_NINJA_OUTPUT_PATH_PREFIX"] = "MyValue"
                 tc.write_toolchain_files()
 
             def build(self):
                 cmake = CMake(self)
                 cmake.configure()
+                cmake.build()
 
             def package(self):
                 cmake = CMake(self)
+
+                cmake.configure()
                 cmake.install()
     """)
 
