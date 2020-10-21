@@ -2,7 +2,6 @@ import os
 import textwrap
 from xml.dom import minidom
 
-from conans.client.tools import msvs_toolset
 from conans.errors import ConanException
 from conans.util.files import save, load
 
@@ -13,15 +12,12 @@ class MSBuildToolchain(object):
         self._conanfile = conanfile
         self.preprocessor_definitions = {}
 
-    @ staticmethod
+    @staticmethod
     def _name_condition(settings):
-        toolset = msvs_toolset(settings)
-
         props = [("Configuration", settings.build_type),
                  # FIXME: This probably requires mapping ARM architectures
                  ("Platform", {'x86': 'Win32',
-                               'x86_64': 'x64'}.get(settings.get_safe("arch"))),
-                 ("PlatformToolset", toolset)]
+                               'x86_64': 'x64'}.get(settings.get_safe("arch")))]
 
         name = "".join("_%s" % v for _, v in props if v is not None)
         condition = " And ".join("'$(%s)' == '%s'" % (k, v) for k, v in props if v is not None)

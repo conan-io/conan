@@ -381,5 +381,3 @@ class GraphBinariesAnalyzer(object):
         output.info("Binary for updated ID from: %s" % node.binary)
         if node.binary == BINARY_BUILD:
             output.info("Binary for the updated ID has to be built")
-        else:
-            output.info("Binary for the updated ID from: %s" % node.binary)

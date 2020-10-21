@@ -6,7 +6,7 @@ from conans.client import tools
 from conans.client.build.visual_environment import (VisualStudioBuildEnvironment,
                                                     vs_build_type_flags, vs_std_cpp)
 from conans.client.tools.env import environment_append, no_op
-from conans.client.tools.intel import compilervars
+from conans.client.tools.intel import intel_compilervars
 from conans.client.tools.oss import cpu_count
 from conans.client.tools.win import vcvars_command
 from conans.errors import ConanException
@@ -99,7 +99,7 @@ class MSBuild(object):
             context = no_op()
             if self._conanfile.settings.get_safe("compiler") == "Intel" and \
                 self._conanfile.settings.get_safe("compiler.base") == "Visual Studio":
-                context = compilervars(self._conanfile.settings, arch)
+                context = intel_compilervars(self._conanfile.settings, arch)
             with context:
                 return self._conanfile.run(command)
 

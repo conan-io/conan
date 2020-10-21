@@ -372,6 +372,21 @@ class LockFileOptionsTest(unittest.TestCase):
         client.run("create ffmepg ffmpeg/1.0@ --build --lockfile=conan.lock")
         self.assertIn("ffmpeg/1.0: Requirements: Variation nano!!", client.out)
 
+    def test_base_options(self):
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile().with_option("shared", [True, False])
+                                                   .with_default_option("shared", False)})
+        client.run("create . pkg/0.1@")
+        client.run("lock create --reference=pkg/0.1 --base --lockfile-out=pkg_base.lock")
+        client.run("lock create --reference=pkg/0.1 --lockfile=pkg_base.lock "
+                   "--lockfile-out=pkg.lock -o pkg:shared=True")
+        pkg_lock = client.load("pkg.lock")
+        self.assertIn('"options": "shared=True"', pkg_lock)
+        client.run("lock create --reference=pkg/0.1 --lockfile=pkg_base.lock "
+                   "--lockfile-out=pkg.lock -o pkg:shared=False")
+        pkg_lock = client.load("pkg.lock")
+        self.assertIn('"options": "shared=False"', pkg_lock)
+
 
 class GraphInstallArgumentsUpdated(unittest.TestCase):
 
