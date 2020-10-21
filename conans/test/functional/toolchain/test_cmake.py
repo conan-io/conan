@@ -117,7 +117,7 @@ class Base(unittest.TestCase):
         """)
 
     def setUp(self):
-        self.client = TestClient(path_with_spaces=False)
+        self.client = TestClient(path_with_spaces=True)
         conanfile = textwrap.dedent("""
             from conans import ConanFile
             from conans.tools import save
