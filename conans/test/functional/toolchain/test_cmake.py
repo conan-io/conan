@@ -255,6 +255,54 @@ class WinTest(Base):
         self._incremental_build(build_type=opposite_build_type)
         self._run_app(opposite_build_type, bin_folder=True, msg="AppImproved")
 
+    @parameterized.expand([("Debug", "libstdc++", "4.9", "98", "x86_64", True),
+                           ("Release", "libstdc++", "4.9", "11", "x86_64", False)])
+    def test_toolchain_mingw_win(self, build_type, libcxx, version, cppstd, arch, shared):
+        settings = {"compiler": "gcc",
+                    "compiler.version": version,
+                    "compiler.libcxx": libcxx,
+                    "compiler.cppstd": cppstd,
+                    "arch": arch,
+                    "build_type": build_type,
+                    }
+        options = {"shared": shared}
+        self._run_build(settings, options)
+        self.assertIn("WARN: Toolchain: Ignoring fPIC option defined for Windows", self.client.out)
+        self.assertIn("The C compiler identification is GNU", self.client.out)
+        self.assertIn('CMake command: cmake -G "MinGW Makefiles" '
+                      '-DCMAKE_TOOLCHAIN_FILE="conan_toolchain.cmake"', self.client.out)
+
+        def _verify_out(marker=">>"):
+            vars = {"CMAKE_GENERATOR_PLATFORM": "",
+                    "CMAKE_BUILD_TYPE": build_type,
+                    "CMAKE_CXX_FLAGS": "-m64",
+                    "CMAKE_CXX_FLAGS_DEBUG": "-g",
+                    "CMAKE_CXX_FLAGS_RELEASE": "-O3 -DNDEBUG",
+                    "CMAKE_C_FLAGS": "-m64",
+                    "CMAKE_C_FLAGS_DEBUG": "-g",
+                    "CMAKE_C_FLAGS_RELEASE": "-O3 -DNDEBUG",
+                    "CMAKE_SHARED_LINKER_FLAGS": "-m64",
+                    "CMAKE_EXE_LINKER_FLAGS": "-m64",
+                    "CMAKE_CXX_STANDARD": cppstd,
+                    "CMAKE_CXX_EXTENSIONS": "OFF",
+                    "BUILD_SHARED_LIBS": "ON" if shared else "OFF"}
+            if shared:
+                self.assertIn("app_lib.dll", self.client.out)
+            else:
+                self.assertNotIn("app_lib.dll", self.client.out)
+
+            out = str(self.client.out).splitlines()
+            for k, v in vars.items():
+                self.assertIn("%s %s: %s" % (marker, k, v), out)
+
+        _verify_out()
+        self._run_app(build_type)
+
+        self._modify_code()
+        self._incremental_build()
+        _verify_out(marker="++>>")
+        self._run_app(build_type, msg="AppImproved")
+
     def test_toolchain_mingw(self):
         settings = {"compiler": "gcc",
                     "compiler.version": "6",
