@@ -219,9 +219,9 @@ set_property(TARGET {{name}}::{{name}}
 
         ########## TARGETS PROPERTIES ###############################################################
         #############################################################################################
-        {% macro tvalue(pkg_name, comp_name, var, config) -%}
+        {%- macro tvalue(pkg_name, comp_name, var, config) -%}
         {{'${'+pkg_name+'_'+comp_name+'_'+var+'_'+config.upper()+'}'}}
-        {% endmacro %}
+        {%- endmacro %}
         {%- for comp_name, comp in components %}
         ########## COMPONENT {{ comp_name }} TARGET PROPERTIES ######################################
 
