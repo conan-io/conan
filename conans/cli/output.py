@@ -9,41 +9,6 @@ from colorama import Fore, Style
 from conans.util.env_reader import get_env
 
 
-def should_color_output():
-    if "NO_COLOR" in os.environ:
-        return False
-
-    clicolor_force = get_env("CLICOLOR_FORCE")
-    if clicolor_force is not None and clicolor_force != "0":
-        import colorama
-        colorama.init(convert=False, strip=False)
-        return True
-
-    isatty = hasattr(sys.stdout, "isatty") and sys.stdout.isatty()
-
-    clicolor = get_env("CLICOLOR")
-    if clicolor is not None:
-        if clicolor == "0" or not isatty:
-            return False
-        import colorama
-        colorama.init()
-        return True
-
-    # Respect color env setting or check tty if unset
-    color_set = "CONAN_COLOR_DISPLAY" in os.environ
-    if ((color_set and get_env("CONAN_COLOR_DISPLAY", 1))
-        or (not color_set and isatty)):
-        import colorama
-        if get_env("PYCHARM_HOSTED"):  # in PyCharm disable convert/strip
-            colorama.init(convert=False, strip=False)
-        else:
-            colorama.init()
-        color = True
-    else:
-        color = False
-    return color
-
-
 class Color(object):
     """ Wrapper around colorama colors that are undefined in importing
     """
@@ -109,6 +74,7 @@ class ConanOutput(object):
         self._logger = logging.getLogger("conan_out_logger")
         self._stream_handler = None
         self._quiet = quiet
+        self._color = self._init_colors()
 
         if self._quiet:
             self._logger.addHandler(NullHandler())
@@ -120,7 +86,6 @@ class ConanOutput(object):
             self._logger.setLevel(logging.INFO)
             self._logger.propagate = False
 
-        self._color = color
         self._scope = ""
 
     @property
@@ -168,6 +133,22 @@ class ConanOutput(object):
     def flush(self):
         if self._stream_handler:
             self._stream_handler.flush()
+
+    @staticmethod
+    def _init_colors():
+        clicolor = get_env("CLICOLOR")
+        clicolor_force = get_env("CLICOLOR_FORCE")
+        no_color = get_env("NO_COLOR")
+        if no_color or (clicolor and clicolor == "0"):
+            return False
+        else:
+            import colorama
+            if clicolor_force or (clicolor and clicolor != "0"):
+                colorama.init(convert=False, strip=False)
+            else:
+                # TODO: check if colorama checks for stripping colors are enough
+                colorama.init()
+            return True
 
 
 class CliOutput(object):

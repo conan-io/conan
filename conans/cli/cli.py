@@ -11,7 +11,7 @@ from conans import __version__ as client_version
 from conans.cli.command import ConanSubCommand
 from conans.cli.exit_codes import SUCCESS, ERROR_MIGRATION, ERROR_GENERAL, USER_CTRL_C, \
     ERROR_SIGTERM, USER_CTRL_BREAK, ERROR_INVALID_CONFIGURATION
-from conans.cli.output import ConanOutput, should_color_output, CliOutput
+from conans.cli.output import ConanOutput, CliOutput
 from conans.client.api.conan_api import Conan
 from conans.errors import ConanException, ConanInvalidConfiguration, ConanMigrationError
 from conans.util.files import exception_message_safe
@@ -147,8 +147,7 @@ def main(args):
         6: Invalid configuration (done)
     """
     try:
-        use_color = should_color_output()
-        output = ConanOutput(use_color=use_color)
+        output = ConanOutput()
         conan_api = Conan(output=output)
     except ConanMigrationError:  # Error migrating
         sys.exit(ERROR_MIGRATION)
