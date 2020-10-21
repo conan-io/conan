@@ -470,3 +470,39 @@ class HelloConan(ConanFile):
                                env_info={})
         client.save({"conanfile.py": conanfile})
         client.run("create conanfile.py")  # Correct usage
+
+    def test_get_name_local_flow(self):
+        # https://github.com/conan-io/conan/issues/7854
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class Package(ConanFile):
+                def package_info(self):
+                    self.cpp_info.names["cmake_find_package"] = "GTest"
+                    self.cpp_info.filenames["cmake_find_package"] = "GtesT"
+                """)
+        client.save({"conanfile.py": conanfile})
+        client.run("create . gtest/1.0@")
+
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class Package(ConanFile):
+                requires = 'gtest/1.0'
+                generators = 'cmake_find_package'
+
+                def build(self):
+                    info = self.deps_cpp_info['gtest'].get_name('cmake_find_package')
+                    self.output.info("GTEST_INFO: %s" % info)
+                    fileinfo = self.deps_cpp_info['gtest'].get_filename('cmake_find_package')
+                    self.output.info("GTEST_FILEINFO: %s" % fileinfo)
+            """)
+        client.save({"conanfile.py": conanfile})
+        client.run("create . pkg/1.0@")
+        self.assertIn("pkg/1.0: GTEST_INFO: GTest", client.out)
+        self.assertIn("pkg/1.0: GTEST_FILEINFO: GtesT", client.out)
+        client.run("install . pkg/1.0@")
+        self.assertIn("Generator cmake_find_package created FindGtesT.cmake", client.out)
+        client.run("build .")
+        self.assertIn("conanfile.py (pkg/1.0): GTEST_INFO: GTest", client.out)
+        self.assertIn("conanfile.py (pkg/1.0): GTEST_FILEINFO: GtesT", client.out)
+

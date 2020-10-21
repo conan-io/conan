@@ -26,8 +26,11 @@ class Base(unittest.TestCase):
             def toolchain(self):
                 tc = CMakeToolchain(self)
                 tc.variables["MYVAR"] = "MYVAR_VALUE"
+                tc.variables["MYVAR2"] = "MYVAR_VALUE2"
                 tc.variables.debug["MYVAR_CONFIG"] = "MYVAR_DEBUG"
                 tc.variables.release["MYVAR_CONFIG"] = "MYVAR_RELEASE"
+                tc.variables.debug["MYVAR2_CONFIG"] = "MYVAR2_DEBUG"
+                tc.variables.release["MYVAR2_CONFIG"] = "MYVAR2_RELEASE"
                 tc.preprocessor_definitions["MYDEFINE"] = "MYDEF_VALUE"
                 tc.preprocessor_definitions.debug["MYDEFINE_CONFIG"] = "MYDEF_DEBUG"
                 tc.preprocessor_definitions.release["MYDEFINE_CONFIG"] = "MYDEF_RELEASE"
@@ -114,7 +117,7 @@ class Base(unittest.TestCase):
         """)
 
     def setUp(self):
-        self.client = TestClient(path_with_spaces=False)
+        self.client = TestClient(path_with_spaces=True)
         conanfile = textwrap.dedent("""
             from conans import ConanFile
             from conans.tools import save
@@ -170,7 +173,9 @@ class Base(unittest.TestCase):
             build_directory = os.path.join(self.client.current_folder, "build").replace("\\", "/")
             command_str = 'DYLD_LIBRARY_PATH="%s" build/app' % build_directory
         else:
-            command_str = "build\\%s\\app.exe" % build_type if bin_folder else "build/app"
+            command_str = "build/%s/app.exe" % build_type if bin_folder else "build/app"
+            if platform.system() == "Windows":
+                command_str = command_str.replace("/", "\\")
         self.client.run_command(command_str)
         self.assertIn("Hello: %s" % build_type, self.client.out)
         self.assertIn("%s: %s!" % (msg, build_type), self.client.out)
@@ -416,6 +421,6 @@ class CMakeInstallTest(unittest.TestCase):
         self.assertIn("pkg/0.1 package(): Packaged 1 '.h' file: header.h", client.out)
         ref = ConanFileReference.loads("pkg/0.1")
         layout = client.cache.package_layout(ref)
-        package_id = layout.conan_packages()[0]
+        package_id = layout.package_ids()[0]
         package_folder = layout.package(PackageReference(ref, package_id))
         self.assertTrue(os.path.exists(os.path.join(package_folder, "include", "header.h")))
