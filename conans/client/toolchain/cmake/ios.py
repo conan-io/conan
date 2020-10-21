@@ -49,7 +49,7 @@ class CMakeiOSToolchain(CMakeToolchainBase):
         self.host_architecture = self._get_architecture()
         self.host_os = self._conanfile.settings.get_safe("os")
         self.host_os_version = self._conanfile.settings.get_safe("os.version")
-        self.host_sdk_name = self._get_sdk_name(self.host_architecture)
+        self.host_sdk_name = self._apple_sdk_name()
 
         # TODO: Discuss how to handle CMAKE_OSX_DEPLOYMENT_TARGET to set min-version
         # add a setting? check an option and if not present set a default?
@@ -74,17 +74,22 @@ class CMakeiOSToolchain(CMakeToolchainBase):
                 "armv8_32": "arm64_32"}.get(arch, arch)
         return None
 
-    def _get_sdk_name(self, architecture):
-        os_name = self._conanfile.settings.get_safe("os")
-        if "arm" in architecture:
-            return {"iOS": "iphoneos",
-                    "watchOS": "appletvos",
-                    "tvOS": "watchos"}.get(os_name)
+    # TODO: refactor, comes from conans.client.tools.apple.py
+    def _apple_sdk_name(self):
+        """returns proper SDK name suitable for OS and architecture
+        we're building for (considering simulators)"""
+        arch = self._conanfile.settings.get_safe('arch')
+        os_ = self._conanfile.settings.get_safe('os')
+        if str(arch).startswith('x86'):
+            return {'Macos': 'macosx',
+                    'iOS': 'iphonesimulator',
+                    'watchOS': 'watchsimulator',
+                    'tvOS': 'appletvsimulator'}.get(str(os_))
         else:
-            return {"iOS": "iphonesimulator",
-                    "watchOS": "appletvsimulator",
-                    "tvOS": "watchsimulator"}.get(os_name)
-        return None
+            return {'Macos': 'macosx',
+                    'iOS': 'iphoneos',
+                    'watchOS': 'watchos',
+                    'tvOS': 'appletvos'}.get(str(os_), None)
 
     def _get_template_context_data(self):
         ctxt_toolchain, _ = super(CMakeiOSToolchain, self)._get_template_context_data()
