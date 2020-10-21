@@ -148,7 +148,7 @@ def main(args):
     """
     try:
         use_color = should_color_output()
-        output = ConanOutput(sys.stderr, use_color)
+        output = ConanOutput(use_color=use_color)
         conan_api = Conan(output=output)
     except ConanMigrationError:  # Error migrating
         sys.exit(ERROR_MIGRATION)

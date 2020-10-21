@@ -105,14 +105,15 @@ class TqdmHandler(logging.StreamHandler):
 
 
 class ConanOutput(object):
-    def __init__(self, stream=None, color=False):
-        self._logger = logging.getLogger("conan.output")
-        self._stream = stream
+    def __init__(self, quiet=False, color=False):
+        self._logger = logging.getLogger("conan_out_logger")
         self._stream_handler = None
+        self._quiet = quiet
 
-        if self._stream is None:
+        if self._quiet:
             self._logger.addHandler(NullHandler())
         else:
+            self._stream = sys.stderr
             self._stream_handler = TqdmHandler(self._stream)
             self._stream_handler.setFormatter(logging.Formatter("%(message)s"))
             self._logger.addHandler(self._stream_handler)
