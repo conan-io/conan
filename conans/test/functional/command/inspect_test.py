@@ -42,6 +42,20 @@ class ConanInspectTest(unittest.TestCase):
         client.run("inspect pkg/0.1@user/channel -a settings")
         self.assertIn("settings: os", client.out)
 
+    def test_inspect_not_in_remote(self):
+        client = TestClient(default_server_user=True)
+        client.save({"conanfile.py": GenConanfile("pkg", "0.1").with_settings("os")})
+        client.run("export . user/channel")
+
+        client.run("inspect pkg/0.1@user/channel -a settings")
+        self.assertIn("settings: os", client.out)
+
+        client.run("inspect pkg/0.1@user/channel -a settings -r default", assert_error=True)
+        self.assertIn("ERROR: Recipe not found: 'pkg/0.1@user/channel'", client.out)
+
+        client.run("inspect pkg/0.1@user/channel -a settings")
+        self.assertIn("settings: os", client.out)
+
     def python_requires_test(self):
         server = TestServer()
         client = TestClient(servers={"default": server}, users={"default": [("lasote", "mypass")]})
