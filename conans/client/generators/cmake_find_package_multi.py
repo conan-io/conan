@@ -48,9 +48,8 @@ class CMakeFindPackageMultiGenerator(CMakeFindPackageGenerator):
 set_property(TARGET {{name}}::{{name}}
              PROPERTY INTERFACE_LINK_LIBRARIES
              {%- for config in configs %}
-             $<$<CONFIG:{{config}}>:
-                ${{'{'}}{{name}}_LIBRARIES_TARGETS_{{config.upper()}}}
-                ${{'{'}}{{name}}_LINKER_FLAGS_{{config.upper()}}_LIST}>
+             $<$<CONFIG:{{config}}>:${{'{'}}{{name}}_LIBRARIES_TARGETS_{{config.upper()}}}
+                                    ${{'{'}}{{name}}_LINKER_FLAGS_{{config.upper()}}_LIST}>
              {%- endfor %})
 set_property(TARGET {{name}}::{{name}}
              PROPERTY INTERFACE_INCLUDE_DIRECTORIES
@@ -221,14 +220,13 @@ set_property(TARGET {{name}}::{{name}}
         #############################################################################################
         {%- macro tvalue(pkg_name, comp_name, var, config) -%}
         {{'${'+pkg_name+'_'+comp_name+'_'+var+'_'+config.upper()+'}'}}
-        {%- endmacro %}
+        {%- endmacro -%}
         {%- for comp_name, comp in components %}
         ########## COMPONENT {{ comp_name }} TARGET PROPERTIES ######################################
 
         set_property(TARGET {{ pkg_name }}::{{ comp_name }} PROPERTY INTERFACE_LINK_LIBRARIES
                      {%- for config in configs %}
-                     $<$<CONFIG:{{config}}>:
-                        {{tvalue(pkg_name, comp_name, 'LINK_LIBS', config)}}
+                     $<$<CONFIG:{{config}}>:{{tvalue(pkg_name, comp_name, 'LINK_LIBS', config)}}
                         {{tvalue(pkg_name, comp_name, 'LINKER_FLAGS_LIST', config)}}>
                      {%- endfor %})
         set_property(TARGET {{ pkg_name }}::{{ comp_name }} PROPERTY INTERFACE_INCLUDE_DIRECTORIES
