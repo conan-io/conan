@@ -3,6 +3,7 @@ import platform
 import subprocess
 import textwrap
 import unittest
+from collections import OrderedDict
 
 import six
 from parameterized.parameterized import parameterized_class
@@ -227,6 +228,8 @@ class VirtualEnvIntegrationTestCase(unittest.TestCase):
         self.assertNotIn("WHATEVER", os.environ)
         self.assertIn("PATH", os.environ)
         existing_path = os.environ.get("PATH")
+        # Avoid duplicates in the path
+        existing_path = os.pathsep.join(OrderedDict.fromkeys(existing_path.split(os.pathsep)))
 
         generator = VirtualEnvGenerator(ConanFileMock())
         generator.env = {"PATH": [os.path.join(self.test_folder, "bin"), r'other\path'],
