@@ -103,6 +103,11 @@ class Printer(object):
             if show("topics") and "topics" in it:
                 self._out.writeln("    Topics: %s" % ", ".join(it["topics"]), Color.BRIGHT_GREEN)
 
+            if show("provides") and "provides" in it:
+                self._out.writeln("    Provides: %s" % ", ".join(it["provides"]), Color.BRIGHT_GREEN)
+
+            _print("deprecated", name="Deprecated")
+
             _print("recipe", name="Recipe", color=None)
             if show_revisions:
                 _print("revision", name="Revision", color=None)

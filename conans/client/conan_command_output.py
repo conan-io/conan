@@ -14,6 +14,7 @@ from conans.util.dates import iso8601_to_str
 from conans.util.env_reader import get_env
 from conans.util.files import save
 from conans import __version__ as client_version
+from conans.util.misc import make_tuple
 
 
 class CommandOutputer(object):
@@ -166,8 +167,7 @@ class CommandOutputer(object):
                     if not as_list:
                         item_data[attrib] = value
                     else:
-                        item_data[attrib] = list(value) if isinstance(value, (list, tuple, set)) \
-                            else [value, ]
+                        item_data[attrib] = make_tuple(value)
 
             _add_if_exists("url")
             _add_if_exists("homepage")
@@ -175,6 +175,8 @@ class CommandOutputer(object):
             _add_if_exists("author")
             _add_if_exists("description")
             _add_if_exists("topics", as_list=True)
+            _add_if_exists("deprecated")
+            _add_if_exists("provides", as_list=True)
 
             if isinstance(ref, ConanFileReference):
                 item_data["recipe"] = node.recipe
