@@ -68,8 +68,7 @@ class ToolchainiOSTestCase(unittest.TestCase):
 
         # Build in the cache
         self.t.run('create . --profile:build=default --profile:host=ios_profile')
-        self.assertIn("Non-fat file: Release-iphoneos/libhello.a is architecture: arm64",
-                      self.t.out)
+        self.assertIn("Non-fat file: Release-iphoneos/libhello.a is architecture: arm64", self.t.out)
 
         # Build locally
         self.t.run('install . --profile:host=ios_profile --profile:build=default')
