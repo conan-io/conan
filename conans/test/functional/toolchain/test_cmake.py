@@ -494,6 +494,7 @@ class CMakeMultiConfigurationTest(unittest.TestCase):
 
         set(CMAKE_CXX_FLAGS_RELEASESHARED ${CMAKE_CXX_FLAGS_RELEASE})
         set(CMAKE_C_FLAGS_RELEASESHARED ${CMAKE_C_FLAGS_RELEASE})
+        set(CMAKE_EXE_LINKER_FLAGS_RELEASESHARED ${CMAKE_EXE_LINKER_FLAGS_RELEASE})
 
         find_package(hello REQUIRED)
 
