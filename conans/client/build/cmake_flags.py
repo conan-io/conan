@@ -5,7 +5,7 @@ from collections import OrderedDict
 from conans.client import tools
 from conans.client.build.compiler_flags import architecture_flag, parallel_compiler_cl_flag
 from conans.client.build.cppstd_flags import cppstd_from_settings, cppstd_flag_new as cppstd_flag
-from conans.client.tools import cross_building
+from conans.client.tools import cross_building, Version
 from conans.client.tools.apple import is_apple_os
 from conans.client.tools.oss import get_cross_building_settings
 from conans.errors import ConanException
@@ -172,7 +172,7 @@ class CMakeDefinitionsBuilder(object):
         definitions["CONAN_STD_CXX_FLAG"] = cppstd_flag(self._conanfile.settings)
         return definitions
 
-    def _cmake_cross_build_defines(self):
+    def _cmake_cross_build_defines(self, cmake_version):
         os_ = self._ss("os")
         arch = self._ss("arch")
         os_ver_str = "os.api_level" if os_ == "Android" else "os.version"
@@ -204,10 +204,11 @@ class CMakeDefinitionsBuilder(object):
         else:  # detect if we are cross building and the system name and version
             skip_x64_x86 = os_ in ['Windows', 'Linux']
             if cross_building(self._conanfile, skip_x64_x86=skip_x64_x86):  # We are cross building
+                apple_system_name = "Darwin" if Version(cmake_version) < Version("3.14") else None
                 cmake_system_name_map = {"Macos": "Darwin",
-                                         "iOS": "Darwin",
-                                         "tvOS": "Darwin",
-                                         "watchOS": "Darwin",
+                                         "iOS": apple_system_name or "iOS",
+                                         "tvOS": apple_system_name or "tvOS",
+                                         "watchOS": apple_system_name or "watchOS",
                                          "Neutrino": "QNX",
                                          "": "Generic",
                                          None: "Generic"}
@@ -280,7 +281,7 @@ class CMakeDefinitionsBuilder(object):
 
         return {}
 
-    def get_definitions(self):
+    def get_definitions(self, cmake_version):
 
         compiler = self._ss("compiler")
         compiler_base = self._ss("compiler.base")
@@ -310,7 +311,7 @@ class CMakeDefinitionsBuilder(object):
                 if sdk_path:
                     definitions["CMAKE_OSX_SYSROOT"] = sdk_path
 
-        definitions.update(self._cmake_cross_build_defines())
+        definitions.update(self._cmake_cross_build_defines(cmake_version))
         definitions.update(self._get_cpp_standard_vars())
 
         definitions.update(in_local_cache_definition(self._conanfile.in_local_cache))
