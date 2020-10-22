@@ -91,7 +91,7 @@ class SystemPackageTool(object):
         self._is_up_to_date = True
         self._tool.update()
 
-    def install(self, packages, update=True, force=False, arch_names=None, all=False):
+    def install(self, packages, update=True, force=False, arch_names=None):
         """ Get the system package tool install command and install one package
 
         :param packages: String with a package to be installed or a list with its variants e.g. "libusb-dev libxusb-devel"
@@ -127,15 +127,23 @@ class SystemPackageTool(object):
         self._install_any(packages)
 
     def install_packages(self, packages, update=True, force=False, arch_names=None):
-        """ Get the system package tool install command and install all packages.
+        """ Get the system package tool install command and install all packages or variants.
+            Inputs:
+            "pkg-variant1"  # (1) String input: Install only one package
+            ["pkg-variant1", "otherpkg", "thirdpkg"] # (2) List of strings: all must be installed
+            [("pkg-variant1", "pkg-variant2"), "otherpkg", "thirdpkg"] # (3) List with alternatives
 
-        :param packages: String with all packages to be installed e.g. "libusb-dev libfoobar-dev"
+        :param packages: String/List/Tuple with all packages to be installed e.g. "libusb-dev libfoobar-dev"
         :param update: Run update command before to install
         :param force: Force installing all packages
         :param arch_names: Package suffix/prefix name used by installer tool e.g. {"x86_64": "amd64"}
         :return: None
         """
         packages = [packages] if isinstance(packages, str) else list(packages)
+        variants = list(filter(lambda x: isinstance(x, tuple), packages))
+        for variant in variants:
+            self.install(variant)
+        packages = list(filter(lambda x: not isinstance(x, tuple), packages))
         packages = self._get_package_names(packages, arch_names)
 
         mode = self._get_sysrequire_mode()
@@ -173,9 +181,12 @@ class SystemPackageTool(object):
             arch = host_arch or build_arch
             parsed_packages = []
             for package in packages:
-                for package_name in package.split(" "):
-                    parsed_packages.append(self._tool.get_package_name(package_name, arch,
-                                                                       arch_names))
+                if isinstance(package, (tuple, list)):
+                    parsed_packages.append(tuple(self._get_package_names(package, arch_names)))
+                else:
+                    for package_name in package.split(" "):
+                        parsed_packages.append(self._tool.get_package_name(package_name, arch,
+                                                                           arch_names))
             return parsed_packages
         return packages
 
@@ -183,6 +194,10 @@ class SystemPackageTool(object):
         return self._tool.installed(package_name)
 
     def _all_installed(self, packages):
+        for pkg in packages:
+            if isinstance(pkg, (list, tuple)):
+                if not self._all_installed(pkg):
+                    return False
         return all([self._installed([pkg]) for pkg in packages])
 
     def _installed(self, packages):
