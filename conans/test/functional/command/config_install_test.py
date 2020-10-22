@@ -214,7 +214,7 @@ class Pkg(ConanFile):
             self._check("file, %s, True, None" % zippath)
             self.assertTrue(os.path.exists(zippath))
 
-    def test_test_install_config_file(self):
+    def test_install_config_file(self):
         """ should install from a settings and remotes file in configuration directory
         """
         import tempfile
