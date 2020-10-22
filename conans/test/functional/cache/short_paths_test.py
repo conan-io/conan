@@ -113,13 +113,11 @@ class TestConan(ConanFile):
             from conans import ConanFile
 
             class TestConan(ConanFile):
-                name = "test"
-                version = "1.0"
                 short_paths = True
             """)
         client = TestClient()
         client.save({"conanfile.py": conanfile})
-        client.run("create . ")
+        client.run("create . test/1.0@")
         self.assertIn("test/1.0: Package '%s' created" % NO_SETTINGS_PACKAGE_ID, client.out)
         ref = ConanFileReference.loads("test/1.0")
         pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
@@ -130,3 +128,7 @@ class TestConan(ConanFile):
         client.run("install test/1.0@", assert_error=True)
         self.assertIn("ERROR: Package 'test/1.0:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9' corrupted."
                       " Package folder must exist:", client.out)
+        client.run("remove test/1.0@ -p -f")
+        client.run("install test/1.0@", assert_error=True)
+        self.assertIn("ERROR: Missing binary: test/1.0:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9",
+                      client.out)
