@@ -47,11 +47,10 @@ def help(conan_api, parser, *args, commands, groups, **kwargs):
 
     parser.add_argument("command", help='command', nargs="?")
     args = parser.parse_args(*args)
-    out = CliOutput()
     if not args.command:
-        output_help_cli(out, commands, groups)
+        output_help_cli(commands, groups)
         return None
     try:
-        commands[args.command].run(conan_api, out, commands[args.command].parser, ["--help"])
+        commands[args.command].run(conan_api, commands[args.command].parser, ["--help"])
     except KeyError:
         raise ConanException("Unknown command '%s'" % args.command)
