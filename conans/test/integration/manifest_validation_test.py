@@ -45,7 +45,7 @@ class ConanFileTest(ConanFile):
         self.client.run("export . lasote/stable")
 
     @parameterized.expand([(True, ), (False, )])
-    def test_package_test(self, use_abs_folder):
+    def test_test_package(self, use_abs_folder):
         self.client.run("install Hello/0.1@lasote/stable --build missing")
         conanfile = """from conans import ConanFile
 
@@ -120,7 +120,7 @@ class ConsumerFileTest(ConanFile):
         self.assertIn("Manifest for '%s': OK" % str(pref), self.client.out)
 
     @unittest.skipUnless(platform.system() == "Windows", "Only Windows with shortpaths")
-    def capture_verify_short_paths_manifest_test(self):
+    def test_capture_verify_short_paths_manifest(self):
         conanfile = """from conans import ConanFile
 
 class ConanFileTest(ConanFile):
@@ -134,18 +134,18 @@ class ConanFileTest(ConanFile):
         self.client.run("export . lasote/stable")
         self._capture_verify_manifest("Hello/0.1@lasote/stable")
 
-    def capture_verify_manifest_test(self):
+    def test_capture_verify_manifest(self):
         self._capture_verify_manifest("Hello/0.1@lasote/stable")
 
-    def conanfile_capture_verify_manifest_test(self):
+    def test_conanfile_capture_verify_manifest(self):
         files = {"conanfile.txt": "[requires]\nHello/0.1@lasote/stable"}
         self.client.save(files, clean_first=True)
         self._capture_verify_manifest(".")
 
-    def capture_verify_manifest_folder_test(self):
+    def test_capture_verify_manifest_folder(self):
         self._capture_verify_manifest("Hello/0.1@lasote/stable", folder="my_custom_folder")
 
-    def conanfile_capture_verify_manifest_folder_test(self):
+    def test_conanfile_capture_verify_manifest_folder(self):
         files = {"conanfile.txt": "[requires]\nHello/0.1@lasote/stable"}
         self.client.save(files, clean_first=True)
         folder = "mymanifests"
@@ -181,7 +181,7 @@ class ConanFileTest(ConanFile):
         self.assertTrue(os.path.exists(os.path.join(package_folder(output_folder, pref),
                                                     CONAN_MANIFEST)))
 
-    def remote_capture_verify_manifest_test(self):
+    def test_remote_capture_verify_manifest(self):
         self.client.run("upload %s --all" % str(self.ref))
         self.client.run("remove Hello* -f")
         files = {"conanfile.txt": "[requires]\nHello/0.1@lasote/stable"}
@@ -226,10 +226,10 @@ class ConanFileTest(ConanFile):
         self.assertIn("Modified or new manifest 'Hello/0.1@lasote/stable' detected",
                       self.client.out)
 
-    def capture_verify_error_manifest_test(self):
+    def test_capture_verify_error_manifest(self):
         self._failed_verify("Hello/0.1@lasote/stable")
 
-    def conanfile_capture_verify_error_manifest_test(self):
+    def test_conanfile_capture_verify_error_manifest(self):
         files = {"conanfile.txt": "[requires]\nHello/0.1@lasote/stable"}
         self.client.save(files, clean_first=True)
         self._failed_verify(".")
@@ -276,21 +276,21 @@ class ConanFileTest(ConanFile):
         self.assertIn("Modified or new manifest '%s' detected" % str(pref),
                       self.client.out)
 
-    def capture_verify_package_error_manifest_test(self):
+    def test_capture_verify_package_error_manifest(self):
         self._failed_package_verify("Hello/0.1@lasote/stable")
 
-    def conanfile_capture_verify_package_error_manifest_test(self):
+    def test_conanfile_capture_verify_package_error_manifest(self):
         files = {"conanfile.txt": "[requires]\nHello/0.1@lasote/stable"}
         self.client.save(files, clean_first=True)
         self._failed_package_verify(".")
 
-    def manifest_wrong_folder_test(self):
+    def test_manifest_wrong_folder(self):
         reference = "Hello/0.1@lasote/stable"
         self.client.run("install %s --build missing --verify whatever"
                         % str(reference), assert_error=True)
         self.assertIn("Manifest folder does not exist:", self.client.out)
 
-    def manifest_wrong_args_test(self):
+    def test_manifest_wrong_args(self):
         reference = "Hello/0.1@lasote/stable"
         self.client.run("install %s --build missing --verify -m"
                         % str(reference), assert_error=True)
