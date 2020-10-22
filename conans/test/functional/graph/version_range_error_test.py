@@ -5,7 +5,7 @@ from conans.test.utils.tools import TestClient, GenConanfile
 
 
 class VersionRangesErrorTest(unittest.TestCase):
-    def verbose_version_test(self):
+    def test_verbose_version(self):
         client = TestClient()
         conanfile = GenConanfile().with_name("MyPkg").with_version("0.1")\
                                   .with_require("MyOtherPkg/[~0.1]@user/testing")

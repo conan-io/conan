@@ -11,12 +11,12 @@ class SearchRecorderTest(unittest.TestCase):
     def setUp(self):
         self.search_recorder = SearchRecorder()
 
-    def empty_test(self):
+    def test_empty(self):
         info = self.search_recorder.get_info()
         expected_result = {'error': False, 'results': []}
         self.assertEqual(expected_result, info)
 
-    def sequential_test(self):
+    def test_sequential(self):
         self.search_recorder.add_recipe("remote1", _ref("fake/0.1@user/channel"))
         self.search_recorder.add_package("remote1", _ref("fake/0.1@user/channel"), "fake_package_id",
                                          "fake_options", "fake_settings", "fake_requires", False)
@@ -80,7 +80,7 @@ class SearchRecorderTest(unittest.TestCase):
         }
         self.assertEqual(expected_result, info)
 
-    def unordered_test(self):
+    def test_unordered(self):
         self.search_recorder.add_recipe("my_remote1", _ref("fake1/0.1@user/channel"))
         self.search_recorder.add_recipe("my_remote2", _ref("fake2/0.1@user/channel"))
         self.search_recorder.add_recipe("my_remote3", _ref("fake3/0.1@user/channel"))
@@ -157,7 +157,7 @@ class SearchRecorderTest(unittest.TestCase):
                         }
         self.assertEqual(expected_result, info)
 
-    def without_packages_test(self):
+    def test_without_packages(self):
         self.search_recorder.add_recipe("my_remote1", _ref("fake1/0.1@user/channel"), None)
         self.search_recorder.add_recipe("my_remote2", _ref("fake2/0.1@user/channel"), None)
         self.search_recorder.add_recipe("my_remote3", _ref("fake3/0.1@user/channel"), None)

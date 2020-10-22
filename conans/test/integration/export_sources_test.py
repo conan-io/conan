@@ -251,7 +251,7 @@ class ExportsSourcesTest(unittest.TestCase):
 
     @parameterized.expand([("exports", ), ("exports_sources", ), ("both", ), ("nested", ),
                            ("overlap", )])
-    def copy_test(self, mode):
+    def test_copy(self, mode):
         # https://github.com/conan-io/conan/issues/943
         self._create_code(mode)
 
@@ -276,7 +276,7 @@ class ExportsSourcesTest(unittest.TestCase):
 
     @parameterized.expand([("exports", ), ("exports_sources", ), ("both", ), ("nested", ),
                            ("overlap", )])
-    def export_test(self, mode):
+    def test_export(self, mode):
         self._create_code(mode)
 
         self.client.run("export . lasote/testing")
@@ -324,7 +324,7 @@ class ExportsSourcesTest(unittest.TestCase):
 
     @parameterized.expand([("exports", ), ("exports_sources", ), ("both", ), ("nested", ),
                            ("overlap", )])
-    def export_upload_test(self, mode):
+    def test_export_upload(self, mode):
         self._create_code(mode)
 
         self.client.run("export . lasote/testing")
@@ -353,7 +353,7 @@ class ExportsSourcesTest(unittest.TestCase):
 
     @parameterized.expand([("exports", ), ("exports_sources", ), ("both", ), ("nested", ),
                            ("overlap", )])
-    def reupload_test(self, mode):
+    def test_reupload(self, mode):
         """ try to reupload to same and other remote
         """
         self._create_code(mode)
@@ -375,7 +375,7 @@ class ExportsSourcesTest(unittest.TestCase):
 
     @parameterized.expand([("exports", ), ("exports_sources", ), ("both", ), ("nested", ),
                            ("overlap", )])
-    def update_test(self, mode):
+    def test_update(self, mode):
         self._create_code(mode)
 
         self.client.run("export . lasote/testing")
@@ -401,7 +401,7 @@ class ExportsSourcesTest(unittest.TestCase):
         self.client.run("install Hello/0.1@lasote/testing --update")
         self._check_export_installed_folder(mode, updated=True)
 
-    def exports_sources_old_c_src_test(self):
+    def test_exports_sources_old_c_src(self):
         conanfile = """
 import os
 from conans import ConanFile

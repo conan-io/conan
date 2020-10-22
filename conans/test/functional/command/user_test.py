@@ -175,7 +175,7 @@ class ConanLib(ConanFile):
         self.assertIn('ERROR: Conan interactive mode disabled', client.out)
         self.assertNotIn("Remote 'default' username:", client.out)
 
-    def authenticated_test(self):
+    def test_authenticated(self):
         test_server = TestServer(users={"lasote": "mypass", "danimtb": "passpass"})
         servers = OrderedDict()
         servers["default"] = test_server
@@ -211,7 +211,7 @@ class ConanLib(ConanFile):
         self.assertIn("Current user of remote 'other_server' set to: 'lasote'", client.out)
         self.assertNotIn("[Authenticated]", client.out)
 
-    def json_test(self):
+    def test_json(self):
         def _compare_dicts(first_dict, second_dict):
             self.assertTrue(set(first_dict), set(second_dict))
 

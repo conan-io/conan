@@ -27,7 +27,7 @@ class InstallOutdatedPackagesTest(unittest.TestCase):
         self.client.run("upload  Hello0/0.1@lasote/stable --all")
 
     @unittest.skipIf(get_env("TESTING_REVISIONS_ENABLED", False), "No sense with revs")
-    def install_outdated_test(self):
+    def test_install_outdated(self):
         # If we try to install the same package with --build oudated it's already ok
         self.client.run("install Hello0/0.1@lasote/stable --build outdated")
         self.assertIn("Hello0/0.1@lasote/stable: Package is up to date", self.client.out)
@@ -59,7 +59,7 @@ class InstallOutdatedPackagesTest(unittest.TestCase):
         self.assertNotIn("Package is up to date", self.client.out)
         self.assertIn("Building your package", self.client.out)
 
-    def install_outdated_dep_test(self):
+    def test_install_outdated_dep(self):
         # A new recipe that depends on Hello0/0.1
         new_client = TestClient(servers=self.servers,
                                 users={"default": [("lasote", "mypass")]})
@@ -98,7 +98,7 @@ class InstallOutdatedPackagesTest(unittest.TestCase):
             self.assertIn("Hello0/0.1@lasote/stable: Outdated package!", new_client.out)
             self.assertIn("Hello0/0.1@lasote/stable: Building your package", new_client.out)
 
-    def install_outdated_and_dep_test(self):
+    def test_install_outdated_and_dep(self):
         # regression test for https://github.com/conan-io/conan/issues/1053
         # A new recipe that depends on Hello0/0.1
         new_client = TestClient(servers=self.servers,
@@ -129,7 +129,7 @@ class InstallOutdatedPackagesTest(unittest.TestCase):
         self.assertIn("Hello1/0.1@lasote/stable: Forced build from source",
                       new_client.out)
 
-    def install_outdated_checking_updates_test(self):
+    def test_install_outdated_checking_updates(self):
         server = TestServer()
         servers = OrderedDict([("default", server)])
         client = TurboTestClient(servers=servers)

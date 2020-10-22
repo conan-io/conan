@@ -17,7 +17,7 @@ from conans.util.files import load
 class ConanEnvTest(unittest.TestCase):
 
     @attr('slow')
-    def shared_in_current_directory_test(self):
+    def test_shared_in_current_directory(self):
         """
         - There is a package building a shared library
         - There is a consumer project importing the shared library (and the executable)
@@ -157,7 +157,7 @@ class MyTest(ConanFile):
         client.run("create . lasote/testing -e MYVAR=MYVALUE")
         self.assertIn("MYVAR==>MYVALUE", client.out)
 
-    def deactivate_env_inheritance_test(self):
+    def test_deactivate_env_inheritance(self):
         client = TestClient()
         conanfile = """from conans import ConanFile
 class MyPkg(ConanFile):
@@ -200,7 +200,7 @@ class MyLib(ConanFile):
                      "myprofile": "[build_requires]\nPkg/0.1@lasote/testing"})
         client.run("create . MyLib/0.1@lasote/testing --profile ./myprofile")
 
-    def env_path_order_test(self):
+    def test_env_path_order(self):
         client = TestClient()
         with tools.environment_append({"SOME_VAR": ["INITIAL VALUE"]}):
             conanfile = """from conans import ConanFile
@@ -300,7 +300,7 @@ virtualrunenv
                 self.assertNotIn("bin2", line)
                 self.assertIn("lib2", line)
 
-    def dual_compiler_settings_and_env_test(self):
+    def test_dual_compiler_settings_and_env(self):
 
         def patch_conanfile(conanfile):
             return conanfile + '''
@@ -352,7 +352,7 @@ virtualrunenv
         self.assertIn("CXX: Hello1=>/mycompilercxx", client.out)
         self.assertIn("CC: Hello1=>/mycompilercc", client.out)
 
-    def conan_profile_unscaped_env_var_test(self):
+    def test_conan_profile_unscaped_env_var(self):
 
         client = TestClient()
         conanfile = '''
@@ -388,7 +388,7 @@ CXXFLAGS=-fPIC -DPIC
                 ret = os.system("activate.bat")
         self.assertEqual(ret, 0)
 
-    def conan_env_deps_test(self):
+    def test_conan_env_deps(self):
         client = TestClient()
         conanfile = '''
 from conans import ConanFile
@@ -630,7 +630,7 @@ class Hello2Conan(ConanFile):
         self.assertInSep("VAR2=>24:23*", client.out)
         self.assertInSep("VAR3=>bestvalue*", client.out)
 
-    def mix_path_case_test(self):
+    def test_mix_path_case(self):
         client = TestClient()
         conanfile = """
 from conans import ConanFile
@@ -679,7 +679,7 @@ PATH=["path_from_B"]""", info)
             activate = client.load("environment.bat.env")
             self.assertIn('PATH=path_from_A;path_from_B;%PATH%', activate)
 
-    def check_conaninfo_completion_test(self):
+    def test_check_conaninfo_completion(self):
         """
         consumer -> B -> C
                       -> D (conditional)
