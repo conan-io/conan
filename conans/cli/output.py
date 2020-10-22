@@ -69,7 +69,7 @@ class TqdmHandler(logging.StreamHandler):
 
 
 class ConanOutput(object):
-    def __init__(self, quiet=False, color=False):
+    def __init__(self, quiet=False):
         self._logger = logging.getLogger("conan_out_logger")
         self._stream_handler = None
         self._quiet = quiet
@@ -120,6 +120,10 @@ class ConanOutput(object):
     def info(self, msg, fg=None, bg=None):
         self._write(msg, logging.INFO, fg, bg)
 
+    # TODO: remove, just to support the migration system warn message
+    def warn(self, msg):
+        self._write("WARNING: {}".format(msg), logging.WARNING, Color.YELLOW)
+
     def warning(self, msg):
         self._write("WARNING: {}".format(msg), logging.WARNING, Color.YELLOW)
 
@@ -139,6 +143,8 @@ class ConanOutput(object):
         clicolor_force = get_env("CLICOLOR_FORCE")
         no_color = get_env("NO_COLOR")
         if no_color or (clicolor and clicolor == "0"):
+            import colorama
+            colorama.init(strip=True)
             return False
         else:
             import colorama
