@@ -121,14 +121,6 @@ class PackageCacheLayout(object):
         pkg_folder = os.path.join(self._base_folder, PACKAGES_FOLDER, pref.id)
         return is_dirty(pkg_folder)
 
-    def package_set_dirty(self, pref):
-        pkg_folder = os.path.join(self._base_folder, PACKAGES_FOLDER, pref.id)
-        return set_dirty(pkg_folder)
-
-    def package_clean_dirty(self, pref):
-        pkg_folder = os.path.join(self._base_folder, PACKAGES_FOLDER, pref.id)
-        return clean_dirty(pkg_folder)
-
     def package_id_exists(self, package_id):
         # This is NOT the short paths, but the standard cache one
         pkg_folder = os.path.join(self._base_folder, PACKAGES_FOLDER, package_id)
@@ -146,6 +138,8 @@ class PackageCacheLayout(object):
             raise ConanException("%s\n\nFolder: %s\n"
                                  "Couldn't remove folder, might be busy or open\n"
                                  "Close any app using it, and retry" % (pkg_folder, str(e)))
+        if is_dirty(pkg_folder):
+            clean_dirty(pkg_folder)
 
     def package_metadata(self):
         return os.path.join(self._base_folder, PACKAGE_METADATA)

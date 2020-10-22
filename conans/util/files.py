@@ -48,6 +48,7 @@ _DIRTY_FOLDER = ".dirty"
 
 def set_dirty(folder):
     dirty_file = os.path.normpath(folder) + _DIRTY_FOLDER
+    assert not os.path.exists(dirty_file)
     save(dirty_file, "")
 
 
