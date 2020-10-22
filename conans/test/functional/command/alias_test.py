@@ -208,7 +208,7 @@ class Pkg(ConanFile):
         self.assertIn('"CK/0.1@user/testing" -> "CH/0.1@user/testing"', graphfile)
 
     @parameterized.expand([(True, ), (False, )])
-    def test_test_double_alias(self, use_requires):
+    def test_double_alias(self, use_requires):
         # https://github.com/conan-io/conan/issues/2583
         client = TestClient()
         if use_requires:
