@@ -173,7 +173,7 @@ class MyLib(ConanFile):
     apply_env = False
     requires = "Pkg/0.1@lasote/testing"
 
-    def test_(self):
+    def _test(self):
         assert("SOME_VAR" not in os.environ)
         assert(self.deps_env_info["Pkg"].SOME_VAR == ["22"])
 

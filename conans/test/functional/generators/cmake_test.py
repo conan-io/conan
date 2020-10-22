@@ -384,7 +384,7 @@ class CMakeGeneratorTest(unittest.TestCase):
     def test_do_not_mix_cflags_cxxflags(self):
         client = TestClient()
 
-        def test_run(consumer_generator, consumer_cmakelists, with_components=True):
+        def run_test(consumer_generator, consumer_cmakelists, with_components=True):
 
             def generate_files(upstream_cpp_info, consumer_generator, consumer_cmakelists):
                 upstream_conanfile = GenConanfile().with_name("upstream").with_version("1.0")\

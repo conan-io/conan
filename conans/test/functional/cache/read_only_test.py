@@ -44,7 +44,7 @@ class MyPkg(ConanFile):
         self.client.run("upload * --all --confirm")
         self.client.run("remove Pkg* -f")
         self.client.run("install Pkg/0.1@lasote/channel")
-        self.basic_test()
+        self.test_basic()
 
     def test_upload_change(self):
         self.client.run("upload * --all --confirm")
