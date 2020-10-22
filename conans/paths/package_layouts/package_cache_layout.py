@@ -16,8 +16,8 @@ from conans.model.package_metadata import PackageMetadata
 from conans.model.ref import ConanFileReference
 from conans.model.ref import PackageReference
 from conans.paths import CONANFILE, SYSTEM_REQS, EXPORT_FOLDER, EXPORT_SRC_FOLDER, SRC_FOLDER, \
-    BUILD_FOLDER, PACKAGES_FOLDER, SYSTEM_REQS_FOLDER, PACKAGE_METADATA, SCM_SRC_FOLDER, rm_conandir, \
-    PACKAGE_TGZ_NAME
+    BUILD_FOLDER, PACKAGES_FOLDER, SYSTEM_REQS_FOLDER, PACKAGE_METADATA, SCM_SRC_FOLDER, \
+    rm_conandir, PACKAGE_TGZ_NAME
 from conans.util.files import load, save, rmdir, set_dirty, clean_dirty, is_dirty
 from conans.util.locks import Lock, NoLock, ReadLock, SimpleLock, WriteLock
 from conans.util.log import logger

@@ -10,7 +10,7 @@ from conans.test.utils.tools import TestClient
 
 class BasicClientTest(unittest.TestCase):
 
-    def help_test(self):
+    def test_help(self):
         client = TestClient()
         client.run("")
         self.assertIn('Conan commands. Type "conan <command> -h" for help', client.out)
@@ -21,7 +21,7 @@ class BasicClientTest(unittest.TestCase):
         client.run("some_unknown_command123", assert_error=True)
         self.assertIn("ERROR: Unknown command 'some_unknown_command123'", client.out)
 
-    def unknown_command_test(self):
+    def test_unknown_command(self):
         client = TestClient()
 
         client.run("some_unknown_command123", assert_error=True)
@@ -67,7 +67,7 @@ class BasicClientTest(unittest.TestCase):
         self.assertIn(
             expected_output, client.out)
 
-    def help_cmd_test(self):
+    def test_help_cmd(self):
         client = TestClient()
         try:
             old_stdout = sys.stdout
@@ -93,7 +93,7 @@ class BasicClientTest(unittest.TestCase):
         self.assertIn("Creator commands",
                       client.out)
 
-    def help_cmd_error_test(self):
+    def test_help_cmd_error(self):
         client = TestClient()
         client.run("help not-exists", assert_error=True)
         self.assertIn("ERROR: Unknown command 'not-exists'", client.out)

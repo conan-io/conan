@@ -87,7 +87,7 @@ class ConanRequesterCacertPathTests(unittest.TestCase):
 
 
 class ConanRequesterHeadersTests(unittest.TestCase):
-    def user_agent_test(self):
+    def test_user_agent(self):
         cache_folder = temp_folder()
         cache = ClientCache(cache_folder, TestBufferConanOutput())
         mock_http_requester = MagicMock()

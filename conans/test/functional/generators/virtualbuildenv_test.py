@@ -24,7 +24,7 @@ class TestConan(ConanFile):
         self.assertIn("UseEnv=True", bat)
         self.assertIn('CL=-MD -DNDEBUG -O2 -Ob2 %CL%', bat)
 
-    def environment_deactivate_test(self):
+    def test_environment_deactivate(self):
         if platform.system() == "Windows":
             """ This test fails. The deactivation script takes the value of some envvars set by
                 the activation script to recover the previous values (set PATH=OLD_PATH). As this

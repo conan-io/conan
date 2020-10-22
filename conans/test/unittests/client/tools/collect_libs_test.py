@@ -7,7 +7,7 @@ from conans.test.utils.tools import TestClient, GenConanfile
 
 class CollectLibsTest(unittest.TestCase):
 
-    def collect_libs_test(self):
+    def test_collect_libs(self):
         conanfile = textwrap.dedent("""
             from conans import ConanFile
             class Pkg(ConanFile):

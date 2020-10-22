@@ -63,7 +63,7 @@ int main(){
 class BuildEnvironmenTest(unittest.TestCase):
 
     @unittest.skipUnless(platform.system() == "Linux", "Requires Linux")
-    def use_build_virtualenv_test(self):
+    def test_use_build_virtualenv(self):
         client = TestClient(path_with_spaces=False)
         client.save({CONANFILE: conanfile, "mean.cpp": mylib, "mean.h": mylibh})
         client.run("export . lasote/stable")
@@ -112,7 +112,7 @@ class ConanReuseLib(ConanFile):
         self.assertIn("15", client.out)
 
     @unittest.skipUnless(platform.system() == "Windows", "Requires windows")
-    def use_build_virtualenv_windows_test(self):
+    def test_use_build_virtualenv_windows(self):
         files = cpp_hello_conan_files("hello", "0.1",  use_cmake=False, with_exe=False)
         client = TestClient(path_with_spaces=False)
         client.save(files)

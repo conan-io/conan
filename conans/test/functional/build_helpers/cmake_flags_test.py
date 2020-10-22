@@ -96,7 +96,7 @@ class CMakeFlagsTest(unittest.TestCase):
         self.assertIn("pkg/1.0: PATH ENV VAR: MyCustomPath;", client.out)
 
     @parameterized.expand([(True, ), (False, )])
-    def build_app_test(self, targets):
+    def test_build_app(self, targets):
         client = TestClient()
         conanfile_py = """
 from conans import ConanFile
@@ -148,7 +148,7 @@ int main(){
         self.assertIn("Msg1: My${} $string", client.out)
         self.assertIn("Msg2: My$ other string", client.out)
 
-    def flags_test(self):
+    def test_flags(self):
         client = TestClient()
         client.save({"conanfile.py": conanfile_py})
         client.run("export . lasote/testing")
@@ -166,7 +166,7 @@ int main(){
         self.assertIn('CONAN_DEFINES_HELLO=-DMY_DEF=My" \string;-DMY_DEF2=My${} other \string',
                       client.out)
 
-    def transitive_flags_test(self):
+    def test_transitive_flags(self):
         client = TestClient()
         client.save({"conanfile.py": conanfile_py})
         client.run("export . lasote/testing")
@@ -183,7 +183,7 @@ int main(){
         self.assertIn("CONAN_CXX_FLAGS=MyFlag1 MyFlag2 MyChatFlag1 MyChatFlag2",
                       client.out)
 
-    def targets_flags_test(self):
+    def test_targets_flags(self):
         client = TestClient()
         client.save({"conanfile.py": conanfile_py})
         client.run("export . lasote/testing")
@@ -208,7 +208,7 @@ int main(){
                       "$<$<CONFIG:MinSizeRel>:;>;$<$<CONFIG:Debug>:;>", client.out)
         self.assertIn('HELLO_DEFINES=MY_DEF=My" \string;MY_DEF2=My${} other \string;', client.out)
 
-    def targets_own_flags_test(self):
+    def test_targets_own_flags(self):
         client = TestClient()
         client.save({"conanfile.py": conanfile_py.replace('version = "0.1"',
                                                           'version = "0.1"\n'
@@ -236,7 +236,7 @@ int main(){
                       "$<$<CONFIG:MinSizeRel>:;>;$<$<CONFIG:Debug>:;>", client.out)
         self.assertIn('HELLO_DEFINES=MY_DEF=My" \string;MY_DEF2=My${} other \string;', client.out)
 
-    def transitive_targets_flags_test(self):
+    def test_transitive_targets_flags(self):
         client = TestClient()
         client.save({"conanfile.py": conanfile_py})
         client.run("export . lasote/testing")
@@ -289,7 +289,7 @@ class MyLib(ConanFile):
             client.run("install .")
             client.run("build .")
 
-    def cmake_shared_flag_test(self):
+    def test_cmake_shared_flag(self):
         conanfile = """
 import os
 from conans import ConanFile, CMake
@@ -321,7 +321,7 @@ class MyLib(ConanFile):
         client.run("install .")
         client.run("build .")
 
-    def std_flag_applied_test(self):
+    def test_std_flag_applied(self):
         conanfile = """
 import os
 from conans import ConanFile, CMake
@@ -374,7 +374,7 @@ target_link_libraries(mylib ${CONAN_LIBS})
         libpath = os.path.join(client.current_folder, "build", "lib", libname)
         self.assertTrue(os.path.exists(libpath))
 
-    def standard_20_as_cxx_flag_test(self):
+    def test_standard_20_as_cxx_flag(self):
         # CMake (1-Jun-2018) do not support the 20 flag in CMAKE_CXX_STANDARD var
         conanfile = """
 import os
@@ -423,7 +423,7 @@ conan_set_std()
         else:
             self.assertIn("Conan setting CPP STANDARD: 20 WITH EXTENSIONS OFF", client.out)
 
-    def fpic_applied_test(self):
+    def test_fpic_applied(self):
         conanfile = """
 import os
 from conans import ConanFile, CMake
@@ -468,7 +468,7 @@ conan_basic_setup()
         client.run("create . user/channel -o MyLib:fPIC=True")
         self.assertNotIn("Conan: Adjusting fPIC flag", client.out)
 
-    def header_only_generator_test(self):
+    def test_header_only_generator(self):
         """ Test cmake.install() is possible although Generetaor could not be deduced from
         settings
         """

@@ -8,7 +8,7 @@ from conans.util.env_reader import get_env
 class DownloadRevisionsTest(unittest.TestCase):
 
     @unittest.skipIf(get_env("TESTING_REVISIONS_ENABLED", False), "No sense with revs")
-    def download_revs_disabled_with_rrev_test(self):
+    def test_download_revs_disabled_with_rrev(self):
         # https://github.com/conan-io/conan/issues/6106
         client = TestClient(revisions_enabled=False)
         client.run("download pkg/1.0@user/channel#fakerevision", assert_error=True)
@@ -17,7 +17,7 @@ class DownloadRevisionsTest(unittest.TestCase):
             client.out)
 
     @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
-    def download_revs_enabled_with_fake_rrev_test(self):
+    def test_download_revs_enabled_with_fake_rrev(self):
         client = TestClient(default_server_user=True, revisions_enabled=True)
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . pkg/1.0@user/channel")
@@ -27,7 +27,7 @@ class DownloadRevisionsTest(unittest.TestCase):
         self.assertIn("ERROR: Recipe not found: 'pkg/1.0@user/channel'", client.out)
 
     @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
-    def download_revs_enabled_with_rrev_test(self):
+    def test_download_revs_enabled_with_rrev(self):
         ref = ConanFileReference.loads("pkg/1.0@user/channel")
         client = TurboTestClient(default_server_user=True, revisions_enabled=True)
         pref = client.create(ref, conanfile=GenConanfile())
@@ -42,7 +42,7 @@ class DownloadRevisionsTest(unittest.TestCase):
         self.assertIn(pref.ref.revision, search_result["revision"])
 
     @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
-    def download_revs_enabled_with_rrev_no_user_channel_test(self):
+    def test_download_revs_enabled_with_rrev_no_user_channel(self):
         ref = ConanFileReference.loads("pkg/1.0@")
         servers = {"default": TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")],
                                          users={"user": "password"})}
@@ -60,7 +60,7 @@ class DownloadRevisionsTest(unittest.TestCase):
         self.assertIn(pref.ref.revision, search_result["revision"])
 
     @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
-    def download_revs_enabled_with_prev_test(self):
+    def test_download_revs_enabled_with_prev(self):
         # https://github.com/conan-io/conan/issues/6106
         ref = ConanFileReference.loads("pkg/1.0@user/channel")
         client = TurboTestClient(default_server_user=True, revisions_enabled=True)

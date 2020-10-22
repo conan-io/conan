@@ -12,7 +12,7 @@ from conans.util.files import load, mkdir
 class DeployTest(unittest.TestCase):
 
     @parameterized.expand([(True, ), (False, )])
-    def deploy_test(self, deploy_to_abs):
+    def test_deploy(self, deploy_to_abs):
         client = TestClient()
         libconanfile = """from conans import ConanFile
 from conans.tools import save

@@ -250,12 +250,12 @@ class SearchTest(unittest.TestCase):
                         lib/1.0@foo/bar
                         lib/1.0@user/channel"""), client.out)
 
-    def search_disabled_remote_test(self):
+    def test_search_disabled_remote(self):
         self.client.run("remote disable search_able")
         self.client.run("search * -r search_able", assert_error=True)
         self.assertIn("ERROR: Remote 'search_able' is disabled", self.client.out)
 
-    def search_skip_disabled_remote_test(self):
+    def test_search_skip_disabled_remote(self):
         os.rmdir(self.servers["local"].server_store.store)
         self._copy_to_server(self.client.cache, self.servers["local"].server_store)
         os.rmdir(self.servers["search_able"].server_store.store)
@@ -264,7 +264,7 @@ class SearchTest(unittest.TestCase):
         self.client.run("search Hello* -r all")
         self.assertNotIn("local", self.client.out)
 
-    def recipe_search_all_test(self):
+    def test_recipe_search_all(self):
         os.rmdir(self.servers["local"].server_store.store)
         self._copy_to_server(self.client.cache, self.servers["local"].server_store)
         os.rmdir(self.servers["search_able"].server_store.store)
@@ -286,7 +286,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         self.client.run("search Hello* -r=all --raw")
         check()
 
-    def recipe_search_test(self):
+    def test_recipe_search(self):
         self.client.run("search Hello*")
         self.assertEqual("Existing package recipes:\n\n"
                          "Hello/1.4.10@myuser/testing\n"
@@ -320,7 +320,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                       "Hello/1.4.12@myuser/testing\n"
                       "Hello/1.5.10@myuser/testing\n", self.client.out)
 
-    def search_partial_match_test(self):
+    def test_search_partial_match(self):
         self.client.run("search Hello")
         self.assertEqual("Existing package recipes:\n\n"
                          "Hello/1.4.10@myuser/testing\n"
@@ -375,7 +375,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         self.client.run("search Hello/1.4.10@myuser/test", assert_error=True)
         self.assertEqual("ERROR: Recipe not found: 'Hello/1.4.10@myuser/test'\n", self.client.out)
 
-    def search_raw_test(self):
+    def test_search_raw(self):
         self.client.run("search Hello* --raw")
         self.assertEqual("Hello/1.4.10@myuser/testing\n"
                          "Hello/1.4.11@myuser/testing\n"
@@ -385,7 +385,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         self.client.run("search Hello/1.4.10@myuser/testing --raw")
         self.assertNotIn("Existing packages for recipe", self.client.out)
 
-    def search_html_table_test(self):
+    def test_search_html_table(self):
         self.client.run("search Hello/1.4.10@myuser/testing --table=table.html")
         html = ''.join([line.strip() for line in self.client.load("table.html").splitlines()])
         self.assertIn("<h1>Hello/1.4.10@myuser/testing</h1>", html)
@@ -406,7 +406,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         self.assertIn("Conan <b>v{}</b> <script>document.write(new Date().getFullYear())</script> JFrog LTD. <a>https://conan.io</a>"
                       .format(client_version), html)
 
-    def search_html_table_all_test(self):
+    def test_search_html_table_all(self):
         os.rmdir(self.servers["local"].server_store.store)
         self._copy_to_server(self.client.cache, self.servers["local"].server_store)
         os.rmdir(self.servers["search_able"].server_store.store)
@@ -436,22 +436,22 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                       "<td></td>"
                       "<td>8.1</td>", html)
 
-    def search_html_table_with_no_reference_test(self):
+    def test_search_html_table_with_no_reference(self):
         self.client.run("search Hello* --table=table.html", assert_error=True)
         self.assertIn("ERROR: '--table' argument can only be used with a reference",
                       self.client.out)
 
-    def package_search_with_invalid_reference_test(self):
+    def test_package_search_with_invalid_reference(self):
         self.client.run("search Hello -q 'a=1'", assert_error=True)
         self.assertIn("-q parameter only allowed with a valid recipe", str(self.client.out))
 
-    def package_search_with_empty_query_test(self):
+    def test_package_search_with_empty_query(self):
         self.client.run("search Hello/1.4.10@myuser/testing")
         self.assertIn("WindowsPackageSHA", self.client.out)
         self.assertIn("PlatformIndependantSHA", self.client.out)
         self.assertIn("LinuxPackageSHA", self.client.out)
 
-    def package_search_nonescaped_characters_test(self):
+    def test_package_search_nonescaped_characters(self):
         self.client.run('search Hello/1.4.10@myuser/testing '
                         '-q "compiler=gcc AND compiler.libcxx=libstdc++11"')
         self.assertIn("LinuxPackageSHA", self.client.out)
@@ -520,7 +520,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
             self.assertEqual(pack_name in self.client.out,
                              pack_name in packages_found, "%s fail" % pack_name)
 
-    def package_search_complex_queries_test(self):
+    def test_package_search_complex_queries(self):
 
         def test_cases(remote=None):
 
@@ -629,7 +629,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                 shutil.copytree(origin_path, dest_path)
                 server_store.update_last_package_revision(pref)
 
-    def package_search_all_remotes_test(self):
+    def test_package_search_all_remotes(self):
         os.rmdir(self.servers["local"].server_store.store)
         self._copy_to_server(self.client.cache, self.servers["local"].server_store)
         os.rmdir(self.servers["search_able"].server_store.store)
@@ -643,7 +643,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         self.assertEqual(str(self.client.out).count("PlatformIndependantSHA"), 2)
         self.assertEqual(str(self.client.out).count("LinuxPackageSHA"), 2)
 
-    def package_search_with_invalid_query_test(self):
+    def test_package_search_with_invalid_query(self):
         self.client.run("search Hello/1.4.10@myuser/testing -q 'invalid'", assert_error=True)
         self.assertIn("Invalid package query: invalid", self.client.out)
 
@@ -668,7 +668,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         self.assertIn("Invalid package query: os=3 AND !os.compiler=4. '!' character is not allowed",
                       self.client.out)
 
-    def package_search_properties_filter_test(self):
+    def test_package_search_properties_filter(self):
 
         # All packages without filter
         self.client.run("search Hello/1.4.10@myuser/testing -q ''")
@@ -761,12 +761,12 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         self.assertIn("There are no packages for reference 'helloTest/1.4.10@myuser/stable' "
                       "matching the query 'use_OpenGL=True AND arch=x86'", self.client.out)
 
-    def search_with_no_local_test(self):
+    def test_search_with_no_local(self):
         client = TestClient()
         client.run("search nonexist/1.0@lasote/stable", assert_error=True)
         self.assertIn("ERROR: Recipe not found: 'nonexist/1.0@lasote/stable'", client.out)
 
-    def search_with_no_registry_test(self):
+    def test_search_with_no_registry(self):
         # https://github.com/conan-io/conan/issues/2589
         client = TestClient()
         os.remove(client.cache.remotes_path)
@@ -774,7 +774,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         self.assertIn("WARN: Remotes registry file missing, creating default one", client.out)
         self.assertIn("ERROR: No remote 'myremote' defined in remotes", client.out)
 
-    def search_json_test(self):
+    def test_search_json(self):
         # Test invalid arguments
         self.client.run("search h* -r all --json search.json --table table.html", assert_error=True)
         self.assertIn("'--table' argument cannot be used together with '--json'", self.client.out)
@@ -1184,11 +1184,11 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         }
         self.assertEqual(expected_output, output)
 
-    def search_packages_with_reference_not_exported_test(self):
+    def test_search_packages_with_reference_not_exported(self):
         self.client.run("search my_pkg/1.0@conan/stable", assert_error=True)
         self.assertIn("ERROR: Recipe not found: 'my_pkg/1.0@conan/stable'", self.client.out)
 
-    def initial_search_without_registry_test(self):
+    def test_initial_search_without_registry(self):
         client = TestClient()
         os.remove(client.cache.remotes_path)
         client.run("search my_pkg")
@@ -1203,7 +1203,7 @@ class Test(ConanFile):
     version = "1.0"
     """
 
-    def search_local_test(self):
+    def test_search_local(self):
         client = TestClient()
         client.save({"conanfile.py": self.conanfile})
         client.run("create . ")
@@ -1219,7 +1219,7 @@ class Test(ConanFile):
         client.run("search lib/1.0@")
         self.assertIn("Package_ID: {}".format(NO_SETTINGS_PACKAGE_ID), client.out)
 
-    def search_remote_test(self):
+    def test_search_remote(self):
         test_server = TestServer(users={"lasote": "password"},
                                  write_permissions=[("lib/1.0@*/*", "lasote")])
         servers = {"default": test_server}
@@ -1238,7 +1238,7 @@ class Test(ConanFile):
 
 
 class SearchOrder(unittest.TestCase):
-    def search_test(self):
+    def test_search(self):
         client = TestClient(default_server_user=True)
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . pkg/1.1@user/testing")
@@ -1267,7 +1267,7 @@ class SearchOrder(unittest.TestCase):
 
 @unittest.skipIf(get_env("TESTING_REVISIONS_ENABLED", False), "No sense with revs")
 class SearchOutdatedTest(unittest.TestCase):
-    def search_outdated_test(self):
+    def test_search_outdated(self):
         test_server = TestServer(users={"lasote": "password"})  # exported users and passwords
         servers = {"default": test_server}
         client = TestClient(servers=servers, users={"default": [("lasote", "password")]})
@@ -1305,7 +1305,7 @@ class Test(ConanFile):
                      "set TESTING_REVISIONS_ENABLED=1")
 class SearchRevisionsTest(unittest.TestCase):
 
-    def search_recipe_revisions_test(self):
+    def test_search_recipe_revisions(self):
         test_server = TestServer(users={"user": "password"})  # exported users and passwords
         servers = {"default": test_server}
         client = TestClient(servers=servers, users={"default": [("user", "password")]})
@@ -1381,7 +1381,7 @@ class Test(ConanFile):
         client.run("search lib/1.0@user/testing --raw --revisions")
         self.assertNotIn("Revisions for", client.out)
 
-    def search_package_revisions_test(self):
+    def test_search_package_revisions(self):
         test_server = TestServer(users={"user": "password"})  # exported users and passwords
         servers = {"default": test_server}
         client = TestClient(servers=servers, users={"default": [("user", "password")]})
@@ -1454,7 +1454,7 @@ class Test(ConanFile):
         self.assertIsNotNone(j[0]["time"])
         self.assertEqual(len(j), 1)
 
-    def search_not_found_test(self):
+    def test_search_not_found(self):
         # Search not found for both package and recipe
         test_server = TestServer(users={"conan": "password"})  # exported users and passwords
         servers = {"default": test_server}
@@ -1516,7 +1516,7 @@ class Test(ConanFile):
                       "'lib/1.0@conan/stable#bd761686d5c57b31f4cd85fd0329751f:"
                       "234234234234234234'", client.out)
 
-    def search_revision_fail_if_v1_server_test(self):
+    def test_search_revision_fail_if_v1_server(self):
         # V1 server
         test_server = TestServer(users={"conan": "password"}, server_capabilities=[])
         servers = {"default": test_server}
@@ -1524,7 +1524,7 @@ class Test(ConanFile):
         client.run("search missing/1.0@conan/stable --revisions -r default", assert_error=True)
         self.assertIn("ERROR: The remote doesn't support revisions", client.out)
 
-    def test_invalid_references_test(self):
+    def test_test_invalid_references(self):
         client = TestClient()
         # Local errors
         client.run("search missing/1.0@conan/stable#revision --revisions", assert_error=True)

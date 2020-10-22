@@ -65,7 +65,7 @@ class ToolsTest(ConanFile):
 
 class PythonBuildTest(unittest.TestCase):
 
-    def reuse_package_info_test(self):
+    def test_reuse_package_info(self):
         # https://github.com/conan-io/conan/issues/2644
         client = TestClient()
         client.save({CONANFILE: conanfile, "__init__.py": "", "mytest.py": test})
@@ -84,7 +84,7 @@ class ToolsTest(ConanFile):
         client.run("create . conan/testing")
         self.assertIn("Consumer/0.1@conan/testing: Hello Bar", client.out)
 
-    def reuse_build_test(self):
+    def test_reuse_build(self):
         # https://github.com/conan-io/conan/issues/2644
         client = TestClient()
         client.save({CONANFILE: conanfile, "__init__.py": "", "mytest.py": test})
@@ -104,7 +104,7 @@ class ToolsTest(ConanFile):
         self.assertIn("Consumer/0.1@conan/testing: Hello Foo", client.out)
         self.assertNotIn("WARN: Linter. Line 8: Unable to import 'mytest'", client.out)
 
-    def reuse_source_test(self):
+    def test_reuse_source(self):
         # https://github.com/conan-io/conan/issues/2644
         client = TestClient()
         client.save({CONANFILE: conanfile, "__init__.py": "", "mytest.py": test})
@@ -124,7 +124,7 @@ class ToolsTest(ConanFile):
         self.assertIn("Consumer/0.1@conan/testing: Hello Baz", client.out)
         self.assertNotIn("WARN: Linter. Line 8: Unable to import 'mytest'", client.out)
 
-    def reuse_test(self):
+    def test_reuse(self):
         client = TestClient()
         client.save({CONANFILE: conanfile, "__init__.py": "", "mytest.py": test})
         client.run("export . lasote/stable")
@@ -151,7 +151,7 @@ class ToolsTest(ConanFile):
         client.run("export-pkg . lasote/stable -f")
         self.assertIn("Hello Boom", client.out)
 
-    def upload_reuse_test(self):
+    def test_upload_reuse(self):
         server = TestServer()
         servers = {"default": server}
         client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
@@ -181,7 +181,7 @@ class ToolsTest(ConanFile):
         client.run("remove * -f -r=default")
         client.run("upload conantool/1.0@lasote/stable --all")
 
-    def basic_install_test(self):
+    def test_basic_install(self):
         client = TestClient()
         client.save({CONANFILE: conanfile, "__init__.py": "", "mytest.py": test})
         client.run("export . lasote/stable")
@@ -195,7 +195,7 @@ class ToolsTest(ConanFile):
         self.assertEqual([' Hello Baz', ' Hello Foo', ' Hello Boom', ' Hello Bar'],
                          lines)
 
-    def basic_package_test(self):
+    def test_basic_package(self):
         client = TestClient()
         client.save({CONANFILE: conanfile, "__init__.py": "", "mytest.py": test})
         client.run("export . lasote/stable")
@@ -208,7 +208,7 @@ class ToolsTest(ConanFile):
         self.assertEqual([' Hello Baz', ' Hello Foo', ' Hello Boom', ' Hello Bar'],
                          lines)
 
-    def basic_source_test(self):
+    def test_basic_source(self):
         client = TestClient()
         client.save({CONANFILE: conanfile, "__init__.py": "", "mytest.py": test})
         client.run("export . lasote/stable")
@@ -221,7 +221,7 @@ class ToolsTest(ConanFile):
         self.assertNotIn("Hello Bar", client.out)
         self.assertNotIn("Hello Boom", client.out)
 
-    def errors_test(self):
+    def test_errors(self):
         client = TestClient()
         client.save({CONANFILE: conanfile, "__init__.py": "", "mytest.py": test})
         client.run("export . lasote/stable")
@@ -235,7 +235,7 @@ class ToolsTest(ConanFile):
         # Now it works automatically without the env generator file
         self.assertIn("No module named mytest", str(client.out).replace("'", ""))
 
-    def pythonpath_env_injection_test(self):
+    def test_pythonpath_env_injection(self):
 
         # Save some custom python code in custom dir
         external_py = '''
@@ -303,7 +303,7 @@ class ToolsTest(ConanFile):
         self.assertEqual(os.path.normpath(pythonpath[0]), os.path.normpath(external_dir))
         self.assertTrue(len(pythonpath), 2)
 
-    def external_python_with_simple_var_test(self):
+    def test_external_python_with_simple_var(self):
         client = TestClient()
         conanfile_simple = """from conans import ConanFile, tools
 

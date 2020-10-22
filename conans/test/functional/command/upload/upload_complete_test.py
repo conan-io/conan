@@ -133,7 +133,7 @@ class UploadTest(unittest.TestCase):
         self.assertFalse(os.path.exists(self.server_reg_folder))
         self.assertFalse(os.path.exists(self.server_pack_folder))
 
-    def try_upload_bad_recipe_test(self):
+    def test_try_upload_bad_recipe(self):
         files = cpp_hello_conan_files("Hello0", "1.2.1")
         self.client.save(files)
         self.client.run("export . frodo/stable")
@@ -144,7 +144,7 @@ class UploadTest(unittest.TestCase):
 
         self.assertIn("Cannot upload corrupted recipe", self.client.out)
 
-    def upload_with_pattern_test(self):
+    def test_upload_with_pattern(self):
         for num in range(5):
             files = cpp_hello_conan_files("Hello%s" % num, "1.2.1")
             self.client.save(files)
@@ -162,7 +162,7 @@ class UploadTest(unittest.TestCase):
         self.assertNotIn("Hello2", self.client.out)
         self.assertNotIn("Hello3", self.client.out)
 
-    def upload_error_test(self):
+    def test_upload_error(self):
         """Cause an error in the transfer and see some message"""
 
         # Check for the default behaviour
@@ -214,7 +214,7 @@ class UploadTest(unittest.TestCase):
         client.run("upload Hello* --confirm --retry 3 --retry-wait=0 --all")
         self.assertEqual(str(client.out).count("ERROR: Pair file, error!"), 6)
 
-    def upload_error_with_config_test(self):
+    def test_upload_error_with_config(self):
         """Cause an error in the transfer and see some message"""
 
         # This will fail in the first put file, so, as we need to
@@ -264,7 +264,7 @@ class UploadTest(unittest.TestCase):
         client.run("upload Hello* --confirm --all")
         self.assertEqual(str(client.out).count("ERROR: Pair file, error!"), 6)
 
-    def upload_parallel_error_test(self):
+    def test_upload_parallel_error(self):
         """Cause an error in the parallel transfer and see some message"""
         client = TestClient(requester_class=FailOnReferencesUploader, default_server_user=True)
         client.save({"conanfile.py": GenConanfile()})
@@ -275,7 +275,7 @@ class UploadTest(unittest.TestCase):
         self.assertIn("Connection fails with lib2 and lib4 references!", client.out)
         self.assertIn("Execute upload again to retry upload the failed files", client.out)
 
-    def upload_parallel_success_test(self):
+    def test_upload_parallel_success(self):
         """Upload 2 packages in parallel with success"""
 
         client = TestClient(default_server_user=True)
@@ -295,7 +295,7 @@ class UploadTest(unittest.TestCase):
         client.run('search lib1/1.0@user/channel -r default')
         self.assertIn("lib1/1.0@user/channel", client.out)
 
-    def upload_parallel_fail_on_interaction_test(self):
+    def test_upload_parallel_fail_on_interaction(self):
         """Upload 2 packages in parallel and fail because non_interactive forced"""
 
         client = TestClient(default_server_user=True)
@@ -312,7 +312,7 @@ class UploadTest(unittest.TestCase):
         self.assertIn("ERROR: lib0/1.0@user/channel: Upload recipe to 'default' failed: "
                       "Conan interactive mode disabled. [Remote: default]", client.out)
 
-    def recipe_upload_fail_on_generic_exception_test(self):
+    def test_recipe_upload_fail_on_generic_exception(self):
         # Make the upload fail with a generic Exception
         client = TestClient(default_server_user=True)
         conanfile = textwrap.dedent("""
@@ -330,6 +330,37 @@ class UploadTest(unittest.TestCase):
         client.run('upload lib* -c --all -r default', assert_error=True)
         self.assertIn("ERROR: lib/1.0@user/channel: Upload recipe to 'default' failed:", client.out)
         self.assertIn("ERROR: Errors uploading some packages", client.out)
+
+    def test_package_upload_fail_on_generic_exception(self):
+        # Make the upload fail with a generic Exception
+        client = TestClient(default_server_user=True)
+        conanfile = textwrap.dedent("""
+            import os
+            from conans import ConanFile
+            class Pkg(ConanFile):
+                exports = "*"
+                def package(self):
+                    os.makedirs(os.path.join(self.package_folder, "conan_package.tgz"))
+                    self.copy("*")
+            """)
+        client.save({"conanfile.py": conanfile,
+                     "myheader.h": ""})
+        client.run('create . lib/1.0@user/channel')
+
+        client.run('upload lib* -c --all -r default', assert_error=True)
+        self.assertNotIn("os.remove(tgz_path)", client.out)
+        self.assertNotIn("Traceback", client.out)
+        self.assertIn("ERROR: lib/1.0@user/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9: "
+                      "Upload package to 'default' failed:", client.out)
+        self.assertIn("ERROR: Errors uploading some packages", client.out)
+
+        with environment_append({"CONAN_VERBOSE_TRACEBACK": "True"}):
+            client.run('upload lib* -c --all -r default', assert_error=True)
+            self.assertIn("os.remove(tgz_path)", client.out)
+            self.assertIn("Traceback", client.out)
+            self.assertIn("ERROR: lib/1.0@user/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9: "
+                          "Upload package to 'default' failed:", client.out)
+            self.assertIn("ERROR: Errors uploading some packages", client.out)
 
     def test_beat_character_long_upload(self):
         client = TestClient(default_server_user=True)
@@ -353,7 +384,7 @@ class UploadTest(unittest.TestCase):
         self.assertIn("%&$Uploading conan_export.tgz", out)
         self.assertIn("%&$Uploading conaninfo.txt", out)
 
-    def upload_with_pattern_and_package_error_test(self):
+    def test_upload_with_pattern_and_package_error(self):
         files = cpp_hello_conan_files("Hello1", "1.2.1")
         self.client.save(files)
         self.client.run("export . frodo/stable")
@@ -362,7 +393,7 @@ class UploadTest(unittest.TestCase):
         self.assertIn("-p parameter only allowed with a valid recipe reference",
                       self.client.out)
 
-    def check_upload_confirm_question_test(self):
+    def test_check_upload_confirm_question(self):
         user_io = MockedUserIO({"default": [("lasote", "mypass")]}, out=TestBufferConanOutput())
         files = cpp_hello_conan_files("Hello1", "1.2.1")
         self.client.save(files)
@@ -380,7 +411,7 @@ class UploadTest(unittest.TestCase):
         self.client.run("upload Hello*", user_io=user_io)
         self.assertNotIn("Uploading Hello2/1.2.1@frodo/stable", self.client.out)
 
-    def upload_same_package_dont_compress_test(self):
+    def test_upload_same_package_dont_compress(self):
         # Create a manifest for the faked package
         pack_path = self.client.cache.package_layout(self.pref.ref).package(self.pref)
         package_path = self.client.cache.package_layout(self.pref.ref).package(self.pref)
@@ -396,7 +427,7 @@ class UploadTest(unittest.TestCase):
         self.assertNotIn("Compressing package", str(self.client.out))
         self.assertIn("Package is up to date", str(self.client.out))
 
-    def upload_with_no_valid_settings_test(self):
+    def test_upload_with_no_valid_settings(self):
         # Check if upload is still working even if the specified setting is not valid.
         # If this test fails, will fail in Linux/OSx
         conanfile = """
@@ -413,14 +444,14 @@ class TestConan(ConanFile):
         self.client.run("upload Hello/1.2@lasote/stable")
         self.assertIn("Uploading conanmanifest.txt", self.client.out)
 
-    def single_binary_test(self):
+    def test_single_binary(self):
         """ basic installation of a new conans
         """
         # Try to upload an package without upload conans first
         self.client.run('upload %s -p %s' % (self.ref, str(self.pref.id)))
         self.assertIn("Uploaded conan recipe '%s'" % str(self.ref), self.client.out)
 
-    def simple_test(self):
+    def test_simple(self):
         # Upload package
         self.client.run('upload %s' % str(self.ref))
         self.server_reg_folder = self.test_server.server_store.export(self.ref)
@@ -477,7 +508,7 @@ class TestConan(ConanFile):
                                                   "my_bin/executable")).st_mode &
                              stat.S_IRWXU, stat.S_IRWXU)
 
-    def upload_all_test(self):
+    def test_upload_all(self):
         """Upload conans and package together"""
         # Try to upload all conans and packages
         self.client.run('user -p mypass -r default lasote')
@@ -507,7 +538,7 @@ class TestConan(ConanFile):
         self.assertTrue(os.path.exists(server_reg_folder))
         self.assertTrue(os.path.exists(server_pack_folder))
 
-    def force_test(self):
+    def test_force(self):
         # Tries to upload a package exported after than remote version.
         # Upload all recipes and packages
         self.client.run('upload %s --all' % str(self.ref))
@@ -544,7 +575,7 @@ class TestConan(ConanFile):
         self.assertIn("Uploading conan_export.tgz", self.client.out)
         self.assertIn("Uploading conanfile.py", self.client.out)
 
-    def upload_json_test(self):
+    def test_upload_json(self):
         conanfile = """
 from conans import ConanFile
 

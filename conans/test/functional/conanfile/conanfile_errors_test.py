@@ -6,7 +6,7 @@ from conans.test.utils.tools import TestClient
 
 class ConanfileErrorsTest(unittest.TestCase):
 
-    def copy_error_test(self):
+    def test_copy_error(self):
         client = TestClient()
         conanfile = textwrap.dedent('''
             from conans import ConanFile
@@ -26,7 +26,7 @@ class ConanfileErrorsTest(unittest.TestCase):
         self.assertIn('self.copy2("*.h", dst="include", src=["include","platform"]', client.out)
         self.assertIn("'HelloConan' object has no attribute 'copy2'", client.out)
 
-    def copy_error2_test(self):
+    def test_copy_error2(self):
         client = TestClient()
         conanfile = textwrap.dedent('''
             from conans import ConanFile
@@ -47,7 +47,7 @@ class ConanfileErrorsTest(unittest.TestCase):
         # It results that the error is different in different Python2/3 and OSs
         # self.assertIn("'list' object has no attribute 'replace'", client.out)
 
-    def package_info_error_test(self):
+    def test_package_info_error(self):
         client = TestClient()
         conanfile = textwrap.dedent('''
             from conans import ConanFile
@@ -67,7 +67,7 @@ class ConanfileErrorsTest(unittest.TestCase):
         self.assertIn('self.copy2()', client.out)
         self.assertIn("'HelloConan' object has no attribute 'copy2'", client.out)
 
-    def config_error_test(self):
+    def test_config_error(self):
         client = TestClient()
         conanfile = textwrap.dedent('''
             from conans import ConanFile
@@ -89,7 +89,7 @@ class ConanfileErrorsTest(unittest.TestCase):
         self.assertIn("self.copy2()", client.out)
         self.assertIn("AttributeError: 'HelloConan' object has no attribute 'copy2'""", client.out)
 
-    def source_error_test(self):
+    def test_source_error(self):
         client = TestClient()
         conanfile = textwrap.dedent('''
             from conans import ConanFile
@@ -109,7 +109,7 @@ class ConanfileErrorsTest(unittest.TestCase):
         self.assertIn('self.copy2()', client.out)
         self.assertIn("'HelloConan' object has no attribute 'copy2'", client.out)
 
-    def duplicate_requires_test(self):
+    def test_duplicate_requires(self):
         client = TestClient()
         conanfile = textwrap.dedent('''
             [requires]
@@ -121,7 +121,7 @@ class ConanfileErrorsTest(unittest.TestCase):
         client.run("install . --build", assert_error=True)
         self.assertIn("ERROR: Duplicated requirement", client.out)
 
-    def duplicate_requires_py_test(self):
+    def test_duplicate_requires_py(self):
         client = TestClient()
         conanfile = textwrap.dedent('''
             from conans import ConanFile

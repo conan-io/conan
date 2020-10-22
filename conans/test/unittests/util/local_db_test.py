@@ -7,7 +7,7 @@ from conans.test.utils.test_files import temp_folder
 
 class LocalStoreTest(unittest.TestCase):
 
-    def localdb_test(self):
+    def test_localdb(self):
         tmp_dir = temp_folder()
         db_file = os.path.join(tmp_dir, "dbfile")
         localdb = LocalDB.create(db_file)

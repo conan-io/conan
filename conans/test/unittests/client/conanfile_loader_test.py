@@ -26,7 +26,7 @@ from conans.util.files import save
 
 class ConanLoaderTest(unittest.TestCase):
 
-    def inherit_short_paths_test(self):
+    def test_inherit_short_paths(self):
         loader = ConanFileLoader(None, TestBufferConanOutput(), ConanPythonRequire(None, None))
         tmp_dir = temp_folder()
         conanfile_path = os.path.join(tmp_dir, "conanfile.py")
@@ -46,7 +46,7 @@ class BasePackage(ConanFile):
         result = loader.load_consumer(conanfile_path, profile_host=test_profile())
         self.assertEqual(result.short_paths, True)
 
-    def requires_init_test(self):
+    def test_requires_init(self):
         loader = ConanFileLoader(None, TestBufferConanOutput(), ConanPythonRequire(None, None))
         tmp_dir = temp_folder()
         conanfile_path = os.path.join(tmp_dir, "conanfile.py")
@@ -100,7 +100,7 @@ class MyTest(ConanFile):
 
 
 class ConanLoaderTxtTest(unittest.TestCase):
-    def conanfile_txt_errors_test(self):
+    def test_conanfile_txt_errors(self):
         # Invalid content
         file_content = '''[requires}
 OpenCV/2.4.10@phil/stable # My requirement for CV
@@ -120,7 +120,7 @@ OpenCV/2.4.10@phil/stable # My requirement for CV
         with six.assertRaisesRegex(self, ConanException, "Unknown argument kk"):
             ConanFileTextLoader(file_content).imports_method(None)
 
-    def plain_text_parser_test(self):
+    def test_plain_text_parser(self):
         # Valid content
         file_content = '''[requires]
 OpenCV/2.4.10@phil/stable # My requirement for CV
@@ -141,7 +141,7 @@ OpenCV2:other_option=Cosa #
                'OpenCV3/2.4.10@phil/stable']
         self.assertEqual(parser.requirements, exp)
 
-    def revision_parsing_test(self):
+    def test_revision_parsing(self):
         # Valid content
         file_content = '''[requires]
 OpenCV/2.4.10@user/stable#RREV1 # My requirement for CV
@@ -150,7 +150,7 @@ OpenCV/2.4.10@user/stable#RREV1 # My requirement for CV
         exp = ['OpenCV/2.4.10@user/stable#RREV1']
         self.assertEqual(parser.requirements, exp)
 
-    def load_conan_txt_test(self):
+    def test_load_conan_txt(self):
         file_content = '''[requires]
 OpenCV/2.4.10@phil/stable
 OpenCV2/2.4.10@phil/stable
@@ -216,7 +216,7 @@ OpenCV/bin/* - ./bin
         with six.assertRaisesRegex(self, ConanException, "is too long. Valid names must contain"):
             loader.load_conanfile_txt(file_path, test_profile())
 
-    def load_imports_arguments_test(self):
+    def test_load_imports_arguments(self):
         file_content = '''
 [imports]
 OpenCV/bin, * -> ./bin # I need this binaries
@@ -241,7 +241,7 @@ licenses, * -> ./licenses @ root_package=Pkg, folder=True, ignore_case=True, exc
                          False)]
         self.assertEqual(ret.copy.call_args_list, expected)
 
-    def load_options_error_test(self):
+    def test_load_options_error(self):
         conanfile_txt = textwrap.dedent("""
             [options]
             myoption: myvalue

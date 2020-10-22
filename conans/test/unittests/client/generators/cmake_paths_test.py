@@ -35,7 +35,7 @@ class _MockSettings(object):
 
 class CMakePathsGeneratorTest(unittest.TestCase):
 
-    def cmake_vars_unit_test(self):
+    def test_cmake_vars_unit(self):
         settings = _MockSettings("Release")
         conanfile = ConanFile(TestBufferConanOutput(), None)
         conanfile.initialize(settings, EnvValues())
@@ -56,7 +56,7 @@ class CMakePathsGeneratorTest(unittest.TestCase):
         self.assertEqual('set(CMAKE_PREFIX_PATH "%s/" "%s" ${CMAKE_PREFIX_PATH} '
                          '${CMAKE_CURRENT_LIST_DIR})' % (path, custom_dir), cmake_lines[2])
 
-    def cpp_info_name_test(self):
+    def test_cpp_info_name(self):
         settings = _MockSettings("Release")
         conanfile = ConanFile(TestBufferConanOutput(), None)
         conanfile.initialize(settings, EnvValues())
@@ -67,7 +67,7 @@ class CMakePathsGeneratorTest(unittest.TestCase):
         generator = CMakePathsGenerator(conanfile)
         self.assertIn('set(CONAN_PKGCMAKENAME_ROOT', generator.content)
 
-    def cpp_info_names_test(self):
+    def test_cpp_info_names(self):
         settings = _MockSettings("Release")
         conanfile = ConanFile(TestBufferConanOutput(), None)
         conanfile.initialize(settings, EnvValues())

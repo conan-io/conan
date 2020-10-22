@@ -180,7 +180,7 @@ class CppInfoComponentsTest(unittest.TestCase):
         self.assertListEqual(["libdep2_d"], deps_cpp_info["dep2"].debug.libs)
         self.assertListEqual(["libdep2_d"], list(deps_cpp_info.debug.libs))
 
-    def cpp_info_link_order_test(self):
+    def test_cpp_info_link_order(self):
 
         def _assert_link_order(sorted_libs):
             """
@@ -247,7 +247,7 @@ class CppInfoComponentsTest(unittest.TestCase):
                           "libH", "libL", "libF", "libI", "libC", "libD", "libE", "libA", "libB"],
                          list(deps_cpp_info.libs))
 
-    def cppinfo_inexistent_component_dep_test(self):
+    def test_cppinfo_inexistent_component_dep(self):
         info = CppInfo("", None)
         info.components["LIB1"].requires = ["LIB2"]
         with six.assertRaisesRegex(self, ConanException, "Component 'LIB1' required components "
@@ -258,7 +258,7 @@ class CppInfoComponentsTest(unittest.TestCase):
                                                          "LIB1 requires"):
             _ = DepCppInfo(info).libs
 
-    def cpp_info_components_requires_loop_test(self):
+    def test_cpp_info_components_requires_loop(self):
         info = CppInfo("", "")
         info.components["LIB1"].requires = ["LIB1"]
         msg = "There is a dependency loop in 'self.cpp_info.components' requires"
@@ -276,7 +276,7 @@ class CppInfoComponentsTest(unittest.TestCase):
         with six.assertRaisesRegex(self, ConanException, msg):
             _ = DepCppInfo(info).defines
 
-    def components_libs_order_test(self):
+    def test_components_libs_order(self):
         info = CppInfo("dep1", "")
         info.components["liba"].libs = ["liba"]
         info.components["libb"].libs = ["libb"]
@@ -329,7 +329,7 @@ class CppInfoComponentsTest(unittest.TestCase):
         self.assertListEqual(["libc"], deps_cpp_info["dep2"].libs)
         self.assertListEqual(["libc", "libb", "liba"], list(deps_cpp_info.libs))
 
-    def cppinfo_components_dirs_test(self):
+    def test_cppinfo_components_dirs(self):
         folder = temp_folder()
         info = CppInfo("OpenSSL", folder)
         info.components["OpenSSL"].includedirs = ["include"]
@@ -385,7 +385,7 @@ class CppInfoComponentsTest(unittest.TestCase):
         self.assertEqual(["different_res", "another_res", "another_other_res"],
                          info.components["Crypto"].resdirs)
 
-    def component_default_dirs_deps_cpp_info_test(self):
+    def test_component_default_dirs_deps_cpp_info(self):
         folder = temp_folder()
         info = CppInfo("my_lib", folder)
         info.components["Component"].filter_empty = False  # For testing purposes
@@ -400,7 +400,7 @@ class CppInfoComponentsTest(unittest.TestCase):
         self.assertListEqual([os.path.join(folder, "res")], list(deps_cpp_info.resdirs))
         self.assertListEqual([os.path.join(folder, "Frameworks")], list(deps_cpp_info.frameworkdirs))
 
-    def deps_cpp_info_components_test(self):
+    def test_deps_cpp_info_components(self):
         folder = temp_folder()
         info = CppInfo("my_lib", folder)
         # Create file so path is not cleared

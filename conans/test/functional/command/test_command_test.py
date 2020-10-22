@@ -57,7 +57,7 @@ class HelloTestConan(ConanFile):
 ''', "Hello/0.1@conan/foo")
         self.assertIn("Tested ok!", client.out)
 
-    def test_package_env_test(self):
+    def test_test_package_env(self):
         client = TestClient()
         conanfile = '''
 from conans import ConanFile
@@ -86,7 +86,7 @@ class HelloTestConan(ConanFile):
         client.run("export . lasote/testing")
         client.run("test test_package Hello/0.1@lasote/testing --build missing")
 
-    def fail_test_package_test(self):
+    def test_fail_test_package(self):
         client = TestClient()
         conanfile = """
 from conans import ConanFile
@@ -125,7 +125,7 @@ class HelloReuseConan(ConanFile):
         self.assertEqual("Bye FindCmake",
                          load(os.path.join(client.cache.package_layout(pref.ref).package(pref), "FindXXX.cmake")))
 
-    def conan_test_test(self):
+    def test_conan_test(self):
         conanfile = '''
 from conans import ConanFile, CMake
 import os
