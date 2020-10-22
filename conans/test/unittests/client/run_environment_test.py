@@ -8,7 +8,7 @@ from conans.test.utils.mocks import ConanFileMock
 
 class RunEnvironmentTest(unittest.TestCase):
 
-    def run_vars_test(self):
+    def test_run_vars(self):
         conanfile = ConanFileMock()
         conanfile.deps_cpp_info["one"].bin_paths.append("path/bin")
         conanfile.deps_cpp_info["two"].lib_paths.append("path/libs")
@@ -18,7 +18,7 @@ class RunEnvironmentTest(unittest.TestCase):
                                     'LD_LIBRARY_PATH': ['path/libs'],
                                     'DYLD_LIBRARY_PATH': ['path/libs']})
 
-    def apple_frameworks_test(self):
+    def test_apple_frameworks(self):
         conanfile = ConanFileMock()
         conanfile.deps_cpp_info["one"].bin_paths.append("path/bin")
         conanfile.deps_cpp_info["two"].lib_paths.append("path/libs")

@@ -55,7 +55,7 @@ class MergeDirectoriesTest(unittest.TestCase):
         # File from src overrides file from dest
         self.assertEqual(load(join(self.dest, "file.txt")), "fromsrc")
 
-    def nested_directories_test(self):
+    def test_nested_directories(self):
         self.dest = join(self.source, "destination_dir")
         files_dest = ["file.txt", "subdir2/file2.txt"]
         self._save(self.dest, files_dest, "fromdest")
@@ -71,13 +71,13 @@ class MergeDirectoriesTest(unittest.TestCase):
         self.assertEqual(load(join(self.dest, "subdir2/file2.txt")), "fromdest")
         self.assertEqual(load(join(self.dest, "subdir/file2.txt")), "fromsrc")
 
-    def same_directory_test(self):
+    def test_same_directory(self):
         files = ["file.txt", "subdir/file2.txt"]
         self._save(self.source, files, "fromsrc")
         merge_directories(self.source, self.source)
         self._assert_equals(self._get_paths(self.source), files)
 
-    def parent_directory_test(self):
+    def test_parent_directory(self):
         files_dest = ["file.txt", "subdir2/file2.txt"]
         self._save(self.dest, files_dest, "fromdest")
         self.source = join(self.dest, "source_folder")
@@ -90,7 +90,7 @@ class MergeDirectoriesTest(unittest.TestCase):
         self.assertEqual(load(join(self.dest, "subdir2/file2.txt")), "fromdest")
         self.assertEqual(load(join(self.dest, "subdir/file2.txt")), "fromsrc")
 
-    def excluded_dirs_test(self):
+    def test_excluded_dirs(self):
         files = ["file.txt", "subdir/file2.txt", "subdir/file3.txt", "other_dir/somefile.txt",
                  "other_dir/somefile2.txt"]
         self._save(self.source, files, "fromsrc")

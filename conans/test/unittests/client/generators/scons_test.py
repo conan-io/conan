@@ -12,7 +12,7 @@ from conans.test.utils.mocks import TestBufferConanOutput
 
 class SConsGeneratorTest(unittest.TestCase):
 
-    def variables_setup_test(self):
+    def test_variables_setup(self):
         conanfile = ConanFile(TestBufferConanOutput(), None)
         conanfile.initialize(Settings({}), EnvValues())
         ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
@@ -35,7 +35,7 @@ class SConsGeneratorTest(unittest.TestCase):
         self.assertIn('    "MyPkg_version" : "0.1",', scons_lines)
         self.assertIn('    "MyPkg2_version" : "3.2.3",', scons_lines)
 
-    def system_frameworks_libs_test(self):
+    def test_system_frameworks_libs(self):
         # https://github.com/conan-io/conan/issues/7301
         conanfile = ConanFile(TestBufferConanOutput(), None)
         conanfile.initialize(Settings({}), EnvValues())

@@ -71,14 +71,14 @@ class HookManagerTest(unittest.TestCase):
         hook_manager = HookManager(temp_dir, ["my_hook"], output)
         return hook_manager, output, hook_path
 
-    def load_test(self):
+    def test_load(self):
         hook_manager, output, _ = self._init()
         self.assertEqual({}, hook_manager.hooks)
         self.assertEqual(["my_hook"], hook_manager._hook_names)
         hook_manager.load_hooks()
         self.assertEqual(16, len(hook_manager.hooks))  # Checks number of methods loaded
 
-    def check_output_test(self):
+    def test_check_output(self):
         hook_manager, output, _ = self._init()
         hook_manager.load_hooks()
         methods = hook_manager.hooks.keys()
@@ -86,7 +86,7 @@ class HookManagerTest(unittest.TestCase):
             hook_manager.execute(method)
             self.assertIn("[HOOK - my_hook.py] %s(): %s()" % (method, method), output)
 
-    def no_error_with_no_method_test(self):
+    def test_no_error_with_no_method(self):
         hook_manager, output, hook_path = self._init()
         other_hook = """
 def my_custom_function():
@@ -97,7 +97,7 @@ def my_custom_function():
         hook_manager.execute("pre_source")
         self.assertEqual("", output)
 
-    def exception_in_method_test(self):
+    def test_exception_in_method(self):
         hook_manager, output, hook_path = self._init()
         my_hook = """
 from conans.errors import ConanException

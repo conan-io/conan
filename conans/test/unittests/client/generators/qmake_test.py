@@ -11,7 +11,7 @@ from conans.test.utils.mocks import TestBufferConanOutput
 
 class QmakeGeneratorTest(unittest.TestCase):
 
-    def system_libs_test(self):
+    def test_system_libs(self):
         # https://github.com/conan-io/conan/issues/7558
         conanfile = ConanFile(TestBufferConanOutput(), None)
         conanfile.initialize(Settings({}), EnvValues())
@@ -25,7 +25,7 @@ class QmakeGeneratorTest(unittest.TestCase):
         self.assertIn('CONAN_LIBS += -lmypkg', qmake_lines)
         self.assertIn('CONAN_SYSTEMLIBS += -lpthread', qmake_lines)
 
-    def frameworks_test(self):
+    def test_frameworks(self):
         conanfile = ConanFile(TestBufferConanOutput(), None)
         conanfile.initialize(Settings({}), EnvValues())
         framework_path = os.getcwd()  # must exist, otherwise filtered by framework_paths
