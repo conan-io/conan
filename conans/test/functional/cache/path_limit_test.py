@@ -84,10 +84,8 @@ class PathLengthLimitTest(unittest.TestCase):
                                  users={"lasote": "mypass"})  # exported users and passwords
         servers = {"default": test_server}
         client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
-        files = {"conanfile.py": base}
-        client.save(files)
-        client.run("export . lasote/channel")
-        client.run("install lib/0.1@lasote/channel --build")
+        client.save({"conanfile.py": base})
+        client.run("create . lasote/channel")
         client.run("upload lib/0.1@lasote/channel --all")
         client.run("remove lib/0.1@lasote/channel -f")
         client.run("search")

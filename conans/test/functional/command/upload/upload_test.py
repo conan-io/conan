@@ -20,7 +20,7 @@ from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServ
     TurboTestClient, GenConanfile, TestRequester, TestingResponse
 from conans.util.env_reader import get_env
 
-from conans.util.files import gzopen_without_timestamps, is_dirty, save, set_dirty
+from conans.util.files import gzopen_without_timestamps, is_dirty, save
 
 conanfile = """from conans import ConanFile
 class MyPkg(ConanFile):
@@ -47,15 +47,12 @@ class MyPkg(ConanFile):
 class UploadTest(unittest.TestCase):
 
     def test_upload_dirty(self):
-        test_server = TestServer([], users={"lasote": "mypass"})
-        client = TestClient(servers={"default": test_server},
-                            users={"default": [("lasote", "mypass")]})
-        client.save({"conanfile.py": GenConanfile().with_name("Hello").with_version("0.1")})
+        client = TestClient(default_server_user=True)
+        client.save({"conanfile.py": GenConanfile("Hello", "0.1")})
         client.run("create . lasote/testing")
         ref = ConanFileReference.loads("Hello/0.1@lasote/testing")
         pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
-        package_folder = client.cache.package_layout(pref.ref).package(pref)
-        set_dirty(package_folder)
+        client.cache.package_layout(pref.ref).package_set_dirty(pref)
 
         client.run("upload * --all --confirm", assert_error=True)
         self.assertIn("ERROR: Hello/0.1@lasote/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9: "

@@ -48,10 +48,10 @@ def _download_binaries(conanfile, ref, package_ids, cache, remote_manager, remot
 
     def _download(package_id):
         pref = PackageReference(ref, package_id)
-        package_folder = cache.package_layout(pref.ref, short_paths=short_paths).package(pref)
+        layout = cache.package_layout(pref.ref, short_paths=short_paths)
         if output and not output.is_terminal:
             output.info("Downloading %s" % str(pref))
-        remote_manager.get_package(pref, package_folder, remote, output, recorder)
+        remote_manager.get_package(pref, layout, remote, output, recorder)
 
     if parallel is not None:
         output.info("Downloading binary packages in %s parallel threads" % parallel)

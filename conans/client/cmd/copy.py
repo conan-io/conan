@@ -68,12 +68,12 @@ def package_copy(src_ref, user_channel, package_ids, cache, user_io, short_paths
         pref_origin = PackageReference(src_ref, package_id)
         pref_dest = PackageReference(dest_ref, package_id)
         package_path_origin = src_layout.package(pref_origin)
-        package_path_dest = dst_layout.package(pref_dest)
-        if os.path.exists(package_path_dest):
+        if dst_layout.package_id_exists(package_id):
             if not force and not user_io.request_boolean("Package '%s' already exist."
                                                          " Override?" % str(package_id)):
                 continue
-            rmdir(package_path_dest)
+            dst_layout.package_remove(pref_dest)
+        package_path_dest = dst_layout.package(pref_dest)
         package_revisions[package_id] = (src_metadata.packages[package_id].revision,
                                          src_metadata.recipe.revision)
         shutil.copytree(package_path_origin, package_path_dest, symlinks=True)
