@@ -11,7 +11,7 @@ from conans.util.files import save
 
 class HashesTest(unittest.TestCase):
 
-    def md5_test(self):
+    def test_md5(self):
         folder = temp_folder()
         filepath = os.path.join(folder, "file.txt")
         file_content = "a file"

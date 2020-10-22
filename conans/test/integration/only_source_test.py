@@ -21,7 +21,7 @@ class OnlySourceTest(unittest.TestCase):
         if export:
             client.run("export . lasote/stable")
 
-    def conan_test_test(self):
+    def test_conan_test(self):
         # Checks --build in test command
         client = TestClient()
         self._create(client, "Hello0", "0.0")
@@ -60,7 +60,7 @@ class OnlySourceTest(unittest.TestCase):
         client.run("create . lasote/stable")
         self.assertIn('Hello2/2.2@lasote/stable: Forced build from source', client.out)
 
-    def build_policies_update_test(self):
+    def test_build_policies_update(self):
         client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
         conanfile = """
 from conans import ConanFile
@@ -89,7 +89,7 @@ class MyPackage(ConanFile):
                       client.out)
         client.run("upload test/1.9@lasote/stable")
 
-    def build_policies_in_conanfile_test(self):
+    def test_build_policies_in_conanfile(self):
 
         client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
         files = cpp_hello_conan_files("Hello0", "1.0", [], config=False, build=False)
@@ -137,7 +137,7 @@ class MyPackage(ConanFile):
         client.run("upload Hello0/1.0@lasote/stable --all", assert_error=True)
         self.assertIn("no packages can be uploaded", client.out)
 
-    def reuse_test(self):
+    def test_reuse(self):
         client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
         ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
         files = cpp_hello_conan_files("Hello0", "0.1")

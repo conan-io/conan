@@ -237,7 +237,7 @@ class ConanServiceTest(unittest.TestCase):
                                                 'settings': {},
                                                 'recipe_hash': None}})
 
-    def remove_test(self):
+    def test_remove(self):
         ref2 = ConanFileReference("OpenCV", "3.0", "lasote", "stable", DEFAULT_REVISION_V1)
         ref3 = ConanFileReference("Assimp", "1.10", "lasote", "stable", DEFAULT_REVISION_V1)
 

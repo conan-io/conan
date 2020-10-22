@@ -7,7 +7,7 @@ from conans.test.utils.tools import TestClient
 
 class RemoveEmptyDirsTest(unittest.TestCase):
 
-    def basic_test(self):
+    def test_basic(self):
         hello_files = cpp_hello_conan_files("Hello")
         client = TestClient()
         client.save(hello_files)
@@ -18,7 +18,7 @@ class RemoveEmptyDirsTest(unittest.TestCase):
         path = os.path.join(client.storage_folder, "Hello")
         self.assertFalse(os.path.exists(path))
 
-    def shared_folder_test(self):
+    def test_shared_folder(self):
         hello_files = cpp_hello_conan_files("Hello")
         client = TestClient()
         client.save(hello_files)

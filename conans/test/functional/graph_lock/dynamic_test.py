@@ -8,7 +8,7 @@ from conans.test.utils.tools import TestClient, GenConanfile
 
 class GraphLockDynamicTest(unittest.TestCase):
 
-    def partial_lock_test(self):
+    def test_partial_lock(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . LibA/1.0@")
@@ -44,7 +44,7 @@ class GraphLockDynamicTest(unittest.TestCase):
         client.run("create . LibD/1.0@ --lockfile=libd.lock")
         self.assertIn("LibA/1.0 from local cache - Cache", client.out)
 
-    def partial_multiple_matches_lock_test(self):
+    def test_partial_multiple_matches_lock(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . LibA/1.0@")
@@ -81,7 +81,7 @@ class GraphLockDynamicTest(unittest.TestCase):
         client.run("create . LibD/1.0@ --lockfile=libd.lock")
         self.assertIn("LibA/1.0 from local cache - Cache", client.out)
 
-    def partial_lock_conflict_test(self):
+    def test_partial_lock_conflict(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . LibA/1.0@")
@@ -113,7 +113,7 @@ class GraphLockDynamicTest(unittest.TestCase):
         self.assertIn("LibA/1.0 from local cache - Cache", client.out)
         self.assertNotIn("LibA/1.0.1", client.out)
 
-    def partial_lock_root_unused_test(self):
+    def test_partial_lock_root_unused(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . LibA/1.0@")
@@ -135,7 +135,7 @@ class GraphLockDynamicTest(unittest.TestCase):
         libc_lock = client.load("libc.lock")
         self.assertNotIn("LibB/1.0", libc_lock)
 
-    def remove_dep_test(self):
+    def test_remove_dep(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . LibA/0.1@")
@@ -188,7 +188,7 @@ class GraphLockDynamicTest(unittest.TestCase):
             self.assertEqual(libc["ref"], "LibC/0.1")
         self.assertEqual(libc["requires"], ["2"])
 
-    def add_dep_test(self):
+    def test_add_dep(self):
         # https://github.com/conan-io/conan/issues/5807
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
@@ -259,7 +259,7 @@ class GraphLockDynamicTest(unittest.TestCase):
             self.assertEqual(dep["ref"], "dep/0.1")
             self.assertEqual(dep["prev"], "0")
 
-    def conditional_env_var_test(self):
+    def test_conditional_env_var(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . dep/1.0@")
@@ -280,7 +280,7 @@ class GraphLockDynamicTest(unittest.TestCase):
         client.run("create . pkg/1.0@ --lockfile=conan.lock", assert_error=True)
         self.assertIn("ERROR: 'pkg/1.0' locked requirement 'dep/1.0' not found", client.out)
 
-    def partial_intermediate_package_lock_test(self):
+    def test_partial_intermediate_package_lock(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . LibA/1.0@")
@@ -336,7 +336,7 @@ class PartialOptionsTest(unittest.TestCase):
         self.assertIn("LibA/1.0:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Build", client.out)
         self.client = client
 
-    def partial_lock_option_command_line_test(self):
+    def test_partial_lock_option_command_line(self):
         # When 'LibA:myoption' is set in command line, the option value is saved in the libb.lock and it is applied to all
         # graph, overriding LibC.
         client = self.client
@@ -366,7 +366,7 @@ class PartialOptionsTest(unittest.TestCase):
         self.assertIn("LibB/1.0:777a7717c781c687b6d0fecc05d3818d0a031f92 - Cache", client.out)
         self.assertIn("LibC/1.0:777a7717c781c687b6d0fecc05d3818d0a031f92 - Missing", client.out)
 
-    def partial_lock_option_conanfile_default_test(self):
+    def test_partial_lock_option_conanfile_default(self):
         # when 'LibA:myoption' is locked, it is used, even if other packages define it.
         client = self.client
         client.save({"conanfile.py": GenConanfile().with_require("LibA/1.0")
@@ -380,7 +380,7 @@ class PartialOptionsTest(unittest.TestCase):
         self.assertIn("LibA/1.0:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache", client.out)
         self._check()
 
-    def partial_lock_option_conanfile_configure_test(self):
+    def test_partial_lock_option_conanfile_configure(self):
         # when 'LibA:myoption' is locked, it is used, even if other packages define it.
         client = self.client
         client.save({"conanfile.py": GenConanfile().with_require("LibA/1.0")

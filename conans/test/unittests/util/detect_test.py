@@ -14,7 +14,7 @@ from conans.util.runners import check_output_runner
 
 class DetectTest(unittest.TestCase):
 
-    def detect_default_compilers_test(self):
+    def test_detect_default_compilers(self):
         platform_default_compilers = {
             "Linux": "gcc",
             "Darwin": "apple-clang",
@@ -29,7 +29,7 @@ class DetectTest(unittest.TestCase):
             self.assertEqual(result.get("compiler", None), platform_compiler)
 
     @unittest.skipIf(platform.system() != "Darwin", "only OSX test")
-    def detect_default_in_mac_os_using_gcc_as_default_test(self):
+    def test_detect_default_in_mac_os_using_gcc_as_default(self):
         """
         Test if gcc in Mac OS X is using apple-clang as frontend
         """
@@ -64,7 +64,7 @@ class DetectTest(unittest.TestCase):
         self.assertTrue("arch_build" not in result)
 
     @mock.patch("conans.client.conf.detect._gcc_compiler", return_value=("gcc", "8"))
-    def detect_custom_profile_test(self, _):
+    def test_detect_custom_profile(self, _):
         output = TestBufferConanOutput()
         with tools.environment_append({"CC": "gcc"}):
             detect_defaults_settings(output, profile_path="~/.conan/profiles/mycustomprofile")
@@ -72,7 +72,7 @@ class DetectTest(unittest.TestCase):
                           "mycustomprofile", output)
 
     @mock.patch("conans.client.conf.detect._gcc_compiler", return_value=("gcc", "8"))
-    def detect_default_profile_test(self, _):
+    def test_detect_default_profile(self, _):
         output = TestBufferConanOutput()
         with tools.environment_append({"CC": "gcc"}):
             detect_defaults_settings(output, profile_path="~/.conan/profiles/default")
@@ -80,7 +80,7 @@ class DetectTest(unittest.TestCase):
                           output)
 
     @mock.patch("conans.client.conf.detect._gcc_compiler", return_value=("gcc", "8"))
-    def detect_file_profile_test(self, _):
+    def test_detect_file_profile(self, _):
         output = TestBufferConanOutput()
         with tools.environment_append({"CC": "gcc"}):
             detect_defaults_settings(output, profile_path="./MyProfile")
@@ -88,7 +88,7 @@ class DetectTest(unittest.TestCase):
                           output)
 
     @mock.patch("conans.client.conf.detect._gcc_compiler", return_value=("gcc", "8"))
-    def detect_abs_file_profile_test(self, _):
+    def test_detect_abs_file_profile(self, _):
         output = TestBufferConanOutput()
         with tools.environment_append({"CC": "gcc"}):
             detect_defaults_settings(output, profile_path="/foo/bar/quz/custom-profile")

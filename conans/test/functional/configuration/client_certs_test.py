@@ -15,7 +15,7 @@ class ClientCertsTest(unittest.TestCase):
         def get(self, _, **kwargs):
             return kwargs.get("cert", None)
 
-    def pic_client_certs_test(self):
+    def test_pic_client_certs(self):
         client = TestClient(requester_class=self.MyHttpRequester)
         self.assertIsNone(client.requester.get("url"))
 
@@ -32,7 +32,7 @@ class ClientCertsTest(unittest.TestCase):
         # assert that the cacert file is created
         self.assertTrue(os.path.exists(config.cacert_path))
 
-    def pic_custom_path_client_certs_test(self):
+    def test_pic_custom_path_client_certs(self):
         folder = temp_folder()
         mycert_path = os.path.join(folder, "mycert.crt")
         mykey_path = os.path.join(folder, "mycert.key")
