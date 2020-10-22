@@ -489,7 +489,7 @@ class InspectRawTest(unittest.TestCase):
         client.run("inspect . --raw=default_options")
         self.assertEqual("dict=True\nlist=False", client.out)
 
-    def test_test_initial_inspect_without_registry(self):
+    def test_initial_inspect_without_registry(self):
         client = TestClient()
         client.save({"conanfile.py": self.conanfile})
         client.run("export . user/channel")
