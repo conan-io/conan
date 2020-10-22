@@ -211,9 +211,9 @@ class TestBufferConanOutput(ConanOutput):
 
 
 # cli2.0
-class TestOutput(StringIO):
+class RedirectedTestOutput(StringIO):
     def __init__(self):
-        super(TestOutput, self).__init__()
+        super(RedirectedTestOutput, self).__init__()
 
     def __repr__(self):
         return self.getvalue()

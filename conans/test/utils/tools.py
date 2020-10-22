@@ -647,8 +647,9 @@ class TestClient(object):
             self.current_folder = old_dir
 
     def get_conan_api_v2(self):
-        user_io = MockedUserIO(self.users, out=self.out)
-        conan = ConanAPIV2(cache_folder=self.cache_folder, output=ConanOutput(sys.stderr), user_io=user_io,
+        output = ConanOutput()
+        user_io = MockedUserIO(self.users, out=output)
+        conan = ConanAPIV2(cache_folder=self.cache_folder, output=output, user_io=user_io,
                            http_requester=self._http_requester, runner=self.runner)
         return conan
 
@@ -700,8 +701,8 @@ class TestClient(object):
         """
         # TODO: remove in 2.0
         if os.getenv("CONAN_V2_CLI"):
-            from conans.test.utils.mocks import TestOutput
-            self.out = TestOutput()
+            from conans.test.utils.mocks import RedirectedTestOutput
+            self.out = RedirectedTestOutput()
             with redirect_output(self.out):
                 error = self.run_cli(command_line, user_io=user_io, assert_error=assert_error)
         else:
