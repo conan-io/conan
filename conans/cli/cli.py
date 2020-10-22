@@ -147,8 +147,7 @@ def main(args):
         6: Invalid configuration (done)
     """
     try:
-        output = ConanOutput()
-        conan_api = Conan(output=output)
+        conan_api = Conan(quiet=False)
     except ConanMigrationError:  # Error migrating
         sys.exit(ERROR_MIGRATION)
     except ConanException as e:

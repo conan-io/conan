@@ -647,9 +647,8 @@ class TestClient(object):
             self.current_folder = old_dir
 
     def get_conan_api_v2(self):
-        output = ConanOutput()
-        user_io = MockedUserIO(self.users, out=output)
-        conan = ConanAPIV2(cache_folder=self.cache_folder, output=output, user_io=user_io,
+        user_io = MockedUserIO(self.users, out=sys.stderr)
+        conan = ConanAPIV2(cache_folder=self.cache_folder, quiet=False, user_io=user_io,
                            http_requester=self._http_requester, runner=self.runner)
         return conan
 
