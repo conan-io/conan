@@ -400,7 +400,7 @@ class MyPkg(ConanFile):
         client.run("create . pkg/0.1@user/stable")
         self.assertIn("Bar/0.1@user/stable: Forced build from source", client.out)
 
-    def test_test_build_folder_handling(self):
+    def test_build_folder_handling(self):
         conanfile = GenConanfile().with_name("Hello").with_version("0.1")
         test_conanfile = GenConanfile().with_test("pass")
         client = TestClient()
