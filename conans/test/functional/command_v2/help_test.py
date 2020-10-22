@@ -13,7 +13,7 @@ class CliHelpTest(unittest.TestCase):
         with environment_append({"CONAN_V2_CLI": "1"}):
             super(CliHelpTest, self).run(*args, **kwargs)
 
-    def help_command_test(self):
+    def test_help_command(self):
         client = TestClient()
 
         client.run("help")

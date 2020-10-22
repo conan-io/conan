@@ -16,7 +16,7 @@ class ActionRecorderTest(unittest.TestCase):
         self.pref2 = PackageReference(self.ref2, "2")
         self.pref3 = PackageReference(self.ref3, "3")
 
-    def incomplete_process_test(self):
+    def test_incomplete_process(self):
         tracer = ActionRecorder()
         tracer.recipe_install_error(self.ref1, INSTALL_ERROR_NETWORK, "SSL wtf", "http://drl.com")
         tracer.add_recipe_being_developed(self.ref1)
@@ -25,7 +25,7 @@ class ActionRecorderTest(unittest.TestCase):
         self.assertEqual(install_info["installed"][0]["packages"], [])
         self.assertEqual(install_info["installed"][0]["recipe"]["dependency"], False)
 
-    def double_actions_test(self):
+    def test_double_actions(self):
         tracer = ActionRecorder()
         tracer.recipe_downloaded(self.ref1, "http://drl.com")
         tracer.recipe_fetched_from_cache(self.ref1)

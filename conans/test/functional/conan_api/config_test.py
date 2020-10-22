@@ -8,7 +8,7 @@ class ConfigTest(unittest.TestCase):
     def setUp(self):
         self.api, _, _ = conan_api.ConanAPIV1.factory()
 
-    def config_rm_test(self):
+    def test_config_rm(self):
         self.api.config_set("proxies.https", "http://10.10.1.10:1080")
         self.assertIn("proxies", self.api.app.config.sections())
         self.api.config_rm('proxies')

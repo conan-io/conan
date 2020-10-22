@@ -38,7 +38,7 @@ class HelloConan(ConanFile):
 
 class ExporterTest(unittest.TestCase):
 
-    def complete_test(self):
+    def test_complete(self):
         """ basic installation of a new conans
         """
         client = TestClient()

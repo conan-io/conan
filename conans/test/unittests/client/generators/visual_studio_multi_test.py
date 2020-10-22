@@ -20,7 +20,7 @@ from conans.test.utils.mocks import TestBufferConanOutput
 class VisualStudioMultiGeneratorTest(unittest.TestCase):
 
     @parameterized.expand([(False, ), (True, )])
-    def valid_xml_test(self, use_toolset):
+    def test_valid_xml(self, use_toolset):
         tempdir = temp_folder()
         with chdir(tempdir):
             settings = Settings.loads(get_default_settings_yml())
@@ -87,7 +87,7 @@ class VisualStudioMultiGeneratorTest(unittest.TestCase):
 
             os.unlink('conanbuildinfo_multi.props')
 
-    def addional_dependencies_test(self):
+    def test_addional_dependencies(self):
 
         def validate_additional_dependencies(libname, additional_dep):
             tempdir = temp_folder()

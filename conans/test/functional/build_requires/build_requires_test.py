@@ -93,7 +93,7 @@ class BuildRequiresTest(unittest.TestCase):
         t.run("create . libC/0.1@user/testing")
         self.assertIn("libC/0.1@user/testing: Created package", t.out)
 
-    def create_with_tests_and_build_requires_test(self):
+    def test_create_with_tests_and_build_requires(self):
         client = TestClient()
         # Generate and export the build_require recipe
         conanfile = """from conans import ConanFile
@@ -358,7 +358,7 @@ Tool/0.1@lasote/stable
         self.assertIn("Tool/0.3@lasote/stable: Generating the package", client.out)
         self.assertIn("ToolPath: MyToolPath", client.out)
 
-    def options_test(self):
+    def test_options(self):
         conanfile = """from conans import ConanFile
 class package(ConanFile):
     name            = "first"
@@ -384,7 +384,7 @@ class package(ConanFile):
         client.run("install . --build=missing -o Pkg:someoption=3")
         self.assertIn("first/0.0.0@lasote/stable: Coverage: True", client.out)
 
-    def failed_assert_test(self):
+    def test_failed_assert(self):
         # https://github.com/conan-io/conan/issues/5685
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
@@ -420,7 +420,7 @@ class package(ConanFile):
         self.assertIn("conanfile.txt: Applying build-requirement: build_req_req/1.0@test/test",
                       client.out)
 
-    def missing_transitive_dependency_test(self):
+    def test_missing_transitive_dependency(self):
         # https://github.com/conan-io/conan/issues/5682
         client = TestClient()
         zlib = textwrap.dedent("""

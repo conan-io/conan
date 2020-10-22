@@ -11,7 +11,7 @@ from conans.util.files import save
 
 class BrokenDownloadTest(unittest.TestCase):
 
-    def basic_test(self):
+    def test_basic(self):
         server = TestServer()
         servers = {"default": server}
         client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
@@ -33,7 +33,7 @@ class BrokenDownloadTest(unittest.TestCase):
         self.assertIn("ERROR: Error while downloading/extracting files to", client.out)
         self.assertFalse(os.path.exists(client.cache.package_layout(ref).export()))
 
-    def client_retries_test(self):
+    def test_client_retries(self):
         server = TestServer()
         servers = {"default": server}
         conanfile = """from conans import ConanFile

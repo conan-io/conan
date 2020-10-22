@@ -6,7 +6,7 @@ from conans.util.files import load, save
 
 class ConditionalReqsTest(unittest.TestCase):
 
-    def conditional_requirements_test(self):
+    def test_conditional_requirements(self):
         conanfile = """from conans import ConanFile
 
 class TestConanLib(ConanFile):

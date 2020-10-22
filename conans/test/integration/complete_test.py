@@ -13,7 +13,7 @@ from conans.test.utils.tools import TestClient, TestServer
 @attr("slow")
 class CompleteFlowTest(unittest.TestCase):
 
-    def reuse_complete_urls_test(self):
+    def test_reuse_complete_urls(self):
         # This test can be removed in conan 2.0 when the complete_urls is removed
         test_server = TestServer(complete_urls=True)
         servers = {"default": test_server}
@@ -44,7 +44,7 @@ class CompleteFlowTest(unittest.TestCase):
         package_ids = other_conan.cache.package_layout(ref).package_ids()
         self.assertEqual(len(package_ids), 2)
 
-    def reuse_test(self):
+    def test_reuse(self):
         test_server = TestServer()
         servers = {"default": test_server}
         client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})

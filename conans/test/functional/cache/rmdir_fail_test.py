@@ -9,7 +9,7 @@ from conans.test.utils.tools import TestClient, GenConanfile
 class RMdirFailTest(unittest.TestCase):
 
     @unittest.skipIf(platform.system() != "Windows", "needs windows")
-    def fail_rmdir_test(self):
+    def test_fail_rmdir(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . MyPkg/0.1@lasote/testing")

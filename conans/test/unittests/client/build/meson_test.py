@@ -29,7 +29,7 @@ class MesonTest(unittest.TestCase):
         self.assertEqual(cmd_ref_splitted[:3], cmd_test_splitted[:3])
         self.assertEqual(set(cmd_ref_splitted[3:]), set(cmd_test_splitted[3:]))
 
-    def partial_build_test(self):
+    def test_partial_build(self):
         conan_file = ConanFileMock()
         conan_file.settings = Settings()
         conan_file.should_configure = False
@@ -51,7 +51,7 @@ class MesonTest(unittest.TestCase):
         meson.meson_install()
         self.assertIsNone(conan_file.command)
 
-    def folders_test(self):
+    def test_folders(self):
         settings = Settings.loads(get_default_settings_yml())
         settings.os = "Linux"
         settings.compiler = "gcc"
@@ -163,7 +163,7 @@ class MesonTest(unittest.TestCase):
         self.assertEqual("meson install -C \"%s\"" % build_expected,
                          conan_file.command)
 
-    def prefix_test(self):
+    def test_prefix(self):
         conan_file = ConanFileMock()
         conan_file.deps_cpp_info = MockDepsCppInfo()
         conan_file.settings = Settings()
@@ -177,7 +177,7 @@ class MesonTest(unittest.TestCase):
         meson.install()
         self.assertIn("ninja -C", conan_file.command)
 
-    def no_prefix_test(self):
+    def test_no_prefix(self):
         conan_file = ConanFileMock()
         conan_file.deps_cpp_info = MockDepsCppInfo()
         conan_file.settings = Settings()
@@ -193,7 +193,7 @@ class MesonTest(unittest.TestCase):
     @parameterized.expand([('Linux', 'gcc', '6.3', 'x86', None, '-m32'),
                            ('Linux', 'gcc', '6.3', 'x86_64', None, '-m64'),
                            ('Windows', 'Visual Studio', '15', 'x86', 'MD', '-MD')])
-    def flags_applied_test(self, the_os, compiler, version, arch, runtime, flag):
+    def test_flags_applied(self, the_os, compiler, version, arch, runtime, flag):
         settings = Settings.loads(get_default_settings_yml())
         settings.os = the_os
         settings.compiler = compiler

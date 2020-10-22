@@ -10,7 +10,7 @@ from conans.test.utils.tools import TestClient
 @attr("slow")
 class CMakeConfigsTest(unittest.TestCase):
 
-    def test_package_configs_test(self):
+    def test_test_package_configs(self):
         client = TestClient()
         name = "Hello0"
         files = multi_config_files(name, test=True)
@@ -20,7 +20,7 @@ class CMakeConfigsTest(unittest.TestCase):
         self.assertIn("Hello Release Hello0", client.out)
         self.assertIn("Hello Debug Hello0", client.out)
 
-    def cmake_multi_test(self):
+    def test_cmake_multi(self):
         client = TestClient()
 
         deps = None

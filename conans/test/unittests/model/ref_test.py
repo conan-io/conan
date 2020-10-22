@@ -8,7 +8,7 @@ from conans.model.ref import ConanFileReference, ConanName, InvalidNameException
 
 
 class RefTest(unittest.TestCase):
-    def basic_test(self):
+    def test_basic(self):
         ref = ConanFileReference.loads("opencv/2.4.10@lasote/testing")
         self.assertEqual(ref.name, "opencv")
         self.assertEqual(ref.version, "2.4.10")
@@ -36,7 +36,7 @@ class RefTest(unittest.TestCase):
         ref = ConanFileReference.loads("opencv/2.4.10@3rd-party/testing#rev1")
         self.assertEqual(ref.revision, "rev1")
 
-    def errors_test(self):
+    def test_errors(self):
         self.assertRaises(ConanException, ConanFileReference.loads, "")
         self.assertIsNone(ConanFileReference.loads("opencv/2.4.10@", validate=False).channel)
         self.assertIsNone(ConanFileReference.loads("opencv/2.4.10@", validate=False).user)
@@ -61,7 +61,7 @@ class RefTest(unittest.TestCase):
         self.assertRaises(ConanException, ConanFileReference.loads, "opencv@2.4.10/laso/test")
         self.assertRaises(ConanException, ConanFileReference.loads, "opencv/2.4.10/laso@test")
 
-    def revisions_test(self):
+    def test_revisions(self):
         ref = ConanFileReference.loads("opencv/2.4.10@lasote/testing#23")
         self.assertEqual(ref.channel, "testing")
         self.assertEqual(ref.revision, "23")
@@ -83,7 +83,7 @@ class RefTest(unittest.TestCase):
         pref = PackageReference(ref, "123123123#989")
         self.assertEqual(pref.ref.revision, "34")
 
-    def equal_test(self):
+    def test_equal(self):
         ref = ConanFileReference.loads("opencv/2.4.10@lasote/testing#23")
         ref2 = ConanFileReference.loads("opencv/2.4.10@lasote/testing#232")
         self.assertFalse(ref == ref2)
@@ -118,7 +118,7 @@ class ConanNameTestCase(unittest.TestCase):
         with six.assertRaisesRegex(self, InvalidNameException, "is not a string"):
             ConanName.validate_name(value)
 
-    def validate_name_test(self):
+    def test_validate_name(self):
         self.assertIsNone(ConanName.validate_name("string.dot.under-score.123"))
         self.assertIsNone(ConanName.validate_name("_underscore+123"))
         self.assertIsNone(ConanName.validate_name("*"))
@@ -135,7 +135,7 @@ class ConanNameTestCase(unittest.TestCase):
         self._check_invalid_type(123.34)
         self._check_invalid_type(("item1", "item2",))
 
-    def validate_name_version_test(self):
+    def test_validate_name_version(self):
         self.assertIsNone(ConanName.validate_name("[vvvv]", version=True))
 
     def validate_name_version_test_invalid(self):
