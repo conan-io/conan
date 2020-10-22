@@ -5,7 +5,7 @@ from conans.test.utils.tools import TestClient
 
 
 class InitTest(unittest.TestCase):
-    def wrong_init_test(self):
+    def test_wrong_init(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
             from conans import ConanFile
@@ -19,7 +19,7 @@ class InitTest(unittest.TestCase):
         self.assertIn("Error in init() method, line 5", client.out)
         self.assertIn("name 'random_error' is not defined", client.out)
 
-    def init_test(self):
+    def test_init(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
             from conans import ConanFile, load

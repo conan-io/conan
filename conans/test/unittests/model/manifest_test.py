@@ -34,7 +34,7 @@ class ManifestTest(unittest.TestCase):
             content = files[filepath]
             self.assertEqual(md5(content), md5readed)
 
-    def already_pyc_in_manifest_test(self):
+    def test_already_pyc_in_manifest(self):
         tmp_dir = temp_folder()
         save(os.path.join(tmp_dir, "man.txt"), "1478122267\nconanfile.pyc: "
                                                "2bcac725a0e6843ef351f4d18cf867ec\n"

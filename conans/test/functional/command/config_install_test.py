@@ -106,7 +106,7 @@ class ConfigInstallTest(unittest.TestCase):
                             })
         return folder
 
-    def config_hooks_test(self):
+    def test_config_hooks(self):
         # Make sure the conan.conf hooks information is appended
         folder = temp_folder(path_with_spaces=False)
         conan_conf = textwrap.dedent("""
@@ -190,7 +190,7 @@ class ConfigInstallTest(unittest.TestCase):
                                                      ".git")))
         self.assertFalse(os.path.exists(os.path.join(self.client.cache_folder, ".git")))
 
-    def reuse_python_test(self):
+    def test_reuse_python(self):
         zippath = self._create_zip()
         self.client.run('config install "%s"' % zippath)
         conanfile = """from conans import ConanFile
@@ -205,7 +205,7 @@ class Pkg(ConanFile):
         self.client.run("create . Pkg/0.1@user/testing")
         self.assertIn("A is 3", self.client.out)
 
-    def test_install_file_test(self):
+    def test_install_file(self):
         """ should install from a file in current dir
         """
         zippath = self._create_zip()
@@ -214,7 +214,7 @@ class Pkg(ConanFile):
             self._check("file, %s, True, None" % zippath)
             self.assertTrue(os.path.exists(zippath))
 
-    def test_install_config_file_test(self):
+    def test_install_config_file(self):
         """ should install from a settings and remotes file in configuration directory
         """
         import tempfile
@@ -239,7 +239,7 @@ class Pkg(ConanFile):
             self.client.run('config install "%s" %s' % (src_remote_file, cmd_option))
             self._check("file, %s, True, None" % src_remote_file)
 
-    def test_install_dir_test(self):
+    def test_install_dir(self):
         """ should install from a dir in current dir
         """
         folder = self._create_profile_folder()
@@ -248,7 +248,7 @@ class Pkg(ConanFile):
             self.client.run('config install "%s" %s' % (folder, dirtype))
             self._check("dir, %s, True, None" % folder)
 
-    def install_source_target_folders_test(self):
+    def test_install_source_target_folders(self):
         folder = temp_folder()
         save_files(folder, {"subf/file.txt": "hello",
                             "subf/subf/file2.txt": "bye"})
@@ -258,7 +258,7 @@ class Pkg(ConanFile):
         content = load(os.path.join(self.client.cache_folder, "newsubf/subf/file2.txt"))
         self.assertEqual(content, "bye")
 
-    def install_multiple_configs_test(self):
+    def test_install_multiple_configs(self):
         folder = temp_folder()
         save_files(folder, {"subf/file.txt": "hello",
                             "subf2/file2.txt": "bye"})
@@ -345,7 +345,7 @@ class Pkg(ConanFile):
                 self.client.run("config install http://myfakeurl.com/myconf.zip %s" % origin)
                 self._check("url, http://myfakeurl.com/myconf.zip, True, None")
 
-    def install_change_only_verify_ssl_test(self):
+    def test_install_change_only_verify_ssl(self):
         def my_download(obj, url, filename, **kwargs):  # @UnusedVariable
             self._create_zip(filename)
 
@@ -357,13 +357,13 @@ class Pkg(ConanFile):
             self.client.run("config install http://myfakeurl.com/myconf.zip --verify-ssl=False")
             self._check("url, http://myfakeurl.com/myconf.zip, False, None")
 
-    def failed_install_repo_test(self):
+    def test_failed_install_repo(self):
         """ should install from a git repo
         """
         self.client.run('config install notexistingrepo.git', assert_error=True)
         self.assertIn("ERROR: Failed conan config install: Can't clone repo", self.client.out)
 
-    def failed_install_http_test(self):
+    def test_failed_install_http(self):
         """ should install from a http zip
         """
         self.client.run("config set general.retry_wait=0")
@@ -371,7 +371,7 @@ class Pkg(ConanFile):
         self.assertIn("ERROR: Failed conan config install: "
                       "Error while installing config from httpnonexisting", self.client.out)
 
-    def install_repo_test(self):
+    def test_install_repo(self):
         """ should install from a git repo
         """
 
@@ -387,7 +387,7 @@ class Pkg(ConanFile):
         check_path = os.path.join(folder, ".git")
         self._check("git, %s, True, None" % check_path)
 
-    def install_repo_relative_test(self):
+    def test_install_repo_relative(self):
         relative_folder = "./config"
         absolute_folder = os.path.join(self.client.current_folder, "config")
         mkdir(absolute_folder)
@@ -402,7 +402,7 @@ class Pkg(ConanFile):
         self.client.run('config install "%s/.git"' % relative_folder)
         self._check("git, %s, True, None" % os.path.join("%s" % folder, ".git"))
 
-    def install_custom_args_test(self):
+    def test_install_custom_args(self):
         """ should install from a git repo
         """
 
@@ -440,13 +440,13 @@ class Pkg(ConanFile):
         self.assertIn("Error downloading file httpnonexisting: 'Invalid URL 'httpnonexisting'",
                       client.out)
 
-    def reinstall_error_test(self):
+    def test_reinstall_error(self):
         """ should use configured URL in conan.conf
         """
         self.client.run("config install", assert_error=True)
         self.assertIn("Called config install without arguments", self.client.out)
 
-    def removed_credentials_from_url_unit_test(self):
+    def test_removed_credentials_from_url_unit(self):
         """
         Unit tests to remove credentials in netloc from url when using basic auth
         # https://github.com/conan-io/conan/issues/2324
@@ -475,7 +475,7 @@ class Pkg(ConanFile):
         # Check works with empty string
         self.assertEqual(_hide_password(''), '')
 
-    def remove_credentials_config_installer_test(self):
+    def test_remove_credentials_config_installer(self):
         """ Functional test to check credentials are not displayed in output but are still present
         in conan configuration
         # https://github.com/conan-io/conan/issues/2324
@@ -497,7 +497,7 @@ class Pkg(ConanFile):
             # Check credentials still stored in configuration
             self._check("url, %s, True, None" % fake_url_with_credentials)
 
-    def ssl_verify_test(self):
+    def test_ssl_verify(self):
         fake_url = "https://fakeurl.com/myconf.zip"
 
         def download_verify_false(obj, url, filename, **kwargs):  # @UnusedVariable

@@ -5,7 +5,7 @@ from conans.test.utils.tools import TestClient
 
 class CMakeInstallPackageTest(unittest.TestCase):
 
-    def patch_config_test(self):
+    def test_patch_config(self):
         client = TestClient()
         conanfile = """from conans import ConanFile, CMake
 from conans.tools import save, load
@@ -43,7 +43,7 @@ class AConan(ConanFile):
         self.assertIn("ConanException: cmake.patch_config_paths() can't work without package name",
                       client.out)
 
-    def install_package_test(self):
+    def test_install_package(self):
         client = TestClient()
         conanfile = """from conans import ConanFile, CMake
 

@@ -12,7 +12,7 @@ from conans.test.utils.mocks import TestBufferConanOutput
 
 class B2GeneratorTest(unittest.TestCase):
 
-    def b2_test(self):
+    def test_b2(self):
         settings = Settings.loads(get_default_settings_yml())
         settings.os = "Linux"
         settings.compiler = "gcc"
@@ -59,7 +59,7 @@ class B2GeneratorTest(unittest.TestCase):
         for ck, cv in generator.content.items():
             self.assertEqual(cv, content[ck])
 
-    def b2_empty_settings_test(self):
+    def test_b2_empty_settings(self):
         conanfile = ConanFile(TestBufferConanOutput(), None)
         conanfile.initialize(Settings({}), EnvValues())
 

@@ -12,7 +12,7 @@ from conans.util.files import save
 
 class PutPropertiesTest(unittest.TestCase):
 
-    def create_empty_property_file_test(self):
+    def test_create_empty_property_file(self):
         test_server = TestServer()
         servers = {"default": test_server}
 
@@ -23,7 +23,7 @@ class PutPropertiesTest(unittest.TestCase):
         props_file = client.cache.artifacts_properties_path
         self.assertTrue(os.path.exists(props_file))
 
-    def put_properties_test(self):
+    def test_put_properties(self):
         test_server = TestServer()
         servers = {"default": test_server}
 
@@ -59,7 +59,7 @@ class PutPropertiesTest(unittest.TestCase):
         client.run("export . lasote/stable")
         client.run("upload Hello0/0.1@lasote/stable -c")
 
-    def matrix_params_test(self):
+    def test_matrix_params(self):
         test_server = TestServer(server_capabilities=[MATRIX_PARAMS, ])
         servers = {"default": test_server}
 

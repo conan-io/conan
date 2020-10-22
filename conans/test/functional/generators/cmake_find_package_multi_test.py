@@ -79,7 +79,7 @@ class CMakeFindPathMultiGeneratorTest(unittest.TestCase):
                         self.assertIn("bye World {}!".format(bt), c.out)
                         os.remove(os.path.join(c.current_folder, "example"))
 
-    def build_modules_test(self):
+    def test_build_modules(self):
         conanfile = textwrap.dedent("""
             import os
             from conans import ConanFile, CMake
@@ -146,7 +146,7 @@ class CMakeFindPathMultiGeneratorTest(unittest.TestCase):
         client.run("create .")
         self.assertIn("Printing using a external module!", client.out)
 
-    def cmake_find_package_system_libs_test(self):
+    def test_cmake_find_package_system_libs(self):
         conanfile = textwrap.dedent("""
             from conans import ConanFile, tools
 
@@ -223,7 +223,7 @@ class CMakeFindPathMultiGeneratorTest(unittest.TestCase):
                               "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>"
             self.assertIn("Target libs: %s" % target_libs, client.out)
 
-    def cpp_info_name_test(self):
+    def test_cpp_info_name(self):
         client = TestClient()
         client.run("new hello/1.0 -s")
         replace_in_file(os.path.join(client.current_folder, "conanfile.py"),
@@ -286,7 +286,7 @@ class Conan(ConanFile):
                       "$<$<CONFIG:Debug>:;>",
                       client.out)
 
-    def no_version_file_test(self):
+    def test_no_version_file(self):
         client = TestClient()
         client.run("new hello/1.1 -s")
         client.run("create .")
@@ -336,7 +336,7 @@ class Conan(ConanFile):
         ("find_package(hello 0.1 REQUIRED)", True, False),
         ("find_package(hello 2.0 REQUIRED)", True, False)
     ])
-    def version_test(self, find_package_string, cmake_fails, package_found):
+    def test_version(self, find_package_string, cmake_fails, package_found):
         client = TestClient()
         client.run("new hello/1.1 -s")
         client.run("create .")
@@ -372,7 +372,7 @@ class Conan(ConanFile):
         else:
             self.assertIn("hello found: 0", client.out)
 
-    def cpp_info_config_test(self):
+    def test_cpp_info_config(self):
         conanfile = textwrap.dedent("""
             from conans import ConanFile
 
@@ -409,7 +409,7 @@ class Conan(ConanFile):
         self.assertIn('set(requirement_LIBRARY_LIST_RELEASE lib_both lib_release)', content_release)
         self.assertIn('set(requirement_LIBRARY_LIST_DEBUG lib_both lib_debug)', content_debug)
 
-    def components_system_libs_test(self):
+    def test_components_system_libs(self):
         conanfile = textwrap.dedent("""
             from conans import ConanFile
 

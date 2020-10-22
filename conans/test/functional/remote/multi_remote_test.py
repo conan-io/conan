@@ -12,7 +12,7 @@ from conans.test.utils.tools import TestClient, TestServer
 
 class ExportsSourcesMissingTest(unittest.TestCase):
 
-    def exports_sources_missing_test(self):
+    def test_exports_sources_missing(self):
         client = TestClient(default_server_user=True)
         conanfile = textwrap.dedent("""
             from conans import ConanFile
@@ -69,7 +69,7 @@ class MultiRemotesTest(unittest.TestCase):
         if export:
             client.run("export . lasote/stable")
 
-    def conan_install_build_flag_test(self):
+    def test_conan_install_build_flag(self):
         """
         Checks conan install --update works with different remotes and changes the associated ones
         in registry accordingly
@@ -138,7 +138,7 @@ class MultiRemotesTest(unittest.TestCase):
         client_b.run("remote list_ref")
         self.assertIn("Hello0/0.0@lasote/stable: default", client_b.out)
 
-    def conan_install_update_test(self):
+    def test_conan_install_update(self):
         """
         Checks conan install --update works only with the remote associated
         """
@@ -186,7 +186,7 @@ class MultiRemoteTest(unittest.TestCase):
 
         self.client = TestClient(servers=self.servers, users=self.users)
 
-    def predefine_remote_test(self):
+    def test_predefine_remote(self):
         files = cpp_hello_conan_files("Hello0", "0.1", build=False)
         self.client.save(files)
         self.client.run("export . lasote/stable")
@@ -201,7 +201,7 @@ class MultiRemoteTest(unittest.TestCase):
         self.client.run("remote list_ref")
         self.assertIn(": remote1", self.client.out)
 
-    def upload_test(self):
+    def test_upload(self):
         ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
         files = cpp_hello_conan_files("Hello0", "0.1", build=False)
         self.client.save(files)
@@ -230,7 +230,7 @@ class MultiRemoteTest(unittest.TestCase):
         client3.run("info %s" % str(ref))
         self.assertIn("remote1=http://", client3.out)
 
-    def fail_when_not_notfound_test(self):
+    def test_fail_when_not_notfound(self):
         """
         If a remote fails with a 404 it has to keep looking in the next remote, but if it fails by
         any other reason it has to stop
@@ -257,7 +257,7 @@ class MultiRemoteTest(unittest.TestCase):
         # s2 is not even tried
         self.assertNotIn("MyLib/0.1@conan/testing: Trying with 's2'...", client2.out)
 
-    def install_from_remotes_test(self):
+    def test_install_from_remotes(self):
         for i in range(3):
             ref = ConanFileReference.loads("Hello%d/0.1@lasote/stable" % i)
             files = cpp_hello_conan_files("Hello%d" % i, "0.1", build=False)
@@ -287,7 +287,7 @@ class MultiRemoteTest(unittest.TestCase):
     @unittest.skipIf(TestClient().cache.config.revisions_enabled,
                      "This test is not valid for revisions, where we keep iterating the remotes "
                      "for searching a package for the same recipe revision")
-    def package_binary_remote_test(self):
+    def test_package_binary_remote(self):
         # https://github.com/conan-io/conan/issues/3882
         conanfile = """from conans import ConanFile
 class ConanFileToolsTest(ConanFile):

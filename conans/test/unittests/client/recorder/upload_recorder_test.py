@@ -10,12 +10,12 @@ class UploadRecorderTest(unittest.TestCase):
     def setUp(self):
         self.upload_recorder = UploadRecorder()
 
-    def empty_test(self):
+    def test_empty(self):
         info = self.upload_recorder.get_info()
         expected_result = {'error': False, 'uploaded': []}
         self.assertEqual(expected_result, info)
 
-    def sequential_test(self):
+    def test_sequential(self):
         ref = ConanFileReference.loads("fake/0.1@user/channel#rev")
         ref2 = ConanFileReference.loads("fakefake/0.1@user/channel")
         self.upload_recorder.add_recipe(ref, "my_remote", "https://fake_url.com")
@@ -69,7 +69,7 @@ class UploadRecorderTest(unittest.TestCase):
                                       }
         self._check_result(expected_result_without_time, info)
 
-    def unordered_test(self):
+    def test_unordered(self):
         ref1 = ConanFileReference.loads("fake1/0.1@user/channel")
         ref2 = ConanFileReference.loads("fake2/0.1@user/channel")
         ref3 = ConanFileReference.loads("fake3/0.1@user/channel")

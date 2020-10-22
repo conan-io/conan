@@ -8,7 +8,7 @@ from conans.test.utils.tools import TestClient
 
 class JsonTest(unittest.TestCase):
 
-    def generate_json_info_test(self):
+    def test_generate_json_info(self):
         conanfile_py = """from conans import ConanFile
 
 class HelloConan(ConanFile):
@@ -36,7 +36,7 @@ class HelloConan(ConanFile):
         self.assertTrue(os.path.isabs(include_path))
         self.assertTrue(os.path.exists(include_path))
 
-    def generate_json_info_settings_test(self):
+    def test_generate_json_info_settings(self):
         conanfile_py = """from conans import ConanFile
 
 class HelloConan(ConanFile):
@@ -117,7 +117,7 @@ class HelloConan(ConanFile):
             self.assertEqual(deps_info[dupe], deps_info_debug[dupe])
             self.assertEqual(deps_info[dupe], deps_info_release[dupe])
 
-    def system_libs_test(self):
+    def test_system_libs(self):
         conanfile = textwrap.dedent("""
             from conans import ConanFile
 
