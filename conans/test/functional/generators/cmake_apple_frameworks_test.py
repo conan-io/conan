@@ -476,7 +476,7 @@ class CMakeAppleOwnFrameworksTestCase(unittest.TestCase):
             link_txt = t.load(os.path.join('CMakeFiles', 'test_package.dir', 'link.txt'))
             self.assertIn("-framework Foundation", link_txt)
 
-    def component_test(self):
+    def test_component(self):
         conanfile_py = textwrap.dedent("""
 from conans import ConanFile, CMake, tools
 

@@ -71,7 +71,7 @@ class PkgConfigGeneratorWithComponentsTest(unittest.TestCase):
             libs = pconfig.libs_only_l
         return libs
 
-    def basic_test(self):
+    def test_basic(self):
         client = TestClient()
         self._create_greetings(client)
         self._create_world(client)
@@ -84,7 +84,7 @@ class PkgConfigGeneratorWithComponentsTest(unittest.TestCase):
         libs = self._get_libs_from_pkg_config("greetings", client.current_folder)
         self.assertListEqual(["-lbye", "-lhello"], libs)
 
-    def pkg_config_general_test(self):
+    def test_pkg_config_general(self):
         client = TestClient()
         self._create_greetings(client, custom_names=True)
 
@@ -117,7 +117,7 @@ class PkgConfigGeneratorWithComponentsTest(unittest.TestCase):
         for f in ["Hello.pc", "Bye.pc", "Greetings.pc", "World.pc", "Helloworld.pc", "Worldall.pc"]:
             self.assertIn("Version: 0.0.1", client.load(f))
 
-    def pkg_config_components_test(self):
+    def test_pkg_config_components(self):
         client = TestClient()
         self._create_greetings(client)
         conanfile2 = textwrap.dedent("""
@@ -148,7 +148,7 @@ class PkgConfigGeneratorWithComponentsTest(unittest.TestCase):
         for f in ["hello.pc", "bye.pc", "greetings.pc", "world.pc", "helloworld.pc", "worldall.pc"]:
             self.assertIn("Version: 0.0.1", client.load(f))
 
-    def recipe_with_components_requiring_recipe_without_components_test(self):
+    def test_recipe_with_components_requiring_recipe_without_components(self):
         client = TestClient()
         self._create_greetings(client, components=False)
 
@@ -185,7 +185,7 @@ class PkgConfigGeneratorWithComponentsTest(unittest.TestCase):
         for f in ["greetings.pc", "world.pc", "helloworld.pc", "worldall.pc"]:
             self.assertIn("Version: 0.0.1", client.load(f))
 
-    def same_names_test(self):
+    def test_same_names(self):
         client = TestClient()
         conanfile_greetings = textwrap.dedent("""
             from conans import ConanFile, CMake
@@ -205,7 +205,7 @@ class PkgConfigGeneratorWithComponentsTest(unittest.TestCase):
         self.assertNotIn("Requires:", client.load("hello.pc"))
         self.assertIn("Version: 0.0.1", client.load("hello.pc"))
 
-    def component_not_found_same_name_as_pkg_require_test(self):
+    def test_component_not_found_same_name_as_pkg_require(self):
         zlib = GenConanfile("zlib", "0.1").with_setting("build_type")\
             .with_generator("pkg_config")
         mypkg = GenConanfile("mypkg", "0.1").with_setting("build_type")\

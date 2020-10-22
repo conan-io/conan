@@ -41,7 +41,7 @@ class ConanLib(ConanFile):
 
 class PathLengthLimitTest(unittest.TestCase):
     @unittest.skipUnless(platform.system() == "Windows", "requires Win")
-    def failure_copy_test(self):
+    def test_failure_copy(self):
         client = TestClient()
         conanfile = dedent("""
             from conans import ConanFile
@@ -63,7 +63,7 @@ class PathLengthLimitTest(unittest.TestCase):
         self.assertIn("Use short_paths=True if paths too long", client.out)
         self.assertIn("Error copying sources to build folder", client.out)
 
-    def remove_test(self):
+    def test_remove(self):
         short_home = tempfile.mkdtemp(dir=CONAN_TEST_FOLDER)
         client = TestClient()
         files = {"conanfile.py": base,
@@ -79,7 +79,7 @@ class PathLengthLimitTest(unittest.TestCase):
             client.run('remove "*" -f')
             self.assertEqual(len(os.listdir(short_home)), 0)
 
-    def upload_test(self):
+    def test_upload(self):
         test_server = TestServer([],  # write permissions
                                  users={"lasote": "mypass"})  # exported users and passwords
         servers = {"default": test_server}
@@ -113,7 +113,7 @@ class PathLengthLimitTest(unittest.TestCase):
             self.assertIn("myfile2.txt", files)
             self.assertNotIn("conan_package.tgz", files)
 
-    def export_source_test(self):
+    def test_export_source(self):
         client = TestClient()
         files = {"conanfile.py": base,
                  "path/"*20 + "file0.txt": "file0 content"}
@@ -134,7 +134,7 @@ class PathLengthLimitTest(unittest.TestCase):
         self.assertTrue(os.path.exists(package_folder))
         self.assertEqual(load(os.path.join(package_folder + "/file0.txt")), "file0 content")
 
-    def package_copier_test(self):
+    def test_package_copier(self):
         client = TestClient()
         files = {"conanfile.py": base}
         client.save(files)
@@ -157,7 +157,7 @@ class PathLengthLimitTest(unittest.TestCase):
             package_folder = load(os.path.join(package_folder, ".conan_link"))
         self.assertTrue(os.path.exists(package_folder))
 
-    def basic_test(self):
+    def test_basic(self):
         client = TestClient()
         files = {"conanfile.py": base}
         client.save(files)
@@ -193,7 +193,7 @@ class PathLengthLimitTest(unittest.TestCase):
             self.assertFalse(os.path.exists(link_build))
             self.assertFalse(os.path.exists(link_package))
 
-    def basic_disabled_test(self):
+    def test_basic_disabled(self):
         client = TestClient()
         conanfile = '''
 from conans import ConanFile
@@ -223,7 +223,7 @@ class ConanLib(ConanFile):
             self.assertTrue(os.path.exists(link_build))
             self.assertTrue(os.path.exists(link_package))
 
-    def failure_test(self):
+    def test_failure(self):
 
         conanfile = '''
 from conans import ConanFile

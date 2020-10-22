@@ -11,7 +11,7 @@ class OrderLibsTest(unittest.TestCase):
     def setUp(self):
         self.client = TestClient()
 
-    def private_order_test(self):
+    def test_private_order(self):
         # https://github.com/conan-io/conan/issues/3006
         client = TestClient()
         conanfile = """from conans import ConanFile
@@ -95,7 +95,7 @@ class LibCConan(ConanFile):
         if export:
             self.client.run("export . lasote/stable")
 
-    def reuse_test(self):
+    def test_reuse(self):
         self._export("ZLib")
         self._export("BZip2")
         self._export("SDL2", ["ZLib"])

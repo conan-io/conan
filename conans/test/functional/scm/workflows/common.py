@@ -28,9 +28,9 @@ class TestWorkflow(object):
             def source(self):
                 self.output.info(self.source_folder)
                 content = tools.load(os.path.join(self.source_folder, "{scm_subfolder}", "file.txt"))
-                self.output.info(">>>> I'm {{}}/{{}}@{{}}/{{}}".format(self.name, self.version, 
+                self.output.info(">>>> I'm {{}}/{{}}@{{}}/{{}}".format(self.name, self.version,
                                                                        self.user, self.channel))
-                self.output.info(">>>> content: {{}} ".format(content)) 
+                self.output.info(">>>> content: {{}} ".format(content))
         """)
 
     def get_files(self, subfolder, conanfile, lib_ref):
@@ -46,7 +46,7 @@ class TestWorkflow(object):
         with environment_append({'CONAN_USERNAME': "user", "CONAN_CHANNEL": "channel"}):
             super(TestWorkflow, self).run(*args, **kwargs)
 
-    def _run_local_test(self, t, working_dir, path_to_conanfile):
+    def test__run_local(self, t, working_dir, path_to_conanfile):
         old_wd = t.current_folder
         try:
             path_to_conanfile = path_to_conanfile.replace('\\', '/')
@@ -58,7 +58,7 @@ class TestWorkflow(object):
         finally:
             t.current_folder = old_wd
 
-    def _run_remote_test(self, t, working_dir, path_to_conanfile):
+    def test__run_remote(self, t, working_dir, path_to_conanfile):
         old_wd = t.current_folder
         try:
             path_to_conanfile = path_to_conanfile.replace('\\', '/')

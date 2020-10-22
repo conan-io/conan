@@ -56,7 +56,7 @@ class ConanInspectTest(unittest.TestCase):
         client.run("inspect pkg/0.1@user/channel -a settings")
         self.assertIn("settings: os", client.out)
 
-    def python_requires_test(self):
+    def test_python_requires(self):
         server = TestServer()
         client = TestClient(servers={"default": server}, users={"default": [("lasote", "mypass")]})
         conanfile = """from conans import ConanFile
@@ -81,7 +81,7 @@ class Pkg(base.Pkg):
         self.assertIn("Base/0.1@lasote/testing", client.out)
         self.assertIn("Pkg/0.1@lasote/testing", client.out)
 
-    def python_requires_not_found_test(self):
+    def test_python_requires_not_found(self):
         server = TestServer()
         client = TestClient(servers={"default": server}, users={"default": [("user", "channel")]})
         conanfile = textwrap.dedent("""
@@ -100,7 +100,7 @@ class Pkg(base.Pkg):
                       ' in remotes', client.out)
         self.assertEqual(3, len(str(client.out).splitlines()))
 
-    def name_version_test(self):
+    def test_name_version(self):
         server = TestServer()
         client = TestClient(servers={"default": server}, users={"default": [("lasote", "mypass")]})
         client.save({"conanfile.py": GenConanfile().with_name("MyPkg").with_version("1.2.3")})
@@ -129,7 +129,7 @@ class Pkg(base.Pkg):
         client.run("inspect MyPkg/1.2.3@lasote/testing -a=version -r=default")
         self.assertIn("version: 1.2.3", client.out)
 
-    def set_name_version_test(self):
+    def test_set_name_version(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
             from conans import ConanFile, load
@@ -154,7 +154,7 @@ class Pkg(base.Pkg):
         client.run("inspect MyPkg/1.2.3@ -a=version")
         self.assertIn("version: 1.2.3", client.out)
 
-    def attributes_display_test(self):
+    def test_attributes_display(self):
         client = TestClient()
         conanfile = """from conans import ConanFile
 class Pkg(ConanFile):
@@ -176,7 +176,7 @@ class Pkg(ConanFile):
         client.run("inspect . -a=unexisting_attr")
         self.assertIn("unexisting_attr:", client.out)
 
-    def options_test(self):
+    def test_options(self):
         client = TestClient()
         conanfile = """from conans import ConanFile
 class Pkg(ConanFile):
@@ -210,7 +210,7 @@ default_options:
                                                             'option2=2',
                                                             'option3=randomANY'])
 
-    def inspect_all_test(self):
+    def test_inspect_all(self):
         client = TestClient()
         conanfile = """from conans import ConanFile
 class Pkg(ConanFile):
@@ -489,7 +489,7 @@ class InspectRawTest(unittest.TestCase):
         client.run("inspect . --raw=default_options")
         self.assertEqual("dict=True\nlist=False", client.out)
 
-    def test_initial_inspect_without_registry_test(self):
+    def test_test_initial_inspect_without_registry(self):
         client = TestClient()
         client.save({"conanfile.py": self.conanfile})
         client.run("export . user/channel")

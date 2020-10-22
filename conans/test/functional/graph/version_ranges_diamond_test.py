@@ -11,7 +11,7 @@ from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServ
 
 class VersionRangesUpdatingTest(unittest.TestCase):
 
-    def update_remote_test(self):
+    def test_update_remote(self):
         # https://github.com/conan-io/conan/issues/5333
         client = TestClient(servers={"default": TestServer()},
                             users={"default": [("lasote", "mypass")]})
@@ -48,7 +48,7 @@ class VersionRangesUpdatingTest(unittest.TestCase):
         self.assertNotIn("boost/1.69.0", client.out)
         self.assertNotIn("boost/1.68.0", client.out)
 
-    def update_test(self):
+    def test_update(self):
         client = TestClient(servers={"default": TestServer()},
                             users={"default": [("lasote", "mypass")]})
         conanfile = """from conans import ConanFile
@@ -83,7 +83,7 @@ class HelloReuseConan(ConanFile):
         self.assertIn("Pkg/1.2@lasote/testing: Already installed!", client.out)
         self.assertNotIn("Pkg/1.1", client.out)
 
-    def update_pkg_test(self):
+    def test_update_pkg(self):
         server = TestServer()
         client = TestClient(servers={"default": server},
                             users={"default": [("lasote", "mypass")]})
@@ -161,7 +161,7 @@ class HelloReuseConan(ConanFile):
             if upload:
                 self.client.run("upload %s/%s@lasote/stable -r=%s" % (name, version, remote))
 
-    def resolve_from_remotes_test(self):
+    def test_resolve_from_remotes(self):
         self._export("Hello0", "0.1")
         self._export("Hello0", "0.2")
         self._export("Hello0", "0.3", remote="other")
@@ -206,7 +206,7 @@ class HelloReuseConan(ConanFile):
             if upload:
                 self.client.run("upload %s/%s@lasote/stable" % (name, version))
 
-    def local_then_remote_test(self):
+    def test_local_then_remote(self):
         self._export("Hello0", "0.1")
         self._export("Hello0", "0.2")
         self._export("Hello0", "0.3")
@@ -225,7 +225,7 @@ class HelloReuseConan(ConanFile):
         self.assertIn("Hello0/0.2@lasote/stable", content)
 
     @parameterized.expand([(False, ), (True,)])
-    def reuse_test(self, upload):
+    def test_reuse(self, upload):
         self._export("Hello0", "0.1", upload=upload)
         self._export("Hello0", "0.2", upload=upload)
         self._export("Hello0", "0.3", upload=upload)
@@ -282,7 +282,7 @@ class HelloReuseConan(ConanFile):
             self.assertIn("Hello1/0.1@lasote/stable", content)
             self.assertIn("Hello2/0.1@lasote/stable", content)
 
-    def no_joint_compatibility_resolved_test(self):
+    def test_no_joint_compatibility_resolved(self):
         """Test to verify that conan is not resolving using joint-compatibility of the full graph
         and you need to specify the right order or override downstream the conflict"""
         self._export("ProblemRequirement", "1.0.0", upload=True)

@@ -9,7 +9,7 @@ from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
 class ShortPathsTest(unittest.TestCase):
 
     @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
-    def inconsistent_cache_test(self):
+    def test_inconsistent_cache(self):
         conanfile = """
 import os
 from conans import ConanFile, tools
@@ -69,7 +69,7 @@ class TestConan(ConanFile):
         self.assertEqual([".conan_link"], os.listdir(package_folder))
 
     @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
-    def package_output_test(self):
+    def test_package_output(self):
         conanfile = """
 import os
 from conans import ConanFile, tools

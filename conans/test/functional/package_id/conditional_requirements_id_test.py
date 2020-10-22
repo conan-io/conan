@@ -5,7 +5,7 @@ from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
 
 class ConditionalRequirementsIdTest(unittest.TestCase):
 
-    def basic_test(self):
+    def test_basic(self):
         # https://github.com/conan-io/conan/issues/3792
         # Default might be improved 2.0 in https://github.com/conan-io/conan/issues/3762
         client = TestClient()

@@ -37,7 +37,7 @@ class ProfilesEnvironmentTest(unittest.TestCase):
     def setUp(self):
         self.client = TestClient()
 
-    def build_with_profile_test(self):
+    def test_build_with_profile(self):
         self._create_profile("scopes_env", {},
                              {"CXX": "/path/tomy/g++_build", "CC": "/path/tomy/gcc_build"})
 

@@ -10,7 +10,7 @@ import json
 
 class ProfileTest(unittest.TestCase):
 
-    def reuse_output_test(self):
+    def test_reuse_output(self):
         client = TestClient()
         client.run("profile new myprofile --detect")
         client.run("profile update options.Pkg:myoption=123 myprofile")
@@ -24,12 +24,12 @@ class ProfileTest(unittest.TestCase):
         client.run("install . -pr=mylocalprofile")
         self.assertIn("conanfile.txt: Generated conaninfo.txt", client.out)
 
-    def empty_test(self):
+    def test_empty(self):
         client = TestClient(cache_autopopulate=False)
         client.run("profile list")
         self.assertIn("No profiles defined", client.out)
 
-    def list_test(self):
+    def test_list(self):
         client = TestClient()
         profiles = ["default", "profile1", "profile2", "profile3",
                     "nested" + os.path.sep + "profile4",
@@ -61,7 +61,7 @@ class ProfileTest(unittest.TestCase):
         self.assertEqual(list, type(json_obj))
         self.assertEqual(profiles, json_obj)
 
-    def show_test(self):
+    def test_show(self):
         client = TestClient()
         create_profile(client.cache.profiles_path, "profile1", settings={"os": "Windows"},
                        options=[("MyOption", "32")])
@@ -76,7 +76,7 @@ class ProfileTest(unittest.TestCase):
         self.assertIn("CXX=/path/tomy/g++_build", client.out)
         self.assertIn("package:VAR=value", client.out)
 
-    def profile_update_and_get_test(self):
+    def test_profile_update_and_get(self):
         client = TestClient()
         client.run("profile new ./MyProfile --detect")
         if "WARNING: GCC OLD ABI COMPATIBILITY" in client.out:
@@ -152,7 +152,7 @@ class ProfileTest(unittest.TestCase):
         client.run("profile remove env.foo ./MyProfile", assert_error=True)
         self.assertIn("Profile key 'env.foo' doesn't exist", client.out)
 
-    def profile_update_env_test(self):
+    def test_profile_update_env(self):
         client = TestClient()
         client.run("profile new ./MyProfile")
         pr_path = os.path.join(client.current_folder, "MyProfile")
@@ -167,7 +167,7 @@ class ProfileTest(unittest.TestCase):
         self.assertEqual(["[env]", "foo=BAZ", "MyPkg:foo=FOO,BAZ,BAR"],
                          load(pr_path).splitlines()[-3:])
 
-    def profile_new_test(self):
+    def test_profile_new(self):
         client = TestClient()
         client.run("profile new ./MyProfile")
         pr_path = os.path.join(client.current_folder, "MyProfile")
@@ -191,7 +191,7 @@ class ProfileTest(unittest.TestCase):
         self.assertTrue(os.path.exists(pr_path))
         self.assertNotIn("os=", load(pr_path))
 
-    def profile_force_new_test(self):
+    def test_profile_force_new(self):
         client = TestClient()
 
         empty_profile = """[settings]
@@ -223,7 +223,7 @@ class ProfileTest(unittest.TestCase):
         self.assertNotIn("[env]\nMyEnv=MYVALUe", load(pr_path))
         self.assertEqual(load(pr_path), detected_profile)
 
-    def missing_subarguments_test(self):
+    def test_missing_subarguments(self):
         client = TestClient()
         client.run("profile", assert_error=True)
         self.assertIn("ERROR: Exiting with code: 2", client.out)

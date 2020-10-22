@@ -5,7 +5,7 @@ from conans.test.utils.tools import TestClient
 
 class LoadRequirementsTextFileTest(unittest.TestCase):
 
-    def load_reqs_from_text_file_test(self):
+    def test_load_reqs_from_text_file(self):
         client = TestClient()
         conanfile = """from conans import ConanFile, load
 def reqs():

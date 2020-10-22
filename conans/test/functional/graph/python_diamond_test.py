@@ -15,7 +15,7 @@ class PythonDiamondTest(unittest.TestCase):
         self.client.save(files, clean_first=True)
         self.client.run("export . lasote/stable")
 
-    def reuse_test(self):
+    def test_reuse(self):
         self._export_upload("Hello0", "0.1")
         self._export_upload("Hello1", "0.1", ["Hello0/0.1@lasote/stable"])
         self._export_upload("Hello2", "0.1", ["Hello0/0.1@lasote/stable"])

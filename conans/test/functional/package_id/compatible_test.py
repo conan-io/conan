@@ -8,7 +8,7 @@ from conans.test.utils.tools import TestClient, GenConanfile
 
 class CompatibleIDsTest(unittest.TestCase):
 
-    def compatible_setting_test(self):
+    def test_compatible_setting(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
             from conans import ConanFile
@@ -46,7 +46,7 @@ class CompatibleIDsTest(unittest.TestCase):
         self.assertIn("pkg/0.1@user/stable:22c594d7fed4994c59a1eacb24ff6ff48bc5c51c", client.out)
         self.assertIn("pkg/0.1@user/stable: Already installed!", client.out)
 
-    def compatible_setting_no_binary_test(self):
+    def test_compatible_setting_no_binary(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
            from conans import ConanFile
@@ -85,7 +85,7 @@ class CompatibleIDsTest(unittest.TestCase):
         self.assertIn("pkg/0.1@user/stable:53f56fbd582a1898b3b9d16efd6d3c0ec71e7cfb - Build",
                       client.out)
 
-    def compatible_setting_no_user_channel_test(self):
+    def test_compatible_setting_no_user_channel(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
             from conans import ConanFile
@@ -119,7 +119,7 @@ class CompatibleIDsTest(unittest.TestCase):
         self.assertIn("pkg/0.1:22c594d7fed4994c59a1eacb24ff6ff48bc5c51c", client.out)
         self.assertIn("pkg/0.1: Already installed!", client.out)
 
-    def compatible_option_test(self):
+    def test_compatible_option(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
             from conans import ConanFile
@@ -160,7 +160,7 @@ class CompatibleIDsTest(unittest.TestCase):
                       client.out)
         self.assertIn("pkg/0.1@user/stable: Already installed!", client.out)
 
-    def visual_package_compatible_with_intel_test(self):
+    def test_visual_package_compatible_with_intel(self):
         client = TestClient()
         ref = ConanFileReference.loads("Bye/0.1@us/ch")
         conanfile = textwrap.dedent("""
@@ -200,7 +200,7 @@ class CompatibleIDsTest(unittest.TestCase):
                       client.out)
         self.assertIn("Bye/0.1@us/ch:1151fe341e6b310f7645a76b4d3d524342835acc - Cache", client.out)
 
-    def wrong_base_compatible_test(self):
+    def test_wrong_base_compatible(self):
         client = TestClient()
         ref = ConanFileReference.loads("Bye/0.1@us/ch")
         conanfile = textwrap.dedent("""
@@ -225,7 +225,7 @@ class CompatibleIDsTest(unittest.TestCase):
         client.run("create . %s --profile visual_profile" % ref.full_str(), assert_error=True)
         self.assertIn("The compiler 'Visual Studio' has no 'base' sub-setting", client.out)
 
-    def intel_package_compatible_with_base_test(self):
+    def test_intel_package_compatible_with_base(self):
         client = TestClient()
         ref = ConanFileReference.loads("Bye/0.1@us/ch")
         conanfile = textwrap.dedent("""
@@ -266,7 +266,7 @@ class CompatibleIDsTest(unittest.TestCase):
                       client.out)
         self.assertIn("Bye/0.1@us/ch:2ef6f6c768dd0f332dc252b72c30dee116632302 - Cache", client.out)
 
-    def no_valid_compiler_keyword_base_test(self):
+    def test_no_valid_compiler_keyword_base(self):
         client = TestClient()
         ref = ConanFileReference.loads("Bye/0.1@us/ch")
         conanfile = textwrap.dedent("""
@@ -294,7 +294,7 @@ class CompatibleIDsTest(unittest.TestCase):
         self.assertIn("Specify 'compiler' as a keywork "
                       "argument. e.g: 'parent_compiler(compiler=\"intel\")'", client.out)
 
-    def intel_package_invalid_subsetting_test(self):
+    def test_intel_package_invalid_subsetting(self):
         """If I specify an invalid subsetting of my base compiler, it won't fail, but it won't
         file the available package_id"""
         client = TestClient()
@@ -332,7 +332,7 @@ class CompatibleIDsTest(unittest.TestCase):
         client.run("install %s -pr visual_profile" % ref.full_str(), assert_error=True)
         self.assertIn("Missing prebuilt package for 'Bye/0.1@us/ch'", client.out)
 
-    def additional_id_mode_test(self):
+    def test_additional_id_mode(self):
         c1 = GenConanfile().with_name("AA").with_version("1.0")
         c2 = GenConanfile().with_name("BB").with_version("1.0").with_require("AA/1.0")
         client = TestClient()
@@ -379,7 +379,7 @@ class CompatibleIDsTest(unittest.TestCase):
         self.assertIn("Using compatible package 'ce6719c914d00372f1a2ae66543c0d135a684951'",
                       client.out)
 
-    def package_id_consumers_test(self):
+    def test_package_id_consumers(self):
         # If we fallback to a different binary upstream and we are using a "package_revision_mode"
         # the current package should have a different binary package ID too.
         client = TestClient()
@@ -440,7 +440,7 @@ class CompatibleIDsTest(unittest.TestCase):
         self.assertIn("consumer/0.1@user/stable: Package 'fca9e94084ed6fe0ca149dc9c2d54c0f336f0d7e'"
                       " created", client.out)
 
-    def build_missing_test(self):
+    def test_build_missing(self):
         # https://github.com/conan-io/conan/issues/6133
         client = TestClient()
         conanfile = textwrap.dedent("""
@@ -465,7 +465,7 @@ class CompatibleIDsTest(unittest.TestCase):
                       client.out)
         self.assertIn("pkg/0.1@user/testing: Already installed!", client.out)
 
-    def compatible_package_python_requires_test(self):
+    def test_compatible_package_python_requires(self):
         # https://github.com/conan-io/conan/issues/6609
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
