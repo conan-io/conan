@@ -13,7 +13,7 @@ from conans.test.utils.mocks import TestBufferConanOutput
 
 class JsonTest(unittest.TestCase):
 
-    def variables_setup_test(self):
+    def test_variables_setup(self):
         conanfile = ConanFile(TestBufferConanOutput(), None)
         conanfile.initialize(Settings({}), EnvValues())
 

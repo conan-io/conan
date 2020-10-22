@@ -3,7 +3,7 @@ import unittest
 from collections import defaultdict, namedtuple
 
 from conans.client.generators import TXTGenerator
-from conans.model.build_info import CppInfo, DepsCppInfo
+from conans.model.build_info import DepsCppInfo
 from conans.model.env_info import DepsEnvInfo, EnvInfo
 from conans.model.user_info import DepsUserInfo
 from conans.test.utils.test_files import temp_folder
@@ -13,7 +13,7 @@ from conans.model.build_info import CppInfo, DepCppInfo
 
 class BuildInfoTest(unittest.TestCase):
 
-    def parse_test(self):
+    def test_parse(self):
         text = """[includedirs]
 F:/ChildrenPath
 G:/mylib_path
@@ -99,7 +99,7 @@ VAR2=23
         self.assertEqual(deps_user_info["LIBA"].VAR2, "23")
         self.assertEqual(deps_env_info["LIBA"].VAR2, "23")
 
-    def help_test(self):
+    def test_help(self):
         deps_env_info = DepsEnvInfo()
         deps_cpp_info = DepsCppInfo()
 
@@ -125,7 +125,7 @@ VAR2=23
                          deps_cpp_info2["Boost"].cxxflags)
         self.assertEqual(deps_cpp_info["Boost"].cxxflags, ["cxxmyflag"])
 
-    def configs_test(self):
+    def test_configs(self):
         deps_cpp_info = DepsCppInfo()
         deps_cpp_info.filter_empty = False
         child = CppInfo("Boost", "F:/")
@@ -182,7 +182,7 @@ VAR2=23
 
         self.assertEqual(deps_user_info["LIB2"].myuservar, "23")
 
-    def cpp_info_test(self):
+    def test_cpp_info(self):
         folder = temp_folder()
         mkdir(os.path.join(folder, "include"))
         mkdir(os.path.join(folder, "lib"))
@@ -203,7 +203,7 @@ VAR2=23
         self.assertListEqual(list(info.lib_paths), [os.path.join(folder, "lib"), abs_lib])
         self.assertListEqual(list(info.bin_paths), [abs_bin, os.path.join(folder, "local_bindir")])
 
-    def cpp_info_system_libs_test(self):
+    def test_cpp_info_system_libs(self):
         info1 = CppInfo("dep1", "folder1")
         info1.system_libs = ["sysdep1"]
         info2 = CppInfo("dep2", "folder2")
@@ -215,7 +215,7 @@ VAR2=23
         self.assertListEqual(["sysdep1"], list(deps_cpp_info["dep1"].system_libs))
         self.assertListEqual(["sysdep2", "sysdep3"], list(deps_cpp_info["dep2"].system_libs))
 
-    def cpp_info_name_test(self):
+    def test_cpp_info_name(self):
         folder = temp_folder()
         info = CppInfo("myname", folder)
         info.name = "MyName"
@@ -225,7 +225,7 @@ VAR2=23
         self.assertIn("MyName", deps_cpp_info["myname"].get_name("my_undefined_generator"))
         self.assertIn("MyNameForMyGenerator", deps_cpp_info["myname"].get_name("my_generator"))
 
-    def cpp_info_build_modules_test(self):
+    def test_cpp_info_build_modules(self):
         folder = temp_folder()
         info = CppInfo("myname", folder)
         info.build_modules.append("my_module.cmake")
@@ -237,7 +237,7 @@ VAR2=23
         self.assertListEqual([os.path.join(folder, "mod-release.cmake")],
                              list(deps_cpp_info["myname"].debug.build_modules_paths))
 
-    def cppinfo_public_interface_test(self):
+    def test_cppinfo_public_interface(self):
         folder = temp_folder()
         info = CppInfo("", folder)
         self.assertEqual([], info.libs)

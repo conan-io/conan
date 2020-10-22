@@ -51,7 +51,7 @@ class EnvValuesTest(unittest.TestCase):
 
         self.assertEqual(env.env_dicts(None), ({}, {'PATH': ['MYPATH', 'SOME/PATH', 'SOME/PATH']}))
 
-    def update_priority_test(self):
+    def test_update_priority(self):
 
         env = EnvValues()
         env.add("VAR", "VALUE1")
@@ -84,40 +84,40 @@ class DepsEnvInfoTest(unittest.TestCase):
         text = "[ENV_libname]\nvar1=value1"
         ret = DepsEnvInfo.loads(text)
         self.assertDictEqual(ret.vars, {'var1': 'value1'})
-        
+
         # string with spaces
         text = "[ENV_libname]\nvar1=value 1"
         ret = DepsEnvInfo.loads(text)
         self.assertDictEqual(ret.vars, {'var1': 'value 1'})
-        
+
         # quoted string
         text = "[ENV_libname]\nvar1=\"value 1\""
         ret = DepsEnvInfo.loads(text)
         self.assertDictEqual(ret.vars, {'var1': '\"value 1\"'})
-        
+
         # quoted string
         text = "[ENV_libname]\nvar1='value 1'"
         ret = DepsEnvInfo.loads(text)
         self.assertDictEqual(ret.vars, {'var1': '\'value 1\''})
-        
+
         # number
         text = "[ENV_libname]\nvar1=123"
         ret = DepsEnvInfo.loads(text)
         self.assertDictEqual(ret.vars, {'var1': '123'})
-        
+
         # empty
         text = "[ENV_libname]\nvar1="
         ret = DepsEnvInfo.loads(text)
         self.assertDictEqual(ret.vars, {'var1': ''})
-        
+
         # mixed
         text = "[ENV_libname]\nvar1=value1\nvar2=\nvar3=\"value3\""
         ret = DepsEnvInfo.loads(text)
         self.assertDictEqual(ret.vars, {'var1': 'value1', 'var2': '', 'var3': '\"value3\"'})
-        
+
 class EnvInfoTest(unittest.TestCase):
 
-    def assign_test(self):
+    def test_assign(self):
         env = DepsEnvInfo()
         env.foo = ["var"]
         env.foo.append("var2")
@@ -127,7 +127,7 @@ class EnvInfoTest(unittest.TestCase):
 
         self.assertEqual(env.vars, {"foo": ["var", "var2"], "foo2": "var4", "foo63": "other"})
 
-    def update_test(self):
+    def test_update(self):
         env = DepsEnvInfo()
         env.foo = ["var"]
         env.foo.append("var2")

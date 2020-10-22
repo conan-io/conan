@@ -25,7 +25,7 @@ class TestSystemReqs(ConanFile):
 
 
 class SystemReqsTest(unittest.TestCase):
-    def force_system_reqs_rerun_test(self):
+    def test_force_system_reqs_rerun(self):
         client = TestClient()
         files = {'conanfile.py': base_conanfile.replace("%GLOBAL%", "")}
         client.save(files)
@@ -42,7 +42,7 @@ class SystemReqsTest(unittest.TestCase):
         self.assertIn("*+Running system requirements+*", client.out)
         self.assertTrue(os.path.exists(reqs_file))
 
-    def local_system_requirements_test(self):
+    def test_local_system_requirements(self):
         client = TestClient()
         files = {'conanfile.py': base_conanfile.replace("%GLOBAL%", "")}
         client.save(files)
@@ -54,7 +54,7 @@ class SystemReqsTest(unittest.TestCase):
         with six.assertRaisesRegex(self, Exception, "Command failed"):
             client.run("install .")
 
-    def per_package_test(self):
+    def test_per_package(self):
         client = TestClient()
         files = {'conanfile.py': base_conanfile.replace("%GLOBAL%", "")}
         client.save(files)
@@ -94,7 +94,7 @@ class SystemReqsTest(unittest.TestCase):
         self.assertFalse(os.path.exists(layout1.system_reqs_package(pref)))
         self.assertFalse(os.path.exists(layout2.system_reqs_package(pref2)))
 
-    def global_test(self):
+    def test_global(self):
         client = TestClient()
         files = {
             'conanfile.py': base_conanfile.replace("%GLOBAL%",
@@ -132,7 +132,7 @@ class SystemReqsTest(unittest.TestCase):
         self.assertFalse(os.path.exists(client.cache.package_layout(ref).system_reqs_package(pref2)))
         self.assertFalse(os.path.exists(client.cache.package_layout(ref).system_reqs()))
 
-    def wrong_output_test(self):
+    def test_wrong_output(self):
         client = TestClient()
         files = {
             'conanfile.py':
@@ -148,7 +148,7 @@ class SystemReqsTest(unittest.TestCase):
         load_file = load(client.cache.package_layout(pref.ref).system_reqs_package(pref))
         self.assertEqual('', load_file)
 
-    def remove_system_reqs_test(self):
+    def test_remove_system_reqs(self):
         ref = ConanFileReference.loads("Test/0.1@user/channel")
         client = TestClient()
         files = {'conanfile.py': base_conanfile.replace("%GLOBAL%", "")}
@@ -210,7 +210,7 @@ class SystemReqsTest(unittest.TestCase):
         self.assertTrue(os.path.exists(system_reqs_path))
         self.assertFalse(os.path.exists(system_reqs_path_other))
 
-    def invalid_remove_reqs_test(self):
+    def test_invalid_remove_reqs(self):
         client = TestClient()
 
         with six.assertRaisesRegex(self, Exception,
@@ -228,7 +228,7 @@ class SystemReqsTest(unittest.TestCase):
             client.run("remove --system-reqs foo/bar@foo/bar "
                        "-p f0ba3ca2c218df4a877080ba99b65834b9413798")
 
-    def permission_denied_remove_system_reqs_test(self):
+    def test_permission_denied_remove_system_reqs(self):
         ref = ConanFileReference.loads("Test/0.1@user/channel")
         client = TestClient()
         files = {'conanfile.py': base_conanfile.replace("%GLOBAL%", "")}
@@ -250,7 +250,7 @@ class SystemReqsTest(unittest.TestCase):
             client.run("remove --system-reqs Test/0.1@user/channel")
         self.assertTrue(os.path.exists(system_reqs_path))
 
-    def duplicate_remove_system_reqs_test(self):
+    def test_duplicate_remove_system_reqs(self):
         ref = ConanFileReference.loads("Test/0.1@user/channel")
         client = TestClient()
         files = {'conanfile.py': base_conanfile.replace("%GLOBAL%", "")}

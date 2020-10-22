@@ -71,7 +71,7 @@ class GraphLockVersionRangeTest(unittest.TestCase):
         self.assertEqual(pkg_b.get("package_id"), package_id_b)
         self.assertEqual(pkg_b.get("prev"), prev_b)
 
-    def install_lock_test(self):
+    def test_install_lock(self):
         # Normal install will use it (use install-folder to not change graph-info)
         client = self.client
         client.run("install . -if=tmp")  # Output graph_info to temporary
@@ -89,14 +89,14 @@ class GraphLockVersionRangeTest(unittest.TestCase):
         self.assertIn("PkgA/0.1", cmake)
         self.assertNotIn("PkgA/0.2", cmake)
 
-    def info_lock_test(self):
+    def test_info_lock(self):
         client = self.client
         client.run("info . --lockfile=conan.lock")
         self.assertIn("PkgA/0.1", client.out)
         self.assertNotIn("PkgA/0.2", client.out)
         self._check_lock()
 
-    def install_ref_lock_test(self):
+    def test_install_ref_lock(self):
         client = self.client
         # Make sure not using lockfile, will get PkgA/0.2
         client.run("install PkgA/[>=0.1]@%s -if=tmp" % self.user_channel)
@@ -131,13 +131,13 @@ class GraphLockVersionRangeTest(unittest.TestCase):
         self.assertNotIn("PkgA/0.2", client.out)
         self._check_lock()
 
-    def export_lock_test(self):
+    def test_export_lock(self):
         # locking a version range at export
         self.client.run("export . %s --lockfile=conan.lock --lockfile-out=conan.lock"
                         % self.user_channel)
         self._check_lock(self.rrev_b)
 
-    def create_lock_test(self):
+    def test_create_lock(self):
         # Create is also possible
         client = self.client
         client.run("create . PkgB/0.1@%s --lockfile=conan.lock --lockfile-out=conan.lock"
@@ -146,7 +146,7 @@ class GraphLockVersionRangeTest(unittest.TestCase):
         self.assertNotIn("PkgA/0.2", client.out)
         self._check_lock(self.rrev_b, self.prev_b, self.pkg_id_b)
 
-    def create_test_lock_test(self):
+    def test_create_test_lock(self):
         # Create with test_package is also possible
         client = self.client
         client.save({"test_package/conanfile.py": GenConanfile().with_test("pass")})
@@ -157,7 +157,7 @@ class GraphLockVersionRangeTest(unittest.TestCase):
         self.assertNotIn("PkgA/0.2", client.out)
         self._check_lock(self.rrev_b, self.prev_b, self.pkg_id_b)
 
-    def export_pkg_test(self):
+    def test_export_pkg(self):
         client = self.client
         client.run("export-pkg . PkgB/0.1@%s --lockfile=conan.lock --lockfile-out=conan.lock"
                    % self.user_channel)

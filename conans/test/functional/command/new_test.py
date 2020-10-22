@@ -13,7 +13,7 @@ from conans.util.files import load
 
 class NewCommandTest(unittest.TestCase):
 
-    def template_test(self):
+    def test_template(self):
         client = TestClient()
         template1 = textwrap.dedent("""
             class {{package_name}}Conan(ConanFile):
@@ -29,7 +29,7 @@ class NewCommandTest(unittest.TestCase):
         self.assertIn('version = "0.1"', conanfile)
         self.assertIn('conan_version = "{}"'.format(client_version), conanfile)
 
-    def template_dir_test(self):
+    def test_template_dir(self):
         client = TestClient()
         template_dir = "templates/command/new/t_dir"
         template_recipe = textwrap.dedent("""
@@ -61,7 +61,7 @@ class NewCommandTest(unittest.TestCase):
         self.assertIn('version=0.1', hellotxt)
         self.assertIn("conan_version={}".format(client_version), hellotxt)
 
-    def template_test_package_test(self):
+    def test_template_test_package(self):
         client = TestClient()
         template2 = textwrap.dedent("""
             class {{package_name}}Conan(ConanFile):
@@ -74,7 +74,7 @@ class NewCommandTest(unittest.TestCase):
         self.assertIn("class HelloConan(ConanFile):", conanfile)
         self.assertIn('version = "fixed"', conanfile)
 
-    def template_abs_path_test_package_test(self):
+    def test_template_abs_path_test_package(self):
         client = TestClient()
         template2 = textwrap.dedent("""
             class {{package_name}}Conan(ConanFile):
@@ -88,7 +88,7 @@ class NewCommandTest(unittest.TestCase):
         self.assertIn("class HelloConan(ConanFile):", conanfile)
         self.assertIn('version = "fixed"', conanfile)
 
-    def template_errors_test(self):
+    def test_template_errors(self):
         client = TestClient()
         client.run("new hello/0.1 -m=mytemplate.py", assert_error=True)
         self.assertIn("ERROR: Template doesn't exist", client.out)
@@ -99,7 +99,7 @@ class NewCommandTest(unittest.TestCase):
         client.run("new hello/0.1 --template", assert_error=True)
         self.assertIn("ERROR: Exiting with code: 2", client.out)
 
-    def new_test(self):
+    def test_new(self):
         client = TestClient()
         client.run('new MyPackage/1.3@myuser/testing -t')
         root = client.current_folder
@@ -115,7 +115,7 @@ class NewCommandTest(unittest.TestCase):
         client.run("search")
         self.assertIn("MyPackage/1.3@myuser/testing", client.out)
 
-    def new_error_test(self):
+    def test_new_error(self):
         """ packages with short name
         """
         client = TestClient()
@@ -131,7 +131,7 @@ class NewCommandTest(unittest.TestCase):
                            ("my_package", "MyPackage"),
                            ("my.Package", "MyPackage"),
                            ("my+package", "MyPackage")])
-    def naming_test(self, package_name, python_class_name):
+    def test_naming(self, package_name, python_class_name):
         """ packages with dash
         """
         client = TestClient()
@@ -150,7 +150,7 @@ class NewCommandTest(unittest.TestCase):
         client.run("search")
         self.assertIn("{}/1.3@myuser/testing".format(package_name), client.out)
 
-    def new_header_test(self):
+    def test_new_header(self):
         client = TestClient()
         client.run('new MyPackage/1.3 -t -i')
         root = client.current_folder
@@ -168,7 +168,7 @@ class NewCommandTest(unittest.TestCase):
         client.run("search")
         self.assertIn("MyPackage/1.3@myuser/testing", client.out)
 
-    def new_sources_test(self):
+    def test_new_sources(self):
         client = TestClient()
         client.run('new MyPackage/1.3@myuser/testing -t -s')
         root = client.current_folder
@@ -185,7 +185,7 @@ class NewCommandTest(unittest.TestCase):
         client.run("search")
         self.assertIn("MyPackage/1.3@myuser/testing", client.out)
 
-    def new_purec_test(self):
+    def test_new_purec(self):
         client = TestClient()
         client.run('new MyPackage/1.3@myuser/testing -c -t')
         root = client.current_folder
@@ -201,7 +201,7 @@ class NewCommandTest(unittest.TestCase):
         client.run("search")
         self.assertIn("MyPackage/1.3@myuser/testing", client.out)
 
-    def new_without_test(self):
+    def test_new_without(self):
         client = TestClient()
         client.run('new MyPackage/1.3@myuser/testing')
         root = client.current_folder
@@ -210,7 +210,7 @@ class NewCommandTest(unittest.TestCase):
         self.assertFalse(os.path.exists(os.path.join(root, "test_package/CMakeLists.txt")))
         self.assertFalse(os.path.exists(os.path.join(root, "test_package/example.cpp")))
 
-    def new_ci_test(self):
+    def test_new_ci(self):
         client = TestClient()
         client.run('new MyPackage/1.3@myuser/testing -cis -ciw -cilg -cilc -cio -ciglg -ciglc '
                    '-ciccg -ciccc -cicco -ciu=myurl')

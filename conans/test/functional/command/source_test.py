@@ -27,7 +27,7 @@ class ScmtestConan(ConanFile):
         self.assertEqual(sorted(["conanfile.py", '.git']),
                          sorted(os.listdir(client.current_folder)))
 
-    def local_flow_patch_test(self):
+    def test_local_flow_patch(self):
         # https://github.com/conan-io/conan/issues/2327
         conanfile = """from conans import ConanFile, tools
 from conans.tools import save
@@ -65,7 +65,7 @@ class TestexportConan(ConanFile):
         self.assertTrue(os.path.exists(os.path.join(client.current_folder,
                                                     "mysrc", "hello/hello.h")))
 
-    def apply_patch_test(self):
+    def test_apply_patch(self):
         # https://github.com/conan-io/conan/issues/2327
         # Test if a patch can be applied in source() both in create
         # and local flow
@@ -89,7 +89,7 @@ class Pkg(ConanFile):
         client.run("create . Pkg/0.1@user/testing")
         self.assertIn("PATCH: this is my patch", client.out)
 
-    def source_warning_os_build_test(self):
+    def test_source_warning_os_build(self):
         # https://github.com/conan-io/conan/issues/2368
         conanfile = '''from conans import ConanFile
 class ConanLib(ConanFile):
@@ -100,12 +100,12 @@ class ConanLib(ConanFile):
         client.run("source .")
         self.assertNotIn("This package defines both 'os' and 'os_build'", client.out)
 
-    def source_reference_test(self):
+    def test_source_reference(self):
         client = TestClient()
         client.run("source lib/1.0@conan/stable", assert_error=True)
         self.assertIn("'conan source' doesn't accept a reference anymore", client.out)
 
-    def source_with_path_errors_test(self):
+    def test_source_with_path_errors(self):
         client = TestClient()
         client.save({"conanfile.txt": "contents"}, clean_first=True)
 
@@ -123,7 +123,7 @@ class ConanLib(ConanFile):
                       % os.path.join(client.current_folder, "not_real_dir", "conanfile.py"),
                       client.out)
 
-    def source_local_cwd_test(self):
+    def test_source_local_cwd(self):
         conanfile = '''
 import os
 from conans import ConanFile
@@ -145,7 +145,7 @@ class ConanLib(ConanFile):
         self.assertIn("conanfile.py (Hello/0.1): Configuring sources", client.out)
         self.assertIn("conanfile.py (Hello/0.1): cwd=>%s" % subdir, client.out)
 
-    def local_source_src_not_exist_test(self):
+    def test_local_source_src_not_exist(self):
         conanfile = '''
 import os
 from conans import ConanFile
@@ -163,7 +163,7 @@ class ConanLib(ConanFile):
         client.run("source conanfile.py --source-folder=src")
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "src")))
 
-    def build_folder_no_exists_crash_test(self):
+    def test_build_folder_no_exists_crash(self):
         conanfile = '''
 import os
 from conans import ConanFile
@@ -181,7 +181,7 @@ class ConanLib(ConanFile):
         client.run("source ./conanfile.py --install-folder=missing_folder", assert_error=True)
         self.assertIn("Specified info-folder doesn't exist", client.out)
 
-    def build_folder_reading_infos_test(self):
+    def test_build_folder_reading_infos(self):
         conanfile = '''
 import os
 from conans import ConanFile
@@ -235,7 +235,7 @@ class ConanLib(ConanFile):
         self.assertIn("OTHERVAR=bar", client.out)
         self.assertIn("CURDIR=%s" % src_folder, client.out)
 
-    def repeat_args_fails_test(self):
+    def test_repeat_args_fails(self):
         conanfile = '''
 from conans import ConanFile
 class ConanLib(ConanFile):
@@ -252,7 +252,7 @@ class ConanLib(ConanFile):
             client.run("source conanfile.py --source-folder sf --install-folder if "
                        "--install-folder rr")
 
-    def local_source_test(self):
+    def test_local_source(self):
         conanfile = '''
 from conans import ConanFile
 from conans.util.files import save

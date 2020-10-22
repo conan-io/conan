@@ -18,7 +18,7 @@ class AConan(ConanFile):
 
 class CPUCountTest(unittest.TestCase):
 
-    def cpu_count_override_test(self):
+    def test_cpu_count_override(self):
         self.client = TestClient()
         self.client.save({CONANFILE: conanfile})
         self.client.run("config set general.cpu_count=5")

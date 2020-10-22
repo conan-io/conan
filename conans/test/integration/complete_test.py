@@ -13,7 +13,7 @@ from conans.test.utils.tools import TestClient, TestServer
 @attr("slow")
 class CompleteFlowTest(unittest.TestCase):
 
-    def reuse_complete_urls_test(self):
+    def test_reuse_complete_urls(self):
         # This test can be removed in conan 2.0 when the complete_urls is removed
         test_server = TestServer(complete_urls=True)
         servers = {"default": test_server}
@@ -41,10 +41,10 @@ class CompleteFlowTest(unittest.TestCase):
         # Now install it but with other options
         other_conan.run('install %s -o language=1 --build missing' % (str(ref)))
         # Should have two packages
-        package_ids = other_conan.cache.package_layout(ref).conan_packages()
+        package_ids = other_conan.cache.package_layout(ref).package_ids()
         self.assertEqual(len(package_ids), 2)
 
-    def reuse_test(self):
+    def test_reuse(self):
         test_server = TestServer()
         servers = {"default": test_server}
         client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
@@ -56,7 +56,7 @@ class CompleteFlowTest(unittest.TestCase):
         self.assertIn("Hello0/0.1@lasote/stable package(): Packaged 1 '.h' file: helloHello0.h",
                       client.out)
         # Check compilation ok
-        package_ids = client.cache.package_layout(ref).conan_packages()
+        package_ids = client.cache.package_layout(ref).package_ids()
         self.assertEqual(len(package_ids), 1)
         pref = PackageReference(ref, package_ids[0])
         self._assert_library_exists(pref, client.cache)
@@ -104,7 +104,7 @@ class CompleteFlowTest(unittest.TestCase):
         # Now install it but with other options
         other_conan.run('install %s -o language=1 --build missing' % (str(ref)))
         # Should have two packages
-        package_ids = other_conan.cache.package_layout(ref).conan_packages()
+        package_ids = other_conan.cache.package_layout(ref).package_ids()
         self.assertEqual(len(package_ids), 2)
         for package_id in package_ids:
             pref = PackageReference(ref, package_id)

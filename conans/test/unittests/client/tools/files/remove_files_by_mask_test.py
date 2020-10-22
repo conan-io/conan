@@ -9,7 +9,7 @@ from conans.util.files import save_files
 
 
 class RemoveFilesByMaskTest(unittest.TestCase):
-    def remove_files_by_mask_test(self):
+    def test_remove_files_by_mask(self):
         tmpdir = temp_folder()
 
         with chdir(tmpdir):

@@ -23,7 +23,7 @@ class VCVarsTest(unittest.TestCase):
         self.output = TestBufferConanOutput()
 
     @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
-    def vcvars_echo_test(self):
+    def test_vcvars_echo(self):
         settings = Settings.loads(get_default_settings_yml())
         settings.os = "Windows"
         settings.compiler = "Visual Studio"
@@ -44,7 +44,7 @@ class VCVarsTest(unittest.TestCase):
             self.assertIn("VS140COMNTOOLS=", str(output))
 
     @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
-    def vcvars_with_store_echo_test(self):
+    def test_vcvars_with_store_echo(self):
         settings = Settings.loads(get_default_settings_yml())
         settings.os = "WindowsStore"
         settings.os.version = "8.1"
@@ -57,7 +57,7 @@ class VCVarsTest(unittest.TestCase):
             self.assertEqual("echo Conan:vcvars already set", cmd)
 
     @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
-    def vcvars_env_not_duplicated_path_test(self):
+    def test_vcvars_env_not_duplicated_path(self):
         """vcvars is not looking at the current values of the env vars, with PATH it is a problem
         because you can already have set some of the vars and accumulate unnecessary entries."""
         settings = Settings.loads(get_default_settings_yml())
@@ -82,7 +82,7 @@ class VCVarsTest(unittest.TestCase):
                         self.fail("The key '%s' has been repeated" % value)
 
     @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
-    def vcvars_filter_known_paths_test(self):
+    def test_vcvars_filter_known_paths(self):
         settings = Settings.loads(get_default_settings_yml())
         settings.os = "Windows"
         settings.compiler = "Visual Studio"
@@ -102,7 +102,7 @@ class VCVarsTest(unittest.TestCase):
                 self.assertIn("WindowsFake", os.environ["PATH"])
 
     @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
-    def vcvars_amd64_32_cross_building_support_test(self):
+    def test_vcvars_amd64_32_cross_building_support(self):
         # amd64_x86 crossbuilder
         settings = Settings.loads(get_default_settings_yml())
         settings.os = "Windows"
@@ -118,7 +118,7 @@ class VCVarsTest(unittest.TestCase):
         cmd = tools.vcvars_command(settings, output=self.output)
         self.assertIn('vcvarsall.bat" x86', cmd)
 
-    def vcvars_raises_when_not_found_test(self):
+    def test_vcvars_raises_when_not_found(self):
         text = """
 os: [Windows]
 compiler:
@@ -135,7 +135,7 @@ compiler:
             tools.vcvars_command(settings, output=output)
 
     @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
-    def vcvars_constrained_test(self):
+    def test_vcvars_constrained(self):
         new_out = StringIO()
         output = ConanOutput(new_out)
 
@@ -165,7 +165,7 @@ compiler:
                 # Not raising
                 tools.vcvars_command(settings, force=True, output=output)
 
-    def vcvars_context_manager_test(self):
+    def test_vcvars_context_manager(self):
         conanfile = """
 from conans import ConanFile, tools
 
@@ -189,7 +189,7 @@ class MyConan(ConanFile):
             self.assertIn("VCINSTALLDIR set to: None", client.out)
 
     @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
-    def vcvars_dict_diff_test(self):
+    def test_vcvars_dict_diff(self):
         text = """
 os: [Windows]
 compiler:
@@ -223,7 +223,7 @@ compiler:
             with tools.environment_append(ret):
                 self.assertEqual(os.environ["LIBPATH"], str_var_value)
 
-    def vcvars_dict_test(self):
+    def test_vcvars_dict(self):
         # https://github.com/conan-io/conan/issues/2904
         output_with_newline_and_spaces = """
      PROCESSOR_ARCHITECTURE=AMD64

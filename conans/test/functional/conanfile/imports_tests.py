@@ -1,4 +1,5 @@
 import os
+import textwrap
 import unittest
 
 from conans.model.ref import ConanFileReference, PackageReference
@@ -36,7 +37,7 @@ class ImportTest(unittest.TestCase):
         client.run("export . lasote/testing")
         return client
 
-    def repackage_test(self):
+    def test_repackage(self):
         client = self._set_up()
         conanfile = """from conans import ConanFile
 class TestConan(ConanFile):
@@ -59,7 +60,7 @@ class TestConan(ConanFile):
         self.assertTrue(os.path.exists(os.path.join(pkg_folder, "licenses/LibB/LICENSE.md")))
         self.assertTrue(os.path.exists(os.path.join(pkg_folder, "licenses/LibC/license.txt")))
 
-    def imports_folders_test(self):
+    def test_imports_folders(self):
         client = self._set_up()
 
         testconanfile = conanfile % "LibD" + "    requires='LibC/0.1@lasote/testing'"
@@ -76,7 +77,7 @@ class TestConan(ConanFile):
         self.assertEqual(client.load("licenses/LibB/LICENSE.md"), "LicenseB")
         self.assertEqual(client.load("licenses/LibC/license.txt"), "LicenseC")
 
-    def imports_folders_txt_test(self):
+    def test_imports_folders_txt(self):
         client = self._set_up()
 
         conanfile = """[requires]
@@ -91,7 +92,7 @@ LibC/0.1@lasote/testing
                                                      "licenses/LibB/LICENSE.md")))
         self.assertEqual(client.load("licenses/LibC/license.txt"), "LicenseC")
 
-    def imports_wrong_args_txt_test(self):
+    def test_imports_wrong_args_txt(self):
         client = TestClient()
         conanfile = """
 [imports]
@@ -101,7 +102,7 @@ LibC/0.1@lasote/testing
         client.run("install .", assert_error=True)
         self.assertIn("Wrong imports argument 'something'. Need a 'arg=value' pair.", client.out)
 
-    def imports_wrong_line_txt_test(self):
+    def test_imports_wrong_line_txt(self):
         client = TestClient()
         conanfile = """
 [imports]
@@ -112,7 +113,7 @@ LibC/0.1@lasote/testing
         self.assertIn("Wrong imports line: ., license*", client.out)
         self.assertIn("Use syntax: path, pattern -> local-folder", client.out)
 
-    def imports_folders_extrachars_txt_test(self):
+    def test_imports_folders_extrachars_txt(self):
         # https://github.com/conan-io/conan/issues/4524
         client = self._set_up()
 
@@ -128,7 +129,7 @@ LibC/0.1@lasote/testing
         self.assertEqual(client.load("lic@myfolder/LICENSE.md"), "LicenseB")
         self.assertEqual(client.load("lic@myfolder/LibC/license.txt"), "LicenseC")
 
-    def conanfile_txt_multi_excludes_test(self):
+    def test_conanfile_txt_multi_excludes(self):
         # https://github.com/conan-io/conan/issues/2293
         client = TestClient()
         conanfile = """from conans import ConanFile
@@ -154,7 +155,7 @@ bin, *.dll ->  @ excludes=Foo/*.dll Baz/*.dll
         self.assertFalse(os.path.exists(os.path.join(client.current_folder, "Foo/b.dll")))
         self.assertFalse(os.path.exists(os.path.join(client.current_folder, "Baz/b.dll")))
 
-    def imports_keep_path_test(self):
+    def test_imports_keep_path(self):
         client = TestClient()
         client.save({"conanfile.py": conanfile % "LibC",
                      "path/to/license.txt": "LicenseC"}, clean_first=True)
@@ -195,3 +196,39 @@ bin, *.dll ->  @ excludes=Foo/*.dll Baz/*.dll
         client.run("install . --build=missing")
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "licenses")))
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "licenses/license.txt")))
+
+    def test_wrong_path_sep(self):
+        # https://github.com/conan-io/conan/issues/7856
+        pkg_conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            from conans.tools import save
+            import os
+
+            class TestConan(ConanFile):
+                def package(self):
+                    save(os.path.join(self.package_folder, "licenses/LICENSE"), "mylicense in file")
+                    save(os.path.join(self.package_folder, "licenses/README"), "myreadme in file")
+            """)
+        client = TestClient()
+        client.save({"conanfile.py": pkg_conanfile})
+        client.run("create . pkg/0.1@")
+        consumer_conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            import platform
+
+            class TestConan(ConanFile):
+                requires = "pkg/0.1"
+
+                def imports(self):
+                    if platform.system() == "Windows":
+                        self.copy("licenses\\LICENSE", dst="deps_licenses", root_package="pkg")
+                    else:
+                        self.copy("licenses/LICENSE", dst="deps_licenses", root_package="pkg")
+                    self.copy("licenses/README", dst="deps_licenses", root_package="pkg")
+            """)
+        client.save({"conanfile.py": consumer_conanfile})
+        client.run("install .")
+        pkg_license = client.load("deps_licenses/licenses/LICENSE")
+        self.assertEqual(pkg_license, "mylicense in file")
+        readme_license = client.load("deps_licenses/licenses/README")
+        self.assertEqual(readme_license, "myreadme in file")

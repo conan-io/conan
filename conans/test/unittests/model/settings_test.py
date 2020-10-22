@@ -85,7 +85,7 @@ class SettingsLoadsTest(unittest.TestCase):
         with six.assertRaisesRegex(self, ConanException, "Invalid setting 'Windows'"):
             settings.os.remove("ANY")
 
-    def getattr_none_test(self):
+    def test_getattr_none(self):
         yml = "os: [None, Windows]"
         settings = Settings.loads(yml)
         self.assertEqual(settings.os, None)
@@ -171,13 +171,13 @@ class SettingsTest(unittest.TestCase):
         other_settings.os = "Windows"
         self.assertEqual(settings.values.sha, other_settings.values.sha)
 
-    def any_test(self):
+    def test_any(self):
         data = {"target": "ANY"}
         sut = Settings(data)
         sut.target = "native"
         self.assertTrue(sut.target == "native")
 
-    def multi_os_test(self):
+    def test_multi_os(self):
         settings = Settings.loads("""os:
             Windows:
             Linux:
@@ -198,20 +198,20 @@ class SettingsTest(unittest.TestCase):
         settings.os.codename = "Yosemite"
         self.assertTrue(settings.os.codename == "Yosemite")
 
-    def remove_test(self):
+    def test_remove(self):
         self.sut.remove("compiler")
         self.sut.os = "Windows"
         self.sut.validate()
         self.assertEqual(self.sut.values.dumps(), "os=Windows")
 
-    def remove_compiler_test(self):
+    def test_remove_compiler(self):
         self.sut.compiler.remove("Visual Studio")
         with self.assertRaises(ConanException) as cm:
             self.sut.compiler = "Visual Studio"
         self.assertEqual(str(cm.exception),
                          bad_value_msg("settings.compiler", "Visual Studio", ["gcc"]))
 
-    def remove_version_test(self):
+    def test_remove_version(self):
         self.sut.compiler["Visual Studio"].version.remove("12")
         self.sut.compiler = "Visual Studio"
         with self.assertRaises(ConanException) as cm:
@@ -221,7 +221,7 @@ class SettingsTest(unittest.TestCase):
         self.sut.compiler.version = 11
         self.assertEqual(self.sut.compiler.version, "11")
 
-    def remove_os_test(self):
+    def test_remove_os(self):
         self.sut.os.remove("Windows")
         with self.assertRaises(ConanException) as cm:
             self.sut.os = "Windows"
@@ -230,7 +230,7 @@ class SettingsTest(unittest.TestCase):
         self.sut.os = "Linux"
         self.assertEqual(self.sut.os, "Linux")
 
-    def loads_default_test(self):
+    def test_loads_default(self):
         settings = Settings.loads("""os: [Windows, Linux, Macos, Android, FreeBSD, SunOS]
 arch: [x86, x86_64, arm]
 compiler:
@@ -250,7 +250,7 @@ build_type: [None, Debug, Release]""")
         self.assertEqual(settings.compiler, "clang")
         self.assertEqual(settings.compiler.version, "3.5")
 
-    def loads_test(self):
+    def test_loads(self):
         settings = Settings.loads("""
 compiler:
     Visual Studio:
@@ -292,7 +292,7 @@ os: [Windows, Linux]
                           ('compiler.version', '12'),
                           ('compiler.version.arch', '64')])
 
-    def set_value_test(self):
+    def test_set_value(self):
         self.sut.values_list = [("compiler", "Visual Studio")]
         self.assertEqual(self.sut.compiler, "Visual Studio")
         self.sut.values_list = [("compiler.version", "12")]
@@ -306,7 +306,7 @@ os: [Windows, Linux]
         self.sut.values_list = [("compiler.arch.speed", "A")]
         self.assertEqual(self.sut.compiler.arch.speed, "A")
 
-    def constraint_test(self):
+    def test_constraint(self):
         s2 = {"os": None}
         self.sut.constraint(s2)
         with self.assertRaises(ConanException) as cm:
@@ -315,21 +315,21 @@ os: [Windows, Linux]
         self.sut.os = "Windows"
         self.sut.os = "Linux"
 
-    def constraint2_test(self):
+    def test_constraint2(self):
         s2 = {"os2": None}
         with self.assertRaises(ConanException) as cm:
             self.sut.constraint(s2)
         self.assertEqual(str(cm.exception),
                          str(undefined_field("settings", "os2", ["compiler", "os"])))
 
-    def constraint3_test(self):
+    def test_constraint3(self):
         s2 = {"os": ["Win"]}
         with self.assertRaises(ConanException) as cm:
             self.sut.constraint(s2)
         self.assertEqual(str(cm.exception),
                          bad_value_msg("os", "Win", ["Linux", "Windows"]))
 
-    def constraint4_test(self):
+    def test_constraint4(self):
         s2 = {"os": ["Windows"]}
         self.sut.constraint(s2)
         with self.assertRaises(ConanException) as cm:
@@ -338,7 +338,7 @@ os: [Windows, Linux]
 
         self.sut.os = "Windows"
 
-    def constraint5_test(self):
+    def test_constraint5(self):
         s2 = {"os": None,
               "compiler": {"Visual Studio": {"version2": None}}}
 
@@ -348,7 +348,7 @@ os: [Windows, Linux]
                                                                 ['runtime', 'version'])))
         self.sut.os = "Windows"
 
-    def constraint6_test(self):
+    def test_constraint6(self):
         s2 = {"os": None,
               "compiler": {"Visual Studio": {"version": None}}}
         self.sut.constraint(s2)
@@ -361,7 +361,7 @@ os: [Windows, Linux]
         self.sut.compiler.version = "11"
         self.sut.compiler.version = "12"
 
-    def constraint7_test(self):
+    def test_constraint7(self):
         s2 = {"os": None,
               "compiler": {"Visual Studio": {"version": ("11", "10")},
                            "gcc": None}}
@@ -377,7 +377,7 @@ os: [Windows, Linux]
         self.sut.os = "Windows"
         self.sut.compiler = "gcc"
 
-    def validate_test(self):
+    def test_validate(self):
         with six.assertRaisesRegex(self, ConanException, str(undefined_value("settings.compiler"))):
             self.sut.validate()
 
@@ -408,7 +408,7 @@ os: [Windows, Linux]
                                                 ("compiler.version", "4.8"),
                                                 ("os", "Windows")])
 
-    def validate2_test(self):
+    def test_validate2(self):
         self.sut.os = "Windows"
         self.sut.compiler = "Visual Studio"
         with six.assertRaisesRegex(self, ConanException,
@@ -428,7 +428,7 @@ os: [Windows, Linux]
                                                 ("compiler.version", "10"),
                                                 ("os", "Windows")])
 
-    def basic_test(self):
+    def test_basic(self):
         s = Settings({"os": ["Windows", "Linux"]})
         s.os = "Windows"
         with self.assertRaises(ConanException) as cm:
@@ -436,7 +436,7 @@ os: [Windows, Linux]
         self.assertEqual(str(cm.exception),
                          bad_value_msg("settings.compiler", "kk", "['Visual Studio', 'gcc']"))
 
-    def my_test(self):
+    def test_my(self):
         self.assertEqual(self.sut.compiler, None)
 
         with self.assertRaises(ConanException) as cm:

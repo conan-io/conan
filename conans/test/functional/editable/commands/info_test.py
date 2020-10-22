@@ -1,38 +1,26 @@
 # coding=utf-8
-
 import textwrap
 import unittest
 
 from conans.model.ref import ConanFileReference
+from conans.test.utils.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
 
 class LinkedPackageAsProject(unittest.TestCase):
-    conanfile_base = textwrap.dedent("""\
-        from conans import ConanFile
-
-        class APck(ConanFile):
-            {body}
-        """)
-    conanfile = conanfile_base.format(body="pass")
-
-    conan_package_layout = textwrap.dedent("""\
-        [includedirs]
-        src/include
-        """)
 
     def setUp(self):
-        self.ref_parent = ConanFileReference.loads("parent/version@user/name")
         self.ref = ConanFileReference.loads('lib/version@user/name')
 
         self.t = TestClient()
-        self.t.save(files={'conanfile.py': self.conanfile})
-        self.t.run('create . {}'.format(self.ref_parent))
-
-        self.t.save(files={'conanfile.py':
-                           self.conanfile_base.format(
-                               body='requires = "{}"'.format(self.ref_parent)),
-                           "mylayout": self.conan_package_layout, })
+        self.t.save({'conanfile.py': GenConanfile()})
+        self.t.run('create . parent/version@user/name')
+        conan_package_layout = textwrap.dedent("""\
+            [includedirs]
+            src/include
+            """)
+        self.t.save({'conanfile.py': GenConanfile().with_require("parent/version@user/name"),
+                     "mylayout": conan_package_layout})
         self.t.run('editable add . {}'.format(self.ref))
         self.assertTrue(self.t.cache.installed_as_editable(self.ref))
 
@@ -70,12 +58,14 @@ class InfoCommandUsingReferenceTest(LinkedPackageAsProject):
 
     def test_no_args(self):
         self.t.run('info {}'.format(self.ref))
-        rev = "    Revision: None\n" \
-            if self.t.cache.config.revisions_enabled else ""  # Project revision is None
+        rev = "    Revision: None\n"\
+              "    Package revision: None\n" \
+              if self.t.cache.config.revisions_enabled else ""  # Project revision is None
         expected = "lib/version@user/name\n" \
                    "    ID: e94ed0d45e4166d2f946107eaa208d550bf3691e\n" \
                    "    BuildID: None\n" \
                    "    Remote: None\n" \
+                   "    Provides: lib\n" \
                    "    Recipe: Editable\n{}" \
                    "    Binary: Editable\n" \
                    "    Binary remote: None\n" \

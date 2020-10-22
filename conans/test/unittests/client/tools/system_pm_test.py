@@ -48,7 +48,7 @@ class SystemPackageToolTest(unittest.TestCase):
             with mock.patch("sys.stdout.isatty", return_value=True):
                 self.assertEqual(SystemPackageTool._get_sudo_str(), "")
 
-    def verify_update_test(self):
+    def test_verify_update(self):
         # https://github.com/conan-io/conan/issues/3142
         with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "False",
                                        "CONAN_SYSREQUIRES_MODE": "Verify"}):
@@ -67,7 +67,7 @@ class SystemPackageToolTest(unittest.TestCase):
 
     # We gotta mock the with_apt property, since it checks for the existence of apt.
     @mock.patch('conans.client.tools.oss.OSInfo.with_apt', new_callable=mock.PropertyMock)
-    def add_repositories_exception_cases_test(self, patched_with_apt):
+    def test_add_repositories_exception_cases(self, patched_with_apt):
         os_info = OSInfo()
         os_info.is_macos = False
         os_info.is_linux = True
@@ -83,7 +83,7 @@ class SystemPackageToolTest(unittest.TestCase):
                                repo_key=None)
 
     @mock.patch('conans.client.tools.oss.OSInfo.with_apt', new_callable=mock.PropertyMock)
-    def add_repository_test(self, patched_with_apt):
+    def test_add_repository(self, patched_with_apt):
         class RunnerOrderedMock:
             commands = []  # Command + return value
 
@@ -136,7 +136,7 @@ class SystemPackageToolTest(unittest.TestCase):
 
     # We gotta mock the with_apt property, since it checks for the existence of apt.
     @mock.patch('conans.client.tools.oss.OSInfo.with_apt', new_callable=mock.PropertyMock)
-    def system_package_tool_test(self, patched_with_apt):
+    def test_system_package_tool(self, patched_with_apt):
 
         with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "True"}):
             runner = RunnerMock()
@@ -382,7 +382,7 @@ class SystemPackageToolTest(unittest.TestCase):
                 spt.install(packages)
             self.assertEqual(7, runner.calls)
 
-    def system_package_tool_mode_test(self):
+    def test_system_package_tool_mode(self):
         """
         System Package Tool mode is defined by CONAN_SYSREQUIRES_MODE env variable.
         Allowed values: (enabled, verify, disabled). Parser accepts it in lower/upper
@@ -460,7 +460,7 @@ class SystemPackageToolTest(unittest.TestCase):
             self.assertIn('\n'.join(packages), self.out)
             self.assertEqual(3, runner.calls)
 
-    def system_package_tool_installed_test(self):
+    def test_system_package_tool_installed(self):
         if (platform.system() != "Linux" and platform.system() != "Macos" and
                 platform.system() != "Windows"):
             return
@@ -479,7 +479,7 @@ class SystemPackageToolTest(unittest.TestCase):
         self.assertFalse(spt._tool.installed("oidfjgesiouhrgioeurhgielurhgaeiorhgioearhgoaeirhg"))
         self.assertFalse(spt.installed("oidfjgesiouhrgioeurhgielurhgaeiorhgioearhgoaeirhg"))
 
-    def system_package_tool_fail_when_not_0_returned_test(self):
+    def test_system_package_tool_fail_when_not_0_returned(self):
         def get_linux_error_message():
             """
             Get error message for Linux platform if distro is supported, None otherwise

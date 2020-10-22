@@ -26,7 +26,7 @@ class SharedChainTest(unittest.TestCase):
         rmdir(conan.current_folder)
         shutil.rmtree(conan.cache.store, ignore_errors=True)
 
-    def uploaded_chain_test(self):
+    def test_uploaded_chain(self):
         self._export_upload("Hello0", "0.1")
         self._export_upload("Hello1", "0.1", ["Hello0/0.1@lasote/stable"])
 

@@ -2,9 +2,9 @@ import os
 import platform
 
 from conans.client import tools
-from conans.client.build import defs_to_string, join_arguments
+from conans.client.build import join_arguments
 from conans.client.build.cmake_flags import is_multi_configuration, get_generator
-from conans.client.toolchain.cmake import CMakeToolchain
+from conans.client.toolchain.cmake.base import CMakeToolchainBase
 from conans.client.tools.files import chdir
 from conans.client.tools.oss import cpu_count, args_to_string
 from conans.errors import ConanException
@@ -20,7 +20,7 @@ def _validate_recipe(conanfile):
                              " or 'cmake_find_package_multi' generators")
 
 
-def _compute_build_flags(conanfile, generator, parallel, msbuild_verbosity):
+def _cmake_cmd_line_args(conanfile, generator, parallel, msbuild_verbosity):
     args = []
     compiler_version = conanfile.settings.get_safe("compiler.version")
     if generator and parallel:
@@ -74,13 +74,9 @@ class CMakeToolchainBuildHelper(object):
         if self._build_folder:
             build_folder = os.path.join(self._conanfile.build_folder, self._build_folder)
 
-        defs = {"CMAKE_TOOLCHAIN_FILE": CMakeToolchain.filename}
-
         mkdir(build_folder)
-        arg_list = join_arguments([
-            defs_to_string(defs),
-            args_to_string([source])
-        ])
+        arg_list = '-DCMAKE_TOOLCHAIN_FILE="%s" "%s"' % (CMakeToolchainBase.filename, source)
+
         generator = '-G "{}" '.format(self._generator) if self._generator else ""
         command = "%s %s%s" % (self._cmake_program, generator, arg_list)
 
@@ -116,11 +112,10 @@ class CMakeToolchainBuildHelper(object):
         if target is not None:
             args = ["--target", target]
 
-        build_flags = _compute_build_flags(self._conanfile, self._generator, self._parallel,
-                                           self._msbuild_verbosity)
-
-        if build_flags:
-            args += ['--'] + build_flags
+        cmd_line_args = _cmake_cmd_line_args(self._conanfile, self._generator, self._parallel,
+                                             self._msbuild_verbosity)
+        if cmd_line_args:
+            args += ['--'] + cmd_line_args
 
         arg_list = [args_to_string([bf]), build_config, args_to_string(args)]
         command = "%s --build %s" % (self._cmake_program, join_arguments(arg_list))

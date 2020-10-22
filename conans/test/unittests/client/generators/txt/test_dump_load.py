@@ -17,7 +17,8 @@ class DumpLoadTestCase(unittest.TestCase):
         cpp_info = CppInfo("pkg_name", "root")
         cpp_info.name = "name"
         cpp_info.names["txt"] = "txt_name"
-        cpp_info.names["cmake_find_package"] = "cmake_find_package"
+        cpp_info.names["cmake_find_package"] = "SpecialName"
+        cpp_info.filenames["cmake_find_package"] = "SpecialFileName"
         conanfile = ConanFile(TestBufferConanOutput(), None)
         conanfile.initialize(Settings({}), EnvValues())
         conanfile.deps_cpp_info.add("pkg_name", DepCppInfo(cpp_info))
@@ -25,9 +26,9 @@ class DumpLoadTestCase(unittest.TestCase):
         parsed_deps_cpp_info, _, _, _ = TXTGenerator.loads(content, filter_empty=False)
 
         parsed_cpp_info = parsed_deps_cpp_info["pkg_name"]
-        # FIXME: Conan v2: Remove 'txt' generator or serialize all the names
         self.assertEqual(parsed_cpp_info.get_name("txt"), "txt_name")
-        self.assertEqual(parsed_cpp_info.get_name("cmake_find_package"), "pkg_name")
+        self.assertEqual(parsed_cpp_info.get_name("cmake_find_package"), "SpecialName")
+        self.assertEqual(parsed_cpp_info.get_filename("cmake_find_package"), "SpecialFileName")
         self.assertEqual(parsed_cpp_info.get_name("pkg_config"), "pkg_name")
 
     def test_idempotent(self):

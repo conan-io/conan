@@ -63,7 +63,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
                                            "frameworks, framework_paths, system_libs")
         return deps_cpp_info([], [], [], [], [], [], [], [], "", [], [], [])
 
-    def target_triple_test(self):
+    def test_target_triple(self):
         conan_file = ConanFileMock()
         conan_file.deps_cpp_info = self._creat_deps_cpp_info()
         conan_file.settings = MockSettings({"os_target":"Linux", "arch_target":"x86_64"})
@@ -71,7 +71,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
         expected = "x86_64-linux-gnu"
         self.assertEqual(be.target, expected)
 
-    def partial_build_test(self):
+    def test_partial_build(self):
         conan_file = ConanFileMock()
         conan_file.deps_cpp_info = self._creat_deps_cpp_info()
         conan_file.settings = Settings()
@@ -84,7 +84,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
         be.make()
         self.assertIsNone(conan_file.command)
 
-    def warn_when_no_triplet_test(self):
+    def test_warn_when_no_triplet(self):
         conan_file = ConanFileMock()
         conan_file.deps_cpp_info = self._creat_deps_cpp_info()
         conan_file.settings = MockSettings({"arch": "UNKNOWN_ARCH", "os": "Linux"})
@@ -363,7 +363,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
         be = AutoToolsBuildEnvironment(conanfile)
         self.assertEqual(be.vars, expected)
 
-    def rpath_optin_test(self):
+    def test_rpath_optin(self):
         settings = MockSettings({"os_build": "Linux",
                                  "build_type": "Release",
                                  "arch": "x86_64",
@@ -383,7 +383,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
         be = AutoToolsBuildEnvironment(conanfile, include_rpath_flags=True)
         self.assertEqual(be.vars, expected)
 
-    def environment_append_test(self):
+    def test_environment_append(self):
         settings = MockSettings({"build_type": "Debug",
                                  "arch": "x86_64",
                                  "compiler": "gcc",
@@ -409,7 +409,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
                         'CFLAGS': 'a_c_flag -m64 -g --sysroot=/path/to/folder -additionalcflag'}
             self.assertEqual(be.vars, expected)
 
-    def modify_values_test(self):
+    def test_modify_values(self):
         settings = MockSettings({"build_type": "Debug",
                                  "arch": "x86_64",
                                  "compiler": "gcc",
@@ -444,7 +444,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
             be = AutoToolsBuildEnvironment(conanfile)
             self.assertEqual(be.vars["CPPFLAGS"], "MyCppFlag")
 
-    def cross_build_command_test(self):
+    def test_cross_build_command(self):
         runner = RunnerMock()
         conanfile = MockConanfile(MockSettings({}), None, runner)
         ab = AutoToolsBuildEnvironment(conanfile)
@@ -514,7 +514,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
         self.assertEqual(runner.command_called, "make install -j%s" %
                           cpu_count(output=conanfile.output))
 
-    def autotools_install_dir_custom_configure_test(self):
+    def test_autotools_install_dir_custom_configure(self):
         for flag_to_remove in default_dirs_flags:
             flags_available = set(default_dirs_flags) - set([flag_to_remove])
             runner = RunnerMockWithHelp(available_args=flags_available)
@@ -526,7 +526,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
             for flag_applied in flags_available:
                 self.assertIn(flag_applied, runner.command_called)
 
-    def failing_configure_help_test(self):
+    def test_failing_configure_help(self):
 
         class RunnerMockWithHelpFailing(RunnerMockWithHelp):
             def __call__(self, command, output=None, win_bash=False,
@@ -546,7 +546,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
             self.assertNotIn(flag_applied, runner.command_called)
         self.assertIn("Error running `configure --help`: Help not available", conanfile.output)
 
-    def autotools_install_dirs_test(self):
+    def test_autotools_install_dirs(self):
 
         runner = RunnerMockWithHelp(available_args=default_dirs_flags)
         conanfile = MockConanfileWithOutput(MockSettings({}), None, runner)
@@ -602,7 +602,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
         self.assertNotIn("--libdir=${prefix}/lib", runner.command_called)
         self.assertNotIn("--includedir=${prefix}/lib", runner.command_called)
 
-    def autotools_configure_vars_test(self):
+    def test_autotools_configure_vars(self):
         from mock import patch
 
         runner = RunnerMock()
@@ -635,7 +635,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
             mocked_result = be.configure(vars=my_vars)
             self.assertEqual(mocked_result, my_vars)
 
-    def autotools_fpic_test(self):
+    def test_autotools_fpic(self):
         runner = None
         settings = MockSettings({"os": "Linux"})
         options = MockOptions({"fPIC": True, "shared": False})
@@ -671,3 +671,30 @@ class AutoToolsConfigureTest(unittest.TestCase):
         self.assertFalse(ab.fpic)
         ab.fpic = True
         self.assertIn("-fPIC", ab.vars["CXXFLAGS"])
+
+    def test_mac_version_min(self):
+        options = MockOptions({})
+        settings = MockSettings({"os": "Macos"})
+        conanfile = MockConanfile(settings, options)
+        be = AutoToolsBuildEnvironment(conanfile)
+        expected = be.vars["CXXFLAGS"]
+        self.assertEqual("", expected)
+
+        settings = MockSettings({"os": "Macos",
+                                 "os.version": "10.13",
+                                 "compiler.version": "12.0"})
+        conanfile = MockConanfile(settings, options)
+        be = AutoToolsBuildEnvironment(conanfile)
+        expected = be.vars["CXXFLAGS"]
+        self.assertIn("10.13", expected)
+
+        with tools.environment_append({"CFLAGS": "-mmacosx-version-min=10.9"}):
+            be = AutoToolsBuildEnvironment(conanfile)
+            expected = be.vars["CFLAGS"]
+            self.assertIn("10.9", expected)
+            self.assertNotIn("10.13", expected)
+
+        with tools.environment_append({"CXXFLAGS": "-mmacosx-version-min=10.9"}):
+            be = AutoToolsBuildEnvironment(conanfile)
+            expected = be.vars["CFLAGS"]
+            self.assertNotIn("10.13", expected)
