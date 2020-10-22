@@ -239,7 +239,7 @@ class Pkg(ConanFile):
             self.client.run('config install "%s" %s' % (src_remote_file, cmd_option))
             self._check("file, %s, True, None" % src_remote_file)
 
-    def test_test_install_dir(self):
+    def test_install_dir(self):
         """ should install from a dir in current dir
         """
         folder = self._create_profile_folder()
