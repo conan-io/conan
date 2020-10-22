@@ -2,10 +2,12 @@ import shutil
 import textwrap
 import unittest
 import os
+import platform
 
 from conans.test.utils.tools import TestClient
 from conans.test.utils.test_files import temp_folder
 from conans.client.tools import environment_append
+from conans.client.toolchain.cmake.base import CMakeToolchainBase
 
 
 class CppProject(object):
@@ -27,8 +29,11 @@ class CppProject(object):
     cmakefile = textwrap.dedent("""
         cmake_minimum_required(VERSION 2.8.12)
         project(foobar CXX)
+        set(CMAKE_VERBOSE_MAKEFILE ON)
         add_library(${CMAKE_PROJECT_NAME} foobar.hpp foobar.cpp)
-        set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES PUBLIC_HEADER foobar.hpp)
+        set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES
+                              PUBLIC_HEADER foobar.hpp
+                              DEBUG_POSTFIX "d")
         install(TARGETS ${CMAKE_PROJECT_NAME}
             RUNTIME DESTINATION bin
             LIBRARY DESTINATION lib
@@ -60,7 +65,6 @@ class CMakeNinjaTestCase(unittest.TestCase):
 
             def toolchain(self):
                 tc = CMakeToolchain(self)
-                # tc.preprocessor_definitions["CMAKE_NINJA_OUTPUT_PATH_PREFIX"] = "MyValue"
                 tc.write_toolchain_files()
 
             def build(self):
@@ -89,11 +93,11 @@ class CMakeNinjaTestCase(unittest.TestCase):
             "conanfile.py": CMakeNinjaTestCase.conanfile,
         })
 
-    def test_regular_build(self):
+    def test_local_cache_build(self):
         """ Ninja build must proceed using default profile and conan create
         """
         with environment_append({"CONAN_CMAKE_GENERATOR": "Ninja"}):
-            self.client.run("create . foobar/0.1.0@")
+            self.client.run("create . foobar/0.1.0@ --profile:build=default --profile:host=default")
             self.assertIn('CMake command: cmake -G "Ninja" '
                           '-DCMAKE_TOOLCHAIN_FILE="conan_toolchain.cmake"', self.client.out)
 
@@ -101,9 +105,41 @@ class CMakeNinjaTestCase(unittest.TestCase):
         self.client.save({
             "conanfile.py": conanfile,
         })
-        self.client.run("create . foobar/0.1.0@")
+        self.client.run("create . foobar/0.1.0@ --profile:build=default --profile:host=default")
         self.assertIn('CMake command: cmake -G "Ninja" '
                       '-DCMAKE_TOOLCHAIN_FILE="conan_toolchain.cmake"', self.client.out)
+
+    def _build_locally(self, profile="default", build_type="Release", shared=False):
+        with environment_append({"CONAN_CMAKE_GENERATOR": "Ninja"}):
+            self.client.run("export . foobar/0.1.0@")
+            self.client.run("install . -o foobar:shared={} -s build_type={} -pr:h={} -pr:b=default"
+                            .format(shared, build_type, profile))
+            self.client.run_command("cmake . -G 'Ninja' -DCMAKE_TOOLCHAIN_FILE={}"
+                                    .format(CMakeToolchainBase.filename))
+            self.client.run_command("cmake --build . --config {}".format(build_type))
+
+    @unittest.skipIf(platform.system() != "Linux", "Only linux")
+    def test_locally_build_linux(self):
+        """ Ninja build must proceed using default profile and cmake build
+        """
+        self.client.save({"linux_host": textwrap.dedent("""
+                      [settings]
+                      os=Linux
+                      arch=x86_64
+                      compiler=gcc
+                      compiler.version=10
+                      compiler.libcxx=libstdc++11
+                      build_type=Release""")})
+        self._build_locally("linux_host")
+        self.client.run_command("objdump -f libfoobar.a")
+        self.assertIn("architecture: i386:x86-64", self.client.out)
+
+        self._build_locally("linux_host", "Debug", True)
+        self.client.run_command("objdump -f libfoobard.so")
+        self.assertIn("architecture: i386:x86-64", self.client.out)
+        self.assertIn("DYNAMIC", self.client.out)
+        self.client.run_command("file libfoobard.so")
+        self.assertIn("with debug_info", self.client.out)
 
     def test_devflow_build(self):
         """ Ninja build must proceed using default profile and conan development flow
