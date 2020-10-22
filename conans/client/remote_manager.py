@@ -15,7 +15,7 @@ from conans.search.search import filter_packages
 from conans.util import progress_bar
 from conans.util.env_reader import get_env
 from conans.util.files import make_read_only, mkdir, rmdir, tar_extract, touch_folder, \
-    merge_directories, md5sum, sha1sum, set_dirty_context_manager
+    merge_directories, md5sum, sha1sum
 from conans.util.log import logger
 # FIXME: Eventually, when all output is done, tracer functions should be moved to the recorder class
 from conans.util.tracer import (log_package_download,
@@ -162,6 +162,7 @@ class RemoteManager(object):
             tgz_file = unzip_and_get_files(zipped_files, dest_folder, PACKAGE_TGZ_NAME,
                                            output=self._output)
             if tgz_file:  # In practice, this file exist always
+                # Move the downloaded pkg_tgz to the right cache location
                 pkg_tgz = layout.package_tgz(pref)
                 mkdir(os.path.dirname(pkg_tgz))
                 shutil.move(tgz_file, pkg_tgz)
