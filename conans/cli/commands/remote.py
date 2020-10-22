@@ -5,7 +5,7 @@ from conans.cli.command import conan_command, conan_subcommand, OnceArgument
 
 def output_remote_list_json(info, out):
     myjson = json.dumps(info, indent=4)
-    out.writeln(myjson)
+    out.write(myjson)
 
 
 def output_remote_list_cli(info, out):
@@ -14,11 +14,11 @@ def output_remote_list_cli(info, out):
                                                             remote_info["url"],
                                                             remote_info["ssl"],
                                                             remote_info["enabled"])
-        out.writeln(output_str)
+        out.write(output_str)
 
 
 @conan_subcommand(formatters={"cli": output_remote_list_cli, "json": output_remote_list_json})
-def remote_list(*args, conan_api, parser, subparser):
+def remote_list(conan_api, parser, subparser, *args):
     """
     List current remotes
     """
@@ -31,7 +31,7 @@ def remote_list(*args, conan_api, parser, subparser):
 
 
 @conan_subcommand()
-def remote_add(*args, conan_api, parser, subparser):
+def remote_add(conan_api, parser, subparser, *args):
     """
     Add a remote
     """
@@ -46,7 +46,7 @@ def remote_add(*args, conan_api, parser, subparser):
 
 
 @conan_subcommand()
-def remote_remove(*args, conan_api, parser, subparser):
+def remote_remove(conan_api, parser, subparser, *args):
     """
     Remove conan remotes
     """
@@ -56,7 +56,7 @@ def remote_remove(*args, conan_api, parser, subparser):
 
 
 @conan_subcommand()
-def remote_update(*args, conan_api, parser, subparser):
+def remote_update(conan_api, parser, subparser, *args):
     """
     Update remote info
     """
@@ -76,7 +76,7 @@ def remote_update(*args, conan_api, parser, subparser):
 
 
 @conan_subcommand()
-def remote_enable(*args, conan_api, parser, subparser):
+def remote_enable(conan_api, parser, subparser, *args):
     """
     Update remote info
     """
@@ -86,7 +86,7 @@ def remote_enable(*args, conan_api, parser, subparser):
 
 
 @conan_subcommand()
-def remote_disable(*args, conan_api, parser, subparser):
+def remote_disable(conan_api, parser, subparser, *args):
     """
     Update remote info
     """
@@ -96,7 +96,7 @@ def remote_disable(*args, conan_api, parser, subparser):
 
 
 @conan_command(group="Misc commands")
-def remote(*args, conan_api, parser, **kwargs):
+def remote(conan_api, parser, *args, **kwargs):
     """
     Manages the remote list and the package recipes associated with a remote.
     """
