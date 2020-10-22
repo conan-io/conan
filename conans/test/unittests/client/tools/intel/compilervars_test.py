@@ -40,19 +40,18 @@ class CompilerVarsTest(unittest.TestCase):
 
             settings.arch = "x86"
             cvars = intel_compilervars_command(MockConanfile(settings))
-            expected = '"%s" -arch ia32' % path
+            expected = 'call "%s" -arch ia32' % path
             self.assertEqual(expected, cvars)
 
             settings.compiler.base.version = "16"
             cvars = intel_compilervars_command(MockConanfile(settings))
-            expected = '"%s" -arch ia32 vs2019' % path
+            expected = 'call "%s" -arch ia32 vs2019' % path
             self.assertEqual(expected, cvars)
 
             settings.arch = "x86_64"
-            expected = '"%s" -arch intel64 vs2019' % path
+            expected = 'call "%s" -arch intel64 vs2019' % path
             cvars = intel_compilervars_command(MockConanfile(settings))
             self.assertEqual(expected, cvars)
-
 
     def test_linux(self):
         install_dir = "/opt/intel"
