@@ -700,7 +700,7 @@ class TestClient(object):
         """
         # TODO: remove in 2.0
         if os.getenv("CONAN_V2_CLI"):
-            from conans.cli.output import TestOutput
+            from conans.test.utils.mocks import TestOutput
             self.out = TestOutput()
             with redirect_output(self.out):
                 error = self.run_cli(command_line, user_io=user_io, assert_error=assert_error)
