@@ -313,7 +313,7 @@ endmacro()""", macro)
         setattr(conanfile, "install_folder", install_folder)
         conanfile.generators = ["cmake_find_package_multi"]
         definitions_builder = CMakeDefinitionsBuilder(conanfile)
-        definitions = definitions_builder.get_definitions()
+        definitions = definitions_builder.get_definitions("3.13")
         self.assertEqual(install_folder, definitions["CMAKE_PREFIX_PATH"])
         self.assertEqual(install_folder, definitions["CMAKE_MODULE_PATH"])
 
@@ -327,11 +327,9 @@ endmacro()""", macro)
         setattr(conanfile, "install_folder", install_folder)
         conanfile.initialize(settings_mock, EnvValues())
         definitions_builder = CMakeDefinitionsBuilder(conanfile)
-        definitions = definitions_builder.get_definitions()
+        definitions = definitions_builder.get_definitions("3.13")
         self.assertEqual("Darwin", definitions["CMAKE_SYSTEM_NAME"])
-        definitions = definitions_builder.get_definitions(cmake_version="3.13")
-        self.assertEqual("Darwin", definitions["CMAKE_SYSTEM_NAME"])
-        definitions = definitions_builder.get_definitions(cmake_version="3.14")
+        definitions = definitions_builder.get_definitions("3.14")
         self.assertEqual("iOS", definitions["CMAKE_SYSTEM_NAME"])
 
     def apple_frameworks_test(self):
