@@ -24,6 +24,38 @@ class ConanInspectTest(unittest.TestCase):
         self.assertIn("ERROR: Unable to find 'non-existing/version@user/channel' in remotes",
                       client.out)
 
+    def test_inspect_remote(self):
+        client = TestClient(default_server_user=True)
+        client.save({"conanfile.py": GenConanfile("pkg", "0.1").with_settings("os")})
+        client.run("export . user/channel")
+        client.run("upload pkg/0.1@user/channel")
+        client.save({"conanfile.py": GenConanfile("pkg", "0.1").with_settings("os", "arch")})
+        client.run("export . user/channel")
+
+        client.run("inspect pkg/0.1@user/channel -a settings")
+        self.assertIn("settings: ('os', 'arch')", client.out)
+        client.run("inspect pkg/0.1@user/channel -r=default -a settings")
+        self.assertIn("settings: os", client.out)
+        client.run("inspect pkg/0.1@user/channel -a settings")
+        self.assertIn("settings: os", client.out)
+        client.run("remove * -f")
+        client.run("inspect pkg/0.1@user/channel -a settings")
+        self.assertIn("settings: os", client.out)
+
+    def test_inspect_not_in_remote(self):
+        client = TestClient(default_server_user=True)
+        client.save({"conanfile.py": GenConanfile("pkg", "0.1").with_settings("os")})
+        client.run("export . user/channel")
+
+        client.run("inspect pkg/0.1@user/channel -a settings")
+        self.assertIn("settings: os", client.out)
+
+        client.run("inspect pkg/0.1@user/channel -a settings -r default", assert_error=True)
+        self.assertIn("ERROR: Recipe not found: 'pkg/0.1@user/channel'", client.out)
+
+        client.run("inspect pkg/0.1@user/channel -a settings")
+        self.assertIn("settings: os", client.out)
+
     def python_requires_test(self):
         server = TestServer()
         client = TestClient(servers={"default": server}, users={"default": [("lasote", "mypass")]})

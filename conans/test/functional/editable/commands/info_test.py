@@ -65,6 +65,7 @@ class InfoCommandUsingReferenceTest(LinkedPackageAsProject):
                    "    ID: e94ed0d45e4166d2f946107eaa208d550bf3691e\n" \
                    "    BuildID: None\n" \
                    "    Remote: None\n" \
+                   "    Provides: lib\n" \
                    "    Recipe: Editable\n{}" \
                    "    Binary: Editable\n" \
                    "    Binary remote: None\n" \
