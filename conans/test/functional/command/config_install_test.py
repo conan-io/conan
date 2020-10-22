@@ -205,7 +205,7 @@ class Pkg(ConanFile):
         self.client.run("create . Pkg/0.1@user/testing")
         self.assertIn("A is 3", self.client.out)
 
-    def test_test_install_file(self):
+    def test_install_file(self):
         """ should install from a file in current dir
         """
         zippath = self._create_zip()
