@@ -172,7 +172,7 @@ class CMakeDefinitionsBuilder(object):
         definitions["CONAN_STD_CXX_FLAG"] = cppstd_flag(self._conanfile.settings)
         return definitions
 
-    def _cmake_cross_build_defines(self, cmake_version=None):
+    def _cmake_cross_build_defines(self, cmake_version):
         os_ = self._ss("os")
         arch = self._ss("arch")
         os_ver_str = "os.api_level" if os_ == "Android" else "os.version"
