@@ -46,7 +46,7 @@ class TestWorkflow(object):
         with environment_append({'CONAN_USERNAME': "user", "CONAN_CHANNEL": "channel"}):
             super(TestWorkflow, self).run(*args, **kwargs)
 
-    def test__run_local(self, t, working_dir, path_to_conanfile):
+    def _run_local_test(self, t, working_dir, path_to_conanfile):
         old_wd = t.current_folder
         try:
             path_to_conanfile = path_to_conanfile.replace('\\', '/')
@@ -58,7 +58,7 @@ class TestWorkflow(object):
         finally:
             t.current_folder = old_wd
 
-    def test__run_remote(self, t, working_dir, path_to_conanfile):
+    def _run_remote_test(self, t, working_dir, path_to_conanfile):
         old_wd = t.current_folder
         try:
             path_to_conanfile = path_to_conanfile.replace('\\', '/')
