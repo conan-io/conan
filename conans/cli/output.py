@@ -1,6 +1,5 @@
 import logging
 import sys
-from io import StringIO
 
 import tqdm
 from colorama import Fore, Style
@@ -154,13 +153,3 @@ class ConanOutput(object):
                 # TODO: check if colorama checks for stripping colors are enough
                 colorama.init()
             return True
-
-
-class CliOutput(object):
-    def __init__(self):
-        self._stream = sys.stdout
-
-    def write(self, data, fg=None, bg=None):
-        data = "{}{}{}{}\n".format(fg or '', bg or '', data, Style.RESET_ALL)
-        self._stream.write(data)
-

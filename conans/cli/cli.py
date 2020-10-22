@@ -7,15 +7,25 @@ from collections import defaultdict
 from difflib import get_close_matches
 from inspect import getmembers
 
+from colorama import Style
+
 from conans import __version__ as client_version
 from conans.cli.command import ConanSubCommand
 from conans.cli.exit_codes import SUCCESS, ERROR_MIGRATION, ERROR_GENERAL, USER_CTRL_C, \
     ERROR_SIGTERM, USER_CTRL_BREAK, ERROR_INVALID_CONFIGURATION
-from conans.cli.output import ConanOutput, CliOutput
 from conans.client.api.conan_api import Conan
 from conans.errors import ConanException, ConanInvalidConfiguration, ConanMigrationError
 from conans.util.files import exception_message_safe
 from conans.util.log import logger
+
+
+class CliOutput(object):
+    def __init__(self):
+        self._stream = sys.stdout
+
+    def write(self, data, fg=None, bg=None):
+        data = "{}{}{}{}\n".format(fg or '', bg or '', data, Style.RESET_ALL)
+        self._stream.write(data)
 
 
 class Cli(object):
