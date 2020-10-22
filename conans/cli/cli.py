@@ -19,15 +19,6 @@ from conans.util.files import exception_message_safe
 from conans.util.log import logger
 
 
-class CliOutput(object):
-    def __init__(self):
-        self._stream = sys.stdout
-
-    def write(self, data, fg=None, bg=None):
-        data = "{}{}{}{}\n".format(fg or '', bg or '', data, Style.RESET_ALL)
-        self._stream.write(data)
-
-
 class Cli(object):
     """A single command of the conan application, with all the first level commands. Manages the
     parsing of parameters and delegates functionality to the conan python api. It can also show the
@@ -39,7 +30,6 @@ class Cli(object):
             type(conan_api))
         self._conan_api = conan_api
         self._out = conan_api.out
-        self._cli_out = CliOutput()
         self._groups = defaultdict(list)
         self._commands = {}
         conan_commands_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "commands")
@@ -136,10 +126,15 @@ class Cli(object):
             self._print_similar(command_argument)
             raise ConanException("Unknown command %s" % str(exc))
 
-        command.run(self.conan_api, self._cli_out, self.commands[command_argument].parser,
+        command.run(self.conan_api, self.commands[command_argument].parser,
                     args[0][1:], commands=self.commands, groups=self.groups)
 
         return SUCCESS
+
+
+def cli_out_write(data, fg=None, bg=None):
+    data = "{}{}{}{}\n".format(fg or '', bg or '', data, Style.RESET_ALL)
+    sys.stdout.write(data)
 
 
 def main(args):

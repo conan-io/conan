@@ -1,20 +1,21 @@
 import json
 
+from conans.cli.cli import cli_out_write
 from conans.cli.command import conan_command, conan_subcommand, OnceArgument
 
 
-def output_remote_list_json(info, out):
+def output_remote_list_json(info):
     myjson = json.dumps(info, indent=4)
-    out.write(myjson)
+    cli_out_write(myjson)
 
 
-def output_remote_list_cli(info, out):
+def output_remote_list_cli(info):
     for remote_info in info:
         output_str = "{}: {} [SSL: {}, Enabled: {}]".format(remote_info["name"],
                                                             remote_info["url"],
                                                             remote_info["ssl"],
                                                             remote_info["enabled"])
-        out.write(output_str)
+        cli_out_write(output_str)
 
 
 @conan_subcommand(formatters={"cli": output_remote_list_cli, "json": output_remote_list_json})
