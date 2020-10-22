@@ -507,7 +507,6 @@ class BinaryInstaller(object):
                 raise ConanException("Package '%s' corrupted. Package folder must exist: %s\n"
                                      "Try removing the package with 'conan remove'"
                                      % (str(pref), package_folder))
-
             # Call the info method
             self._call_package_info(conanfile, package_folder, ref=pref.ref)
             self._recorder.package_cpp_info(pref, conanfile.cpp_info)
