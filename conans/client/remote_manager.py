@@ -133,25 +133,27 @@ class RemoteManager(object):
 
         output.info("Retrieving package %s from remote '%s' " % (pref.id, remote.name))
         layout.package_remove(pref)  # Remove first the destination folder
-        pkg_folder = layout.package(pref)
         with layout.set_dirty_context_manager(pref):
-            self._get_package(layout, pref, pkg_folder, remote, output, recorder)
+            self._get_package(layout, pref, remote, output, recorder)
 
         self._hook_manager.execute("post_download_package", conanfile_path=conanfile_path,
                                    reference=pref.ref, package_id=pref.id, remote=remote)
 
-    def _get_package(self, layout, pref, dest_folder, remote, output, recorder):
+    def _get_package(self, layout, pref, remote, output, recorder):
         t1 = time.time()
         try:
             pref = self._resolve_latest_pref(pref, remote)
             snapshot = self._call_remote(remote, "get_package_snapshot", pref)
             if not is_package_snapshot_complete(snapshot):
                 raise PackageNotFoundException(pref)
-            zipped_files = self._call_remote(remote, "get_package", pref, dest_folder)
 
+            download_pkg_folder = layout.download_package(pref)
+            # Download files to the pkg_tgz folder, not to the final one
+            zipped_files = self._call_remote(remote, "get_package", pref, download_pkg_folder)
+
+            # Compute and update the package metadata
             package_checksums = calc_files_checksum(zipped_files)
-
-            with self._cache.package_layout(pref.ref).update_metadata() as metadata:
+            with layout.update_metadata() as metadata:
                 metadata.packages[pref.id].revision = pref.revision
                 metadata.packages[pref.id].recipe_revision = pref.ref.revision
                 metadata.packages[pref.id].checksums = package_checksums
@@ -159,18 +161,21 @@ class RemoteManager(object):
 
             duration = time.time() - t1
             log_package_download(pref, duration, remote, zipped_files)
-            tgz_file = unzip_and_get_files(zipped_files, dest_folder, PACKAGE_TGZ_NAME,
-                                           output=self._output)
-            if tgz_file:  # In practice, this file exist always
-                # Move the downloaded pkg_tgz to the right cache location
-                pkg_tgz = layout.package_tgz(pref)
-                mkdir(os.path.dirname(pkg_tgz))
-                shutil.move(tgz_file, pkg_tgz)
+
+            tgz_file = zipped_files.pop(PACKAGE_TGZ_NAME, None)
+            check_compressed_files(PACKAGE_TGZ_NAME, zipped_files)
+            package_folder = layout.package(pref)
+            if tgz_file:  # This must happen always, but just in case
+                # TODO: The output could be changed to the package one, but
+                uncompress_file(tgz_file, package_folder, output=self._output)
+            mkdir(package_folder)  # Just in case it doesn't exist, because uncompress did nothing
+            for file_name, file_path in zipped_files.items():  # copy CONANINFO and CONANMANIFEST
+                os.rename(file_path, os.path.join(package_folder, file_name))
 
             # Issue #214 https://github.com/conan-io/conan/issues/214
-            touch_folder(dest_folder)
+            touch_folder(package_folder)
             if get_env("CONAN_READ_ONLY_CACHE", False):
-                make_read_only(dest_folder)
+                make_read_only(package_folder)
             recorder.package_downloaded(pref, remote.url)
             output.success('Package installed %s' % pref.id)
             output.info("Downloaded package revision %s" % pref.revision)
@@ -179,12 +184,6 @@ class RemoteManager(object):
         except BaseException as e:
             output.error("Exception while getting package: %s" % str(pref.id))
             output.error("Exception: %s %s" % (type(e), str(e)))
-            try:
-                output.warn("Trying to remove package folder: %s" % dest_folder)
-                rmdir(dest_folder)
-            except OSError as e:
-                raise ConanException("%s\n\nCouldn't remove folder '%s', might be busy or open. "
-                                     "Close any app using it, and retry" % (str(e), dest_folder))
             raise
 
     def search_recipes(self, remote, pattern=None, ignorecase=True):
@@ -292,9 +291,7 @@ def unzip_and_get_files(files, destination_dir, tgz_name, output):
     check_compressed_files(tgz_name, files)
     if tgz_file:
         uncompress_file(tgz_file, destination_dir, output=output)
-        if tgz_name != PACKAGE_TGZ_NAME:
-            os.remove(tgz_file)
-    return tgz_file
+        os.remove(tgz_file)
 
 
 def uncompress_file(src_path, dest_folder, output):

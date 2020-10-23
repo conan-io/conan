@@ -16,8 +16,7 @@ from conans.model.package_metadata import PackageMetadata
 from conans.model.ref import ConanFileReference
 from conans.model.ref import PackageReference
 from conans.paths import CONANFILE, SYSTEM_REQS, EXPORT_FOLDER, EXPORT_SRC_FOLDER, SRC_FOLDER, \
-    BUILD_FOLDER, PACKAGES_FOLDER, SYSTEM_REQS_FOLDER, PACKAGE_METADATA, SCM_SRC_FOLDER, \
-    rm_conandir, PACKAGE_TGZ_NAME
+    BUILD_FOLDER, PACKAGES_FOLDER, SYSTEM_REQS_FOLDER, PACKAGE_METADATA, SCM_SRC_FOLDER, rm_conandir
 from conans.util.files import load, save, rmdir, set_dirty, clean_dirty, is_dirty
 from conans.util.locks import Lock, NoLock, ReadLock, SimpleLock, WriteLock
 from conans.util.log import logger
@@ -118,8 +117,8 @@ class PackageCacheLayout(object):
         yield
         clean_dirty(pkg_folder)
 
-    def package_tgz(self, pref):
-        return os.path.join(self._base_folder, PACKAGES_FOLDER + "_tgz", pref.id, PACKAGE_TGZ_NAME)
+    def download_package(self, pref):
+        return os.path.join(self._base_folder, "dl", "pkg", pref.id)
 
     def package_is_dirty(self, pref):
         pkg_folder = os.path.join(self._base_folder, PACKAGES_FOLDER, pref.id)
@@ -143,7 +142,7 @@ class PackageCacheLayout(object):
         assert isinstance(pref, PackageReference)
         assert pref.ref == self._ref, "{!r} != {!r}".format(pref.ref, self._ref)
         # Remove the tgz storage
-        tgz_folder = os.path.join(self._base_folder, PACKAGES_FOLDER + "_tgz", pref.id)
+        tgz_folder = self.download_package(pref)
         rmdir(tgz_folder)
         # This is NOT the short paths, but the standard cache one
         pkg_folder = os.path.join(self._base_folder, PACKAGES_FOLDER, pref.id)
