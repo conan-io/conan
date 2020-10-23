@@ -77,7 +77,6 @@ def config_source(export_folder, export_source_folder, scm_sources_folder,
         try:
             rmdir(src_folder)
         except BaseException as e_rm:
-            set_dirty(src_folder)
             msg = str(e_rm)
             if six.PY2:
                 msg = str(e_rm).decode("latin1")  # Windows prints some chars in latin1

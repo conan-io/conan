@@ -56,7 +56,6 @@ class GraphBinariesAnalyzer(object):
             if package_layout.package_is_dirty(pref):
                 node.conanfile.output.warn("Package binary is corrupted, removing: %s" % pref.id)
                 package_layout.package_remove(pref)
-                package_layout.package_clean_dirty(pref)
                 return
 
             if self._cache.config.revisions_enabled:
