@@ -138,9 +138,9 @@ class SystemPackageTool(object):
 
         :param packages: Supports multiple formats (string,list,tuple). Lists and tuples into a list
         are considered variants and is processed just like self.install(). A list of string is
-        considered a list of packages to be all installed.
+        considered a list of packages to be installed (only not installed yet).
         :param update: Run update command before to install
-        :param force: Force installing all packages
+        :param force: Force installing all packages, including all installed.
         :param arch_names: Package suffix/prefix name used by installer tool e.g. {"x86_64": "amd64"}
         :return: None
         """
