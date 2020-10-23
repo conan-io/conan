@@ -1,5 +1,6 @@
 import os
 import sys
+import itertools
 
 from conans.client.runner import ConanRunner
 from conans.client.tools.oss import OSInfo, cross_building, get_cross_building_settings
@@ -127,23 +128,31 @@ class SystemPackageTool(object):
         self._install_any(packages)
 
     def install_packages(self, packages, update=True, force=False, arch_names=None):
-        """ Get the system package tool install command and install all packages or variants.
+        """ Get the system package tool install command and install all packages and/or variants.
             Inputs:
-            "pkg-variant1"  # (1) String input: Install only one package
-            ["pkg-variant1", "otherpkg", "thirdpkg"] # (2) List of strings: all must be installed
-            [("pkg-variant1", "pkg-variant2"), "otherpkg", "thirdpkg"] # (3) List with alternatives
+            "pkg-variant1"  # (1) Install only one package
+            ["pkg-variant1", "otherpkg", "thirdpkg"] # (2) All must be installed
+            [("pkg-variant1", "pkg-variant2"), "otherpkg", "thirdpkg"] # (3) Install only one variant
+                                                                             and all other packages
+            ["pkg1 pkg2", "pkg3 pkg4"] # (4) Install all packages
 
-        :param packages: String/List/Tuple with all packages to be installed e.g. "libusb-dev libfoobar-dev"
+        :param packages: Supports multiple formats (string,list,tuple). Lists and tuples into a list
+        are considered variants and is processed just like self.install(). A list of string is
+        considered a list of packages to be all installed.
         :param update: Run update command before to install
         :param force: Force installing all packages
         :param arch_names: Package suffix/prefix name used by installer tool e.g. {"x86_64": "amd64"}
         :return: None
         """
         packages = [packages] if isinstance(packages, str) else list(packages)
-        variants = list(filter(lambda x: isinstance(x, tuple), packages))
+        # only one (first) variant will be installed
+        variants = list(filter(lambda x: isinstance(x, (tuple, list)), packages))
         for variant in variants:
-            self.install(variant, update=update, force=update, arch_names=arch_names)
-        packages = list(filter(lambda x: not isinstance(x, tuple), packages))
+            self.install(variant, update=update, force=force, arch_names=arch_names)
+        # all packages will be installed
+        packages = list(filter(lambda x: not isinstance(x, (tuple, list)), packages))
+        # split "pkg1 pkg2", "pkg3 pkg4" cases
+        packages = list(itertools.chain.from_iterable([pkg.split() for pkg in packages]))
         packages = self._get_package_names(packages, arch_names)
 
         mode = self._get_sysrequire_mode()
@@ -161,8 +170,11 @@ class SystemPackageTool(object):
                 raise ConanException("Aborted due to CONAN_SYSREQUIRES_MODE=%s. "
                                      "Some system packages need to be installed" % mode)
 
-        if not force and self._all_installed(packages):
+        to_be_installed = self._to_be_installed(packages)
+        if not force and not to_be_installed:
             return
+        # install only what is not installed yet
+        packages = packages if force else to_be_installed
 
         # From here system packages can be updated/modified
         if update and not self._is_up_to_date:
@@ -193,14 +205,19 @@ class SystemPackageTool(object):
     def installed(self, package_name):
         return self._tool.installed(package_name)
 
-    def _all_installed(self, packages):
+    def _to_be_installed(self, packages):
+        """ Returns a list with all not installed packages.
+        """
         for pkg in packages:
             if isinstance(pkg, (list, tuple)):
-                if not self._all_installed(pkg):
-                    return False
-        return all([self._installed([pkg]) for pkg in packages])
+                if not self._to_be_installed(pkg):
+                    return list(pkg)
+        installed = {pkg: self._installed([pkg]) for pkg in packages}
+        return [] if all(installed.values()) else [pkg for pkg, i in installed.items() if not i]
 
     def _installed(self, packages):
+        """ Return True if at least one of the packages is installed.
+        """
         if not packages:
             return True
 
