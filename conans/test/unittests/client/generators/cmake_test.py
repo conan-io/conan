@@ -39,6 +39,10 @@ class _MockSettings(object):
     def get_safe(self, name):
         if name == "build_type":
             return self.build_type
+        if name == "os":
+            return self.os
+        if name == "os_build":
+            return self.os_build
         return None
 
     def items(self):
@@ -309,9 +313,24 @@ endmacro()""", macro)
         setattr(conanfile, "install_folder", install_folder)
         conanfile.generators = ["cmake_find_package_multi"]
         definitions_builder = CMakeDefinitionsBuilder(conanfile)
-        definitions = definitions_builder.get_definitions()
+        definitions = definitions_builder.get_definitions("3.13")
         self.assertEqual(install_folder, definitions["CMAKE_PREFIX_PATH"])
         self.assertEqual(install_folder, definitions["CMAKE_MODULE_PATH"])
+
+    def test_cmake_definitions_apple(self):
+        #https://github.com/conan-io/conan/issues/7875
+        settings_mock = _MockSettings(build_type="Release")
+        settings_mock.os = "iOS"
+        settings_mock.os_build = "Macos"
+        conanfile = ConanFile(TestBufferConanOutput(), None)
+        install_folder = "/c/foo/testing"
+        setattr(conanfile, "install_folder", install_folder)
+        conanfile.initialize(settings_mock, EnvValues())
+        definitions_builder = CMakeDefinitionsBuilder(conanfile)
+        definitions = definitions_builder.get_definitions("3.13")
+        self.assertEqual("Darwin", definitions["CMAKE_SYSTEM_NAME"])
+        definitions = definitions_builder.get_definitions("3.14")
+        self.assertEqual("iOS", definitions["CMAKE_SYSTEM_NAME"])
 
     def test_apple_frameworks(self):
         settings = Settings.loads(get_default_settings_yml())
