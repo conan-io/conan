@@ -228,7 +228,7 @@ class SystemPackageTool(object):
         return False
 
     def _install_all(self, packages):
-        self._tool.install(" ".join(packages))
+        self._tool.install(" ".join(sorted(packages)))
 
     def _install_any(self, packages):
         if len(packages) == 1:
