@@ -2,6 +2,8 @@
 
 import unittest
 
+from parameterized import parameterized
+
 from conans.test.utils.tools import TestClient, GenConanfile
 
 
@@ -57,7 +59,8 @@ class VersionRangeOverrideTestCase(unittest.TestCase):
 
 class VersionRangeOverrideFailTestCase(unittest.TestCase):
 
-    def test(self):
+    @parameterized.expand([(True,), (False,)])
+    def test(self, host_context):
         # https://github.com/conan-io/conan/issues/7864
         t = TestClient()
         t.save({"conanfile.py": GenConanfile()})
@@ -67,8 +70,14 @@ class VersionRangeOverrideFailTestCase(unittest.TestCase):
         t.save({"conanfile.py": GenConanfile().with_require("gtest/1.8.0@PORT/stable")})
         t.run("create . intermediate/1.0@PORT/stable")
 
-        t.save({"conanfile.py": GenConanfile().with_requires("intermediate/1.0@PORT/stable")
-                                              .with_build_requires("gtest/1.8.0@PORT/stable")})
+        if host_context:
+            t.save({"conanfile.py": GenConanfile().with_requires("intermediate/1.0@PORT/stable")
+                   .with_build_requirement("gtest/1.8.0@PORT/stable", force_host_context=True)})
+        else:
+            # WARNING: This test will fail in Conan 2.0, because build_requires will be by default
+            # in the build-context and do not conflict
+            t.save({"conanfile.py": GenConanfile().with_requires("intermediate/1.0@PORT/stable")
+                   .with_build_requires("gtest/1.8.0@PORT/stable")})
         t.run("create . scubaclient/1.6@PORT/stable")
 
         # IMPORTANT: We need to override the private build-require in the profile too,
