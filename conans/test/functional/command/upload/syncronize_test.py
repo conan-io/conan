@@ -1,4 +1,5 @@
 import os
+import shutil
 import unittest
 
 from conans import DEFAULT_REVISION_V1
@@ -97,7 +98,7 @@ class SynchronizeTest(unittest.TestCase):
         pack_path = layout.package(pref)
         new_file_source_path = os.path.join(pack_path, "newlib.lib")
         save(new_file_source_path, "newlib")
-        os.unlink(layout.package_tgz(pref))  # Force new tgz
+        shutil.rmtree(layout.download_package(pref))  # Force new tgz
 
         self._create_manifest(client, pref)
         client.run("upload %s -p %s" % (str(ref), str(package_ids[0])))
@@ -118,7 +119,7 @@ class SynchronizeTest(unittest.TestCase):
         # Now delete the file and check again
         os.remove(new_file_source_path)
         self._create_manifest(client, pref)
-        os.unlink(layout.package_tgz(pref))  # Force new tgz
+        shutil.rmtree(layout.download_package(pref))  # Force new tgz
         client.run("upload %s -p %s" % (str(ref), str(package_ids[0])))
         folder = uncompress_packaged_files(remote_paths, pref)
         remote_file_path = os.path.join(folder, "newlib.lib")
