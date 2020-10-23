@@ -142,7 +142,7 @@ class SystemPackageTool(object):
         packages = [packages] if isinstance(packages, str) else list(packages)
         variants = list(filter(lambda x: isinstance(x, tuple), packages))
         for variant in variants:
-            self.install(variant)
+            self.install(variant, update=update, force=update, arch_names=arch_names)
         packages = list(filter(lambda x: not isinstance(x, tuple), packages))
         packages = self._get_package_names(packages, arch_names)
 
