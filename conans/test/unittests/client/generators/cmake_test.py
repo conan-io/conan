@@ -317,7 +317,7 @@ endmacro()""", macro)
         self.assertEqual(install_folder, definitions["CMAKE_PREFIX_PATH"])
         self.assertEqual(install_folder, definitions["CMAKE_MODULE_PATH"])
 
-    def cmake_definitions_apple_test(self):
+    def test_cmake_definitions_apple(self):
         #https://github.com/conan-io/conan/issues/7875
         settings_mock = _MockSettings(build_type="Release")
         settings_mock.os = "iOS"
