@@ -10,7 +10,6 @@ from mock import patch
 from requests.packages.urllib3.exceptions import ConnectionError
 
 from conans import DEFAULT_REVISION_V1
-from conans.client.tools import environment_append
 from conans.client.tools.files import untargz
 from conans.model.manifest import FileTreeManifest
 from conans.model.package_metadata import PackageMetadata

@@ -157,7 +157,7 @@ class PackageCacheLayout(object):
         export_folder = self.export()
         rmdir(export_folder)
         export_src_folder = self.export_sources()
-        rmdir(export_src_folder)
+        rm_conandir(export_src_folder)
         download_export = self.download_export()
         rmdir(download_export)
         scm_folder = self.scm_sources()
