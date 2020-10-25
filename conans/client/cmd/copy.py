@@ -80,8 +80,11 @@ def package_copy(src_ref, user_channel, package_ids, cache, user_io, short_paths
         user_io.out.info("Copied %s to %s" % (str(package_id), str(dest_ref)))
 
     # The downloaded .tgz files can also be copied
-    rmdir(dst_layout.download_folder())
-    shutil.copytree(src_layout.download_folder(), dst_layout.download_folder())
+    src_download = src_layout.download_folder()
+    dst_download = dst_layout.download_folder()
+    rmdir(dst_download)
+    if os.path.isdir(src_download):
+        shutil.copytree(src_download, dst_download)
 
     # Generate the metadata
     with dst_layout.update_metadata() as metadata:
