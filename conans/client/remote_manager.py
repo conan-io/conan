@@ -9,13 +9,12 @@ from conans import DEFAULT_REVISION_V1
 from conans.client.cache.remote_registry import Remote
 from conans.errors import ConanConnectionError, ConanException, NotFoundException, \
     NoRestV2Available, PackageNotFoundException
-from conans.paths import EXPORT_SOURCES_DIR_OLD, \
-    EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME, rm_conandir
+from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME, rm_conandir
 from conans.search.search import filter_packages
 from conans.util import progress_bar
 from conans.util.env_reader import get_env
-from conans.util.files import make_read_only, mkdir, rmdir, tar_extract, touch_folder, \
-    merge_directories, md5sum, sha1sum
+from conans.util.files import make_read_only, mkdir, rmdir, tar_extract, touch_folder, md5sum, \
+    sha1sum
 from conans.util.log import logger
 # FIXME: Eventually, when all output is done, tracer functions should be moved to the recorder class
 from conans.util.tracer import (log_package_download,
@@ -105,11 +104,13 @@ class RemoteManager(object):
 
         return ref
 
-    def get_recipe_sources(self, ref, export_folder, export_sources_folder, remote):
+    def get_recipe_sources(self, ref, layout, remote):
         assert ref.revision, "get_recipe_sources requires RREV"
         t1 = time.time()
 
-        zipped_files = self._call_remote(remote, "get_recipe_sources", ref, export_folder)
+        download_folder = layout.download_export()
+        export_sources_folder = layout.export_sources()
+        zipped_files = self._call_remote(remote, "get_recipe_sources", ref, download_folder)
         if not zipped_files:
             mkdir(export_sources_folder)  # create the folder even if no source files
             return
@@ -117,13 +118,10 @@ class RemoteManager(object):
         duration = time.time() - t1
         log_recipe_sources_download(ref, duration, remote.name, zipped_files)
 
-        unzip_and_get_files(zipped_files, export_sources_folder, EXPORT_SOURCES_TGZ_NAME,
-                            output=self._output)
-        # REMOVE in Conan 2.0
-        c_src_path = os.path.join(export_sources_folder, EXPORT_SOURCES_DIR_OLD)
-        if os.path.exists(c_src_path):
-            merge_directories(c_src_path, export_sources_folder)
-            rmdir(c_src_path)
+        tgz_file = zipped_files[EXPORT_SOURCES_TGZ_NAME]
+        check_compressed_files(EXPORT_SOURCES_TGZ_NAME, zipped_files)
+        uncompress_file(tgz_file, export_sources_folder, output=self._output)
+
         touch_folder(export_sources_folder)
 
     def get_package(self, pref, layout, remote, output, recorder):

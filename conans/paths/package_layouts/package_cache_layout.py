@@ -120,6 +120,9 @@ class PackageCacheLayout(object):
     def download_package(self, pref):
         return os.path.join(self._base_folder, "dl", "pkg", pref.id)
 
+    def download_export(self):
+        return os.path.join(self._base_folder, "dl", "export")
+
     def package_is_dirty(self, pref):
         pkg_folder = os.path.join(self._base_folder, PACKAGES_FOLDER, pref.id)
         return is_dirty(pkg_folder)
