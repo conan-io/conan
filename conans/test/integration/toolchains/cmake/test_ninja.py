@@ -110,17 +110,16 @@ class CMakeNinjaTestCase(unittest.TestCase):
                       '-DCMAKE_TOOLCHAIN_FILE="conan_toolchain.cmake"', self.client.out)
 
     def _build_locally(self, profile="default", build_type="Release", shared=False):
-        with environment_append({"CONAN_CMAKE_GENERATOR": "Ninja"}):
-            self.client.run("export . foobar/0.1.0@")
-            self.client.run("install . -o foobar:shared={} -s build_type={} -pr:h={} -pr:b=default"
-                            .format(shared, build_type, profile))
-            self.client.run_command("cmake . -G 'Ninja' -DCMAKE_TOOLCHAIN_FILE={}"
-                                    .format(CMakeToolchainBase.filename))
-            self.client.run_command("cmake --build . --config {}".format(build_type))
+        self.client.run("export . foobar/0.1.0@")
+        self.client.run("install . -o foobar:shared={} -s build_type={} -pr:h={} -pr:b=default"
+                        .format(shared, build_type, profile))
+        self.client.run_command('cmake . -G "Ninja" -DCMAKE_TOOLCHAIN_FILE={}'
+                                .format(CMakeToolchainBase.filename))
+        self.client.run_command("cmake --build . --config {}".format(build_type))
 
     @unittest.skipIf(platform.system() != "Linux", "Only linux")
     def test_locally_build_linux(self):
-        """ Ninja build must proceed using default profile and cmake build
+        """ Ninja build must proceed using default profile and cmake build (Linux)
         """
         self.client.save({"linux_host": textwrap.dedent("""
                       [settings]
@@ -129,7 +128,9 @@ class CMakeNinjaTestCase(unittest.TestCase):
                       compiler=gcc
                       compiler.version=10
                       compiler.libcxx=libstdc++11
-                      build_type=Release""")})
+                      build_type=Release
+                      [env]
+                      CONAN_CMAKE_GENERATOR=Ninja""")})
         self._build_locally("linux_host")
         self.client.run_command("objdump -f libfoobar.a")
         self.assertIn("architecture: i386:x86-64", self.client.out)
@@ -140,6 +141,43 @@ class CMakeNinjaTestCase(unittest.TestCase):
         self.assertIn("DYNAMIC", self.client.out)
         self.client.run_command("file libfoobard.so")
         self.assertIn("with debug_info", self.client.out)
+
+    @unittest.skipIf(platform.system() != "Windows", "Only Windows")
+    def test_locally_build_Windows(self):
+        """ Ninja build must proceed using default profile and cmake build (Windows)
+        """
+        win_host = textwrap.dedent("""[settings]
+                                 os=Windows
+                                 arch=x86_64
+                                 compiler=Visual Studio
+                                 compiler.version=16
+                                 compiler.runtime=MD
+                                 build_type=Release
+                                 [env]
+                                 CONAN_CMAKE_GENERATOR=Ninja""")
+        self.client.save({"win_host": win_host})
+        self._build_locally("win_host")
+        self.client.run_command("DUMPBIN /NOLOGO /DIRECTIVES foobar.lib")
+        self.assertIn("RuntimeLibrary=MD_Dynamic", self.client.out)
+        self.client.run_command("DUMPBIN /NOLOGO /HEADERS foobar.lib")
+        self.assertIn("machine (x64)", self.client.out)
+
+        win_host.replace("MD", "MDd")
+        self.client.save({"win_host": win_host})
+        self._build_locally("win_host", "Debug", False)
+        self.client.run_command("DUMPBIN /NOLOGO /DIRECTIVES foobard.lib")
+        self.assertIn("RuntimeLibrary=MDd_DynamicDebug", self.client.out)
+        self.client.run_command("DUMPBIN /NOLOGO /HEADERS foobard.lib")
+        self.assertIn("machine (x64)", self.client.out)
+
+        win_host.replace("MD", "MDd")
+        self.client.save({"win_host": win_host})
+        self._build_locally("win_host", "Debug", True)
+        self.client.run_command("DUMPBIN /NOLOGO /HEADERS foobard.dll")
+        self.assertIn("machine (x64)", self.client.out)
+        # TODO - How to detect Runtime library from a DLL (command line)?
+        # self.client.run_command("DUMPBIN /NOLOGO /DIRECTIVES foobard.dll")
+        # self.assertIn("RuntimeLibrary=MDd_DynamicDebug", self.client.out)
 
     def test_devflow_build(self):
         """ Ninja build must proceed using default profile and conan development flow
