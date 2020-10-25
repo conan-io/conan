@@ -234,8 +234,8 @@ class UploadTest(unittest.TestCase):
             self.assertIn("ERROR: Hello0/1.2.1@user/testing: Upload recipe to 'default' failed: "
                           "Error gzopen conan_sources.tgz", client.out)
 
-            export_folder = client.cache.package_layout(ref).export()
-            tgz = os.path.join(export_folder, EXPORT_SOURCES_TGZ_NAME)
+            export_download_folder = client.cache.package_layout(ref).download_export()
+            tgz = os.path.join(export_download_folder, EXPORT_SOURCES_TGZ_NAME)
             self.assertTrue(os.path.exists(tgz))
             self.assertTrue(is_dirty(tgz))
 

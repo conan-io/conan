@@ -150,6 +150,16 @@ class PackageCacheLayout(object):
         if is_dirty(pkg_folder):
             clean_dirty(pkg_folder)
 
+    def export_remove(self):
+        export_folder = self.export()
+        rmdir(export_folder)
+        export_src_folder = self.export_sources()
+        rmdir(export_src_folder)
+        download_export = self.download_export()
+        rmdir(download_export)
+        scm_folder = self.scm_sources()
+        rmdir(scm_folder)
+
     def package_metadata(self):
         return os.path.join(self._base_folder, PACKAGE_METADATA)
 
