@@ -117,6 +117,9 @@ class PackageCacheLayout(object):
         yield
         clean_dirty(pkg_folder)
 
+    def download_folder(self):
+        return os.path.join(self._base_folder, "dl")
+
     def download_package(self, pref):
         return os.path.join(self._base_folder, "dl", "pkg", pref.id)
 
