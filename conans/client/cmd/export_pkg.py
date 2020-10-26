@@ -7,7 +7,6 @@ from conans.client.graph.graph_manager import load_deps_info
 from conans.client.installer import add_env_conaninfo
 from conans.errors import ConanException
 from conans.model.ref import PackageReference
-from conans.util.files import rmdir, set_dirty_context_manager
 
 
 def export_pkg(app, recorder, full_ref, source_folder, build_folder, package_folder, install_folder,
@@ -45,19 +44,17 @@ def export_pkg(app, recorder, full_ref, source_folder, build_folder, package_fol
     output.info("Packaging to %s" % package_id)
     pref = PackageReference(ref, package_id)
     layout = cache.package_layout(ref, short_paths=conanfile.short_paths)
+
+    if layout.package_id_exists(package_id) and not force:
+        raise ConanException("Package already exists. Please use --force, -f to overwrite it")
+
+    layout.package_remove(pref)
+
     dest_package_folder = layout.package(pref)
-
-    if os.path.exists(dest_package_folder):
-        if force:
-            rmdir(dest_package_folder)
-        else:
-            raise ConanException("Package already exists. Please use --force, -f to "
-                                 "overwrite it")
-
     recipe_hash = layout.recipe_manifest().summary_hash
     conanfile.info.recipe_hash = recipe_hash
     conanfile.develop = True
-    with set_dirty_context_manager(dest_package_folder):
+    with layout.set_dirty_context_manager(pref):
         if package_folder:
             prev = packager.export_pkg(conanfile, package_id, package_folder, dest_package_folder,
                                        hook_manager, conan_file_path, ref)

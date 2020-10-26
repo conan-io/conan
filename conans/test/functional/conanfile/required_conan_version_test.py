@@ -9,7 +9,7 @@ from conans.test.utils.tools import TestClient
 
 class RequiredConanVersionTest(unittest.TestCase):
 
-    def required_conan_version_test(self):
+    def test_required_conan_version(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
             from conans import ConanFile

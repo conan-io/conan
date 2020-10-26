@@ -6,7 +6,7 @@ from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServ
 
 class PackageIdTest(unittest.TestCase):
 
-    def double_package_id_call_test(self):
+    def test_double_package_id_call(self):
         # https://github.com/conan-io/conan/issues/3085
         conanfile = """from conans import ConanFile
 
@@ -22,7 +22,7 @@ class TestConan(ConanFile):
         out = str(client.out)
         self.assertEqual(1, out.count("Pkg/0.1@user/testing: Calling package_id()"))
 
-    def remove_option_setting_test(self):
+    def test_remove_option_setting(self):
         # https://github.com/conan-io/conan/issues/2826
         conanfile = """from conans import ConanFile
 
@@ -49,7 +49,7 @@ class TestConan(ConanFile):
                       "'%s' created" % NO_SETTINGS_PACKAGE_ID,
                       client.out)
 
-    def value_parse_test(self):
+    def test_value_parse(self):
         # https://github.com/conan-io/conan/issues/2816
         conanfile = """
 from conans import ConanFile
@@ -80,7 +80,7 @@ class TestConan(ConanFile):
         client.run("search test/0.1@danimtb/testing")
         self.assertIn("compiler.version: kk=kk", client.out)
 
-    def option_in_test(self):
+    def test_option_in(self):
         # https://github.com/conan-io/conan/issues/7299
         conanfile = textwrap.dedent("""
             from conans import ConanFile
@@ -117,7 +117,7 @@ class TestConan(ConanFile):
         self.assertIn("ERROR: OPTIONS: option 'whatever' doesn't exist", client.out)
         self.assertIn("ERROR: INFO: option 'whatever' doesn't exist", client.out)
 
-    def build_type_remove_windows_test(self):
+    def test_build_type_remove_windows(self):
         # https://github.com/conan-io/conan/issues/7603
         client = TestClient()
         conanfile = textwrap.dedent("""

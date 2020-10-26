@@ -50,7 +50,7 @@ class InstallCascadeTest(unittest.TestCase):
                 self.assertNotIn("{}: Copying sources to build folder".format(ref),
                                  self.client.out)
 
-    def install_cascade_only_affected_test(self):
+    def test_install_cascade_only_affected(self):
         project = ConanFileReference.loads("project/1.0@conan/stable")
         project_cf = GenConanfile().with_requirement(self.ref_e).with_requirement(self.ref_f)
 

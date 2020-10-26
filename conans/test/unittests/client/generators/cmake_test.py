@@ -39,6 +39,10 @@ class _MockSettings(object):
     def get_safe(self, name):
         if name == "build_type":
             return self.build_type
+        if name == "os":
+            return self.os
+        if name == "os_build":
+            return self.os_build
         return None
 
     def items(self):
@@ -52,7 +56,7 @@ class CMakeGeneratorTest(unittest.TestCase):
         pattern = r".*(macro\(%s\).*?endmacro\(\)).*" % name
         return re.sub(pattern, r"\1", text, flags=re.DOTALL)
 
-    def variables_setup_test(self):
+    def test_variables_setup(self):
         conanfile = ConanFile(TestBufferConanOutput(), None)
         conanfile.initialize(Settings({}), EnvValues())
         ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
@@ -78,7 +82,7 @@ class CMakeGeneratorTest(unittest.TestCase):
         self.assertIn('set(CONAN_USER_LIB1_myvar2 "myvalue2")', cmake_lines)
         self.assertIn('set(CONAN_USER_LIB2_MYVAR2 "myvalue4")', cmake_lines)
 
-    def paths_cmake_multi_user_vars_test(self):
+    def test_paths_cmake_multi_user_vars(self):
         settings_mock = _MockSettings(build_type="Release")
         conanfile = ConanFile(TestBufferConanOutput(), None)
         conanfile.initialize(settings_mock, EnvValues())
@@ -97,7 +101,7 @@ class CMakeGeneratorTest(unittest.TestCase):
         self.assertIn('set(CONAN_INCLUDE_DIRS_MYPKG_RELEASE "root_folder/include")', cmake_lines)
         self.assertIn('set(CONAN_LIB_DIRS_MYPKG_RELEASE "root_folder/lib")', cmake_lines)
 
-    def paths_cmake_test(self):
+    def test_paths_cmake(self):
         settings_mock = _MockSettings()
         conanfile = ConanFile(TestBufferConanOutput(), None)
         conanfile.initialize(settings_mock, EnvValues())
@@ -116,7 +120,7 @@ class CMakeGeneratorTest(unittest.TestCase):
         self.assertIn('set(CONAN_INCLUDE_DIRS_MYPKG_RELEASE "root_folder/include")', cmake_lines)
         self.assertIn('set(CONAN_LIB_DIRS_MYPKG_RELEASE "root_folder/lib")', cmake_lines)
 
-    def variables_cmake_multi_user_vars_test(self):
+    def test_variables_cmake_multi_user_vars(self):
         settings_mock = _MockSettings(build_type="Release")
         conanfile = ConanFile(TestBufferConanOutput(), None)
         conanfile.initialize(settings_mock, EnvValues())
@@ -130,7 +134,7 @@ class CMakeGeneratorTest(unittest.TestCase):
         self.assertIn('set(CONAN_USER_LIB1_myvar2 "myvalue2")', cmake_lines)
         self.assertIn('set(CONAN_USER_LIB2_MYVAR2 "myvalue4")', cmake_lines)
 
-    def variables_cmake_multi_user_vars_escape_test(self):
+    def test_variables_cmake_multi_user_vars_escape(self):
         settings_mock = _MockSettings(build_type="Release")
         conanfile = ConanFile(TestBufferConanOutput(), None)
         conanfile.initialize(settings_mock, EnvValues())
@@ -144,7 +148,7 @@ class CMakeGeneratorTest(unittest.TestCase):
         self.assertIn(r'set(CONAN_USER_FOO_myvar2 "my\${value}")', cmake_lines)
         self.assertIn(r'set(CONAN_USER_FOO_myvar3 "my\\value")', cmake_lines)
 
-    def multi_flag_test(self):
+    def test_multi_flag(self):
         conanfile = ConanFile(TestBufferConanOutput(), None)
         conanfile.initialize(Settings({}), EnvValues())
         ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
@@ -166,7 +170,7 @@ class CMakeGeneratorTest(unittest.TestCase):
         self.assertIn('set(CONAN_CXX_FLAGS "-DGTEST_USE_OWN_TR1_TUPLE=1'
                       ' -DGTEST_LINKED_AS_SHARED_LIBRARY=1 ${CONAN_CXX_FLAGS}")', cmake_lines)
 
-    def escaped_flags_test(self):
+    def test_escaped_flags(self):
         conanfile = ConanFile(TestBufferConanOutput(), None)
         conanfile.initialize(Settings({}), EnvValues())
         ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
@@ -184,7 +188,7 @@ class CMakeGeneratorTest(unittest.TestCase):
         self.assertIn(r'set(CONAN_DEFINES_MYPKG "-DMY_DEF=My string"', cmake_lines)
         self.assertIn('\t\t\t"-DMY_DEF2=My other string")', cmake_lines)
 
-    def aux_cmake_test_setup_test(self):
+    def test_aux_cmake_test_setup(self):
         conanfile = ConanFile(TestBufferConanOutput(), None)
         conanfile.initialize(Settings({}), EnvValues())
         generator = CMakeGenerator(conanfile)
@@ -267,7 +271,7 @@ endmacro()""", macro)
     endif()
 endmacro()""", macro)
 
-    def name_and_version_are_generated_test(self):
+    def test_name_and_version_are_generated(self):
         conanfile = ConanFile(TestBufferConanOutput(), None)
         conanfile.initialize(Settings({}), EnvValues())
         conanfile.name = "MyPkg"
@@ -299,7 +303,7 @@ endmacro()""", macro)
         self.assertIn('set(CONAN_SETTINGS_COMPILER_RUNTIME "MD")', cmake_lines)
         self.assertIn('set(CONAN_SETTINGS_OS "Windows")', cmake_lines)
 
-    def cmake_find_package_multi_definitions_test(self):
+    def test_cmake_find_package_multi_definitions(self):
         # CMAKE_PREFIX_PATH and CMAKE_MODULE_PATH must be in cmake_find_package_multi definitions
 
         settings_mock = _MockSettings(build_type="Release")
@@ -309,11 +313,26 @@ endmacro()""", macro)
         setattr(conanfile, "install_folder", install_folder)
         conanfile.generators = ["cmake_find_package_multi"]
         definitions_builder = CMakeDefinitionsBuilder(conanfile)
-        definitions = definitions_builder.get_definitions()
+        definitions = definitions_builder.get_definitions("3.13")
         self.assertEqual(install_folder, definitions["CMAKE_PREFIX_PATH"])
         self.assertEqual(install_folder, definitions["CMAKE_MODULE_PATH"])
 
-    def apple_frameworks_test(self):
+    def test_cmake_definitions_apple(self):
+        #https://github.com/conan-io/conan/issues/7875
+        settings_mock = _MockSettings(build_type="Release")
+        settings_mock.os = "iOS"
+        settings_mock.os_build = "Macos"
+        conanfile = ConanFile(TestBufferConanOutput(), None)
+        install_folder = "/c/foo/testing"
+        setattr(conanfile, "install_folder", install_folder)
+        conanfile.initialize(settings_mock, EnvValues())
+        definitions_builder = CMakeDefinitionsBuilder(conanfile)
+        definitions = definitions_builder.get_definitions("3.13")
+        self.assertEqual("Darwin", definitions["CMAKE_SYSTEM_NAME"])
+        definitions = definitions_builder.get_definitions("3.14")
+        self.assertEqual("iOS", definitions["CMAKE_SYSTEM_NAME"])
+
+    def test_apple_frameworks(self):
         settings = Settings.loads(get_default_settings_yml())
         settings.os = "Macos"
         settings.compiler = "apple-clang"
@@ -370,7 +389,7 @@ class CMakeCppInfoNameTest(unittest.TestCase):
         cpp_info.public_deps = ["my_pkg"]
         self.conanfile.deps_cpp_info.add(ref.name, cpp_info)
 
-    def cmake_test(self):
+    def test_cmake(self):
         generator = CMakeGenerator(self.conanfile)
         content = generator.content
         self.assertIn("set(CONAN_DEPENDENCIES my_pkg my_pkg2)", content)
@@ -382,7 +401,7 @@ class CMakeCppInfoNameTest(unittest.TestCase):
         self.assertNotIn('CONAN_PKG::my_pkg', content)
         self.assertNotIn('CONAN_PKG::my_pkg2', content)
 
-    def cmake_multi_test(self):
+    def test_cmake_multi(self):
         generator = CMakeMultiGenerator(self.conanfile)
         content = generator.content
         self.assertIn("set(CONAN_DEPENDENCIES_DEBUG my_pkg my_pkg2)",
@@ -396,7 +415,7 @@ class CMakeCppInfoNameTest(unittest.TestCase):
         self.assertNotIn('CONAN_PKG::my_pkg', content["conanbuildinfo_multi.cmake"])
         self.assertNotIn('CONAN_PKG::my_pkg2', content["conanbuildinfo_multi.cmake"])
 
-    def cmake_find_package_test(self):
+    def test_cmake_find_package(self):
         generator = CMakeFindPackageGenerator(self.conanfile)
         content = generator.content
         self.assertIn("FindMyPkG.cmake", content.keys())
@@ -409,7 +428,7 @@ class CMakeCppInfoNameTest(unittest.TestCase):
         self.assertIn("add_library(MyPkG2::MyPkG2 INTERFACE IMPORTED)", content["FindMyPkG2.cmake"])
         self.assertIn("find_dependency(MyPkG REQUIRED)", content["FindMyPkG2.cmake"])
 
-    def cmake_find_package_multi_test(self):
+    def test_cmake_find_package_multi(self):
         generator = CMakeFindPackageMultiGenerator(self.conanfile)
         content = generator.content
         six.assertCountEqual(self, ['MyPkG2Targets.cmake', 'MyPkGConfig.cmake', 'MyPkG2Config.cmake',
@@ -455,7 +474,7 @@ class CMakeCppInfoNamesTest(unittest.TestCase):
         cpp_info.public_deps = ["my_pkg"]
         self.conanfile.deps_cpp_info.add(ref.name, cpp_info)
 
-    def cmake_test(self):
+    def test_cmake(self):
         generator = CMakeGenerator(self.conanfile)
         content = generator.content
         self.assertNotIn("MyPkG", content)
@@ -463,7 +482,7 @@ class CMakeCppInfoNamesTest(unittest.TestCase):
         self.assertIn('add_library(CONAN_PKG::MyCMakeName INTERFACE IMPORTED)', content)
         self.assertIn('add_library(CONAN_PKG::MyCMakeName2 INTERFACE IMPORTED)', content)
 
-    def cmake_multi_test(self):
+    def test_cmake_multi(self):
         generator = CMakeMultiGenerator(self.conanfile)
         content = generator.content
         self.assertNotIn("MyPkG", content["conanbuildinfo_multi.cmake"])
@@ -473,7 +492,7 @@ class CMakeCppInfoNamesTest(unittest.TestCase):
         self.assertIn('add_library(CONAN_PKG::MyCMakeMultiName2 INTERFACE IMPORTED)',
                       content["conanbuildinfo_multi.cmake"])
 
-    def cmake_find_package_test(self):
+    def test_cmake_find_package(self):
         generator = CMakeFindPackageGenerator(self.conanfile)
         content = generator.content
         self.assertIn("FindMyCMakeFindPackageName.cmake", content.keys())
@@ -487,7 +506,7 @@ class CMakeCppInfoNamesTest(unittest.TestCase):
         self.assertIn("find_dependency(MyCMakeFindPackageName REQUIRED)",
                       content["FindMyCMakeFindPackageName2.cmake"])
 
-    def cmake_find_package_multi_test(self):
+    def test_cmake_find_package_multi(self):
         generator = CMakeFindPackageMultiGenerator(self.conanfile)
         content = generator.content
         six.assertCountEqual(self, ['MyCMakeFindPackageMultiName2Targets.cmake',
@@ -531,7 +550,7 @@ class CMakeBuildModulesTest(unittest.TestCase):
         cpp_info.release.build_modules = ["release-mod.cmake"]
         self.conanfile.deps_cpp_info.add(ref.name, cpp_info)
 
-    def cmake_test(self):
+    def test_cmake(self):
         generator = CMakeGenerator(self.conanfile)
         content = generator.content
         self.assertNotIn("not-a-cmake-module.pc", content)
@@ -545,7 +564,7 @@ class CMakeBuildModulesTest(unittest.TestCase):
         self.assertIn("macro(conan_include_build_modules)", content)
         self.assertIn("conan_include_build_modules()", content)
 
-    def cmake_multi_test(self):
+    def test_cmake_multi(self):
         generator = CMakeMultiGenerator(self.conanfile)
         content = generator.content
         self.assertNotIn("not-a-cmake-module.pc", content["conanbuildinfo_release.cmake"])
@@ -565,7 +584,7 @@ class CMakeBuildModulesTest(unittest.TestCase):
         self.assertIn("macro(conan_include_build_modules)", content["conanbuildinfo_multi.cmake"])
         self.assertIn("conan_include_build_modules()", content["conanbuildinfo_multi.cmake"])
 
-    def cmake_find_package_test(self):
+    def test_cmake_find_package(self):
         generator = CMakeFindPackageGenerator(self.conanfile)
         content = generator.content
         self.assertIn("Findmy_pkg.cmake", content.keys())
@@ -585,7 +604,7 @@ class CMakeBuildModulesTest(unittest.TestCase):
                       '\n\t\t\t"dummy_root_folder2/release-mod.cmake")',
                       content["Findmy_pkg2.cmake"])
 
-    def cmake_find_package_multi_test(self):
+    def test_cmake_find_package_multi(self):
         generator = CMakeFindPackageMultiGenerator(self.conanfile)
         content = generator.content
         self.assertNotIn("not-a-cmake-module.pc", content["my_pkg2Target-release.cmake"])

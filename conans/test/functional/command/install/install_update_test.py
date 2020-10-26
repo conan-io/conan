@@ -19,7 +19,7 @@ class InstallUpdateTest(unittest.TestCase):
         self.servers = {"myremote": test_server}
         self.client = TestClient(servers=self.servers, users={"myremote": [("lasote", "mypass")]})
 
-    def update_binaries_test(self):
+    def test_update_binaries(self):
         conanfile = """from conans import ConanFile
 from conans.tools import save
 import os, random
@@ -64,7 +64,7 @@ class Pkg(ConanFile):
         new_value = load(os.path.join(client2.current_folder, "file.txt"))
         self.assertEqual(value2, new_value)
 
-    def upload_doesnt_follow_pref_test(self):
+    def test_upload_doesnt_follow_pref(self):
         conanfile = """from conans import ConanFile
 class Pkg(ConanFile):
     pass
@@ -89,7 +89,7 @@ class Pkg(ConanFile):
         self.assertIn("Uploading package 1/1: %s to 'r1'" % NO_SETTINGS_PACKAGE_ID,
                       client.out)
 
-    def install_update_following_pref_test(self):
+    def test_install_update_following_pref(self):
         conanfile = """
 import os, random
 from conans import ConanFile, tools
@@ -126,7 +126,7 @@ class Pkg(ConanFile):
         self.assertIn("Retrieving package "
                       "%s from remote 'r2'" % NO_SETTINGS_PACKAGE_ID, client.out)
 
-    def update_binaries_failed_test(self):
+    def test_update_binaries_failed(self):
         conanfile = """from conans import ConanFile
 class Pkg(ConanFile):
     pass
@@ -138,7 +138,7 @@ class Pkg(ConanFile):
         self.assertIn("Pkg/0.1@lasote/testing: WARN: Can't update, no remote defined",
                       client.out)
 
-    def update_binaries_no_package_error_test(self):
+    def test_update_binaries_no_package_error(self):
         conanfile = """from conans import ConanFile
 class Pkg(ConanFile):
     pass
@@ -153,7 +153,7 @@ class Pkg(ConanFile):
         self.assertIn("Pkg/0.1@lasote/testing: WARN: Can't update, no package in remote",
                       client.out)
 
-    def update_not_date_test(self):
+    def test_update_not_date(self):
         # Regression for https://github.com/conan-io/conan/issues/949
         files0 = cpp_hello_conan_files("Hello0", "1.0", build=False)
         files0["conanfile.py"] = files0["conanfile.py"].replace("settings = ", "# settings = ")
@@ -227,7 +227,7 @@ class Pkg(ConanFile):
         update_timestamps = timestamps()
         self.assertEqual(update_timestamps, initial_timestamps)
 
-    def reuse_test(self):
+    def test_reuse(self):
         files = cpp_hello_conan_files("Hello0", "1.0", build=False)
 
         self.client.save(files)
@@ -249,13 +249,13 @@ class Pkg(ConanFile):
 
         client2.run("install Hello0/1.0@lasote/stable --update")
         ref = ConanFileReference.loads("Hello0/1.0@lasote/stable")
-        package_ids = client2.cache.package_layout(ref).conan_packages()
+        package_ids = client2.cache.package_layout(ref).package_ids()
         pref = PackageReference(ref, package_ids[0])
         package_path = client2.cache.package_layout(ref).package(pref)
         header = load(os.path.join(package_path, "include/helloHello0.h"))
         self.assertEqual(header, "//EMPTY!")
 
-    def remove_old_sources_test(self):
+    def test_remove_old_sources(self):
         # https://github.com/conan-io/conan/issues/1841
         test_server = TestServer()
 
@@ -295,7 +295,7 @@ class ConanLib(ConanFile):
         header = os.path.join(client.cache.package_layout(pref.ref).package(pref), "header.h")
         self.assertEqual(load(header), "mycontent2")
 
-    def fail_usefully_when_failing_retrieving_package_test(self):
+    def test_fail_usefully_when_failing_retrieving_package(self):
         ref = ConanFileReference.loads("lib/1.0@conan/stable")
         ref2 = ConanFileReference.loads("lib2/1.0@conan/stable")
         client = TurboTestClient(servers={"default": TestServer()})

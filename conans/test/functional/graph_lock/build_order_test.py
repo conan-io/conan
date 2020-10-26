@@ -9,7 +9,7 @@ from conans.util.env_reader import get_env
 
 class BuildOrderTest(unittest.TestCase):
 
-    def single_consumer_test(self):
+    def test_single_consumer(self):
         # https://github.com/conan-io/conan/issues/5727
         client = TestClient()
         client.save({"conanfile.py": GenConanfile("test4", "0.1")})
@@ -27,7 +27,7 @@ class BuildOrderTest(unittest.TestCase):
                       "cannot be used. Create a full lockfile", client.out)
 
     @parameterized.expand([(True,), (False,)])
-    def build_not_locked_test(self, export):
+    def test_build_not_locked(self, export):
         # https://github.com/conan-io/conan/issues/5727
         client = TestClient()
         client.save({"conanfile.py": GenConanfile("test4", "0.1")})
@@ -67,7 +67,7 @@ class BuildOrderTest(unittest.TestCase):
         jsonbo = json.loads(client.load("bo.json"))
         self.assertEqual([], jsonbo)
 
-    def build_locked_error_test(self):
+    def test_build_locked_error(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile("test4", "0.1")})
         client.run("create .")
@@ -92,7 +92,7 @@ class BuildOrderTest(unittest.TestCase):
                       "already locked in the input lockfile", client.out)
 
     @parameterized.expand([(True,), (False,)])
-    def transitive_build_not_locked_test(self, export):
+    def test_transitive_build_not_locked(self, export):
         # https://github.com/conan-io/conan/issues/5727
         client = TestClient()
         client.save({"dep/conanfile.py": GenConanfile(),
@@ -207,7 +207,7 @@ class BuildOrderTest(unittest.TestCase):
         self.assertEqual([], jsonbo)
 
     @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
-    def package_revision_mode_build_order_test(self):
+    def test_package_revision_mode_build_order(self):
         # https://github.com/conan-io/conan/issues/6232
         client = TestClient()
         client.run("config set general.default_package_id_mode=package_revision_mode")
@@ -252,7 +252,7 @@ class BuildOrderTest(unittest.TestCase):
 class BuildRequiresBuildOrderTest(unittest.TestCase):
 
     @parameterized.expand([(True,), (False,)])
-    def transitive_build_not_locked_test(self, export):
+    def test_transitive_build_not_locked(self, export):
         # https://github.com/conan-io/conan/issues/5727
         client = TestClient()
         client.save({"dep/conanfile.py": GenConanfile(),

@@ -308,7 +308,7 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
             if run_example2:
                 client.run_command(".%sexample2" % os.sep)
 
-    def basic_test(self):
+    def test_basic(self):
         client = TestClient()
         self._create_greetings(client, test=True)
         self._install_build_run_test_package(client, "Release")
@@ -339,7 +339,7 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
                 self.assertIn("Hello World release!", client.out)
                 self.assertIn("Bye World release!", client.out)
 
-    def find_package_general_test(self):
+    def test_find_package_general(self):
         client = TestClient()
         self._create_greetings(client, custom_names=True)
 
@@ -414,7 +414,7 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
         self.assertIn("Hello World debug!", client.out)
         self.assertIn("Bye World debug!", client.out)
 
-    def find_package_components_test(self):
+    def test_find_package_components(self):
         client = TestClient()
         self._create_greetings(client)
         conanfile2 = textwrap.dedent("""
@@ -470,7 +470,7 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
         self.assertIn("Hello World debug!", client.out)
         self.assertIn("Bye World debug!", client.out)
 
-    def recipe_with_components_requiring_recipe_without_components_test(self):
+    def test_recipe_with_components_requiring_recipe_without_components(self):
         client = TestClient()
         self._create_greetings(client, components=False)
 
@@ -528,7 +528,7 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
         self.assertIn("Hello World debug!", client.out)
         self.assertIn("Bye World debug!", client.out)
 
-    def component_not_found_test(self):
+    def test_component_not_found(self):
         conanfile = textwrap.dedent("""
             from conans import ConanFile
 
@@ -556,7 +556,7 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
         self.assertIn("ERROR: Component 'greetings::non-existent' not found in 'greetings' "
                       "package requirement", client.out)
 
-    def component_not_found_cmake_test(self):
+    def test_component_not_found_cmake(self):
         conanfile = textwrap.dedent("""
             from conans import ConanFile
 
@@ -593,7 +593,7 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
         self.assertIn("Conan: Component 'hello' found in package 'greetings'", client.out)
         self.assertIn("Conan: Component 'non-existent' NOT found in package 'greetings'", client.out)
 
-    def same_names_test(self):
+    def test_same_names(self):
         client = TestClient()
         conanfile_greetings = textwrap.dedent("""
             from conans import ConanFile, CMake
@@ -691,7 +691,7 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
         client.run("create .")
         self.assertIn("Hello Moon!", client.out)
 
-    def component_not_found_same_name_as_pkg_require_test(self):
+    def test_component_not_found_same_name_as_pkg_require(self):
         zlib = GenConanfile("zlib", "0.1").with_setting("build_type")\
             .with_generator("cmake_find_package_multi")
         mypkg = GenConanfile("mypkg", "0.1").with_setting("build_type")\
@@ -714,7 +714,7 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
         client.run("install consumer.py", assert_error=True)
         self.assertIn("Component 'mypkg::zlib' not found in 'mypkg' package requirement", client.out)
 
-    def filenames_test(self):
+    def test_filenames(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
             import os

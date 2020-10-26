@@ -13,7 +13,7 @@ from conans.util.files import load
 
 class VSXCodeGeneratorsTest(unittest.TestCase):
 
-    def generators_test(self):
+    def test_generators(self):
         ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
         client = TestClient()
         client.save({"conanfile.py": """from conans import ConanFile

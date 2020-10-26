@@ -94,7 +94,7 @@ target_link_libraries(hello{name} {dep})
 
 class WorkspaceTest(unittest.TestCase):
 
-    def parse_test(self):
+    def test_parse(self):
         folder = temp_folder()
         path = os.path.join(folder, "conanws.yml")
         project = "root: Hellob/0.1@lasote/stable"
@@ -154,7 +154,7 @@ class WorkspaceTest(unittest.TestCase):
                                    "does not define path"):
             Workspace(path, None)
 
-    def simple_test(self):
+    def test_simple(self):
         client = TestClient()
 
         def files(name, depend=None):
@@ -191,7 +191,7 @@ class WorkspaceTest(unittest.TestCase):
                 self.assertTrue(os.path.exists(os.path.join(client.current_folder, sub, f)))
 
     @parameterized.expand([("csv",), ("list",), (("abbreviated_list"))])
-    def multiple_roots_test(self, root_attribute_format):
+    def test_multiple_roots(self, root_attribute_format):
         # https://github.com/conan-io/conan/issues/4720
         client = TestClient()
 
@@ -242,7 +242,7 @@ class WorkspaceTest(unittest.TestCase):
         b_cmake = client.load(os.path.join("B", "conanbuildinfo.cmake"))
         self.assertIn("set(CONAN_LIBS helloD ${CONAN_LIBS})", b_cmake)
 
-    def transitivity_test(self):
+    def test_transitivity(self):
         # https://github.com/conan-io/conan/issues/4720
         client = TestClient()
 
@@ -289,7 +289,7 @@ class WorkspaceTest(unittest.TestCase):
         b_cmake = client.load(os.path.join("B", "conanbuildinfo.cmake"))
         self.assertIn("set(CONAN_LIBS helloC helloD ${CONAN_LIBS})", b_cmake)
 
-    def missing_layout_cmake_test(self):
+    def test_missing_layout_cmake(self):
         # Specifying cmake generator without layout file raised exception
         # https://github.com/conan-io/conan/issues/4752
         client = TestClient()
@@ -319,7 +319,7 @@ class WorkspaceTest(unittest.TestCase):
         self.assertIn("HelloD/0.1@lasote/stable from user folder - Editable", client.out)
         self.assertIn("HelloD/0.1@lasote/stable from user folder - Editable", client.out)
 
-    def simple_build_test(self):
+    def test_simple_build(self):
         client = TestClient()
 
         def files(name, depend=None):
@@ -391,7 +391,7 @@ class WorkspaceTest(unittest.TestCase):
         self.assertIn("Hello World B Debug!", client.out)
         self.assertIn("Hello World A Debug!", client.out)
 
-    def simple_out_of_source_build_test(self):
+    def test_simple_out_of_source_build(self):
         client = TestClient()
 
         def files(name, depend=None):
@@ -464,7 +464,7 @@ class WorkspaceTest(unittest.TestCase):
         self.assertIn("Hello World B Debug!", client.out)
         self.assertIn("Hello World A Debug!", client.out)
 
-    def complete_single_conf_build_test(self):
+    def test_complete_single_conf_build(self):
         client = TestClient()
 
         def files(name, depend=None):
@@ -583,7 +583,7 @@ class WorkspaceTest(unittest.TestCase):
         self.assertNotIn("Release", client.out)
 
     @unittest.skipUnless(platform.system() == "Windows", "only windows")
-    def complete_multi_conf_build_test(self):
+    def test_complete_multi_conf_build(self):
         client = TestClient()
 
         def files(name, depend=None):
@@ -697,7 +697,7 @@ class WorkspaceTest(unittest.TestCase):
 
         self.assertNotIn("Release", client.out)
 
-    def build_requires_test(self):
+    def test_build_requires(self):
         # https://github.com/conan-io/conan/issues/3075
         client = TestClient()
         tool = """from conans import ConanFile
@@ -753,7 +753,7 @@ class Pkg(ConanFile):
             conanbuildinfo = client.load(os.path.join(sub, "build", "conanbuildinfo.cmake"))
             self.assertIn("set(CONAN_LIBS_TOOL MyToolLib)", conanbuildinfo)
 
-    def use_build_requires_editable_test(self):
+    def test_use_build_requires_editable(self):
         client = TestClient()
         toolconanfile = """from conans import ConanFile
 class Tool(ConanFile):
@@ -800,7 +800,7 @@ class Pkg(ConanFile):
         conanbuildinfo = client.load(os.path.join("A", "build", "conanbuildinfo.cmake"))
         self.assertIn("set(CONAN_LIBS_TOOL MyToolLib)", conanbuildinfo)
 
-    def per_package_layout_test(self):
+    def test_per_package_layout(self):
         client = TestClient()
 
         def files(name, depend=None):
@@ -844,7 +844,7 @@ class Pkg(ConanFile):
         self.assertIn("myincludeC", cmake)
         self.assertIn("myincludeB", cmake)
 
-    def generators_test(self):
+    def test_generators(self):
         client = TestClient()
 
         def files(name, depend=None):
@@ -892,7 +892,7 @@ class Pkg(ConanFile):
         self.assertTrue(os.path.exists(os.path.join(client.current_folder,
                                                     "conanworkspace.cmake")))
 
-    def gen_subdirectories_test(self):
+    def test_gen_subdirectories(self):
         client = TestClient()
 
         def files(name, depend=None):
@@ -1056,7 +1056,7 @@ class Pkg(ConanFile):
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "ws_install",
                                                     "conanworkspace.cmake")))
 
-    def missing_subarguments_test(self):
+    def test_missing_subarguments(self):
         client = TestClient()
         client.run("workspace", assert_error=True)
         self.assertIn("ERROR: Exiting with code: 2", client.out)

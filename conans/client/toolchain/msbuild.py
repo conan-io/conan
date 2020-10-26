@@ -46,7 +46,7 @@ class MSBuildToolchain(object):
         self._conanfile = conanfile
         self.preprocessor_definitions = {}
 
-    @ staticmethod
+    @staticmethod
     def _name_condition(settings):
         props = [("Configuration", settings.build_type),
                  # FIXME: This probably requires mapping ARM architectures

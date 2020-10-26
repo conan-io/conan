@@ -34,8 +34,7 @@ from conans.model.user_info import UserInfo
 from conans.paths import BUILD_INFO, CONANINFO, RUN_LOG_NAME
 from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
 from conans.util.env_reader import get_env
-from conans.util.files import (clean_dirty, is_dirty, make_read_only, mkdir, rmdir, save, set_dirty,
-                               set_dirty_context_manager)
+from conans.util.files import clean_dirty, is_dirty, make_read_only, mkdir, rmdir, save, set_dirty
 from conans.util.log import logger
 from conans.util.tracer import log_package_built, log_package_got_from_local_cache
 
@@ -200,7 +199,6 @@ class _PackageBuilder(object):
 
         # BUILD & PACKAGE
         with package_layout.conanfile_read_lock(self._output):
-            _remove_folder_raising(package_folder)
             mkdir(build_folder)
             with tools.chdir(build_folder):
                 self._output.info('Building your package in %s' % build_folder)
@@ -382,7 +380,9 @@ class BinaryInstaller(object):
         def _download(n):
             npref = n.pref
             layout = self._cache.package_layout(npref.ref, n.conanfile.short_paths)
-            with layout.package_lock(npref):
+            # We cannot embed the package_lock inside the remote.get_package()
+            # because the handle_node_cache has its own lock
+            with layout.package_lock(pref):
                 self._download_pkg(layout, npref, n)
 
         parallel = self._cache.config.parallel_download
@@ -397,15 +397,8 @@ class BinaryInstaller(object):
                 _download(node)
 
     def _download_pkg(self, layout, pref, node):
-        conanfile = node.conanfile
-        package_folder = layout.package(pref)
-        output = conanfile.output
-        with set_dirty_context_manager(package_folder):
-            self._remote_manager.get_package(pref, package_folder, node.binary_remote,
-                                             output, self._recorder)
-            output.info("Downloaded package revision %s" % pref.revision)
-            with layout.update_metadata() as metadata:
-                metadata.packages[pref.id].remote = node.binary_remote.name
+        self._remote_manager.get_package(pref, layout, node.binary_remote,
+                                         node.conanfile.output, self._recorder)
 
     def _build(self, nodes_by_level, keep_build, root_node, graph_info, remotes, build_mode, update):
         using_build_profile = bool(graph_info.profile_build)
@@ -488,14 +481,14 @@ class BinaryInstaller(object):
         output = conanfile.output
 
         layout = self._cache.package_layout(pref.ref, conanfile.short_paths)
-        package_folder = layout.package(pref)
 
         with layout.package_lock(pref):
             if pref not in processed_package_references:
                 processed_package_references.add(pref)
                 if node.binary == BINARY_BUILD:
                     assert node.prev is None, "PREV for %s to be built should be None" % str(pref)
-                    with set_dirty_context_manager(package_folder):
+                    layout.package_remove(pref)
+                    with layout.set_dirty_context_manager(pref):
                         pref = self._build_package(node, output, keep_build, remotes)
                     assert node.prev, "Node PREV shouldn't be empty"
                     assert node.pref.revision, "Node PREF revision shouldn't be empty"
@@ -509,6 +502,11 @@ class BinaryInstaller(object):
                     log_package_got_from_local_cache(pref)
                     self._recorder.package_fetched_from_cache(pref)
 
+            package_folder = layout.package(pref)
+            if not os.path.isdir(package_folder):
+                raise ConanException("Package '%s' corrupted. Package folder must exist: %s\n"
+                                     "Try removing the package with 'conan remove'"
+                                     % (str(pref), package_folder))
             # Call the info method
             self._call_package_info(conanfile, package_folder, ref=pref.ref)
             self._recorder.package_cpp_info(pref, conanfile.cpp_info)

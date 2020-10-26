@@ -37,7 +37,7 @@ Pkg/0.1@lasote/channel
 [imports]
 ., *.h -> .
 """
-        client.save({'conanfile.txt': conanfile}) 
+        client.save({'conanfile.txt': conanfile})
         with client.chdir('import'):
             client.run('install ..')
 
@@ -48,42 +48,42 @@ Pkg/0.1@lasote/channel
     def _is_file_writable(self, client, folder):
         return bool(os.stat(os.path.join(client.current_folder, folder, self.file_name)).st_mode & stat.S_IWRITE)
 
-    def import_rw_file_rw_cache_test(self):
+    def test_import_rw_file_rw_cache(self):
         client = self._client(ro_file=False, ro_cache=False)
         self._import(client)
         self.assertTrue(self._is_file_writable(client, 'import'))
 
-    def import_ro_file_rw_cache_test(self):
+    def test_import_ro_file_rw_cache(self):
         client = self._client(ro_file=True, ro_cache=False)
         self._import(client)
         self.assertFalse(self._is_file_writable(client, 'import'))
 
-    def import_rw_file_ro_cache_test(self):
+    def test_import_rw_file_ro_cache(self):
         client = self._client(ro_file=False, ro_cache=True)
         self._import(client)
         self.assertTrue(self._is_file_writable(client, 'import'))
 
-    def import_ro_file_ro_cache_test(self):
+    def test_import_ro_file_ro_cache(self):
         client = self._client(ro_file=True, ro_cache=True)
         self._import(client)
         self.assertTrue(self._is_file_writable(client, 'import'))
 
-    def deploy_rw_file_rw_cache_test(self):
+    def test_deploy_rw_file_rw_cache(self):
         client = self._client(ro_file=False, ro_cache=False)
         self._deploy(client)
         self.assertTrue(self._is_file_writable(client, 'deploy'))
 
-    def deploy_ro_file_rw_cache_test(self):
+    def test_deploy_ro_file_rw_cache(self):
         client = self._client(ro_file=True, ro_cache=False)
         self._deploy(client)
         self.assertFalse(self._is_file_writable(client, 'deploy'))
 
-    def deploy_rw_file_ro_cache_test(self):
+    def test_deploy_rw_file_ro_cache(self):
         client = self._client(ro_file=False, ro_cache=True)
         self._deploy(client)
         self.assertTrue(self._is_file_writable(client, 'deploy'))
 
-    def deploy_ro_file_ro_cache_test(self):
+    def test_deploy_ro_file_ro_cache(self):
         client = self._client(ro_file=True, ro_cache=True)
         self._deploy(client)
         self.assertTrue(self._is_file_writable(client, 'deploy'))

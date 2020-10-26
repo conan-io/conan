@@ -63,13 +63,14 @@ def intel_compilervars_command(conanfile, arch=None, compiler_version=None, forc
     :return:
     """
     if "PSTLROOT" in os.environ and not force:
-        return "echo Conan:compilervars already set"
+        return "echo Conan:intel_compilervars already set"
     settings = conanfile.settings
     compiler_version = compiler_version or settings.get_safe("compiler.version")
     arch = arch or settings.get_safe("arch")
     system = platform.system()
     cvars = "compilervars.bat" if system == "Windows" else "compilervars.sh"
-    command = os.path.join(intel_installation_path(version=compiler_version, arch=arch), "bin", cvars)
+    command = os.path.join(intel_installation_path(version=compiler_version, arch=arch), "bin",
+                           cvars)
     command = '"%s"' % command
     if system == "Windows":
         command = "call " + command
@@ -103,7 +104,8 @@ def intel_compilervars_command(conanfile, arch=None, compiler_version=None, forc
     return command
 
 
-def intel_compilervars_dict(conanfile, arch=None, compiler_version=None, force=False, only_diff=True):
+def intel_compilervars_dict(conanfile, arch=None, compiler_version=None, force=False,
+                            only_diff=True):
     cmd = intel_compilervars_command(conanfile, arch, compiler_version, force)
     return env_diff(cmd, only_diff)
 

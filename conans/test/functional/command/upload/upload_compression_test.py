@@ -14,10 +14,9 @@ class UploadCompressionTest(unittest.TestCase):
         self.servers = {"default": test_server}
         self.client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
 
-    def reuse_uploaded_tgz_test(self):
-        '''Download packages from a remote, then copy to another channel
-        and reupload them. Because they have not changed, the tgz is not created
-        again'''
+    def test_reuse_uploaded_tgz(self):
+        # Download packages from a remote, then copy to another channel
+        # and reupload them. Because they have not changed, the tgz is not created again
 
         # UPLOAD A PACKAGE
         ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
@@ -36,9 +35,9 @@ class UploadCompressionTest(unittest.TestCase):
         self.assertNotIn("Compressing recipe", self.client.out)
         self.assertNotIn("Compressing package", self.client.out)
 
-    def reuse_downloaded_tgz_test(self):
-        '''Download packages from a remote, then copy to another channel
-        and reupload them. It needs to compress it again, not tgz is kept'''
+    def test_reuse_downloaded_tgz(self):
+        # Download packages from a remote, then copy to another channel
+        # and reupload them. It needs to compress it again, not tgz is kept
 
         # UPLOAD A PACKAGE
         ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
@@ -60,7 +59,7 @@ class UploadCompressionTest(unittest.TestCase):
         self.assertIn("Compressing recipe", self.client.out)
         self.assertIn("Compressing package", self.client.out)
 
-    def upload_only_tgz_if_needed_test(self):
+    def test_upload_only_tgz_if_needed(self):
         ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
         files = cpp_hello_conan_files("Hello0", "0.1", need_patch=True, build=False)
         files["lib/another_export_file.lib"] = "to compress"
@@ -80,7 +79,7 @@ class UploadCompressionTest(unittest.TestCase):
         server_paths = self.servers["default"].server_store
         conan_path = server_paths.conan_revisions_root(ref)
         self.assertTrue(os.path.exists(conan_path))
-        package_ids = self.client.cache.package_layout(ref).conan_packages()
+        package_ids = self.client.cache.package_layout(ref).package_ids()
         pref = PackageReference(ref, package_ids[0])
 
         # Upload package

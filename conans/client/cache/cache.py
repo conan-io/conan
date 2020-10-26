@@ -225,6 +225,9 @@ class ClientCache(object):
         return generators
 
     def delete_empty_dirs(self, deleted_refs):
+        """ Method called by ConanRemover.remove() to clean up from the cache empty folders
+        :param deleted_refs: The recipe references that the remove() has been removed
+        """
         for ref in deleted_refs:
             ref_path = self.package_layout(ref).base_folder()
             for _ in range(4):
@@ -302,6 +305,8 @@ def _mix_settings_with_env(settings):
     from conf file. If you specify a compiler with ENV variable you
     need to specify all the subsettings, the file defaulted will be
     ignored"""
+
+    # FIXME: Conan 2.0. This should be removed, it only applies to default profile, not others
 
     def get_env_value(name_):
         env_name = "CONAN_ENV_%s" % name_.upper().replace(".", "_")

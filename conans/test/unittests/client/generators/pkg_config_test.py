@@ -12,7 +12,7 @@ from conans.test.utils.mocks import TestBufferConanOutput
 
 class PkgGeneratorTest(unittest.TestCase):
 
-    def variables_setup_test(self):
+    def test_variables_setup(self):
         conanfile = ConanFile(TestBufferConanOutput(), None)
         conanfile.initialize(Settings({}), EnvValues())
         ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
@@ -84,7 +84,7 @@ Libs: -L${libdir}
 Cflags: -I${includedir} -Flag1=23 -DMYDEFINE1
 """)
 
-    def pkg_config_custom_names_test(self):
+    def test_pkg_config_custom_names(self):
         conanfile = ConanFile(TestBufferConanOutput(), None)
         conanfile.initialize(Settings({}), EnvValues())
 
@@ -188,7 +188,7 @@ Cflags: -I${includedir} -cxxflag -DMYDEFINE2
 Requires: my_pkg_custom_name my_pkg1_custom_name zlib
 """)
 
-    def apple_frameworks_test(self):
+    def test_apple_frameworks(self):
         settings = Settings.loads(get_default_settings_yml())
         settings.compiler = "apple-clang"
         settings.os = "Macos"

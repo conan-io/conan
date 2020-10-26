@@ -15,7 +15,7 @@ class GeneratorFromCacheTest(unittest.TestCase):
     the client cache.
     """
 
-    def install_cmdline_test(self):
+    def test_install_cmdline(self):
         """
         Test the availability of user-defined generators from the command-line
         using `install -g`
@@ -65,7 +65,7 @@ class GeneratorFromCacheTest(unittest.TestCase):
         self.assertEqual(json_data["MY_ENV_VAR2"], "bar")
         self.assertEqual(json_data["MY_ENV_VAR3"], "baz")
 
-    def install_conanfile_test(self):
+    def test_install_conanfile(self):
         """
         Test the availability of user-defined generators from a conanfile
         """

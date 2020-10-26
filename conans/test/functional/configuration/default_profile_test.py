@@ -11,7 +11,7 @@ from conans.util.files import save
 
 class DefaultProfileTest(unittest.TestCase):
 
-    def conanfile_txt_incomplete_profile_test(self):
+    def test_conanfile_txt_incomplete_profile(self):
         conanfile = '''from conans import ConanFile
 class MyConanfile(ConanFile):
     pass
@@ -29,7 +29,7 @@ class MyConanfile(ConanFile):
         client.run('install .')
         self.assertIn("Pkg/0.1@lasote/stable: Already installed!", client.out)
 
-    def change_default_profile_test(self):
+    def test_change_default_profile(self):
         br = '''
 import os
 from conans import ConanFile
@@ -112,7 +112,7 @@ class MyConanfile(ConanFile):
         assert(self.settings.compiler.runtime=="MD")
         assert(self.settings.arch=="x86")
         assert(self.options.option1=="2")
-    
+
     def build(self):
         # This has changed, the value from profile higher priority than build require
         assert(os.environ["MyVAR"]=="%s")
@@ -139,7 +139,7 @@ from conans import ConanFile
 class MyConanfile(ConanFile):
 
     def build(self):
-        self.output.info(">>> env_variable={}".format(os.environ.get('env_variable'))) 
+        self.output.info(">>> env_variable={}".format(os.environ.get('env_variable')))
 '''
 
         client = TestClient()

@@ -14,7 +14,7 @@ from conans.util.files import load, save
 
 class SynchronizeTest(unittest.TestCase):
 
-    def upload_test(self):
+    def test_upload(self):
         client = TestClient(servers={"default": TestServer()},
                             users={"default": [("lasote", "mypass")]})
         ref = ConanFileReference.loads("Hello0/0.1@lasote/stable#%s" % DEFAULT_REVISION_V1)
@@ -82,7 +82,7 @@ class SynchronizeTest(unittest.TestCase):
 
         client.run("install %s --build missing" % str(ref))
         # Upload package
-        package_ids = client.cache.package_layout(ref).conan_packages()
+        package_ids = client.cache.package_layout(ref).package_ids()
         client.run("upload %s -p %s" % (str(ref), str(package_ids[0])))
 
         # Check that package exists on server
