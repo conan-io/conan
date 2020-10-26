@@ -250,6 +250,6 @@ the old general
             client2.run("-h")
             self.assertIn("Removing temporary .tgz files, they are stored in a different "
                           "location now", client2.out)
-        self.assertFalse(os.path.isfile(export_tgz))
-        self.assertFalse(os.path.isfile(export_src_tgz))
+        self.assertTrue(os.path.isfile(export_tgz))
+        self.assertTrue(os.path.isfile(export_src_tgz))
         self.assertFalse(os.path.isfile(pkg_tgz))

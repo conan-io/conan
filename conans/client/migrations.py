@@ -3,7 +3,6 @@ import shutil
 
 from conans import DEFAULT_REVISION_V1
 from conans.client import migrations_settings
-from conans.client.cache.cache import CONAN_CONF, PROFILES_FOLDER
 from conans.client.cache.cache import ClientCache
 from conans.client.cache.remote_registry import migrate_registry_file
 from conans.client.conf.config_installer import _ConfigOrigin, _save_configs
@@ -14,8 +13,8 @@ from conans.model.manifest import FileTreeManifest
 from conans.model.package_metadata import PackageMetadata
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.version import Version
-from conans.paths import CONANFILE, EXPORT_SOURCES_TGZ_NAME, PACKAGE_TGZ_NAME, EXPORT_TGZ_NAME
-from conans.paths import EXPORT_SOURCES_DIR_OLD
+from conans.paths import EXPORT_SOURCES_TGZ_NAME, PACKAGE_TGZ_NAME, EXPORT_TGZ_NAME
+from conans.paths import CONANFILE
 from conans.paths import PACKAGE_METADATA
 from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
 from conans.util.files import list_folder_subdirs, load, save
@@ -71,20 +70,6 @@ class ClientMigrator(Migrator):
         # Migrate the settings if they were the default for that version
         self._update_settings_yml(old_version)
 
-        if old_version < Version("0.25"):
-            from conans.paths import DEFAULT_PROFILE_NAME
-            default_profile_path = os.path.join(self.cache.cache_folder, PROFILES_FOLDER,
-                                                DEFAULT_PROFILE_NAME)
-            if not os.path.exists(default_profile_path):
-                self.out.warn("Migration: Moving default settings from %s file to %s"
-                              % (CONAN_CONF, DEFAULT_PROFILE_NAME))
-                conf_path = os.path.join(self.cache.cache_folder, CONAN_CONF)
-
-                migrate_to_default_profile(conf_path, default_profile_path)
-
-                self.out.warn("Migration: export_source cache new layout")
-                migrate_c_src_export_source(self.cache, self.out)
-
         if old_version < Version("1.0"):
             _migrate_lock_files(self.cache, self.out)
 
@@ -137,7 +122,7 @@ def migrate_tgz_location(cache, out):
             base_folder = os.path.normpath(os.path.join(cache.store, ref.dir_repr()))
             for d, _, fs in os.walk(base_folder):
                 for f in fs:
-                    if f in (EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME):
+                    if f in (PACKAGE_TGZ_NAME, ):
                         tgz_file = os.path.join(d, f)
                         os.remove(tgz_file)
         except Exception as e:
@@ -309,20 +294,6 @@ def migrate_to_default_profile(conf_path, default_profile_path):
         # Now generate the default profile from the read settings_defaults
         new_profile = "[settings]\n%s" % settings
         save(default_profile_path, new_profile)
-
-
-def migrate_c_src_export_source(cache, out):
-    package_folders = list_folder_subdirs(cache.store, 4)
-    for package in package_folders:
-        package_folder = os.path.join(cache.store, package)
-        c_src = os.path.join(package_folder, "export/%s" % EXPORT_SOURCES_DIR_OLD)
-        if os.path.exists(c_src):
-            out.warn("Migration: Removing package with old export_sources layout: %s" % package)
-            try:
-                shutil.rmtree(package_folder)
-            except Exception:
-                out.warn("Migration: Can't remove the '%s' directory, "
-                         "remove it manually" % package_folder)
 
 
 def migrate_plugins_to_hooks(cache, output=None):
