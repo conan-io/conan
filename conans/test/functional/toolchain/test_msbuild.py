@@ -321,6 +321,8 @@ class WinTest(unittest.TestCase):
 
         # Run the configure corresponding to this test case
         client.run("install . %s -if=conan" % (settings, ))
+        self.assertIn("conanfile.py: MSBuildToolchain created conan_toolchain_release_win32.props",
+                      client.out)
         client.run("build . -if=conan")
 
         self.assertIn("Visual Studio 2017", client.out)
@@ -360,7 +362,6 @@ class WinTest(unittest.TestCase):
 
         # Run the configure corresponding to this test case
         client.run("install . %s -if=conan" % (settings, ))
-        print(client.current_folder)
         self.assertIn("conanfile.py: MSBuildToolchain created conan_toolchain_debug_x64.props",
                       client.out)
         client.run("build . -if=conan")

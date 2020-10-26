@@ -4,23 +4,12 @@ from conans.client.tools.win import vs_installation_path
 from conans.errors import ConanException
 
 
-def vcvars_path(version):
-    vs_path = vs_installation_path(version)
-    if not vs_path or not os.path.isdir(vs_path):
-        raise ConanException("VS non-existing installation: Visual Studio %s" % version)
-
-    if int(version) > 14:
-        vcpath = os.path.join(vs_path, "VC/Auxiliary/Build/vcvarsall.bat")
-    else:
-        vcpath = os.path.join(vs_path, "VC/vcvarsall.bat")
-    return vcpath
-
-
 def vcvars_command(version, architecture=None, platform_type=None, winsdk_version=None,
                    vcvars_ver=None, start_dir_cd=True):
     """ conan-agnostic construction of vcvars command
     https://docs.microsoft.com/en-us/cpp/build/building-on-the-command-line
     """
+    # TODO: This comes from conans/client/tools/win.py vcvars_command()
     cmd = []
     if start_dir_cd:
         cmd.append('set "VSCMD_START_DIR=%%CD%%" &&')
@@ -38,6 +27,19 @@ def vcvars_command(version, architecture=None, platform_type=None, winsdk_versio
     return " ".join(cmd)
 
 
+def vcvars_path(version):
+    # TODO: This comes from conans/client/tools/win.py vcvars_command()
+    vs_path = vs_installation_path(version)
+    if not vs_path or not os.path.isdir(vs_path):
+        raise ConanException("VS non-existing installation: Visual Studio %s" % version)
+
+    if int(version) > 14:
+        vcpath = os.path.join(vs_path, "VC/Auxiliary/Build/vcvarsall.bat")
+    else:
+        vcpath = os.path.join(vs_path, "VC/vcvarsall.bat")
+    return vcpath
+
+
 def vcvars_arch(conanfile):
     """
     computes the vcvars command line architecture based on conanfile settings (host) and
@@ -45,6 +47,7 @@ def vcvars_arch(conanfile):
     :param conanfile:
     :return:
     """
+    # TODO: This comes from conans/client/tools/win.py vcvars_command()
     settings_host = conanfile.settings
     try:
         settings_build = conanfile.settings_build

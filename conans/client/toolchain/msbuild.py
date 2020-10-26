@@ -26,7 +26,7 @@ class MSBuildCmd(object):
         if conanfile.settings.get_safe("os") == "WindowsCE":
             msvc_arch = conanfile.settings.get_safe("os.platform")
         self.platform = msvc_arch
-
+ 
     def command(self):
         vcvars = vcvars_command(self.version, architecture=self.vcvars_arch,
                                 platform_type=None, winsdk_version=None,
