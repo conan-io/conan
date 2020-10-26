@@ -36,6 +36,10 @@ ifndef CONAN_TOOLCHAIN_INCLUDED
     TEST_VAR_01 = TEST_VAR_VAL_01
     TEST_VAR_02 = TEST_VAR_VAL_02
 
+    # Automatic Conan pre-processor definition: build_type_define
+
+    # Automatic Conan pre-processor definition: glibcxx_define
+
     # Recipe-Defined pre-processor definitions
     CONAN_TC_CPPFLAGS = -DTEST_PPD_01 -DTEST_PPD_02
 
@@ -55,5 +59,6 @@ class MakeToolchainTest(unittest.TestCase):
         toolchain.preprocessor_definitions["TEST_PPD_01"] = "TEST_PPD_VAL_01"
         toolchain.preprocessor_definitions["TEST_PPD_02"] = "TEST_PPD_VAL_02"
         content = toolchain.content
+        print(content)
         self.maxDiff = None
         self.assertIn(EXPECTED_OUT, content)
