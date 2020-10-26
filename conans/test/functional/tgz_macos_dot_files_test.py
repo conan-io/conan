@@ -93,7 +93,7 @@ class TgzMacosDotFilesTest(unittest.TestCase):
         self._test_for_metadata(pkg_folder, 'file.txt', dot_file_expected=True)
 
         # 3) In the upload process, the metadata is lost again
-        export_download_folder = layout.export_download()
+        export_download_folder = layout.download_export()
         tgz = os.path.join(export_download_folder, EXPORT_SOURCES_TGZ_NAME)
         self.assertFalse(os.path.exists(tgz))
         t.run("upload lib/version@user/channel")
