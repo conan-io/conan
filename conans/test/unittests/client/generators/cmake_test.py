@@ -334,6 +334,8 @@ endmacro()""", macro)
         self.assertEqual("Darwin", definitions["CMAKE_SYSTEM_NAME"])
         definitions = definitions_builder.get_definitions("3.14")
         self.assertEqual("iOS", definitions["CMAKE_SYSTEM_NAME"])
+        definitions = definitions_builder.get_definitions(None)
+        self.assertEqual("Darwin", definitions["CMAKE_SYSTEM_NAME"])
 
     def test_cmake_definitions_cmake_not_in_path(self):
         def raise_get_version():
