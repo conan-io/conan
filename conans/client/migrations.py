@@ -13,6 +13,7 @@ from conans.model.manifest import FileTreeManifest
 from conans.model.package_metadata import PackageMetadata
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.version import Version
+from conans.paths import EXPORT_SOURCES_TGZ_NAME, PACKAGE_TGZ_NAME, EXPORT_TGZ_NAME
 from conans.paths import CONANFILE
 from conans.paths import PACKAGE_METADATA
 from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
@@ -94,6 +95,9 @@ class ClientMigrator(Migrator):
         if old_version < Version("1.26.0"):
             migrate_editables_use_conanfile_name(self.cache, self.out)
 
+        if old_version < Version("1.31.0"):
+            migrate_tgz_location(self.cache, self.out)
+
 
 def _get_refs(cache):
     folders = list_folder_subdirs(cache.store, 4)
@@ -104,6 +108,27 @@ def _get_prefs(layout):
     packages_folder = layout.packages()
     folders = list_folder_subdirs(packages_folder, 1)
     return [PackageReference(layout.ref, s) for s in folders]
+
+
+def migrate_tgz_location(cache, out):
+    """ In Conan 1.31, the temporary .tgz are no longer stored in the content folders. In case
+    they are found there, they can be removed, and the next time they are needed (upload), they
+    will be compressed again
+    """
+    out.info("Removing temporary .tgz files, they are stored in a different location now")
+    refs = _get_refs(cache)
+    for ref in refs:
+        try:
+            base_folder = os.path.normpath(os.path.join(cache.store, ref.dir_repr()))
+            for d, _, fs in os.walk(base_folder):
+                for f in fs:
+                    if f in (PACKAGE_TGZ_NAME, ):
+                        tgz_file = os.path.join(d, f)
+                        os.remove(tgz_file)
+        except Exception as e:
+            raise ConanException("Something went wrong while removing temporary .tgz files "
+                                 "in the cache, please try to fix the issue or wipe the cache: {}"
+                                 ":{}".format(ref, e))
 
 
 def migrate_localdb_refresh_token(cache, out):

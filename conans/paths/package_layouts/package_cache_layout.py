@@ -117,6 +117,12 @@ class PackageCacheLayout(object):
         yield
         clean_dirty(pkg_folder)
 
+    def download_folder(self):
+        return os.path.join(self._base_folder, "dl")
+
+    def download_package(self, pref):
+        return os.path.join(self._base_folder, "dl", "pkg", pref.id)
+
     def package_is_dirty(self, pref):
         pkg_folder = os.path.join(self._base_folder, PACKAGES_FOLDER, pref.id)
         return is_dirty(pkg_folder)
@@ -130,6 +136,9 @@ class PackageCacheLayout(object):
         # Here we could validate and check we own a write lock over this package
         assert isinstance(pref, PackageReference)
         assert pref.ref == self._ref, "{!r} != {!r}".format(pref.ref, self._ref)
+        # Remove the tgz storage
+        tgz_folder = self.download_package(pref)
+        rmdir(tgz_folder)
         # This is NOT the short paths, but the standard cache one
         pkg_folder = os.path.join(self._base_folder, PACKAGES_FOLDER, pref.id)
         try:
