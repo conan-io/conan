@@ -128,7 +128,6 @@ class RemoteManager(object):
         tgz_file = zipped_files[EXPORT_SOURCES_TGZ_NAME]
         check_compressed_files(EXPORT_SOURCES_TGZ_NAME, zipped_files)
         uncompress_file(tgz_file, export_sources_folder, output=self._output)
-
         touch_folder(export_sources_folder)
 
     def get_package(self, pref, layout, remote, output, recorder):

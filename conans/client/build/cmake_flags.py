@@ -204,7 +204,8 @@ class CMakeDefinitionsBuilder(object):
         else:  # detect if we are cross building and the system name and version
             skip_x64_x86 = os_ in ['Windows', 'Linux']
             if cross_building(self._conanfile, skip_x64_x86=skip_x64_x86):  # We are cross building
-                apple_system_name = "Darwin" if Version(cmake_version) < Version("3.14") else None
+                apple_system_name = "Darwin" if cmake_version and Version(cmake_version) < Version(
+                    "3.14") or not cmake_version else None
                 cmake_system_name_map = {"Macos": "Darwin",
                                          "iOS": apple_system_name or "iOS",
                                          "tvOS": apple_system_name or "tvOS",
