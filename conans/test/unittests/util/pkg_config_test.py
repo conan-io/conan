@@ -87,7 +87,7 @@ class PkgConfigTest(unittest.TestCase):
             self.assertEqual(frozenset(pkg_config.version), frozenset(['6.6.6']))
         os.unlink(filename)
 
-    def rpaths_libs_test(self):
+    def test_rpaths_libs(self):
         if platform.system() == "Windows":
             return
         pc_content = """prefix=/my_prefix/path

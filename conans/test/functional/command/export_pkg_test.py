@@ -620,11 +620,10 @@ class TestConan(ConanFile):
         pref = PackageReference(ref, "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
         build_folder = layout.build(pref)
         self.assertTrue(is_dirty(build_folder))
-        package_folder = layout.package(pref)
-        self.assertTrue(is_dirty(package_folder))
+        self.assertTrue(layout.package_is_dirty(pref))
 
         client.run("export-pkg . pkg/0.1@")
-        self.assertFalse(is_dirty(package_folder))
+        self.assertFalse(layout.package_is_dirty(pref))
         client.run("install pkg/0.1@")
         self.assertIn("pkg/0.1: Already installed!", client.out)
 

@@ -7,7 +7,7 @@ from conans.util.files import load, make_read_only, save
 
 class ReadOnlyTest(unittest.TestCase):
 
-    def read_only_test(self):
+    def test_read_only(self):
         folder = temp_folder()
         f = os.path.join(folder, "file.txt")
         save(f, "Hello World")

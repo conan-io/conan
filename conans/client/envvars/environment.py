@@ -1,6 +1,7 @@
 import os
 import platform
 import textwrap
+from collections import OrderedDict
 
 from jinja2 import Template
 
@@ -137,6 +138,7 @@ def _format_values(flavor, variables, append_with_spaces):
     for name, value in variables:
         # activate values
         if isinstance(value, list):
+            value = list(OrderedDict.fromkeys(value))  # Avoid repeated entries, while keeping order
             append_space = name in append_with_spaces
             placeholder = _variable_placeholder(flavor, name, append_space)
             if append_space:

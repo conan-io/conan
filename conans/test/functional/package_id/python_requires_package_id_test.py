@@ -20,7 +20,7 @@ class PythonRequiresPackageIDTest(unittest.TestCase):
         self.client = client
         self.client2 = client2
 
-    def default_test(self):
+    def test_default(self):
         self.client2.run("create . pkg/0.1@")
         self.assertEqual(1, str(self.client2.out).count(" resolved to 'tool/1.1.1' in local cache"))
         self.assertIn("tool/1.1.1", self.client2.out)
@@ -37,7 +37,7 @@ class PythonRequiresPackageIDTest(unittest.TestCase):
         self.assertIn("tool/1.2.0", self.client2.out)
         self.assertIn("pkg/0.1:2f471d7bec8ea131369a4b683cd1aeea65a18861 - Build", self.client2.out)
 
-    def change_mode_conf_test(self):
+    def test_change_mode_conf(self):
         # change the policy in conan.conf
         self.client2.run("config set general.default_python_requires_id_mode=patch_mode")
         self.client2.run("create . pkg/0.1@")
@@ -50,7 +50,7 @@ class PythonRequiresPackageIDTest(unittest.TestCase):
         self.assertIn("tool/1.1.2", self.client2.out)
         self.assertIn("pkg/0.1:387c1c797a011d426ecb25a1e01b28251e443ec8 - Build", self.client2.out)
 
-    def change_mode_package_id_test(self):
+    def test_change_mode_package_id(self):
         # change the policy in package_id
         conanfile = textwrap.dedent("""
             from conans import ConanFile

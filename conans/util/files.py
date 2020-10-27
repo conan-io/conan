@@ -48,6 +48,7 @@ _DIRTY_FOLDER = ".dirty"
 
 def set_dirty(folder):
     dirty_file = os.path.normpath(folder) + _DIRTY_FOLDER
+    assert not os.path.exists(dirty_file), "Folder '{}' is already dirty".format(folder)
     save(dirty_file, "")
 
 
@@ -442,4 +443,3 @@ def merge_directories(src, dst, excluded=None):
                 link_to_rel(src_file)
             else:
                 shutil.copy2(src_file, dst_file)
-

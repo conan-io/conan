@@ -51,7 +51,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
         conanfile.deps_cpp_info.sysroot = "/path/to/folder"
 
     @unittest.skipUnless(platform.system() == "Linux", "Requires make")
-    def autotools_real_install_dirs_test(self):
+    def test_autotools_real_install_dirs(self):
         body = r"""#include "hello.h"
 #include <iostream>
 using namespace std;

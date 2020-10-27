@@ -50,7 +50,7 @@ class MyConanfileBase(ConanFile):
         client.save({"conanfile.py": conanfile})
         client.run("export . MyConanfileBase/1.1@lasote/testing")
 
-    def with_alias_test(self):
+    def test_with_alias(self):
         client = TestClient(servers={"default": TestServer()},
                             users={"default": [("lasote", "mypass")]})
         self._define_base(client)
@@ -64,7 +64,7 @@ class PkgTest(base.MyConanfileBase):
         client.save({"conanfile.py": reuse}, clean_first=True)
         client.run("create . Pkg/0.1@lasote/testing")
 
-    def reuse_test(self):
+    def test_reuse(self):
         client = TestClient(servers={"default": TestServer()},
                             users={"default": [("lasote", "mypass")]})
         self._define_base(client)
@@ -90,7 +90,7 @@ class PkgTest(base.MyConanfileBase):
         self.assertIn("Pkg/0.1@lasote/testing: Package installed %s" % NO_SETTINGS_PACKAGE_ID,
                       client.out)
 
-    def reuse_version_ranges_test(self):
+    def test_reuse_version_ranges(self):
         client = TestClient()
         self._define_base(client)
         reuse = """from conans import python_requires
@@ -108,7 +108,7 @@ class PkgTest(base.MyConanfileBase):
         self.assertIn("Pkg/0.1@lasote/testing: My cool package!", client.out)
         self.assertIn("Pkg/0.1@lasote/testing: My cool package_info!", client.out)
 
-    def invalid_test(self):
+    def test_invalid(self):
         client = TestClient()
         reuse = """from conans import ConanFile, python_requires
 class PkgTest(ConanFile):
@@ -123,7 +123,7 @@ class PkgTest(ConanFile):
         self.assertIn("ConanException: Invalid use of python_requires"
                       "(MyConanfileBase/1.0@lasote/testing)", client.out)
 
-    def invalid2_test(self):
+    def test_invalid2(self):
         client = TestClient()
         reuse = """import conans
 class PkgTest(conans.ConanFile):
@@ -140,7 +140,7 @@ class PkgTest(conans.ConanFile):
         self.assertIn("ConanException: Invalid use of python_requires"
                       "(MyConanfileBase/1.0@lasote/testing)", client.out)
 
-    def invalid3_test(self):
+    def test_invalid3(self):
         client = TestClient()
         reuse = """from conans import ConanFile
 from helpers import my_print
@@ -164,7 +164,7 @@ def my_print():
         self.assertIn("ConanException: Invalid use of python_requires"
                       "(MyConanfileBase/1.0@lasote/testing)", client.out)
 
-    def invalid4_test(self):
+    def test_invalid4(self):
         client = TestClient()
         reuse = """from conans import ConanFile
 from helpers import my_print
@@ -187,7 +187,7 @@ def my_print():
         self.assertIn("ConanException: Invalid use of python_requires"
                       "(MyConanfileBase/1.0@lasote/testing)", client.out)
 
-    def multiple_reuse_test(self):
+    def test_multiple_reuse(self):
         client = TestClient()
         conanfile = """from conans import ConanFile
 class SourceBuild(ConanFile):
@@ -222,7 +222,7 @@ class MyConanfileBase(source.SourceBuild, package.PackageInfo):
         self.assertIn("Pkg/0.1@lasote/testing: My cool package!", client.out)
         self.assertIn("Pkg/0.1@lasote/testing: My cool package_info!", client.out)
 
-    def transitive_py_requires_test(self):
+    def test_transitive_py_requires(self):
         # https://github.com/conan-io/conan/issues/5529
         client = TestClient()
         conanfile = textwrap.dedent("""
@@ -260,7 +260,7 @@ class MyConanfileBase(source.SourceBuild, package.PackageInfo):
         client.run("source .")
         self.assertIn("conanfile.py (pkg/0.1@user/channel): Configuring sources in", client.out)
 
-    def multiple_requires_error_test(self):
+    def test_multiple_requires_error(self):
         client = TestClient()
         conanfile = """from conans import ConanFile
 myvar = 123
@@ -299,7 +299,7 @@ class MyConanfileBase(ConanFile):
         self.assertIn("Consumer/0.1@lasote/testing: PKG1F : 123", client.out)
         self.assertIn("Consumer/0.1@lasote/testing: PKG2F : 234", client.out)
 
-    def local_import_test(self):
+    def test_local_import(self):
         client = TestClient(servers={"default": TestServer()},
                             users={"default": [("lasote", "mypass")]})
         conanfile = """from conans import ConanFile
@@ -345,7 +345,7 @@ class PkgTest(base.MyConanfileBase):
         self.assertIn("Pkg/0.1@lasote/testing: Package installed %s" % NO_SETTINGS_PACKAGE_ID,
                       client.out)
 
-    def reuse_scm_test(self):
+    def test_reuse_scm(self):
         client = TestClient()
 
         conanfile = """from conans import ConanFile
@@ -390,7 +390,7 @@ class PkgTest(base.MyConanfileBase):
         self.assertIn('"type": "git",', client.out)
         self.assertIn('"url": "somerepo"', client.out)
 
-    def reuse_class_members_test(self):
+    def test_reuse_class_members(self):
         client = TestClient()
         conanfile = """from conans import ConanFile
 class MyConanfileBase(ConanFile):
@@ -431,7 +431,7 @@ class PkgTest(base.MyConanfileBase):
         self.assertTrue(os.path.exists(os.path.join(client.cache.package_layout(ref).export(),
                                                     "other.txt")))
 
-    def reuse_name_version_test(self):
+    def test_reuse_name_version(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
             from conans import ConanFile
@@ -465,7 +465,7 @@ class PkgTest(base.MyConanfileBase):
         client.run("create . lasote/testing")
         self.assertIn("Pkg/0.1@lasote/testing: Created package ", client.out)
 
-    def reuse_set_name_set_version_test(self):
+    def test_reuse_set_name_set_version(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
             from conans import ConanFile, load
@@ -492,7 +492,7 @@ class PkgTest(base.MyConanfileBase):
         client.run("create . user/testing")
         self.assertIn("Pkg/2.3@user/testing: Created package", client.out)
 
-    def reuse_exports_conflict_test(self):
+    def test_reuse_exports_conflict(self):
         conanfile = """from conans import ConanFile
 class Base(ConanFile):
     exports_sources = "*.h"
@@ -513,7 +513,7 @@ class Pkg2(base.Base):
         client.run("create . Pkg/0.1@user/testing")
         self.assertIn("Pkg/0.1@user/testing: HEADER CONTENT!: my header Pkg!!", client.out)
 
-    def transitive_imports_conflicts_test(self):
+    def test_transitive_imports_conflicts(self):
         # https://github.com/conan-io/conan/issues/3874
         client = TestClient()
         conanfile = """from conans import ConanFile
@@ -552,7 +552,7 @@ class MyConanfileBase(ConanFile):
         self.assertIn("Pkg/0.1@lasote/testing: MyHelperOutput!", client.out)
         self.assertIn("Pkg/0.1@lasote/testing: MyOtherHelperOutput!", client.out)
 
-    def update_test(self):
+    def test_update(self):
         client = TestClient(servers={"default": TestServer()},
                             users={"default": [("lasote", "mypass")]})
         conanfile = """from conans import ConanFile
@@ -585,7 +585,7 @@ class PkgTest(base.MyConanfileBase):
         client2.run("install . --update")
         self.assertIn("conanfile.py: PYTHON REQUIRE VAR 143", client2.out)
 
-    def update_ranges_test(self):
+    def test_update_ranges(self):
         # https://github.com/conan-io/conan/issues/4650#issuecomment-497464305
         client = TestClient(servers={"default": TestServer()},
                             users={"default": [("lasote", "mypass")]})
@@ -619,7 +619,7 @@ class PkgTest(base.MyConanfileBase):
         client2.run("install . --update")
         self.assertIn("conanfile.py: PYTHON REQUIRE VAR 143", client2.out)
 
-    def duplicate_pyreq_test(self):
+    def test_duplicate_pyreq(self):
         t = TestClient()
         conanfile = textwrap.dedent("""
             from conans import ConanFile
@@ -645,7 +645,7 @@ class PkgTest(base.MyConanfileBase):
         self.assertIn("Same python_requires with different versions not allowed for a conanfile",
                       t.out)
 
-    def short_paths_test(self):
+    def test_short_paths(self):
         # https://github.com/conan-io/conan/issues/5814
         client = TestClient(default_server_user=True)
         conanfile = textwrap.dedent("""
@@ -799,7 +799,7 @@ class Project(base_class.PythonRequires2, base_class2.PythonRequires22):
         self.assertNotIn("alias", client.out)
         self.assertNotIn("alias2", client.out)
 
-    def local_build_test(self):
+    def test_local_build(self):
         client = TestClient()
         client.save({"conanfile.py": "var=42\n"+
                                      str(GenConanfile().with_name("Tool").with_version("0.1"))})

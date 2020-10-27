@@ -63,7 +63,7 @@ class InfoTest(unittest.TestCase):
         lastline = str(client.out).splitlines()[-1]
         self.assertEqual(lastline, line)
 
-    def info_build_test(self):
+    def test_info_build(self):
         """ Test that the output of 'conan info --build' is correct """
         # If we install H3 we need to build all except H1b
         self.clients["H3"].run("info . --build missing")

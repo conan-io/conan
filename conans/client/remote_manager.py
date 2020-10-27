@@ -9,13 +9,12 @@ from conans import DEFAULT_REVISION_V1
 from conans.client.cache.remote_registry import Remote
 from conans.errors import ConanConnectionError, ConanException, NotFoundException, \
     NoRestV2Available, PackageNotFoundException
-from conans.paths import EXPORT_SOURCES_DIR_OLD, \
-    EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME, rm_conandir
+from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME, rm_conandir
 from conans.search.search import filter_packages
 from conans.util import progress_bar
 from conans.util.env_reader import get_env
 from conans.util.files import make_read_only, mkdir, rmdir, tar_extract, touch_folder, \
-    merge_directories, md5sum, sha1sum
+    md5sum, sha1sum
 from conans.util.log import logger
 # FIXME: Eventually, when all output is done, tracer functions should be moved to the recorder class
 from conans.util.tracer import (log_package_download,
@@ -119,20 +118,24 @@ class RemoteManager(object):
 
         unzip_and_get_files(zipped_files, export_sources_folder, EXPORT_SOURCES_TGZ_NAME,
                             output=self._output)
-        # REMOVE in Conan 2.0
-        c_src_path = os.path.join(export_sources_folder, EXPORT_SOURCES_DIR_OLD)
-        if os.path.exists(c_src_path):
-            merge_directories(c_src_path, export_sources_folder)
-            rmdir(c_src_path)
+
         touch_folder(export_sources_folder)
 
-    def get_package(self, pref, dest_folder, remote, output, recorder):
-
-        conanfile_path = self._cache.package_layout(pref.ref).conanfile()
+    def get_package(self, pref, layout, remote, output, recorder):
+        conanfile_path = layout.conanfile()
         self._hook_manager.execute("pre_download_package", conanfile_path=conanfile_path,
                                    reference=pref.ref, package_id=pref.id, remote=remote)
+
         output.info("Retrieving package %s from remote '%s' " % (pref.id, remote.name))
-        rm_conandir(dest_folder)  # Remove first the destination folder
+        layout.package_remove(pref)  # Remove first the destination folder
+        pkg_folder = layout.package(pref)
+        with layout.set_dirty_context_manager(pref):
+            self._get_package(pref, pkg_folder, remote, output, recorder)
+
+        self._hook_manager.execute("post_download_package", conanfile_path=conanfile_path,
+                                   reference=pref.ref, package_id=pref.id, remote=remote)
+
+    def _get_package(self, pref, dest_folder, remote, output, recorder):
         t1 = time.time()
         try:
             pref = self._resolve_latest_pref(pref, remote)
@@ -147,6 +150,7 @@ class RemoteManager(object):
                 metadata.packages[pref.id].revision = pref.revision
                 metadata.packages[pref.id].recipe_revision = pref.ref.revision
                 metadata.packages[pref.id].checksums = package_checksums
+                metadata.packages[pref.id].remote = remote.name
 
             duration = time.time() - t1
             log_package_download(pref, duration, remote, zipped_files)
@@ -157,6 +161,7 @@ class RemoteManager(object):
                 make_read_only(dest_folder)
             recorder.package_downloaded(pref, remote.url)
             output.success('Package installed %s' % pref.id)
+            output.info("Downloaded package revision %s" % pref.revision)
         except NotFoundException:
             raise PackageNotFoundException(pref)
         except BaseException as e:
@@ -169,8 +174,6 @@ class RemoteManager(object):
                 raise ConanException("%s\n\nCouldn't remove folder '%s', might be busy or open. "
                                      "Close any app using it, and retry" % (str(e), dest_folder))
             raise
-        self._hook_manager.execute("post_download_package", conanfile_path=conanfile_path,
-                                   reference=pref.ref, package_id=pref.id, remote=remote)
 
     def search_recipes(self, remote, pattern=None, ignorecase=True):
         """

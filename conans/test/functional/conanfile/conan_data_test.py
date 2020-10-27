@@ -14,7 +14,7 @@ from conans.util.files import md5sum, sha1sum, sha256sum, load
 
 class ConanDataTest(unittest.TestCase):
 
-    def conan_exports_kept_test(self):
+    def test_conan_exports_kept(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
             from conans import ConanFile
@@ -36,7 +36,7 @@ class ConanDataTest(unittest.TestCase):
         self.assertEqual(data, {"foo": {"bar": "as"}})
         self.assertTrue(os.path.exists(os.path.join(export_folder, "myfile.txt")))
 
-    def conan_data_everywhere_test(self):
+    def test_conan_data_everywhere(self):
         client = TestClient()
         conanfile = """from conans import ConanFile
 
@@ -88,7 +88,7 @@ sources:
 
     @attr("slow")
     @attr('local_bottle')
-    def conan_data_as_source_test(self):
+    def test_conan_data_as_source(self):
         tgz_path = tgz_with_contents({"foo.txt": "foo"})
         md5_value = "2ef49b5a102db1abb775eaf1922d5662"
         sha1_value = "18dbea2d9a97bb9e9948604a41976bba5b5940bf"
@@ -136,7 +136,7 @@ sources:
         downloaded_file = os.path.join(source_folder, "foo.txt")
         self.assertEqual("foo", load(downloaded_file))
 
-    def invalid_yml_test(self):
+    def test_invalid_yml(self):
         client = TestClient()
         conanfile = """from conans import ConanFile
 
@@ -151,13 +151,13 @@ class Lib(ConanFile):
         self.assertIn(": Invalid yml format at conandata.yml: while scanning a block scalar",
                       client.out)
 
-    def conan_data_development_flow_test(self):
+    def test_conan_data_development_flow(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
             from conans import ConanFile
 
             class Lib(ConanFile):
-            
+
                 def _assert_data(self):
                     assert(self.conan_data["sources"]["all"]["url"] == "this url")
                     assert(self.conan_data["sources"]["all"]["other"] == "field")
