@@ -2,9 +2,10 @@ import shutil
 import textwrap
 import unittest
 
+from conans.client.toolchain.cmake.base import CMakeToolchainBase
 from conans.test.utils.tools import TestClient
 from ._utils import create_library
-from conans.client.toolchain.cmake.base import CMakeToolchainBase
+
 
 class SystemToolsTestCase(unittest.TestCase):
     # This test assumes that 'CMake' and 'AndroidNDK' are available in the system
@@ -15,12 +16,11 @@ class SystemToolsTestCase(unittest.TestCase):
     def setUpClass(cls):
         if not shutil.which('cmake'):
             raise unittest.SkipTest("CMake expected in PATH")
-        if not shutil.which('cmake'):
-            raise unittest.SkipTest("CMake expected in PATH")
+        if not shutil.which('ndk-build'):
+            raise unittest.SkipTest("ANDROID_NDK (ndk-build) expected in PATH")
 
     def setUp(self):
-        current_folder = '/private/var/folders/fc/6mvcrc952dqcjfhl4c7c11ph0000gn/T/tmp4xr45tt5conans/path with spaces'
-        self.t = TestClient(current_folder=current_folder)
+        self.t = TestClient()
         create_library(self.t)
         self.t.save({
             'conanfile.py': textwrap.dedent("""
@@ -57,10 +57,6 @@ class SystemToolsTestCase(unittest.TestCase):
             """)
         })
 
-    def test_regular_build(self):
-        # TODO: Remove this test, useless besides validating this project
-        self.t.run('create . library/version@ --profile:host=default --profile:build=default')
-
     def test_use_cmake_toolchain(self):
         """ This is the naïve approach, we follow instruction from CMake in its documentation
             https://cmake.org/cmake/help/latest/manual/cmake-toolchains.7.html#cross-compiling-for-android
@@ -72,10 +68,3 @@ class SystemToolsTestCase(unittest.TestCase):
         self.t.run('install . library/version@ --profile:host=profile_host --profile:build=default')
         self.t.run_command('cmake . -DCMAKE_TOOLCHAIN_FILE={}'.format(CMakeToolchainBase.filename))
         self.t.run_command('cmake --build .')
-
-    def test_use_android_ndk_toolchain(self):
-        """ Use the CMake toolchain provided by Android NDK itself
-            https://developer.android.com/ndk/guides/cmake#command-line
-        """
-        pass
-

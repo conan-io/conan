@@ -1,6 +1,8 @@
+import os
 import textwrap
 
 from .base import CMakeToolchainBase
+from ...tools import which, ConanException
 
 
 class CMakeAndroidToolchain(CMakeToolchainBase):
@@ -68,6 +70,15 @@ class CMakeAndroidToolchain(CMakeToolchainBase):
         libcxx_str = str(self._conanfile.settings.compiler.libcxx)
         return libcxx_str  # TODO: only 'c++_shared' y 'c++_static' supported?
 
+    def _guess_android_ndk(self):
+        # TODO: Do not use envvar! This has to be provided by the user somehow
+        android_ndk = os.getenv("CONAN_CMAKE_ANDROID_NDK")
+        if not android_ndk:
+            android_ndk = which('ndk-build')
+            android_ndk = os.path.dirname(android_ndk) if android_ndk else None
+        if not android_ndk:
+            raise ConanException('Cannot find ANDROID_NDK (ndk-build) in the PATH')
+
     def _get_template_context_data(self):
         ctxt_toolchain, _ = super(CMakeAndroidToolchain, self)._get_template_context_data()
         ctxt_toolchain.update({
@@ -75,7 +86,7 @@ class CMakeAndroidToolchain(CMakeToolchainBase):
             'CMAKE_SYSTEM_VERSION': self._conanfile.settings.os.api_level,
             'CMAKE_ANDROID_ARCH_ABI': self._get_android_abi(),
             'CMAKE_ANDROID_STL_TYPE': self._get_android_stl(),
-            'CMAKE_ANDROID_NDK': '/Users/jgsogo/Library/Android/sdk/ndk/21.0.6113669',  # TODO: ???
+            'CMAKE_ANDROID_NDK': self._guess_android_ndk(),
 
         })
         return ctxt_toolchain, {}
