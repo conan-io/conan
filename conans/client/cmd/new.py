@@ -191,7 +191,31 @@ target_link_libraries(example ${CONAN_LIBS})
 #          COMMAND example)
 """
 
+test_cmake_pure_c = """cmake_minimum_required(VERSION 2.8.12)
+project(PackageTest C)
+
+include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+conan_basic_setup()
+
+add_executable(example example.c)
+target_link_libraries(example ${CONAN_LIBS})
+
+# CTest is a testing tool that can be used to test your project.
+# enable_testing()
+# add_test(NAME example
+#          WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+#          COMMAND example)
+"""
+
 test_main = """#include <iostream>
+#include "hello.h"
+
+int main() {
+    hello();
+}
+"""
+
+test_main_pure_c = """#include <stdio.h>
 #include "hello.h"
 
 int main() {
@@ -349,8 +373,12 @@ def cmd_new(ref, header=False, pure_c=False, test=False, exports_sources=False, 
         files["test_package/conanfile.py"] = test_conanfile.format(name=name, version=version,
                                                                    user=user, channel=channel,
                                                                    package_name=package_name)
-        files["test_package/CMakeLists.txt"] = test_cmake
-        files["test_package/example.cpp"] = test_main
+        if pure_c:
+            files["test_package/example.c"] = test_main_pure_c
+            files["test_package/CMakeLists.txt"] = test_cmake_pure_c
+        else:
+            files["test_package/example.cpp"] = test_main
+            files["test_package/CMakeLists.txt"] = test_cmake
 
     if gitignore:
         files[".gitignore"] = gitignore_template
