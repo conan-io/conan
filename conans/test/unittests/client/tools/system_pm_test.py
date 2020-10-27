@@ -652,59 +652,9 @@ class SystemPackageToolTest(unittest.TestCase):
         """
         packages = "varianta variantb", "variantc variantd"
         with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "True"}):
-            runner = RunnerMultipleMock(["sudo -A apt-get update",
-                                         "sudo -A apt-get install -y --no-install-recommends"
-                                         " varianta variantb variantc variantd",
-                                         ])
+            runner = RunnerMultipleMock([])
             spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out), output=self.out)
-            spt.install_packages(packages)
-            self.assertEqual(6, runner.calls)
-
-    def test_install_partial_multiple_package_list(self):
-        """ Separated string list must install only uninstalled packages
-        """
-        packages = "varianta variantb", "variantc variantd"
-        with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "True"}):
-            runner = RunnerMultipleMock(['dpkg-query -W -f=\'${Status}\' variantb | '
-                                         'grep -q "ok installed"',
-                                         "sudo -A apt-get update",
-                                         "sudo -A apt-get install -y --no-install-recommends"
-                                         " varianta variantc variantd",
-                                         ])
-            spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out), output=self.out)
-            spt.install_packages(packages)
-            self.assertEqual(6, runner.calls)
-
-    def test_force_installed_package_list(self):
-        """ Install all packages listed again (force mode on)
-        """
-        packages = ["a_package", "another_package", "yet_another_package"]
-        with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "True"}):
-            runner = RunnerMultipleMock(['dpkg-query -W -f=\'${Status}\' another_package | '
-                                         'grep -q "ok installed"',
-                                         "sudo -A apt-get update",
-                                         "sudo -A apt-get install -y --no-install-recommends"
-                                         " a_package another_package yet_another_package",
-                                         ])
-            spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out), output=self.out)
-            spt.install_packages(packages, force=True)
-            self.assertEqual(5, runner.calls)
-
-    def test_force_installed_variant_install_package_list(self):
-        """ Install one variant and all packages listed again (force mode on)
-        """
-        packages = [("varianta", "variantb", "variantc"), "a_package", "another_package"]
-        with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "True"}):
-            runner = RunnerMultipleMock(['dpkg-query -W -f=\'${Status}\' varianta | '
-                                         'grep -q "ok installed"',
-                                         'dpkg-query -W -f=\'${Status}\' a_package | '
-                                         'grep -q "ok installed"',
-                                         "sudo -A apt-get update",
-                                         "sudo -A apt-get install -y --no-install-recommends"
-                                         " varianta",
-                                         "sudo -A apt-get install -y --no-install-recommends"
-                                         " a_package another_package",
-                                         ])
-            spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out), output=self.out)
-            spt.install_packages(packages, force=True)
-            self.assertEqual(5, runner.calls)
+            with self.assertRaises(ConanException) as error:
+                spt.install_packages(packages)
+                self.assertEqual("Each string must contain only one package to be installed."
+                                 " Use a list instead e.g. ['foo', 'bar'].", str(error.exception))

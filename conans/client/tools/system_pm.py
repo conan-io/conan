@@ -1,6 +1,5 @@
 import os
 import sys
-import itertools
 
 from conans.client.runner import ConanRunner
 from conans.client.tools.oss import OSInfo, cross_building, get_cross_building_settings
@@ -134,7 +133,8 @@ class SystemPackageTool(object):
             ["pkg-variant1", "otherpkg", "thirdpkg"] # (2) All must be installed
             [("pkg-variant1", "pkg-variant2"), "otherpkg", "thirdpkg"] # (3) Install only one variant
                                                                              and all other packages
-            ["pkg1 pkg2", "pkg3 pkg4"] # (4) Install all packages
+            "pkg1 pkg2", "pkg3 pkg4" # (4) Invalid
+            ["pkg1 pkg2", "pkg3 pkg4"] # (5) Invalid
 
         :param packages: Supports multiple formats (string,list,tuple). Lists and tuples into a list
         are considered variants and is processed just like self.install(). A list of string is
@@ -151,8 +151,11 @@ class SystemPackageTool(object):
             self.install(variant, update=update, force=force, arch_names=arch_names)
         # all packages will be installed
         packages = list(filter(lambda x: not isinstance(x, (tuple, list)), packages))
-        # split "pkg1 pkg2", "pkg3 pkg4" cases
-        packages = list(itertools.chain.from_iterable([pkg.split() for pkg in packages]))
+
+        if [pkg for pkg in packages if " " in pkg]:
+            raise ConanException("Each string must contain only one package to be installed. "
+                                 "Use a list instead e.g. ['foo', 'bar'].")
+
         packages = self._get_package_names(packages, arch_names)
 
         mode = self._get_sysrequire_mode()
