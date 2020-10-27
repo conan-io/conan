@@ -117,11 +117,11 @@ class PackageCacheLayout(object):
         yield
         clean_dirty(pkg_folder)
 
-    def download_folder(self):
-        return os.path.join(self._base_folder, "dl")
-
     def download_package(self, pref):
         return os.path.join(self._base_folder, "dl", "pkg", pref.id)
+
+    def download_export(self):
+        return os.path.join(self._base_folder, "dl", "export")
 
     def package_is_dirty(self, pref):
         pkg_folder = os.path.join(self._base_folder, PACKAGES_FOLDER, pref.id)
@@ -149,6 +149,16 @@ class PackageCacheLayout(object):
                                  "Close any app using it, and retry" % (pkg_folder, str(e)))
         if is_dirty(pkg_folder):
             clean_dirty(pkg_folder)
+
+    def export_remove(self):
+        export_folder = self.export()
+        rmdir(export_folder)
+        export_src_folder = self.export_sources()
+        rm_conandir(export_src_folder)
+        download_export = self.download_export()
+        rmdir(download_export)
+        scm_folder = self.scm_sources()
+        rmdir(scm_folder)
 
     def package_metadata(self):
         return os.path.join(self._base_folder, PACKAGE_METADATA)

@@ -10,7 +10,6 @@ from mock import patch
 from requests.packages.urllib3.exceptions import ConnectionError
 
 from conans import DEFAULT_REVISION_V1
-from conans.client.tools import environment_append
 from conans.client.tools.files import untargz
 from conans.model.manifest import FileTreeManifest
 from conans.model.package_metadata import PackageMetadata
@@ -311,25 +310,6 @@ class UploadTest(unittest.TestCase):
         client.run('upload lib* --parallel -c --all -r default', assert_error=True)
         self.assertIn("ERROR: lib0/1.0@user/channel: Upload recipe to 'default' failed: "
                       "Conan interactive mode disabled. [Remote: default]", client.out)
-
-    def test_recipe_upload_fail_on_generic_exception(self):
-        # Make the upload fail with a generic Exception
-        client = TestClient(default_server_user=True)
-        conanfile = textwrap.dedent("""
-            import os
-            from conans import ConanFile
-            class Pkg(ConanFile):
-                exports = "*"
-                def package(self):
-                    self.copy("*")
-            """)
-        client.save({"conanfile.py": conanfile,
-                     "myheader.h": "",
-                     "conan_export.tgz/dummy": ""})
-        client.run('create . lib/1.0@user/channel')
-        client.run('upload lib* -c --all -r default', assert_error=True)
-        self.assertIn("ERROR: lib/1.0@user/channel: Upload recipe to 'default' failed:", client.out)
-        self.assertIn("ERROR: Errors uploading some packages", client.out)
 
     def test_beat_character_long_upload(self):
         client = TestClient(default_server_user=True)

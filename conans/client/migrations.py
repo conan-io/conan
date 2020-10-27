@@ -13,8 +13,7 @@ from conans.model.manifest import FileTreeManifest
 from conans.model.package_metadata import PackageMetadata
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.version import Version
-from conans.paths import EXPORT_SOURCES_TGZ_NAME, PACKAGE_TGZ_NAME, EXPORT_TGZ_NAME
-from conans.paths import CONANFILE
+from conans.paths import CONANFILE, EXPORT_SOURCES_TGZ_NAME, PACKAGE_TGZ_NAME, EXPORT_TGZ_NAME
 from conans.paths import PACKAGE_METADATA
 from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
 from conans.util.files import list_folder_subdirs, load, save
@@ -122,7 +121,7 @@ def migrate_tgz_location(cache, out):
             base_folder = os.path.normpath(os.path.join(cache.store, ref.dir_repr()))
             for d, _, fs in os.walk(base_folder):
                 for f in fs:
-                    if f in (PACKAGE_TGZ_NAME, ):
+                    if f in (EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME):
                         tgz_file = os.path.join(d, f)
                         os.remove(tgz_file)
         except Exception as e:
