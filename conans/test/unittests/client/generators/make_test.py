@@ -14,7 +14,7 @@ from conans.util.files import save
 
 class MakeGeneratorTest(unittest.TestCase):
 
-    def variables_setup_test(self):
+    def test_variables_setup(self):
         tmp_folder1 = temp_folder()
         tmp_folder2 = temp_folder()
         save(os.path.join(tmp_folder1, "include1", "file.h"), "")

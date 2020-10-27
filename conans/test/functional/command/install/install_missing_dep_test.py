@@ -6,7 +6,7 @@ from conans.test.utils.tools import TestClient
 
 class InstallMissingDependency(unittest.TestCase):
 
-    def missing_dep_test(self):
+    def test_missing_dep(self):
         client = TestClient()
 
         # Create deps packages
@@ -34,7 +34,7 @@ class InstallMissingDependency(unittest.TestCase):
         self.assertIn("Can't find a 'dep2/1.0@lasote/testing' package", client.out)
         self.assertIn("- Dependencies: dep1/2.0@lasote/testing", client.out)
 
-    def missing_multiple_dep_test(self):
+    def test_missing_multiple_dep(self):
         client = TestClient()
 
         dep1_conanfile = GenConanfile()

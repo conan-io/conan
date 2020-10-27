@@ -72,7 +72,7 @@ compiled Apr  5 2019, 18:59:58 on x86_64-apple-darwin17.0.0"""
         svn.checkout(url=project_url)
         self.assertTrue(os.path.exists(os.path.join(tmp_folder, 'myfile')))
 
-    def svn_revision_message_test(self):
+    def test_svn_revision_message(self):
         tmp_folder = self.gimme_tmp()
         svn = SVN(folder=tmp_folder)
         svn.checkout(url=self.repo_url)

@@ -4,7 +4,6 @@ from collections import OrderedDict
 
 from parameterized.parameterized import parameterized
 
-from conans.client import tools
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_SRC_FOLDER, EXPORT_TGZ_NAME
@@ -251,7 +250,7 @@ class ExportsSourcesTest(unittest.TestCase):
 
     @parameterized.expand([("exports", ), ("exports_sources", ), ("both", ), ("nested", ),
                            ("overlap", )])
-    def copy_test(self, mode):
+    def test_copy(self, mode):
         # https://github.com/conan-io/conan/issues/943
         self._create_code(mode)
 
@@ -276,7 +275,7 @@ class ExportsSourcesTest(unittest.TestCase):
 
     @parameterized.expand([("exports", ), ("exports_sources", ), ("both", ), ("nested", ),
                            ("overlap", )])
-    def export_test(self, mode):
+    def test_export(self, mode):
         self._create_code(mode)
 
         self.client.run("export . lasote/testing")
@@ -324,7 +323,7 @@ class ExportsSourcesTest(unittest.TestCase):
 
     @parameterized.expand([("exports", ), ("exports_sources", ), ("both", ), ("nested", ),
                            ("overlap", )])
-    def export_upload_test(self, mode):
+    def test_export_upload(self, mode):
         self._create_code(mode)
 
         self.client.run("export . lasote/testing")
@@ -353,7 +352,7 @@ class ExportsSourcesTest(unittest.TestCase):
 
     @parameterized.expand([("exports", ), ("exports_sources", ), ("both", ), ("nested", ),
                            ("overlap", )])
-    def reupload_test(self, mode):
+    def test_reupload(self, mode):
         """ try to reupload to same and other remote
         """
         self._create_code(mode)
@@ -375,7 +374,7 @@ class ExportsSourcesTest(unittest.TestCase):
 
     @parameterized.expand([("exports", ), ("exports_sources", ), ("both", ), ("nested", ),
                            ("overlap", )])
-    def update_test(self, mode):
+    def test_update(self, mode):
         self._create_code(mode)
 
         self.client.run("export . lasote/testing")
@@ -400,29 +399,3 @@ class ExportsSourcesTest(unittest.TestCase):
 
         self.client.run("install Hello/0.1@lasote/testing --update")
         self._check_export_installed_folder(mode, updated=True)
-
-    def exports_sources_old_c_src_test(self):
-        conanfile = """
-import os
-from conans import ConanFile
-
-class HelloConan(ConanFile):
-    exports_sources = "*"
-
-    def build(self):
-        # won't be run in create but in the install from remote, we are emulating old .c_src
-        # in the package
-        if not os.environ.get("SKIP_THIS"):
-            # This dir has to exists after the install
-            assert(os.path.exists("modules/Hello/projects/Hello/myfile.txt"))
-
-"""
-        # Fake old package layout with .c_src
-        self.client.save({"conanfile.py": conanfile,
-                          ".c_src/modules/Hello/projects/Hello/myfile.txt": "contents"})
-        with tools.environment_append({"SKIP_THIS": "1"}):
-            self.client.run("create . Hello/0.1@lasote/channel")
-        self.client.run("upload Hello/0.1@lasote/channel --all")
-
-        self.client.run('remove "*" -f')
-        self.client.run("install Hello/0.1@lasote/channel --build")

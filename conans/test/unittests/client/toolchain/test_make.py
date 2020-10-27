@@ -84,11 +84,10 @@ endif
 # Call this function in your Makefile to have Conan variables added to the standard variables
 # Example:  $(call CONAN_TC_SETUP)
 
-CONAN_TC_SETUP =  \\
-    $(eval CFLAGS += $(CONAN_TC_CFLAGS)) ; \\
-    $(eval CXXFLAGS += $(CONAN_TC_CXXFLAGS)) ; \\
-    $(eval CPPFLAGS += $(CONAN_TC_CPPFLAGS)) ; \\
-    $(eval LDFLAGS += $(CONAN_TC_LDFLAGS)) ;
+CONAN_TC_SETUP = $(eval CFLAGS += $(CONAN_TC_CFLAGS)) ; \\
+                 $(eval CXXFLAGS += $(CONAN_TC_CXXFLAGS)) ; \\
+                 $(eval CPPFLAGS += $(CONAN_TC_CPPFLAGS)) ; \\
+                 $(eval LDFLAGS += $(CONAN_TC_LDFLAGS)) ;
 """)
 
 EXPECTED_OUT_2 = textwrap.dedent("""
@@ -137,11 +136,10 @@ endif
 # Call this function in your Makefile to have Conan variables added to the standard variables
 # Example:  $(call CONAN_TC_SETUP)
 
-CONAN_TC_SETUP =  \\
-    $(eval CFLAGS += $(CONAN_TC_CFLAGS)) ; \\
-    $(eval CXXFLAGS += $(CONAN_TC_CXXFLAGS)) ; \\
-    $(eval CPPFLAGS += $(CONAN_TC_CPPFLAGS)) ; \\
-    $(eval LDFLAGS += $(CONAN_TC_LDFLAGS)) ;
+CONAN_TC_SETUP = $(eval CFLAGS += $(CONAN_TC_CFLAGS)) ; \\
+                 $(eval CXXFLAGS += $(CONAN_TC_CXXFLAGS)) ; \\
+                 $(eval CPPFLAGS += $(CONAN_TC_CPPFLAGS)) ; \\
+                 $(eval LDFLAGS += $(CONAN_TC_LDFLAGS)) ;
 """)
 
 EXPECTED_OUT_3 = textwrap.dedent("""
@@ -193,11 +191,10 @@ endif
 # Call this function in your Makefile to have Conan variables added to the standard variables
 # Example:  $(call CONAN_TC_SETUP)
 
-CONAN_TC_SETUP =  \\
-    $(eval CFLAGS += $(CONAN_TC_CFLAGS)) ; \\
-    $(eval CXXFLAGS += $(CONAN_TC_CXXFLAGS)) ; \\
-    $(eval CPPFLAGS += $(CONAN_TC_CPPFLAGS)) ; \\
-    $(eval LDFLAGS += $(CONAN_TC_LDFLAGS)) ;
+CONAN_TC_SETUP = $(eval CFLAGS += $(CONAN_TC_CFLAGS)) ; \\
+                 $(eval CXXFLAGS += $(CONAN_TC_CXXFLAGS)) ; \\
+                 $(eval CPPFLAGS += $(CONAN_TC_CPPFLAGS)) ; \\
+                 $(eval LDFLAGS += $(CONAN_TC_LDFLAGS)) ;
 """)
 
 EXPECTED_OUT_4 = textwrap.dedent("""
@@ -250,15 +247,13 @@ endif
 # Call this function in your Makefile to have Conan variables added to the standard variables
 # Example:  $(call CONAN_TC_SETUP)
 
-CONAN_TC_SETUP =  \\
-    $(eval CFLAGS += $(CONAN_TC_CFLAGS)) ; \\
-    $(eval CXXFLAGS += $(CONAN_TC_CXXFLAGS)) ; \\
-    $(eval CPPFLAGS += $(CONAN_TC_CPPFLAGS)) ; \\
-    $(eval LDFLAGS += $(CONAN_TC_LDFLAGS)) ;
+CONAN_TC_SETUP = $(eval CFLAGS += $(CONAN_TC_CFLAGS)) ; \\
+                 $(eval CXXFLAGS += $(CONAN_TC_CXXFLAGS)) ; \\
+                 $(eval CPPFLAGS += $(CONAN_TC_CPPFLAGS)) ; \\
+                 $(eval LDFLAGS += $(CONAN_TC_LDFLAGS)) ;
 """)
 
 
-@unittest.skipUnless(platform.system() == "Linux", "Only for Linux")
 class MakeToolchainTest(unittest.TestCase):
     @parameterized.expand([
         ("Debug", "x86", "gcc", "9", "14", "libstdc++", False, False, EXPECTED_OUT_1),
@@ -266,7 +261,8 @@ class MakeToolchainTest(unittest.TestCase):
         ("Release", "x86_64", "clang", "8.0", "20", "libc++", True, True, EXPECTED_OUT_3),
         ("Release", "x86_64", "clang", "8.0", "20", "libstdc++11", True, True, EXPECTED_OUT_4),
     ])
-    def test_toolchain_linux(self, build_type, arch, compiler, compiler_ver, compiler_cppstd,
+    @unittest.skipUnless(platform.system() in ["Linux", "Macos"], "Requires make")
+    def test_toolchain_posix(self, build_type, arch, compiler, compiler_ver, compiler_cppstd,
                              compiler_libcxx, shared, fpic, expected):
 
         settings_mock = _MockSettings(build_type, arch, compiler, compiler_ver, compiler_cppstd,

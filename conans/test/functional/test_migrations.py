@@ -32,7 +32,7 @@ class TestMigrations(unittest.TestCase):
         migrations_settings_content = getattr(migrations_settings, var_name)
         self.assertListEqual(current_settings.splitlines(), migrations_settings_content.splitlines())
 
-    def is_there_var_for_settings_previous_version_test(self):
+    def test_is_there_var_for_settings_previous_version(self):
         from conans import __version__ as current_version
 
         tmp = Version(current_version)
@@ -96,7 +96,7 @@ class TestMigrations(unittest.TestCase):
         self.assertNotIn("config_install", conf)
         self.assertIn("http:/fake.url", load(client.cache.config_install_file))
 
-    def migration_to_default_profile_test(self):
+    def test_migration_to_default_profile(self):
         tmp = temp_folder()
         old_conf = """
 [general]
@@ -155,7 +155,7 @@ the old general
 
 """)
 
-    def migration_from_plugins_to_hooks_test(self):
+    def test_migration_from_plugins_to_hooks(self):
 
         def _create_old_layout():
             old_user_home = temp_folder()

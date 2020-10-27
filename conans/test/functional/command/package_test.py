@@ -11,7 +11,7 @@ from conans.util.files import load, mkdir
 
 
 class PackageLocalCommandTest(unittest.TestCase):
-    def uses_recipe_env_test(self):
+    def test_uses_recipe_env(self):
         conanfile = """from conans import ConanFile, tools
 import os
 
@@ -29,7 +29,7 @@ class Pkg(ConanFile):
         client.run("package .")
         self.assertIn("Test_param: hello-world!", client.out)
 
-    def package_with_destination_test(self):
+    def test_package_with_destination(self):
         client = TestClient()
 
         def prepare_for_package(the_client):
@@ -82,7 +82,7 @@ class Pkg(ConanFile):
         client.run("package ./my_conanfile.py --build-folder build --package-folder='%s'" % pf)
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "mypackage", "two")))
 
-    def package_with_path_errors_test(self):
+    def test_package_with_path_errors(self):
         client = TestClient()
         client.save({"conanfile.txt": "contents"}, clean_first=True)
 
@@ -101,13 +101,13 @@ class Pkg(ConanFile):
                       % os.path.join(client.current_folder, "not_real_dir", "conanfile.py"),
                       client.out)
 
-    def package_with_reference_errors_test(self):
+    def test_package_with_reference_errors(self):
         client = TestClient()
         client.run("package MyLib/0.1@lasote/stable", assert_error=True)
         self.assertIn("conan package' doesn't accept a reference anymore",
                       client.out)
 
-    def local_package_test(self):
+    def test_local_package(self):
         client = TestClient()
         conanfile_template = """
 from conans import ConanFile
@@ -129,7 +129,7 @@ class MyConan(ConanFile):
         self.assertEqual(os.listdir(os.path.join(package_folder, "include")), ["file.h"])
 
     @parameterized.expand([(False, False), (True, False), (True, True), (False, True)])
-    def local_package_build_test(self, default_folder, conanfile_path):
+    def test_local_package_build(self, default_folder, conanfile_path):
         client = TestClient()
         conanfile_template = """
 from conans import ConanFile
@@ -173,7 +173,7 @@ class MyConan(ConanFile):
         self.assertEqual(os.listdir(os.path.join(package_folder, "lib")), ["mypkg.lib"])
 
     @parameterized.expand([(False, False), (True, False), (True, True), (False, True)])
-    def local_package_source_test(self, default_folder, conanfile_path):
+    def test_local_package_source(self, default_folder, conanfile_path):
         client = TestClient()
         conanfile_template = """
 from conans import ConanFile
@@ -217,7 +217,7 @@ class MyConan(ConanFile):
         self.assertEqual(os.listdir(os.path.join(package_folder, "lib")), ["mypkg.lib"])
         self.assertEqual(os.listdir(os.path.join(package_folder, "bin")), ["myapp"])
 
-    def no_files_copied_local_package_test(self):
+    def test_no_files_copied_local_package(self):
         # https://github.com/conan-io/conan/issues/2753
         client = TestClient()
         conanfile = """
@@ -266,7 +266,7 @@ class MyConan(ConanFile):
         self.assertIn("package(): Packaged 1 '.h' file: file.h", client.out)
         self.assertIn("package(): Packaged 1 '.lib' file: library.lib", client.out)
 
-    def installer_package_test(self):
+    def test_installer_package(self):
         """ Simulates installers when packaging the file e.g. cmake install
             The package() does not use self.copy, but files are copied to package folder
         """
@@ -288,7 +288,7 @@ class MyConan(ConanFile):
         self.assertIn("package(): Packaged 1 '.md' file: LICENSE.md", client.out)
         self.assertIn("conanfile.py: Package 'package' created", client.out)
 
-    def empty_package_folder_test(self):
+    def test_empty_package_folder(self):
         """ When the package folder is empty, then an warning should appear
             and no files must be listed. Also, self.copy() return value should be empty.
         """

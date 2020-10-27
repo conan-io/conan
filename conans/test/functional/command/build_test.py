@@ -39,7 +39,7 @@ class AConan(ConanFile):
 
 class ConanBuildTest(unittest.TestCase):
 
-    def partial_build_test(self):
+    def test_partial_build(self):
         client = TestClient()
         conanfile = """from conans import ConanFile
 
@@ -84,7 +84,7 @@ class Conan(ConanFile):
         self.assertIn("INSTALL=True!", client.out)
         self.assertIn("TEST=True!", client.out)
 
-    def build_error_test(self):
+    def test_build_error(self):
         """ If not using -g txt generator, and build() requires self.deps_cpp_info,
         or self.deps_user_info it wont fail because now it's automatic
         """
@@ -115,7 +115,7 @@ class AConan(ConanFile):
         client.run("install . --build=missing")
         client.run("build ./conanfile.py")
 
-    def build_test(self):
+    def test_build(self):
         """ Try to reuse variables loaded from txt generator => deps_cpp_info
         """
         client = TestClient()
@@ -134,7 +134,7 @@ class AConan(ConanFile):
         self.assertIn("my_conanfile.py: HELLO INCLUDE PATHS: %s/include"
                       % package_folder, client.out)
 
-    def build_different_folders_test(self):
+    def test_build_different_folders(self):
         conanfile = """
 import os
 from conans import ConanFile
@@ -212,7 +212,7 @@ class AConan(ConanFile):
                       client.out)
         self.assertIn("Src folder=>%s" % os.path.join(client.current_folder, "mysrc"), client.out)
 
-    def build_dots_names_test(self):
+    def test_build_dots_names(self):
         """ Try to reuse variables loaded from txt generator => deps_cpp_info
         """
         client = TestClient()
@@ -242,7 +242,7 @@ class AConan(ConanFile):
         self.assertIn("Hello.Pkg/0.1/lasote/testing", client.out)
         self.assertIn("Hello-Tools/0.1/lasote/testing", client.out)
 
-    def build_cmake_install_test(self):
+    def test_build_cmake_install(self):
         client = TestClient()
         conanfile = """
 from conans import ConanFile, CMake
@@ -285,7 +285,7 @@ cmake_minimum_required(VERSION 2.8.12)
         header = client.load("mypkg/include/header.h")
         self.assertEqual(header, "my header2 h!!")
 
-    def build_with_deps_env_info_test(self):
+    def test_build_with_deps_env_info(self):
         client = TestClient()
         conanfile = """
 from conans import ConanFile, CMake
@@ -314,7 +314,7 @@ class AConan(ConanFile):
         client.run("install . --build missing")
         client.run("build .")
 
-    def build_single_full_reference_test(self):
+    def test_build_single_full_reference(self):
         client = TestClient()
         conanfile = """
 from conans import ConanFile, CMake
@@ -327,7 +327,7 @@ class FooConan(ConanFile):
         client.run("create --build foo/1.0@user/stable . user/stable")
         self.assertIn("foo/1.0@user/stable: Forced build from source", client.out)
 
-    def build_multiple_full_reference_test(self):
+    def test_build_multiple_full_reference(self):
         client = TestClient()
         conanfile = """
 from conans import ConanFile, CMake
@@ -352,7 +352,7 @@ class BarConan(ConanFile):
         self.assertIn("foo/1.0@user/stable: Forced build from source", client.out)
         self.assertIn("bar/1.0@user/testing: Forced build from source", client.out)
 
-    def debug_build_release_deps_test(self):
+    def test_debug_build_release_deps(self):
         # https://github.com/conan-io/conan/issues/2899
         client = TestClient()
         conanfile = textwrap.dedent("""

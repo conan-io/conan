@@ -82,7 +82,7 @@ class BuildIdTest(unittest.TestCase):
         self.assertIn("build_type=Release", conaninfo)
         self.assertNotIn("Debug", conaninfo)
 
-    def create_test(self):
+    def test_create(self):
         # Ensure that build_id() works when multiple create calls are made
 
         client = TestClient()
@@ -105,7 +105,7 @@ class BuildIdTest(unittest.TestCase):
         self._check_conaninfo(client)
 
     @parameterized.expand([(True, ), (False,)])
-    def basic_test(self, python_consumer):
+    def test_basic(self, python_consumer):
         client = TestClient()
 
         client.save({"conanfile.py": conanfile})
@@ -199,7 +199,7 @@ class BuildIdTest(unittest.TestCase):
         self.assertEqual("Release file1", content)
         self._check_conaninfo(client)
 
-    def remove_specific_builds_test(self):
+    def test_remove_specific_builds(self):
         client = TestClient()
         client.save({"conanfile.py": conanfile})
         client.run('create . user/channel -s os=Windows -s build_type=Debug')
@@ -209,7 +209,7 @@ class BuildIdTest(unittest.TestCase):
         def _check_builds():
             builds = client.cache.package_layout(ref).conan_builds()
             self.assertEqual(1, len(builds))
-            pkgs = client.cache.package_layout(ref).conan_packages()
+            pkgs = client.cache.package_layout(ref).package_ids()
             self.assertEqual(2, len(pkgs))
             self.assertNotIn(builds[0], pkgs)
             return builds[0], pkgs
@@ -220,11 +220,11 @@ class BuildIdTest(unittest.TestCase):
         client.run("remove Pkg/0.1@user/channel -b %s -f" % build)
         cache_builds = client.cache.package_layout(ref).conan_builds()
         self.assertEqual(0, len(cache_builds))
-        cache_packages = client.cache.package_layout(ref).conan_packages()
-        self.assertEqual(2, len(cache_packages))
+        package_ids = client.cache.package_layout(ref).package_ids()
+        self.assertEqual(2, len(package_ids))
 
     @parameterized.expand([(True, ), (False,)])
-    def info_test(self, python_consumer):
+    def test_info(self, python_consumer):
         client = TestClient()
         client.save({"conanfile.py": conanfile})
         client.run("export . user/channel")
@@ -266,7 +266,7 @@ class BuildIdTest(unittest.TestCase):
             self.assertIn("ID: ab2e9f86b4109980930cdc685f4a320b359e7bb4", client.out)
             self.assertNotIn("ID: f3989dcba0ab50dc5ed9b40ede202bdd7b421f09", client.out)
 
-    def failed_build_test(self):
+    def test_failed_build(self):
         # Repeated failed builds keep failing
         fail_conanfile = textwrap.dedent("""\
             from conans import ConanFile
