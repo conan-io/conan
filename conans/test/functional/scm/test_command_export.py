@@ -13,7 +13,7 @@ from conans.test.utils.scm import create_local_git_repo
 
 
 @attr("svn")
-@pytest.mark.tool.svn
+@pytest.mark.tool_svn
 class ExportErrorCommandTestCase(unittest.TestCase):
     conanfile = textwrap.dedent("""\
         from conans import ConanFile

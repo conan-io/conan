@@ -33,7 +33,7 @@ class GitRemoteUrlTest(unittest.TestCase):
 
 
 @attr('git')
-@pytest.mark.tool.git
+@pytest.mark.tool_git
 class GitToolTest(unittest.TestCase):
 
     @patch('subprocess.Popen')

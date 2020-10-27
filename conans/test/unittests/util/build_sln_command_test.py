@@ -21,7 +21,7 @@ from conans.util.files import load, save
 
 
 @attr('visual_studio')
-@pytest.mark.tool.visual_studio
+@pytest.mark.tool_visual_studio
 class BuildSLNCommandTest(unittest.TestCase):
 
     def test_no_configuration(self):

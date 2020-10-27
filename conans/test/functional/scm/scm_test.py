@@ -50,7 +50,7 @@ def _quoted(item):
 
 
 @attr('git')
-@pytest.mark.tool.git
+@pytest.mark.tool_git
 class GitSCMTest(unittest.TestCase):
 
     def setUp(self):
@@ -634,7 +634,7 @@ class ConanLib(ConanFile):
 
 
 @attr('svn')
-@pytest.mark.tool.svn
+@pytest.mark.tool_svn
 class SVNSCMTest(SVNLocalRepoTestCase):
 
     def setUp(self):
@@ -990,7 +990,7 @@ class ConanLib(ConanFile):
 
 
 @attr('svn')
-@pytest.mark.tool.svn
+@pytest.mark.tool_svn
 class SCMSVNWithLockedFilesTest(SVNLocalRepoTestCase):
 
     def test_propset_own(self):

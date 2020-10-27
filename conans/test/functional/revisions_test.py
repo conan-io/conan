@@ -1351,7 +1351,7 @@ class SCMRevisions(unittest.TestCase):
                       client.out)
 
     @attr("svn")
-    @pytest.mark.tool.svn
+    @pytest.mark.tool_svn
     def test_auto_revision_even_without_scm_svn(self):
         """Even without using the scm feature, the revision is detected from repo.
          Also while we continue working in local, the revision doesn't change, so the packages

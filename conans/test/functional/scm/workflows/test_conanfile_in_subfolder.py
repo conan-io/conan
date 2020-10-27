@@ -20,7 +20,7 @@ class ConanfileInSubfolder(TestWorkflow):
 
 
 @attr("svn")
-@pytest.mark.tool.svn
+@pytest.mark.tool_svn
 class SVNConanfileInSubfolderTest(ConanfileInSubfolder, SVNLocalRepoTestCase):
 
     extra_header = textwrap.dedent("""\

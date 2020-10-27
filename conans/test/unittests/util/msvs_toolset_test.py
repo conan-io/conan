@@ -13,7 +13,7 @@ from conans.test.utils.mocks import MockSettings
 
 
 @attr('visual_studio')
-@pytest.mark.tool.visual_studio
+@pytest.mark.tool_visual_studio
 @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
 class MSVCToolsetTest(unittest.TestCase):
 

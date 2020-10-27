@@ -9,7 +9,7 @@ from conans.test.utils.tools import TestClient
 
 
 @attr("premake")
-@pytest.mark.tool.premake
+@pytest.mark.tool_premake
 @unittest.skipIf(which("premake5") is None, "Needs premake5")
 class PremakeGeneratorTest(unittest.TestCase):
 

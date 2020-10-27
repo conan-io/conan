@@ -13,7 +13,7 @@ from conans.test.utils.scm import SVNLocalRepoTestCase
 
 
 @attr('svn')
-@pytest.mark.tool.svn
+@pytest.mark.tool_svn
 class SVNTaggedComponentTest(SVNLocalRepoTestCase):
     # Reproducing https://github.com/conan-io/conan/issues/5017
 

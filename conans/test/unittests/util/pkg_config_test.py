@@ -30,7 +30,7 @@ Cflags: -I${includedir}/libastral -D_USE_LIBASTRAL
 
 
 @attr("unix")
-@pytest.mark.tool.unix
+@pytest.mark.tool_unix
 class PkgConfigTest(unittest.TestCase):
     def test_negative(self):
         if platform.system() == "Windows":
