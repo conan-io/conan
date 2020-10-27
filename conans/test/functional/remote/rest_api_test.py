@@ -1,5 +1,6 @@
 import os
 import platform
+import pytest
 import unittest
 
 import requests
@@ -55,7 +56,9 @@ class RestApiUnitTest(unittest.TestCase):
 
 
 @attr('slow')
+@pytest.mark.slow
 @attr('rest_api')
+@pytest.mark.rest_api
 class RestApiTest(unittest.TestCase):
     """Open a real server (sockets) to test rest_api function."""
 

@@ -1,6 +1,8 @@
 import platform
+import pytest
 import textwrap
 import unittest
+
 
 from nose.plugins.attrib import attr
 
@@ -415,6 +417,7 @@ int main(){
 class MSBuildGeneratorTest(unittest.TestCase):
 
     @attr('slow')
+    @pytest.mark.slow
     def test_msbuild_generator(self):
         client = TestClient()
         # Upload to alternative server Hello0 but Hello1 to the default

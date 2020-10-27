@@ -1,4 +1,5 @@
 import unittest
+import pytest
 
 from nose.plugins.attrib import attr
 
@@ -58,6 +59,7 @@ int main(){
 
 
 @attr("slow")
+@pytest.mark.slow
 class BuildRequiresTest(unittest.TestCase):
 
     def test_test_framework(self):

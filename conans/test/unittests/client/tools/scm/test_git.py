@@ -1,5 +1,6 @@
 # coding=utf-8
 import os
+import pytest
 import six
 import unittest
 import subprocess
@@ -32,6 +33,7 @@ class GitRemoteUrlTest(unittest.TestCase):
 
 
 @attr('git')
+@pytest.mark.tool.git
 class GitToolTest(unittest.TestCase):
 
     @patch('subprocess.Popen')

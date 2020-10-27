@@ -1,5 +1,6 @@
 import os
 import platform
+import pytest
 import stat
 import unittest
 from collections import OrderedDict
@@ -67,6 +68,7 @@ class UploadTest(unittest.TestCase):
         client.run("upload * --all --confirm")
 
     @attr("artifactory_ready")
+    @pytest.mark.artifactory_ready
     def test_upload_force(self):
         ref = ConanFileReference.loads("Hello/0.1@conan/testing")
         client = TurboTestClient(servers={"default": TestServer()})

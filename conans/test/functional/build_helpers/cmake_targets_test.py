@@ -1,4 +1,5 @@
 import platform
+import pytest
 import unittest
 
 from nose.plugins.attrib import attr
@@ -47,6 +48,7 @@ int main(){
 
 
 @attr("slow")
+@pytest.mark.slow
 class CMakeTargetsTest(unittest.TestCase):
     def test_transitive_flags(self):
         client = TestClient()

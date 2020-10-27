@@ -1,4 +1,5 @@
 import os
+import pytest
 import time
 import unittest
 
@@ -11,6 +12,7 @@ from conans.test.utils.tools import TestClient, TestServer
 
 
 @attr("slow")
+@pytest.mark.slow
 class CompleteFlowTest(unittest.TestCase):
 
     def test_reuse_complete_urls(self):

@@ -2,6 +2,7 @@
 
 import os
 import unittest
+import pytest
 
 from nose.plugins.attrib import attr
 
@@ -18,6 +19,7 @@ class ConanfileInRepoRoot(TestWorkflow):
 
 
 @attr("svn")
+@pytest.mark.tool.svn
 class SVNConanfileInRepoRootTest(ConanfileInRepoRoot, SVNLocalRepoTestCase):
     """ Test SCM url='auto' with SVN, it can only work if conanfile is in the root of the repo
 

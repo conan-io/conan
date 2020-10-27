@@ -1,5 +1,6 @@
 import os
 import platform
+import pytest
 import textwrap
 import unittest
 
@@ -132,9 +133,11 @@ int main(){{
 
 
 @attr("slow")
+@pytest.mark.slow
 class CMakeMultiTest(unittest.TestCase):
 
     @attr("mingw")
+    @pytest.mark.tool.mingw
     def test_cmake_multi_find(self):
         if platform.system() not in ["Windows", "Linux"]:
             return

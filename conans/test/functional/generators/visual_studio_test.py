@@ -2,6 +2,7 @@
 
 import os
 import platform
+import pytest
 import textwrap
 import unittest
 
@@ -27,6 +28,7 @@ Hello1/0.1@lasote/testing
 class VisualStudioTest(unittest.TestCase):
 
     @attr('slow')
+    @pytest.mark.slow
     @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
     def test_build_vs_project_with_a(self):
         client = TestClient()

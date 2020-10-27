@@ -1,5 +1,6 @@
 import os
 import platform
+import pytest
 import textwrap
 import unittest
 
@@ -15,6 +16,8 @@ from conans.util.files import mkdir
 
 @attr("slow")
 @attr("toolchain")
+@pytest.mark.slow
+@pytest.mark.toolchain
 class MakeToolchainTest(unittest.TestCase):
     @parameterized.expand([
         ("exe", "Release"),

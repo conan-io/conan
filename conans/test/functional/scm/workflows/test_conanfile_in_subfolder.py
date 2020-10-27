@@ -3,6 +3,7 @@
 import os
 import textwrap
 import unittest
+import pytest
 
 from nose.plugins.attrib import attr
 
@@ -19,6 +20,7 @@ class ConanfileInSubfolder(TestWorkflow):
 
 
 @attr("svn")
+@pytest.mark.tool.svn
 class SVNConanfileInSubfolderTest(ConanfileInSubfolder, SVNLocalRepoTestCase):
 
     extra_header = textwrap.dedent("""\

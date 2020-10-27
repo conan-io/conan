@@ -1,5 +1,6 @@
 import os
 import platform
+import pytest
 import unittest
 
 from nose.plugins.attrib import attr
@@ -17,6 +18,7 @@ from conans.util.files import load
 class ConanEnvTest(unittest.TestCase):
 
     @attr('slow')
+    @pytest.mark.slow
     def test_shared_in_current_directory(self):
         """
         - There is a package building a shared library

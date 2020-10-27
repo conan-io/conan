@@ -1,6 +1,7 @@
 # coding=utf-8
 
 import os
+import pytest
 import shutil
 import six
 import subprocess
@@ -37,6 +38,8 @@ class SVNRemoteUrlTest(unittest.TestCase):
 
 @attr("slow")
 @attr('svn')
+@pytest.mark.slow
+@pytest.mark.tool.svn
 class SVNToolTestsBasic(SVNLocalRepoTestCase):
 
     @patch('subprocess.Popen')
@@ -308,6 +311,8 @@ compiled Apr  5 2019, 18:59:58 on x86_64-apple-darwin17.0.0"""
 
 @attr("slow")
 @attr('svn')
+@pytest.mark.slow
+@pytest.mark.tool.svn
 class SVNToolTestsBasicOldVersion(SVNToolTestsBasic):
     def run(self, *args, **kwargs):
         try:
@@ -324,6 +329,8 @@ class SVNToolTestsBasicOldVersion(SVNToolTestsBasic):
 
 @attr("slow")
 @attr('svn')
+@pytest.mark.slow
+@pytest.mark.tool.svn
 class SVNToolTestsPristine(SVNLocalRepoTestCase):
 
     def setUp(self):
@@ -426,6 +433,7 @@ class SVNToolTestsPristine(SVNLocalRepoTestCase):
 
 
 @attr("svn")
+@pytest.mark.tool.svn
 class SVNToolTestsPristineWithExternalFile(SVNLocalRepoTestCase):
 
     def _propset_cmd(self, relpath, rev, url):
@@ -449,6 +457,7 @@ class SVNToolTestsPristineWithExternalFile(SVNLocalRepoTestCase):
 
 
 @attr("svn")
+@pytest.mark.tool.svn
 class SVNToolTestsPristineWithExternalsNotFixed(SVNLocalRepoTestCase):
 
     def _propset_cmd(self, relpath, url):
@@ -481,6 +490,7 @@ class SVNToolTestsPristineWithExternalsNotFixed(SVNLocalRepoTestCase):
 
 
 @attr("svn")
+@pytest.mark.tool.svn
 class SVNToolTestsPristineWithExternalsFixed(SVNLocalRepoTestCase):
 
     def _propset_cmd(self, relpath, rev, url):
@@ -548,6 +558,8 @@ class SVNToolTestsPristineWithExternalsFixed(SVNLocalRepoTestCase):
 
 @attr("slow")
 @attr('svn')
+@pytest.mark.slow
+@pytest.mark.tool.svn
 class SVNToolsTestsRecipe(SVNLocalRepoTestCase):
 
     conanfile = """

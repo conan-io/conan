@@ -1,5 +1,6 @@
 import os
 import platform
+import pytest
 import textwrap
 import unittest
 
@@ -11,6 +12,7 @@ from conans.test.utils.tools import TestClient
 
 
 @attr('slow')
+@pytest.mark.slow
 class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
 
     @staticmethod

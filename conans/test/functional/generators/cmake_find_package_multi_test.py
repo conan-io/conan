@@ -1,5 +1,6 @@
 import os
 import platform
+import pytest
 import textwrap
 import unittest
 
@@ -12,6 +13,7 @@ from conans.util.files import load
 
 
 @attr('slow')
+@pytest.mark.slow
 class CMakeFindPathMultiGeneratorTest(unittest.TestCase):
 
     def test_native_export_multi(self):

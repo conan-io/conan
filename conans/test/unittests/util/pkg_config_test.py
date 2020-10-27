@@ -3,6 +3,7 @@
 
 import os
 import platform
+import pytest
 import unittest
 
 from nose.plugins.attrib import attr
@@ -29,6 +30,7 @@ Cflags: -I${includedir}/libastral -D_USE_LIBASTRAL
 
 
 @attr("unix")
+@pytest.mark.tool.unix
 class PkgConfigTest(unittest.TestCase):
     def test_negative(self):
         if platform.system() == "Windows":

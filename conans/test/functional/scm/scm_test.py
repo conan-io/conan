@@ -1,6 +1,7 @@
 import os
 import textwrap
 import unittest
+import pytest
 from collections import namedtuple
 
 from nose.plugins.attrib import attr
@@ -49,6 +50,7 @@ def _quoted(item):
 
 
 @attr('git')
+@pytest.mark.tool.git
 class GitSCMTest(unittest.TestCase):
 
     def setUp(self):
@@ -632,6 +634,7 @@ class ConanLib(ConanFile):
 
 
 @attr('svn')
+@pytest.mark.tool.svn
 class SVNSCMTest(SVNLocalRepoTestCase):
 
     def setUp(self):
@@ -987,6 +990,7 @@ class ConanLib(ConanFile):
 
 
 @attr('svn')
+@pytest.mark.tool.svn
 class SCMSVNWithLockedFilesTest(SVNLocalRepoTestCase):
 
     def test_propset_own(self):

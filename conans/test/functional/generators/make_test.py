@@ -1,5 +1,6 @@
 import os
 import platform
+import pytest
 import unittest
 
 from nose.plugins.attrib import attr
@@ -11,6 +12,7 @@ from conans.test.utils.tools import TestClient
 class MakeGeneratorTest(unittest.TestCase):
 
     @attr('slow')
+    @pytest.mark.slow
     @unittest.skipUnless(platform.system() == "Linux", "Requires make")
     def test_complete_creation_reuse(self):
         client = TestClient(path_with_spaces=False)

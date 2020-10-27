@@ -1,11 +1,13 @@
 import json
 import os
+import pytest
 import sys
 import unittest
 from collections import OrderedDict
 
 import six
 from nose.plugins.attrib import attr
+
 
 from conans.build_info.conan_build_info import get_build_info
 from conans.client import tools
@@ -126,6 +128,7 @@ class MyBuildInfo(unittest.TestCase):
             self.assertEqual(0, len(module["dependencies"]))
 
     @attr('ide_fail')
+    @pytest.mark.ide_fail
     def test_trace_command(self):
         from conans.build_info.command import run
         trace_file = os.path.join(temp_folder(), "conan_trace.log")

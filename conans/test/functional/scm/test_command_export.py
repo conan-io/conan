@@ -3,6 +3,7 @@
 import itertools
 import textwrap
 import unittest
+import pytest
 
 from parameterized import parameterized
 from nose.plugins.attrib import attr
@@ -12,6 +13,7 @@ from conans.test.utils.scm import create_local_git_repo
 
 
 @attr("svn")
+@pytest.mark.tool.svn
 class ExportErrorCommandTestCase(unittest.TestCase):
     conanfile = textwrap.dedent("""\
         from conans import ConanFile

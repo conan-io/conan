@@ -1,4 +1,5 @@
 import os
+import pytest
 import unittest
 
 from nose.plugins.attrib import attr
@@ -8,6 +9,7 @@ from conans.test.utils.tools import TestClient
 
 
 @attr("slow")
+@pytest.mark.slow
 class CMakeConfigsTest(unittest.TestCase):
 
     def test_test_package_configs(self):

@@ -1,5 +1,6 @@
 import os
 import unittest
+import pytest
 
 from nose.plugins.attrib import attr
 from parameterized import parameterized
@@ -17,6 +18,7 @@ from conans.test.utils.mocks import TestBufferConanOutput
 
 
 @attr('visual_studio')
+@pytest.mark.tool.visual_studio
 class VisualStudioMultiGeneratorTest(unittest.TestCase):
 
     @parameterized.expand([(False, ), (True, )])

@@ -1,4 +1,5 @@
 import os
+import pytest
 import shutil
 import unittest
 
@@ -10,6 +11,7 @@ from conans.util.files import rmdir
 
 
 @attr("slow")
+@pytest.mark.slow
 class SharedChainTest(unittest.TestCase):
 
     def setUp(self):

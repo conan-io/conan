@@ -2,6 +2,7 @@
 
 import os
 import platform
+import pytest
 import unittest
 
 from nose.plugins.attrib import attr
@@ -58,6 +59,7 @@ void hello(){
 
 
 @attr('slow')
+@pytest.mark.slow
 @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
 class VisualStudioMultiTest(unittest.TestCase):
 

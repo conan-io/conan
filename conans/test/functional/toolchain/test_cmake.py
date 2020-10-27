@@ -1,5 +1,6 @@
 import os
 import platform
+import pytest
 import textwrap
 import time
 import unittest
@@ -12,6 +13,7 @@ from conans.test.utils.tools import TestClient
 
 
 @attr("toolchain")
+@pytest.mark.toolchain
 class Base(unittest.TestCase):
 
     conanfile = textwrap.dedent("""
@@ -371,6 +373,7 @@ class AppleTest(Base):
 
 
 @attr("toolchain")
+@pytest.mark.toolchain
 class CMakeInstallTest(unittest.TestCase):
 
     def test_install(self):

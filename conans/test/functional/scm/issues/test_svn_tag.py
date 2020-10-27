@@ -2,6 +2,7 @@
 
 import os
 import textwrap
+import pytest
 
 from nose.plugins.attrib import attr
 
@@ -12,6 +13,7 @@ from conans.test.utils.scm import SVNLocalRepoTestCase
 
 
 @attr('svn')
+@pytest.mark.tool.svn
 class SVNTaggedComponentTest(SVNLocalRepoTestCase):
     # Reproducing https://github.com/conan-io/conan/issues/5017
 

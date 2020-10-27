@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import platform
+import pytest
 import unittest
 
 from mock import mock
@@ -15,6 +16,7 @@ from conans.test.utils.mocks import TestBufferConanOutput
 
 
 @attr('visual_studio')
+@pytest.mark.tool.visual_studio
 @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
 class VCVarsClangClTest(unittest.TestCase):
     output = TestBufferConanOutput()

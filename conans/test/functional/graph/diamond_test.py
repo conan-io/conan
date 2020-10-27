@@ -1,5 +1,6 @@
 import os
 import platform
+import pytest
 import unittest
 
 from nose.plugins.attrib import attr
@@ -12,6 +13,7 @@ from conans.util.files import load
 
 
 @attr("slow")
+@pytest.mark.slow
 class DiamondTest(unittest.TestCase):
 
     def setUp(self):

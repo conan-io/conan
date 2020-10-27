@@ -1,4 +1,5 @@
 import os
+import pytest
 import time
 import unittest
 
@@ -12,6 +13,7 @@ from conans.util.files import load
 
 
 @attr("slow")
+@pytest.mark.slow
 class ConanTestTest(unittest.TestCase):
 
     def test_partial_reference(self):

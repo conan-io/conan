@@ -1,4 +1,5 @@
 import os
+import pytest
 import textwrap
 import unittest
 
@@ -87,6 +88,7 @@ sources:
         self.assertIn("My URL:", client.out)
 
     @attr("slow")
+    @pytest.mark.slow
     @attr('local_bottle')
     def test_conan_data_as_source(self):
         tgz_path = tgz_with_contents({"foo.txt": "foo"})

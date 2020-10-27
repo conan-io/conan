@@ -1,5 +1,6 @@
 import os
 import platform
+import pytest
 import textwrap
 import unittest
 
@@ -72,6 +73,7 @@ class CMakeGeneratorTest(unittest.TestCase):
         self.assertIn("Conan: Checking correct version:", client.out)
 
     @attr("slow")
+    @pytest.mark.slow
     @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
     def test_skip_check_if_toolset(self):
         file_content = textwrap.dedent("""
@@ -102,6 +104,7 @@ class CMakeGeneratorTest(unittest.TestCase):
         self.assertIn("Conan: Skipping compiler check: Declared 'compiler.toolset'", client.out)
 
     @attr('slow')
+    @pytest.mark.slow
     def test_no_output(self):
         client = TestClient()
         client.run("new Test/1.0 --sources")
