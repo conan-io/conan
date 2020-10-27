@@ -58,7 +58,7 @@ class SystemToolsTestCase(unittest.TestCase):
         })
 
     def test_use_cmake_toolchain(self):
-        """ This is the naïve approach, we follow instruction from CMake in its documentation
+        """ This is the naive approach, we follow instruction from CMake in its documentation
             https://cmake.org/cmake/help/latest/manual/cmake-toolchains.7.html#cross-compiling-for-android
         """
         # Build in the cache
