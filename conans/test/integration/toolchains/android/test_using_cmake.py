@@ -1,8 +1,8 @@
-import shutil
 import textwrap
 import unittest
 
 from conans.client.toolchain.cmake.base import CMakeToolchainBase
+from conans.client.tools import which
 from conans.test.utils.tools import TestClient
 from ._utils import create_library
 
@@ -14,9 +14,9 @@ class SystemToolsTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        if not shutil.which('cmake'):
+        if not which('cmake'):
             raise unittest.SkipTest("CMake expected in PATH")
-        if not shutil.which('ndk-build'):
+        if not which('ndk-build'):
             raise unittest.SkipTest("ANDROID_NDK (ndk-build) expected in PATH")
 
     def setUp(self):
