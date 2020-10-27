@@ -98,7 +98,12 @@ class CMakeBuildHelper(object):
         # FIXME CONAN 2.0: CMake() interface should be always the constructor and self.definitions.
         # FIXME CONAN 2.0: Avoid properties and attributes to make the user interface more clear
 
-        self.definitions = builder.get_definitions(self.get_version())
+        try:
+            cmake_version = self.get_version()
+            self.definitions = builder.get_definitions(cmake_version)
+        except ConanException:
+            self.definitions = builder.get_definitions(None)
+
         self.definitions["CONAN_EXPORTED"] = "1"
 
         self.toolset = toolset or get_toolset(self._settings, self.generator)
