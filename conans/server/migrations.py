@@ -15,19 +15,11 @@ class ServerMigrator(Migrator):
 
     def __init__(self, conf_path, store_path, current_version, out, force_migrations):
         self.force_migrations = force_migrations
-        super(ServerMigrator, self).__init__(conf_path, store_path, current_version, out)
+        self.store_path = store_path
+        super(ServerMigrator, self).__init__(conf_path, current_version, out)
 
     def _make_migrations(self, old_version):
         # ############### FILL THIS METHOD WITH THE REQUIRED ACTIONS ##############
-
-        # VERSION 0.1
-        if old_version == Version("0.1"):
-            # Remove config, conans, all!
-            self.out.warn("Reseting configuration and storage files...")
-            if self.conf_path:
-                rmdir(self.conf_path)
-            if self.store_path:
-                rmdir(self.store_path)
 
         if old_version < Version("1.10.0"):
             if not os.path.exists(self.store_path) or not os.listdir(self.store_path):

@@ -4,6 +4,7 @@ import unittest
 import six
 
 from conans.errors import ConanException
+from conans.test.utils.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 from conans.util.files import load, save_append
 from conans.test.utils.test_files import temp_folder
@@ -112,10 +113,19 @@ class ConfigTest(unittest.TestCase):
             client.run("config home --json home.json")
             self._assert_dict_subset({"home": cache_folder}, json.loads(client.load("home.json")))
 
+    def test_config_home_custom_install(self):
+        cache_folder = os.path.join(temp_folder(), "custom")
+        with environment_append({"CONAN_USER_HOME": cache_folder}):
+            client = TestClient(cache_folder=cache_folder, cache_autopopulate=False)
+            client.save({"conanfile.py": GenConanfile()})
+            client.run("install .")
+            self.assertIn("conanfile.py: Installing package", client.out)
+
     def test_config_home_short_home_dir(self):
         cache_folder = os.path.join(temp_folder(), "custom")
         with environment_append({"CONAN_USER_HOME_SHORT": cache_folder}):
-            with six.assertRaisesRegex(self, ConanException, "cannot be a subdirectory of the conan cache"):
+            with six.assertRaisesRegex(self, ConanException,
+                                       "cannot be a subdirectory of the conan cache"):
                 TestClient(cache_folder=cache_folder)
 
     def test_config_home_short_home_dir_contains_cache_dir(self):

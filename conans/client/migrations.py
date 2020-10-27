@@ -22,14 +22,13 @@ from conans.util.files import list_folder_subdirs, load, save
 class ClientMigrator(Migrator):
 
     def __init__(self, cache_folder, current_version, out):
-        self.cache = ClientCache(cache_folder, out)
-        super(ClientMigrator, self).__init__(self.cache.cache_folder, self.cache.store,
-                                             current_version, out)
+        self.cache_folder = cache_folder
+        super(ClientMigrator, self).__init__(cache_folder, current_version, out)
 
-    def _update_settings_yml(self, old_version):
+    def _update_settings_yml(self, cache, old_version):
 
         from conans.client.conf import get_default_settings_yml
-        settings_path = self.cache.settings_path
+        settings_path = cache.settings_path
         if not os.path.exists(settings_path):
             self.out.warn("Migration: This conan installation doesn't have settings yet")
             self.out.warn("Nothing to migrate here, settings will be generated automatically")
@@ -38,7 +37,7 @@ class ClientMigrator(Migrator):
         var_name = "settings_{}".format(old_version.replace(".", "_"))
 
         def save_new():
-            new_path = self.cache.settings_path + ".new"
+            new_path = cache.settings_path + ".new"
             save(new_path, get_default_settings_yml())
             self.out.warn("*" * 40)
             self.out.warn("settings.yml is locally modified, can't be updated")
@@ -49,11 +48,11 @@ class ClientMigrator(Migrator):
         if hasattr(migrations_settings, var_name):
             version_default_contents = getattr(migrations_settings, var_name)
             if version_default_contents != get_default_settings_yml():
-                current_settings = load(self.cache.settings_path)
+                current_settings = load(cache.settings_path)
                 if current_settings != version_default_contents:
                     save_new()
                 else:
-                    save(self.cache.settings_path, get_default_settings_yml())
+                    save(cache.settings_path, get_default_settings_yml())
             else:
                 self.out.info("Migration: Settings already up to date")
         else:
@@ -67,32 +66,33 @@ class ClientMigrator(Migrator):
             return
 
         # Migrate the settings if they were the default for that version
-        self._update_settings_yml(old_version)
+        cache = ClientCache(self.cache_folder, self.out)
+        self._update_settings_yml(cache, old_version)
 
         if old_version < Version("1.0"):
-            _migrate_lock_files(self.cache, self.out)
+            _migrate_lock_files(cache, self.out)
 
         if old_version < Version("1.12.0"):
-            migrate_plugins_to_hooks(self.cache)
+            migrate_plugins_to_hooks(cache)
 
         if old_version < Version("1.13.0"):
             # MIGRATE LOCAL CACHE TO GENERATE MISSING METADATA.json
-            _migrate_create_metadata(self.cache, self.out)
+            _migrate_create_metadata(cache, self.out)
 
         if old_version < Version("1.14.0"):
-            migrate_config_install(self.cache)
+            migrate_config_install(cache)
 
         if old_version < Version("1.14.2"):
-            _migrate_full_metadata(self.cache, self.out)
+            _migrate_full_metadata(cache, self.out)
 
         if old_version < Version("1.15.0"):
-            migrate_registry_file(self.cache, self.out)
+            migrate_registry_file(cache, self.out)
 
         if old_version < Version("1.19.0"):
-            migrate_localdb_refresh_token(self.cache, self.out)
+            migrate_localdb_refresh_token(cache, self.out)
 
         if old_version < Version("1.26.0"):
-            migrate_editables_use_conanfile_name(self.cache, self.out)
+            migrate_editables_use_conanfile_name(cache)
 
 
 def _get_refs(cache):
@@ -279,7 +279,7 @@ def migrate_plugins_to_hooks(cache, output=None):
     replace_in_file(conf_path, "[plugins]", "[hooks]", strict=False, output=output)
 
 
-def migrate_editables_use_conanfile_name(cache, output=None):
+def migrate_editables_use_conanfile_name(cache):
     """
     In Conan v1.26 we store full path to the conanfile in the editable_package.json file, before
     it Conan was storing just the directory and assume that the 'conanfile' was a file
