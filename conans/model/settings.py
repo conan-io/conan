@@ -296,9 +296,9 @@ class Settings(object):
     def iteritems(self):
         return self.values_list
 
-    @values_list.setter
-    def values_list(self, vals):
+    def update_values(self, vals):
         """ receives a list of tuples (compiler.version, value)
+        This is more an updated than a setter
         """
         assert isinstance(vals, list), vals
         for (name, value) in vals:
@@ -311,7 +311,7 @@ class Settings(object):
     @values.setter
     def values(self, vals):
         assert isinstance(vals, Values)
-        self.values_list = vals.as_list()
+        self.update_values(vals.as_list())
 
     def constraint(self, constraint_def):
         """ allows to restrict a given Settings object with the input of another Settings object
