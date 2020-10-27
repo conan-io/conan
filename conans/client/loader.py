@@ -183,7 +183,7 @@ class ConanFileLoader(object):
                         pkg_settings = settings
                         break
             if pkg_settings:
-                tmp_settings.values = Values.from_list(pkg_settings)
+                tmp_settings.values_list = pkg_settings
 
         conanfile.initialize(tmp_settings, profile.env_values)
 
