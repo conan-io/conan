@@ -29,6 +29,6 @@ class MigratorPermissionTest(unittest.TestCase):
         migrator = FakeMigrator(conf_path, "latest", out)
         with self.assertRaises(ConanMigrationError) as error:
             migrator.migrate()
-        self.assertEqual("Could not create the directory '{}/version.txt' due to lack of "
+        self.assertEqual("Could not create the directory '{}' due to lack of "
                          "permission. Please, check your user write permission."
                          .format(conf_path), str(error.exception))
