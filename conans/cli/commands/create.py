@@ -1,16 +1,17 @@
 import json
 
-from conans.cli.command import conan_command, Extender, OnceArgument
+from conans.cli.cli import cli_out_write
+from conans.cli.command import conan_command, OnceArgument
 
 
-def output_create_cli(info, out):
+def output_create_cli(info):
     full_reference = info["full_reference"]
-    out.write(full_reference)
+    cli_out_write(full_reference)
 
 
-def output_create_json(info, out):
+def output_create_json(info):
     myjson = json.dumps(info, indent=4)
-    out.write(myjson)
+    cli_out_write(myjson)
 
 
 @conan_command(group="Creator commands", formatters={"cli": output_create_cli,

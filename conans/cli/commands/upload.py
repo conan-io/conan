@@ -2,17 +2,18 @@ import argparse
 import json
 import sys
 
-from conans.cli.command import conan_command, Extender, OnceArgument
+from conans.cli.cli import cli_out_write
+from conans.cli.command import conan_command, OnceArgument
 
 
-def output_upload_cli(info, out):
+def output_upload_cli(info):
     for uploaded_reference in info["uploaded_references"]:
-        out.write("{}".format(uploaded_reference))
+        cli_out_write("{}".format(uploaded_reference))
 
 
-def output_upload_json(info, out):
+def output_upload_json(info):
     myjson = json.dumps(info, indent=4)
-    out.write(myjson)
+    cli_out_write(myjson)
 
 
 @conan_command(group="Creator commands", formatters={"cli": output_upload_cli,
