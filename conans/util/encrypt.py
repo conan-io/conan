@@ -12,7 +12,7 @@ def _ascii_key(key):
 
 def encode(text, key):
     assert isinstance(text, six.string_types), "Expected string type, got '{}'".format(type(text))
-    assert isinstance(key, str), "Expected 'str' type, got '{}'".format(type(key))
+    assert isinstance(key, six.string_types), "Expected 'str' type, got '{}'".format(type(key))
     key = _ascii_key(key)
     res = ""
     for i, c in enumerate(text):
@@ -27,7 +27,7 @@ def encode(text, key):
 
 def decode(text, key):
     assert isinstance(text, six.string_types), "Expected 'bytes', got '{}'".format(type(text))
-    assert isinstance(key, str), "Expected 'str' type, got '{}'".format(type(key))
+    assert isinstance(key, six.string_types), "Expected 'str' type, got '{}'".format(type(key))
     key = _ascii_key(key)
     res = ""
     for i, c in enumerate(text):
