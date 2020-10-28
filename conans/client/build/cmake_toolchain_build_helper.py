@@ -75,7 +75,10 @@ class CMakeToolchainBuildHelper(object):
             build_folder = os.path.join(self._conanfile.build_folder, self._build_folder)
 
         mkdir(build_folder)
-        arg_list = '-DCMAKE_TOOLCHAIN_FILE="%s" "%s"' % (CMakeToolchainBase.filename, source)
+        arg_list = '-DCMAKE_TOOLCHAIN_FILE="{}" -DCMAKE_INSTALL_PREFIX="{}" "{}"'.format(
+            CMakeToolchainBase.filename,
+            self._conanfile.package_folder.replace("\\", "/"),
+            source)
 
         generator = '-G "{}" '.format(self._generator) if self._generator else ""
         command = "%s %s%s" % (self._cmake_program, generator, arg_list)
