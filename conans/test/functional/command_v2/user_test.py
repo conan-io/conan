@@ -15,7 +15,7 @@ class CliUserTest(unittest.TestCase):
         with environment_append({"CONAN_V2_CLI": "1"}):
             super(CliUserTest, self).run(*args, **kwargs)
 
-    def user_command_test(self):
+    def test_user_command(self):
         client = TestClient()
 
         client.run("user list")
