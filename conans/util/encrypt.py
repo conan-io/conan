@@ -7,12 +7,14 @@ import six
 
 def encode(data, key):
     assert isinstance(data, six.string_types), "Expected string type, got '{}'".format(type(data))
+    assert isinstance(key, str), "Expected 'str' type, got '{}'".format(type(key))
     if six.PY3:
         return urlsafe_b64encode(bytes(key + data, 'utf-8'))
     else:
-        return urlsafe_b64encode(str(key + data).encode('utf-8'))
+        return urlsafe_b64encode((key.encode('utf-8') + data).encode('utf-8'))
 
 
 def decode(enc, key):
     assert isinstance(enc, bytes), "Expected 'bytes', got '{}'".format(type(enc))
+    assert isinstance(key, str), "Expected 'str' type, got '{}'".format(type(key))
     return urlsafe_b64decode(enc)[len(key):].decode('utf-8')
