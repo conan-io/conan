@@ -1,8 +1,8 @@
 import abc
-import ctypes
 import os
 import random
 import six
+import shutil
 import stat
 import string
 import sys
@@ -16,8 +16,8 @@ from nose.plugins.attrib import attr
 from parameterized import parameterized_class
 
 from conans.client.tools.files import chdir, load
-from conans.util.files import md5sum
-from conans.test.utils.tools import TestClient
+from conans.test.utils.test_files import temp_folder
+from conans.util.files import md5sum, save_files
 
 
 @six.add_metaclass(abc.ABCMeta)
@@ -142,6 +142,7 @@ class TarCompressor(Compressor):
             f.extractall(path=d)
             f.close()
 
+
 class TarGzCompressor(TarCompressor):
     read_mode = "r:gz"
     write_mode = "w:gz"
@@ -176,27 +177,31 @@ if sys.version_info.major >= 3:
 def symlinks_supported():
     if not hasattr(os, "symlink"):
         return False
-    client = TestClient()
+    tmpdir = temp_folder()
     try:
-        client.save({"a": ""})
-        with chdir(client.current_folder):
+        save_files(tmpdir, {"a": ""})
+        with chdir(tmpdir):
             os.symlink("a", "b")
             return os.path.islink("b")
     except OSError:
         return False
+    finally:
+        shutil.rmtree(tmpdir)
 
 
 def hardlinks_supported():
     if not hasattr(os, "link"):
         return False
-    client = TestClient()
+    tmpdir = temp_folder()
     try:
-        client.save({"a": ""})
-        with chdir(client.current_folder):
+        save_files(tmpdir, {"a": ""})
+        with chdir(tmpdir):
             os.link("a", "b")
             return os.stat("a").st_ino == os.stat("b").st_ino
     except OSError:
         return False
+    finally:
+        shutil.rmtree(tmpdir)
 
 
 @parameterized_class(compressors)
@@ -239,7 +244,7 @@ class CompressionTest(unittest.TestCase):
             inodes[stat.st_ino].append(filename)
         return sorted(list(inodes.values()))
 
-    def compare_dirs(self, d1, d2):
+    def assertDirsEqual(self, d1, d2):
         files1, dirs1, links1 = self.get_file_list(d1)
         files2, dirs2, links2 = self.get_file_list(d2)
         self.assertEqual(files1, files2)
@@ -296,11 +301,11 @@ class CompressionTest(unittest.TestCase):
         components.append(filename + "." + ext)
         return os.path.join(*components)
 
-    def gen_files(self, client, count=1, level=1, filesize=1024):
+    def gen_files(self, d, count=1, level=1, filesize=1024):
         files = dict()
         for i in range(count):
             files[self.gen_filename(level=level)] = self.gen_n_chars(filesize)
-        client.save(files, clean_first=True)
+        save_files(d, files)
 
         # generate timestamps on files
         for filename in files.keys():
@@ -308,40 +313,42 @@ class CompressionTest(unittest.TestCase):
             time1980 = time.mktime((1980, 1, 1, 0, 0, 0, 0, 0, 0))
             atime = random.randrange(time1980, 1 << 32)
             mtime = random.randrange(time1980, 1 << 32)
-            os.utime(os.path.join(client.current_folder, filename), (atime, mtime))
+            os.utime(os.path.join(d, filename), (atime, mtime))
 
             if os.name == 'posix':
                 permission = random.randrange(0, 0o777)
                 # at least read permission is needed to archive
                 permission |= stat.S_IROTH | stat.S_IRUSR
-                os.chmod(os.path.join(client.current_folder, filename), permission)
+                os.chmod(os.path.join(d, filename), permission)
 
         return files
 
     def setUp(self):
-        # common for all tests below
-        self.c1 = TestClient()
-        self.c2 = TestClient()
+        self.d1 = temp_folder()
+        self.d2 = temp_folder()
+
+    def tearDown(self):
+        shutil.rmtree(self.d1)
+        shutil.rmtree(self.d2)
 
     def compress_decompress_check(self):
         # common for all tests below
-        self.compressor.compress(self.c1.current_folder)
-        self.compressor.decompress(self.c2.current_folder)
+        self.compressor.compress(self.d1)
+        self.compressor.decompress(self.d2)
 
-        self.compare_dirs(self.c1.current_folder, self.c2.current_folder)
+        self.assertDirsEqual(self.d1, self.d2)
 
     def test_basic(self):
-        self.c1.save(self.gen_files(client=self.c1, count=10, level=3, filesize=10*1024),
-                     clean_first=True)
+        self.gen_files(self.d1, count=10, level=3, filesize=10*1024)
 
         self.compress_decompress_check()
 
     # simple valid file symbolic link
     @unittest.skipUnless(symlinks_supported(), "requires symlinks")
     def test_simple_file_symlink(self):
-        files = self.gen_files(client=self.c1)
+        files = self.gen_files(self.d1)
 
-        with chdir(self.c1.current_folder):
+        with chdir(self.d1):
             os.symlink(list(files.keys())[0], self.gen_filename())
 
         self.compress_decompress_check()
@@ -349,9 +356,9 @@ class CompressionTest(unittest.TestCase):
     # simple valid directory symbolic link
     @unittest.skipUnless(symlinks_supported(), "requires symlinks")
     def test_simple_dir_symlink(self):
-        files = self.gen_files(client=self.c1)
+        files = self.gen_files(self.d1)
 
-        with chdir(self.c1.current_folder):
+        with chdir(self.d1):
             filename = list(files.keys())[0]
             dirname = os.path.dirname(filename)
             os.symlink(dirname, self.gen_filename())
@@ -361,9 +368,9 @@ class CompressionTest(unittest.TestCase):
     # simple valid file symbolic link (absolute)
     @unittest.skipUnless(symlinks_supported(), "requires symlinks")
     def test_abs_symlink(self):
-        files = self.gen_files(client=self.c1)
+        files = self.gen_files(self.d1)
 
-        with chdir(self.c1.current_folder):
+        with chdir(self.d1):
             os.symlink(os.path.abspath(list(files.keys())[0]), self.gen_filename())
 
         self.compress_decompress_check()
@@ -371,20 +378,20 @@ class CompressionTest(unittest.TestCase):
     # valid relative symbolic link to the parent directory like "../A/B"
     @unittest.skipUnless(symlinks_supported(), "requires symlinks")
     def test_relative_symlink(self):
-        files = self.gen_files(client=self.c1, count=2)
+        files = self.gen_files(self.d1, count=2)
 
-        with chdir(self.c1.current_folder):
+        with chdir(self.d1):
             a = list(files.keys())[0]
             b = list(files.keys())[1]
             os.unlink(b)
-            os.symlink(os.path.relpath(a, os.path.dirname(b)) ,b)
+            os.symlink(os.path.relpath(a, os.path.dirname(b)), b)
 
         self.compress_decompress_check()
 
     # symbolic link pointing to the non-existing file
     @unittest.skipUnless(symlinks_supported(), "requires symlinks")
     def test_broken_symlink(self):
-        with chdir(self.c1.current_folder):
+        with chdir(self.d1):
             os.symlink(self.gen_filename(), self.gen_filename())
 
         self.compress_decompress_check()
@@ -392,11 +399,11 @@ class CompressionTest(unittest.TestCase):
     # symbolink link pointing outside of the archive (e.g. system location like "/dev/null")
     @unittest.skipUnless(symlinks_supported(), "requires symlinks")
     def test_symlink_outside(self):
-        self.c3 = TestClient()
-        files = self.gen_files(client=self.c3)
+        self.d3 = temp_folder()
+        files = self.gen_files(self.d3)
 
-        with chdir(self.c1.current_folder):
-            os.symlink(os.path.join(self.c3.current_folder, list(files.keys())[0]),
+        with chdir(self.d1):
+            os.symlink(os.path.join(self.d1, list(files.keys())[0]),
                        self.gen_filename())
 
         self.compress_decompress_check()
@@ -404,7 +411,7 @@ class CompressionTest(unittest.TestCase):
     # cyclic reference A -> B, B -> A
     @unittest.skipUnless(symlinks_supported(), "requires symlinks")
     def test_cyclic_symlink(self):
-        with chdir(self.c1.current_folder):
+        with chdir(self.d1):
             a = self.gen_filename()
             b = self.gen_filename()
             os.symlink(a, b)
@@ -415,8 +422,8 @@ class CompressionTest(unittest.TestCase):
     # transitive A -> B -> C
     @unittest.skipUnless(symlinks_supported(), "requires symlinks")
     def test_transitive_symlinks(self):
-        files = self.gen_files(client=self.c1)
-        with chdir(self.c1.current_folder):
+        files = self.gen_files(self.d1)
+        with chdir(self.d1):
             a = list(files.keys())[0]
             b = self.gen_filename()
             c = self.gen_filename()
@@ -428,8 +435,8 @@ class CompressionTest(unittest.TestCase):
     # check the empty directory and symlink to the empty directory
     @unittest.skipUnless(symlinks_supported(), "requires symlinks")
     def test_empty_directory(self):
-        self.gen_files(client=self.c1)
-        with chdir(self.c1.current_folder):
+        self.gen_files(self.d1)
+        with chdir(self.d1):
             a = self.gen_filename()
             b = self.gen_filename()
             os.makedirs(a)
@@ -443,9 +450,9 @@ class CompressionTest(unittest.TestCase):
         if isinstance(self.compressor, ZipCompressor):
             # zip format doesn't seem to support hard-links?
             return
-        files = self.gen_files(client=self.c1, count=2)
+        files = self.gen_files(self.d1, count=2)
 
-        with chdir(self.c1.current_folder):
+        with chdir(self.d1):
             a = list(files.keys())[0]
             b = list(files.keys())[1]
             os.unlink(b)
