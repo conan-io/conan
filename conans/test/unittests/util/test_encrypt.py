@@ -22,3 +22,11 @@ class EncryptTestCase(unittest.TestCase):
         data = encrypt.encode(message, key)
         self.assertNotEqual(message, data)
         self.assertEquals(message, encrypt.decode(data, key))
+
+    def test_key_unicode(self):
+        key = b'espa\xc3\xb1a\xe2\x82\xac$'.decode('utf-8')  # codebase allows only ASCII files
+        message = 'the message'
+
+        data = encrypt.encode(message, key)
+        self.assertNotEqual(message, data)
+        self.assertEquals(message, encrypt.decode(data, key))

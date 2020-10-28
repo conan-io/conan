@@ -1,20 +1,40 @@
-from base64 import urlsafe_b64encode, urlsafe_b64decode
-
 import six
 
+# WARNING: These functions implements a Vigenere cypher, they are NO WAY OK FOR SECURITY!
+CHARS = [c for c in (chr(i) for i in range(32, 127))]
 
-# WARNING: These are useful functions to obfuscate some data, but they are NO WAY OK FOR SECURITY!
 
-def encode(data, key):
-    assert isinstance(data, six.string_types), "Expected string type, got '{}'".format(type(data))
+def _ascii_key(key):
+    key = "".join([it for it in key if it in CHARS])
+    assert len(key), "Provide a key containing ASCII characters"
+    return key
+
+
+def encode(text, key):
+    assert isinstance(text, six.string_types), "Expected string type, got '{}'".format(type(text))
     assert isinstance(key, str), "Expected 'str' type, got '{}'".format(type(key))
-    if six.PY3:
-        return urlsafe_b64encode(bytes(key + data, 'utf-8'))
-    else:
-        return urlsafe_b64encode((key.encode('utf-8') + data).encode('utf-8'))
+    key = _ascii_key(key)
+    res = ""
+    for i, c in enumerate(text):
+        if c not in CHARS:
+            res += c
+        else:
+            text_index = CHARS.index(c)
+            key_index = CHARS.index(key[i % len(key)])
+            res += CHARS[(text_index + key_index) % len(CHARS)]
+    return res
 
 
-def decode(enc, key):
-    assert isinstance(enc, bytes), "Expected 'bytes', got '{}'".format(type(enc))
+def decode(text, key):
+    assert isinstance(text, six.string_types), "Expected 'bytes', got '{}'".format(type(text))
     assert isinstance(key, str), "Expected 'str' type, got '{}'".format(type(key))
-    return urlsafe_b64decode(enc)[len(key):].decode('utf-8')
+    key = _ascii_key(key)
+    res = ""
+    for i, c in enumerate(text):
+        if c not in CHARS:
+            res += c
+        else:
+            text_index = CHARS.index(c)
+            key_index = CHARS.index(key[i % len(key)])
+            res += CHARS[(text_index - key_index) % len(CHARS)]
+    return res
