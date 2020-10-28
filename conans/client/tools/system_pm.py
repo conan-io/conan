@@ -146,9 +146,9 @@ class SystemPackageTool(object):
         """
         packages = [packages] if isinstance(packages, str) else list(packages)
         # only one (first) variant will be installed
-        variants = list(filter(lambda x: isinstance(x, (tuple, list)), packages))
-        for variant in variants:
-            self.install(variant, update=update, force=force, arch_names=arch_names)
+        list_variants = list(filter(lambda x: isinstance(x, (tuple, list)), packages))
+        for variants in list_variants:
+            self.install(variants, update=update, force=force, arch_names=arch_names)
         # all packages will be installed
         packages = list(filter(lambda x: not isinstance(x, (tuple, list)), packages))
 
