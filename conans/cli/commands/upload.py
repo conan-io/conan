@@ -1,6 +1,4 @@
-import argparse
 import json
-import sys
 
 from conans.cli.cli import cli_out_write
 from conans.cli.command import conan_command, OnceArgument
@@ -17,7 +15,7 @@ def output_upload_json(info):
 
 
 @conan_command(group="Creator commands", formatters={"cli": output_upload_cli,
-                                                     "json": output_upload_json})
+                                                     "json": output_upload_json}, pipeable=True)
 def upload(conan_api, parser, *args, **kwargs):
     """
     Uploads a recipe and binary packages to a remote.
@@ -26,8 +24,8 @@ def upload(conan_api, parser, *args, **kwargs):
     """
 
     parser.add_argument("pattern_or_reference", help="Pattern, recipe reference or package "
-                        "reference e.g., 'boost/*', 'MyPackage/1.2@user/channel', "
-                        "'MyPackage/1.2@user/channel:af7901d8bdfde621d086181aa1c495c25a17b137'",
+                                                     "reference e.g., 'boost/*', 'MyPackage/1.2@user/channel', "
+                                                     "'MyPackage/1.2@user/channel:af7901d8bdfde621d086181aa1c495c25a17b137'",
                         nargs="?")
     parser.add_argument("-r", "--remote", action=OnceArgument,
                         help="Upload to this specific remote")
@@ -39,12 +37,10 @@ def upload(conan_api, parser, *args, **kwargs):
                              "has to be a reference: MyPackage/1.2@user/channel")
     parser.add_argument("--all", action="store_true", default=False,
                         help="Upload both package recipe and packages")
-    parser.add_argument('infile', nargs='?', type=argparse.FileType('r'),
-                        default=(None if sys.stdin.isatty() else sys.stdin))
     args = parser.parse_args(*args)
-    if not args.pattern_or_reference and not args.infile:
-        parser.error("Please specify at least the pattern to upload or the input file with "
-                     "the pattern")
-    pattern_or_reference = args.infile.read().strip() if args.infile else args.pattern_or_reference
+    if not args.pattern_or_reference and not args.pipe:
+        parser.error("Please specify at least the pattern to upload or pipe the input from another "
+                     "command")
+    pattern_or_reference = args.pipe.read().strip() if args.pipe else args.pattern_or_reference
     info = conan_api.upload(pattern_or_reference, args.remote, args.query, args.all)
     return info

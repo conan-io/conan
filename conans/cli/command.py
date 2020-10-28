@@ -1,4 +1,5 @@
 import argparse
+import sys
 import textwrap
 
 from conans.errors import ConanException
@@ -98,7 +99,7 @@ class BaseConanCommand(object):
 
 
 class ConanCommand(BaseConanCommand):
-    def __init__(self, method, group, formatters=None):
+    def __init__(self, method, group, formatters=None, pipeable=False):
         super().__init__(method, formatters=formatters)
         self._subcommands = {}
         self._subcommand_parser = None
@@ -107,6 +108,11 @@ class ConanCommand(BaseConanCommand):
         self._parser = argparse.ArgumentParser(description=self._doc,
                                                prog="conan {}".format(self._name),
                                                formatter_class=SmartFormatter)
+        if pipeable:
+            self._parser.add_argument('pipe', nargs='?', type=argparse.FileType('r'),
+                                      default=(None if sys.stdin.isatty() else sys.stdin),
+                                      help="This command is pipeable. You can pipe the output "
+                                           "of another command to set the input of this one.")
         self._init_formatters()
 
     def add_subcommand(self, subcommand):
@@ -136,11 +142,12 @@ class ConanCommand(BaseConanCommand):
 
 
 class ConanSubCommand(BaseConanCommand):
-    def __init__(self, method, formatters=None):
+    def __init__(self, method, formatters=None, pipeable=False):
         super().__init__(method, formatters=formatters)
         self._parent_parser = None
         self._parser = None
         self._name = "-".join(method.__name__.split("_")[1:])
+        self._pipeable = pipeable
 
     def run(self, conan_api, *args):
         info = self._method(conan_api, self._parent_parser, self._parser, *args)
@@ -150,21 +157,26 @@ class ConanSubCommand(BaseConanCommand):
 
     def set_parser(self, parent_parser, subcommand_parser):
         self._parser = subcommand_parser.add_parser(self._name, help=self._doc)
+        if self._pipeable:
+            self._parser.add_argument('pipe', nargs='?', type=argparse.FileType('r'),
+                                      default=(None if sys.stdin.isatty() else sys.stdin),
+                                      help="This command is pipeable. You can pipe the output "
+                                           "of another command to set the input of this one.")
         self._parent_parser = parent_parser
         self._init_formatters()
 
 
-def conan_command(group, formatters=None):
+def conan_command(group, formatters=None, pipeable=False):
     def decorator(f):
-        cmd = ConanCommand(f, group, formatters=formatters)
+        cmd = ConanCommand(f, group, formatters=formatters, pipeable=pipeable)
         return cmd
 
     return decorator
 
 
-def conan_subcommand(formatters=None):
+def conan_subcommand(formatters=None, pipeable=False):
     def decorator(f):
-        cmd = ConanSubCommand(f, formatters=formatters)
+        cmd = ConanSubCommand(f, formatters=formatters, pipeable=pipeable)
         return cmd
 
     return decorator
