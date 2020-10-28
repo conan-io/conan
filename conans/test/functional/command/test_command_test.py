@@ -1,8 +1,8 @@
 import os
-import pytest
 import time
 import unittest
 
+import pytest
 from nose.plugins.attrib import attr
 
 from conans.model.ref import PackageReference

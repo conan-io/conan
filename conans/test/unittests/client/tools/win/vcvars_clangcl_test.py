@@ -2,9 +2,9 @@
 # -*- coding: utf-8 -*-
 
 import platform
-import pytest
 import unittest
 
+import pytest
 from mock import mock
 from nose.plugins.attrib import attr
 

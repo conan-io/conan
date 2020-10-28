@@ -1,10 +1,9 @@
 import os
 import platform
-import pytest
 import unittest
 
+import pytest
 from nose.plugins.attrib import attr
-
 
 from conans.model.info import ConanInfo
 from conans.paths import CONANINFO

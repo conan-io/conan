@@ -3,13 +3,13 @@
 import os
 import textwrap
 import unittest
-import pytest
 
+import pytest
 from nose.plugins.attrib import attr
 
 from conans.test.functional.scm.workflows.common import TestWorkflow
-from conans.test.utils.tools import TestClient
 from conans.test.utils.scm import create_local_git_repo, SVNLocalRepoTestCase
+from conans.test.utils.tools import TestClient
 
 
 class SCMSubfolder(TestWorkflow):

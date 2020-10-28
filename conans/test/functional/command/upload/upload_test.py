@@ -1,11 +1,11 @@
+import itertools
 import os
 import platform
-import pytest
 import stat
 import unittest
 from collections import OrderedDict
 
-import itertools
+import pytest
 import requests
 from mock import patch
 from nose.plugins.attrib import attr
@@ -20,7 +20,6 @@ from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, \
     TurboTestClient, GenConanfile, TestRequester, TestingResponse
 from conans.util.env_reader import get_env
-
 from conans.util.files import gzopen_without_timestamps, is_dirty, save, set_dirty
 
 conanfile = """from conans import ConanFile

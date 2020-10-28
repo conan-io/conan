@@ -1,9 +1,9 @@
 import os
 import textwrap
 import unittest
-import pytest
 from collections import namedtuple
 
+import pytest
 from nose.plugins.attrib import attr
 from parameterized.parameterized import parameterized
 
@@ -11,10 +11,10 @@ from conans.client.tools.scm import Git, SVN
 from conans.client.tools.win import get_cased_path
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.scm import SCMData
+from conans.test.utils.scm import create_local_git_repo, SVNLocalRepoTestCase
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, \
     TestServer, GenConanfile
-from conans.test.utils.scm import create_local_git_repo, SVNLocalRepoTestCase
 from conans.util.files import load, rmdir, save, to_file_bytes
 
 base = '''

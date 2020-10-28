@@ -1,16 +1,14 @@
 import os
 import platform
-import pytest
 import textwrap
 import unittest
 
+import pytest
 from nose.plugins.attrib import attr
-
-from conans.test.utils.tools import TestClient
-from conans.client.tools import which
-
 from parameterized.parameterized import parameterized
 
+from conans.client.tools import which
+from conans.test.utils.tools import TestClient
 from conans.util.files import mkdir
 
 

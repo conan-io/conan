@@ -1,13 +1,12 @@
 import json
 import os
-import pytest
 import sys
 import unittest
 from collections import OrderedDict
 
+import pytest
 import six
 from nose.plugins.attrib import attr
-
 
 from conans.build_info.conan_build_info import get_build_info
 from conans.client import tools

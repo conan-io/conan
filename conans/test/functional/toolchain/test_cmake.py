@@ -1,10 +1,10 @@
 import os
 import platform
-import pytest
 import textwrap
 import time
 import unittest
 
+import pytest
 from nose.plugins.attrib import attr
 from parameterized.parameterized import parameterized
 

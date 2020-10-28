@@ -1,6 +1,6 @@
 import unittest
-import pytest
 
+import pytest
 from nose.plugins.attrib import attr
 
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files

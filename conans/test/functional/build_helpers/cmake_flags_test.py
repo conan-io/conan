@@ -1,11 +1,10 @@
 import os
 import platform
-import pytest
 import textwrap
 import unittest
-
 from textwrap import dedent
 
+import pytest
 from nose.plugins.attrib import attr
 from parameterized.parameterized import parameterized
 

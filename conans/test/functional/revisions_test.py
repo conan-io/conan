@@ -1,9 +1,9 @@
-import time
-from collections import OrderedDict
-
 import json
 import os
+import time
 import unittest
+from collections import OrderedDict
+
 import pytest
 from nose.plugins.attrib import attr
 from parameterized.parameterized import parameterized

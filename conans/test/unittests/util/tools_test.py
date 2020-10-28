@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 import os
 import platform
-import pytest
 import subprocess
 import sys
 import unittest
 import warnings
 from collections import namedtuple
 
+import pytest
 import requests
 import six
 from bottle import request, static_file, HTTPError

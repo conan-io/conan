@@ -1,9 +1,9 @@
 import os
 import platform
-import pytest
 import textwrap
 import unittest
 
+import pytest
 import six
 from nose.plugins.attrib import attr
 

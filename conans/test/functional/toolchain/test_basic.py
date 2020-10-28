@@ -1,8 +1,8 @@
 # coding=utf-8
 import textwrap
 import unittest
-import pytest
 
+import pytest
 from nose.plugins.attrib import attr
 
 from conans.test.utils.tools import TestClient

@@ -1,8 +1,8 @@
 import os
-import pytest
 import textwrap
 import unittest
 
+import pytest
 import yaml
 from bottle import static_file
 from nose.plugins.attrib import attr

@@ -3,13 +3,13 @@
 import itertools
 import textwrap
 import unittest
+
 import pytest
-
-from parameterized import parameterized
 from nose.plugins.attrib import attr
+from parameterized import parameterized
 
-from conans.test.utils.tools import TestClient
 from conans.test.utils.scm import create_local_git_repo
+from conans.test.utils.tools import TestClient
 
 
 @attr("svn")

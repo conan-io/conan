@@ -1,7 +1,7 @@
 import os
-import pytest
 import unittest
 
+import pytest
 from nose.plugins.attrib import attr
 
 from conans.test.utils.multi_config import multi_config_files

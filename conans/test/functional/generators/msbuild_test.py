@@ -1,15 +1,13 @@
 import platform
-import pytest
 import textwrap
 import unittest
 
-
+import pytest
 from nose.plugins.attrib import attr
 
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
-
 
 sln_file = r"""
 Microsoft Visual Studio Solution File, Format Version 12.00

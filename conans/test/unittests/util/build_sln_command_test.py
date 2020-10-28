@@ -2,10 +2,10 @@
 # -*- coding: utf-8 -*-
 
 import os
-import pytest
 import unittest
 import warnings
 
+import pytest
 from nose.plugins.attrib import attr
 from six import StringIO
 

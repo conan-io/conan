@@ -2,15 +2,14 @@
 
 import os
 import platform
-import pytest
 import textwrap
 import unittest
 
+import pytest
 from nose.plugins.attrib import attr
 
 from conans.test.utils.tools import TestClient
 from conans.test.utils.visual_project_files import get_vs_project_files
-
 
 main_cpp = r"""#include <hello.h>
 int main(){

@@ -1,23 +1,22 @@
 # coding=utf-8
 
 import os
-import pytest
 import shutil
-import six
 import subprocess
 import unittest
 import uuid
 
+import pytest
+import six
 from mock import patch
-
 from nose.plugins.attrib import attr
 from six.moves.urllib.parse import quote
 
 from conans.client.tools.scm import SVN
 from conans.errors import ConanException
 from conans.model.version import Version
-from conans.test.utils.tools import temp_folder, TestClient
 from conans.test.utils.scm import SVNLocalRepoTestCase, try_remove_readonly
+from conans.test.utils.tools import temp_folder, TestClient
 from conans.util.files import save
 
 

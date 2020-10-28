@@ -2,14 +2,14 @@
 
 import os
 import textwrap
-import pytest
 
+import pytest
 from nose.plugins.attrib import attr
 
 from conans.model.ref import ConanFileReference
+from conans.test.utils.scm import SVNLocalRepoTestCase
 from conans.test.utils.tools import TestClient, \
     load
-from conans.test.utils.scm import SVNLocalRepoTestCase
 
 
 @attr('svn')

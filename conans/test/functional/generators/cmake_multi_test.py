@@ -1,12 +1,12 @@
 import os
 import platform
-import pytest
 import textwrap
 import unittest
 
+import pytest
 from nose.plugins.attrib import attr
 
-from conans.client.tools import load, remove_from_path
+from conans.client.tools import remove_from_path
 from conans.test.utils.multi_config import multi_config_files
 from conans.test.utils.tools import TestClient
 
