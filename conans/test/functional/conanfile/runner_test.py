@@ -1,4 +1,5 @@
 import os
+import platform
 import textwrap
 import unittest
 
@@ -240,5 +241,8 @@ class ConanFileToolsTest(ConanFile):
             client.run("export . name/version@")
             self.assertIn("name/version: >> key: secret!<<", client.out)
             self.assertIn("name/version: >> var: other_var<<", client.out)
-            self.assertIn("key: --", client.out)
+            if platform.system() == 'Windows':
+                self.assertIn("key: %CONAN_LOGIN_ENCRYPTION_KEY%--", client.out)
+            else:
+                self.assertIn("key: --", client.out)
             self.assertIn("var: other_var--", client.out)
