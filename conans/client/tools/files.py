@@ -1,3 +1,4 @@
+import gzip
 import logging
 import os
 import platform
@@ -74,7 +75,6 @@ def unzip(filename, destination=".", keep_permissions=False, pattern=None, outpu
             filename.endswith(".tar")):
         return untargz(filename, destination, pattern)
     if filename.endswith(".gz"):
-        import gzip
         with gzip.open(filename, 'rb') as f:
             file_content = f.read()
         target_name = filename[:-3] if destination == "." else destination
