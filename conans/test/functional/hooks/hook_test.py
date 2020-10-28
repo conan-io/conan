@@ -171,7 +171,7 @@ def pre_export(output, conanfile_path, reference, **kwargs):
 
 class HookTest(unittest.TestCase):
 
-    def default_hook_test(self):
+    def test_default_hook(self):
         client = TestClient()
         self.assertTrue(client.cache.hooks_path.endswith("hooks"))
         client.save({"conanfile.py": conanfile_basic})
@@ -183,7 +183,7 @@ class HookTest(unittest.TestCase):
         self.assertIn("[HOOK - attribute_checker.py] pre_export(): "
                       "WARN: Conanfile doesn't have 'license'", client.out)
 
-    def complete_hook_test(self):
+    def test_complete_hook(self):
         server = TestServer([], users={"danimtb": "pass"})
         client = TestClient(servers={"default": server}, users={"default": [("danimtb", "pass")]})
         hook_path = os.path.join(client.cache.hooks_path, "complete_hook",
@@ -415,7 +415,7 @@ class HookTest(unittest.TestCase):
         self.assertIn("[HOOK - complete_hook/complete_hook.py] post_package_info(): "
                       "conanfile.cpp_info.defines=['ACONAN']", out)
 
-    def import_hook_test(self):
+    def test_import_hook(self):
         client = TestClient()
         hook_path = os.path.join(client.cache.hooks_path, "my_hook", "my_hook.py")
         init_path = os.path.join(client.cache.hooks_path, "my_hook", "custom_module",

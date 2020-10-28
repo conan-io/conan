@@ -16,7 +16,7 @@ from conans.util.files import save
 
 class RegistryTest(unittest.TestCase):
 
-    def retro_compatibility_test(self):
+    def test_retro_compatibility(self):
         folder = temp_folder()
         f = os.path.join(folder, "registry.txt")
         save(f, textwrap.dedent("""conan.io https://server.conan.io
@@ -30,7 +30,7 @@ class RegistryTest(unittest.TestCase):
         self.assertEqual(list(registry.load_remotes().values()),
                          [("conan.io", "https://server.conan.io", True, False)])
 
-    def to_json_migration_test(self):
+    def test_to_json_migration(self):
         cache_folder = temp_folder()
         f = os.path.join(cache_folder, "registry.txt")
         save(f, """conan.io https://server.conan.io True
@@ -57,7 +57,7 @@ other/1.0@lasote/testing conan.io
         m = client.cache.package_layout(ref2).load_metadata()
         self.assertEqual(m.recipe.remote, "conan.io")
 
-    def add_remove_update_test(self):
+    def test_add_remove_update(self):
         f = os.path.join(temp_folder(), "aux_file")
         Remotes().save(f)
         cache = ClientCache(os.path.dirname(f), TestBufferConanOutput())
@@ -99,7 +99,7 @@ other/1.0@lasote/testing conan.io
         with self.assertRaises(ConanException):
             registry.remove("new2")
 
-    def insert_test(self):
+    def test_insert(self):
         tmp_folder = temp_folder()
         f = os.path.join(tmp_folder, "remotes.json")
         save(f, """
@@ -149,7 +149,7 @@ other/1.0@lasote/testing conan.io
                          [("conan-center", None, True, False)])
         self.assertIn("WARN: The URL is empty. It must contain scheme and hostname.", cache._output)
 
-    def enable_disable_remotes_test(self):
+    def test_enable_disable_remotes(self):
         f = os.path.join(temp_folder(), "aux_file")
         Remotes().save(f)
         cache = ClientCache(os.path.dirname(f), TestBufferConanOutput())

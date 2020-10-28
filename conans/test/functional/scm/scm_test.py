@@ -3,6 +3,7 @@ import textwrap
 import unittest
 from collections import namedtuple
 
+import pytest
 from nose.plugins.attrib import attr
 from parameterized.parameterized import parameterized
 
@@ -10,10 +11,10 @@ from conans.client.tools.scm import Git, SVN
 from conans.client.tools.win import get_cased_path
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.scm import SCMData
+from conans.test.utils.scm import create_local_git_repo, SVNLocalRepoTestCase
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, \
     TestServer, GenConanfile
-from conans.test.utils.scm import create_local_git_repo, SVNLocalRepoTestCase
 from conans.util.files import load, rmdir, save, to_file_bytes
 
 base = '''
@@ -49,6 +50,7 @@ def _quoted(item):
 
 
 @attr('git')
+@pytest.mark.tool_git
 class GitSCMTest(unittest.TestCase):
 
     def setUp(self):
@@ -551,7 +553,7 @@ class ConanLib(ConanFile):
         self.assertIn("SOURCE METHOD CALLED", self.client.out)
         self.assertIn("BUILD METHOD CALLED", self.client.out)
 
-    def scm_serialization_test(self):
+    def test_scm_serialization(self):
         data = {"url": "myurl", "revision": "myrevision", "username": "myusername",
                 "password": "mypassword", "type": "git", "verify_ssl": True,
                 "subfolder": "mysubfolder"}
@@ -632,6 +634,7 @@ class ConanLib(ConanFile):
 
 
 @attr('svn')
+@pytest.mark.tool_svn
 class SVNSCMTest(SVNLocalRepoTestCase):
 
     def setUp(self):
@@ -987,6 +990,7 @@ class ConanLib(ConanFile):
 
 
 @attr('svn')
+@pytest.mark.tool_svn
 class SCMSVNWithLockedFilesTest(SVNLocalRepoTestCase):
 
     def test_propset_own(self):

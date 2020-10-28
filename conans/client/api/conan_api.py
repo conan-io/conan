@@ -45,9 +45,9 @@ def api_method(f):
 
 
 class ConanAPIV2(object):
-    def __init__(self, cache_folder=None, output=None, user_io=None, http_requester=None,
+    def __init__(self, cache_folder=None, quiet=True, user_io=None, http_requester=None,
                  runner=None):
-        self.out = output or ConanOutput()
+        self.out = ConanOutput(quiet=quiet)
         self.user_io = user_io or UserIO(out=self.out)
         self.cache_folder = cache_folder or os.path.join(get_conan_user_home(), ".conan")
         self.http_requester = http_requester
@@ -107,37 +107,6 @@ class ConanAPIV2(object):
                                      {"recipe": {"id": "liba/1.0"}}]}]
 
         return search_results
-
-    @api_method
-    def create(self, path, name, version, user, channel):
-        name = name or "pkg"
-        version = version or "1.0"
-        create_results = {"full_reference": "{}/{}@{}/{}#cfeb566fb51ca21a2f549c969c907b53:"
-                                            "587de5488b43bc9cebd0703c6c0f8c74#"
-                                            "cfeb566fb51ca21a2f549c969c907b53".format(name, version,
-                                                                                      user, channel),
-                          "name":  name,
-                          "version":  version,
-                          "user":  user,
-                          "channel":  channel,
-                          "package_id":  "587de5488b43bc9cebd0703c6c0f8c74",
-                          "recipe_revision":  "cfeb566fb51ca21a2f549c969c907b53",
-                          "package_revision":  "cfeb566fb51ca21a2f549c969c907b53"}
-        return create_results
-
-    @api_method
-    def upload(self, pattern_or_reference, remote, query, all):
-        rev = "587de5488b43bc9cebd0703c6c0f8c74:cfeb566fb51ca21a2f549c969c907b53#" \
-              "cfeb566fb51ca21a2f549c969c907b53"
-        if "*" in pattern_or_reference:
-            upload_results = {"uploaded_references": ["pkg/1.0@user/channel#{}".format(rev),
-                                                      "pkg/2.0@user/channel#{}".format(rev),
-                                                      "pkg/3.0@user/channel#{}".format(rev),
-                                                      "pkg/4.0@user/channel#{}".format(rev)]}
-        else:
-            upload_results = {"uploaded_references": [pattern_or_reference]}
-
-        return upload_results
 
 
 Conan = ConanAPIV2

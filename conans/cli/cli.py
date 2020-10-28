@@ -7,11 +7,12 @@ from collections import defaultdict
 from difflib import get_close_matches
 from inspect import getmembers
 
+from colorama import Style
+
 from conans import __version__ as client_version
 from conans.cli.command import ConanSubCommand
 from conans.cli.exit_codes import SUCCESS, ERROR_MIGRATION, ERROR_GENERAL, USER_CTRL_C, \
     ERROR_SIGTERM, USER_CTRL_BREAK, ERROR_INVALID_CONFIGURATION
-from conans.cli.output import ConanOutput, should_color_output, CliOutput
 from conans.client.api.conan_api import Conan
 from conans.errors import ConanException, ConanInvalidConfiguration, ConanMigrationError
 from conans.util.files import exception_message_safe
@@ -29,7 +30,6 @@ class Cli(object):
             type(conan_api))
         self._conan_api = conan_api
         self._out = conan_api.out
-        self._cli_out = CliOutput(self._out.color)
         self._groups = defaultdict(list)
         self._commands = {}
         conan_commands_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "commands")
@@ -126,10 +126,15 @@ class Cli(object):
             self._print_similar(command_argument)
             raise ConanException("Unknown command %s" % str(exc))
 
-        command.run(self.conan_api, self._cli_out, self.commands[command_argument].parser,
+        command.run(self.conan_api, self.commands[command_argument].parser,
                     args[0][1:], commands=self.commands, groups=self.groups)
 
         return SUCCESS
+
+
+def cli_out_write(data, fg=None, bg=None):
+    data = "{}{}{}{}\n".format(fg or '', bg or '', data, Style.RESET_ALL)
+    sys.stdout.write(data)
 
 
 def main(args):
@@ -147,9 +152,7 @@ def main(args):
         6: Invalid configuration (done)
     """
     try:
-        use_color = should_color_output()
-        output = ConanOutput(sys.stderr, use_color)
-        conan_api = Conan(output=output)
+        conan_api = Conan(quiet=False)
     except ConanMigrationError:  # Error migrating
         sys.exit(ERROR_MIGRATION)
     except ConanException as e:

@@ -28,7 +28,7 @@ class RenameTest(unittest.TestCase):
         self.assertTrue(os.path.isfile(os.path.join(basedir, "middir", "deepdir", "4.pdb")))
         self.assertTrue(os.path.isfile(os.path.join(basedir, "middir", "deepdir", "4.pdb1")))
 
-    def rename_test(self):
+    def test_rename(self):
         client = TestClient()
         tmpdir = client.current_folder
 

@@ -117,16 +117,16 @@ class ConanCommand(BaseConanCommand):
         subcommand.set_parser(self._parser, self._subcommand_parser)
         self._subcommands[subcommand.name] = subcommand
 
-    def run(self, conan_api, cli_out, parser, *args, **kwargs):
+    def run(self, conan_api, parser, *args, **kwargs):
         info = self._method(conan_api, parser, *args, **kwargs)
         if not self._subcommands:
             parser_args = self._parser.parse_args(*args)
             if info:
-                self._formatters[parser_args.output](info, cli_out)
+                self._formatters[parser_args.output](info)
         else:
             subcommand = args[0][0] if args[0] else None
             if subcommand in self._subcommands:
-                self._subcommands[subcommand].run(conan_api, cli_out, *args)
+                self._subcommands[subcommand].run(conan_api, *args)
             else:
                 self._parser.parse_args(*args)
 
@@ -142,11 +142,11 @@ class ConanSubCommand(BaseConanCommand):
         self._parser = None
         self._name = "-".join(method.__name__.split("_")[1:])
 
-    def run(self, conan_api, cli_out, *args):
+    def run(self, conan_api, *args):
         info = self._method(conan_api, self._parent_parser, self._parser, *args)
         parser_args = self._parent_parser.parse_args(*args)
         if info:
-            self._formatters[parser_args.output](info, cli_out)
+            self._formatters[parser_args.output](info)
 
     def set_parser(self, parent_parser, subcommand_parser):
         self._parser = subcommand_parser.add_parser(self._name, help=self._doc)

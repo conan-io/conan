@@ -3,6 +3,7 @@ import platform
 import unittest
 
 from conans.model.ref import ConanFileReference
+from conans.paths import PACKAGE_TGZ_NAME
 from conans.test.utils.tools import TestServer, TurboTestClient
 
 
@@ -22,7 +23,7 @@ class HelloConan(ConanFile):
     def package(self):
         # Link to file.txt and then remove it
         tools.save(os.path.join(self.package_folder, "file.txt"), "contents")
-        os.symlink("file.txt", os.path.join(self.package_folder, "link.txt"))    
+        os.symlink("file.txt", os.path.join(self.package_folder, "link.txt"))
 """
         ref = ConanFileReference.loads("lib/1.0@conan/stable")
         # By default it is not allowed
@@ -31,8 +32,8 @@ class HelloConan(ConanFile):
         client.upload_all(ref)
 
         # We can uncompress it without warns
-        p_folder = client.cache.package_layout(pref.ref).package(pref)
-        tgz = os.path.join(p_folder, "conan_package.tgz")
+        p_folder = client.cache.package_layout(pref.ref).download_package(pref)
+        tgz = os.path.join(p_folder, PACKAGE_TGZ_NAME)
         client.run_command('gzip -d "{}"'.format(tgz))
         client.run_command('tar tvf "{}"'.format(os.path.join(p_folder, "conan_package.tar")))
         lines = str(client.out).splitlines()

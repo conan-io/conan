@@ -1,18 +1,19 @@
 import json
 
+from conans.cli.cli import cli_out_write
 from conans.cli.command import conan_command, conan_subcommand, Extender, OnceArgument
 
 
-def output_user_list_json(info, out):
+def output_user_list_json(info):
     myjson = json.dumps(info, indent=4)
-    out.write(myjson)
+    cli_out_write(myjson)
 
 
-def output_user_list_cli(info, out):
+def output_user_list_cli(info):
     for remote_name, user_info in info.items():
         output_str = "remote: {} user: {}".format(remote_name,
                                                   user_info["user"])
-        out.write(output_str)
+        cli_out_write(output_str)
 
 
 @conan_subcommand(formatters={"cli": output_user_list_cli, "json": output_user_list_json})

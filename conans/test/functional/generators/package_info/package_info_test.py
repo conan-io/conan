@@ -10,7 +10,7 @@ from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
 
 class TestPackageInfo(unittest.TestCase):
 
-    def package_info_called_in_local_cache_test(self):
+    def test_package_info_called_in_local_cache(self):
         client = TestClient()
         conanfile_tmp = '''
 from conans import ConanFile
@@ -51,7 +51,7 @@ class HelloConan(ConanFile):
         client.run("install . -o *:switch=0 --build Lib3")
         self.assertIn("Lib3/1.0@conan/stable: WARN: Env var MYVAR=foo", client.out)
 
-    def package_info_name_test(self):
+    def test_package_info_name(self):
         dep = textwrap.dedent("""
             from conans import ConanFile
 
@@ -87,7 +87,7 @@ class HelloConan(ConanFile):
         self.assertIn("intermediate name: intermediate", client.out)
         self.assertIn("dep name: MyCustomGreatName", client.out)
 
-    def package_info_system_libs_test(self):
+    def test_package_info_system_libs(self):
         dep = textwrap.dedent("""
             from conans import ConanFile
 
@@ -131,7 +131,7 @@ class HelloConan(ConanFile):
         self.assertIn("intermediate system deps: %s" % intermediate_system_libs, client.out)
         self.assertIn("dep system deps: %s" % dep_system_libs, client.out)
 
-    def package_info_components_test(self):
+    def test_package_info_components(self):
         dep = textwrap.dedent("""
             import os
             from conans import ConanFile
@@ -209,7 +209,7 @@ class HelloConan(ConanFile):
         self.assertIn("dep.defines: ['definedep1']", client.out)
         self.assertIn("dep.include_paths: ['include', 'includedep2']", client.out)
 
-    def package_info_raise_components_test(self):
+    def test_package_info_raise_components(self):
         conanfile = textwrap.dedent("""
             from conans import ConanFile
 
@@ -252,7 +252,7 @@ class HelloConan(ConanFile):
         self.assertIn("dep/1.0@us/ch package_info(): Component name cannot be the same as the "
                       "package name: 'dep'", client.out)
 
-    def package_info_components_complete_test(self):
+    def test_package_info_components_complete(self):
         dep = textwrap.dedent("""
             import os
             from conans import ConanFile
@@ -384,7 +384,7 @@ class HelloConan(ConanFile):
         self.assertIn("COMP Planet Requires: ['Starlight']", client.out)
         self.assertIn("COMP ISS Requires: ['Starlight', 'Launcher']", client.out)
 
-    def package_requires_in_components_requires_test(self):
+    def test_package_requires_in_components_requires(self):
         client = TestClient()
         client.save({"conanfile1.py": GenConanfile("dep1", "0.1"),
                      "conanfile2.py": GenConanfile("dep2", "0.1")})
@@ -470,3 +470,39 @@ class HelloConan(ConanFile):
                                env_info={})
         client.save({"conanfile.py": conanfile})
         client.run("create conanfile.py")  # Correct usage
+
+    def test_get_name_local_flow(self):
+        # https://github.com/conan-io/conan/issues/7854
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class Package(ConanFile):
+                def package_info(self):
+                    self.cpp_info.names["cmake_find_package"] = "GTest"
+                    self.cpp_info.filenames["cmake_find_package"] = "GtesT"
+                """)
+        client.save({"conanfile.py": conanfile})
+        client.run("create . gtest/1.0@")
+
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class Package(ConanFile):
+                requires = 'gtest/1.0'
+                generators = 'cmake_find_package'
+
+                def build(self):
+                    info = self.deps_cpp_info['gtest'].get_name('cmake_find_package')
+                    self.output.info("GTEST_INFO: %s" % info)
+                    fileinfo = self.deps_cpp_info['gtest'].get_filename('cmake_find_package')
+                    self.output.info("GTEST_FILEINFO: %s" % fileinfo)
+            """)
+        client.save({"conanfile.py": conanfile})
+        client.run("create . pkg/1.0@")
+        self.assertIn("pkg/1.0: GTEST_INFO: GTest", client.out)
+        self.assertIn("pkg/1.0: GTEST_FILEINFO: GtesT", client.out)
+        client.run("install . pkg/1.0@")
+        self.assertIn("Generator cmake_find_package created FindGtesT.cmake", client.out)
+        client.run("build .")
+        self.assertIn("conanfile.py (pkg/1.0): GTEST_INFO: GTest", client.out)
+        self.assertIn("conanfile.py (pkg/1.0): GTEST_FILEINFO: GtesT", client.out)
+

@@ -1,6 +1,7 @@
 import os
 import platform
 import sys
+from collections import OrderedDict
 from contextlib import contextmanager
 
 from conans.client.run_environment import RunEnvironment
@@ -65,6 +66,9 @@ def _environment_add(env_vars, post=False):
                     apply_vars[name] = old + os.pathsep + apply_vars[name]
                 else:
                     apply_vars[name] += os.pathsep + old
+            # Remove possible duplicates, keeping the order of the remaining paths
+            items = apply_vars[name].split(os.pathsep)
+            apply_vars[name] = os.pathsep.join(OrderedDict.fromkeys(items))
         else:
             apply_vars[name] = value
 

@@ -80,14 +80,14 @@ class RemoteTest(unittest.TestCase):
         self.client.run('remote list_pref lib/1.0@lasote/channel')
         self.assertEqual("", self.client.out)
 
-    def list_raw_test(self):
+    def test_list_raw(self):
         self.client.run("remote list --raw")
         output = re.sub(r"http://fake.+.com", "http://fake.com", str(self.client.out))
         self.assertIn("remote0 http://fake.com True", output)
         self.assertIn("remote1 http://fake.com True", output)
         self.assertIn("remote2 http://fake.com True", output)
 
-    def basic_test(self):
+    def test_basic(self):
         self.client.run("remote list")
         self.assertIn("remote0: http://", self.client.out)
         self.assertIn("remote1: http://", self.client.out)
@@ -112,7 +112,7 @@ class RemoteTest(unittest.TestCase):
         output = str(self.client.out)
         self.assertIn("remote1: http://", output.splitlines()[0])
 
-    def remove_remote_test(self):
+    def test_remove_remote(self):
         self.client.run("remote list")
         self.assertIn("remote0: http://", self.client.out)
         self.assertIn("remote1: http://", self.client.out)
@@ -145,7 +145,7 @@ class RemoteTest(unittest.TestCase):
         self.assertNotIn("Hello2/0.1@user/testing", registry)
         self.assertNotIn("Hello/0.1@user/testing", registry)
 
-    def clean_remote_test(self):
+    def test_clean_remote(self):
         self.client.run("remote add_ref Hello/0.1@user/testing remote0")
         self.client.run("remote clean")
         self.client.run("remote list")
@@ -153,7 +153,7 @@ class RemoteTest(unittest.TestCase):
         self.client.run("remote list_ref")
         self.assertEqual("", self.client.out)
 
-    def clean_remote_no_user_test(self):
+    def test_clean_remote_no_user(self):
         self.client.run("remote add_ref Hello/0.1 remote0")
         self.client.run("remote clean")
         self.client.run("remote list")
@@ -161,7 +161,7 @@ class RemoteTest(unittest.TestCase):
         self.client.run("remote list_ref")
         self.assertEqual("", self.client.out)
 
-    def remove_remote_no_user_test(self):
+    def test_remove_remote_no_user(self):
         self.client.run("remote add_ref Hello/0.1 remote0")
         self.client.run("remote remove remote0")
         self.client.run("remote list")
@@ -169,7 +169,7 @@ class RemoteTest(unittest.TestCase):
         self.client.run("remote list_ref")
         self.assertEqual("", self.client.out)
 
-    def add_force_test(self):
+    def test_add_force(self):
         client = TestClient()
         client.run("remote add r1 https://r1")
         client.run("remote add r2 https://r2")
@@ -212,7 +212,7 @@ class RemoteTest(unittest.TestCase):
         self.assertIn("r4: https://r4", lines[2])
         self.assertIn("r2: https://newr2", lines[3])
 
-    def rename_test(self):
+    def test_rename(self):
         client = TestClient()
         client.run("remote add r1 https://r1")
         client.run("remote add r2 https://r2")
@@ -231,7 +231,7 @@ class RemoteTest(unittest.TestCase):
         client.run("remote rename r2 r1", assert_error=True)
         self.assertIn("Remote 'r1' already exists", client.out)
 
-    def insert_test(self):
+    def test_insert(self):
         self.client.run("remote add origin https://myurl --insert")
         self.client.run("remote list")
         first_line = str(self.client.out).splitlines()[0]
@@ -281,7 +281,7 @@ class RemoteTest(unittest.TestCase):
         self.assertLess(str(client.out).find("r2"), str(client.out).find("r1"))
         self.assertLess(str(client.out).find("r1"), str(client.out).find("r3"))
 
-    def verify_ssl_test(self):
+    def test_verify_ssl(self):
         client = TestClient()
         client.run("remote add my-remote http://someurl TRUE")
         client.run("remote add my-remote2 http://someurl2 yes")
@@ -305,7 +305,7 @@ class RemoteTest(unittest.TestCase):
         self.assertEqual(data["remotes"][3]["url"], "http://someurl4")
         self.assertEqual(data["remotes"][3]["verify_ssl"], False)
 
-    def remote_disable_test(self):
+    def test_remote_disable(self):
         client = TestClient()
         client.run("remote add my-remote0 http://someurl0")
         client.run("remote add my-remote1 http://someurl1")
@@ -334,7 +334,7 @@ class RemoteTest(unittest.TestCase):
         for remote in data["remotes"]:
             self.assertNotIn("disabled", remote)
 
-    def invalid_remote_disable_test(self):
+    def test_invalid_remote_disable(self):
         client = TestClient()
 
         client.run("remote disable invalid_remote", assert_error=True)
@@ -345,7 +345,7 @@ class RemoteTest(unittest.TestCase):
 
         client.run("remote disable invalid_wildcard_*")
 
-    def remote_disable_already_set_test(self):
+    def test_remote_disable_already_set(self):
         """
         Check that we don't raise an error if the remote is already in the required state
         """
@@ -358,7 +358,7 @@ class RemoteTest(unittest.TestCase):
         client.run("remote disable my-remote0")
         client.run("remote disable my-remote0")
 
-    def verify_ssl_error_test(self):
+    def test_verify_ssl_error(self):
         client = TestClient()
         client.run("remote add my-remote http://someurl some_invalid_option=foo", assert_error=True)
 
@@ -367,7 +367,7 @@ class RemoteTest(unittest.TestCase):
         data = json.loads(load(client.cache.remotes_path))
         self.assertEqual(data["remotes"], [])
 
-    def errors_test(self):
+    def test_errors(self):
         self.client.run("remote update origin url", assert_error=True)
         self.assertIn("ERROR: Remote 'origin' not found in remotes", self.client.out)
 
@@ -389,7 +389,7 @@ class RemoteTest(unittest.TestCase):
         self.client.run("remote update remote1 %s" % url, assert_error=True)
         self.assertIn("Remote 'remote0' already exists with same URL", self.client.out)
 
-    def basic_refs_test(self):
+    def test_basic_refs(self):
         self.client.run("remote add_ref Hello/0.1@user/testing remote0")
         self.client.run("remote list_ref")
         self.assertIn("Hello/0.1@user/testing: remote0", self.client.out)
@@ -414,7 +414,7 @@ class RemoteTest(unittest.TestCase):
         self.assertIn("Hello/0.1@user/testing: remote0", self.client.out)
         self.assertIn("Hello1/0.1@user/testing: remote2", self.client.out)
 
-    def package_refs_test(self):
+    def test_package_refs(self):
 
         self.client.run("remote add_pref Hello/0.1@user/testing:555 remote0")
         self.client.run("remote list_pref Hello/0.1@user/testing")
@@ -439,7 +439,7 @@ class RemoteTest(unittest.TestCase):
         self.assertIn("Hello1/0.1@user/testing:555: remote2", self.client.out)
         self.assertIn("Hello1/0.1@user/testing:666: remote1", self.client.out)
 
-    def missing_subarguments_test(self):
+    def test_missing_subarguments(self):
         self.client.run("remote", assert_error=True)
         self.assertIn("ERROR: Exiting with code: 2", self.client.out)
 

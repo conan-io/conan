@@ -11,7 +11,7 @@ class ChangeOptionsInRequirementsTest(unittest.TestCase):
     options for its dependencies, just in case they were just added
     """
 
-    def basic_test(self):
+    def test_basic(self):
         client = TestClient()
         zlib = '''
 from conans import ConanFile

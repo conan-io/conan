@@ -2,7 +2,6 @@ import os
 import platform
 import shutil
 from collections import OrderedDict
-from os.path import join
 
 from jinja2 import Environment, select_autoescape, FileSystemLoader, ChoiceLoader
 
@@ -14,6 +13,7 @@ from conans.client.conf import ConanClientConfigParser, get_default_client_conf,
 from conans.client.conf.detect import detect_defaults_settings
 from conans.client.output import Color
 from conans.client.profile_loader import read_profile
+from conans.client.store.localdb import LocalDB
 from conans.errors import ConanException
 from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
@@ -111,7 +111,7 @@ class ClientCache(object):
 
     @property
     def remotes_path(self):
-        return join(self.cache_folder, REMOTES)
+        return os.path.join(self.cache_folder, REMOTES)
 
     @property
     def registry(self):
@@ -124,7 +124,7 @@ class ClientCache(object):
 
     @property
     def artifacts_properties_path(self):
-        return join(self.cache_folder, ARTIFACTS_PROPERTIES_FILE)
+        return os.path.join(self.cache_folder, ARTIFACTS_PROPERTIES_FILE)
 
     def read_artifacts_properties(self):
         ret = {}
@@ -154,37 +154,38 @@ class ClientCache(object):
 
     @property
     def localdb(self):
-        return join(self.cache_folder, LOCALDB)
+        localdb_filename = os.path.join(self.cache_folder, LOCALDB)
+        return LocalDB.create(localdb_filename)
 
     @property
     def conan_conf_path(self):
-        return join(self.cache_folder, CONAN_CONF)
+        return os.path.join(self.cache_folder, CONAN_CONF)
 
     @property
     def profiles_path(self):
-        return join(self.cache_folder, PROFILES_FOLDER)
+        return os.path.join(self.cache_folder, PROFILES_FOLDER)
 
     @property
     def settings_path(self):
-        return join(self.cache_folder, CONAN_SETTINGS)
+        return os.path.join(self.cache_folder, CONAN_SETTINGS)
 
     @property
     def generators_path(self):
-        return join(self.cache_folder, GENERATORS_FOLDER)
+        return os.path.join(self.cache_folder, GENERATORS_FOLDER)
 
     @property
     def default_profile_path(self):
         if os.path.isabs(self.config.default_profile):
             return self.config.default_profile
         else:
-            return join(self.cache_folder, PROFILES_FOLDER, self.config.default_profile)
+            return os.path.join(self.cache_folder, PROFILES_FOLDER, self.config.default_profile)
 
     @property
     def hooks_path(self):
         """
         :return: Hooks folder in client cache
         """
-        return join(self.cache_folder, HOOKS_FOLDER)
+        return os.path.join(self.cache_folder, HOOKS_FOLDER)
 
     @property
     def default_profile(self):
@@ -225,6 +226,9 @@ class ClientCache(object):
         return generators
 
     def delete_empty_dirs(self, deleted_refs):
+        """ Method called by ConanRemover.remove() to clean up from the cache empty folders
+        :param deleted_refs: The recipe references that the remove() has been removed
+        """
         for ref in deleted_refs:
             ref_path = self.package_layout(ref).base_folder()
             for _ in range(4):
@@ -302,6 +306,8 @@ def _mix_settings_with_env(settings):
     from conf file. If you specify a compiler with ENV variable you
     need to specify all the subsettings, the file defaulted will be
     ignored"""
+
+    # FIXME: Conan 2.0. This should be removed, it only applies to default profile, not others
 
     def get_env_value(name_):
         env_name = "CONAN_ENV_%s" % name_.upper().replace(".", "_")

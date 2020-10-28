@@ -14,23 +14,23 @@ class SettingsCompilerIntelVisualPreprocessorTest(unittest.TestCase):
         self.settings.compiler = "intel"
         self.settings.compiler.base = "Visual Studio"
 
-    def release_build_type_runtime_test(self):
+    def test_release_build_type_runtime(self):
         self.settings.build_type = "Release"
         preprocess(self.settings)
         self.assertEqual(self.settings.compiler.base.runtime, "MD")
 
-    def debug_build_type_runtime_test(self):
+    def test_debug_build_type_runtime(self):
         self.settings.build_type = "Debug"
         preprocess(self.settings)
         self.assertEqual(self.settings.compiler.base.runtime, "MDd")
 
-    def different_base_compiler_test(self):
+    def test_different_base_compiler(self):
         self.settings.compiler.base = "gcc"
         self.settings.build_type = "Debug"
         preprocess(self.settings)
         self.assertIsNone(self.settings.compiler.base.get_safe("runtime"))
 
-    def custom_base_runtime_set_test(self):
+    def test_custom_base_runtime_set(self):
         self.settings.build_type = "Debug"
         self.settings.compiler.base.runtime = "MT"
         preprocess(self.settings)
@@ -43,23 +43,23 @@ class SettingsCompilerVisualPreprocessorTest(unittest.TestCase):
         self.settings = Settings.loads(get_default_settings_yml())
         self.settings.compiler = "Visual Studio"
 
-    def release_build_type_runtime_test(self):
+    def test_release_build_type_runtime(self):
         self.settings.build_type = "Release"
         preprocess(self.settings)
         self.assertEqual(self.settings.compiler.runtime, "MD")
 
-    def debug_build_type_runtime_test(self):
+    def test_debug_build_type_runtime(self):
         self.settings.build_type = "Debug"
         preprocess(self.settings)
         self.assertEqual(self.settings.compiler.runtime, "MDd")
 
-    def different_base_compiler_test(self):
+    def test_different_base_compiler(self):
         self.settings.compiler = "gcc"
         self.settings.build_type = "Debug"
         preprocess(self.settings)
         self.assertIsNone(self.settings.compiler.get_safe("runtime"))
 
-    def custom_base_runtime_set_test(self):
+    def test_custom_base_runtime_set(self):
         self.settings.build_type = "Debug"
         self.settings.compiler.runtime = "MT"
         preprocess(self.settings)

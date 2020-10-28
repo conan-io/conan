@@ -7,7 +7,7 @@ from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, GenConan
 
 class OptionsTest(unittest.TestCase):
 
-    def general_scope_options_test_package_test(self):
+    def test_general_scope_options_test_package(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
             from conans import ConanFile
@@ -32,7 +32,7 @@ class OptionsTest(unittest.TestCase):
         client.run("create . Pkg/0.1@user/testing -o shared=1", assert_error=True)
         self.assertIn("option 'shared' doesn't exist", client.out)
 
-    def general_scope_options_test_package_notdefined_test(self):
+    def test_general_scope_options_test_package_notdefined(self):
         client = TestClient()
         conanfile = GenConanfile()
         client.save({"conanfile.py": conanfile})
@@ -47,7 +47,7 @@ class OptionsTest(unittest.TestCase):
         self.assertIn("Pkg/0.1@user/testing: Calling build()", client.out)
         self.assertIn("Pkg/0.1@user/testing (test package): Calling build()", client.out)
 
-    def general_scope_priorities_test(self):
+    def test_general_scope_priorities(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
             from conans import ConanFile
@@ -74,7 +74,7 @@ class OptionsTest(unittest.TestCase):
         client.run("create . Pkg/0.1@user/testing  -o Pk*:shared=2 -o P*:shared=1")
         self.assertIn("Pkg/0.1@user/testing: BUILD SHARED: 2", client.out)
 
-    def parsing_test(self):
+    def test_parsing(self):
         client = TestClient()
         conanfile = '''
 from conans import ConanFile
@@ -99,7 +99,7 @@ equal:opt=a=b
         client.run("install . --build=missing")
         self.assertIn("OPTION a=b", client.out)
 
-    def basic_caching_test(self):
+    def test_basic_caching(self):
         client = TestClient()
         zlib = '''
 from conans import ConanFile
@@ -194,7 +194,7 @@ class MyConanFile(ConanFile):
         self.assertNotIn("None evaluation", client.out)
         self.assertNotIn("String evaluation", client.out)
 
-    def general_scope_options_test(self):
+    def test_general_scope_options(self):
         # https://github.com/conan-io/conan/issues/2538
         client = TestClient()
         conanfile_liba = textwrap.dedent("""
@@ -240,7 +240,7 @@ class MyConanFile(ConanFile):
             self.assertIn("conanfile.py: shared=True", client.out)
             self.assertIn("libA/0.1@danimtb/testing: shared=True", client.out)
 
-    def overridable_shared_option_test(self):
+    def test_overridable_shared_option(self):
         client = TestClient()
         conanfile = GenConanfile().with_option("shared", [True, False])\
                                   .with_default_option("shared", "False")
@@ -304,7 +304,7 @@ class MyConanFile(ConanFile):
         self.assertIn("pkg/0.1@user/testing:5e7619965702ca25bdff1b2ce672a8236b8da689 - Build",
                       client.out)
 
-    def overridable_no_shared_option_test(self):
+    def test_overridable_no_shared_option(self):
         client = TestClient()
         conanfile = GenConanfile()
         client.save({"conanfile.py": conanfile})
@@ -331,7 +331,7 @@ class MyConanFile(ConanFile):
             self.assertIn("liba/0.1@user/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache",
                           client.out)
 
-    def missing_shared_option_package_id_test(self):
+    def test_missing_shared_option_package_id(self):
         client = TestClient()
 
         consumer = textwrap.dedent("""

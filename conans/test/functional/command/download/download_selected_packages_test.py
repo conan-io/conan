@@ -18,14 +18,14 @@ class DownloadSelectedPackagesTest(unittest.TestCase):
         self.new_client = TestClient(servers=self.servers,
                                      users={"default": [("lasote", "mypass")]})
 
-    def download_all_test(self):
+    def test_download_all(self):
         # Should retrieve the three packages
         self.new_client.run("download Hello0/0.1@lasote/stable")
         p1 = os.path.join(self.new_client.cache.package_layout(self.ref).packages())
         packages = os.listdir(p1)
         self.assertEqual(len(packages), 3)
 
-    def download_some_reference_test(self):
+    def test_download_some_reference(self):
         # Should retrieve the specified packages
         self.new_client.run("download Hello0/0.1@lasote/stable -p %s" % self.package_ids[0])
         packages = os.listdir(self.new_client.cache.package_layout(self.ref).packages())
@@ -37,7 +37,7 @@ class DownloadSelectedPackagesTest(unittest.TestCase):
         packages = os.listdir(self.new_client.cache.package_layout(self.ref).packages())
         self.assertEqual(len(packages), 2)
 
-    def download_recipe_twice_test(self):
+    def test_download_recipe_twice(self):
         expected_conanfile_contents = self.files[CONANFILE]
         self.new_client.run("download Hello0/0.1@lasote/stable")
         conanfile_path = self.new_client.cache.package_layout(self.ref).conanfile()
@@ -52,7 +52,7 @@ class DownloadSelectedPackagesTest(unittest.TestCase):
         got_conanfile = load(conanfile_path)
         self.assertEqual(expected_conanfile_contents, got_conanfile)
 
-    def download_packages_twice_test(self):
+    def test_download_packages_twice(self):
         expected_header_contents = self.files["helloHello0.h"]
         pref = PackageReference(self.ref, self.package_ids[0])
         package_folder = self.new_client.cache.package_layout(self.ref).package(pref)
@@ -69,7 +69,7 @@ class DownloadSelectedPackagesTest(unittest.TestCase):
         got_header = load(os.path.join(package_folder, "include", "helloHello0.h"))
         self.assertEqual(expected_header_contents, got_header)
 
-    def download_all_but_no_packages_test(self):
+    def test_download_all_but_no_packages(self):
         # Remove all from remote
         self.new_client.run("remove Hello* -f -r default")
 

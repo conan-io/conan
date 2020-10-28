@@ -1,47 +1,10 @@
 import logging
-import os
 import sys
-from io import StringIO
 
 import tqdm
 from colorama import Fore, Style
 
 from conans.util.env_reader import get_env
-
-
-def should_color_output():
-    if "NO_COLOR" in os.environ:
-        return False
-
-    clicolor_force = get_env("CLICOLOR_FORCE")
-    if clicolor_force is not None and clicolor_force != "0":
-        import colorama
-        colorama.init(convert=False, strip=False)
-        return True
-
-    isatty = hasattr(sys.stdout, "isatty") and sys.stdout.isatty()
-
-    clicolor = get_env("CLICOLOR")
-    if clicolor is not None:
-        if clicolor == "0" or not isatty:
-            return False
-        import colorama
-        colorama.init()
-        return True
-
-    # Respect color env setting or check tty if unset
-    color_set = "CONAN_COLOR_DISPLAY" in os.environ
-    if ((color_set and get_env("CONAN_COLOR_DISPLAY", 1))
-        or (not color_set and isatty)):
-        import colorama
-        if get_env("PYCHARM_HOSTED"):  # in PyCharm disable convert/strip
-            colorama.init(convert=False, strip=False)
-        else:
-            colorama.init()
-        color = True
-    else:
-        color = False
-    return color
 
 
 class Color(object):
@@ -105,26 +68,22 @@ class TqdmHandler(logging.StreamHandler):
 
 
 class ConanOutput(object):
-    def __init__(self, stream=None, color=False):
-        self._logger = logging.getLogger("conan.output")
-        self._stream = stream
+    def __init__(self, quiet=False):
+        self._logger = logging.getLogger("conan_out_logger")
         self._stream_handler = None
+        self._quiet = quiet
+        self._color = self._init_colors()
 
-        if self._stream is None:
+        if self._quiet:
             self._logger.addHandler(NullHandler())
         else:
+            self._stream = sys.stderr
             self._stream_handler = TqdmHandler(self._stream)
             self._stream_handler.setFormatter(logging.Formatter("%(message)s"))
             self._logger.addHandler(self._stream_handler)
             self._logger.setLevel(logging.INFO)
             self._logger.propagate = False
 
-            logging.captureWarnings(True)
-            logging.getLogger("py.warnings").setLevel(logging.WARNING)
-            logging.getLogger("py.warnings").addHandler(self._stream_handler)
-            logging.getLogger("py.warnings").propagate = False
-
-        self._color = color
         self._scope = ""
 
     @property
@@ -152,23 +111,17 @@ class ConanOutput(object):
             msg = "{}: {}".format(self.scope, msg)
         if self._color:
             msg = "{}{}{}{}".format(fg or '', bg or '', msg, Style.RESET_ALL)
-        for _ in range(3):
-            try:
-                self._logger.log(level, msg)
-                break
-            except IOError:
-                import time
-                time.sleep(0.02)
-            except UnicodeError:
-                msg = msg.encode("utf8").decode("ascii", "ignore")
-
-        self.flush()
+        self._logger.log(level, msg)
 
     def debug(self, msg):
         self._write(msg, logging.DEBUG)
 
     def info(self, msg, fg=None, bg=None):
         self._write(msg, logging.INFO, fg, bg)
+
+    # TODO: remove, just to support the migration system warn message
+    def warn(self, msg):
+        self._write("WARNING: {}".format(msg), logging.WARNING, Color.YELLOW)
 
     def warning(self, msg):
         self._write("WARNING: {}".format(msg), logging.WARNING, Color.YELLOW)
@@ -183,67 +136,20 @@ class ConanOutput(object):
         if self._stream_handler:
             self._stream_handler.flush()
 
-
-# TODO: move to another place
-class BufferConanOutput(ConanOutput):
-    """ wraps the normal output of the application, captures it into an stream
-    and gives it operators similar to string, so it can be compared in tests
-    """
-
-    def __init__(self):
-        ConanOutput.__init__(self, StringIO(), color=False)
-
-    def __repr__(self):
-        return self._stream.getvalue()
-
-    def __str__(self, *args, **kwargs):
-        return self.__repr__()
-
-    def __eq__(self, value):
-        return self.__repr__() == value
-
-    def __ne__(self, value):
-        return not self.__eq__(value)
-
-    def __contains__(self, value):
-        return value in self.__repr__()
-
-
-class CliOutput(object):
-    def __init__(self, color=False):
-        self._stream = sys.stdout
-        self._color = color
-        self._scope = None
-
-    @property
-    def color(self):
-        return self._color
-
-    @property
-    def is_terminal(self):
-        return hasattr(self._stream, "isatty") and self._stream.isatty()
-
-    def write(self, data, fg=None, bg=None, newline=True):
-        # https://github.com/conan-io/conan/issues/4277
-        # Windows output locks produce IOErrors
-        if self._scope:
-            data = "{}: {}".format(self.scope, data)
-        if self._color:
-            data = "{}{}{}{}".format(fg or '', bg or '', data, Style.RESET_ALL)
-        for _ in range(3):
-            try:
-                self._write(data, newline)
-                break
-            except IOError:
-                import time
-                time.sleep(0.02)
-            except UnicodeError:
-                data = data.encode("utf8").decode("ascii", "ignore")
-        self.flush()
-
-    def _write(self, message, newline=True):
-        message = "{}\n".format(message) if newline else message
-        self._stream.write(message)
-
-    def flush(self):
-        self._stream.flush()
+    @staticmethod
+    def _init_colors():
+        clicolor = get_env("CLICOLOR")
+        clicolor_force = get_env("CLICOLOR_FORCE")
+        no_color = get_env("NO_COLOR")
+        if no_color or (clicolor and clicolor == "0"):
+            import colorama
+            colorama.init(strip=True)
+            return False
+        else:
+            import colorama
+            if clicolor_force or (clicolor and clicolor != "0"):
+                colorama.init(convert=False, strip=False)
+            else:
+                # TODO: check if colorama checks for stripping colors are enough
+                colorama.init()
+            return True

@@ -28,9 +28,9 @@ class TestWorkflow(object):
             def source(self):
                 self.output.info(self.source_folder)
                 content = tools.load(os.path.join(self.source_folder, "{scm_subfolder}", "file.txt"))
-                self.output.info(">>>> I'm {{}}/{{}}@{{}}/{{}}".format(self.name, self.version, 
+                self.output.info(">>>> I'm {{}}/{{}}@{{}}/{{}}".format(self.name, self.version,
                                                                        self.user, self.channel))
-                self.output.info(">>>> content: {{}} ".format(content)) 
+                self.output.info(">>>> content: {{}} ".format(content))
         """)
 
     def get_files(self, subfolder, conanfile, lib_ref):

@@ -79,7 +79,7 @@ includes(a/path/to\profile.txt)
 
 class ProfileTest(unittest.TestCase):
 
-    def profile_loads_test(self):
+    def test_profile_loads(self):
 
         tmp = temp_folder()
 
@@ -146,7 +146,7 @@ class ProfileTest(unittest.TestCase):
         profile, _ = self._get_profile(tmp, "[settings]")
         self.assertTrue(isinstance(profile.env_values, EnvValues))
 
-    def profile_loads_win_test(self):
+    def test_profile_loads_win(self):
         tmp = temp_folder()
         prof = '''[env]
     QTPATH=C:/QtCommercial/5.8/msvc2015_64/bin
@@ -160,7 +160,7 @@ class ProfileTest(unittest.TestCase):
         self.assertIn("QTPATH=C:/QtCommercial/5.8/msvc2015_64/bin", new_profile.dumps())
         self.assertIn("QTPATH2=C:/QtCommercial2/5.8/msvc2015_64/bin", new_profile.dumps())
 
-    def profile_load_dump_test(self):
+    def test_profile_load_dump(self):
         # Empty profile
         tmp = temp_folder()
         profile = Profile()
@@ -202,7 +202,7 @@ class ProfileTest(unittest.TestCase):
         save(abs_profile_path, txt)
         return read_profile(abs_profile_path, None, None)
 
-    def profile_vars_test(self):
+    def test_profile_vars(self):
         tmp = temp_folder()
 
         txt = '''
@@ -316,7 +316,7 @@ one/1.5@lasote/stable
                                                          ConanFileReference.loads("two/1.2@lasote/stable"),
                                                          ConanFileReference.loads("one/1.5@lasote/stable")]})
 
-    def profile_dir_test(self):
+    def test_profile_dir(self):
         tmp = temp_folder()
         txt = '''
 [env]
@@ -338,7 +338,7 @@ PYTHONPATH=$PROFILE_DIR/my_python_tools
         profile, _ = read_profile("Myprofile.txt", None, tmp)
         assert_path(profile)
 
-    def include_order_test(self):
+    def test_include_order(self):
         tmp = temp_folder()
 
         save(os.path.join(tmp, "profile1.txt"), "MYVAR=fromProfile1")

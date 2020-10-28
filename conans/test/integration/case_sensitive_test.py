@@ -19,7 +19,7 @@ class ConanLib(ConanFile):
 
 class CaseSensitiveTest(unittest.TestCase):
 
-    def install_test(self):
+    def test_install(self):
         test_server = TestServer()
         servers = {"default": test_server}
         client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
@@ -44,14 +44,14 @@ class CaseSensitiveTest(unittest.TestCase):
         else:
             self.assertNotIn("case incompatible 'Hello0'", client.out)
 
-    def install_same_test(self):
+    def test_install_same(self):
         client = TestClient()
         client.save({CONANFILE: conanfile})
         client.run("export . lasote/stable")
         client.run("install hello0/0.1@lasote/stable --build=missing", assert_error=True)
         self._check(client)
 
-    def imports_test(self):
+    def test_imports(self):
         client = TestClient()
         client.save({CONANFILE: conanfile})
         client.run("export . lasote/stable")
@@ -60,7 +60,7 @@ class CaseSensitiveTest(unittest.TestCase):
         # Reference interpreted as a path, so no valid path
         self.assertIn("Parameter 'path' cannot be a reference", client.out)
 
-    def package_test(self):
+    def test_package(self):
         client = TestClient()
         client.save({CONANFILE: conanfile})
         client.run("export . lasote/stable")
@@ -68,7 +68,7 @@ class CaseSensitiveTest(unittest.TestCase):
         client.run("export-pkg . hello0/0.1@lasote/stable", assert_error=True)
         self.assertIn("ERROR: Package recipe with name hello0!=Hello0", client.out)
 
-    def copy_test(self):
+    def test_copy(self):
         client = TestClient()
         client.save({CONANFILE: conanfile})
         client.run("export . lasote/stable")

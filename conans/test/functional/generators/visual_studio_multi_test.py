@@ -4,6 +4,7 @@ import os
 import platform
 import unittest
 
+import pytest
 from nose.plugins.attrib import attr
 from parameterized import parameterized
 
@@ -58,12 +59,13 @@ void hello(){
 
 
 @attr('slow')
+@pytest.mark.slow
 @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
 class VisualStudioMultiTest(unittest.TestCase):
 
     @parameterized.expand([("visual_studio", "conanbuildinfo.props"),
                            ("visual_studio_multi", "conanbuildinfo_multi.props")])
-    def build_vs_project_test(self, generator, props):
+    def test_build_vs_project(self, generator, props):
         client = TestClient()
         client.save({"conanfile.py": hello_conanfile_py,
                      "hello.h": hello_h})

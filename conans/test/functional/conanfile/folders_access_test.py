@@ -121,7 +121,7 @@ class TestFoldersAccess(unittest.TestCase):
         self.client.save({"conanfile.py": conanfile_parent})
         self.client.run("export . conan/stable")
 
-    def source_local_command_test(self):
+    def test_source_local_command(self):
         c1 = conanfile % {"no_copy_source": False, "source_with_infos": False,
                           "local_command": True}
         self.client.save({"conanfile.py": c1}, clean_first=True)
@@ -155,7 +155,7 @@ class TestFoldersAccess(unittest.TestCase):
         self.client.current_folder = old_dir
         self.client.run("source . --install-folder=build1")
 
-    def build_local_command_test(self):
+    def test_build_local_command(self):
 
         c1 = conanfile % {"no_copy_source": False, "source_with_infos": False,
                           "local_command": True}
@@ -175,7 +175,7 @@ class TestFoldersAccess(unittest.TestCase):
         self.client.run("install . --build missing")
         self.client.run("build .")
 
-    def package_local_command_test(self):
+    def test_package_local_command(self):
         c1 = conanfile % {"no_copy_source": False, "source_with_infos": False,
                           "local_command": True}
         self.client.save({"conanfile.py": c1}, clean_first=True)
@@ -190,21 +190,21 @@ class TestFoldersAccess(unittest.TestCase):
         self.client.run("install . --build missing")
         self.client.run("package .")
 
-    def imports_local_test(self):
+    def test_imports_local(self):
         c1 = conanfile % {"no_copy_source": False, "source_with_infos": False,
                           "local_command": True}
         self.client.save({"conanfile.py": c1}, clean_first=True)
         self.client.run("imports .", assert_error=True)
         self.assertIn("ERROR: conanbuildinfo.txt file not found", self.client.out)
 
-    def deploy_test(self):
+    def test_deploy(self):
         c1 = conanfile % {"no_copy_source": False, "source_with_infos": True,
                           "local_command": False}
         self.client.save({"conanfile.py": c1}, clean_first=True)
         self.client.run("create . user/testing --build missing")
         self.client.run("install lib/1.0@user/testing")  # Checks deploy
 
-    def full_install_test(self):
+    def test_full_install(self):
         c1 = conanfile % {"no_copy_source": False, "source_with_infos": False,
                           "local_command": False}
         self.client.save({"conanfile.py": c1}, clean_first=True)
@@ -252,7 +252,7 @@ class RecipeFolderTest(unittest.TestCase):
                 self.output.info("PACKAGE_INFO: {}".format(r))
         """)
 
-    def recipe_folder_test(self):
+    def test_recipe_folder(self):
         client = TestClient()
         client.save({"conanfile.py": self.recipe_conanfile,
                      "file.txt": "MYFILE!"})
@@ -268,7 +268,7 @@ class RecipeFolderTest(unittest.TestCase):
         self.assertIn("pkg/0.1@user/testing: PACKAGE: MYFILE!", client.out)
         self.assertIn("pkg/0.1@user/testing: PACKAGE_INFO: MYFILE!", client.out)
 
-    def local_flow_test(self):
+    def test_local_flow(self):
         client = TestClient()
         client.save({"conanfile.py": self.recipe_conanfile,
                      "file.txt": "MYFILE!"})
@@ -278,7 +278,7 @@ class RecipeFolderTest(unittest.TestCase):
         self.assertIn("conanfile.py: CONFIGURE: MYFILE!", client.out)
         self.assertIn("conanfile.py: REQUIREMENTS: MYFILE!", client.out)
 
-    def editable_test(self):
+    def test_editable(self):
         client = TestClient()
         client.save({"pkg/conanfile.py": self.recipe_conanfile,
                      "pkg/file.txt": "MYFILE!",

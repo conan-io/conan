@@ -5,7 +5,7 @@ from conans.test.utils.tools import TestClient
 
 class CppInfoScopeTest(unittest.TestCase):
 
-    def cpp_info_scope_test(self):
+    def test_cpp_info_scope(self):
         client = TestClient()
         conanfile = """from conans import ConanFile
 class TestConan(ConanFile):

@@ -23,7 +23,7 @@ class LoadConanfileTxtTest(unittest.TestCase):
         output = TestBufferConanOutput()
         self.loader = ConanFileLoader(None, output, ConanPythonRequire(None, None))
 
-    def env_test(self):
+    def test_env(self):
         env_values = EnvValues()
         env_values.add("PREPEND_PATH", ["hello", "bye"])
         env_values.add("VAR", ["var_value"])
@@ -33,7 +33,7 @@ class LoadConanfileTxtTest(unittest.TestCase):
         conanfile = self.loader.load_conanfile_txt(conanfile_txt_path, self.profile)
         self.assertEqual(conanfile.env, {"PREPEND_PATH": ["hello", "bye"], "VAR": ["var_value"]})
 
-    def conanfile_py_env_test(self):
+    def test_conanfile_py_env(self):
         conanfile_path = os.path.join(temp_folder(), "conanfile.py")
         env_values = EnvValues()
         env_values.add("PREPEND_PATH", ["hello", "bye"])
