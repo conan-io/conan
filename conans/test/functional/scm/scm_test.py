@@ -551,7 +551,7 @@ class ConanLib(ConanFile):
         self.assertIn("SOURCE METHOD CALLED", self.client.out)
         self.assertIn("BUILD METHOD CALLED", self.client.out)
 
-    def scm_serialization_test(self):
+    def test_scm_serialization(self):
         data = {"url": "myurl", "revision": "myrevision", "username": "myusername",
                 "password": "mypassword", "type": "git", "verify_ssl": True,
                 "subfolder": "mysubfolder"}

@@ -28,7 +28,7 @@ class VisualStudioTest(unittest.TestCase):
 
     @attr('slow')
     @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
-    def build_vs_project_with_a_test(self):
+    def test_build_vs_project_with_a(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
             from conans import ConanFile, CMake
@@ -93,7 +93,7 @@ class VisualStudioTest(unittest.TestCase):
         client.run_command(r"x64\Release\MyProject.exe")
         self.assertIn("Hello world!!!", client.out)
 
-    def system_libs_test(self):
+    def test_system_libs(self):
         mylib = textwrap.dedent("""
             import os
             from conans import ConanFile

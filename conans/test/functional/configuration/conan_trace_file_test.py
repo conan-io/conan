@@ -19,7 +19,7 @@ class ConanTraceTest(unittest.TestCase):
         test_server = TestServer()
         self.servers = {"default": test_server}
 
-    def test_run_log_file_package_test(self):
+    def test_run_log_file_packaged(self):
         """Check if the log file is generated and packaged"""
 
         base = '''

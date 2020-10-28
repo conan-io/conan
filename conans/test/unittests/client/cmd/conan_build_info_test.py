@@ -476,7 +476,7 @@ class BuildInfoTest(unittest.TestCase):
         ]
     }""")
 
-    def update_build_info_test(self):
+    def test_update_build_info(self):
         tmp_dir = temp_folder()
         file1 = os.path.join(tmp_dir, "buildinfo1.json")
         file2 = os.path.join(tmp_dir, "buildinfo2.json")

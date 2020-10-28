@@ -223,7 +223,7 @@ class PrivateDepsTest(unittest.TestCase):
         self.client.save(files, clean_first=True)
         self.client.run("export . lasote/stable")
 
-    def modern_cmake_test(self):
+    def test_modern_cmake(self):
         self._export("glew", "0.1")
         self._export("glm", "0.1")
         self._export("gf", "0.1", deps=[("glm/0.1@lasote/stable", "private"),
@@ -245,7 +245,7 @@ class PrivateDepsTest(unittest.TestCase):
         self.assertIn("CONAN_PKG::ImGuiTest PROPERTY INTERFACE_LINK_LIBRARIES "
                       "${CONAN_PACKAGE_TARGETS_IMGUITEST}", conanbuildinfo_cmake)
 
-    def consumer_force_build_test(self):
+    def test_consumer_force_build(self):
         """If a conanfile requires another private conanfile, but in the install is forced
         the build, the private node has to be downloaded and built"""
         self._export_upload("Hello0", "0.1", build=False, upload=False)
@@ -283,7 +283,7 @@ class PrivateDepsTest(unittest.TestCase):
         self.assertIn("Hello0/0.1@lasote/stable: Package installed", self.client.out)
         self.assertIn("Hello1/0.1@lasote/stable: Building your package", self.client.out)
 
-    def consumer_private_test(self):
+    def test_consumer_private(self):
         self._export_upload("Hello0", "0.1", build=False, upload=False)
         self._export_upload("Hello1", "0.1", deps=["Hello0/0.1@lasote/stable"],
                             build=False, upload=False)
@@ -313,7 +313,7 @@ class PrivateDepsTest(unittest.TestCase):
         self.assertNotIn("Hello1/0.1@lasote/stable: Generating the package",
                          self.client.out)
 
-    def reuse_test(self):
+    def test_reuse(self):
         self._export_upload("Hello0", "0.1")
         self._export_upload("Hello1", "0.1", deps=[("Hello0/0.1@lasote/stable", "private")],
                             static=False)

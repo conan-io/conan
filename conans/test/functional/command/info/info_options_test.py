@@ -5,7 +5,7 @@ from conans.test.utils.tools import TestClient
 
 class InfoOptionsTest(unittest.TestCase):
 
-    def info_options_test(self):
+    def test_info_options(self):
         # packages with dash
         client = TestClient()
         client.run('new My-Package/1.3@myuser/testing -t')
@@ -26,7 +26,7 @@ class InfoOptionsTest(unittest.TestCase):
         client.run("info . -o My-Package:shared2=True", assert_error=True)
         self.assertIn("option 'shared2' doesn't exist", client.out)
 
-    def info_wrong_options_test(self):
+    def test_info_wrong_options(self):
         # https://github.com/conan-io/conan/issues/2202
         client = TestClient()
         conanfile = """from conans import ConanFile

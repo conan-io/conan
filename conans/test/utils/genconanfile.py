@@ -102,6 +102,10 @@ class GenConanfile(object):
         self._settings.append(setting)
         return self
 
+    def with_settings(self, *settings):
+        self._settings.extend(settings)
+        return self
+
     def with_option(self, option_name, values):
         self._options[option_name] = values
         return self

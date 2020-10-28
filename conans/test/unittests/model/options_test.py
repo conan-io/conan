@@ -33,7 +33,7 @@ class OptionsTest(unittest.TestCase):
         self.assertTrue("shared" not in sut)
         self.assertFalse("static" not in sut)
 
-    def undefined_value_test(self):
+    def test_undefined_value(self):
         """ Not assigning a value to options will raise an error at validate() step
         """
         package_options = PackageOptions.loads("""{
@@ -43,7 +43,7 @@ class OptionsTest(unittest.TestCase):
         package_options.path = "Something"
         package_options.validate()
 
-    def undefined_value_none_test(self):
+    def test_undefined_value_none(self):
         """ The value None is allowed as default, not necessary to default to it
         """
         package_options = PackageOptions.loads('{path: [None, "Other"]}')
@@ -51,13 +51,13 @@ class OptionsTest(unittest.TestCase):
         package_options = PackageOptions.loads('{path: ["None", "Other"]}')
         package_options.validate()
 
-    def items_test(self):
+    def test_items(self):
         self.assertEqual(self.sut.items(), [("optimized", "3"), ("path", "NOTDEF"),
                                             ("static", "True")])
         self.assertEqual(self.sut.items(), [("optimized", "3"), ("path", "NOTDEF"),
                                             ("static", "True")])
 
-    def change_test(self):
+    def test_change(self):
         self.sut.path = "C:/MyPath"
         self.assertEqual(self.sut.items(), [("optimized", "3"), ("path", "C:/MyPath"),
                                             ("static", "True")])
@@ -67,7 +67,7 @@ class OptionsTest(unittest.TestCase):
                                      "'5' is not a valid 'options.optimized' value"):
             self.sut.optimized = 5
 
-    def boolean_test(self):
+    def test_boolean(self):
         self.sut.static = False
         self.assertFalse(self.sut.static)
         self.assertTrue(not self.sut.static)
@@ -78,7 +78,7 @@ class OptionsTest(unittest.TestCase):
         self.assertTrue(self.sut.static == "False")
         self.assertTrue(self.sut.static != "True")
 
-    def basic_test(self):
+    def test_basic(self):
         boost_values = PackageOptionValues()
         boost_values.add_option("static", False)
         boost_values.add_option("thread", True)
@@ -130,7 +130,7 @@ Boost:thread=True
 Boost:thread.multi=off
 Poco:deps_bundled=True""")
 
-    def pattern_positive_test(self):
+    def test_pattern_positive(self):
         boost_values = PackageOptionValues()
         boost_values.add_option("static", False)
         boost_values.add_option("path", "FuzzBuzz")
@@ -146,7 +146,7 @@ Poco:deps_bundled=True""")
                                                      ("Boost.*:static", "False"),
                                                      ])
 
-    def multi_pattern_test(self):
+    def test_multi_pattern(self):
         boost_values = PackageOptionValues()
         boost_values.add_option("static", False)
         boost_values.add_option("path", "FuzzBuzz")
@@ -166,7 +166,7 @@ Poco:deps_bundled=True""")
                                                      ("Boost.*:static", "False"),
                                                      ])
 
-    def multi_pattern_error_test(self):
+    def test_multi_pattern_error(self):
         boost_values = PackageOptionValues()
         boost_values.add_option("optimized", 4)
         boost_values2 = PackageOptionValues()
@@ -183,7 +183,7 @@ Poco:deps_bundled=True""")
                                                      ('*:optimized', '2'),
                                                      ('Boost.*:optimized', '4')])
 
-    def all_positive_test(self):
+    def test_all_positive(self):
         boost_values = PackageOptionValues()
         boost_values.add_option("static", False)
         boost_values.add_option("path", "FuzzBuzz")
@@ -199,7 +199,7 @@ Poco:deps_bundled=True""")
                                                      ("*:static", "False"),
                                                      ])
 
-    def pattern_ignore_test(self):
+    def test_pattern_ignore(self):
         boost_values = PackageOptionValues()
         boost_values.add_option("fake_option", "FuzzBuzz")
 
@@ -213,7 +213,7 @@ Poco:deps_bundled=True""")
                                                      ("Boost.*:fake_option", "FuzzBuzz"),
                                                      ])
 
-    def pattern_unmatch_test(self):
+    def test_pattern_unmatch(self):
         boost_values = PackageOptionValues()
         boost_values.add_option("fake_option", "FuzzBuzz")
 

@@ -21,7 +21,7 @@ class RunnerTest(unittest.TestCase):
         client.run("build .")
         return client
 
-    def ignore_error_test(self):
+    def test_ignore_error(self):
         conanfile = """from conans import ConanFile
 class Pkg(ConanFile):
     def source(self):
@@ -33,7 +33,7 @@ class Pkg(ConanFile):
         client.run("source .")
         self.assertIn("RETCODE True", client.out)
 
-    def basic_test(self):
+    def test_basic(self):
         conanfile = '''
 from conans import ConanFile
 from conans.client.runner import ConanRunner
@@ -60,7 +60,7 @@ class ConanFileToolsTest(ConanFile):
 > python --version
 -----------------""", out.getvalue())
 
-    def log_test(self):
+    def test_log(self):
         conanfile = '''
 from conans import ConanFile
 
@@ -136,7 +136,7 @@ class ConanFileToolsTest(ConanFile):
         self.assertNotIn("cmake version", output)
         self.assertIn("Logging command output to file ", output)
 
-    def cwd_test(self):
+    def test_cwd(self):
         conanfile = '''
 from conans import ConanFile
 from conans.client.runner import ConanRunner
@@ -159,7 +159,7 @@ class ConanFileToolsTest(ConanFile):
         client.run("build .")
         self.assertTrue(os.path.exists(test_folder))
 
-    def cwd_error_test(self):
+    def test_cwd_error(self):
         conanfile = '''
 from conans import ConanFile
 from conans.client.runner import ConanRunner
@@ -182,7 +182,7 @@ class ConanFileToolsTest(ConanFile):
         self.assertIn("Error while executing 'mkdir test_folder'", client.out)
         self.assertFalse(os.path.exists(test_folder))
 
-    def runner_capture_output_test(self):
+    def test_runner_capture_output(self):
         conanfile = textwrap.dedent("""
             from conans import ConanFile
             class Pkg(ConanFile):

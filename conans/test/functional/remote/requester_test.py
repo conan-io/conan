@@ -18,7 +18,7 @@ class MyRequester(object):
 
 class RequesterTest(unittest.TestCase):
 
-    def requester_timeout_test(self):
+    def test_requester_timeout(self):
 
         client = TestClient(requester_class=MyRequester)
         conf = """
@@ -33,7 +33,7 @@ request_timeout=2
             client = TestClient(requester_class=MyRequester)
             self.assertEqual(client.requester.get("MyUrl"), 4.3)
 
-    def requester_timeout_errors_test(self):
+    def test_requester_timeout_errors(self):
         client = TestClient(requester_class=MyRequester)
         conf = """
 [general]
@@ -44,7 +44,7 @@ request_timeout=any_string
                                    "Specify a numeric parameter for 'request_timeout'"):
             client.run("install Lib/1.0@conan/stable")
 
-    def no_request_timeout_test(self):
+    def test_no_request_timeout(self):
         # Test that not having timeout works
         client = TestClient(requester_class=MyRequester)
         conf = """

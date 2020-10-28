@@ -240,7 +240,7 @@ class GitToolTest(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(submodule_path, "submodule")))
         self.assertTrue(os.path.exists(os.path.join(subsubmodule_path, "subsubmodule")))
 
-    def git_to_capture_branch_test(self):
+    def test_git_to_capture_branch(self):
         conanfile = """
 import re
 from conans import ConanFile, tools
@@ -267,7 +267,7 @@ class HelloConan(ConanFile):
         client.current_folder = path
         client.run("create . user/channel")
 
-    def git_helper_in_recipe_test(self):
+    def test_git_helper_in_recipe(self):
         client = TestClient()
         git_repo = temp_folder()
         save(os.path.join(git_repo, "file.h"), "contents")
@@ -341,7 +341,7 @@ class HelloConan(ConanFile):
         client.run("create . user/channel", assert_error=True)
         self.assertIn("specify a branch to checkout", client.out)
 
-    def git_commit_message_test(self):
+    def test_git_commit_message(self):
         client = TestClient()
         git_repo = temp_folder()
         with client.chdir(git_repo):

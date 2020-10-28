@@ -8,7 +8,7 @@ from conans.util.files import load
 
 class VirtualEnvPythonGeneratorTest(unittest.TestCase):
 
-    def simple_value_test(self):
+    def test_simple_value(self):
         client = TestClient()
         dep1 = """
 import os
@@ -48,7 +48,7 @@ virtualenv
         self.assertIn("LD_LIBRARY_PATH=", contents)
         self.assertIn("DYLD_LIBRARY_PATH=", contents)
 
-    def multiple_value_test(self):
+    def test_multiple_value(self):
             client = TestClient()
             dep1 = """
 from conans import ConanFile
@@ -82,7 +82,7 @@ class BaseConan(ConanFile):
                 self.assertIn('PYTHONPATH=/path/to/something;/otherpath;%PYTHONPATH%', contents)
             self.assertNotIn("OTHER", contents)
 
-    def no_value_declared_test(self):
+    def test_no_value_declared(self):
         client = TestClient()
         dep1 = GenConanfile()
 

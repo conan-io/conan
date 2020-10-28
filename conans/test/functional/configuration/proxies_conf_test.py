@@ -68,7 +68,7 @@ http=http://conan.url
 
         self.assertEqual(requester.get("MyUrl"), "mocked ok!")
 
-    def new_proxy_exclude_test(self):
+    def test_new_proxy_exclude(self):
 
         class MyRequester(object):
 
