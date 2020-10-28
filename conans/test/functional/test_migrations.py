@@ -206,7 +206,7 @@ the old general
                                                         "layout": "anyfile"}}))
 
         cache = TestClient(cache_folder=tmp_folder).cache
-        migrate_editables_use_conanfile_name(cache, None)
+        migrate_editables_use_conanfile_name(cache)
 
         # Now we have same info and full paths
         with open(os.path.join(tmp_folder, EDITABLE_PACKAGES_FILE)) as f:
