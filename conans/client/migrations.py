@@ -131,11 +131,9 @@ def migrate_tgz_location(cache, out):
 
 
 def migrate_localdb_refresh_token(cache, out):
-    from conans.client.store.localdb import LocalDB
     from sqlite3 import OperationalError
 
-    localdb = LocalDB.create(cache.localdb)
-    with localdb._connect() as connection:
+    with cache.localdb._connect() as connection:
         try:
             statement = connection.cursor()
             statement.execute("ALTER TABLE users_remotes ADD refresh_token TEXT;")
