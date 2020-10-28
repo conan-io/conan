@@ -3,9 +3,10 @@ import platform
 import textwrap
 import unittest
 
+import pytest
 from nose.plugins.attrib import attr
 
-from conans.client.tools import load, remove_from_path
+from conans.client.tools import remove_from_path
 from conans.test.utils.multi_config import multi_config_files
 from conans.test.utils.tools import TestClient
 
@@ -132,9 +133,11 @@ int main(){{
 
 
 @attr("slow")
+@pytest.mark.slow
 class CMakeMultiTest(unittest.TestCase):
 
     @attr("mingw")
+    @pytest.mark.tool_mingw
     def test_cmake_multi_find(self):
         if platform.system() not in ["Windows", "Linux"]:
             return

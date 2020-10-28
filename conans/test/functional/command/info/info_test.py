@@ -600,14 +600,14 @@ class InfoTest(unittest.TestCase):
 
         client.run("info ./subfolder --json=output.json")
         output = json.loads(client.load('output.json'))[0]
-        self.assertEquals(output['reference'], 'conanfile.py (Pkg/0.2)')
+        self.assertEqual(output['reference'], 'conanfile.py (Pkg/0.2)')
         self.assertListEqual(output['license'], ['MIT', ])
-        self.assertEquals(output['author'], 'John Doe')
+        self.assertEqual(output['author'], 'John Doe')
         self.assertListEqual(output['topics'], ['foo', 'bar', 'qux'])
-        self.assertEquals(output['url'], 'https://foo.bar.baz')
-        self.assertEquals(output['homepage'], 'https://foo.bar.site')
+        self.assertEqual(output['url'], 'https://foo.bar.baz')
+        self.assertEqual(output['homepage'], 'https://foo.bar.site')
         self.assertListEqual(output['provides'], ['libjpeg', 'libjpg'])
-        self.assertEquals(output['deprecated'], 'other-pkg')
+        self.assertEqual(output['deprecated'], 'other-pkg')
 
     def test_topics_graph(self):
 
