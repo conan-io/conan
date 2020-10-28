@@ -95,7 +95,7 @@ class ClientMigrator(Migrator):
             migrate_editables_use_conanfile_name(cache)
 
         if old_version < Version("1.31.0"):
-            migrate_tgz_location(self.cache, self.out)
+            migrate_tgz_location(cache, self.out)
 
 
 def _get_refs(cache):
