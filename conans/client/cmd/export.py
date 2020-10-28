@@ -113,21 +113,22 @@ def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
     output.highlight("Exporting package recipe")
     output = conanfile.output
 
-    # Get previous digest
-    try:
-        previous_manifest = package_layout.recipe_manifest()
-    except IOError:
-        previous_manifest = None
-    finally:
-        _recreate_folders(package_layout.export())
-        _recreate_folders(package_layout.export_sources())
-
     # Copy sources to target folders
     with package_layout.conanfile_write_lock(output=output):
+        # Get previous manifest
+        try:
+            previous_manifest = package_layout.recipe_manifest()
+        except IOError:
+            previous_manifest = None
 
+        package_layout.export_remove()
+        export_folder = package_layout.export()
+        export_src_folder = package_layout.export_sources()
+        mkdir(export_folder)
+        mkdir(export_src_folder)
         origin_folder = os.path.dirname(conanfile_path)
-        export_recipe(conanfile, origin_folder, package_layout.export())
-        export_source(conanfile, origin_folder, package_layout.export_sources())
+        export_recipe(conanfile, origin_folder, export_folder)
+        export_source(conanfile, origin_folder, export_src_folder)
         shutil.copy2(conanfile_path, package_layout.conanfile())
 
         # Calculate the "auto" values and replace in conanfile.py
@@ -138,7 +139,6 @@ def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
         # Clear previous scm_folder
         modified_recipe = False
         scm_sources_folder = package_layout.scm_sources()
-        rmdir(scm_sources_folder)
         if local_src_folder and not keep_source:
             # Copy the local scm folder to scm_sources in the cache
             mkdir(scm_sources_folder)
@@ -153,15 +153,15 @@ def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
                              conanfile_path=package_layout.conanfile())
 
         # Compute the new digest
-        manifest = FileTreeManifest.create(package_layout.export(), package_layout.export_sources())
+        manifest = FileTreeManifest.create(export_folder, export_src_folder)
         modified_recipe |= not previous_manifest or previous_manifest != manifest
         if modified_recipe:
             output.success('A new %s version was exported' % CONANFILE)
-            output.info('Folder: %s' % package_layout.export())
+            output.info('Folder: %s' % export_folder)
         else:
             output.info("The stored package has not changed")
             manifest = previous_manifest  # Use the old one, keep old timestamp
-        manifest.save(package_layout.export())
+        manifest.save(export_folder)
 
     # Compute the revision for the recipe
     revision = _update_revision_in_metadata(package_layout=package_layout,
@@ -424,15 +424,6 @@ def _update_revision_in_metadata(package_layout, revisions_enabled, output, path
         metadata.recipe.revision = revision
 
     return revision
-
-
-def _recreate_folders(destination_folder):
-    try:
-        if os.path.exists(destination_folder):
-            rmdir(destination_folder)
-        os.makedirs(destination_folder)
-    except Exception as e:
-        raise ConanException("Unable to create folder %s\n%s" % (destination_folder, str(e)))
 
 
 def _classify_patterns(patterns):

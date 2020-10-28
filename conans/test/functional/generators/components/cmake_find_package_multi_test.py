@@ -3,6 +3,7 @@ import platform
 import textwrap
 import unittest
 
+import pytest
 from nose.plugins.attrib import attr
 
 from conans.model.ref import ConanFileReference
@@ -11,6 +12,7 @@ from conans.test.utils.tools import TestClient
 
 
 @attr('slow')
+@pytest.mark.slow
 class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
 
     @staticmethod

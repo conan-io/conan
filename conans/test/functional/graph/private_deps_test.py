@@ -1,6 +1,7 @@
 import os
 import unittest
 
+import pytest
 from nose.plugins.attrib import attr
 
 from conans.model.info import ConanInfo
@@ -198,6 +199,7 @@ class V3D(ConanFile):
 
 
 @attr("slow")
+@pytest.mark.slow
 class PrivateDepsTest(unittest.TestCase):
 
     def setUp(self):
