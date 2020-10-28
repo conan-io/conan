@@ -2,12 +2,12 @@ import platform
 import textwrap
 import unittest
 
+import pytest
 from nose.plugins.attrib import attr
 
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
-
 
 sln_file = r"""
 Microsoft Visual Studio Solution File, Format Version 12.00
@@ -415,6 +415,7 @@ int main(){
 class MSBuildGeneratorTest(unittest.TestCase):
 
     @attr('slow')
+    @pytest.mark.slow
     def test_msbuild_generator(self):
         client = TestClient()
         # Upload to alternative server Hello0 but Hello1 to the default

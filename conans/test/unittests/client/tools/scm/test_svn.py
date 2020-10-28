@@ -2,21 +2,21 @@
 
 import os
 import shutil
-import six
 import subprocess
 import unittest
 import uuid
 
+import pytest
+import six
 from mock import patch
-
 from nose.plugins.attrib import attr
 from six.moves.urllib.parse import quote
 
 from conans.client.tools.scm import SVN
 from conans.errors import ConanException
 from conans.model.version import Version
-from conans.test.utils.tools import temp_folder, TestClient
 from conans.test.utils.scm import SVNLocalRepoTestCase, try_remove_readonly
+from conans.test.utils.tools import temp_folder, TestClient
 from conans.util.files import save
 
 
@@ -37,6 +37,8 @@ class SVNRemoteUrlTest(unittest.TestCase):
 
 @attr("slow")
 @attr('svn')
+@pytest.mark.slow
+@pytest.mark.tool_svn
 class SVNToolTestsBasic(SVNLocalRepoTestCase):
 
     @patch('subprocess.Popen')
@@ -308,6 +310,8 @@ compiled Apr  5 2019, 18:59:58 on x86_64-apple-darwin17.0.0"""
 
 @attr("slow")
 @attr('svn')
+@pytest.mark.slow
+@pytest.mark.tool_svn
 class SVNToolTestsBasicOldVersion(SVNToolTestsBasic):
     def run(self, *args, **kwargs):
         try:
@@ -324,6 +328,8 @@ class SVNToolTestsBasicOldVersion(SVNToolTestsBasic):
 
 @attr("slow")
 @attr('svn')
+@pytest.mark.slow
+@pytest.mark.tool_svn
 class SVNToolTestsPristine(SVNLocalRepoTestCase):
 
     def setUp(self):
@@ -426,6 +432,7 @@ class SVNToolTestsPristine(SVNLocalRepoTestCase):
 
 
 @attr("svn")
+@pytest.mark.tool_svn
 class SVNToolTestsPristineWithExternalFile(SVNLocalRepoTestCase):
 
     def _propset_cmd(self, relpath, rev, url):
@@ -449,6 +456,7 @@ class SVNToolTestsPristineWithExternalFile(SVNLocalRepoTestCase):
 
 
 @attr("svn")
+@pytest.mark.tool_svn
 class SVNToolTestsPristineWithExternalsNotFixed(SVNLocalRepoTestCase):
 
     def _propset_cmd(self, relpath, url):
@@ -481,6 +489,7 @@ class SVNToolTestsPristineWithExternalsNotFixed(SVNLocalRepoTestCase):
 
 
 @attr("svn")
+@pytest.mark.tool_svn
 class SVNToolTestsPristineWithExternalsFixed(SVNLocalRepoTestCase):
 
     def _propset_cmd(self, relpath, rev, url):
@@ -548,6 +557,8 @@ class SVNToolTestsPristineWithExternalsFixed(SVNLocalRepoTestCase):
 
 @attr("slow")
 @attr('svn')
+@pytest.mark.slow
+@pytest.mark.tool_svn
 class SVNToolsTestsRecipe(SVNLocalRepoTestCase):
 
     conanfile = """
