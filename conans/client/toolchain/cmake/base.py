@@ -4,7 +4,6 @@ from collections import OrderedDict, defaultdict
 
 from jinja2 import DictLoader, Environment
 
-from conans.errors import ConanException
 from conans.util.files import save
 
 

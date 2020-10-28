@@ -1,4 +1,5 @@
 import errno
+import gzip
 import hashlib
 import os
 import platform
@@ -311,24 +312,16 @@ def gzopen_without_timestamps(name, mode="r", fileobj=None, compresslevel=None, 
         setted in Gzip file causing md5 to change. Not possible using the
         previous tarfile open because arguments are not passed to GzipFile constructor
     """
-    from tarfile import CompressionError, ReadError
-
     compresslevel = compresslevel or int(os.getenv("CONAN_COMPRESSION_LEVEL", 9))
 
     if mode not in ("r", "w"):
         raise ValueError("mode must be 'r' or 'w'")
 
     try:
-        import gzip
-        gzip.GzipFile
-    except (ImportError, AttributeError):
-        raise CompressionError("gzip module is not available")
-
-    try:
         fileobj = gzip.GzipFile(name, mode, compresslevel, fileobj, mtime=0)
     except OSError:
         if fileobj is not None and mode == 'r':
-            raise ReadError("not a gzip file")
+            raise tarfile.ReadError("not a gzip file")
         raise
 
     try:
@@ -338,7 +331,7 @@ def gzopen_without_timestamps(name, mode="r", fileobj=None, compresslevel=None, 
     except IOError:
         fileobj.close()
         if mode == 'r':
-            raise ReadError("not a gzip file")
+            raise tarfile.ReadError("not a gzip file")
         raise
     except Exception:
         fileobj.close()

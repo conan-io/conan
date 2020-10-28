@@ -132,8 +132,6 @@ content = """
 
                 // Add filter profile to
                 $("#filterProfileButton").appendTo("#results_length");
-
-                //$('#results_length').appendChild($('#filterProfileButton'));
             });
 
             function apply_profile_filter() {
