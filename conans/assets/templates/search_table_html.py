@@ -23,9 +23,11 @@ content = """
         </div>
 
         <!-- Button trigger modal -->
-        <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#filterProfile">
-            Use profile to filter
-        </button>
+        <span id="filterProfileButton"> |
+            <button type="button" class="btn btn-link" data-toggle="modal" data-target="#filterProfile">
+                Filter using profile
+            </button>
+        </span>
 
         <!-- Modal -->
         <div class="modal fade" id="filterProfile" tabindex="-1" role="dialog" aria-labelledby="filterProfileLabel" aria-hidden="true">
@@ -127,6 +129,11 @@ content = """
                         }
                     } );
                 } );
+
+                // Add filter profile to
+                $("#filterProfileButton").appendTo("#results_length");
+
+                //$('#results_length').appendChild($('#filterProfileButton'));
             });
 
             function apply_profile_filter() {
