@@ -221,7 +221,6 @@ class ConanFileToolsTest(ConanFile):
         conanfile = textwrap.dedent("""
             import os
             import platform
-            from six import StringIO
             from conans import ConanFile
 
             class Recipe(ConanFile):
@@ -229,11 +228,11 @@ class ConanFileToolsTest(ConanFile):
                     self.output.info(">> key: {}<<".format(os.getenv('CONAN_LOGIN_ENCRYPTION_KEY')))
                     self.output.info(">> var: {}<<".format(os.getenv('OTHER_VAR')))
                     if platform.system() == 'Windows':
-                        self.run("echo key: %CONAN_LOGIN_ENCRYPTION_KEY%^--")
-                        self.run("echo var: %$OTHER_VAR%^--")
+                        self.run("echo key: %CONAN_LOGIN_ENCRYPTION_KEY%--")
+                        self.run("echo var: %OTHER_VAR%--")
                     else:
-                        self.run("echo key: $CONAN_LOGIN_ENCRYPTION_KEY^--")
-                        self.run("echo var: $OTHER_VAR^--")
+                        self.run("echo key: $CONAN_LOGIN_ENCRYPTION_KEY--")
+                        self.run("echo var: $OTHER_VAR--")
         """)
         with environment_append({'CONAN_LOGIN_ENCRYPTION_KEY': 'secret!', 'OTHER_VAR': 'other_var'}):
             client = TestClient()
@@ -241,5 +240,5 @@ class ConanFileToolsTest(ConanFile):
             client.run("export . name/version@")
             self.assertIn("name/version: >> key: secret!<<", client.out)
             self.assertIn("name/version: >> var: other_var<<", client.out)
-            self.assertIn("key: ^--", client.out)
-            self.assertIn("var: other_var^--", client.out)
+            self.assertIn("key: --", client.out)
+            self.assertIn("var: other_var--", client.out)
