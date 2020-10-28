@@ -2,6 +2,7 @@ import os
 import platform
 import unittest
 
+import pytest
 import requests
 from mock import Mock
 from nose.plugins.attrib import attr
@@ -19,9 +20,9 @@ from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE, CONANINFO, CONAN_MANIFEST
 from conans.test.utils.cpp_test_files import cpp_hello_source_files
+from conans.test.utils.mocks import LocalDBMock, TestBufferConanOutput
 from conans.test.utils.server_launcher import TestServerLauncher
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.mocks import LocalDBMock, TestBufferConanOutput
 from conans.util.env_reader import get_env
 from conans.util.files import md5, save
 
@@ -55,7 +56,9 @@ class RestApiUnitTest(unittest.TestCase):
 
 
 @attr('slow')
+@pytest.mark.slow
 @attr('rest_api')
+@pytest.mark.rest_api
 class RestApiTest(unittest.TestCase):
     """Open a real server (sockets) to test rest_api function."""
 

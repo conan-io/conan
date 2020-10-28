@@ -4,6 +4,7 @@ import textwrap
 import unittest
 from textwrap import dedent
 
+import pytest
 from nose.plugins.attrib import attr
 from parameterized.parameterized import parameterized
 
@@ -61,6 +62,7 @@ message(STATUS "HELLO_DEFINES=${HELLO_DEFINES}")
 
 
 @attr("slow")
+@pytest.mark.slow
 class CMakeFlagsTest(unittest.TestCase):
 
     def _get_line(self, text, begin):

@@ -1,9 +1,10 @@
-import time
-from collections import OrderedDict
-
 import json
 import os
+import time
 import unittest
+from collections import OrderedDict
+
+import pytest
 from nose.plugins.attrib import attr
 from parameterized.parameterized import parameterized
 
@@ -16,6 +17,7 @@ from conans.util.env_reader import get_env
 
 
 @attr("artifactory_ready")
+@pytest.mark.artifactory_ready
 @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
 class InstallingPackagesWithRevisionsTest(unittest.TestCase):
 
@@ -1349,6 +1351,7 @@ class SCMRevisions(unittest.TestCase):
                       client.out)
 
     @attr("svn")
+    @pytest.mark.tool_svn
     def test_auto_revision_even_without_scm_svn(self):
         """Even without using the scm feature, the revision is detected from repo.
          Also while we continue working in local, the revision doesn't change, so the packages

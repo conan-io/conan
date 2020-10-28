@@ -3,6 +3,7 @@ import platform
 import textwrap
 import unittest
 
+import pytest
 from nose.plugins.attrib import attr
 from parameterized import parameterized
 
@@ -12,6 +13,7 @@ from conans.util.files import load
 
 
 @attr('slow')
+@pytest.mark.slow
 class CMakeFindPathMultiGeneratorTest(unittest.TestCase):
 
     def test_native_export_multi(self):
