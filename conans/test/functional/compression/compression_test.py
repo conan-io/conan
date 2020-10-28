@@ -15,7 +15,7 @@ import unittest
 from nose.plugins.attrib import attr
 from parameterized import parameterized_class
 
-from conans.client.tools.files import chdir, load
+from conans.client.tools.files import chdir, load, save
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import md5sum, save_files
 
@@ -231,6 +231,8 @@ class CompressionTest(unittest.TestCase):
     def is_broken_link(cls, link):
         if os.path.islink(link):
             target = os.readlink(link)
+            if not os.path.isabs(target):
+                target = os.path.join(os.path.dirname(link), target)
             return not os.path.exists(target)
         return False
 
@@ -443,6 +445,80 @@ class CompressionTest(unittest.TestCase):
             os.symlink(a, b)
 
         self.compress_decompress_check()
+
+    # absolute symlink, target exists for client1, but not for client2
+    @unittest.skipUnless(symlinks_supported(), "requires symlinks")
+    def test_abs_valid_becomes_invalid(self):
+        self.d3 = temp_folder()
+        files = self.gen_files(self.d3)
+
+        with chdir(self.d1):
+            a = list(files.keys())[0]
+            b = self.gen_filename()
+            os.symlink(os.path.join(self.d3, a), b)
+
+        self.assertFalse(self.is_broken_link(os.path.join(self.d1, b)))
+        self.compressor.compress(self.d1)
+        shutil.rmtree(self.d3)
+        self.compressor.decompress(self.d2)
+        self.assertTrue(self.is_broken_link(os.path.join(self.d2, b)))
+
+        self.assertDirsEqual(self.d1, self.d2)
+
+    # absolute symlink, target doesn't exist for client1, but exists for client2
+    @unittest.skipUnless(symlinks_supported(), "requires symlinks")
+    def test_abs_invalid_becomes_valid(self):
+        self.d3 = temp_folder()
+        a = self.gen_filename()
+
+        with chdir(self.d1):
+            b = self.gen_filename()
+            os.symlink(os.path.join(self.d3, a), b)
+
+        self.assertTrue(self.is_broken_link(os.path.join(self.d1, b)))
+        self.compressor.compress(self.d1)
+        save(os.path.join(self.d3, a), "")
+        self.compressor.decompress(self.d2)
+        self.assertFalse(self.is_broken_link(os.path.join(self.d2, b)))
+
+        self.assertDirsEqual(self.d1, self.d2)
+
+    # relative symlink, target exists for client1, but not for client2
+    @unittest.skipUnless(symlinks_supported(), "requires symlinks")
+    def test_rel_valid_becomes_invalid(self):
+        self.d3 = temp_folder()
+        files = self.gen_files(self.d3)
+
+        with chdir(self.d1):
+            a = list(files.keys())[0]
+            b = self.gen_filename()
+            os.symlink(os.path.relpath(os.path.join(self.d3, a), self.d1), b)
+
+        self.assertFalse(self.is_broken_link(os.path.join(self.d1, b)))
+        self.compressor.compress(self.d1)
+        shutil.rmtree(self.d3)
+        self.compressor.decompress(self.d2)
+        self.assertTrue(self.is_broken_link(os.path.join(self.d2, b)))
+
+        self.assertDirsEqual(self.d1, self.d2)
+
+    # relative symlink, target doesn't exist for client1, but exists for client2
+    @unittest.skipUnless(symlinks_supported(), "requires symlinks")
+    def test_rel_invalid_becomes_valid(self):
+        self.d3 = temp_folder()
+        a = self.gen_filename()
+
+        with chdir(self.d1):
+            b = self.gen_filename()
+            os.symlink(os.path.relpath(os.path.join(self.d3, a), self.d1), b)
+
+        self.assertTrue(self.is_broken_link(os.path.join(self.d1, b)))
+        self.compressor.compress(self.d1)
+        save(os.path.join(self.d3, a), "")
+        self.compressor.decompress(self.d2)
+        self.assertFalse(self.is_broken_link(os.path.join(self.d2, b)))
+
+        self.assertDirsEqual(self.d1, self.d2)
 
     # simple file hard-link
     @unittest.skipUnless(hardlinks_supported(), "requires hardlinks")
