@@ -31,6 +31,7 @@ def upload(conan_api, parser, *args, **kwargs):
                         nargs="?")
     parser.add_argument("-r", "--remote", action=OnceArgument,
                         help="Upload to this specific remote")
+    # TODO: could upload --query be substituted by search --query | upload ?
     parser.add_argument("--query", default=None, action=OnceArgument,
                         help="Only upload packages matching a specific query. "
                              "Packages query: 'os=Windows AND (arch=x86 OR"
