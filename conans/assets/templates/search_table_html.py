@@ -41,13 +41,13 @@ content = """
                         <p>Copy and paste here the content of a Conan profile:</p>
                         <form>
                             <div class="form-group">
-                                    <textarea class="form-control" rows="8" placeholder="[settings]&#10;os=Macos&#10;arch=x86_64&#10;compiler=apple-clang&#10;compiler.version=11.0&#10;compiler.libcxx=libc++&#10;build_type=Release"></textarea>
+                                    <textarea id="filterProfileValue" class="form-control" rows="8" placeholder="[settings]&#10;os=Macos&#10;arch=x86_64&#10;compiler=apple-clang&#10;compiler.version=11.0&#10;compiler.libcxx=libc++&#10;build_type=Release"></textarea>
                             </div>
                         </form>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                        <button type="button" class="btn btn-primary">Apply filter</button>
+                        <button type="button" class="btn btn-primary" onclick="apply_profile_filter()">Apply filter</button>
                     </div>
                 </div>
             </div>
@@ -101,7 +101,8 @@ content = """
                 // Setup - add a text input to each footer cell
                 $('#results tfoot th').each( function () {
                     var title = $(this).text();
-                    $(this).html( '<input type="text" class="form-control filter-input" placeholder="Filter '+title+'" style="width:100%"/>' );
+                    var title_id = title.replace('.', '_');
+                    $(this).html( '<input type="text" id="filter-input-'+title_id+'" class="form-control filter-input" placeholder="Filter '+title+'" style="width:100%"/>' );
                 });
 
                 var table = $('#results').DataTable( {
@@ -127,6 +128,24 @@ content = """
                     } );
                 } );
             });
+
+            function apply_profile_filter() {
+                // Parse the profile input
+                var profile_txt = $("#filterProfileValue").val();
+                var regex = {
+                    section: /^\s*\[\s*([^\]]*)\s*\]\s*$/,
+                    param: /^\s*([^=]+?)\s*=\s*(.*?)\s*$/
+                };
+                profile_txt.split(/[\\r\\n]+/).forEach( function(line) {
+                    if(regex.param.test(line)){
+                        var match = line.match(regex.param);
+                        var field_id = '#filter-input-'+match[1].replace('.', '_');
+                        $(field_id).val(match[2]);
+                        $(field_id).keyup();
+                    }
+                });
+                $('#filterProfile').modal('hide');
+            }
         </script>
     </div>
     </body>
@@ -134,7 +153,7 @@ content = """
         <div class="container-fluid">
             <div class="info">
                 <p>
-                      Conan <b>v{{ version  }}</b> <script>document.write(new Date().getFullYear())</script> JFrog LTD. <a>https://conan.io</a>
+                      Conan <b>v{{ version }}</b> <script>document.write(new Date().getFullYear())</script> JFrog LTD. <a>https://conan.io</a>
                 </p>
             </div>
         </div>
