@@ -191,7 +191,7 @@ def save(path, content, only_if_modified=False, encoding="utf-8"):
     except OSError as error:
         if error.errno == errno.EACCES:
             raise OSError("Could not create the directory '{}' due to lack of permission."
-                          " Please, check your user write permission.".format(path))
+                          " Please, check your user write permission.".format(os.path.dirname(path)))
     except Exception:
         pass
 
