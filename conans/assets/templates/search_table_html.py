@@ -22,6 +22,37 @@ content = """
             </p>
         </div>
 
+        <!-- Button trigger modal -->
+        <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#filterProfile">
+            Use profile to filter
+        </button>
+
+        <!-- Modal -->
+        <div class="modal fade" id="filterProfile" tabindex="-1" role="dialog" aria-labelledby="filterProfileLabel" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h4 class="modal-title" id="filterProfileLabel">Filter results</h4>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Copy and paste here the content of a Conan profile:</p>
+                        <form>
+                            <div class="form-group">
+                                    <textarea class="form-control" rows="8" placeholder="[settings]&#10;os=Macos&#10;arch=x86_64&#10;compiler=apple-clang&#10;compiler.version=11.0&#10;compiler.libcxx=libc++&#10;build_type=Release"></textarea>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-primary">Apply filter</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <table id="results" class="table table-striped table-bordered" style="width:100%">
             <thead>
                 {%- set headers = results.get_headers(keys=['remote', 'package_id', 'outdated']) %}
@@ -61,7 +92,8 @@ content = """
             </tfoot>
         </table>
 
-        <script type="text/javascript" src="https://code.jquery.com/jquery-3.3.1.js"></script>
+        <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
+        <script src="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js" integrity="sha384-aJ21OjlMXNL5UyIl/XNwTMqvzeRMZH2w8c5cRVpzpU8Y5bApTppSuUkhZXN0VxHd" crossorigin="anonymous"></script>
         <script type="text/javascript" src="https://cdn.datatables.net/v/dt/dt-1.10.20/datatables.min.js"></script>
         <script type="text/javascript" src="https://cdn.datatables.net/1.10.21/js/dataTables.bootstrap.min.js"></script>
         <script>
