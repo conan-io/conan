@@ -21,15 +21,6 @@ class FakeMigrator(Migrator):
 
 class MigratorPermissionTest(unittest.TestCase):
 
-    def test_conf_dir_already_exist(self):
-        out = TestBufferConanOutput()
-        conf_path = temp_folder(False)
-        migrator = FakeMigrator(conf_path, "latest", out)
-        with self.assertRaises(ConanMigrationError) as error:
-            migrator.migrate()
-        self.assertEqual("Could not create the directory '{}/version.txt' because it already"
-                         " exists.".format(conf_path), str(error.exception))
-
     def test_invalid_permission(self):
         out = TestBufferConanOutput()
         conf_path = temp_folder(False)
