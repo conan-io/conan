@@ -10,8 +10,9 @@ REMOTES_USER_TABLE = "users_remotes"
 
 class LocalDB(object):
 
-    def __init__(self, dbfile):
+    def __init__(self, dbfile, encryption_key=None):
         self.dbfile = dbfile
+        self.encryption_key = encryption_key
 
     def clean(self):
         with self._connect() as connection:
