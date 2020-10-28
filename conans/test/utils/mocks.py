@@ -208,3 +208,24 @@ class TestBufferConanOutput(ConanOutput):
 
     def __contains__(self, value):
         return value in self.__repr__()
+
+
+# cli2.0
+class RedirectedTestOutput(StringIO):
+    def __init__(self):
+        super(RedirectedTestOutput, self).__init__()
+
+    def __repr__(self):
+        return self.getvalue()
+
+    def __str__(self, *args, **kwargs):
+        return self.__repr__()
+
+    def __eq__(self, value):
+        return self.__repr__() == value
+
+    def __ne__(self, value):
+        return not self.__eq__(value)
+
+    def __contains__(self, value):
+        return value in self.__repr__()

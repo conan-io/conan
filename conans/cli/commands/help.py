@@ -1,11 +1,12 @@
 import textwrap
 
+from conans.cli.cli import cli_out_write
 from conans.client.output import Color
 from conans.errors import ConanException
 from conans.cli.command import conan_command
 
 
-def output_help_cli(out, commands, groups):
+def output_help_cli(commands, groups):
     """
     Prints a summary of all commands.
     """
@@ -13,10 +14,10 @@ def output_help_cli(out, commands, groups):
     fmt = '  %-{}s'.format(max_len)
 
     for group_name, comm_names in groups.items():
-        out.writeln(group_name, Color.BRIGHT_MAGENTA)
+        cli_out_write(group_name, Color.BRIGHT_MAGENTA)
         for name in comm_names:
             # future-proof way to ensure tabular formatting
-            out.write(fmt % name, Color.GREEN)
+            cli_out_write(fmt % name, Color.GREEN)
 
             # Help will be all the lines up to the first empty one
             docstring_lines = commands[name].doc.split('\n')
@@ -32,14 +33,14 @@ def output_help_cli(out, commands, groups):
                 data.append(line)
 
             txt = textwrap.fill(' '.join(data), 80, subsequent_indent=" " * (max_len + 2))
-            out.writeln(txt)
+            cli_out_write(txt)
 
-    out.writeln("")
-    out.writeln('Conan commands. Type "conan <command> -h" for help', Color.BRIGHT_YELLOW)
+    cli_out_write("")
+    cli_out_write('Conan commands. Type "conan <command> -h" for help', Color.BRIGHT_YELLOW)
 
 
 @conan_command(group="Misc", formatters={"cli": output_help_cli})
-def help(*args, conan_api, parser, commands, groups, **kwargs):
+def help(conan_api, parser, *args, commands, groups, **kwargs):
     """
     Shows help for a specific command.
     """
@@ -47,10 +48,9 @@ def help(*args, conan_api, parser, commands, groups, **kwargs):
     parser.add_argument("command", help='command', nargs="?")
     args = parser.parse_args(*args)
     if not args.command:
-        output_help_cli(conan_api.out, commands, groups)
+        output_help_cli(commands, groups)
         return None
     try:
-        commands[args.command].run(["--help"], parser=commands[args.command].parser,
-                                   conan_api=conan_api)
+        commands[args.command].run(conan_api, commands[args.command].parser, ["--help"])
     except KeyError:
         raise ConanException("Unknown command '%s'" % args.command)
