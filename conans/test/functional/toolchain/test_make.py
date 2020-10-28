@@ -12,7 +12,7 @@ from conans.client.tools import which
 @attr("toolchain")
 class MakeToolchainTest(unittest.TestCase):
 
-    @unittest.skipUnless(platform.system() in ["Linux", "Macos"], "Requires make")
+    @unittest.skipUnless(platform.system() in ["Linux"], "Requires linux")
     def test_toolchain_posix(self):
         client = TestClient(path_with_spaces=False)
         settings = {
