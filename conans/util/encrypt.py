@@ -22,7 +22,6 @@ def encode(text, key):
             text_index = CHARS.index(c)
             key_index = CHARS.index(key[i % len(key)])
             res += CHARS[(text_index + key_index) % len(CHARS)]
-    assert type(text) == type(res), "Returning modified encoding"
     return res
 
 
@@ -38,5 +37,4 @@ def decode(text, key):
             text_index = CHARS.index(c)
             key_index = CHARS.index(key[i % len(key)])
             res += CHARS[(text_index - key_index) % len(CHARS)]
-    assert type(text) == type(res), "Returning modified encoding"
     return res
