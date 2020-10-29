@@ -46,7 +46,7 @@ class OnlySourceTest(unittest.TestCase):
 
         # Still missing Hello1/1.1
         client.run("create . lasote/stable", assert_error=True)
-        self.assertIn('Try to build from sources with \'--build=Hello1\'', client.out)
+        self.assertIn("Try to build from sources with '--build=Hello1'", client.out)
 
         # We generate the package for Hello1/1.1
         client.run("install Hello1/1.1@lasote/stable --build Hello1")
