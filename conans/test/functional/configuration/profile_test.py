@@ -154,9 +154,11 @@ class ProfileTest(unittest.TestCase):
         self.client.run("install Hello0/0.1@lasote/stable --build -pr clang")
         self._assert_env_variable_printed("ENV_VAR", "a value")
 
-    @parameterized.expand([("", ), ("./local_profiles/", ), None])
+    @parameterized.expand([("", ), ("./local_profiles/", ), (None, )])
     def test_install_with_missing_profile(self, path):
         if path is None:
+            # Not good practice to introduce temp_folder() in the expand because it randomize
+            # the test names causing issues to split them in N processes
             path = temp_folder() + "/"
         self.client.save({CONANFILE: conanfile_scope_env})
         self.client.run('install . -pr "%sscopes_env"' % path, assert_error=True)
