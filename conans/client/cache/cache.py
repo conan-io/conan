@@ -76,7 +76,7 @@ class ClientCache(object):
         self._config = None
         self.editable_packages = EditablePackages(self.cache_folder)
         # paths
-        self._store_folder = self.config.storage_path or self.cache_folder
+        self._store_folder = self.config.storage_path or os.path.join(self.cache_folder, "data")
         # Just call it to make it raise in case of short_paths misconfiguration
         _ = self.config.short_paths_home
 
