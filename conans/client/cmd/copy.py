@@ -79,6 +79,20 @@ def package_copy(src_ref, user_channel, package_ids, cache, user_io, short_paths
         shutil.copytree(package_path_origin, package_path_dest, symlinks=True)
         user_io.out.info("Copied %s to %s" % (str(package_id), str(dest_ref)))
 
+        # The downloaded .tgz files can also be copied
+        src_download = src_layout.download_package(pref_origin)
+        dst_download = dst_layout.download_package(pref_dest)
+        rmdir(dst_download)
+        if os.path.isdir(src_download):
+            shutil.copytree(src_download, dst_download)
+
+    # The downloaded export and sources .tgz files can also be copied
+    src_download = src_layout.download_export()
+    dst_download = dst_layout.download_export()
+    rmdir(dst_download)
+    if os.path.isdir(src_download):
+        shutil.copytree(src_download, dst_download)
+
     # Generate the metadata
     with dst_layout.update_metadata() as metadata:
         metadata.recipe.revision = src_metadata.recipe.revision

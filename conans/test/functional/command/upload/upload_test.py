@@ -1,10 +1,11 @@
+import itertools
 import os
 import platform
 import stat
 import unittest
 from collections import OrderedDict
 
-import itertools
+import pytest
 import requests
 from mock import patch
 from nose.plugins.attrib import attr
@@ -19,7 +20,6 @@ from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, \
     TurboTestClient, GenConanfile, TestRequester, TestingResponse
 from conans.util.env_reader import get_env
-
 from conans.util.files import gzopen_without_timestamps, is_dirty, save, set_dirty
 
 conanfile = """from conans import ConanFile
@@ -67,6 +67,7 @@ class UploadTest(unittest.TestCase):
         client.run("upload * --all --confirm")
 
     @attr("artifactory_ready")
+    @pytest.mark.artifactory_ready
     def test_upload_force(self):
         ref = ConanFileReference.loads("Hello/0.1@conan/testing")
         client = TurboTestClient(servers={"default": TestServer()})
@@ -234,8 +235,8 @@ class UploadTest(unittest.TestCase):
             self.assertIn("ERROR: Hello0/1.2.1@user/testing: Upload recipe to 'default' failed: "
                           "Error gzopen conan_sources.tgz", client.out)
 
-            export_folder = client.cache.package_layout(ref).export()
-            tgz = os.path.join(export_folder, EXPORT_SOURCES_TGZ_NAME)
+            export_download_folder = client.cache.package_layout(ref).download_export()
+            tgz = os.path.join(export_download_folder, EXPORT_SOURCES_TGZ_NAME)
             self.assertTrue(os.path.exists(tgz))
             self.assertTrue(is_dirty(tgz))
 
@@ -263,8 +264,8 @@ class UploadTest(unittest.TestCase):
                           ": Upload package to 'default' failed: Error gzopen conan_package.tgz",
                           client.out)
 
-            export_folder = client.cache.package_layout(pref.ref).package(pref)
-            tgz = os.path.join(export_folder, PACKAGE_TGZ_NAME)
+            download_folder = client.cache.package_layout(pref.ref).download_package(pref)
+            tgz = os.path.join(download_folder, PACKAGE_TGZ_NAME)
             self.assertTrue(os.path.exists(tgz))
             self.assertTrue(is_dirty(tgz))
 

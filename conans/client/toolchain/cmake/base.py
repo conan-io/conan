@@ -4,7 +4,6 @@ from collections import OrderedDict, defaultdict
 
 from jinja2 import DictLoader, Environment
 
-from conans.errors import ConanException
 from conans.util.files import save
 
 
@@ -114,11 +113,6 @@ class CMakeToolchainBase(object):
             {%- endif %}
         {% endblock %}
 
-        # Install prefix
-        {% if install_prefix -%}
-        set(CMAKE_INSTALL_PREFIX "{{install_prefix}}" CACHE STRING "" FORCE)
-        {%- endif %}
-
         # Variables
         {% for it, value in variables.items() %}
         set({{ it }} "{{ value }}")
@@ -144,13 +138,6 @@ class CMakeToolchainBase(object):
         self.cmake_prefix_path = "${CMAKE_BINARY_DIR}"
         self.cmake_module_path = "${CMAKE_BINARY_DIR}"
 
-        try:
-            # This is only defined in the cache, not in the local flow
-            self.install_prefix = self._conanfile.package_folder.replace("\\", "/")
-        except AttributeError:
-            # FIXME: In the local flow, we don't know the package_folder
-            self.install_prefix = None
-
         self.build_type = None
 
     def _get_templates(self):
@@ -170,7 +157,6 @@ class CMakeToolchainBase(object):
             "preprocessor_definitions_config": self.preprocessor_definitions.configuration_types,
             "cmake_prefix_path": self.cmake_prefix_path,
             "cmake_module_path": self.cmake_module_path,
-            "install_prefix": self.install_prefix,
             "build_type": self.build_type,
         }
         return ctxt_toolchain, {}

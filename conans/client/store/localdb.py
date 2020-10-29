@@ -13,8 +13,22 @@ class LocalDB(object):
     def __init__(self, dbfile):
         self.dbfile = dbfile
 
+    def clean(self):
+        with self._connect() as connection:
+            try:
+                cursor = connection.cursor()
+                cursor.execute("DELETE FROM %s" % REMOTES_USER_TABLE)
+                try:
+                    # https://github.com/ghaering/pysqlite/issues/109
+                    connection.isolation_level = None
+                    cursor.execute('VACUUM')  # Make sure the DB is cleaned, drop doesn't do that
+                except OperationalError:
+                    pass
+            except Exception as e:
+                raise ConanException("Could not initialize local sqlite database", e)
+
     @staticmethod
-    def create(dbfile, clean=False):
+    def create(dbfile):
         # Create the database file if it doesn't exist
         if not os.path.exists(dbfile):
             par = os.path.dirname(dbfile)
@@ -23,29 +37,18 @@ class LocalDB(object):
             db = open(dbfile, 'w+')
             db.close()
 
-        connection = sqlite3.connect(dbfile, detect_types=sqlite3.PARSE_DECLTYPES)
+        db = LocalDB(dbfile)
+        with db._connect() as connection:
+            try:
+                cursor = connection.cursor()
+                cursor.execute("create table if not exists %s "
+                               "(remote_url TEXT UNIQUE, user TEXT, "
+                               "token TEXT, refresh_token TEXT)" % REMOTES_USER_TABLE)
+            except Exception as e:
+                message = "Could not initialize local sqlite database"
+                raise ConanException(message, e)
 
-        try:
-            cursor = connection.cursor()
-            if clean:
-                cursor.execute("drop table if exists %s" % REMOTES_USER_TABLE)
-                try:
-                    # https://github.com/ghaering/pysqlite/issues/109
-                    connection.isolation_level = None
-                    cursor.execute('VACUUM')  # Make sure the DB is cleaned, drop doesn't do that
-                except OperationalError:
-                    pass
-
-            cursor.execute("create table if not exists %s "
-                           "(remote_url TEXT UNIQUE, user TEXT, "
-                           "token TEXT, refresh_token TEXT)" % REMOTES_USER_TABLE)
-        except Exception as e:
-            message = "Could not initialize local sqlite database"
-            raise ConanException(message, e)
-        finally:
-            connection.close()
-
-        return LocalDB(dbfile)
+        return db
 
     @contextmanager
     def _connect(self):
