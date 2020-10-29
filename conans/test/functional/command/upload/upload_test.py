@@ -330,10 +330,11 @@ class UploadTest(unittest.TestCase):
             client.run("upload Hello0/1.2.1@frodo/stable")
             self.assertIn("Recipe is up to date, upload skipped", client.out)
 
+    @pytest.mark.tool_compiler  # Needed only because it assume that a settings.compiler is detected
     def test_upload_unmodified_recipe(self):
         client = self._client()
 
-        files = cpp_hello_conan_files("Hello0", "1.2.1", build=False, settings='"os"')
+        files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
         client.save(files)
         client.run("export . frodo/stable")
         client.run("upload Hello0/1.2.1@frodo/stable")
@@ -546,12 +547,13 @@ class MyPkg(ConanFile):
         else:
             self.assertIn("Uploading conan_package.tgz", client.out)
 
+    @pytest.mark.tool_compiler  # Needed only because it assume that a settings.compiler is detected
     def test_skip_upload(self):
         """ Check that the option --dry does not upload anything
         """
         client = self._client()
 
-        files = cpp_hello_conan_files("Hello0", "1.2.1", build=False, settings='"os"')
+        files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
         client.save(files)
         client.run("export . frodo/stable")
         client.run("install Hello0/1.2.1@frodo/stable --build=missing")
@@ -599,10 +601,11 @@ class MyPkg(ConanFile):
         self.assertIn("Uploading conanfile.py", client2.out)
         self.assertIn("Uploading conan_package.tgz", client2.out)
 
+    @pytest.mark.tool_compiler  # Needed only because it assume that a settings.compiler is detected
     def test_upload_login_prompt_disabled_no_user(self):
         """ Without user info, uploads should fail when login prompt has been disabled.
         """
-        files = cpp_hello_conan_files("Hello0", "1.2.1", build=False, settings='"os"')
+        files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
         client = self._client()
         client.save(files)
         client.run("config set general.non_interactive=True")
@@ -616,9 +619,10 @@ class MyPkg(ConanFile):
         self.assertNotIn("Uploading conanfile.py", client.out)
         self.assertNotIn("Uploading conan_export.tgz", client.out)
 
+    @pytest.mark.tool_compiler  # Needed only because it assume that a settings.compiler is detected
     def test_upload_login_prompt_disabled_user_not_authenticated(self):
         # When a user is not authenticated, uploads should fail when login prompt has been disabled.
-        files = cpp_hello_conan_files("Hello0", "1.2.1", build=False, settings='"os"')
+        files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
         client = self._client()
         client.save(files)
         client.run("config set general.non_interactive=True")
@@ -633,9 +637,10 @@ class MyPkg(ConanFile):
         self.assertNotIn("Uploading conan_export.tgz", client.out)
         self.assertNotIn("Please enter a password for \"lasote\" account:", client.out)
 
+    @pytest.mark.tool_compiler  # Needed only because it assume that a settings.compiler is detected
     def test_upload_login_prompt_disabled_user_authenticated(self):
         #  When user is authenticated, uploads should work even when login prompt has been disabled.
-        files = cpp_hello_conan_files("Hello0", "1.2.1", build=False, settings='"os"')
+        files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
         client = self._client()
         client.save(files)
         client.run("config set general.non_interactive=True")
@@ -648,8 +653,9 @@ class MyPkg(ConanFile):
         self.assertIn("Uploading conan_export.tgz", client.out)
 
     @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
+    @pytest.mark.tool_compiler  # Needed only because it assume that a settings.compiler is detected
     def test_upload_key_error(self):
-        files = cpp_hello_conan_files("Hello0", "1.2.1", build=False, settings='"os"')
+        files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
         server1 = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")], users={"lasote": "mypass"})
         server2 = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")], users={"lasote": "mypass"})
         servers = OrderedDict()
@@ -799,6 +805,7 @@ class MyPkg(ConanFile):
         self.assertEqual(metadata.recipe.checksums["conanfile.py"]["md5"], recipe_md5)
         self.assertEqual(metadata.recipe.checksums["conanfile.py"]["sha1"], recipe_sha1)
 
+    @pytest.mark.tool_compiler  # Needed only because it assume that a settings.compiler is detected
     def test_upload_without_cleaned_user(self):
         """ When a user is not authenticated, uploads failed first time
         https://github.com/conan-io/conan/issues/5878
@@ -842,7 +849,7 @@ class MyPkg(ConanFile):
         servers = {"default": server}
         client = TestClient(requester_class=ServerCapabilitiesRequester, servers=servers,
                             revisions_enabled=True)
-        files = cpp_hello_conan_files("Hello0", "1.2.1", build=False, settings='"os"')
+        files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
         client.save(files)
         client.run("create . user/testing")
         client.run("user -c")

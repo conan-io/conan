@@ -1,6 +1,7 @@
 import os
 import unittest
 
+import pytest
 
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE
@@ -8,7 +9,7 @@ from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import load
 
-
+@pytest.mark.tool_compiler  # Needed only because it assume that a settings.compiler is detected
 class DownloadSelectedPackagesTest(unittest.TestCase):
 
     def setUp(self):
@@ -89,15 +90,14 @@ class DownloadSelectedPackagesTest(unittest.TestCase):
 
     def _upload_some_packages(self, client):
         self.ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
-        self.files = cpp_hello_conan_files("Hello0", "0.1", build=False)
+        self.files = cpp_hello_conan_files("Hello0", "0.1")
         # No build.
+        self.files[CONANFILE] = self.files[CONANFILE].replace("def build(self):",
+                                                              "def build(self):\n        return\n")
         client.save(self.files)
         client.run("export . lasote/stable")
-        # Specify the compiler to avoid the need of detecting a compiler (we are not building)
-        client.run("install Hello0/0.1@lasote/stable -s os=Windows -s compiler=clang "
-                   "-s compiler.version=8 --build missing")
-        client.run("install Hello0/0.1@lasote/stable -s os=Linux -s compiler=clang "
-                   "-s compiler.version=8 --build missing")
+        client.run("install Hello0/0.1@lasote/stable -s os=Windows --build missing")
+        client.run("install Hello0/0.1@lasote/stable -s os=Linux --build missing")
         client.run("install Hello0/0.1@lasote/stable -s os=Linux -s compiler=gcc -s "
                    "compiler.version=4.6 -s compiler.libcxx=libstdc++ --build missing")
         client.run("upload  Hello0/0.1@lasote/stable --all")

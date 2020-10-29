@@ -2,6 +2,8 @@ import os
 import shutil
 import unittest
 
+import pytest
+
 from conans import DEFAULT_REVISION_V1
 from conans.client.tools.files import untargz
 from conans.model.manifest import FileTreeManifest
@@ -15,11 +17,12 @@ from conans.util.files import load, save
 
 class SynchronizeTest(unittest.TestCase):
 
+    @pytest.mark.tool_compiler  # Needed only because it assume that a settings.compiler is detected
     def test_upload(self):
         client = TestClient(servers={"default": TestServer()},
                             users={"default": [("lasote", "mypass")]})
         ref = ConanFileReference.loads("Hello0/0.1@lasote/stable#%s" % DEFAULT_REVISION_V1)
-        files = cpp_hello_conan_files("Hello0", "0.1", build=False, settings="'os'")
+        files = cpp_hello_conan_files("Hello0", "0.1", build=False)
         files["to_be_deleted.txt"] = "delete me"
         files["to_be_deleted2.txt"] = "delete me2"
 

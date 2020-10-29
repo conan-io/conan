@@ -5,6 +5,7 @@ import stat
 import textwrap
 import unittest
 
+import pytest
 import six
 from mock import patch
 from requests.packages.urllib3.exceptions import ConnectionError
@@ -132,8 +133,9 @@ class UploadTest(unittest.TestCase):
         self.assertFalse(os.path.exists(self.server_reg_folder))
         self.assertFalse(os.path.exists(self.server_pack_folder))
 
+    @pytest.mark.tool_compiler  # Needed only because it assume that a settings.compiler is detected
     def test_try_upload_bad_recipe(self):
-        files = cpp_hello_conan_files("Hello0", "1.2.1", build=False, settings='"os"')
+        files = cpp_hello_conan_files("Hello0", "1.2.1")
         self.client.save(files)
         self.client.run("export . frodo/stable")
         ref = ConanFileReference.loads("Hello0/1.2.1@frodo/stable")
@@ -143,9 +145,10 @@ class UploadTest(unittest.TestCase):
 
         self.assertIn("Cannot upload corrupted recipe", self.client.out)
 
+    @pytest.mark.tool_compiler  # Needed only because it assume that a settings.compiler is detected
     def test_upload_with_pattern(self):
         for num in range(5):
-            files = cpp_hello_conan_files("Hello%s" % num, "1.2.1", build=False, settings='"os"')
+            files = cpp_hello_conan_files("Hello%s" % num, "1.2.1")
             self.client.save(files)
             self.client.run("export . frodo/stable")
 
@@ -161,12 +164,13 @@ class UploadTest(unittest.TestCase):
         self.assertNotIn("Hello2", self.client.out)
         self.assertNotIn("Hello3", self.client.out)
 
+    @pytest.mark.tool_compiler  # Needed only because it assume that a settings.compiler is detected
     def test_upload_error(self):
         """Cause an error in the transfer and see some message"""
 
         # Check for the default behaviour
         client = self._get_client(BadConnectionUploader)
-        files = cpp_hello_conan_files("Hello0", "1.2.1", build=False, settings="'os'")
+        files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
         client.save(files)
         client.run("export . frodo/stable")
         client.run("upload Hello* --confirm")
@@ -176,7 +180,7 @@ class UploadTest(unittest.TestCase):
         # This will fail in the first put file, so, as we need to
         # upload 3 files (conanmanifest, conanfile and tgz) will do it with 2 retries
         client = self._get_client(BadConnectionUploader)
-        files = cpp_hello_conan_files("Hello0", "1.2.1", build=False, settings="'os'")
+        files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
         client.save(files)
         client.run("export . frodo/stable")
         client.run("upload Hello* --confirm --retry-wait=0")
@@ -185,7 +189,7 @@ class UploadTest(unittest.TestCase):
 
         # but not with 0
         client = self._get_client(BadConnectionUploader)
-        files = cpp_hello_conan_files("Hello0", "1.2.1", build=False, settings="'os'")
+        files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
         client.save(files)
         client.run("export . frodo/stable")
         client.run("upload Hello* --confirm --retry 0 --retry-wait=1", assert_error=True)
@@ -196,7 +200,7 @@ class UploadTest(unittest.TestCase):
 
         # Try with broken connection even with 10 retries
         client = self._get_client(TerribleConnectionUploader)
-        files = cpp_hello_conan_files("Hello0", "1.2.1", build=False, settings="'os'")
+        files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
         client.save(files)
         client.run("export . frodo/stable")
         client.run("upload Hello* --confirm --retry 10 --retry-wait=0", assert_error=True)
@@ -206,20 +210,21 @@ class UploadTest(unittest.TestCase):
 
         # For each file will fail the first time and will success in the second one
         client = self._get_client(FailPairFilesUploader)
-        files = cpp_hello_conan_files("Hello0", "1.2.1", build=False, settings="'os'")
+        files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
         client.save(files)
         client.run("export . frodo/stable")
         client.run("install Hello0/1.2.1@frodo/stable --build")
         client.run("upload Hello* --confirm --retry 3 --retry-wait=0 --all")
         self.assertEqual(str(client.out).count("ERROR: Pair file, error!"), 6)
 
+    @pytest.mark.tool_compiler  # Needed only because it assume that a settings.compiler is detected
     def test_upload_error_with_config(self):
         """Cause an error in the transfer and see some message"""
 
         # This will fail in the first put file, so, as we need to
         # upload 3 files (conanmanifest, conanfile and tgz) will do it with 2 retries
         client = self._get_client(BadConnectionUploader)
-        files = cpp_hello_conan_files("Hello0", "1.2.1", build=False, settings="'os'")
+        files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
         client.save(files)
         client.run("export . frodo/stable")
         client.run('config set general.retry_wait=0')
@@ -229,7 +234,7 @@ class UploadTest(unittest.TestCase):
 
         # but not with 0
         client = self._get_client(BadConnectionUploader)
-        files = cpp_hello_conan_files("Hello0", "1.2.1", build=False, settings="'os'")
+        files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
         client.save(files)
         client.run("export . frodo/stable")
         client.run('config set general.retry=0')
@@ -242,7 +247,7 @@ class UploadTest(unittest.TestCase):
 
         # Try with broken connection even with 10 retries
         client = self._get_client(TerribleConnectionUploader)
-        files = cpp_hello_conan_files("Hello0", "1.2.1", build=False, settings="'os'")
+        files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
         client.save(files)
         client.run("export . frodo/stable")
         client.run('config set general.retry=10')
@@ -254,7 +259,7 @@ class UploadTest(unittest.TestCase):
 
         # For each file will fail the first time and will success in the second one
         client = self._get_client(FailPairFilesUploader)
-        files = cpp_hello_conan_files("Hello0", "1.2.1", build=False, settings="'os'")
+        files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
         client.save(files)
         client.run("export . frodo/stable")
         client.run("install Hello0/1.2.1@frodo/stable --build")
@@ -334,7 +339,7 @@ class UploadTest(unittest.TestCase):
         self.assertIn("%&$Uploading conaninfo.txt", out)
 
     def test_upload_with_pattern_and_package_error(self):
-        files = cpp_hello_conan_files("Hello1", "1.2.1", build=False, settings='"os"')
+        files = cpp_hello_conan_files("Hello1", "1.2.1")
         self.client.save(files)
         self.client.run("export . frodo/stable")
 
@@ -342,9 +347,10 @@ class UploadTest(unittest.TestCase):
         self.assertIn("-p parameter only allowed with a valid recipe reference",
                       self.client.out)
 
+    @pytest.mark.tool_compiler  # Needed only because it assume that a settings.compiler is detected
     def test_check_upload_confirm_question(self):
         user_io = MockedUserIO({"default": [("lasote", "mypass")]}, out=TestBufferConanOutput())
-        files = cpp_hello_conan_files("Hello1", "1.2.1", build=False, settings='"os"')
+        files = cpp_hello_conan_files("Hello1", "1.2.1")
         self.client.save(files)
         self.client.run("export . frodo/stable")
 
@@ -352,7 +358,7 @@ class UploadTest(unittest.TestCase):
         self.client.run("upload Hello*", user_io=user_io)
         self.assertIn("Uploading Hello1/1.2.1@frodo/stable", self.client.out)
 
-        files = cpp_hello_conan_files("Hello2", "1.2.1", build=False, settings='"os"')
+        files = cpp_hello_conan_files("Hello2", "1.2.1")
         self.client.save(files)
         self.client.run("export . frodo/stable")
 

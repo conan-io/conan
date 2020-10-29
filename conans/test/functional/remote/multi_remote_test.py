@@ -4,6 +4,8 @@ import unittest
 from collections import OrderedDict
 from time import sleep
 
+import pytest
+
 from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
@@ -50,7 +52,7 @@ class ExportsSourcesMissingTest(unittest.TestCase):
         self.assertIn("Probably it was installed from a remote that is no longer available.",
                       client2.out)
 
-
+@pytest.mark.tool_compiler  # Needed only because it assume that a settings.compiler is detected
 class MultiRemotesTest(unittest.TestCase):
 
     def setUp(self):
@@ -62,7 +64,7 @@ class MultiRemotesTest(unittest.TestCase):
 
     @staticmethod
     def _create(client, number, version, deps=None, export=True, modifier=""):
-        files = cpp_hello_conan_files(number, version, deps, build=False, settings='"os"')
+        files = cpp_hello_conan_files(number, version, deps, build=False)
         # To avoid building
         files = {CONANFILE: files[CONANFILE].replace("config(", "config2(") + modifier}
         client.save(files, clean_first=True)
@@ -173,7 +175,7 @@ class MultiRemotesTest(unittest.TestCase):
         client.run("install Hello0/0.0@lasote/stable --update")
         self.assertIn("Hello0/0.0@lasote/stable from 'local' - Updated", client.out)
 
-
+@pytest.mark.tool_compiler  # Needed only because it assume that a settings.compiler is detected
 class MultiRemoteTest(unittest.TestCase):
 
     def setUp(self):
@@ -187,7 +189,7 @@ class MultiRemoteTest(unittest.TestCase):
         self.client = TestClient(servers=self.servers, users=self.users)
 
     def test_predefine_remote(self):
-        files = cpp_hello_conan_files("Hello0", "0.1", build=False, settings='"os"')
+        files = cpp_hello_conan_files("Hello0", "0.1", build=False)
         self.client.save(files)
         self.client.run("export . lasote/stable")
         self.client.run("upload Hello0/0.1@lasote/stable -r=remote0")
@@ -203,7 +205,7 @@ class MultiRemoteTest(unittest.TestCase):
 
     def test_upload(self):
         ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
-        files = cpp_hello_conan_files("Hello0", "0.1", build=False, settings='"os"')
+        files = cpp_hello_conan_files("Hello0", "0.1", build=False)
         self.client.save(files)
         self.client.run("export . lasote/stable")
         self.client.run("upload %s" % str(ref))
@@ -241,7 +243,7 @@ class MultiRemoteTest(unittest.TestCase):
         servers["s2"] = TestServer()
 
         client = TestClient(servers=servers, users=self.users)
-        files = cpp_hello_conan_files("MyLib", "0.1", build=False, settings='"os"')
+        files = cpp_hello_conan_files("MyLib", "0.1", build=False)
         client.save(files)
         client.run("create . lasote/testing")
         client.run("user lasote -p mypass -r s1")
@@ -260,7 +262,7 @@ class MultiRemoteTest(unittest.TestCase):
     def test_install_from_remotes(self):
         for i in range(3):
             ref = ConanFileReference.loads("Hello%d/0.1@lasote/stable" % i)
-            files = cpp_hello_conan_files("Hello%d" % i, "0.1", build=False, settings='"os"')
+            files = cpp_hello_conan_files("Hello%d" % i, "0.1", build=False)
             self.client.save(files)
             self.client.run("export . lasote/stable")
             self.client.run("upload %s -r=remote%d" % (str(ref), i))
@@ -272,8 +274,7 @@ class MultiRemoteTest(unittest.TestCase):
         client2 = TestClient(servers=self.servers, users=self.users)
         files = cpp_hello_conan_files("HelloX", "0.1", deps=["Hello0/0.1@lasote/stable",
                                                              "Hello1/0.1@lasote/stable",
-                                                             "Hello2/0.1@lasote/stable"],
-                                      settings='"os"')
+                                                             "Hello2/0.1@lasote/stable"])
         files["conanfile.py"] = files["conanfile.py"].replace("def build(", "def build2(")
         client2.save(files)
         client2.run("install . --build=missing")
