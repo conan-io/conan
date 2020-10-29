@@ -1,10 +1,10 @@
-import os
 import platform
 import textwrap
 import unittest
 
 import pytest
 from nose.plugins.attrib import attr
+
 from parameterized.parameterized import parameterized
 
 from conans.client.tools import which
@@ -17,210 +17,24 @@ from conans.util.files import mkdir
 @pytest.mark.slow
 @pytest.mark.toolchain
 class MakeToolchainTest(unittest.TestCase):
-    @parameterized.expand([
-        ("exe", "Release"),
-        ("exe", "Debug"),
-        ("exe", "Release"),
-        ("shared", "Release"),
-        ("static", "Release"),
-    ])
-    @unittest.skipUnless(platform.system() in ["Linux", "Macos"], "Requires make")
-    def test_toolchain_posix(self, target, build_type):
+
+    @unittest.skipUnless(platform.system() in ["Linux"], "Requires linux")
+    def test_toolchain_posix(self):
         client = TestClient(path_with_spaces=False)
-
-        settings = {
-            "build_type": build_type,
-        }
-        options = {
-            "fPIC": "True",
-        }
-
-        if target == "exe":
-            conanfile_options = 'options = {"fPIC": [True, False]}'
-            conanfile_default_options = 'default_options = {"fPIC": True}'
-        else:
-            conanfile_options = 'options = {"shared": [True, False], "fPIC": [True, False]}'
-            conanfile_default_options = 'default_options = {"shared": False, "fPIC": True}'
-            if target == "shared":
-                options["shared"] = True
-
-        settings_str = " ".join('-s %s="%s"' % (k, v) for k, v in settings.items() if v)
-        options_str = " ".join("-o %s=%s" % (k, v) for k, v in options.items()) if options else ""
-
-        conanfile = textwrap.dedent("""
-            from conans import ConanFile, MakeToolchain
-            class App(ConanFile):
-                settings = "os", "arch", "compiler", "build_type"
-                {options}
-                {default_options}
-                def toolchain(self):
-                    tc = MakeToolchain(self)
-                    tc.variables["TEST_VAR"] = "TestVarValue"
-                    tc.preprocessor_definitions["TEST_DEFINITION"] = "TestPpdValue"
-                    tc.write_toolchain_files()
-
-                def build(self):
-                    self.run("make -C ..")
-
-            """).format(options=conanfile_options, default_options=conanfile_default_options)
-
-        hello_h = textwrap.dedent("""
-            #pragma once
-            #define HELLO_MSG "{0}"
-            #ifdef WIN32
-              #define APP_LIB_EXPORT __declspec(dllexport)
-            #else
-              #define APP_LIB_EXPORT
-            #endif
-            APP_LIB_EXPORT void hello();
-            """.format(build_type))
-
-        hello_cpp = textwrap.dedent("""
-            #include <iostream>
-            #include "hello.h"
-
-            void hello() {
-                std::cout << "Hello World " << HELLO_MSG << "!" << std::endl;
-                #ifdef NDEBUG
-                std::cout << "App: Release!" << std::endl;
-                #else
-                std::cout << "App: Debug!" << std::endl;
-                #endif
-                std::cout << "TEST_DEFINITION: " << TEST_DEFINITION << "\\n";
-            }
-            """)
-
-        # only used for the executable test case
-        main = textwrap.dedent("""
-            #include "hello.h"
-            int main() {
-                hello();
-            }
-            """)
-
-        makefile = textwrap.dedent("""
-            include conan_toolchain.mak
-
-            #-------------------------------------------------
-            #     Make variables for a sample App
-            #-------------------------------------------------
-
-            OUT_DIR             ?= out
-            SRC_DIR             ?= src
-            INCLUDE_DIR         ?= include
-
-            PROJECT_NAME        = hello
-            EXE_FILENAME        = $(PROJECT_NAME).bin
-            STATIC_LIB_FILENAME = lib$(PROJECT_NAME).a
-            SHARED_LIB_FILENAME = lib$(PROJECT_NAME).so
-
-            SRCS                += $(wildcard $(SRC_DIR)/*.cpp)
-            OBJS                += $(patsubst $(SRC_DIR)/%.cpp,$(OUT_DIR)/%.o,$(SRCS))
-            CPPFLAGS            += $(addprefix -I,$(INCLUDE_DIR))
-
-            #-------------------------------------------------
-            #     Append CONAN_ variables to standards
-            #-------------------------------------------------
-
-            $(call CONAN_TC_SETUP)
-
-            # The above function should append CONAN_TC flags to standard flags
-            $(info >> CFLAGS: $(CFLAGS))
-            $(info >> CXXFLAGS: $(CXXFLAGS))
-            $(info >> CPPFLAGS: $(CPPFLAGS))
-            $(info >> LDFLAGS: $(LDFLAGS))
-            $(info >> LDLIBS: $(LDLIBS))
-            $(info >> TEST_VAR: $(TEST_VAR))
-
-            #-------------------------------------------------
-            #     Make Rules
-            #-------------------------------------------------
-
-
-            .PHONY               : exe static shared
-
-            exe                  : $(OBJS)
-            	$(CXX) $(OBJS) $(LDFLAGS) $(LDLIBS) -o $(OUT_DIR)/$(EXE_FILENAME)
-
-            static               : $(OBJS)
-            	$(AR) $(ARFLAGS) $(OUT_DIR)/$(STATIC_LIB_FILENAME) $(OBJS)
-
-            shared               : $(OBJS)
-            	$(CXX) -shared $(OBJS) $(LDFLAGS) $(LDLIBS) -o $(OUT_DIR)/$(SHARED_LIB_FILENAME)
-
-            $(OUT_DIR)/%.o       : $(SRC_DIR)/%.cpp $(OUT_DIR)
-            	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c $< -o $@
-
-            $(OUT_DIR):
-            	-mkdir $@
-            """)
-
-        files_to_save = {
-            "conanfile.py": conanfile,
-            "Makefile": makefile,
-            "src/hello.cpp": hello_cpp,
-            "include/hello.h": hello_h
-        }
-        if target == "exe":
-            files_to_save["src/main.cpp"] = main
-
-        client.save(files_to_save, clean_first=True)
-        client.run("install . hello/0.1@ %s %s" % (settings_str, options_str))
-
-        if target == "exe":
-            client.run_command("make exe")
-            client.run_command("./out/hello.bin")
-            self.assertIn("Hello World {}!".format(build_type), client.out)
-        elif target == "shared":
-            client.run_command("make shared")
-            client.run_command("nm -C out/libhello.so | grep 'hello()'")
-            self.assertIn("hello()", client.out)
-        elif target == "static":
-            client.run_command("make static")
-            client.run_command("nm -C out/libhello.a | grep 'hello()'")
-            self.assertIn("hello()", client.out)
-
-    @parameterized.expand([
-        ("exe", "Release"),
-        ("exe", "Debug"),
-        ("exe", "Release"),
-        ("shared", "Release"),
-        ("static", "Release"),
-    ])
-    @unittest.skipUnless(platform.system() in ["Windows"], "Requires mingw32-make")
-    @unittest.skipIf(which("mingw32-make") is None, "Needs mingw32-make")
-    def test_toolchain_windows(self, target, build_type):
-        client = TestClient(path_with_spaces=False)
-
         settings = {
             "arch": "x86_64",
-            "build_type": build_type,
+            "build_type": "Release",
             "compiler": "gcc",
             "compiler.version": "9",
             "compiler.libcxx": "libstdc++11",
         }
-        options = {
-            "fPIC": "True",
-        }
-
-        if target == "exe":
-            conanfile_options = 'options = {"fPIC": [True, False]}'
-            conanfile_default_options = 'default_options = {"fPIC": True}'
-        else:
-            conanfile_options = 'options = {"shared": [True, False], "fPIC": [True, False]}'
-            conanfile_default_options = 'default_options = {"shared": False, "fPIC": True}'
-            if target == "shared":
-                options["shared"] = True
 
         settings_str = " ".join('-s %s="%s"' % (k, v) for k, v in settings.items() if v)
-        options_str = " ".join("-o %s=%s" % (k, v) for k, v in options.items()) if options else ""
 
         conanfile = textwrap.dedent("""
             from conans import ConanFile, MakeToolchain
             class App(ConanFile):
                 settings = "os", "arch", "compiler", "build_type"
-                {options}
-                {default_options}
                 def toolchain(self):
                     tc = MakeToolchain(self)
                     tc.variables["TEST_VAR"] = "TestVarValue"
@@ -230,18 +44,18 @@ class MakeToolchainTest(unittest.TestCase):
                 def build(self):
                     self.run("make -C ..")
 
-            """).format(options=conanfile_options, default_options=conanfile_default_options)
+            """)
 
         hello_h = textwrap.dedent("""
             #pragma once
-            #define HELLO_MSG "{0}"
+            #define HELLO_MSG "Release"
             #ifdef WIN32
               #define APP_LIB_EXPORT __declspec(dllexport)
             #else
               #define APP_LIB_EXPORT
             #endif
             APP_LIB_EXPORT void hello();
-            """.format(build_type))
+            """)
 
         hello_cpp = textwrap.dedent("""
             #include <iostream>
@@ -249,20 +63,8 @@ class MakeToolchainTest(unittest.TestCase):
 
             void hello() {
                 std::cout << "Hello World " << HELLO_MSG << "!" << std::endl;
-                #ifdef NDEBUG
                 std::cout << "App: Release!" << std::endl;
-                #else
-                std::cout << "App: Debug!" << std::endl;
-                #endif
                 std::cout << "TEST_DEFINITION: " << TEST_DEFINITION << "\\n";
-            }
-            """)
-
-        # only used for the executable test case
-        main = textwrap.dedent("""
-            #include "hello.h"
-            int main() {
-                hello();
             }
             """)
 
@@ -278,9 +80,7 @@ class MakeToolchainTest(unittest.TestCase):
             INCLUDE_DIR         ?= include
 
             PROJECT_NAME        = hello
-            EXE_FILENAME        = $(PROJECT_NAME).bin
             STATIC_LIB_FILENAME = lib$(PROJECT_NAME).a
-            SHARED_LIB_FILENAME = lib$(PROJECT_NAME).so
 
             SRCS                += $(wildcard $(SRC_DIR)/*.cpp)
             OBJS                += $(patsubst $(SRC_DIR)/%.cpp,$(OUT_DIR)/%.o,$(SRCS))
@@ -290,14 +90,13 @@ class MakeToolchainTest(unittest.TestCase):
             #     Append CONAN_ variables to standards
             #-------------------------------------------------
 
-            $(call CONAN_TC_SETUP)
+            CPPFLAGS += $(CONAN_TC_CPPFLAGS)
 
-            # The above function should append CONAN_TC flags to standard flags
-            $(info >> CFLAGS: $(CFLAGS))
-            $(info >> CXXFLAGS: $(CXXFLAGS))
+            #-------------------------------------------------
+            #     Print variables to be tested
+            #-------------------------------------------------
+
             $(info >> CPPFLAGS: $(CPPFLAGS))
-            $(info >> LDFLAGS: $(LDFLAGS))
-            $(info >> LDLIBS: $(LDLIBS))
             $(info >> TEST_VAR: $(TEST_VAR))
 
             #-------------------------------------------------
@@ -305,16 +104,10 @@ class MakeToolchainTest(unittest.TestCase):
             #-------------------------------------------------
 
 
-            .PHONY               : exe static shared
-
-            exe                  : $(OBJS)
-            	$(CXX) -v $(OBJS) $(LDFLAGS) $(LDLIBS) -o $(OUT_DIR)/$(EXE_FILENAME)
+            .PHONY               : static
 
             static               : $(OBJS)
             	$(AR) $(ARFLAGS) $(OUT_DIR)/$(STATIC_LIB_FILENAME) $(OBJS)
-
-            shared               : $(OBJS)
-            	$(CXX) -shared $(OBJS) $(LDFLAGS) $(LDLIBS) -o $(OUT_DIR)/$(SHARED_LIB_FILENAME)
 
             $(OUT_DIR)/%.o       : $(SRC_DIR)/%.cpp $(OUT_DIR)
             	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c $< -o $@
@@ -329,22 +122,121 @@ class MakeToolchainTest(unittest.TestCase):
             "src/hello.cpp": hello_cpp,
             "include/hello.h": hello_h
         }
-        if target == "exe":
-            files_to_save["src/main.cpp"] = main
 
         client.save(files_to_save, clean_first=True)
-        client.run("install . hello/0.1@ %s %s" % (settings_str, options_str))
+        client.run("install . hello/0.1@ %s" % settings_str)
+        client.run_command("make static")
+        client.run_command("nm -C out/libhello.a | grep 'hello()'")
+        self.assertIn("hello()", client.out)
 
-        mkdir(os.path.join(client.current_folder, "out"))
-        if target == "exe":
-            client.run_command("mingw32-make exe")
-            client.run_command("out\\hello.bin")
-            self.assertIn("Hello World {}!".format(build_type), client.out)
-        elif target == "shared":
-            client.run_command("mingw32-make shared")
-            client.run_command("nm -C out/libhello.so | find \"hello()\"")
-            self.assertIn("hello()", client.out)
-        elif target == "static":
-            client.run_command("mingw32-make static")
-            client.run_command("nm -C out/libhello.a | find \"hello()\"")
-            self.assertIn("hello()", client.out)
+    @unittest.skipUnless(platform.system() in ["Windows"], "Requires mingw32-make")
+    @unittest.skipIf(which("mingw32-make") is None, "Needs mingw32-make")
+    def test_toolchain_windows(self):
+        client = TestClient(path_with_spaces=False)
+
+        settings = {
+            "arch": "x86_64",
+            "build_type": "Release",
+            "compiler": "gcc",
+            "compiler.version": "9",
+            "compiler.libcxx": "libstdc++11",
+        }
+        settings_str = " ".join('-s %s="%s"' % (k, v) for k, v in settings.items() if v)
+
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile, MakeToolchain
+            class App(ConanFile):
+                settings = "os", "arch", "compiler", "build_type"
+                def toolchain(self):
+                    tc = MakeToolchain(self)
+                    tc.variables["TEST_VAR"] = "TestVarValue"
+                    tc.preprocessor_definitions["TEST_DEFINITION"] = "TestPpdValue"
+                    tc.write_toolchain_files()
+
+                def build(self):
+                    self.run("make -C ..")
+
+            """)
+
+        hello_h = textwrap.dedent("""
+            #pragma once
+            #define HELLO_MSG "{0}"
+            #ifdef WIN32
+              #define APP_LIB_EXPORT __declspec(dllexport)
+            #else
+              #define APP_LIB_EXPORT
+            #endif
+            APP_LIB_EXPORT void hello();
+            """)
+
+        hello_cpp = textwrap.dedent("""
+            #include <iostream>
+            #include "hello.h"
+
+            void hello() {
+                std::cout << "Hello World " << HELLO_MSG << "!" << std::endl;
+                std::cout << "App: Release!" << std::endl;
+                std::cout << "TEST_DEFINITION: " << TEST_DEFINITION << "\\n";
+            }
+            """)
+
+        makefile = textwrap.dedent("""
+            include conan_toolchain.mak
+
+            #-------------------------------------------------
+            #     Make variables for a sample App
+            #-------------------------------------------------
+
+            OUT_DIR             ?= out
+            SRC_DIR             ?= src
+            INCLUDE_DIR         ?= include
+
+            PROJECT_NAME        = hello
+            STATIC_LIB_FILENAME = lib$(PROJECT_NAME).a
+
+            SRCS                += $(wildcard $(SRC_DIR)/*.cpp)
+            OBJS                += $(patsubst $(SRC_DIR)/%.cpp,$(OUT_DIR)/%.o,$(SRCS))
+            CPPFLAGS            += $(addprefix -I,$(INCLUDE_DIR))
+
+            #-------------------------------------------------
+            #     Append CONAN_ variables to standards
+            #-------------------------------------------------
+
+            CPPFLAGS += $(CONAN_TC_CPPFLAGS)
+
+            #-------------------------------------------------
+            #     Print variables to be tested
+            #-------------------------------------------------
+
+            $(info >> CPPFLAGS: $(CPPFLAGS))
+            $(info >> TEST_VAR: $(TEST_VAR))
+
+            #-------------------------------------------------
+            #     Make Rules
+            #-------------------------------------------------
+
+
+            .PHONY               : static
+
+            static               : $(OBJS)
+            	$(AR) $(ARFLAGS) $(OUT_DIR)/$(STATIC_LIB_FILENAME) $(OBJS)
+
+            $(OUT_DIR)/%.o       : $(SRC_DIR)/%.cpp $(OUT_DIR)
+            	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c $< -o $@
+
+            $(OUT_DIR):
+            	-mkdir $@
+            """)
+
+        files_to_save = {
+            "conanfile.py": conanfile,
+            "Makefile": makefile,
+            "src/hello.cpp": hello_cpp,
+            "include/hello.h": hello_h
+        }
+
+        client.save(files_to_save, clean_first=True)
+        client.run("install . hello/0.1@ %s" % settings_str)
+        client.run_command("mingw32-make static")
+        client.run_command("nm -C out/libhello.a | find \"hello()\"")
+        self.assertIn("hello()", client.out)

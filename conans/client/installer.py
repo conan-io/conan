@@ -383,7 +383,7 @@ class BinaryInstaller(object):
             # We cannot embed the package_lock inside the remote.get_package()
             # because the handle_node_cache has its own lock
             with layout.package_lock(pref):
-                self._download_pkg(layout, npref, n)
+                self._download_pkg(layout, n)
 
         parallel = self._cache.config.parallel_download
         if parallel is not None:
@@ -396,8 +396,8 @@ class BinaryInstaller(object):
             for node in download_nodes:
                 _download(node)
 
-    def _download_pkg(self, layout, pref, node):
-        self._remote_manager.get_package(pref, layout, node.binary_remote,
+    def _download_pkg(self, layout, node):
+        self._remote_manager.get_package(node.conanfile, node.pref, layout, node.binary_remote,
                                          node.conanfile.output, self._recorder)
 
     def _build(self, nodes_by_level, keep_build, root_node, graph_info, remotes, build_mode, update):
@@ -495,7 +495,7 @@ class BinaryInstaller(object):
                     assert pref.revision is not None, "PREV for %s to be built is None" % str(pref)
                 elif node.binary in (BINARY_UPDATE, BINARY_DOWNLOAD):
                     # this can happen after a re-evaluation of packageID with Package_ID_unknown
-                    self._download_pkg(layout, node.pref, node)
+                    self._download_pkg(layout, node)
                 elif node.binary == BINARY_CACHE:
                     assert node.prev, "PREV for %s is None" % str(pref)
                     output.success('Already installed!')

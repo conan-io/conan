@@ -155,7 +155,8 @@ class ClientCache(object):
     @property
     def localdb(self):
         localdb_filename = os.path.join(self.cache_folder, LOCALDB)
-        return LocalDB.create(localdb_filename)
+        encryption_key = os.getenv('CONAN_LOGIN_ENCRYPTION_KEY', None)
+        return LocalDB.create(localdb_filename, encryption_key=encryption_key)
 
     @property
     def conan_conf_path(self):
