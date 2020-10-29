@@ -30,7 +30,7 @@ class UploadCompressionTest(unittest.TestCase):
         self.assertIn("Compressing package", self.client.out)
 
         # UPLOAD TO A DIFFERENT CHANNEL WITHOUT COMPRESS AGAIN
-        self.client.run("copy %s lasote/testing" % str(ref))
+        self.client.run("copy %s lasote/testing --all" % str(ref))
         self.client.run("upload Hello0/0.1@lasote/testing --all")
         self.assertNotIn("Compressing recipe", self.client.out)
         self.assertNotIn("Compressing package", self.client.out)

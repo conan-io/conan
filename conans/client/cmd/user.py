@@ -1,12 +1,10 @@
-from conans.client.store.localdb import LocalDB
 from conans.errors import ConanException
 
 
-def users_list(localdb_file, remotes):
+def users_list(localdb, remotes):
     if not remotes:
         raise ConanException("No remotes defined")
 
-    localdb = LocalDB.create(localdb_file)
     remotes_info = []
     for remote in remotes:
         user_info = {}
@@ -18,19 +16,16 @@ def users_list(localdb_file, remotes):
     return remotes_info
 
 
-def token_present(localdb_file, remote, user):
-    localdb = LocalDB.create(localdb_file)
+def token_present(localdb, remote, user):
     current_user, token, _ = localdb.get_login(remote.url)
     return token is not None and (user is None or user == current_user)
 
 
-def users_clean(localdb_file):
-    LocalDB.create(localdb_file, clean=True)
+def users_clean(localdb):
+    localdb.clean()
 
 
-def user_set(localdb_file, user, remote_name=None):
-    localdb = LocalDB.create(localdb_file)
-
+def user_set(localdb, user, remote_name=None):
     if user.lower() == "none":
         user = None
     return update_localdb(localdb, user, token=None, refresh_token=None, remote=remote_name)

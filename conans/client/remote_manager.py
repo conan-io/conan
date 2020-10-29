@@ -13,8 +13,7 @@ from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_N
 from conans.search.search import filter_packages
 from conans.util import progress_bar
 from conans.util.env_reader import get_env
-from conans.util.files import make_read_only, mkdir, rmdir, tar_extract, touch_folder, \
-    md5sum, sha1sum
+from conans.util.files import make_read_only, mkdir, tar_extract, touch_folder, md5sum, sha1sum
 from conans.util.log import logger
 # FIXME: Eventually, when all output is done, tracer functions should be moved to the recorder class
 from conans.util.tracer import (log_package_download,
@@ -76,21 +75,29 @@ class RemoteManager(object):
         returns (dict relative_filepath:abs_path , remote_name)"""
 
         self._hook_manager.execute("pre_download_recipe", reference=ref, remote=remote)
-        export_folder = self._cache.package_layout(ref).export()
-        rmdir(export_folder)
+        package_layout = self._cache.package_layout(ref)
+        package_layout.export_remove()
 
         ref = self._resolve_latest_ref(ref, remote)
 
         t1 = time.time()
-        zipped_files = self._call_remote(remote, "get_recipe", ref, export_folder)
+        download_export = package_layout.download_export()
+        zipped_files = self._call_remote(remote, "get_recipe", ref, download_export)
         duration = time.time() - t1
         log_recipe_download(ref, duration, remote.name, zipped_files)
 
         recipe_checksums = calc_files_checksum(zipped_files)
 
-        unzip_and_get_files(zipped_files, export_folder, EXPORT_TGZ_NAME, output=self._output)
+        export_folder = package_layout.export()
+        tgz_file = zipped_files.pop(EXPORT_TGZ_NAME, None)
+        check_compressed_files(EXPORT_TGZ_NAME, zipped_files)
+        if tgz_file:
+            uncompress_file(tgz_file, export_folder, output=self._output)
+        mkdir(export_folder)
+        for file_name, file_path in zipped_files.items():  # copy CONANFILE
+            os.rename(file_path, os.path.join(export_folder, file_name))
+
         # Make sure that the source dir is deleted
-        package_layout = self._cache.package_layout(ref)
         rm_conandir(package_layout.source())
         touch_folder(export_folder)
         conanfile_path = package_layout.conanfile()
@@ -104,11 +111,13 @@ class RemoteManager(object):
 
         return ref
 
-    def get_recipe_sources(self, ref, export_folder, export_sources_folder, remote):
+    def get_recipe_sources(self, ref, layout, remote):
         assert ref.revision, "get_recipe_sources requires RREV"
         t1 = time.time()
 
-        zipped_files = self._call_remote(remote, "get_recipe_sources", ref, export_folder)
+        download_folder = layout.download_export()
+        export_sources_folder = layout.export_sources()
+        zipped_files = self._call_remote(remote, "get_recipe_sources", ref, download_folder)
         if not zipped_files:
             mkdir(export_sources_folder)  # create the folder even if no source files
             return
@@ -116,9 +125,9 @@ class RemoteManager(object):
         duration = time.time() - t1
         log_recipe_sources_download(ref, duration, remote.name, zipped_files)
 
-        unzip_and_get_files(zipped_files, export_sources_folder, EXPORT_SOURCES_TGZ_NAME,
-                            output=self._output)
-
+        tgz_file = zipped_files[EXPORT_SOURCES_TGZ_NAME]
+        check_compressed_files(EXPORT_SOURCES_TGZ_NAME, zipped_files)
+        uncompress_file(tgz_file, export_sources_folder, output=self._output)
         touch_folder(export_sources_folder)
 
     def get_package(self, pref, layout, remote, output, recorder):
@@ -128,25 +137,27 @@ class RemoteManager(object):
 
         output.info("Retrieving package %s from remote '%s' " % (pref.id, remote.name))
         layout.package_remove(pref)  # Remove first the destination folder
-        pkg_folder = layout.package(pref)
         with layout.set_dirty_context_manager(pref):
-            self._get_package(pref, pkg_folder, remote, output, recorder)
+            self._get_package(layout, pref, remote, output, recorder)
 
         self._hook_manager.execute("post_download_package", conanfile_path=conanfile_path,
                                    reference=pref.ref, package_id=pref.id, remote=remote)
 
-    def _get_package(self, pref, dest_folder, remote, output, recorder):
+    def _get_package(self, layout, pref, remote, output, recorder):
         t1 = time.time()
         try:
             pref = self._resolve_latest_pref(pref, remote)
             snapshot = self._call_remote(remote, "get_package_snapshot", pref)
             if not is_package_snapshot_complete(snapshot):
                 raise PackageNotFoundException(pref)
-            zipped_files = self._call_remote(remote, "get_package", pref, dest_folder)
 
+            download_pkg_folder = layout.download_package(pref)
+            # Download files to the pkg_tgz folder, not to the final one
+            zipped_files = self._call_remote(remote, "get_package", pref, download_pkg_folder)
+
+            # Compute and update the package metadata
             package_checksums = calc_files_checksum(zipped_files)
-
-            with self._cache.package_layout(pref.ref).update_metadata() as metadata:
+            with layout.update_metadata() as metadata:
                 metadata.packages[pref.id].revision = pref.revision
                 metadata.packages[pref.id].recipe_revision = pref.ref.revision
                 metadata.packages[pref.id].checksums = package_checksums
@@ -154,11 +165,21 @@ class RemoteManager(object):
 
             duration = time.time() - t1
             log_package_download(pref, duration, remote, zipped_files)
-            unzip_and_get_files(zipped_files, dest_folder, PACKAGE_TGZ_NAME, output=self._output)
+
+            tgz_file = zipped_files.pop(PACKAGE_TGZ_NAME, None)
+            check_compressed_files(PACKAGE_TGZ_NAME, zipped_files)
+            package_folder = layout.package(pref)
+            if tgz_file:  # This must happen always, but just in case
+                # TODO: The output could be changed to the package one, but
+                uncompress_file(tgz_file, package_folder, output=self._output)
+            mkdir(package_folder)  # Just in case it doesn't exist, because uncompress did nothing
+            for file_name, file_path in zipped_files.items():  # copy CONANINFO and CONANMANIFEST
+                os.rename(file_path, os.path.join(package_folder, file_name))
+
             # Issue #214 https://github.com/conan-io/conan/issues/214
-            touch_folder(dest_folder)
+            touch_folder(package_folder)
             if get_env("CONAN_READ_ONLY_CACHE", False):
-                make_read_only(dest_folder)
+                make_read_only(package_folder)
             recorder.package_downloaded(pref, remote.url)
             output.success('Package installed %s' % pref.id)
             output.info("Downloaded package revision %s" % pref.revision)
@@ -167,12 +188,6 @@ class RemoteManager(object):
         except BaseException as e:
             output.error("Exception while getting package: %s" % str(pref.id))
             output.error("Exception: %s %s" % (type(e), str(e)))
-            try:
-                output.warn("Trying to remove package folder: %s" % dest_folder)
-                rmdir(dest_folder)
-            except OSError as e:
-                raise ConanException("%s\n\nCouldn't remove folder '%s', might be busy or open. "
-                                     "Close any app using it, and retry" % (str(e), dest_folder))
             raise
 
     def search_recipes(self, remote, pattern=None, ignorecase=True):
@@ -270,17 +285,6 @@ def check_compressed_files(tgz_name, files):
         if bare_name == os.path.splitext(f)[0]:
             raise ConanException("This Conan version is not prepared to handle '%s' file format. "
                                  "Please upgrade conan client." % f)
-
-
-def unzip_and_get_files(files, destination_dir, tgz_name, output):
-    """Moves all files from package_files, {relative_name: tmp_abs_path}
-    to destination_dir, unzipping the "tgz_name" if found"""
-
-    tgz_file = files.pop(tgz_name, None)
-    check_compressed_files(tgz_name, files)
-    if tgz_file:
-        uncompress_file(tgz_file, destination_dir, output=output)
-        os.remove(tgz_file)
 
 
 def uncompress_file(src_path, dest_folder, output):
