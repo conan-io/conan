@@ -5,6 +5,7 @@ from collections import OrderedDict
 from conans.client.profile_loader import _load_profile
 from conans.model.profile import Profile
 from conans.test.utils.test_files import temp_folder
+from conans.test.utils.tools import TestClient
 from conans.util.files import save
 
 
@@ -109,3 +110,35 @@ zlib/*: aaaa/1.2.3@lasote/testing, bb/1.2@lasote/testing
                          '[build_requires]\n'
                          '[env]\nCC=path/to/my/compiler/gcc\nCXX=path/to/my/compiler/g++',
                          profile.dumps())
+
+    def test_config_parser(self):
+        from configparser import ConfigParser
+        import os
+
+        text = u"""
+[my section]
+test_home=valueis$HOME
+
+[kk]
+test_1=%(test_home)s/foo.csv
+test_2=%(test_home)s/bar.csv"""
+        content = os.path.expandvars(text)
+        print(content)
+        parser = ConfigParser()
+        parser.read_string(content)
+        print(parser.get('my section', 'test_home'))
+        print(parser.get('kk', 'test_1'))
+        print(parser.get('kk', 'test_2'))
+
+    def test_profile_load(self):
+        client = TestClient()
+        profile = """
+        VAR=whatever
+        kk=${HOME}
+        [env]
+        foo=$VAR/and/ever/${HOME}
+        """
+        client.save({"profile": profile})
+        client.run("new test/1.0")
+        client.run("create . test/1.0@ -pr profile")
+        print(client.out)
