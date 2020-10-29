@@ -7,6 +7,7 @@ from six import StringIO
 
 from conans.client.cache.cache import ClientCache
 from conans.client.output import ConanOutput
+from conans.client.tools import environment_append
 from conans.model.package_metadata import PackageMetadata
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.utils.test_files import temp_folder
@@ -68,3 +69,12 @@ class CacheTest(unittest.TestCase):
             metadata.packages[pref2.id].revision = "prevision"
 
         self.assertTrue(layout2.package_exists(pref2))
+
+    def test_localdb_uses_encryption(self):
+        localdb = self.cache.localdb
+        self.assertIsNone(localdb.encryption_key)
+
+        with environment_append({"CONAN_LOGIN_ENCRYPTION_KEY": "key"}):
+            localdb = self.cache.localdb
+            self.assertIsNotNone(localdb.encryption_key)
+            self.assertEqual(localdb.encryption_key, "key")
