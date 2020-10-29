@@ -189,14 +189,14 @@ def save(path, content, only_if_modified=False, encoding="utf-8"):
     """
     dir_path = os.path.dirname(path)
     if not os.path.isdir(dir_path):
-        errmsg = "The folder {} does not exist and could not be created ({})."
         try:
-            os.makedirs(os.path.dirname(path))
+            os.makedirs(dir_path)
         except OSError as error:
-            if "permission denied" in error.strerror.lower():
-                raise OSError(errmsg.format(dir_path, error.strerror))
-        except Exception as error:
-            raise OSError(errmsg.format(dir_path, str(error)))
+            if error.errno not in (errno.EEXIST, errno.ENOENT):
+                raise OSError("The folder {} does not exist and could not be created ({})."
+                              .format(dir_path, error.strerror))
+        except Exception:
+            raise
 
     new_content = to_file_bytes(content, encoding)
 
