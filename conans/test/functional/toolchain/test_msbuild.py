@@ -219,7 +219,7 @@ myapp_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
 class WinTest(unittest.TestCase):
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile, MSBuildToolchain, MSBuildCmd
+        from conans import ConanFile, MSBuildToolchain, MSBuild
         class App(ConanFile):
             settings = "os", "arch", "compiler", "build_type"
             requires = "hello/0.1"
@@ -236,8 +236,8 @@ class WinTest(unittest.TestCase):
                 tc.write_toolchain_files()
 
             def build(self):
-                msbuild = MSBuildCmd(self, "MyProject.sln")
-                msbuild.build()
+                msbuild = MSBuild(self)
+                msbuild.build("MyProject.sln")
         """)
 
     app = textwrap.dedent("""

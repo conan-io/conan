@@ -9,8 +9,7 @@ from conans.util.files import save, load
 
 
 class MSBuildCmd(object):
-    def __init__(self, conanfile, sln):
-        self._sln = sln
+    def __init__(self, conanfile):
         self._conanfile = conanfile
         self.version = conanfile.settings.get_safe("compiler.version")
         self.vcvars_arch = vcvars_arch(conanfile)
@@ -26,18 +25,23 @@ class MSBuildCmd(object):
         if conanfile.settings.get_safe("os") == "WindowsCE":
             msvc_arch = conanfile.settings.get_safe("os.platform")
         self.platform = msvc_arch
- 
-    def command(self):
+
+    def command(self, sln):
         vcvars = vcvars_command(self.version, architecture=self.vcvars_arch,
                                 platform_type=None, winsdk_version=None,
                                 vcvars_ver=None)
         cmd = ('%s && msbuild "%s" /p:Configuration=%s /p:Platform=%s '
-               % (vcvars, self._sln, self.build_type, self.platform))
+               % (vcvars, sln, self.build_type, self.platform))
         return cmd
 
-    def build(self):
-        cmd = self.command()
+    def build(self, sln):
+        cmd = self.command(sln)
         self._conanfile.run(cmd)
+
+    @staticmethod
+    def get_version(settings):
+        return NotImplementedError("get_version() method is not supported in MSBuild "
+                                   "toolchain helper")
 
 
 class MSBuildToolchain(object):
