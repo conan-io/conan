@@ -14,6 +14,7 @@ from conans.client.conf import ConanClientConfigParser
 from conans.client.conf.config_installer import _hide_password, _ConfigOrigin
 from conans.client.rest.file_downloader import FileDownloader
 from conans.errors import ConanException
+from conans.test.utils.genconanfile import GenConanfile
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, StoppableThreadBottle
 from conans.util.files import load, mkdir, save, save_files, make_file_read_only
@@ -132,6 +133,20 @@ class ConfigInstallTest(unittest.TestCase):
         content = load(client.cache.conan_conf_path)
         self.assertEqual(1, content.count("foo"))
         self.assertEqual(1, content.count("custom/custom"))
+
+    def test_config_fails_no_storage(self):
+        folder = temp_folder(path_with_spaces=False)
+        save_files(folder, {"remotes.txt": remotes})
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . pkg/1.0@")
+        conf = load(client.cache.conan_conf_path)
+        conf = conf.replace("path = ./data", "")
+        save(client.cache.conan_conf_path, conf)
+        client.run('config install "%s"' % folder)
+        client.run("remote list")
+        self.assertIn("myrepo1: https://myrepourl.net [Verify SSL: False]", client.out)
+        self.assertIn("my-repo-2: https://myrepo2.com [Verify SSL: True]", client.out)
 
     def _create_zip(self, zippath=None):
         folder = self._create_profile_folder()
