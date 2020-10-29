@@ -193,7 +193,8 @@ def save(path, content, only_if_modified=False, encoding="utf-8"):
         try:
             os.makedirs(os.path.dirname(path))
         except OSError as error:
-            raise OSError(errmsg.format(dir_path, error.strerror))
+            if "permission denied" in error.strerror.lower():
+                raise OSError(errmsg.format(dir_path, error.strerror))
         except Exception as error:
             raise OSError(errmsg.format(dir_path, str(error)))
 
