@@ -2,6 +2,7 @@
 
 import unittest
 import os
+import platform
 
 from conans.migrations import Migrator
 from conans.test.utils.mocks import TestBufferConanOutput
@@ -21,6 +22,7 @@ class FakeMigrator(Migrator):
 
 class MigratorPermissionTest(unittest.TestCase):
 
+    @unittest.skipIf(platform.system() == "Windows", "Can't apply chmod on Windows")
     def test_invalid_permission(self):
         out = TestBufferConanOutput()
         conf_path = temp_folder(False)
