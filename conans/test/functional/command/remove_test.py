@@ -131,7 +131,7 @@ conaninfo = '''
   OpenSSL/2.10@lasote/testing:2222
   HelloInfo1/0.45@myuser/testing:33333
 [recipe_hash]
-''' + fake_recipe_hash +  '''
+''' + fake_recipe_hash + '''
 [recipe_revision]
 '''
 
@@ -293,11 +293,11 @@ class RemoveTest(unittest.TestCase):
         folders = os.listdir(self.client.storage_folder)
         six.assertCountEqual(self, ["Hello", "Other", "Bye"], folders)
         six.assertCountEqual(self, ["build", "source", "export", "export_source", "metadata.json",
-                                    "metadata.json.lock"],
+                                    "dl", "metadata.json.lock"],
                              os.listdir(os.path.join(self.client.storage_folder,
                                                      "Hello/1.4.10/myuser/testing")))
         six.assertCountEqual(self, ["build", "source", "export", "export_source", "metadata.json",
-                                    "metadata.json.lock"],
+                                    "dl", "metadata.json.lock"],
                              os.listdir(os.path.join(self.client.storage_folder,
                                                      "Hello/2.4.11/myuser/testing")))
 
@@ -313,7 +313,7 @@ class RemoveTest(unittest.TestCase):
         self.client.run("remove Hello/*@myuser/testing -f")
         self._validate_remove_all_hello_packages()
 
-    def test_remove_any_package_version_channel(self):
+    def test_remove_any_package_version_user(self):
         self.client.run("remove Hello/*@*/testing -f")
         self._validate_remove_all_hello_packages()
 
@@ -329,7 +329,7 @@ class RemoveTest(unittest.TestCase):
         folders = os.listdir(self.client.storage_folder)
         six.assertCountEqual(self, ["Hello", "Other", "Bye"], folders)
 
-    def test_remove_any_package_channel(self):
+    def test_remove_any_package_user(self):
         self.client.run("remove Hello/1.4.10@*/testing -f")
         self._validate_remove_hello_1_4_10()
 
@@ -347,11 +347,11 @@ class RemoveTest(unittest.TestCase):
                             src_folders={"H1": True, "H2": True, "B": True, "O": True})
         folders = os.listdir(self.client.storage_folder)
         six.assertCountEqual(self, ["Hello", "Other", "Bye"], folders)
-        six.assertCountEqual(self, ["package", "source", "export", "export_source",
+        six.assertCountEqual(self, ["package", "dl", "source", "export", "export_source",
                                     "metadata.json", "metadata.json.lock"],
                              os.listdir(os.path.join(self.client.storage_folder,
                                                      "Hello/1.4.10/myuser/testing")))
-        six.assertCountEqual(self, ["package", "source", "export", "export_source",
+        six.assertCountEqual(self, ["package", "dl", "source", "export", "export_source",
                                     "metadata.json", "metadata.json.lock"],
                              os.listdir(os.path.join(self.client.storage_folder,
                                                      "Hello/2.4.11/myuser/testing")))
@@ -367,11 +367,11 @@ class RemoveTest(unittest.TestCase):
         folders = os.listdir(self.client.storage_folder)
         six.assertCountEqual(self, ["Hello", "Other", "Bye"], folders)
         six.assertCountEqual(self, ["package", "build", "export", "export_source", "metadata.json",
-                                    "metadata.json.lock"],
+                                    "dl", "metadata.json.lock"],
                              os.listdir(os.path.join(self.client.storage_folder,
                                                      "Hello/1.4.10/myuser/testing")))
         six.assertCountEqual(self, ["package", "build", "export", "export_source", "metadata.json",
-                                    "metadata.json.lock"],
+                                    "dl", "metadata.json.lock"],
                              os.listdir(os.path.join(self.client.storage_folder,
                                                      "Hello/2.4.11/myuser/testing")))
 

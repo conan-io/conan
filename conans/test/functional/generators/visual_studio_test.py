@@ -5,11 +5,11 @@ import platform
 import textwrap
 import unittest
 
+import pytest
 from nose.plugins.attrib import attr
 
 from conans.test.utils.tools import TestClient
 from conans.test.utils.visual_project_files import get_vs_project_files
-
 
 main_cpp = r"""#include <hello.h>
 int main(){
@@ -27,6 +27,7 @@ Hello1/0.1@lasote/testing
 class VisualStudioTest(unittest.TestCase):
 
     @attr('slow')
+    @pytest.mark.slow
     @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
     def test_build_vs_project_with_a(self):
         client = TestClient()

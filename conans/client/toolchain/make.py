@@ -2,6 +2,7 @@
 
 import platform
 import textwrap
+from collections import OrderedDict
 
 from jinja2 import Template
 from conans.client.build.compiler_flags import build_type_define, libcxx_define
@@ -48,8 +49,8 @@ class MakeToolchain(object):
         self._build_type_define = build_type_define(build_type=self._build_type)
         self._glibcxx_define = libcxx_define(self._conanfile.settings)
 
-        self.variables = {}
-        self.preprocessor_definitions = {}
+        self.variables = OrderedDict()
+        self.preprocessor_definitions = OrderedDict()
 
     def _get_build_os_arch(self):
         if hasattr(self._conanfile, 'settings_build'):

@@ -2,6 +2,7 @@ import os
 import time
 import unittest
 
+import pytest
 from nose.plugins.attrib import attr
 
 from conans.model.ref import PackageReference
@@ -12,6 +13,7 @@ from conans.util.files import load
 
 
 @attr("slow")
+@pytest.mark.slow
 class ConanTestTest(unittest.TestCase):
 
     def test_partial_reference(self):

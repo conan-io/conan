@@ -2,6 +2,7 @@ import os
 import textwrap
 import unittest
 
+import pytest
 import yaml
 from bottle import static_file
 from nose.plugins.attrib import attr
@@ -87,6 +88,7 @@ sources:
         self.assertIn("My URL:", client.out)
 
     @attr("slow")
+    @pytest.mark.slow
     @attr('local_bottle')
     def test_conan_data_as_source(self):
         tgz_path = tgz_with_contents({"foo.txt": "foo"})

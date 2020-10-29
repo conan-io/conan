@@ -1,6 +1,6 @@
 import unittest
 
-from conans.client.tools import environment_append, save, six
+from conans.client.tools import environment_append, six
 from conans.test.utils.tools import TestClient
 from conans.util.env_reader import get_env
 

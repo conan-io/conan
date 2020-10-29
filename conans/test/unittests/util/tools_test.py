@@ -7,6 +7,7 @@ import unittest
 import warnings
 from collections import namedtuple
 
+import pytest
 import requests
 import six
 from bottle import request, static_file, HTTPError
@@ -484,6 +485,7 @@ class HelloConan(ConanFile):
                            retry=2, retry_wait=0)
 
     @attr("slow")
+    @pytest.mark.slow
     def test_download_retries(self):
         http_server = StoppableThreadBottle()
 
@@ -548,6 +550,7 @@ class HelloConan(ConanFile):
         http_server.stop()
 
     @attr("slow")
+    @pytest.mark.slow
     @patch("conans.tools._global_config")
     def test_download_unathorized(self, mock_config):
         http_server = StoppableThreadBottle()
@@ -638,7 +641,9 @@ class HelloConan(ConanFile):
             self.assertEqual(str, type(result))
 
     @attr('slow')
+    @pytest.mark.slow
     @attr('local_bottle')
+    @pytest.mark.tool_local_bottle
     def test_get_filename_download(self):
         # Create a tar file to be downloaded from server
         with tools.chdir(tools.mkdir_tmp()):
@@ -704,7 +709,9 @@ class HelloConan(ConanFile):
         self.assertEqual(str(out).count("Waiting 0 seconds to retry..."), 2)
 
     @attr('slow')
+    @pytest.mark.slow
     @attr('local_bottle')
+    @pytest.mark.tool_local_bottle
     def test_get_gunzip(self):
         # Create a tar file to be downloaded from server
         tmp = temp_folder()

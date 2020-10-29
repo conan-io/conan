@@ -22,6 +22,39 @@ content = """
             </p>
         </div>
 
+        <!-- Button trigger modal -->
+        <span id="filterProfileButton"> |
+            <button type="button" class="btn btn-link" data-toggle="modal" data-target="#filterProfile">
+                Filter using profile
+            </button>
+        </span>
+
+        <!-- Modal -->
+        <div class="modal fade" id="filterProfile" tabindex="-1" role="dialog" aria-labelledby="filterProfileLabel" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                        </button>
+                        <h4 class="modal-title" id="filterProfileLabel">Filter results</h4>
+                    </div>
+                    <div class="modal-body">
+                        <p>Copy and paste here the content of a Conan profile:</p>
+                        <form>
+                            <div class="form-group">
+                                    <textarea id="filterProfileValue" class="form-control" rows="8" placeholder="[settings]&#10;os=Macos&#10;arch=x86_64&#10;compiler=apple-clang&#10;compiler.version=11.0&#10;compiler.libcxx=libc++&#10;build_type=Release"></textarea>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-primary" onclick="apply_profile_filter()">Apply filter</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <table id="results" class="table table-striped table-bordered" style="width:100%">
             <thead>
                 {%- set headers = results.get_headers(keys=['remote', 'package_id', 'outdated']) %}
@@ -61,7 +94,8 @@ content = """
             </tfoot>
         </table>
 
-        <script type="text/javascript" src="https://code.jquery.com/jquery-3.3.1.js"></script>
+        <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
+        <script src="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js" integrity="sha384-aJ21OjlMXNL5UyIl/XNwTMqvzeRMZH2w8c5cRVpzpU8Y5bApTppSuUkhZXN0VxHd" crossorigin="anonymous"></script>
         <script type="text/javascript" src="https://cdn.datatables.net/v/dt/dt-1.10.20/datatables.min.js"></script>
         <script type="text/javascript" src="https://cdn.datatables.net/1.10.21/js/dataTables.bootstrap.min.js"></script>
         <script>
@@ -69,7 +103,8 @@ content = """
                 // Setup - add a text input to each footer cell
                 $('#results tfoot th').each( function () {
                     var title = $(this).text();
-                    $(this).html( '<input type="text" class="form-control filter-input" placeholder="Filter '+title+'" style="width:100%"/>' );
+                    var title_id = title.replace('.', '_');
+                    $(this).html( '<input type="text" id="filter-input-'+title_id+'" class="form-control filter-input" placeholder="Filter '+title+'" style="width:100%"/>' );
                 });
 
                 var table = $('#results').DataTable( {
@@ -94,7 +129,28 @@ content = """
                         }
                     } );
                 } );
+
+                // Add filter profile to
+                $("#filterProfileButton").appendTo("#results_length");
             });
+
+            function apply_profile_filter() {
+                // Parse the profile input
+                var profile_txt = $("#filterProfileValue").val();
+                var regex = {
+                    section: /^\s*\[\s*([^\]]*)\s*\]\s*$/,
+                    param: /^\s*([^=]+?)\s*=\s*(.*?)\s*$/
+                };
+                profile_txt.split(/[\\r\\n]+/).forEach( function(line) {
+                    if(regex.param.test(line)){
+                        var match = line.match(regex.param);
+                        var field_id = '#filter-input-'+match[1].replace('.', '_');
+                        $(field_id).val(match[2]);
+                        $(field_id).keyup();
+                    }
+                });
+                $('#filterProfile').modal('hide');
+            }
         </script>
     </div>
     </body>
@@ -102,7 +158,7 @@ content = """
         <div class="container-fluid">
             <div class="info">
                 <p>
-                      Conan <b>v{{ version  }}</b> <script>document.write(new Date().getFullYear())</script> JFrog LTD. <a>https://conan.io</a>
+                      Conan <b>v{{ version }}</b> <script>document.write(new Date().getFullYear())</script> JFrog LTD. <a>https://conan.io</a>
                 </p>
             </div>
         </div>
