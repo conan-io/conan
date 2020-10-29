@@ -39,7 +39,7 @@ class OnlySourceTest(unittest.TestCase):
         # Will Fail because Hello0/0.0 and Hello1/1.1 has not built packages
         # and by default no packages are built
         client.run("create . lasote/stable", assert_error=True)
-        self.assertIn('Try to build from sources with \'--build=Hello0 --build=Hello1\'', client.out)
+        self.assertIn("Try to build from sources with '--build=Hello0 --build=Hello1'", client.out)
 
         # We generate the package for Hello0/0.0
         client.run("install Hello0/0.0@lasote/stable --build Hello0")
