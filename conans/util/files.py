@@ -187,14 +187,15 @@ def save(path, content, only_if_modified=False, encoding="utf-8"):
         only_if_modified: file won't be modified if the content hasn't changed
         encoding: target file text encoding
     """
-    try:
-        os.makedirs(os.path.dirname(path))
-    except OSError as error:
-        if error.errno == errno.EACCES:
-            raise OSError("Could not create the directory '{}' due to lack of permission."
-                          " Please, check your user write permission.".format(os.path.dirname(path)))
-    except Exception:
-        pass
+    dir_path = os.path.dirname(path)
+    if not os.path.isdir(dir_path):
+        errmsg = "The folder {} does not exist and could not be created ({})."
+        try:
+            os.makedirs(os.path.dirname(path))
+        except OSError as error:
+            raise OSError(errmsg.format(dir_path, error.strerror))
+        except Exception as error:
+            raise OSError(errmsg.format(dir_path, str(error)))
 
     new_content = to_file_bytes(content, encoding)
 
