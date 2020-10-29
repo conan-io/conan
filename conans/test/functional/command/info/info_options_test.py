@@ -1,8 +1,11 @@
 import unittest
 
+import pytest
+
 from conans.test.utils.tools import TestClient
 
 
+@pytest.mark.tool_compiler
 class InfoOptionsTest(unittest.TestCase):
 
     def test_info_options(self):

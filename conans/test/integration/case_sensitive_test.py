@@ -1,5 +1,7 @@
 import unittest
 
+import pytest
+
 from conans.paths import CONANFILE
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import TestClient, TestServer
@@ -19,6 +21,7 @@ class ConanLib(ConanFile):
 
 class CaseSensitiveTest(unittest.TestCase):
 
+    @pytest.mark.tool_compiler
     def test_install(self):
         test_server = TestServer()
         servers = {"default": test_server}

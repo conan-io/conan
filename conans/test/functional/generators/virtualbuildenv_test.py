@@ -58,7 +58,7 @@ class TestConan(ConanFile):
         conanfile = textwrap.dedent("""
             from conans import ConanFile
             class TestConan(ConanFile):
-                settings = "os", "compiler", "arch", "build_type"
+                settings = "os"
                 generators = "virtualbuildenv"
             """)
         client = TestClient(path_with_spaces=False)

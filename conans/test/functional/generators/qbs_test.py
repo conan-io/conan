@@ -1,9 +1,11 @@
 import unittest
 
+import pytest
+
 from conans.test.utils.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
-
+@pytest.mark.tool_compiler
 class QbsGeneratorTest(unittest.TestCase):
 
     def test(self):

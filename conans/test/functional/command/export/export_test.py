@@ -3,6 +3,7 @@ import stat
 import textwrap
 import unittest
 
+import pytest
 from parameterized import parameterized
 
 from conans.model.manifest import FileTreeManifest
@@ -403,6 +404,7 @@ class ExportMetadataTest(unittest.TestCase):
         meta = t.cache.package_layout(ref, short_paths=False).load_metadata()
         self.assertEqual(meta.recipe.revision, self.summary_hash)
 
+    @pytest.mark.tool_git
     def test_revision_mode_scm(self):
         t = TestClient()
         commit = t.init_git_repo({'conanfile.py': self.conanfile.format(revision_mode="scm")})

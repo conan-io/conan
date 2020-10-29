@@ -3,6 +3,7 @@ import platform
 import subprocess
 import unittest
 
+import pytest
 from parameterized import parameterized
 
 from conans.client import tools
@@ -14,6 +15,7 @@ from conans.util.runners import check_output_runner
 
 class DetectTest(unittest.TestCase):
 
+    @pytest.mark.tool_compiler
     def test_detect_default_compilers(self):
         platform_default_compilers = {
             "Linux": "gcc",

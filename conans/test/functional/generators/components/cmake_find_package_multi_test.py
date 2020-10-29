@@ -13,6 +13,7 @@ from conans.test.utils.tools import TestClient
 
 @attr('slow')
 @pytest.mark.slow
+@pytest.mark.tool_cmake
 class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
 
     @staticmethod

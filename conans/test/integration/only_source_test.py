@@ -1,6 +1,8 @@
 import os
 import unittest
 
+import pytest
+
 from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
@@ -21,6 +23,7 @@ class OnlySourceTest(unittest.TestCase):
         if export:
             client.run("export . lasote/stable")
 
+    @pytest.mark.tool_cmake
     def test_conan_test(self):
         # Checks --build in test command
         client = TestClient()
@@ -89,6 +92,7 @@ class MyPackage(ConanFile):
                       client.out)
         client.run("upload test/1.9@lasote/stable")
 
+    @pytest.mark.tool_cmake
     def test_build_policies_in_conanfile(self):
 
         client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
@@ -137,6 +141,7 @@ class MyPackage(ConanFile):
         client.run("upload Hello0/1.0@lasote/stable --all", assert_error=True)
         self.assertIn("no packages can be uploaded", client.out)
 
+    @pytest.mark.tool_cmake
     def test_reuse(self):
         client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
         ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")

@@ -2,6 +2,8 @@ import os
 import platform
 import unittest
 
+import pytest
+
 from conans.client import tools
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE
@@ -50,7 +52,8 @@ class AutoToolsConfigureTest(unittest.TestCase):
         conanfile.deps_cpp_info.exelinkflags.append("exe_link_flag")
         conanfile.deps_cpp_info.sysroot = "/path/to/folder"
 
-    @unittest.skipUnless(platform.system() == "Linux", "Requires make")
+    @unittest.skipUnless(platform.system() == "Linux", "Requires Autotools")
+    @pytest.mark.tool_autotools()
     def test_autotools_real_install_dirs(self):
         body = r"""#include "hello.h"
 #include <iostream>

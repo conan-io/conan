@@ -200,6 +200,7 @@ class V3D(ConanFile):
 
 @attr("slow")
 @pytest.mark.slow
+@pytest.mark.tool_cmake
 class PrivateDepsTest(unittest.TestCase):
 
     def setUp(self):

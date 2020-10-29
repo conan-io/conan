@@ -2,6 +2,8 @@ import os
 import textwrap
 import unittest
 
+import pytest
+
 from conans.model.ref import PackageReference
 from conans.paths import BUILD_INFO, CONANFILE
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
@@ -242,6 +244,7 @@ class AConan(ConanFile):
         self.assertIn("Hello.Pkg/0.1/lasote/testing", client.out)
         self.assertIn("Hello-Tools/0.1/lasote/testing", client.out)
 
+    @pytest.mark.tool_cmake
     def test_build_cmake_install(self):
         client = TestClient()
         conanfile = """

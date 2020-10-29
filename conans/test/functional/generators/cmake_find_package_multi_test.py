@@ -14,6 +14,7 @@ from conans.util.files import load
 
 @attr('slow')
 @pytest.mark.slow
+@pytest.mark.tool_cmake
 class CMakeFindPathMultiGeneratorTest(unittest.TestCase):
 
     def test_native_export_multi(self):

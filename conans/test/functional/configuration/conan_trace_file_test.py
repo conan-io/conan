@@ -78,7 +78,8 @@ class HelloConan(ConanFile):
         with tools.environment_append({"CONAN_TRACE_FILE": trace_file}):
             # UPLOAD A PACKAGE
             ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
-            files = cpp_hello_conan_files("Hello0", "0.1", need_patch=True, build=False)
+            files = cpp_hello_conan_files("Hello0", "0.1", need_patch=True, build=False,
+                                          settings="'os'")
             client.save(files)
             client.run("user lasote -p mypass -r default")
             client.run("export . lasote/stable")

@@ -94,6 +94,7 @@ class VisualStudioTest(unittest.TestCase):
         client.run_command(r"x64\Release\MyProject.exe")
         self.assertIn("Hello world!!!", client.out)
 
+    @pytest.mark.tool_compiler
     def test_system_libs(self):
         mylib = textwrap.dedent("""
             import os

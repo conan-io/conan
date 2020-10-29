@@ -16,6 +16,7 @@ from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 
 @attr('slow')
 @pytest.mark.slow
+@pytest.mark.tool_cmake
 class CMakeFindPathGeneratorTest(unittest.TestCase):
 
     def test_cmake_find_package_system_libs(self):

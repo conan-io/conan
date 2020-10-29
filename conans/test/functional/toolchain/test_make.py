@@ -16,6 +16,7 @@ from conans.util.files import mkdir
 @attr("toolchain")
 @pytest.mark.slow
 @pytest.mark.toolchain
+@pytest.mark.tool_autotools
 class MakeToolchainTest(unittest.TestCase):
     @parameterized.expand([
         ("exe", "Release"),

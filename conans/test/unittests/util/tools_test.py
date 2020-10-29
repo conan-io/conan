@@ -808,7 +808,7 @@ class HelloConan(ConanFile):
             output = check_output_runner(["echo", payload], stderr=subprocess.STDOUT)
             self.assertIn(payload, str(output))
 
-
+    @pytest.mark.tool_file  # Needs the "file" command, not by default in linux
     def test_unix_to_dos_unit(self):
 
         def save_file(contents):

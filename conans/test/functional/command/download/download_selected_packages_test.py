@@ -1,6 +1,7 @@
 import os
 import unittest
 
+
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
@@ -88,14 +89,15 @@ class DownloadSelectedPackagesTest(unittest.TestCase):
 
     def _upload_some_packages(self, client):
         self.ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
-        self.files = cpp_hello_conan_files("Hello0", "0.1")
+        self.files = cpp_hello_conan_files("Hello0", "0.1", build=False)
         # No build.
-        self.files[CONANFILE] = self.files[CONANFILE].replace("def build(self):",
-                                                              "def build(self):\n        return\n")
         client.save(self.files)
         client.run("export . lasote/stable")
-        client.run("install Hello0/0.1@lasote/stable -s os=Windows --build missing")
-        client.run("install Hello0/0.1@lasote/stable -s os=Linux --build missing")
+        # Specify the compiler to avoid the need of detecting a compiler (we are not building)
+        client.run("install Hello0/0.1@lasote/stable -s os=Windows -s compiler=clang "
+                   "-s compiler.version=8 --build missing")
+        client.run("install Hello0/0.1@lasote/stable -s os=Linux -s compiler=clang "
+                   "-s compiler.version=8 --build missing")
         client.run("install Hello0/0.1@lasote/stable -s os=Linux -s compiler=gcc -s "
                    "compiler.version=4.6 -s compiler.libcxx=libstdc++ --build missing")
         client.run("upload  Hello0/0.1@lasote/stable --all")

@@ -10,6 +10,7 @@ from conans.test.utils.tools import TestClient
 
 @attr("slow")
 @pytest.mark.slow
+@pytest.mark.tool_cmake
 class CMakeConfigsTest(unittest.TestCase):
 
     def test_test_package_configs(self):

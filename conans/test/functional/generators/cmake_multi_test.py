@@ -134,6 +134,7 @@ int main(){{
 
 @attr("slow")
 @pytest.mark.slow
+@pytest.mark.tool_cmake
 class CMakeMultiTest(unittest.TestCase):
 
     @attr("mingw")
@@ -275,6 +276,7 @@ class HelloConan(ConanFile):
             self.assertIn("Hello Release Hello0", client.out)
 
 
+@pytest.mark.tool_cmake
 class CMakeMultiSystemLibsTest(unittest.TestCase):
 
     def test_system_libs(self):
@@ -329,6 +331,7 @@ class CMakeMultiSystemLibsTest(unittest.TestCase):
         self.assertIn("set(CONAN_SYSTEM_LIBS_MYLIB_DEBUG sys1d)", content)
 
 
+@pytest.mark.tool_cmake
 class CMakeMultiSyntaxTest(unittest.TestCase):
 
     def setUp(self):

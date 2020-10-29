@@ -3,6 +3,8 @@ import platform
 import textwrap
 import unittest
 
+import pytest
+
 from conans.test.utils.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 from conans.util.files import load
@@ -10,6 +12,8 @@ from conans.util.files import load
 
 class PkgGeneratorTest(unittest.TestCase):
 
+    # Without compiler, def rpath_flags(settings, os_build, lib_paths): doesn't append the -Wl...etc
+    @pytest.mark.tool_compiler
     def test_pkg_config_dirs(self):
         # https://github.com/conan-io/conan/issues/2756
         conanfile = """

@@ -20,7 +20,7 @@ class UploadCompressionTest(unittest.TestCase):
 
         # UPLOAD A PACKAGE
         ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
-        files = cpp_hello_conan_files("Hello0", "0.1", need_patch=True, build=False)
+        files = cpp_hello_conan_files("Hello0", "0.1", need_patch=True, build=False, settings='"os"')
         files["another_export_file.lib"] = "to compress"
         self.client.save(files)
         self.client.run("export . lasote/stable")
@@ -41,7 +41,7 @@ class UploadCompressionTest(unittest.TestCase):
 
         # UPLOAD A PACKAGE
         ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
-        files = cpp_hello_conan_files("Hello0", "0.1", need_patch=True, build=False)
+        files = cpp_hello_conan_files("Hello0", "0.1", need_patch=True, build=False, settings='"os"')
         files["another_export_file.lib"] = "to compress"
         self.client.save(files)
         self.client.run("export . lasote/stable")
@@ -61,7 +61,7 @@ class UploadCompressionTest(unittest.TestCase):
 
     def test_upload_only_tgz_if_needed(self):
         ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
-        files = cpp_hello_conan_files("Hello0", "0.1", need_patch=True, build=False)
+        files = cpp_hello_conan_files("Hello0", "0.1", need_patch=True, build=False, settings='"os"')
         files["lib/another_export_file.lib"] = "to compress"
         self.client.save(files)
         self.client.run("export . lasote/stable")

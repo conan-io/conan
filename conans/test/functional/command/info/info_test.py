@@ -5,6 +5,8 @@ import textwrap
 import unittest
 from datetime import datetime
 
+import pytest
+
 from conans import __version__ as client_version
 from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE
@@ -106,6 +108,7 @@ class InfoTest(unittest.TestCase):
         self.assertIn("--install-folder cannot be used together with a"
                       " host profile (-s, -o, -e or -pr)", client.out)
 
+    @pytest.mark.tool_compiler
     def test_graph(self):
         self.client = TestClient()
 
@@ -175,6 +178,7 @@ class InfoTest(unittest.TestCase):
         dot_file = os.path.join(self.client.current_folder, arg_filename)
         check_file(dot_file)
 
+    @pytest.mark.tool_compiler
     def test_graph_html(self):
         self.client = TestClient()
 
@@ -250,6 +254,7 @@ class InfoTest(unittest.TestCase):
                       "shape: 'ellipse',\n                        "
                       "color: { background: 'SkyBlue'},", html)
 
+    @pytest.mark.tool_compiler
     def test_only_names(self):
         self.client = TestClient()
         self._create("Hello0", "0.1")
@@ -288,6 +293,7 @@ class InfoTest(unittest.TestCase):
         path = os.path.join(client.current_folder, "jsonfile.txt")
         self.assertTrue(os.path.exists(path))
 
+    @pytest.mark.tool_compiler
     def test_info_virtual(self):
         # Checking that "Required by: virtual" doesnt appear in the output
         self.client = TestClient()
@@ -296,6 +302,7 @@ class InfoTest(unittest.TestCase):
         self.assertNotIn("virtual", self.client.out)
         self.assertNotIn("Required", self.client.out)
 
+    @pytest.mark.tool_compiler
     def test_reuse(self):
         self.client = TestClient()
         self._create("Hello0", "0.1")
@@ -405,6 +412,7 @@ class InfoTest(unittest.TestCase):
                              las hay""")
         self.assertIn(expected_output, clean_output(self.client.out))
 
+    @pytest.mark.tool_compiler
     def test_json_info_outputs(self):
         self.client = TestClient()
         self._create("LibA", "0.1")
@@ -429,6 +437,7 @@ class InfoTest(unittest.TestCase):
         self.assertEqual(content[1]["url"], "myurl")
         self.assertEqual(content[1]["required_by"][0], "conanfile.py (LibD/0.1)")
 
+    @pytest.mark.tool_compiler
     def test_build_order(self):
         self.client = TestClient()
         self._create("Hello0", "0.1")
@@ -497,6 +506,7 @@ class InfoTest(unittest.TestCase):
                       "[Pkg/0.1@user/channel, Pkg2/0.1@user/channel]",
                       client.out)
 
+    @pytest.mark.tool_compiler
     def test_diamond_build_order(self):
         self.client = TestClient()
         self._create("LibA", "0.1")

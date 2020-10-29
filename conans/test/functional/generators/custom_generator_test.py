@@ -73,7 +73,7 @@ class CustomGeneratorTest(unittest.TestCase):
 
     def test_reuse(self):
         ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
-        files = cpp_hello_conan_files("Hello0", "0.1", build=False)
+        files = cpp_hello_conan_files("Hello0", "0.1", build=False, settings='"os"')
 
         client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
         client.save(files)
