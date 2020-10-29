@@ -7,7 +7,7 @@ from conans.test.utils.tools import TestClient
 from ._utils import create_library
 
 
-class SystemToolsTestCase(unittest.TestCase):
+class AndroidToolchainTestCase(unittest.TestCase):
     # This test assumes that 'CMake' and 'AndroidNDK' are available in the system
     #
     # Guidelines: https://developer.android.com/ndk/guides/cmake#command-line

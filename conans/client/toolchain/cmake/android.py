@@ -1,8 +1,9 @@
 import os
 import textwrap
 
+from conans.client.tools.files import which
+from conans.errors import ConanException
 from .base import CMakeToolchainBase
-from ...tools import which, ConanException
 
 
 class CMakeAndroidToolchain(CMakeToolchainBase):
@@ -78,6 +79,7 @@ class CMakeAndroidToolchain(CMakeToolchainBase):
             android_ndk = os.path.dirname(android_ndk) if android_ndk else None
         if not android_ndk:
             raise ConanException('Cannot find ANDROID_NDK (ndk-build) in the PATH')
+        return android_ndk
 
     def _get_template_context_data(self):
         ctxt_toolchain, _ = super(CMakeAndroidToolchain, self)._get_template_context_data()
@@ -87,6 +89,5 @@ class CMakeAndroidToolchain(CMakeToolchainBase):
             'CMAKE_ANDROID_ARCH_ABI': self._get_android_abi(),
             'CMAKE_ANDROID_STL_TYPE': self._get_android_stl(),
             'CMAKE_ANDROID_NDK': self._guess_android_ndk(),
-
         })
         return ctxt_toolchain, {}
