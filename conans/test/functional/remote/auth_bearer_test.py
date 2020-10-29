@@ -53,7 +53,7 @@ class ReturnHandlerPlugin(object):
 class AuthorizeBearerTest(unittest.TestCase):
 
     @parameterized.expand([(False, ), (True, )])
-    def basic_test(self, artifacts_properties):
+    def test_basic(self, artifacts_properties):
         auth = AuthorizationHeaderSpy()
         server = TestServer(plugins=[auth])
         servers = {"default": server}
@@ -90,7 +90,7 @@ class AuthorizeBearerTest(unittest.TestCase):
 
     @parameterized.expand([(False,), (True,)])
     @unittest.skipIf(get_env("TESTING_REVISIONS_ENABLED", False), "ApiV1 test")
-    def no_signature_test(self, artifacts_properties):
+    def test_no_signature(self, artifacts_properties):
         auth = AuthorizationHeaderSpy()
         retur = ReturnHandlerPlugin()
         server = TestServer(plugins=[auth, retur])

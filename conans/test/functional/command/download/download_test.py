@@ -10,7 +10,7 @@ from conans.util.files import load
 
 class DownloadTest(unittest.TestCase):
 
-    def download_recipe_test(self):
+    def test_download_recipe(self):
         client = TurboTestClient(default_server_user={"lasote": "pass"})
         # Test download of the recipe only
         conanfile = str(GenConanfile().with_name("pkg").with_version("0.1"))
@@ -29,7 +29,7 @@ class DownloadTest(unittest.TestCase):
         conan = client.cache.package_layout(ref).base_folder()
         self.assertFalse(os.path.exists(os.path.join(conan, "package")))
 
-    def download_with_sources_test(self):
+    def test_download_with_sources(self):
         server = TestServer()
         servers = OrderedDict()
         servers["default"] = server
@@ -58,7 +58,7 @@ class Pkg(ConanFile):
         self.assertEqual("myfile.h", load(os.path.join(source, "file.h")))
         self.assertEqual("C++code", load(os.path.join(source, "otherfile.cpp")))
 
-    def download_reference_without_packages_test(self):
+    def test_download_reference_without_packages(self):
         client = TestClient(default_server_user=True)
         client.save({"conanfile.py": GenConanfile().with_name("pkg").with_version("0.1")})
         client.run("export . user/stable")
@@ -72,7 +72,7 @@ class Pkg(ConanFile):
         ref = ConanFileReference.loads("pkg/0.1@user/stable")
         self.assertTrue(os.path.exists(client.cache.package_layout(ref).conanfile()))
 
-    def download_reference_with_packages_test(self):
+    def test_download_reference_with_packages(self):
         server = TestServer()
         servers = {"default": server}
 
@@ -120,7 +120,7 @@ class Pkg(ConanFile):
         client.run("download pkg/*@user/channel", assert_error=True)
         self.assertIn("Provide a valid full reference without wildcards", client.out)
 
-    def download_full_reference_test(self):
+    def test_download_full_reference(self):
         server = TestServer()
         servers = {"default": server}
 
@@ -158,7 +158,7 @@ class Pkg(ConanFile):
 
         self.assertIn("ERROR: recipe parameter cannot be used together with package", client.out)
 
-    def download_package_argument_test(self):
+    def test_download_package_argument(self):
         server = TestServer()
         servers = {"default": server}
 
@@ -181,14 +181,14 @@ class Pkg(ConanFile):
         # Check package folder created
         self.assertTrue(os.path.exists(package_folder))
 
-    def download_not_found_reference_test(self):
+    def test_download_not_found_reference(self):
         server = TestServer()
         servers = {"default": server}
         client = TurboTestClient(servers=servers, users={"default": [("lasote", "mypass")]})
         client.run("download pkg/0.1@lasote/stable", assert_error=True)
         self.assertIn("ERROR: Recipe not found: 'pkg/0.1@lasote/stable'", client.out)
 
-    def no_user_channel_test(self):
+    def test_no_user_channel(self):
         # https://github.com/conan-io/conan/issues/6009
         server = TestServer(users={"user": "password"}, write_permissions=[("*/*@*/*", "*")])
         client = TestClient(servers={"default": server}, users={"default": [("user", "password")]})

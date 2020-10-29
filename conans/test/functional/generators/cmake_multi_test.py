@@ -3,9 +3,10 @@ import platform
 import textwrap
 import unittest
 
+import pytest
 from nose.plugins.attrib import attr
 
-from conans.client.tools import load, remove_from_path
+from conans.client.tools import remove_from_path
 from conans.test.utils.multi_config import multi_config_files
 from conans.test.utils.tools import TestClient
 
@@ -132,10 +133,12 @@ int main(){{
 
 
 @attr("slow")
+@pytest.mark.slow
 class CMakeMultiTest(unittest.TestCase):
 
     @attr("mingw")
-    def cmake_multi_find_test(self):
+    @pytest.mark.tool_mingw
+    def test_cmake_multi_find(self):
         if platform.system() not in ["Windows", "Linux"]:
             return
         client = TestClient()
@@ -195,7 +198,7 @@ class HelloConan(ConanFile):
             self.assertIn("FIND HELLO MINSIZEREL!", client.out)
 
     @unittest.skipUnless(platform.system() in ["Windows", "Darwin"], "Exclude Linux")
-    def cmake_multi_test(self):
+    def test_cmake_multi(self):
         client = TestClient()
 
         client.save(multi_config_files("Hello0", test=False), clean_first=True)
@@ -274,7 +277,7 @@ class HelloConan(ConanFile):
 
 class CMakeMultiSystemLibsTest(unittest.TestCase):
 
-    def system_libs_test(self):
+    def test_system_libs(self):
         mylib = textwrap.dedent("""
             import os
             from conans import ConanFile
@@ -340,7 +343,7 @@ class CMakeMultiSyntaxTest(unittest.TestCase):
         self.client.run("install .")
         self.client.run("install . -s build_type=Debug")
 
-    def conan_basic_setup_interface_test(self):
+    def test_conan_basic_setup_interface(self):
         """
         Check conan_basic_setup() interface is the same one for cmake and cmake_multi generators
         """
@@ -350,7 +353,7 @@ class CMakeMultiSyntaxTest(unittest.TestCase):
         self.assertIn(expected, conanbuildinfo)
         self.assertIn(expected, conanbuildinfo_multi)
 
-    def conan_basic_setup_output_dirs_warning_test(self):
+    def test_conan_basic_setup_output_dirs_warning(self):
         """
         Check warning when suing NO_OUTPUT_DIRS
         """

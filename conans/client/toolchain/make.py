@@ -2,6 +2,7 @@
 
 import platform
 import textwrap
+from collections import OrderedDict
 
 from jinja2 import Template
 
@@ -151,8 +152,8 @@ class MakeToolchain(object):
         self._build_type_define = build_type_define(build_type=self._build_type)
         self._glibcxx_define = libcxx_define(self._conanfile.settings)
 
-        self.variables = {}
-        self.preprocessor_definitions = {}
+        self.variables = OrderedDict()
+        self.preprocessor_definitions = OrderedDict()
 
     def _get_host_build_target_flags(self):
         """Based on google search for build/host triplets, it could need a lot

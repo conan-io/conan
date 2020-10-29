@@ -5,7 +5,7 @@ from conans.test.utils.tools import TestClient, GenConanfile
 
 class TransitiveIdsTest(unittest.TestCase):
 
-    def transitive_library_test(self):
+    def test_transitive_library(self):
         # https://github.com/conan-io/conan/issues/6450
         client = TestClient()
         client.run("config set general.default_package_id_mode=full_version_mode")
@@ -29,7 +29,7 @@ class TransitiveIdsTest(unittest.TestCase):
         self.assertIn("libc/1.0:4599994f77257f88443590022af4754d5520b753 - Missing", client.out)
         self.assertIn("libd/1.0:39906c34335d9ad465711e847688c4a27894af0f - Build", client.out)
 
-    def transitive_major_mode_test(self):
+    def test_transitive_major_mode(self):
         # https://github.com/conan-io/conan/issues/6450
         # Test LibE->LibD->LibC->LibB->LibA
         # LibC declares that it only depends on major version changes of its upstream
@@ -66,7 +66,7 @@ class TransitiveIdsTest(unittest.TestCase):
         self.assertIn("libd/1.0:39906c34335d9ad465711e847688c4a27894af0f - Missing", client.out)
         self.assertIn("libe/1.0:204261ad030cca3acf07c7a58b169e4257056ba1 - Build", client.out)
 
-    def transitive_unrelated_test(self):
+    def test_transitive_unrelated(self):
         # https://github.com/conan-io/conan/issues/6450
         client = TestClient()
         client.run("config set general.default_package_id_mode=full_version_mode")
@@ -94,7 +94,7 @@ class TransitiveIdsTest(unittest.TestCase):
         self.assertIn("libc/1.0:e3884c6976eb7debb8ec57aada7c0c2beaabe8ac - Missing", client.out)
         self.assertIn("libd/1.0:9b0b7b0905c9bc2cb9b7329f842b3b7c6663e8c3 - Missing", client.out)
 
-    def transitive_second_level_header_only_test(self):
+    def test_transitive_second_level_header_only(self):
         # https://github.com/conan-io/conan/issues/6450
         client = TestClient()
         client.run("config set general.default_package_id_mode=full_version_mode")
@@ -129,7 +129,7 @@ class TransitiveIdsTest(unittest.TestCase):
         self.assertIn("libc/1.0:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache", client.out)
         self.assertIn("libd/1.0:95b14a919aa70f9a7e24afbf48d1101cff344a67 - Missing", client.out)
 
-    def transitive_header_only_test(self):
+    def test_transitive_header_only(self):
         # https://github.com/conan-io/conan/issues/6450
         client = TestClient()
         client.run("config set general.default_package_id_mode=full_version_mode")

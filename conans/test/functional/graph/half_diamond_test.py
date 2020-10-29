@@ -30,7 +30,7 @@ class HalfDiamondTest(unittest.TestCase):
         if export:
             self.client.run("export . lasote/stable")
 
-    def reuse_test(self):
+    def test_reuse(self):
         self._export("Hello0")
         self._export("Hello1", ["Hello0/0.1@lasote/stable"])
         self._export("Hello2", ["Hello1/0.1@lasote/stable", "Hello0/0.1@lasote/stable"])
@@ -40,7 +40,7 @@ class HalfDiamondTest(unittest.TestCase):
         self.assertIn("conanfile.py (Hello3/0.1): Generated conaninfo.txt",
                       self.client.out)
 
-    def check_duplicated_full_requires_test(self):
+    def test_check_duplicated_full_requires(self):
         self._export("Hello0")
         self._export("Hello1", ["Hello0/0.1@lasote/stable"])
         self._export("Hello2", ["Hello1/0.1@lasote/stable", "Hello0/0.1@lasote/stable"],

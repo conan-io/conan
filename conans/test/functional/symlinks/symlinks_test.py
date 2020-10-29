@@ -67,7 +67,7 @@ class SymLinksTest(unittest.TestCase):
             file1 = load(filepath)
             self.assertEqual("Hello2", file1)
 
-    def basic_test(self):
+    def test_basic(self):
         client = TestClient()
         client.save({"conanfile.py": conanfile,
                      "conanfile.txt": test_conanfile})
@@ -81,7 +81,7 @@ class SymLinksTest(unittest.TestCase):
         client.run("install conanfile.txt --build")
         self._check(client, pref)
 
-    def package_files_test(self):
+    def test_package_files(self):
         client = TestClient()
         conanfile = """
 from conans import ConanFile
@@ -108,7 +108,7 @@ class TestConan(ConanFile):
 
         self._check(client, pref, build=False)
 
-    def export_and_copy_test(self):
+    def test_export_and_copy(self):
         lib_name = "libtest.so.2"
         lib_contents = "TestLib"
         link_name = "libtest.so"
@@ -144,7 +144,7 @@ class TestConan(ConanFile):
 
         self._check(client, pref)
 
-    def upload_test(self):
+    def test_upload(self):
         test_server = TestServer()
         servers = {"default": test_server}
         client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
@@ -162,7 +162,7 @@ class TestConan(ConanFile):
         client.run("install conanfile.txt")
         self._check(client, pref, build=False)
 
-    def export_pattern_test(self):
+    def test_export_pattern(self):
         conanfile = """from conans import ConanFile
 class ConanSymlink(ConanFile):
     name = "ConanSymlink"
@@ -194,7 +194,7 @@ class ConanSymlink(ConanFile):
             self.assertTrue(os.path.exists(cache_main))
             self.assertTrue(os.path.exists(cache_cmake))
 
-    def export_ignore_case_test(self):
+    def test_export_ignore_case(self):
         conanfile = """from conans import ConanFile
 class ConanSymlink(ConanFile):
     name = "ConanSymlink"

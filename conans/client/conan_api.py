@@ -184,10 +184,8 @@ class ConanApp(object):
         artifacts_properties = self.cache.read_artifacts_properties()
         rest_client_factory = RestApiClientFactory(self.out, self.requester, self.config,
                                                    artifacts_properties=artifacts_properties)
-        # To store user and token
-        localdb = LocalDB.create(self.cache.localdb)
         # Wraps RestApiClient to add authentication support (same interface)
-        auth_manager = ConanApiAuthManager(rest_client_factory, self.user_io, localdb)
+        auth_manager = ConanApiAuthManager(rest_client_factory, self.user_io, self.cache.localdb)
         # Handle remote connections
         self.remote_manager = RemoteManager(self.cache, auth_manager, self.out, self.hook_manager)
 
@@ -284,8 +282,17 @@ class ConanAPIV1(object):
             conanfile_path = _get_conanfile_path(path, get_cwd(), py=True)
             conanfile = self.app.loader.load_named(conanfile_path, None, None, None, None)
         else:
-            update = True if remote_name else False
-            result = self.app.proxy.get_recipe(ref, update, update, remotes, ActionRecorder())
+            if remote_name:
+                remotes = self.app.load_remotes()
+                remote = remotes.get_remote(remote_name)
+                try:  # get_recipe_manifest can fail, not in server
+                    _, ref = self.app.remote_manager.get_recipe_manifest(ref, remote)
+                except NotFoundException:
+                    raise RecipeNotFoundException(ref)
+                else:
+                    ref = self.app.remote_manager.get_recipe(ref, remote)
+
+            result = self.app.proxy.get_recipe(ref, False, False, remotes, ActionRecorder())
             conanfile_path, _, _, ref = result
             conanfile = self.app.loader.load_basic(conanfile_path)
             conanfile.name = ref.name

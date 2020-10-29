@@ -4,6 +4,7 @@ import sys
 import unittest
 from collections import OrderedDict
 
+import pytest
 import six
 from nose.plugins.attrib import attr
 
@@ -126,7 +127,8 @@ class MyBuildInfo(unittest.TestCase):
             self.assertEqual(0, len(module["dependencies"]))
 
     @attr('ide_fail')
-    def trace_command_test(self):
+    @pytest.mark.ide_fail
+    def test_trace_command(self):
         from conans.build_info.command import run
         trace_file = os.path.join(temp_folder(), "conan_trace.log")
         # Generate some traces

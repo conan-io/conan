@@ -25,7 +25,7 @@ class MyPkg(ConanFile):
         client.run("create . Pkg/0.1@lasote/channel")
         self.client = client
 
-    def basic_test(self):
+    def test_basic(self):
         pref = PackageReference(ConanFileReference.loads("Pkg/0.1@lasote/channel"),
                                 NO_SETTINGS_PACKAGE_ID)
         path = os.path.join(self.client.cache.package_layout(pref.ref).package(pref), "myheader.h")
@@ -34,19 +34,19 @@ class MyPkg(ConanFile):
         os.chmod(path, 0o777)
         save(path, "Bye World")
 
-    def remove_test(self):
+    def test_remove(self):
         self.client.run("search")
         self.assertIn("Pkg/0.1@lasote/channel", self.client.out)
         self.client.run("remove Pkg* -f")
         self.assertNotIn("Pkg/0.1@lasote/channel", self.client.out)
 
-    def upload_test(self):
+    def test_upload(self):
         self.client.run("upload * --all --confirm")
         self.client.run("remove Pkg* -f")
         self.client.run("install Pkg/0.1@lasote/channel")
-        self.basic_test()
+        self.test_basic()
 
-    def upload_change_test(self):
+    def test_upload_change(self):
         self.client.run("upload * --all --confirm")
         client = TestClient(servers={"default": self.test_server},
                             users={"default": [("lasote", "mypass")]})
