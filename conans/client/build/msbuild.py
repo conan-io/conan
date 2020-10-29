@@ -31,7 +31,7 @@ class MSBuild(object):
         if hasattr(conanfile, "toolchain"):
             msbuild_class = type("CustomMSBuildClass", (cls, MSBuildCmd), {})
         else:
-            msbuild_class = type("CustomMSBuildeClass", (cls, MSBuildHelper), {})
+            msbuild_class = type("CustomMSBuildClass", (cls, MSBuildHelper), {})
 
         return msbuild_class.__new__(msbuild_class, conanfile, *args, **kwargs)
 
