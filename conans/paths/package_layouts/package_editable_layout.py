@@ -6,7 +6,6 @@ from conans.errors import ConanException
 from conans.model.editable_layout import EditableLayout
 from conans.model.ref import ConanFileReference
 from conans.model.ref import PackageReference
-from conans.paths import CONANFILE
 
 
 class PackageEditableLayout(object):
@@ -40,6 +39,9 @@ class PackageEditableLayout(object):
                 raise ConanException("Layout file not found: %s" % self._layout_file)
 
     def export(self):
+        raise ConanException("Operation not allowed on a package installed as editable")
+
+    def conanfile_write_lock(self, output):
         raise ConanException("Operation not allowed on a package installed as editable")
 
     def export_sources(self):

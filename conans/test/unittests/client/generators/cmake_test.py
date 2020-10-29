@@ -3,7 +3,10 @@ import re
 import unittest
 
 import six
+from mock import patch
 
+import conans
+from conans.client.build.cmake import CMakeBuildHelper
 from conans.client.build.cmake_flags import CMakeDefinitionsBuilder
 from conans.client.conf import get_default_settings_yml
 from conans.client.generators import CMakeFindPackageGenerator, CMakeFindPackageMultiGenerator
@@ -331,6 +334,21 @@ endmacro()""", macro)
         self.assertEqual("Darwin", definitions["CMAKE_SYSTEM_NAME"])
         definitions = definitions_builder.get_definitions("3.14")
         self.assertEqual("iOS", definitions["CMAKE_SYSTEM_NAME"])
+        definitions = definitions_builder.get_definitions(None)
+        self.assertEqual("Darwin", definitions["CMAKE_SYSTEM_NAME"])
+
+    def test_cmake_definitions_cmake_not_in_path(self):
+        def raise_get_version():
+            raise ConanException('Error retrieving CMake version')
+
+        with patch.object(conans.client.build.cmake.CMakeBuildHelper, "get_version",
+                          side_effect=raise_get_version):
+            settings_mock = _MockSettings(build_type="Release")
+            conanfile = ConanFile(TestBufferConanOutput(), None)
+            install_folder = "/c/foo/testing"
+            setattr(conanfile, "install_folder", install_folder)
+            conanfile.initialize(settings_mock, EnvValues())
+            assert CMakeBuildHelper(conanfile)
 
     def test_apple_frameworks(self):
         settings = Settings.loads(get_default_settings_yml())

@@ -272,9 +272,9 @@ compiler:
         version: ['4.8', '4.9']
 os: [Windows, Linux]
 """)
-        settings.values_list = [('compiler', 'Visual Studio'),
+        settings.update_values([('compiler', 'Visual Studio'),
                                 ('compiler.version', '10'),
-                                ('compiler.version.arch', '32')]
+                                ('compiler.version.arch', '32')])
         self.assertEqual(settings.values_list,
                          [('compiler', 'Visual Studio'),
                           ('compiler.version', '10'),
@@ -293,17 +293,17 @@ os: [Windows, Linux]
                           ('compiler.version.arch', '64')])
 
     def test_set_value(self):
-        self.sut.values_list = [("compiler", "Visual Studio")]
+        self.sut.update_values([("compiler", "Visual Studio")])
         self.assertEqual(self.sut.compiler, "Visual Studio")
-        self.sut.values_list = [("compiler.version", "12")]
+        self.sut.update_values([("compiler.version", "12")])
         self.assertEqual(self.sut.compiler.version, "12")
-        self.sut.values_list = [("compiler", "gcc")]
+        self.sut.update_values([("compiler", "gcc")])
         self.assertEqual(self.sut.compiler, "gcc")
-        self.sut.values_list = [("compiler.version", "4.8")]
+        self.sut.update_values([("compiler.version", "4.8")])
         self.assertEqual(self.sut.compiler.version, "4.8")
-        self.sut.values_list = [("compiler.arch", "x86")]
+        self.sut.update_values([("compiler.arch", "x86")])
         self.assertEqual(self.sut.compiler.arch, "x86")
-        self.sut.values_list = [("compiler.arch.speed", "A")]
+        self.sut.update_values([("compiler.arch.speed", "A")])
         self.assertEqual(self.sut.compiler.arch.speed, "A")
 
     def test_constraint(self):

@@ -30,8 +30,7 @@ class DiskRemover(object):
 
     def remove_recipe(self, package_layout, output):
         self.remove_src(package_layout)
-        self._remove(package_layout.export(), package_layout.ref, "export folder")
-        self._remove(package_layout.export_sources(), package_layout.ref, "export_source folder")
+        package_layout.export_remove()
         for f in package_layout.conanfile_lock_files(output=output):
             try:
                 os.remove(f)
