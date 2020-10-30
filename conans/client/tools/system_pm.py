@@ -1,5 +1,6 @@
 import os
 import sys
+import six
 
 from conans.client.runner import ConanRunner
 from conans.client.tools.oss import OSInfo, cross_building, get_cross_building_settings
@@ -144,17 +145,18 @@ class SystemPackageTool(object):
         :param arch_names: Package suffix/prefix name used by installer tool e.g. {"x86_64": "amd64"}
         :return: None
         """
-        packages = [packages] if isinstance(packages, str) else list(packages)
+        packages = [packages] if isinstance(packages, six.string_types) else list(packages)
         # only one (first) variant will be installed
         variants = list(filter(lambda x: isinstance(x, (tuple, list)), packages))
-        for variant in variants:
-            self.install(variant, update=update, force=force, arch_names=arch_names)
         # all packages will be installed
         packages = list(filter(lambda x: not isinstance(x, (tuple, list)), packages))
 
         if [pkg for pkg in packages if " " in pkg]:
             raise ConanException("Each string must contain only one package to be installed. "
                                  "Use a list instead e.g. ['foo', 'bar'].")
+
+        for variant in variants:
+            self.install(variant, update=update, force=force, arch_names=arch_names)
 
         packages = self._get_package_names(packages, arch_names)
 
@@ -173,11 +175,9 @@ class SystemPackageTool(object):
                 raise ConanException("Aborted due to CONAN_SYSREQUIRES_MODE=%s. "
                                      "Some system packages need to be installed" % mode)
 
-        to_be_installed = self._to_be_installed(packages)
-        if not force and not to_be_installed:
+        packages = packages if force else self._to_be_installed(packages)
+        if not force and not packages:
             return
-        # install only what is not installed yet
-        packages = packages if force else to_be_installed
 
         # From here system packages can be updated/modified
         if update and not self._is_up_to_date:
@@ -211,12 +211,8 @@ class SystemPackageTool(object):
     def _to_be_installed(self, packages):
         """ Returns a list with all not installed packages.
         """
-        for pkg in packages:
-            if isinstance(pkg, (list, tuple)):
-                if not self._to_be_installed(pkg):
-                    return list(pkg)
-        installed = {pkg: self._installed([pkg]) for pkg in packages}
-        return [] if all(installed.values()) else [pkg for pkg, i in installed.items() if not i]
+        not_installed = [pkg for pkg in packages if not self._tool.installed(pkg)]
+        return not_installed
 
     def _installed(self, packages):
         """ Return True if at least one of the packages is installed.
