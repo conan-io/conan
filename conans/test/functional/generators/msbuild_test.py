@@ -5,8 +5,8 @@ import unittest
 import pytest
 from nose.plugins.attrib import attr
 
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files
-from conans.test.utils.genconanfile import GenConanfile
+from conans.test.assets.cpp_test_files import cpp_hello_conan_files
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
 sln_file = r"""

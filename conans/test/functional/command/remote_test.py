@@ -4,7 +4,7 @@ import unittest
 from collections import OrderedDict
 
 from conans.model.ref import ConanFileReference
-from conans.test.utils.genconanfile import GenConanfile
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
 from conans.util.files import load
 

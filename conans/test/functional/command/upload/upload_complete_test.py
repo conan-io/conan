@@ -15,7 +15,7 @@ from conans.model.manifest import FileTreeManifest
 from conans.model.package_metadata import PackageMetadata
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE, CONANINFO, CONAN_MANIFEST, EXPORT_TGZ_NAME
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files, cpp_hello_source_files
+from conans.test.assets.cpp_test_files import cpp_hello_conan_files, cpp_hello_source_files
 from conans.test.utils.test_files import temp_folder, uncompress_packaged_files
 from conans.test.utils.tools import (NO_SETTINGS_PACKAGE_ID, TestClient, TestRequester, TestServer,
                                      GenConanfile)

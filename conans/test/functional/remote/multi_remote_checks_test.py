@@ -3,7 +3,7 @@ from collections import OrderedDict
 
 import time
 
-from conans.test.utils.genconanfile import GenConanfile
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, \
     inc_package_manifest_timestamp, inc_recipe_manifest_timestamp
 from conans.util.env_reader import get_env

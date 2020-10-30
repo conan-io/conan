@@ -23,9 +23,7 @@ class CMakeFindPathMultiGeneratorTest(unittest.TestCase):
         """
         c = TestClient()
         project_folder_name = "project_targets"
-        assets_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                                   "assets/cmake_find_package_multi")
-        c.copy_from_assets(assets_path, ["bye", "hello", project_folder_name])
+        c.copy_assets("cmake_find_package_multi", ["bye", "hello", project_folder_name])
 
         # Create packages for hello and bye
         for p in ("hello", "bye"):
