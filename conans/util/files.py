@@ -187,10 +187,16 @@ def save(path, content, only_if_modified=False, encoding="utf-8"):
         only_if_modified: file won't be modified if the content hasn't changed
         encoding: target file text encoding
     """
-    try:
-        os.makedirs(os.path.dirname(path))
-    except Exception:
-        pass
+    dir_path = os.path.dirname(path)
+    if not os.path.isdir(dir_path):
+        try:
+            os.makedirs(dir_path)
+        except OSError as error:
+            if error.errno not in (errno.EEXIST, errno.ENOENT):
+                raise OSError("The folder {} does not exist and could not be created ({})."
+                              .format(dir_path, error.strerror))
+        except Exception:
+            raise
 
     new_content = to_file_bytes(content, encoding)
 

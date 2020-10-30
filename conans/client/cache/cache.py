@@ -76,7 +76,7 @@ class ClientCache(object):
         self._config = None
         self.editable_packages = EditablePackages(self.cache_folder)
         # paths
-        self._store_folder = self.config.storage_path or self.cache_folder
+        self._store_folder = self.config.storage_path or os.path.join(self.cache_folder, "data")
         # Just call it to make it raise in case of short_paths misconfiguration
         _ = self.config.short_paths_home
 
@@ -155,7 +155,8 @@ class ClientCache(object):
     @property
     def localdb(self):
         localdb_filename = os.path.join(self.cache_folder, LOCALDB)
-        return LocalDB.create(localdb_filename)
+        encryption_key = os.getenv('CONAN_LOGIN_ENCRYPTION_KEY', None)
+        return LocalDB.create(localdb_filename, encryption_key=encryption_key)
 
     @property
     def conan_conf_path(self):

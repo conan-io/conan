@@ -130,10 +130,11 @@ class RemoteManager(object):
         uncompress_file(tgz_file, export_sources_folder, output=self._output)
         touch_folder(export_sources_folder)
 
-    def get_package(self, pref, layout, remote, output, recorder):
+    def get_package(self, conanfile, pref, layout, remote, output, recorder):
         conanfile_path = layout.conanfile()
         self._hook_manager.execute("pre_download_package", conanfile_path=conanfile_path,
-                                   reference=pref.ref, package_id=pref.id, remote=remote)
+                                   reference=pref.ref, package_id=pref.id, remote=remote,
+                                   conanfile=conanfile)
 
         output.info("Retrieving package %s from remote '%s' " % (pref.id, remote.name))
         layout.package_remove(pref)  # Remove first the destination folder
@@ -141,7 +142,8 @@ class RemoteManager(object):
             self._get_package(layout, pref, remote, output, recorder)
 
         self._hook_manager.execute("post_download_package", conanfile_path=conanfile_path,
-                                   reference=pref.ref, package_id=pref.id, remote=remote)
+                                   reference=pref.ref, package_id=pref.id, remote=remote,
+                                   conanfile=conanfile)
 
     def _get_package(self, layout, pref, remote, output, recorder):
         t1 = time.time()
