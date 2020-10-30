@@ -6,7 +6,7 @@ import unittest
 import pytest
 from nose.plugins.attrib import attr
 
-from conans.client.tools import remove_from_path
+from conans.client.tools import remove_from_path, no_op
 from conans.test.utils.multi_config import multi_config_files
 from conans.test.utils.tools import TestClient
 
@@ -138,7 +138,7 @@ int main(){{
 class CMakeMultiTest(unittest.TestCase):
 
     @attr("mingw")
-    @pytest.mark.tool_mingw
+    @pytest.mark.tool_gcc
     def test_cmake_multi_find(self):
         if platform.system() not in ["Windows", "Linux"]:
             return
@@ -182,7 +182,8 @@ class HelloConan(ConanFile):
         client.run("install . -s build_type=RelWithDebInfo --build=missing ")
         client.run("install . -s build_type=MinSizeRel --build=missing ")
 
-        with remove_from_path("sh"):
+        # in Linux it can remove /usr/bin from the path invalidating "cmake" and everything
+        with remove_from_path("sh") if platform.system() == "Windows" else no_op():
             generator = "MinGW Makefiles" if platform.system() == "Windows" else "Unix Makefiles"
             client.run_command('cmake . -G "%s" -DCMAKE_BUILD_TYPE=Debug' % generator)
             self.assertIn("FIND HELLO DEBUG!", client.out)
