@@ -35,7 +35,7 @@ if not which("svn"):
 if not which("autoconf") or not which("automake"):
     tools_available.remove("autotools")
 if not which("pkg-config"):
-    tools_available.remove("pkg-config")
+    tools_available.remove("pkg_config")
 if not which("premake"):
     tools_available.remove("premake")
 
