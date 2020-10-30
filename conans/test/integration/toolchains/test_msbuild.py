@@ -5,6 +5,7 @@ import unittest
 
 from conans.client.toolchain.visual import vcvars_command
 from conans.client.tools import vs_installation_path
+from conans.test.assets.sources import gen_function_cpp
 from conans.test.utils.tools import TestClient
 
 
@@ -240,58 +241,19 @@ class WinTest(unittest.TestCase):
                 msbuild.build("MyProject.sln")
         """)
 
-    app = textwrap.dedent("""
-        #include <iostream>
-        #include "hello.h"
+    app = gen_function_cpp("main", includes=["hello"], calls=["hello"],
+                           preprocessor=["DEFINITIONS_BOTH", "DEFINITIONS_CONFIG"])
 
-        int main() {
-            auto number = 0b1111'1111 ;  // VS 2017 is C++14 by default
-            hello();
-
-            #ifdef _M_X64
-            std::cout << "AppArch x64!!!\\n";
-            #else
-            std::cout << "AppArch x86!!!\\n";
-            #endif
-
-            #if _MSC_VER > 1900 && _MSC_VER < 1920
-            std::cout << "AppMSCVER 17!!" << std::endl;
-            # endif
-
-            #if _MSC_VER == 1900
-            std::cout << "AppMSCVER 15!!" << std::endl;
-            # endif
-
-            #if _MSVC_LANG == 201402L
-            std::cout << "AppCppStd 14!!!\\n";
-            #endif
-
-            #if _MSVC_LANG == 201703L
-            std::cout << "AppCppStd 17!!!\\n";
-            #endif
-
-
-            #ifdef NDEBUG
-            std::cout << "App: Release!" <<std::endl;
-            #else
-            std::cout << "App: Debug!" <<std::endl;
-            #endif
-
-            std::cout << "DEFINITIONS_BOTH: " << DEFINITIONS_BOTH << "\\n";
-            std::cout << "DEFINITIONS_CONFIG: " << DEFINITIONS_CONFIG << "\\n";
-        }
-        """)
-
-    def _run_app(self, client, arch, build_type, msg="App"):
+    def _run_app(self, client, arch, build_type, msg="main"):
         if arch == "x86":
             command_str = "%s\\MyApp.exe" % build_type
         else:
             command_str = "x64\\%s\\MyApp.exe" % build_type
         client.run_command(command_str)
         if arch == "x86":
-            self.assertIn("AppArch x86!!!", client.out)
+            self.assertIn("main _M_IX86 defined", client.out)
         else:
-            self.assertIn("AppArch x64!!!", client.out)
+            self.assertIn("main _M_X64 defined", client.out)
         self.assertIn("Hello World %s" % build_type, client.out)
         self.assertIn("%s: %s!" % (msg, build_type), client.out)
         self.assertIn("DEFINITIONS_BOTH: True", client.out)
@@ -328,8 +290,8 @@ class WinTest(unittest.TestCase):
         self.assertIn("Visual Studio 2017", client.out)
         self.assertIn("[vcvarsall.bat] Environment initialized for: 'x86'", client.out)
         self._run_app(client, "x86", "Release")
-        self.assertIn("AppMSCVER 17!!", client.out)
-        self.assertIn("AppCppStd 17!!!", client.out)
+        self.assertIn("main _MSC_VER1916", client.out)
+        self.assertIn("main _MSVC_LANG2017", client.out)
 
         vcvars = vcvars_command(version="15", architecture="x86")
         cmd = ('%s && dumpbin /dependents "Release\\MyApp.exe"' % vcvars)
@@ -368,8 +330,8 @@ class WinTest(unittest.TestCase):
         self.assertIn("Visual Studio 2017", client.out)
         self.assertIn("[vcvarsall.bat] Environment initialized for: 'x64'", client.out)
         self._run_app(client, "x64", "Debug")
-        self.assertIn("AppMSCVER 15!!", client.out)
-        self.assertIn("AppCppStd 14!!!", client.out)
+        self.assertIn("main _MSC_VER1900", client.out)
+        self.assertIn("main _MSVC_LANG2014", client.out)
 
         vcvars = vcvars_command(version="15", architecture="amd64")
         cmd = ('%s && dumpbin /dependents "x64\\Debug\\MyApp.exe"' % vcvars)
@@ -416,5 +378,5 @@ class WinTest(unittest.TestCase):
             self.assertIn("Visual Studio 2017", client.out)
             self.assertIn("[vcvarsall.bat] Environment initialized for: 'x64'", client.out)
             self._run_app(client, arch, build_type)
-            self.assertIn("AppMSCVER 17!!", client.out)
-            self.assertIn("AppCppStd 17!!!", client.out)
+            self.assertIn("main _MSC_VER1916", client.out)
+            self.assertIn("main _MSVC_LANG2017", client.out)
