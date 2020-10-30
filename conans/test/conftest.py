@@ -9,6 +9,7 @@ tools_available = [
     'autotools', 'pkg_config', 'premake',
     'file',
     'git', 'svn',
+    'compiler'
 ]
 
 if not which("cmake"):
@@ -18,11 +19,14 @@ if not which("gcc"):
     tools_available.remove("gcc")
 if not which("clang"):
     tools_available.remove("clang")
-
 try:
     vswhere()
 except ConanException:
     tools_available.remove("visual_studio")
+
+if not any([x for x in ("gcc", "clang", "visual_sudio") if x in tools_available]):
+    tools_available.remove("compiler")
+
 
 if not which("file"):
     tools_available.remove("file")
