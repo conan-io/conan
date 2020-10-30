@@ -147,7 +147,7 @@ class SystemPackageTool(object):
         """
         packages = [packages] if isinstance(packages, six.string_types) else list(packages)
         # only one (first) variant will be installed
-        variants = list(filter(lambda x: isinstance(x, (tuple, list)), packages))
+        list_variants = list(filter(lambda x: isinstance(x, (tuple, list)), packages))
         # all packages will be installed
         packages = list(filter(lambda x: not isinstance(x, (tuple, list)), packages))
 
@@ -155,7 +155,7 @@ class SystemPackageTool(object):
             raise ConanException("Each string must contain only one package to be installed. "
                                  "Use a list instead e.g. ['foo', 'bar'].")
 
-        for variant in variants:
+        for variant in list_variants:
             self.install(variant, update=update, force=force, arch_names=arch_names)
 
         packages = self._get_package_names(packages, arch_names)
