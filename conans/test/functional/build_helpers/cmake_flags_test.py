@@ -4,6 +4,7 @@ import textwrap
 import unittest
 from textwrap import dedent
 
+import pytest
 from nose.plugins.attrib import attr
 from parameterized.parameterized import parameterized
 
@@ -61,6 +62,7 @@ message(STATUS "HELLO_DEFINES=${HELLO_DEFINES}")
 
 
 @attr("slow")
+@pytest.mark.slow
 class CMakeFlagsTest(unittest.TestCase):
 
     def _get_line(self, text, begin):
@@ -92,7 +94,13 @@ class CMakeFlagsTest(unittest.TestCase):
             """)
 
         client.save({"conanfile.py": conanfile_vcvars})
-        client.run('create . pkg/1.0@ -e PATH="MyCustomPath"')
+        # FIXME this would fail:
+        # client.run('create . pkg/1.0@ -e PATH="MyCustomPath"')
+        # because cmake will not be in the PATH anymore, and CMake.get_version() fails
+        # For some reason cmake.configure() worked in the past, because it is finding the
+        # cmake inside VISUAL STUDIO!!! (cmake version 3.12.18081601-MSVC_2), because VS vcvars
+        # is activated by CMake for Ninja
+        client.run('create . pkg/1.0@ -e PATH=["MyCustomPath"]')
         self.assertIn("pkg/1.0: PATH ENV VAR: MyCustomPath;", client.out)
 
     @parameterized.expand([(True, ), (False, )])

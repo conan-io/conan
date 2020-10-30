@@ -9,9 +9,8 @@ CONAN_VERSION = "version.txt"
 
 class Migrator(object):
 
-    def __init__(self, conf_path, store_path, current_version, out):
+    def __init__(self, conf_path, current_version, out):
         self.conf_path = conf_path
-        self.store_path = store_path
 
         self.current_version = current_version
         self.file_version_path = os.path.join(self.conf_path, CONAN_VERSION)
@@ -33,8 +32,9 @@ class Migrator(object):
     def _update_version_file(self):
         try:
             save(self.file_version_path, str(self.current_version))
-        except Exception:
-            raise ConanException("Can't write version file in %s" % self.file_version_path)
+        except Exception as error:
+            raise ConanException("Can't write version file in '{}': {}"
+                                 .format(self.file_version_path, str(error)))
 
     def _load_old_version(self):
         try:

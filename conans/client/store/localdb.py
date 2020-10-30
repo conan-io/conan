@@ -1,20 +1,46 @@
 import os
 import sqlite3
+from contextlib import contextmanager
 from sqlite3 import OperationalError
 
 from conans.errors import ConanException
-from contextlib import contextmanager
+from conans.util import encrypt
 
 REMOTES_USER_TABLE = "users_remotes"
 
 
 class LocalDB(object):
 
-    def __init__(self, dbfile):
+    def __init__(self, dbfile, encryption_key):
         self.dbfile = dbfile
+        self.encryption_key = encryption_key
+
+    def _encode(self, value):
+        if self.encryption_key:
+            return encrypt.encode(value, self.encryption_key)
+        return value
+
+    def _decode(self, value):
+        if self.encryption_key:
+            return encrypt.decode(value, self.encryption_key)
+        return value
+
+    def clean(self):
+        with self._connect() as connection:
+            try:
+                cursor = connection.cursor()
+                cursor.execute("DELETE FROM %s" % REMOTES_USER_TABLE)
+                try:
+                    # https://github.com/ghaering/pysqlite/issues/109
+                    connection.isolation_level = None
+                    cursor.execute('VACUUM')  # Make sure the DB is cleaned, drop doesn't do that
+                except OperationalError:
+                    pass
+            except Exception as e:
+                raise ConanException("Could not initialize local sqlite database", e)
 
     @staticmethod
-    def create(dbfile, clean=False):
+    def create(dbfile, encryption_key=None):
         # Create the database file if it doesn't exist
         if not os.path.exists(dbfile):
             par = os.path.dirname(dbfile)
@@ -23,29 +49,18 @@ class LocalDB(object):
             db = open(dbfile, 'w+')
             db.close()
 
-        connection = sqlite3.connect(dbfile, detect_types=sqlite3.PARSE_DECLTYPES)
+        db = LocalDB(dbfile, encryption_key=encryption_key)
+        with db._connect() as connection:
+            try:
+                cursor = connection.cursor()
+                cursor.execute("create table if not exists %s "
+                               "(remote_url TEXT UNIQUE, user TEXT, "
+                               "token TEXT, refresh_token TEXT)" % REMOTES_USER_TABLE)
+            except Exception as e:
+                message = "Could not initialize local sqlite database"
+                raise ConanException(message, e)
 
-        try:
-            cursor = connection.cursor()
-            if clean:
-                cursor.execute("drop table if exists %s" % REMOTES_USER_TABLE)
-                try:
-                    # https://github.com/ghaering/pysqlite/issues/109
-                    connection.isolation_level = None
-                    cursor.execute('VACUUM')  # Make sure the DB is cleaned, drop doesn't do that
-                except OperationalError:
-                    pass
-
-            cursor.execute("create table if not exists %s "
-                           "(remote_url TEXT UNIQUE, user TEXT, "
-                           "token TEXT, refresh_token TEXT)" % REMOTES_USER_TABLE)
-        except Exception as e:
-            message = "Could not initialize local sqlite database"
-            raise ConanException(message, e)
-        finally:
-            connection.close()
-
-        return LocalDB(dbfile)
+        return db
 
     @contextmanager
     def _connect(self):
@@ -67,8 +82,8 @@ class LocalDB(object):
                 if not rs:
                     return None, None, None
                 name = rs[0]
-                token = rs[1]
-                refresh_token = rs[2]
+                token = self._decode(rs[1])
+                refresh_token = self._decode(rs[2])
                 return name, token, refresh_token
             except Exception:
                 raise ConanException("Couldn't read login\n Try removing '%s' file" % self.dbfile)
@@ -80,6 +95,8 @@ class LocalDB(object):
         """ Login is a tuple of (user, token) """
         with self._connect() as connection:
             try:
+                token = self._encode(token)
+                refresh_token = self._encode(refresh_token)
                 statement = connection.cursor()
                 statement.execute("INSERT OR REPLACE INTO %s (remote_url, user, token, "
                                   "refresh_token) "

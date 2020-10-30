@@ -1524,7 +1524,7 @@ class Test(ConanFile):
         client.run("search missing/1.0@conan/stable --revisions -r default", assert_error=True)
         self.assertIn("ERROR: The remote doesn't support revisions", client.out)
 
-    def test_test_invalid_references(self):
+    def test_invalid_references(self):
         client = TestClient()
         # Local errors
         client.run("search missing/1.0@conan/stable#revision --revisions", assert_error=True)

@@ -4,7 +4,6 @@ from collections import OrderedDict
 
 from parameterized.parameterized import parameterized
 
-from conans.client import tools
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_SRC_FOLDER, EXPORT_TGZ_NAME
@@ -144,27 +143,19 @@ class ExportsSourcesTest(unittest.TestCase):
         self.assertEqual(scan_folder(export_src_folder or self.export_sources_folder),
                          sorted(expected_src_exports))
 
-    def _check_export_installed_folder(self, mode, reuploaded=False, updated=False):
+    def _check_export_installed_folder(self, mode, updated=False):
         """ Just installed, no EXPORT_SOURCES_DIR is present
         """
         if mode == "exports_sources":
             expected_exports = ['conanfile.py', 'conanmanifest.txt']
         if mode == "both":
             expected_exports = ['conanfile.py', 'conanmanifest.txt', "data.txt"]
-            if reuploaded:
-                expected_exports.append("conan_export.tgz")
         if mode == "exports":
             expected_exports = ['conanfile.py', 'conanmanifest.txt', "hello.h"]
-            if reuploaded:
-                expected_exports.append("conan_export.tgz")
         if mode == "nested":
             expected_exports = ['conanfile.py', 'conanmanifest.txt', "src/data.txt"]
-            if reuploaded:
-                expected_exports.append("conan_export.tgz")
         if mode == "overlap":
             expected_exports = ['conanfile.py', 'conanmanifest.txt', "src/data.txt", "src/hello.h"]
-            if reuploaded:
-                expected_exports.append("conan_export.tgz")
         if updated:
             expected_exports.append("license.txt")
 
@@ -174,23 +165,20 @@ class ExportsSourcesTest(unittest.TestCase):
     def _check_export_uploaded_folder(self, mode, export_folder=None, export_src_folder=None):
         if mode == "exports_sources":
             expected_src_exports = ["hello.h"]
-            expected_exports = ['conanfile.py', 'conanmanifest.txt', EXPORT_SOURCES_TGZ_NAME]
+            expected_exports = ['conanfile.py', 'conanmanifest.txt']
         if mode == "exports":
             expected_src_exports = []
-            expected_exports = ["hello.h", 'conanfile.py', 'conanmanifest.txt', EXPORT_TGZ_NAME]
+            expected_exports = ["hello.h", 'conanfile.py', 'conanmanifest.txt']
         if mode == "both":
             expected_src_exports = ["hello.h"]
-            expected_exports = ['conanfile.py', 'conanmanifest.txt', "data.txt",
-                                EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME]
+            expected_exports = ['conanfile.py', 'conanmanifest.txt', "data.txt"]
         if mode == "nested":
             expected_src_exports = ["src/hello.h"]
-            expected_exports = ["src/data.txt", 'conanfile.py', 'conanmanifest.txt',
-                                EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME]
+            expected_exports = ["src/data.txt", 'conanfile.py', 'conanmanifest.txt']
 
         if mode == "overlap":
             expected_src_exports = ["src/hello.h", "src/data.txt"]
-            expected_exports = ["src/data.txt", "src/hello.h", 'conanfile.py', 'conanmanifest.txt',
-                                EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME]
+            expected_exports = ["src/data.txt", "src/hello.h", 'conanfile.py', 'conanmanifest.txt']
 
         export_folder = export_folder or self.export_folder
         self.assertEqual(scan_folder(export_folder), sorted(expected_exports))
@@ -366,7 +354,7 @@ class ExportsSourcesTest(unittest.TestCase):
 
         # upload to remote again, the folder remains as installed
         self.client.run("upload Hello/0.1@lasote/testing --all")
-        self._check_export_installed_folder(mode, reuploaded=True)
+        self._check_export_installed_folder(mode)
         self._check_server_folder(mode)
 
         self.client.run("upload Hello/0.1@lasote/testing --all -r=other")
@@ -400,29 +388,3 @@ class ExportsSourcesTest(unittest.TestCase):
 
         self.client.run("install Hello/0.1@lasote/testing --update")
         self._check_export_installed_folder(mode, updated=True)
-
-    def test_exports_sources_old_c_src(self):
-        conanfile = """
-import os
-from conans import ConanFile
-
-class HelloConan(ConanFile):
-    exports_sources = "*"
-
-    def build(self):
-        # won't be run in create but in the install from remote, we are emulating old .c_src
-        # in the package
-        if not os.environ.get("SKIP_THIS"):
-            # This dir has to exists after the install
-            assert(os.path.exists("modules/Hello/projects/Hello/myfile.txt"))
-
-"""
-        # Fake old package layout with .c_src
-        self.client.save({"conanfile.py": conanfile,
-                          ".c_src/modules/Hello/projects/Hello/myfile.txt": "contents"})
-        with tools.environment_append({"SKIP_THIS": "1"}):
-            self.client.run("create . Hello/0.1@lasote/channel")
-        self.client.run("upload Hello/0.1@lasote/channel --all")
-
-        self.client.run('remove "*" -f')
-        self.client.run("install Hello/0.1@lasote/channel --build")

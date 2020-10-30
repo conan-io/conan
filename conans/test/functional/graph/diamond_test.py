@@ -2,6 +2,7 @@ import os
 import platform
 import unittest
 
+import pytest
 from nose.plugins.attrib import attr
 
 from conans.client.generators.text import TXTGenerator
@@ -12,6 +13,7 @@ from conans.util.files import load
 
 
 @attr("slow")
+@pytest.mark.slow
 class DiamondTest(unittest.TestCase):
 
     def setUp(self):

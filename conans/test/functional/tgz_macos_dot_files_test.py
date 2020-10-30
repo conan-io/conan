@@ -7,10 +7,10 @@ import textwrap
 import unittest
 
 from conans.client.remote_manager import uncompress_file
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.ref import PackageReference
 from conans.paths import EXPORT_SOURCES_TGZ_NAME
 from conans.test.utils.mocks import TestBufferConanOutput
-from conans.test.utils.tools import TestClient, TestServer
+from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 
 
 @unittest.skipUnless(platform.system() == "Darwin", "Requires OSX")
@@ -71,22 +71,19 @@ class TgzMacosDotFilesTest(unittest.TestCase):
                     self.copy("file.txt")
             """)
 
-        default_server = TestServer()
-        servers = {"default": default_server}
-        t = TestClient(path_with_spaces=False, servers=servers,
-                       users={"default": [("lasote", "mypass")]})
-        t.save(files={'conanfile.py': conanfile, 'file.txt': "content"})
+        t = TestClient(path_with_spaces=False, default_server_user=True)
+        t.save({'conanfile.py': conanfile, 'file.txt': "content"})
 
         def _add_macos_metadata_to_file(filepath):
             subprocess.call(["xattr", "-w", "name", "value", filepath])
 
         _add_macos_metadata_to_file(os.path.join(t.current_folder, 'file.txt'))
-        t.run("create . lasote/channel")
+        t.run("create . user/channel")
 
         # Check if the metadata travels through the Conan commands
-        pref = PackageReference.loads(
-            "lib/version@lasote/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
-        pkg_folder = t.cache.package_layout(pref.ref).package(pref)
+        pref = PackageReference.loads("lib/version@user/channel:%s" % NO_SETTINGS_PACKAGE_ID)
+        layout = t.cache.package_layout(pref.ref)
+        pkg_folder = layout.package(pref)
 
         # 1) When copied to the package folder, the metadata is lost
         self._test_for_metadata(pkg_folder, 'file.txt', dot_file_expected=False)
@@ -96,9 +93,8 @@ class TgzMacosDotFilesTest(unittest.TestCase):
         self._test_for_metadata(pkg_folder, 'file.txt', dot_file_expected=True)
 
         # 3) In the upload process, the metadata is lost again
-        ref = ConanFileReference.loads("lib/version@lasote/channel")
-        export_folder = t.cache.package_layout(ref).export()
-        tgz = os.path.join(export_folder, EXPORT_SOURCES_TGZ_NAME)
+        export_download_folder = layout.download_export()
+        tgz = os.path.join(export_download_folder, EXPORT_SOURCES_TGZ_NAME)
         self.assertFalse(os.path.exists(tgz))
-        t.run("upload lib/version@lasote/channel")
+        t.run("upload lib/version@user/channel")
         self._test_for_metadata_in_zip_file(tgz, 'file.txt', dot_file_expected=False)

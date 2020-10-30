@@ -2,6 +2,7 @@ import os
 import shutil
 import unittest
 
+import pytest
 from nose.plugins.attrib import attr
 
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
@@ -10,6 +11,7 @@ from conans.util.files import rmdir
 
 
 @attr("slow")
+@pytest.mark.slow
 class SharedChainTest(unittest.TestCase):
 
     def setUp(self):

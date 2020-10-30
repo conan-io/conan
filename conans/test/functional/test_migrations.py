@@ -1,5 +1,6 @@
 import json
 import os
+import textwrap
 import unittest
 
 from six import StringIO
@@ -11,9 +12,10 @@ from conans.client.migrations import migrate_plugins_to_hooks, migrate_to_defaul
 from conans.client.output import ConanOutput
 from conans.client.tools.version import Version
 from conans.migrations import CONAN_VERSION
-from conans.model.ref import ConanFileReference
+from conans.model.ref import ConanFileReference, PackageReference
+from conans.paths import EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME, PACKAGE_TGZ_NAME
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient, GenConanfile
+from conans.test.utils.tools import TestClient, GenConanfile, NO_SETTINGS_PACKAGE_ID
 from conans.util.files import load, save
 from conans.client import migrations_settings
 from conans.client.conf import get_default_settings_yml
@@ -204,7 +206,7 @@ the old general
                                                         "layout": "anyfile"}}))
 
         cache = TestClient(cache_folder=tmp_folder).cache
-        migrate_editables_use_conanfile_name(cache, None)
+        migrate_editables_use_conanfile_name(cache)
 
         # Now we have same info and full paths
         with open(os.path.join(tmp_folder, EDITABLE_PACKAGES_FILE)) as f:
@@ -214,3 +216,40 @@ the old general
         self.assertEqual(data["name/version"]["layout"], None)
         self.assertEqual(data["other/version@user/testing"]["path"], conanfile2)
         self.assertEqual(data["other/version@user/testing"]["layout"], "anyfile")
+
+    def test_migration_tgz_location(self):
+        client = TestClient(default_server_user=True)
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class Pkg(ConanFile):
+                exports = "*.txt"
+                exports_sources = "*.h"
+            """)
+        client.save({"conanfile.py": conanfile,
+                     "file.h": "contents",
+                     "file.txt": "contents"})
+        client.run("create . pkg/1.0@")
+        ref = ConanFileReference.loads("pkg/1.0")
+        layout = client.cache.package_layout(ref)
+        export_tgz = os.path.join(layout.export(), EXPORT_TGZ_NAME)
+        export_src_tgz = os.path.join(layout.export(), EXPORT_SOURCES_TGZ_NAME)
+        pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
+        pkg_tgz = os.path.join(layout.package(pref), PACKAGE_TGZ_NAME)
+        save(export_tgz, "")
+        save(export_src_tgz, "")
+        save(pkg_tgz, "")
+        self.assertTrue(os.path.isfile(export_tgz))
+        self.assertTrue(os.path.isfile(export_src_tgz))
+        self.assertTrue(os.path.isfile(pkg_tgz))
+        save(os.path.join(client.cache_folder, "version.txt"), "1.30.0")
+        client2 = TestClient(client.cache_folder)
+        if client2.cache.config.revisions_enabled:
+            self.assertIn("Removing temporary .tgz files, they are stored in a different "
+                          "location now", client2.out)
+        else:
+            client2.run("-h")
+            self.assertIn("Removing temporary .tgz files, they are stored in a different "
+                          "location now", client2.out)
+        self.assertFalse(os.path.isfile(export_tgz))
+        self.assertFalse(os.path.isfile(export_src_tgz))
+        self.assertFalse(os.path.isfile(pkg_tgz))

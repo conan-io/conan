@@ -2,6 +2,7 @@ import os
 import time
 import unittest
 
+import pytest
 from nose.plugins.attrib import attr
 
 from conans.model.ref import ConanFileReference, PackageReference
@@ -11,6 +12,7 @@ from conans.test.utils.tools import TestClient, TestServer
 
 
 @attr("slow")
+@pytest.mark.slow
 class CompleteFlowTest(unittest.TestCase):
 
     def test_reuse_complete_urls(self):

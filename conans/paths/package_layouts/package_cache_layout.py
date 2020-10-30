@@ -117,17 +117,15 @@ class PackageCacheLayout(object):
         yield
         clean_dirty(pkg_folder)
 
+    def download_package(self, pref):
+        return os.path.join(self._base_folder, "dl", "pkg", pref.id)
+
+    def download_export(self):
+        return os.path.join(self._base_folder, "dl", "export")
+
     def package_is_dirty(self, pref):
         pkg_folder = os.path.join(self._base_folder, PACKAGES_FOLDER, pref.id)
         return is_dirty(pkg_folder)
-
-    def package_set_dirty(self, pref):
-        pkg_folder = os.path.join(self._base_folder, PACKAGES_FOLDER, pref.id)
-        return set_dirty(pkg_folder)
-
-    def package_clean_dirty(self, pref):
-        pkg_folder = os.path.join(self._base_folder, PACKAGES_FOLDER, pref.id)
-        return clean_dirty(pkg_folder)
 
     def package_id_exists(self, package_id):
         # This is NOT the short paths, but the standard cache one
@@ -138,6 +136,9 @@ class PackageCacheLayout(object):
         # Here we could validate and check we own a write lock over this package
         assert isinstance(pref, PackageReference)
         assert pref.ref == self._ref, "{!r} != {!r}".format(pref.ref, self._ref)
+        # Remove the tgz storage
+        tgz_folder = self.download_package(pref)
+        rmdir(tgz_folder)
         # This is NOT the short paths, but the standard cache one
         pkg_folder = os.path.join(self._base_folder, PACKAGES_FOLDER, pref.id)
         try:
@@ -146,6 +147,18 @@ class PackageCacheLayout(object):
             raise ConanException("%s\n\nFolder: %s\n"
                                  "Couldn't remove folder, might be busy or open\n"
                                  "Close any app using it, and retry" % (pkg_folder, str(e)))
+        if is_dirty(pkg_folder):
+            clean_dirty(pkg_folder)
+
+    def export_remove(self):
+        export_folder = self.export()
+        rmdir(export_folder)
+        export_src_folder = self.export_sources()
+        rm_conandir(export_src_folder)
+        download_export = self.download_export()
+        rmdir(download_export)
+        scm_folder = self.scm_sources()
+        rmdir(scm_folder)
 
     def package_metadata(self):
         return os.path.join(self._base_folder, PACKAGE_METADATA)

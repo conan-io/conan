@@ -3,6 +3,7 @@ import platform
 import textwrap
 import unittest
 
+import pytest
 import six
 from nose.plugins.attrib import attr
 from parameterized import parameterized
@@ -10,15 +11,16 @@ from parameterized import parameterized
 from conans.client.tools.files import replace_in_file
 from conans.model.ref import PackageReference
 from conans.paths import CONANFILE
+from conans.test.utils.deprecation import catch_deprecation_warning
 from conans.test.utils.tools import TestClient
 from conans.test.utils.visual_project_files import get_vs_project_files
-from conans.test.utils.deprecation import catch_deprecation_warning
 from conans.util.files import load
 
 
 class MSBuildTest(unittest.TestCase):
 
     @attr('slow')
+    @pytest.mark.slow
     @unittest.skipUnless(platform.system() == "Windows" and six.PY3, "Requires MSBuild")
     def test_build_vs_project(self):
         conan_build_vs = """
@@ -101,6 +103,7 @@ class HelloConan(ConanFile):
         self.assertTrue(os.path.exists(os.path.join(build_folder, "mp.props")))
 
     @attr('slow')
+    @pytest.mark.slow
     @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
     def test_user_properties_file(self):
         conan_build_vs = textwrap.dedent("""
@@ -153,6 +156,7 @@ class HelloConan(ConanFile):
         self.assertIn("<RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>", content)
 
     @attr('slow')
+    @pytest.mark.slow
     @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
     def test_user_properties_multifile(self):
         conan_build_vs = textwrap.dedent("""
