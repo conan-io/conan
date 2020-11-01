@@ -96,17 +96,6 @@ class FileTreeManifest(object):
         content = "\n".join(ret)
         return content
 
-    def __str__(self):
-        raise
-        # TODO: check if this is used in the UI
-        dt = datetime.datetime.utcfromtimestamp(self.time).strftime('%Y-%m-%d %H:%M:%S')
-        ret = ["Time: %s" % dt]
-        for file_path, file_md5 in sorted(self.file_sums.items()):
-            ret.append("%s, MD5: %s" % (file_path, file_md5))
-        ret.append("")
-        content = "\n".join(ret)
-        return content
-
     def save(self, folder, filename=CONAN_MANIFEST):
         path = os.path.join(folder, filename)
         save(path, repr(self))
