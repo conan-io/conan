@@ -51,9 +51,11 @@ class ConanProxy(object):
             status = RECIPE_DOWNLOADED
             return conanfile_path, status, remote, new_ref
 
-        metadata = layout.load_metadata()
-        cur_revision = metadata.recipe.revision
-        cur_remote = metadata.recipe.remote
+        with layout.update_metadata() as metadata:
+            cur_revision = metadata.recipe.revision
+            cur_remote = metadata.recipe.remote
+            metadata.recipe.lru_now()
+
         cur_remote = remotes[cur_remote] if cur_remote else None
         selected_remote = remotes.selected or cur_remote
 

@@ -171,6 +171,18 @@ class PackageCacheLayout(object):
             if recipe.lru + old <= current_time:
                 return ref, None, None, None  # All in ref can be removed
 
+        if package_ids is None:
+            package_ids = self.package_ids()
+        filter_package_ids = []
+        for package_id in package_ids:
+            package_lru = metadata.packages[package_id].lru
+            if package_lru is not None:
+                if package_lru + old <= current_time:
+                    filter_package_ids.append(package_id)
+
+        if filter_package_ids:
+            return ref, src, build_ids, filter_package_ids
+
         return None, src, build_ids, package_ids
 
     def package_metadata(self):
