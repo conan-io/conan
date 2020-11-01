@@ -572,9 +572,10 @@ class CmdUpload(object):
         try:
             self._output.info("\n%s" % ("-"*40))
             self._output.info("Remote manifest:")
-            self._output.info(remote_recipe_manifest)
+            # FIXME: Conversion to repr() only necessary to pass test
+            self._output.info(repr(remote_recipe_manifest))
             self._output.info("Local manifest:")
-            self._output.info(local_manifest)
+            self._output.info(repr(local_manifest))
             difference = remote_recipe_manifest.difference(local_manifest)
             if "conanfile.py" in difference:
                 contents = load(self._cache.package_layout(ref).conanfile())
