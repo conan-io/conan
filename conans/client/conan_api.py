@@ -48,7 +48,6 @@ from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest.rest_client import RestApiClientFactory
 from conans.client.runner import ConanRunner
 from conans.client.source import config_source_local
-from conans.client.store.localdb import LocalDB
 from conans.client.tools.env import environment_append
 from conans.client.userio import UserIO
 from conans.errors import (ConanException, RecipeNotFoundException,
@@ -65,7 +64,7 @@ from conans.search.search import search_recipes
 from conans.tools import set_global_instances
 from conans.unicode import get_cwd
 from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
-from conans.util.dates import interval_from_text
+from conans.util.dates import timedelta_from_text
 from conans.util.env_reader import get_env
 from conans.util.files import exception_message_safe, mkdir, save_files, load, save
 from conans.util.log import configure_logger
@@ -855,7 +854,7 @@ class ConanAPIV1(object):
                remote_name=None, outdated=False, old=None):
         remotes = self.app.cache.registry.load_remotes()
         if old is not None:
-            old = interval_from_text(old)
+            old = timedelta_from_text(old).total_seconds()
         remover = ConanRemover(self.app.cache, self.app.remote_manager, self.app.user_io, remotes)
         remover.remove(pattern, remote_name, src, builds, packages, force=force,
                        packages_query=query, outdated=outdated, old=old)

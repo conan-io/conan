@@ -97,9 +97,9 @@ class ConanServiceTest(unittest.TestCase):
         files = cpp_hello_source_files("test")
         save_files(self.server_store.export(self.ref), files)
         self.server_store.update_last_revision(self.ref)
-        self.conan_digest = FileTreeManifest.create(self.server_store.export(self.ref))
+        manifest = FileTreeManifest.create(self.server_store.export(self.ref))
         conan_digest_path = os.path.join(self.server_store.export(self.ref), CONAN_MANIFEST)
-        save(conan_digest_path, str(self.conan_digest))
+        save(conan_digest_path, repr(manifest))
 
         files = cpp_hello_source_files("package")
         save_files(self.server_store.package(self.pref), files)

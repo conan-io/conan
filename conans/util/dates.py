@@ -1,5 +1,8 @@
+import calendar
 import datetime
 import re
+import time
+
 
 from dateutil import parser
 
@@ -19,15 +22,20 @@ def iso8601_to_str(iso_str):
     return dt.strftime('%Y-%m-%d %H:%M:%S UTC')
 
 
-def interval_from_text(interval):
+def timestamp_now():
+    # seconds since epoch 0, easy to store
+    return calendar.timegm(time.gmtime())
+
+
+def timedelta_from_text(interval):
     match = re.search(r"(\d+)([mhd])", interval)
     try:
         value, unit = match.group(1), match.group(2)
         if unit == 'm':
-            return datetime.timedelta(minutes=float(value)).total_seconds()
+            return datetime.timedelta(minutes=float(value))
         elif unit == 'h':
-            return datetime.timedelta(hours=float(value)).total_seconds()
+            return datetime.timedelta(hours=float(value))
         else:
-            return datetime.timedelta(days=float(value)).total_seconds()
+            return datetime.timedelta(days=float(value))
     except Exception:
         raise ConanException("Incorrect time interval definition: %s" % interval)

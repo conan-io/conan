@@ -1,11 +1,8 @@
-import calendar
 import json
-import time
 from collections import defaultdict
-from datetime import datetime
 
 from conans import DEFAULT_REVISION_V1
-from conans.util.dates import iso8601_to_str
+from conans.util.dates import timestamp_now
 
 
 class _RecipeMetadata(object):
@@ -18,7 +15,7 @@ class _RecipeMetadata(object):
         self.lru = None
 
     def lru_now(self):
-        self.lru = calendar.timegm(time.gmtime())
+        self.lru = timestamp_now()
 
     def to_dict(self):
         ret = {"revision": self.revision,
@@ -51,7 +48,7 @@ class _BinaryPackageMetadata(object):
         self.lru = None
 
     def lru_now(self):
-        self.lru = calendar.timegm(time.gmtime())
+        self.lru = timestamp_now()
 
     @property
     def revision(self):

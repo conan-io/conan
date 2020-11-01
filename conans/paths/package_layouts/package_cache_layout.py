@@ -19,7 +19,7 @@ from conans.model.ref import ConanFileReference
 from conans.model.ref import PackageReference
 from conans.paths import CONANFILE, SYSTEM_REQS, EXPORT_FOLDER, EXPORT_SRC_FOLDER, SRC_FOLDER, \
     BUILD_FOLDER, PACKAGES_FOLDER, SYSTEM_REQS_FOLDER, PACKAGE_METADATA, SCM_SRC_FOLDER, rm_conandir
-from conans.util.dates import from_iso8601_to_datetime
+from conans.util.dates import from_iso8601_to_datetime, timestamp_now
 from conans.util.files import load, save, rmdir, set_dirty, clean_dirty, is_dirty
 from conans.util.locks import Lock, NoLock, ReadLock, SimpleLock, WriteLock
 from conans.util.log import logger
@@ -166,7 +166,7 @@ class PackageCacheLayout(object):
     def filter_old(self, ref, src, build_ids, package_ids, old):
         metadata = self.load_metadata()
         recipe = metadata.recipe
-        current_time = calendar.timegm(time.gmtime())
+        current_time = timestamp_now()
         if recipe.lru is not None:
             if recipe.lru + old <= current_time:
                 return ref, None, None, None  # All in ref can be removed
