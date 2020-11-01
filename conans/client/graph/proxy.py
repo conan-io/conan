@@ -119,6 +119,7 @@ class ConanProxy(object):
             output.info("Downloaded recipe revision %s" % _ref.revision)
             with layout.update_metadata() as metadata:
                 metadata.recipe.remote = the_remote.name
+                metadata.recipe.lru_now()
             recorder.recipe_downloaded(ref, the_remote.url)
             return _ref
 

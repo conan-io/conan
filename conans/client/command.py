@@ -1099,9 +1099,13 @@ class Command(object):
                             help='Remove source folders')
         parser.add_argument('-t', '--system-reqs', default=False, action="store_true",
                             help='Remove system_reqs folders')
+        parser.add_argument('--old', help='Remove recipes or packages older than given time')
         args = parser.parse_args(*args)
 
         self._warn_python_version()
+
+        if args.old and args.remote:
+            raise ConanException("Remove old packages only work in cache, not remotes")
 
         if args.packages is not None and args.query:
             raise ConanException("'-q' and '-p' parameters can't be used at the same time")
@@ -1134,7 +1138,8 @@ class Command(object):
 
         return self._conan.remove(pattern=args.pattern_or_reference, query=args.query,
                                   packages=args.packages, builds=args.builds, src=args.src,
-                                  force=args.force, remote_name=args.remote, outdated=args.outdated)
+                                  force=args.force, remote_name=args.remote, outdated=args.outdated,
+                                  old=args.old)
 
     def copy(self, *args):
         """

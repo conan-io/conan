@@ -39,6 +39,7 @@ def update_package_metadata(prev, layout, package_id, rrev):
     with layout.update_metadata() as metadata:
         metadata.packages[package_id].revision = prev
         metadata.packages[package_id].recipe_revision = rrev
+        metadata.packages[package_id].lru_now()
 
 
 def report_files_from_manifest(output, manifest):

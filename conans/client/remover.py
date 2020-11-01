@@ -128,7 +128,7 @@ class ConanRemover(object):
             remover.remove(package_layout, output=self._user_io.out)
 
     def remove(self, pattern, remote_name, src=None, build_ids=None, package_ids_filter=None,
-               force=False, packages_query=None, outdated=False):
+               force=False, packages_query=None, outdated=False, old=None):
         """ Remove local/remote conans, package folders, etc.
         @param src: Remove src folder
         @param pattern: it could be OpenCV* or OpenCV or a ConanFileReference
@@ -136,6 +136,9 @@ class ConanRemover(object):
         @param package_ids_filter: Lists with ids or empty for all. (Its a filter)
         @param force: if True, it will be deleted without requesting anything
         @param packages_query: Only if src is a reference. Query settings and options
+        @param old: Remove only packages older than this time
+        @param outdated: remove the outdated from recipe packages
+        @param remote_name: removal will be from this remote
         """
 
         if remote_name and (build_ids is not None or src):
@@ -210,6 +213,11 @@ class ConanRemover(object):
                                            % ref.full_str())
                     continue
 
+            if old is not None:
+                ref, src, build_ids, package_ids = package_layout.filter_old(ref, src, build_ids,
+                                                                             package_ids, old)
+                if ref is None:
+                    continue
             if self._ask_permission(ref, src, build_ids, package_ids, force):
                 try:
                     if remote_name:

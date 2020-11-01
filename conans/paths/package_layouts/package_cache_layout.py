@@ -1,9 +1,11 @@
 # coding=utf-8
-
+import calendar
 import os
 import platform
 import threading
+import time
 from contextlib import contextmanager
+from datetime import datetime
 
 import fasteners
 
@@ -17,6 +19,7 @@ from conans.model.ref import ConanFileReference
 from conans.model.ref import PackageReference
 from conans.paths import CONANFILE, SYSTEM_REQS, EXPORT_FOLDER, EXPORT_SRC_FOLDER, SRC_FOLDER, \
     BUILD_FOLDER, PACKAGES_FOLDER, SYSTEM_REQS_FOLDER, PACKAGE_METADATA, SCM_SRC_FOLDER, rm_conandir
+from conans.util.dates import from_iso8601_to_datetime
 from conans.util.files import load, save, rmdir, set_dirty, clean_dirty, is_dirty
 from conans.util.locks import Lock, NoLock, ReadLock, SimpleLock, WriteLock
 from conans.util.log import logger
@@ -159,6 +162,16 @@ class PackageCacheLayout(object):
         rmdir(download_export)
         scm_folder = self.scm_sources()
         rmdir(scm_folder)
+
+    def filter_old(self, ref, src, build_ids, package_ids, old):
+        metadata = self.load_metadata()
+        recipe = metadata.recipe
+        current_time = calendar.timegm(time.gmtime())
+        if recipe.lru is not None:
+            if recipe.lru + old <= current_time:
+                return ref, None, None, None  # All in ref can be removed
+
+        return None, src, build_ids, package_ids
 
     def package_metadata(self):
         return os.path.join(self._base_folder, PACKAGE_METADATA)

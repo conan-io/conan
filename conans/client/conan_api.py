@@ -65,6 +65,7 @@ from conans.search.search import search_recipes
 from conans.tools import set_global_instances
 from conans.unicode import get_cwd
 from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
+from conans.util.dates import interval_from_text
 from conans.util.env_reader import get_env
 from conans.util.files import exception_message_safe, mkdir, save_files, load, save
 from conans.util.log import configure_logger
@@ -851,11 +852,13 @@ class ConanAPIV1(object):
 
     @api_method
     def remove(self, pattern, query=None, packages=None, builds=None, src=False, force=False,
-               remote_name=None, outdated=False):
+               remote_name=None, outdated=False, old=None):
         remotes = self.app.cache.registry.load_remotes()
+        if old is not None:
+            old = interval_from_text(old)
         remover = ConanRemover(self.app.cache, self.app.remote_manager, self.app.user_io, remotes)
         remover.remove(pattern, remote_name, src, builds, packages, force=force,
-                       packages_query=query, outdated=outdated)
+                       packages_query=query, outdated=outdated, old=old)
 
     @api_method
     def copy(self, reference, user_channel, force=False, packages=None):

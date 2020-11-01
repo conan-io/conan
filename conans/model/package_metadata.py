@@ -1,30 +1,31 @@
+import calendar
 import json
+import time
 from collections import defaultdict
+from datetime import datetime
 
 from conans import DEFAULT_REVISION_V1
+from conans.util.dates import iso8601_to_str
 
 
 class _RecipeMetadata(object):
 
     def __init__(self):
-        self._revision = None
+        self.revision = None
         self.properties = {}
         self.checksums = {}
         self.remote = None
+        self.lru = None
 
-    @property
-    def revision(self):
-        return self._revision
-
-    @revision.setter
-    def revision(self, r):
-        self._revision = r
+    def lru_now(self):
+        self.lru = calendar.timegm(time.gmtime())
 
     def to_dict(self):
         ret = {"revision": self.revision,
                "remote": self.remote,
                "properties": self.properties,
-               "checksums": self.checksums}
+               "checksums": self.checksums,
+               "lru": self.lru}
         return ret
 
     @staticmethod
@@ -35,6 +36,7 @@ class _RecipeMetadata(object):
         ret.properties = data["properties"]
         ret.checksums = data.get("checksums", {})
         ret.time = data.get("time")
+        ret.lru = data.get("lru")
         return ret
 
 
@@ -46,6 +48,10 @@ class _BinaryPackageMetadata(object):
         self.properties = {}
         self.checksums = {}
         self.remote = None
+        self.lru = None
+
+    def lru_now(self):
+        self.lru = calendar.timegm(time.gmtime())
 
     @property
     def revision(self):
@@ -68,7 +74,8 @@ class _BinaryPackageMetadata(object):
                "recipe_revision": self.recipe_revision,
                "remote": self.remote,
                "properties": self.properties,
-               "checksums": self.checksums}
+               "checksums": self.checksums,
+               "lru": self.lru}
         return ret
 
     @staticmethod
@@ -79,6 +86,7 @@ class _BinaryPackageMetadata(object):
         ret.properties = data.get("properties")
         ret.checksums = data.get("checksums", {})
         ret.remote = data.get("remote")
+        ret.lru = data.get("lru")
         return ret
 
 
