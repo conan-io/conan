@@ -75,8 +75,6 @@ class DiskRemover(object):
                 if not package_layout.package_exists(pref):
                     raise PackageNotFoundException(pref)
                 package_layout.package_remove(pref)
-                self._remove_file(package_layout.system_reqs_package(pref), package_layout.ref,
-                                  "%s/%s" % (package_id, SYSTEM_REQS))
 
 
 class ConanRemover(object):

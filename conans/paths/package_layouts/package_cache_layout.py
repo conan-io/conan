@@ -147,6 +147,8 @@ class PackageCacheLayout(object):
             raise ConanException("%s\n\nFolder: %s\n"
                                  "Couldn't remove folder, might be busy or open\n"
                                  "Close any app using it, and retry" % (pkg_folder, str(e)))
+        system_reqs_package = os.path.join(self._base_folder, SYSTEM_REQS_FOLDER, pref.id)
+        rmdir(system_reqs_package)
         if is_dirty(pkg_folder):
             clean_dirty(pkg_folder)
 
