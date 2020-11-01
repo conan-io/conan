@@ -1,10 +1,9 @@
-import calendar
 import datetime
 import os
-import time
 
 from conans.errors import ConanException
 from conans.paths import CONAN_MANIFEST, EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
+from conans.util.dates import timestamp_now
 from conans.util.env_reader import get_env
 from conans.util.files import load, md5, md5sum, save, walk
 
@@ -89,6 +88,7 @@ class FileTreeManifest(object):
         return FileTreeManifest.loads(text)
 
     def __repr__(self):
+        # Used for serialization and saving it to disk
         ret = ["%s" % self.time]
         for file_path, file_md5 in sorted(self.file_sums.items()):
             ret.append("%s: %s" % (file_path, file_md5))
@@ -97,6 +97,8 @@ class FileTreeManifest(object):
         return content
 
     def __str__(self):
+        raise
+        # TODO: check if this is used in the UI
         dt = datetime.datetime.utcfromtimestamp(self.time).strftime('%Y-%m-%d %H:%M:%S')
         ret = ["Time: %s" % dt]
         for file_path, file_md5 in sorted(self.file_sums.items()):
@@ -127,7 +129,7 @@ class FileTreeManifest(object):
             for name, filepath in export_files.items():
                 file_dict["export_source/%s" % name] = md5sum(filepath)
 
-        date = calendar.timegm(time.gmtime())
+        date = timestamp_now()
 
         return cls(date, file_dict)
 
