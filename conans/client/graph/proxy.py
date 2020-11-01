@@ -96,8 +96,6 @@ class ConanProxy(object):
                     DiskRemover().remove_recipe(layout, output=output)
                     output.info("Retrieving from remote '%s'..." % selected_remote.name)
                     self._download_recipe(layout, ref, output, remotes, selected_remote, recorder)
-                    with layout.update_metadata() as metadata:
-                        metadata.recipe.remote = selected_remote.name
                     status = RECIPE_UPDATED
                     return conanfile_path, status, selected_remote, ref
                 else:
