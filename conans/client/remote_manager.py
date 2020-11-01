@@ -105,6 +105,8 @@ class RemoteManager(object):
         with package_layout.update_metadata() as metadata:
             metadata.recipe.revision = ref.revision
             metadata.recipe.checksums = recipe_checksums
+            metadata.recipe.remote = remote.name
+            metadata.recipe.lru_now()
 
         self._hook_manager.execute("post_download_recipe", conanfile_path=conanfile_path,
                                    reference=ref, remote=remote)
