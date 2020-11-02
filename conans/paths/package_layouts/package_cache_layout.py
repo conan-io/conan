@@ -150,15 +150,24 @@ class PackageCacheLayout(object):
         if is_dirty(pkg_folder):
             clean_dirty(pkg_folder)
 
+    def sources_remove(self):
+        src_folder = os.path.join(self._base_folder, SRC_FOLDER)
+        try:
+            rm_conandir(src_folder)  # This will remove the shortened path too if exists
+        except OSError as e:
+            raise ConanException("%s\n\nFolder: %s\n"
+                                 "Couldn't remove folder, might be busy or open\n"
+                                 "Close any app using it, and retry" % (src_folder, str(e)))
+
     def export_remove(self):
         export_folder = self.export()
         rmdir(export_folder)
-        export_src_folder = self.export_sources()
+        export_src_folder = os.path.join(self._base_folder, EXPORT_SRC_FOLDER)
         rm_conandir(export_src_folder)
         download_export = self.download_export()
         rmdir(download_export)
-        scm_folder = self.scm_sources()
-        rmdir(scm_folder)
+        scm_folder = os.path.join(self._base_folder, SCM_SRC_FOLDER)
+        rm_conandir(scm_folder)
 
     def package_metadata(self):
         return os.path.join(self._base_folder, PACKAGE_METADATA)
