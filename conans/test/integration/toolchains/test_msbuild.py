@@ -1,5 +1,6 @@
 import os
 import platform
+import re
 import textwrap
 import unittest
 
@@ -97,7 +98,8 @@ myapp_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
-  <!-- Very IMPORTANT this should go BEFORE the Microsoft.Cpp.props. If it goes after, the Toolset definition is ignored -->
+  <!-- Very IMPORTANT this should go BEFORE the Microsoft.Cpp.props.
+  If it goes after, the Toolset definition is ignored -->
   <ImportGroup Label="PropertySheets">
     <Import Project="..\conan\conan_Hello.props" />
     <Import Project="..\conan\conan_toolchain.props" />
@@ -378,5 +380,7 @@ class WinTest(unittest.TestCase):
             self.assertIn("Visual Studio 2017", client.out)
             self.assertIn("[vcvarsall.bat] Environment initialized for: 'x64'", client.out)
             self._run_app(client, arch, build_type)
-            self.assertIn("main _MSC_VER1916", client.out)
+            version = re.search("main _MSC_VER19([0-9]*)", str(client.out)).group(1)
+            version = int(version)
+            self.assertTrue(10 <= version < 20)
             self.assertIn("main _MSVC_LANG2017", client.out)

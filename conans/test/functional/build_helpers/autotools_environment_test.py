@@ -5,6 +5,7 @@ import unittest
 from conans.client import tools
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE
+from conans.test.assets.sources import gen_function_cpp, gen_function_h
 from conans.test.unittests.util.tools_test import RunnerMock
 from conans.test.utils.mocks import MockConanfile
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
@@ -52,28 +53,10 @@ class AutoToolsConfigureTest(unittest.TestCase):
 
     @unittest.skipUnless(platform.system() == "Linux", "Requires make")
     def test_autotools_real_install_dirs(self):
-        body = r"""#include "hello.h"
-#include <iostream>
-using namespace std;
+        body = gen_function_cpp("hello", msg="Hola Mundo!")
+        header = gen_function_h("hello")
+        main = gen_function_cpp("main", includes=["hello"], calls=["hello"])
 
-void hello()
-{
-    cout << "Hola Mundo!";
-}
-"""
-        header = """
-#pragma once
-void hello();
-"""
-        main = """
-#include "hello.h"
-
-int main()
-{
-    hello();
-    return 0;
-}
-"""
         conanfile = """
 from conans import ConanFile, AutoToolsBuildEnvironment, tools
 
