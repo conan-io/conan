@@ -191,11 +191,47 @@ target_link_libraries(example ${CONAN_LIBS})
 #          COMMAND example)
 """
 
+test_cmake_pure_c = """cmake_minimum_required(VERSION 2.8.12)
+project(PackageTest C)
+
+include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+conan_basic_setup()
+
+add_executable(example example.c)
+target_link_libraries(example ${CONAN_LIBS})
+
+# CTest is a testing tool that can be used to test your project.
+# enable_testing()
+# add_test(NAME example
+#          WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+#          COMMAND example)
+"""
+
 test_main = """#include <iostream>
 #include "hello.h"
 
 int main() {
     hello();
+}
+"""
+
+test_main_pure_c = """
+#include "hello.h"
+
+int main() {
+    hello();
+}
+"""
+
+hello_c = """ #include <stdio.h>
+#include "hello.h"
+
+void hello() {
+    #ifdef NDEBUG
+        printf("Hello World Release!\\n");
+    #else
+        printf("Hello World Debug!\\n");
+    #endif
 }
 """
 
@@ -220,6 +256,15 @@ void hello(){
     std::cout << "Hello World Debug!" <<std::endl;
     #endif
 }
+"""
+
+cmake_pure_c = """cmake_minimum_required(VERSION 2.8)
+project(MyHello C)
+
+include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+conan_basic_setup()
+
+add_library(hello hello.c)
 """
 
 cmake = """cmake_minimum_required(VERSION 2.8)
@@ -293,8 +338,10 @@ def cmd_new(ref, header=False, pure_c=False, test=False, exports_sources=False, 
 
     if header and exports_sources:
         raise ConanException("'header' and 'sources' are incompatible options")
-    if pure_c and (header or exports_sources):
-        raise ConanException("'pure_c' is incompatible with 'header' and 'sources'")
+    if pure_c and header:
+        raise ConanException("'pure_c' is incompatible with 'header'")
+    if pure_c and not exports_sources:
+        raise ConanException("'pure_c' requires the use of --source")
     if bare and (header or exports_sources):
         raise ConanException("'bare' is incompatible with 'header' and 'sources'")
     if template and (header or exports_sources or bare or pure_c):
@@ -304,12 +351,19 @@ def cmd_new(ref, header=False, pure_c=False, test=False, exports_sources=False, 
     if header:
         files = {"conanfile.py": conanfile_header.format(name=name, version=version,
                                                          package_name=package_name)}
-    elif exports_sources:
+    elif exports_sources and not pure_c:
         files = {"conanfile.py": conanfile_sources.format(name=name, version=version,
                                                           package_name=package_name),
                  "src/hello.cpp": hello_cpp,
                  "src/hello.h": hello_h,
                  "src/CMakeLists.txt": cmake}
+
+    elif exports_sources and pure_c:
+        files = {"conanfile.py": conanfile_sources.format(name=name, version=version,
+                                                          package_name=package_name),
+                 "src/hello.c": hello_c,
+                 "src/hello.h": hello_h,
+                 "src/CMakeLists.txt": cmake_pure_c}
     elif bare:
         files = {"conanfile.py": conanfile_bare.format(name=name, version=version,
                                                        package_name=package_name)}
@@ -349,8 +403,12 @@ def cmd_new(ref, header=False, pure_c=False, test=False, exports_sources=False, 
         files["test_package/conanfile.py"] = test_conanfile.format(name=name, version=version,
                                                                    user=user, channel=channel,
                                                                    package_name=package_name)
-        files["test_package/CMakeLists.txt"] = test_cmake
-        files["test_package/example.cpp"] = test_main
+        if pure_c:
+            files["test_package/example.c"] = test_main_pure_c
+            files["test_package/CMakeLists.txt"] = test_cmake_pure_c
+        else:
+            files["test_package/example.cpp"] = test_main
+            files["test_package/CMakeLists.txt"] = test_cmake
 
     if gitignore:
         files[".gitignore"] = gitignore_template
