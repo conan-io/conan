@@ -95,7 +95,7 @@ class {package_name}Conan(ConanFile):
     default_options = {{"shared": False}}
     generators = "cmake"
     exports_sources = "src/*"
-
+{configure}
     def build(self):
         cmake = CMake(self)
         cmake.configure(source_folder="src")
@@ -115,7 +115,7 @@ class {package_name}Conan(ConanFile):
         self.copy("*.a", dst="lib", keep_path=False)
 
     def package_info(self):
-        self.cpp_info.libs = ["hello"]
+        self.cpp_info.libs = ["{name}"]
 """
 
 conanfile_header = """import os
@@ -207,73 +207,65 @@ target_link_libraries(example ${CONAN_LIBS})
 #          COMMAND example)
 """
 
-test_main = """#include <iostream>
-#include "hello.h"
+test_main = """#include "{name}.h"
 
-int main() {
-    hello();
-}
-"""
-
-test_main_pure_c = """
-#include "hello.h"
-
-int main() {
-    hello();
-}
+int main() {{
+    {name}();
+}}
 """
 
 hello_c = """ #include <stdio.h>
-#include "hello.h"
+#include "{name}.h"
 
-void hello() {
+void {name}() {{
+    int class = 0;  //This will be an error in C++
     #ifdef NDEBUG
-        printf("Hello World Release!\\n");
+        printf("{name}/{version}-(pure C): Hello World Release!\\n");
     #else
-        printf("Hello World Debug!\\n");
+        printf("{name}/{version}-(pure C): Hello World Debug!\\n");
     #endif
-}
+}}
 """
 
 hello_h = """#pragma once
 
 #ifdef WIN32
-  #define HELLO_EXPORT __declspec(dllexport)
+  #define {name}_EXPORT __declspec(dllexport)
 #else
-  #define HELLO_EXPORT
+  #define {name}_EXPORT
 #endif
 
-HELLO_EXPORT void hello();
+{name}_EXPORT void {name}();
 """
 
 hello_cpp = """#include <iostream>
-#include "hello.h"
+#include "{name}.h"
 
-void hello(){
+void {name}(){{
     #ifdef NDEBUG
-    std::cout << "Hello World Release!" <<std::endl;
+    std::cout << "{name}/{version}: Hello World Release!" <<std::endl;
     #else
-    std::cout << "Hello World Debug!" <<std::endl;
+    std::cout << "{name}/{version}: Hello World Debug!" <<std::endl;
     #endif
-}
+}}
 """
 
 cmake_pure_c = """cmake_minimum_required(VERSION 2.8)
-project(MyHello C)
+project({name} C)
 
-include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+include(${{CMAKE_BINARY_DIR}}/conanbuildinfo.cmake)
 conan_basic_setup()
 
-add_library(hello hello.c)
+add_library({name} {name}.c)
 """
 
 cmake = """cmake_minimum_required(VERSION 2.8)
-project(MyHello CXX)
+project({name} CXX)
 
-include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+include(${{CMAKE_BINARY_DIR}}/conanbuildinfo.cmake)
 conan_basic_setup()
 
-add_library(hello hello.cpp)
+add_library({name} {name}.cpp)
 """
 
 gitignore_template = """
@@ -294,7 +286,7 @@ def _render_template(text, name, version, package_name):
 
 def _get_files_from_template_dir(template_dir, name, version, package_name):
     if (not os.path.isfile(os.path.join(template_dir, "conanfile.py"))
-        and not os.path.isfile(os.path.join(template_dir, "conanfile.txt"))):
+            and not os.path.isfile(os.path.join(template_dir, "conanfile.txt"))):
         raise ConanException("Template is missing a recipe file: {}".format(template_dir))
 
     files = []
@@ -351,19 +343,24 @@ def cmd_new(ref, header=False, pure_c=False, test=False, exports_sources=False, 
     if header:
         files = {"conanfile.py": conanfile_header.format(name=name, version=version,
                                                          package_name=package_name)}
-    elif exports_sources and not pure_c:
-        files = {"conanfile.py": conanfile_sources.format(name=name, version=version,
-                                                          package_name=package_name),
-                 "src/hello.cpp": hello_cpp,
-                 "src/hello.h": hello_h,
-                 "src/CMakeLists.txt": cmake}
-
-    elif exports_sources and pure_c:
-        files = {"conanfile.py": conanfile_sources.format(name=name, version=version,
-                                                          package_name=package_name),
-                 "src/hello.c": hello_c,
-                 "src/hello.h": hello_h,
-                 "src/CMakeLists.txt": cmake_pure_c}
+    elif exports_sources:
+        if not pure_c:
+            files = {"conanfile.py": conanfile_sources.format(name=name, version=version,
+                                                              package_name=package_name,
+                                                              configure=""),
+                     "src/{}.cpp".format(name): hello_cpp.format(name=name, version=version),
+                     "src/{}.h".format(name): hello_h.format(name=name, version=version),
+                     "src/CMakeLists.txt": cmake.format(name=name, version=version)}
+        else:
+            config = ("\n    def configure(self):\n"
+                      "        del self.settings.compiler.libcxx\n"
+                      "        del self.settings.compiler.cppstd\n")
+            files = {"conanfile.py": conanfile_sources.format(name=name, version=version,
+                                                              package_name=package_name,
+                                                              configure=config),
+                     "src/{}.c".format(name): hello_c.format(name=name, version=version),
+                     "src/{}.h".format(name): hello_h.format(name=name, version=version),
+                     "src/CMakeLists.txt": cmake_pure_c.format(name=name, version=version)}
     elif bare:
         files = {"conanfile.py": conanfile_bare.format(name=name, version=version,
                                                        package_name=package_name)}
@@ -395,19 +392,16 @@ def cmd_new(ref, header=False, pure_c=False, test=False, exports_sources=False, 
     else:
         files = {"conanfile.py": conanfile.format(name=name, version=version,
                                                   package_name=package_name)}
-        if pure_c:
-            config = "    def configure(self):\n        del self.settings.compiler.libcxx\n"
-            files["conanfile.py"] = files["conanfile.py"] + config
 
     if test:
         files["test_package/conanfile.py"] = test_conanfile.format(name=name, version=version,
                                                                    user=user, channel=channel,
                                                                    package_name=package_name)
         if pure_c:
-            files["test_package/example.c"] = test_main_pure_c
+            files["test_package/example.c"] = test_main.format(name=name, version=version)
             files["test_package/CMakeLists.txt"] = test_cmake_pure_c
         else:
-            files["test_package/example.cpp"] = test_main
+            files["test_package/example.cpp"] = test_main.format(name=name, version=version)
             files["test_package/CMakeLists.txt"] = test_cmake
 
     if gitignore:
