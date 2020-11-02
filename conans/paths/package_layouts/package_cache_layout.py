@@ -149,6 +149,8 @@ class PackageCacheLayout(object):
                                  "Close any app using it, and retry" % (pkg_folder, str(e)))
         if is_dirty(pkg_folder):
             clean_dirty(pkg_folder)
+        with self.update_metadata() as metadata:
+            metadata.clear_package(pref.id)
 
     def export_remove(self):
         export_folder = self.export()
