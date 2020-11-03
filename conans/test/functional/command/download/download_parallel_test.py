@@ -5,7 +5,7 @@ from conans.test.utils.tools import GenConanfile, TestClient
 
 class DownloadParallelTest(unittest.TestCase):
 
-    def basic_parallel_download_test(self):
+    def test_basic_parallel_download(self):
         client = TestClient(default_server_user=True)
         threads = 1  # At the moment, not really parallel until output implements mutex
         counter = 4

@@ -94,7 +94,7 @@ class DevConanFile(HelloConan2):
         self.assertIn("lib/0.1@user/channel", client.out)
         self.assertIn("otherlib/0.2@user/channel", client.out)
 
-    def conanfile_subclass_test(self):
+    def test_conanfile_subclass(self):
         base = '''
 from conans import ConanFile
 

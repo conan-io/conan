@@ -10,7 +10,7 @@ from conans.util.files import save
 
 class ProfileTest(unittest.TestCase):
 
-    def profile_settings_update_test(self):
+    def test_profile_settings_update(self):
         prof = '''[settings]
 os=Windows
 '''
@@ -32,7 +32,7 @@ os=Windows
         new_profile, _ = _load_profile(p2, tmp_dir, tmp_dir)
         self.assertEqual(new_profile.env_values.data[None]["VAR"], "2")
 
-    def profile_subsettings_update_test(self):
+    def test_profile_subsettings_update(self):
         prof = '''[settings]
 os=Windows
 compiler=Visual Studio
@@ -53,7 +53,7 @@ compiler.runtime=MT
                                                       "compiler.subsetting": "3",
                                                       "other": "value"})
 
-    def package_settings_update_test(self):
+    def test_package_settings_update(self):
         prof = '''[settings]
 MyPackage:os=Windows
 
@@ -71,7 +71,7 @@ MyPackage:os=Windows
                          {"MyPackage": [("os", "Windows"), ("OTHER", "2"),
                                         ("compiler", "2"), ("compiler.version", "3")]})
 
-    def profile_dump_order_test(self):
+    def test_profile_dump_order(self):
         # Settings
         profile = Profile()
         profile.package_settings["zlib"] = {"compiler": "gcc"}
@@ -91,7 +91,7 @@ zlib:compiler=gcc
 zlib/*: aaaa/1.2.3@lasote/testing, bb/1.2@lasote/testing
 [env]""".splitlines(), profile.dumps().splitlines())
 
-    def apply_test(self):
+    def test_apply(self):
         # Settings
         profile = Profile()
         profile.settings["arch"] = "x86_64"

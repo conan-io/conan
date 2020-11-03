@@ -3,7 +3,7 @@ import platform
 import textwrap
 import unittest
 
-
+from conans.client.toolchain.visual import vcvars_command
 from conans.client.tools import vs_installation_path
 from conans.test.utils.tools import TestClient
 
@@ -23,14 +23,6 @@ Global
         Release|x86 = Release|x86
     EndGlobalSection
     GlobalSection(ProjectConfigurationPlatforms) = postSolution
-        {6F392A05-B151-490C-9505-B2A49720C4D9}.Debug|x64.ActiveCfg = Debug|x64
-        {6F392A05-B151-490C-9505-B2A49720C4D9}.Debug|x64.Build.0 = Debug|x64
-        {6F392A05-B151-490C-9505-B2A49720C4D9}.Debug|x86.ActiveCfg = Debug|Win32
-        {6F392A05-B151-490C-9505-B2A49720C4D9}.Debug|x86.Build.0 = Debug|Win32
-        {6F392A05-B151-490C-9505-B2A49720C4D9}.Release|x64.ActiveCfg = Release|x64
-        {6F392A05-B151-490C-9505-B2A49720C4D9}.Release|x64.Build.0 = Release|x64
-        {6F392A05-B151-490C-9505-B2A49720C4D9}.Release|x86.ActiveCfg = Release|Win32
-        {6F392A05-B151-490C-9505-B2A49720C4D9}.Release|x86.Build.0 = Release|Win32
         {B58316C0-C78A-4E9B-AE8F-5D6368CE3840}.Debug|x64.ActiveCfg = Debug|x64
         {B58316C0-C78A-4E9B-AE8F-5D6368CE3840}.Debug|x64.Build.0 = Debug|x64
         {B58316C0-C78A-4E9B-AE8F-5D6368CE3840}.Debug|x86.ActiveCfg = Debug|Win32
@@ -104,14 +96,15 @@ myapp_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
+  <!-- Very IMPORTANT this should go BEFORE the Microsoft.Cpp.props. If it goes after, the Toolset definition is ignored -->
+  <ImportGroup Label="PropertySheets">
+    <Import Project="..\conan\conan_Hello.props" />
+    <Import Project="..\conan\conan_toolchain.props" />
+  </ImportGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
   </ImportGroup>
   <ImportGroup Label="Shared">
-  </ImportGroup>
-  <ImportGroup Label="PropertySheets">
-    <Import Project="..\conan\conan_Hello.props" />
-    <Import Project="..\conan\conan_toolchain.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props"
@@ -226,7 +219,7 @@ myapp_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
 class WinTest(unittest.TestCase):
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile, MSBuildToolchain
+        from conans import ConanFile, MSBuildToolchain, MSBuild
         class App(ConanFile):
             settings = "os", "arch", "compiler", "build_type"
             requires = "hello/0.1"
@@ -241,6 +234,10 @@ class WinTest(unittest.TestCase):
                 else:
                     tc.preprocessor_definitions["DEFINITIONS_CONFIG"] = "Release"
                 tc.write_toolchain_files()
+
+            def build(self):
+                msbuild = MSBuild(self)
+                msbuild.build("MyProject.sln")
         """)
 
     app = textwrap.dedent("""
@@ -324,22 +321,18 @@ class WinTest(unittest.TestCase):
 
         # Run the configure corresponding to this test case
         client.run("install . %s -if=conan" % (settings, ))
-        self.assertIn("conanfile.py: MSBuildToolchain created "
-                      "conan_toolchain_release_win32_v141.props", client.out)
-        vs_path = vs_installation_path("15")
-        vcvars_path = os.path.join(vs_path, "VC/Auxiliary/Build/vcvarsall.bat")
+        self.assertIn("conanfile.py: MSBuildToolchain created conan_toolchain_release_win32.props",
+                      client.out)
+        client.run("build . -if=conan")
 
-        cmd = ('set "VSCMD_START_DIR=%%CD%%" && '
-               '"%s" x86 && msbuild "MyProject.sln" /p:Configuration=Release' % vcvars_path)
-        client.run_command(cmd)
         self.assertIn("Visual Studio 2017", client.out)
         self.assertIn("[vcvarsall.bat] Environment initialized for: 'x86'", client.out)
         self._run_app(client, "x86", "Release")
         self.assertIn("AppMSCVER 17!!", client.out)
         self.assertIn("AppCppStd 17!!!", client.out)
 
-        cmd = ('set "VSCMD_START_DIR=%%CD%%" && '
-               '"%s" x86 && dumpbin /dependents "Release\\MyApp.exe"' % vcvars_path)
+        vcvars = vcvars_command(version="15", architecture="x86")
+        cmd = ('%s && dumpbin /dependents "Release\\MyApp.exe"' % vcvars)
         client.run_command(cmd)
         # No other DLLs dependencies rather than kernel, it was MT, statically linked
         self.assertIn("KERNEL32.dll", client.out)
@@ -369,24 +362,17 @@ class WinTest(unittest.TestCase):
 
         # Run the configure corresponding to this test case
         client.run("install . %s -if=conan" % (settings, ))
-        self.assertIn("conanfile.py: MSBuildToolchain created conan_toolchain_debug_x64_v140.props",
+        self.assertIn("conanfile.py: MSBuildToolchain created conan_toolchain_debug_x64.props",
                       client.out)
-        vs_path = vs_installation_path("15")
-        vcvars_path = os.path.join(vs_path, "VC/Auxiliary/Build/vcvarsall.bat")
-
-        cmd = ('set "VSCMD_START_DIR=%%CD%%" && '
-               '"%s" x64 && '
-               'msbuild "MyProject.sln" /p:Configuration=Debug /p:PlatformToolset="v140"'
-               % vcvars_path)
-        client.run_command(cmd)
+        client.run("build . -if=conan")
         self.assertIn("Visual Studio 2017", client.out)
         self.assertIn("[vcvarsall.bat] Environment initialized for: 'x64'", client.out)
         self._run_app(client, "x64", "Debug")
         self.assertIn("AppMSCVER 15!!", client.out)
         self.assertIn("AppCppStd 14!!!", client.out)
 
-        cmd = ('set "VSCMD_START_DIR=%%CD%%" && '
-               '"%s" x64 && dumpbin /dependents "x64\\Debug\\MyApp.exe"' % vcvars_path)
+        vcvars = vcvars_command(version="15", architecture="amd64")
+        cmd = ('%s && dumpbin /dependents "x64\\Debug\\MyApp.exe"' % vcvars)
         client.run_command(cmd)
         self.assertIn("MSVCP140D.dll", client.out)
         self.assertIn("VCRUNTIME140D.dll", client.out)

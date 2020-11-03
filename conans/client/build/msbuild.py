@@ -5,8 +5,9 @@ import re
 from conans.client import tools
 from conans.client.build.visual_environment import (VisualStudioBuildEnvironment,
                                                     vs_build_type_flags, vs_std_cpp)
+from conans.client.toolchain.msbuild import MSBuildCmd
 from conans.client.tools.env import environment_append, no_op
-from conans.client.tools.intel import compilervars
+from conans.client.tools.intel import intel_compilervars
 from conans.client.tools.oss import cpu_count
 from conans.client.tools.win import vcvars_command
 from conans.errors import ConanException
@@ -19,6 +20,27 @@ from conans.util.runners import version_runner
 
 
 class MSBuild(object):
+    def __new__(cls, conanfile, *args, **kwargs):
+        """ Inject the proper MSBuild base class in the hierarchy """
+
+        # If already injected, create and return
+        if MSBuildHelper in cls.__bases__ or MSBuildCmd in cls.__bases__:
+            return super(MSBuild, cls).__new__(cls)
+
+        # If not, add the proper CMake implementation
+        if hasattr(conanfile, "toolchain"):
+            msbuild_class = type("CustomMSBuildClass", (cls, MSBuildCmd), {})
+        else:
+            msbuild_class = type("CustomMSBuildClass", (cls, MSBuildHelper), {})
+
+        return msbuild_class.__new__(msbuild_class, conanfile, *args, **kwargs)
+
+    @staticmethod
+    def get_version(settings):
+        return MSBuildHelper.get_version(settings)
+
+
+class MSBuildHelper(object):
 
     def __init__(self, conanfile):
         if isinstance(conanfile, ConanFile):
@@ -99,7 +121,7 @@ class MSBuild(object):
             context = no_op()
             if self._conanfile.settings.get_safe("compiler") == "Intel" and \
                 self._conanfile.settings.get_safe("compiler.base") == "Visual Studio":
-                context = compilervars(self._conanfile.settings, arch)
+                context = intel_compilervars(self._conanfile.settings, arch)
             with context:
                 return self._conanfile.run(command)
 
@@ -156,7 +178,7 @@ class MSBuild(object):
                 self._output.warn("Use 'platforms' argument to define your architectures")
 
         if output_binary_log:
-            msbuild_version = MSBuild.get_version(self._settings)
+            msbuild_version = MSBuildHelper.get_version(self._settings)
             if msbuild_version >= "15.3":  # http://msbuildlog.com/
                 command.append('/bl' if isinstance(output_binary_log, bool)
                                else '/bl:"%s"' % output_binary_log)

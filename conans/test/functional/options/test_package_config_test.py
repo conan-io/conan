@@ -60,7 +60,7 @@ class PkgConan(ConanFile):
 
 class TestPackageConfigTest(unittest.TestCase):
 
-    def test_package_test(self):
+    def test_test_package(self):
         client = TestClient()
         client.save({"conanfile.py": conanfile,
                      "test_package/conanfile.py": test_conanfile})
@@ -94,7 +94,7 @@ class TestPackageConfigTest(unittest.TestCase):
                       client.out)
         self.assertNotIn("True", client.out)
 
-    def create_test(self):
+    def test_create(self):
         client = TestClient()
         client.save({"conanfile.py": conanfile,
                      "test_package/conanfile.py": create_conanfile})

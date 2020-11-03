@@ -8,7 +8,7 @@ from conans.util.env_reader import get_env
 
 class LockRecipeTest(unittest.TestCase):
 
-    def error_pass_base_test(self):
+    def test_error_pass_base(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . pkg/0.1@")
@@ -18,7 +18,7 @@ class LockRecipeTest(unittest.TestCase):
         self.assertIn("Lockfiles with --base do not contain profile information, "
                       "cannot be used. Create a full lockfile", client.out)
 
-    def lock_recipe_test(self):
+    def test_lock_recipe(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile().with_setting("os")})
         client.run("create . pkg/0.1@ -s os=Windows")
@@ -77,7 +77,7 @@ class LockRecipeTest(unittest.TestCase):
                    "--lockfile-out=linux_base.lock --lockfile=linux.lock")
         self.assertEqual(client.load("linux_base.lock"), client.load("base.lock"))
 
-    def lock_recipe_from_partial_test(self):
+    def test_lock_recipe_from_partial(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . LibA/1.0@")
@@ -108,7 +108,7 @@ class LockRecipeTest(unittest.TestCase):
                 self.assertIsNone(pkg_node.get("prev"))
                 self.assertIsNone(pkg_node.get("options"))
 
-    def conditional_lock_recipe_test(self):
+    def test_conditional_lock_recipe(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . common/0.1@")
@@ -189,7 +189,7 @@ class LockRecipeTest(unittest.TestCase):
         self.assertEqual(win["options"], "")
 
     @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
-    def lose_rrev_test(self):
+    def test_lose_rrev(self):
         # https://github.com/conan-io/conan/issues/7595
         client = TestClient()
         client.run("config set general.default_package_id_mode=full_package_mode")
@@ -214,7 +214,7 @@ class LockRecipeTest(unittest.TestCase):
         self.assertIn("libb/0.1: Created package", client.out)
 
     @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
-    def missing_configuration_test(self):
+    def test_missing_configuration(self):
         client = TestClient()
         client.run("config set general.default_package_id_mode=package_revision_mode")
         client.save({"conanfile.py": GenConanfile().with_setting("os")})
@@ -238,7 +238,7 @@ class LockRecipeTest(unittest.TestCase):
         self.assertIn("libb/0.1:Package_ID_unknown - Unknown", client.out)
 
     @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
-    def missing_configuration_build_require_test(self):
+    def test_missing_configuration_build_require(self):
         client = TestClient()
         client.run("config set general.default_package_id_mode=package_revision_mode")
 

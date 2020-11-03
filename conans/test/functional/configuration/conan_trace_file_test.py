@@ -6,7 +6,7 @@ from conans.client import tools
 from conans.client.runner import ConanRunner
 from conans.model.ref import ConanFileReference
 from conans.paths import RUN_LOG_NAME
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.test.assets.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, TestServer
 from conans.test.utils.mocks import TestBufferConanOutput
@@ -19,7 +19,7 @@ class ConanTraceTest(unittest.TestCase):
         test_server = TestServer()
         self.servers = {"default": test_server}
 
-    def test_run_log_file_package_test(self):
+    def test_run_log_file_packaged(self):
         """Check if the log file is generated and packaged"""
 
         base = '''

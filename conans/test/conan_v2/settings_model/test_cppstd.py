@@ -30,7 +30,7 @@ class SettingsCppstdTestCase(ConanV2ModeTestCase):
         if use_settings_v1:
             self.assertIn("Conan v2 incompatible: Setting 'cppstd' is deprecated", t.out)
         else:
-            self.assertIn("ERROR: Error while initializing settings. 'settings.cppstd' doesn't exist", t.out)
+            self.assertIn("ERROR: The recipe is contraining settings. 'settings.cppstd' doesn't exist", t.out)
 
     @parameterized.expand([(True,), (False,)])
     def test_settings_model(self, use_settings_v1):

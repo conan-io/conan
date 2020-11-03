@@ -48,7 +48,7 @@ os=Windows
 
         self.assertIsNone(os.environ.get("CONAN_ENV_COMPILER_VERSION"))
 
-    def env_setting_override_test(self):
+    def test_env_setting_override(self):
         tmp_dir = temp_folder()
         out = MockOut()
         cache = ClientCache(tmp_dir, out)

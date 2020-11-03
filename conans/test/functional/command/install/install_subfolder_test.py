@@ -3,7 +3,7 @@ import unittest
 
 from conans.model.info import ConanInfo
 from conans.paths import BUILD_INFO_CMAKE, CONANFILE, CONANINFO
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.test.assets.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import TestClient
 from conans.util.files import load, mkdir
 
@@ -26,7 +26,7 @@ class InstallSubfolderTest(unittest.TestCase):
         if export:
             self.client.run("export . lasote/stable")
 
-    def reuse_test(self):
+    def test_reuse(self):
         self._create("Hello0", "0.1")
         self._create("Hello1", "0.1", ["Hello0/0.1@lasote/stable"])
         self._create("Hello2", "0.1", ["Hello1/0.1@lasote/stable"], export=False)
