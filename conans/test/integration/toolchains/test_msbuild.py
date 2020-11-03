@@ -243,7 +243,7 @@ class WinTest(unittest.TestCase):
                 msbuild.build("MyProject.sln")
         """)
 
-    app = gen_function_cpp("main", includes=["hello"], calls=["hello"],
+    app = gen_function_cpp(name="main", includes=["hello"], calls=["hello"],
                            preprocessor=["DEFINITIONS_BOTH", "DEFINITIONS_CONFIG"])
 
     def _run_app(self, client, arch, build_type, msg="main"):

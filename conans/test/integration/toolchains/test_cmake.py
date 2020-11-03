@@ -45,10 +45,10 @@ class Base(unittest.TestCase):
                 cmake.build()
         """)
 
-    lib_h = gen_function_h("app")
-    lib_cpp = gen_function_cpp("app", msg="App", includes=["hello"], calls=["hello"],
+    lib_h = gen_function_h(name="app")
+    lib_cpp = gen_function_cpp(name="app", msg="App", includes=["hello"], calls=["hello"],
                                preprocessor=["MYVAR", "MYVAR_CONFIG", "MYDEFINE", "MYDEFINE_CONFIG"])
-    main = gen_function_cpp("main", includes=["app"], calls=["app"])
+    main = gen_function_cpp(name="main", includes=["app"], calls=["app"])
 
     cmakelist = textwrap.dedent("""
         cmake_minimum_required(VERSION 2.8)
@@ -129,7 +129,7 @@ class Base(unittest.TestCase):
         return install_out
 
     def _modify_code(self):
-        lib_cpp = gen_function_cpp("app", msg="AppImproved", includes=["hello"], calls=["hello"],
+        lib_cpp = gen_function_cpp(name="app", msg="AppImproved", includes=["hello"], calls=["hello"],
                                    preprocessor=["MYVAR", "MYVAR_CONFIG", "MYDEFINE",
                                                  "MYDEFINE_CONFIG"])
         self.client.save({"app_lib.cpp": lib_cpp})

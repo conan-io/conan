@@ -44,8 +44,8 @@ class MakeToolchainTest(unittest.TestCase):
                     self.run("make -C ..")
 
             """)
-        hello_h = gen_function_h("hello")
-        hello_cpp = gen_function_cpp("hello", preprocessor=["TEST_DEFINITION"])
+        hello_h = gen_function_h(name="hello")
+        hello_cpp = gen_function_cpp(name="hello", preprocessor=["TEST_DEFINITION"])
 
         makefile = textwrap.dedent("""
             include conan_toolchain.mak
@@ -137,8 +137,8 @@ class MakeToolchainTest(unittest.TestCase):
 
             """)
 
-        hello_h = gen_function_h("hello")
-        hello_cpp = gen_function_cpp("hello", preprocessor=["TEST_DEFINITION"])
+        hello_h = gen_function_h(name="hello")
+        hello_cpp = gen_function_cpp(name="hello", preprocessor=["TEST_DEFINITION"])
 
         makefile = textwrap.dedent("""
             include conan_toolchain.mak

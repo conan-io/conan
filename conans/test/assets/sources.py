@@ -54,7 +54,7 @@ def gen_function_cpp(**context):
 _function_h = """
 #pragma once
 
-{% for it in includes -%}
+{% for it in includes or [] -%}
 #include "{{it}}.h"
 {%- endfor %}
 
@@ -67,6 +67,6 @@ _function_h = """
 """
 
 
-def gen_function_h(name, includes=None):
+def gen_function_h(**context):
     t = Template(_function_h)
-    return t.render(name=name, includes=includes or [])
+    return t.render(**context)
