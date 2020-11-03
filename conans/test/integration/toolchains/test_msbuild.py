@@ -292,7 +292,9 @@ class WinTest(unittest.TestCase):
         self.assertIn("Visual Studio 2017", client.out)
         self.assertIn("[vcvarsall.bat] Environment initialized for: 'x86'", client.out)
         self._run_app(client, "x86", "Release")
-        self.assertIn("main _MSC_VER1916", client.out)
+        version = re.search("main _MSC_VER19([0-9]*)", str(client.out)).group(1)
+        version = int(version)
+        self.assertTrue(10 <= version < 20)
         self.assertIn("main _MSVC_LANG2017", client.out)
 
         vcvars = vcvars_command(version="15", architecture="x86")
