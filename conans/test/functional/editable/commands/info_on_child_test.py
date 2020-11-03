@@ -7,7 +7,7 @@ import unittest
 from parameterized import parameterized
 
 from conans.model.ref import ConanFileReference
-from conans.test.utils.genconanfile import GenConanfile
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
 

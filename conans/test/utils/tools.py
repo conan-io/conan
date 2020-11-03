@@ -20,7 +20,6 @@ from webtest.app import TestApp
 
 from conans import load
 from conans.cli.cli import Cli
-from conans.cli.output import ConanOutput
 from conans.client.api.conan_api import ConanAPIV2
 from conans.client.cache.cache import ClientCache
 from conans.client.cache.remote_registry import Remotes
@@ -36,7 +35,8 @@ from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.settings import Settings
 from conans.server.revision_list import _RevisionEntry
-from conans.test.utils.genconanfile import GenConanfile
+from conans.test.assets import copy_assets
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.mocks import MockedUserIO, TestBufferConanOutput
 from conans.test.utils.scm import create_local_git_repo, create_local_svn_checkout, \
     create_remote_svn_repo
@@ -744,14 +744,8 @@ class TestClient(object):
         if not files:
             mkdir(self.current_folder)
 
-    def copy_from_assets(self, origin_folder, assets):
-        for asset in assets:
-            s = os.path.join(origin_folder, asset)
-            d = os.path.join(self.current_folder, asset)
-            if os.path.isdir(s):
-                shutil.copytree(s, d)
-            else:
-                shutil.copy2(s, d)
+    def copy_assets(self, origin_folder, assets=None):
+        copy_assets(origin_folder, self.current_folder, assets)
 
     # Higher level operations
     def remove_all(self):
