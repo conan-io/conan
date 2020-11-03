@@ -7,31 +7,31 @@ _function_cpp = r"""
 
 #include <iostream>
 
-{% if includes %}{% for it in includes -%}
+{% for it in includes -%}
 #include "{{it}}.h"
-{%- endfor %}{% endif %}
+{%- endfor %}
 
 int {{name}}(){
     #ifdef NDEBUG
-    std::cout << "{{ msg|default(name) }}: Release!\n";
+    std::cout << "{{ msg or name }}: Release!\n";
     #else
-    std::cout << "{{msg}}: Debug!\n";
+    std::cout << "{{ msg or name }}: Debug!\n";
     #endif
 
     #ifdef _M_X64
-    std::cout << "  {{msg}} _M_X64 defined\n";
+    std::cout << "  {{ msg or name }} _M_X64 defined\n";
     #endif
 
     #ifdef _M_IX86
-    std::cout << "  {{msg}} _M_IX86 defined\n";
+    std::cout << "  {{ msg or name }} _M_IX86 defined\n";
     #endif
 
     #if _MSC_VER
-    std::cout << "  {{msg}} _MSC_VER" << _MSC_VER<< "\n";
+    std::cout << "  {{ msg or name }} _MSC_VER" << _MSC_VER<< "\n";
     #endif
 
     #if _MSVC_LANG
-    std::cout << "  {{msg}} _MSVC_LANG" << _MSVC_LANG<< "\n";
+    std::cout << "  {{ msg or name }} _MSVC_LANG" << _MSVC_LANG<< "\n";
     #endif
 
     {% for it in preprocessor -%}
@@ -54,7 +54,7 @@ def gen_function_cpp(**context):
 _function_h = """
 #pragma once
 
-{% for it in includes or [] -%}
+{% for it in includes -%}
 #include "{{it}}.h"
 {%- endfor %}
 
