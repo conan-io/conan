@@ -7,9 +7,9 @@ _function_cpp = r"""
 
 #include <iostream>
 
-{% for it in includes -%}
+{% if includes %}{% for it in includes -%}
 #include "{{it}}.h"
-{%- endfor %}
+{%- endfor %}{% endif %}
 
 int {{name}}(){
     #ifdef NDEBUG
