@@ -465,7 +465,6 @@ class RemoveTest(unittest.TestCase):
                                                                   "tested with revisions, in "
                                                                   "general all the module")
     def test_query_remove_locally(self):
-        # Incorrect casing of "hello"
         self.client.run("remove notfoundname/1.4.10@myuser/testing -q='compiler.version=4.4' -f",
                         assert_error=True)
         self.assertIn("Recipe not found: 'notfoundname/1.4.10@myuser/testing'", self.client.out)
