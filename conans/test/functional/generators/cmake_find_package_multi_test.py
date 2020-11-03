@@ -233,8 +233,8 @@ class CMakeFindPathMultiGeneratorTest(unittest.TestCase):
         client.run("create .")
         client.run("new hello2/1.0 -s")
         replace_in_file(os.path.join(client.current_folder, "conanfile.py"),
-                        'self.cpp_info.libs = ["hello"]',
-                        'self.cpp_info.libs = ["hello"]\n        self.cpp_info.name = "MYHELLO2"',
+                        'self.cpp_info.libs = ["hello2"]',
+                        'self.cpp_info.libs = ["hello2"]\n        self.cpp_info.name = "MYHELLO2"',
                         output=client.out)
         replace_in_file(os.path.join(client.current_folder, "conanfile.py"),
                         'exports_sources = "src/*"',
@@ -268,7 +268,7 @@ class Conan(ConanFile):
         client.run("install .")
         client.run("build .")
         self.assertIn("Target libs (hello2): "
-                      "$<$<CONFIG:Release>:CONAN_LIB::MYHELLO2_hello_RELEASE;MYHELLO::MYHELLO;"
+                      "$<$<CONFIG:Release>:CONAN_LIB::MYHELLO2_hello2_RELEASE;MYHELLO::MYHELLO;"
                       "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
                       "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
                       "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>;"

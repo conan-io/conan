@@ -261,7 +261,7 @@ class HookTest(unittest.TestCase):
             self.assertIn("[HOOK - complete_hook/complete_hook.py] post_source(): "
                           "reference=%s" % reference, out)
 
-    def _check_build(self, conanfile_path,  out, in_cache=False):
+    def _check_build(self, conanfile_path, out, in_cache=False):
         reference = REFERENCE_CACHE if in_cache else REFERENCE_LOCAL
         if in_cache:
             self.assertIn("[HOOK - complete_hook/complete_hook.py] pre_build(): "
