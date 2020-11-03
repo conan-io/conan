@@ -46,13 +46,9 @@ int {{name}}(){
 """
 
 
-def gen_function_cpp(name, msg=None, includes=None, calls=None, preprocessor=None):
+def gen_function_cpp(**context):
     t = Template(_function_cpp)
-    msg = msg or name
-    includes = includes or []
-    calls = calls or []
-    preprocessor = preprocessor or []
-    return t.render(name=name, msg=msg, includes=includes, calls=calls, preprocessor=preprocessor)
+    return t.render(**context)
 
 
 _function_h = """
