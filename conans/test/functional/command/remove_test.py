@@ -1,7 +1,9 @@
 import os
 import unittest
-
 import six
+
+from mock import Mock
+
 from conans import DEFAULT_REVISION_V1
 from conans.client.userio import UserIO
 from conans.model.manifest import FileTreeManifest
@@ -17,7 +19,6 @@ from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, \
     TestServer, GenConanfile
 from conans.util.env_reader import get_env
 from conans.util.files import load
-from mock import Mock
 
 
 class RemoveLocksTest(unittest.TestCase):
@@ -162,7 +163,7 @@ class RemoveTest(unittest.TestCase):
             fake_metadata.recipe.revision = DEFAULT_REVISION_V1
             files["%s/%s/conanfile.py" % (folder, EXPORT_FOLDER)] = test_conanfile_contents
             files["%s/%s/conanmanifest.txt" % (
-            folder, EXPORT_FOLDER)] = "%s\nconanfile.py: 234234234" % fake_recipe_hash
+                folder, EXPORT_FOLDER)] = "%s\nconanfile.py: 234234234" % fake_recipe_hash
             files["%s/%s/conans.txt" % (folder, SRC_FOLDER)] = ""
             for pack_id in (1, 2):
                 i = pack_id
