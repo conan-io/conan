@@ -3,7 +3,6 @@ import os
 from conans.errors import ConanException
 from conans.paths import CONAN_MANIFEST, EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
 from conans.util.dates import timestamp_now, timestamp_to_str
-
 from conans.util.env_reader import get_env
 from conans.util.files import load, md5, md5sum, save, walk
 

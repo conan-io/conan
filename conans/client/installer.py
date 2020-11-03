@@ -502,9 +502,8 @@ class BinaryInstaller(object):
                     output.success('Already installed!')
                     log_package_got_from_local_cache(pref)
                     self._recorder.package_fetched_from_cache(pref)
-
-                with layout.update_metadata() as metadata:
-                    metadata.packages[node.package_id].lru_now()
+                    with layout.update_metadata() as metadata:
+                        metadata.packages[node.package_id].lru_now()  # Use cache binary sets LRU
 
             package_folder = layout.package(pref)
             if not os.path.isdir(package_folder):

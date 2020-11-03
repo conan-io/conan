@@ -54,7 +54,7 @@ class ConanProxy(object):
         with layout.update_metadata() as metadata:
             cur_revision = metadata.recipe.revision
             cur_remote = metadata.recipe.remote
-            metadata.recipe.lru_now()
+            metadata.recipe.lru_now()  # Recipe loaded from cache updates LRU
 
         cur_remote = remotes[cur_remote] if cur_remote else None
         selected_remote = remotes.selected or cur_remote

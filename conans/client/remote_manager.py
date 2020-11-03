@@ -106,7 +106,7 @@ class RemoteManager(object):
             metadata.recipe.revision = ref.revision
             metadata.recipe.checksums = recipe_checksums
             metadata.recipe.remote = remote.name
-            metadata.recipe.lru_now()
+            metadata.recipe.lru_now()  # Recipe install from remote sets LRU
 
         self._hook_manager.execute("post_download_recipe", conanfile_path=conanfile_path,
                                    reference=ref, remote=remote)
