@@ -69,7 +69,7 @@ nonexistingpattern*: SomeTool/1.2@user/channel
 
 class BuildRequiresTest(unittest.TestCase):
 
-    def duplicated_build_requires_test(self):
+    def test_duplicated_build_requires(self):
         client = TestClient()
         build_require = """from conans import ConanFile
 class Pkg(ConanFile):
@@ -106,7 +106,7 @@ class Pkg(ConanFile):
         self.assertIn("MyLib/0.1@user/testing: Applying build-requirement: "
                       "build_require/0.1@user/testing", client.out)
 
-    def recursive_build_requires_test(self):
+    def test_recursive_build_requires(self):
         client = TestClient()
         profile = """[build_requires]
 build1/0.1@user/testing
@@ -266,7 +266,7 @@ nonexistingpattern*: SomeTool/1.2@user/channel
         self.assertIn("MyLib/0.1@lasote/stable: Hello world from python tool!", client.out)
         self.assertNotIn("Project: Hello world from python tool!", client.out)
 
-    def build_requires_options_test(self):
+    def test_build_requires_options(self):
         client = TestClient()
         client.save({CONANFILE: GenConanfile("MyTool", "0.1")})
         client.run("export . lasote/stable")

@@ -6,7 +6,7 @@ from conans.test.utils.tools import TestClient
 
 class ExitWithCodeTest(unittest.TestCase):
 
-    def raise_an_error_test(self):
+    def test_raise_an_error(self):
 
         base = '''
 import sys

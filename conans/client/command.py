@@ -280,7 +280,7 @@ class Command(object):
                                          formatter_class=SmartFormatter)
         parser.add_argument("path", help='Path to the "testing" folder containing a conanfile.py or'
                             ' to a recipe file with test() method'
-                            'e.g. conan test_package/conanfile.py pkg/version@user/channel')
+                            ' e.g. conan test_package/conanfile.py pkg/version@user/channel')
         parser.add_argument("reference",
                             help='pkg/version@user/channel of the package to be tested')
         parser.add_argument("-tbf", "--test-build-folder", action=OnceArgument,
@@ -559,7 +559,7 @@ class Command(object):
         home_subparser.add_argument("-j", "--json", default=None, action=OnceArgument,
                                     help='json file path where the config home will be written to')
         install_subparser.add_argument("item", nargs="?",
-                                       help="git repository, local folder or zip file (local or "
+                                       help="git repository, local file or folder or zip file (local or "
                                        "http) where the configuration is stored")
 
         install_subparser.add_argument("--verify-ssl", nargs="?", default="True",

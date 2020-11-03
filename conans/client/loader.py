@@ -17,7 +17,6 @@ from conans.model.conan_generator import Generator
 from conans.model.options import OptionsValues
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
-from conans.model.values import Values
 from conans.paths import DATA_YML
 from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
 from conans.util.files import load
@@ -183,7 +182,7 @@ class ConanFileLoader(object):
                         pkg_settings = settings
                         break
             if pkg_settings:
-                tmp_settings.values = Values.from_list(pkg_settings)
+                tmp_settings.update_values(pkg_settings)
 
         conanfile.initialize(tmp_settings, profile.env_values)
 

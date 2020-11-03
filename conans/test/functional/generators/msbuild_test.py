@@ -2,12 +2,12 @@ import platform
 import textwrap
 import unittest
 
+import pytest
 from nose.plugins.attrib import attr
 
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files
-from conans.test.utils.genconanfile import GenConanfile
+from conans.test.assets.cpp_test_files import cpp_hello_conan_files
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
-
 
 sln_file = r"""
 Microsoft Visual Studio Solution File, Format Version 12.00
@@ -415,7 +415,8 @@ int main(){
 class MSBuildGeneratorTest(unittest.TestCase):
 
     @attr('slow')
-    def msbuild_generator_test(self):
+    @pytest.mark.slow
+    def test_msbuild_generator(self):
         client = TestClient()
         # Upload to alternative server Hello0 but Hello1 to the default
         files = cpp_hello_conan_files("Hello0", "1.0")
@@ -458,7 +459,7 @@ class MSBuildGeneratorTest(unittest.TestCase):
         self.assertIn("Hello Hello1", client.out)
         self.assertIn("Hello Hello0", client.out)
 
-    def install_reference_test(self):
+    def test_install_reference(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . mypkg/0.1@")
@@ -466,7 +467,7 @@ class MSBuildGeneratorTest(unittest.TestCase):
         self.assertIn("Generator msbuild created conan_deps.props", client.out)
         self.assertIn("Generator msbuild created conan_mypkg.props", client.out)
 
-    def install_reference_gcc_test(self):
+    def test_install_reference_gcc(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . pkg/1.0@")
@@ -494,7 +495,7 @@ class MSBuildGeneratorTest(unittest.TestCase):
         pkg_props = client.load("conan_pkg.props")
         self.assertIn('Project="conan_pkg_release_x64.props"', pkg_props)
 
-    def no_build_type_error_test(self):
+    def test_no_build_type_error(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . mypkg/0.1@")

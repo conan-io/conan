@@ -40,7 +40,7 @@ class CorruptedPackagesTest(unittest.TestCase):
         self.assertTrue(os.path.exists(self.info_path))
         self.assertTrue(os.path.exists(self.tgz_path))
 
-    def info_manifest_missing_test(self):
+    def test_info_manifest_missing(self):
         os.unlink(self.info_path)
         os.unlink(self.manifest_path)
         # Try search
@@ -57,7 +57,7 @@ class CorruptedPackagesTest(unittest.TestCase):
         self.client.run("upload * --all --confirm -r default")
         self._assert_all_package_files_in_server()
 
-    def manifest_missing_test(self):
+    def test_manifest_missing(self):
         os.unlink(self.manifest_path)
         # Try search
         self.client.run("search Pkg/0.1@user/testing -r default")
@@ -72,7 +72,7 @@ class CorruptedPackagesTest(unittest.TestCase):
         self.client.run("upload * --all --confirm")
         self._assert_all_package_files_in_server()
 
-    def tgz_info_missing_test(self):
+    def test_tgz_info_missing(self):
         os.unlink(self.tgz_path)
         os.unlink(self.info_path)
         # Try search
@@ -91,7 +91,7 @@ class CorruptedPackagesTest(unittest.TestCase):
         self.assertIn("Uploading conaninfo.txt", self.client.out)
         self._assert_all_package_files_in_server()
 
-    def tgz_missing_test(self):
+    def test_tgz_missing(self):
         os.unlink(self.tgz_path)
         # Try search
         self.client.run("search Pkg/0.1@user/testing -r default")
@@ -105,7 +105,7 @@ class CorruptedPackagesTest(unittest.TestCase):
         self.assertIn("Uploading conan_package.tgz", self.client.out)
         self._assert_all_package_files_in_server()
 
-    def tgz_manifest_missing_test(self):
+    def test_tgz_manifest_missing(self):
         os.unlink(self.tgz_path)
         os.unlink(self.manifest_path)
         # Try search
@@ -120,7 +120,7 @@ class CorruptedPackagesTest(unittest.TestCase):
         self.client.run("upload * --all --confirm")
         self._assert_all_package_files_in_server()
 
-    def tgz_manifest_info_missing_test(self):
+    def test_tgz_manifest_info_missing(self):
         os.unlink(self.tgz_path)
         os.unlink(self.manifest_path)
         os.unlink(self.info_path)

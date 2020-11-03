@@ -5,11 +5,11 @@ import platform
 import textwrap
 import unittest
 
+import pytest
 from nose.plugins.attrib import attr
 
 from conans.test.utils.tools import TestClient
-from conans.test.utils.visual_project_files import get_vs_project_files
-
+from conans.test.assets.visual_project_files import get_vs_project_files
 
 main_cpp = r"""#include <hello.h>
 int main(){
@@ -27,8 +27,9 @@ Hello1/0.1@lasote/testing
 class VisualStudioTest(unittest.TestCase):
 
     @attr('slow')
+    @pytest.mark.slow
     @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
-    def build_vs_project_with_a_test(self):
+    def test_build_vs_project_with_a(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
             from conans import ConanFile, CMake
@@ -93,7 +94,7 @@ class VisualStudioTest(unittest.TestCase):
         client.run_command(r"x64\Release\MyProject.exe")
         self.assertIn("Hello world!!!", client.out)
 
-    def system_libs_test(self):
+    def test_system_libs(self):
         mylib = textwrap.dedent("""
             import os
             from conans import ConanFile

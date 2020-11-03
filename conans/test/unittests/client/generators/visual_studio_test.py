@@ -16,7 +16,7 @@ from conans.util.files import save
 
 class VisualStudioGeneratorTest(unittest.TestCase):
 
-    def valid_xml_test(self):
+    def test_valid_xml(self):
         conanfile = ConanFile(TestBufferConanOutput(), None)
         conanfile.initialize(Settings({}), EnvValues())
         ref = ConanFileReference.loads("MyPkg/0.1@user/testing")
@@ -35,7 +35,7 @@ class VisualStudioGeneratorTest(unittest.TestCase):
         self.assertIn("<Conan-My-Fancy-Pkg_2-Root>dummy_root_folder2</Conan-My-Fancy-Pkg_2-Root>",
                       content)
 
-    def user_profile_test(self):
+    def test_user_profile(self):
         conanfile = ConanFile(TestBufferConanOutput(), None)
         conanfile.initialize(Settings({}), EnvValues())
         ref = ConanFileReference.loads("MyPkg/0.1@user/testing")
@@ -70,7 +70,7 @@ class VisualStudioGeneratorTest(unittest.TestCase):
             self.assertIn(expected1, content)
             self.assertIn(expected2, content)
 
-    def multi_config_test(self):
+    def test_multi_config(self):
         tmp_folder = temp_folder()
         ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
         conanfile = ConanFile(TestBufferConanOutput(), None)
@@ -112,7 +112,7 @@ class VisualStudioGeneratorTest(unittest.TestCase):
         self.assertIn(condition_release, content)
         self.assertIn(condition_custom, content)
 
-    def addional_dependencies_test(self):
+    def test_addional_dependencies(self):
 
         def validate_additional_dependencies(lib, additional_dep):
             conanfile = ConanFile(TestBufferConanOutput(), None)

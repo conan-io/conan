@@ -2,16 +2,18 @@ import os
 import platform
 import unittest
 
+import pytest
 from nose.plugins.attrib import attr
 
 from conans.client.generators.text import TXTGenerator
 from conans.paths import BUILD_INFO, BUILD_INFO_CMAKE, CONANFILE
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.test.assets.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import load
 
 
 @attr("slow")
+@pytest.mark.slow
 class DiamondTest(unittest.TestCase):
 
     def setUp(self):
@@ -19,15 +21,15 @@ class DiamondTest(unittest.TestCase):
                                  users={"lasote": "mypass"})  # exported users and passwords
         self.servers = {"default": test_server}
 
-    def diamond_cmake_test(self):
+    def test_diamond_cmake(self):
         self.client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
         self._run(use_cmake=True, language=1)
 
-    def diamond_cmake_targets_test(self):
+    def test_diamond_cmake_targets(self):
         self.client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
         self._run(use_cmake=True, cmake_targets=True)
 
-    def diamond_default_test(self):
+    def test_diamond_default(self):
         self.client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]},
                                  path_with_spaces=False)
         self._run(use_cmake=False)

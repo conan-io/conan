@@ -8,7 +8,7 @@ from conans.util.env_reader import get_env
 
 class FullRevisionModeTest(unittest.TestCase):
 
-    def recipe_revision_mode_test(self):
+    def test_recipe_revision_mode(self):
         liba_ref = ConanFileReference.loads("liba/0.1@user/testing")
         libb_ref = ConanFileReference.loads("libb/0.1@user/testing")
 
@@ -61,7 +61,7 @@ class FullRevisionModeTest(unittest.TestCase):
         clienta.run("create . liba/0.1@user/testing")
         clientc.run("info . --build-order=ALL")
 
-    def binary_id_recomputation_after_build_test(self):
+    def test_binary_id_recomputation_after_build(self):
         clienta = TestClient()
         clienta.run("config set general.default_package_id_mode=recipe_revision_mode")
         conanfile = dedent("""
@@ -104,7 +104,7 @@ class FullRevisionModeTest(unittest.TestCase):
                       clientd.out)
         self.assertIn("libc/0.1@user/testing: Calling build()", clientd.out)
 
-    def binary_id_recomputation_with_build_requires_test(self):
+    def test_binary_id_recomputation_with_build_requires(self):
         clienta = TestClient()
         clienta.save({"conanfile.py": GenConanfile().with_name("Tool").with_version("0.1")
                                                     .with_package_info(cpp_info={"libs":
@@ -155,7 +155,7 @@ class FullRevisionModeTest(unittest.TestCase):
                       clientd.out)
         self.assertIn("libc/0.1@user/testing: Calling build()", clientd.out)
 
-    def reusing_artifacts_after_build_test(self):
+    def test_reusing_artifacts_after_build(self):
         # An unknown binary that after build results in the exact same PREF with PREV, doesn't
         # fire build of downstream
         client = TestClient()
@@ -180,7 +180,7 @@ class FullRevisionModeTest(unittest.TestCase):
             self.assertIn("%s/0.1@user/testing: Already installed!" % lib, client.out)
 
     @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
-    def download_artifacts_after_build_test(self):
+    def test_download_artifacts_after_build(self):
         # An unknown binary that after build results in the exact same PREF with PREV, doesn't
         # fire build of downstream
         client = TestClient(default_server_user=True)
@@ -231,7 +231,7 @@ class PackageRevisionModeTest(unittest.TestCase):
             self.client.save({filename: conanfile})
             self.client.run("export %s %s@" % (filename, ref))
 
-    def simple_dependency_graph_test(self):
+    def test_simple_dependency_graph(self):
         dependencies = {
             "Log4Qt/0.3.0": [],
             "MccApi/3.0.9": ["Log4Qt/0.3.0"],
@@ -246,7 +246,7 @@ class PackageRevisionModeTest(unittest.TestCase):
         self.assertIn("Util/0.3.5: Package 'ba438cd9d192b914edb1669b3e0149822290f7d8' created",
                       self.client.out)
 
-    def triangle_dependency_graph_test(self):
+    def test_triangle_dependency_graph(self):
         dependencies = {
             "Log4Qt/0.3.0": [],
             "MccApi/3.0.9": ["Log4Qt/0.3.0"],
@@ -261,7 +261,7 @@ class PackageRevisionModeTest(unittest.TestCase):
         self.assertIn("Util/0.3.5: Package 'ba438cd9d192b914edb1669b3e0149822290f7d8' created",
                       self.client.out)
 
-    def diamond_dependency_graph_test(self):
+    def test_diamond_dependency_graph(self):
         dependencies = {
             "Log4Qt/0.3.0": [],
             "MccApi/3.0.9": ["Log4Qt/0.3.0"],
@@ -276,7 +276,7 @@ class PackageRevisionModeTest(unittest.TestCase):
         self.assertIn("Util/0.3.5: Package '484784c96c359def1283e7354eec200f9f9c5cd8' created",
                       self.client.out)
 
-    def full_dependency_graph_test(self):
+    def test_full_dependency_graph(self):
         dependencies = {
             "Log4Qt/0.3.0": [],
             "MccApi/3.0.9": ["Log4Qt/0.3.0"],

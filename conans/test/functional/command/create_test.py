@@ -13,7 +13,7 @@ from conans.util.files import load
 
 class CreateTest(unittest.TestCase):
 
-    def dependencies_order_matches_requires_test(self):
+    def test_dependencies_order_matches_requires(self):
         client = TestClient()
         conanfile = """from conans import ConanFile
 from conans.tools import save
@@ -39,7 +39,7 @@ PkgA/0.1@user/testing"""
         cmake = client.load("conanbuildinfo.cmake")
         self.assertIn("set(CONAN_LIBS LibB LibA ${CONAN_LIBS})", cmake)
 
-    def can_override_even_versions_with_build_metadata_test(self):
+    def test_can_override_even_versions_with_build_metadata(self):
         # https://github.com/conan-io/conan/issues/5900
 
         client = TestClient()
@@ -63,7 +63,7 @@ PkgA/0.1@user/testing"""
         self.assertIn("WARN: intermediate/1.0: requirement libcore/1.0+abc "
                       "overridden by consumer/1.0 to libcore/1.0+xyz", client.out)
 
-    def transitive_same_name_test(self):
+    def test_transitive_same_name(self):
         # https://github.com/conan-io/conan/issues/1366
         client = TestClient()
         conanfile = GenConanfile().with_name("HelloBar").with_version("0.1")
@@ -88,7 +88,7 @@ class HelloTestConan(ConanFile):
                          client.out)
 
     @parameterized.expand([(True, ), (False, )])
-    def keep_build_test(self, with_test):
+    def test_keep_build(self, with_test):
         client = TestClient()
         conanfile = textwrap.dedent("""
             from conans import ConanFile
@@ -149,13 +149,13 @@ class HelloTestConan(ConanFile):
         self.assertIn("Pkg/0.1@lasote/testing package(): Packaged 1 '.h' file: header.h",
                       client.out)
 
-    def keep_build_error_test(self):
+    def test_keep_build_error(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . Pkg/0.1@lasote/testing --keep-build", assert_error=True)
         self.assertIn("ERROR: --keep-build specified, but build folder not found", client.out)
 
-    def keep_build_package_folder_test(self):
+    def test_keep_build_package_folder(self):
         """
         Package folder should be deleted always before a new conan create command, even with
         --keep-build
@@ -185,7 +185,7 @@ class HelloTestConan(ConanFile):
         self.assertNotIn("header.h", package_files)
         self.assertIn("source.cpp", package_files)
 
-    def create_test(self):
+    def test_create(self):
         client = TestClient()
         client.save({"conanfile.py": """from conans import ConanFile
 class MyPkg(ConanFile):
@@ -227,7 +227,7 @@ class MyPkg(ConanFile):
         self.assertIn("Invalid parameter 'lasote', specify the full reference or user/channel",
                       client.out)
 
-    def create_name_command_line_test(self):
+    def test_create_name_command_line(self):
         client = TestClient()
         client.save({"conanfile.py": """from conans import ConanFile
 class MyPkg(ConanFile):
@@ -261,7 +261,7 @@ class MyPkg(ConanFile):
         client.run("search")
         self.assertIn("Pkg/0.1@lasote/testing", client.out)
 
-    def create_werror_test(self):
+    def test_create_werror(self):
         client = TestClient()
         client.save({"conanfile.py": """from conans import ConanFile
 class Pkg(ConanFile):
@@ -296,7 +296,7 @@ class Pkg(ConanFile):
         client.run("create . Hello/1.1@lasote/stable", assert_error=True)
         self.assertIn("ERROR: Package recipe with version 1.1!=1.2", client.out)
 
-    def create_user_channel_test(self):
+    def test_create_user_channel(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile().with_name("Pkg").with_version("0.1")})
         client.run("create . lasote/channel")
@@ -308,7 +308,7 @@ class Pkg(ConanFile):
         self.assertIn("Invalid parameter 'lasote', specify the full reference or user/channel",
                       client.out)
 
-    def create_in_subfolder_test(self):
+    def test_create_in_subfolder(self):
         client = TestClient()
         client.save({"subfolder/conanfile.py": GenConanfile().with_name("Pkg").with_version("0.1")})
         client.run("create subfolder lasote/channel")
@@ -316,7 +316,7 @@ class Pkg(ConanFile):
         client.run("search")
         self.assertIn("Pkg/0.1@lasote/channel", client.out)
 
-    def create_in_subfolder_with_different_name_test(self):
+    def test_create_in_subfolder_with_different_name(self):
         # Now with a different name
         client = TestClient()
         client.save({"subfolder/Custom.py": GenConanfile().with_name("Pkg").with_version("0.1")})
@@ -325,7 +325,7 @@ class Pkg(ConanFile):
         client.run("search")
         self.assertIn("Pkg/0.1@lasote/channel", client.out)
 
-    def create_test_package_test(self):
+    def test_create_test_package(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile().with_name("Pkg").with_version("0.1"),
                      "test_package/conanfile.py":
@@ -334,7 +334,7 @@ class Pkg(ConanFile):
         self.assertIn("Pkg/0.1@lasote/testing: Generating the package", client.out)
         self.assertIn("Pkg/0.1@lasote/testing (test package): TESTING!!!", client.out)
 
-    def create_skip_test_package_test(self):
+    def test_create_skip_test_package(self):
         # Skip the test package stage if explicitly disabled with --test-folder=None
         # https://github.com/conan-io/conan/issues/2355
         client = TestClient()
@@ -386,7 +386,7 @@ class MyPkg(ConanFile):
         self.assertIn("Pkg/0.1@lasote/testing (test package): build() cpp_info dep: Pkg",
                       client.out)
 
-    def build_policy_test(self):
+    def test_build_policy(self):
         # https://github.com/conan-io/conan/issues/1956
         client = TestClient()
         conanfile = str(GenConanfile()) + '\n    build_policy = "always"'
@@ -400,7 +400,7 @@ class MyPkg(ConanFile):
         client.run("create . pkg/0.1@user/stable")
         self.assertIn("Bar/0.1@user/stable: Forced build from source", client.out)
 
-    def test_build_folder_handling_test(self):
+    def test_build_folder_handling(self):
         conanfile = GenConanfile().with_name("Hello").with_version("0.1")
         test_conanfile = GenConanfile().with_test("pass")
         client = TestClient()
@@ -438,7 +438,7 @@ class MyPkg(ConanFile):
                                                     "build_folder")))
         self.assertFalse(os.path.exists(default_build_dir))
 
-    def package_folder_build_error_test(self):
+    def test_package_folder_build_error(self):
         """
         Check package folder is not created if the build step fails
         """
@@ -459,13 +459,13 @@ class MyPkg(ConanFile):
         package_folder = client.cache.package_layout(pref.ref).package(pref)
         self.assertFalse(os.path.exists(package_folder))
 
-    def create_with_name_and_version_test(self):
+    def test_create_with_name_and_version(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
         client.run('create . lib/1.0@')
         self.assertIn("lib/1.0: Created package revision", client.out)
 
-    def create_with_only_user_channel_test(self):
+    def test_create_with_only_user_channel(self):
         """This should be the recommended way and only from Conan 2.0"""
         client = TestClient()
         client.save({"conanfile.py": GenConanfile().with_name("lib").with_version("1.0")})
@@ -475,7 +475,7 @@ class MyPkg(ConanFile):
         client.run('create . user/channel')
         self.assertIn("lib/1.0@user/channel: Created package revision", client.out)
 
-    def requires_without_user_channel_test(self):
+    def test_requires_without_user_channel(self):
         client = TestClient()
         conanfile = textwrap.dedent('''
             from conans import ConanFile
@@ -496,7 +496,7 @@ class MyPkg(ConanFile):
         self.assertIn("HelloBar/0.1: WARN: Hello, I'm HelloBar", client.out)
         self.assertIn("consumer/1.0: Created package revision", client.out)
 
-    def conaninfo_contents_without_user_channel_test(self):
+    def test_conaninfo_contents_without_user_channel(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile().with_name("Hello").with_version("0.1")})
         client.run("create .")

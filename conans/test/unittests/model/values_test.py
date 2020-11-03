@@ -5,7 +5,7 @@ from conans.model.values import Values
 
 class ValuesTest(unittest.TestCase):
 
-    def simple_test(self):
+    def test_simple(self):
         v = Values()
         self.assertEqual(v.compiler, None)
         v.compiler = 3

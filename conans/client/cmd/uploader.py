@@ -292,20 +292,20 @@ class CmdUpload(object):
                                        remote=recipe_remote)
 
     def _upload_recipe(self, ref, conanfile, retry, retry_wait, policy, remote, remotes):
-
-        current_remote_name = self._cache.package_layout(ref).load_metadata().recipe.remote
+        layout = self._cache.package_layout(ref)
+        current_remote_name = layout.load_metadata().recipe.remote
 
         if remote.name != current_remote_name:
             complete_recipe_sources(self._remote_manager, self._cache, conanfile, ref, remotes)
 
-        conanfile_path = self._cache.package_layout(ref).conanfile()
+        conanfile_path = layout.conanfile()
         self._hook_manager.execute("pre_upload_recipe", conanfile_path=conanfile_path,
                                    reference=ref, remote=remote)
 
         t1 = time.time()
-        cache_files = self._compress_recipe_files(ref)
+        cache_files = self._compress_recipe_files(layout, ref)
 
-        with self._cache.package_layout(ref).update_metadata() as metadata:
+        with layout.update_metadata() as metadata:
             metadata.recipe.checksums = calc_files_checksum(cache_files)
 
         local_manifest = FileTreeManifest.loads(load(cache_files["conanmanifest.txt"]))
@@ -343,7 +343,7 @@ class CmdUpload(object):
 
         # The recipe wasn't in the registry or it has changed the revision field only
         if not current_remote_name:
-            with self._cache.package_layout(ref).update_metadata() as metadata:
+            with layout.update_metadata() as metadata:
                 metadata.recipe.remote = remote.name
 
         return ref
@@ -362,7 +362,7 @@ class CmdUpload(object):
                                    remote=p_remote)
 
         t1 = time.time()
-        the_files = self._compress_package_files(pref, integrity_check)
+        the_files = self._compress_package_files(pkg_layout, pref, integrity_check)
 
         if policy == UPLOAD_POLICY_SKIP:
             return None
@@ -392,42 +392,59 @@ class CmdUpload(object):
 
         return pref
 
-    def _compress_recipe_files(self, ref):
-        export_folder = self._cache.package_layout(ref).export()
+    def _compress_recipe_files(self, layout, ref):
+        download_export_folder = layout.download_export()
 
         for f in (EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME):
-            tgz_path = os.path.join(export_folder, f)
+            tgz_path = os.path.join(download_export_folder, f)
             if is_dirty(tgz_path):
                 self._output.warn("%s: Removing %s, marked as dirty" % (str(ref), f))
                 os.remove(tgz_path)
                 clean_dirty(tgz_path)
 
+        export_folder = layout.export()
         files, symlinks = gather_files(export_folder)
         if CONANFILE not in files or CONAN_MANIFEST not in files:
             raise ConanException("Cannot upload corrupted recipe '%s'" % str(ref))
-        export_src_folder = self._cache.package_layout(ref).export_sources()
+        export_src_folder = layout.export_sources()
         src_files, src_symlinks = gather_files(export_src_folder)
-        the_files = _compress_recipe_files(files, symlinks, src_files, src_symlinks, export_folder,
-                                           self._output)
 
-        return the_files
+        result = {CONANFILE: files.pop(CONANFILE),
+                  CONAN_MANIFEST: files.pop(CONAN_MANIFEST)}
 
-    def _compress_package_files(self, pref, integrity_check):
+        def add_tgz(tgz_name, tgz_files, tgz_symlinks, msg):
+            tgz = os.path.join(download_export_folder, tgz_name)
+            if os.path.isfile(tgz):
+                result[tgz_name] = tgz
+            elif tgz_files:
+                if self._output and not self._output.is_terminal:
+                    self._output.writeln(msg)
+                tgz = compress_files(tgz_files, tgz_symlinks, tgz_name, download_export_folder,
+                                     self._output)
+                result[tgz_name] = tgz
 
+        add_tgz(EXPORT_TGZ_NAME, files, symlinks, "Compressing recipe...")
+        add_tgz(EXPORT_SOURCES_TGZ_NAME, src_files, src_symlinks, "Compressing recipe sources...")
+
+        return result
+
+    def _compress_package_files(self, layout, pref, integrity_check):
         t1 = time.time()
-        # existing package, will use short paths if defined
-        package_folder = self._cache.package_layout(pref.ref, short_paths=None).package(pref)
-
-        if is_dirty(package_folder):
+        if layout.package_is_dirty(pref):
             raise ConanException("Package %s is corrupted, aborting upload.\n"
                                  "Remove it with 'conan remove %s -p=%s'"
                                  % (pref, pref.ref, pref.id))
-        tgz_path = os.path.join(package_folder, PACKAGE_TGZ_NAME)
-        if is_dirty(tgz_path):
+
+        download_pkg_folder = layout.download_package(pref)
+        package_tgz = os.path.join(download_pkg_folder, PACKAGE_TGZ_NAME)
+        if is_dirty(package_tgz):
             self._output.warn("%s: Removing %s, marked as dirty" % (str(pref), PACKAGE_TGZ_NAME))
-            os.remove(tgz_path)
-            clean_dirty(tgz_path)
+            os.remove(package_tgz)
+            clean_dirty(package_tgz)
+
         # Get all the files in that directory
+        # existing package, will use short paths if defined
+        package_folder = layout.package(pref)
         files, symlinks = gather_files(package_folder)
 
         if CONANINFO not in files or CONAN_MANIFEST not in files:
@@ -440,8 +457,19 @@ class CmdUpload(object):
             logger.debug("UPLOAD: Time remote_manager check package integrity : %f"
                          % (time.time() - t1))
 
-        the_files = _compress_package_files(files, symlinks, package_folder, self._output)
-        return the_files
+        if not os.path.isfile(package_tgz):
+            if self._output and not self._output.is_terminal:
+                self._output.writeln("Compressing package...")
+            tgz_files = {f: path for f, path in files.items() if
+                         f not in [CONANINFO, CONAN_MANIFEST]}
+            tgz_path = compress_files(tgz_files, symlinks, PACKAGE_TGZ_NAME, download_pkg_folder,
+                                      self._output)
+            assert tgz_path == package_tgz
+            assert os.path.exists(package_tgz)
+
+        return {PACKAGE_TGZ_NAME: package_tgz,
+                CONANINFO: files[CONANINFO],
+                CONAN_MANIFEST: files[CONAN_MANIFEST]}
 
     def _recipe_files_to_upload(self, ref, policy, files, remote, remote_manifest,
                                 local_manifest):
@@ -558,43 +586,6 @@ class CmdUpload(object):
             self._output.info("\n%s" % ("-"*40))
         except Exception as e:
             self._output.info("Error printing information about the diff: %s" % str(e))
-
-
-def _compress_recipe_files(files, symlinks, src_files, src_symlinks, dest_folder, output):
-    # This is the minimum recipe
-    result = {CONANFILE: files.pop(CONANFILE),
-              CONAN_MANIFEST: files.pop(CONAN_MANIFEST)}
-
-    export_tgz_path = files.pop(EXPORT_TGZ_NAME, None)
-    sources_tgz_path = files.pop(EXPORT_SOURCES_TGZ_NAME, None)
-
-    def add_tgz(tgz_name, tgz_path, tgz_files, tgz_symlinks, msg):
-        if tgz_path:
-            result[tgz_name] = tgz_path
-        elif tgz_files:
-            if output and not output.is_terminal:
-                output.writeln(msg)
-            tgz_path = compress_files(tgz_files, tgz_symlinks, tgz_name, dest_folder, output)
-            result[tgz_name] = tgz_path
-
-    add_tgz(EXPORT_TGZ_NAME, export_tgz_path, files, symlinks, "Compressing recipe...")
-    add_tgz(EXPORT_SOURCES_TGZ_NAME, sources_tgz_path, src_files, src_symlinks,
-            "Compressing recipe sources...")
-
-    return result
-
-
-def _compress_package_files(files, symlinks, dest_folder, output):
-    tgz_path = files.get(PACKAGE_TGZ_NAME)
-    if not tgz_path:
-        if output and not output.is_terminal:
-            output.writeln("Compressing package...")
-        tgz_files = {f: path for f, path in files.items() if f not in [CONANINFO, CONAN_MANIFEST]}
-        tgz_path = compress_files(tgz_files, symlinks, PACKAGE_TGZ_NAME, dest_folder, output)
-
-    return {PACKAGE_TGZ_NAME: tgz_path,
-            CONANINFO: files[CONANINFO],
-            CONAN_MANIFEST: files[CONAN_MANIFEST]}
 
 
 def compress_files(files, symlinks, name, dest_dir, output=None):

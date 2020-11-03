@@ -7,7 +7,7 @@ from conans.test.utils.tools import TestClient
 
 class StdCppTest(unittest.TestCase):
 
-    def use_wrong_setting_for_compiler_test(self):
+    def test_use_wrong_setting_for_compiler(self):
         client = TestClient()
 
         conanfile = """from conans import ConanFile
@@ -31,7 +31,7 @@ class TestConan(ConanFile):
             client.run('create . user/testing -s compiler="gcc" -s compiler.libcxx="libstdc++11" '
                        '-s compiler.version="6.3" -s cppstd=17')
 
-    def gcc_8_std_20_test(self):
+    def test_gcc_8_std_20(self):
         client = TestClient()
 
         conanfile = """from conans import ConanFile
@@ -48,7 +48,7 @@ class TestConan(ConanFile):
                        '-s compiler.libcxx="libstdc++11" '
                        '-s compiler.version="8" -s cppstd=20')
 
-    def set_default_package_id_test(self):
+    def test_set_default_package_id(self):
         client = TestClient()
         conanfile = """from conans import ConanFile
 

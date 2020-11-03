@@ -18,7 +18,7 @@ from conans.util.windows import path_shortener
 
 class PathsTest(unittest.TestCase):
 
-    def expand_user_test(self):
+    def test_expand_user(self):
         if platform.system() == "Windows":
             old_env = dict(os.environ)
             try:
@@ -29,7 +29,7 @@ class PathsTest(unittest.TestCase):
                 os.environ.update(old_env)
             self.assertTrue(os.path.exists(user_home))
 
-    def basic_test(self):
+    def test_basic(self):
         folder = temp_folder()
         paths = ClientCache(folder, TestBufferConanOutput())
         ref = ConanFileReference.loads("opencv/2.4.10@lasote/testing")

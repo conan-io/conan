@@ -5,6 +5,7 @@ import os
 import unittest
 import warnings
 
+import pytest
 from nose.plugins.attrib import attr
 from six import StringIO
 
@@ -20,9 +21,10 @@ from conans.util.files import load, save
 
 
 @attr('visual_studio')
+@pytest.mark.tool_visual_studio
 class BuildSLNCommandTest(unittest.TestCase):
 
-    def no_configuration_test(self):
+    def test_no_configuration(self):
         dummy = """GlobalSection
             EndGlobalSection
      GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -67,7 +69,7 @@ class BuildSLNCommandTest(unittest.TestCase):
         self.assertNotIn("WARN", new_out.getvalue())
         self.assertNotIn("ERROR", new_out.getvalue())
 
-    def no_arch_test(self):
+    def test_no_arch(self):
         with self.assertRaises(ConanException):
             with warnings.catch_warnings(record=True) as w:
                 warnings.simplefilter("always")
@@ -80,7 +82,7 @@ class BuildSLNCommandTest(unittest.TestCase):
                 self.assertEqual(len(w), 1)
                 self.assertTrue(issubclass(w[0].category, DeprecationWarning))
 
-    def no_build_type_test(self):
+    def test_no_build_type(self):
         with self.assertRaises(ConanException):
             with warnings.catch_warnings(record=True) as w:
                 warnings.simplefilter("always")
@@ -93,7 +95,7 @@ class BuildSLNCommandTest(unittest.TestCase):
                 self.assertEqual(len(w), 1)
                 self.assertTrue(issubclass(w[0].category, DeprecationWarning))
 
-    def positive_test(self):
+    def test_positive(self):
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
 
@@ -111,7 +113,7 @@ class BuildSLNCommandTest(unittest.TestCase):
         self.assertNotIn('/m:%s' % cpu_count(output=output), command)
         self.assertNotIn('/target:teapot', command)
 
-    def upgrade_test(self):
+    def test_upgrade(self):
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
 
@@ -161,7 +163,7 @@ class BuildSLNCommandTest(unittest.TestCase):
 
             self.assertIn('devenv "dummy.sln" /upgrade', command)
 
-    def parallel_test(self):
+    def test_parallel(self):
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
 
@@ -179,7 +181,7 @@ class BuildSLNCommandTest(unittest.TestCase):
         self.assertNotIn('/m:%s' % cpu_count(output=output), command)
         self.assertNotIn('/target:teapot', command)
 
-    def target_test(self):
+    def test_target(self):
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
 
@@ -197,7 +199,7 @@ class BuildSLNCommandTest(unittest.TestCase):
         self.assertNotIn('/m:%s' % cpu_count(output=output), command)
         self.assertIn('/target:teapot', command)
 
-    def toolset_test(self):
+    def test_toolset(self):
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
 
@@ -221,7 +223,7 @@ class BuildSLNCommandTest(unittest.TestCase):
                                            '/verbosity:minimal '
                                            '/p:ForceImportBeforeCppTargets='), command)
 
-    def properties_file_test(self):
+    def test_properties_file(self):
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
 
