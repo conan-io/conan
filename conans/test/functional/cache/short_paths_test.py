@@ -7,7 +7,7 @@ import unittest
 from parameterized import parameterized
 
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.test.utils.genconanfile import GenConanfile
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
 
