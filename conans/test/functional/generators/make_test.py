@@ -29,7 +29,7 @@ class MakeGeneratorTest(unittest.TestCase):
 void hellowrapper();
 """
         hellowrapper_impl = """
-#include "hello.h"
+#include "myhello.h"
 
 #include "hellowrapper.h"
 
