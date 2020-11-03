@@ -439,8 +439,8 @@ message("Target libs: ${tmp}")
         client.run("create .")
         client.run("new hello2/1.0 -s")
         replace_in_file(os.path.join(client.current_folder, "conanfile.py"),
-                        'self.cpp_info.libs = ["hello"]',
-                        'self.cpp_info.libs = ["hello"]\n        self.cpp_info.name = "MYHELLO2"',
+                        'self.cpp_info.libs = ["hello2"]',
+                        'self.cpp_info.libs = ["hello2"]\n        self.cpp_info.name = "MYHELLO2"',
                         output=client.out)
         replace_in_file(os.path.join(client.current_folder, "conanfile.py"),
                         'exports_sources = "src/*"',
@@ -476,7 +476,7 @@ message("Target libs: ${tmp}")
         self.assertIn('Found MYHELLO2: 1.0 (found version "1.0")', client.out)
         self.assertIn('Found MYHELLO: 1.0 (found version "1.0")', client.out)
         self.assertIn("Target libs (hello2): "
-                      "CONAN_LIB::MYHELLO2_hello;MYHELLO::MYHELLO;"
+                      "CONAN_LIB::MYHELLO2_hello2;MYHELLO::MYHELLO;"
                       "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
                       "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
                       "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>",
@@ -506,14 +506,8 @@ message("Target libs: ${tmp}")
 
         client.run("new hello2/1.0 -s")
         replace_in_file(
-            os.path.join(client.current_folder, "src/CMakeLists.txt"),
-            search='add_library(hello hello.cpp)',
-            replace='add_library(hello2 hello.cpp)',
-            output=client.out
-        )
-        replace_in_file(
             os.path.join(client.current_folder, "conanfile.py"),
-            search='self.cpp_info.libs = ["hello"]',
+            search='self.cpp_info.libs = ["hello2"]',
             replace=indent.join([
                 'self.cpp_info.name = "MYHELLO2"',
                 'self.cpp_info.filenames["cmake_find_package"] = "hello_2"',
