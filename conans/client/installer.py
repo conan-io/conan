@@ -558,23 +558,25 @@ class BinaryInstaller(object):
             if n not in transitive:
                 conan_file.output.info("Applying build-requirement: %s" % str(n.ref))
 
+            dep_cpp_info = n.conanfile._conan_dep_cpp_info
+
             if not using_build_profile:  # Do not touch anything
                 conan_file.deps_user_info[n.ref.name] = n.conanfile.user_info
-                conan_file.deps_cpp_info.add(n.ref.name, n.conanfile._conan_dep_cpp_info)
+                conan_file.deps_cpp_info.add(n.ref.name, dep_cpp_info)
                 conan_file.deps_env_info.update(n.conanfile.env_info, n.ref.name)
             else:
                 if n in transitive or n in br_host:
                     conan_file.deps_user_info[n.ref.name] = n.conanfile.user_info
-                    conan_file.deps_cpp_info.add(n.ref.name, n.conanfile._conan_dep_cpp_info)
+                    conan_file.deps_cpp_info.add(n.ref.name, dep_cpp_info)
                 else:
                     conan_file.user_info_build[n.ref.name] = n.conanfile.user_info
                     env_info = EnvInfo()
                     env_info._values_ = n.conanfile.env_info._values_.copy()
                     # Add cpp_info.bin_paths/lib_paths to env_info (it is needed for runtime)
-                    env_info.DYLD_LIBRARY_PATH.extend(n.conanfile._conan_dep_cpp_info.lib_paths)
-                    env_info.DYLD_LIBRARY_PATH.extend(n.conanfile._conan_dep_cpp_info.framework_paths)
-                    env_info.LD_LIBRARY_PATH.extend(n.conanfile._conan_dep_cpp_info.lib_paths)
-                    env_info.PATH.extend(n.conanfile._conan_dep_cpp_info.bin_paths)
+                    env_info.DYLD_LIBRARY_PATH.extend(dep_cpp_info.lib_paths)
+                    env_info.DYLD_LIBRARY_PATH.extend(dep_cpp_info.framework_paths)
+                    env_info.LD_LIBRARY_PATH.extend(dep_cpp_info.lib_paths)
+                    env_info.PATH.extend(dep_cpp_info.bin_paths)
                     conan_file.deps_env_info.update(env_info, n.ref.name)
 
         # Update the info but filtering the package values that not apply to the subtree
@@ -596,7 +598,8 @@ class BinaryInstaller(object):
         # Once the node is build, execute package info, so it has access to the
         # package folder and artifacts
         conan_v2 = get_env(CONAN_V2_MODE_ENVVAR, False)
-        with pythonpath(conanfile) if not conan_v2 else no_op():  # Minimal pythonpath, not the whole context, make it 50% slower
+        # Minimal pythonpath, not the whole context, make it 50% slower
+        with pythonpath(conanfile) if not conan_v2 else no_op():
             with tools.chdir(package_folder):
                 with conanfile_exception_formatter(str(conanfile), "package_info"):
                     conanfile.package_folder = package_folder
