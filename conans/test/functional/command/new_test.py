@@ -187,13 +187,12 @@ class NewCommandTest(unittest.TestCase):
 
     def test_new_purec(self):
         client = TestClient()
-        client.run('new MyPackage/1.3@myuser/testing -c -t')
+        client.run('new MyPackage/1.3@myuser/testing -c -t --source')
         root = client.current_folder
         self.assertTrue(os.path.exists(os.path.join(root, "conanfile.py")))
         content = load(os.path.join(root, "conanfile.py"))
         self.assertIn('name = "MyPackage"', content)
         self.assertIn('version = "1.3"', content)
-        self.assertIn('del self.settings.compiler.libcxx', content)
         self.assertIn('topics = (', content)
         self.assertNotIn('homepage', content)
         # assert they are correct at least

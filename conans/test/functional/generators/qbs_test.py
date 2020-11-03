@@ -1,6 +1,6 @@
 import unittest
 
-from conans.test.utils.genconanfile import GenConanfile
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
 

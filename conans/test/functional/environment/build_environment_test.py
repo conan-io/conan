@@ -4,7 +4,7 @@ from textwrap import dedent
 
 from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.test.assets.cpp_test_files import cpp_hello_conan_files
 
 
 mylibh = '''

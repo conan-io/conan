@@ -149,6 +149,9 @@ class PackageCacheLayout(object):
                                  "Close any app using it, and retry" % (pkg_folder, str(e)))
         if is_dirty(pkg_folder):
             clean_dirty(pkg_folder)
+        # FIXME: This fails at the moment, but should be fixed
+        # with self.update_metadata() as metadata:
+        #    metadata.clear_package(pref.id)
 
     def sources_remove(self):
         src_folder = os.path.join(self._base_folder, SRC_FOLDER)
