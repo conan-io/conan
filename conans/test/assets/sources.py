@@ -13,7 +13,7 @@ _function_cpp = r"""
 
 int {{name}}(){
     #ifdef NDEBUG
-    std::cout << "{{msg}}: Release!\n";
+    std::cout << "{{ msg|default(name) }}: Release!\n";
     #else
     std::cout << "{{msg}}: Debug!\n";
     #endif
