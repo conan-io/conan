@@ -6,6 +6,7 @@ import unittest
 
 from parameterized import parameterized
 
+from conans.client.tools import environment_append
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import temp_folder
@@ -142,22 +143,22 @@ class TestConan(ConanFile):
         # https://github.com/conan-io/conan/issues/7983
         client = TestClient(cache_autopopulate=False)
         short_folder = temp_folder()
-        print("SHORT FOLDER ", short_folder)
-        client.run('config set general.user_home_short="%s"' % short_folder)
-        conanfile = GenConanfile().with_exports_sources("*")
-        if use_always_short_paths:
-            client.run("config set general.use_always_short_paths=True")
-        else:
-            conanfile.with_short_paths(True)
-        client.save({"conanfile.py": conanfile,
-                     "file.h": ""})
-        client.run("create . dep/1.0@")
-        self.assertEqual(5, len(os.listdir(short_folder)))
-        client.run("remove * -f")
-        self.assertEqual(0, len(os.listdir(short_folder)))
-        client.run("create . dep/1.0@")
-        self.assertEqual(5, len(os.listdir(short_folder)))
-        client.run("install dep/1.0@")
-        self.assertEqual(5, len(os.listdir(short_folder)))
-        client.run("install dep/1.0@ --build")
-        self.assertEqual(5, len(os.listdir(short_folder)))
+        # Testing in CI requires setting it via env-var
+        with environment_append({"CONAN_USER_HOME_SHORT": short_folder}):
+            conanfile = GenConanfile().with_exports_sources("*")
+            if use_always_short_paths:
+                client.run("config set general.use_always_short_paths=True")
+            else:
+                conanfile.with_short_paths(True)
+            client.save({"conanfile.py": conanfile,
+                         "file.h": ""})
+            client.run("create . dep/1.0@")
+            self.assertEqual(5, len(os.listdir(short_folder)))
+            client.run("remove * -f")
+            self.assertEqual(0, len(os.listdir(short_folder)))
+            client.run("create . dep/1.0@")
+            self.assertEqual(5, len(os.listdir(short_folder)))
+            client.run("install dep/1.0@")
+            self.assertEqual(5, len(os.listdir(short_folder)))
+            client.run("install dep/1.0@ --build")
+            self.assertEqual(5, len(os.listdir(short_folder)))
