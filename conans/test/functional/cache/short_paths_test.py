@@ -142,6 +142,7 @@ class TestConan(ConanFile):
         # https://github.com/conan-io/conan/issues/7983
         client = TestClient(cache_autopopulate=False)
         short_folder = temp_folder()
+        print("SHORT FOLDER ", short_folder)
         client.run('config set general.user_home_short="%s"' % short_folder)
         conanfile = GenConanfile().with_exports_sources("*")
         if use_always_short_paths:

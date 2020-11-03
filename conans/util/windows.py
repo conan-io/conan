@@ -48,6 +48,8 @@ def path_shortener(path, short_paths):
     use_always_short_paths = get_env("CONAN_USE_ALWAYS_SHORT_PATHS", False)
     short_paths = use_always_short_paths or short_paths
 
+    print("path_shortener: short_paths=%s" % short_paths)
+
     if short_paths is False or os.getenv("CONAN_USER_HOME_SHORT") == "None":
         return path
     link = os.path.join(path, CONAN_LINK)
@@ -107,6 +109,7 @@ def path_shortener(path, short_paths):
     # temp folder generator and conan-links consistency
     redirect = os.path.join(redirect, "1")
     save(link, redirect)
+    print("path_shortener returned %s" % redirect)
     return redirect
 
 
