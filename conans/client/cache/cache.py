@@ -35,13 +35,13 @@ TEMPLATES_FOLDER = "templates"
 GENERATORS_FOLDER = "generators"
 
 
-def is_case_insensitive_os():
+def _is_case_insensitive_os():
     system = platform.system()
     return system != "Linux" and system != "FreeBSD" and system != "SunOS"
 
 
-if is_case_insensitive_os():
-    def check_ref_case(ref, store_folder):
+if _is_case_insensitive_os():
+    def _check_ref_case(ref, store_folder):
         if not os.path.exists(store_folder):
             return
 
@@ -51,14 +51,15 @@ if is_case_insensitive_os():
             try:
                 idx = [item.lower() for item in items].index(part.lower())
                 if part != items[idx]:
-                    raise ConanException("Requested '%s' but found case incompatible '%s'\n"
+                    raise ConanException("Requested '%s', but found case incompatible recipe with"
+                                         " name '%s' in the cache.\n"
                                          "Case insensitive filesystem can't manage this"
                                          % (str(ref), items[idx]))
                 tmp = os.path.normpath(tmp + os.sep + part)
             except ValueError:
                 return
 else:
-    def check_ref_case(ref, store_folder):  # @UnusedVariable
+    def _check_ref_case(ref, store_folder):  # @UnusedVariable
         pass
 
 
@@ -104,7 +105,7 @@ class ClientCache(object):
             return PackageEditableLayout(os.path.dirname(conanfile_path), layout_file, ref,
                                          conanfile_path)
         else:
-            check_ref_case(ref, self.store)
+            _check_ref_case(ref, self.store)
             base_folder = os.path.normpath(os.path.join(self.store, ref.dir_repr()))
             return PackageCacheLayout(base_folder=base_folder, ref=ref,
                                       short_paths=short_paths, no_lock=self._no_locks())
