@@ -20,7 +20,7 @@ conanfile = textwrap.dedent('''
 
 class CaseSensitiveTest(unittest.TestCase):
 
-    @unittest.skipIf(platform.system() == 'Linux', "Only for case sensitive OS")
+    @unittest.skipIf(platform.system() == 'Linux', "Only for case insensitive OS")
     def test_install(self):
         test_server = TestServer()
         servers = {"default": test_server}
@@ -40,7 +40,7 @@ class CaseSensitiveTest(unittest.TestCase):
         client.run("install .", assert_error=True)
         self.assertIn("found case incompatible recipe with name 'Hello0' in the cache", client.out)
 
-    @unittest.skipIf(platform.system() == 'Linux', "Only for case sensitive OS")
+    @unittest.skipIf(platform.system() == 'Linux', "Only for case insensitive OS")
     def test_install_same(self):
         client = TestClient()
         client.save({CONANFILE: conanfile})
@@ -65,7 +65,7 @@ class CaseSensitiveTest(unittest.TestCase):
         client.run("export-pkg . hello0/0.1@lasote/stable", assert_error=True)
         self.assertIn("ERROR: Package recipe with name hello0!=Hello0", client.out)
 
-    @unittest.skipIf(platform.system() == 'Linux', "Only for case sensitive OS")
+    @unittest.skipIf(platform.system() == 'Linux', "Only for case insensitive OS")
     def test_copy(self):
         client = TestClient()
         client.save({CONANFILE: conanfile})
@@ -74,7 +74,7 @@ class CaseSensitiveTest(unittest.TestCase):
         client.run("copy hello0/0.1@lasote/stable otheruser/testing", assert_error=True)
         self.assertIn("found case incompatible recipe with name 'Hello0' in the cache", client.out)
 
-    @unittest.skipIf(platform.system() == 'Linux', "Only for case sensitive OS")
+    @unittest.skipIf(platform.system() == 'Linux', "Only for case insensitive OS")
     def test_remove(self):
         client = TestClient()
         client.save({CONANFILE: conanfile})
