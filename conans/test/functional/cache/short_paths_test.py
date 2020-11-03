@@ -140,9 +140,8 @@ class TestConan(ConanFile):
     @parameterized.expand([(True,), (False,)])
     def test_leaking_folders(self, use_always_short_paths):
         # https://github.com/conan-io/conan/issues/7983
-        client = TestClient()
+        client = TestClient(cache_autopopulate=False)
         short_folder = temp_folder()
-        print(short_folder)
         client.run('config set general.user_home_short="%s"' % short_folder)
         conanfile = GenConanfile().with_exports_sources("*")
         if use_always_short_paths:
