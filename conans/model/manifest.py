@@ -1,9 +1,9 @@
-import datetime
 import os
 
 from conans.errors import ConanException
 from conans.paths import CONAN_MANIFEST, EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
-from conans.util.dates import timestamp_now
+from conans.util.dates import timestamp_now, timestamp_to_str
+
 from conans.util.env_reader import get_env
 from conans.util.files import load, md5, md5sum, save, walk
 
@@ -65,7 +65,7 @@ class FileTreeManifest(object):
 
     @property
     def time_str(self):
-        return datetime.datetime.fromtimestamp(int(self.time)).strftime('%Y-%m-%d %H:%M:%S')
+        return timestamp_to_str(self.time)
 
     @staticmethod
     def loads(text):
@@ -92,6 +92,17 @@ class FileTreeManifest(object):
         ret = ["%s" % self.time]
         for file_path, file_md5 in sorted(self.file_sums.items()):
             ret.append("%s: %s" % (file_path, file_md5))
+        ret.append("")
+        content = "\n".join(ret)
+        return content
+
+    def __str__(self):
+        """  Used for displaying the manifest in user readable format in Uploader, when the server
+        manifest is newer than the cache one (and not force)
+        """
+        ret = ["Time: %s" % timestamp_to_str(self.time)]
+        for file_path, file_md5 in sorted(self.file_sums.items()):
+            ret.append("%s, MD5: %s" % (file_path, file_md5))
         ret.append("")
         content = "\n".join(ret)
         return content

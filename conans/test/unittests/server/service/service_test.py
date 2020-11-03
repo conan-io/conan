@@ -15,7 +15,7 @@ from conans.server.service.v1.service import ConanService
 from conans.server.service.v1.upload_download_service import FileUploadDownloadService
 from conans.server.store.disk_adapter import ServerDiskAdapter
 from conans.server.store.server_store import ServerStore
-from conans.test.utils.cpp_test_files import cpp_hello_source_files
+from conans.test.assets.cpp_test_files import cpp_hello_source_files
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import load, md5sum, mkdir, save, save_files
 

@@ -5,7 +5,7 @@ import unittest
 from six.moves.urllib.parse import unquote
 
 from conans import MATRIX_PARAMS
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.test.assets.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import TestClient, TestRequester, TestServer
 from conans.util.files import save
 

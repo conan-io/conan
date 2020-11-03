@@ -785,7 +785,7 @@ class ConanAPIV1(object):
                                                                    deps_info_required=True)
         run_package_method(conanfile, None, source_folder, build_folder, package_folder,
                            install_folder, self.app.hook_manager, conanfile_path, None,
-                           local=True, copy_info=True)
+                           copy_info=True)
 
     @api_method
     def source(self, path, source_folder=None, info_folder=None, cwd=None):

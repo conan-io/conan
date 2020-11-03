@@ -3,7 +3,6 @@ import datetime
 import re
 import time
 
-
 from dateutil import parser
 
 from conans.errors import ConanException
@@ -23,8 +22,12 @@ def iso8601_to_str(iso_str):
 
 
 def timestamp_now():
-    # seconds since epoch 0, easy to store
+    # seconds since epoch 0, easy to store, in UTC
     return calendar.timegm(time.gmtime())
+
+
+def timestamp_to_str(timestamp):
+    return datetime.datetime.fromtimestamp(int(timestamp)).strftime('%Y-%m-%d %H:%M:%S UTC')
 
 
 def timedelta_from_text(interval):

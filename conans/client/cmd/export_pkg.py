@@ -61,7 +61,7 @@ def export_pkg(app, recorder, full_ref, source_folder, build_folder, package_fol
         else:
             prev = run_package_method(conanfile, package_id, source_folder, build_folder,
                                       dest_package_folder, install_folder, hook_manager,
-                                      conan_file_path, ref, local=True)
+                                      conan_file_path, ref)
 
     packager.update_package_metadata(prev, layout, package_id, full_ref.revision)
     pref = PackageReference(pref.ref, pref.id, prev)

@@ -2,7 +2,7 @@ import os
 import unittest
 
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.test.assets.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.test_files import uncompress_packaged_files
 from conans.test.utils.tools import TestClient, TestServer
 
