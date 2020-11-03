@@ -18,9 +18,9 @@ conanfile = textwrap.dedent('''
 ''')
 
 
+@unittest.skipIf(platform.system() == 'Linux', "Only for case insensitive OS")
 class CaseSensitiveTest(unittest.TestCase):
 
-    @unittest.skipIf(platform.system() == 'Linux', "Only for case insensitive OS")
     def test_install(self):
         test_server = TestServer()
         servers = {"default": test_server}
@@ -40,7 +40,6 @@ class CaseSensitiveTest(unittest.TestCase):
         client.run("install .", assert_error=True)
         self.assertIn("found case incompatible recipe with name 'Hello0' in the cache", client.out)
 
-    @unittest.skipIf(platform.system() == 'Linux', "Only for case insensitive OS")
     def test_install_same(self):
         client = TestClient()
         client.save({CONANFILE: conanfile})
@@ -48,6 +47,23 @@ class CaseSensitiveTest(unittest.TestCase):
         client.run("install hello0/0.1@lasote/stable --build=missing", assert_error=True)
         self.assertIn("found case incompatible recipe with name 'Hello0' in the cache", client.out)
 
+    def test_copy(self):
+        client = TestClient()
+        client.save({CONANFILE: conanfile})
+        client.run("export . lasote/stable")
+        client.run("install Hello0/0.1@lasote/stable --build=missing")
+        client.run("copy hello0/0.1@lasote/stable otheruser/testing", assert_error=True)
+        self.assertIn("found case incompatible recipe with name 'Hello0' in the cache", client.out)
+
+    def test_remove(self):
+        client = TestClient()
+        client.save({CONANFILE: conanfile})
+        client.run("export . lasote/stable")
+        client.run("remove hello0/0.1@lasote/stable -f", assert_error=True)
+        self.assertIn("found case incompatible recipe with name 'Hello0' in the cache", client.out)
+
+
+class MismatchReference(unittest.TestCase):
     def test_imports(self):
         client = TestClient()
         client.save({CONANFILE: conanfile})
@@ -64,20 +80,3 @@ class CaseSensitiveTest(unittest.TestCase):
         client.run("install Hello0/0.1@lasote/stable --build=missing")
         client.run("export-pkg . hello0/0.1@lasote/stable", assert_error=True)
         self.assertIn("ERROR: Package recipe with name hello0!=Hello0", client.out)
-
-    @unittest.skipIf(platform.system() == 'Linux', "Only for case insensitive OS")
-    def test_copy(self):
-        client = TestClient()
-        client.save({CONANFILE: conanfile})
-        client.run("export . lasote/stable")
-        client.run("install Hello0/0.1@lasote/stable --build=missing")
-        client.run("copy hello0/0.1@lasote/stable otheruser/testing", assert_error=True)
-        self.assertIn("found case incompatible recipe with name 'Hello0' in the cache", client.out)
-
-    @unittest.skipIf(platform.system() == 'Linux', "Only for case insensitive OS")
-    def test_remove(self):
-        client = TestClient()
-        client.save({CONANFILE: conanfile})
-        client.run("export . lasote/stable")
-        client.run("remove hello0/0.1@lasote/stable -f", assert_error=True)
-        self.assertIn("found case incompatible recipe with name 'Hello0' in the cache", client.out)
