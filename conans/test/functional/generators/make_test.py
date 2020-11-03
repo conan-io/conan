@@ -34,7 +34,7 @@ void hellowrapper();
 #include "hellowrapper.h"
 
 void hellowrapper(){
-    hello();
+    myhello();
 }
 """
         makefile = """
