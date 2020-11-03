@@ -147,9 +147,6 @@ def _load_profile(text, profile_path, default_folder):
         # Replace the variables from parents in the current profile
         profile_parser.apply_vars()
 
-        # Expand env vars after variable substitution
-        profile_parser.profile_text = os.path.expandvars(profile_parser.profile_text)
-
         # Current profile before update with parents (but parent variables already applied)
         doc = ConfigParser(profile_parser.profile_text,
                            allowed_fields=["build_requires", "settings", "env", "scopes", "options"])
