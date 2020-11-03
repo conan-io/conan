@@ -366,4 +366,3 @@ class CMakeMultiSyntaxTest(unittest.TestCase):
         self.assertIn("CMake Warning at conanbuildinfo_multi.cmake", self.client.out)
         self.assertIn("Conan: NO_OUTPUT_DIRS has no effect with cmake_multi generator",
                       self.client.out)
-                                                                                                                                                   
