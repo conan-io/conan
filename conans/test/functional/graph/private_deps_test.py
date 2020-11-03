@@ -7,7 +7,7 @@ from nose.plugins.attrib import attr
 from conans.model.info import ConanInfo
 from conans.model.ref import ConanFileReference
 from conans.paths import BUILD_INFO_CMAKE, CONANINFO
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.test.assets.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, GenConanfile
 from conans.util.files import load
 

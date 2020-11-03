@@ -19,7 +19,7 @@ from conans.model.info import ConanInfo
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE, CONANINFO, CONAN_MANIFEST
-from conans.test.utils.cpp_test_files import cpp_hello_source_files
+from conans.test.assets.cpp_test_files import cpp_hello_source_files
 from conans.test.utils.mocks import LocalDBMock, TestBufferConanOutput
 from conans.test.utils.server_launcher import TestServerLauncher
 from conans.test.utils.test_files import temp_folder

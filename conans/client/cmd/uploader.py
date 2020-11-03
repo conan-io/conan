@@ -292,20 +292,20 @@ class CmdUpload(object):
                                        remote=recipe_remote)
 
     def _upload_recipe(self, ref, conanfile, retry, retry_wait, policy, remote, remotes):
-
-        current_remote_name = self._cache.package_layout(ref).load_metadata().recipe.remote
+        layout = self._cache.package_layout(ref)
+        current_remote_name = layout.load_metadata().recipe.remote
 
         if remote.name != current_remote_name:
             complete_recipe_sources(self._remote_manager, self._cache, conanfile, ref, remotes)
 
-        conanfile_path = self._cache.package_layout(ref).conanfile()
+        conanfile_path = layout.conanfile()
         self._hook_manager.execute("pre_upload_recipe", conanfile_path=conanfile_path,
                                    reference=ref, remote=remote)
 
         t1 = time.time()
-        cache_files = self._compress_recipe_files(ref)
+        cache_files = self._compress_recipe_files(layout, ref)
 
-        with self._cache.package_layout(ref).update_metadata() as metadata:
+        with layout.update_metadata() as metadata:
             metadata.recipe.checksums = calc_files_checksum(cache_files)
 
         local_manifest = FileTreeManifest.loads(load(cache_files["conanmanifest.txt"]))
@@ -343,7 +343,7 @@ class CmdUpload(object):
 
         # The recipe wasn't in the registry or it has changed the revision field only
         if not current_remote_name:
-            with self._cache.package_layout(ref).update_metadata() as metadata:
+            with layout.update_metadata() as metadata:
                 metadata.recipe.remote = remote.name
 
         return ref
@@ -392,8 +392,7 @@ class CmdUpload(object):
 
         return pref
 
-    def _compress_recipe_files(self, ref):
-        layout = self._cache.package_layout(ref)
+    def _compress_recipe_files(self, layout, ref):
         download_export_folder = layout.download_export()
 
         for f in (EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME):

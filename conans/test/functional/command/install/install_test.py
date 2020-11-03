@@ -10,7 +10,7 @@ from conans.client.tools.oss import detected_os
 from conans.model.info import ConanInfo
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE, CONANFILE_TXT, CONANINFO
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.test.assets.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID
 from conans.test.utils.tools import TestClient, TestServer, GenConanfile
 from conans.util.files import mkdir, rmdir

@@ -6,8 +6,13 @@ import unittest
 import pytest
 from nose.plugins.attrib import attr
 
+<<<<<<< HEAD
 from conans.client.tools import remove_from_path, no_op
 from conans.test.utils.multi_config import multi_config_files
+=======
+from conans.client.tools import remove_from_path
+from conans.test.assets.multi_config import multi_config_files
+>>>>>>> develop
 from conans.test.utils.tools import TestClient
 
 conanfile_py = """
