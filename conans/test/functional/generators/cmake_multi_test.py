@@ -6,13 +6,9 @@ import unittest
 import pytest
 from nose.plugins.attrib import attr
 
-<<<<<<< HEAD
+
 from conans.client.tools import remove_from_path, no_op
-from conans.test.utils.multi_config import multi_config_files
-=======
-from conans.client.tools import remove_from_path
 from conans.test.assets.multi_config import multi_config_files
->>>>>>> develop
 from conans.test.utils.tools import TestClient
 
 conanfile_py = """
@@ -370,3 +366,4 @@ class CMakeMultiSyntaxTest(unittest.TestCase):
         self.assertIn("CMake Warning at conanbuildinfo_multi.cmake", self.client.out)
         self.assertIn("Conan: NO_OUTPUT_DIRS has no effect with cmake_multi generator",
                       self.client.out)
+                                                                                                                                                   
