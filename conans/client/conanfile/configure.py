@@ -32,6 +32,7 @@ def run_configure_method(conanfile, down_options, down_ref, ref):
         conanfile.settings.validate()  # All has to be ok!
         conanfile.options.validate()
         # Recipe provides its own name if nothing else is defined
+        # FIXME: This shouldn't be here
         conanfile.provides = make_tuple(conanfile.provides or conanfile.name)
 
         _validate_fpic(conanfile)
