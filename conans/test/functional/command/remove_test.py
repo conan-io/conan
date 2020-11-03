@@ -1,7 +1,7 @@
 import os
 import unittest
-import six
 
+import six
 from mock import Mock
 
 from conans import DEFAULT_REVISION_V1

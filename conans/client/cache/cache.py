@@ -51,10 +51,12 @@ if _is_case_insensitive_os():
             try:
                 idx = [item.lower() for item in items].index(part.lower())
                 if part != items[idx]:
-                    raise ConanException("Requested '%s', but found case incompatible recipe with"
-                                         " name '%s' in the cache.\n"
-                                         "Case insensitive filesystem can't manage this"
-                                         % (str(ref), items[idx]))
+                    raise ConanException("Requested '{requested}', but found case incompatible"
+                                         " recipe with name '{existing}' in the cache. Case"
+                                         " insensitive filesystem can't manage this.\n Remove"
+                                         " existing recipe '{existing}' and try again.".format(
+                        requested=str(ref), existing=items[idx]
+                    ))
                 tmp = os.path.normpath(tmp + os.sep + part)
             except ValueError:
                 return
