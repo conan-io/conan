@@ -139,11 +139,9 @@ class CMakeNinjaTestCase(unittest.TestCase):
         self.assertIn("architecture: i386:x86-64", self.client.out)
         self.assertIn("DYNAMIC", self.client.out)
         self.client.run_command("file libfoobard.so")
-        # FIXME: Broken assert
-        #  self.assertIn("with debug_info", self.client.out)
+        self.assertIn("debug", self.client.out)
 
-    # This test is broken in Windows now
-    @unittest.skip
+    @unittest.skip("FIXME: Broken on Windows")
     def test_locally_build_Windows(self):
         """ Ninja build must proceed using default profile and cmake build (Windows)
         """
@@ -179,6 +177,29 @@ class CMakeNinjaTestCase(unittest.TestCase):
         # TODO - How to detect Runtime library from a DLL (command line)?
         # self.client.run_command("DUMPBIN /NOLOGO /DIRECTIVES foobard.dll")
         # self.assertIn("RuntimeLibrary=MDd_DynamicDebug", self.client.out)
+
+    @ unittest.skipIf(platform.system() != "Darwin", "Only OSX")
+    def test_locally_build_macos(self):
+        """ Ninja build must proceed using default profile and cmake build (MacOS)
+        """
+
+        self.client.save({"mac_host": textwrap.dedent("""
+                          [settings]
+                          os=Macos
+                          arch=x86_64
+                          compiler=apple-clang
+                          compiler.version=12.0
+                          compiler.libcxx=libc++
+                          build_type=Release
+                          [env]
+                          CONAN_CMAKE_GENERATOR=Ninja""")})
+        self._build_locally("mac_host")
+        self.client.run_command("lipo -info libfoobar.a")
+        self.assertIn("architecture: x86_64", self.client.out)
+
+        self._build_locally("mac_host", "Debug", True)
+        self.client.run_command("file libfoobard.dylib")
+        self.assertIn("64-bit dynamically linked shared library x86_64", self.client.out)
 
     def test_devflow_build(self):
         """ Ninja build must proceed using default profile and conan development flow
