@@ -494,7 +494,6 @@ class GraphLock(object):
             node.graph_lock_node = locked_node
             if locked_node.options is not None:  # This was a "partial" one, not a "base" one
                 node.conanfile.options.values = locked_node.options
-                node.conanfile.options.freeze()
 
     def lock_node(self, node, requires, build_requires=False):
         """ apply options and constraints on requirements of a node, given the information from
@@ -511,6 +510,13 @@ class GraphLock(object):
                         require.lock(locked_node.ref, locked_id)
             return
 
+        # Make sure that locked options match
+        if node.conanfile.options.values != node.graph_lock_node.options:
+            raise ConanException("{}: Locked options do not match computed options\n"
+                                 "Locked options:\n{}\n"
+                                 "Computed options:\n{}".format(node.ref,
+                                                                node.conanfile.options.values,
+                                                                node.graph_lock_node.options))
         locked_node = node.graph_lock_node
         if build_requires:
             locked_requires = locked_node.build_requires or []

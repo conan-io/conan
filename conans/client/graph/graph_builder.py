@@ -323,10 +323,7 @@ class DepsGraphBuilder(object):
         """
         conanfile, ref = node.conanfile, node.ref
         try:
-            if not node.graph_lock_node:
-                run_configure_method(conanfile, down_options, down_ref, ref)
-            else:
-                conanfile.provides = []
+            run_configure_method(conanfile, down_options, down_ref, ref)
 
             with get_env_context_manager(conanfile, without_python=True):
                 # Update requirements (overwrites), computing new upstream

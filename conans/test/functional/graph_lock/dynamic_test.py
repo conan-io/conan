@@ -406,8 +406,13 @@ class PartialOptionsTest(unittest.TestCase):
         def _validate():
             client.run("lock create conanfile.py --name=LibD --version=1.0 --lockfile=libb.lock "
                        "--lockfile-out=libd.lock", assert_error=True)
-            expected = ("LibA/1.0: LibC/1.0 tried to change LibA/1.0 option myoption to False\n"
-                        "but it was already defined as True")
+            expected = textwrap.dedent("""\
+                ERROR: LibA/1.0: Locked options do not match computed options
+                Locked options:
+                myoption=False
+                Computed options:
+                myoption=True""")
+
             self.assertIn(expected, client.out)
 
         client.save({"conanfile.py": GenConanfile().with_require("LibB/1.0")

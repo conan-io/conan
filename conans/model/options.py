@@ -83,6 +83,12 @@ class PackageOptionValues(object):
     def clear(self):
         self._dict.clear()
 
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __eq__(self, other):
+        return self._dict == other._dict
+
     def __setattr__(self, attr, value):
         if attr[0] == "_":
             return super(PackageOptionValues, self).__setattr__(attr, value)
@@ -230,6 +236,13 @@ class OptionsValues(object):
             self._reqs_options[package].remove(name)
         else:
             self._package_values.remove(name)
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __eq__(self, other):
+        return (self._package_values == other._package_values and
+                self._reqs_options == other._reqs_options)
 
     def __repr__(self):
         return self.dumps()
