@@ -9,6 +9,7 @@ from nose.plugins.attrib import attr
 from parameterized.parameterized import parameterized
 
 from conans.model.ref import ConanFileReference, PackageReference
+from conans.test.assets.sources import gen_function_cpp, gen_function_h
 from conans.test.utils.tools import TestClient
 
 
@@ -44,40 +45,10 @@ class Base(unittest.TestCase):
                 cmake.build()
         """)
 
-    lib_h = textwrap.dedent("""
-        #pragma once
-        #ifdef WIN32
-          #define APP_LIB_EXPORT __declspec(dllexport)
-        #else
-          #define APP_LIB_EXPORT
-        #endif
-        APP_LIB_EXPORT void app();
-        """)
-
-    lib_cpp = textwrap.dedent("""
-        #include <iostream>
-        #include "app.h"
-        #include "hello.h"
-        void app() {
-            std::cout << "Hello: " << HELLO_MSG <<std::endl;
-            #ifdef NDEBUG
-            std::cout << "App: Release!" <<std::endl;
-            #else
-            std::cout << "App: Debug!" <<std::endl;
-            #endif
-            std::cout << "MYVAR: " << MYVAR << "\\n";
-            std::cout << "MYVAR_CONFIG: " << MYVAR_CONFIG << "\\n";
-            std::cout << "MYDEFINE: " << MYDEFINE << "\\n";
-            std::cout << "MYDEFINE_CONFIG: " << MYDEFINE_CONFIG << "\\n";
-        }
-        """)
-
-    app = textwrap.dedent("""
-        #include "app.h"
-        int main() {
-            app();
-        }
-        """)
+    lib_h = gen_function_h(name="app")
+    lib_cpp = gen_function_cpp(name="app", msg="App", includes=["hello"], calls=["hello"],
+                               preprocessor=["MYVAR", "MYVAR_CONFIG", "MYDEFINE", "MYDEFINE_CONFIG"])
+    main = gen_function_cpp(name="main", includes=["app"], calls=["app"])
 
     cmakelist = textwrap.dedent("""
         cmake_minimum_required(VERSION 2.8)
@@ -128,7 +99,9 @@ class Base(unittest.TestCase):
                 settings = "build_type"
                 def package(self):
                     save(os.path.join(self.package_folder, "include/hello.h"),
-                         '#define HELLO_MSG "%s"' % self.settings.build_type)
+                         '''#include <iostream>
+                         void hello(){std::cout<< "Hello: %s" <<std::endl;}'''
+                         % self.settings.build_type)
             """)
         self.client.save({"conanfile.py": conanfile})
         self.client.run("create . hello/0.1@ -s build_type=Debug")
@@ -137,7 +110,7 @@ class Base(unittest.TestCase):
         # Prepare the actual consumer package
         self.client.save({"conanfile.py": self.conanfile,
                           "CMakeLists.txt": self.cmakelist,
-                          "app.cpp": self.app,
+                          "app.cpp": self.main,
                           "app_lib.cpp": self.lib_cpp,
                           "app.h": self.lib_h})
 
@@ -156,9 +129,10 @@ class Base(unittest.TestCase):
         return install_out
 
     def _modify_code(self):
-        content = self.client.load("app_lib.cpp")
-        content = content.replace("App:", "AppImproved:")
-        self.client.save({"app_lib.cpp": content})
+        lib_cpp = gen_function_cpp(name="app", msg="AppImproved", includes=["hello"], calls=["hello"],
+                                   preprocessor=["MYVAR", "MYVAR_CONFIG", "MYDEFINE",
+                                                 "MYDEFINE_CONFIG"])
+        self.client.save({"app_lib.cpp": lib_cpp})
 
         content = self.client.load("CMakeLists.txt")
         content = content.replace(">>", "++>>")
