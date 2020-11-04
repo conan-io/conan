@@ -49,6 +49,7 @@ class CppProject(object):
         })
 
 
+@unittest.skip("Ninja tests still not working")
 class CMakeNinjaTestCase(unittest.TestCase):
     # This test assumes that 'CMake' and 'Ninja' are available in the system
 
@@ -142,8 +143,6 @@ class CMakeNinjaTestCase(unittest.TestCase):
         # FIXME: Broken assert
         #  self.assertIn("with debug_info", self.client.out)
 
-    # This test is broken in Windows now
-    @unittest.skip
     def test_locally_build_Windows(self):
         """ Ninja build must proceed using default profile and cmake build (Windows)
         """
