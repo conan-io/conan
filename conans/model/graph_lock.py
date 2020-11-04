@@ -511,7 +511,8 @@ class GraphLock(object):
             return
 
         # Make sure that locked options match
-        if node.conanfile.options.values != node.graph_lock_node.options:
+        if (node.graph_lock_node.options is not None and
+                node.conanfile.options.values != node.graph_lock_node.options):
             raise ConanException("{}: Locked options do not match computed options\n"
                                  "Locked options:\n{}\n"
                                  "Computed options:\n{}".format(node.ref,
