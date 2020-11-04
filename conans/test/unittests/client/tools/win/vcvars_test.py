@@ -3,6 +3,7 @@ import platform
 import unittest
 
 import mock
+import pytest
 import six
 from mock.mock import patch
 from six import StringIO
@@ -165,6 +166,7 @@ compiler:
                 # Not raising
                 tools.vcvars_command(settings, force=True, output=output)
 
+    @pytest.mark.tool_compiler
     def test_vcvars_context_manager(self):
         conanfile = """
 from conans import ConanFile, tools

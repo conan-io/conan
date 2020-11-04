@@ -16,6 +16,7 @@ from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import load, save
 
 
+@pytest.mark.tool_compiler  # Needed only because it assume that a settings.compiler is detected
 class MyBuildInfo(unittest.TestCase):
 
     def setUp(self):

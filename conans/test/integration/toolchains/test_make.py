@@ -5,7 +5,6 @@ import unittest
 import pytest
 from nose.plugins.attrib import attr
 
-
 from conans.client.tools import which
 from conans.test.assets.sources import gen_function_h, gen_function_cpp
 from conans.test.utils.tools import TestClient
@@ -15,6 +14,7 @@ from conans.test.utils.tools import TestClient
 @attr("toolchain")
 @pytest.mark.slow
 @pytest.mark.toolchain
+@pytest.mark.tool_autotools
 class MakeToolchainTest(unittest.TestCase):
 
     @unittest.skipUnless(platform.system() in ["Linux"], "Requires linux")

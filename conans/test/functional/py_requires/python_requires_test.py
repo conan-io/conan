@@ -4,6 +4,7 @@ import textwrap
 import time
 import unittest
 
+import pytest
 from parameterized import parameterized
 
 from conans.model.ref import ConanFileReference
@@ -282,6 +283,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         self.assertIn("Pkg/0.1@user/testing: Package installed "
                       "69265e58ddc68274e0c5510905003ff78c9db5de", client.out)
 
+    @pytest.mark.tool_git
     def test_reuse_scm(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
@@ -311,6 +313,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         self.assertIn('"type": "git",', client.out)
         self.assertIn('"url": "somerepo"', client.out)
 
+    @pytest.mark.tool_git
     def test_reuse_customize_scm(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
@@ -346,6 +349,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         self.assertIn('"type": "git",', client.out)
         self.assertIn('"url": "other_repo"', client.out)
 
+    @pytest.mark.tool_git
     def test_reuse_scm_multiple_conandata(self):
         # https://github.com/conan-io/conan/issues/7236
         # This only works when using conandata.yml, conanfile.py replace is broken
@@ -499,6 +503,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         self.assertIn("Pkg/0.1@user/testing: Author! frodo", client.out)
         self.assertIn("Pkg/0.1@user/testing: os: Windows arch: armv7", client.out)
 
+    @pytest.mark.tool_compiler
     def test_failure_init_method(self):
         client = TestClient()
         base = textwrap.dedent("""

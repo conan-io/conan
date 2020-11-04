@@ -77,6 +77,7 @@ class Alpha(ConanFile):
         self.assertIn('set(CONAN_SHARED_LINKER_FLAGS '
                       '"CharlieFlag BetaFlag ${CONAN_SHARED_LINKER_FLAGS}")', cmake)
 
+    @pytest.mark.tool_cmake
     def test_header_only(self):
         client = TestClient()
         client.save({"conanfile.py": conanfile_py,

@@ -15,6 +15,7 @@ from conans.test.utils.tools import TestClient
 
 @attr("toolchain")
 @pytest.mark.toolchain
+@pytest.mark.tool_cmake
 class Base(unittest.TestCase):
 
     conanfile = textwrap.dedent("""
@@ -348,6 +349,7 @@ class AppleTest(Base):
 
 @attr("toolchain")
 @pytest.mark.toolchain
+@pytest.mark.tool_cmake
 class CMakeInstallTest(unittest.TestCase):
 
     def test_install(self):
