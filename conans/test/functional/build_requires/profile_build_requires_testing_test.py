@@ -60,6 +60,7 @@ int main(){
 
 @attr("slow")
 @pytest.mark.slow
+@pytest.mark.tool_cmake
 class BuildRequiresTest(unittest.TestCase):
 
     def test_test_framework(self):

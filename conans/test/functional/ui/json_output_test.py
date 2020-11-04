@@ -3,6 +3,8 @@ import os
 import textwrap
 import unittest
 
+import pytest
+
 from conans.model.build_info import DEFAULT_LIB
 from conans.model.ref import ConanFileReference
 from conans.test.assets.cpp_test_files import cpp_hello_conan_files
@@ -16,6 +18,7 @@ class JsonOutputTest(unittest.TestCase):
         self.servers = {"default": TestServer()}
         self.client = TestClient(servers=self.servers)
 
+    @pytest.mark.tool_compiler
     def test_simple_fields(self):
         # Result of a create
         files = cpp_hello_conan_files("CC", "1.0", build=False)
@@ -77,6 +80,7 @@ class JsonOutputTest(unittest.TestCase):
         self.assertFalse(my_json["installed"][0]["packages"][0]["downloaded"])
         self.assertTrue(my_json["installed"][0]["packages"][0]["cpp_info"])
 
+    @pytest.mark.tool_compiler
     def test_errors(self):
 
         # Missing recipe
@@ -125,6 +129,7 @@ class JsonOutputTest(unittest.TestCase):
         self.assertIn("CC/1.0@private_user/channel: Error in build() method, line 36",
                       my_json["installed"][0]["packages"][0]["error"]["description"])
 
+    @pytest.mark.tool_compiler
     def test_json_generation(self):
 
         files = cpp_hello_conan_files("CC", "1.0", build=False)

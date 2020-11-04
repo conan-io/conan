@@ -1,6 +1,7 @@
 import os
 import unittest
 
+import pytest
 import six
 
 from conans.paths import BUILD_INFO, CONANFILE
@@ -10,6 +11,7 @@ from conans.util.files import mkdir
 
 class SourceTest(unittest.TestCase):
 
+    @pytest.mark.tool_git
     def test_conanfile_removed(self):
         # https://github.com/conan-io/conan/issues/4013
         conanfile = """from conans import ConanFile

@@ -4,6 +4,7 @@ import sys
 import textwrap
 import unittest
 
+import pytest
 from mock import patch, Mock
 from six import StringIO
 
@@ -185,6 +186,7 @@ class MyBuildInfoCreation(unittest.TestCase):
         for user_channel in user_channels:
             self._test_buildinfo(client, user_channel)
 
+    @pytest.mark.tool_git
     @patch("conans.build_info.build_info.get_conan_user_home")
     @patch("conans.build_info.build_info.ClientCache")
     @patch("conans.build_info.build_info.requests.get", new=mock_response_get)

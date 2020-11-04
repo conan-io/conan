@@ -127,6 +127,7 @@ class HelloReuseConan(ConanFile):
         self.assertEqual("Bye FindCmake",
                          load(os.path.join(client.cache.package_layout(pref.ref).package(pref), "FindXXX.cmake")))
 
+    @pytest.mark.tool_cmake
     def test_conan_test(self):
         conanfile = '''
 from conans import ConanFile, CMake

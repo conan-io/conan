@@ -11,6 +11,7 @@ from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient, GenConanfile, TurboTestClient
 
 
+@pytest.mark.tool_cmake
 class CMakeGeneratorTest(unittest.TestCase):
 
     def test_no_check_compiler(self):

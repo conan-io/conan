@@ -643,7 +643,6 @@ class HelloConan(ConanFile):
     @attr('slow')
     @pytest.mark.slow
     @attr('local_bottle')
-    @pytest.mark.tool_local_bottle
     def test_get_filename_download(self):
         # Create a tar file to be downloaded from server
         with tools.chdir(tools.mkdir_tmp()):
@@ -711,7 +710,6 @@ class HelloConan(ConanFile):
     @attr('slow')
     @pytest.mark.slow
     @attr('local_bottle')
-    @pytest.mark.tool_local_bottle
     def test_get_gunzip(self):
         # Create a tar file to be downloaded from server
         tmp = temp_folder()
@@ -808,7 +806,7 @@ class HelloConan(ConanFile):
             output = check_output_runner(["echo", payload], stderr=subprocess.STDOUT)
             self.assertIn(payload, str(output))
 
-
+    @pytest.mark.tool_file  # Needs the "file" command, not by default in linux
     def test_unix_to_dos_unit(self):
 
         def save_file(contents):

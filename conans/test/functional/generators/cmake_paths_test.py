@@ -3,10 +3,13 @@ import platform
 import shutil
 import unittest
 
+import pytest
+
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID, TurboTestClient, GenConanfile
 
 
+@pytest.mark.tool_cmake
 class CMakePathsGeneratorTest(unittest.TestCase):
 
     def test_cmake_paths_contents(self):

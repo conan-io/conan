@@ -3,6 +3,8 @@
 import textwrap
 import unittest
 
+import pytest
+
 from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient
 from conans.test.utils.scm import create_local_git_repo
@@ -25,6 +27,7 @@ class RemoveCredentials(unittest.TestCase):
         self.client.current_folder = self.path
         self.client.run_command("git remote add origin https://url.to.be.sustituted")
 
+    @pytest.mark.tool_git
     def test_https(self):
         expected_url = 'https://myrepo.com.git'
         origin_url = 'https://username:password@myrepo.com.git'

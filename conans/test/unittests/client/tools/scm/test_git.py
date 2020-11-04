@@ -17,6 +17,8 @@ from conans.test.utils.tools import temp_folder, TestClient
 from conans.util.files import save
 
 
+@attr('git')
+@pytest.mark.tool_git
 class GitRemoteUrlTest(unittest.TestCase):
 
     def test_remove_credentials(self):
@@ -360,7 +362,8 @@ class HelloConan(ConanFile):
         self.assertEqual("dev", git.get_branch())
         self.assertEqual("first commit", git.get_commit_message())
 
-
+@attr('git')
+@pytest.mark.tool_git
 class GitToolsTests(unittest.TestCase):
 
     def setUp(self):

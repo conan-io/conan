@@ -80,6 +80,8 @@ class SVNConanfileInRepoRootTest(ConanfileInRepoRoot, SVNLocalRepoTestCase):
         self.assertIn("Repo origin deduced by 'auto':", t.out)
 
 
+@attr("git")
+@pytest.mark.tool_git
 class GitConanfileInRepoRootTest(ConanfileInRepoRoot, unittest.TestCase):
 
     conanfile = ConanfileInRepoRoot.conanfile_base.format(extra_header="",
