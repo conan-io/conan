@@ -66,6 +66,8 @@ class DepsGraphBuilder(object):
         self._expand_node(root_node, dep_graph, Requirements(), None, None, check_updates,
                           update, remotes, profile_host, profile_build, graph_lock)
         logger.debug("GRAPH: Time to load deps %s" % (time.time() - t1))
+
+        self._propagate_options_downstream(dep_graph)
         return dep_graph
 
     def extend_build_requires(self, graph, node, build_requires_refs, check_updates, update,
@@ -106,6 +108,7 @@ class DepsGraphBuilder(object):
         new_nodes = set(n for n in graph.nodes if n.package_id is None)
         # This is to make sure that build_requires have precedence over the normal requires
         node.public_closure.sort(key_fn=lambda x: x not in new_nodes)
+        self._propagate_options_downstream(graph, new_nodes)
         return new_nodes
 
     def _expand_node(self, node, graph, down_reqs, down_ref, down_options, check_updates, update,
@@ -314,6 +317,28 @@ class DepsGraphBuilder(object):
                     if getattr(options, option) != value:
                         return True
         return False
+
+    @staticmethod
+    def _propagate_options_downstream(graph, nodes_subset=None):
+        for node in graph.ordered_iterate(nodes_subset=nodes_subset):
+            conanfile = node.conanfile
+            neighbors = node.neighbors()
+            # Accumulating the transitive deps, to clear_unused later
+            node.options_transitive_reqs = set()  # of ConanFileReference, avoid duplicates
+            for neighbor in neighbors:
+                ref, nconan = neighbor.ref, neighbor.conanfile
+                node.options_transitive_reqs.add(neighbor.ref)
+                # All direct and indirect ones
+                node.options_transitive_reqs.update(neighbor.options_transitive_reqs)
+
+                conanfile.options.propagate_downstream(ref, nconan.options.values)
+                # Update the requirements to contain the full revision. Later in lockfiles
+                conanfile.requires[ref.name].ref = ref
+
+            # There might be options that are not upstream, backup them, might be for build-requires
+            conanfile.build_requires_options = conanfile.options.values
+            conanfile.options.clear_unused(node.options_transitive_reqs)
+            conanfile.options.freeze()
 
     @staticmethod
     def _config_node(node, down_ref, down_options):

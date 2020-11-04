@@ -112,7 +112,7 @@ class Node(object):
 
     @property
     def pref(self):
-        assert self.ref is not None and self.package_id is not None, "Node %s" % self.recipe
+        assert self.ref is not None and self.package_id is not None, "Node %s" % repr(self.ref)
         return PackageReference(self.ref, self.package_id, self.prev)
 
     @property
