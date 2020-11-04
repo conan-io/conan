@@ -4,7 +4,7 @@ import unittest
 import pytest
 from nose.plugins.attrib import attr
 
-from conans.test.utils.multi_config import multi_config_files
+from conans.test.assets.multi_config import multi_config_files
 from conans.test.utils.tools import TestClient
 
 

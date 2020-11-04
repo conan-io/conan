@@ -7,7 +7,7 @@ from conans.model.ref import PackageReference
 from conans.model.settings import bad_value_msg, undefined_value
 from conans.paths import CONANFILE, CONANINFO
 from conans.test.utils.deprecation import catch_deprecation_warning
-from conans.test.utils.genconanfile import GenConanfile
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 from conans.util.files import load, save
 

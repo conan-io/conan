@@ -8,7 +8,7 @@ import pytest
 
 from conans.client import tools
 from conans.paths import CONANFILE
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.test.assets.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.runners import check_output_runner
 

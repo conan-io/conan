@@ -9,7 +9,7 @@ from parameterized import parameterized
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE, CONAN_MANIFEST
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.test.assets.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import TestClient, GenConanfile
 from conans.util.files import load, save
 

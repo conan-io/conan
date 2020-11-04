@@ -13,7 +13,7 @@ from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import BUILD_FOLDER, CONANFILE, CONANINFO, CONAN_MANIFEST, EXPORT_FOLDER, \
     PACKAGES_FOLDER, SRC_FOLDER
 from conans.server.store.server_store import ServerStore
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.test.assets.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, \
     TestServer, GenConanfile

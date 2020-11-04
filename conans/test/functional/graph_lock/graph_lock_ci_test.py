@@ -6,7 +6,7 @@ import unittest
 from parameterized import parameterized
 
 from conans.model.graph_lock import LOCKFILE
-from conans.test.utils.genconanfile import GenConanfile
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.env_reader import get_env
 from conans.util.files import load

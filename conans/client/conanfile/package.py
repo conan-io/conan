@@ -4,20 +4,18 @@ import shutil
 from conans.client.file_copier import FileCopier
 from conans.client.output import ScopedOutput
 from conans.client.packager import report_files_from_manifest
-from conans.errors import ConanException, ConanExceptionInUserConanfileMethod, \
-    conanfile_exception_formatter
+from conans.errors import ConanException, conanfile_exception_formatter
 from conans.model.conan_file import get_env_context_manager
 from conans.model.manifest import FileTreeManifest
 from conans.paths import CONANINFO
 from conans.tools import chdir
 from conans.util.conan_v2_mode import conan_v2_property
-from conans.util.files import save, mkdir, rmdir
+from conans.util.files import save, mkdir
 from conans.util.log import logger
 
 
 def run_package_method(conanfile, package_id, source_folder, build_folder, package_folder,
-                       install_folder, hook_manager, conanfile_path, ref, local=False,
-                       copy_info=False):
+                       install_folder, hook_manager, conanfile_path, ref, copy_info=False):
     """ calls the recipe "package()" method
     - Assigns folders to conanfile.package_folder, source_folder, install_folder, build_folder
     - Calls pre-post package hook
@@ -36,36 +34,24 @@ def run_package_method(conanfile, package_id, source_folder, build_folder, packa
 
     with get_env_context_manager(conanfile):
         return _call_package(conanfile, package_id, source_folder, build_folder, package_folder,
-                             install_folder, hook_manager, conanfile_path, ref, local, copy_info)
+                             install_folder, hook_manager, conanfile_path, ref, copy_info)
 
 
 def _call_package(conanfile, package_id, source_folder, build_folder, package_folder,
-                  install_folder, hook_manager, conanfile_path, ref, local, copy_info):
+                  install_folder, hook_manager, conanfile_path, ref, copy_info):
     output = conanfile.output
-    try:
-        hook_manager.execute("pre_package", conanfile=conanfile, conanfile_path=conanfile_path,
-                             reference=ref, package_id=package_id)
 
-        output.highlight("Calling package()")
-        folders = [source_folder, build_folder] if source_folder != build_folder else [build_folder]
-        conanfile.copy = FileCopier(folders, package_folder)
-        with conanfile_exception_formatter(str(conanfile), "package"):
-            with chdir(build_folder):
-                with conan_v2_property(conanfile, 'info',
-                                       "'self.info' access in package() method is deprecated"):
-                    conanfile.package()
-    except Exception as e:
-        if not local:
-            os.chdir(build_folder)
-            try:
-                rmdir(package_folder)
-            except Exception as e_rm:
-                output.error("Unable to remove package folder %s\n%s" % (package_folder, str(e_rm)))
-                output.warn("**** Please delete it manually ****")
+    hook_manager.execute("pre_package", conanfile=conanfile, conanfile_path=conanfile_path,
+                         reference=ref, package_id=package_id)
 
-        if isinstance(e, ConanExceptionInUserConanfileMethod):
-            raise
-        raise ConanException(e)
+    output.highlight("Calling package()")
+    folders = [source_folder, build_folder] if source_folder != build_folder else [build_folder]
+    conanfile.copy = FileCopier(folders, package_folder)
+    with conanfile_exception_formatter(str(conanfile), "package"):
+        with chdir(build_folder):
+            with conan_v2_property(conanfile, 'info',
+                                   "'self.info' access in package() method is deprecated"):
+                conanfile.package()
 
     hook_manager.execute("post_package", conanfile=conanfile, conanfile_path=conanfile_path,
                          reference=ref, package_id=package_id)

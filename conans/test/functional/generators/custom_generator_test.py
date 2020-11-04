@@ -5,7 +5,7 @@ import pytest
 
 from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE, CONANFILE_TXT
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.test.assets.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import TestClient, TestServer
 
 generator = """
