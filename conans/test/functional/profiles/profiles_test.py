@@ -1,3 +1,4 @@
+import textwrap
 import unittest
 
 from conans.client.tools import environment_append
@@ -33,24 +34,24 @@ class ProfileTest(unittest.TestCase):
 
     def test_config_parser(self):
         parser1 = ProfileConfigParser()
-        profile1 = """
-        [env]
-        bar=bar1
-        zet=zet
-        CXXFLAGS=-fPIC
-        """
+        profile1 = textwrap.dedent("""
+            [env]
+            bar=bar1
+            zet=zet
+            CXXFLAGS=-fPIC
+        """)
         parser1.read_string(profile1)
         p1_vars = dict(parser1.items("env"))
         self.assertDictEqual({"bar": "bar1", "CXXFLAGS": "-fPIC", "zet": "zet"}, p1_vars)
 
         parser2 = ProfileConfigParser(defaults=p1_vars)
-        profile2 = """
-        [env]
-        foo=foo1
-        bar=bar2
-        CXXFLAGS=%(CXXFLAGS)s -fother
-        OTHERFLAGS=%(missing_flag)s -fother
-        """
+        profile2 = textwrap.dedent("""
+            [env]
+            foo=foo1
+            bar=bar2
+            CXXFLAGS=%(CXXFLAGS)s -fother
+            OTHERFLAGS=%(missing_flag)s -fother
+        """)
         parser2.read_string(profile2)
         self.assertDictEqual({"foo": "foo1", "CXXFLAGS": "-fPIC -fother", "bar": "bar2",
                               "zet": "zet", "OTHERFLAGS": " -fother"},
