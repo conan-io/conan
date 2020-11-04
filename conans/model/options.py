@@ -241,8 +241,14 @@ class OptionsValues(object):
         return not self.__eq__(other)
 
     def __eq__(self, other):
-        return (self._package_values == other._package_values and
-                self._reqs_options == other._reqs_options)
+        if not self._package_values == other._package_values:
+            return False
+        # It is possible that the entry in the dict is not defined
+        for key, pkg_values in self._reqs_options.items():
+            other_values = other[key]
+            if not pkg_values == other_values:
+                return False
+        return True
 
     def __repr__(self):
         return self.dumps()

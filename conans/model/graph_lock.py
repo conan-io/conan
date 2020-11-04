@@ -510,14 +510,6 @@ class GraphLock(object):
                         require.lock(locked_node.ref, locked_id)
             return
 
-        # Make sure that locked options match
-        if (node.graph_lock_node.options is not None and
-                node.conanfile.options.values != node.graph_lock_node.options):
-            raise ConanException("{}: Locked options do not match computed options\n"
-                                 "Locked options:\n{}\n"
-                                 "Computed options:\n{}".format(node.ref,
-                                                                node.conanfile.options.values,
-                                                                node.graph_lock_node.options))
         locked_node = node.graph_lock_node
         if build_requires:
             locked_requires = locked_node.build_requires or []

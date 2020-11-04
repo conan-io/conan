@@ -418,6 +418,7 @@ class LockFileOptionsTest(unittest.TestCase):
         client.save({"conanfile.txt": "[requires]\npahomqttcpp/1.0"}, clean_first=True)
         client.run("install . --build -o paho-mqtt-c:shared=False")
         lockfile = client.load("conan.lock")
+        print(lockfile)
         self.assertIn('"options": "pahomqttc:shared=False"', lockfile)
         self.assertNotIn('shared=True', lockfile)
         client.run("install . --lockfile=conan.lock")
