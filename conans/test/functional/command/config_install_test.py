@@ -14,7 +14,7 @@ from conans.client.conf import ConanClientConfigParser
 from conans.client.conf.config_installer import _hide_password, _ConfigOrigin
 from conans.client.rest.file_downloader import FileDownloader
 from conans.errors import ConanException
-from conans.test.utils.genconanfile import GenConanfile
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, StoppableThreadBottle
 from conans.util.files import load, mkdir, save, save_files, make_file_read_only

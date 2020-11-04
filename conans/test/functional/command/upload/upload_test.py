@@ -16,7 +16,7 @@ from conans.client.tools.env import environment_append
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import EXPORT_SOURCES_TGZ_NAME, PACKAGE_TGZ_NAME, PACKAGES_FOLDER
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.test.assets.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, \
     TurboTestClient, GenConanfile, TestRequester, TestingResponse
 from conans.util.env_reader import get_env

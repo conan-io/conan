@@ -5,9 +5,9 @@ import unittest
 
 from conans.model.build_info import DEFAULT_LIB
 from conans.model.ref import ConanFileReference
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.test.assets.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import TestClient, TestServer
-from conans.util.files import load, save
+from conans.util.files import save
 
 
 class JsonOutputTest(unittest.TestCase):
@@ -182,14 +182,14 @@ AA*: CC/1.0@private_user/channel
     def test_json_create_multiconfig(self):
         conanfile = textwrap.dedent("""
             from conans import ConanFile
-            
+
             class Lib(ConanFile):
                 def package_info(self):
                     self.cpp_info.release.libs = ["hello"]
                     self.cpp_info.debug.libs = ["hello_d"]
-                    
+
                     self.cpp_info.debug.libdirs = ["lib-debug"]
-                    
+
             """)
         self.client.save({'conanfile.py': conanfile})
         self.client.run("create . name/version@user/channel --json=myfile.json")
