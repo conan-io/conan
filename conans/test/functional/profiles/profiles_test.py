@@ -43,7 +43,6 @@ class ProfileTest(unittest.TestCase):
         p1_vars = dict(parser1.items("env"))
         self.assertDictEqual({"bar": "bar1", "CXXFLAGS": "-fPIC", "zet": "zet"}, p1_vars)
 
-        print(p1_vars)
         parser2 = ProfileConfigParser(defaults=p1_vars)
         profile2 = """
         [env]
