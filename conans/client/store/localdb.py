@@ -16,12 +16,12 @@ class LocalDB(object):
         self.encryption_key = encryption_key
 
     def _encode(self, value):
-        if self.encryption_key:
+        if value and self.encryption_key:
             return encrypt.encode(value, self.encryption_key)
         return value
 
     def _decode(self, value):
-        if self.encryption_key:
+        if value and self.encryption_key:
             return encrypt.decode(value, self.encryption_key)
         return value
 
