@@ -651,10 +651,9 @@ class SystemPackageToolTest(unittest.TestCase):
         """ Separated string list must be treated as full package list to be installed
         """
         packages = "varianta variantb", "variantc variantd"
-        with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "True"}):
-            runner = RunnerMultipleMock([])
-            spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out), output=self.out)
-            with self.assertRaises(ConanException) as error:
-                spt.install_packages(packages)
-                self.assertEqual("Each string must contain only one package to be installed."
-                                 " Use a list instead e.g. ['foo', 'bar'].", str(error.exception))
+        runner = RunnerMultipleMock([])
+        spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out), output=self.out)
+        with self.assertRaises(ConanException) as error:
+            spt.install_packages(packages)
+            self.assertEqual("Each string must contain only one package to be installed."
+                             " Use a list instead e.g. ['foo', 'bar'].", str(error.exception))
