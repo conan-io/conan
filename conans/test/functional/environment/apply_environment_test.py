@@ -19,6 +19,7 @@ class ConanEnvTest(unittest.TestCase):
 
     @attr('slow')
     @pytest.mark.slow
+    @pytest.mark.tool_cmake
     def test_shared_in_current_directory(self):
         """
         - There is a package building a shared library

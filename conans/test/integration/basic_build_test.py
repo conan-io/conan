@@ -16,12 +16,14 @@ from conans.util.files import load
 @pytest.mark.slow
 class BasicBuildTest(unittest.TestCase):
 
+    @pytest.mark.tool_cmake
     def test_build_cmake(self):
         for cmd, lang, static, pure_c in [("install .", 0, True, True),
                                           ("install . -o language=1 -o static=False", 1,
                                            False, False)]:
             build(self, cmd, static, pure_c, use_cmake=True, lang=lang)
 
+    @pytest.mark.tool_compiler
     def test_build_default(self):
         """ build default (gcc in nix, VS in win) """
         if platform.system() == "SunOS":

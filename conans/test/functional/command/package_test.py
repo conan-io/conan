@@ -1,6 +1,7 @@
 import os
 import unittest
 
+import pytest
 from parameterized import parameterized
 
 from conans.client import tools
@@ -29,6 +30,7 @@ class Pkg(ConanFile):
         client.run("package .")
         self.assertIn("Test_param: hello-world!", client.out)
 
+    @pytest.mark.tool_compiler
     def test_package_with_destination(self):
         client = TestClient()
 

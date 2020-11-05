@@ -1012,7 +1012,7 @@ class SCMSVNWithLockedFilesTest(SVNLocalRepoTestCase):
 
         client.run("export . user/channel")
 
-
+@pytest.mark.tool_git
 class SCMBlockUploadTest(unittest.TestCase):
 
     def test_upload_blocking_auto(self):

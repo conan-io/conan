@@ -3,6 +3,7 @@
 import textwrap
 import unittest
 
+import pytest
 from parameterized.parameterized import parameterized_class
 
 from conans.model.ref import ConanFileReference
@@ -11,6 +12,7 @@ from conans.test.utils.scm import create_local_git_repo
 from conans.util.files import load
 
 
+@pytest.mark.tool_git
 @parameterized_class([{"verify_ssl": True}, {"verify_ssl": False},
                       {"verify_ssl": None},{"verify_ssl": "None"}, ])
 class GitVerifySSLTestCase(unittest.TestCase):

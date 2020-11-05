@@ -183,11 +183,14 @@ class VirtualEnvIntegrationTestCase(unittest.TestCase):
 
         env_before = _load_env_file(os.path.join(self.test_folder, self.env_before))
         env_after = _load_env_file(os.path.join(self.test_folder, self.env_after))
-        if platform.system() == "Darwin":
+        there_was_ps1 = os.getenv("PS1")
+        # FIXME: Not the best behavior
+        # The deactivate sets PS1 always, but sometimes it didn't exist previously
+        if platform.system() == "Darwin" or not there_was_ps1:
             env_after.pop(six.u("PS1"), None)  # TODO: FIXME: Needed for the test to pass
             env_after.pop("PS1", None)  # TODO: FIXME: Needed for the test to pass
-        self.assertDictEqual(env_before, env_after)  # Environment restored correctly
 
+        self.assertDictEqual(env_before, env_after)  # Environment restored correctly
         return stdout, _load_env_file(os.path.join(self.test_folder, self.env_activated))
 
     def test_basic_variable(self):
