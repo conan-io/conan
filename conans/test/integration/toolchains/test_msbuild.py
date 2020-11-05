@@ -4,6 +4,8 @@ import re
 import textwrap
 import unittest
 
+import pytest
+
 from conans.client.toolchain.visual import vcvars_command
 from conans.client.tools import vs_installation_path
 from conans.test.assets.sources import gen_function_cpp
@@ -219,6 +221,7 @@ myapp_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
 
 
 @unittest.skipUnless(platform.system() == "Windows", "Only for windows")
+@pytest.mark.tool_visual_studio
 class WinTest(unittest.TestCase):
 
     conanfile = textwrap.dedent("""
@@ -261,6 +264,7 @@ class WinTest(unittest.TestCase):
         self.assertIn("DEFINITIONS_BOTH: True", client.out)
         self.assertIn("DEFINITIONS_CONFIG: %s" % build_type, client.out)
 
+    @pytest.mark.tool_cmake
     def test_toolchain_win(self):
         client = TestClient(path_with_spaces=False)
         settings = {"compiler": "Visual Studio",
@@ -304,6 +308,7 @@ class WinTest(unittest.TestCase):
         self.assertIn("KERNEL32.dll", client.out)
         self.assertEqual(1, str(client.out).count(".dll"))
 
+    @pytest.mark.tool_cmake
     def test_toolchain_win_debug(self):
         client = TestClient(path_with_spaces=False)
         settings = {"compiler": "Visual Studio",
@@ -343,6 +348,7 @@ class WinTest(unittest.TestCase):
         self.assertIn("MSVCP140D.dll", client.out)
         self.assertIn("VCRUNTIME140D.dll", client.out)
 
+    @pytest.mark.tool_cmake
     def test_toolchain_win_multi(self):
         client = TestClient(path_with_spaces=False)
         settings = {"compiler": "Visual Studio",

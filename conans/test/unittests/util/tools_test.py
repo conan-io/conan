@@ -291,6 +291,7 @@ class HelloConan(ConanFile):
         self.assertEqual(os.getenv("Z", None), None)
 
     @unittest.skipUnless(platform.system() == "Windows", "Requires vswhere")
+    @pytest.mark.tool_visual_studio
     def test_msvc_build_command(self):
         settings = Settings.loads(get_default_settings_yml())
         settings.os = "Windows"
@@ -400,6 +401,7 @@ class HelloConan(ConanFile):
             self.assertNotIn("descripton", json)
 
     @unittest.skipUnless(platform.system() == "Windows", "Requires vswhere")
+    @pytest.mark.tool_visual_studio
     def test_vswhere_path(self):
         """
         Locate vswhere in PATH or in ProgramFiles
@@ -633,7 +635,7 @@ class HelloConan(ConanFile):
             tools.get_gnu_triplet("Windows", "x86")
 
     def test_detect_windows_subsystem(self):
-        # Dont raise test
+        # Don't raise test
         result = OSInfo.detect_windows_subsystem()
         if not OSInfo.bash_path() or platform.system() != "Windows":
             self.assertEqual(None, result)
