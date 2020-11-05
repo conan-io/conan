@@ -62,14 +62,20 @@ class SCMBase(object):
                         return self._runner(command)
 
     def get_url_with_credentials(self, url):
-        if not self._username or not self._password:
+        if not self._username and not self._password:
             return url
         if urlparse(url).password:
             return url
 
-        user_enc = quote_plus(self._username)
-        pwd_enc = quote_plus(self._password)
-        url = url.replace("://", "://" + user_enc + ":" + pwd_enc + "@", 1)
+        replace_str = "://"
+        if self._username:
+            user_enc = quote_plus(self._username)
+            replace_str = replace_str + user_enc
+        if self._password:
+            pwd_enc = quote_plus(self._password)
+            replace_str = replace_str + ":" + pwd_enc
+        replace_str = replace_str + "@"
+        url = url.replace("://", replace_str, 1)
         return url
 
     @classmethod
