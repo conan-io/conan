@@ -369,7 +369,7 @@ class GenConanfile(object):
         if self._short_path is not None:
             ret.append("    short_paths = {}".format(str(self._short_path)))
         if self._exports_sources:
-            line = ", ".join('"%s"' % e for e in self._exports_sources)
+            line = ", ".join('"{}"'.format(e) for e in self._exports_sources)
             ret.append("    exports_sources = {}".format(line))
         if self._generators_line:
             ret.append("    {}".format(self._generators_line))
