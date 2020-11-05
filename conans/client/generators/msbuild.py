@@ -71,7 +71,7 @@ class MSBuildGenerator(Generator):
         self.platform = {'x86': 'Win32',
                          'x86_64': 'x64'}.get(str(conanfile.settings.arch))
         # TODO: this is ugly, improve this
-        self.install_folder = os.getcwd()
+        self.output_path = os.getcwd()
         # User configurable things
         self._config_filename = None
 
@@ -86,7 +86,7 @@ class MSBuildGenerator(Generator):
         # to generators and called from there
         generator_files = self.content
         for generator_file, content in generator_files.items():
-            generator_file_path = os.path.join(self.install_folder, generator_file)
+            generator_file_path = os.path.join(self.output_path, generator_file)
             self.conanfile.output.info("Generating {}".format(generator_file))
             save(generator_file_path, content)
 
@@ -125,7 +125,7 @@ class MSBuildGenerator(Generator):
                 </ImportGroup>
             </Project>
             """)
-        multi_path = os.path.join(self.install_folder, name_general)
+        multi_path = os.path.join(self.output_path, name_general)
         if os.path.isfile(multi_path):
             content_multi = load(multi_path)
         else:
@@ -176,7 +176,7 @@ class MSBuildGenerator(Generator):
 
     def _pkg_props(self, name_multi, dep_name, vars_props_name, condition, cpp_info):
         # read the existing mult_filename or use the template if it doesn't exist
-        multi_path = os.path.join(self.install_folder, name_multi)
+        multi_path = os.path.join(self.output_path, name_multi)
         if os.path.isfile(multi_path):
             content_multi = load(multi_path)
         else:

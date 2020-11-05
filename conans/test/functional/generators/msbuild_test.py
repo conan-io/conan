@@ -410,6 +410,7 @@ int main(){
 }
 """
 
+
 @pytest.mark.tool_visual_studio
 @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
 class MSBuildGeneratorTest(unittest.TestCase):
@@ -541,7 +542,8 @@ class MSBuildGeneratorTest(unittest.TestCase):
                 requires = "pkg/1.0"
                 def toolchain(self):
                     ms = MSBuildGenerator(self)
-                    ms.config_filename = "_{}-{}".format(self.settings.arch, self.settings.build_type)
+                    ms.config_filename = "_{}-{}".format(self.settings.arch,
+                                                         self.settings.build_type)
                     ms.write_generator_files()
             """)
         client.save({"conanfile.py": conanfile})
@@ -555,4 +557,3 @@ class MSBuildGeneratorTest(unittest.TestCase):
         props = client.load("conan_pkg.props")
         self.assertIn('Project="conan_pkg_x86_64-Release.props"', props)
         self.assertIn('Project="conan_pkg_x86-Debug.props"', props)
-
