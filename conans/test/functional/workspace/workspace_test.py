@@ -591,6 +591,7 @@ class WorkspaceTest(unittest.TestCase):
         self.assertNotIn("Release", client.out)
 
     @unittest.skipUnless(platform.system() == "Windows", "only windows")
+    @pytest.mark.tool_cmake
     def test_complete_multi_conf_build(self):
         client = TestClient()
 

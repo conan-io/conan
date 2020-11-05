@@ -54,4 +54,4 @@ def pytest_runtest_setup(item):
     # Every mark is a required tool, some specify a version
     for mark in item.iter_markers():
         if mark.name.startswith("tool_"):
-            return tool_check(mark)
+            tool_check(mark)
