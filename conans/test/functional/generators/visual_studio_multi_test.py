@@ -60,6 +60,7 @@ void hello(){
 
 @attr('slow')
 @pytest.mark.slow
+@pytest.mark.tool_visual_studio
 @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
 class VisualStudioMultiTest(unittest.TestCase):
 

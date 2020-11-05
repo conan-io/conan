@@ -115,6 +115,7 @@ class ConanReuseLib(ConanFile):
         self.assertIn("15", client.out)
 
     @unittest.skipUnless(platform.system() == "Windows", "Requires windows")
+    @pytest.mark.tool_compiler
     def test_use_build_virtualenv_windows(self):
         files = cpp_hello_conan_files("hello", "0.1",  use_cmake=False, with_exe=False)
         client = TestClient(path_with_spaces=False)
