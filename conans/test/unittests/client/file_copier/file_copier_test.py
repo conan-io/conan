@@ -233,7 +233,8 @@ class FileCopierTest(unittest.TestCase):
         # Exclude pattern will match AttributeStorage
         copier("*.h", excludes="*Test*", dst="include")
         self.assertEqual(["include"], os.listdir(dst_folder))
-        self.assertEqual(["file.h", "sub"], os.listdir(os.path.join(dst_folder, "include")))
+        self.assertEqual(sorted(["file.h", "sub"]),
+                         sorted(os.listdir(os.path.join(dst_folder, "include"))))
         self.assertEqual(["file.h"], os.listdir(os.path.join(dst_folder, "include", "sub")))
 
         dst_folder = temp_folder()
@@ -241,7 +242,7 @@ class FileCopierTest(unittest.TestCase):
         # Exclude pattern will not match AttributeStorage if ignore_case=False
         copier("*.h", excludes="*Test*", dst="include", ignore_case=False)
         self.assertEqual(["include"], os.listdir(dst_folder))
-        self.assertEqual(["AttributeStorage.h", "file.h", "sub"],
+        self.assertEqual(sorted(["AttributeStorage.h", "file.h", "sub"]),
                          sorted(os.listdir(os.path.join(dst_folder, "include"))))
-        self.assertEqual(["AttributeStorage.h", "file.h"],
+        self.assertEqual(sorted(["AttributeStorage.h", "file.h"]),
                          sorted(os.listdir(os.path.join(dst_folder, "include", "sub"))))
