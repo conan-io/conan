@@ -5,7 +5,7 @@ from xml.dom import minidom
 from conans.client.tools import VALID_LIB_EXTENSIONS
 from conans.errors import ConanException
 from conans.model import Generator
-from conans.util.files import load
+from conans.util.files import load, save
 
 
 class MSBuildGenerator(Generator):
@@ -65,20 +65,54 @@ class MSBuildGenerator(Generator):
         </Project>
         """)
 
+    def __init__(self, conanfile):
+        super(MSBuildGenerator, self).__init__(conanfile)
+        self.configuration = conanfile.settings.build_type
+        self.platform = {'x86': 'Win32',
+                         'x86_64': 'x64'}.get(str(conanfile.settings.arch))
+        # TODO: this is ugly, improve this
+        self.install_folder = os.getcwd()
+        # User configurable things
+        self._config_filename = None
+
+    def write_generator_files(self):
+        # TODO: Apply config from command line, something like
+        # configuration = self.conanfile.config.generators["msbuild"].configuration
+        # if configuration is not None:
+        #     self.configuration = configuration
+        # platform
+        # config_filename
+        # TODO: This is duplicated in write_generators() function, would need to be moved
+        # to generators and called from there
+        generator_files = self.content
+        for generator_file, content in generator_files.items():
+            generator_file_path = os.path.join(self.install_folder, generator_file)
+            self.conanfile.output.info("Generating {}".format(generator_file))
+            save(generator_file_path, content)
+
     @property
     def filename(self):
         return None
 
-    @ staticmethod
-    def _name_condition(settings):
-        props = [("Configuration", settings.build_type),
-                 # FIXME: This probably requires mapping ARM architectures
-                 ("Platform", {'x86': 'Win32',
-                               'x86_64': 'x64'}.get(settings.get_safe("arch")))]
-
+    @property
+    def config_filename(self):
+        if self._config_filename is not None:
+            return self._config_filename
+        # Default name
+        props = [("Configuration", self.configuration),
+                 ("Platform", self.platform)]
         name = "".join("_%s" % v for _, v in props if v is not None)
+        return name.lower()
+
+    @config_filename.setter
+    def config_filename(self, value):
+        self._config_filename = value
+
+    def _condition(self):
+        props = [("Configuration", self.configuration),
+                 ("Platform", self.platform)]
         condition = " And ".join("'$(%s)' == '%s'" % (k, v) for k, v in props if v is not None)
-        return name.lower(), condition
+        return condition
 
     def _deps_props(self, name_general, deps):
         """ this is a .props file including all declared dependencies
@@ -91,7 +125,7 @@ class MSBuildGenerator(Generator):
                 </ImportGroup>
             </Project>
             """)
-        multi_path = os.path.join(self.output_path, name_general)
+        multi_path = os.path.join(self.install_folder, name_general)
         if os.path.isfile(multi_path):
             content_multi = load(multi_path)
         else:
@@ -142,7 +176,7 @@ class MSBuildGenerator(Generator):
 
     def _pkg_props(self, name_multi, dep_name, vars_props_name, condition, cpp_info):
         # read the existing mult_filename or use the template if it doesn't exist
-        multi_path = os.path.join(self.output_path, name_multi)
+        multi_path = os.path.join(self.install_folder, name_multi)
         if os.path.isfile(multi_path):
             content_multi = load(multi_path)
         else:
@@ -192,7 +226,8 @@ class MSBuildGenerator(Generator):
             raise ConanException("The 'msbuild' generator requires a 'build_type' setting value")
         result = {}
         general_name = "conan_deps.props"
-        conf_name, condition = self._name_condition(self.conanfile.settings)
+        conf_name = self.config_filename
+        condition = self._condition()
         public_deps = self.conanfile.requires.keys()
         result[general_name] = self._deps_props(general_name, public_deps)
         for dep_name, cpp_info in self._deps_build_info.dependencies:

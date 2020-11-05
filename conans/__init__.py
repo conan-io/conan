@@ -2,6 +2,8 @@
 # to allow refactors
 from conans.client.build.autotools_environment import AutoToolsBuildEnvironment
 from conans.client.build.cmake import CMake
+# To decide the package scope to be put
+from conans.client.generators.msbuild import MSBuildGenerator
 from conans.client.toolchain.cmake import CMakeToolchain
 from conans.client.toolchain.make import MakeToolchain
 from conans.client.toolchain.msbuild import MSBuildToolchain

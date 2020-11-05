@@ -502,3 +502,56 @@ class MSBuildGeneratorTest(unittest.TestCase):
         client.run("install mypkg/0.1@ -g msbuild -s build_type=None", assert_error=True)
         self.assertIn("ERROR: The 'msbuild' generator requires a 'build_type' setting value",
                       client.out)
+
+    def test_custom_configuration(self):
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . pkg/1.0@")
+
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile, MSBuildGenerator
+            class Pkg(ConanFile):
+                settings = "os", "compiler", "arch", "build_type"
+                requires = "pkg/1.0"
+                def toolchain(self):
+                    ms = MSBuildGenerator(self)
+                    ms.configuration = "My"+str(self.settings.build_type)
+                    ms.platform = "My"+str(self.settings.arch)
+                    ms.write_generator_files()
+            """)
+        client.save({"conanfile.py": conanfile})
+
+        client.run('install . -s os=Windows -s compiler="Visual Studio" -s compiler.version=15'
+                   ' -s compiler.runtime=MD')
+        self.assertIn("conanfile.py: Generating conan_pkg_myrelease_myx86_64.props", client.out)
+        client.run('install . -s os=Windows -s compiler="Visual Studio" -s compiler.version=15'
+                   ' -s compiler.runtime=MD -s arch=x86 -s build_type=Debug')
+        self.assertIn("conanfile.py: Generating conan_pkg_mydebug_myx86.props", client.out)
+
+    def test_custom_configuration_filename(self):
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . pkg/1.0@")
+
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile, MSBuildGenerator
+            class Pkg(ConanFile):
+                settings = "os", "compiler", "arch", "build_type"
+                requires = "pkg/1.0"
+                def toolchain(self):
+                    ms = MSBuildGenerator(self)
+                    ms.config_filename = "_{}-{}".format(self.settings.arch, self.settings.build_type)
+                    ms.write_generator_files()
+            """)
+        client.save({"conanfile.py": conanfile})
+
+        client.run('install . -s os=Windows -s compiler="Visual Studio" -s compiler.version=15'
+                   ' -s compiler.runtime=MD')
+        self.assertIn("conanfile.py: Generating conan_pkg_x86_64-Release.props", client.out)
+        client.run('install . -s os=Windows -s compiler="Visual Studio" -s compiler.version=15'
+                   ' -s compiler.runtime=MD -s arch=x86 -s build_type=Debug')
+        self.assertIn("conanfile.py: Generating conan_pkg_x86-Debug.props", client.out)
+        props = client.load("conan_pkg.props")
+        self.assertIn('Project="conan_pkg_x86_64-Release.props"', props)
+        self.assertIn('Project="conan_pkg_x86-Debug.props"', props)
+
