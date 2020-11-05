@@ -257,9 +257,9 @@ class HelloConan(ConanFile):
         client.run("create . danimtb/testing")
         self.assertIn("build() completed", client.out)
 
-    @pytest.mark.tool_visual_studio
     @parameterized.expand([("True",), ("'my_log.binlog'",)])
     @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
+    @pytest.mark.tool_visual_studio
     def test_binary_log_build(self, value):
         conan_build_vs = """
 from conans import ConanFile, MSBuild

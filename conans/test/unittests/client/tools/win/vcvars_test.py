@@ -19,6 +19,7 @@ from conans.test.utils.tools import TestClient
 from conans.test.utils.mocks import TestBufferConanOutput
 
 
+@pytest.mark.tool_visual_studio
 class VCVarsTest(unittest.TestCase):
     def setUp(self):
         self.output = TestBufferConanOutput()

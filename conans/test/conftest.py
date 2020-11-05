@@ -6,10 +6,11 @@ from conans.client.tools import vswhere, which
 tools_available = [
     'cmake',
     'gcc', 'clang', 'visual_studio',
-    'autotools', 'pkg_config', 'premake',
+    'autotools', 'pkg_config', 'premake', 'meson',
     'file',
     'git', 'svn',
-    'compiler'
+    'compiler',
+    'conan',  # Search the tool_conan test that needs conan itself
 ]
 
 if not which("cmake"):
@@ -20,7 +21,8 @@ if not which("gcc"):
 if not which("clang"):
     tools_available.remove("clang")
 try:
-    vswhere()
+    if not vswhere():
+       tools_available.remove("visual_studio")
 except ConanException:
     tools_available.remove("visual_studio")
 
@@ -38,10 +40,14 @@ if not which("svn"):
 
 if not which("autoconf") or not which("automake"):
     tools_available.remove("autotools")
+if not which("meson"):
+    tools_available.remove("meson")
 if not which("pkg-config"):
     tools_available.remove("pkg_config")
 if not which("premake"):
     tools_available.remove("premake")
+if not which("conan"):
+    tools_available.remove("conan")
 
 
 def tool_check(mark):
