@@ -410,12 +410,13 @@ int main(){
 }
 """
 
-
+@pytest.mark.tool_visual_studio
 @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
 class MSBuildGeneratorTest(unittest.TestCase):
 
     @attr('slow')
     @pytest.mark.slow
+    @pytest.mark.tool_cmake
     def test_msbuild_generator(self):
         client = TestClient()
         # Upload to alternative server Hello0 but Hello1 to the default

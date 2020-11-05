@@ -28,6 +28,8 @@ class VisualStudioTest(unittest.TestCase):
 
     @attr('slow')
     @pytest.mark.slow
+    @pytest.mark.tool_cmake
+    @pytest.mark.tool_visual_studio
     @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
     def test_build_vs_project_with_a(self):
         client = TestClient()
