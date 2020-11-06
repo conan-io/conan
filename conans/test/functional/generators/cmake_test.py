@@ -11,6 +11,7 @@ from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient, GenConanfile, TurboTestClient
 
 
+@pytest.mark.tool_cmake
 class CMakeGeneratorTest(unittest.TestCase):
 
     def test_no_check_compiler(self):
@@ -74,6 +75,7 @@ class CMakeGeneratorTest(unittest.TestCase):
 
     @attr("slow")
     @pytest.mark.slow
+    @pytest.mark.tool_visual_studio
     @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
     def test_skip_check_if_toolset(self):
         file_content = textwrap.dedent("""

@@ -4,9 +4,11 @@ import unittest
 from collections import OrderedDict
 from time import sleep
 
+import pytest
+
 from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.test.assets.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import TestClient, TestServer
 
 
@@ -50,7 +52,7 @@ class ExportsSourcesMissingTest(unittest.TestCase):
         self.assertIn("Probably it was installed from a remote that is no longer available.",
                       client2.out)
 
-
+@pytest.mark.tool_compiler  # Needed only because it assume that a settings.compiler is detected
 class MultiRemotesTest(unittest.TestCase):
 
     def setUp(self):
@@ -173,7 +175,7 @@ class MultiRemotesTest(unittest.TestCase):
         client.run("install Hello0/0.0@lasote/stable --update")
         self.assertIn("Hello0/0.0@lasote/stable from 'local' - Updated", client.out)
 
-
+@pytest.mark.tool_compiler  # Needed only because it assume that a settings.compiler is detected
 class MultiRemoteTest(unittest.TestCase):
 
     def setUp(self):

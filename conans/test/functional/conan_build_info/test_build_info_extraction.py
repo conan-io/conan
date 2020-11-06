@@ -10,12 +10,13 @@ from nose.plugins.attrib import attr
 
 from conans.build_info.conan_build_info import get_build_info
 from conans.client import tools
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.test.assets.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import load, save
 
 
+@pytest.mark.tool_compiler  # Needed only because it assume that a settings.compiler is detected
 class MyBuildInfo(unittest.TestCase):
 
     def setUp(self):

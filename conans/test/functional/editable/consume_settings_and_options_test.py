@@ -4,6 +4,7 @@ import itertools
 import os
 import unittest
 
+import pytest
 from parameterized import parameterized
 
 from conans.model.editable_layout import DEFAULT_LAYOUT_FILE, LAYOUTS_FOLDER
@@ -76,6 +77,7 @@ src/include/{{settings.build_type}}/{{options.shared}}
         self.save(files)
 
 
+@pytest.mark.tool_cmake
 class SettingsAndOptionsTest(unittest.TestCase):
 
     @parameterized.expand(itertools.product(["Debug", "Release", ],  # build_type

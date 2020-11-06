@@ -63,6 +63,7 @@ message(STATUS "HELLO_DEFINES=${HELLO_DEFINES}")
 
 @attr("slow")
 @pytest.mark.slow
+@pytest.mark.tool_cmake
 class CMakeFlagsTest(unittest.TestCase):
 
     def _get_line(self, text, begin):

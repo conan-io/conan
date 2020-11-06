@@ -4,9 +4,11 @@ import unittest
 from collections import OrderedDict
 from time import sleep
 
+import pytest
+
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONAN_MANIFEST
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.test.assets.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, \
     TurboTestClient, GenConanfile
 from conans.util.files import load, save
@@ -153,6 +155,7 @@ class Pkg(ConanFile):
         self.assertIn("Pkg/0.1@lasote/testing: WARN: Can't update, no package in remote",
                       client.out)
 
+    @pytest.mark.tool_compiler
     def test_update_not_date(self):
         # Regression for https://github.com/conan-io/conan/issues/949
         files0 = cpp_hello_conan_files("Hello0", "1.0", build=False)
@@ -228,7 +231,7 @@ class Pkg(ConanFile):
         self.assertEqual(update_timestamps, initial_timestamps)
 
     def test_reuse(self):
-        files = cpp_hello_conan_files("Hello0", "1.0", build=False)
+        files = cpp_hello_conan_files("Hello0", "1.0", build=False, settings='"os"')
 
         self.client.save(files)
         self.client.run("export . lasote/stable")

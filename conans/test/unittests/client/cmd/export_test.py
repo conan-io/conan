@@ -3,6 +3,8 @@ import shutil
 import unittest
 from collections import namedtuple
 
+import pytest
+
 from conans.client.cmd.export import _replace_scm_data_in_conanfile
 from conans.client.loader import _parse_conanfile
 from conans.model.ref import ConanFileReference
@@ -119,6 +121,7 @@ class ConanLib(ConanFile):
         after_recipe = ''
         self._do_actual_test(scm_data=scm_data, after_scm=after_scm, after_recipe=after_recipe)
 
+    @pytest.mark.tool_git
     def test_scm_from_superclass(self):
         client = TurboTestClient()
         conanfile = '''from conans import ConanFile
@@ -175,6 +178,7 @@ class ModuleConan(python_requires(baseline).get_conanfile()):
 
 class SCMUpload(unittest.TestCase):
 
+    @pytest.mark.tool_git
     def test_scm_sources(self):
         """ Test conan_sources.tgz is deleted in server when removing 'exports_sources' and using
         'scm'"""

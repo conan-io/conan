@@ -14,6 +14,7 @@ from conans.util.files import load, save
 
 @attr('slow')
 @pytest.mark.slow
+@pytest.mark.tool_cmake
 class CMakeFindPathMultiGeneratorTest(unittest.TestCase):
 
     def test_native_export_multi(self):
@@ -23,9 +24,7 @@ class CMakeFindPathMultiGeneratorTest(unittest.TestCase):
         """
         c = TestClient()
         project_folder_name = "project_targets"
-        assets_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                                   "assets/cmake_find_package_multi")
-        c.copy_from_assets(assets_path, ["bye", "hello", project_folder_name])
+        c.copy_assets("cmake_find_package_multi", ["bye", "hello", project_folder_name])
 
         # Create packages for hello and bye
         for p in ("hello", "bye"):
@@ -235,8 +234,8 @@ class CMakeFindPathMultiGeneratorTest(unittest.TestCase):
         client.run("create .")
         client.run("new hello2/1.0 -s")
         replace_in_file(os.path.join(client.current_folder, "conanfile.py"),
-                        'self.cpp_info.libs = ["hello"]',
-                        'self.cpp_info.libs = ["hello"]\n        self.cpp_info.name = "MYHELLO2"',
+                        'self.cpp_info.libs = ["hello2"]',
+                        'self.cpp_info.libs = ["hello2"]\n        self.cpp_info.name = "MYHELLO2"',
                         output=client.out)
         replace_in_file(os.path.join(client.current_folder, "conanfile.py"),
                         'exports_sources = "src/*"',
@@ -270,7 +269,7 @@ class Conan(ConanFile):
         client.run("install .")
         client.run("build .")
         self.assertIn("Target libs (hello2): "
-                      "$<$<CONFIG:Release>:CONAN_LIB::MYHELLO2_hello_RELEASE;MYHELLO::MYHELLO;"
+                      "$<$<CONFIG:Release>:CONAN_LIB::MYHELLO2_hello2_RELEASE;MYHELLO::MYHELLO;"
                       "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
                       "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
                       "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>;"

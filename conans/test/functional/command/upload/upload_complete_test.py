@@ -5,6 +5,7 @@ import stat
 import textwrap
 import unittest
 
+import pytest
 import six
 from mock import patch
 from requests.packages.urllib3.exceptions import ConnectionError
@@ -15,7 +16,7 @@ from conans.model.manifest import FileTreeManifest
 from conans.model.package_metadata import PackageMetadata
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE, CONANINFO, CONAN_MANIFEST, EXPORT_TGZ_NAME
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files, cpp_hello_source_files
+from conans.test.assets.cpp_test_files import cpp_hello_conan_files, cpp_hello_source_files
 from conans.test.utils.test_files import temp_folder, uncompress_packaged_files
 from conans.test.utils.tools import (NO_SETTINGS_PACKAGE_ID, TestClient, TestRequester, TestServer,
                                      GenConanfile)
@@ -132,6 +133,7 @@ class UploadTest(unittest.TestCase):
         self.assertFalse(os.path.exists(self.server_reg_folder))
         self.assertFalse(os.path.exists(self.server_pack_folder))
 
+    @pytest.mark.tool_compiler  # Needed only because it assume that a settings.compiler is detected
     def test_try_upload_bad_recipe(self):
         files = cpp_hello_conan_files("Hello0", "1.2.1")
         self.client.save(files)
@@ -143,6 +145,7 @@ class UploadTest(unittest.TestCase):
 
         self.assertIn("Cannot upload corrupted recipe", self.client.out)
 
+    @pytest.mark.tool_compiler  # Needed only because it assume that a settings.compiler is detected
     def test_upload_with_pattern(self):
         for num in range(5):
             files = cpp_hello_conan_files("Hello%s" % num, "1.2.1")
@@ -161,6 +164,7 @@ class UploadTest(unittest.TestCase):
         self.assertNotIn("Hello2", self.client.out)
         self.assertNotIn("Hello3", self.client.out)
 
+    @pytest.mark.tool_compiler  # Needed only because it assume that a settings.compiler is detected
     def test_upload_error(self):
         """Cause an error in the transfer and see some message"""
 
@@ -213,6 +217,7 @@ class UploadTest(unittest.TestCase):
         client.run("upload Hello* --confirm --retry 3 --retry-wait=0 --all")
         self.assertEqual(str(client.out).count("ERROR: Pair file, error!"), 6)
 
+    @pytest.mark.tool_compiler  # Needed only because it assume that a settings.compiler is detected
     def test_upload_error_with_config(self):
         """Cause an error in the transfer and see some message"""
 
@@ -342,6 +347,7 @@ class UploadTest(unittest.TestCase):
         self.assertIn("-p parameter only allowed with a valid recipe reference",
                       self.client.out)
 
+    @pytest.mark.tool_compiler  # Needed only because it assume that a settings.compiler is detected
     def test_check_upload_confirm_question(self):
         user_io = MockedUserIO({"default": [("lasote", "mypass")]}, out=TestBufferConanOutput())
         files = cpp_hello_conan_files("Hello1", "1.2.1")

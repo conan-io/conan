@@ -2,13 +2,16 @@ import time
 import unittest
 from collections import OrderedDict
 
+import pytest
+
 from conans.model.ref import ConanFileReference
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.test.assets.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import TestClient, TestServer, TurboTestClient, GenConanfile
 from conans.util.env_reader import get_env
 from conans.util.files import rmdir
 
 
+@pytest.mark.tool_compiler
 class InstallOutdatedPackagesTest(unittest.TestCase):
 
     def setUp(self):

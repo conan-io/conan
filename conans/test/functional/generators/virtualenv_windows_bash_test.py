@@ -4,6 +4,8 @@ import subprocess
 import textwrap
 import unittest
 
+import pytest
+
 from conans.test.functional.generators.virtualenv_test import _load_env_file
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
@@ -21,7 +23,7 @@ class VirtualenvWindowsBashTestCase(unittest.TestCase):
     conanfile = textwrap.dedent("""
         import os
         from conans import ConanFile, tools
-        
+
         class Recipe(ConanFile):
             def build(self):
                 tools.save("executable.exe", "echo EXECUTABLE IN PACKAGE!!")
@@ -33,19 +35,20 @@ class VirtualenvWindowsBashTestCase(unittest.TestCase):
                 # Basic variable
                 self.env_info.USER_VAR = r"some value with space and \\ (backslash)"
                 self.env_info.ANOTHER = "data"
-                
+
                 # List variable
                 self.env_info.WHATEVER = ["list", "other"]
                 self.env_info.WHATEVER2.append("list")
-                
+
                 # List with spaces
                 self.env_info.CFLAGS = ["cflags1", "cflags2"]
-                
+
                 # Add something to the path
                 self.env_info.PATH.append(os.path.join(self.package_folder, "bin"))
-                
+
     """)
 
+    @pytest.mark.tool_conan
     def test_git_shell(self):
         test_folder = temp_folder(path_with_spaces=False)
 
@@ -68,11 +71,11 @@ class VirtualenvWindowsBashTestCase(unittest.TestCase):
             export WHATEVER=existing_value
             export WHATEVER2=existing_value
             export CFLAGS=existing_value
-            
+
             export PATH={conan_path}:$PATH
             export CONAN_USER_HOME={conan_user_home}
             conan install name/version@ -g virtualenv -g virtualrunenv
-            
+
             env > env_before.txt
             echo 'Start to find executable'
             echo __exec_pre_path__=$(which executable)

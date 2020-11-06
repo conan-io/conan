@@ -5,7 +5,7 @@ import unittest
 import pytest
 from nose.plugins.attrib import attr
 
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.test.assets.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import rmdir
 
@@ -28,6 +28,7 @@ class SharedChainTest(unittest.TestCase):
         rmdir(conan.current_folder)
         shutil.rmtree(conan.cache.store, ignore_errors=True)
 
+    @pytest.mark.tool_compiler
     def test_uploaded_chain(self):
         self._export_upload("Hello0", "0.1")
         self._export_upload("Hello1", "0.1", ["Hello0/0.1@lasote/stable"])

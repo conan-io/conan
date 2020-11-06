@@ -3,6 +3,7 @@ import textwrap
 import time
 import unittest
 
+import pytest
 from parameterized import parameterized
 
 from conans.model.ref import ConanFileReference
@@ -345,6 +346,7 @@ class PkgTest(base.MyConanfileBase):
         self.assertIn("Pkg/0.1@lasote/testing: Package installed %s" % NO_SETTINGS_PACKAGE_ID,
                       client.out)
 
+    @pytest.mark.tool_git
     def test_reuse_scm(self):
         client = TestClient()
 

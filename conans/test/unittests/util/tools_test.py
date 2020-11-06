@@ -291,6 +291,7 @@ class HelloConan(ConanFile):
         self.assertEqual(os.getenv("Z", None), None)
 
     @unittest.skipUnless(platform.system() == "Windows", "Requires vswhere")
+    @pytest.mark.tool_visual_studio
     def test_msvc_build_command(self):
         settings = Settings.loads(get_default_settings_yml())
         settings.os = "Windows"
@@ -400,6 +401,7 @@ class HelloConan(ConanFile):
             self.assertNotIn("descripton", json)
 
     @unittest.skipUnless(platform.system() == "Windows", "Requires vswhere")
+    @pytest.mark.tool_visual_studio
     def test_vswhere_path(self):
         """
         Locate vswhere in PATH or in ProgramFiles
@@ -633,7 +635,7 @@ class HelloConan(ConanFile):
             tools.get_gnu_triplet("Windows", "x86")
 
     def test_detect_windows_subsystem(self):
-        # Dont raise test
+        # Don't raise test
         result = OSInfo.detect_windows_subsystem()
         if not OSInfo.bash_path() or platform.system() != "Windows":
             self.assertEqual(None, result)
@@ -643,7 +645,6 @@ class HelloConan(ConanFile):
     @attr('slow')
     @pytest.mark.slow
     @attr('local_bottle')
-    @pytest.mark.tool_local_bottle
     def test_get_filename_download(self):
         # Create a tar file to be downloaded from server
         with tools.chdir(tools.mkdir_tmp()):
@@ -711,7 +712,6 @@ class HelloConan(ConanFile):
     @attr('slow')
     @pytest.mark.slow
     @attr('local_bottle')
-    @pytest.mark.tool_local_bottle
     def test_get_gunzip(self):
         # Create a tar file to be downloaded from server
         tmp = temp_folder()
@@ -808,7 +808,7 @@ class HelloConan(ConanFile):
             output = check_output_runner(["echo", payload], stderr=subprocess.STDOUT)
             self.assertIn(payload, str(output))
 
-
+    @pytest.mark.tool_file  # Needs the "file" command, not by default in linux
     def test_unix_to_dos_unit(self):
 
         def save_file(contents):

@@ -88,6 +88,8 @@ class SVNConanfileInRepoRootTest(SCMSubfolder, SVNLocalRepoTestCase):
         self._run_remote_test(t, os.path.join(t.current_folder, "lib1"), self.path_to_conanfile)
 
 
+@attr("git")
+@pytest.mark.tool_git
 class GitConanfileInRepoRootTest(SCMSubfolder, unittest.TestCase):
 
     conanfile = SCMSubfolder.conanfile_base.format(extra_header="",

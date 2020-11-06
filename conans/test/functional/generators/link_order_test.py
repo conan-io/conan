@@ -3,6 +3,7 @@ import platform
 import textwrap
 import unittest
 
+import pytest
 from jinja2 import Template
 from parameterized import parameterized
 
@@ -10,6 +11,7 @@ from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient
 
 
+@pytest.mark.tool_cmake
 class LinkOrderTest(unittest.TestCase):
     """ Check that the link order of libraries is preserved when using CMake generators
         https://github.com/conan-io/conan/issues/6280

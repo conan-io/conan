@@ -39,7 +39,7 @@ class ExportErrorCommandTestCase(unittest.TestCase):
         self.assertIn("ERROR: Not a valid '{}' repository".format(repo_type.lower()),
                       self.client.out)
 
-
+@pytest.mark.tool_git
 class ExportCommandTestCase(unittest.TestCase):
     conanfile = textwrap.dedent("""\
         from conans import ConanFile

@@ -1,8 +1,6 @@
 import logging
 import os
-import re
 import textwrap
-from datetime import timedelta
 
 from jinja2 import Template
 from six.moves.configparser import ConfigParser, NoSectionError
@@ -11,6 +9,7 @@ from conans.errors import ConanException
 from conans.model.env_info import unquote
 from conans.paths import DEFAULT_PROFILE_NAME, conan_expand_user, CACERT_FILE
 from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
+from conans.util.dates import timedelta_from_text
 from conans.util.env_reader import get_env
 from conans.util.files import load
 
@@ -710,15 +709,8 @@ class ConanClientConfigParser(ConfigParser, object):
         except ConanException:
             return None
 
-        match = re.search(r"(\d+)([mhd])", interval)
         try:
-            value, unit = match.group(1), match.group(2)
-            if unit == 'm':
-                return timedelta(minutes=float(value))
-            elif unit == 'h':
-                return timedelta(hours=float(value))
-            else:
-                return timedelta(days=float(value))
+            return timedelta_from_text(interval)
         except Exception:
             raise ConanException("Incorrect definition of general.config_install_interval: %s"
                                  % interval)

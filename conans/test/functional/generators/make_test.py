@@ -13,6 +13,7 @@ class MakeGeneratorTest(unittest.TestCase):
 
     @attr('slow')
     @pytest.mark.slow
+    @pytest.mark.tool_autotools
     @unittest.skipUnless(platform.system() == "Linux", "Requires make")
     def test_complete_creation_reuse(self):
         client = TestClient(path_with_spaces=False)
@@ -29,12 +30,12 @@ class MakeGeneratorTest(unittest.TestCase):
 void hellowrapper();
 """
         hellowrapper_impl = """
-#include "hello.h"
+#include "myhello.h"
 
 #include "hellowrapper.h"
 
 void hellowrapper(){
-    hello();
+    myhello();
 }
 """
         makefile = """

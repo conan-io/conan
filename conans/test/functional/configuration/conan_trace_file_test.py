@@ -2,11 +2,13 @@ import json
 import os
 import unittest
 
+import pytest
+
 from conans.client import tools
 from conans.client.runner import ConanRunner
 from conans.model.ref import ConanFileReference
 from conans.paths import RUN_LOG_NAME
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.test.assets.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, TestServer
 from conans.test.utils.mocks import TestBufferConanOutput
@@ -71,6 +73,7 @@ class HelloConan(ConanFile):
         self.assertNotIn("Packaged 1 '.log' file: conan_run.log", output)
         self.assertFalse(os.path.exists(log_file_packaged))
 
+    @pytest.mark.tool_compiler  # Needed only because it assume that a settings.compiler is detected
     def test_trace_actions(self):
         client = TestClient(servers=self.servers,
                             users={"default": [("lasote", "mypass")]})

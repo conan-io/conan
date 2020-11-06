@@ -4,11 +4,12 @@ import unittest
 from collections import OrderedDict
 from textwrap import dedent
 
+import pytest
 from parameterized import parameterized
 
 from conans.client import tools
 from conans.paths import CONANFILE
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.test.assets.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.profiles import create_profile as _create_profile
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
@@ -70,6 +71,7 @@ class ProfileTest(unittest.TestCase):
         self.client.run("install .. -pr=sub/profile")
         self.assertIn("conanfile.txt: Installing package", self.client.out)
 
+    @pytest.mark.tool_compiler
     def test_base_profile_generated(self):
         """we are testing that the default profile is created (when not existing, fresh install)
          even when you run a create with a profile"""
@@ -77,6 +79,7 @@ class ProfileTest(unittest.TestCase):
                           "myprofile": "include(default)\n[settings]\nbuild_type=Debug"})
         self.client.run("create . conan/testing --profile myprofile")
 
+    @pytest.mark.tool_compiler
     def test_bad_syntax(self):
         self.client.save({CONANFILE: conanfile_scope_env})
         self.client.run("export . lasote/stable")
@@ -151,13 +154,18 @@ class ProfileTest(unittest.TestCase):
         self.client.run("install Hello0/0.1@lasote/stable --build -pr clang")
         self._assert_env_variable_printed("ENV_VAR", "a value")
 
-    @parameterized.expand([("", ), ("./local_profiles/", ), (temp_folder() + "/", )])
+    @parameterized.expand([("", ), ("./local_profiles/", ), (None, )])
     def test_install_with_missing_profile(self, path):
+        if path is None:
+            # Not good practice to introduce temp_folder() in the expand because it randomize
+            # the test names causing issues to split them in N processes
+            path = temp_folder() + "/"
         self.client.save({CONANFILE: conanfile_scope_env})
         self.client.run('install . -pr "%sscopes_env"' % path, assert_error=True)
         self.assertIn("ERROR: Profile not found:", self.client.out)
         self.assertIn("scopes_env", self.client.out)
 
+    @pytest.mark.tool_compiler
     def test_install_profile_env(self):
         files = cpp_hello_conan_files("Hello0", "0.1", build=False)
         files["conanfile.py"] = conanfile_scope_env
@@ -306,6 +314,7 @@ class ProfileTest(unittest.TestCase):
         self.assertNotIn("gcc", info)
         self.assertNotIn("libcxx", info)
 
+    @pytest.mark.tool_compiler
     def test_install_profile_options(self):
         files = cpp_hello_conan_files("Hello0", "0.1", build=False)
 
@@ -319,6 +328,7 @@ class ProfileTest(unittest.TestCase):
         self.assertIn("language=1", info)
         self.assertIn("static=False", info)
 
+    @pytest.mark.tool_compiler
     def test_scopes_env(self):
         # Create a profile and use it
         create_profile(self.client.cache.profiles_path, "scopes_env", settings={},
@@ -334,6 +344,7 @@ class ProfileTest(unittest.TestCase):
         self.assertFalse(os.environ.get("CC", None) == "/path/tomy/gcc")
         self.assertFalse(os.environ.get("CXX", None) == "/path/tomy/g++")
 
+    @pytest.mark.tool_compiler
     def test_default_including_another_profile(self):
         p1 = "include(p2)\n[env]\nA_VAR=1"
         p2 = "include(default)\n[env]\nA_VAR=2"
@@ -350,6 +361,7 @@ class ProfileTest(unittest.TestCase):
         self.client.run("create . user/testing")
         self._assert_env_variable_printed("A_VAR", "1")
 
+    @pytest.mark.tool_compiler
     def test_test_package(self):
         test_conanfile = '''from conans.model.conan_file import ConanFile
 from conans import CMake
@@ -409,6 +421,7 @@ class DefaultNameConan(ConanFile):
     def _assert_env_variable_printed(self, name, value):
         self.assertIn("%s=%s" % (name, value), self.client.out)
 
+    @pytest.mark.tool_compiler
     def test_info_with_profiles(self):
 
         self.client.run("remove '*' -f")

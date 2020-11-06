@@ -1,11 +1,10 @@
-import calendar
 import os
 import shutil
-import time
 
 from conans.model import Generator
 from conans.model.manifest import FileTreeManifest
 from conans.paths import BUILD_INFO_DEPLOY
+from conans.util.dates import timestamp_now
 from conans.util.files import mkdir, md5sum
 
 
@@ -15,7 +14,7 @@ FILTERED_FILES = ["conaninfo.txt", "conanmanifest.txt"]
 class DeployGenerator(Generator):
 
     def deploy_manifest_content(self, copied_files):
-        date = calendar.timegm(time.gmtime())
+        date = timestamp_now()
         file_dict = {}
         for f in copied_files:
             abs_path = os.path.join(self.output_path, f)
