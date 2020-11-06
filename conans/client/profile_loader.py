@@ -114,7 +114,6 @@ def read_profile(profile_name, cwd, default_folder):
 
     profile_path = get_profile_path(profile_name, default_folder, cwd)
     logger.debug("PROFILE LOAD: %s" % profile_path)
-
     text = load(profile_path)
 
     try:

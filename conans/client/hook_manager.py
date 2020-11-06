@@ -100,7 +100,6 @@ class HookManager(object):
             with chdir(current_dir):
                 sys.dont_write_bytecode = True
                 loaded = __import__(filename)
-                print(loaded.__dict__)
             # Put all imported files under a new package name
             module_id = uuid.uuid1()
             added_modules = set(sys.modules).difference(old_modules)
