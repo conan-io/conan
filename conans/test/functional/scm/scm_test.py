@@ -6,7 +6,6 @@ from collections import namedtuple
 from nose.plugins.attrib import attr
 from parameterized.parameterized import parameterized
 
-from conans.client.tools import environment_append
 from conans.client.tools.scm import Git, SVN
 from conans.client.tools.win import get_cased_path
 from conans.model.ref import ConanFileReference, PackageReference
@@ -631,26 +630,6 @@ class ConanLib(ConanFile):
         content = load(exported_conanfile)
         self.assertIn(commit, content)
 
-    def test_ssh(self):
-        conanfile = textwrap.dedent('''
-            from conans import ConanFile
-            
-            
-            class TestRecipe(ConanFile):
-                name = 'test-recipe'
-                version = '0.1'
-                scm = {
-                    'type': 'git',
-                    #'url': 'git@github.com:conan-io/conan.git',
-                    'url': 'ssh://github.com/conan-io/conan.git',
-                    'username': 'danimtb',
-                    #'password': 'kk'
-                    }
-        ''')
-        self.client.save({"conanfile.py": conanfile})
-        with environment_append({"CONAN_PRINT_RUN_COMMANDS": "1"}):
-            self.client.run("create . user/channel")
-        print(self.client.out)
 
 @attr('svn')
 class SVNSCMTest(SVNLocalRepoTestCase):
