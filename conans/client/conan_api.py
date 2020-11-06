@@ -1317,6 +1317,35 @@ class ConanAPIV1(object):
         graph_lock_file.save(lockfile)
 
     @api_method
+    def lock_install(self, lockfile, remote_name=None, build=None,
+                     generators=None, install_folder=None, cwd=None,
+                     lockfile_out=None):
+        lockfile = _make_abs_path(lockfile, cwd) if lockfile else None
+        graph_info = get_graph_info(None, None, cwd, None,
+                                    self.app.cache, self.app.out, lockfile=lockfile)
+
+        if not generators:  # We don't want the default txt
+            generators = False
+
+        install_folder = _make_abs_path(install_folder, cwd)
+
+        mkdir(install_folder)
+        remotes = self.app.load_remotes(remote_name=remote_name)
+        recorder = ActionRecorder()
+        graph_lock = graph_info.graph_lock
+        root_id = graph_lock.root_node_id()
+        reference = graph_lock.nodes[root_id].ref
+        deps_install(self.app, ref_or_path=reference, install_folder=install_folder,
+                     remotes=remotes, graph_info=graph_info, build_modes=build,
+                     generators=generators, recorder=recorder)
+
+        if lockfile_out:
+            lockfile_out = _make_abs_path(lockfile_out, cwd)
+            graph_lock_file = GraphLockFile(graph_info.profile_host, graph_info.profile_build,
+                                            graph_info.graph_lock)
+            graph_lock_file.save(lockfile_out)
+
+    @api_method
     def lock_create(self, path, lockfile_out,
                     reference=None, name=None, version=None, user=None, channel=None,
                     profile_host=None, profile_build=None, remote_name=None, update=None, build=None,

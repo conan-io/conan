@@ -1878,6 +1878,11 @@ class Command(object):
         clean_modified_cmd = subparsers.add_parser('clean-modified', help='Clean modified flags')
         clean_modified_cmd.add_argument('lockfile', help='Path to the lockfile')
 
+        install_cmd = subparsers.add_parser('install', help='Install a lockfile')
+        install_cmd.add_argument('lockfile', help='Path to the lockfile')
+        install_cmd.add_argument("-g", "--generator", nargs=1, action=Extender,
+                                 help='Generators to use')
+
         create_cmd = subparsers.add_parser('create',
                                            help='Create a lockfile from a conanfile or a reference')
         create_cmd.add_argument("path", nargs="?", help="Path to a conanfile")
@@ -1903,7 +1908,9 @@ class Command(object):
         args = parser.parse_args(*args)
         self._warn_python_version()
 
-        if args.subcommand == "update":
+        if args.subcommand == "install":
+            self._conan.lock_install(args.lockfile, generators=args.generator)
+        elif args.subcommand == "update":
             self._conan.lock_update(args.old_lockfile, args.new_lockfile)
         elif args.subcommand == "build-order":
             build_order = self._conan.lock_build_order(args.lockfile)
