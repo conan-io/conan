@@ -136,6 +136,7 @@ class Git(SCMBase):
             return self._fetch(url, branch, shallow)
         branch_cmd = "--branch %s" % branch if branch else ""
         shallow_cmd = "--depth 1" if shallow else ""
+        print('clone "%s" . %s %s %s' % (url, branch_cmd, shallow_cmd, args))
         output = self.run('clone "%s" . %s %s %s' % (url, branch_cmd, shallow_cmd, args))
 
         return output

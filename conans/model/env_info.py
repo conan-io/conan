@@ -42,15 +42,6 @@ class EnvValues(object):
         ret = EnvValues()
         if not text:
             return ret
-        if isinstance(text, dict):
-            for k, v in text.items():
-                package = None
-                if ":" in k:
-                    package, name = k.split(":", 1)
-                else:
-                    name = k
-                ret.add(name, v, package)
-            return ret
 
         for env_def in text.splitlines():
             try:

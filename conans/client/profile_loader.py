@@ -1,7 +1,6 @@
 import os
 from collections import OrderedDict, defaultdict
 
-from conans.client.hook_manager import HookManager
 from conans.errors import ConanException, ConanV2Exception
 from conans.model.env_info import EnvValues, unquote
 from conans.model.options import OptionsValues
@@ -116,9 +115,6 @@ def read_profile(profile_name, cwd, default_folder):
     profile_path = get_profile_path(profile_name, default_folder, cwd)
     logger.debug("PROFILE LOAD: %s" % profile_path)
 
-    if profile_path.endswith(".py"):
-        return _load_profile_python(profile_path), None
-
     text = load(profile_path)
 
     try:
@@ -127,17 +123,6 @@ def read_profile(profile_name, cwd, default_folder):
         raise
     except ConanException as exc:
         raise ConanException("Error reading '%s' profile: %s" % (profile_name, exc))
-
-
-def _load_profile_python(profile_path):
-    # TODO: implement include() of other profiles? variable substitution?
-    profile_content = HookManager._load_module_from_file(profile_path)  #FIXME: specific of hooks
-    profile = Profile()
-    profile.settings = OrderedDict(getattr(profile_content, "settings", None))
-    profile.options = OptionsValues(getattr(profile_content, "options", None))
-    profile.env_values = EnvValues.loads(getattr(profile_content, "env", None))
-    # TODO: Add other fields like build_requires
-    return profile
 
 
 def _load_profile(text, profile_path, default_folder):

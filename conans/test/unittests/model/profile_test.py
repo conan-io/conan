@@ -3,7 +3,7 @@ import textwrap
 import unittest
 from collections import OrderedDict
 
-from conans.client.profile_loader import _load_profile, read_profile, _load_profile_python
+from conans.client.profile_loader import _load_profile
 from conans.model.profile import Profile
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import save
@@ -110,26 +110,3 @@ zlib/*: aaaa/1.2.3@lasote/testing, bb/1.2@lasote/testing
                          '[build_requires]\n'
                          '[env]\nCC=path/to/my/compiler/gcc\nCXX=path/to/my/compiler/g++',
                          profile.dumps())
-
-    def test_python_profile(self):
-        profile_content = textwrap.dedent("""
-            import os
-
-
-            settings = {
-                 "os": "Windows",
-                 "compiler.version": "13",
-                }
-            options = {"file": "%s_%s" % ("yes", "no")}
-            env = {"pkg:env_var": "bar"}
-            cxxflags = os.environ.get('HOME', "")
-            if (cxxflags):
-                env['CXXFLAGS'] = cxxflags + "-stdlib=libc++11"
-        """)
-        profile_path = os.path.join(temp_folder(), "whatever_profile.py")
-        save(profile_path, profile_content)
-        profile = _load_profile_python(profile_path)
-        print(profile)
-        print(profile.settings)
-        print(profile.options)
-        print(profile.env_values)
