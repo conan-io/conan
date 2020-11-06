@@ -501,7 +501,6 @@ class Conan(ConanFile):
                 requires = "hello/0.1"
                 generators = "cmake_find_package_multi"
 
-
                 def build(self):
                     cmake = CMake(self)
                     cmake.configure()
