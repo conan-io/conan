@@ -1,19 +1,11 @@
 import os
 import textwrap
-import traceback
 import unittest
-import uuid
-from _ast import Module
-from collections import OrderedDict
 
-import sys
 from importlib.util import spec_from_file_location, module_from_spec
-from os.path import splitext, basename
 
 from conans.client.tools import environment_append
-from conans.errors import ConanException
 from conans.test.utils.tools import TestClient
-from conans.tools import chdir
 
 
 class Profile(dict):
@@ -36,7 +28,7 @@ class Profile(dict):
 
 
 def _load_module_from_file(filename, parent_profile):
-    name = splitext(basename(filename))[0]
+    name = os.path.splitext(os.path.basename(filename))[0]
     spec = spec_from_file_location(name, filename)
     config = module_from_spec(spec)
     for key, value in parent_profile.items():
