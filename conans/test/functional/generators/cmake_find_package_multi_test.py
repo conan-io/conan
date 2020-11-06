@@ -9,7 +9,7 @@ from parameterized import parameterized
 
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID, replace_in_file
-from conans.util.files import load, save
+from conans.util.files import load
 
 
 @attr('slow')
@@ -454,62 +454,3 @@ class Conan(ConanFile):
         t.run("create . --build missing -s build_type=Release")
 
         self.assertIn("component libs: $<$<CONFIG:Release>:system_lib_component", t.out)
-
-    def test_custom_config(self):
-        client = TestClient()
-        settings = load(client.cache.settings_path)
-        new_settings = settings.replace("build_type: [None, Debug, Release,",
-                                        "build_type: [None, Debug, Release, MyRelease,")
-        assert settings != new_settings
-        save(client.cache.settings_path, new_settings)
-        conanfile = textwrap.dedent("""
-            from conans import ConanFile
-            from conans.tools import save
-            import os
-            class Pkg(ConanFile):
-                settings = "build_type"
-                def package(self):
-                    save(os.path.join(self.package_folder, "include/hello.h"),
-                         '#define HELLO_MSG "%s"' % self.settings.build_type)
-            """)
-        client.save({"conanfile.py": conanfile})
-        client.run("create . hello/0.1@ -s build_type=MyRelease")
-
-        app = textwrap.dedent("""
-            #include <iostream>
-            #include "hello.h"
-            int main() {
-                std::cout << "Hello: " << HELLO_MSG <<std::endl;
-            }
-            """)
-
-        cmakelist = textwrap.dedent("""
-            set(CMAKE_CONFIGURATION_TYPES Debug Release MyRelease CACHE STRING
-                "Available build-types: Debug, Release and MyRelease")
-            cmake_minimum_required(VERSION 2.8)
-            project(App CXX)
-
-            find_package(hello REQUIRED)
-            add_executable(app app.cpp)
-            target_link_libraries(app PRIVATE hello::hello)
-            """)
-
-        conanfile = textwrap.dedent("""
-            from conans import ConanFile, CMake, CMakeToolchain
-            class App(ConanFile):
-                settings = "os", "arch", "compiler", "build_type"
-                requires = "hello/0.1"
-                generators = "cmake_find_package_multi"
-
-                def build(self):
-                    cmake = CMake(self)
-                    cmake.configure()
-                    cmake.build()
-            """)
-
-        client.save({"conanfile.py": conanfile,
-                     "CMakeLists.txt": cmakelist,
-                     "app.cpp": app})
-        print(client.current_folder)
-        client.run("install . -s build_type=MyRelease")
-        client.run("build .")
