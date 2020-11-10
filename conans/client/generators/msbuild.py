@@ -38,7 +38,7 @@ class MSBuildGenerator(Generator):
             <conan_{name}_props_imported>True</conan_{name}_props_imported>
           </PropertyGroup>
           <PropertyGroup>
-            <LocalDebuggerEnvironment>PATH=%PATH%;$(Conan{name}BinaryDirectories)</LocalDebuggerEnvironment>
+            <LocalDebuggerEnvironment>PATH=%PATH%;$(Conan{name}BinaryDirectories)$(LocalDebuggerEnvironment)</LocalDebuggerEnvironment>
             <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
           </PropertyGroup>
           <ItemDefinitionGroup>
