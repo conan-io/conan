@@ -3,7 +3,7 @@ from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLO
                                        BINARY_UPDATE, RECIPE_EDITABLE, BINARY_EDITABLE,
                                        RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP, BINARY_UNKNOWN)
 from conans.errors import NoRemoteAvailable, NotFoundException, conanfile_exception_formatter, \
-    ConanException
+    ConanException, ConanInvalidConfiguration
 from conans.model.info import ConanInfo, PACKAGE_ID_UNKNOWN
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference
@@ -344,6 +344,15 @@ class GraphBinariesAnalyzer(object):
             self._propagate_options(node)
 
             self._compute_package_id(node, default_package_id_mode, default_python_requires_id_mode)
+
+            conanfile = node.conanfile
+            if hasattr(conanfile, "validate") and callable(conanfile.validate):
+                with conanfile_exception_formatter(str(conanfile), "validate"):
+                    try:
+                        conanfile.validate()
+                    except ConanInvalidConfiguration as e:
+                        conanfile.info.invalid = "{}:validate(): {}".format(conanfile, str(e))
+
             if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
                 continue
             if node.package_id == PACKAGE_ID_UNKNOWN:

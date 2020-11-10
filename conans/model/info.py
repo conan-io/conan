@@ -425,6 +425,7 @@ class ConanInfo(object):
         """ Useful for build_id implementation
         """
         result = ConanInfo()
+        result.invalid = None
         result.settings = self.settings.copy()
         result.options = self.options.copy()
         result.requires = self.requires.copy()
@@ -435,6 +436,7 @@ class ConanInfo(object):
     def create(settings, options, prefs_direct, prefs_indirect, default_package_id_mode,
                python_requires, default_python_requires_id_mode):
         result = ConanInfo()
+        result.invalid = None
         result.full_settings = settings
         result.settings = settings.copy()
         result.full_options = options
@@ -461,6 +463,7 @@ class ConanInfo(object):
                                      "requires", "full_requires", "scope", "recipe_hash", "env"],
                               raise_unexpected_field=False)
         result = ConanInfo()
+        result.invalid = None
         result.settings = Values.loads(parser.settings)
         result.full_settings = Values.loads(parser.full_settings)
         result.options = OptionsValues.loads(parser.options)
