@@ -129,7 +129,8 @@ class CMakeGenericToolchain(CMakeToolchainBase):
                                    get_generator_platform(self._conanfile.settings,
                                                           self.generator))
         self.toolset = toolset or get_toolset(self._conanfile.settings, self.generator)
-        if "Ninja" in self.generator and "Visual" in self._conanfile.settings.compiler:
+        if (self.generator is not None and "Ninja" in self.generator
+                and "Visual" in self._conanfile.settings.compiler):
             self.compiler = "cl"
         else:
             self.compiler = None  # compiler defined by default
