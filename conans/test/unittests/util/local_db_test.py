@@ -40,6 +40,18 @@ class LocalStoreTest(unittest.TestCase):
         self.assertEqual("token", token)
         self.assertEqual("access_token", access_token)
 
+    def test_token_encryption_none(self):
+        tmp_dir = temp_folder()
+        db_file = os.path.join(tmp_dir, "dbfile")
+        encryption_key = str(uuid.uuid4())
+        localdb = LocalDB.create(db_file, encryption_key=encryption_key)
+
+        localdb.store("pepe", "token", None, "myurl1")
+        user, token, access_token = localdb.get_login("myurl1")
+        self.assertEqual("pepe", user)
+        self.assertEqual("token", token)
+        self.assertEqual(None, access_token)
+
     @unittest.skipIf(six.PY2, "Python2 sqlite3 converts to str")
     def test_token_encryption_unicode(self):
         tmp_dir = temp_folder()
