@@ -9,7 +9,7 @@ _function_cpp = r"""
 
 {% for it in includes -%}
 #include "{{it}}.h"
-{%- endfor %}
+{% endfor %}
 
 int {{name}}(){
     #ifdef NDEBUG
@@ -40,7 +40,7 @@ int {{name}}(){
 
     {% for it in calls -%}
     {{it}}();
-    {%- endfor %}
+    {% endfor %}
     return 0;
 }
 """
