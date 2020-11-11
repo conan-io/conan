@@ -13,6 +13,7 @@ from conans.test.utils.tools import TestClient, TestServer
 
 @attr("slow")
 @pytest.mark.slow
+@pytest.mark.tool_cmake
 class CompleteFlowTest(unittest.TestCase):
 
     def test_reuse_complete_urls(self):

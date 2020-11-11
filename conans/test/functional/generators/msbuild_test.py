@@ -7,6 +7,7 @@ from nose.plugins.attrib import attr
 
 from conans.test.assets.cpp_test_files import cpp_hello_conan_files
 from conans.test.assets.genconanfile import GenConanfile
+from conans.test.assets.sources import gen_function_cpp
 from conans.test.utils.tools import TestClient
 
 sln_file = r"""
@@ -222,14 +223,6 @@ myproject_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
 </Project>
 """
 
-myproject_cpp = r"""#include <iostream>
-#include "helloHello3.h"
-
-int main(){
-    helloHello3();
-    std::cout << "Hello World!\n";
-}
-"""
 
 myapp_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0"
@@ -401,21 +394,14 @@ myapp_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
 </Project>
 """
 
-myapp_cpp = r"""#include <iostream>
-#include "helloHello1.h"
 
-int main(){
-    helloHello1();
-    std::cout << "Hello App!\n";
-}
-"""
-
-
+@pytest.mark.tool_visual_studio
 @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
 class MSBuildGeneratorTest(unittest.TestCase):
 
     @attr('slow')
     @pytest.mark.slow
+    @pytest.mark.tool_cmake
     def test_msbuild_generator(self):
         client = TestClient()
         # Upload to alternative server Hello0 but Hello1 to the default
@@ -439,6 +425,10 @@ class MSBuildGeneratorTest(unittest.TestCase):
                     msbuild = MSBuild(self)
                     msbuild.build("MyProject.sln")
             """)
+        myapp_cpp = gen_function_cpp(name="main", msg="MyApp",
+                                     includes=["helloHello1"], calls=["helloHello1"])
+        myproject_cpp = gen_function_cpp(name="main", msg="MyProject", includes=["helloHello3"],
+                                         calls=["helloHello3"])
         files = {"MyProject.sln": sln_file,
                  "MyProject/MyProject.vcxproj": myproject_vcxproj,
                  "MyProject/MyProject.cpp": myproject_cpp,
@@ -452,10 +442,10 @@ class MSBuildGeneratorTest(unittest.TestCase):
         # Need to test also with bare SLN, because the helper is doing too much
         client.run("build .")
         client.run_command(r"x64\Release\MyProject.exe")
-        self.assertIn("Hello World!", client.out)
+        self.assertIn("MyProject: Release!", client.out)
         self.assertIn("Hello Hello3", client.out)
         client.run_command(r"x64\Release\MyApp.exe")
-        self.assertIn("Hello App!", client.out)
+        self.assertIn("MyApp: Release!", client.out)
         self.assertIn("Hello Hello1", client.out)
         self.assertIn("Hello Hello0", client.out)
 
@@ -473,12 +463,12 @@ class MSBuildGeneratorTest(unittest.TestCase):
         client.run("create . pkg/1.0@")
 
         conanfile = textwrap.dedent("""
-                    from conans import ConanFile
-                    class Pkg(ConanFile):
-                        settings = "os", "compiler", "arch", "build_type"
-                        generators = "msbuild"
-                        requires = "pkg/1.0"
-                    """)
+            from conans import ConanFile
+            class Pkg(ConanFile):
+                settings = "os", "compiler", "arch", "build_type"
+                generators = "msbuild"
+                requires = "pkg/1.0"
+            """)
         client.save({"conanfile.py": conanfile})
 
         client.run('install . -s os=Windows -s compiler="Visual Studio" -s compiler.version=15'

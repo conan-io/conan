@@ -3,6 +3,7 @@ import platform
 import unittest
 from textwrap import dedent
 
+import pytest
 import six
 import time
 
@@ -154,6 +155,7 @@ class WorkspaceTest(unittest.TestCase):
                                    "does not define path"):
             Workspace(path, None)
 
+    @pytest.mark.tool_compiler
     def test_simple(self):
         client = TestClient()
 
@@ -191,6 +193,7 @@ class WorkspaceTest(unittest.TestCase):
                 self.assertTrue(os.path.exists(os.path.join(client.current_folder, sub, f)))
 
     @parameterized.expand([("csv",), ("list",), (("abbreviated_list"))])
+    @pytest.mark.tool_cmake
     def test_multiple_roots(self, root_attribute_format):
         # https://github.com/conan-io/conan/issues/4720
         client = TestClient()
@@ -242,6 +245,7 @@ class WorkspaceTest(unittest.TestCase):
         b_cmake = client.load(os.path.join("B", "conanbuildinfo.cmake"))
         self.assertIn("set(CONAN_LIBS helloD ${CONAN_LIBS})", b_cmake)
 
+    @pytest.mark.tool_compiler
     def test_transitivity(self):
         # https://github.com/conan-io/conan/issues/4720
         client = TestClient()
@@ -289,6 +293,7 @@ class WorkspaceTest(unittest.TestCase):
         b_cmake = client.load(os.path.join("B", "conanbuildinfo.cmake"))
         self.assertIn("set(CONAN_LIBS helloC helloD ${CONAN_LIBS})", b_cmake)
 
+    @pytest.mark.tool_cmake
     def test_missing_layout_cmake(self):
         # Specifying cmake generator without layout file raised exception
         # https://github.com/conan-io/conan/issues/4752
@@ -319,6 +324,7 @@ class WorkspaceTest(unittest.TestCase):
         self.assertIn("HelloD/0.1@lasote/stable from user folder - Editable", client.out)
         self.assertIn("HelloD/0.1@lasote/stable from user folder - Editable", client.out)
 
+    @pytest.mark.tool_cmake
     def test_simple_build(self):
         client = TestClient()
 
@@ -391,6 +397,7 @@ class WorkspaceTest(unittest.TestCase):
         self.assertIn("Hello World B Debug!", client.out)
         self.assertIn("Hello World A Debug!", client.out)
 
+    @pytest.mark.tool_cmake
     def test_simple_out_of_source_build(self):
         client = TestClient()
 
@@ -464,6 +471,7 @@ class WorkspaceTest(unittest.TestCase):
         self.assertIn("Hello World B Debug!", client.out)
         self.assertIn("Hello World A Debug!", client.out)
 
+    @pytest.mark.tool_cmake
     def test_complete_single_conf_build(self):
         client = TestClient()
 
@@ -583,6 +591,7 @@ class WorkspaceTest(unittest.TestCase):
         self.assertNotIn("Release", client.out)
 
     @unittest.skipUnless(platform.system() == "Windows", "only windows")
+    @pytest.mark.tool_cmake
     def test_complete_multi_conf_build(self):
         client = TestClient()
 
@@ -800,6 +809,7 @@ class Pkg(ConanFile):
         conanbuildinfo = client.load(os.path.join("A", "build", "conanbuildinfo.cmake"))
         self.assertIn("set(CONAN_LIBS_TOOL MyToolLib)", conanbuildinfo)
 
+    @pytest.mark.tool_compiler
     def test_per_package_layout(self):
         client = TestClient()
 
@@ -844,6 +854,7 @@ class Pkg(ConanFile):
         self.assertIn("myincludeC", cmake)
         self.assertIn("myincludeB", cmake)
 
+    @pytest.mark.tool_compiler
     def test_generators(self):
         client = TestClient()
 
@@ -892,6 +903,7 @@ class Pkg(ConanFile):
         self.assertTrue(os.path.exists(os.path.join(client.current_folder,
                                                     "conanworkspace.cmake")))
 
+    @pytest.mark.tool_cmake
     def test_gen_subdirectories(self):
         client = TestClient()
 

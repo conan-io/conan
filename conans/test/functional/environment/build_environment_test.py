@@ -2,6 +2,8 @@ import platform
 import unittest
 from textwrap import dedent
 
+import pytest
+
 from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient
 from conans.test.assets.cpp_test_files import cpp_hello_conan_files
@@ -63,6 +65,7 @@ int main(){
 class BuildEnvironmenTest(unittest.TestCase):
 
     @unittest.skipUnless(platform.system() == "Linux", "Requires Linux")
+    @pytest.mark.tool_autotools
     def test_use_build_virtualenv(self):
         client = TestClient(path_with_spaces=False)
         client.save({CONANFILE: conanfile, "mean.cpp": mylib, "mean.h": mylibh})
@@ -112,6 +115,7 @@ class ConanReuseLib(ConanFile):
         self.assertIn("15", client.out)
 
     @unittest.skipUnless(platform.system() == "Windows", "Requires windows")
+    @pytest.mark.tool_compiler
     def test_use_build_virtualenv_windows(self):
         files = cpp_hello_conan_files("hello", "0.1",  use_cmake=False, with_exe=False)
         client = TestClient(path_with_spaces=False)

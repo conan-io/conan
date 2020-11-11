@@ -481,6 +481,9 @@ class SystemPackageToolTest(unittest.TestCase):
             spt = SystemPackageTool(tool=ChocolateyTool(output=self.out), output=self.out)
             # Git is not installed by default on Chocolatey
             expected_package = "chocolatey"
+        else:
+            if platform.system() != "Windows" and not which("git"):
+                return
         # The expected should be installed on development/testing machines
         self.assertTrue(spt._tool.installed(expected_package))
         self.assertTrue(spt.installed(expected_package))

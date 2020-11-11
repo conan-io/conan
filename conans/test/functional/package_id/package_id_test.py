@@ -1,6 +1,8 @@
 import textwrap
 import unittest
 
+import pytest
+
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
 
 
@@ -49,6 +51,7 @@ class TestConan(ConanFile):
                       "'%s' created" % NO_SETTINGS_PACKAGE_ID,
                       client.out)
 
+    @pytest.mark.tool_compiler
     def test_value_parse(self):
         # https://github.com/conan-io/conan/issues/2816
         conanfile = """

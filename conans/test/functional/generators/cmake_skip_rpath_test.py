@@ -1,6 +1,8 @@
 import platform
 import unittest
 
+import pytest
+
 from conans.test.utils.tools import TestClient
 
 conanfile_py = """
@@ -30,6 +32,7 @@ ENDIF()
 """
 
 
+@pytest.mark.tool_cmake
 class CMakeSkipRpathTest(unittest.TestCase):
 
     def test_skip_flag(self):

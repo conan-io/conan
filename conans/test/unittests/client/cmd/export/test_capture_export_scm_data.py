@@ -4,18 +4,21 @@ import os
 import unittest
 
 import mock
+import pytest
+from nose.plugins.attrib import attr
 from parameterized import parameterized
 
 from conans.client.cmd.export import _capture_scm_auto_fields
 from conans.client.tools.scm import Git
 from conans.model.ref import ConanFileReference
-from conans.test.utils.test_files import temp_folder
 from conans.test.utils.mocks import TestBufferConanOutput
 from conans.test.utils.scm import create_local_git_repo
+from conans.test.utils.test_files import temp_folder
 from conans.util.files import save
-from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
 
 
+@attr("git")
+@pytest.mark.tool_git
 @mock.patch("conans.client.cmd.export._replace_scm_data_in_recipe", return_value=None)
 class CaptureExportSCMDataTest(unittest.TestCase):
 

@@ -5,17 +5,16 @@ import unittest
 import pytest
 from nose.plugins.attrib import attr
 
-from parameterized.parameterized import parameterized
-
 from conans.client.tools import which
+from conans.test.assets.sources import gen_function_h, gen_function_cpp
 from conans.test.utils.tools import TestClient
-from conans.util.files import mkdir
 
 
 @attr("slow")
 @attr("toolchain")
 @pytest.mark.slow
 @pytest.mark.toolchain
+@pytest.mark.tool_autotools
 class MakeToolchainTest(unittest.TestCase):
 
     @unittest.skipUnless(platform.system() in ["Linux"], "Requires linux")
@@ -45,28 +44,8 @@ class MakeToolchainTest(unittest.TestCase):
                     self.run("make -C ..")
 
             """)
-
-        hello_h = textwrap.dedent("""
-            #pragma once
-            #define HELLO_MSG "Release"
-            #ifdef WIN32
-              #define APP_LIB_EXPORT __declspec(dllexport)
-            #else
-              #define APP_LIB_EXPORT
-            #endif
-            APP_LIB_EXPORT void hello();
-            """)
-
-        hello_cpp = textwrap.dedent("""
-            #include <iostream>
-            #include "hello.h"
-
-            void hello() {
-                std::cout << "Hello World " << HELLO_MSG << "!" << std::endl;
-                std::cout << "App: Release!" << std::endl;
-                std::cout << "TEST_DEFINITION: " << TEST_DEFINITION << "\\n";
-            }
-            """)
+        hello_h = gen_function_h(name="hello")
+        hello_cpp = gen_function_cpp(name="hello", preprocessor=["TEST_DEFINITION"])
 
         makefile = textwrap.dedent("""
             include conan_toolchain.mak
@@ -158,27 +137,8 @@ class MakeToolchainTest(unittest.TestCase):
 
             """)
 
-        hello_h = textwrap.dedent("""
-            #pragma once
-            #define HELLO_MSG "{0}"
-            #ifdef WIN32
-              #define APP_LIB_EXPORT __declspec(dllexport)
-            #else
-              #define APP_LIB_EXPORT
-            #endif
-            APP_LIB_EXPORT void hello();
-            """)
-
-        hello_cpp = textwrap.dedent("""
-            #include <iostream>
-            #include "hello.h"
-
-            void hello() {
-                std::cout << "Hello World " << HELLO_MSG << "!" << std::endl;
-                std::cout << "App: Release!" << std::endl;
-                std::cout << "TEST_DEFINITION: " << TEST_DEFINITION << "\\n";
-            }
-            """)
+        hello_h = gen_function_h(name="hello")
+        hello_cpp = gen_function_cpp(name="hello", preprocessor=["TEST_DEFINITION"])
 
         makefile = textwrap.dedent("""
             include conan_toolchain.mak

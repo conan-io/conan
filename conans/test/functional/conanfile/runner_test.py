@@ -3,6 +3,7 @@ import platform
 import textwrap
 import unittest
 
+import pytest
 import six
 
 from conans.client.runner import ConanRunner
@@ -62,6 +63,7 @@ class ConanFileToolsTest(ConanFile):
 > python --version
 -----------------""", out.getvalue())
 
+    @pytest.mark.tool_cmake
     def test_log(self):
         conanfile = '''
 from conans import ConanFile
