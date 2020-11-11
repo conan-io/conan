@@ -349,6 +349,48 @@ class WinTest(unittest.TestCase):
         self.assertIn("VCRUNTIME140D.dll", client.out)
 
     @pytest.mark.tool_cmake
+    def test_toolchain_win_vs2019(self):
+        client = TestClient(path_with_spaces=False)
+        settings = {"compiler": "Visual Studio",
+                    "compiler.version": "16",
+                    "compiler.toolset": "v141",
+                    "compiler.runtime": "MD",
+                    "build_type": "Release",
+                    "arch": "x86_64"}
+
+        # Build the profile according to the settings provided
+        settings = " ".join('-s %s="%s"' % (k, v) for k, v in settings.items() if v)
+
+        client.run("new hello/0.1 -s")
+        client.run("create . hello/0.1@ %s" % (settings,))
+
+        # Prepare the actual consumer package
+        client.save({"conanfile.py": self.conanfile,
+                     "MyProject.sln": sln_file,
+                     "MyApp/MyApp.vcxproj": myapp_vcxproj,
+                     "MyApp/MyApp.cpp": self.app},
+                    clean_first=True)
+
+        # Run the configure corresponding to this test case
+        client.run("install . %s -if=conan" % (settings,))
+        self.assertIn("conanfile.py: MSBuildToolchain created conan_toolchain_release_x64.props",
+                      client.out)
+        client.run("build . -if=conan")
+        self.assertIn("Visual Studio 2019", client.out)
+        self.assertIn("[vcvarsall.bat] Environment initialized for: 'x64'", client.out)
+        self._run_app(client, "x64", "Release")
+        version = re.search("main _MSC_VER19([0-9]*)", str(client.out)).group(1)
+        version = int(version)
+        self.assertTrue(10 <= version < 20)
+        self.assertIn("main _MSVC_LANG2014", client.out)
+
+        vcvars = vcvars_command(version="16", architecture="amd64")
+        cmd = ('%s && dumpbin /dependents "x64\\Release\\MyApp.exe"' % vcvars)
+        client.run_command(cmd)
+        self.assertIn("MSVCP140.dll", client.out)
+        self.assertIn("VCRUNTIME140.dll", client.out)
+
+    @pytest.mark.tool_cmake
     def test_toolchain_win_multi(self):
         client = TestClient(path_with_spaces=False)
         settings = {"compiler": "Visual Studio",
