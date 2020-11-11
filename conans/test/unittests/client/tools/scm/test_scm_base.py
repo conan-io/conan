@@ -77,6 +77,14 @@ class GetUrlWithCredentialsTest(unittest.TestCase):
                          scm.get_url_with_credentials("ssh://github.com/conan-io/conan.git"))
 
     def test_ssh_password(self):
-        scm = SCMBase(password="pass")
+        scm = SCMBase(password="pass")  #FIXME: username?
         self.assertEqual('ssh://github.com/conan-io/conan.git',
                          scm.get_url_with_credentials("ssh://github.com/conan-io/conan.git"))
+
+    def test_ssh_url_with_username(self):
+        scm = SCMBase(password="pass")
+        self.assertEqual('ssh://git:pass@github.com/conan-io/conan.git',
+                         scm.get_url_with_credentials("ssh://git@github.com/conan-io/conan.git"))
+        scm = SCMBase(password="pass", username="dani")  #FIXME: Warning?
+        self.assertEqual('ssh://git:pass@github.com/conan-io/conan.git',
+                         scm.get_url_with_credentials("ssh://git@github.com/conan-io/conan.git"))

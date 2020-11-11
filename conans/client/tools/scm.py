@@ -67,6 +67,14 @@ class SCMBase(object):
         if urlparse(url).password:
             return url
 
+        url_username = urlparse(url).username
+        if url_username and self._password:
+            lookfor = "{username}@".format(username=url_username)
+            replace_str = "{username}:{password}@".format(username=url_username,
+                                                          password=self._password)
+            url = url.replace(lookfor, replace_str, 1)
+            return url
+
         replace_str = "://"
         if self._username:
             user_enc = quote_plus(self._username)
