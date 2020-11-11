@@ -190,6 +190,7 @@ class GraphBinariesAnalyzer(object):
                             node.conanfile.output.info("Main binary package '%s' missing. Using "
                                                        "compatible package '%s'"
                                                        % (node.package_id, package_id))
+
                             # Modifying package id under the hood, FIXME
                             node._package_id = package_id
                             # So they are available in package_info() method
