@@ -75,6 +75,7 @@ class RemoteManager(object):
         """
         headers = _headers_for_settings(settings)
         pref = self._resolve_latest_pref(pref, remote, headers=headers)
+        # FIXME Conan 2.0: With revisions, it is not needed to pass headers to this second function
         return self._call_remote(remote, "get_package_info", pref, headers=headers), pref
 
     def get_recipe(self, ref, remote):

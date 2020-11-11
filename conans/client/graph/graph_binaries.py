@@ -111,7 +111,7 @@ class GraphBinariesAnalyzer(object):
         # If the "remote" came from the registry but the user didn't specified the -r, with
         # revisions iterate all remotes
         if not remote or (not remote_info and self._cache.config.revisions_enabled):
-            for r in remotes.values():  # FIXME: Here we hit the same remote as before
+            for r in remotes.values():  # FIXME: Here we hit the same remote we did before
                 try:
                     remote_info, pref = self._get_package_info(node, pref, r)
                 except NotFoundException:
