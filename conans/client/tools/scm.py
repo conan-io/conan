@@ -71,10 +71,10 @@ class SCMBase(object):
         if self._username:
             user_enc = quote_plus(self._username)
             replace_str = replace_str + user_enc
-        if self._password:
-            pwd_enc = quote_plus(self._password)
-            replace_str = replace_str + ":" + pwd_enc
-        replace_str = replace_str + "@"
+            if self._password:
+                pwd_enc = quote_plus(self._password)
+                replace_str = replace_str + ":" + pwd_enc
+            replace_str = replace_str + "@"
         url = url.replace("://", replace_str, 1)
         return url
 

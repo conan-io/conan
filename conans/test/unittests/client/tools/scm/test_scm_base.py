@@ -33,6 +33,9 @@ class RemoveCredentialsTest(unittest.TestCase):
         self.assertEqual('ssh://git@github.com:2222/conan-io/conan.git',
                          SCMBase._remove_credentials_url(
                              'ssh://git:password@github.com:2222/conan-io/conan.git'))
+        self.assertEqual('ssh://github.com:2222/conan-io/conan.git',
+                         SCMBase._remove_credentials_url(
+                             'ssh://github.com:2222/conan-io/conan.git'))
         # scp-like syntax
         self.assertEqual('git@github.com:conan-io/conan.git',
                          SCMBase._remove_credentials_url(
@@ -54,3 +57,26 @@ class RemoveCredentialsTest(unittest.TestCase):
         self.assertEqual('svn+ssh://10.106.191.164/home/svn/shproject',
                          SCMBase._remove_credentials_url(
                              'svn+ssh://username:password@10.106.191.164/home/svn/shproject'))
+
+
+class GetUrlWithCredentialsTest(unittest.TestCase):
+
+    def test_ssh(self):
+        scm = SCMBase()
+        self.assertEqual('ssh://github.com/conan-io/conan.git',
+                         scm.get_url_with_credentials("ssh://github.com/conan-io/conan.git"))
+
+    def test_ssh_username_password(self):
+        scm = SCMBase(username="dani", password="pass")
+        self.assertEqual('ssh://dani:pass@github.com/conan-io/conan.git',
+                         scm.get_url_with_credentials("ssh://github.com/conan-io/conan.git"))
+
+    def test_ssh_username(self):
+        scm = SCMBase(username="dani")
+        self.assertEqual('ssh://dani@github.com/conan-io/conan.git',
+                         scm.get_url_with_credentials("ssh://github.com/conan-io/conan.git"))
+
+    def test_ssh_password(self):
+        scm = SCMBase(password="pass")
+        self.assertEqual('ssh://github.com/conan-io/conan.git',
+                         scm.get_url_with_credentials("ssh://github.com/conan-io/conan.git"))
