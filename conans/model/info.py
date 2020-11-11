@@ -14,6 +14,7 @@ from conans.util.sha import sha1
 
 PREV_UNKNOWN = "PREV unknown"
 PACKAGE_ID_UNKNOWN = "Package_ID_unknown"
+PACKAGE_ID_INVALID = "INVALID"
 
 
 class RequirementInfo(object):
@@ -425,7 +426,7 @@ class ConanInfo(object):
         """ Useful for build_id implementation
         """
         result = ConanInfo()
-        result.invalid = None
+        result.invalid = self.invalid
         result.settings = self.settings.copy()
         result.options = self.options.copy()
         result.requires = self.requires.copy()
@@ -537,6 +538,8 @@ class ConanInfo(object):
         """ The package_id of a conans is the sha1 of its specific requirements,
         options and settings
         """
+        if self.invalid:
+            return PACKAGE_ID_INVALID
         result = [self.settings.sha]
         # Only are valid requires for OPtions those Non-Dev who are still in requires
         self.options.filter_used(self.requires.pkg_names)

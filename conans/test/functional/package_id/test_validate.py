@@ -15,9 +15,9 @@ class TestValidate(unittest.TestCase):
             class Pkg(ConanFile):
                 settings = "os"
 
-                def validate(self):
+                def package_id(self):
                     if self.settings.os == "Windows":
-                        raise ConanInvalidConfiguration("MyPkg NOT in Win")
+                        self.info.invalid = True
             """)
 
         client.save({"conanfile.py": conanfile})
@@ -28,6 +28,7 @@ class TestValidate(unittest.TestCase):
 
         error = client.run("create . pkg/0.1@ -s os=Windows", assert_error=True)
         self.assertEqual(error, ERROR_INVALID_CONFIGURATION)
-        self.assertIn("ERROR: pkg/0.1:validate(): MyPkg NOT in Win", client.out)
+        self.assertIn("ERROR: pkg/0.1: Invalid ID", client.out)
         client.run("info pkg/0.1@ -s os=Windows")
         print(client.out)
+        self.assertIn("ID: INVALID", client.out)
