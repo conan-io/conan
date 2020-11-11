@@ -340,7 +340,7 @@ class RestV1Methods(RestCommonMethods):
     def get_latest_recipe_revision(self, ref):
         raise NoRestV2Available("The remote doesn't support revisions")
 
-    def get_latest_package_revision(self, pref):
+    def get_latest_package_revision(self, pref, headers):
         raise NoRestV2Available("The remote doesn't support revisions")
 
     def _post_json(self, url, payload):

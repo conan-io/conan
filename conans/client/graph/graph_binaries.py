@@ -72,7 +72,8 @@ class GraphBinariesAnalyzer(object):
             output = node.conanfile.output
             if remote:
                 try:
-                    tmp = self._remote_manager.get_package_manifest(pref, remote)
+                    settings = node.conanfile.info.full_settings.as_list()
+                    tmp = self._remote_manager.get_package_manifest(pref, remote, settings=settings)
                     upstream_manifest, pref = tmp
                 except NotFoundException:
                     output.warn("Can't update, no package in remote")
@@ -93,11 +94,15 @@ class GraphBinariesAnalyzer(object):
             node.prev = metadata.packages[pref.id].revision
             assert node.prev, "PREV for %s is None: %s" % (str(pref), metadata.dumps())
 
+    def _get_package_info(self, node, pref, remote):
+        settings = node.conanfile.info.full_settings.as_list()
+        return self._remote_manager.get_package_info(pref, remote, settings=settings)
+
     def _evaluate_remote_pkg(self, node, pref, remote, remotes):
         remote_info = None
         if remote:
             try:
-                remote_info, pref = self._remote_manager.get_package_info(pref, remote)
+                remote_info, pref = self._get_package_info(node, pref, remote)
             except NotFoundException:
                 pass
             except Exception:
@@ -109,7 +114,7 @@ class GraphBinariesAnalyzer(object):
         if not remote or (not remote_info and self._cache.config.revisions_enabled):
             for r in remotes.values():
                 try:
-                    remote_info, pref = self._remote_manager.get_package_info(pref, r)
+                    remote_info, pref = self._get_package_info(node, pref, r)
                 except NotFoundException:
                     pass
                 else:
@@ -236,7 +241,7 @@ class GraphBinariesAnalyzer(object):
         if build_mode.outdated:
             if node.binary in (BINARY_CACHE, BINARY_DOWNLOAD, BINARY_UPDATE):
                 if node.binary == BINARY_UPDATE:
-                    info, pref = self._remote_manager.get_package_info(pref, remote)
+                    info, pref = self._get_package_info(node, pref, remote)
                     recipe_hash = info.recipe_hash
                 elif node.binary == BINARY_CACHE:
                     package_folder = package_layout.package(pref)

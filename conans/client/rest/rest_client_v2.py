@@ -329,9 +329,9 @@ class RestV2Methods(RestCommonMethods):
         # Ignored data["time"]
         return ref.copy_with_rev(rev)
 
-    def get_latest_package_revision(self, pref):
+    def get_latest_package_revision(self, pref, headers):
         url = self.router.package_latest(pref)
-        data = self.get_json(url)
+        data = self.get_json(url, headers=headers)
         prev = data["revision"]
         # Ignored data["time"]
         return pref.copy_with_revs(pref.ref.revision, prev)

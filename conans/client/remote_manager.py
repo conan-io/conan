@@ -38,7 +38,7 @@ class RemoteManager(object):
         return self._call_remote(remote, "get_recipe_snapshot", ref)
 
     def get_package_snapshot(self, pref, remote):
-        assert pref.ref.revision, "upload_package requires RREV"
+        assert pref.ref.revision, "get_package_snapshot requires RREV"
         assert pref.revision, "get_package_snapshot requires PREV"
         return self._call_remote(remote, "get_package_snapshot", pref)
 
@@ -57,14 +57,14 @@ class RemoteManager(object):
         ref = self._resolve_latest_ref(ref, remote)
         return self._call_remote(remote, "get_recipe_manifest", ref), ref
 
-    def get_package_manifest(self, pref, remote):
-        pref = self._resolve_latest_pref(pref, remote)
+    def get_package_manifest(self, pref, remote, settings=None):
+        pref = self._resolve_latest_pref(pref, remote, settings=settings)
         return self._call_remote(remote, "get_package_manifest", pref), pref
 
-    def get_package_info(self, pref, remote):
+    def get_package_info(self, pref, remote, settings=None):
         """ Read a package ConanInfo from remote
         """
-        pref = self._resolve_latest_pref(pref, remote)
+        pref = self._resolve_latest_pref(pref, remote, settings=settings)
         return self._call_remote(remote, "get_package_info", pref), pref
 
     def get_recipe(self, ref, remote):
@@ -140,16 +140,19 @@ class RemoteManager(object):
         output.info("Retrieving package %s from remote '%s' " % (pref.id, remote.name))
         layout.package_remove(pref)  # Remove first the destination folder
         with layout.set_dirty_context_manager(pref):
-            self._get_package(layout, pref, remote, output, recorder)
+            settings = None
+            if hasattr(conanfile, 'info'):
+                settings = conanfile.info.full_settings.as_list()
+            self._get_package(layout, pref, remote, output, recorder, settings=settings)
 
         self._hook_manager.execute("post_download_package", conanfile_path=conanfile_path,
                                    reference=pref.ref, package_id=pref.id, remote=remote,
                                    conanfile=conanfile)
 
-    def _get_package(self, layout, pref, remote, output, recorder):
+    def _get_package(self, layout, pref, remote, output, recorder, settings):
         t1 = time.time()
         try:
-            pref = self._resolve_latest_pref(pref, remote)
+            pref = self._resolve_latest_pref(pref, remote, settings=settings)
             snapshot = self._call_remote(remote, "get_package_snapshot", pref)
             if not is_package_snapshot_complete(snapshot):
                 raise PackageNotFoundException(pref)
@@ -230,8 +233,8 @@ class RemoteManager(object):
         revision = self._call_remote(remote, "get_latest_recipe_revision", ref)
         return revision
 
-    def get_latest_package_revision(self, pref, remote):
-        revision = self._call_remote(remote, "get_latest_package_revision", pref)
+    def get_latest_package_revision(self, pref, remote, headers):
+        revision = self._call_remote(remote, "get_latest_package_revision", pref, headers=headers)
         return revision
 
     def _resolve_latest_ref(self, ref, remote):
@@ -242,10 +245,14 @@ class RemoteManager(object):
                 ref = ref.copy_with_rev(DEFAULT_REVISION_V1)
         return ref
 
-    def _resolve_latest_pref(self, pref, remote):
+    def _resolve_latest_pref(self, pref, remote, settings):
         if pref.revision is None:
             try:
-                pref = self.get_latest_package_revision(pref, remote)
+                headers = None
+                if settings:
+                    settings = ['{}={}'.format(*it) for it in settings]
+                    headers = {'Conan-PkgID-Settings': ';'.join(settings), }
+                pref = self.get_latest_package_revision(pref, remote, headers=headers)
             except NoRestV2Available:
                 pref = pref.copy_with_revs(pref.ref.revision, DEFAULT_REVISION_V1)
         return pref
