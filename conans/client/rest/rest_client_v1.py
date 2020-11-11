@@ -106,11 +106,11 @@ class RestV1Methods(RestCommonMethods):
             logger.error(traceback.format_exc())
             raise ConanException(msg)
 
-    def get_package_info(self, pref):
+    def get_package_info(self, pref, headers):
         """Gets a ConanInfo file from a package"""
         pref = pref.copy_with_revs(None, None)
         url = self.router.package_download_urls(pref)
-        urls = self._get_file_to_url_dict(url)
+        urls = self._get_file_to_url_dict(url, headers=headers)
         if not urls:
             raise PackageNotFoundException(pref)
 
@@ -124,10 +124,10 @@ class RestV1Methods(RestCommonMethods):
         contents = {key: decode_text(value) for key, value in dict(contents).items()}
         return ConanInfo.loads(contents[CONANINFO])
 
-    def _get_file_to_url_dict(self, url, data=None):
+    def _get_file_to_url_dict(self, url, data=None, headers=None):
         """Call to url and decode the json returning a dict of {filepath: url} dict
         converting the url to a complete url when needed"""
-        urls = self.get_json(url, data=data)
+        urls = self.get_json(url, data=data, headers=headers)
         return {filepath: complete_url(self.remote_url, url) for filepath, url in urls.items()}
 
     def _upload_recipe(self, ref, files_to_upload, retry, retry_wait):

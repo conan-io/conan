@@ -20,6 +20,15 @@ from conans.util.tracer import (log_package_download,
                                 log_recipe_download, log_recipe_sources_download,
                                 log_uncompressed_file)
 
+CONAN_REQUEST_HEADER_SETTINGS = 'Conan-PkgID-Settings'
+
+
+def _headers_for_settings(settings):
+    if settings:
+        settings = ['{}={}'.format(*it) for it in settings]
+        return {CONAN_REQUEST_HEADER_SETTINGS: ';'.join(settings), }
+    return None
+
 
 class RemoteManager(object):
     """ Will handle the remotes to get recipes, packages etc """
@@ -64,8 +73,9 @@ class RemoteManager(object):
     def get_package_info(self, pref, remote, settings=None):
         """ Read a package ConanInfo from remote
         """
-        pref = self._resolve_latest_pref(pref, remote, settings=settings)
-        return self._call_remote(remote, "get_package_info", pref), pref
+        headers = _headers_for_settings(settings)
+        pref = self._resolve_latest_pref(pref, remote, headers=headers)
+        return self._call_remote(remote, "get_package_info", pref, headers=headers), pref
 
     def get_recipe(self, ref, remote):
         """
@@ -152,7 +162,8 @@ class RemoteManager(object):
     def _get_package(self, layout, pref, remote, output, recorder, settings):
         t1 = time.time()
         try:
-            pref = self._resolve_latest_pref(pref, remote, settings=settings)
+            headers = _headers_for_settings(settings)
+            pref = self._resolve_latest_pref(pref, remote, headers=headers)
             snapshot = self._call_remote(remote, "get_package_snapshot", pref)
             if not is_package_snapshot_complete(snapshot):
                 raise PackageNotFoundException(pref)
@@ -245,20 +256,16 @@ class RemoteManager(object):
                 ref = ref.copy_with_rev(DEFAULT_REVISION_V1)
         return ref
 
-    def _resolve_latest_pref(self, pref, remote, settings):
+    def _resolve_latest_pref(self, pref, remote, headers):
         if pref.revision is None:
             try:
-                headers = None
-                if settings:
-                    settings = ['{}={}'.format(*it) for it in settings]
-                    headers = {'Conan-PkgID-Settings': ';'.join(settings), }
                 pref = self.get_latest_package_revision(pref, remote, headers=headers)
             except NoRestV2Available:
                 pref = pref.copy_with_revs(pref.ref.revision, DEFAULT_REVISION_V1)
         return pref
 
     def _call_remote(self, remote, method, *args, **kwargs):
-        assert(isinstance(remote, Remote))
+        assert (isinstance(remote, Remote))
         try:
             return self._auth_manager.call_rest_api_method(remote, method, *args, **kwargs)
         except ConnectionError as exc:
@@ -301,7 +308,7 @@ def uncompress_file(src_path, dest_folder, output):
     t1 = time.time()
     try:
         with progress_bar.open_binary(src_path, output, "Decompressing %s" % os.path.basename(
-                src_path)) as file_handler:
+            src_path)) as file_handler:
             tar_extract(file_handler, dest_folder)
     except Exception as e:
         error_msg = "Error while downloading/extracting files to %s\n%s\n" % (dest_folder, str(e))
