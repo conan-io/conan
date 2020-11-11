@@ -507,8 +507,7 @@ class CmdUpload(object):
         if remote_snapshot and policy != UPLOAD_POLICY_FORCE:
             if not is_package_snapshot_complete(remote_snapshot):
                 return the_files, set()
-            remote_manifest, _ = self._remote_manager.get_package_manifest(pref, remote,
-                                                                           settings=None)
+            remote_manifest, _ = self._remote_manager.get_package_manifest(pref, remote)
             local_manifest = FileTreeManifest.loads(load(the_files["conanmanifest.txt"]))
             if remote_manifest == local_manifest:
                 return None, None

@@ -66,8 +66,8 @@ class RemoteManager(object):
         ref = self._resolve_latest_ref(ref, remote)
         return self._call_remote(remote, "get_recipe_manifest", ref), ref
 
-    def get_package_manifest(self, pref, remote, settings=None):
-        pref = self._resolve_latest_pref(pref, remote, settings=settings)
+    def get_package_manifest(self, pref, remote):
+        pref = self._resolve_latest_pref(pref, remote, headers=None)
         return self._call_remote(remote, "get_package_manifest", pref), pref
 
     def get_package_info(self, pref, remote, settings=None):

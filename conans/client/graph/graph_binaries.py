@@ -72,8 +72,7 @@ class GraphBinariesAnalyzer(object):
             output = node.conanfile.output
             if remote:
                 try:
-                    settings = node.conanfile.info.full_settings.as_list()
-                    tmp = self._remote_manager.get_package_manifest(pref, remote, settings=settings)
+                    tmp = self._remote_manager.get_package_manifest(pref, remote)
                     upstream_manifest, pref = tmp
                 except NotFoundException:
                     output.warn("Can't update, no package in remote")
@@ -112,7 +111,7 @@ class GraphBinariesAnalyzer(object):
         # If the "remote" came from the registry but the user didn't specified the -r, with
         # revisions iterate all remotes
         if not remote or (not remote_info and self._cache.config.revisions_enabled):
-            for r in remotes.values():
+            for r in remotes.values():  # FIXME: Here we hit the same remote as before
                 try:
                     remote_info, pref = self._get_package_info(node, pref, r)
                 except NotFoundException:

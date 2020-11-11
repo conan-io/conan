@@ -39,7 +39,7 @@ class RestV2Methods(RestCommonMethods):
         data["files"] = list(data["files"].keys())
         return data
 
-    def _get_remote_file_contents(self, url, use_cache, headers):
+    def _get_remote_file_contents(self, url, use_cache, headers=None):
         # We don't want traces in output of these downloads, they are ugly in output
         downloader = FileDownloader(self.requester, None, self.verify_ssl, self._config)
         if use_cache and self._config.download_cache:

@@ -1,6 +1,8 @@
 import textwrap
 import unittest
 
+from parameterized.parameterized import parameterized_class
+
 from conans.client.remote_manager import CONAN_REQUEST_HEADER_SETTINGS
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, TestServer, TestRequester
@@ -18,8 +20,9 @@ class RequesterClass(TestRequester):
         return super(RequesterClass, self).get(url, headers=headers, **kwargs)
 
 
+@parameterized_class([{"revs_enabled": True}, {"revs_enabled": False}, ])
 class RequestSettingsHeaderTestCase(unittest.TestCase):
-    """ Send all the information together with the request when searching for package IDs """
+    """ Conan adds a header with the settings used to compute the package ID """
 
     profile = textwrap.dedent("""
         [settings]
@@ -39,14 +42,16 @@ class RequestSettingsHeaderTestCase(unittest.TestCase):
         t.run('create conanfile.py name/version@user/channel --profile:host=profile')
         t.run('upload name/version@user/channel --all')
 
-    @staticmethod
-    def _get_settings_headers(requester):
-        settings = None
+    def _get_settings_headers(self, requester):
+        hits = sum([CONAN_REQUEST_HEADER_SETTINGS in headers for _, headers in requester.requests])
+        self.assertEquals(hits, 2 if self.revs_enabled else 1)
         for url, headers in requester.requests:
             if CONAN_REQUEST_HEADER_SETTINGS in headers:
-                assert not settings
-                settings = headers.get(CONAN_REQUEST_HEADER_SETTINGS)
-        return settings
+                if self.revs_enabled:
+                    self.assertTrue(url.endswith('/latest'), msg=url)
+                else:
+                    self.assertTrue(url.endswith('/download_urls'), msg=url)
+                return headers.get(CONAN_REQUEST_HEADER_SETTINGS)
 
     def _assert_settings_headers(self, settings_header, compiler_version='11.0'):
         # It takes only the values that are relevant to the recipe
@@ -60,16 +65,21 @@ class RequestSettingsHeaderTestCase(unittest.TestCase):
         self.assertIn('compiler.version={}'.format(compiler_version), settings_header)
         self.assertNotIn('build_type', settings_header)
 
-    def test_install_recipe_mismatch(self):
+    def _get_test_client(self):
         t = TestClient(requester_class=RequesterClass, servers=self.servers,
                        users={"default": [("user", "mypass")]})
+        t.run('config set general.revisions_enabled={}'.format('1' if self.revs_enabled else '0'))
+        return t
+
+    def test_install_recipe_mismatch(self):
+        t = self._get_test_client()
         t.save({'profile': self.profile})
         t.run('install failing/version@user/channel --profile=profile', assert_error=True)
-        self.assertIsNone(self._get_settings_headers(t.api.http_requester))
+        self.assertFalse(any([CONAN_REQUEST_HEADER_SETTINGS in headers for _, headers in
+                              t.api.http_requester.requests]))
 
     def test_install_package_match(self):
-        t = TestClient(requester_class=RequesterClass, servers=self.servers,
-                       users={"default": [("user", "mypass")]})
+        t = self._get_test_client()
         t.save({'profile': self.profile})
 
         # Package match
@@ -84,8 +94,7 @@ class RequestSettingsHeaderTestCase(unittest.TestCase):
         self._assert_settings_headers(settings_header, compiler_version='12.0')
 
     def test_info_package_match(self):
-        t = TestClient(requester_class=RequesterClass, servers=self.servers,
-                       users={"default": [("user", "mypass")]})
+        t = self._get_test_client()
         t.save({'profile': self.profile})
 
         # Package match
@@ -99,8 +108,7 @@ class RequestSettingsHeaderTestCase(unittest.TestCase):
         self._assert_settings_headers(settings_header, compiler_version='12.0')
 
     def test_install_as_requirement(self):
-        t = TestClient(requester_class=RequesterClass, servers=self.servers,
-                       users={"default": [("user", "mypass")]})
+        t = self._get_test_client()
         t.save({'conanfile.py': GenConanfile().with_requires('name/version@user/channel'),
                 'profile': self.profile})
 
