@@ -86,9 +86,11 @@ class GetUrlWithCredentialsTest(unittest.TestCase):
                          scm.get_url_with_credentials("ssh://github.com/conan-io/conan.git"))
 
     def test_ssh_password(self):
-        scm = SCMBase(password="pass")  #FIXME: username?
+        output = OutputMock()
+        scm = SCMBase(password="pass", output=output)
         self.assertEqual('ssh://github.com/conan-io/conan.git',
                          scm.get_url_with_credentials("ssh://github.com/conan-io/conan.git"))
+        self.assertIn("WARN: SCM username undefined, ignoring 'password' parameter", output.out)
 
     def test_ssh_url_with_username_only_password(self):
         scm = SCMBase(password="pass")

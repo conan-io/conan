@@ -69,6 +69,8 @@ class SCMBase(object):
             self._output.warn("SCM username got from URL, ignoring 'username' parameter")
         if url_parsed.password and self._password:
             self._output.warn("SCM password got from URL, ignoring 'password' parameter")
+        if self._password and not (url_parsed.username or self._username):
+            self._output.warn("SCM username undefined, ignoring 'password' parameter")
 
         if url_parsed.password:  # This implies having the username in the url as well
             return url
