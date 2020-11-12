@@ -330,7 +330,7 @@ class GraphLockDynamicTest(unittest.TestCase):
                    "--lockfile-out=libc2.lock")
         libc2_json = json.loads(client.load("libc2.lock"))
         libc = libc2_json["graph_lock"]["nodes"]["1"]
-        self.assertEqual(libc["ref"], "LibC/1.0")
+        self.assertIn("LibC/1.0", libc["ref"])
         self.assertIsNone(libc.get("prev"))
         # Now it is possible to build it again
         client.run("install LibC/1.0@ --build=LibC --lockfile=libc2.lock --lockfile-out=libc3.lock")
@@ -338,7 +338,7 @@ class GraphLockDynamicTest(unittest.TestCase):
         self.assertIn("LibC/1.0: Created package", client.out)
         libc3_json = json.loads(client.load("libc3.lock"))
         libc = libc3_json["graph_lock"]["nodes"]["1"]
-        self.assertEqual(libc["ref"], "LibC/1.0")
+        self.assertIn("LibC/1.0", libc["ref"])
         self.assertIsNotNone(libc.get("prev"))
 
 
