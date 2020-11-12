@@ -307,16 +307,16 @@ class BinaryInstaller(object):
 
     @staticmethod
     def _classify(nodes_by_level):
-        missing, downloads = [], []
+        missing, invalid, downloads = [], [], []
         for level in nodes_by_level:
             for node in level:
                 if node.binary == BINARY_MISSING:
                     missing.append(node)
                 elif node.binary == BINARY_INVALID:
-                    raise ConanInvalidConfiguration("{}: Invalid ID".format(node.conanfile))
+                    invalid.append(node)
                 elif node.binary in (BINARY_UPDATE, BINARY_DOWNLOAD):
                     downloads.append(node)
-        return missing, downloads
+        return missing, invalid, downloads
 
     def _raise_missing(self, missing):
         if not missing:
@@ -405,7 +405,11 @@ class BinaryInstaller(object):
 
     def _build(self, nodes_by_level, keep_build, root_node, graph_info, remotes, build_mode, update):
         using_build_profile = bool(graph_info.profile_build)
-        missing, downloads = self._classify(nodes_by_level)
+        missing, invalid, downloads = self._classify(nodes_by_level)
+        if invalid:
+            node = invalid[0]  # Raise the first one
+            msg = "{}: Invalid ID: {}".format(node.conanfile, node.conanfile.info.invalid)
+            raise ConanInvalidConfiguration(msg)
         self._raise_missing(missing)
         processed_package_refs = set()
         self._download(downloads, processed_package_refs)
@@ -429,6 +433,7 @@ class BinaryInstaller(object):
                         self._binaries_analyzer.reevaluate_node(node, remotes, build_mode, update)
                         if node.binary == BINARY_MISSING:
                             self._raise_missing([node])
+                        # TODO: Check if BINARY_INVALID?
                     _handle_system_requirements(conan_file, node.pref, self._cache, output)
                     self._handle_node_cache(node, keep_build, processed_package_refs, remotes)
 

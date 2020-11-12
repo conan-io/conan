@@ -215,6 +215,8 @@ class GraphBinariesAnalyzer(object):
             return
 
         if pref.id == PACKAGE_ID_INVALID:
+            # annotate pattern, so unused patterns in --build are not displayed as errors
+            build_mode.forced(node.conanfile, node.ref)
             node.binary = BINARY_INVALID
             return
 
