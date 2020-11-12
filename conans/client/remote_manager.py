@@ -163,7 +163,7 @@ class RemoteManager(object):
         output.info("Retrieving package %s from remote '%s' " % (pref.id, remote.name))
         layout.package_remove(pref)  # Remove first the destination folder
         with layout.set_dirty_context_manager(pref):
-            info = getattr(conanfile, 'info')
+            info = getattr(conanfile, 'info', None)
             self._get_package(layout, pref, remote, output, recorder, info=info)
 
         self._hook_manager.execute("post_download_package", conanfile_path=conanfile_path,
