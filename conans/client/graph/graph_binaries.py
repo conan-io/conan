@@ -94,8 +94,8 @@ class GraphBinariesAnalyzer(object):
             assert node.prev, "PREV for %s is None: %s" % (str(pref), metadata.dumps())
 
     def _get_package_info(self, node, pref, remote):
-        settings = node.conanfile.info.full_settings.as_list()
-        return self._remote_manager.get_package_info(pref, remote, settings=settings)
+        info = getattr(node.conanfile, 'info')
+        return self._remote_manager.get_package_info(pref, remote, info=info)
 
     def _evaluate_remote_pkg(self, node, pref, remote, remotes):
         remote_info = None

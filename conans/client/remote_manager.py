@@ -21,13 +21,25 @@ from conans.util.tracer import (log_package_download,
                                 log_uncompressed_file)
 
 CONAN_REQUEST_HEADER_SETTINGS = 'Conan-PkgID-Settings'
+CONAN_REQUEST_HEADER_OPTIONS = 'Conan-PkgID-Options'
 
 
-def _headers_for_settings(settings):
+def _headers_for_info(info):
+    if not info:
+        return None
+
+    r = {}
+    settings = info.full_settings.as_list()
     if settings:
         settings = ['{}={}'.format(*it) for it in settings]
-        return {CONAN_REQUEST_HEADER_SETTINGS: ';'.join(settings), }
-    return None
+        r.update({CONAN_REQUEST_HEADER_SETTINGS: ';'.join(settings)})
+
+    options = info.options.as_list()
+    if options:
+        options = filter(lambda u: u[0] in ['shared', 'fPIC', 'header_only'], options)
+        options = ['{}={}'.format(*it) for it in options]
+        r.update({CONAN_REQUEST_HEADER_OPTIONS: ';'.join(options)})
+    return r
 
 
 class RemoteManager(object):
@@ -70,10 +82,10 @@ class RemoteManager(object):
         pref = self._resolve_latest_pref(pref, remote, headers=None)
         return self._call_remote(remote, "get_package_manifest", pref), pref
 
-    def get_package_info(self, pref, remote, settings=None):
+    def get_package_info(self, pref, remote, info=None):
         """ Read a package ConanInfo from remote
         """
-        headers = _headers_for_settings(settings)
+        headers = _headers_for_info(info)
         pref = self._resolve_latest_pref(pref, remote, headers=headers)
         # FIXME Conan 2.0: With revisions, it is not needed to pass headers to this second function
         return self._call_remote(remote, "get_package_info", pref, headers=headers), pref
@@ -151,19 +163,17 @@ class RemoteManager(object):
         output.info("Retrieving package %s from remote '%s' " % (pref.id, remote.name))
         layout.package_remove(pref)  # Remove first the destination folder
         with layout.set_dirty_context_manager(pref):
-            settings = None
-            if hasattr(conanfile, 'info'):
-                settings = conanfile.info.full_settings.as_list()
-            self._get_package(layout, pref, remote, output, recorder, settings=settings)
+            info = getattr(conanfile, 'info')
+            self._get_package(layout, pref, remote, output, recorder, info=info)
 
         self._hook_manager.execute("post_download_package", conanfile_path=conanfile_path,
                                    reference=pref.ref, package_id=pref.id, remote=remote,
                                    conanfile=conanfile)
 
-    def _get_package(self, layout, pref, remote, output, recorder, settings):
+    def _get_package(self, layout, pref, remote, output, recorder, info):
         t1 = time.time()
         try:
-            headers = _headers_for_settings(settings)
+            headers = _headers_for_info(info)
             pref = self._resolve_latest_pref(pref, remote, headers=headers)
             snapshot = self._call_remote(remote, "get_package_snapshot", pref)
             if not is_package_snapshot_complete(snapshot):

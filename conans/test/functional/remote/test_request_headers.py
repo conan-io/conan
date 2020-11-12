@@ -3,7 +3,7 @@ import unittest
 
 from parameterized.parameterized import parameterized_class
 
-from conans.client.remote_manager import CONAN_REQUEST_HEADER_SETTINGS
+from conans.client.remote_manager import CONAN_REQUEST_HEADER_SETTINGS, CONAN_REQUEST_HEADER_OPTIONS
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, TestServer, TestRequester
 
@@ -21,7 +21,7 @@ class RequesterClass(TestRequester):
 
 
 @parameterized_class([{"revs_enabled": True}, {"revs_enabled": False}, ])
-class RequestSettingsHeaderTestCase(unittest.TestCase):
+class RequestHeadersTestCase(unittest.TestCase):
     """ Conan adds a header with the settings used to compute the package ID """
 
     profile = textwrap.dedent("""
@@ -31,27 +31,34 @@ class RequestSettingsHeaderTestCase(unittest.TestCase):
         compiler=apple-clang
         compiler.version=11.0
         compiler.libcxx=libc++
+        build_type=Release
     """)
+
+    conanfile = GenConanfile().with_settings('os', 'arch', 'compiler') \
+        .with_option('opt1', [True, False]) \
+        .with_option('shared', [True, False]) \
+        .with_default_option('opt1', True) \
+        .with_default_option('shared', False)
 
     def setUp(self):
         test_server = TestServer(users={"user": "mypass"})
         self.servers = {"default": test_server}
         t = TestClient(servers=self.servers, users={"default": [("user", "mypass")]})
-        t.save({'conanfile.py': GenConanfile().with_settings('os', 'arch', 'compiler'),
+        t.save({'conanfile.py': self.conanfile,
                 'profile': self.profile})
         t.run('create conanfile.py name/version@user/channel --profile:host=profile')
         t.run('upload name/version@user/channel --all')
 
-    def _get_settings_headers(self, requester):
-        hits = sum([CONAN_REQUEST_HEADER_SETTINGS in headers for _, headers in requester.requests])
+    def _get_header(self, requester, header_name):
+        hits = sum([header_name in headers for _, headers in requester.requests])
         self.assertEquals(hits, 2 if self.revs_enabled else 1)
         for url, headers in requester.requests:
-            if CONAN_REQUEST_HEADER_SETTINGS in headers:
+            if header_name in headers:
                 if self.revs_enabled:
                     self.assertTrue(url.endswith('/latest'), msg=url)
                 else:
                     self.assertTrue(url.endswith('/download_urls'), msg=url)
-                return headers.get(CONAN_REQUEST_HEADER_SETTINGS)
+                return headers.get(header_name)
 
     def _assert_settings_headers(self, settings_header, compiler_version='11.0'):
         # It takes only the values that are relevant to the recipe
@@ -65,6 +72,10 @@ class RequestSettingsHeaderTestCase(unittest.TestCase):
         self.assertIn('compiler.version={}'.format(compiler_version), settings_header)
         self.assertNotIn('build_type', settings_header)
 
+    def _assert_options_headers(self, options_header, shared_value='False'):
+        self.assertListEqual(['shared'], [it.split('=', 1)[0] for it in options_header.split(';')])
+        self.assertIn('shared={}'.format(shared_value), options_header)
+
     def _get_test_client(self):
         t = TestClient(requester_class=RequesterClass, servers=self.servers,
                        users={"default": [("user", "mypass")]})
@@ -77,35 +88,53 @@ class RequestSettingsHeaderTestCase(unittest.TestCase):
         t.run('install failing/version@user/channel --profile=profile', assert_error=True)
         self.assertFalse(any([CONAN_REQUEST_HEADER_SETTINGS in headers for _, headers in
                               t.api.http_requester.requests]))
+        self.assertFalse(any([CONAN_REQUEST_HEADER_OPTIONS in headers for _, headers in
+                              t.api.http_requester.requests]))
 
     def test_install_package_match(self):
         t = self._get_test_client()
         t.save({'profile': self.profile})
 
         # Package match
-        t.run('install name/version@user/channel --profile=profile -s build_type=Release')
-        settings_header = self._get_settings_headers(t.api.http_requester)
+        t.run('install name/version@user/channel --profile=profile')
+        settings_header = self._get_header(t.api.http_requester, CONAN_REQUEST_HEADER_SETTINGS)
         self._assert_settings_headers(settings_header)
+        options_headers = self._get_header(t.api.http_requester, CONAN_REQUEST_HEADER_OPTIONS)
+        self._assert_options_headers(options_headers)
 
-        # Package mismatch
+        # Package mismatch (settings)
         t.run('install name/version@user/channel --profile=profile -s compiler.version=12.0',
               assert_error=True)
-        settings_header = self._get_settings_headers(t.api.http_requester)
+        settings_header = self._get_header(t.api.http_requester, CONAN_REQUEST_HEADER_SETTINGS)
         self._assert_settings_headers(settings_header, compiler_version='12.0')
+
+        # Package mismatch (options)
+        t.run('install name/version@user/channel --profile=profile -o shared=True',
+              assert_error=True)
+        options_headers = self._get_header(t.api.http_requester, CONAN_REQUEST_HEADER_OPTIONS)
+        self._assert_options_headers(options_headers, shared_value='True')
 
     def test_info_package_match(self):
         t = self._get_test_client()
         t.save({'profile': self.profile})
 
         # Package match
-        t.run('info name/version@user/channel --profile=profile -s build_type=Release')
-        settings_header = self._get_settings_headers(t.api.http_requester)
+        t.run('info name/version@user/channel --profile=profile')
+        settings_header = self._get_header(t.api.http_requester, CONAN_REQUEST_HEADER_SETTINGS)
         self._assert_settings_headers(settings_header)
+        options_headers = self._get_header(t.api.http_requester, CONAN_REQUEST_HEADER_OPTIONS)
+        self._assert_options_headers(options_headers)
 
-        # Package mismatch
+        # Package mismatch (settings)
         t.run('info name/version@user/channel --profile=profile -s compiler.version=12.0')
-        settings_header = self._get_settings_headers(t.api.http_requester)
+        settings_header = self._get_header(t.api.http_requester, CONAN_REQUEST_HEADER_SETTINGS)
         self._assert_settings_headers(settings_header, compiler_version='12.0')
+
+        # Package mismatch (options)
+        t.run('install name/version@user/channel --profile=profile -o shared=True',
+              assert_error=True)
+        options_headers = self._get_header(t.api.http_requester, CONAN_REQUEST_HEADER_OPTIONS)
+        self._assert_options_headers(options_headers, shared_value='True')
 
     def test_install_as_requirement(self):
         t = self._get_test_client()
@@ -113,12 +142,19 @@ class RequestSettingsHeaderTestCase(unittest.TestCase):
                 'profile': self.profile})
 
         # Requirement is found
-        t.run('install . consumer/version@ --profile=profile -s compiler.version=11.0')
-        settings_header = self._get_settings_headers(t.api.http_requester)
+        t.run('install . consumer/version@ --profile=profile')
+        settings_header = self._get_header(t.api.http_requester, CONAN_REQUEST_HEADER_SETTINGS)
         self._assert_settings_headers(settings_header)
+        options_headers = self._get_header(t.api.http_requester, CONAN_REQUEST_HEADER_OPTIONS)
+        self._assert_options_headers(options_headers)
 
-        # Requirement is not found
+        # Requirement is not found (settings)
         t.run('install . consumer/version@ --profile=profile -s compiler.version=12.0',
               assert_error=True)
-        settings_header = self._get_settings_headers(t.api.http_requester)
+        settings_header = self._get_header(t.api.http_requester, CONAN_REQUEST_HEADER_SETTINGS)
         self._assert_settings_headers(settings_header, compiler_version='12.0')
+
+        # Requirement is not found (options)
+        t.run('install . consumer/version@ --profile=profile -o name:shared=True', assert_error=True)
+        options_headers = self._get_header(t.api.http_requester, CONAN_REQUEST_HEADER_OPTIONS)
+        self._assert_options_headers(options_headers, shared_value='True')
