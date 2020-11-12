@@ -59,6 +59,15 @@ class RemoveCredentialsTest(unittest.TestCase):
                              'svn+ssh://username:password@10.106.191.164/home/svn/shproject'))
 
 
+class OutputMock(object):
+
+    def __init__(self):
+        self.out = list()
+
+    def warn(self, text):
+        self.out.append("WARN: " + text)
+
+
 class GetUrlWithCredentialsTest(unittest.TestCase):
 
     def test_ssh(self):
@@ -81,10 +90,43 @@ class GetUrlWithCredentialsTest(unittest.TestCase):
         self.assertEqual('ssh://github.com/conan-io/conan.git',
                          scm.get_url_with_credentials("ssh://github.com/conan-io/conan.git"))
 
-    def test_ssh_url_with_username(self):
+    def test_ssh_url_with_username_only_password(self):
         scm = SCMBase(password="pass")
         self.assertEqual('ssh://git:pass@github.com/conan-io/conan.git',
                          scm.get_url_with_credentials("ssh://git@github.com/conan-io/conan.git"))
-        scm = SCMBase(password="pass", username="dani")  #FIXME: Warning?
+
+    def test_ssh_url_with_username_only_username(self):
+        output = OutputMock()
+        scm = SCMBase(username="dani", output=output)
+        self.assertEqual('ssh://git@github.com/conan-io/conan.git',
+                         scm.get_url_with_credentials("ssh://git@github.com/conan-io/conan.git"))
+        self.assertIn("WARN: SCM username got from URL, ignoring 'username' parameter", output.out)
+
+    def test_ssh_url_with_username_and_username_password(self):
+        output = OutputMock()
+        scm = SCMBase(password="pass", username="dani", output=output)
         self.assertEqual('ssh://git:pass@github.com/conan-io/conan.git',
                          scm.get_url_with_credentials("ssh://git@github.com/conan-io/conan.git"))
+        self.assertIn("WARN: SCM username got from URL, ignoring 'username' parameter", output.out)
+
+    def test_ssh_url_with_username_password_and_only_password(self):
+        output = OutputMock()
+        scm = SCMBase(password="password", output=output)
+        self.assertEqual('ssh://git:pass@github.com/conan-io/conan.git',
+                         scm.get_url_with_credentials("ssh://git:pass@github.com/conan-io/conan.git"))
+        self.assertIn("WARN: SCM password got from URL, ignoring 'password' parameter", output.out)
+
+    def test_ssh_url_with_username_password_and_only_username(self):
+        output = OutputMock()
+        scm = SCMBase(username="dani", output=output)
+        self.assertEqual('ssh://git:pass@github.com/conan-io/conan.git',
+                         scm.get_url_with_credentials("ssh://git:pass@github.com/conan-io/conan.git"))
+        self.assertIn("WARN: SCM username got from URL, ignoring 'username' parameter", output.out)
+
+    def test_ssh_url_with_username_password_and_username_password(self):
+        output = OutputMock()
+        scm = SCMBase(password="password", username="dani", output=output)
+        self.assertEqual('ssh://git:pass@github.com/conan-io/conan.git',
+                         scm.get_url_with_credentials("ssh://git:pass@github.com/conan-io/conan.git"))
+        self.assertIn("WARN: SCM username got from URL, ignoring 'username' parameter", output.out)
+        self.assertIn("WARN: SCM password got from URL, ignoring 'password' parameter", output.out)

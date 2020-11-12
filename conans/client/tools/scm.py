@@ -64,26 +64,32 @@ class SCMBase(object):
     def get_url_with_credentials(self, url):
         if not self._username and not self._password:
             return url
-        if urlparse(url).password:
+        url_parsed = urlparse(url)
+        if url_parsed.username and self._username:
+            self._output.warn("SCM username got from URL, ignoring 'username' parameter")
+        if url_parsed.password and self._password:
+            self._output.warn("SCM password got from URL, ignoring 'password' parameter")
+
+        if url_parsed.password:  # This implies having the username in the url as well
             return url
 
-        url_username = urlparse(url).username
-        if url_username and self._password:
-            lookfor = "{username}@".format(username=url_username)
-            replace_str = "{username}:{password}@".format(username=url_username,
+        if url_parsed.username and self._password:
+            lookfor = "{username}@".format(username=url_parsed.username)
+            replace_str = "{username}:{password}@".format(username=url_parsed.username,
                                                           password=self._password)
             url = url.replace(lookfor, replace_str, 1)
             return url
 
-        replace_str = "://"
-        if self._username:
+        if self._username and not url_parsed.username:
+            replace_str = "://"
             user_enc = quote_plus(self._username)
             replace_str = replace_str + user_enc
             if self._password:
                 pwd_enc = quote_plus(self._password)
                 replace_str = replace_str + ":" + pwd_enc
             replace_str = replace_str + "@"
-        url = url.replace("://", replace_str, 1)
+            url = url.replace("://", replace_str, 1)
+            return url
         return url
 
     @classmethod
