@@ -6,6 +6,7 @@ from parameterized.parameterized import parameterized_class
 from conans.client.remote_manager import CONAN_REQUEST_HEADER_SETTINGS, CONAN_REQUEST_HEADER_OPTIONS
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, TestServer, TestRequester
+from conans.util.env_reader import get_env
 
 
 class RequesterClass(TestRequester):
@@ -20,9 +21,9 @@ class RequesterClass(TestRequester):
         return super(RequesterClass, self).get(url, headers=headers, **kwargs)
 
 
-@parameterized_class([{"revs_enabled": True}, {"revs_enabled": False}, ])
 class RequestHeadersTestCase(unittest.TestCase):
     """ Conan adds a header with the settings used to compute the package ID """
+    revs_enabled = get_env("TESTING_REVISIONS_ENABLED", False)
 
     profile = textwrap.dedent("""
         [settings]
