@@ -342,8 +342,13 @@ class GraphBinariesAnalyzer(object):
                                    "'self.cpp_info' access in package_id() method is deprecated"):
                 conanfile.package_id()
 
+        if hasattr(conanfile, "validate") and callable(conanfile.validate):
+            with conanfile_exception_formatter(str(conanfile), "validate"):
+                conanfile.validate()
+
         info = conanfile.info
         node.package_id = info.package_id()
+
 
     def evaluate_graph(self, deps_graph, build_mode, update, remotes, nodes_subset=None, root=None):
         default_package_id_mode = self._cache.config.default_package_id_mode
@@ -375,6 +380,7 @@ class GraphBinariesAnalyzer(object):
         default_python_requires_id_mode = self._cache.config.default_python_requires_id_mode
         output.info("Unknown binary for %s, computing updated ID" % str(node.ref))
         self._compute_package_id(node, default_package_id_mode, default_python_requires_id_mode)
+
         output.info("Updated ID: %s" % node.package_id)
         if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
             return
