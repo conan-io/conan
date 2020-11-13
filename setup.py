@@ -32,7 +32,7 @@ dev_requirements = get_requires("conans/requirements_dev.txt")
 # The tests utils are used by conan-package-tools
 exclude_test_packages = ["conans.test.{}*".format(d)
                          for d in os.listdir(os.path.join(here, "conans/test"))
-                         if os.path.isdir(os.path.join(here, "conans/test", d)) and d != "utils"]
+                         if os.path.isdir(os.path.join(here, "conans/test", d)) and d not in ("utils", "assets")]
 
 
 def load_version():
