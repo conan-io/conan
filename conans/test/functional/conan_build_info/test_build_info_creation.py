@@ -121,7 +121,7 @@ class MyBuildInfoCreation(unittest.TestCase):
         self.assertEqual(buildinfo["name"], "MyBuildName")
         self.assertEqual(buildinfo["number"], "42")
         ids_list = [item["id"] for item in buildinfo["modules"]]
-        rrev_pkgd, rrev_pkgc, prev_pkgd_win, prev_pkgc_win, prev_pkgd_linux, prev_pkgc_linux = "", "" , "", "", "", ""
+        rrev_pkgd, rrev_pkgc, prev_pkgd_win, prev_pkgc_win, prev_pkgd_linux, prev_pkgc_linux = "", "", "", "", "", ""
         if client.cache.config.revisions_enabled:
             rrev_pkgd = "#4923df588db8c6e5867f8df8b8d4e79d" if user_channel else "#a4041e14960e937df21d431579e32e9c"
             rrev_pkgc = "#4fb6c2b0610701ceb5d3b5ccb7a93ecf" if user_channel else "#9d4a7842c95b2ab65b99e2a8834c58da"
