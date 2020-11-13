@@ -109,7 +109,7 @@ class BuildInfoCreator(object):
         return set([Artifact(k, **v) for k, v in ret.items()])
 
     def _get_recipe_rev(self, ref):
-        return "#{rrev}".format(ref.get("rrev")) if ref.get("rrev") and ref.get("rrev") != "0" else ""
+        return "#{}".format(ref.get("rrev")) if ref.get("rrev") and ref.get("rrev") != "0" else ""
 
     def _get_user_channel(self, ref):
         return "@{}/{}".format(ref.get("user"), ref.get("channel")) if ref.get("user") and \
