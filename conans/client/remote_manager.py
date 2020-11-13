@@ -255,7 +255,7 @@ class RemoteManager(object):
         revision = self._call_remote(remote, "get_latest_recipe_revision", ref)
         return revision
 
-    def get_latest_package_revision(self, pref, remote, headers):
+    def get_latest_package_revision(self, pref, remote, headers=None):
         revision = self._call_remote(remote, "get_latest_package_revision", pref, headers=headers)
         return revision
 

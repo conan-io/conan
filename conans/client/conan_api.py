@@ -1133,8 +1133,7 @@ class ConanAPIV1(object):
             if package_id:
                 pref = PackageReference(ref, package_id)
                 if self.app.config.revisions_enabled and not pref.revision:
-                    pref = self.app.remote_manager.get_latest_package_revision(pref, remote,
-                                                                               headers=None)
+                    pref = self.app.remote_manager.get_latest_package_revision(pref, remote)
                 return self.app.remote_manager.get_package_path(pref, path, remote), path
             else:
                 return self.app.remote_manager.get_recipe_path(ref, path, remote), path
