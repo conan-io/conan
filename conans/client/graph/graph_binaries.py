@@ -163,12 +163,8 @@ class GraphBinariesAnalyzer(object):
             self._process_node(node, pref, build_mode, update, remotes)
             if node.binary == BINARY_MISSING and build_mode.allowed(node.conanfile):
                 node.binary = BINARY_BUILD
-            if node.binary == BINARY_BUILD and locked.prev:
-                if locked._relaxed:
-                    locked._prev = None
-                else:
-                    raise ConanException("Cannot build '%s' because it is already locked in the "
-                                         "input lockfile" % repr(node.ref))
+            if node.binary == BINARY_BUILD:
+                locked.unlock_prev()
         else:
             assert node.prev is None, "Non locked node shouldn't have PREV in evaluate_node"
             assert node.binary is None, "Node.binary should be None if not locked"
