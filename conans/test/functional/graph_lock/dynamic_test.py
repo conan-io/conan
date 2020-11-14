@@ -345,9 +345,9 @@ class GraphLockDynamicTest(unittest.TestCase):
         client.run("lock create --reference=LibC/1.0 --build --lockfile=libc3.lock "
                    "--lockfile-out=libc4.lock")
         client.run("lock build-order libc4.lock")
-        self.assertIn("[[('LibA/1.0@', '5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9', 'host', '3')], "
-                      "[('LibB/1.0@', 'd3bf0cdac04c6f0df52003768c2226693884ea99', 'host', '2')], "
-                      "[('LibC/1.0@'", client.out)
+        self.assertIn("LibA/1.0@", client.out)
+        self.assertIn("LibB/1.0@", client.out)
+        self.assertIn("LibC/1.0@", client.out)
 
 
 class PartialOptionsTest(unittest.TestCase):
