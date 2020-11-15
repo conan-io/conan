@@ -61,14 +61,15 @@ class BuildInfoCreator(object):
 
     def _get_reference(self, ref):
         r = self.parse_ref(ref)
-        if r.get("user") and r.get("channel"):
-            return "{name}/{version}@{user}/{channel}".format(**r)
-        else:
-            return "{name}/{version}".format(**r)
+        recipe_rev = self._get_recipe_rev(r)
+        user_channel = self._get_user_channel(r)
+        return "{name}/{version}{user_channel}{recipe_rev}".format(recipe_rev=recipe_rev,
+                                                                   user_channel=user_channel, **r)
 
-    def _get_package_reference(self, ref, pid):
-        r = self.parse_ref(ref)
-        return "{reference}:{pid}".format(reference=self._get_reference(ref), pid=pid)
+    def _get_package_reference(self, ref, pid, prev):
+        package_rev = "#{}".format(prev) if prev and prev != "0" else ""
+        return "{reference}:{pid}{package_rev}".format(reference=self._get_reference(ref), pid=pid,
+                                                       package_rev=package_rev)
 
     def _get_metadata_artifacts(self, metadata, request_path, use_id=False, name_format="{}",
                                 package_id=None):
@@ -107,41 +108,44 @@ class BuildInfoCreator(object):
                                                   "id": "conan_sources.tgz" if use_id else None}
         return set([Artifact(k, **v) for k, v in ret.items()])
 
+    def _get_recipe_rev(self, ref):
+        return "#{}".format(ref.get("rrev")) if ref.get("rrev") and ref.get("rrev") != "0" else ""
+
+    def _get_user_channel(self, ref):
+        return "@{}/{}".format(ref.get("user"), ref.get("channel")) if ref.get("user") and \
+                                                                       ref.get("channel") else ""
+
     def _get_recipe_artifacts(self, ref, is_dependency):
         r = self.parse_ref(ref)
-        if r.get("user") and r.get("channel"):
-            ref = "{name}/{version}@{user}/{channel}#{rrev}".format(**r)
-        else:
-            ref = "{name}/{version}#{rrev}".format(**r)
+        user_channel = self._get_user_channel(r)
+        recipe_rev = self._get_recipe_rev(r)
+        ref = "{name}/{version}{user_channel}{recipe_rev}".format(user_channel=user_channel,
+                                                                  recipe_rev=recipe_rev, **r)
         reference = ConanFileReference.loads(ref)
         package_layout = self._conan_cache.package_layout(reference)
         metadata = package_layout.load_metadata()
         name_format = "{} :: {{}}".format(self._get_reference(ref)) if is_dependency else "{}"
-        if r.get("user") and r.get("channel"):
-            url = "{user}/{name}/{version}/{channel}/{rrev}/export".format(**r)
-        else:
-            url = "_/{name}/{version}/_/{rrev}/export".format(**r)
+        url = "{user}/{name}/{version}/{channel}/{rrev}/export".format(
+            **r) if user_channel else "_/{name}/{version}/_/{rrev}/export".format(**r)
 
         return self._get_metadata_artifacts(metadata, url, name_format=name_format,
                                             use_id=is_dependency)
 
     def _get_package_artifacts(self, ref, pid, prev, is_dependency):
         r = self.parse_ref(ref)
-        if r.get("user") and r.get("channel"):
-            ref = "{name}/{version}@{user}/{channel}#{rrev}".format(**r)
-        else:
-            ref = "{name}/{version}#{rrev}".format(**r)
+        user_channel = self._get_user_channel(r)
+        recipe_rev = self._get_recipe_rev(r)
+        ref = "{name}/{version}{user_channel}{recipe_rev}".format(user_channel=user_channel,
+                                                                  recipe_rev=recipe_rev, **r)
         reference = ConanFileReference.loads(ref)
         package_layout = self._conan_cache.package_layout(reference)
         metadata = package_layout.load_metadata()
         if is_dependency:
-            name_format = "{} :: {{}}".format(self._get_package_reference(ref, pid))
+            name_format = "{} :: {{}}".format(self._get_package_reference(ref, pid, prev))
         else:
             name_format = "{}"
-        if r.get("user") and r.get("channel"):
-            url = "{user}/{name}/{version}/{channel}/{rrev}/package/{pid}/{prev}"
-        else:
-            url = "_/{name}/{version}/_/{rrev}/package/{pid}/{prev}"
+        url = "{user}/{name}/{version}/{channel}/{rrev}/package/{pid}/{prev}" if user_channel else \
+              "_/{name}/{version}/_/{rrev}/package/{pid}/{prev}"
         url = url.format(pid=pid, prev=prev, **r)
         arts = self._get_metadata_artifacts(metadata, url, name_format=name_format,
                                             use_id=is_dependency, package_id=pid)
@@ -193,7 +197,7 @@ class BuildInfoCreator(object):
                 # TODO: be different per lockfile
 
                 # Create module for the package_id
-                package_key = self._get_package_reference(ref, pid)
+                package_key = self._get_package_reference(ref, pid, prev)
                 modules[package_key]["id"] = package_key
                 modules[package_key]["artifacts"].update(
                     self._get_package_artifacts(ref, pid, prev, is_dependency=False))
