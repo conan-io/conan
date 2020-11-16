@@ -93,8 +93,10 @@ class GraphLockErrorsTest(unittest.TestCase):
         client.run("create . --lockfile=conan.lock --lockfile-out=conan.lock")
         client.run("install PkgA/0.1@ --build=PkgA --lockfile=conan.lock --lockfile-out=conan.lock",
                    assert_error=True)
-        self.assertIn("Cannot build 'PkgA/0.1#fa090239f8ba41ad559f8e934494ee2a' because it is "
-                      "already locked", client.out)
+        rev = "#fa090239f8ba41ad559f8e934494ee2a" if client.cache.config.revisions_enabled else ""
+        self.assertIn("Cannot build 'PkgA/0.1{}' because it is already locked".format(rev),
+                      client.out)
+
         client.run("create . --lockfile=conan.lock --lockfile-out=conan.lock", assert_error=True)
         self.assertIn("ERROR: Attempt to modify locked PkgA/0.1", client.out)
 
@@ -401,8 +403,9 @@ class GraphInstallArgumentsUpdated(unittest.TestCase):
         previous_lock = client.load("somelib.lock")
         # This should fail, because somelib is locked
         client.run("install somelib/1.0@ --lockfile=somelib.lock --build somelib", assert_error=True)
-        self.assertIn("Cannot build 'somelib/1.0#f3367e0e7d170aa12abccb175fee5f97' because it "
-                      "is already locked in the input lockfile", client.out)
+        rev = "#f3367e0e7d170aa12abccb175fee5f97" if client.cache.config.revisions_enabled else ""
+        self.assertIn("Cannot build 'somelib/1.0' because it "
+                      "is already locked in the input lockfile".format(rev), client.out)
         new_lock = client.load("somelib.lock")
         self.assertEqual(previous_lock, new_lock)
 
