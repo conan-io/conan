@@ -65,6 +65,8 @@ class SCMBase(object):
         if not self._username and not self._password:
             return url
         url_parsed = urlparse(url)
+        if url_parsed.scheme == "ssh" and (url_parsed.password or self._password):
+            raise ConanException("SCM password cannot be set for ssh url")
         if url_parsed.username and self._username:
             self._output.warn("SCM username got from URL, ignoring 'username' parameter")
         if url_parsed.password and self._password:
