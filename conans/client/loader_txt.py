@@ -32,7 +32,7 @@ class ConanFileTextLoader(object):
     @property
     def _import_parameters(self):
         def _parse_args(param_string):
-            root_package, ignore_case, folder, excludes, keep_path = None, False, False, None, True
+            root_package, ignore_case, folder, excludes, keep_path = None, True, False, None, True
             params = param_string.split(",")
             params = [p.strip() for p in params if p.strip()]
             for param in params:

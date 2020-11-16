@@ -159,7 +159,7 @@ class RestApiTest(unittest.TestCase):
         self._upload_package(pref, {CONANINFO: conan_info})
 
         # Get the package info
-        info = self.api.get_package_info(pref)
+        info = self.api.get_package_info(pref, headers=None)
         self.assertIsInstance(info, ConanInfo)
         self.assertEqual(info, ConanInfo.loads(conan_info))
 

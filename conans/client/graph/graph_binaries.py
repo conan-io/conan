@@ -93,11 +93,14 @@ class GraphBinariesAnalyzer(object):
             node.prev = metadata.packages[pref.id].revision
             assert node.prev, "PREV for %s is None: %s" % (str(pref), metadata.dumps())
 
+    def _get_package_info(self, node, pref, remote):
+        return self._remote_manager.get_package_info(pref, remote, info=node.conanfile.info)
+
     def _evaluate_remote_pkg(self, node, pref, remote, remotes):
         remote_info = None
         if remote:
             try:
-                remote_info, pref = self._remote_manager.get_package_info(pref, remote)
+                remote_info, pref = self._get_package_info(node, pref, remote)
             except NotFoundException:
                 pass
             except Exception:
@@ -107,9 +110,9 @@ class GraphBinariesAnalyzer(object):
         # If the "remote" came from the registry but the user didn't specified the -r, with
         # revisions iterate all remotes
         if not remote or (not remote_info and self._cache.config.revisions_enabled):
-            for r in remotes.values():
+            for r in remotes.values():  # FIXME: Here we hit the same remote we did before
                 try:
-                    remote_info, pref = self._remote_manager.get_package_info(pref, r)
+                    remote_info, pref = self._get_package_info(node, pref, r)
                 except NotFoundException:
                     pass
                 else:
@@ -236,7 +239,7 @@ class GraphBinariesAnalyzer(object):
         if build_mode.outdated:
             if node.binary in (BINARY_CACHE, BINARY_DOWNLOAD, BINARY_UPDATE):
                 if node.binary == BINARY_UPDATE:
-                    info, pref = self._remote_manager.get_package_info(pref, remote)
+                    info, pref = self._get_package_info(node, pref, remote)
                     recipe_hash = info.recipe_hash
                 elif node.binary == BINARY_CACHE:
                     package_folder = package_layout.package(pref)
