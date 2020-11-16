@@ -13,14 +13,14 @@ from conans.test.utils.tools import TestClient
 @unittest.skipUnless(platform.system() == "Windows", "Only for windows")
 class CustomConfigurationTest(unittest.TestCase):
     conanfile = textwrap.dedent("""
-        from conans import ConanFile, CMake, CMakeToolchain
-        from conans.client.generators.cmake_find_package_multi import CMakeFindPackageMultiGenerator
+        from conans import ConanFile
+        from conan.generators import CMakeGenerator
         class App(ConanFile):
             settings = "os", "arch", "compiler", "build_type"
             requires = "hello/0.1"
 
             def toolchain(self):
-                generator = CMakeFindPackageMultiGenerator(self)
+                generator = CMakeGenerator(self)
                 generator.configurations.append("ReleaseShared")
                 if self.options["hello"].shared:
                     generator.configuration = "ReleaseShared"
@@ -57,8 +57,10 @@ class CustomConfigurationTest(unittest.TestCase):
     def setUp(self):
         self.client = TestClient(path_with_spaces=False)
         self.client.run("new hello/0.1 -s")
-        self.client.run("create . hello/0.1@ -s build_type=Release -o hello:shared=True")
-        self.client.run("create . hello/0.1@ -s build_type=Release")
+        self.client.run("create . hello/0.1@ -s compiler.version=15 "
+                        "-s build_type=Release -o hello:shared=True")
+        self.client.run("create . hello/0.1@ -s compiler.version=15 "
+                        "-s build_type=Release")
 
         # Prepare the actual consumer package
         self.client.save({"conanfile.py": self.conanfile,
