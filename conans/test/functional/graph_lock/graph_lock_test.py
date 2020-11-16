@@ -404,7 +404,7 @@ class GraphInstallArgumentsUpdated(unittest.TestCase):
         # This should fail, because somelib is locked
         client.run("install somelib/1.0@ --lockfile=somelib.lock --build somelib", assert_error=True)
         rev = "#f3367e0e7d170aa12abccb175fee5f97" if client.cache.config.revisions_enabled else ""
-        self.assertIn("Cannot build 'somelib/1.0' because it "
+        self.assertIn("Cannot build 'somelib/1.0{}' because it "
                       "is already locked in the input lockfile".format(rev), client.out)
         new_lock = client.load("somelib.lock")
         self.assertEqual(previous_lock, new_lock)
