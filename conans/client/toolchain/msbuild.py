@@ -118,8 +118,16 @@ class MSBuildToolchain(object):
                         xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
                     <ImportGroup Label="PropertySheets" >
                     </ImportGroup>
+                    <PropertyGroup Label="Conan-PackageInfo">
+                        <ConanPackageName>{}</ConanPackageName>
+                        <ConanPackageVersion>{}</ConanPackageVersion>
+                    </PropertyGroup>                    
                 </Project>
                 """)
+
+            conan_package_name = self._conanfile.name if self._conanfile.name else ""
+            conan_package_version = self._conanfile.version if self._conanfile.version else ""
+            content = content.format(conan_package_name, conan_package_version)
 
         dom = minidom.parseString(content)
         try:
