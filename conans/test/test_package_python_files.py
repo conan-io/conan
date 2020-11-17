@@ -61,9 +61,3 @@ class TestPackagePythonFiles(unittest.TestCase):
         self.assertIn("myfile.pyc", manifest)
         self.assertIn("myfile.pyo", manifest)
         self.assertNotIn(".DS_Store", manifest)
-
-
-
-
-
-
