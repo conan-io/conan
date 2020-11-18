@@ -111,7 +111,7 @@ class CMakeNinjaTestCase(unittest.TestCase):
 
     @unittest.skipIf(platform.system() != "Windows", "Only windows")
     def test_locally_build_windows_debug(self):
-        """ Ninja build must proceed using default profile and cmake build (Windows)
+        """ Ninja build must proceed using default profile and cmake build (Windows Debug)
         """
         client = TestClient(path_with_spaces=False)
         client.save({"conanfile.py": self.conanfile,
