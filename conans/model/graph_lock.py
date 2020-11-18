@@ -637,10 +637,13 @@ class GraphLock(object):
         if not self._relaxed:
             raise ConanException("Couldn't find '%s' in lockfile" % ref.full_str())
 
-    def find_require_and_lock(self, reference, conanfile):
-        node_id = self._find_node_by_requirement(reference)
-        if node_id is None:  # relaxed and not found
-            return
+    def find_require_and_lock(self, reference, conanfile, lockfile_id=None):
+        if lockfile_id:
+            node_id = lockfile_id
+        else:
+            node_id = self._find_node_by_requirement(reference)
+            if node_id is None:  # relaxed and not found
+                return
 
         locked_ref = self._nodes[node_id].ref
         assert locked_ref is not None
