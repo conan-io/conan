@@ -98,7 +98,12 @@ class CMakeBuildHelper(object):
         # FIXME CONAN 2.0: CMake() interface should be always the constructor and self.definitions.
         # FIXME CONAN 2.0: Avoid properties and attributes to make the user interface more clear
 
-        self.definitions = builder.get_definitions()
+        try:
+            cmake_version = self.get_version()
+            self.definitions = builder.get_definitions(cmake_version)
+        except ConanException:
+            self.definitions = builder.get_definitions(None)
+
         self.definitions["CONAN_EXPORTED"] = "1"
 
         self.toolset = toolset or get_toolset(self._settings, self.generator)
@@ -258,8 +263,8 @@ class CMakeBuildHelper(object):
         elif is_intel:
             if self.generator in ["Ninja", "NMake Makefiles", "NMake Makefiles JOM",
                                   "Unix Makefiles"]:
-                compilervars_dict = tools.compilervars_dict(self._conanfile, force=True)
-                context = _environment_add(compilervars_dict, post=self._append_vcvars)
+                intel_compilervars_dict = tools.intel_compilervars_dict(self._conanfile, force=True)
+                context = _environment_add(intel_compilervars_dict, post=self._append_vcvars)
         with context:
             self._conanfile.run(command)
 

@@ -1,9 +1,10 @@
 # coding=utf-8
 import os
-import six
-import unittest
 import subprocess
+import unittest
 
+import pytest
+import six
 from mock import patch
 from nose.plugins.attrib import attr
 from parameterized import parameterized
@@ -11,11 +12,13 @@ from parameterized import parameterized
 from conans.client import tools
 from conans.client.tools.scm import Git
 from conans.errors import ConanException
-from conans.test.utils.tools import temp_folder, TestClient
 from conans.test.utils.scm import create_local_git_repo
+from conans.test.utils.tools import temp_folder, TestClient
 from conans.util.files import save
 
 
+@attr('git')
+@pytest.mark.tool_git
 class GitRemoteUrlTest(unittest.TestCase):
 
     def test_remove_credentials(self):
@@ -32,6 +35,7 @@ class GitRemoteUrlTest(unittest.TestCase):
 
 
 @attr('git')
+@pytest.mark.tool_git
 class GitToolTest(unittest.TestCase):
 
     @patch('subprocess.Popen')
@@ -240,7 +244,7 @@ class GitToolTest(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(submodule_path, "submodule")))
         self.assertTrue(os.path.exists(os.path.join(subsubmodule_path, "subsubmodule")))
 
-    def git_to_capture_branch_test(self):
+    def test_git_to_capture_branch(self):
         conanfile = """
 import re
 from conans import ConanFile, tools
@@ -267,7 +271,7 @@ class HelloConan(ConanFile):
         client.current_folder = path
         client.run("create . user/channel")
 
-    def git_helper_in_recipe_test(self):
+    def test_git_helper_in_recipe(self):
         client = TestClient()
         git_repo = temp_folder()
         save(os.path.join(git_repo, "file.h"), "contents")
@@ -341,7 +345,7 @@ class HelloConan(ConanFile):
         client.run("create . user/channel", assert_error=True)
         self.assertIn("specify a branch to checkout", client.out)
 
-    def git_commit_message_test(self):
+    def test_git_commit_message(self):
         client = TestClient()
         git_repo = temp_folder()
         with client.chdir(git_repo):
@@ -358,7 +362,8 @@ class HelloConan(ConanFile):
         self.assertEqual("dev", git.get_branch())
         self.assertEqual("first commit", git.get_commit_message())
 
-
+@attr('git')
+@pytest.mark.tool_git
 class GitToolsTests(unittest.TestCase):
 
     def setUp(self):

@@ -3,6 +3,7 @@ import platform
 import textwrap
 import unittest
 
+import pytest
 import six
 from nose.plugins.attrib import attr
 from parameterized import parameterized
@@ -10,17 +11,19 @@ from parameterized import parameterized
 from conans.client.tools.files import replace_in_file
 from conans.model.ref import PackageReference
 from conans.paths import CONANFILE
-from conans.test.utils.tools import TestClient
-from conans.test.utils.visual_project_files import get_vs_project_files
 from conans.test.utils.deprecation import catch_deprecation_warning
+from conans.test.utils.tools import TestClient
+from conans.test.assets.visual_project_files import get_vs_project_files
 from conans.util.files import load
 
 
 class MSBuildTest(unittest.TestCase):
 
     @attr('slow')
+    @pytest.mark.slow
+    @pytest.mark.tool_visual_studio
     @unittest.skipUnless(platform.system() == "Windows" and six.PY3, "Requires MSBuild")
-    def build_vs_project_test(self):
+    def test_build_vs_project(self):
         conan_build_vs = """
 from conans import ConanFile, MSBuild
 
@@ -101,8 +104,10 @@ class HelloConan(ConanFile):
         self.assertTrue(os.path.exists(os.path.join(build_folder, "mp.props")))
 
     @attr('slow')
+    @pytest.mark.slow
+    @pytest.mark.tool_visual_studio
     @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
-    def user_properties_file_test(self):
+    def test_user_properties_file(self):
         conan_build_vs = textwrap.dedent("""
             from conans import ConanFile, MSBuild
 
@@ -153,8 +158,10 @@ class HelloConan(ConanFile):
         self.assertIn("<RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>", content)
 
     @attr('slow')
+    @pytest.mark.slow
+    @pytest.mark.tool_visual_studio
     @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
-    def user_properties_multifile_test(self):
+    def test_user_properties_multifile(self):
         conan_build_vs = textwrap.dedent("""
             from conans import ConanFile, MSBuild
 
@@ -219,8 +226,9 @@ class HelloConan(ConanFile):
         content = load(conan_props)
         self.assertIn("<RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>", content)
 
+    @pytest.mark.tool_visual_studio
     @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
-    def reuse_msbuild_object_test(self):
+    def test_reuse_msbuild_object(self):
         # https://github.com/conan-io/conan/issues/2865
         conan_build_vs = """
 from conans import ConanFile, MSBuild
@@ -251,7 +259,8 @@ class HelloConan(ConanFile):
 
     @parameterized.expand([("True",), ("'my_log.binlog'",)])
     @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
-    def binary_log_build_test(self, value):
+    @pytest.mark.tool_visual_studio
+    def test_binary_log_build(self, value):
         conan_build_vs = """
 from conans import ConanFile, MSBuild
 

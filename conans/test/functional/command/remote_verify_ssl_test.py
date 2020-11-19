@@ -32,7 +32,7 @@ class RequesterMockFalse(object):
 
 class VerifySSLTest(unittest.TestCase):
 
-    def verify_ssl_test(self):
+    def test_verify_ssl(self):
 
         self.client = TestClient(requester_class=RequesterMockTrue)
         self.client.run("remote add myremote https://localhost False")

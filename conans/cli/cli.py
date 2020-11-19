@@ -7,11 +7,13 @@ from collections import defaultdict
 from difflib import get_close_matches
 from inspect import getmembers
 
+from colorama import Style
+
 from conans import __version__ as client_version
 from conans.cli.command import ConanSubCommand
 from conans.cli.exit_codes import SUCCESS, ERROR_MIGRATION, ERROR_GENERAL, USER_CTRL_C, \
     ERROR_SIGTERM, USER_CTRL_BREAK, ERROR_INVALID_CONFIGURATION
-from conans.client.conan_api import Conan
+from conans.client.api.conan_api import Conan
 from conans.errors import ConanException, ConanInvalidConfiguration, ConanMigrationError
 from conans.util.files import exception_message_safe
 from conans.util.log import logger
@@ -81,17 +83,17 @@ class Cli(object):
             return
 
         if len(matches) > 1:
-            self._out.writeln("The most similar commands are")
+            self._out.info("The most similar commands are")
         else:
-            self._out.writeln("The most similar command is")
+            self._out.info("The most similar command is")
 
         for match in matches:
-            self._out.writeln("    %s" % match)
+            self._out.info("    %s" % match)
 
-        self._out.writeln("")
+        self._out.info("")
 
     def help_message(self):
-        self.commands["help"].method(conan_api=self.conan_api, parser=self.commands["help"].parser,
+        self.commands["help"].method(self.conan_api, self.commands["help"].parser,
                                      commands=self.commands, groups=self.groups)
 
     def run(self, *args):
@@ -112,24 +114,27 @@ class Cli(object):
             command = self.commands[command_argument]
         except KeyError as exc:
             if command_argument in ["-v", "--version"]:
-                self._out.success("Conan version %s" % client_version)
+                self._out.info("Conan version %s" % client_version)
                 return SUCCESS
 
             if command_argument in ["-h", "--help"]:
                 self.help_message()
                 return SUCCESS
 
-            self._out.writeln(
-                "'%s' is not a Conan command. See 'conan --help'." % command_argument)
-            self._out.writeln("")
+            self._out.info("'%s' is not a Conan command. See 'conan --help'." % command_argument)
+            self._out.info("")
             self._print_similar(command_argument)
             raise ConanException("Unknown command %s" % str(exc))
 
-        command.run(args[0][1:], conan_api=self.conan_api,
-                    parser=self.commands[command_argument].parser,
-                    commands=self.commands, groups=self.groups)
+        command.run(self.conan_api, self.commands[command_argument].parser,
+                    args[0][1:], commands=self.commands, groups=self.groups)
 
         return SUCCESS
+
+
+def cli_out_write(data, fg=None, bg=None):
+    data = "{}{}{}{}\n".format(fg or '', bg or '', data, Style.RESET_ALL)
+    sys.stdout.write(data)
 
 
 def main(args):
@@ -147,7 +152,7 @@ def main(args):
         6: Invalid configuration (done)
     """
     try:
-        conan_api, _, _ = Conan.factory()  # FIXME: Conan factory will be removed in Conan 2.0
+        conan_api = Conan(quiet=False)
     except ConanMigrationError:  # Error migrating
         sys.exit(ERROR_MIGRATION)
     except ConanException as e:

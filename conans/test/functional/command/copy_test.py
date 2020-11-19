@@ -1,5 +1,6 @@
 import os
 import unittest
+import textwrap
 
 from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient, TestServer
@@ -102,3 +103,15 @@ class Pkg(ConanFile):
         client.run("copy pkg/0.1@user/channel other/channel -p {} --all".format("mimic"),
                    assert_error=True)
         self.assertIn("Cannot specify both --all and --package", client.out)
+
+    def test_copy_full_reference(self):
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class Pkg(ConanFile):
+                settings = "os"
+        """)
+        client = TestClient()
+        client.save({"conanfile.py": conanfile})
+        client.run("export . pkg/0.1@user/channel")
+        client.run("copy pkg/0.1@user/channel pkg/0.1@other/branch", assert_error=True)
+        self.assertIn("Destination must contain user/channel only.", client.out)

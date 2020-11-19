@@ -2,7 +2,6 @@ import json
 import unittest
 from collections import OrderedDict
 
-from conans.client.store.localdb import LocalDB
 from conans.test.utils.tools import TestClient, TestServer
 
 
@@ -61,7 +60,7 @@ class UserTest(unittest.TestCase):
         client.run('user john')
         self.assertIn("Changed user of remote 'default' from 'None' (anonymous) to 'john'",
                       client.out)
-        localdb = LocalDB.create(client.cache.localdb)
+        localdb = client.cache.localdb
         self.assertEqual(('john', None, None), localdb.get_login(test_server.fake_url))
 
         client.run('user will')
@@ -93,7 +92,7 @@ class UserTest(unittest.TestCase):
         client.run('user none')
         self.assertIn("Changed user of remote 'default' from 'lasote' to 'None' (anonymous)",
                       client.out)
-        localdb = LocalDB.create(client.cache.localdb)
+        localdb = client.cache.localdb
         self.assertEqual((None, None, None), localdb.get_login(test_server.fake_url))
         client.run('user')
         self.assertIn("Current user of remote 'default' set to: 'None' (anonymous)", client.out)
@@ -175,7 +174,7 @@ class ConanLib(ConanFile):
         self.assertIn('ERROR: Conan interactive mode disabled', client.out)
         self.assertNotIn("Remote 'default' username:", client.out)
 
-    def authenticated_test(self):
+    def test_authenticated(self):
         test_server = TestServer(users={"lasote": "mypass", "danimtb": "passpass"})
         servers = OrderedDict()
         servers["default"] = test_server
@@ -211,7 +210,7 @@ class ConanLib(ConanFile):
         self.assertIn("Current user of remote 'other_server' set to: 'lasote'", client.out)
         self.assertNotIn("[Authenticated]", client.out)
 
-    def json_test(self):
+    def test_json(self):
         def _compare_dicts(first_dict, second_dict):
             self.assertTrue(set(first_dict), set(second_dict))
 

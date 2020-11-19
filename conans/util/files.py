@@ -1,4 +1,5 @@
 import errno
+import gzip
 import hashlib
 import os
 import platform
@@ -48,6 +49,7 @@ _DIRTY_FOLDER = ".dirty"
 
 def set_dirty(folder):
     dirty_file = os.path.normpath(folder) + _DIRTY_FOLDER
+    assert not os.path.exists(dirty_file), "Folder '{}' is already dirty".format(folder)
     save(dirty_file, "")
 
 
@@ -127,7 +129,10 @@ def normalize(text):
 
 
 def md5(content):
-    md5alg = hashlib.md5()
+    try:
+        md5alg = hashlib.md5()
+    except ValueError:  # FIPS error https://github.com/conan-io/conan/issues/7800
+        md5alg = hashlib.md5(usedforsecurity=False)
     if isinstance(content, bytes):
         tmp = content
     else:
@@ -151,7 +156,10 @@ def sha256sum(file_path):
 def _generic_algorithm_sum(file_path, algorithm_name):
 
     with open(file_path, 'rb') as fh:
-        m = hashlib.new(algorithm_name)
+        try:
+            m = hashlib.new(algorithm_name)
+        except ValueError:  # FIPS error https://github.com/conan-io/conan/issues/7800
+            m = hashlib.new(algorithm_name, usedforsecurity=False)
         while True:
             data = fh.read(8192)
             if not data:
@@ -179,10 +187,16 @@ def save(path, content, only_if_modified=False, encoding="utf-8"):
         only_if_modified: file won't be modified if the content hasn't changed
         encoding: target file text encoding
     """
-    try:
-        os.makedirs(os.path.dirname(path))
-    except Exception:
-        pass
+    dir_path = os.path.dirname(path)
+    if not os.path.isdir(dir_path):
+        try:
+            os.makedirs(dir_path)
+        except OSError as error:
+            if error.errno not in (errno.EEXIST, errno.ENOENT):
+                raise OSError("The folder {} does not exist and could not be created ({})."
+                              .format(dir_path, error.strerror))
+        except Exception:
+            raise
 
     new_content = to_file_bytes(content, encoding)
 
@@ -300,24 +314,16 @@ def gzopen_without_timestamps(name, mode="r", fileobj=None, compresslevel=None, 
         setted in Gzip file causing md5 to change. Not possible using the
         previous tarfile open because arguments are not passed to GzipFile constructor
     """
-    from tarfile import CompressionError, ReadError
-
     compresslevel = compresslevel or int(os.getenv("CONAN_COMPRESSION_LEVEL", 9))
 
     if mode not in ("r", "w"):
         raise ValueError("mode must be 'r' or 'w'")
 
     try:
-        import gzip
-        gzip.GzipFile
-    except (ImportError, AttributeError):
-        raise CompressionError("gzip module is not available")
-
-    try:
         fileobj = gzip.GzipFile(name, mode, compresslevel, fileobj, mtime=0)
     except OSError:
         if fileobj is not None and mode == 'r':
-            raise ReadError("not a gzip file")
+            raise tarfile.ReadError("not a gzip file")
         raise
 
     try:
@@ -327,7 +333,7 @@ def gzopen_without_timestamps(name, mode="r", fileobj=None, compresslevel=None, 
     except IOError:
         fileobj.close()
         if mode == 'r':
-            raise ReadError("not a gzip file")
+            raise tarfile.ReadError("not a gzip file")
         raise
     except Exception:
         fileobj.close()
@@ -436,4 +442,3 @@ def merge_directories(src, dst, excluded=None):
                 link_to_rel(src_file)
             else:
                 shutil.copy2(src_file, dst_file)
-

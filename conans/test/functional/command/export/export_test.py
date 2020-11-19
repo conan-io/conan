@@ -3,12 +3,13 @@ import stat
 import textwrap
 import unittest
 
+import pytest
 from parameterized import parameterized
 
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE, CONAN_MANIFEST
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.test.assets.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import TestClient, GenConanfile
 from conans.util.files import load, save
 
@@ -31,7 +32,7 @@ class ExportSettingsTest(unittest.TestCase):
         self.assertIn("'Windows' is not a valid 'settings.os' value", client.out)
         self.assertIn("Possible values are ['Linux']", client.out)
 
-    def export_without_full_reference_test(self):
+    def test_export_without_full_reference(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
         client.run("export . lasote/stable", assert_error=True)
@@ -249,9 +250,9 @@ class ExportTest(unittest.TestCase):
         expected_sums = {'hello.cpp': '4f005274b2fdb25e6113b69774dac184',
                          'main.cpp': '0479f3c223c9a656a718f3148e044124',
                          'CMakeLists.txt': '10d907c160c360b28f6991397a5aa9b4',
-                         'conanfile.py': '355949fbf0b4fc32b8f1c5a338dfe1ae',
+                         'conanfile.py': '1ad1f4b995ae7ffdb00d53ff49e1366f',
                          'executable': '68b329da9893e34099c7d8ad5cb9c940',
-                         'helloHello0.h': '9448df034392fc8781a47dd03ae71bdd'}
+                         'helloHello0.h': 'd0a6868b5df17a6ae6e61ebddb0c9eb3'}
         self.assertEqual(expected_sums, manif.file_sums)
 
     def test_case_sensitive(self):
@@ -323,9 +324,9 @@ class OpenSSLConan(ConanFile):
         expected_sums = {'hello.cpp': '4f005274b2fdb25e6113b69774dac184',
                          'main.cpp': '0479f3c223c9a656a718f3148e044124',
                          'CMakeLists.txt': '10d907c160c360b28f6991397a5aa9b4',
-                         'conanfile.py': '355949fbf0b4fc32b8f1c5a338dfe1ae',
+                         'conanfile.py': '1ad1f4b995ae7ffdb00d53ff49e1366f',
                          'executable': '68b329da9893e34099c7d8ad5cb9c940',
-                         'helloHello0.h': '9448df034392fc8781a47dd03ae71bdd'}
+                         'helloHello0.h': 'd0a6868b5df17a6ae6e61ebddb0c9eb3'}
         self.assertEqual(expected_sums, digest2.file_sums)
 
         for f in file_list:
@@ -357,9 +358,9 @@ class OpenSSLConan(ConanFile):
         expected_sums = {'hello.cpp': '4f005274b2fdb25e6113b69774dac184',
                          'main.cpp': '0479f3c223c9a656a718f3148e044124',
                          'CMakeLists.txt': '10d907c160c360b28f6991397a5aa9b4',
-                         'conanfile.py': 'ad17cf00b3142728b03ac37782b9acd9',
+                         'conanfile.py': 'e309305959502e16f8a57439bb6a4107',
                          'executable': '68b329da9893e34099c7d8ad5cb9c940',
-                         'helloHello0.h': '9448df034392fc8781a47dd03ae71bdd'}
+                         'helloHello0.h': 'd0a6868b5df17a6ae6e61ebddb0c9eb3'}
         self.assertEqual(expected_sums, digest3.file_sums)
 
         # for f in file_list:
@@ -403,6 +404,7 @@ class ExportMetadataTest(unittest.TestCase):
         meta = t.cache.package_layout(ref, short_paths=False).load_metadata()
         self.assertEqual(meta.recipe.revision, self.summary_hash)
 
+    @pytest.mark.tool_git
     def test_revision_mode_scm(self):
         t = TestClient()
         commit = t.init_git_repo({'conanfile.py': self.conanfile.format(revision_mode="scm")})
@@ -433,14 +435,14 @@ class ExportMetadataTest(unittest.TestCase):
         client.run('export . ')
         self.assertIn("lib/1.0: The stored package has not changed", client.out)
 
-    def export_with_name_and_version_test(self):
+    def test_export_with_name_and_version(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
 
         client.run('export . lib/1.0@')
         self.assertIn("lib/1.0: A new conanfile.py version was exported", client.out)
 
-    def export_with_only_user_channel_test(self):
+    def test_export_with_only_user_channel(self):
         """This should be the recommended way and only from Conan 2.0"""
         client = TestClient()
         client.save({"conanfile.py": GenConanfile().with_name("lib").with_version("1.0")})
@@ -448,7 +450,7 @@ class ExportMetadataTest(unittest.TestCase):
         client.run('export . @user/channel')
         self.assertIn("lib/1.0@user/channel: A new conanfile.py version was exported", client.out)
 
-    def export_conflict_no_user_channel_test(self):
+    def test_export_conflict_no_user_channel(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
 

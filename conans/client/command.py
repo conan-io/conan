@@ -280,7 +280,7 @@ class Command(object):
                                          formatter_class=SmartFormatter)
         parser.add_argument("path", help='Path to the "testing" folder containing a conanfile.py or'
                             ' to a recipe file with test() method'
-                            'e.g. conan test_package/conanfile.py pkg/version@user/channel')
+                            ' e.g. conan test_package/conanfile.py pkg/version@user/channel')
         parser.add_argument("reference",
                             help='pkg/version@user/channel of the package to be tested')
         parser.add_argument("-tbf", "--test-build-folder", action=OnceArgument,
@@ -559,7 +559,7 @@ class Command(object):
         home_subparser.add_argument("-j", "--json", default=None, action=OnceArgument,
                                     help='json file path where the config home will be written to')
         install_subparser.add_argument("item", nargs="?",
-                                       help="git repository, local folder or zip file (local or "
+                                       help="git repository, local file or folder or zip file (local or "
                                        "http) where the configuration is stored")
 
         install_subparser.add_argument("--verify-ssl", nargs="?", default="True",
@@ -629,7 +629,8 @@ class Command(object):
         """
 
         info_only_options = ["id", "build_id", "remote", "url", "license", "requires", "update",
-                             "required", "date", "author", "description", "None"]
+                             "required", "date", "author", "description", "provides", "deprecated",
+                             "None"]
         path_only_options = ["export_folder", "build_folder", "package_folder", "source_folder"]
         str_path_only_options = ", ".join(['"%s"' % field for field in path_only_options])
         str_only_options = ", ".join(['"%s"' % field for field in info_only_options])
@@ -1034,8 +1035,9 @@ class Command(object):
                                          formatter_class=SmartFormatter)
         parser.add_argument("path", help=_PATH_HELP)
         parser.add_argument("reference", nargs='?', default=None,
-                            help="user/channel, or Pkg/version@user/channel (if name "
-                                 "and version are not declared in the conanfile.py")
+                            help="user/channel, Pkg/version@user/channel (if name "
+                                 "and version are not declared in the conanfile.py) "
+                                 "Pkg/version@ if user/channel is not relevant.")
         parser.add_argument('-k', '-ks', '--keep-source', default=False, action='store_true',
                             help=_KEEP_SOURCE_HELP)
         parser.add_argument("-l", "--lockfile", action=OnceArgument,
@@ -1259,6 +1261,7 @@ class Command(object):
     def search(self, *args):
         """
         Searches package recipes and binaries in the local cache or a remote.
+        Unless a remote is specified only the local cache is searched.
 
         If you provide a pattern, then it will search for existing package
         recipes matching it.  If a full reference is provided
@@ -1422,8 +1425,10 @@ class Command(object):
         parser.add_argument("-j", "--json", default=None, action=OnceArgument,
                             help='json file path where the upload information will be written to')
         parser.add_argument("--parallel", action='store_true', default=False,
-                            help='Upload files in parallel using multiple threads '
-                                 'The default number of launched threads is 8')
+                            help='Upload files in parallel using multiple threads. '
+                                 'The default number of launched threads is set to the value of '
+                                 'cpu_count and can be configured using the CONAN_CPU_COUNT '
+                                 'environment variable or defining cpu_count in conan.conf')
 
         args = parser.parse_args(*args)
 

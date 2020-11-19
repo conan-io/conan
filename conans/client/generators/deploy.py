@@ -1,11 +1,10 @@
-import calendar
 import os
 import shutil
-import time
 
 from conans.model import Generator
 from conans.model.manifest import FileTreeManifest
 from conans.paths import BUILD_INFO_DEPLOY
+from conans.util.dates import timestamp_now
 from conans.util.files import mkdir, md5sum
 
 
@@ -15,7 +14,7 @@ FILTERED_FILES = ["conaninfo.txt", "conanmanifest.txt"]
 class DeployGenerator(Generator):
 
     def deploy_manifest_content(self, copied_files):
-        date = calendar.timegm(time.gmtime())
+        date = timestamp_now()
         file_dict = {}
         for f in copied_files:
             abs_path = os.path.join(self.output_path, f)
@@ -33,7 +32,8 @@ class DeployGenerator(Generator):
 
         for dep_name in self.conanfile.deps_cpp_info.deps:
             rootpath = self.conanfile.deps_cpp_info[dep_name].rootpath
-            for root, _, files in os.walk(os.path.normpath(rootpath)):
+            for root, dirs, files in os.walk(os.path.normpath(rootpath)):
+                files += [d for d in dirs if os.path.islink(os.path.join(root, d))]
                 for f in files:
                     if f in FILTERED_FILES:
                         continue
@@ -52,5 +52,6 @@ class DeployGenerator(Generator):
                         os.symlink(linkto, dst)
                     else:
                         shutil.copy(src, dst)
-                    copied_files.append(dst)
+                    if f not in dirs:
+                        copied_files.append(dst)
         return self.deploy_manifest_content(copied_files)

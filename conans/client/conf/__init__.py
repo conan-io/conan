@@ -1,8 +1,6 @@
 import logging
 import os
-import re
 import textwrap
-from datetime import timedelta
 
 from jinja2 import Template
 from six.moves.configparser import ConfigParser, NoSectionError
@@ -11,6 +9,7 @@ from conans.errors import ConanException
 from conans.model.env_info import unquote
 from conans.paths import DEFAULT_PROFILE_NAME, conan_expand_user, CACERT_FILE
 from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
+from conans.util.dates import timedelta_from_text
 from conans.util.env_reader import get_env
 from conans.util.files import load
 
@@ -37,7 +36,7 @@ _t_default_settings_yml = Template(textwrap.dedent("""
             version: ["5.0", "6.0", "7.0", "8.0"]
         Linux:
         Macos:
-            version: [None, "10.6", "10.7", "10.8", "10.9", "10.10", "10.11", "10.12", "10.13", "10.14", "10.15"]
+            version: [None, "10.6", "10.7", "10.8", "10.9", "10.10", "10.11", "10.12", "10.13", "10.14", "10.15", "11.0"]
         Android:
             api_level: ANY
         iOS:
@@ -84,12 +83,12 @@ _t_default_settings_yml = Template(textwrap.dedent("""
         clang:
             version: ["3.3", "3.4", "3.5", "3.6", "3.7", "3.8", "3.9", "4.0",
                       "5.0", "6.0", "7.0", "7.1",
-                      "8", "9", "10"]
+                      "8", "9", "10", "11"]
             libcxx: [None, libstdc++, libstdc++11, libc++, c++_shared, c++_static]
             cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
             runtime: [None, MD, MT, MTd, MDd]
         apple-clang: &apple_clang
-            version: ["5.0", "5.1", "6.0", "6.1", "7.0", "7.3", "8.0", "8.1", "9.0", "9.1", "10.0", "11.0"]
+            version: ["5.0", "5.1", "6.0", "6.1", "7.0", "7.3", "8.0", "8.1", "9.0", "9.1", "10.0", "11.0", "12.0"]
             libcxx: [libstdc++, libc++]
             cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
         intel:
@@ -265,6 +264,7 @@ class ConanClientConfigParser(ConfigParser, object):
             ("CONAN_MSBUILD_VERBOSITY", "msbuild_verbosity", None),
             ("CONAN_CACERT_PATH", "cacert_path", None),
             ("CONAN_DEFAULT_PACKAGE_ID_MODE", "default_package_id_mode", None),
+            ("CONAN_KEEP_PYTHON_FILES", "keep_python_files", False),
             # ("CONAN_DEFAULT_PROFILE_PATH", "default_profile", DEFAULT_PROFILE_NAME),
         ],
         "hooks": [
@@ -710,15 +710,8 @@ class ConanClientConfigParser(ConfigParser, object):
         except ConanException:
             return None
 
-        match = re.search(r"(\d+)([mhd])", interval)
         try:
-            value, unit = match.group(1), match.group(2)
-            if unit == 'm':
-                return timedelta(minutes=float(value))
-            elif unit == 'h':
-                return timedelta(hours=float(value))
-            else:
-                return timedelta(days=float(value))
+            return timedelta_from_text(interval)
         except Exception:
             raise ConanException("Incorrect definition of general.config_install_interval: %s"
                                  % interval)

@@ -11,7 +11,7 @@ from conans.test.utils.mocks import TestBufferConanOutput
 
 class CMakeFindPackageMultiTest(unittest.TestCase):
 
-    def cmake_find_package_multi_version_test(self):
+    def test_cmake_find_package_multi_version(self):
         # https://github.com/conan-io/conan/issues/6908
         settings_mock = _MockSettings(build_type="Debug")
         conanfile = ConanFile(TestBufferConanOutput(), None)

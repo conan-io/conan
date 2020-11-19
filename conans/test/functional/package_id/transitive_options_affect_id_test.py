@@ -5,7 +5,7 @@ from conans.test.utils.tools import TestClient
 
 class TransitiveOptionsAffectPackageIDTest(unittest.TestCase):
 
-    def basic_test(self):
+    def test_basic(self):
         client = TestClient()
         conanfile = '''from conans import ConanFile
 class Pkg(ConanFile):

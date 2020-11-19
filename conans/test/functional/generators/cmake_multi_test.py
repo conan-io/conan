@@ -3,10 +3,12 @@ import platform
 import textwrap
 import unittest
 
+import pytest
 from nose.plugins.attrib import attr
 
-from conans.client.tools import load, remove_from_path
-from conans.test.utils.multi_config import multi_config_files
+
+from conans.client.tools import remove_from_path, no_op
+from conans.test.assets.multi_config import multi_config_files
 from conans.test.utils.tools import TestClient
 
 conanfile_py = """
@@ -132,10 +134,13 @@ int main(){{
 
 
 @attr("slow")
+@pytest.mark.slow
+@pytest.mark.tool_cmake
 class CMakeMultiTest(unittest.TestCase):
 
     @attr("mingw")
-    def cmake_multi_find_test(self):
+    @pytest.mark.tool_gcc
+    def test_cmake_multi_find(self):
         if platform.system() not in ["Windows", "Linux"]:
             return
         client = TestClient()
@@ -178,7 +183,8 @@ class HelloConan(ConanFile):
         client.run("install . -s build_type=RelWithDebInfo --build=missing ")
         client.run("install . -s build_type=MinSizeRel --build=missing ")
 
-        with remove_from_path("sh"):
+        # in Linux it can remove /usr/bin from the path invalidating "cmake" and everything
+        with remove_from_path("sh") if platform.system() == "Windows" else no_op():
             generator = "MinGW Makefiles" if platform.system() == "Windows" else "Unix Makefiles"
             client.run_command('cmake . -G "%s" -DCMAKE_BUILD_TYPE=Debug' % generator)
             self.assertIn("FIND HELLO DEBUG!", client.out)
@@ -195,7 +201,7 @@ class HelloConan(ConanFile):
             self.assertIn("FIND HELLO MINSIZEREL!", client.out)
 
     @unittest.skipUnless(platform.system() in ["Windows", "Darwin"], "Exclude Linux")
-    def cmake_multi_test(self):
+    def test_cmake_multi(self):
         client = TestClient()
 
         client.save(multi_config_files("Hello0", test=False), clean_first=True)
@@ -272,9 +278,10 @@ class HelloConan(ConanFile):
             self.assertIn("Hello Release Hello0", client.out)
 
 
+@pytest.mark.tool_cmake
 class CMakeMultiSystemLibsTest(unittest.TestCase):
 
-    def system_libs_test(self):
+    def test_system_libs(self):
         mylib = textwrap.dedent("""
             import os
             from conans import ConanFile
@@ -326,6 +333,7 @@ class CMakeMultiSystemLibsTest(unittest.TestCase):
         self.assertIn("set(CONAN_SYSTEM_LIBS_MYLIB_DEBUG sys1d)", content)
 
 
+@pytest.mark.tool_cmake
 class CMakeMultiSyntaxTest(unittest.TestCase):
 
     def setUp(self):
@@ -340,7 +348,7 @@ class CMakeMultiSyntaxTest(unittest.TestCase):
         self.client.run("install .")
         self.client.run("install . -s build_type=Debug")
 
-    def conan_basic_setup_interface_test(self):
+    def test_conan_basic_setup_interface(self):
         """
         Check conan_basic_setup() interface is the same one for cmake and cmake_multi generators
         """
@@ -350,7 +358,7 @@ class CMakeMultiSyntaxTest(unittest.TestCase):
         self.assertIn(expected, conanbuildinfo)
         self.assertIn(expected, conanbuildinfo_multi)
 
-    def conan_basic_setup_output_dirs_warning_test(self):
+    def test_conan_basic_setup_output_dirs_warning(self):
         """
         Check warning when suing NO_OUTPUT_DIRS
         """

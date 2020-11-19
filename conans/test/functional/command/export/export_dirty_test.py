@@ -2,9 +2,11 @@ import os
 import platform
 import unittest
 
+import pytest
+
 from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.test.assets.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import TestClient
 from conans.util.files import load
 
@@ -69,6 +71,7 @@ class ExportDirtyTest(unittest.TestCase):
         self.client.run("install Hello0/0.1@lasote/stable --build", assert_error=True)
         self.assertIn("ERROR: Unable to remove source folder", self.client.out)
 
+    @pytest.mark.tool_compiler
     def test_export_remove(self):
         # export is able to remove dirty source folders
         self.f.close()
@@ -77,6 +80,7 @@ class ExportDirtyTest(unittest.TestCase):
         self.client.run("install Hello0/0.1@lasote/stable --build")
         self.assertNotIn("WARN: Trying to remove corrupted source folder", self.client.out)
 
+    @pytest.mark.tool_compiler
     def test_install_remove(self):
         # install is also able to remove dirty source folders
         # Now, release the handle to the file

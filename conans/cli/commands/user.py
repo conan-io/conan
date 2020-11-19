@@ -1,24 +1,23 @@
 import json
 
+from conans.cli.cli import cli_out_write
 from conans.cli.command import conan_command, conan_subcommand, Extender, OnceArgument
 
 
-def output_user_list_json(info, out):
-    results = info["results"]
-    myjson = json.dumps(results, indent=4)
-    out.writeln(myjson)
+def output_user_list_json(info):
+    myjson = json.dumps(info, indent=4)
+    cli_out_write(myjson)
 
 
-def output_user_list_cli(info, out):
-    results = info["results"]
-    for remote_name, user_info in results.items():
+def output_user_list_cli(info):
+    for remote_name, user_info in info.items():
         output_str = "remote: {} user: {}".format(remote_name,
                                                   user_info["user"])
-        out.writeln(output_str)
+        cli_out_write(output_str)
 
 
 @conan_subcommand(formatters={"cli": output_user_list_cli, "json": output_user_list_json})
-def user_list(*args, conan_api, parser, subparser):
+def user_list(conan_api, parser, subparser, *args):
     """
     List users and remotes they are associated to.
     """
@@ -29,19 +28,13 @@ def user_list(*args, conan_api, parser, subparser):
                                 "If no remote is specified it will show the users for all "
                                 "the remotes")
     args = parser.parse_args(*args)
-    if not args.remote or "*" in args.remote:
-        info = {"results": {"remote1": {"user": "someuser1"},
-                            "remote2": {"user": "someuser2"},
-                            "remote3": {"user": "someuser3"},
-                            "remote4": {"user": "someuser4"}}}
-    else:
-        info = {"results": {"remote1": {"user": "someuser1"}}}
+    info = conan_api.user_list(args.remote)
     return info
 
 
 # no user associated with remote yet
 @conan_subcommand()
-def user_add(*args, conan_api, parser, subparser):
+def user_add(conan_api, parser, subparser, *args):
     """
     Add user authentication for a remote.
     """
@@ -60,11 +53,10 @@ def user_add(*args, conan_api, parser, subparser):
     subparser.add_argument("-f", "--force", action='store_true', default=False,
                            help="Force addition, will update if existing.")
     args = parser.parse_args(*args)
-    return {}
 
 
 @conan_subcommand()
-def user_remove(*args, conan_api, parser, subparser):
+def user_remove(conan_api, parser, subparser, *args):
     """
     Remove associated user from remote.
     """
@@ -72,11 +64,10 @@ def user_remove(*args, conan_api, parser, subparser):
                            help="Remote name. Accepts 'fnmatch' style wildcards. "
                                 "To remove the user for all remotes use: conan remote remove \"*\"")
     args = parser.parse_args(*args)
-    return {}
 
 
 @conan_subcommand()
-def user_update(*args, conan_api, parser, subparser):
+def user_update(conan_api, parser, subparser, *args):
     """
     Update the current user for a remote. If not 'user' and 'password' are passed it will ask
     for them interactively.
@@ -94,11 +85,10 @@ def user_update(*args, conan_api, parser, subparser):
                                 "empty, the password is requested interactively "
                                 "(not exposed)")
     args = parser.parse_args(*args)
-    return {}
 
 
 @conan_command(group="Misc")
-def user(*args, conan_api, parser, **kwargs):
+def user(conan_api, parser, *args, **kwargs):
     """
     Authenticates against a remote with user/pass, caching the auth token.
 
@@ -107,4 +97,3 @@ def user(*args, conan_api, parser, **kwargs):
     Changing the user, or introducing the password is only necessary to
     perform changes in remote packages.
     """
-    return

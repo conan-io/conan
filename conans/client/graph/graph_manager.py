@@ -343,6 +343,10 @@ class GraphManager(object):
             if new_profile_build_requires:
                 _recurse_build_requires(new_profile_build_requires, {})
 
+            if graph_lock:
+                graph_lock.check_locked_build_requires(node, package_build_requires,
+                                                       new_profile_build_requires)
+
     def _load_graph(self, root_node, check_updates, update, build_mode, remotes,
                     recorder, profile_host, profile_build, apply_build_requires,
                     graph_lock):

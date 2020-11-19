@@ -4,14 +4,18 @@ import textwrap
 import time
 import unittest
 
+import pytest
 from nose.plugins.attrib import attr
 from parameterized.parameterized import parameterized
 
 from conans.model.ref import ConanFileReference, PackageReference
+from conans.test.assets.sources import gen_function_cpp, gen_function_h
 from conans.test.utils.tools import TestClient
 
 
 @attr("toolchain")
+@pytest.mark.toolchain
+@pytest.mark.tool_cmake
 class Base(unittest.TestCase):
 
     conanfile = textwrap.dedent("""
@@ -25,9 +29,15 @@ class Base(unittest.TestCase):
 
             def toolchain(self):
                 tc = CMakeToolchain(self)
-                tc.definitions["DEFINITIONS_BOTH"] = True
-                tc.definitions.debug["DEFINITIONS_CONFIG"] = "Debug"
-                tc.definitions.release["DEFINITIONS_CONFIG"] = "Release"
+                tc.variables["MYVAR"] = "MYVAR_VALUE"
+                tc.variables["MYVAR2"] = "MYVAR_VALUE2"
+                tc.variables.debug["MYVAR_CONFIG"] = "MYVAR_DEBUG"
+                tc.variables.release["MYVAR_CONFIG"] = "MYVAR_RELEASE"
+                tc.variables.debug["MYVAR2_CONFIG"] = "MYVAR2_DEBUG"
+                tc.variables.release["MYVAR2_CONFIG"] = "MYVAR2_RELEASE"
+                tc.preprocessor_definitions["MYDEFINE"] = "MYDEF_VALUE"
+                tc.preprocessor_definitions.debug["MYDEFINE_CONFIG"] = "MYDEF_DEBUG"
+                tc.preprocessor_definitions.release["MYDEFINE_CONFIG"] = "MYDEF_RELEASE"
                 tc.write_toolchain_files()
 
             def build(self):
@@ -36,38 +46,10 @@ class Base(unittest.TestCase):
                 cmake.build()
         """)
 
-    lib_h = textwrap.dedent("""
-        #pragma once
-        #ifdef WIN32
-          #define APP_LIB_EXPORT __declspec(dllexport)
-        #else
-          #define APP_LIB_EXPORT
-        #endif
-        APP_LIB_EXPORT void app();
-        """)
-
-    lib_cpp = textwrap.dedent("""
-        #include <iostream>
-        #include "app.h"
-        #include "hello.h"
-        void app() {
-            std::cout << "Hello: " << HELLO_MSG <<std::endl;
-            #ifdef NDEBUG
-            std::cout << "App: Release!" <<std::endl;
-            #else
-            std::cout << "App: Debug!" <<std::endl;
-            #endif
-            std::cout << "DEFINITIONS_BOTH: " << DEFINITIONS_BOTH << "\\n";
-            std::cout << "DEFINITIONS_CONFIG: " << DEFINITIONS_CONFIG << "\\n";
-        }
-        """)
-
-    app = textwrap.dedent("""
-        #include "app.h"
-        int main() {
-            app();
-        }
-        """)
+    lib_h = gen_function_h(name="app")
+    lib_cpp = gen_function_cpp(name="app", msg="App", includes=["hello"], calls=["hello"],
+                               preprocessor=["MYVAR", "MYVAR_CONFIG", "MYDEFINE", "MYDEFINE_CONFIG"])
+    main = gen_function_cpp(name="main", includes=["app"], calls=["app"])
 
     cmakelist = textwrap.dedent("""
         cmake_minimum_required(VERSION 2.8)
@@ -98,17 +80,18 @@ class Base(unittest.TestCase):
         message(">> BUILD_SHARED_LIBS: ${BUILD_SHARED_LIBS}")
         get_directory_property(_COMPILE_DEFS DIRECTORY ${CMAKE_SOURCE_DIR} COMPILE_DEFINITIONS)
         message(">> COMPILE_DEFINITIONS: ${_COMPILE_DEFS}")
+
         find_package(hello REQUIRED)
         add_library(app_lib app_lib.cpp)
         target_link_libraries(app_lib PRIVATE hello::hello)
-        target_compile_definitions(app_lib PRIVATE DEFINITIONS_BOTH="${DEFINITIONS_BOTH}")
-        target_compile_definitions(app_lib PRIVATE DEFINITIONS_CONFIG=${DEFINITIONS_CONFIG})
+        target_compile_definitions(app_lib PRIVATE MYVAR="${MYVAR}")
+        target_compile_definitions(app_lib PRIVATE MYVAR_CONFIG=${MYVAR_CONFIG})
         add_executable(app app.cpp)
         target_link_libraries(app PRIVATE app_lib)
         """)
 
     def setUp(self):
-        self.client = TestClient(path_with_spaces=False)
+        self.client = TestClient(path_with_spaces=True)
         conanfile = textwrap.dedent("""
             from conans import ConanFile
             from conans.tools import save
@@ -117,7 +100,9 @@ class Base(unittest.TestCase):
                 settings = "build_type"
                 def package(self):
                     save(os.path.join(self.package_folder, "include/hello.h"),
-                         '#define HELLO_MSG "%s"' % self.settings.build_type)
+                         '''#include <iostream>
+                         void hello(){std::cout<< "Hello: %s" <<std::endl;}'''
+                         % self.settings.build_type)
             """)
         self.client.save({"conanfile.py": conanfile})
         self.client.run("create . hello/0.1@ -s build_type=Debug")
@@ -126,7 +111,7 @@ class Base(unittest.TestCase):
         # Prepare the actual consumer package
         self.client.save({"conanfile.py": self.conanfile,
                           "CMakeLists.txt": self.cmakelist,
-                          "app.cpp": self.app,
+                          "app.cpp": self.main,
                           "app_lib.cpp": self.lib_cpp,
                           "app.h": self.lib_h})
 
@@ -145,9 +130,10 @@ class Base(unittest.TestCase):
         return install_out
 
     def _modify_code(self):
-        content = self.client.load("app_lib.cpp")
-        content = content.replace("App:", "AppImproved:")
-        self.client.save({"app_lib.cpp": content})
+        lib_cpp = gen_function_cpp(name="app", msg="AppImproved", includes=["hello"], calls=["hello"],
+                                   preprocessor=["MYVAR", "MYVAR_CONFIG", "MYDEFINE",
+                                                 "MYDEFINE_CONFIG"])
+        self.client.save({"app_lib.cpp": lib_cpp})
 
         content = self.client.load("CMakeLists.txt")
         content = content.replace(">>", "++>>")
@@ -164,12 +150,16 @@ class Base(unittest.TestCase):
             build_directory = os.path.join(self.client.current_folder, "build").replace("\\", "/")
             command_str = 'DYLD_LIBRARY_PATH="%s" build/app' % build_directory
         else:
-            command_str = "build\\%s\\app.exe" % build_type if bin_folder else "build/app"
+            command_str = "build/%s/app.exe" % build_type if bin_folder else "build/app"
+            if platform.system() == "Windows":
+                command_str = command_str.replace("/", "\\")
         self.client.run_command(command_str)
         self.assertIn("Hello: %s" % build_type, self.client.out)
         self.assertIn("%s: %s!" % (msg, build_type), self.client.out)
-        self.assertIn("DEFINITIONS_BOTH: True", self.client.out)
-        self.assertIn("DEFINITIONS_CONFIG: %s" % build_type, self.client.out)
+        self.assertIn("MYVAR: MYVAR_VALUE", self.client.out)
+        self.assertIn("MYVAR_CONFIG: MYVAR_%s" % build_type.upper(), self.client.out)
+        self.assertIn("MYDEFINE: MYDEF_VALUE", self.client.out)
+        self.assertIn("MYDEFINE_CONFIG: MYDEF_%s" % build_type.upper(), self.client.out)
 
 
 @unittest.skipUnless(platform.system() == "Windows", "Only for windows")
@@ -267,6 +257,9 @@ class LinuxTest(Base):
         pic_str = "" if shared else "ON"
         arch_str = "-m32" if arch == "x86" else "-m64"
         cxx11_abi_str = "1" if libcxx == "libstdc++11" else "0"
+        defines = '_GLIBCXX_USE_CXX11_ABI=%s;MYDEFINE="MYDEF_VALUE";'\
+                  'MYDEFINE_CONFIG=$<IF:$<CONFIG:debug>,"MYDEF_DEBUG",'\
+                  '$<IF:$<CONFIG:release>,"MYDEF_RELEASE","">>' % cxx11_abi_str
         vals = {"CMAKE_CXX_STANDARD": "14",
                 "CMAKE_CXX_EXTENSIONS": extensions_str,
                 "CMAKE_BUILD_TYPE": build_type,
@@ -277,8 +270,8 @@ class LinuxTest(Base):
                 "CMAKE_C_FLAGS_DEBUG": "-g",
                 "CMAKE_C_FLAGS_RELEASE": "-O3 -DNDEBUG",
                 "CMAKE_SHARED_LINKER_FLAGS": arch_str,
-                "CMAKE_EXE_LINKER_FLAGS": "",
-                "COMPILE_DEFINITIONS": "_GLIBCXX_USE_CXX11_ABI=%s" % cxx11_abi_str,
+                "CMAKE_EXE_LINKER_FLAGS": arch_str,
+                "COMPILE_DEFINITIONS": defines,
                 "CMAKE_POSITION_INDEPENDENT_CODE": pic_str
                 }
 
@@ -326,7 +319,7 @@ class AppleTest(Base):
                 "CMAKE_C_FLAGS_DEBUG": "-g",
                 "CMAKE_C_FLAGS_RELEASE": "-O3 -DNDEBUG",
                 "CMAKE_SHARED_LINKER_FLAGS": "-m64",
-                "CMAKE_EXE_LINKER_FLAGS": "",
+                "CMAKE_EXE_LINKER_FLAGS": "-m64",
                 "CMAKE_SKIP_RPATH": "1",
                 "CMAKE_INSTALL_NAME_DIR": ""
                 }
@@ -355,6 +348,8 @@ class AppleTest(Base):
 
 
 @attr("toolchain")
+@pytest.mark.toolchain
+@pytest.mark.tool_cmake
 class CMakeInstallTest(unittest.TestCase):
 
     def test_install(self):
@@ -405,6 +400,6 @@ class CMakeInstallTest(unittest.TestCase):
         self.assertIn("pkg/0.1 package(): Packaged 1 '.h' file: header.h", client.out)
         ref = ConanFileReference.loads("pkg/0.1")
         layout = client.cache.package_layout(ref)
-        package_id = layout.conan_packages()[0]
+        package_id = layout.package_ids()[0]
         package_folder = layout.package(PackageReference(ref, package_id))
         self.assertTrue(os.path.exists(os.path.join(package_folder, "include", "header.h")))

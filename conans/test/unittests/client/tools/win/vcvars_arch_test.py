@@ -4,6 +4,7 @@
 import platform
 import unittest
 
+import pytest
 from nose.plugins.attrib import attr
 
 from conans.client import tools
@@ -15,6 +16,7 @@ from conans.test.utils.mocks import TestBufferConanOutput
 
 
 @attr('visual_studio')
+@pytest.mark.tool_visual_studio
 @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
 class VCVarsArchTest(unittest.TestCase):
     output = TestBufferConanOutput()

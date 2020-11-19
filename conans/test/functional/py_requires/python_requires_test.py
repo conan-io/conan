@@ -4,6 +4,7 @@ import textwrap
 import time
 import unittest
 
+import pytest
 from parameterized import parameterized
 
 from conans.model.ref import ConanFileReference
@@ -30,7 +31,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile})
         client.run("export . base/1.1@user/testing")
 
-    def reuse_test(self):
+    def test_reuse(self):
         client = TestClient(default_server_user=True)
         self._define_base(client)
         reuse = textwrap.dedent("""
@@ -55,7 +56,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         self.assertIn("Pkg/0.1@user/testing: Package installed "
                       "69265e58ddc68274e0c5510905003ff78c9db5de", client.out)
 
-    def reuse_dot_test(self):
+    def test_reuse_dot(self):
         client = TestClient(default_server_user=True)
         conanfile = textwrap.dedent("""
             from conans import ConanFile
@@ -75,7 +76,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         client.run("create . Pkg/0.1@user/testing")
         self.assertIn("Pkg/0.1@user/testing: My cool build!", client.out)
 
-    def with_alias_test(self):
+    def test_with_alias(self):
         client = TestClient()
         self._define_base(client)
         client.run("alias base/LATEST@user/testing base/1.1@user/testing")
@@ -93,7 +94,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         self.assertIn("Pkg/0.1@user/testing: My cool package!", client.out)
         self.assertIn("Pkg/0.1@user/testing: My cool package_info!", client.out)
 
-    def reuse_version_ranges_test(self):
+    def test_reuse_version_ranges(self):
         client = TestClient()
         self._define_base(client)
 
@@ -113,7 +114,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         self.assertIn("Pkg/0.1@user/testing: My cool package!", client.out)
         self.assertIn("Pkg/0.1@user/testing: My cool package_info!", client.out)
 
-    def multiple_reuse_test(self):
+    def test_multiple_reuse(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
             from conans import ConanFile
@@ -150,7 +151,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         self.assertIn("Pkg/0.1@user/testing: My cool package!", client.out)
         self.assertIn("Pkg/0.1@user/testing: My cool package_info!", client.out)
 
-    def transitive_access_error_test(self):
+    def test_transitive_access_error(self):
         # https://github.com/conan-io/conan/issues/5529
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
@@ -185,7 +186,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         client.run("create . pkg/0.1@user/channel", assert_error=True)
         self.assertIn("'base' is not a python_require", client.out)
 
-    def multiple_requires_error_test(self):
+    def test_multiple_requires_error(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
             from conans import ConanFile
@@ -234,7 +235,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         self.assertIn("Consumer/0.1@user/testing: PKG1F : 123", client.out)
         self.assertIn("Consumer/0.1@user/testing: PKG2F : 234", client.out)
 
-    def local_import_test(self):
+    def test_local_import(self):
         client = TestClient(default_server_user=True)
         conanfile = textwrap.dedent("""
             from conans import ConanFile
@@ -282,7 +283,8 @@ class PyRequiresExtendTest(unittest.TestCase):
         self.assertIn("Pkg/0.1@user/testing: Package installed "
                       "69265e58ddc68274e0c5510905003ff78c9db5de", client.out)
 
-    def reuse_scm_test(self):
+    @pytest.mark.tool_git
+    def test_reuse_scm(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
             from conans import ConanFile
@@ -311,7 +313,8 @@ class PyRequiresExtendTest(unittest.TestCase):
         self.assertIn('"type": "git",', client.out)
         self.assertIn('"url": "somerepo"', client.out)
 
-    def reuse_customize_scm_test(self):
+    @pytest.mark.tool_git
+    def test_reuse_customize_scm(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
             from conans import ConanFile
@@ -346,7 +349,8 @@ class PyRequiresExtendTest(unittest.TestCase):
         self.assertIn('"type": "git",', client.out)
         self.assertIn('"url": "other_repo"', client.out)
 
-    def reuse_scm_multiple_conandata_test(self):
+    @pytest.mark.tool_git
+    def test_reuse_scm_multiple_conandata(self):
         # https://github.com/conan-io/conan/issues/7236
         # This only works when using conandata.yml, conanfile.py replace is broken
         client = TestClient()
@@ -392,7 +396,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         self.assertNotEqual(base_rev, reuse2_rev)
         self.assertNotEqual(reuse2_rev, reuse1_rev)
 
-    def reuse_class_members_test(self):
+    def test_reuse_class_members(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
             from conans import ConanFile
@@ -440,7 +444,28 @@ class PyRequiresExtendTest(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(client.cache.package_layout(ref).export(),
                                                     "other.txt")))
 
-    def overwrite_class_members_test(self):
+    def test_reuse_system_requirements(self):
+        # https://github.com/conan-io/conan/issues/7718
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+           from conans import ConanFile
+           class MyConanfileBase(ConanFile):
+               def system_requirements(self):
+                   self.output.info("My system_requirements %s being called!" % self.name)
+           """)
+        client.save({"conanfile.py": conanfile})
+        client.run("export . base/1.1@user/testing")
+        reuse = textwrap.dedent("""
+            from conans import ConanFile
+            class PkgTest(ConanFile):
+                python_requires = "base/1.1@user/testing"
+                python_requires_extend = "base.MyConanfileBase"
+            """)
+        client.save({"conanfile.py": reuse}, clean_first=True)
+        client.run("create . Pkg/0.1@user/testing")
+        self.assertIn("Pkg/0.1@user/testing: My system_requirements Pkg being called!", client.out)
+
+    def test_overwrite_class_members(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
             from conans import ConanFile
@@ -478,7 +503,8 @@ class PyRequiresExtendTest(unittest.TestCase):
         self.assertIn("Pkg/0.1@user/testing: Author! frodo", client.out)
         self.assertIn("Pkg/0.1@user/testing: os: Windows arch: armv7", client.out)
 
-    def failure_init_method_test(self):
+    @pytest.mark.tool_compiler
+    def test_failure_init_method(self):
         client = TestClient()
         base = textwrap.dedent("""
             from conans import ConanFile
@@ -512,7 +538,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         client.run("create . pkg/0.1@ -o base_option=True")
         self.assertIn("pkg/0.1: Created package", client.out)
 
-    def transitive_imports_conflicts_test(self):
+    def test_transitive_imports_conflicts(self):
         # https://github.com/conan-io/conan/issues/3874
         client = TestClient()
         conanfile = textwrap.dedent("""
@@ -553,7 +579,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         self.assertIn("Pkg/0.1@user/testing: MyHelperOutput!", client.out)
         self.assertIn("Pkg/0.1@user/testing: MyOtherHelperOutput!", client.out)
 
-    def update_test(self):
+    def test_update(self):
         client = TestClient(default_server_user=True)
         conanfile = textwrap.dedent("""
             from conans import ConanFile
@@ -588,7 +614,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         client2.run("install . --update")
         self.assertIn("conanfile.py: PYTHON REQUIRE VAR 143", client2.out)
 
-    def update_ranges_test(self):
+    def test_update_ranges(self):
         # Same as the above, but using a version range, and no --update
         # https://github.com/conan-io/conan/issues/4650#issuecomment-497464305
         client = TestClient(default_server_user=True)
@@ -625,7 +651,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         client2.run("install . --update")
         self.assertIn("conanfile.py: PYTHON REQUIRE VAR 143", client2.out)
 
-    def duplicate_pyreq_test(self):
+    def test_duplicate_pyreq(self):
         t = TestClient()
         conanfile = textwrap.dedent("""
             from conans import ConanFile
@@ -646,7 +672,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         self.assertIn("ERROR: Error loading conanfile", t.out)
         self.assertIn("The python_require 'pyreq' already exists", t.out)
 
-    def local_build_test(self):
+    def test_local_build(self):
         client = TestClient()
         client.save({"conanfile.py": "var=42\n"+str(GenConanfile())})
         client.run("export . tool/0.1@user/channel")
@@ -671,7 +697,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         self.assertIn("conanfile.py: Pkg1 package: 42", client.out)
         client.run("export-pkg . pkg1/0.1@user/testing")
 
-    def reuse_name_version_test(self):
+    def test_reuse_name_version(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
             from conans import ConanFile
@@ -824,7 +850,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         self.assertNotIn("alias", client.out)
         self.assertNotIn("alias2", client.out)
 
-    def reuse_export_sources_test(self):
+    def test_reuse_export_sources(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
             from conans import ConanFile
@@ -881,7 +907,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         self.assertIn("conanfile.py: Build: tool header: myheader", client.out)
         self.assertIn("conanfile.py: Build: tool other: otherheader", client.out)
 
-    def reuse_exports_test(self):
+    def test_reuse_exports(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
             from conans import ConanFile

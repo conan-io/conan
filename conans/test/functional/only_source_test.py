@@ -1,10 +1,12 @@
 import os
 import unittest
 
+import pytest
+
 from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files
-from conans.test.utils.genconanfile import GenConanfile
+from conans.test.assets.cpp_test_files import cpp_hello_conan_files
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, TestServer
 
 
@@ -21,7 +23,8 @@ class OnlySourceTest(unittest.TestCase):
         if export:
             client.run("export . lasote/stable")
 
-    def conan_test_test(self):
+    @pytest.mark.tool_cmake
+    def test_conan_test(self):
         # Checks --build in test command
         client = TestClient()
         self._create(client, "Hello0", "0.0")
@@ -39,14 +42,14 @@ class OnlySourceTest(unittest.TestCase):
         # Will Fail because Hello0/0.0 and Hello1/1.1 has not built packages
         # and by default no packages are built
         client.run("create . lasote/stable", assert_error=True)
-        self.assertIn('Try to build from sources with "--build=Hello0 --build=Hello1"', client.out)
+        self.assertIn("Try to build from sources with '--build=Hello0 --build=Hello1'", client.out)
 
         # We generate the package for Hello0/0.0
         client.run("install Hello0/0.0@lasote/stable --build Hello0")
 
         # Still missing Hello1/1.1
         client.run("create . lasote/stable", assert_error=True)
-        self.assertIn('Try to build from sources with "--build=Hello1"', client.out)
+        self.assertIn("Try to build from sources with '--build=Hello1'", client.out)
 
         # We generate the package for Hello1/1.1
         client.run("install Hello1/1.1@lasote/stable --build Hello1")
@@ -60,7 +63,7 @@ class OnlySourceTest(unittest.TestCase):
         client.run("create . lasote/stable")
         self.assertIn('Hello2/2.2@lasote/stable: Forced build from source', client.out)
 
-    def build_policies_update_test(self):
+    def test_build_policies_update(self):
         client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
         conanfile = """
 from conans import ConanFile
@@ -89,7 +92,8 @@ class MyPackage(ConanFile):
                       client.out)
         client.run("upload test/1.9@lasote/stable")
 
-    def build_policies_in_conanfile_test(self):
+    @pytest.mark.tool_cmake
+    def test_build_policies_in_conanfile(self):
 
         client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
         files = cpp_hello_conan_files("Hello0", "1.0", [], config=False, build=False)
@@ -137,7 +141,8 @@ class MyPackage(ConanFile):
         client.run("upload Hello0/1.0@lasote/stable --all", assert_error=True)
         self.assertIn("no packages can be uploaded", client.out)
 
-    def reuse_test(self):
+    @pytest.mark.tool_cmake
+    def test_reuse(self):
         client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
         ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
         files = cpp_hello_conan_files("Hello0", "0.1")

@@ -5,7 +5,7 @@ from collections import OrderedDict
 from conans.client import tools
 from conans.client.build.compiler_flags import architecture_flag, parallel_compiler_cl_flag
 from conans.client.build.cppstd_flags import cppstd_from_settings, cppstd_flag_new as cppstd_flag
-from conans.client.tools import cross_building
+from conans.client.tools import cross_building, Version
 from conans.client.tools.apple import is_apple_os
 from conans.client.tools.oss import get_cross_building_settings
 from conans.errors import ConanException
@@ -172,7 +172,7 @@ class CMakeDefinitionsBuilder(object):
         definitions["CONAN_STD_CXX_FLAG"] = cppstd_flag(self._conanfile.settings)
         return definitions
 
-    def _cmake_cross_build_defines(self):
+    def _cmake_cross_build_defines(self, cmake_version):
         os_ = self._ss("os")
         arch = self._ss("arch")
         os_ver_str = "os.api_level" if os_ == "Android" else "os.version"
@@ -202,15 +202,19 @@ class CMakeDefinitionsBuilder(object):
         if cmake_system_name is not True:  # String not empty
             definitions["CMAKE_SYSTEM_NAME"] = cmake_system_name
         else:  # detect if we are cross building and the system name and version
-            if cross_building(self._conanfile):  # We are cross building
-                if os_ != os_build:
-                    if os_:  # the_os is the host (regular setting)
-                        definitions["CMAKE_SYSTEM_NAME"] = {"iOS": "Darwin",
-                                                            "tvOS": "Darwin",
-                                                            "watchOS": "Darwin",
-                                                            "Neutrino": "QNX"}.get(os_, os_)
-                    else:
-                        definitions["CMAKE_SYSTEM_NAME"] = "Generic"
+            skip_x64_x86 = os_ in ['Windows', 'Linux', 'SunOS', 'AIX']
+            if cross_building(self._conanfile, skip_x64_x86=skip_x64_x86):  # We are cross building
+                apple_system_name = "Darwin" if cmake_version and Version(cmake_version) < Version(
+                    "3.14") or not cmake_version else None
+                cmake_system_name_map = {"Macos": "Darwin",
+                                         "iOS": apple_system_name or "iOS",
+                                         "tvOS": apple_system_name or "tvOS",
+                                         "watchOS": apple_system_name or "watchOS",
+                                         "Neutrino": "QNX",
+                                         "": "Generic",
+                                         None: "Generic"}
+                definitions["CMAKE_SYSTEM_NAME"] = cmake_system_name_map.get(os_, os_)
+
         if os_ver:
             definitions["CMAKE_SYSTEM_VERSION"] = os_ver
             if is_apple_os(os_):
@@ -278,7 +282,7 @@ class CMakeDefinitionsBuilder(object):
 
         return {}
 
-    def get_definitions(self):
+    def get_definitions(self, cmake_version):
 
         compiler = self._ss("compiler")
         compiler_base = self._ss("compiler.base")
@@ -295,7 +299,8 @@ class CMakeDefinitionsBuilder(object):
                                                  self._generator, self._output))
 
         # don't attempt to override variables set within toolchain
-        if tools.is_apple_os(os_) and "CONAN_CMAKE_TOOLCHAIN_FILE" not in os.environ and "CMAKE_TOOLCHAIN_FILE" not in definitions:
+        if (tools.is_apple_os(os_) and "CONAN_CMAKE_TOOLCHAIN_FILE" not in os.environ
+                and "CMAKE_TOOLCHAIN_FILE" not in definitions):
             apple_arch = tools.to_apple_arch(arch)
             if apple_arch:
                 definitions["CMAKE_OSX_ARCHITECTURES"] = apple_arch
@@ -307,7 +312,7 @@ class CMakeDefinitionsBuilder(object):
                 if sdk_path:
                     definitions["CMAKE_OSX_SYSROOT"] = sdk_path
 
-        definitions.update(self._cmake_cross_build_defines())
+        definitions.update(self._cmake_cross_build_defines(cmake_version))
         definitions.update(self._get_cpp_standard_vars())
 
         definitions.update(in_local_cache_definition(self._conanfile.in_local_cache))

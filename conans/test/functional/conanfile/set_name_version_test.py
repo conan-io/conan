@@ -11,7 +11,7 @@ from conans.util.files import mkdir
 class SetVersionNameTest(unittest.TestCase):
 
     @parameterized.expand([("", ), ("@user/channel", )])
-    def set_version_name_test(self, user_channel):
+    def test_set_version_name(self, user_channel):
         client = TestClient()
         conanfile = textwrap.dedent("""
             from conans import ConanFile
@@ -37,7 +37,7 @@ class SetVersionNameTest(unittest.TestCase):
         client.run("install .")
         self.assertIn("conanfile.py (pkg/2.1): Installing package", client.out)
 
-    def set_version_name_file_test(self):
+    def test_set_version_name_file(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
             from conans import ConanFile, load
@@ -62,7 +62,7 @@ class SetVersionNameTest(unittest.TestCase):
         client.run("install .")
         self.assertIn("conanfile.py (pkg/2.1): Installing package", client.out)
 
-    def set_version_name_errors_test(self):
+    def test_set_version_name_errors(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
             from conans import ConanFile
@@ -85,7 +85,7 @@ class SetVersionNameTest(unittest.TestCase):
         client.run("install . other/1.2@", assert_error=True)
         self.assertIn("ERROR: Package recipe with name other!=pkg", client.out)
 
-    def set_version_name_only_not_cli_test(self):
+    def test_set_version_name_only_not_cli(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
             from conans import ConanFile
@@ -109,7 +109,7 @@ class SetVersionNameTest(unittest.TestCase):
         client.run("install .")
         self.assertIn("conanfile.py (pkg/2.0)", client.out)
 
-    def set_version_name_crash_test(self):
+    def test_set_version_name_crash(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
             from conans import ConanFile
@@ -132,7 +132,7 @@ class SetVersionNameTest(unittest.TestCase):
         self.assertIn("ERROR: conanfile.py: Error in set_version() method, line 5", client.out)
         self.assertIn("name 'error' is not defined", client.out)
 
-    def set_version_recipe_folder_test(self):
+    def test_set_version_recipe_folder(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
             import os
@@ -163,7 +163,7 @@ class SetVersionNameTest(unittest.TestCase):
         client2.run("export .")
         self.assertIn("consumer/8.3: A new conanfile.py version was exported", client2.out)
 
-    def set_version_cwd_test(self):
+    def test_set_version_cwd(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
             import os

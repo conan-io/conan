@@ -3,6 +3,7 @@ import platform
 import textwrap
 import unittest
 
+import pytest
 from jinja2 import Template
 from parameterized import parameterized
 
@@ -10,6 +11,7 @@ from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient
 
 
+@pytest.mark.tool_cmake
 class LinkOrderTest(unittest.TestCase):
     """ Check that the link order of libraries is preserved when using CMake generators
         https://github.com/conan-io/conan/issues/6280
@@ -232,8 +234,10 @@ class LinkOrderTest(unittest.TestCase):
         libs = []
         for it in content.splitlines():
             # This is for Linux and Mac
-            if 'main.cpp.o  -o example' in it:
-                _, links = it.split("main.cpp.o  -o example")
+            # Remove double spaces from output that appear in some platforms
+            line = ' '.join(it.split())
+            if 'main.cpp.o -o example' in line:
+                _, links = line.split("main.cpp.o -o example")
                 for it_lib in links.split():
                     if it_lib.startswith("-l"):
                         libs.append(it_lib[2:])

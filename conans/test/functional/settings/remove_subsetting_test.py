@@ -7,7 +7,7 @@ from conans.util.files import mkdir
 
 class RemoveSubsettingTest(unittest.TestCase):
 
-    def remove_options_test(self):
+    def test_remove_options(self):
         # https://github.com/conan-io/conan/issues/2327
         # https://github.com/conan-io/conan/issues/2781
         client = TestClient()
@@ -30,7 +30,7 @@ class Pkg(ConanFile):
         self.assertIn("ConanException: option 'opt2' doesn't exist", client.out)
         self.assertIn("Possible options are ['opt1']", client.out)
 
-    def remove_setting_test(self):
+    def test_remove_setting(self):
         # https://github.com/conan-io/conan/issues/2327
         client = TestClient()
         conanfile = """from conans import ConanFile
@@ -53,7 +53,7 @@ class Pkg(ConanFile):
         client.run("install ..")
         client.run("build ..")
 
-    def remove_runtime_test(self):
+    def test_remove_runtime(self):
         # https://github.com/conan-io/conan/issues/2327
         client = TestClient()
         conanfile = """from conans import ConanFile, CMake
@@ -81,7 +81,7 @@ class Pkg(ConanFile):
         self.assertNotIn("CONAN_LINK_RUNTIME", client.out)
         self.assertIn('-DCONAN_COMPILER="Visual Studio"', client.out)
 
-    def remove_subsetting_test(self):
+    def test_remove_subsetting(self):
         # https://github.com/conan-io/conan/issues/2049
         client = TestClient()
         base = '''from conans import ConanFile
@@ -109,7 +109,7 @@ class ConanLib(ConanFile):
                    "-s compiler.version=4.9 -s compiler.libcxx=libstdc++11")
         self.assertNotIn("LIBCXX", client.out)
 
-    def remove_subsetting_build_test(self):
+    def test_remove_subsetting_build(self):
         # https://github.com/conan-io/conan/issues/2049
         client = TestClient()
 
