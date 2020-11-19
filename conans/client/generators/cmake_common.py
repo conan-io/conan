@@ -642,6 +642,8 @@ class CMakeCommonMacros:
 
             link_directories(${CONAN_LIB_DIRS})
 
+            conan_find_libraries_abs_path("${CONAN_LIBS}" "${CONAN_LIB_DIRS}"
+                                          CONAN_LIBS)
             conan_find_libraries_abs_path("${CONAN_LIBS_DEBUG}" "${CONAN_LIB_DIRS_DEBUG}"
                                           CONAN_LIBS_DEBUG)
             conan_find_libraries_abs_path("${CONAN_LIBS_RELEASE}" "${CONAN_LIB_DIRS_RELEASE}"
