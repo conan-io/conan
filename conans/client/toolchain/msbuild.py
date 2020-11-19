@@ -29,16 +29,14 @@ class MSBuildCmd(object):
         self.platform = msvc_arch
 
     def command(self, sln):
-        vcvars = vcvars_command(self.version, architecture=self.vcvars_arch,
-                                platform_type=None, winsdk_version=None,
-                                vcvars_ver=None)
-        cmd = ('%s && msbuild "%s" /p:Configuration=%s /p:Platform=%s '
-               % (vcvars, sln, self.build_type, self.platform))
-
-        if self.compiler == 'intel':
+        if self.compiler == "intel":
             cvars = intel_compilervars_command(self._conanfile)
-            cmd = '%s && %s' % (cvars, cmd)
-            cmd += '/p:PlatformToolset="%s"' % msvs_toolset(self._conanfile)
+        else:
+            cvars = vcvars_command(self.version, architecture=self.vcvars_arch,
+                                    platform_type=None, winsdk_version=None,
+                                    vcvars_ver=None)
+        cmd = ('%s && msbuild "%s" /p:Configuration=%s /p:Platform=%s '
+               % (cvars, sln, self.build_type, self.platform))
 
         return cmd
 
@@ -59,8 +57,6 @@ class MSBuildToolchain(object):
     def __init__(self, conanfile):
         self._conanfile = conanfile
         self.preprocessor_definitions = {}
-
-    filename = "conan_toolchain.props"
 
     @staticmethod
     def _name_condition(settings):
