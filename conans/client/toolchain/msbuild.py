@@ -38,9 +38,6 @@ class MSBuildCmd(object):
         cmd = ('%s && msbuild "%s" /p:Configuration=%s /p:Platform=%s '
                % (cvars, sln, self.build_type, self.platform))
 
-        if self.compiler == 'intel':
-            cmd += '/p:PlatformToolset="%s"' % msvs_toolset(self._conanfile)
-
         return cmd
 
     def build(self, sln):
