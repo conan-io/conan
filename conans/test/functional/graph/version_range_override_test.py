@@ -90,3 +90,31 @@ class VersionRangeOverrideFailTestCase(unittest.TestCase):
         lock = t.load("conan.lock")
         self.assertIn("gtest/1.8.1@bloomberg/stable", lock)
         self.assertNotIn("gtest/1.8.0@PORT/stable", lock)
+
+    def test_override(self):
+        # https://github.com/conan-io/conan/issues/8071
+        t = TestClient()
+        t.save({"conanfile.py": GenConanfile()})
+        t.run("create . ros_core/1.1.4@3rdparty/unstable")
+        t.run("create . ros_core/PR-53@3rdparty/snapshot")
+        t.save({"conanfile.py": GenConanfile().with_requires("ros_core/1.1.4@3rdparty/unstable")})
+        t.run("create . ros_perception/1.1.4@3rdparty/unstable")
+        t.run("create . ros_perception/PR-53@3rdparty/snapshot")
+        t.save({"conanfile.py": GenConanfile().with_requires("ros_core/[~=1.1]@3rdparty/unstable")})
+        t.run("create . pkgb/0.1@common/unstable")
+        t.save({"conanfile.py": GenConanfile().with_requires(
+            "ros_perception/[~=1.1]@3rdparty/unstable",
+            "pkgb/[~=0]@common/unstable")})
+        t.run("create . pkga/0.1@common/unstable")
+        self.assertIn("ros_core/1.1.4@3rdparty/unstable", t.out)
+        self.assertIn("ros_perception/1.1.4@3rdparty/unstable", t.out)
+        self.assertNotIn("snapshot", t.out)
+
+        t.save({"conanfile.py": GenConanfile().with_require("pkgb/[~=0]@common/unstable")
+                                              .with_require("ros_perception/PR-53@3rdparty/snapshot")
+                                              .with_require("ros_core/PR-53@3rdparty/snapshot",
+                                                            override=True)})
+
+        t.run("create . pkga/0.1@common/unstable --build=missing --build=pkga")
+        self.assertIn("ros_core/PR-53@3rdparty/snapshot", t.out)
+        self.assertIn("ros_perception/PR-53@3rdparty/snapshot", t.out)
