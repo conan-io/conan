@@ -6,6 +6,7 @@ from conans.client.toolchain.cmake import CMakeToolchain
 from conans.client.toolchain.make import MakeToolchain
 from conans.client.build.meson import Meson
 from conans.client.build.msbuild import MSBuild
+from conans.client.build.qbs import Qbs
 from conans.client.build.visual_environment import VisualStudioBuildEnvironment
 from conans.client.run_environment import RunEnvironment
 from conans.model.conan_file import ConanFile
