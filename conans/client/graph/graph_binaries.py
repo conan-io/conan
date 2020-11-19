@@ -4,7 +4,7 @@ from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLO
                                        RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP, BINARY_UNKNOWN,
                                        BINARY_INVALID)
 from conans.errors import NoRemoteAvailable, NotFoundException, conanfile_exception_formatter, \
-    ConanException
+    ConanException, ConanInvalidConfiguration
 from conans.model.info import ConanInfo, PACKAGE_ID_UNKNOWN, PACKAGE_ID_INVALID
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference
@@ -188,7 +188,7 @@ class GraphBinariesAnalyzer(object):
                         # NO Build mode
                         self._process_node(node, pref, compatible_build_mode, update, remotes)
                         assert node.binary is not None
-                        if node.binary not in (BINARY_MISSING, BINARY_INVALID):
+                        if node.binary not in BINARY_MISSING:
                             node.conanfile.output.info("Main binary package '%s' missing. Using "
                                                        "compatible package '%s'"
                                                        % (node.package_id, package_id))
@@ -199,6 +199,8 @@ class GraphBinariesAnalyzer(object):
                             node.conanfile.settings.values = compatible_package.settings
                             node.conanfile.options.values = compatible_package.options
                             break
+                    if node.binary == BINARY_MISSING and node.package_id == PACKAGE_ID_INVALID:
+                        node.binary = BINARY_INVALID
                 if node.binary == BINARY_MISSING and build_mode.allowed(node.conanfile):
                     node.binary = BINARY_BUILD
 
@@ -346,7 +348,10 @@ class GraphBinariesAnalyzer(object):
 
         if hasattr(conanfile, "validate") and callable(conanfile.validate):
             with conanfile_exception_formatter(str(conanfile), "validate"):
-                conanfile.validate()
+                try:
+                    conanfile.validate()
+                except ConanInvalidConfiguration as e:
+                    conanfile.info.invalid = str(e)
 
         info = conanfile.info
         node.package_id = info.package_id()
