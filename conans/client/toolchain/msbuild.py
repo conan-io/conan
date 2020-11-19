@@ -29,15 +29,16 @@ class MSBuildCmd(object):
         self.platform = msvc_arch
 
     def command(self, sln):
-        vcvars = vcvars_command(self.version, architecture=self.vcvars_arch,
-                                platform_type=None, winsdk_version=None,
-                                vcvars_ver=None)
+        if self.compiler == "intel":
+            cvars = intel_compilervars_command(self._conanfile)
+        else:
+            cvars = vcvars_command(self.version, architecture=self.vcvars_arch,
+                                    platform_type=None, winsdk_version=None,
+                                    vcvars_ver=None)
         cmd = ('%s && msbuild "%s" /p:Configuration=%s /p:Platform=%s '
-               % (vcvars, sln, self.build_type, self.platform))
+               % (cvars, sln, self.build_type, self.platform))
 
         if self.compiler == 'intel':
-            cvars = intel_compilervars_command(self._conanfile)
-            cmd = '%s && %s' % (cvars, cmd)
             cmd += '/p:PlatformToolset="%s"' % msvs_toolset(self._conanfile)
 
         return cmd
