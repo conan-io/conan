@@ -88,8 +88,9 @@ class BuildOrderTest(unittest.TestCase):
         self.assertEqual([], jsonbo)
         # if we try to build anyway, error
         client.run("install test4/0.1@ --lockfile=conan.lock --build", assert_error=True)
-        self.assertIn("Cannot build 'test4/0.1#f876ec9ea0f44cb7adb1588e431b391a' because it is "
-                      "already locked in the input lockfile", client.out)
+        rev = "#f876ec9ea0f44cb7adb1588e431b391a" if client.cache.config.revisions_enabled else ""
+        self.assertIn("Cannot build 'test4/0.1{}' because it is "
+                      "already locked in the input lockfile".format(rev), client.out)
 
     @parameterized.expand([(True,), (False,)])
     def test_transitive_build_not_locked(self, export):
@@ -166,8 +167,9 @@ class BuildOrderTest(unittest.TestCase):
         self.assertEqual(build_order[1:], jsonbo)
 
         client.run("install pkg/0.1@ --lockfile=conan.lock --build", assert_error=True)
-        self.assertIn("Cannot build 'dep/0.1#f3367e0e7d170aa12abccb175fee5f97' because it is "
-                      "already locked in the input lockfile", client.out)
+        rev = "#f3367e0e7d170aa12abccb175fee5f97" if client.cache.config.revisions_enabled else ""
+        self.assertIn("Cannot build 'dep/0.1{}' because it is "
+                      "already locked in the input lockfile".format(rev), client.out)
         client.run("install {0} --lockfile=conan.lock --lockfile-out=conan.lock "
                    "--build={0}".format(build_order[1][0][0]))
         self.assertIn("dep/0.1:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache", client.out)
@@ -185,8 +187,9 @@ class BuildOrderTest(unittest.TestCase):
         self.assertEqual(build_order[2:], jsonbo)
 
         client.run("install app/0.1@ --lockfile=conan.lock --build", assert_error=True)
-        self.assertIn("Cannot build 'dep/0.1#f3367e0e7d170aa12abccb175fee5f97' because it is "
-                      "already locked in the input lockfile", client.out)
+        rev = "#f3367e0e7d170aa12abccb175fee5f97" if client.cache.config.revisions_enabled else ""
+        self.assertIn("Cannot build 'dep/0.1{}' because it is "
+                      "already locked in the input lockfile".format(rev), client.out)
         client.run("install {0} --lockfile=conan.lock --lockfile-out=conan.lock "
                    "--build={0}".format(build_order[2][0][0]))
         self.assertIn("dep/0.1:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache", client.out)
@@ -329,8 +332,9 @@ class BuildRequiresBuildOrderTest(unittest.TestCase):
         self.assertEqual(build_order[1:], jsonbo)
 
         client.run("install pkg/0.1@ --lockfile=conan.lock --build", assert_error=True)
-        self.assertIn("Cannot build 'dep/0.1#f3367e0e7d170aa12abccb175fee5f97' because it is "
-                      "already locked in the input lockfile", client.out)
+        rrev = "#f3367e0e7d170aa12abccb175fee5f97" if client.cache.config.revisions_enabled else ""
+        self.assertIn("Cannot build 'dep/0.1{}' because it is "
+                      "already locked in the input lockfile".format(rrev), client.out)
         client.run("install {0} --lockfile=conan.lock --lockfile-out=conan.lock "
                    "--build={0}".format(build_order[1][0][0]))
         self.assertIn("dep/0.1:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache", client.out)
@@ -348,8 +352,9 @@ class BuildRequiresBuildOrderTest(unittest.TestCase):
         self.assertEqual(build_order[2:], jsonbo)
 
         client.run("install app/0.1@ --lockfile=conan.lock --build", assert_error=True)
-        self.assertIn("Cannot build 'pkg/0.1#1364f701b47130c7e38f04c5e5fab985' because it is "
-                      "already locked in the input lockfile", client.out)
+        rrev = "#1364f701b47130c7e38f04c5e5fab985" if client.cache.config.revisions_enabled else ""
+        self.assertIn("Cannot build 'pkg/0.1{}' because it is "
+                      "already locked in the input lockfile".format(rrev), client.out)
         client.run("install {0} --lockfile=conan.lock --lockfile-out=conan.lock "
                    "--build={0}".format(build_order[2][0][0]))
         self.assertNotIn("dep/0.1", client.out)

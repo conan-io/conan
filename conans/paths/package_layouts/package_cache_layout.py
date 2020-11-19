@@ -17,6 +17,7 @@ from conans.model.ref import ConanFileReference
 from conans.model.ref import PackageReference
 from conans.paths import CONANFILE, SYSTEM_REQS, EXPORT_FOLDER, EXPORT_SRC_FOLDER, SRC_FOLDER, \
     BUILD_FOLDER, PACKAGES_FOLDER, SYSTEM_REQS_FOLDER, PACKAGE_METADATA, SCM_SRC_FOLDER, rm_conandir
+from conans.util.env_reader import get_env
 from conans.util.files import load, save, rmdir, set_dirty, clean_dirty, is_dirty
 from conans.util.locks import Lock, NoLock, ReadLock, SimpleLock, WriteLock
 from conans.util.log import logger
@@ -294,6 +295,8 @@ class PackageCacheLayout(object):
         if not os.path.exists(abs_path):
             raise NotFoundException("The specified path doesn't exist")
         if os.path.isdir(abs_path):
-            return sorted([path for path in os.listdir(abs_path) if not discarded_file(path)])
+            keep_python = get_env("CONAN_KEEP_PYTHON_FILES", False)
+            return sorted([path for path in os.listdir(abs_path) if not discarded_file(path,
+                                                                                       keep_python)])
         else:
             return load(abs_path)

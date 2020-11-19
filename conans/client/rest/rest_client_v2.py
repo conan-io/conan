@@ -39,12 +39,12 @@ class RestV2Methods(RestCommonMethods):
         data["files"] = list(data["files"].keys())
         return data
 
-    def _get_remote_file_contents(self, url, use_cache):
+    def _get_remote_file_contents(self, url, use_cache, headers=None):
         # We don't want traces in output of these downloads, they are ugly in output
         downloader = FileDownloader(self.requester, None, self.verify_ssl, self._config)
         if use_cache and self._config.download_cache:
             downloader = CachedFileDownloader(self._config.download_cache, downloader)
-        contents = downloader.download(url, auth=self.auth)
+        contents = downloader.download(url, auth=self.auth, headers=headers)
         return contents
 
     def _get_snapshot(self, url):
@@ -77,10 +77,10 @@ class RestV2Methods(RestCommonMethods):
             logger.error(traceback.format_exc())
             raise ConanException(msg)
 
-    def get_package_info(self, pref):
+    def get_package_info(self, pref, headers):
         url = self.router.package_info(pref)
         cache = (pref.revision != DEFAULT_REVISION_V1)
-        content = self._get_remote_file_contents(url, use_cache=cache)
+        content = self._get_remote_file_contents(url, use_cache=cache, headers=headers)
         return ConanInfo.loads(decode_text(content))
 
     def get_recipe(self, ref, dest_folder):
@@ -329,9 +329,9 @@ class RestV2Methods(RestCommonMethods):
         # Ignored data["time"]
         return ref.copy_with_rev(rev)
 
-    def get_latest_package_revision(self, pref):
+    def get_latest_package_revision(self, pref, headers):
         url = self.router.package_latest(pref)
-        data = self.get_json(url)
+        data = self.get_json(url, headers=headers)
         prev = data["revision"]
         # Ignored data["time"]
         return pref.copy_with_revs(pref.ref.revision, prev)

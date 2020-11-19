@@ -116,25 +116,34 @@ class MyBuildInfoCreation(unittest.TestCase):
                     os.path.join(client.current_folder, "Linux.lock")]
         run()
 
-        user_channel = "@" + user_channel if len(user_channel) > 2 else user_channel
+        user_channel = "@" + user_channel if user_channel else user_channel
         buildinfo = json.loads(client.load("buildinfowin.json"))
         self.assertEqual(buildinfo["name"], "MyBuildName")
         self.assertEqual(buildinfo["number"], "42")
         ids_list = [item["id"] for item in buildinfo["modules"]]
-        expected = ["PkgC/0.1{}".format(user_channel),
-                    "PkgD/0.1{}".format(user_channel),
-                    "PkgC/0.1{}:3374c4fa6b7e865cfc3a1903ae014cf77a6938ec".format(user_channel),
-                    "PkgD/0.1{}:6cd742f1b907e693abf6da9f767aab3ee7fde606".format(user_channel)]
+        rrev_pkgd, rrev_pkgc, prev_pkgd_win, prev_pkgc_win, prev_pkgd_linux, prev_pkgc_linux = "", "", "", "", "", ""
+        if client.cache.config.revisions_enabled:
+            rrev_pkgd = "#4923df588db8c6e5867f8df8b8d4e79d" if user_channel else "#a4041e14960e937df21d431579e32e9c"
+            rrev_pkgc = "#4fb6c2b0610701ceb5d3b5ccb7a93ecf" if user_channel else "#9d4a7842c95b2ab65b99e2a8834c58da"
+            prev_pkgd_win = "#fae36f88c6cc61dafd2afe78687ab248" if user_channel else "#5f50bfa7642cd8924c80b3d6be87b4c5"
+            prev_pkgc_win = "#d0f5b7f73cb879dcc78b72ed3af8c85c" if user_channel else "#861f0854c9135d1e753ca9ffe8587d4a"
+            prev_pkgd_linux = "#ca5538e3a9abdfcc024ebd96837b7161" if user_channel else "#e6adeb06f3b4296c63a751b5d68ed858"
+            prev_pkgc_linux = "#472d19aea10fe10ddf081d13ca716404" if user_channel else "#919776eb660a26575c327cceb2f046f8"
+
+        expected = ["PkgC/0.1{}{}".format(user_channel, rrev_pkgc),
+                    "PkgD/0.1{}{}".format(user_channel, rrev_pkgd),
+                    "PkgC/0.1{}{}:3374c4fa6b7e865cfc3a1903ae014cf77a6938ec{}".format(user_channel, rrev_pkgc, prev_pkgc_win),
+                    "PkgD/0.1{}{}:6cd742f1b907e693abf6da9f767aab3ee7fde606{}".format(user_channel, rrev_pkgd, prev_pkgd_win)]
         self.assertEqual(set(expected), set(ids_list))
 
         buildinfo = json.loads(client.load("buildinfolinux.json"))
         self.assertEqual(buildinfo["name"], "MyBuildName")
         self.assertEqual(buildinfo["number"], "42")
         ids_list = [item["id"] for item in buildinfo["modules"]]
-        expected = ["PkgC/0.1{}".format(user_channel),
-                    "PkgD/0.1{}".format(user_channel),
-                    "PkgC/0.1{}:a1e39343af463cef4284c5550fde03912afd9852".format(user_channel),
-                    "PkgD/0.1{}:39af3f48fdee2bbc5f84e7da3a67ebab2a297acb".format(user_channel)]
+        expected = ["PkgC/0.1{}{}".format(user_channel, rrev_pkgc),
+                    "PkgD/0.1{}{}".format(user_channel, rrev_pkgd),
+                    "PkgC/0.1{}{}:a1e39343af463cef4284c5550fde03912afd9852{}".format(user_channel, rrev_pkgc, prev_pkgc_linux),
+                    "PkgD/0.1{}{}:39af3f48fdee2bbc5f84e7da3a67ebab2a297acb{}".format(user_channel, rrev_pkgd, prev_pkgd_linux)]
         self.assertEqual(set(expected), set(ids_list))
 
         sys.argv = ["conan_build_info", "--v2", "update",
@@ -148,12 +157,12 @@ class MyBuildInfoCreation(unittest.TestCase):
         self.assertEqual(buildinfo["name"], "MyBuildName")
         self.assertEqual(buildinfo["number"], "42")
         ids_list = [item["id"] for item in buildinfo["modules"]]
-        expected = ["PkgC/0.1{}".format(user_channel),
-                    "PkgD/0.1{}".format(user_channel),
-                    "PkgC/0.1{}:3374c4fa6b7e865cfc3a1903ae014cf77a6938ec".format(user_channel),
-                    "PkgC/0.1{}:a1e39343af463cef4284c5550fde03912afd9852".format(user_channel),
-                    "PkgD/0.1{}:6cd742f1b907e693abf6da9f767aab3ee7fde606".format(user_channel),
-                    "PkgD/0.1{}:39af3f48fdee2bbc5f84e7da3a67ebab2a297acb".format(user_channel),
+        expected = ["PkgC/0.1{}{}".format(user_channel, rrev_pkgc),
+                    "PkgD/0.1{}{}".format(user_channel, rrev_pkgd),
+                    "PkgC/0.1{}{}:3374c4fa6b7e865cfc3a1903ae014cf77a6938ec{}".format(user_channel, rrev_pkgc, prev_pkgc_win),
+                    "PkgC/0.1{}{}:a1e39343af463cef4284c5550fde03912afd9852{}".format(user_channel, rrev_pkgc, prev_pkgc_linux),
+                    "PkgD/0.1{}{}:6cd742f1b907e693abf6da9f767aab3ee7fde606{}".format(user_channel, rrev_pkgd, prev_pkgd_win),
+                    "PkgD/0.1{}{}:39af3f48fdee2bbc5f84e7da3a67ebab2a297acb{}".format(user_channel, rrev_pkgd, prev_pkgd_linux)
                     ]
         self.assertEqual(set(expected), set(ids_list))
 
@@ -182,7 +191,7 @@ class MyBuildInfoCreation(unittest.TestCase):
 
         mock_cache.return_value = client.cache
         user_home_mock.return_value = base_folder
-        user_channels = ["", "user/channel"]
+        user_channels = ["user/channel", ""]
         for user_channel in user_channels:
             self._test_buildinfo(client, user_channel)
 
