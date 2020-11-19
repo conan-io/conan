@@ -3,7 +3,7 @@ import textwrap
 from xml.dom import minidom
 
 from conans.client.toolchain.visual import vcvars_arch, vcvars_command
-from conans.client.tools import msvs_toolset
+from conans.client.tools import msvs_toolset, intel_compilervars_command
 from conans.errors import ConanException
 from conans.util.files import save, load
 
@@ -11,7 +11,9 @@ from conans.util.files import save, load
 class MSBuildCmd(object):
     def __init__(self, conanfile):
         self._conanfile = conanfile
-        self.version = conanfile.settings.get_safe("compiler.version")
+        self.compiler = conanfile.settings.get_safe("compiler")
+        self.version = conanfile.settings.get_safe("compiler.base.version") or \
+                       conanfile.settings.get_safe("compiler.version")
         self.vcvars_arch = vcvars_arch(conanfile)
         self.build_type = conanfile.settings.get_safe("build_type")
         msvc_arch = {'x86': 'x86',
@@ -32,6 +34,12 @@ class MSBuildCmd(object):
                                 vcvars_ver=None)
         cmd = ('%s && msbuild "%s" /p:Configuration=%s /p:Platform=%s '
                % (vcvars, sln, self.build_type, self.platform))
+
+        if self.compiler == 'intel':
+            cvars = intel_compilervars_command(self._conanfile)
+            cmd = '%s && %s' % (cvars, cmd)
+            cmd += '/p:PlatformToolset="%s"' % msvs_toolset(self._conanfile)
+
         return cmd
 
     def build(self, sln):
@@ -39,7 +47,7 @@ class MSBuildCmd(object):
         self._conanfile.run(cmd)
 
     @staticmethod
-    def get_version(settings):
+    def get_version(_):
         return NotImplementedError("get_version() method is not supported in MSBuild "
                                    "toolchain helper")
 
@@ -49,6 +57,8 @@ class MSBuildToolchain(object):
     def __init__(self, conanfile):
         self._conanfile = conanfile
         self.preprocessor_definitions = {}
+
+    filename = "conan_toolchain.props"
 
     @staticmethod
     def _name_condition(settings):
@@ -108,7 +118,7 @@ class MSBuildToolchain(object):
         save(config_filepath, config_props)
 
     def _write_main_toolchain(self, config_filename, condition):
-        main_toolchain_path = os.path.abspath("conan_toolchain.props")
+        main_toolchain_path = os.path.abspath(self.filename)
         if os.path.isfile(main_toolchain_path):
             content = load(main_toolchain_path)
         else:
