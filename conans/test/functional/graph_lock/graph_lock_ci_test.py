@@ -739,13 +739,13 @@ class CIPrivateRequiresTest(unittest.TestCase):
         json_file = client.load("build_order.json")
         to_build = json.loads(json_file)
         if client.cache.config.revisions_enabled:
-            build_order = [[['private/0.1@',
+            build_order = [[['private/0.1@#e31c7a656abb86256b08af0e64d37d42',
                              'd2560ba1787c188a1d7fabeb5f8e012ac53301bb', 'host', '3'],
-                            ['private/0.1@',
+                            ['private/0.1@#e31c7a656abb86256b08af0e64d37d42',
                              '5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9', 'host', '4']],
-                           [['pkga/0.1@',
+                           [['pkga/0.1@#edf085c091f9f4adfdb623bda9415a79',
                              '5b0fc4382d9c849ae3ef02a57b62b26ad5137990', 'host', '2']],
-                           [['pkgb/0.1@',
+                           [['pkgb/0.1@#9b0edf8f61a88f92e05919b406d74089',
                              'd7d6ac48b43e368b0a5ff79015acea49b758ffdf', 'host', '1']]]
         else:
             build_order = [[['private/0.1@',
@@ -762,4 +762,4 @@ class CIPrivateRequiresTest(unittest.TestCase):
         for ref, pid, _, node_id in build_order[0]:
             client.run("install %s --build=%s --lockfile=conan.lock --lockfile-out=conan.lock "
                        "--lockfile-id=%s" % (ref, ref, node_id))
-            self.assertIn('private/0.1:{} - Build'.format(pid))
+            self.assertIn('private/0.1:{} - Build'.format(pid), client.out)
