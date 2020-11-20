@@ -77,9 +77,12 @@ class GetUrlWithCredentialsTest(unittest.TestCase):
                          scm.get_url_with_credentials("ssh://github.com/conan-io/conan.git"))
 
     def test_ssh_username_password(self):
-        scm = SCMBase(username="dani", password="pass")
-        with self.assertRaises(ConanException, msg="SCM password cannot be set for ssh url"):
-            scm.get_url_with_credentials("ssh://github.com/conan-io/conan.git")
+        output = OutputMock()
+        scm = SCMBase(username="dani", password="pass", output=output)
+        self.assertEqual('ssh://dani@github.com/conan-io/conan.git',
+                         scm.get_url_with_credentials("ssh://github.com/conan-io/conan.git"))
+        self.assertEqual(1, len(output.out))
+        self.assertIn("WARN: SCM password cannot be set for ssh url, ignoring parameter", output.out)
 
     def test_ssh_username(self):
         scm = SCMBase(username="dani")
@@ -89,13 +92,18 @@ class GetUrlWithCredentialsTest(unittest.TestCase):
     def test_ssh_password(self):
         output = OutputMock()
         scm = SCMBase(password="pass", output=output)
-        with self.assertRaises(ConanException, msg="SCM password cannot be set for ssh url"):
-            scm.get_url_with_credentials("ssh://github.com/conan-io/conan.git")
+        self.assertEqual('ssh://github.com/conan-io/conan.git',
+                         scm.get_url_with_credentials("ssh://github.com/conan-io/conan.git"))
+        self.assertEqual(1, len(output.out))
+        self.assertIn("WARN: SCM password cannot be set for ssh url, ignoring parameter", output.out)
 
     def test_ssh_url_with_username_only_password(self):
-        scm = SCMBase(password="pass")
-        with self.assertRaises(ConanException, msg="SCM password cannot be set for ssh url"):
-            scm.get_url_with_credentials("ssh://git@github.com/conan-io/conan.git")
+        output = OutputMock()
+        scm = SCMBase(password="pass", output=output)
+        self.assertEqual('ssh://dani@github.com/conan-io/conan.git',
+                         scm.get_url_with_credentials("ssh://dani@github.com/conan-io/conan.git"))
+        self.assertEqual(1, len(output.out))
+        self.assertIn("WARN: SCM password cannot be set for ssh url, ignoring parameter", output.out)
 
     def test_ssh_url_with_username_only_username(self):
         output = OutputMock()
@@ -107,23 +115,70 @@ class GetUrlWithCredentialsTest(unittest.TestCase):
     def test_ssh_url_with_username_and_username_password(self):
         output = OutputMock()
         scm = SCMBase(password="pass", username="dani", output=output)
-        with self.assertRaises(ConanException, msg="SCM password cannot be set for ssh url"):
-            scm.get_url_with_credentials("ssh://git@github.com/conan-io/conan.git")
+        self.assertEqual('ssh://git@github.com/conan-io/conan.git',
+                         scm.get_url_with_credentials("ssh://git@github.com/conan-io/conan.git"))
+        self.assertEqual(2, len(output.out))
+        self.assertIn("WARN: SCM password cannot be set for ssh url, ignoring parameter", output.out)
+        self.assertIn("WARN: SCM username got from URL, ignoring 'username' parameter", output.out)
 
     def test_ssh_url_with_username_password_and_only_password(self):
         output = OutputMock()
         scm = SCMBase(password="password", output=output)
-        with self.assertRaises(ConanException, msg="SCM password cannot be set for ssh url"):
-            scm.get_url_with_credentials("ssh://git:pass@github.com/conan-io/conan.git")
+        self.assertEqual('ssh://git:pass@github.com/conan-io/conan.git',
+                         scm.get_url_with_credentials("ssh://git:pass@github.com/conan-io/conan.git"))
+        self.assertEqual(1, len(output.out))
+        self.assertIn("WARN: SCM password cannot be set for ssh url, ignoring parameter", output.out)
 
     def test_ssh_url_with_username_password_and_only_username(self):
         output = OutputMock()
         scm = SCMBase(username="dani", output=output)
-        with self.assertRaises(ConanException, msg="SCM password cannot be set for ssh url"):
-            scm.get_url_with_credentials("ssh://git:pass@github.com/conan-io/conan.git")
+        self.assertEqual('ssh://git:pass@github.com/conan-io/conan.git',
+                         scm.get_url_with_credentials("ssh://git:pass@github.com/conan-io/conan.git"))
+        self.assertEqual(1, len(output.out))
+        self.assertIn("WARN: SCM username got from URL, ignoring 'username' parameter",
+                      output.out)
 
     def test_ssh_url_with_username_password_and_username_password(self):
         output = OutputMock()
         scm = SCMBase(password="password", username="dani", output=output)
-        with self.assertRaises(ConanException, msg="SCM password cannot be set for ssh url"):
-            scm.get_url_with_credentials("ssh://git:pass@github.com/conan-io/conan.git")
+        self.assertEqual("ssh://git:pass@github.com/conan-io/conan.git",
+                         scm.get_url_with_credentials("ssh://git:pass@github.com/conan-io/conan.git"))
+        self.assertEqual(2, len(output.out))
+        self.assertIn("WARN: SCM password cannot be set for ssh url, ignoring parameter", output.out)
+        self.assertIn("WARN: SCM username got from URL, ignoring 'username' parameter", output.out)
+
+    def test_scp(self):
+        scm = SCMBase()
+        self.assertEqual('git@github.com/conan-io/conan.git',
+                         scm.get_url_with_credentials("git@github.com/conan-io/conan.git"))
+
+    def test_scp_only_password(self):
+        output = OutputMock()
+        scm = SCMBase(password="pass", output=output)
+        self.assertEqual("git@github.com:conan-io/conan.git",
+                         scm.get_url_with_credentials("git@github.com:conan-io/conan.git"))
+        self.assertIn("WARN: SCM password cannot be set for ssh url, ignoring parameter", output.out)
+
+    def test_scp_only_username(self):
+        output = OutputMock()
+        scm = SCMBase(username="dani", output=output)
+        self.assertEqual('git@github.com:conan-io/conan.git',
+                         scm.get_url_with_credentials("git@github.com:conan-io/conan.git"))
+        self.assertIn("WARN: SCM username got from URL, ignoring 'username' parameter", output.out)
+
+    def test_scp_username_password(self):
+        output = OutputMock()
+        scm = SCMBase(password="pass", username="dani", output=output)
+        self.assertEqual("git@github.com:conan-io/conan.git",
+                         scm.get_url_with_credentials("git@github.com:conan-io/conan.git"))
+        self.assertEqual(2, len(output.out))
+        self.assertIn("WARN: SCM password cannot be set for ssh url, ignoring parameter", output.out)
+        self.assertIn("WARN: SCM username got from URL, ignoring 'username' parameter", output.out)
+
+    def test_scp_url_username_password(self):
+        output = OutputMock()
+        scm = SCMBase(password="password", output=output)
+        self.assertEqual('git:pass@github.com:conan-io/conan.git',
+                         scm.get_url_with_credentials("git:pass@github.com:conan-io/conan.git"))
+        self.assertIn("WARN: URL type not supported, ignoring 'username' and 'password' "
+                      "parameters", output.out)
