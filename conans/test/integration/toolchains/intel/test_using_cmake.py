@@ -5,7 +5,7 @@ import textwrap
 from ._base import BaseIntelTestCase
 
 from conans.client.toolchain.cmake.base import CMakeToolchainBase
-from conans.client.toolchain.visual import vcvars_command
+from conan.tools.microsoft.vcvars import vcvars_command
 from conans.test.assets.sources import gen_function_cpp
 
 

@@ -6,7 +6,7 @@ import unittest
 
 import pytest
 
-from conans.client.toolchain.visual import vcvars_command
+from conan.tools.microsoft.vcvars import vcvars_command
 from conans.client.tools import vs_installation_path
 from conans.test.assets.sources import gen_function_cpp
 from conans.test.utils.tools import TestClient
@@ -225,7 +225,8 @@ myapp_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
 class WinTest(unittest.TestCase):
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile, MSBuildToolchain, MSBuild
+        from conans import ConanFile
+        from conan.tools.microsoft import MSBuildToolchain, MSBuild
         class App(ConanFile):
             settings = "os", "arch", "compiler", "build_type"
             requires = "hello/0.1"

@@ -7,7 +7,7 @@ import unittest
 from ._base import BaseIntelTestCase
 from ..test_msbuild import myapp_vcxproj, sln_file
 
-from conans.client.toolchain.visual import vcvars_command
+from conan.tools.microsoft.vcvars import vcvars_command
 from conans.test.assets.sources import gen_function_cpp
 
 

@@ -2,7 +2,7 @@ import textwrap
 import unittest
 import platform
 
-from conans.client.toolchain.visual import vcvars_command
+from conan.tools.microsoft.vcvars import vcvars_command
 from conans.test.assets.sources import gen_function_cpp
 from conans.test.utils.tools import TestClient
 from conans.client.tools import which
