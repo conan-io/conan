@@ -38,7 +38,7 @@ class TestValidate(unittest.TestCase):
         client.run("info pkg/0.1@ -s os=Windows --json=myjson")
         myjson = json.loads(client.load("myjson"))
         self.assertEqual(myjson[0]["binary"], BINARY_INVALID)
-        self.assertEqual(myjson[0]["id"], PACKAGE_ID_INVALID)
+        self.assertEqual(myjson[0]["id"], 'Invalid')
 
     def test_validate_compatible(self):
         client = TestClient()
