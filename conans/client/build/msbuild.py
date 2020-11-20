@@ -156,7 +156,7 @@ class MSBuild(object):
                 self._output.warn("Use 'platforms' argument to define your architectures")
 
         if output_binary_log:
-            msbuild_version = MSBuildHelper.get_version(self._settings)
+            msbuild_version = MSBuild.get_version(self._settings)
             if msbuild_version >= "15.3":  # http://msbuildlog.com/
                 command.append('/bl' if isinstance(output_binary_log, bool)
                                else '/bl:"%s"' % output_binary_log)

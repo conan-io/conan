@@ -124,7 +124,7 @@ class MSBuildTest(unittest.TestCase):
 
     @pytest.mark.tool_visual_studio
     @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
-    @mock.patch("conans.client.build.msbuild.MSBuildHelper.get_version")
+    @mock.patch("conans.client.build.msbuild.MSBuild.get_version")
     def test_binary_logging_not_supported(self, mock_get_version):
         mock_get_version.return_value = Version("14")
 
