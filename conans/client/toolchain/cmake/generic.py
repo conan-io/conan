@@ -21,6 +21,10 @@ class CMakeGenericToolchain(CMakeToolchainBase):
             {{ super() }}
             {% if generator_platform %}set(CMAKE_GENERATOR_PLATFORM "{{ generator_platform }}" CACHE STRING "" FORCE){% endif %}
             {% if toolset %}set(CMAKE_GENERATOR_TOOLSET "{{ toolset }}" CACHE STRING "" FORCE){% endif %}
+            {% if compiler %}
+            set(CMAKE_C_COMPILER {{ compiler }})
+            set(CMAKE_CXX_COMPILER {{ compiler }})
+            {%- endif %}
         {% endblock %}
 
         {% block main %}
@@ -125,6 +129,11 @@ class CMakeGenericToolchain(CMakeToolchainBase):
                                    get_generator_platform(self._conanfile.settings,
                                                           self.generator))
         self.toolset = toolset or get_toolset(self._conanfile.settings, self.generator)
+        if (self.generator is not None and "Ninja" in self.generator
+                and "Visual" in self._conanfile.settings.compiler):
+            self.compiler = "cl"
+        else:
+            self.compiler = None  # compiler defined by default
 
         try:
             self._build_shared_libs = "ON" if self._conanfile.options.shared else "OFF"
@@ -237,7 +246,8 @@ class CMakeGenericToolchain(CMakeToolchainBase):
             "cppstd": self.cppstd,
             "cppstd_extensions": self.cppstd_extensions,
             "shared_libs": self._build_shared_libs,
-            "architecture": self.architecture
+            "architecture": self.architecture,
+            "compiler": self.compiler
         })
         ctxt_project_include.update({'vs_static_runtime': self.vs_static_runtime})
         return ctxt_toolchain, ctxt_project_include
