@@ -19,7 +19,8 @@ from conans.test.utils.tools import TestClient
 class Base(unittest.TestCase):
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile, CMake, CMakeToolchain
+        from conans import ConanFile
+        from conan.tools.cmake import CMake, CMakeToolchain
         class App(ConanFile):
             settings = "os", "arch", "compiler", "build_type"
             requires = "hello/0.1"
@@ -354,7 +355,8 @@ class CMakeInstallTest(unittest.TestCase):
 
     def test_install(self):
         conanfile = textwrap.dedent("""
-            from conans import ConanFile, CMake, CMakeToolchain
+            from conans import ConanFile
+            from conan.tools.cmake import CMake, CMakeToolchain
             class App(ConanFile):
                 settings = "os", "arch", "compiler", "build_type"
                 exports_sources = "CMakeLists.txt", "header.h"

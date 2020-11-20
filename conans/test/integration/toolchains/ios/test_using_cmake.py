@@ -14,8 +14,8 @@ class ToolchainiOSTestCase(unittest.TestCase):
         self.t = TestClient()
         create_library(self.t)
         self._conanfile = textwrap.dedent("""
-            from conans import ConanFile, CMake, CMakeToolchain
-
+            from conans import ConanFile
+            from conan.tools.cmake import CMake, CMakeToolchain
 
             class Library(ConanFile):
                 name = 'hello'
